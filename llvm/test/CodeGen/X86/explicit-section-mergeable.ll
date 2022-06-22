@@ -136,7 +136,7 @@
 @explicit_assoc_2 = unnamed_addr constant [2 x i16] [i16 1, i16 1], section ".explicit", !associated !4
 @explicit_assoc_3 = unnamed_addr constant [2 x i32] [i32 1, i32 1], section ".explicit", !associated !4
 
-!4 = !{[2 x i16]* @implicit_rodata_cst4}
+!4 = !{ptr @implicit_rodata_cst4}
 
 ;; Test implicit section assignment for globals in distinct comdat groups.
 ; CHECK: .section .rodata.cst4,"aGM",@progbits,4,f,comdat,unique,[[#U+7]]

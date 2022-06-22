@@ -10,7 +10,7 @@
 
 ; XMM versions.
 
-define <2 x double> @test_v2f64_align1(<2 x double>* %src) nounwind {
+define <2 x double> @test_v2f64_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v2f64_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -20,11 +20,11 @@ define <2 x double> @test_v2f64_align1(<2 x double>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %1 = load <2 x double>, <2 x double>* %src, align 1, !nontemporal !1
+  %1 = load <2 x double>, ptr %src, align 1, !nontemporal !1
   ret <2 x double> %1
 }
 
-define <4 x float> @test_v4f32_align1(<4 x float>* %src) nounwind {
+define <4 x float> @test_v4f32_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v4f32_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -34,11 +34,11 @@ define <4 x float> @test_v4f32_align1(<4 x float>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %1 = load <4 x float>, <4 x float>* %src, align 1, !nontemporal !1
+  %1 = load <4 x float>, ptr %src, align 1, !nontemporal !1
   ret <4 x float> %1
 }
 
-define <2 x i64> @test_v2i64_align1(<2 x i64>* %src) nounwind {
+define <2 x i64> @test_v2i64_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v2i64_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -48,11 +48,11 @@ define <2 x i64> @test_v2i64_align1(<2 x i64>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %1 = load <2 x i64>, <2 x i64>* %src, align 1, !nontemporal !1
+  %1 = load <2 x i64>, ptr %src, align 1, !nontemporal !1
   ret <2 x i64> %1
 }
 
-define <4 x i32> @test_v4i32_align1(<4 x i32>* %src) nounwind {
+define <4 x i32> @test_v4i32_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v4i32_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -62,11 +62,11 @@ define <4 x i32> @test_v4i32_align1(<4 x i32>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %1 = load <4 x i32>, <4 x i32>* %src, align 1, !nontemporal !1
+  %1 = load <4 x i32>, ptr %src, align 1, !nontemporal !1
   ret <4 x i32> %1
 }
 
-define <8 x i16> @test_v8i16_align1(<8 x i16>* %src) nounwind {
+define <8 x i16> @test_v8i16_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v8i16_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -76,11 +76,11 @@ define <8 x i16> @test_v8i16_align1(<8 x i16>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %src, align 1, !nontemporal !1
+  %1 = load <8 x i16>, ptr %src, align 1, !nontemporal !1
   ret <8 x i16> %1
 }
 
-define <16 x i8> @test_v16i8_align1(<16 x i8>* %src) nounwind {
+define <16 x i8> @test_v16i8_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v16i8_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -90,13 +90,13 @@ define <16 x i8> @test_v16i8_align1(<16 x i8>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %src, align 1, !nontemporal !1
+  %1 = load <16 x i8>, ptr %src, align 1, !nontemporal !1
   ret <16 x i8> %1
 }
 
 ; YMM versions.
 
-define <4 x double> @test_v4f64_align1(<4 x double>* %src) nounwind {
+define <4 x double> @test_v4f64_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v4f64_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -107,11 +107,11 @@ define <4 x double> @test_v4f64_align1(<4 x double>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %ymm0
 ; AVX-NEXT:    retq
-  %1 = load <4 x double>, <4 x double>* %src, align 1, !nontemporal !1
+  %1 = load <4 x double>, ptr %src, align 1, !nontemporal !1
   ret <4 x double> %1
 }
 
-define <8 x float> @test_v8f32_align1(<8 x float>* %src) nounwind {
+define <8 x float> @test_v8f32_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v8f32_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -122,11 +122,11 @@ define <8 x float> @test_v8f32_align1(<8 x float>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %ymm0
 ; AVX-NEXT:    retq
-  %1 = load <8 x float>, <8 x float>* %src, align 1, !nontemporal !1
+  %1 = load <8 x float>, ptr %src, align 1, !nontemporal !1
   ret <8 x float> %1
 }
 
-define <4 x i64> @test_v4i64_align1(<4 x i64>* %src) nounwind {
+define <4 x i64> @test_v4i64_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v4i64_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -137,11 +137,11 @@ define <4 x i64> @test_v4i64_align1(<4 x i64>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %ymm0
 ; AVX-NEXT:    retq
-  %1 = load <4 x i64>, <4 x i64>* %src, align 1, !nontemporal !1
+  %1 = load <4 x i64>, ptr %src, align 1, !nontemporal !1
   ret <4 x i64> %1
 }
 
-define <8 x i32> @test_v8i32_align1(<8 x i32>* %src) nounwind {
+define <8 x i32> @test_v8i32_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v8i32_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -152,11 +152,11 @@ define <8 x i32> @test_v8i32_align1(<8 x i32>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %ymm0
 ; AVX-NEXT:    retq
-  %1 = load <8 x i32>, <8 x i32>* %src, align 1, !nontemporal !1
+  %1 = load <8 x i32>, ptr %src, align 1, !nontemporal !1
   ret <8 x i32> %1
 }
 
-define <16 x i16> @test_v16i16_align1(<16 x i16>* %src) nounwind {
+define <16 x i16> @test_v16i16_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v16i16_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -167,11 +167,11 @@ define <16 x i16> @test_v16i16_align1(<16 x i16>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %ymm0
 ; AVX-NEXT:    retq
-  %1 = load <16 x i16>, <16 x i16>* %src, align 1, !nontemporal !1
+  %1 = load <16 x i16>, ptr %src, align 1, !nontemporal !1
   ret <16 x i16> %1
 }
 
-define <32 x i8> @test_v32i8_align1(<32 x i8>* %src) nounwind {
+define <32 x i8> @test_v32i8_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v32i8_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -182,11 +182,11 @@ define <32 x i8> @test_v32i8_align1(<32 x i8>* %src) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %ymm0
 ; AVX-NEXT:    retq
-  %1 = load <32 x i8>, <32 x i8>* %src, align 1, !nontemporal !1
+  %1 = load <32 x i8>, ptr %src, align 1, !nontemporal !1
   ret <32 x i8> %1
 }
 
-define <4 x double> @test_v4f64_align16(<4 x double>* %src) nounwind {
+define <4 x double> @test_v4f64_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v4f64_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -213,11 +213,11 @@ define <4 x double> @test_v4f64_align16(<4 x double>* %src) nounwind {
 ; AVX-NEXT:    movq %rbp, %rsp
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
-  %1 = load <4 x double>, <4 x double>* %src, align 16, !nontemporal !1
+  %1 = load <4 x double>, ptr %src, align 16, !nontemporal !1
   ret <4 x double> %1
 }
 
-define <8 x float> @test_v8f32_align16(<8 x float>* %src) nounwind {
+define <8 x float> @test_v8f32_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v8f32_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -244,11 +244,11 @@ define <8 x float> @test_v8f32_align16(<8 x float>* %src) nounwind {
 ; AVX-NEXT:    movq %rbp, %rsp
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
-  %1 = load <8 x float>, <8 x float>* %src, align 16, !nontemporal !1
+  %1 = load <8 x float>, ptr %src, align 16, !nontemporal !1
   ret <8 x float> %1
 }
 
-define <4 x i64> @test_v4i64_align16(<4 x i64>* %src) nounwind {
+define <4 x i64> @test_v4i64_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v4i64_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -275,11 +275,11 @@ define <4 x i64> @test_v4i64_align16(<4 x i64>* %src) nounwind {
 ; AVX-NEXT:    movq %rbp, %rsp
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
-  %1 = load <4 x i64>, <4 x i64>* %src, align 16, !nontemporal !1
+  %1 = load <4 x i64>, ptr %src, align 16, !nontemporal !1
   ret <4 x i64> %1
 }
 
-define <8 x i32> @test_v8i32_align16(<8 x i32>* %src) nounwind {
+define <8 x i32> @test_v8i32_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v8i32_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -306,11 +306,11 @@ define <8 x i32> @test_v8i32_align16(<8 x i32>* %src) nounwind {
 ; AVX-NEXT:    movq %rbp, %rsp
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
-  %1 = load <8 x i32>, <8 x i32>* %src, align 16, !nontemporal !1
+  %1 = load <8 x i32>, ptr %src, align 16, !nontemporal !1
   ret <8 x i32> %1
 }
 
-define <16 x i16> @test_v16i16_align16(<16 x i16>* %src) nounwind {
+define <16 x i16> @test_v16i16_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v16i16_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -337,11 +337,11 @@ define <16 x i16> @test_v16i16_align16(<16 x i16>* %src) nounwind {
 ; AVX-NEXT:    movq %rbp, %rsp
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
-  %1 = load <16 x i16>, <16 x i16>* %src, align 16, !nontemporal !1
+  %1 = load <16 x i16>, ptr %src, align 16, !nontemporal !1
   ret <16 x i16> %1
 }
 
-define <32 x i8> @test_v32i8_align16(<32 x i8>* %src) nounwind {
+define <32 x i8> @test_v32i8_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v32i8_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -368,13 +368,13 @@ define <32 x i8> @test_v32i8_align16(<32 x i8>* %src) nounwind {
 ; AVX-NEXT:    movq %rbp, %rsp
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
-  %1 = load <32 x i8>, <32 x i8>* %src, align 16, !nontemporal !1
+  %1 = load <32 x i8>, ptr %src, align 16, !nontemporal !1
   ret <32 x i8> %1
 }
 
 ; ZMM versions.
 
-define <8 x double> @test_v8f64_align1(<8 x double>* %src) nounwind {
+define <8 x double> @test_v8f64_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v8f64_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -399,11 +399,11 @@ define <8 x double> @test_v8f64_align1(<8 x double>* %src) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512-NEXT:    retq
-  %1 = load <8 x double>, <8 x double>* %src, align 1, !nontemporal !1
+  %1 = load <8 x double>, ptr %src, align 1, !nontemporal !1
   ret <8 x double> %1
 }
 
-define <16 x float> @test_v16f32_align1(<16 x float>* %src) nounwind {
+define <16 x float> @test_v16f32_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v16f32_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -428,11 +428,11 @@ define <16 x float> @test_v16f32_align1(<16 x float>* %src) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512-NEXT:    retq
-  %1 = load <16 x float>, <16 x float>* %src, align 1, !nontemporal !1
+  %1 = load <16 x float>, ptr %src, align 1, !nontemporal !1
   ret <16 x float> %1
 }
 
-define <8 x i64> @test_v8i64_align1(<8 x i64>* %src) nounwind {
+define <8 x i64> @test_v8i64_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v8i64_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -457,11 +457,11 @@ define <8 x i64> @test_v8i64_align1(<8 x i64>* %src) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512-NEXT:    retq
-  %1 = load <8 x i64>, <8 x i64>* %src, align 1, !nontemporal !1
+  %1 = load <8 x i64>, ptr %src, align 1, !nontemporal !1
   ret <8 x i64> %1
 }
 
-define <16 x i32> @test_v16i32_align1(<16 x i32>* %src) nounwind {
+define <16 x i32> @test_v16i32_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v16i32_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -486,11 +486,11 @@ define <16 x i32> @test_v16i32_align1(<16 x i32>* %src) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512-NEXT:    retq
-  %1 = load <16 x i32>, <16 x i32>* %src, align 1, !nontemporal !1
+  %1 = load <16 x i32>, ptr %src, align 1, !nontemporal !1
   ret <16 x i32> %1
 }
 
-define <32 x i16> @test_v32i16_align1(<32 x i16>* %src) nounwind {
+define <32 x i16> @test_v32i16_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v32i16_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -515,11 +515,11 @@ define <32 x i16> @test_v32i16_align1(<32 x i16>* %src) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512-NEXT:    retq
-  %1 = load <32 x i16>, <32 x i16>* %src, align 1, !nontemporal !1
+  %1 = load <32 x i16>, ptr %src, align 1, !nontemporal !1
   ret <32 x i16> %1
 }
 
-define <64 x i8> @test_v64i8_align1(<64 x i8>* %src) nounwind {
+define <64 x i8> @test_v64i8_align1(ptr %src) nounwind {
 ; SSE-LABEL: test_v64i8_align1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -544,11 +544,11 @@ define <64 x i8> @test_v64i8_align1(<64 x i8>* %src) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512-NEXT:    retq
-  %1 = load <64 x i8>, <64 x i8>* %src, align 1, !nontemporal !1
+  %1 = load <64 x i8>, ptr %src, align 1, !nontemporal !1
   ret <64 x i8> %1
 }
 
-define <8 x double> @test_v8f64_align16(<8 x double>* %src) nounwind {
+define <8 x double> @test_v8f64_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v8f64_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -623,11 +623,11 @@ define <8 x double> @test_v8f64_align16(<8 x double>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <8 x double>, <8 x double>* %src, align 16, !nontemporal !1
+  %1 = load <8 x double>, ptr %src, align 16, !nontemporal !1
   ret <8 x double> %1
 }
 
-define <16 x float> @test_v16f32_align16(<16 x float>* %src) nounwind {
+define <16 x float> @test_v16f32_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v16f32_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -702,11 +702,11 @@ define <16 x float> @test_v16f32_align16(<16 x float>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <16 x float>, <16 x float>* %src, align 16, !nontemporal !1
+  %1 = load <16 x float>, ptr %src, align 16, !nontemporal !1
   ret <16 x float> %1
 }
 
-define <8 x i64> @test_v8i64_align16(<8 x i64>* %src) nounwind {
+define <8 x i64> @test_v8i64_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v8i64_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -781,11 +781,11 @@ define <8 x i64> @test_v8i64_align16(<8 x i64>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <8 x i64>, <8 x i64>* %src, align 16, !nontemporal !1
+  %1 = load <8 x i64>, ptr %src, align 16, !nontemporal !1
   ret <8 x i64> %1
 }
 
-define <16 x i32> @test_v16i32_align16(<16 x i32>* %src) nounwind {
+define <16 x i32> @test_v16i32_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v16i32_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -860,11 +860,11 @@ define <16 x i32> @test_v16i32_align16(<16 x i32>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <16 x i32>, <16 x i32>* %src, align 16, !nontemporal !1
+  %1 = load <16 x i32>, ptr %src, align 16, !nontemporal !1
   ret <16 x i32> %1
 }
 
-define <32 x i16> @test_v32i16_align16(<32 x i16>* %src) nounwind {
+define <32 x i16> @test_v32i16_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v32i16_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -939,11 +939,11 @@ define <32 x i16> @test_v32i16_align16(<32 x i16>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <32 x i16>, <32 x i16>* %src, align 16, !nontemporal !1
+  %1 = load <32 x i16>, ptr %src, align 16, !nontemporal !1
   ret <32 x i16> %1
 }
 
-define <64 x i8> @test_v64i8_align16(<64 x i8>* %src) nounwind {
+define <64 x i8> @test_v64i8_align16(ptr %src) nounwind {
 ; SSE2-LABEL: test_v64i8_align16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -1018,11 +1018,11 @@ define <64 x i8> @test_v64i8_align16(<64 x i8>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <64 x i8>, <64 x i8>* %src, align 16, !nontemporal !1
+  %1 = load <64 x i8>, ptr %src, align 16, !nontemporal !1
   ret <64 x i8> %1
 }
 
-define <8 x double> @test_v8f64_align32(<8 x double>* %src) nounwind {
+define <8 x double> @test_v8f64_align32(ptr %src) nounwind {
 ; SSE2-LABEL: test_v8f64_align32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -1069,11 +1069,11 @@ define <8 x double> @test_v8f64_align32(<8 x double>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <8 x double>, <8 x double>* %src, align 32, !nontemporal !1
+  %1 = load <8 x double>, ptr %src, align 32, !nontemporal !1
   ret <8 x double> %1
 }
 
-define <16 x float> @test_v16f32_align32(<16 x float>* %src) nounwind {
+define <16 x float> @test_v16f32_align32(ptr %src) nounwind {
 ; SSE2-LABEL: test_v16f32_align32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -1120,11 +1120,11 @@ define <16 x float> @test_v16f32_align32(<16 x float>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <16 x float>, <16 x float>* %src, align 32, !nontemporal !1
+  %1 = load <16 x float>, ptr %src, align 32, !nontemporal !1
   ret <16 x float> %1
 }
 
-define <8 x i64> @test_v8i64_align32(<8 x i64>* %src) nounwind {
+define <8 x i64> @test_v8i64_align32(ptr %src) nounwind {
 ; SSE2-LABEL: test_v8i64_align32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -1171,11 +1171,11 @@ define <8 x i64> @test_v8i64_align32(<8 x i64>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <8 x i64>, <8 x i64>* %src, align 32, !nontemporal !1
+  %1 = load <8 x i64>, ptr %src, align 32, !nontemporal !1
   ret <8 x i64> %1
 }
 
-define <16 x i32> @test_v16i32_align32(<16 x i32>* %src) nounwind {
+define <16 x i32> @test_v16i32_align32(ptr %src) nounwind {
 ; SSE2-LABEL: test_v16i32_align32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -1222,11 +1222,11 @@ define <16 x i32> @test_v16i32_align32(<16 x i32>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <16 x i32>, <16 x i32>* %src, align 32, !nontemporal !1
+  %1 = load <16 x i32>, ptr %src, align 32, !nontemporal !1
   ret <16 x i32> %1
 }
 
-define <32 x i16> @test_v32i16_align32(<32 x i16>* %src) nounwind {
+define <32 x i16> @test_v32i16_align32(ptr %src) nounwind {
 ; SSE2-LABEL: test_v32i16_align32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -1273,11 +1273,11 @@ define <32 x i16> @test_v32i16_align32(<32 x i16>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <32 x i16>, <32 x i16>* %src, align 32, !nontemporal !1
+  %1 = load <32 x i16>, ptr %src, align 32, !nontemporal !1
   ret <32 x i16> %1
 }
 
-define <64 x i8> @test_v64i8_align32(<64 x i8>* %src) nounwind {
+define <64 x i8> @test_v64i8_align32(ptr %src) nounwind {
 ; SSE2-LABEL: test_v64i8_align32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -1324,7 +1324,7 @@ define <64 x i8> @test_v64i8_align32(<64 x i8>* %src) nounwind {
 ; AVX512-NEXT:    movq %rbp, %rsp
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    retq
-  %1 = load <64 x i8>, <64 x i8>* %src, align 32, !nontemporal !1
+  %1 = load <64 x i8>, ptr %src, align 32, !nontemporal !1
   ret <64 x i8> %1
 }
 

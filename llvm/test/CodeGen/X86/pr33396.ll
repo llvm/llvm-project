@@ -12,16 +12,16 @@ bb:
   br label %bb1
 
 bb1:
-  br i1 icmp ne (i8* getelementptr ([2 x i8], [2 x i8]* @global.1, i64 0, i64 1),
-                 i8* getelementptr ([2 x i8], [2 x i8]* @global, i64 0, i64 1)), label %bb2, label %bb3
+  br i1 icmp ne (ptr getelementptr ([2 x i8], ptr @global.1, i64 0, i64 1),
+                 ptr getelementptr ([2 x i8], ptr @global, i64 0, i64 1)), label %bb2, label %bb3
 
 bb2:
   br label %bb3
 
 bb3:
   %tmp = phi i32 [ 60, %bb2 ],
-                 [ sdiv (i32 60, i32 zext (i1 icmp eq (i8* getelementptr ([2 x i8], [2 x i8]* @global.1, i64 0, i64 1),
-                                           i8* getelementptr ([2 x i8], [2 x i8]* @global, i64 0, i64 1)) to i32)), %bb1 ]
+                 [ sdiv (i32 60, i32 zext (i1 icmp eq (ptr getelementptr ([2 x i8], ptr @global.1, i64 0, i64 1),
+                                           ptr getelementptr ([2 x i8], ptr @global, i64 0, i64 1)) to i32)), %bb1 ]
   %tmp4 = icmp slt i8 %tinky, -4
   br label %bb1
 }

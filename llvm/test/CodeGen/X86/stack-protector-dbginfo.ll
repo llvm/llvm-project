@@ -12,7 +12,7 @@
 define i32 @_Z18read_response_sizev() #0 !dbg !9 {
 entry:
   tail call void @llvm.dbg.value(metadata !22, i64 0, metadata !23, metadata !DIExpression()), !dbg !39
-  %0 = load i64, i64* getelementptr inbounds ({ i64, [56 x i8] }, { i64, [56 x i8] }* @a, i32 0, i32 0), align 8, !dbg !40
+  %0 = load i64, ptr getelementptr inbounds ({ i64, [56 x i8] }, ptr @a, i32 0, i32 0), align 8, !dbg !40
   tail call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !64, metadata !DIExpression()), !dbg !71
   %1 = trunc i64 %0 to i32
   ret i32 %1
@@ -21,12 +21,11 @@ entry:
 define i32 @IgnoreIntrinsicTest() #1 {
 ; IGNORE_INTRIN: IgnoreIntrinsicTest:
   %1 = alloca i32, align 4
-  %2 = bitcast i32* %1 to i8*
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !73, metadata !DIExpression()), !dbg !74
-  store volatile i32 1, i32* %1, align 4
-  %3 = load volatile i32, i32* %1, align 4
-  %4 = mul nsw i32 %3, 42
-  ret i32 %4
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !73, metadata !DIExpression()), !dbg !74
+  store volatile i32 1, ptr %1, align 4
+  %2 = load volatile i32, ptr %1, align 4
+  %3 = mul nsw i32 %2, 42
+  ret i32 %3
 ; IGNORE_INTRIN-NOT: callq __stack_chk_fail
 ; IGNORE_INTRIN:     .cfi_endproc
 }
@@ -61,7 +60,7 @@ attributes #0 = { sspreq }
 !19 = !DILocalVariable(name: "c", line: 29, scope: !9, file: !10, type: !13)
 !20 = !{}
 !21 = !{i32 2, !"Dwarf Version", i32 2}
-!22 = !{i64* getelementptr inbounds ({ i64, [56 x i8] }, { i64, [56 x i8] }* @a, i32 0, i32 0)}
+!22 = !{ptr getelementptr inbounds ({ i64, [56 x i8] }, ptr @a, i32 0, i32 0)}
 !23 = !DILocalVariable(name: "p2", line: 12, arg: 2, scope: !24, file: !10, type: !32)
 !24 = distinct !DISubprogram(name: "min<unsigned long long>", linkageName: "_ZN3__13minIyEERKT_S3_RS1_", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 12, file: !1, scope: !25, type: !27, templateParams: !33, retainedNodes: !35)
 !25 = !DINamespace(name: "__1", scope: null)

@@ -30,7 +30,7 @@ entry:
   ret i32 %b
 }
 
-define i32 @test1b(i32* %p) nounwind {
+define i32 @test1b(ptr %p) nounwind {
 ; X86-LABEL: test1b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -50,7 +50,7 @@ define i32 @test1b(i32* %p) nounwind {
 ; X64-WIN32-NEXT:    subl $-128, %eax
 ; X64-WIN32-NEXT:    retq
 entry:
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %b = add i32 %a, 128
   ret i32 %b
 }
@@ -98,7 +98,7 @@ entry:
   ret i64 %b
 }
 
-define i64 @test3b(i64* %p) nounwind {
+define i64 @test3b(ptr %p) nounwind {
 ; X86-LABEL: test3b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -120,12 +120,12 @@ define i64 @test3b(i64* %p) nounwind {
 ; X64-WIN32-NEXT:    subq $-128, %rax
 ; X64-WIN32-NEXT:    retq
 entry:
-  %a = load i64, i64* %p
+  %a = load i64, ptr %p
   %b = add i64 %a, 128
   ret i64 %b
 }
 
-define i1 @test4(i32 %v1, i32 %v2, i32* %X) nounwind {
+define i1 @test4(i32 %v1, i32 %v2, ptr %X) nounwind {
 ; X86-LABEL: test4:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -164,14 +164,14 @@ entry:
   br i1 %obit, label %overflow, label %normal
 
 normal:
-  store i32 0, i32* %X
+  store i32 0, ptr %X
   br label %overflow
 
 overflow:
   ret i1 false
 }
 
-define i1 @test5(i32 %v1, i32 %v2, i32* %X) nounwind {
+define i1 @test5(i32 %v1, i32 %v2, ptr %X) nounwind {
 ; X86-LABEL: test5:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -210,7 +210,7 @@ entry:
   br i1 %obit, label %carry, label %normal
 
 normal:
-  store i32 0, i32* %X
+  store i32 0, ptr %X
   br label %carry
 
 carry:
@@ -366,7 +366,7 @@ entry:
   ret i1 %obit
 }
 
-define void @test11(i32* inreg %a) nounwind {
+define void @test11(ptr inreg %a) nounwind {
 ; X86-LABEL: test11:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $-128, (%eax)
@@ -382,13 +382,13 @@ define void @test11(i32* inreg %a) nounwind {
 ; X64-WIN32-NEXT:    subl $-128, (%rcx)
 ; X64-WIN32-NEXT:    retq
 entry:
-  %aa = load i32, i32* %a
+  %aa = load i32, ptr %a
   %b = add i32 %aa, 128
-  store i32 %b, i32* %a
+  store i32 %b, ptr %a
   ret void
 }
 
-define void @test12(i64* inreg %a) nounwind {
+define void @test12(ptr inreg %a) nounwind {
 ; X86-LABEL: test12:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    addl $-2147483648, (%eax) # imm = 0x80000000
@@ -405,13 +405,13 @@ define void @test12(i64* inreg %a) nounwind {
 ; X64-WIN32-NEXT:    subq $-2147483648, (%rcx) # imm = 0x80000000
 ; X64-WIN32-NEXT:    retq
 entry:
-  %aa = load i64, i64* %a
+  %aa = load i64, ptr %a
   %b = add i64 %aa, 2147483648
-  store i64 %b, i64* %a
+  store i64 %b, ptr %a
   ret void
 }
 
-define void @test13(i64* inreg %a) nounwind {
+define void @test13(ptr inreg %a) nounwind {
 ; X86-LABEL: test13:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    addl $128, (%eax)
@@ -428,9 +428,9 @@ define void @test13(i64* inreg %a) nounwind {
 ; X64-WIN32-NEXT:    subq $-128, (%rcx)
 ; X64-WIN32-NEXT:    retq
 entry:
-  %aa = load i64, i64* %a
+  %aa = load i64, ptr %a
   %b = add i64 %aa, 128
-  store i64 %b, i64* %a
+  store i64 %b, ptr %a
   ret void
 }
 
@@ -496,7 +496,7 @@ define <4 x i32> @inc_not_vec(<4 x i32> %a) nounwind {
   ret <4 x i32> %r
 }
 
-define void @uaddo1_not(i32 %a, i32* %p0, i1* %p1) {
+define void @uaddo1_not(i32 %a, ptr %p0, ptr %p1) {
 ; X86-LABEL: uaddo1_not:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -524,8 +524,8 @@ define void @uaddo1_not(i32 %a, i32* %p0, i1* %p1) {
   %uaddo = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %nota, i32 1)
   %r0 = extractvalue {i32, i1} %uaddo, 0
   %r1 = extractvalue {i32, i1} %uaddo, 1
-  store i32 %r0, i32* %p0
-  store i1 %r1, i1* %p1
+  store i32 %r0, ptr %p0
+  store i1 %r1, ptr %p1
   ret void
 }
 

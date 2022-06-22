@@ -5,7 +5,7 @@
 ; test vector shifts converted to proper SSE2 vector shifts when the shift
 ; amounts are the same when using a shuffle splat.
 
-define void @shift1a(<2 x i64> %val, <2 x i64>* %dst, <2 x i64> %sh) nounwind {
+define void @shift1a(<2 x i64> %val, ptr %dst, <2 x i64> %sh) nounwind {
 ; X86-LABEL: shift1a:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -21,12 +21,12 @@ define void @shift1a(<2 x i64> %val, <2 x i64>* %dst, <2 x i64> %sh) nounwind {
 entry:
   %shamt = shufflevector <2 x i64> %sh, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %shl = shl <2 x i64> %val, %shamt
-  store <2 x i64> %shl, <2 x i64>* %dst
+  store <2 x i64> %shl, ptr %dst
   ret void
 }
 
 ; shift1b can't use a packed shift but can shift lanes separately and shuffle back together
-define void @shift1b(<2 x i64> %val, <2 x i64>* %dst, <2 x i64> %sh) nounwind {
+define void @shift1b(<2 x i64> %val, ptr %dst, <2 x i64> %sh) nounwind {
 ; X86-LABEL: shift1b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -50,11 +50,11 @@ define void @shift1b(<2 x i64> %val, <2 x i64>* %dst, <2 x i64> %sh) nounwind {
 entry:
   %shamt = shufflevector <2 x i64> %sh, <2 x i64> undef, <2 x i32> <i32 0, i32 1>
   %shl = shl <2 x i64> %val, %shamt
-  store <2 x i64> %shl, <2 x i64>* %dst
+  store <2 x i64> %shl, ptr %dst
   ret void
 }
 
-define void @shift2a(<4 x i32> %val, <4 x i32>* %dst, <2 x i32> %amt) nounwind {
+define void @shift2a(<4 x i32> %val, ptr %dst, <2 x i32> %amt) nounwind {
 ; X86-LABEL: shift2a:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -72,11 +72,11 @@ define void @shift2a(<4 x i32> %val, <4 x i32>* %dst, <2 x i32> %amt) nounwind {
 entry:
   %shamt = shufflevector <2 x i32> %amt, <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %shl = shl <4 x i32> %val, %shamt
-  store <4 x i32> %shl, <4 x i32>* %dst
+  store <4 x i32> %shl, ptr %dst
   ret void
 }
 
-define void @shift2b(<4 x i32> %val, <4 x i32>* %dst, <2 x i32> %amt) nounwind {
+define void @shift2b(<4 x i32> %val, ptr %dst, <2 x i32> %amt) nounwind {
 ; X86-LABEL: shift2b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -94,11 +94,11 @@ define void @shift2b(<4 x i32> %val, <4 x i32>* %dst, <2 x i32> %amt) nounwind {
 entry:
   %shamt = shufflevector <2 x i32> %amt, <2 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 1, i32 1>
   %shl = shl <4 x i32> %val, %shamt
-  store <4 x i32> %shl, <4 x i32>* %dst
+  store <4 x i32> %shl, ptr %dst
   ret void
 }
 
-define void @shift2c(<4 x i32> %val, <4 x i32>* %dst, <2 x i32> %amt) nounwind {
+define void @shift2c(<4 x i32> %val, ptr %dst, <2 x i32> %amt) nounwind {
 ; X86-LABEL: shift2c:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -116,11 +116,11 @@ define void @shift2c(<4 x i32> %val, <4 x i32>* %dst, <2 x i32> %amt) nounwind {
 entry:
   %shamt = shufflevector <2 x i32> %amt, <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %shl = shl <4 x i32> %val, %shamt
-  store <4 x i32> %shl, <4 x i32>* %dst
+  store <4 x i32> %shl, ptr %dst
   ret void
 }
 
-define void @shift3a(<8 x i16> %val, <8 x i16>* %dst, <8 x i16> %amt) nounwind {
+define void @shift3a(<8 x i16> %val, ptr %dst, <8 x i16> %amt) nounwind {
 ; X86-LABEL: shift3a:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -140,11 +140,11 @@ define void @shift3a(<8 x i16> %val, <8 x i16>* %dst, <8 x i16> %amt) nounwind {
 entry:
   %shamt = shufflevector <8 x i16> %amt, <8 x i16> undef, <8 x i32> <i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6>
   %shl = shl <8 x i16> %val, %shamt
-  store <8 x i16> %shl, <8 x i16>* %dst
+  store <8 x i16> %shl, ptr %dst
   ret void
 }
 
-define void @shift3b(<8 x i16> %val, <8 x i16>* %dst, i16 %amt) nounwind {
+define void @shift3b(<8 x i16> %val, ptr %dst, i16 %amt) nounwind {
 ; X86-LABEL: shift3b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -171,7 +171,7 @@ entry:
   %6 = insertelement <8 x i16> %5, i16 %amt, i32 6
   %7 = insertelement <8 x i16> %6, i16 %amt, i32 7
   %shl = shl <8 x i16> %val, %7
-  store <8 x i16> %shl, <8 x i16>* %dst
+  store <8 x i16> %shl, ptr %dst
   ret void
 }
 

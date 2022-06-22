@@ -2683,7 +2683,7 @@ define <16 x i8> @fptoui_16f32_to_16i8(<16 x float> %a) {
   ret <16 x i8> %cvt
 }
 
-define <2 x i64> @fptosi_2f32_to_2i64_load(<2 x float>* %x) {
+define <2 x i64> @fptosi_2f32_to_2i64_load(ptr %x) {
 ; SSE-LABEL: fptosi_2f32_to_2i64_load:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
@@ -2740,12 +2740,12 @@ define <2 x i64> @fptosi_2f32_to_2i64_load(<2 x float>* %x) {
 ; AVX512VLDQ:       # %bb.0:
 ; AVX512VLDQ-NEXT:    vcvttps2qq (%rdi), %xmm0
 ; AVX512VLDQ-NEXT:    retq
-  %a = load <2 x float>, <2 x float>* %x
+  %a = load <2 x float>, ptr %x
   %b = fptosi <2 x float> %a to <2 x i64>
   ret <2 x i64> %b
 }
 
-define <2 x i64> @fptoui_2f32_to_2i64_load(<2 x float>* %x) {
+define <2 x i64> @fptoui_2f32_to_2i64_load(ptr %x) {
 ; SSE-LABEL: fptoui_2f32_to_2i64_load:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
@@ -2829,7 +2829,7 @@ define <2 x i64> @fptoui_2f32_to_2i64_load(<2 x float>* %x) {
 ; AVX512VLDQ:       # %bb.0:
 ; AVX512VLDQ-NEXT:    vcvttps2uqq (%rdi), %xmm0
 ; AVX512VLDQ-NEXT:    retq
-  %a = load <2 x float>, <2 x float>* %x
+  %a = load <2 x float>, ptr %x
   %b = fptoui <2 x float> %a to <2 x i64>
   ret <2 x i64> %b
 }

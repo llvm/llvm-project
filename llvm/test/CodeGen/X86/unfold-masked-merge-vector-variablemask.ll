@@ -1009,7 +1009,7 @@ define <8 x i16> @out_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %mask) nounwin
   ret <8 x i16> %r
 }
 
-define <4 x i32> @out_v4i32(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) nounwind {
+define <4 x i32> @out_v4i32(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: out_v4i32:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    movq %rdi, %rax
@@ -1065,9 +1065,9 @@ define <4 x i32> @out_v4i32(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) n
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm1
 ; CHECK-XOP-NEXT:    vpcmov %xmm1, (%rsi), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %mx = and <4 x i32> %x, %mask
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %my = and <4 x i32> %y, %notmask
@@ -1075,7 +1075,7 @@ define <4 x i32> @out_v4i32(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) n
   ret <4 x i32> %r
 }
 
-define <4 x i32> @out_v4i32_undef(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) nounwind {
+define <4 x i32> @out_v4i32_undef(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: out_v4i32_undef:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    movq %rdi, %rax
@@ -1128,9 +1128,9 @@ define <4 x i32> @out_v4i32_undef(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pm
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm1
 ; CHECK-XOP-NEXT:    vpcmov %xmm1, (%rsi), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %mx = and <4 x i32> %x, %mask
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 undef, i32 -1>
   %my = and <4 x i32> %y, %notmask
@@ -1185,7 +1185,7 @@ define <2 x i64> @out_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %mask) nounwin
 ; 256-bit vector width
 ; ============================================================================ ;
 
-define <32 x i8> @out_v32i8(<32 x i8> *%px, <32 x i8> *%py, <32 x i8> *%pmask) nounwind {
+define <32 x i8> @out_v32i8(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: out_v32i8:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    pushq %rbp
@@ -1740,9 +1740,9 @@ define <32 x i8> @out_v32i8(<32 x i8> *%px, <32 x i8> *%py, <32 x i8> *%pmask) n
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %ymm1
 ; CHECK-XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <32 x i8>, <32 x i8> *%px, align 32
-  %y = load <32 x i8>, <32 x i8> *%py, align 32
-  %mask = load <32 x i8>, <32 x i8> *%pmask, align 32
+  %x = load <32 x i8>, ptr%px, align 32
+  %y = load <32 x i8>, ptr%py, align 32
+  %mask = load <32 x i8>, ptr%pmask, align 32
   %mx = and <32 x i8> %x, %mask
   %notmask = xor <32 x i8> %mask, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %my = and <32 x i8> %y, %notmask
@@ -1750,7 +1750,7 @@ define <32 x i8> @out_v32i8(<32 x i8> *%px, <32 x i8> *%py, <32 x i8> *%pmask) n
   ret <32 x i8> %r
 }
 
-define <16 x i16> @out_v16i16(<16 x i16> *%px, <16 x i16> *%py, <16 x i16> *%pmask) nounwind {
+define <16 x i16> @out_v16i16(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: out_v16i16:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    pushq %rbp
@@ -2017,9 +2017,9 @@ define <16 x i16> @out_v16i16(<16 x i16> *%px, <16 x i16> *%py, <16 x i16> *%pma
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %ymm1
 ; CHECK-XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <16 x i16>, <16 x i16> *%px, align 32
-  %y = load <16 x i16>, <16 x i16> *%py, align 32
-  %mask = load <16 x i16>, <16 x i16> *%pmask, align 32
+  %x = load <16 x i16>, ptr%px, align 32
+  %y = load <16 x i16>, ptr%py, align 32
+  %mask = load <16 x i16>, ptr%pmask, align 32
   %mx = and <16 x i16> %x, %mask
   %notmask = xor <16 x i16> %mask, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %my = and <16 x i16> %y, %notmask
@@ -2027,7 +2027,7 @@ define <16 x i16> @out_v16i16(<16 x i16> *%px, <16 x i16> *%py, <16 x i16> *%pma
   ret <16 x i16> %r
 }
 
-define <8 x i32> @out_v8i32(<8 x i32> *%px, <8 x i32> *%py, <8 x i32> *%pmask) nounwind {
+define <8 x i32> @out_v8i32(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: out_v8i32:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    pushq %rbp
@@ -2174,9 +2174,9 @@ define <8 x i32> @out_v8i32(<8 x i32> *%px, <8 x i32> *%py, <8 x i32> *%pmask) n
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %ymm1
 ; CHECK-XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <8 x i32>, <8 x i32> *%px, align 32
-  %y = load <8 x i32>, <8 x i32> *%py, align 32
-  %mask = load <8 x i32>, <8 x i32> *%pmask, align 32
+  %x = load <8 x i32>, ptr%px, align 32
+  %y = load <8 x i32>, ptr%py, align 32
+  %mask = load <8 x i32>, ptr%pmask, align 32
   %mx = and <8 x i32> %x, %mask
   %notmask = xor <8 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %my = and <8 x i32> %y, %notmask
@@ -2184,7 +2184,7 @@ define <8 x i32> @out_v8i32(<8 x i32> *%px, <8 x i32> *%py, <8 x i32> *%pmask) n
   ret <8 x i32> %r
 }
 
-define <4 x i64> @out_v4i64(<4 x i64> *%px, <4 x i64> *%py, <4 x i64> *%pmask) nounwind {
+define <4 x i64> @out_v4i64(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: out_v4i64:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    movq %rdi, %rax
@@ -2263,9 +2263,9 @@ define <4 x i64> @out_v4i64(<4 x i64> *%px, <4 x i64> *%py, <4 x i64> *%pmask) n
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %ymm1
 ; CHECK-XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i64>, <4 x i64> *%px, align 32
-  %y = load <4 x i64>, <4 x i64> *%py, align 32
-  %mask = load <4 x i64>, <4 x i64> *%pmask, align 32
+  %x = load <4 x i64>, ptr%px, align 32
+  %y = load <4 x i64>, ptr%py, align 32
+  %mask = load <4 x i64>, ptr%pmask, align 32
   %mx = and <4 x i64> %x, %mask
   %notmask = xor <4 x i64> %mask, <i64 -1, i64 -1, i64 -1, i64 -1>
   %my = and <4 x i64> %y, %notmask
@@ -3121,7 +3121,7 @@ define <8 x i16> @in_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %mask) nounwind
   ret <8 x i16> %r
 }
 
-define <4 x i32> @in_v4i32(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) nounwind {
+define <4 x i32> @in_v4i32(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: in_v4i32:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    pushq %rbx
@@ -3179,9 +3179,9 @@ define <4 x i32> @in_v4i32(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) no
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm1
 ; CHECK-XOP-NEXT:    vpcmov %xmm1, (%rsi), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %n0 = xor <4 x i32> %x, %y
   %n1 = and <4 x i32> %n0, %mask
   %r = xor <4 x i32> %n1, %y
@@ -3234,7 +3234,7 @@ define <2 x i64> @in_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %mask) nounwind
 ; 256-bit vector width
 ; ============================================================================ ;
 
-define <32 x i8> @in_v32i8(<32 x i8> *%px, <32 x i8> *%py, <32 x i8> *%pmask) nounwind {
+define <32 x i8> @in_v32i8(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: in_v32i8:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    pushq %rbp
@@ -3781,16 +3781,16 @@ define <32 x i8> @in_v32i8(<32 x i8> *%px, <32 x i8> *%py, <32 x i8> *%pmask) no
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %ymm1
 ; CHECK-XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <32 x i8>, <32 x i8> *%px, align 32
-  %y = load <32 x i8>, <32 x i8> *%py, align 32
-  %mask = load <32 x i8>, <32 x i8> *%pmask, align 32
+  %x = load <32 x i8>, ptr%px, align 32
+  %y = load <32 x i8>, ptr%py, align 32
+  %mask = load <32 x i8>, ptr%pmask, align 32
   %n0 = xor <32 x i8> %x, %y
   %n1 = and <32 x i8> %n0, %mask
   %r = xor <32 x i8> %n1, %y
   ret <32 x i8> %r
 }
 
-define <16 x i16> @in_v16i16(<16 x i16> *%px, <16 x i16> *%py, <16 x i16> *%pmask) nounwind {
+define <16 x i16> @in_v16i16(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: in_v16i16:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    pushq %rbp
@@ -4113,16 +4113,16 @@ define <16 x i16> @in_v16i16(<16 x i16> *%px, <16 x i16> *%py, <16 x i16> *%pmas
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %ymm1
 ; CHECK-XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <16 x i16>, <16 x i16> *%px, align 32
-  %y = load <16 x i16>, <16 x i16> *%py, align 32
-  %mask = load <16 x i16>, <16 x i16> *%pmask, align 32
+  %x = load <16 x i16>, ptr%px, align 32
+  %y = load <16 x i16>, ptr%py, align 32
+  %mask = load <16 x i16>, ptr%pmask, align 32
   %n0 = xor <16 x i16> %x, %y
   %n1 = and <16 x i16> %n0, %mask
   %r = xor <16 x i16> %n1, %y
   ret <16 x i16> %r
 }
 
-define <8 x i32> @in_v8i32(<8 x i32> *%px, <8 x i32> *%py, <8 x i32> *%pmask) nounwind {
+define <8 x i32> @in_v8i32(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: in_v8i32:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    pushq %rbp
@@ -4279,16 +4279,16 @@ define <8 x i32> @in_v8i32(<8 x i32> *%px, <8 x i32> *%py, <8 x i32> *%pmask) no
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %ymm1
 ; CHECK-XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <8 x i32>, <8 x i32> *%px, align 32
-  %y = load <8 x i32>, <8 x i32> *%py, align 32
-  %mask = load <8 x i32>, <8 x i32> *%pmask, align 32
+  %x = load <8 x i32>, ptr%px, align 32
+  %y = load <8 x i32>, ptr%py, align 32
+  %mask = load <8 x i32>, ptr%pmask, align 32
   %n0 = xor <8 x i32> %x, %y
   %n1 = and <8 x i32> %n0, %mask
   %r = xor <8 x i32> %n1, %y
   ret <8 x i32> %r
 }
 
-define <4 x i64> @in_v4i64(<4 x i64> *%px, <4 x i64> *%py, <4 x i64> *%pmask) nounwind {
+define <4 x i64> @in_v4i64(ptr%px, ptr%py, ptr%pmask) nounwind {
 ; CHECK-BASELINE-LABEL: in_v4i64:
 ; CHECK-BASELINE:       # %bb.0:
 ; CHECK-BASELINE-NEXT:    pushq %rbx
@@ -4371,9 +4371,9 @@ define <4 x i64> @in_v4i64(<4 x i64> *%px, <4 x i64> *%py, <4 x i64> *%pmask) no
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %ymm1
 ; CHECK-XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i64>, <4 x i64> *%px, align 32
-  %y = load <4 x i64>, <4 x i64> *%py, align 32
-  %mask = load <4 x i64>, <4 x i64> *%pmask, align 32
+  %x = load <4 x i64>, ptr%px, align 32
+  %y = load <4 x i64>, ptr%py, align 32
+  %mask = load <4 x i64>, ptr%pmask, align 32
   %n0 = xor <4 x i64> %x, %y
   %n1 = and <4 x i64> %n0, %mask
   %r = xor <4 x i64> %n1, %y

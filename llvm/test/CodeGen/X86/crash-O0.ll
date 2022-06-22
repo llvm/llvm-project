@@ -88,8 +88,8 @@ define i64 @addressModeWith32bitIndex(i32 %V) {
 ; CHECK-NEXT:    idivq (%rcx,%rsi,8)
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
-  %gep = getelementptr i64, i64* null, i32 %V
-  %load = load i64, i64* %gep
+  %gep = getelementptr i64, ptr null, i32 %V
+  %load = load i64, ptr %gep
   %sdiv = sdiv i64 0, %load
   ret i64 %sdiv
 }

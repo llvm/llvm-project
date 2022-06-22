@@ -3,14 +3,12 @@
 
 
 ; Test that Control Flow Guard checks are correctly added for x86 vector calls.
-define void @func_cf_vector_x86(void (%struct.HVA)* %0, %struct.HVA* %1) #0 {
+define void @func_cf_vector_x86(ptr %0, ptr %1) #0 {
 entry:
   %2 = alloca %struct.HVA, align 8
-  %3 = bitcast %struct.HVA* %2 to i8*
-  %4 = bitcast %struct.HVA* %1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %3, i8* align 8 %4, i32 32, i1 false)
-  %5 = load %struct.HVA, %struct.HVA* %2, align 8
-  call x86_vectorcallcc void %0(%struct.HVA inreg %5)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %2, ptr align 8 %1, i32 32, i1 false)
+  %3 = load %struct.HVA, ptr %2, align 8
+  call x86_vectorcallcc void %0(%struct.HVA inreg %3)
   ret void
 
   ; X32-LABEL: func_cf_vector_x86
@@ -35,7 +33,7 @@ attributes #0 = { "target-cpu"="pentium4" "target-features"="+cx8,+fxsr,+mmx,+ss
 
 %struct.HVA = type { double, double, double, double }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1 immarg) #1
 attributes #1 = { argmemonly nounwind willreturn }
 
 

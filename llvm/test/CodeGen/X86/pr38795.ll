@@ -169,11 +169,11 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %or.cond61, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.cond
-  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0), i64 undef)
+  tail call void (ptr, ...) @printf(ptr @.str, i64 undef)
   br label %for.cond35
 
 if.end:                                           ; preds = %for.cond
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %div = sdiv i32 %m.0, %0
   br label %ac
 
@@ -183,16 +183,16 @@ ac:                                               ; preds = %ac, %if.end
 if.end9:                                          ; preds = %ac
   %conv3 = trunc i32 %m.0 to i8
   %conv5 = sext i16 %l.0 to i32
-  store i32 %conv5, i32* @h, align 4
+  store i32 %conv5, ptr @h, align 4
   %cmp11 = icmp slt i8 %k.0, 9
   br i1 %cmp11, label %if.then13, label %if.end21
 
 if.then13:                                        ; preds = %if.end9
-  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0), i64 undef)
+  tail call void (ptr, ...) @printf(ptr @.str, i64 undef)
   br i1 undef, label %for.inc, label %for.cond35
 
 if.end21:                                         ; preds = %if.end9
-  %1 = load i8, i8* @g, align 1
+  %1 = load i8, ptr @g, align 1
   br label %ae
 
 ae:                                               ; preds = %for.cond47, %if.end21
@@ -218,7 +218,7 @@ for.inc:                                          ; preds = %if.then31, %if.end2
   %p.2 = phi i8 [ %p.1, %if.then31 ], [ %p.1, %if.end26 ], [ undef, %if.then13 ]
   %k.2 = phi i8 [ %k.1, %if.then31 ], [ %k.1, %if.end26 ], [ %conv3, %if.then13 ]
   %q.2 = phi i32 [ 0, %if.then31 ], [ %q.1, %if.end26 ], [ %q.0, %if.then13 ]
-  %2 = load i32, i32* @h, align 4
+  %2 = load i32, ptr @h, align 4
   br label %for.cond
 
 for.cond35:                                       ; preds = %for.inc44, %if.then13, %if.then
@@ -240,7 +240,7 @@ if.end39:                                         ; preds = %af
   br i1 %tobool40, label %for.end46, label %if.then41
 
 if.then41:                                        ; preds = %if.end39
-  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0), i64 ptrtoint (void ()* @fn to i64))
+  tail call void (ptr, ...) @printf(ptr @.str, i64 ptrtoint (ptr @fn to i64))
   br label %for.end46
 
 for.inc44:                                        ; preds = %af
@@ -258,4 +258,4 @@ for.cond47:                                       ; preds = %for.cond47, %for.en
   br i1 %brmerge, label %for.cond47, label %ae
 }
 
-declare dso_local void @printf(i8* nocapture readonly, ...) local_unnamed_addr
+declare dso_local void @printf(ptr nocapture readonly, ...) local_unnamed_addr

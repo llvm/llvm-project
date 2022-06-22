@@ -2,7 +2,7 @@
 target triple = "x86_64-apple-macosx10.8.0"
 
 ; CHECK: mm2
-define i32 @mm2(i32* nocapture %p, i32 %n) nounwind uwtable readonly ssp {
+define i32 @mm2(ptr nocapture %p, i32 %n) nounwind uwtable readonly ssp {
 entry:
   br label %do.body
 
@@ -13,9 +13,9 @@ do.body:
   %max.0 = phi i32 [ 0, %entry ], [ %max.1, %do.cond ]
   %min.0 = phi i32 [ 0, %entry ], [ %min.1, %do.cond ]
   %n.addr.0 = phi i32 [ %n, %entry ], [ %dec, %do.cond ]
-  %p.addr.0 = phi i32* [ %p, %entry ], [ %incdec.ptr, %do.cond ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.0, i64 1
-  %0 = load i32, i32* %p.addr.0, align 4
+  %p.addr.0 = phi ptr [ %p, %entry ], [ %incdec.ptr, %do.cond ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.0, i64 1
+  %0 = load i32, ptr %p.addr.0, align 4
   %cmp = icmp sgt i32 %0, %max.0
   br i1 %cmp, label %do.cond, label %if.else
 
@@ -71,7 +71,7 @@ declare void @fprintf(...) nounwind
 ; CHECK: BZ2_decompress
 ; This test case contains irreducible control flow, so MachineLoopInfo doesn't
 ; recognize the cycle in the CFG. This would confuse MachineTraceMetrics.
-define void @BZ2_decompress(i8* %s) nounwind ssp {
+define void @BZ2_decompress(ptr %s) nounwind ssp {
 entry:
   switch i32 undef, label %sw.default [
     i32 39, label %if.end.sw.bb2050_crit_edge
@@ -108,7 +108,7 @@ if.end2042:                                       ; preds = %while.body2038
   br i1 undef, label %if.end2048, label %while.end2104
 
 if.end2048:                                       ; preds = %if.end2042
-  %bsLive2054.pre = getelementptr inbounds i8, i8* %s, i32 8
+  %bsLive2054.pre = getelementptr inbounds i8, ptr %s, i32 8
   br label %sw.bb2050
 
 sw.bb2050:                                        ; preds = %if.end2048, %if.end.sw.bb2050_crit_edge
@@ -137,7 +137,7 @@ sw.default:                                       ; preds = %entry
 
 save_state_and_return:
   %groupPos.14 = phi i32 [ 0, %sw.default ], [ %groupPos.8, %while.body2038 ], [ %groupPos.8, %while.end2104 ], [ 0, %if.end.sw.bb3058_crit_edge ], [ 0, %if.end.sw.bb1855_crit_edge ], [ %groupPos.8, %while.body2161.lr.ph ], [ %groupPos.8, %while.body2145.lr.ph ], [ 0, %sw.bb2409 ], [ 0, %sw.bb1788 ], [ 0, %sw.bb1983 ]
-  store i32 %groupPos.14, i32* undef, align 4
+  store i32 %groupPos.14, ptr undef, align 4
   ret void
 }
 

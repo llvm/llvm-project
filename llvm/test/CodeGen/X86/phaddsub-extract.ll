@@ -1563,7 +1563,7 @@ define i16 @extract_extract01_v32i16_sub_i16_commute(<32 x i16> %x) {
 
 ; Check output when 1 or both extracts have extra uses.
 
-define i32 @extract_extract01_v4i32_add_i32_uses1(<4 x i32> %x, i32* %p) {
+define i32 @extract_extract01_v4i32_add_i32_uses1(<4 x i32> %x, ptr %p) {
 ; SSE3-SLOW-LABEL: extract_extract01_v4i32_add_i32_uses1:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
@@ -1595,13 +1595,13 @@ define i32 @extract_extract01_v4i32_add_i32_uses1(<4 x i32> %x, i32* %p) {
 ; AVX-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX-FAST-NEXT:    retq
   %x0 = extractelement <4 x i32> %x, i32 0
-  store i32 %x0, i32* %p
+  store i32 %x0, ptr %p
   %x1 = extractelement <4 x i32> %x, i32 1
   %x01 = add i32 %x0, %x1
   ret i32 %x01
 }
 
-define i32 @extract_extract01_v4i32_add_i32_uses2(<4 x i32> %x, i32* %p) {
+define i32 @extract_extract01_v4i32_add_i32_uses2(<4 x i32> %x, ptr %p) {
 ; SSE3-SLOW-LABEL: extract_extract01_v4i32_add_i32_uses2:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
@@ -1635,12 +1635,12 @@ define i32 @extract_extract01_v4i32_add_i32_uses2(<4 x i32> %x, i32* %p) {
 ; AVX-FAST-NEXT:    retq
   %x0 = extractelement <4 x i32> %x, i32 0
   %x1 = extractelement <4 x i32> %x, i32 1
-  store i32 %x1, i32* %p
+  store i32 %x1, ptr %p
   %x01 = add i32 %x0, %x1
   ret i32 %x01
 }
 
-define i32 @extract_extract01_v4i32_add_i32_uses3(<4 x i32> %x, i32* %p1, i32* %p2) {
+define i32 @extract_extract01_v4i32_add_i32_uses3(<4 x i32> %x, ptr %p1, ptr %p2) {
 ; SSE3-LABEL: extract_extract01_v4i32_add_i32_uses3:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movd %xmm0, %ecx
@@ -1660,9 +1660,9 @@ define i32 @extract_extract01_v4i32_add_i32_uses3(<4 x i32> %x, i32* %p1, i32* %
 ; AVX-NEXT:    vpextrd $1, %xmm0, (%rsi)
 ; AVX-NEXT:    retq
   %x0 = extractelement <4 x i32> %x, i32 0
-  store i32 %x0, i32* %p1
+  store i32 %x0, ptr %p1
   %x1 = extractelement <4 x i32> %x, i32 1
-  store i32 %x1, i32* %p2
+  store i32 %x1, ptr %p2
   %x01 = add i32 %x0, %x1
   ret i32 %x01
 }

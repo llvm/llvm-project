@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64"
 @i6000 = dso_local global [128 x i64] zeroinitializer, align 16
 
 
-define dso_local void @foo(i32* %a0, i32* %a1, i32* %a2, i32* %a3, i32* %a4, i32* %a5) {
+define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %b
 ; CHECK-NEXT:    pushq %rbp
@@ -249,12 +249,12 @@ define dso_local void @foo(i32* %a0, i32* %a1, i32* %a2, i32* %a3, i32* %a4, i32
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 b:
-	%r = load i32, i32* %a0
-	%r2 = load i32, i32* %a1
-	%r4 = load i32, i32* %a2
-	%r6 = load i32, i32* %a3
-	%r8 = load i32, i32* %a4
-	%r14 = load i32, i32* %a5
+	%r = load i32, ptr %a0
+	%r2 = load i32, ptr %a1
+	%r4 = load i32, ptr %a2
+	%r6 = load i32, ptr %a3
+	%r8 = load i32, ptr %a4
+	%r14 = load i32, ptr %a5
 	%rx = sext i32 %r2 to i64
 	%r9 = sext i32 %r to i64
 	%r11 = add i64 %rx, 0
@@ -272,13 +272,12 @@ b:
 	%r24 = shl i32 %r23a, 0
 	%r25 = add i32 %r24, 0
 	%ras2 = alloca i8, i32 %r25, align 16
-	%r28 = getelementptr i8, i8* %ras2, i32 0
 	%r38 = shl i64 %r12, 0
 	%s2013 = add i64 %r38, 0
-	%c22012 = getelementptr i8, i8* %ras2, i64 %s2013
+	%c22012 = getelementptr i8, ptr %ras2, i64 %s2013
 	%r42 = shl i64 %r12, 0
 	%s2011 = add i64 %r42, 16
-	%c22010 = getelementptr i8, i8* %ras2, i64 %s2011
+	%c22010 = getelementptr i8, ptr %ras2, i64 %s2011
 	%r50 = add i64 %r16, 0
 	%r51 = icmp slt i64 %r50, 0
 	%r50sh = shl i64 %r50, 0
@@ -286,7 +285,7 @@ b:
 	%r54 = select i1 %r51, i64 0, i64 %r50j
 	%r56 = mul i64 %r54, %r12
 	%r28s = add i64 %r56, 16
-	%c2 = getelementptr i8, i8* %ras2, i64 %r28s
+	%c2 = getelementptr i8, ptr %ras2, i64 %r28s
 	%r60 = sub i32 %r2, %r
 	%r61 = icmp slt i32 %r60, 0
 	br i1 %r61, label %a29b, label %b63
@@ -373,14 +372,14 @@ b341:
 	%d753 = bitcast i64 %w1874 to i64
 	%r343 = add i64 %s661, 0
 	%r346 = add i64 %r343, 0
-	%r347 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r346
-	%r348 = load float, float* %r347
+	%r347 = getelementptr float, ptr @i6000, i64 %r346
+	%r348 = load float, ptr %r347
 	%r352 = add i64 %r343, 0
-	%r353 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r352
-	%r354 = load float, float* %r353
-	%r362 = load float, float* bitcast ([128 x i64]* @i6000 to float*)
+	%r353 = getelementptr float, ptr @i6000, i64 %r352
+	%r354 = load float, ptr %r353
+	%r362 = load float, ptr @i6000
 	%r363 = fadd float 0.000000e+00, %r362
-	%r370 = load float, float* bitcast ([128 x i64]* @i6000 to float*)
+	%r370 = load float, ptr @i6000
 	%r376 = icmp slt i64 %r16, 0
 	br i1 %r376, label %b377, label %a35b
 b377:
@@ -424,9 +423,9 @@ b535:
 	%s923 = phi i64 [ 0, %b514 ], [ %r799, %b712 ]
 	%s933 = phi i64 [ %r533, %b514 ], [ %r795, %b712 ]
 	%r538 = add i64 %w1855, 0
-	%r539 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r538
-	%r540 = load float, float* %r539
-	%r551 = load float, float* bitcast ([128 x i64]* @i6000 to float*)
+	%r539 = getelementptr float, ptr @i6000, i64 %r538
+	%r540 = load float, ptr %r539
+	%r551 = load float, ptr @i6000
 	%r562 = sub i64 %s933, 0
 	%r564 = icmp slt i64 %r512, 0
 	br i1 %r564, label %b565, label %a45b
@@ -453,23 +452,23 @@ b712:
 a45b714:
 	%r717 = add i64 %e944, 0
 	%r720 = add i64 %r717, 0
-	%r721 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r720
-	%r722 = load float, float* %r721
+	%r721 = getelementptr float, ptr @i6000, i64 %r720
+	%r722 = load float, ptr %r721
 	%r726 = add i64 %r717, 0
-	%r727 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r726
-	%r728 = load float, float* %r727
+	%r727 = getelementptr float, ptr @i6000, i64 %r726
+	%r728 = load float, ptr %r727
 	%r732 = add i64 %r717, 0
-	%r733 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r732
-	%r734 = load float, float* %r733
+	%r733 = getelementptr float, ptr @i6000, i64 %r732
+	%r734 = load float, ptr %r733
 	%r738 = add i64 %r717, 0
-	%r739 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r738
-	%r740 = load float, float* %r739
+	%r739 = getelementptr float, ptr @i6000, i64 %r738
+	%r740 = load float, ptr %r739
 	%r744 = add i64 %r717, 0
-	%r745 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r744
-	%r746 = load float, float* %r745
+	%r745 = getelementptr float, ptr @i6000, i64 %r744
+	%r746 = load float, ptr %r745
 	%r750 = add i64 %r717, 0
-	%r751 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r750
-	%r752 = load float, float* %r751
+	%r751 = getelementptr float, ptr @i6000, i64 %r750
+	%r752 = load float, ptr %r751
 	%r753 = fadd float %r752, %r746
 	%r754 = fadd float %r728, %r722
 	%r755 = fadd float %r734, %r754
@@ -477,11 +476,11 @@ a45b714:
 	%r757 = fadd float %r753, %r756
 	%r759 = fadd float %r757, %r540
 	%r770 = add i64 %r717, 0
-	%r771 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r770
-	%r772 = load float, float* %r771
+	%r771 = getelementptr float, ptr @i6000, i64 %r770
+	%r772 = load float, ptr %r771
 	%r776 = add i64 %r717, 0
-	%r777 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r776
-	%r778 = load float, float* %r777
+	%r777 = getelementptr float, ptr @i6000, i64 %r776
+	%r778 = load float, ptr %r777
 	%r781 = fadd float %r363, %r772
 	%r782 = fadd float %r781, %r778
 	%r783 = fadd float %r551, %r782
@@ -494,7 +493,7 @@ b820:
 	%r844 = add i64 %r16, 0
 	%r846 = sext i32 %r60 to i64
 	%r847 = add i64 %r846, 0
-	%r851 = load float, float* bitcast ([128 x i64]* @i6000 to float*)
+	%r851 = load float, ptr @i6000
 	%r856 = sub i64 %rx, 0
 	br label %b858
 b858:
@@ -506,11 +505,11 @@ b858:
 	%s1173 = add i64 %b1902, 0
 	%r859 = add i64 %r856, 0
 	%r862 = add i64 %w1891, 0
-	%r863 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r862
-	%r864 = load float, float* %r863
+	%r863 = getelementptr float, ptr @i6000, i64 %r862
+	%r864 = load float, ptr %r863
 	%r868 = add i64 %w1891, 0
-	%r869 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r868
-	%r870 = load float, float* %r869
+	%r869 = getelementptr float, ptr @i6000, i64 %r868
+	%r870 = load float, ptr %r869
 	%r873 = sub i64 %r859, 0
 	%r876 = sub i64 %s1173, 0
 	%r878 = icmp slt i64 %r847, 0
@@ -540,16 +539,14 @@ b1016:
 a53b1019:
 	%w1885 = phi i64 [ 0, %a53b1019q ], [ %v1886, %a53b1019 ]
 	%r1022 = add i64 %r876, 0
-	%r1024 = bitcast i8* %c2 to float*
 	%r1025 = add i64 %r1022, 0
-	%r1026 = getelementptr float, float* %r1024, i64 %r1025
-	%r1027 = load float, float* %r1026
+	%r1026 = getelementptr float, ptr %c2, i64 %r1025
+	%r1027 = load float, ptr %r1026
 	%r1032 = add i64 %r873, 0
 	%r1033 = add i64 %r1032, 0
-	%r1034 = getelementptr float, float* %r1024, i64 %r1033
-	%r1035 = load float, float* %r1034
-	%r1037 = bitcast i8* %c22010 to float*
-	%r1040 = getelementptr float, float* %r1037, i64 %r1025
+	%r1034 = getelementptr float, ptr %c2, i64 %r1033
+	%r1035 = load float, ptr %r1034
+	%r1040 = getelementptr float, ptr %c22010, i64 %r1025
 	%r1044 = fadd float %r864, %r1035
 	%r1046 = fadd float %r870, %r1027
 	%r1047 = fadd float %r1044, %r1046
@@ -576,11 +573,10 @@ b1117:
 	%d1353 = bitcast i64 %w1915 to i64
 	%r1120 = add i64 %s661, 0
 	%r1121 = add i64 %r1120, 0
-	%r1122 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r1121
-	%r1123 = load float, float* %r1122
-	%r1132 = bitcast i8* %c22012 to float*
-	%r1134 = getelementptr float, float* %r1132, i64 %w1915
-	%r1135 = load float, float* %r1134
+	%r1122 = getelementptr float, ptr @i6000, i64 %r1121
+	%r1123 = load float, ptr %r1122
+	%r1134 = getelementptr float, ptr %c22012, i64 %w1915
+	%r1135 = load float, ptr %r1134
 	%r1136 = fadd float %r1123, %r1135
 	%r1138 = icmp slt i64 %r1114, 0
 	br i1 %r1138, label %b1139, label %a63b
@@ -650,8 +646,8 @@ b1342:
 	%r1352 = add i64 %s1523, 0
 	%r1355 = sub i64 %r1352, 0
 	%r1370 = add i64 %d1533, 0
-	%r1371 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r1370
-	%r1372 = load float, float* %r1371
+	%r1371 = getelementptr float, ptr @i6000, i64 %r1370
+	%r1372 = load float, ptr %r1371
 	br label %a74b
 a74b:
 	%w1958 = phi i64 [ 0, %b1342 ], [ %v1959, %a74b ]
@@ -680,19 +676,18 @@ a97b:
 	%r1613 = add i64 %w1964, 0
 	%r1614 = mul i64 %r1613, 0
 	%r1622 = add i64 %r1614, 0
-	%r1754 = bitcast i8* %r28 to float*
-	%r1756 = getelementptr float, float* %r1754, i64 %w1970
-	%r1757 = load float, float* %r1756
+	%r1756 = getelementptr float, ptr %ras2, i64 %w1970
+	%r1757 = load float, ptr %r1756
 	%r1761 = add i64 %r1622, 0
-	%r1762 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r1761
-	%r1763 = load float, float* %r1762
+	%r1762 = getelementptr float, ptr @i6000, i64 %r1761
+	%r1763 = load float, ptr %r1762
 	%r1767 = add i64 %r1622, 0
-	%r1768 = getelementptr float, float* bitcast ([128 x i64]* @i6000 to float*), i64 %r1767
+	%r1768 = getelementptr float, ptr @i6000, i64 %r1767
 	%r1772 = fadd float %r1763, 0.000000e+00
 	%r1773 = fadd float %r1772, 0.000000e+00
 	%r1809 = fadd float %r1757, 0.000000e+00
 	%r1810 = fadd float %r1773, %r1809
-	store float %r1810, float* %r1768
+	store float %r1810, ptr %r1768
 	%r1818 = add i64 %w1970, 0
 	%r1826 = icmp slt i64 %r1818, 0
 	%v1971 = add i64 %w1970, 0

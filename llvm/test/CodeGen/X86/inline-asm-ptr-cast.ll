@@ -11,17 +11,14 @@ entry:
   %dst = alloca i32, align 4
   %flags = alloca i64, align 8
   %newflags = alloca i64, align 8
-  store i32 0, i32* %src, align 4
-  store i32 0, i32* %dst, align 4
-  store i64 1, i64* %flags, align 8
-  store i64 -1, i64* %newflags, align 8
-  %0 = bitcast i32* %dst to i8*
-  %tmp = load i64, i64* %flags, align 8
+  store i32 0, ptr %src, align 4
+  store i32 0, ptr %dst, align 4
+  store i64 1, ptr %flags, align 8
+  store i64 -1, ptr %newflags, align 8
+  %tmp = load i64, ptr %flags, align 8
   %and = and i64 %tmp, 1
-  %1 = bitcast i32* %src to i8*
-  %tmp1 = load i8, i8* %1
-  %2 = bitcast i32* %dst to i8*
-  %tmp2 = load i8, i8* %2
-  call void asm "pushfq \0Aandq $2, (%rsp) \0Aorq  $3, (%rsp) \0Apopfq \0Aaddb $4, $1 \0Apushfq \0Apopq $0 \0A", "=*&rm,=*&rm,i,r,r,1,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %newflags, i8* elementtype(i8) %0, i64 -2, i64 %and, i8 %tmp1, i8 %tmp2) nounwind
+  %tmp1 = load i8, ptr %src
+  %tmp2 = load i8, ptr %dst
+  call void asm "pushfq \0Aandq $2, (%rsp) \0Aorq  $3, (%rsp) \0Apopfq \0Aaddb $4, $1 \0Apushfq \0Apopq $0 \0A", "=*&rm,=*&rm,i,r,r,1,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %newflags, ptr elementtype(i8) %dst, i64 -2, i64 %and, i8 %tmp1, i8 %tmp2) nounwind
   ret void
 }

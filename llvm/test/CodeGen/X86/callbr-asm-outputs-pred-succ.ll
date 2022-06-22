@@ -31,25 +31,25 @@
 @str.4 = private unnamed_addr constant [30 x i8] c"inline asm#2 caused exception\00", align 1
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @main(i32 %0, i8** nocapture readnone %1) #0 {
-  %3 = callbr i32 asm "jmp ${1:l}", "=r,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@main, %11)) #3
+define dso_local i32 @main(i32 %0, ptr nocapture readnone %1) #0 {
+  %3 = callbr i32 asm "jmp ${1:l}", "=r,i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@main, %11)) #3
           to label %4 [label %11]
 
 4:                                                ; preds = %2
-  %5 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([26 x i8], [26 x i8]* @.str, i64 0, i64 0), i32 %3)
-  %6 = callbr i32 asm "jmp ${1:l}", "=r,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@main, %7)) #3
+  %5 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 %3)
+  %6 = callbr i32 asm "jmp ${1:l}", "=r,i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@main, %7)) #3
           to label %9 [label %7]
 
 7:                                                ; preds = %4
-  %8 = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([30 x i8], [30 x i8]* @str.4, i64 0, i64 0))
+  %8 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str.4)
   br label %13
 
 9:                                                ; preds = %4
-  %10 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([26 x i8], [26 x i8]* @.str.2, i64 0, i64 0), i32 %6)
+  %10 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str.2, i32 %6)
   br label %13
 
 11:                                               ; preds = %2
-  %12 = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([30 x i8], [30 x i8]* @str, i64 0, i64 0))
+  %12 = tail call i32 @puts(ptr nonnull dereferenceable(1) @str)
   br label %13
 
 13:                                               ; preds = %11, %9, %7
@@ -57,5 +57,5 @@ define dso_local i32 @main(i32 %0, i8** nocapture readnone %1) #0 {
   ret i32 %14
 }
 
-declare dso_local i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr #1
-declare i32 @puts(i8* nocapture readonly) local_unnamed_addr #2
+declare dso_local i32 @printf(ptr nocapture readonly, ...) local_unnamed_addr #1
+declare i32 @puts(ptr nocapture readonly) local_unnamed_addr #2

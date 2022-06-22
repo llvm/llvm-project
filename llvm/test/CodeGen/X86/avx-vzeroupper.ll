@@ -83,11 +83,11 @@ define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounw
 ; BTVER2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; BTVER2-NEXT:    addq $40, %rsp
 ; BTVER2-NEXT:    retq
-  %tmp = load <4 x float>, <4 x float>* @x, align 16
+  %tmp = load <4 x float>, ptr @x, align 16
   %call = tail call <4 x float> @do_sse(<4 x float> %tmp) nounwind
-  store <4 x float> %call, <4 x float>* @x, align 16
+  store <4 x float> %call, ptr @x, align 16
   %call2 = tail call <4 x float> @do_sse(<4 x float> %call) nounwind
-  store <4 x float> %call2, <4 x float>* @x, align 16
+  store <4 x float> %call2, ptr @x, align 16
   ret <8 x float> %c
 }
 
@@ -254,7 +254,7 @@ for.body:
   %c.017 = phi <4 x float> [ %add.i, %while.cond ], [ %call14, %for.body ]
   %call5 = tail call <4 x float> @do_sse(<4 x float> %c.017) nounwind
   %call7 = tail call <4 x float> @do_sse(<4 x float> %call5) nounwind
-  %tmp11 = load <8 x float>, <8 x float>* @g, align 32
+  %tmp11 = load <8 x float>, ptr @g, align 32
   %0 = tail call <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float> %tmp11, i8 1) nounwind
   %call14 = tail call <4 x float> @do_sse(<4 x float> %0) nounwind
   %1 = add nsw i32 %i.018, 1

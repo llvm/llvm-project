@@ -2,5 +2,5 @@
 ; PR853
 
 ; CHECK: 4294967240
-@X = global i32* inttoptr (i64 -56 to i32*)		; <i32**> [#uses=0]
+@X = global ptr inttoptr (i64 -56 to ptr)		; <ptr> [#uses=0]
 

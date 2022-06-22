@@ -1396,7 +1396,7 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %
 ; CGP should allow a cross-block splat shift amount to be seen in SDAG.
 ; PR37426 - https://bugs.llvm.org/show_bug.cgi?id=37426
 
-define void @sink_splatvar(i32* %p, i32 %shift_amt) {
+define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; SSE-LABEL: sink_splatvar:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movd %esi, %xmm0
@@ -1622,11 +1622,10 @@ entry:
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %inc, %loop ]
-  %addr = getelementptr inbounds i32, i32* %p, i64 %index
-  %addr_vec = bitcast i32* %addr to <4 x i32>*
-  %x = load <4 x i32>, <4 x i32>* %addr_vec, align 4
+  %addr = getelementptr inbounds i32, ptr %p, i64 %index
+  %x = load <4 x i32>, ptr %addr, align 4
   %fsh = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %splat)
-  store <4 x i32> %fsh, <4 x i32>* %addr_vec, align 4
+  store <4 x i32> %fsh, ptr %addr, align 4
   %inc = add i64 %index, 4
   %iv = icmp eq i64 %inc, 256
   br i1 %iv, label %end, label %loop

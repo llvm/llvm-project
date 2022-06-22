@@ -166,7 +166,7 @@ declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32)
 
 declare <4 x float> @f()
 
-define <4 x float> @test3(<4 x float> %A, float *%b, i32 %C) nounwind {
+define <4 x float> @test3(<4 x float> %A, ptr%b, i32 %C) nounwind {
 ; X32-LABEL: test3:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -188,13 +188,13 @@ define <4 x float> @test3(<4 x float> %A, float *%b, i32 %C) nounwind {
 ; X64_AVX:       ## %bb.0:
 ; X64_AVX-NEXT:    vroundss $4, (%rdi), %xmm0, %xmm0
 ; X64_AVX-NEXT:    retq
-  %a = load float , float *%b
+  %a = load float , ptr%b
   %B = insertelement <4 x float> undef, float %a, i32 0
   %X = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %A, <4 x float> %B, i32 4)
   ret <4 x float> %X
 }
 
-define <4 x float> @test4(<4 x float> %A, float *%b, i32 %C) nounwind {
+define <4 x float> @test4(<4 x float> %A, ptr%b, i32 %C) nounwind {
 ; X32-LABEL: test4:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    subl $28, %esp
@@ -236,7 +236,7 @@ define <4 x float> @test4(<4 x float> %A, float *%b, i32 %C) nounwind {
 ; X64_AVX-NEXT:    vroundss $4, (%rsp), %xmm0, %xmm0 ## 16-byte Folded Reload
 ; X64_AVX-NEXT:    addq $24, %rsp
 ; X64_AVX-NEXT:    retq
-  %a = load float , float *%b
+  %a = load float , ptr%b
   %B = insertelement <4 x float> undef, float %a, i32 0
   %q = call <4 x float> @f()
   %X = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %q, <4 x float> %B, i32 4)
@@ -271,7 +271,7 @@ entry:
 
 declare <2 x double> @llvm.x86.sse2.cvtsi2sd(<2 x double>, i32) nounwind readnone
 
-define <4 x float> @minss_fold(float* %x, <4 x float> %y) {
+define <4 x float> @minss_fold(ptr %x, <4 x float> %y) {
 ; X32-LABEL: minss_fold:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -294,7 +294,7 @@ define <4 x float> @minss_fold(float* %x, <4 x float> %y) {
 ; X64_AVX-NEXT:    vminss (%rdi), %xmm0, %xmm0
 ; X64_AVX-NEXT:    retq
 entry:
-  %0 = load float, float* %x, align 1
+  %0 = load float, ptr %x, align 1
   %vecinit.i = insertelement <4 x float> undef, float %0, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float 0.000000e+00, i32 1
   %vecinit3.i = insertelement <4 x float> %vecinit2.i, float 0.000000e+00, i32 2
@@ -303,7 +303,7 @@ entry:
   ret <4 x float> %1
 }
 
-define <4 x float> @maxss_fold(float* %x, <4 x float> %y) {
+define <4 x float> @maxss_fold(ptr %x, <4 x float> %y) {
 ; X32-LABEL: maxss_fold:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -326,7 +326,7 @@ define <4 x float> @maxss_fold(float* %x, <4 x float> %y) {
 ; X64_AVX-NEXT:    vmaxss (%rdi), %xmm0, %xmm0
 ; X64_AVX-NEXT:    retq
 entry:
-  %0 = load float, float* %x, align 1
+  %0 = load float, ptr %x, align 1
   %vecinit.i = insertelement <4 x float> undef, float %0, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float 0.000000e+00, i32 1
   %vecinit3.i = insertelement <4 x float> %vecinit2.i, float 0.000000e+00, i32 2
@@ -335,7 +335,7 @@ entry:
   ret <4 x float> %1
 }
 
-define <4 x float> @cmpss_fold(float* %x, <4 x float> %y) {
+define <4 x float> @cmpss_fold(ptr %x, <4 x float> %y) {
 ; X32-LABEL: cmpss_fold:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -358,7 +358,7 @@ define <4 x float> @cmpss_fold(float* %x, <4 x float> %y) {
 ; X64_AVX-NEXT:    vcmpeqss (%rdi), %xmm0, %xmm0
 ; X64_AVX-NEXT:    retq
 entry:
-  %0 = load float, float* %x, align 1
+  %0 = load float, ptr %x, align 1
   %vecinit.i = insertelement <4 x float> undef, float %0, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float 0.000000e+00, i32 1
   %vecinit3.i = insertelement <4 x float> %vecinit2.i, float 0.000000e+00, i32 2
@@ -369,7 +369,7 @@ entry:
 declare <4 x float> @llvm.x86.sse.cmp.ss(<4 x float>, <4 x float>, i8) nounwind readnone
 
 
-define <4 x float> @double_fold(float* %x, <4 x float> %y) {
+define <4 x float> @double_fold(ptr %x, <4 x float> %y) {
 ; X32-LABEL: double_fold:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -406,7 +406,7 @@ define <4 x float> @double_fold(float* %x, <4 x float> %y) {
 ; X64_AVX-NEXT:    vaddps %xmm0, %xmm2, %xmm0
 ; X64_AVX-NEXT:    retq
 entry:
-  %0 = load float, float* %x, align 1
+  %0 = load float, ptr %x, align 1
   %vecinit.i = insertelement <4 x float> undef, float %0, i32 0
   %1 = tail call <4 x float> @llvm.x86.sse.min.ss(<4 x float> %y, <4 x float> %vecinit.i)
   %2 = tail call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %y, <4 x float> %vecinit.i)

@@ -15,9 +15,9 @@ define <4 x float> @foo() {
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,0,3,1]
 ; CHECK-NEXT:    retq
 entry:
-  %V = load <2 x float>, <2 x float>* @G1, align 8
+  %V = load <2 x float>, ptr @G1, align 8
   %shuffle = shufflevector <2 x float> %V, <2 x float> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef>
-  %L = load <8 x float>, <8 x float>* @G2, align 32
+  %L = load <8 x float>, ptr @G2, align 32
   %shuffle1 = shufflevector <8 x float> %shuffle, <8 x float> %L, <4 x i32> <i32 12, i32 10, i32 14, i32 4>
   ret <4 x float> %shuffle1
 }

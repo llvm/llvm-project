@@ -7,16 +7,16 @@
 ; Chain and flag folding issues.
 define i32 @test1() nounwind ssp {
 entry:
-  %tmp5.i = load volatile i32, i32* undef              ; <i32> [#uses=1]
+  %tmp5.i = load volatile i32, ptr undef              ; <i32> [#uses=1]
   %conv.i = zext i32 %tmp5.i to i64               ; <i64> [#uses=1]
-  %tmp12.i = load volatile i32, i32* undef             ; <i32> [#uses=1]
+  %tmp12.i = load volatile i32, ptr undef             ; <i32> [#uses=1]
   %conv13.i = zext i32 %tmp12.i to i64            ; <i64> [#uses=1]
   %shl.i = shl i64 %conv13.i, 32                  ; <i64> [#uses=1]
   %or.i = or i64 %shl.i, %conv.i                  ; <i64> [#uses=1]
   %add16.i = add i64 %or.i, 256                   ; <i64> [#uses=1]
   %shr.i = lshr i64 %add16.i, 8                   ; <i64> [#uses=1]
   %conv19.i = trunc i64 %shr.i to i32             ; <i32> [#uses=1]
-  store volatile i32 %conv19.i, i32* undef
+  store volatile i32 %conv19.i, ptr undef
   ret i32 undef
 }
 
@@ -40,19 +40,19 @@ if.end:                                           ; preds = %land.end
 
 define void @test3() {
 dependentGraph243.exit:
-  %subject19 = load %pair, %pair* undef                     ; <%1> [#uses=1]
+  %subject19 = load %pair, ptr undef                     ; <%1> [#uses=1]
   %0 = extractvalue %pair %subject19, 1              ; <double> [#uses=2]
   %1 = select i1 undef, double %0, double undef   ; <double> [#uses=1]
   %2 = select i1 undef, double %1, double %0      ; <double> [#uses=1]
   %3 = insertvalue %pair undef, double %2, 1         ; <%1> [#uses=1]
-  store %pair %3, %pair* undef
+  store %pair %3, ptr undef
   ret void
 }
 
 ; PR6605
-define i64 @test4(i8* %P) nounwind ssp {
+define i64 @test4(ptr %P) nounwind ssp {
 entry:
-  %tmp1 = load i8, i8* %P                           ; <i8> [#uses=3]
+  %tmp1 = load i8, ptr %P                           ; <i8> [#uses=3]
   %tobool = icmp eq i8 %tmp1, 0                   ; <i1> [#uses=1]
   %tmp58 = sext i1 %tobool to i8                  ; <i8> [#uses=1]
   %mul.i = and i8 %tmp58, %tmp1                   ; <i8> [#uses=1]
@@ -76,7 +76,7 @@ declare i32 @safe(i32)
 ; PR6607
 define fastcc void @test5(i32 %FUNC) nounwind {
 foo:
-  %0 = load i8, i8* undef, align 1                    ; <i8> [#uses=3]
+  %0 = load i8, ptr undef, align 1                    ; <i8> [#uses=3]
   %1 = sext i8 %0 to i32                          ; <i32> [#uses=2]
   %2 = zext i8 %0 to i32                          ; <i32> [#uses=1]
   %tmp1.i5037 = urem i32 %2, 10                   ; <i32> [#uses=1]
@@ -88,7 +88,7 @@ foo:
   %6 = shl i32 %storemerge.i.i57, 16              ; <i32> [#uses=1]
   %7 = sdiv i32 %6, -256                          ; <i32> [#uses=1]
   %8 = trunc i32 %7 to i8                         ; <i8> [#uses=1]
-  store i8 %8, i8* undef, align 1
+  store i8 %8, ptr undef, align 1
   ret void
 }
 
@@ -121,7 +121,7 @@ entry:
 
 bb14:
   %tmp0 = trunc i16 undef to i1
-  %tmp1 = load i8, i8* undef, align 8
+  %tmp1 = load i8, ptr undef, align 8
   %tmp2 = shl i8 %tmp1, 4
   %tmp3 = lshr i8 %tmp2, 7
   %tmp4 = trunc i8 %tmp3 to i1
@@ -174,13 +174,13 @@ for.body22:                                       ; preds = %for.body22, %bb.nph
   %l_75.077 = phi i64 [ %ins, %for.body22 ], [ undef, %bb.nph81 ]
   %tmp110 = trunc i64 %l_75.077 to i32
   %tmp111 = and i32 %tmp110, 65535
-  %arrayidx32.0 = getelementptr [9 x [5 x [2 x %struct.S0]]], [9 x [5 x [2 x %struct.S0]]]* undef, i32 0, i32 %l_74.0, i32 %tmp98, i32 %tmp111, i32 0
-  store i8 1, i8* %arrayidx32.0, align 4
+  %arrayidx32.0 = getelementptr [9 x [5 x [2 x %struct.S0]]], ptr undef, i32 0, i32 %l_74.0, i32 %tmp98, i32 %tmp111, i32 0
+  store i8 1, ptr %arrayidx32.0, align 4
   %tmp106 = shl i32 %tmp110, 2
   %tmp107 = and i32 %tmp106, 262140
   %scevgep99.sum114 = or i32 %tmp107, 1
-  %arrayidx32.1.1 = getelementptr [9 x [5 x [2 x %struct.S0]]], [9 x [5 x [2 x %struct.S0]]]* undef, i32 0, i32 %l_74.0, i32 %tmp98, i32 0, i32 1, i32 %scevgep99.sum114
-  store i8 0, i8* %arrayidx32.1.1, align 1
+  %arrayidx32.1.1 = getelementptr [9 x [5 x [2 x %struct.S0]]], ptr undef, i32 0, i32 %l_74.0, i32 %tmp98, i32 0, i32 1, i32 %scevgep99.sum114
+  store i8 0, ptr %arrayidx32.1.1, align 1
   %ins = or i64 undef, undef
   br label %for.body22
 
@@ -197,14 +197,14 @@ entry:
   %2 = zext i160 %1 to i576
   %3 = zext i96 undef to i576
   %4 = or i576 %3, %2
-  store i576 %4, i576* undef, align 8
+  store i576 %4, ptr undef, align 8
   ret void
 }
 
 ; <rdar://problem/9187792>
 define fastcc void @func_61() nounwind sspreq {
 entry:
-  %t1 = tail call i64 @llvm.objectsize.i64.p0i8(i8* undef, i1 false)
+  %t1 = tail call i64 @llvm.objectsize.i64.p0(ptr undef, i1 false)
   %t2 = icmp eq i64 %t1, -1
   br i1 %t2, label %bb2, label %bb1
 
@@ -215,7 +215,7 @@ bb2:
   ret void
 }
 
-declare i64 @llvm.objectsize.i64.p0i8(i8*, i1) nounwind readnone
+declare i64 @llvm.objectsize.i64.p0(ptr, i1) nounwind readnone
 
 ; PR10277
 ; This test has dead code elimination caused by remat during spilling.
@@ -226,22 +226,21 @@ declare i64 @llvm.objectsize.i64.p0i8(i8*, i1) nounwind readnone
 %t9 = type { %t10 }
 %t10 = type { %t11 }
 %t11 = type { %t12 }
-%t12 = type { %t13*, %t13*, %t13* }
-%t13 = type { %t14*, %t15, %t15 }
+%t12 = type { ptr, ptr, ptr }
+%t13 = type { ptr, %t15, %t15 }
 %t14 = type opaque
 %t15 = type { i8, i32, i32 }
-%t16 = type { %t17, i8* }
+%t16 = type { %t17, ptr }
 %t17 = type { %t18 }
 %t18 = type { %t19 }
-%t19 = type { %t20*, %t20*, %t20* }
+%t19 = type { ptr, ptr, ptr }
 %t20 = type { i32, i32 }
-%t21 = type { %t13* }
+%t21 = type { ptr }
 
 define void @_ZNK4llvm17MipsFrameLowering12emitPrologueERNS_15MachineFunctionE() ssp align 2 {
 bb:
-  %tmp = load %t9*, %t9** undef, align 4
-  %tmp2 = getelementptr inbounds %t9, %t9* %tmp, i32 0, i32 0
-  %tmp3 = getelementptr inbounds %t9, %t9* %tmp, i32 0, i32 0, i32 0, i32 0, i32 1
+  %tmp = load ptr, ptr undef, align 4
+  %tmp3 = getelementptr inbounds %t9, ptr %tmp, i32 0, i32 0, i32 0, i32 0, i32 1
   br label %bb4
 
 bb4:                                              ; preds = %bb37, %bb
@@ -250,43 +249,43 @@ bb4:                                              ; preds = %bb37, %bb
   br i1 undef, label %bb34, label %bb7
 
 bb7:                                              ; preds = %bb4
-  %tmp8 = load i32, i32* undef, align 4
+  %tmp8 = load i32, ptr undef, align 4
   %tmp9 = and i96 %tmp6, 4294967040
   %tmp10 = zext i32 %tmp8 to i96
   %tmp11 = shl nuw nsw i96 %tmp10, 32
   %tmp12 = or i96 %tmp9, %tmp11
   %tmp13 = or i96 %tmp12, 1
-  %tmp14 = load i32, i32* undef, align 4
+  %tmp14 = load i32, ptr undef, align 4
   %tmp15 = and i96 %tmp5, 4294967040
   %tmp16 = zext i32 %tmp14 to i96
   %tmp17 = shl nuw nsw i96 %tmp16, 32
   %tmp18 = or i96 %tmp15, %tmp17
   %tmp19 = or i96 %tmp18, 1
-  %tmp20 = load i8, i8* undef, align 1
+  %tmp20 = load i8, ptr undef, align 1
   %tmp21 = and i8 %tmp20, 1
   %tmp22 = icmp ne i8 %tmp21, 0
   %tmp23 = select i1 %tmp22, i96 %tmp19, i96 %tmp13
   %tmp24 = select i1 %tmp22, i96 %tmp13, i96 %tmp19
-  store i96 %tmp24, i96* undef, align 4
-  %tmp25 = load %t13*, %t13** %tmp3, align 4
-  %tmp26 = icmp eq %t13* %tmp25, undef
+  store i96 %tmp24, ptr undef, align 4
+  %tmp25 = load ptr, ptr %tmp3, align 4
+  %tmp26 = icmp eq ptr %tmp25, undef
   br i1 %tmp26, label %bb28, label %bb27
 
 bb27:                                             ; preds = %bb7
   br label %bb29
 
 bb28:                                             ; preds = %bb7
-  call void @_ZNSt6vectorIN4llvm11MachineMoveESaIS1_EE13_M_insert_auxEN9__gnu_cxx17__normal_iteratorIPS1_S3_EERKS1_(%t10* %tmp2, %t21* byval(%t21) align 4 undef, %t13* undef)
+  call void @_ZNSt6vectorIN4llvm11MachineMoveESaIS1_EE13_M_insert_auxEN9__gnu_cxx17__normal_iteratorIPS1_S3_EERKS1_(ptr %tmp, ptr byval(%t21) align 4 undef, ptr undef)
   br label %bb29
 
 bb29:                                             ; preds = %bb28, %bb27
-  store i96 %tmp23, i96* undef, align 4
-  %tmp30 = load %t13*, %t13** %tmp3, align 4
+  store i96 %tmp23, ptr undef, align 4
+  %tmp30 = load ptr, ptr %tmp3, align 4
   br i1 false, label %bb33, label %bb31
 
 bb31:                                             ; preds = %bb29
-  %tmp32 = getelementptr inbounds %t13, %t13* %tmp30, i32 1
-  store %t13* %tmp32, %t13** %tmp3, align 4
+  %tmp32 = getelementptr inbounds %t13, ptr %tmp30, i32 1
+  store ptr %tmp32, ptr %tmp3, align 4
   br label %bb37
 
 bb33:                                             ; preds = %bb29
@@ -296,11 +295,11 @@ bb34:                                             ; preds = %bb4
   br i1 undef, label %bb36, label %bb35
 
 bb35:                                             ; preds = %bb34
-  store %t13* null, %t13** %tmp3, align 4
+  store ptr null, ptr %tmp3, align 4
   br label %bb37
 
 bb36:                                             ; preds = %bb34
-  call void @_ZNSt6vectorIN4llvm11MachineMoveESaIS1_EE13_M_insert_auxEN9__gnu_cxx17__normal_iteratorIPS1_S3_EERKS1_(%t10* %tmp2, %t21* byval(%t21) align 4 undef, %t13* undef)
+  call void @_ZNSt6vectorIN4llvm11MachineMoveESaIS1_EE13_M_insert_auxEN9__gnu_cxx17__normal_iteratorIPS1_S3_EERKS1_(ptr %tmp, ptr byval(%t21) align 4 undef, ptr undef)
   br label %bb37
 
 bb37:                                             ; preds = %bb36, %bb35, %bb31
@@ -310,13 +309,13 @@ bb37:                                             ; preds = %bb36, %bb35, %bb31
   br label %bb4
 }
 
-declare %t14* @_ZN4llvm9MCContext16CreateTempSymbolEv(%t2*)
+declare ptr @_ZN4llvm9MCContext16CreateTempSymbolEv(ptr)
 
-declare void @_ZNSt6vectorIN4llvm11MachineMoveESaIS1_EE13_M_insert_auxEN9__gnu_cxx17__normal_iteratorIPS1_S3_EERKS1_(%t10*, %t21* byval(%t21) align 4, %t13*)
+declare void @_ZNSt6vectorIN4llvm11MachineMoveESaIS1_EE13_M_insert_auxEN9__gnu_cxx17__normal_iteratorIPS1_S3_EERKS1_(ptr, ptr byval(%t21) align 4, ptr)
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 
 ; PR10463
 ; Spilling a virtual register with <undef> uses.
@@ -334,7 +333,7 @@ CF75:
     br i1 undef, label %CF75, label %CF76
 
 CF76:
-    store double %E19, double* undef
+    store double %E19, ptr undef
     br i1 undef, label %CF76, label %CF77
 
 CF77:
@@ -348,13 +347,13 @@ entry:
   br label %"4"
 
 "3":
-  %0 = load <2 x i32>, <2 x i32>* null, align 8
+  %0 = load <2 x i32>, ptr null, align 8
   %1 = xor <2 x i32> zeroinitializer, %0
   %2 = and <2 x i32> %1, %6
   %3 = or <2 x i32> undef, %2
   %4 = and <2 x i32> %3, undef
-  store <2 x i32> %4, <2 x i32>* undef
-  %5 = load <2 x i32>, <2 x i32>* undef, align 1
+  store <2 x i32> %4, ptr undef
+  %5 = load <2 x i32>, ptr undef, align 1
   br label %"4"
 
 "4":
@@ -376,20 +375,20 @@ entry:
 ; The constraint originally comes from the TEST8ri optimization of (icmp (and %t0, 1), 0).
 
 @__force_order = external hidden global i32, align 4
-define void @pr11078(i32* %pgd) nounwind {
+define void @pr11078(ptr %pgd) nounwind {
 entry:
-  %t0 = load i32, i32* %pgd, align 4
+  %t0 = load i32, ptr %pgd, align 4
   %and2 = and i32 %t0, 1
   %tobool = icmp eq i32 %and2, 0
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:
-  %t1 = tail call i32 asm sideeffect "bar", "=r,=*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @__force_order) nounwind
+  %t1 = tail call i32 asm sideeffect "bar", "=r,=*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @__force_order) nounwind
   br label %if.end
 
 if.end:
-  %t6 = inttoptr i32 %t0 to i64*
-  %t11 = tail call i64 asm sideeffect "foo", "=*m,=A,{bx},{cx},1,~{memory},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %t6, i32 0, i32 0, i64 0) nounwind
+  %t6 = inttoptr i32 %t0 to ptr
+  %t11 = tail call i64 asm sideeffect "foo", "=*m,=A,{bx},{cx},1,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %t6, i32 0, i32 0, i64 0) nounwind
   ret void
 }
 
@@ -397,7 +396,7 @@ if.end:
 ; InstrEmitter::EmitSubregNode() may steal virtual registers from already
 ; emitted blocks when isCoalescableExtInstr points out the opportunity.
 ; Make sure kill flags are cleared on the newly global virtual register.
-define i64 @ov_read(i8* %vf, i8* nocapture %buffer, i32 %length, i32 %bigendianp, i32 %word, i32 %sgned, i32* %bitstream) nounwind uwtable ssp {
+define i64 @ov_read(ptr %vf, ptr nocapture %buffer, i32 %length, i32 %bigendianp, i32 %word, i32 %sgned, ptr %bitstream) nounwind uwtable ssp {
 entry:
   br i1 undef, label %return, label %while.body.preheader
 
@@ -405,7 +404,7 @@ while.body.preheader:                             ; preds = %entry
   br i1 undef, label %if.then3, label %if.end7
 
 if.then3:                                         ; preds = %while.body.preheader
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   br i1 undef, label %land.lhs.true.i255, label %if.end7
 
 land.lhs.true.i255:                               ; preds = %if.then3
@@ -432,34 +431,34 @@ return:                                           ; preds = %entry
 ; uitofp expands to an FCMOV instruction which splits the basic block.
 ; Make sure the live range of %AL isn't split.
 @.str = private unnamed_addr constant { [1 x i8], [63 x i8] } zeroinitializer, align 32
-define void @pr13188(i64* nocapture %this) uwtable ssp sanitize_address align 2 {
+define void @pr13188(ptr nocapture %this) uwtable ssp sanitize_address align 2 {
 entry:
-  %x7 = load i64, i64* %this, align 8
+  %x7 = load i64, ptr %this, align 8
   %sub = add i64 %x7, -1
   %conv = uitofp i64 %sub to float
   %div = fmul float %conv, 5.000000e-01
   %conv2 = fpext float %div to double
-  tail call void (...) @_Z6PrintFz(i8* getelementptr inbounds ({ [1 x i8], [63 x i8] }, { [1 x i8], [63 x i8] }* @.str, i64 0, i32 0, i64 0), double %conv2)
+  tail call void (...) @_Z6PrintFz(ptr getelementptr inbounds ({ [1 x i8], [63 x i8] }, ptr @.str, i64 0, i32 0, i64 0), double %conv2)
   ret void
 }
 declare void @_Z6PrintFz(...)
 
 @a = external global i32, align 4
-@fn1.g = private unnamed_addr constant [9 x i32*] [i32* null, i32* @a, i32* null, i32* null, i32* null, i32* null, i32* null, i32* null, i32* null], align 16
+@fn1.g = private unnamed_addr constant [9 x ptr] [ptr null, ptr @a, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null], align 16
 @e = external global i32, align 4
 
 define void @pr13943() nounwind uwtable ssp {
 entry:
-  %srcval = load i576, i576* bitcast ([9 x i32*]* @fn1.g to i576*), align 16
+  %srcval = load i576, ptr @fn1.g, align 16
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
   %g.0 = phi i576 [ %srcval, %entry ], [ %ins, %for.inc ]
-  %0 = load i32, i32* @e, align 4
+  %0 = load i32, ptr @e, align 4
   %1 = lshr i576 %g.0, 64
   %2 = trunc i576 %1 to i64
-  %3 = inttoptr i64 %2 to i32*
-  %cmp = icmp eq i32* undef, %3
+  %3 = inttoptr i64 %2 to ptr
+  %cmp = icmp eq ptr undef, %3
   %conv2 = zext i1 %cmp to i32
   %and = and i32 %conv2, %0
   tail call void (...) @fn3(i32 %and) nounwind
@@ -510,9 +509,9 @@ bb4:                                              ; preds = %bb3
   unreachable
 
 bb5:                                              ; preds = %bb3
-  %tmp = load <4 x float>, <4 x float>* undef, align 1
+  %tmp = load <4 x float>, ptr undef, align 1
   %tmp6 = bitcast <4 x float> %tmp to i128
-  %tmp7 = load <4 x float>, <4 x float>* undef, align 1
+  %tmp7 = load <4 x float>, ptr undef, align 1
   %tmp8 = bitcast <4 x float> %tmp7 to i128
   br label %bb10
 
@@ -553,8 +552,8 @@ bb18:                                             ; preds = %bb10, %bb10
 bb21:                                             ; preds = %bb18, %bb14, %bb10, %bb
   %tmp22 = phi <4 x float> [ undef, %bb ], [ undef, %bb10 ], [ undef, %bb14 ], [ %tmp20, %bb18 ]
   %tmp23 = phi <4 x float> [ undef, %bb ], [ undef, %bb10 ], [ undef, %bb14 ], [ %tmp19, %bb18 ]
-  store <4 x float> %tmp23, <4 x float>* undef, align 16
-  store <4 x float> %tmp22, <4 x float>* undef, align 16
+  store <4 x float> %tmp23, ptr undef, align 16
+  store <4 x float> %tmp22, ptr undef, align 16
   switch i32 undef, label %bb29 [
     i32 5, label %bb27
     i32 1, label %bb24
@@ -583,7 +582,7 @@ bb29:                                             ; preds = %bb28, %bb26, %bb25,
 }
 
 define void @pr14194() nounwind uwtable {
-  %tmp = load i64, i64* undef, align 16
+  %tmp = load i64, ptr undef, align 16
   %tmp1 = trunc i64 %tmp to i32
   %tmp2 = lshr i64 %tmp, 32
   %tmp3 = trunc i64 %tmp2 to i32

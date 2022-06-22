@@ -22,8 +22,8 @@ bb:
   %tmp6 = extractelement <2 x double> %tmp4, i32 1
   %tmp7 = bitcast double %tmp6 to i64
   %tmp8 = trunc i64 %tmp7 to i32
-  store i32 %tmp8, i32* undef, align 4
-  store double %tmp5, double* undef, align 16
+  store i32 %tmp8, ptr undef, align 4
+  store double %tmp5, ptr undef, align 16
   ret void
 }
 

@@ -11,7 +11,7 @@
 ; instead of:
 ;   v4i64 = vselect ..
 
-define <16 x double> @bug45563(<16 x double>* %addr, <16 x double> %dst, <16 x i64> %e, <16 x i64> %f) {
+define <16 x double> @bug45563(ptr %addr, <16 x double> %dst, <16 x i64> %e, <16 x i64> %f) {
 ; CHECK-LABEL: bug45563:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -58,8 +58,8 @@ define <16 x double> @bug45563(<16 x double>* %addr, <16 x double> %dst, <16 x i
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
   %mask = icmp slt <16 x i64> %e, %f
-  %res = call <16 x double> @llvm.masked.load.v16f64.p0v16f64(<16 x double>* %addr, i32 4, <16 x i1>%mask, <16 x double> %dst)
+  %res = call <16 x double> @llvm.masked.load.v16f64.p0(ptr %addr, i32 4, <16 x i1>%mask, <16 x double> %dst)
   ret <16 x double> %res
 }
 
-declare <16 x double> @llvm.masked.load.v16f64.p0v16f64(<16 x double>* %addr, i32 %align, <16 x i1> %mask, <16 x double> %dst)
+declare <16 x double> @llvm.masked.load.v16f64.p0(ptr %addr, i32 %align, <16 x i1> %mask, <16 x double> %dst)

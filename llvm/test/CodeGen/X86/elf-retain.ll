@@ -8,10 +8,10 @@
 
 ; RUN: llc -mtriple=x86_64 -data-sections=1 -unique-section-names=0 < %s | FileCheck %s --check-prefix=NOUNIQUE
 
-@llvm.used = appending global [10 x i8*] [
-  i8* bitcast (void ()* @fa to i8*), i8* bitcast (void ()* @fb to i8*), i8* bitcast (void ()* @fc to i8*),
-  i8* bitcast (i32* @ga to i8*), i8* bitcast (i32* @gb to i8*), i8* bitcast (i32* @gc to i8*), i8* bitcast (i32* @gd to i8*), i8* bitcast (i32* @ge to i8*),
-  i8* bitcast (i32* @aa to i8*), i8* bitcast (i32* @ab to i8*) ], section "llvm.metadata"
+@llvm.used = appending global [10 x ptr] [
+  ptr @fa, ptr @fb, ptr @fc,
+  ptr @ga, ptr @gb, ptr @gc, ptr @gd, ptr @ge,
+  ptr @aa, ptr @ab ], section "llvm.metadata"
 
 ; CHECK:    .section .text.fa,"axR",@progbits{{$}}
 ; OLDGAS-NOT: .section .text
@@ -70,7 +70,7 @@ entry:
 ; NOUNIQUE: .section fff,"aw",@progbits{{$}}
 @gf = global i32 1, section "fff"
 
-@aa = alias i32, i32* @gf
-@ab = internal alias i32, i32* @gf
+@aa = alias i32, ptr @gf
+@ab = internal alias i32, ptr @gf
 
-!0 = !{i32* @gc}
+!0 = !{ptr @gc}

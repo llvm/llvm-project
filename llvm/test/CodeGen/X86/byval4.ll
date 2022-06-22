@@ -89,21 +89,20 @@ define void @g(i16 signext  %a1, i16 signext  %a2, i16 signext  %a3,
 	 i16 signext  %a4, i16 signext  %a5, i16 signext  %a6) nounwind {
 entry:
         %a = alloca %struct.s, align 16
-        %tmp = getelementptr %struct.s, %struct.s* %a, i32 0, i32 0
-        store i16 %a1, i16* %tmp, align 16
-        %tmp2 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 1
-        store i16 %a2, i16* %tmp2, align 16
-        %tmp4 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 2
-        store i16 %a3, i16* %tmp4, align 16
-        %tmp6 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 3
-        store i16 %a4, i16* %tmp6, align 16
-        %tmp8 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 4
-        store i16 %a5, i16* %tmp8, align 16
-        %tmp10 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 5
-        store i16 %a6, i16* %tmp10, align 16
-        call void @f(%struct.s* byval(%struct.s) %a)
-        call void @f(%struct.s* byval(%struct.s) %a)
+        store i16 %a1, ptr %a, align 16
+        %tmp2 = getelementptr %struct.s, ptr %a, i32 0, i32 1
+        store i16 %a2, ptr %tmp2, align 16
+        %tmp4 = getelementptr %struct.s, ptr %a, i32 0, i32 2
+        store i16 %a3, ptr %tmp4, align 16
+        %tmp6 = getelementptr %struct.s, ptr %a, i32 0, i32 3
+        store i16 %a4, ptr %tmp6, align 16
+        %tmp8 = getelementptr %struct.s, ptr %a, i32 0, i32 4
+        store i16 %a5, ptr %tmp8, align 16
+        %tmp10 = getelementptr %struct.s, ptr %a, i32 0, i32 5
+        store i16 %a6, ptr %tmp10, align 16
+        call void @f(ptr byval(%struct.s) %a)
+        call void @f(ptr byval(%struct.s) %a)
         ret void
 }
 
-declare void @f(%struct.s* byval(%struct.s))
+declare void @f(ptr byval(%struct.s))

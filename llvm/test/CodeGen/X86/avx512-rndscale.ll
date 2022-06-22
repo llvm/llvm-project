@@ -86,62 +86,62 @@ define <16 x float> @floor_v16f32(<16 x float> %p) {
   ret <16 x float> %t
 }
 
-define <2 x double> @floor_v2f64_load(<2 x double>* %ptr) {
+define <2 x double> @floor_v2f64_load(ptr %ptr) {
 ; CHECK-LABEL: floor_v2f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $9, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.floor.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @floor_v4f32_load(<4 x float>* %ptr) {
+define <4 x float> @floor_v4f32_load(ptr %ptr) {
 ; CHECK-LABEL: floor_v4f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $9, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.floor.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @floor_v4f64_load(<4 x double>* %ptr){
+define <4 x double> @floor_v4f64_load(ptr %ptr){
 ; CHECK-LABEL: floor_v4f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $9, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.floor.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @floor_v8f32_load(<8 x float>* %ptr) {
+define <8 x float> @floor_v8f32_load(ptr %ptr) {
 ; CHECK-LABEL: floor_v8f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $9, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.floor.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @floor_v8f64_load(<8 x double>* %ptr){
+define <8 x double> @floor_v8f64_load(ptr %ptr){
 ; CHECK-LABEL: floor_v8f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.floor.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @floor_v16f32_load(<16 x float>* %ptr) {
+define <16 x float> @floor_v16f32_load(ptr %ptr) {
 ; CHECK-LABEL: floor_v16f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.floor.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
@@ -296,242 +296,242 @@ define <16 x float> @floor_v16f32_maskz(<16 x float> %p, <16 x i32> %cmp) {
   ret <16 x float> %s
 }
 
-define <2 x double> @floor_v2f64_mask_load(<2 x double>* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @floor_v2f64_mask_load(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: floor_v2f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.floor.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> %passthru
   ret <2 x double> %s
 }
 
-define <4 x float> @floor_v4f32_mask_load(<4 x float>* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @floor_v4f32_mask_load(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: floor_v4f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.floor.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> %passthru
   ret <4 x float> %s
 }
 
-define <4 x double> @floor_v4f64_mask_load(<4 x double>* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @floor_v4f64_mask_load(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: floor_v4f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.floor.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> %passthru
   ret <4 x double> %s
 }
 
-define <8 x float> @floor_v8f32_mask_load(<8 x float>* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @floor_v8f32_mask_load(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: floor_v8f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.floor.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> %passthru
   ret <8 x float> %s
 }
 
-define <8 x double> @floor_v8f64_mask_load(<8 x double>* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @floor_v8f64_mask_load(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: floor_v8f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.floor.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> %passthru
   ret <8 x double> %s
 }
 
-define <16 x float> @floor_v16f32_mask_load(<16 x float>* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @floor_v16f32_mask_load(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: floor_v16f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.floor.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> %passthru
   ret <16 x float> %s
 }
 
-define <2 x double> @floor_v2f64_maskz_load(<2 x double>* %ptr, <2 x i64> %cmp) {
+define <2 x double> @floor_v2f64_maskz_load(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: floor_v2f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.floor.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> zeroinitializer
   ret <2 x double> %s
 }
 
-define <4 x float> @floor_v4f32_maskz_load(<4 x float>* %ptr, <4 x i32> %cmp) {
+define <4 x float> @floor_v4f32_maskz_load(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: floor_v4f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.floor.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> zeroinitializer
   ret <4 x float> %s
 }
 
-define <4 x double> @floor_v4f64_maskz_load(<4 x double>* %ptr, <4 x i64> %cmp) {
+define <4 x double> @floor_v4f64_maskz_load(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: floor_v4f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.floor.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> zeroinitializer
   ret <4 x double> %s
 }
 
-define <8 x float> @floor_v8f32_maskz_load(<8 x float>* %ptr, <8 x i32> %cmp) {
+define <8 x float> @floor_v8f32_maskz_load(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: floor_v8f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.floor.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> zeroinitializer
   ret <8 x float> %s
 }
 
-define <8 x double> @floor_v8f64_maskz_load(<8 x double>* %ptr, <8 x i64> %cmp) {
+define <8 x double> @floor_v8f64_maskz_load(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: floor_v8f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.floor.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> zeroinitializer
   ret <8 x double> %s
 }
 
-define <16 x float> @floor_v16f32_maskz_load(<16 x float>* %ptr, <16 x i32> %cmp) {
+define <16 x float> @floor_v16f32_maskz_load(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: floor_v16f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.floor.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> zeroinitializer
   ret <16 x float> %s
 }
 
-define <2 x double> @floor_v2f64_broadcast(double* %ptr) {
+define <2 x double> @floor_v2f64_broadcast(ptr %ptr) {
 ; CHECK-LABEL: floor_v2f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi){1to2}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.floor.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @floor_v4f32_broadcast(float* %ptr) {
+define <4 x float> @floor_v4f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: floor_v4f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi){1to4}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.floor.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @floor_v4f64_broadcast(double* %ptr){
+define <4 x double> @floor_v4f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: floor_v4f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi){1to4}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.floor.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @floor_v8f32_broadcast(float* %ptr) {
+define <8 x float> @floor_v8f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: floor_v8f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi){1to8}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.floor.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @floor_v8f64_broadcast(double* %ptr){
+define <8 x double> @floor_v8f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: floor_v8f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi){1to8}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.floor.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @floor_v16f32_broadcast(float* %ptr) {
+define <16 x float> @floor_v16f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: floor_v16f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi){1to16}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.floor.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
 
-define <2 x double> @floor_v2f64_mask_broadcast(double* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @floor_v2f64_mask_broadcast(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: floor_v2f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi){1to2}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.floor.v2f64(<2 x double> %p)
@@ -539,14 +539,14 @@ define <2 x double> @floor_v2f64_mask_broadcast(double* %ptr, <2 x double> %pass
   ret <2 x double> %s
 }
 
-define <4 x float> @floor_v4f32_mask_broadcast(float* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @floor_v4f32_mask_broadcast(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: floor_v4f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi){1to4}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.floor.v4f32(<4 x float> %p)
@@ -554,14 +554,14 @@ define <4 x float> @floor_v4f32_mask_broadcast(float* %ptr, <4 x float> %passthr
   ret <4 x float> %s
 }
 
-define <4 x double> @floor_v4f64_mask_broadcast(double* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @floor_v4f64_mask_broadcast(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: floor_v4f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi){1to4}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.floor.v4f64(<4 x double> %p)
@@ -569,14 +569,14 @@ define <4 x double> @floor_v4f64_mask_broadcast(double* %ptr, <4 x double> %pass
   ret <4 x double> %s
 }
 
-define <8 x float> @floor_v8f32_mask_broadcast(float* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @floor_v8f32_mask_broadcast(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: floor_v8f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi){1to8}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.floor.v8f32(<8 x float> %p)
@@ -584,14 +584,14 @@ define <8 x float> @floor_v8f32_mask_broadcast(float* %ptr, <8 x float> %passthr
   ret <8 x float> %s
 }
 
-define <8 x double> @floor_v8f64_mask_broadcast(double* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @floor_v8f64_mask_broadcast(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: floor_v8f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi){1to8}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.floor.v8f64(<8 x double> %p)
@@ -599,14 +599,14 @@ define <8 x double> @floor_v8f64_mask_broadcast(double* %ptr, <8 x double> %pass
   ret <8 x double> %s
 }
 
-define <16 x float> @floor_v16f32_mask_broadcast(float* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @floor_v16f32_mask_broadcast(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: floor_v16f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi){1to16}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.floor.v16f32(<16 x float> %p)
@@ -614,14 +614,14 @@ define <16 x float> @floor_v16f32_mask_broadcast(float* %ptr, <16 x float> %pass
   ret <16 x float> %s
 }
 
-define <2 x double> @floor_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cmp) {
+define <2 x double> @floor_v2f64_maskz_broadcast(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: floor_v2f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi){1to2}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.floor.v2f64(<2 x double> %p)
@@ -629,14 +629,14 @@ define <2 x double> @floor_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cmp) {
   ret <2 x double> %s
 }
 
-define <4 x float> @floor_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp) {
+define <4 x float> @floor_v4f32_maskz_broadcast(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: floor_v4f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi){1to4}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.floor.v4f32(<4 x float> %p)
@@ -644,14 +644,14 @@ define <4 x float> @floor_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp) {
   ret <4 x float> %s
 }
 
-define <4 x double> @floor_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cmp) {
+define <4 x double> @floor_v4f64_maskz_broadcast(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: floor_v4f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi){1to4}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.floor.v4f64(<4 x double> %p)
@@ -659,14 +659,14 @@ define <4 x double> @floor_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cmp) {
   ret <4 x double> %s
 }
 
-define <8 x float> @floor_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp) {
+define <8 x float> @floor_v8f32_maskz_broadcast(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: floor_v8f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi){1to8}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.floor.v8f32(<8 x float> %p)
@@ -674,14 +674,14 @@ define <8 x float> @floor_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp) {
   ret <8 x float> %s
 }
 
-define <8 x double> @floor_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cmp) {
+define <8 x double> @floor_v8f64_maskz_broadcast(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: floor_v8f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $9, (%rdi){1to8}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.floor.v8f64(<8 x double> %p)
@@ -689,14 +689,14 @@ define <8 x double> @floor_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cmp) {
   ret <8 x double> %s
 }
 
-define <16 x float> @floor_v16f32_maskz_broadcast(float* %ptr, <16 x i32> %cmp) {
+define <16 x float> @floor_v16f32_maskz_broadcast(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: floor_v16f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $9, (%rdi){1to16}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.floor.v16f32(<16 x float> %p)
@@ -758,62 +758,62 @@ define <16 x float> @ceil_v16f32(<16 x float> %p) {
   ret <16 x float> %t
 }
 
-define <2 x double> @ceil_v2f64_load(<2 x double>* %ptr) {
+define <2 x double> @ceil_v2f64_load(ptr %ptr) {
 ; CHECK-LABEL: ceil_v2f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $10, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.ceil.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @ceil_v4f32_load(<4 x float>* %ptr) {
+define <4 x float> @ceil_v4f32_load(ptr %ptr) {
 ; CHECK-LABEL: ceil_v4f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $10, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @ceil_v4f64_load(<4 x double>* %ptr){
+define <4 x double> @ceil_v4f64_load(ptr %ptr){
 ; CHECK-LABEL: ceil_v4f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $10, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @ceil_v8f32_load(<8 x float>* %ptr) {
+define <8 x float> @ceil_v8f32_load(ptr %ptr) {
 ; CHECK-LABEL: ceil_v8f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $10, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.ceil.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @ceil_v8f64_load(<8 x double>* %ptr){
+define <8 x double> @ceil_v8f64_load(ptr %ptr){
 ; CHECK-LABEL: ceil_v8f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @ceil_v16f32_load(<16 x float>* %ptr) {
+define <16 x float> @ceil_v16f32_load(ptr %ptr) {
 ; CHECK-LABEL: ceil_v16f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
@@ -968,242 +968,242 @@ define <16 x float> @ceil_v16f32_maskz(<16 x float> %p, <16 x i32> %cmp) {
   ret <16 x float> %s
 }
 
-define <2 x double> @ceil_v2f64_mask_load(<2 x double>* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @ceil_v2f64_mask_load(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v2f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.ceil.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> %passthru
   ret <2 x double> %s
 }
 
-define <4 x float> @ceil_v4f32_mask_load(<4 x float>* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @ceil_v4f32_mask_load(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v4f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> %passthru
   ret <4 x float> %s
 }
 
-define <4 x double> @ceil_v4f64_mask_load(<4 x double>* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @ceil_v4f64_mask_load(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v4f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> %passthru
   ret <4 x double> %s
 }
 
-define <8 x float> @ceil_v8f32_mask_load(<8 x float>* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @ceil_v8f32_mask_load(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v8f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.ceil.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> %passthru
   ret <8 x float> %s
 }
 
-define <8 x double> @ceil_v8f64_mask_load(<8 x double>* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @ceil_v8f64_mask_load(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v8f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> %passthru
   ret <8 x double> %s
 }
 
-define <16 x float> @ceil_v16f32_mask_load(<16 x float>* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @ceil_v16f32_mask_load(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v16f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> %passthru
   ret <16 x float> %s
 }
 
-define <2 x double> @ceil_v2f64_maskz_load(<2 x double>* %ptr, <2 x i64> %cmp) {
+define <2 x double> @ceil_v2f64_maskz_load(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v2f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.ceil.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> zeroinitializer
   ret <2 x double> %s
 }
 
-define <4 x float> @ceil_v4f32_maskz_load(<4 x float>* %ptr, <4 x i32> %cmp) {
+define <4 x float> @ceil_v4f32_maskz_load(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v4f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> zeroinitializer
   ret <4 x float> %s
 }
 
-define <4 x double> @ceil_v4f64_maskz_load(<4 x double>* %ptr, <4 x i64> %cmp) {
+define <4 x double> @ceil_v4f64_maskz_load(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v4f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> zeroinitializer
   ret <4 x double> %s
 }
 
-define <8 x float> @ceil_v8f32_maskz_load(<8 x float>* %ptr, <8 x i32> %cmp) {
+define <8 x float> @ceil_v8f32_maskz_load(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v8f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.ceil.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> zeroinitializer
   ret <8 x float> %s
 }
 
-define <8 x double> @ceil_v8f64_maskz_load(<8 x double>* %ptr, <8 x i64> %cmp) {
+define <8 x double> @ceil_v8f64_maskz_load(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v8f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> zeroinitializer
   ret <8 x double> %s
 }
 
-define <16 x float> @ceil_v16f32_maskz_load(<16 x float>* %ptr, <16 x i32> %cmp) {
+define <16 x float> @ceil_v16f32_maskz_load(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v16f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> zeroinitializer
   ret <16 x float> %s
 }
 
-define <2 x double> @ceil_v2f64_broadcast(double* %ptr) {
+define <2 x double> @ceil_v2f64_broadcast(ptr %ptr) {
 ; CHECK-LABEL: ceil_v2f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi){1to2}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.ceil.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @ceil_v4f32_broadcast(float* %ptr) {
+define <4 x float> @ceil_v4f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: ceil_v4f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi){1to4}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @ceil_v4f64_broadcast(double* %ptr){
+define <4 x double> @ceil_v4f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: ceil_v4f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi){1to4}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @ceil_v8f32_broadcast(float* %ptr) {
+define <8 x float> @ceil_v8f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: ceil_v8f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi){1to8}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.ceil.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @ceil_v8f64_broadcast(double* %ptr){
+define <8 x double> @ceil_v8f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: ceil_v8f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi){1to8}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @ceil_v16f32_broadcast(float* %ptr) {
+define <16 x float> @ceil_v16f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: ceil_v16f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi){1to16}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
 
-define <2 x double> @ceil_v2f64_mask_broadcast(double* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @ceil_v2f64_mask_broadcast(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v2f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi){1to2}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.ceil.v2f64(<2 x double> %p)
@@ -1211,14 +1211,14 @@ define <2 x double> @ceil_v2f64_mask_broadcast(double* %ptr, <2 x double> %passt
   ret <2 x double> %s
 }
 
-define <4 x float> @ceil_v4f32_mask_broadcast(float* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @ceil_v4f32_mask_broadcast(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v4f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi){1to4}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
@@ -1226,14 +1226,14 @@ define <4 x float> @ceil_v4f32_mask_broadcast(float* %ptr, <4 x float> %passthru
   ret <4 x float> %s
 }
 
-define <4 x double> @ceil_v4f64_mask_broadcast(double* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @ceil_v4f64_mask_broadcast(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v4f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi){1to4}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
@@ -1241,14 +1241,14 @@ define <4 x double> @ceil_v4f64_mask_broadcast(double* %ptr, <4 x double> %passt
   ret <4 x double> %s
 }
 
-define <8 x float> @ceil_v8f32_mask_broadcast(float* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @ceil_v8f32_mask_broadcast(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v8f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi){1to8}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.ceil.v8f32(<8 x float> %p)
@@ -1256,14 +1256,14 @@ define <8 x float> @ceil_v8f32_mask_broadcast(float* %ptr, <8 x float> %passthru
   ret <8 x float> %s
 }
 
-define <8 x double> @ceil_v8f64_mask_broadcast(double* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @ceil_v8f64_mask_broadcast(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v8f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi){1to8}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
@@ -1271,14 +1271,14 @@ define <8 x double> @ceil_v8f64_mask_broadcast(double* %ptr, <8 x double> %passt
   ret <8 x double> %s
 }
 
-define <16 x float> @ceil_v16f32_mask_broadcast(float* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @ceil_v16f32_mask_broadcast(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v16f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi){1to16}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
@@ -1286,14 +1286,14 @@ define <16 x float> @ceil_v16f32_mask_broadcast(float* %ptr, <16 x float> %passt
   ret <16 x float> %s
 }
 
-define <2 x double> @ceil_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cmp) {
+define <2 x double> @ceil_v2f64_maskz_broadcast(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v2f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi){1to2}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.ceil.v2f64(<2 x double> %p)
@@ -1301,14 +1301,14 @@ define <2 x double> @ceil_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cmp) {
   ret <2 x double> %s
 }
 
-define <4 x float> @ceil_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp) {
+define <4 x float> @ceil_v4f32_maskz_broadcast(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v4f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi){1to4}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
@@ -1316,14 +1316,14 @@ define <4 x float> @ceil_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp) {
   ret <4 x float> %s
 }
 
-define <4 x double> @ceil_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cmp) {
+define <4 x double> @ceil_v4f64_maskz_broadcast(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v4f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi){1to4}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
@@ -1331,14 +1331,14 @@ define <4 x double> @ceil_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cmp) {
   ret <4 x double> %s
 }
 
-define <8 x float> @ceil_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp) {
+define <8 x float> @ceil_v8f32_maskz_broadcast(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v8f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi){1to8}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.ceil.v8f32(<8 x float> %p)
@@ -1346,14 +1346,14 @@ define <8 x float> @ceil_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp) {
   ret <8 x float> %s
 }
 
-define <8 x double> @ceil_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cmp) {
+define <8 x double> @ceil_v8f64_maskz_broadcast(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: ceil_v8f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $10, (%rdi){1to8}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
@@ -1361,14 +1361,14 @@ define <8 x double> @ceil_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cmp) {
   ret <8 x double> %s
 }
 
-define <16 x float> @ceil_v16f32_maskz_broadcast(float* %ptr, <16 x i32> %cmp) {
+define <16 x float> @ceil_v16f32_maskz_broadcast(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: ceil_v16f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $10, (%rdi){1to16}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
@@ -1430,62 +1430,62 @@ define <16 x float> @trunc_v16f32(<16 x float> %p) {
   ret <16 x float> %t
 }
 
-define <2 x double> @trunc_v2f64_load(<2 x double>* %ptr) {
+define <2 x double> @trunc_v2f64_load(ptr %ptr) {
 ; CHECK-LABEL: trunc_v2f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $11, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @trunc_v4f32_load(<4 x float>* %ptr) {
+define <4 x float> @trunc_v4f32_load(ptr %ptr) {
 ; CHECK-LABEL: trunc_v4f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $11, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @trunc_v4f64_load(<4 x double>* %ptr){
+define <4 x double> @trunc_v4f64_load(ptr %ptr){
 ; CHECK-LABEL: trunc_v4f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $11, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.trunc.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @trunc_v8f32_load(<8 x float>* %ptr) {
+define <8 x float> @trunc_v8f32_load(ptr %ptr) {
 ; CHECK-LABEL: trunc_v8f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $11, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.trunc.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @trunc_v8f64_load(<8 x double>* %ptr){
+define <8 x double> @trunc_v8f64_load(ptr %ptr){
 ; CHECK-LABEL: trunc_v8f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.trunc.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @trunc_v16f32_load(<16 x float>* %ptr) {
+define <16 x float> @trunc_v16f32_load(ptr %ptr) {
 ; CHECK-LABEL: trunc_v16f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.trunc.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
@@ -1640,242 +1640,242 @@ define <16 x float> @trunc_v16f32_maskz(<16 x float> %p, <16 x i32> %cmp) {
   ret <16 x float> %s
 }
 
-define <2 x double> @trunc_v2f64_mask_load(<2 x double>* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @trunc_v2f64_mask_load(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v2f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> %passthru
   ret <2 x double> %s
 }
 
-define <4 x float> @trunc_v4f32_mask_load(<4 x float>* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @trunc_v4f32_mask_load(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v4f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> %passthru
   ret <4 x float> %s
 }
 
-define <4 x double> @trunc_v4f64_mask_load(<4 x double>* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @trunc_v4f64_mask_load(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v4f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.trunc.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> %passthru
   ret <4 x double> %s
 }
 
-define <8 x float> @trunc_v8f32_mask_load(<8 x float>* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @trunc_v8f32_mask_load(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v8f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.trunc.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> %passthru
   ret <8 x float> %s
 }
 
-define <8 x double> @trunc_v8f64_mask_load(<8 x double>* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @trunc_v8f64_mask_load(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v8f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.trunc.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> %passthru
   ret <8 x double> %s
 }
 
-define <16 x float> @trunc_v16f32_mask_load(<16 x float>* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @trunc_v16f32_mask_load(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v16f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.trunc.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> %passthru
   ret <16 x float> %s
 }
 
-define <2 x double> @trunc_v2f64_maskz_load(<2 x double>* %ptr, <2 x i64> %cmp) {
+define <2 x double> @trunc_v2f64_maskz_load(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v2f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> zeroinitializer
   ret <2 x double> %s
 }
 
-define <4 x float> @trunc_v4f32_maskz_load(<4 x float>* %ptr, <4 x i32> %cmp) {
+define <4 x float> @trunc_v4f32_maskz_load(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v4f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> zeroinitializer
   ret <4 x float> %s
 }
 
-define <4 x double> @trunc_v4f64_maskz_load(<4 x double>* %ptr, <4 x i64> %cmp) {
+define <4 x double> @trunc_v4f64_maskz_load(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v4f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.trunc.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> zeroinitializer
   ret <4 x double> %s
 }
 
-define <8 x float> @trunc_v8f32_maskz_load(<8 x float>* %ptr, <8 x i32> %cmp) {
+define <8 x float> @trunc_v8f32_maskz_load(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v8f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.trunc.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> zeroinitializer
   ret <8 x float> %s
 }
 
-define <8 x double> @trunc_v8f64_maskz_load(<8 x double>* %ptr, <8 x i64> %cmp) {
+define <8 x double> @trunc_v8f64_maskz_load(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v8f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.trunc.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> zeroinitializer
   ret <8 x double> %s
 }
 
-define <16 x float> @trunc_v16f32_maskz_load(<16 x float>* %ptr, <16 x i32> %cmp) {
+define <16 x float> @trunc_v16f32_maskz_load(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v16f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.trunc.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> zeroinitializer
   ret <16 x float> %s
 }
 
-define <2 x double> @trunc_v2f64_broadcast(double* %ptr) {
+define <2 x double> @trunc_v2f64_broadcast(ptr %ptr) {
 ; CHECK-LABEL: trunc_v2f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi){1to2}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @trunc_v4f32_broadcast(float* %ptr) {
+define <4 x float> @trunc_v4f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: trunc_v4f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi){1to4}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @trunc_v4f64_broadcast(double* %ptr){
+define <4 x double> @trunc_v4f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: trunc_v4f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi){1to4}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.trunc.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @trunc_v8f32_broadcast(float* %ptr) {
+define <8 x float> @trunc_v8f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: trunc_v8f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi){1to8}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.trunc.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @trunc_v8f64_broadcast(double* %ptr){
+define <8 x double> @trunc_v8f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: trunc_v8f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi){1to8}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.trunc.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @trunc_v16f32_broadcast(float* %ptr) {
+define <16 x float> @trunc_v16f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: trunc_v16f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi){1to16}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.trunc.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
 
-define <2 x double> @trunc_v2f64_mask_broadcast(double* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @trunc_v2f64_mask_broadcast(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v2f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi){1to2}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> %p)
@@ -1883,14 +1883,14 @@ define <2 x double> @trunc_v2f64_mask_broadcast(double* %ptr, <2 x double> %pass
   ret <2 x double> %s
 }
 
-define <4 x float> @trunc_v4f32_mask_broadcast(float* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @trunc_v4f32_mask_broadcast(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v4f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi){1to4}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %p)
@@ -1898,14 +1898,14 @@ define <4 x float> @trunc_v4f32_mask_broadcast(float* %ptr, <4 x float> %passthr
   ret <4 x float> %s
 }
 
-define <4 x double> @trunc_v4f64_mask_broadcast(double* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @trunc_v4f64_mask_broadcast(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v4f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi){1to4}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.trunc.v4f64(<4 x double> %p)
@@ -1913,14 +1913,14 @@ define <4 x double> @trunc_v4f64_mask_broadcast(double* %ptr, <4 x double> %pass
   ret <4 x double> %s
 }
 
-define <8 x float> @trunc_v8f32_mask_broadcast(float* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @trunc_v8f32_mask_broadcast(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v8f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi){1to8}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.trunc.v8f32(<8 x float> %p)
@@ -1928,14 +1928,14 @@ define <8 x float> @trunc_v8f32_mask_broadcast(float* %ptr, <8 x float> %passthr
   ret <8 x float> %s
 }
 
-define <8 x double> @trunc_v8f64_mask_broadcast(double* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @trunc_v8f64_mask_broadcast(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v8f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi){1to8}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.trunc.v8f64(<8 x double> %p)
@@ -1943,14 +1943,14 @@ define <8 x double> @trunc_v8f64_mask_broadcast(double* %ptr, <8 x double> %pass
   ret <8 x double> %s
 }
 
-define <16 x float> @trunc_v16f32_mask_broadcast(float* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @trunc_v16f32_mask_broadcast(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v16f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi){1to16}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.trunc.v16f32(<16 x float> %p)
@@ -1958,14 +1958,14 @@ define <16 x float> @trunc_v16f32_mask_broadcast(float* %ptr, <16 x float> %pass
   ret <16 x float> %s
 }
 
-define <2 x double> @trunc_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cmp) {
+define <2 x double> @trunc_v2f64_maskz_broadcast(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v2f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi){1to2}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> %p)
@@ -1973,14 +1973,14 @@ define <2 x double> @trunc_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cmp) {
   ret <2 x double> %s
 }
 
-define <4 x float> @trunc_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp) {
+define <4 x float> @trunc_v4f32_maskz_broadcast(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v4f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi){1to4}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %p)
@@ -1988,14 +1988,14 @@ define <4 x float> @trunc_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp) {
   ret <4 x float> %s
 }
 
-define <4 x double> @trunc_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cmp) {
+define <4 x double> @trunc_v4f64_maskz_broadcast(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v4f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi){1to4}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.trunc.v4f64(<4 x double> %p)
@@ -2003,14 +2003,14 @@ define <4 x double> @trunc_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cmp) {
   ret <4 x double> %s
 }
 
-define <8 x float> @trunc_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp) {
+define <8 x float> @trunc_v8f32_maskz_broadcast(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v8f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi){1to8}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.trunc.v8f32(<8 x float> %p)
@@ -2018,14 +2018,14 @@ define <8 x float> @trunc_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp) {
   ret <8 x float> %s
 }
 
-define <8 x double> @trunc_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cmp) {
+define <8 x double> @trunc_v8f64_maskz_broadcast(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: trunc_v8f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $11, (%rdi){1to8}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.trunc.v8f64(<8 x double> %p)
@@ -2033,14 +2033,14 @@ define <8 x double> @trunc_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cmp) {
   ret <8 x double> %s
 }
 
-define <16 x float> @trunc_v16f32_maskz_broadcast(float* %ptr, <16 x i32> %cmp) {
+define <16 x float> @trunc_v16f32_maskz_broadcast(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: trunc_v16f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $11, (%rdi){1to16}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.trunc.v16f32(<16 x float> %p)
@@ -2102,62 +2102,62 @@ define <16 x float> @rint_v16f32(<16 x float> %p) {
   ret <16 x float> %t
 }
 
-define <2 x double> @rint_v2f64_load(<2 x double>* %ptr) {
+define <2 x double> @rint_v2f64_load(ptr %ptr) {
 ; CHECK-LABEL: rint_v2f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $4, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.rint.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @rint_v4f32_load(<4 x float>* %ptr) {
+define <4 x float> @rint_v4f32_load(ptr %ptr) {
 ; CHECK-LABEL: rint_v4f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $4, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.rint.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @rint_v4f64_load(<4 x double>* %ptr){
+define <4 x double> @rint_v4f64_load(ptr %ptr){
 ; CHECK-LABEL: rint_v4f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $4, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.rint.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @rint_v8f32_load(<8 x float>* %ptr) {
+define <8 x float> @rint_v8f32_load(ptr %ptr) {
 ; CHECK-LABEL: rint_v8f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $4, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.rint.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @rint_v8f64_load(<8 x double>* %ptr){
+define <8 x double> @rint_v8f64_load(ptr %ptr){
 ; CHECK-LABEL: rint_v8f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.rint.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @rint_v16f32_load(<16 x float>* %ptr) {
+define <16 x float> @rint_v16f32_load(ptr %ptr) {
 ; CHECK-LABEL: rint_v16f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.rint.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
@@ -2312,242 +2312,242 @@ define <16 x float> @rint_v16f32_maskz(<16 x float> %p, <16 x i32> %cmp) {
   ret <16 x float> %s
 }
 
-define <2 x double> @rint_v2f64_mask_load(<2 x double>* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @rint_v2f64_mask_load(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: rint_v2f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.rint.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> %passthru
   ret <2 x double> %s
 }
 
-define <4 x float> @rint_v4f32_mask_load(<4 x float>* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @rint_v4f32_mask_load(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: rint_v4f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.rint.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> %passthru
   ret <4 x float> %s
 }
 
-define <4 x double> @rint_v4f64_mask_load(<4 x double>* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @rint_v4f64_mask_load(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: rint_v4f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.rint.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> %passthru
   ret <4 x double> %s
 }
 
-define <8 x float> @rint_v8f32_mask_load(<8 x float>* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @rint_v8f32_mask_load(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: rint_v8f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.rint.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> %passthru
   ret <8 x float> %s
 }
 
-define <8 x double> @rint_v8f64_mask_load(<8 x double>* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @rint_v8f64_mask_load(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: rint_v8f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.rint.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> %passthru
   ret <8 x double> %s
 }
 
-define <16 x float> @rint_v16f32_mask_load(<16 x float>* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @rint_v16f32_mask_load(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: rint_v16f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.rint.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> %passthru
   ret <16 x float> %s
 }
 
-define <2 x double> @rint_v2f64_maskz_load(<2 x double>* %ptr, <2 x i64> %cmp) {
+define <2 x double> @rint_v2f64_maskz_load(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: rint_v2f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.rint.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> zeroinitializer
   ret <2 x double> %s
 }
 
-define <4 x float> @rint_v4f32_maskz_load(<4 x float>* %ptr, <4 x i32> %cmp) {
+define <4 x float> @rint_v4f32_maskz_load(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: rint_v4f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.rint.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> zeroinitializer
   ret <4 x float> %s
 }
 
-define <4 x double> @rint_v4f64_maskz_load(<4 x double>* %ptr, <4 x i64> %cmp) {
+define <4 x double> @rint_v4f64_maskz_load(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: rint_v4f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.rint.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> zeroinitializer
   ret <4 x double> %s
 }
 
-define <8 x float> @rint_v8f32_maskz_load(<8 x float>* %ptr, <8 x i32> %cmp) {
+define <8 x float> @rint_v8f32_maskz_load(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: rint_v8f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.rint.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> zeroinitializer
   ret <8 x float> %s
 }
 
-define <8 x double> @rint_v8f64_maskz_load(<8 x double>* %ptr, <8 x i64> %cmp) {
+define <8 x double> @rint_v8f64_maskz_load(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: rint_v8f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.rint.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> zeroinitializer
   ret <8 x double> %s
 }
 
-define <16 x float> @rint_v16f32_maskz_load(<16 x float>* %ptr, <16 x i32> %cmp) {
+define <16 x float> @rint_v16f32_maskz_load(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: rint_v16f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.rint.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> zeroinitializer
   ret <16 x float> %s
 }
 
-define <2 x double> @rint_v2f64_broadcast(double* %ptr) {
+define <2 x double> @rint_v2f64_broadcast(ptr %ptr) {
 ; CHECK-LABEL: rint_v2f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi){1to2}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.rint.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @rint_v4f32_broadcast(float* %ptr) {
+define <4 x float> @rint_v4f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: rint_v4f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi){1to4}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.rint.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @rint_v4f64_broadcast(double* %ptr){
+define <4 x double> @rint_v4f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: rint_v4f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi){1to4}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.rint.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @rint_v8f32_broadcast(float* %ptr) {
+define <8 x float> @rint_v8f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: rint_v8f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi){1to8}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.rint.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @rint_v8f64_broadcast(double* %ptr){
+define <8 x double> @rint_v8f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: rint_v8f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi){1to8}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.rint.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @rint_v16f32_broadcast(float* %ptr) {
+define <16 x float> @rint_v16f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: rint_v16f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi){1to16}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.rint.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
 
-define <2 x double> @rint_v2f64_mask_broadcast(double* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @rint_v2f64_mask_broadcast(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: rint_v2f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi){1to2}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.rint.v2f64(<2 x double> %p)
@@ -2555,14 +2555,14 @@ define <2 x double> @rint_v2f64_mask_broadcast(double* %ptr, <2 x double> %passt
   ret <2 x double> %s
 }
 
-define <4 x float> @rint_v4f32_mask_broadcast(float* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @rint_v4f32_mask_broadcast(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: rint_v4f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi){1to4}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.rint.v4f32(<4 x float> %p)
@@ -2570,14 +2570,14 @@ define <4 x float> @rint_v4f32_mask_broadcast(float* %ptr, <4 x float> %passthru
   ret <4 x float> %s
 }
 
-define <4 x double> @rint_v4f64_mask_broadcast(double* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @rint_v4f64_mask_broadcast(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: rint_v4f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi){1to4}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.rint.v4f64(<4 x double> %p)
@@ -2585,14 +2585,14 @@ define <4 x double> @rint_v4f64_mask_broadcast(double* %ptr, <4 x double> %passt
   ret <4 x double> %s
 }
 
-define <8 x float> @rint_v8f32_mask_broadcast(float* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @rint_v8f32_mask_broadcast(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: rint_v8f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi){1to8}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.rint.v8f32(<8 x float> %p)
@@ -2600,14 +2600,14 @@ define <8 x float> @rint_v8f32_mask_broadcast(float* %ptr, <8 x float> %passthru
   ret <8 x float> %s
 }
 
-define <8 x double> @rint_v8f64_mask_broadcast(double* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @rint_v8f64_mask_broadcast(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: rint_v8f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi){1to8}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.rint.v8f64(<8 x double> %p)
@@ -2615,14 +2615,14 @@ define <8 x double> @rint_v8f64_mask_broadcast(double* %ptr, <8 x double> %passt
   ret <8 x double> %s
 }
 
-define <16 x float> @rint_v16f32_mask_broadcast(float* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @rint_v16f32_mask_broadcast(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: rint_v16f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi){1to16}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.rint.v16f32(<16 x float> %p)
@@ -2630,14 +2630,14 @@ define <16 x float> @rint_v16f32_mask_broadcast(float* %ptr, <16 x float> %passt
   ret <16 x float> %s
 }
 
-define <2 x double> @rint_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cmp) {
+define <2 x double> @rint_v2f64_maskz_broadcast(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: rint_v2f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi){1to2}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.rint.v2f64(<2 x double> %p)
@@ -2645,14 +2645,14 @@ define <2 x double> @rint_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cmp) {
   ret <2 x double> %s
 }
 
-define <4 x float> @rint_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp) {
+define <4 x float> @rint_v4f32_maskz_broadcast(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: rint_v4f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi){1to4}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.rint.v4f32(<4 x float> %p)
@@ -2660,14 +2660,14 @@ define <4 x float> @rint_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp) {
   ret <4 x float> %s
 }
 
-define <4 x double> @rint_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cmp) {
+define <4 x double> @rint_v4f64_maskz_broadcast(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: rint_v4f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi){1to4}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.rint.v4f64(<4 x double> %p)
@@ -2675,14 +2675,14 @@ define <4 x double> @rint_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cmp) {
   ret <4 x double> %s
 }
 
-define <8 x float> @rint_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp) {
+define <8 x float> @rint_v8f32_maskz_broadcast(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: rint_v8f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi){1to8}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.rint.v8f32(<8 x float> %p)
@@ -2690,14 +2690,14 @@ define <8 x float> @rint_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp) {
   ret <8 x float> %s
 }
 
-define <8 x double> @rint_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cmp) {
+define <8 x double> @rint_v8f64_maskz_broadcast(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: rint_v8f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $4, (%rdi){1to8}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.rint.v8f64(<8 x double> %p)
@@ -2705,14 +2705,14 @@ define <8 x double> @rint_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cmp) {
   ret <8 x double> %s
 }
 
-define <16 x float> @rint_v16f32_maskz_broadcast(float* %ptr, <16 x i32> %cmp) {
+define <16 x float> @rint_v16f32_maskz_broadcast(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: rint_v16f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $4, (%rdi){1to16}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.rint.v16f32(<16 x float> %p)
@@ -2774,62 +2774,62 @@ define <16 x float> @nearbyint_v16f32(<16 x float> %p) {
   ret <16 x float> %t
 }
 
-define <2 x double> @nearbyint_v2f64_load(<2 x double>* %ptr) {
+define <2 x double> @nearbyint_v2f64_load(ptr %ptr) {
 ; CHECK-LABEL: nearbyint_v2f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $12, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @nearbyint_v4f32_load(<4 x float>* %ptr) {
+define <4 x float> @nearbyint_v4f32_load(ptr %ptr) {
 ; CHECK-LABEL: nearbyint_v4f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $12, (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @nearbyint_v4f64_load(<4 x double>* %ptr){
+define <4 x double> @nearbyint_v4f64_load(ptr %ptr){
 ; CHECK-LABEL: nearbyint_v4f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundpd $12, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @nearbyint_v8f32_load(<8 x float>* %ptr) {
+define <8 x float> @nearbyint_v8f32_load(ptr %ptr) {
 ; CHECK-LABEL: nearbyint_v8f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vroundps $12, (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @nearbyint_v8f64_load(<8 x double>* %ptr){
+define <8 x double> @nearbyint_v8f64_load(ptr %ptr){
 ; CHECK-LABEL: nearbyint_v8f64_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @nearbyint_v16f32_load(<16 x float>* %ptr) {
+define <16 x float> @nearbyint_v16f32_load(ptr %ptr) {
 ; CHECK-LABEL: nearbyint_v16f32_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
@@ -2984,242 +2984,242 @@ define <16 x float> @nearbyint_v16f32_maskz(<16 x float> %p, <16 x i32> %cmp) {
   ret <16 x float> %s
 }
 
-define <2 x double> @nearbyint_v2f64_mask_load(<2 x double>* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @nearbyint_v2f64_mask_load(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v2f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> %passthru
   ret <2 x double> %s
 }
 
-define <4 x float> @nearbyint_v4f32_mask_load(<4 x float>* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @nearbyint_v4f32_mask_load(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v4f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> %passthru
   ret <4 x float> %s
 }
 
-define <4 x double> @nearbyint_v4f64_mask_load(<4 x double>* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @nearbyint_v4f64_mask_load(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v4f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> %passthru
   ret <4 x double> %s
 }
 
-define <8 x float> @nearbyint_v8f32_mask_load(<8 x float>* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @nearbyint_v8f32_mask_load(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v8f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> %passthru
   ret <8 x float> %s
 }
 
-define <8 x double> @nearbyint_v8f64_mask_load(<8 x double>* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @nearbyint_v8f64_mask_load(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v8f64_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> %passthru
   ret <8 x double> %s
 }
 
-define <16 x float> @nearbyint_v16f32_mask_load(<16 x float>* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @nearbyint_v16f32_mask_load(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v16f32_mask_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> %passthru
   ret <16 x float> %s
 }
 
-define <2 x double> @nearbyint_v2f64_maskz_load(<2 x double>* %ptr, <2 x i64> %cmp) {
+define <2 x double> @nearbyint_v2f64_maskz_load(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v2f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %p = load <2 x double>, <2 x double>* %ptr
+  %p = load <2 x double>, ptr %ptr
   %t = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %p)
   %s = select <2 x i1> %c, <2 x double> %t, <2 x double> zeroinitializer
   ret <2 x double> %s
 }
 
-define <4 x float> @nearbyint_v4f32_maskz_load(<4 x float>* %ptr, <4 x i32> %cmp) {
+define <4 x float> @nearbyint_v4f32_maskz_load(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v4f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %p = load <4 x float>, <4 x float>* %ptr
+  %p = load <4 x float>, ptr %ptr
   %t = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %p)
   %s = select <4 x i1> %c, <4 x float> %t, <4 x float> zeroinitializer
   ret <4 x float> %s
 }
 
-define <4 x double> @nearbyint_v4f64_maskz_load(<4 x double>* %ptr, <4 x i64> %cmp) {
+define <4 x double> @nearbyint_v4f64_maskz_load(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v4f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %p = load <4 x double>, <4 x double>* %ptr
+  %p = load <4 x double>, ptr %ptr
   %t = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %p)
   %s = select <4 x i1> %c, <4 x double> %t, <4 x double> zeroinitializer
   ret <4 x double> %s
 }
 
-define <8 x float> @nearbyint_v8f32_maskz_load(<8 x float>* %ptr, <8 x i32> %cmp) {
+define <8 x float> @nearbyint_v8f32_maskz_load(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v8f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %p = load <8 x float>, <8 x float>* %ptr
+  %p = load <8 x float>, ptr %ptr
   %t = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %p)
   %s = select <8 x i1> %c, <8 x float> %t, <8 x float> zeroinitializer
   ret <8 x float> %s
 }
 
-define <8 x double> @nearbyint_v8f64_maskz_load(<8 x double>* %ptr, <8 x i64> %cmp) {
+define <8 x double> @nearbyint_v8f64_maskz_load(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v8f64_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %p = load <8 x double>, <8 x double>* %ptr
+  %p = load <8 x double>, ptr %ptr
   %t = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %p)
   %s = select <8 x i1> %c, <8 x double> %t, <8 x double> zeroinitializer
   ret <8 x double> %s
 }
 
-define <16 x float> @nearbyint_v16f32_maskz_load(<16 x float>* %ptr, <16 x i32> %cmp) {
+define <16 x float> @nearbyint_v16f32_maskz_load(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v16f32_maskz_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %p = load <16 x float>, <16 x float>* %ptr
+  %p = load <16 x float>, ptr %ptr
   %t = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %p)
   %s = select <16 x i1> %c, <16 x float> %t, <16 x float> zeroinitializer
   ret <16 x float> %s
 }
 
-define <2 x double> @nearbyint_v2f64_broadcast(double* %ptr) {
+define <2 x double> @nearbyint_v2f64_broadcast(ptr %ptr) {
 ; CHECK-LABEL: nearbyint_v2f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi){1to2}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
 
-define <4 x float> @nearbyint_v4f32_broadcast(float* %ptr) {
+define <4 x float> @nearbyint_v4f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: nearbyint_v4f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi){1to4}, %xmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %p)
   ret <4 x float> %t
 }
 
-define <4 x double> @nearbyint_v4f64_broadcast(double* %ptr){
+define <4 x double> @nearbyint_v4f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: nearbyint_v4f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi){1to4}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %p)
   ret <4 x double> %t
 }
 
-define <8 x float> @nearbyint_v8f32_broadcast(float* %ptr) {
+define <8 x float> @nearbyint_v8f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: nearbyint_v8f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi){1to8}, %ymm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %p)
   ret <8 x float> %t
 }
 
-define <8 x double> @nearbyint_v8f64_broadcast(double* %ptr){
+define <8 x double> @nearbyint_v8f64_broadcast(ptr %ptr){
 ; CHECK-LABEL: nearbyint_v8f64_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi){1to8}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %p)
   ret <8 x double> %t
 }
 
-define <16 x float> @nearbyint_v16f32_broadcast(float* %ptr) {
+define <16 x float> @nearbyint_v16f32_broadcast(ptr %ptr) {
 ; CHECK-LABEL: nearbyint_v16f32_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi){1to16}, %zmm0
 ; CHECK-NEXT:    retq
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %p)
   ret <16 x float> %t
 }
 
-define <2 x double> @nearbyint_v2f64_mask_broadcast(double* %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
+define <2 x double> @nearbyint_v2f64_mask_broadcast(ptr %ptr, <2 x double> %passthru, <2 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v2f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi){1to2}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %p)
@@ -3227,14 +3227,14 @@ define <2 x double> @nearbyint_v2f64_mask_broadcast(double* %ptr, <2 x double> %
   ret <2 x double> %s
 }
 
-define <4 x float> @nearbyint_v4f32_mask_broadcast(float* %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
+define <4 x float> @nearbyint_v4f32_mask_broadcast(ptr %ptr, <4 x float> %passthru, <4 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v4f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi){1to4}, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %p)
@@ -3242,14 +3242,14 @@ define <4 x float> @nearbyint_v4f32_mask_broadcast(float* %ptr, <4 x float> %pas
   ret <4 x float> %s
 }
 
-define <4 x double> @nearbyint_v4f64_mask_broadcast(double* %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
+define <4 x double> @nearbyint_v4f64_mask_broadcast(ptr %ptr, <4 x double> %passthru, <4 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v4f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi){1to4}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %p)
@@ -3257,14 +3257,14 @@ define <4 x double> @nearbyint_v4f64_mask_broadcast(double* %ptr, <4 x double> %
   ret <4 x double> %s
 }
 
-define <8 x float> @nearbyint_v8f32_mask_broadcast(float* %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
+define <8 x float> @nearbyint_v8f32_mask_broadcast(ptr %ptr, <8 x float> %passthru, <8 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v8f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi){1to8}, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %p)
@@ -3272,14 +3272,14 @@ define <8 x float> @nearbyint_v8f32_mask_broadcast(float* %ptr, <8 x float> %pas
   ret <8 x float> %s
 }
 
-define <8 x double> @nearbyint_v8f64_mask_broadcast(double* %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
+define <8 x double> @nearbyint_v8f64_mask_broadcast(ptr %ptr, <8 x double> %passthru, <8 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v8f64_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi){1to8}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %p)
@@ -3287,14 +3287,14 @@ define <8 x double> @nearbyint_v8f64_mask_broadcast(double* %ptr, <8 x double> %
   ret <8 x double> %s
 }
 
-define <16 x float> @nearbyint_v16f32_mask_broadcast(float* %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
+define <16 x float> @nearbyint_v16f32_mask_broadcast(ptr %ptr, <16 x float> %passthru, <16 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v16f32_mask_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi){1to16}, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %p)
@@ -3302,14 +3302,14 @@ define <16 x float> @nearbyint_v16f32_mask_broadcast(float* %ptr, <16 x float> %
   ret <16 x float> %s
 }
 
-define <2 x double> @nearbyint_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cmp) {
+define <2 x double> @nearbyint_v2f64_maskz_broadcast(ptr %ptr, <2 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v2f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi){1to2}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <2 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <2 x double> undef, double %ps, i32 0
   %p = shufflevector <2 x double> %pins, <2 x double> undef, <2 x i32> zeroinitializer
   %t = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %p)
@@ -3317,14 +3317,14 @@ define <2 x double> @nearbyint_v2f64_maskz_broadcast(double* %ptr, <2 x i64> %cm
   ret <2 x double> %s
 }
 
-define <4 x float> @nearbyint_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp) {
+define <4 x float> @nearbyint_v4f32_maskz_broadcast(ptr %ptr, <4 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v4f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi){1to4}, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <4 x float> undef, float %ps, i32 0
   %p = shufflevector <4 x float> %pins, <4 x float> undef, <4 x i32> zeroinitializer
   %t = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %p)
@@ -3332,14 +3332,14 @@ define <4 x float> @nearbyint_v4f32_maskz_broadcast(float* %ptr, <4 x i32> %cmp)
   ret <4 x float> %s
 }
 
-define <4 x double> @nearbyint_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cmp) {
+define <4 x double> @nearbyint_v4f64_maskz_broadcast(ptr %ptr, <4 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v4f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi){1to4}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <4 x double> undef, double %ps, i32 0
   %p = shufflevector <4 x double> %pins, <4 x double> undef, <4 x i32> zeroinitializer
   %t = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %p)
@@ -3347,14 +3347,14 @@ define <4 x double> @nearbyint_v4f64_maskz_broadcast(double* %ptr, <4 x i64> %cm
   ret <4 x double> %s
 }
 
-define <8 x float> @nearbyint_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp) {
+define <8 x float> @nearbyint_v8f32_maskz_broadcast(ptr %ptr, <8 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v8f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi){1to8}, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <8 x float> undef, float %ps, i32 0
   %p = shufflevector <8 x float> %pins, <8 x float> undef, <8 x i32> zeroinitializer
   %t = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %p)
@@ -3362,14 +3362,14 @@ define <8 x float> @nearbyint_v8f32_maskz_broadcast(float* %ptr, <8 x i32> %cmp)
   ret <8 x float> %s
 }
 
-define <8 x double> @nearbyint_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cmp) {
+define <8 x double> @nearbyint_v8f64_maskz_broadcast(ptr %ptr, <8 x i64> %cmp) {
 ; CHECK-LABEL: nearbyint_v8f64_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscalepd $12, (%rdi){1to8}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <8 x i64> %cmp, zeroinitializer
-  %ps = load double, double* %ptr
+  %ps = load double, ptr %ptr
   %pins = insertelement <8 x double> undef, double %ps, i32 0
   %p = shufflevector <8 x double> %pins, <8 x double> undef, <8 x i32> zeroinitializer
   %t = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %p)
@@ -3377,14 +3377,14 @@ define <8 x double> @nearbyint_v8f64_maskz_broadcast(double* %ptr, <8 x i64> %cm
   ret <8 x double> %s
 }
 
-define <16 x float> @nearbyint_v16f32_maskz_broadcast(float* %ptr, <16 x i32> %cmp) {
+define <16 x float> @nearbyint_v16f32_maskz_broadcast(ptr %ptr, <16 x i32> %cmp) {
 ; CHECK-LABEL: nearbyint_v16f32_maskz_broadcast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vrndscaleps $12, (%rdi){1to16}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %c = icmp eq <16 x i32> %cmp, zeroinitializer
-  %ps = load float, float* %ptr
+  %ps = load float, ptr %ptr
   %pins = insertelement <16 x float> undef, float %ps, i32 0
   %p = shufflevector <16 x float> %pins, <16 x float> undef, <16 x i32> zeroinitializer
   %t = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %p)

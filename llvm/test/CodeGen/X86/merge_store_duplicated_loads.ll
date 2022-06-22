@@ -4,7 +4,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @merge_double(double* noalias nocapture %st, double* noalias nocapture readonly %ld) #0 {
+define void @merge_double(ptr noalias nocapture %st, ptr noalias nocapture readonly %ld) #0 {
 ; CHECK-LABEL: merge_double:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -14,22 +14,22 @@ define void @merge_double(double* noalias nocapture %st, double* noalias nocaptu
 ; CHECK-NEXT:    movsd %xmm0, 16(%rdi)
 ; CHECK-NEXT:    movsd %xmm1, 24(%rdi)
 ; CHECK-NEXT:    retq
-  %ld_idx1 = getelementptr inbounds double, double* %ld, i64 1
-  %ld0 = load double, double* %ld, align 8, !tbaa !2
-  %ld1 = load double, double* %ld_idx1, align 8, !tbaa !2
+  %ld_idx1 = getelementptr inbounds double, ptr %ld, i64 1
+  %ld0 = load double, ptr %ld, align 8, !tbaa !2
+  %ld1 = load double, ptr %ld_idx1, align 8, !tbaa !2
 
-  %st_idx1 = getelementptr inbounds double, double* %st, i64 1
-  %st_idx2 = getelementptr inbounds double, double* %st, i64 2
-  %st_idx3 = getelementptr inbounds double, double* %st, i64 3
+  %st_idx1 = getelementptr inbounds double, ptr %st, i64 1
+  %st_idx2 = getelementptr inbounds double, ptr %st, i64 2
+  %st_idx3 = getelementptr inbounds double, ptr %st, i64 3
 
-  store double %ld0, double* %st, align 8, !tbaa !2
-  store double %ld1, double* %st_idx1, align 8, !tbaa !2
-  store double %ld0, double* %st_idx2, align 8, !tbaa !2
-  store double %ld1, double* %st_idx3, align 8, !tbaa !2
+  store double %ld0, ptr %st, align 8, !tbaa !2
+  store double %ld1, ptr %st_idx1, align 8, !tbaa !2
+  store double %ld0, ptr %st_idx2, align 8, !tbaa !2
+  store double %ld1, ptr %st_idx3, align 8, !tbaa !2
   ret void
 }
 
-define void @merge_loadstore_int(i64* noalias nocapture readonly %p, i64* noalias nocapture %q) local_unnamed_addr #0 {
+define void @merge_loadstore_int(ptr noalias nocapture readonly %p, ptr noalias nocapture %q) local_unnamed_addr #0 {
 ; CHECK-LABEL: merge_loadstore_int:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -40,20 +40,20 @@ define void @merge_loadstore_int(i64* noalias nocapture readonly %p, i64* noalia
 ; CHECK-NEXT:    movq %rcx, 24(%rsi)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i64, i64* %p, align 8, !tbaa !1
-  %arrayidx1 = getelementptr inbounds i64, i64* %p, i64 1
-  %1 = load i64, i64* %arrayidx1, align 8, !tbaa !1
-  store i64 %0, i64* %q, align 8, !tbaa !1
-  %arrayidx3 = getelementptr inbounds i64, i64* %q, i64 1
-  store i64 %1, i64* %arrayidx3, align 8, !tbaa !1
-  %arrayidx4 = getelementptr inbounds i64, i64* %q, i64 2
-  store i64 %0, i64* %arrayidx4, align 8, !tbaa !1
-  %arrayidx5 = getelementptr inbounds i64, i64* %q, i64 3
-  store i64 %1, i64* %arrayidx5, align 8, !tbaa !1
+  %0 = load i64, ptr %p, align 8, !tbaa !1
+  %arrayidx1 = getelementptr inbounds i64, ptr %p, i64 1
+  %1 = load i64, ptr %arrayidx1, align 8, !tbaa !1
+  store i64 %0, ptr %q, align 8, !tbaa !1
+  %arrayidx3 = getelementptr inbounds i64, ptr %q, i64 1
+  store i64 %1, ptr %arrayidx3, align 8, !tbaa !1
+  %arrayidx4 = getelementptr inbounds i64, ptr %q, i64 2
+  store i64 %0, ptr %arrayidx4, align 8, !tbaa !1
+  %arrayidx5 = getelementptr inbounds i64, ptr %q, i64 3
+  store i64 %1, ptr %arrayidx5, align 8, !tbaa !1
   ret void
 }
 
-define i64 @merge_loadstore_int_with_extra_use(i64* noalias nocapture readonly %p, i64* noalias nocapture %q) local_unnamed_addr #0 {
+define i64 @merge_loadstore_int_with_extra_use(ptr noalias nocapture readonly %p, ptr noalias nocapture %q) local_unnamed_addr #0 {
 ; CHECK-LABEL: merge_loadstore_int_with_extra_use:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -64,16 +64,16 @@ define i64 @merge_loadstore_int_with_extra_use(i64* noalias nocapture readonly %
 ; CHECK-NEXT:    movq %rcx, 24(%rsi)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i64, i64* %p, align 8, !tbaa !1
-  %arrayidx1 = getelementptr inbounds i64, i64* %p, i64 1
-  %1 = load i64, i64* %arrayidx1, align 8, !tbaa !1
-  store i64 %0, i64* %q, align 8, !tbaa !1
-  %arrayidx3 = getelementptr inbounds i64, i64* %q, i64 1
-  store i64 %1, i64* %arrayidx3, align 8, !tbaa !1
-  %arrayidx4 = getelementptr inbounds i64, i64* %q, i64 2
-  store i64 %0, i64* %arrayidx4, align 8, !tbaa !1
-  %arrayidx5 = getelementptr inbounds i64, i64* %q, i64 3
-  store i64 %1, i64* %arrayidx5, align 8, !tbaa !1
+  %0 = load i64, ptr %p, align 8, !tbaa !1
+  %arrayidx1 = getelementptr inbounds i64, ptr %p, i64 1
+  %1 = load i64, ptr %arrayidx1, align 8, !tbaa !1
+  store i64 %0, ptr %q, align 8, !tbaa !1
+  %arrayidx3 = getelementptr inbounds i64, ptr %q, i64 1
+  store i64 %1, ptr %arrayidx3, align 8, !tbaa !1
+  %arrayidx4 = getelementptr inbounds i64, ptr %q, i64 2
+  store i64 %0, ptr %arrayidx4, align 8, !tbaa !1
+  %arrayidx5 = getelementptr inbounds i64, ptr %q, i64 3
+  store i64 %1, ptr %arrayidx5, align 8, !tbaa !1
   ret i64 %0
 
 }

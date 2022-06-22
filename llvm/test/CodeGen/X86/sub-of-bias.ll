@@ -113,7 +113,7 @@ define i32 @t2_commutative(i32 %ptr, i32 %mask) nounwind {
 
 ; Extra use tests
 
-define i32 @n3_extrause1(i32 %ptr, i32 %mask, i32* %bias_storage) nounwind {
+define i32 @n3_extrause1(i32 %ptr, i32 %mask, ptr %bias_storage) nounwind {
 ; X86-LABEL: n3_extrause1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -132,7 +132,7 @@ define i32 @n3_extrause1(i32 %ptr, i32 %mask, i32* %bias_storage) nounwind {
 ; X64-NEXT:    subl %esi, %eax
 ; X64-NEXT:    retq
   %bias = and i32 %ptr, %mask ; has extra uses, can't fold
-  store i32 %bias, i32* %bias_storage
+  store i32 %bias, ptr %bias_storage
   %r = sub i32 %ptr, %bias
   ret i32 %r
 }

@@ -61,7 +61,7 @@ entry:
     ret double %rd
 }
 
-define void @ret_large_struct(%struct.st12_t* noalias nocapture sret(%struct.st12_t) %agg.result, %struct.st12_t* byval(%struct.st12_t) nocapture readonly align 4 %r) #0 {
+define void @ret_large_struct(ptr noalias nocapture sret(%struct.st12_t) %agg.result, ptr byval(%struct.st12_t) nocapture readonly align 4 %r) #0 {
 ; CHECK-LABEL: ret_large_struct:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
@@ -73,9 +73,7 @@ define void @ret_large_struct(%struct.st12_t* noalias nocapture sret(%struct.st1
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 entry:
-  %0 = bitcast %struct.st12_t* %agg.result to i8*
-  %1 = bitcast %struct.st12_t* %r to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 48, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %agg.result, ptr %r, i32 48, i1 false)
   ret void
 }
 
@@ -100,7 +98,7 @@ define i32 @test_lib_args(float %a, float %b) #0 {
   ret i32 %ret
 }
 
-define i32 @test_fp128(fp128* %ptr) #0 {
+define i32 @test_fp128(ptr %ptr) #0 {
 ; CHECK-LABEL: test_fp128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl 12(%eax)
@@ -110,12 +108,12 @@ define i32 @test_fp128(fp128* %ptr) #0 {
 ; CHECK-NEXT:    calll __fixtfsi
 ; CHECK-NEXT:    addl $16, %esp
 ; CHECK-NEXT:    retl
-  %v = load fp128, fp128* %ptr
+  %v = load fp128, ptr %ptr
   %ret = fptosi fp128 %v to i32
   ret i32 %ret
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture readonly, i32, i1) #1
 
 define void @test_alignment_d() #0 {
 ; CHECK-LABEL: test_alignment_d:
@@ -129,8 +127,8 @@ define void @test_alignment_d() #0 {
 ; CHECK-NEXT:    retl
 entry:
   %d = alloca double
-  store double 2.000000e+00, double* %d
-  call void @food(double* inreg %d)
+  store double 2.000000e+00, ptr %d
+  call void @food(ptr inreg %d)
   ret void
 }
 
@@ -146,8 +144,8 @@ define void @test_alignment_i() #0 {
 ; CHECK-NEXT:    retl
 entry:
   %i = alloca i64
-  store i64 2, i64* %i
-  call void @fooi(i64* inreg %i)
+  store i64 2, ptr %i
+  call void @fooi(ptr inreg %i)
   ret void
 }
 
@@ -160,7 +158,7 @@ define void @test_alignment_s() #0 {
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
   %s = alloca %struct.S, align 4
-  call void @foos(%struct.S* inreg %s)
+  call void @foos(ptr inreg %s)
   ret void
 }
 
@@ -178,15 +176,15 @@ define void @test_alignment_fp() #0 {
 ; CHECK-NEXT:    retl
 entry:
   %f = alloca fp128
-  store fp128 0xL00000000000000004000000000000000, fp128* %f
-  call void @foofp(fp128* inreg %f)
+  store fp128 0xL00000000000000004000000000000000, ptr %f
+  call void @foofp(ptr inreg %f)
   ret void
 }
 
-declare void @food(double* inreg)
-declare void @fooi(i64* inreg)
-declare void @foos(%struct.S* inreg)
-declare void @foofp(fp128* inreg)
+declare void @food(ptr inreg)
+declare void @fooi(ptr inreg)
+declare void @foos(ptr inreg)
+declare void @foofp(ptr inreg)
 
 attributes #0 = { nounwind "use-soft-float"="true"}
 attributes #1 = { nounwind argmemonly }

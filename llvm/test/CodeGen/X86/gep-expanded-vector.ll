@@ -1,12 +1,12 @@
 ; RUN: llc < %s -O2 -mattr=avx512f -mtriple=x86_64-unknown | FileCheck %s
 
-%struct.S1 = type { %struct.S1*, %struct.S1* }
+%struct.S1 = type { ptr, ptr }
 
-define %struct.S1** @malloc_init_state(<64 x %struct.S1**> %tmp, i32 %ind) {
+define ptr @malloc_init_state(<64 x ptr> %tmp, i32 %ind) {
 entry:
-  %Vec = getelementptr inbounds %struct.S1*, <64 x %struct.S1**> %tmp , i64 2
-  %ptr = extractelement <64 x %struct.S1**> %Vec, i32 %ind
-  ret %struct.S1** %ptr
+  %Vec = getelementptr inbounds ptr, <64 x ptr> %tmp , i64 2
+  %ptr = extractelement <64 x ptr> %Vec, i32 %ind
+  ret ptr %ptr
 }
 
 ; CHECK: .LCPI0_0:

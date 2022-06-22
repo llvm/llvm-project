@@ -34,6 +34,6 @@ define void @test_sret_libcall(i128 %l, i128 %r) {
 ; CHECK-DAG: movl [[RES2]], var+8
 ; CHECK-DAG: movl [[RES3]], var+12
   %quot = udiv i128 %l, %r
-  store i128 %quot, i128* @var
+  store i128 %quot, ptr @var
   ret void
 }

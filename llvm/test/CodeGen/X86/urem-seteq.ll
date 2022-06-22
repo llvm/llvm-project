@@ -378,9 +378,9 @@ define void @ossfuzz34366() {
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    sete (%rax)
 ; X64-NEXT:    retq
-  %L10 = load i448, i448* undef, align 4
+  %L10 = load i448, ptr undef, align 4
   %B18 = urem i448 %L10, -363419362147803445274661903944002267176820680343659030140745099590319644056698961663095525356881782780381260803133088966767300814307328
   %C13 = icmp ule i448 %B18, 0
-  store i1 %C13, i1* undef, align 1
+  store i1 %C13, ptr undef, align 1
   ret void
 }

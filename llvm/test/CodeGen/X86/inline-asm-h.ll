@@ -4,7 +4,7 @@
 
 define dso_local void @zed() nounwind {
 entry:
-  call void asm "movq %mm2,${0:H}", "=*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @foobar) nounwind
+  call void asm "movq %mm2,${0:H}", "=*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @foobar) nounwind
   ret void
 }
 

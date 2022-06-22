@@ -10,7 +10,7 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx512f,+fast-variable-perlane-shuffle | FileCheck %s --check-prefix=AVX512
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+xop | FileCheck %s --check-prefixes=AVX,XOP
 
-define void @insert_v7i8_v2i16_2(<7 x i8> *%a0, <2 x i16> *%a1) nounwind {
+define void @insert_v7i8_v2i16_2(ptr%a0, ptr%a1) nounwind {
 ; SSE-LABEL: insert_v7i8_v2i16_2:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl (%rsi), %eax
@@ -52,19 +52,19 @@ define void @insert_v7i8_v2i16_2(<7 x i8> *%a0, <2 x i16> *%a1) nounwind {
 ; AVX512-NEXT:    movw %ax, 4(%rdi)
 ; AVX512-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
-  %1 = load <2 x i16>, <2 x i16> *%a1
+  %1 = load <2 x i16>, ptr%a1
   %2 = bitcast <2 x i16> %1 to <4 x i8>
   %3 = shufflevector <4 x i8> %2, <4 x i8> undef, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef>
-  %4 = load <7 x i8>, <7 x i8> *%a0
+  %4 = load <7 x i8>, ptr%a0
   %5 = shufflevector <7 x i8> %4, <7 x i8> %3, <7 x i32> <i32 0, i32 1, i32 7, i32 8, i32 9, i32 10, i32 6>
-  store <7 x i8> %5, <7 x i8>* %a0
+  store <7 x i8> %5, ptr %a0
   ret void
 }
 
 %struct.Mat4 = type { %struct.storage }
 %struct.storage = type { [16 x float] }
 
-define void @PR40815(%struct.Mat4* nocapture readonly dereferenceable(64), %struct.Mat4* nocapture dereferenceable(64)) {
+define void @PR40815(ptr nocapture readonly dereferenceable(64), ptr nocapture dereferenceable(64)) {
 ; SSE-LABEL: PR40815:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0
@@ -99,30 +99,25 @@ define void @PR40815(%struct.Mat4* nocapture readonly dereferenceable(64), %stru
 ; AVX512-NEXT:    vmovups %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %3 = bitcast %struct.Mat4* %0 to <16 x float>*
-  %4 = load <16 x float>, <16 x float>* %3, align 64
-  %5 = shufflevector <16 x float> %4, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %6 = getelementptr inbounds %struct.Mat4, %struct.Mat4* %1, i64 0, i32 0, i32 0, i64 4
-  %7 = bitcast <16 x float> %4 to <4 x i128>
-  %8 = extractelement <4 x i128> %7, i32 1
-  %9 = getelementptr inbounds %struct.Mat4, %struct.Mat4* %1, i64 0, i32 0, i32 0, i64 8
-  %10 = bitcast <16 x float> %4 to <4 x i128>
-  %11 = extractelement <4 x i128> %10, i32 2
-  %12 = getelementptr inbounds %struct.Mat4, %struct.Mat4* %1, i64 0, i32 0, i32 0, i64 12
-  %13 = bitcast float* %12 to <4 x float>*
-  %14 = bitcast <16 x float> %4 to <4 x i128>
-  %15 = extractelement <4 x i128> %14, i32 3
-  %16 = bitcast %struct.Mat4* %1 to i128*
-  store i128 %15, i128* %16, align 16
-  %17 = bitcast float* %6 to i128*
-  store i128 %11, i128* %17, align 16
-  %18 = bitcast float* %9 to i128*
-  store i128 %8, i128* %18, align 16
-  store <4 x float> %5, <4 x float>* %13, align 16
+  %3 = load <16 x float>, ptr %0, align 64
+  %4 = shufflevector <16 x float> %3, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %5 = getelementptr inbounds %struct.Mat4, ptr %1, i64 0, i32 0, i32 0, i64 4
+  %6 = bitcast <16 x float> %3 to <4 x i128>
+  %7 = extractelement <4 x i128> %6, i32 1
+  %8 = getelementptr inbounds %struct.Mat4, ptr %1, i64 0, i32 0, i32 0, i64 8
+  %9 = bitcast <16 x float> %3 to <4 x i128>
+  %10 = extractelement <4 x i128> %9, i32 2
+  %11 = getelementptr inbounds %struct.Mat4, ptr %1, i64 0, i32 0, i32 0, i64 12
+  %12 = bitcast <16 x float> %3 to <4 x i128>
+  %13 = extractelement <4 x i128> %12, i32 3
+  store i128 %13, ptr %1, align 16
+  store i128 %10, ptr %5, align 16
+  store i128 %7, ptr %8, align 16
+  store <4 x float> %4, ptr %11, align 16
   ret void
 }
 
-define <16 x i32> @PR42819(<8 x i32>* %a0) {
+define <16 x i32> @PR42819(ptr %a0) {
 ; SSE-LABEL: PR42819:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm3
@@ -148,7 +143,7 @@ define <16 x i32> @PR42819(<8 x i32>* %a0) {
 ; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
-  %1 = load <8 x i32>, <8 x i32>* %a0, align 4
+  %1 = load <8 x i32>, ptr %a0, align 4
   %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %3 = shufflevector <16 x i32> zeroinitializer, <16 x i32> %2, <16 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18>
   ret <16 x i32> %3
@@ -346,8 +341,8 @@ define void @PR42833() {
 ; XOP-NEXT:    vmovdqa %xmm0, c+176(%rip)
 ; XOP-NEXT:    vzeroupper
 ; XOP-NEXT:    retq
-  %1 = load i32, i32* @b, align 4
-  %2 = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([49 x i32], [49 x i32]* @c, i64 0, i64 32) to <8 x i32>*), align 16
+  %1 = load i32, ptr @b, align 4
+  %2 = load <8 x i32>, ptr getelementptr inbounds ([49 x i32], ptr @c, i64 0, i64 32), align 16
   %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <16 x i32> <i32 undef, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %4 = extractelement <8 x i32> %2, i32 0
   %5 = add i32 %1, %4
@@ -355,15 +350,15 @@ define void @PR42833() {
   %7 = add <8 x i32> %2, %6
   %8 = shl <8 x i32> %2, %6
   %9 = shufflevector <8 x i32> %7, <8 x i32> %8, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <8 x i32> %9, <8 x i32>* bitcast (i32* getelementptr inbounds ([49 x i32], [49 x i32]* @c, i64 0, i64 32) to <8 x i32>*), align 16
-  %10 = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([49 x i32], [49 x i32]* @c, i64 0, i64 40) to <8 x i32>*), align 16
+  store <8 x i32> %9, ptr getelementptr inbounds ([49 x i32], ptr @c, i64 0, i64 32), align 16
+  %10 = load <8 x i32>, ptr getelementptr inbounds ([49 x i32], ptr @c, i64 0, i64 40), align 16
   %11 = shufflevector <8 x i32> %10, <8 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %12 = load <16 x i32>, <16 x i32>* bitcast (i32* getelementptr inbounds ([49 x i32], [49 x i32]* @d, i64 0, i64 32) to <16 x i32>*), align 16
+  %12 = load <16 x i32>, ptr getelementptr inbounds ([49 x i32], ptr @d, i64 0, i64 32), align 16
   %13 = insertelement <16 x i32> %3, i32 %5, i32 0
   %14 = shufflevector <16 x i32> %13, <16 x i32> %11, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
   %15 = sub <16 x i32> %12, %14
-  store <16 x i32> %15, <16 x i32>* bitcast (i32* getelementptr inbounds ([49 x i32], [49 x i32]* @d, i64 0, i64 32) to <16 x i32>*), align 16
+  store <16 x i32> %15, ptr getelementptr inbounds ([49 x i32], ptr @d, i64 0, i64 32), align 16
   %16 = shl <8 x i32> %10, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  store <8 x i32> %16, <8 x i32>* bitcast (i32* getelementptr inbounds ([49 x i32], [49 x i32]* @c, i64 0, i64 40) to <8 x i32>*), align 16
+  store <8 x i32> %16, ptr getelementptr inbounds ([49 x i32], ptr @c, i64 0, i64 40), align 16
   ret void
 }

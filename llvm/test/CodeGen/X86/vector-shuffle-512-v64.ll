@@ -254,7 +254,7 @@ define <64 x i8> @shuffle_v64i8_01_03_02_05_07_06_09_11_10_13_15_14_17_19_18_21_
   ret <64 x i8> %shuffle
 }
 
-define <64 x i8> @insert_dup_mem_v64i8_i32(i32* %ptr) {
+define <64 x i8> @insert_dup_mem_v64i8_i32(ptr %ptr) {
 ; AVX512F-LABEL: insert_dup_mem_v64i8_i32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastb (%rdi), %ymm0
@@ -276,14 +276,14 @@ define <64 x i8> @insert_dup_mem_v64i8_i32(i32* %ptr) {
 ; AVX512VBMI:       # %bb.0:
 ; AVX512VBMI-NEXT:    vpbroadcastb (%rdi), %zmm0
 ; AVX512VBMI-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
   %tmp2 = bitcast <4 x i32> %tmp1 to <16 x i8>
   %tmp3 = shufflevector <16 x i8> %tmp2, <16 x i8> undef, <64 x i32> zeroinitializer
   ret <64 x i8> %tmp3
 }
 
-define <64 x i8> @insert_dup_mem_v64i8_sext_i8(i8* %ptr) {
+define <64 x i8> @insert_dup_mem_v64i8_sext_i8(ptr %ptr) {
 ; AVX512F-LABEL: insert_dup_mem_v64i8_sext_i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastb (%rdi), %ymm0
@@ -305,7 +305,7 @@ define <64 x i8> @insert_dup_mem_v64i8_sext_i8(i8* %ptr) {
 ; AVX512VBMI:       # %bb.0:
 ; AVX512VBMI-NEXT:    vpbroadcastb (%rdi), %zmm0
 ; AVX512VBMI-NEXT:    retq
-  %tmp = load i8, i8* %ptr, align 1
+  %tmp = load i8, ptr %ptr, align 1
   %tmp1 = sext i8 %tmp to i32
   %tmp2 = insertelement <4 x i32> zeroinitializer, i32 %tmp1, i32 0
   %tmp3 = bitcast <4 x i32> %tmp2 to <16 x i8>
@@ -313,7 +313,7 @@ define <64 x i8> @insert_dup_mem_v64i8_sext_i8(i8* %ptr) {
   ret <64 x i8> %tmp4
 }
 
-define <64 x i8> @insert_dup_elt1_mem_v64i8_i32(i32* %ptr) {
+define <64 x i8> @insert_dup_elt1_mem_v64i8_i32(ptr %ptr) {
 ; AVX512F-LABEL: insert_dup_elt1_mem_v64i8_i32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastb 1(%rdi), %ymm0
@@ -335,14 +335,14 @@ define <64 x i8> @insert_dup_elt1_mem_v64i8_i32(i32* %ptr) {
 ; AVX512VBMI:       # %bb.0:
 ; AVX512VBMI-NEXT:    vpbroadcastb 1(%rdi), %zmm0
 ; AVX512VBMI-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
   %tmp2 = bitcast <4 x i32> %tmp1 to <16 x i8>
   %tmp3 = shufflevector <16 x i8> %tmp2, <16 x i8> undef, <64 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <64 x i8> %tmp3
 }
 
-define <64 x i8> @insert_dup_elt3_mem_v64i8_i32(i32* %ptr) {
+define <64 x i8> @insert_dup_elt3_mem_v64i8_i32(ptr %ptr) {
 ; AVX512F-LABEL: insert_dup_elt3_mem_v64i8_i32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastb 3(%rdi), %ymm0
@@ -364,14 +364,14 @@ define <64 x i8> @insert_dup_elt3_mem_v64i8_i32(i32* %ptr) {
 ; AVX512VBMI:       # %bb.0:
 ; AVX512VBMI-NEXT:    vpbroadcastb 3(%rdi), %zmm0
 ; AVX512VBMI-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
   %tmp2 = bitcast <4 x i32> %tmp1 to <16 x i8>
   %tmp3 = shufflevector <16 x i8> %tmp2, <16 x i8> undef, <64 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <64 x i8> %tmp3
 }
 
-define <64 x i8> @insert_dup_elt1_mem_v64i8_sext_i8(i8* %ptr) {
+define <64 x i8> @insert_dup_elt1_mem_v64i8_sext_i8(ptr %ptr) {
 ; AVX512F-LABEL: insert_dup_elt1_mem_v64i8_sext_i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    movsbl (%rdi), %eax
@@ -403,7 +403,7 @@ define <64 x i8> @insert_dup_elt1_mem_v64i8_sext_i8(i8* %ptr) {
 ; AVX512VBMI-NEXT:    shrl $8, %eax
 ; AVX512VBMI-NEXT:    vpbroadcastb %eax, %zmm0
 ; AVX512VBMI-NEXT:    retq
-  %tmp = load i8, i8* %ptr, align 1
+  %tmp = load i8, ptr %ptr, align 1
   %tmp1 = sext i8 %tmp to i32
   %tmp2 = insertelement <4 x i32> zeroinitializer, i32 %tmp1, i32 0
   %tmp3 = bitcast <4 x i32> %tmp2 to <16 x i8>
@@ -1529,7 +1529,7 @@ define <64 x i8> @PR54562_ref(<64 x i8> %a0) {
   ret <64 x i8> %shuffle2
 }
 
-define void @PR54562_mem(<64 x i8>* %src, <64 x i8>* %dst) {
+define void @PR54562_mem(ptr %src, ptr %dst) {
 ; AVX512F-LABEL: PR54562_mem:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa 32(%rdi), %xmm0
@@ -1574,9 +1574,9 @@ define void @PR54562_mem(<64 x i8>* %src, <64 x i8>* %dst) {
 ; AVX512VBMI-NEXT:    vmovdqa64 %zmm0, (%rsi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
-  %load = load <64 x i8>, <64 x i8>* %src, align 512
+  %load = load <64 x i8>, ptr %src, align 512
   %shuffle1 = shufflevector <64 x i8> %load, <64 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 undef, i32 undef, i32 undef, i32 undef, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 undef, i32 undef, i32 undef, i32 undef, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 undef, i32 undef, i32 undef, i32 undef, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 undef, i32 undef, i32 undef, i32 undef>
   %shuffle2 = shufflevector <64 x i8> %shuffle1, <64 x i8> poison, <64 x i32> <i32 1,  i32 0,  i32 2,  i32 1,  i32 4,  i32 3,  i32 5,  i32 4, i32 7,  i32 6,  i32 8,  i32 7,  i32 10, i32 9,  i32 11, i32 10, i32 17, i32 16, i32 18, i32 17, i32 20, i32 19, i32 21, i32 20, i32 23, i32 22, i32 24, i32 23, i32 26, i32 25, i32 27, i32 26, i32 33, i32 32, i32 34, i32 33, i32 36, i32 35, i32 37, i32 36, i32 39, i32 38, i32 40, i32 39, i32 42, i32 41, i32 43, i32 42, i32 49, i32 48, i32 50, i32 49, i32 52, i32 51, i32 53, i32 52, i32 55, i32 54, i32 56, i32 55, i32 58, i32 57, i32 59, i32 58>
-  store <64 x i8> %shuffle2, <64 x i8>* %dst, align 512
+  store <64 x i8> %shuffle2, ptr %dst, align 512
   ret void
 }

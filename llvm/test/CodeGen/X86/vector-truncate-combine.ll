@@ -24,7 +24,7 @@ entry:
   %0 = bitcast double %vec.coerce to <8 x i8>
   %1 = shufflevector <8 x i8> %0, <8 x i8> undef, <4 x i32> <i32 2, i32 undef, i32 undef, i32 0>
   %2 = shufflevector <4 x i8> %1, <4 x i8> undef, <2 x i32> <i32 3, i32 0>
-  store volatile <2 x i8> %2, <2 x i8>* %c2, align 2
+  store volatile <2 x i8> %2, ptr %c2, align 2
   br label %if.end
 
 if.end:

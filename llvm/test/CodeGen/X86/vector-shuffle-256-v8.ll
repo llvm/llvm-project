@@ -1566,7 +1566,7 @@ define <8 x float> @shuffle_v8f32_32107654_v4f32(<4 x float> %a, <4 x float> %b)
   ret <8 x float> %3
 }
 
-define <8 x float> @shuffle_mem_v8f32_8BA0CFE4(<8 x float> %a0, <8 x float>* %a1) {
+define <8 x float> @shuffle_mem_v8f32_8BA0CFE4(<8 x float> %a0, ptr %a1) {
 ; AVX1OR2-LABEL: shuffle_mem_v8f32_8BA0CFE4:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm1 = ymm0[2,0],mem[0,0],ymm0[6,4],mem[4,4]
@@ -1584,7 +1584,7 @@ define <8 x float> @shuffle_mem_v8f32_8BA0CFE4(<8 x float> %a0, <8 x float>* %a1
 ; AVX512VL-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,3,2,8,4,7,6,12]
 ; AVX512VL-FAST-NEXT:    vpermt2ps (%rdi), %ymm1, %ymm0
 ; AVX512VL-FAST-NEXT:    retq
-  %1 = load <8 x float>, <8 x float>* %a1
+  %1 = load <8 x float>, ptr %a1
   %2 = shufflevector <8 x float> %1, <8 x float> %a0, <8 x i32> <i32 8, i32 11, i32 10, i32 0, i32 12, i32 15, i32 14, i32 4>
   ret <8 x float> %2
 }
@@ -3270,12 +3270,12 @@ define <8 x i32> @shuffle_v8i32_32107654_v4i32(<4 x i32> %a, <4 x i32> %b) {
   ret <8 x i32> %3
 }
 
-define <8 x float> @splat_mem_v8f32_2(float* %p) {
+define <8 x float> @splat_mem_v8f32_2(ptr %p) {
 ; ALL-LABEL: splat_mem_v8f32_2:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss (%rdi), %ymm0
 ; ALL-NEXT:    retq
-  %1 = load float, float* %p
+  %1 = load float, ptr %p
   %2 = insertelement <4 x float> undef, float %1, i32 0
   %3 = shufflevector <4 x float> %2, <4 x float> undef, <8 x i32> zeroinitializer
   ret <8 x float> %3
@@ -3410,54 +3410,54 @@ define <8 x i32> @shuffle_v8i32_12305674(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %shuffle
 }
 
-define <8x float> @concat_v2f32_1(<2 x float>* %tmp64, <2 x float>* %tmp65) {
+define <8x float> @concat_v2f32_1(ptr %tmp64, ptr %tmp65) {
 ; ALL-LABEL: concat_v2f32_1:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; ALL-NEXT:    retq
 entry:
-  %tmp74 = load <2 x float>, <2 x float>* %tmp65, align 8
-  %tmp72 = load <2 x float>, <2 x float>* %tmp64, align 8
+  %tmp74 = load <2 x float>, ptr %tmp65, align 8
+  %tmp72 = load <2 x float>, ptr %tmp64, align 8
   %tmp73 = shufflevector <2 x float> %tmp72, <2 x float> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %tmp75 = shufflevector <2 x float> %tmp74, <2 x float> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %tmp76 = shufflevector <8 x float> %tmp73, <8 x float> %tmp75, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x float> %tmp76
 }
 
-define <8x float> @concat_v2f32_2(<2 x float>* %tmp64, <2 x float>* %tmp65) {
+define <8x float> @concat_v2f32_2(ptr %tmp64, ptr %tmp65) {
 ; ALL-LABEL: concat_v2f32_2:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; ALL-NEXT:    retq
 entry:
-  %tmp74 = load <2 x float>, <2 x float>* %tmp65, align 8
-  %tmp72 = load <2 x float>, <2 x float>* %tmp64, align 8
+  %tmp74 = load <2 x float>, ptr %tmp65, align 8
+  %tmp72 = load <2 x float>, ptr %tmp64, align 8
   %tmp76 = shufflevector <2 x float> %tmp72, <2 x float> %tmp74, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x float> %tmp76
 }
 
-define <8x float> @concat_v2f32_3(<2 x float>* %tmp64, <2 x float>* %tmp65) {
+define <8x float> @concat_v2f32_3(ptr %tmp64, ptr %tmp65) {
 ; ALL-LABEL: concat_v2f32_3:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; ALL-NEXT:    retq
 entry:
-  %tmp74 = load <2 x float>, <2 x float>* %tmp65, align 8
-  %tmp72 = load <2 x float>, <2 x float>* %tmp64, align 8
+  %tmp74 = load <2 x float>, ptr %tmp65, align 8
+  %tmp72 = load <2 x float>, ptr %tmp64, align 8
   %tmp76 = shufflevector <2 x float> %tmp72, <2 x float> %tmp74, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = shufflevector <4 x float> %tmp76, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x float> %res
 }
 
-define <8 x i32> @insert_mem_and_zero_v8i32(i32* %ptr) {
+define <8 x i32> @insert_mem_and_zero_v8i32(ptr %ptr) {
 ; ALL-LABEL: insert_mem_and_zero_v8i32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    retq
-  %a = load i32, i32* %ptr
+  %a = load i32, ptr %ptr
   %v = insertelement <8 x i32> undef, i32 %a, i32 0
   %shuffle = shufflevector <8 x i32> %v, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i32> %shuffle
@@ -3509,12 +3509,12 @@ define <8 x float> @concat_v8f32_4567CDEF_bc(<8 x float> %f0, <8 x float> %f1) {
   ret <8 x float> %shuffle32
 }
 
-define <8 x i32> @insert_dup_mem_v8i32(i32* %ptr) {
+define <8 x i32> @insert_dup_mem_v8i32(ptr %ptr) {
 ; ALL-LABEL: insert_dup_mem_v8i32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss (%rdi), %ymm0
 ; ALL-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
   %tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <8 x i32> zeroinitializer
   ret <8 x i32> %tmp2

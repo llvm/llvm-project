@@ -223,7 +223,7 @@ entry:
 ;  }
 ;  return (u.e);
 ; }
-define fp128 @TestI128_3(fp128 %x, i32* nocapture readnone %ex) #0 {
+define fp128 @TestI128_3(fp128 %x, ptr nocapture readnone %ex) #0 {
 ; SSE-LABEL: TestI128_3:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    subq $56, %rsp
@@ -353,11 +353,11 @@ define dso_local void @TestShift128_2() #2 {
 ; CHECK-NEXT:    movq %rax, v128+8(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i128, i128* @v128, align 16
+  %0 = load i128, ptr @v128, align 16
   %shl = shl i128 %0, 96
-  %1 = load i128, i128* @v128_2, align 16
+  %1 = load i128, ptr @v128_2, align 16
   %or = or i128 %shl, %1
-  store i128 %or, i128* @v128, align 16
+  store i128 %or, ptr @v128, align 16
   ret void
 }
 
@@ -440,7 +440,7 @@ declare fp128 @fabsl(fp128) #1
 declare fp128 @copysignl(fp128, fp128) #1
 
 ; Test more complicated logical operations generated from copysignl.
-define dso_local void @TestCopySign({ fp128, fp128 }* noalias nocapture sret({ fp128, fp128 }) %agg.result, { fp128, fp128 }* byval({ fp128, fp128 }) nocapture readonly align 16 %z) #0 {
+define dso_local void @TestCopySign(ptr noalias nocapture sret({ fp128, fp128 }) %agg.result, ptr byval({ fp128, fp128 }) nocapture readonly align 16 %z) #0 {
 ; SSE-LABEL: TestCopySign:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rbp
@@ -514,10 +514,10 @@ define dso_local void @TestCopySign({ fp128, fp128 }* noalias nocapture sret({ f
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
 entry:
-  %z.realp = getelementptr inbounds { fp128, fp128 }, { fp128, fp128 }* %z, i64 0, i32 0
-  %z.real = load fp128, fp128* %z.realp, align 16
-  %z.imagp = getelementptr inbounds { fp128, fp128 }, { fp128, fp128 }* %z, i64 0, i32 1
-  %z.imag4 = load fp128, fp128* %z.imagp, align 16
+  %z.realp = getelementptr inbounds { fp128, fp128 }, ptr %z, i64 0, i32 0
+  %z.real = load fp128, ptr %z.realp, align 16
+  %z.imagp = getelementptr inbounds { fp128, fp128 }, ptr %z, i64 0, i32 1
+  %z.imag4 = load fp128, ptr %z.imagp, align 16
   %cmp = fcmp ogt fp128 %z.real, %z.imag4
   %sub = fsub fp128 %z.imag4, %z.imag4
   br i1 %cmp, label %if.then, label %cleanup
@@ -530,10 +530,10 @@ cleanup:                                          ; preds = %entry, %if.then
   %z.real.sink = phi fp128 [ %z.real, %if.then ], [ %sub, %entry ]
   %call.sink = phi fp128 [ %call, %if.then ], [ %z.real, %entry ]
   %call5 = tail call fp128 @copysignl(fp128 %z.real.sink, fp128 %z.imag4) #2
-  %0 = getelementptr inbounds { fp128, fp128 }, { fp128, fp128 }* %agg.result, i64 0, i32 0
-  %1 = getelementptr inbounds { fp128, fp128 }, { fp128, fp128 }* %agg.result, i64 0, i32 1
-  store fp128 %call.sink, fp128* %0, align 16
-  store fp128 %call5, fp128* %1, align 16
+  %0 = getelementptr inbounds { fp128, fp128 }, ptr %agg.result, i64 0, i32 0
+  %1 = getelementptr inbounds { fp128, fp128 }, ptr %agg.result, i64 0, i32 1
+  store fp128 %call.sink, ptr %0, align 16
+  store fp128 %call5, ptr %1, align 16
   ret void
 }
 

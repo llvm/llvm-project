@@ -7,7 +7,7 @@
 ; the chains correctly.
 ; PR10747
 
-define <4 x i32> @test(<4 x i32>* %p) {
+define <4 x i32> @test(ptr %p) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl $3, 8(%rdi)
@@ -18,7 +18,7 @@ define <4 x i32> @test(<4 x i32>* %p) {
 ; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %v = load <4 x i32>, <4 x i32>* %p
+  %v = load <4 x i32>, ptr %p
   %e = extractelement <4 x i32> %v, i32 2
   %cmp = icmp eq i32 %e, 3
   %sel = select i1 %cmp, <4 x i32> %v, <4 x i32> zeroinitializer

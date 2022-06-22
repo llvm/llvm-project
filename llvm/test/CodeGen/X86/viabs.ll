@@ -744,7 +744,7 @@ define <8 x i64> @test_abs_le_v8i64(<8 x i64> %a) nounwind {
   ret <8 x i64> %abs
 }
 
-define <8 x i64> @test_abs_le_v8i64_fold(<8 x i64>* %a.ptr) nounwind {
+define <8 x i64> @test_abs_le_v8i64_fold(ptr %a.ptr) nounwind {
 ; SSE2-LABEL: test_abs_le_v8i64_fold:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -859,7 +859,7 @@ define <8 x i64> @test_abs_le_v8i64_fold(<8 x i64>* %a.ptr) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpabsq (%rdi), %zmm0 # encoding: [0x62,0xf2,0xfd,0x48,0x1f,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a = load <8 x i64>, <8 x i64>* %a.ptr, align 8
+  %a = load <8 x i64>, ptr %a.ptr, align 8
   %tmp1neg = sub <8 x i64> zeroinitializer, %a
   %b = icmp sle <8 x i64> %a, zeroinitializer
   %abs = select <8 x i1> %b, <8 x i64> %tmp1neg, <8 x i64> %a

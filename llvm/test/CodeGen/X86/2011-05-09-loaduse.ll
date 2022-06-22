@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mcpu=corei7 | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 | FileCheck %s --check-prefix=X64
 
-define float @test(<4 x float>* %A) nounwind {
+define float @test(ptr %A) nounwind {
 ; X86-LABEL: test:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %eax
@@ -24,9 +24,9 @@ define float @test(<4 x float>* %A) nounwind {
 ; X64-NEXT:    movaps %xmm1, (%rdi)
 ; X64-NEXT:    retq
 entry:
-  %T = load <4 x float>, <4 x float>* %A
+  %T = load <4 x float>, ptr %A
   %R = extractelement <4 x float> %T, i32 3
-  store <4 x float><float 0.0, float 0.0, float 0.0, float 0.0>, <4 x float>* %A
+  store <4 x float><float 0.0, float 0.0, float 0.0, float 0.0>, ptr %A
   ret float %R
 }
 

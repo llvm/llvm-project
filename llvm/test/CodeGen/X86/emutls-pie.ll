@@ -19,8 +19,8 @@
 ; NoEMU-NOT: __emutls
 
 ; Use my_emutls_get_address like __emutls_get_address.
-@my_emutls_v_xyz = external global i8*, align 4
-declare i8* @my_emutls_get_address(i8*)
+@my_emutls_v_xyz = external global ptr, align 4
+declare ptr @my_emutls_get_address(ptr)
 
 define dso_local i32 @my_get_xyz() {
 ; X86-LABEL: my_get_xyz:
@@ -42,10 +42,9 @@ define dso_local i32 @my_get_xyz() {
 ; X64-NEXT: retq
 
 entry:
-  %call = call i8* @my_emutls_get_address(i8* bitcast (i8** @my_emutls_v_xyz to i8*))
-  %0 = bitcast i8* %call to i32*
-  %1 = load i32, i32* %0, align 4
-  ret i32 %1
+  %call = call ptr @my_emutls_get_address(ptr @my_emutls_v_xyz)
+  %0 = load i32, ptr %call, align 4
+  ret i32 %0
 }
 
 @i = dso_local thread_local global i32 15
@@ -71,11 +70,11 @@ define dso_local i32 @f1() {
 ; X64-NEXT: retq
 
 entry:
-  %tmp1 = load i32, i32* @i
+  %tmp1 = load i32, ptr @i
   ret i32 %tmp1
 }
 
-define dso_local i32* @f2() {
+define dso_local ptr @f2() {
 ; X86-LABEL: f2:
 ; X86:      leal __emutls_v.i@GOTOFF(%ebx), %eax
 ; X86-NEXT: movl %eax, (%esp)
@@ -85,7 +84,7 @@ define dso_local i32* @f2() {
 ; X64-NEXT: callq __emutls_get_address@PLT
 
 entry:
-  ret i32* @i
+  ret ptr @i
 }
 
 define dso_local i32 @f3() {
@@ -98,11 +97,11 @@ define dso_local i32 @f3() {
 ; X64-NEXT: callq __emutls_get_address@PLT
 
 entry:
-  %tmp1 = load i32, i32* @i2
+  %tmp1 = load i32, ptr @i2
   ret i32 %tmp1
 }
 
-define dso_local i32* @f4() {
+define dso_local ptr @f4() {
 ; X86-LABEL: f4:
 ; X86:      movl __emutls_v.i2@GOT(%ebx), %eax
 ; X86-NEXT: movl %eax, (%esp)
@@ -112,7 +111,7 @@ define dso_local i32* @f4() {
 ; X64-NEXT: callq __emutls_get_address@PLT
 
 entry:
-  ret i32* @i2
+  ret ptr @i2
 }
 
 ;;;;; 32-bit targets

@@ -44,7 +44,7 @@ define i8 @clear_highbits8_c0(i8 %val, i8 %numhighbits) nounwind {
   ret i8 %masked
 }
 
-define i8 @clear_highbits8_c2_load(i8* %w, i8 %numhighbits) nounwind {
+define i8 @clear_highbits8_c2_load(ptr %w, i8 %numhighbits) nounwind {
 ; X86-LABEL: clear_highbits8_c2_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
@@ -62,7 +62,7 @@ define i8 @clear_highbits8_c2_load(i8* %w, i8 %numhighbits) nounwind {
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrb %cl, %al
 ; X64-NEXT:    retq
-  %val = load i8, i8* %w
+  %val = load i8, ptr %w
   %mask = lshr i8 -1, %numhighbits
   %masked = and i8 %mask, %val
   ret i8 %masked
@@ -180,7 +180,7 @@ define i16 @clear_highbits16_c1_indexzext(i16 %val, i8 %numhighbits) nounwind {
   ret i16 %masked
 }
 
-define i16 @clear_highbits16_c2_load(i16* %w, i16 %numhighbits) nounwind {
+define i16 @clear_highbits16_c2_load(ptr %w, i16 %numhighbits) nounwind {
 ; X86-NOBMI2-LABEL: clear_highbits16_c2_load:
 ; X86-NOBMI2:       # %bb.0:
 ; X86-NOBMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
@@ -222,13 +222,13 @@ define i16 @clear_highbits16_c2_load(i16* %w, i16 %numhighbits) nounwind {
 ; X64-BMI2-NEXT:    shrxl %esi, %eax, %eax
 ; X64-BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i16, i16* %w
+  %val = load i16, ptr %w
   %mask = lshr i16 -1, %numhighbits
   %masked = and i16 %mask, %val
   ret i16 %masked
 }
 
-define i16 @clear_highbits16_c3_load_indexzext(i16* %w, i8 %numhighbits) nounwind {
+define i16 @clear_highbits16_c3_load_indexzext(ptr %w, i8 %numhighbits) nounwind {
 ; X86-NOBMI2-LABEL: clear_highbits16_c3_load_indexzext:
 ; X86-NOBMI2:       # %bb.0:
 ; X86-NOBMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
@@ -270,7 +270,7 @@ define i16 @clear_highbits16_c3_load_indexzext(i16* %w, i8 %numhighbits) nounwin
 ; X64-BMI2-NEXT:    shrxl %esi, %eax, %eax
 ; X64-BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i16, i16* %w
+  %val = load i16, ptr %w
   %sh_prom = zext i8 %numhighbits to i16
   %mask = lshr i16 -1, %sh_prom
   %masked = and i16 %mask, %val
@@ -398,7 +398,7 @@ define i32 @clear_highbits32_c1_indexzext(i32 %val, i8 %numhighbits) nounwind {
   ret i32 %masked
 }
 
-define i32 @clear_highbits32_c2_load(i32* %w, i32 %numhighbits) nounwind {
+define i32 @clear_highbits32_c2_load(ptr %w, i32 %numhighbits) nounwind {
 ; X86-NOBMI2-LABEL: clear_highbits32_c2_load:
 ; X86-NOBMI2:       # %bb.0:
 ; X86-NOBMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
@@ -432,13 +432,13 @@ define i32 @clear_highbits32_c2_load(i32* %w, i32 %numhighbits) nounwind {
 ; X64-BMI2-NEXT:    subl %esi, %eax
 ; X64-BMI2-NEXT:    bzhil %eax, (%rdi), %eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %mask = lshr i32 -1, %numhighbits
   %masked = and i32 %mask, %val
   ret i32 %masked
 }
 
-define i32 @clear_highbits32_c3_load_indexzext(i32* %w, i8 %numhighbits) nounwind {
+define i32 @clear_highbits32_c3_load_indexzext(ptr %w, i8 %numhighbits) nounwind {
 ; X86-NOBMI2-LABEL: clear_highbits32_c3_load_indexzext:
 ; X86-NOBMI2:       # %bb.0:
 ; X86-NOBMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
@@ -472,7 +472,7 @@ define i32 @clear_highbits32_c3_load_indexzext(i32* %w, i8 %numhighbits) nounwin
 ; X64-BMI2-NEXT:    subl %esi, %eax
 ; X64-BMI2-NEXT:    bzhil %eax, (%rdi), %eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %sh_prom = zext i8 %numhighbits to i32
   %mask = lshr i32 -1, %sh_prom
   %masked = and i32 %mask, %val
@@ -667,7 +667,7 @@ define i64 @clear_highbits64_c1_indexzext(i64 %val, i8 %numhighbits) nounwind {
   ret i64 %masked
 }
 
-define i64 @clear_highbits64_c2_load(i64* %w, i64 %numhighbits) nounwind {
+define i64 @clear_highbits64_c2_load(ptr %w, i64 %numhighbits) nounwind {
 ; X86-BASELINE-LABEL: clear_highbits64_c2_load:
 ; X86-BASELINE:       # %bb.0:
 ; X86-BASELINE-NEXT:    pushl %edi
@@ -744,13 +744,13 @@ define i64 @clear_highbits64_c2_load(i64* %w, i64 %numhighbits) nounwind {
 ; X64-BMI2-NEXT:    subl %esi, %eax
 ; X64-BMI2-NEXT:    bzhiq %rax, (%rdi), %rax
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %mask = lshr i64 -1, %numhighbits
   %masked = and i64 %mask, %val
   ret i64 %masked
 }
 
-define i64 @clear_highbits64_c3_load_indexzext(i64* %w, i8 %numhighbits) nounwind {
+define i64 @clear_highbits64_c3_load_indexzext(ptr %w, i8 %numhighbits) nounwind {
 ; X86-BASELINE-LABEL: clear_highbits64_c3_load_indexzext:
 ; X86-BASELINE:       # %bb.0:
 ; X86-BASELINE-NEXT:    pushl %edi
@@ -827,7 +827,7 @@ define i64 @clear_highbits64_c3_load_indexzext(i64* %w, i8 %numhighbits) nounwin
 ; X64-BMI2-NEXT:    subl %esi, %eax
 ; X64-BMI2-NEXT:    bzhiq %rax, (%rdi), %rax
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %sh_prom = zext i8 %numhighbits to i64
   %mask = lshr i64 -1, %sh_prom
   %masked = and i64 %mask, %val
@@ -911,7 +911,7 @@ define i64 @clear_highbits64_c4_commutative(i64 %val, i64 %numhighbits) nounwind
 ; Multi-use tests
 ; ---------------------------------------------------------------------------- ;
 
-define i32 @oneuse32_c(i32 %val, i32 %numhighbits, i32* %escape) nounwind {
+define i32 @oneuse32_c(i32 %val, i32 %numhighbits, ptr %escape) nounwind {
 ; X86-NOBMI2-LABEL: oneuse32_c:
 ; X86-NOBMI2:       # %bb.0:
 ; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -950,12 +950,12 @@ define i32 @oneuse32_c(i32 %val, i32 %numhighbits, i32* %escape) nounwind {
 ; X64-BMI2-NEXT:    andl %edi, %eax
 ; X64-BMI2-NEXT:    retq
   %mask = lshr i32 -1, %numhighbits
-  store i32 %mask, i32* %escape
+  store i32 %mask, ptr %escape
   %masked = and i32 %mask, %val
   ret i32 %masked
 }
 
-define i64 @oneuse64_c(i64 %val, i64 %numhighbits, i64* %escape) nounwind {
+define i64 @oneuse64_c(i64 %val, i64 %numhighbits, ptr %escape) nounwind {
 ; X86-BASELINE-LABEL: oneuse64_c:
 ; X86-BASELINE:       # %bb.0:
 ; X86-BASELINE-NEXT:    pushl %esi
@@ -1036,12 +1036,12 @@ define i64 @oneuse64_c(i64 %val, i64 %numhighbits, i64* %escape) nounwind {
 ; X64-BMI2-NEXT:    andq %rdi, %rax
 ; X64-BMI2-NEXT:    retq
   %mask = lshr i64 -1, %numhighbits
-  store i64 %mask, i64* %escape
+  store i64 %mask, ptr %escape
   %masked = and i64 %mask, %val
   ret i64 %masked
 }
 
-define i32 @oneuse32_d(i32 %val, i32 %numhighbits, i32* %escape) nounwind {
+define i32 @oneuse32_d(i32 %val, i32 %numhighbits, ptr %escape) nounwind {
 ; X86-NOBMI2-LABEL: oneuse32_d:
 ; X86-NOBMI2:       # %bb.0:
 ; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1078,12 +1078,12 @@ define i32 @oneuse32_d(i32 %val, i32 %numhighbits, i32* %escape) nounwind {
 ; X64-BMI2-NEXT:    shrxl %esi, %eax, %eax
 ; X64-BMI2-NEXT:    retq
   %sh1 = shl i32 %val, %numhighbits
-  store i32 %sh1, i32* %escape
+  store i32 %sh1, ptr %escape
   %masked = lshr i32 %sh1, %numhighbits
   ret i32 %masked
 }
 
-define i64 @oneusei64_d(i64 %val, i64 %numhighbits, i64* %escape) nounwind {
+define i64 @oneusei64_d(i64 %val, i64 %numhighbits, ptr %escape) nounwind {
 ; X86-BASELINE-LABEL: oneusei64_d:
 ; X86-BASELINE:       # %bb.0:
 ; X86-BASELINE-NEXT:    pushl %ebx
@@ -1200,7 +1200,7 @@ define i64 @oneusei64_d(i64 %val, i64 %numhighbits, i64* %escape) nounwind {
 ; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rax
 ; X64-BMI2-NEXT:    retq
   %sh1 = shl i64 %val, %numhighbits
-  store i64 %sh1, i64* %escape
+  store i64 %sh1, ptr %escape
   %masked = lshr i64 %sh1, %numhighbits
   ret i64 %masked
 }
@@ -1296,7 +1296,7 @@ define i32 @clear_highbits32_48(i32 %val, i32 %numlowbits) nounwind {
   ret i32 %masked
 }
 
-define i32 @clear_highbits32_16_extrause(i32 %val, i32 %numlowbits, i32* %escape) nounwind {
+define i32 @clear_highbits32_16_extrause(i32 %val, i32 %numlowbits, ptr %escape) nounwind {
 ; X86-NOBMI2-LABEL: clear_highbits32_16_extrause:
 ; X86-NOBMI2:       # %bb.0:
 ; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1340,11 +1340,11 @@ define i32 @clear_highbits32_16_extrause(i32 %val, i32 %numlowbits, i32* %escape
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i32 16, %numlowbits
   %mask = lshr i32 -1, %numhighbits
-  store i32 %mask, i32* %escape
+  store i32 %mask, ptr %escape
   %masked = and i32 %mask, %val
   ret i32 %masked
 }
-define i32 @clear_highbits32_48_extrause(i32 %val, i32 %numlowbits, i32* %escape) nounwind {
+define i32 @clear_highbits32_48_extrause(i32 %val, i32 %numlowbits, ptr %escape) nounwind {
 ; X86-NOBMI2-LABEL: clear_highbits32_48_extrause:
 ; X86-NOBMI2:       # %bb.0:
 ; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1388,7 +1388,7 @@ define i32 @clear_highbits32_48_extrause(i32 %val, i32 %numlowbits, i32* %escape
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i32 48, %numlowbits
   %mask = lshr i32 -1, %numhighbits
-  store i32 %mask, i32* %escape
+  store i32 %mask, ptr %escape
   %masked = and i32 %mask, %val
   ret i32 %masked
 }

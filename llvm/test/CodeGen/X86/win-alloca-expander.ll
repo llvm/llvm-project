@@ -22,7 +22,7 @@ bb1:
 ; CHECK: pushl %eax
 ; CHECK: subl $1020, %esp
 
-  %saved_stack = tail call i8* @llvm.stacksave()
+  %saved_stack = tail call ptr @llvm.stacksave()
 
   %p1 = alloca %struct.S
 ; We know the %esp offset from above, so there is no need to touch the stack
@@ -34,7 +34,7 @@ bb1:
 ; CHECK: pushl %eax
 ; CHECK: subl $2996, %esp
 
-  call void @f(%struct.S* %p0)
+  call void @f(ptr %p0)
 ; CHECK: calll
 
   %p3 = alloca %struct.T
@@ -50,18 +50,18 @@ bb1:
 ; The stack probing above touched the tip of the stack, so there's room for a T.
 ; CHECK: subl $3000, %esp
 
-  call void @llvm.stackrestore(i8* %saved_stack)
+  call void @llvm.stackrestore(ptr %saved_stack)
   %p6 = alloca %struct.S
 ; The stack restore means we lose track of the stack pointer and must probe.
 ; CHECK: pushl %eax
 ; CHECK: subl $1020, %esp
 
 ; Use the pointers so they're not optimized away.
-  call void @f(%struct.S* %p1)
-  call void @g(%struct.T* %p2)
-  call void @g(%struct.T* %p3)
-  call void @h(%struct.U* %p4)
-  call void @g(%struct.T* %p5)
+  call void @f(ptr %p1)
+  call void @g(ptr %p2)
+  call void @g(ptr %p3)
+  call void @h(ptr %p4)
+  call void @g(ptr %p5)
   ret void
 }
 
@@ -91,8 +91,8 @@ loop1:
 ; CHECK: jg
 
 end:
-  call void @f(%struct.S* %p1)
-  call void @f(%struct.S* %p2)
+  call void @f(ptr %p1)
+  call void @f(ptr %p2)
   ret void
 }
 
@@ -107,7 +107,7 @@ bb1:
 ; for the stack-probe-size attribute.
 ; CHECK: movl $1024, %eax
 ; CHECK: calll __chkstk
-  call void @f(%struct.S* %p0)
+  call void @f(ptr %p0)
   ret void
 }
 
@@ -127,7 +127,7 @@ bb2:
   %p5 = alloca %struct.T
 ; CHECK: pushl %eax
 ; CHECK: subl $2996, %esp
-  call void @g(%struct.T* %p5)
+  call void @g(ptr %p5)
   ret void
 
 bb3:
@@ -142,15 +142,15 @@ bb4:
 bb5:
   %p4 = alloca %struct.S
 ; CHECK: subl $1024, %esp
-  call void @f(%struct.S* %p4)
+  call void @f(ptr %p4)
   ret void
 
 }
 
 
-declare void @f(%struct.S*)
-declare void @g(%struct.T*)
-declare void @h(%struct.U*)
+declare void @f(ptr)
+declare void @g(ptr)
+declare void @h(ptr)
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)

@@ -519,7 +519,7 @@ define i32 @test12(i32 %a1, i32 %a2, i32 %b1) {
   ret i32 %res1
 }
 
-define <1 x i1> @test13(<1 x i1>* %foo) {
+define <1 x i1> @test13(ptr %foo) {
 ; KNL-LABEL: test13:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movzbl (%rdi), %eax
@@ -546,11 +546,11 @@ define <1 x i1> @test13(<1 x i1>* %foo) {
 ; FASTISEL-NEXT:    kmovd %k0, %eax
 ; FASTISEL-NEXT:    ## kill: def $al killed $al killed $eax
 ; FASTISEL-NEXT:    retq
-  %bar = load <1 x i1>, <1 x i1>* %foo
+  %bar = load <1 x i1>, ptr %foo
   ret <1 x i1> %bar
 }
 
-define void @test14(<32 x i16>* %x) {
+define void @test14(ptr %x) {
 ; KNL-LABEL: test14:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbx
@@ -603,14 +603,14 @@ define void @test14(<32 x i16>* %x) {
 ; FASTISEL-NEXT:    popq %rbx
 ; FASTISEL-NEXT:    vzeroupper
 ; FASTISEL-NEXT:    retq
-  %a = load <32 x i16>, <32 x i16>* %x
+  %a = load <32 x i16>, ptr %x
   %b = call <32 x i16> @test14_callee(<32 x i16> %a)
-  store <32 x i16> %b, <32 x i16>* %x
+  store <32 x i16> %b, ptr %x
   ret void
 }
 declare <32 x i16> @test14_callee(<32 x i16>)
 
-define void @test15(<64 x i8>* %x) {
+define void @test15(ptr %x) {
 ; KNL-LABEL: test15:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbx
@@ -663,9 +663,9 @@ define void @test15(<64 x i8>* %x) {
 ; FASTISEL-NEXT:    popq %rbx
 ; FASTISEL-NEXT:    vzeroupper
 ; FASTISEL-NEXT:    retq
-  %a = load <64 x i8>, <64 x i8>* %x
+  %a = load <64 x i8>, ptr %x
   %b = call <64 x i8> @test15_callee(<64 x i8> %a)
-  store <64 x i8> %b, <64 x i8>* %x
+  store <64 x i8> %b, ptr %x
   ret void
 }
 declare <64 x i8> @test15_callee(<64 x i8>)

@@ -62,11 +62,11 @@ define void @bar(i32, ...) nounwind {
 ; NO-RAX-NEXT:    movl $8, 0
 ; NO-RAX-NEXT:    movl $48, 4
 ; NO-RAX-NEXT:    retq
-  call void @llvm.va_start(i8* null)
+  call void @llvm.va_start(ptr null)
   ret void
 }
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 4, !"SkipRaxSetup", i32 1}

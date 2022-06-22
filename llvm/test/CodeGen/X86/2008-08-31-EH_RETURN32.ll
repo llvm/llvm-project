@@ -6,11 +6,11 @@ target triple = "i386-pc-linux"
 
 ; CHECK: test1
 ; CHECK: pushl %ebp
-define i8* @test1(i32 %a, i8* %b)  {
+define ptr @test1(i32 %a, ptr %b)  {
 entry:
   call void @llvm.eh.unwind.init()
   %foo   = alloca i32
-  call void @llvm.eh.return.i32(i32 %a, i8* %b)
+  call void @llvm.eh.return.i32(i32 %a, ptr %b)
 ; CHECK: movl 12(%ebp), %[[ECX:e..]]
 ; CHECK: movl 8(%ebp), %[[EAX:e..]]
 ; CHECK: movl %[[ECX]], 4(%ebp,%[[EAX]])
@@ -22,9 +22,9 @@ entry:
 
 ; CHECK: test2
 ; CHECK: pushl %ebp
-define i8* @test2(i32 %a, i8* %b)  {
+define ptr @test2(i32 %a, ptr %b)  {
 entry:
-  call void @llvm.eh.return.i32(i32 %a, i8* %b)
+  call void @llvm.eh.return.i32(i32 %a, ptr %b)
 ; CHECK: movl 12(%ebp), %[[ECX:e..]]
 ; CHECK: movl 8(%ebp), %[[EAX:e..]]
 ; CHECK: movl %[[ECX]], 4(%ebp,%[[EAX]])
@@ -34,5 +34,5 @@ entry:
   unreachable
 }
 
-declare void @llvm.eh.return.i32(i32, i8*)
+declare void @llvm.eh.return.i32(i32, ptr)
 declare void @llvm.eh.unwind.init()

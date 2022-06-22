@@ -160,7 +160,7 @@ define <2 x i32> @trunc_ssat_v2i64_v2i32(<2 x i64> %a0) {
   ret <2 x i32> %5
 }
 
-define void @trunc_ssat_v2i64_v2i32_store(<2 x i64> %a0, <2 x i32>* %p1) {
+define void @trunc_ssat_v2i64_v2i32_store(<2 x i64> %a0, ptr %p1) {
 ; SSE2-LABEL: trunc_ssat_v2i64_v2i32_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648]
@@ -302,7 +302,7 @@ define void @trunc_ssat_v2i64_v2i32_store(<2 x i64> %a0, <2 x i32>* %p1) {
   %3 = icmp sgt <2 x i64> %2, <i64 -2147483648, i64 -2147483648>
   %4 = select <2 x i1> %3, <2 x i64> %2, <2 x i64> <i64 -2147483648, i64 -2147483648>
   %5 = trunc <2 x i64> %4 to <2 x i32>
-  store <2 x i32> %5, <2 x i32>* %p1
+  store <2 x i32> %5, ptr %p1
   ret void
 }
 
@@ -575,7 +575,7 @@ define <4 x i32> @trunc_ssat_v4i64_v4i32(<4 x i64> %a0) {
 }
 
 
-define <8 x i32> @trunc_ssat_v8i64_v8i32(<8 x i64>* %p0) "min-legal-vector-width"="256" {
+define <8 x i32> @trunc_ssat_v8i64_v8i32(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_ssat_v8i64_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm3
@@ -1003,7 +1003,7 @@ define <8 x i32> @trunc_ssat_v8i64_v8i32(<8 x i64>* %p0) "min-legal-vector-width
 ; SKX-NEXT:    vpmovsqd %ymm1, %xmm1
 ; SKX-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp slt <8 x i64> %a0, <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>
   %3 = icmp sgt <8 x i64> %2, <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>
@@ -1182,7 +1182,7 @@ define <2 x i16> @trunc_ssat_v2i64_v2i16(<2 x i64> %a0) {
   ret <2 x i16> %5
 }
 
-define void @trunc_ssat_v2i64_v2i16_store(<2 x i64> %a0, <2 x i16> *%p1) {
+define void @trunc_ssat_v2i64_v2i16_store(<2 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_ssat_v2i64_v2i16_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648]
@@ -1353,7 +1353,7 @@ define void @trunc_ssat_v2i64_v2i16_store(<2 x i64> %a0, <2 x i16> *%p1) {
   %3 = icmp sgt <2 x i64> %2, <i64 -32768, i64 -32768>
   %4 = select <2 x i1> %3, <2 x i64> %2, <2 x i64> <i64 -32768, i64 -32768>
   %5 = trunc <2 x i64> %4 to <2 x i16>
-  store <2 x i16> %5, <2 x i16> *%p1
+  store <2 x i16> %5, ptr%p1
   ret void
 }
 
@@ -1601,7 +1601,7 @@ define <4 x i16> @trunc_ssat_v4i64_v4i16(<4 x i64> %a0) {
   ret <4 x i16> %5
 }
 
-define void @trunc_ssat_v4i64_v4i16_store(<4 x i64> %a0, <4 x i16> *%p1) {
+define void @trunc_ssat_v4i64_v4i16_store(<4 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_ssat_v4i64_v4i16_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [32767,32767]
@@ -1848,11 +1848,11 @@ define void @trunc_ssat_v4i64_v4i16_store(<4 x i64> %a0, <4 x i16> *%p1) {
   %3 = icmp sgt <4 x i64> %2, <i64 -32768, i64 -32768, i64 -32768, i64 -32768>
   %4 = select <4 x i1> %3, <4 x i64> %2, <4 x i64> <i64 -32768, i64 -32768, i64 -32768, i64 -32768>
   %5 = trunc <4 x i64> %4 to <4 x i16>
-  store <4 x i16> %5, <4 x i16> *%p1
+  store <4 x i16> %5, ptr%p1
   ret void
 }
 
-define <8 x i16> @trunc_ssat_v8i64_v8i16(<8 x i64>* %p0) "min-legal-vector-width"="256" {
+define <8 x i16> @trunc_ssat_v8i64_v8i16(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_ssat_v8i64_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm11
@@ -2248,7 +2248,7 @@ define <8 x i16> @trunc_ssat_v8i64_v8i16(<8 x i64>* %p0) "min-legal-vector-width
 ; SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp slt <8 x i64> %a0, <i64 32767, i64 32767, i64 32767, i64 32767, i64 32767, i64 32767, i64 32767, i64 32767>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 32767, i64 32767, i64 32767, i64 32767, i64 32767, i64 32767, i64 32767, i64 32767>
   %3 = icmp sgt <8 x i64> %2, <i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768>
@@ -2285,7 +2285,7 @@ define <4 x i16> @trunc_ssat_v4i32_v4i16(<4 x i32> %a0) {
   ret <4 x i16> %5
 }
 
-define void @trunc_ssat_v4i32_v4i16_store(<4 x i32> %a0, <4 x i16> *%p1) {
+define void @trunc_ssat_v4i32_v4i16_store(<4 x i32> %a0, ptr%p1) {
 ; SSE-LABEL: trunc_ssat_v4i32_v4i16_store:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    packssdw %xmm0, %xmm0
@@ -2329,7 +2329,7 @@ define void @trunc_ssat_v4i32_v4i16_store(<4 x i32> %a0, <4 x i16> *%p1) {
   %3 = icmp sgt <4 x i32> %2, <i32 -32768, i32 -32768, i32 -32768, i32 -32768>
   %4 = select <4 x i1> %3, <4 x i32> %2, <4 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768>
   %5 = trunc <4 x i32> %4 to <4 x i16>
-  store <4 x i16> %5, <4 x i16> *%p1
+  store <4 x i16> %5, ptr%p1
   ret void
 }
 
@@ -2392,7 +2392,7 @@ define <8 x i16> @trunc_ssat_v8i32_v8i16(<8 x i32> %a0) {
   ret <8 x i16> %5
 }
 
-define <16 x i16> @trunc_ssat_v16i32_v16i16(<16 x i32>* %p0) "min-legal-vector-width"="256" {
+define <16 x i16> @trunc_ssat_v16i32_v16i16(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE-LABEL: trunc_ssat_v16i32_v16i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -2429,7 +2429,7 @@ define <16 x i16> @trunc_ssat_v16i32_v16i16(<16 x i32>* %p0) "min-legal-vector-w
 ; SKX-NEXT:    vpackssdw 32(%rdi), %ymm0, %ymm0
 ; SKX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i32>, <16 x i32>* %p0
+  %a0 = load <16 x i32>, ptr %p0
   %1 = icmp slt <16 x i32> %a0, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
   %2 = select <16 x i1> %1, <16 x i32> %a0, <16 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
   %3 = icmp sgt <16 x i32> %2, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
@@ -2585,7 +2585,7 @@ define <2 x i8> @trunc_ssat_v2i64_v2i8(<2 x i64> %a0) {
   ret <2 x i8> %5
 }
 
-define void @trunc_ssat_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8> *%p1) {
+define void @trunc_ssat_v2i64_v2i8_store(<2 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_ssat_v2i64_v2i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648]
@@ -2732,7 +2732,7 @@ define void @trunc_ssat_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8> *%p1) {
   %3 = icmp sgt <2 x i64> %2, <i64 -128, i64 -128>
   %4 = select <2 x i1> %3, <2 x i64> %2, <2 x i64> <i64 -128, i64 -128>
   %5 = trunc <2 x i64> %4 to <2 x i8>
-  store <2 x i8> %5, <2 x i8> *%p1
+  store <2 x i8> %5, ptr%p1
   ret void
 }
 
@@ -2993,7 +2993,7 @@ define <4 x i8> @trunc_ssat_v4i64_v4i8(<4 x i64> %a0) {
   ret <4 x i8> %5
 }
 
-define void @trunc_ssat_v4i64_v4i8_store(<4 x i64> %a0, <4 x i8> *%p1) {
+define void @trunc_ssat_v4i64_v4i8_store(<4 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_ssat_v4i64_v4i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [127,127]
@@ -3253,11 +3253,11 @@ define void @trunc_ssat_v4i64_v4i8_store(<4 x i64> %a0, <4 x i8> *%p1) {
   %3 = icmp sgt <4 x i64> %2, <i64 -128, i64 -128, i64 -128, i64 -128>
   %4 = select <4 x i1> %3, <4 x i64> %2, <4 x i64> <i64 -128, i64 -128, i64 -128, i64 -128>
   %5 = trunc <4 x i64> %4 to <4 x i8>
-  store <4 x i8> %5, <4 x i8> *%p1
+  store <4 x i8> %5, ptr%p1
   ret void
 }
 
-define <8 x i8> @trunc_ssat_v8i64_v8i8(<8 x i64>* %p0) "min-legal-vector-width"="256" {
+define <8 x i8> @trunc_ssat_v8i64_v8i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_ssat_v8i64_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm11
@@ -3658,7 +3658,7 @@ define <8 x i8> @trunc_ssat_v8i64_v8i8(<8 x i64>* %p0) "min-legal-vector-width"=
 ; SKX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp slt <8 x i64> %a0, <i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127>
   %3 = icmp sgt <8 x i64> %2, <i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128>
@@ -3669,7 +3669,7 @@ define <8 x i8> @trunc_ssat_v8i64_v8i8(<8 x i64>* %p0) "min-legal-vector-width"=
 
 ; TODO: The AVX1 codegen shows a missed opportunity to narrow blendv+logic to 128-bit.
 
-define void @trunc_ssat_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) "min-legal-vector-width"="256" {
+define void @trunc_ssat_v8i64_v8i8_store(ptr %p0, ptr%p1) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_ssat_v8i64_v8i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm11
@@ -4075,17 +4075,17 @@ define void @trunc_ssat_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) "min-leg
 ; SKX-NEXT:    vmovq %xmm0, (%rsi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp slt <8 x i64> %a0, <i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127>
   %3 = icmp sgt <8 x i64> %2, <i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128>
   %4 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> <i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128>
   %5 = trunc <8 x i64> %4 to <8 x i8>
-  store <8 x i8> %5, <8 x i8> *%p1
+  store <8 x i8> %5, ptr%p1
   ret void
 }
 
-define <16 x i8> @trunc_ssat_v16i64_v16i8(<16 x i64>* %p0) "min-legal-vector-width"="256" {
+define <16 x i8> @trunc_ssat_v16i64_v16i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_ssat_v16i64_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm11
@@ -4836,7 +4836,7 @@ define <16 x i8> @trunc_ssat_v16i64_v16i8(<16 x i64>* %p0) "min-legal-vector-wid
 ; SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i64>, <16 x i64>* %p0
+  %a0 = load <16 x i64>, ptr %p0
   %1 = icmp slt <16 x i64> %a0, <i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127>
   %2 = select <16 x i1> %1, <16 x i64> %a0, <16 x i64> <i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127, i64 127>
   %3 = icmp sgt <16 x i64> %2, <i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128>
@@ -4944,7 +4944,7 @@ define <4 x i8> @trunc_ssat_v4i32_v4i8(<4 x i32> %a0) {
   ret <4 x i8> %5
 }
 
-define void @trunc_ssat_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
+define void @trunc_ssat_v4i32_v4i8_store(<4 x i32> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_ssat_v4i32_v4i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [127,127,127,127]
@@ -5047,7 +5047,7 @@ define void @trunc_ssat_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
   %3 = icmp sgt <4 x i32> %2, <i32 -128, i32 -128, i32 -128, i32 -128>
   %4 = select <4 x i1> %3, <4 x i32> %2, <4 x i32> <i32 -128, i32 -128, i32 -128, i32 -128>
   %5 = trunc <4 x i32> %4 to <4 x i8>
-  store <4 x i8> %5, <4 x i8> *%p1
+  store <4 x i8> %5, ptr%p1
   ret void
 }
 
@@ -5115,7 +5115,7 @@ define <8 x i8> @trunc_ssat_v8i32_v8i8(<8 x i32> %a0) {
   ret <8 x i8> %5
 }
 
-define void @trunc_ssat_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
+define void @trunc_ssat_v8i32_v8i8_store(<8 x i32> %a0, ptr%p1) {
 ; SSE-LABEL: trunc_ssat_v8i32_v8i8_store:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
@@ -5181,11 +5181,11 @@ define void @trunc_ssat_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
   %3 = icmp sgt <8 x i32> %2, <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
   %4 = select <8 x i1> %3, <8 x i32> %2, <8 x i32> <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
   %5 = trunc <8 x i32> %4 to <8 x i8>
-  store <8 x i8> %5, <8 x i8> *%p1
+  store <8 x i8> %5, ptr%p1
   ret void
 }
 
-define <16 x i8> @trunc_ssat_v16i32_v16i8(<16 x i32>* %p0) "min-legal-vector-width"="256" {
+define <16 x i8> @trunc_ssat_v16i32_v16i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE-LABEL: trunc_ssat_v16i32_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -5230,7 +5230,7 @@ define <16 x i8> @trunc_ssat_v16i32_v16i8(<16 x i32>* %p0) "min-legal-vector-wid
 ; SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i32>, <16 x i32>* %p0
+  %a0 = load <16 x i32>, ptr %p0
   %1 = icmp slt <16 x i32> %a0, <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
   %2 = select <16 x i1> %1, <16 x i32> %a0, <16 x i32> <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
   %3 = icmp sgt <16 x i32> %2, <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
@@ -5239,7 +5239,7 @@ define <16 x i8> @trunc_ssat_v16i32_v16i8(<16 x i32>* %p0) "min-legal-vector-wid
   ret <16 x i8> %5
 }
 
-define void @trunc_ssat_v16i32_v16i8_store(<16 x i32>* %p0, <16 x i8>* %p1) "min-legal-vector-width"="256" {
+define void @trunc_ssat_v16i32_v16i8_store(ptr %p0, ptr %p1) "min-legal-vector-width"="256" {
 ; SSE-LABEL: trunc_ssat_v16i32_v16i8_store:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -5288,13 +5288,13 @@ define void @trunc_ssat_v16i32_v16i8_store(<16 x i32>* %p0, <16 x i8>* %p1) "min
 ; SKX-NEXT:    vmovdqa %xmm0, (%rsi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i32>, <16 x i32>* %p0
+  %a0 = load <16 x i32>, ptr %p0
   %1 = icmp slt <16 x i32> %a0, <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
   %2 = select <16 x i1> %1, <16 x i32> %a0, <16 x i32> <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
   %3 = icmp sgt <16 x i32> %2, <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
   %4 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
   %5 = trunc <16 x i32> %4 to <16 x i8>
-  store <16 x i8> %5, <16 x i8>* %p1
+  store <16 x i8> %5, ptr %p1
   ret void
 }
 
@@ -5326,7 +5326,7 @@ define <8 x i8> @trunc_ssat_v8i16_v8i8(<8 x i16> %a0) {
   ret <8 x i8> %5
 }
 
-define void @trunc_ssat_v8i16_v8i8_store(<8 x i16> %a0, <8 x i8> *%p1) {
+define void @trunc_ssat_v8i16_v8i8_store(<8 x i16> %a0, ptr%p1) {
 ; SSE-LABEL: trunc_ssat_v8i16_v8i8_store:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    packsswb %xmm0, %xmm0
@@ -5371,7 +5371,7 @@ define void @trunc_ssat_v8i16_v8i8_store(<8 x i16> %a0, <8 x i8> *%p1) {
   %3 = icmp sgt <8 x i16> %2, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
   %4 = select <8 x i1> %3, <8 x i16> %2, <8 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
   %5 = trunc <8 x i16> %4 to <8 x i8>
-  store <8 x i8> %5, <8 x i8> *%p1
+  store <8 x i8> %5, ptr%p1
   ret void
 }
 
@@ -5435,7 +5435,7 @@ define <16 x i8> @trunc_ssat_v16i16_v16i8(<16 x i16> %a0) {
   ret <16 x i8> %5
 }
 
-define <32 x i8> @trunc_ssat_v32i16_v32i8(<32 x i16>* %p0) "min-legal-vector-width"="256" {
+define <32 x i8> @trunc_ssat_v32i16_v32i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE-LABEL: trunc_ssat_v32i16_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -5492,7 +5492,7 @@ define <32 x i8> @trunc_ssat_v32i16_v32i8(<32 x i16>* %p0) "min-legal-vector-wid
 ; SKX-NEXT:    vpacksswb 32(%rdi), %ymm0, %ymm0
 ; SKX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; SKX-NEXT:    retq
-  %a0 = load <32 x i16>, <32 x i16>* %p0
+  %a0 = load <32 x i16>, ptr %p0
   %1 = icmp slt <32 x i16> %a0, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
   %2 = select <32 x i1> %1, <32 x i16> %a0, <32 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
   %3 = icmp sgt <32 x i16> %2, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
@@ -5501,7 +5501,7 @@ define <32 x i8> @trunc_ssat_v32i16_v32i8(<32 x i16>* %p0) "min-legal-vector-wid
   ret <32 x i8> %5
 }
 
-define <32 x i8> @trunc_ssat_v32i32_v32i8(<32 x i32>* %p0) "min-legal-vector-width"="256" {
+define <32 x i8> @trunc_ssat_v32i32_v32i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE-LABEL: trunc_ssat_v32i32_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -5563,7 +5563,7 @@ define <32 x i8> @trunc_ssat_v32i32_v32i8(<32 x i32>* %p0) "min-legal-vector-wid
 ; SKX-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; SKX-NEXT:    retq
-  %a0 = load <32 x i32>, <32 x i32>* %p0
+  %a0 = load <32 x i32>, ptr %p0
   %1 = icmp slt <32 x i32> %a0, <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
   %2 = select <32 x i1> %1, <32 x i32> %a0, <32 x i32> <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
   %3 = icmp sgt <32 x i32> %2, <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
@@ -5574,7 +5574,7 @@ define <32 x i8> @trunc_ssat_v32i32_v32i8(<32 x i32>* %p0) "min-legal-vector-wid
 
 ; This used to crash with avx512 due because we were missing a check for
 ; unsupported element types like i24.
-define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, <16 x i24>* %y) nounwind {
+define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, ptr %y) nounwind {
 ; SSE2-LABEL: trunc_ssat_v16i32_v16i24:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbp
@@ -6241,7 +6241,7 @@ define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, <16 x i24>* %y) nounwind {
   %a = call <16 x i32> @llvm.smin.v16i32(<16 x i32> %x, <16 x i32> <i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607, i32 8388607>)
   %b = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %a, <16 x i32> <i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608>)
   %c = trunc <16 x i32> %b to <16 x i24>
-  store <16 x i24> %c, <16 x i24>* %y
+  store <16 x i24> %c, ptr %y
   ret void
 }
 declare <16 x i32> @llvm.smax.v16i32(<16 x i32>, <16 x i32>)

@@ -2,9 +2,9 @@
 
 define fastcc void @optimize_bit_field() nounwind {
 bb4:
-        %a = load i32, i32* null             ; <i32> [#uses=1]
-        %s = load i32, i32* getelementptr (i32, i32* null, i32 1)         ; <i32> [#uses=1]
-        %z = load i32, i32* getelementptr (i32, i32* null, i32 2)         ; <i32> [#uses=1]
+        %a = load i32, ptr null             ; <i32> [#uses=1]
+        %s = load i32, ptr getelementptr (i32, ptr null, i32 1)         ; <i32> [#uses=1]
+        %z = load i32, ptr getelementptr (i32, ptr null, i32 2)         ; <i32> [#uses=1]
         %r = bitcast i32 0 to i32          ; <i32> [#uses=1]
         %q = trunc i32 %z to i8            ; <i8> [#uses=1]
         %b = icmp eq i8 0, %q              ; <i1> [#uses=1]
@@ -16,7 +16,7 @@ bb72:      ; preds = %bb4
 
 bb73:         ; preds = %bb72, %bb4
         %y = phi i32 [ %f, %bb72 ], [ %s, %bb4 ]          ; <i32> [#uses=1]
-        store i32 %y, i32* getelementptr (i32, i32* null, i32 3)
+        store i32 %y, ptr getelementptr (i32, ptr null, i32 3)
         unreachable
 }
 

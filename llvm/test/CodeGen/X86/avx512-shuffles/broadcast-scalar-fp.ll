@@ -606,24 +606,24 @@ define <16 x float> @test_masked_z_float_to_16_mask3(float %s, <16 x float> %mas
   %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <4 x double> @test_double_to_4_mem(double* %p) {
+define <4 x double> @test_double_to_4_mem(ptr %p) {
 ; CHECK-LABEL: test_double_to_4_mem:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %res = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_double_to_4_mem_mask0(double* %p, <4 x double> %default, <4 x double> %mask) {
+define <4 x double> @test_masked_double_to_4_mem_mask0(ptr %p, <4 x double> %default, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_double_to_4_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
@@ -631,28 +631,28 @@ define <4 x double> @test_masked_double_to_4_mem_mask0(double* %p, <4 x double> 
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_double_to_4_mem_mask0(double* %p, <4 x double> %mask) {
+define <4 x double> @test_masked_z_double_to_4_mem_mask0(ptr %p, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_double_to_4_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_double_to_4_mem_mask1(double* %p, <4 x double> %default, <4 x double> %mask) {
+define <4 x double> @test_masked_double_to_4_mem_mask1(ptr %p, <4 x double> %default, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_double_to_4_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
@@ -660,28 +660,28 @@ define <4 x double> @test_masked_double_to_4_mem_mask1(double* %p, <4 x double> 
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_double_to_4_mem_mask1(double* %p, <4 x double> %mask) {
+define <4 x double> @test_masked_z_double_to_4_mem_mask1(ptr %p, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_double_to_4_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_double_to_4_mem_mask2(double* %p, <4 x double> %default, <4 x double> %mask) {
+define <4 x double> @test_masked_double_to_4_mem_mask2(ptr %p, <4 x double> %default, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_double_to_4_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
@@ -689,28 +689,28 @@ define <4 x double> @test_masked_double_to_4_mem_mask2(double* %p, <4 x double> 
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_double_to_4_mem_mask2(double* %p, <4 x double> %mask) {
+define <4 x double> @test_masked_z_double_to_4_mem_mask2(ptr %p, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_double_to_4_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_double_to_4_mem_mask3(double* %p, <4 x double> %default, <4 x double> %mask) {
+define <4 x double> @test_masked_double_to_4_mem_mask3(ptr %p, <4 x double> %default, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_double_to_4_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
@@ -718,38 +718,38 @@ define <4 x double> @test_masked_double_to_4_mem_mask3(double* %p, <4 x double> 
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_double_to_4_mem_mask3(double* %p, <4 x double> %mask) {
+define <4 x double> @test_masked_z_double_to_4_mem_mask3(ptr %p, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_double_to_4_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x double> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <8 x double> @test_double_to_8_mem(double* %p) {
+define <8 x double> @test_double_to_8_mem(ptr %p) {
 ; CHECK-LABEL: test_double_to_8_mem:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %res = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_double_to_8_mem_mask0(double* %p, <8 x double> %default, <8 x double> %mask) {
+define <8 x double> @test_masked_double_to_8_mem_mask0(ptr %p, <8 x double> %default, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_double_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x double> %mask, zeroinitializer
@@ -757,28 +757,28 @@ define <8 x double> @test_masked_double_to_8_mem_mask0(double* %p, <8 x double> 
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_double_to_8_mem_mask0(double* %p, <8 x double> %mask) {
+define <8 x double> @test_masked_z_double_to_8_mem_mask0(ptr %p, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_double_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x double> %mask, zeroinitializer
   %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_double_to_8_mem_mask1(double* %p, <8 x double> %default, <8 x double> %mask) {
+define <8 x double> @test_masked_double_to_8_mem_mask1(ptr %p, <8 x double> %default, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_double_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x double> %mask, zeroinitializer
@@ -786,28 +786,28 @@ define <8 x double> @test_masked_double_to_8_mem_mask1(double* %p, <8 x double> 
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_double_to_8_mem_mask1(double* %p, <8 x double> %mask) {
+define <8 x double> @test_masked_z_double_to_8_mem_mask1(ptr %p, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_double_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x double> %mask, zeroinitializer
   %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_double_to_8_mem_mask2(double* %p, <8 x double> %default, <8 x double> %mask) {
+define <8 x double> @test_masked_double_to_8_mem_mask2(ptr %p, <8 x double> %default, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_double_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x double> %mask, zeroinitializer
@@ -815,28 +815,28 @@ define <8 x double> @test_masked_double_to_8_mem_mask2(double* %p, <8 x double> 
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_double_to_8_mem_mask2(double* %p, <8 x double> %mask) {
+define <8 x double> @test_masked_z_double_to_8_mem_mask2(ptr %p, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_double_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x double> %mask, zeroinitializer
   %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_double_to_8_mem_mask3(double* %p, <8 x double> %default, <8 x double> %mask) {
+define <8 x double> @test_masked_double_to_8_mem_mask3(ptr %p, <8 x double> %default, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_double_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x double> %mask, zeroinitializer
@@ -844,38 +844,38 @@ define <8 x double> @test_masked_double_to_8_mem_mask3(double* %p, <8 x double> 
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_double_to_8_mem_mask3(double* %p, <8 x double> %mask) {
+define <8 x double> @test_masked_z_double_to_8_mem_mask3(ptr %p, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_double_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load double, double* %p
+  %s = load double, ptr %p
   %vec = insertelement <2 x double> undef, double %s, i32 0
   %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x double> %mask, zeroinitializer
   %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <4 x float> @test_float_to_4_mem(float* %p) {
+define <4 x float> @test_float_to_4_mem(ptr %p) {
 ; CHECK-LABEL: test_float_to_4_mem:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %res = shufflevector <2 x float> %vec, <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x float> %res
 }
-define <4 x float> @test_masked_float_to_4_mem_mask0(float* %p, <4 x float> %default, <4 x float> %mask) {
+define <4 x float> @test_masked_float_to_4_mem_mask0(ptr %p, <4 x float> %default, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_4_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
@@ -883,28 +883,28 @@ define <4 x float> @test_masked_float_to_4_mem_mask0(float* %p, <4 x float> %def
   ret <4 x float> %res
 }
 
-define <4 x float> @test_masked_z_float_to_4_mem_mask0(float* %p, <4 x float> %mask) {
+define <4 x float> @test_masked_z_float_to_4_mem_mask0(ptr %p, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_4_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
-define <4 x float> @test_masked_float_to_4_mem_mask1(float* %p, <4 x float> %default, <4 x float> %mask) {
+define <4 x float> @test_masked_float_to_4_mem_mask1(ptr %p, <4 x float> %default, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_4_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
@@ -912,28 +912,28 @@ define <4 x float> @test_masked_float_to_4_mem_mask1(float* %p, <4 x float> %def
   ret <4 x float> %res
 }
 
-define <4 x float> @test_masked_z_float_to_4_mem_mask1(float* %p, <4 x float> %mask) {
+define <4 x float> @test_masked_z_float_to_4_mem_mask1(ptr %p, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_4_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
-define <4 x float> @test_masked_float_to_4_mem_mask2(float* %p, <4 x float> %default, <4 x float> %mask) {
+define <4 x float> @test_masked_float_to_4_mem_mask2(ptr %p, <4 x float> %default, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_4_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
@@ -941,28 +941,28 @@ define <4 x float> @test_masked_float_to_4_mem_mask2(float* %p, <4 x float> %def
   ret <4 x float> %res
 }
 
-define <4 x float> @test_masked_z_float_to_4_mem_mask2(float* %p, <4 x float> %mask) {
+define <4 x float> @test_masked_z_float_to_4_mem_mask2(ptr %p, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_4_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
-define <4 x float> @test_masked_float_to_4_mem_mask3(float* %p, <4 x float> %default, <4 x float> %mask) {
+define <4 x float> @test_masked_float_to_4_mem_mask3(ptr %p, <4 x float> %default, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_4_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
@@ -970,38 +970,38 @@ define <4 x float> @test_masked_float_to_4_mem_mask3(float* %p, <4 x float> %def
   ret <4 x float> %res
 }
 
-define <4 x float> @test_masked_z_float_to_4_mem_mask3(float* %p, <4 x float> %mask) {
+define <4 x float> @test_masked_z_float_to_4_mem_mask3(ptr %p, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_4_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <4 x float> %mask, zeroinitializer
   %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
-define <8 x float> @test_float_to_8_mem(float* %p) {
+define <8 x float> @test_float_to_8_mem(ptr %p) {
 ; CHECK-LABEL: test_float_to_8_mem:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %res = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_float_to_8_mem_mask0(float* %p, <8 x float> %default, <8 x float> %mask) {
+define <8 x float> @test_masked_float_to_8_mem_mask0(ptr %p, <8 x float> %default, <8 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x float> %mask, zeroinitializer
@@ -1009,28 +1009,28 @@ define <8 x float> @test_masked_float_to_8_mem_mask0(float* %p, <8 x float> %def
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_float_to_8_mem_mask0(float* %p, <8 x float> %mask) {
+define <8 x float> @test_masked_z_float_to_8_mem_mask0(ptr %p, <8 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_8_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x float> %mask, zeroinitializer
   %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_float_to_8_mem_mask1(float* %p, <8 x float> %default, <8 x float> %mask) {
+define <8 x float> @test_masked_float_to_8_mem_mask1(ptr %p, <8 x float> %default, <8 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x float> %mask, zeroinitializer
@@ -1038,28 +1038,28 @@ define <8 x float> @test_masked_float_to_8_mem_mask1(float* %p, <8 x float> %def
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_float_to_8_mem_mask1(float* %p, <8 x float> %mask) {
+define <8 x float> @test_masked_z_float_to_8_mem_mask1(ptr %p, <8 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_8_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x float> %mask, zeroinitializer
   %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_float_to_8_mem_mask2(float* %p, <8 x float> %default, <8 x float> %mask) {
+define <8 x float> @test_masked_float_to_8_mem_mask2(ptr %p, <8 x float> %default, <8 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x float> %mask, zeroinitializer
@@ -1067,28 +1067,28 @@ define <8 x float> @test_masked_float_to_8_mem_mask2(float* %p, <8 x float> %def
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_float_to_8_mem_mask2(float* %p, <8 x float> %mask) {
+define <8 x float> @test_masked_z_float_to_8_mem_mask2(ptr %p, <8 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_8_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x float> %mask, zeroinitializer
   %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_float_to_8_mem_mask3(float* %p, <8 x float> %default, <8 x float> %mask) {
+define <8 x float> @test_masked_float_to_8_mem_mask3(ptr %p, <8 x float> %default, <8 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x float> %mask, zeroinitializer
@@ -1096,38 +1096,38 @@ define <8 x float> @test_masked_float_to_8_mem_mask3(float* %p, <8 x float> %def
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_float_to_8_mem_mask3(float* %p, <8 x float> %mask) {
+define <8 x float> @test_masked_z_float_to_8_mem_mask3(ptr %p, <8 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_8_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %ymm1, %ymm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <8 x float> %mask, zeroinitializer
   %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <16 x float> @test_float_to_16_mem(float* %p) {
+define <16 x float> @test_float_to_16_mem(ptr %p) {
 ; CHECK-LABEL: test_float_to_16_mem:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %res = shufflevector <2 x float> %vec, <2 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_float_to_16_mem_mask0(float* %p, <16 x float> %default, <16 x float> %mask) {
+define <16 x float> @test_masked_float_to_16_mem_mask0(ptr %p, <16 x float> %default, <16 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_16_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <16 x float> %mask, zeroinitializer
@@ -1135,28 +1135,28 @@ define <16 x float> @test_masked_float_to_16_mem_mask0(float* %p, <16 x float> %
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_float_to_16_mem_mask0(float* %p, <16 x float> %mask) {
+define <16 x float> @test_masked_z_float_to_16_mem_mask0(ptr %p, <16 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_16_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <16 x float> %mask, zeroinitializer
   %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_float_to_16_mem_mask1(float* %p, <16 x float> %default, <16 x float> %mask) {
+define <16 x float> @test_masked_float_to_16_mem_mask1(ptr %p, <16 x float> %default, <16 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_16_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <16 x float> %mask, zeroinitializer
@@ -1164,28 +1164,28 @@ define <16 x float> @test_masked_float_to_16_mem_mask1(float* %p, <16 x float> %
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_float_to_16_mem_mask1(float* %p, <16 x float> %mask) {
+define <16 x float> @test_masked_z_float_to_16_mem_mask1(ptr %p, <16 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_16_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <16 x float> %mask, zeroinitializer
   %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_float_to_16_mem_mask2(float* %p, <16 x float> %default, <16 x float> %mask) {
+define <16 x float> @test_masked_float_to_16_mem_mask2(ptr %p, <16 x float> %default, <16 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_16_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <16 x float> %mask, zeroinitializer
@@ -1193,28 +1193,28 @@ define <16 x float> @test_masked_float_to_16_mem_mask2(float* %p, <16 x float> %
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_float_to_16_mem_mask2(float* %p, <16 x float> %mask) {
+define <16 x float> @test_masked_z_float_to_16_mem_mask2(ptr %p, <16 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_16_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <16 x float> %mask, zeroinitializer
   %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_float_to_16_mem_mask3(float* %p, <16 x float> %default, <16 x float> %mask) {
+define <16 x float> @test_masked_float_to_16_mem_mask3(ptr %p, <16 x float> %default, <16 x float> %mask) {
 ; CHECK-LABEL: test_masked_float_to_16_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <16 x float> %mask, zeroinitializer
@@ -1222,14 +1222,14 @@ define <16 x float> @test_masked_float_to_16_mem_mask3(float* %p, <16 x float> %
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_float_to_16_mem_mask3(float* %p, <16 x float> %mask) {
+define <16 x float> @test_masked_z_float_to_16_mem_mask3(ptr %p, <16 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_float_to_16_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %vec = insertelement <2 x float> undef, float %s, i32 0
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %cmp = fcmp oeq <16 x float> %mask, zeroinitializer

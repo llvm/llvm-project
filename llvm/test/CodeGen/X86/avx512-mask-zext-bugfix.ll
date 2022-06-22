@@ -9,12 +9,12 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind uwtable
-declare i64 @calc_expected_mask_val(i8* %valp, i32 %el_size, i32 %length)
+declare i64 @calc_expected_mask_val(ptr %valp, i32 %el_size, i32 %length)
 ; Function Attrs: nounwind uwtable
-declare i32 @check_mask16(i16 zeroext %res_mask, i16 zeroext %exp_mask, i8* %fname, i8* %input)
+declare i32 @check_mask16(i16 zeroext %res_mask, i16 zeroext %exp_mask, ptr %fname, ptr %input)
 
 ; Function Attrs: nounwind uwtable
-define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,i8* %arraydecay,i8* %fname){
+define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,ptr %arraydecay,ptr %fname){
 ; CHECK-LABEL: test_xmm:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    subq $56, %rsp
@@ -60,15 +60,15 @@ define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,i8* %arraydecay,i8* %f
   %d2 = bitcast <2 x i64> %a to <8 x i16>
   %m2 = call i8 @llvm.x86.avx512.cvtw2mask.128(<8 x i16> %d2)
   %conv7 = zext i8 %m2 to i16
-  %call9 = call i64 @calc_expected_mask_val(i8* %arraydecay, i32 2, i32 8)
+  %call9 = call i64 @calc_expected_mask_val(ptr %arraydecay, i32 2, i32 8)
   %conv10 = trunc i64 %call9 to i16
-  %call12 = call i32 @check_mask16(i16 zeroext %conv7, i16 zeroext %conv10, i8* %fname, i8* %arraydecay)
+  %call12 = call i32 @check_mask16(i16 zeroext %conv7, i16 zeroext %conv10, ptr %fname, ptr %arraydecay)
   %d3 = bitcast <2 x i64> %a to <4 x i32>
   %m3 = call i8 @llvm.x86.avx512.cvtd2mask.128(<4 x i32> %d3)
   %conv14 = zext i8 %m3 to i16
-  %call16 = call i64 @calc_expected_mask_val(i8* %arraydecay, i32 4, i32 4)
+  %call16 = call i64 @calc_expected_mask_val(ptr %arraydecay, i32 4, i32 4)
   %conv17 = trunc i64 %call16 to i16
-  %call19 = call i32 @check_mask16(i16 zeroext %conv14, i16 zeroext %conv17, i8* %fname, i8* %arraydecay)
+  %call19 = call i32 @check_mask16(i16 zeroext %conv14, i16 zeroext %conv17, ptr %fname, ptr %arraydecay)
   ret void
 }
 

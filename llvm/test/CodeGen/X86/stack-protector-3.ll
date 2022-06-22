@@ -59,28 +59,27 @@
 
 ; ModuleID = 't.c'
 @.str = private unnamed_addr constant [14 x i8] c"stackoverflow\00", align 1
-@a = dso_local local_unnamed_addr global i8* null, align 8
+@a = dso_local local_unnamed_addr global ptr null, align 8
 
 ; Function Attrs: nounwind sspreq uwtable writeonly
 define dso_local i32 @main() local_unnamed_addr #0 {
 entry:
   %array = alloca [5 x i8], align 1
-  %0 = getelementptr inbounds [5 x i8], [5 x i8]* %array, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 5, i8* nonnull %0) #2
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(14) %0, i8* nonnull align 1 dereferenceable(14) getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i64 0, i64 0), i64 14, i1 false) #2
-  store i8* %0, i8** @a, align 8
-  call void @llvm.lifetime.end.p0i8(i64 5, i8* nonnull %0) #2
+  call void @llvm.lifetime.start.p0(i64 5, ptr nonnull %array) #2
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 dereferenceable(14) %array, ptr nonnull align 1 dereferenceable(14) @.str, i64 14, i1 false) #2
+  store ptr %array, ptr @a, align 8
+  call void @llvm.lifetime.end.p0(i64 5, ptr nonnull %array) #2
   ret i32 0
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
 attributes #0 = { nounwind sspreq uwtable writeonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind willreturn }

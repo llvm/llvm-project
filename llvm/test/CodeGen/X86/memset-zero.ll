@@ -7,9 +7,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -mcpu=knl | FileCheck %s --check-prefix=KNL
 
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
-define void @memset_0(i8* %a) nounwind  {
+define void @memset_0(ptr %a) nounwind  {
 ; X86-LABEL: memset_0:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    retl
@@ -34,11 +34,11 @@ define void @memset_0(i8* %a) nounwind  {
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 0, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 0, i1 false)
 	ret void
 }
 
-define void @memset_4(i8* %a) nounwind  {
+define void @memset_4(ptr %a) nounwind  {
 ; X86-LABEL: memset_4:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -70,11 +70,11 @@ define void @memset_4(i8* %a) nounwind  {
 ; KNL-NEXT:    movl $0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 4, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 4, i1 false)
 	ret void
 }
 
-define void @memset_5(i8* %a) nounwind  {
+define void @memset_5(ptr %a) nounwind  {
 ; X86-LABEL: memset_5:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -112,11 +112,11 @@ define void @memset_5(i8* %a) nounwind  {
 ; KNL-NEXT:    movl $0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 5, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 5, i1 false)
 	ret void
 }
 
-define void @memset_7(i8* %a) nounwind  {
+define void @memset_7(ptr %a) nounwind  {
 ; X86-LABEL: memset_7:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -154,11 +154,11 @@ define void @memset_7(i8* %a) nounwind  {
 ; KNL-NEXT:    movl $0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 7, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 7, i1 false)
 	ret void
 }
 
-define void @memset_8(i8* %a) nounwind  {
+define void @memset_8(ptr %a) nounwind  {
 ; X86-LABEL: memset_8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -191,11 +191,11 @@ define void @memset_8(i8* %a) nounwind  {
 ; KNL-NEXT:    movq $0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 8, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 8, i1 false)
 	ret void
 }
 
-define void @memset_11(i8* %a) nounwind  {
+define void @memset_11(ptr %a) nounwind  {
 ; X86-LABEL: memset_11:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -234,11 +234,11 @@ define void @memset_11(i8* %a) nounwind  {
 ; KNL-NEXT:    movq $0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 11, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 11, i1 false)
 	ret void
 }
 
-define void @memset_13(i8* %a) nounwind  {
+define void @memset_13(ptr %a) nounwind  {
 ; X86-LABEL: memset_13:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -278,11 +278,11 @@ define void @memset_13(i8* %a) nounwind  {
 ; KNL-NEXT:    movq $0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 13, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 13, i1 false)
 	ret void
 }
 
-define void @memset_15(i8* %a) nounwind  {
+define void @memset_15(ptr %a) nounwind  {
 ; X86-LABEL: memset_15:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -322,11 +322,11 @@ define void @memset_15(i8* %a) nounwind  {
 ; KNL-NEXT:    movq $0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 15, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 15, i1 false)
 	ret void
 }
 
-define void @memset_16(i8* %a) nounwind  {
+define void @memset_16(ptr %a) nounwind  {
 ; X86-LABEL: memset_16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -366,11 +366,11 @@ define void @memset_16(i8* %a) nounwind  {
 ; KNL-NEXT:    vmovups %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 16, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
 	ret void
 }
 
-define void @memset_17(i8* %a) nounwind  {
+define void @memset_17(ptr %a) nounwind  {
 ; X86-LABEL: memset_17:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -416,11 +416,11 @@ define void @memset_17(i8* %a) nounwind  {
 ; KNL-NEXT:    movb $0, 16(%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 17, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 17, i1 false)
 	ret void
 }
 
-define void @memset_19(i8* %a) nounwind  {
+define void @memset_19(ptr %a) nounwind  {
 ; X86-LABEL: memset_19:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -466,11 +466,11 @@ define void @memset_19(i8* %a) nounwind  {
 ; KNL-NEXT:    movl $0, 15(%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 19, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 19, i1 false)
 	ret void
 }
 
-define void @memset_31(i8* %a) nounwind  {
+define void @memset_31(ptr %a) nounwind  {
 ; X86-LABEL: memset_31:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -520,11 +520,11 @@ define void @memset_31(i8* %a) nounwind  {
 ; KNL-NEXT:    vmovups %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 31, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 31, i1 false)
 	ret void
 }
 
-define void @memset_32(i8* %a) nounwind  {
+define void @memset_32(ptr %a) nounwind  {
 ; X86-LABEL: memset_32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -573,11 +573,11 @@ define void @memset_32(i8* %a) nounwind  {
 ; KNL-NEXT:    vmovups %ymm0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 32, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 32, i1 false)
 	ret void
 }
 
-define void @memset_32_align32(i8* %a) nounwind  {
+define void @memset_32_align32(ptr %a) nounwind  {
 ; X86-LABEL: memset_32_align32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -625,12 +625,12 @@ define void @memset_32_align32(i8* %a) nounwind  {
 ; KNL-NEXT:    vmovaps %ymm0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* align 32 %a, i8 0, i64 32, i1 false)
+	call void @llvm.memset.p0.i64(ptr align 32 %a, i8 0, i64 32, i1 false)
 	ret void
 }
 
 
-define void @memset_35(i8* %a) nounwind  {
+define void @memset_35(ptr %a) nounwind  {
 ; X86-LABEL: memset_35:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -685,11 +685,11 @@ define void @memset_35(i8* %a) nounwind  {
 ; KNL-NEXT:    movl $0, 31(%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 35, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 35, i1 false)
 	ret void
 }
 
-define void @memset_64(i8* %a) nounwind  {
+define void @memset_64(ptr %a) nounwind  {
 ; X86-LABEL: memset_64:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -755,11 +755,11 @@ define void @memset_64(i8* %a) nounwind  {
 ; KNL-NEXT:    vmovups %zmm0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 64, i1 false)
+	call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 64, i1 false)
 	ret void
 }
 
-define void @memset_64_align64(i8* %a) nounwind  {
+define void @memset_64_align64(ptr %a) nounwind  {
 ; X86-LABEL: memset_64_align64:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -821,6 +821,6 @@ define void @memset_64_align64(i8* %a) nounwind  {
 ; KNL-NEXT:    vmovaps %zmm0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
-	call void @llvm.memset.p0i8.i64(i8* align 64 %a, i8 0, i64 64, i1 false)
+	call void @llvm.memset.p0.i64(ptr align 64 %a, i8 0, i64 64, i1 false)
 	ret void
 }

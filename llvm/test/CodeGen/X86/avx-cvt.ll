@@ -105,42 +105,42 @@ define <2 x double> @fpext01(<2 x double> %a0, <4 x float> %a1) nounwind {
   ret <2 x double> %res
 }
 
-define double @funcA(i64* nocapture %e) nounwind uwtable readonly ssp {
+define double @funcA(ptr nocapture %e) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: funcA:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2sdq (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %tmp1 = load i64, i64* %e, align 8
+  %tmp1 = load i64, ptr %e, align 8
   %conv = sitofp i64 %tmp1 to double
   ret double %conv
 }
 
-define double @funcB(i32* nocapture %e) nounwind uwtable readonly ssp {
+define double @funcB(ptr nocapture %e) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: funcB:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2sdl (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %tmp1 = load i32, i32* %e, align 4
+  %tmp1 = load i32, ptr %e, align 4
   %conv = sitofp i32 %tmp1 to double
   ret double %conv
 }
 
-define float @funcC(i32* nocapture %e) nounwind uwtable readonly ssp {
+define float @funcC(ptr nocapture %e) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: funcC:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2ssl (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %tmp1 = load i32, i32* %e, align 4
+  %tmp1 = load i32, ptr %e, align 4
   %conv = sitofp i32 %tmp1 to float
   ret float %conv
 }
 
-define float @funcD(i64* nocapture %e) nounwind uwtable readonly ssp {
+define float @funcD(ptr nocapture %e) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: funcD:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2ssq (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %tmp1 = load i64, i64* %e, align 8
+  %tmp1 = load i64, ptr %e, align 8
   %conv = sitofp i64 %tmp1 to float
   ret float %conv
 }
@@ -154,9 +154,9 @@ define void @fpext() nounwind uwtable {
 ; CHECK-NEXT:    retq
   %f = alloca float, align 4
   %d = alloca double, align 8
-  %tmp = load float, float* %f, align 4
+  %tmp = load float, ptr %f, align 4
   %conv = fpext float %tmp to double
-  store double %conv, double* %d, align 8
+  store double %conv, ptr %d, align 8
   ret void
 }
 
@@ -180,42 +180,42 @@ define float @floor_f32(float %a) {
 }
 declare float @llvm.floor.f32(float %p)
 
-define float @floor_f32_load(float* %aptr) optsize {
+define float @floor_f32_load(ptr %aptr) optsize {
 ; CHECK-LABEL: floor_f32_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundss $9, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %a = load float, float* %aptr
+  %a = load float, ptr %aptr
   %res = call float @llvm.floor.f32(float %a)
   ret float %res
 }
 
-define float @floor_f32_load_pgso(float* %aptr) !prof !14 {
+define float @floor_f32_load_pgso(ptr %aptr) !prof !14 {
 ; CHECK-LABEL: floor_f32_load_pgso:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundss $9, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %a = load float, float* %aptr
+  %a = load float, ptr %aptr
   %res = call float @llvm.floor.f32(float %a)
   ret float %res
 }
 
-define double @nearbyint_f64_load(double* %aptr) optsize {
+define double @nearbyint_f64_load(ptr %aptr) optsize {
 ; CHECK-LABEL: nearbyint_f64_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundsd $12, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %a = load double, double* %aptr
+  %a = load double, ptr %aptr
   %res = call double @llvm.nearbyint.f64(double %a)
   ret double %res
 }
 
-define double @nearbyint_f64_load_pgso(double* %aptr) !prof !14 {
+define double @nearbyint_f64_load_pgso(ptr %aptr) !prof !14 {
 ; CHECK-LABEL: nearbyint_f64_load_pgso:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundsd $12, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %a = load double, double* %aptr
+  %a = load double, ptr %aptr
   %res = call double @llvm.nearbyint.f64(double %a)
   ret double %res
 }

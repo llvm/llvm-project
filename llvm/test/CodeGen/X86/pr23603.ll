@@ -3,7 +3,7 @@
 
 declare void @free_v()
 
-define void @f(i32* %x, i32 %c32, i32* %y) nounwind {
+define void @f(ptr %x, i32 %c32, ptr %y) nounwind {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -23,13 +23,13 @@ define void @f(i32* %x, i32 %c32, i32* %y) nounwind {
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
  entry:
-  %v = load i32, i32* %x, !invariant.load !0
+  %v = load i32, ptr %x, !invariant.load !0
   call void @free_v()
   %c = icmp ne i32 %c32, 0
   br i1 %c, label %left, label %merge
 
  left:
-  store i32 %v, i32* %y
+  store i32 %v, ptr %y
   br label %merge
 
  merge:

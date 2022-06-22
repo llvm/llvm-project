@@ -269,57 +269,57 @@ define <16 x i16> @shuffle_v16i16_zz_zz_zz_zz_zz_zz_zz_16_zz_zz_zz_zz_zz_zz_zz_2
   ret <16 x i16> %shuffle
 }
 
-define i64 @extract_v2i64(<2 x i64> %x, i64* %dst) {
+define i64 @extract_v2i64(<2 x i64> %x, ptr %dst) {
   %r1 = extractelement <2 x i64> %x, i32 0
   %r2 = extractelement <2 x i64> %x, i32 1
-  store i64 %r2, i64* %dst, align 1
+  store i64 %r2, ptr %dst, align 1
   ret i64 %r1
 }
 
-define i32 @extract_v4i32(<4 x i32> %x, i32* %dst) {
+define i32 @extract_v4i32(<4 x i32> %x, ptr %dst) {
   %r1 = extractelement <4 x i32> %x, i32 1
   %r2 = extractelement <4 x i32> %x, i32 3
-  store i32 %r2, i32* %dst, align 1
+  store i32 %r2, ptr %dst, align 1
   ret i32 %r1
 }
 
-define i16 @extract_v8i16(<8 x i16> %x, i16* %dst) {
+define i16 @extract_v8i16(<8 x i16> %x, ptr %dst) {
   %r1 = extractelement <8 x i16> %x, i32 1
   %r2 = extractelement <8 x i16> %x, i32 3
-  store i16 %r2, i16* %dst, align 1
+  store i16 %r2, ptr %dst, align 1
   ret i16 %r1
 }
 
-define i8 @extract_v16i8(<16 x i8> %x, i8* %dst) {
+define i8 @extract_v16i8(<16 x i8> %x, ptr %dst) {
   %r1 = extractelement <16 x i8> %x, i32 1
   %r2 = extractelement <16 x i8> %x, i32 3
-  store i8 %r2, i8* %dst, align 1
+  store i8 %r2, ptr %dst, align 1
   ret i8 %r1
 }
 
-define <2 x i64> @insert_v2i64(<2 x i64> %x, i64 %y , i64* %ptr) {
-  %val = load i64, i64* %ptr
+define <2 x i64> @insert_v2i64(<2 x i64> %x, i64 %y , ptr %ptr) {
+  %val = load i64, ptr %ptr
   %r1 = insertelement <2 x i64> %x, i64 %val, i32 1
   %r2 = insertelement <2 x i64> %r1, i64 %y, i32 3
   ret <2 x i64> %r2
 }
 
-define <4 x i32> @insert_v4i32(<4 x i32> %x, i32 %y, i32* %ptr) {
-  %val = load i32, i32* %ptr
+define <4 x i32> @insert_v4i32(<4 x i32> %x, i32 %y, ptr %ptr) {
+  %val = load i32, ptr %ptr
   %r1 = insertelement <4 x i32> %x, i32 %val, i32 1
   %r2 = insertelement <4 x i32> %r1, i32 %y, i32 3
   ret <4 x i32> %r2
 }
 
-define <8 x i16> @insert_v8i16(<8 x i16> %x, i16 %y, i16* %ptr) {
-  %val = load i16, i16* %ptr
+define <8 x i16> @insert_v8i16(<8 x i16> %x, i16 %y, ptr %ptr) {
+  %val = load i16, ptr %ptr
   %r1 = insertelement <8 x i16> %x, i16 %val, i32 1
   %r2 = insertelement <8 x i16> %r1, i16 %y, i32 5
   ret <8 x i16> %r2
 }
 
-define <16 x i8> @insert_v16i8(<16 x i8> %x, i8 %y, i8* %ptr) {
-  %val = load i8, i8* %ptr
+define <16 x i8> @insert_v16i8(<16 x i8> %x, i8 %y, ptr %ptr) {
+  %val = load i8, ptr %ptr
   %r1 = insertelement <16 x i8> %x, i8 %val, i32 3
   %r2 = insertelement <16 x i8> %r1, i8 %y, i32 10
   ret <16 x i8> %r2
@@ -369,53 +369,53 @@ define <4 x float> @shuffle_v4f32_0022(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %shuffle
 }
 
-define <2 x double> @insert_mem_lo_v2f64(double* %ptr, <2 x double> %b) {
-  %a = load double, double* %ptr
+define <2 x double> @insert_mem_lo_v2f64(ptr %ptr, <2 x double> %b) {
+  %a = load double, ptr %ptr
   %v = insertelement <2 x double> undef, double %a, i32 0
   %shuffle = shufflevector <2 x double> %v, <2 x double> %b, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %shuffle
 }
 
-define <2 x double> @insert_mem_hi_v2f64(double* %ptr, <2 x double> %b) {
-  %a = load double, double* %ptr
+define <2 x double> @insert_mem_hi_v2f64(ptr %ptr, <2 x double> %b) {
+  %a = load double, ptr %ptr
   %v = insertelement <2 x double> undef, double %a, i32 0
   %shuffle = shufflevector <2 x double> %v, <2 x double> %b, <2 x i32> <i32 2, i32 0>
   ret <2 x double> %shuffle
 }
 
-define void @store_floats(<4 x float> %x, i64* %p) {
+define void @store_floats(<4 x float> %x, ptr %p) {
   %a = fadd <4 x float> %x, %x
   %b = shufflevector <4 x float> %a, <4 x float> undef, <2 x i32> <i32 0, i32 1>
   %c = bitcast <2 x float> %b to i64
-  store i64 %c, i64* %p
+  store i64 %c, ptr %p
   ret void
 }
 
-define void @store_double(<2 x double> %x, i64* %p) {
+define void @store_double(<2 x double> %x, ptr %p) {
   %a = fadd <2 x double> %x, %x
   %b = extractelement <2 x double> %a, i32 0
   %c = bitcast double %b to i64
-  store i64 %c, i64* %p
+  store i64 %c, ptr %p
   ret void
 }
 
-define void @store_h_double(<2 x double> %x, i64* %p) {
+define void @store_h_double(<2 x double> %x, ptr %p) {
   %a = fadd <2 x double> %x, %x
   %b = extractelement <2 x double> %a, i32 1
   %c = bitcast double %b to i64
-  store i64 %c, i64* %p
+  store i64 %c, ptr %p
   ret void
 }
 
-define <2 x double> @test39(double* %ptr) nounwind {
-  %a = load double, double* %ptr
+define <2 x double> @test39(ptr %ptr) nounwind {
+  %a = load double, ptr %ptr
   %v = insertelement <2 x double> undef, double %a, i32 0
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   ret <2 x double> %shuffle
   }
 
-define <2 x double> @test40(<2 x double>* %ptr) nounwind {
-  %v = load  <2 x double>,  <2 x double>* %ptr
+define <2 x double> @test40(ptr %ptr) nounwind {
+  %v = load  <2 x double>,  ptr %ptr
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   ret <2 x double> %shuffle
   }

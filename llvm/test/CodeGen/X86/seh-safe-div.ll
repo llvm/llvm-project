@@ -23,32 +23,32 @@
 @str1 = internal constant [27 x i8] c"EXCEPTION_ACCESS_VIOLATION\00"
 @str2 = internal constant [29 x i8] c"EXCEPTION_INT_DIVIDE_BY_ZERO\00"
 
-define i32 @safe_div(i32* %n, i32* %d) personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
+define i32 @safe_div(ptr %n, ptr %d) personality ptr @__C_specific_handler {
 entry:
   %r = alloca i32, align 4
-  invoke void @try_body(i32* %r, i32* %n, i32* %d)
+  invoke void @try_body(ptr %r, ptr %n, ptr %d)
           to label %__try.cont unwind label %lpad0
 
 lpad0:
   %cs0 = catchswitch within none [label %handler0] unwind label %lpad1
 
 handler0:
-  %p0 = catchpad within %cs0 [i8* bitcast (i32 (i8*, i8*)* @safe_div_filt0 to i8*)]
-  call void @puts(i8* getelementptr ([27 x i8], [27 x i8]* @str1, i32 0, i32 0)) [ "funclet"(token %p0) ]
-  store i32 -1, i32* %r, align 4
+  %p0 = catchpad within %cs0 [ptr @safe_div_filt0]
+  call void @puts(ptr @str1) [ "funclet"(token %p0) ]
+  store i32 -1, ptr %r, align 4
   catchret from %p0 to label %__try.cont
 
 lpad1:
   %cs1 = catchswitch within none [label %handler1] unwind to caller
 
 handler1:
-  %p1 = catchpad within %cs1 [i8* bitcast (i32 (i8*, i8*)* @safe_div_filt1 to i8*)]
-  call void @puts(i8* getelementptr ([29 x i8], [29 x i8]* @str2, i32 0, i32 0)) [ "funclet"(token %p1) ]
-  store i32 -2, i32* %r, align 4
+  %p1 = catchpad within %cs1 [ptr @safe_div_filt1]
+  call void @puts(ptr @str2) [ "funclet"(token %p1) ]
+  store i32 -2, ptr %r, align 4
   catchret from %p1 to label %__try.cont
 
 __try.cont:
-  %safe_ret = load i32, i32* %r, align 4
+  %safe_ret = load i32, ptr %r, align 4
   ret i32 %safe_ret
 }
 
@@ -93,17 +93,17 @@ __try.cont:
 ; CHECK: .text
 ; CHECK: .seh_endproc
 
-define void @try_body(i32* %r, i32* %n, i32* %d) {
+define void @try_body(ptr %r, ptr %n, ptr %d) {
 entry:
-  %0 = load i32, i32* %n, align 4
-  %1 = load i32, i32* %d, align 4
+  %0 = load i32, ptr %n, align 4
+  %1 = load i32, ptr %d, align 4
   %div = sdiv i32 %0, %1
-  store i32 %div, i32* %r, align 4
+  store i32 %div, ptr %r, align 4
   ret void
 }
 
 ; The prototype of these filter functions is:
-; int filter(EXCEPTION_POINTERS *eh_ptrs, void *rbp);
+; int filter(EXCEPTION_POINTERS *eh_ptrs, ptr rbp);
 
 ; The definition of EXCEPTION_POINTERS is:
 ;   typedef struct _EXCEPTION_POINTERS {
@@ -122,20 +122,18 @@ entry:
 ; accessed via rbp, but that would require additional not yet implemented LLVM
 ; support.
 
-define i32 @safe_div_filt0(i8* %eh_ptrs, i8* %rbp) {
-  %eh_ptrs_c = bitcast i8* %eh_ptrs to i32**
-  %eh_rec = load i32*, i32** %eh_ptrs_c
-  %eh_code = load i32, i32* %eh_rec
+define i32 @safe_div_filt0(ptr %eh_ptrs, ptr %rbp) {
+  %eh_rec = load ptr, ptr %eh_ptrs
+  %eh_code = load i32, ptr %eh_rec
   ; EXCEPTION_ACCESS_VIOLATION = 0xC0000005
   %cmp = icmp eq i32 %eh_code, 3221225477
   %filt.res = zext i1 %cmp to i32
   ret i32 %filt.res
 }
 
-define i32 @safe_div_filt1(i8* %eh_ptrs, i8* %rbp) {
-  %eh_ptrs_c = bitcast i8* %eh_ptrs to i32**
-  %eh_rec = load i32*, i32** %eh_ptrs_c
-  %eh_code = load i32, i32* %eh_rec
+define i32 @safe_div_filt1(ptr %eh_ptrs, ptr %rbp) {
+  %eh_rec = load ptr, ptr %eh_ptrs
+  %eh_code = load i32, ptr %eh_rec
   ; EXCEPTION_INT_DIVIDE_BY_ZERO = 0xC0000094
   %cmp = icmp eq i32 %eh_code, 3221225620
   %filt.res = zext i1 %cmp to i32
@@ -148,23 +146,23 @@ define i32 @main() {
   %d.addr = alloca i32, align 4
   %n.addr = alloca i32, align 4
 
-  store i32 10, i32* %n.addr, align 4
-  store i32 2, i32* %d.addr, align 4
-  %r1 = call i32 @safe_div(i32* %n.addr, i32* %d.addr)
-  call void (i8*, ...) @printf(i8* getelementptr ([21 x i8], [21 x i8]* @str_result, i32 0, i32 0), i32 %r1)
+  store i32 10, ptr %n.addr, align 4
+  store i32 2, ptr %d.addr, align 4
+  %r1 = call i32 @safe_div(ptr %n.addr, ptr %d.addr)
+  call void (ptr, ...) @printf(ptr @str_result, i32 %r1)
 
-  store i32 10, i32* %n.addr, align 4
-  store i32 0, i32* %d.addr, align 4
-  %r2 = call i32 @safe_div(i32* %n.addr, i32* %d.addr)
-  call void (i8*, ...) @printf(i8* getelementptr ([21 x i8], [21 x i8]* @str_result, i32 0, i32 0), i32 %r2)
+  store i32 10, ptr %n.addr, align 4
+  store i32 0, ptr %d.addr, align 4
+  %r2 = call i32 @safe_div(ptr %n.addr, ptr %d.addr)
+  call void (ptr, ...) @printf(ptr @str_result, i32 %r2)
 
-  %r3 = call i32 @safe_div(i32* %n.addr, i32* null)
-  call void (i8*, ...) @printf(i8* getelementptr ([21 x i8], [21 x i8]* @str_result, i32 0, i32 0), i32 %r3)
+  %r3 = call i32 @safe_div(ptr %n.addr, ptr null)
+  call void (ptr, ...) @printf(ptr @str_result, i32 %r3)
   ret i32 0
 }
 
 declare i32 @__C_specific_handler(...)
-declare i32 @llvm.eh.typeid.for(i8*) readnone nounwind
-declare void @puts(i8*)
-declare void @printf(i8*, ...)
+declare i32 @llvm.eh.typeid.for(ptr) readnone nounwind
+declare void @puts(ptr)
+declare void @printf(ptr, ...)
 declare void @abort()

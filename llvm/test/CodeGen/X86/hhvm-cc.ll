@@ -221,10 +221,10 @@ entry:
   %t1 = alloca <2 x double>, align 16
   %t2 = alloca i64, align 8
   %t3 = alloca i64, align 8
-  %load3 = load i64, i64 *%t3
+  %load3 = load i64, ptr%t3
   call hhvm_ccc void @stack_helper(i64 %c, i64 %load3, i64 42)
-  %load = load <2 x double>, <2 x double> *%t1
-  %load2 = load i64, i64 *%t2
+  %load = load <2 x double>, ptr%t1
+  %load2 = load i64, ptr%t2
   call hhvm_ccc void @stack_helper2(<2 x double> %load, i64 %load2)
   ret void
 }

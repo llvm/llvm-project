@@ -14,10 +14,10 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @m() {
 ; CHECK-LABEL: @m(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* @f, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* @c, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @f, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @c, align 8
 ; CHECK-NEXT:    [[CONV18:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, i64* @d, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @d, align 8
 ; CHECK-NEXT:    [[CONV43:%.*]] = trunc i64 [[TMP2]] to i8
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
@@ -42,7 +42,7 @@ define dso_local i32 @m() {
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[J_174]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[CLEANUP45:%.*]], label [[FOR_COND2_PREHEADER:%.*]]
 ; CHECK:       for.cond2.preheader:
-; CHECK-NEXT:    [[DOTPR_PRE:%.*]] = load i64, i64* @e, align 8
+; CHECK-NEXT:    [[DOTPR_PRE:%.*]] = load i64, ptr @e, align 8
 ; CHECK-NEXT:    switch i64 [[P_175]], label [[FOR_BODY4_PREHEADER6:%.*]] [
 ; CHECK-NEXT:    i64 -1, label [[FOR_END12:%.*]]
 ; CHECK-NEXT:    i64 -2, label [[FOR_END12]]
@@ -64,17 +64,17 @@ define dso_local i32 @m() {
 ; CHECK-NEXT:    [[TOBOOL3_NOT_7:%.*]] = icmp eq i64 [[INC11_7]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL3_NOT_7]], label [[FOR_END12]], label [[FOR_BODY4]]
 ; CHECK:       for.end12:
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP0]] to i32*
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP0]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[CONV23:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = load i64, i64* @b, align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr @b, align 8
 ; CHECK-NEXT:    [[DIV24:%.*]] = udiv i64 [[TMP9]], [[CONV23]]
-; CHECK-NEXT:    store i64 [[DIV24]], i64* @b, align 8
+; CHECK-NEXT:    store i64 [[DIV24]], ptr @b, align 8
 ; CHECK-NEXT:    [[SUB]] = add i8 [[L_176]], -1
 ; CHECK-NEXT:    [[TOBOOL32_NOT72:%.*]] = icmp eq i64 [[DOTPR_PRE]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL32_NOT72]], label [[FOR_COND1_LOOPEXIT]], label [[FOR_INC34_PREHEADER:%.*]]
 ; CHECK:       for.inc34.preheader:
-; CHECK-NEXT:    store i64 0, i64* @e, align 8
+; CHECK-NEXT:    store i64 0, ptr @e, align 8
 ; CHECK-NEXT:    br label [[FOR_COND1_LOOPEXIT]]
 ; CHECK:       for.inc42:
 ; CHECK-NEXT:    br label [[FOR_INC42]]
@@ -84,12 +84,12 @@ define dso_local i32 @m() {
 ; CHECK-NEXT:    ret i32 [[CONV16]]
 ;
 entry:
-  %0 = load i64, i64* @f, align 8
-  %1 = inttoptr i64 %0 to i32*
-  %2 = load i64, i64* @c, align 8
+  %0 = load i64, ptr @f, align 8
+  %1 = inttoptr i64 %0 to ptr
+  %2 = load i64, ptr @c, align 8
   %conv18 = trunc i64 %2 to i32
   %cmp = icmp slt i32 %conv18, 3
-  %3 = load i64, i64* @d, align 8
+  %3 = load i64, ptr @d, align 8
   %conv43 = trunc i64 %3 to i8
   %tobool40.not = icmp eq i8 %conv43, 0
   br label %for.cond
@@ -118,7 +118,7 @@ for.body:                                         ; preds = %for.cond, %for.cond
   br i1 %tobool.not, label %cleanup45, label %for.cond2.preheader
 
 for.cond2.preheader:                              ; preds = %for.body
-  %.pr.pre = load i64, i64* @e, align 8
+  %.pr.pre = load i64, ptr @e, align 8
   switch i64 %p.175, label %for.body4.preheader6 [
   i64 -1, label %for.end12
   i64 -2, label %for.end12
@@ -143,17 +143,17 @@ for.body4:                                        ; preds = %for.body4.preheader
   br i1 %tobool3.not.7, label %for.end12, label %for.body4
 
 for.end12:                                        ; preds = %for.body4, %for.cond2.preheader, %for.cond2.preheader, %for.cond2.preheader, %for.cond2.preheader, %for.cond2.preheader, %for.cond2.preheader, %for.cond2.preheader, %for.cond2.preheader
-  %6 = load i32, i32* %1, align 4
+  %6 = load i32, ptr %1, align 4
   %conv23 = zext i32 %6 to i64
-  %7 = load i64, i64* @b, align 8
+  %7 = load i64, ptr @b, align 8
   %div24 = udiv i64 %7, %conv23
-  store i64 %div24, i64* @b, align 8
+  store i64 %div24, ptr @b, align 8
   %sub = add i8 %l.176, -1
   %tobool32.not72 = icmp eq i64 %.pr.pre, 0
   br i1 %tobool32.not72, label %for.cond1.loopexit, label %for.inc34.preheader
 
 for.inc34.preheader:                              ; preds = %for.end12
-  store i64 0, i64* @e, align 8
+  store i64 0, ptr @e, align 8
   br label %for.cond1.loopexit
 
 for.inc42:                                        ; preds = %for.cond39.preheader, %for.inc42

@@ -11,8 +11,8 @@ define dso_local void @foo() {
   ret void
 }
 
-define dso_local i8* @bar() {
-  ret i8* bitcast (void ()* @foo to i8*)
+define dso_local ptr @bar() {
+  ret ptr @foo
 }
 
 !llvm.module.flags = !{!1}

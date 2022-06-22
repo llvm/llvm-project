@@ -3,7 +3,7 @@
 
 ; Basic test coverage for FREM
 
-define void @frem_f16(half %a0, half %a1, half *%p3) nounwind {
+define void @frem_f16(half %a0, half %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -26,11 +26,11 @@ define void @frem_f16(half %a0, half %a1, half *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem half %a0, %a1
-  store half %frem, half *%p3
+  store half %frem, ptr%p3
   ret void
 }
 
-define void @frem_f32(float %a0, float %a1, float *%p3) nounwind {
+define void @frem_f32(float %a0, float %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -40,11 +40,11 @@ define void @frem_f32(float %a0, float %a1, float *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem float %a0, %a1
-  store float %frem, float *%p3
+  store float %frem, ptr%p3
   ret void
 }
 
-define void @frem_f64(double %a0, double %a1, double *%p3) nounwind {
+define void @frem_f64(double %a0, double %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -54,11 +54,11 @@ define void @frem_f64(double %a0, double %a1, double *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem double %a0, %a1
-  store double %frem, double *%p3
+  store double %frem, ptr%p3
   ret void
 }
 
-define void @frem_f80(x86_fp80 %a0, x86_fp80 %a1, x86_fp80 *%p3) nounwind {
+define void @frem_f80(x86_fp80 %a0, x86_fp80 %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f80:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -74,11 +74,11 @@ define void @frem_f80(x86_fp80 %a0, x86_fp80 %a1, x86_fp80 *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem x86_fp80 %a0, %a1
-  store x86_fp80 %frem, x86_fp80 *%p3
+  store x86_fp80 %frem, ptr%p3
   ret void
 }
 
-define void @frem_f128(fp128 %a0, fp128 %a1, fp128 *%p3) nounwind {
+define void @frem_f128(fp128 %a0, fp128 %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -88,11 +88,11 @@ define void @frem_f128(fp128 %a0, fp128 %a1, fp128 *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem fp128 %a0, %a1
-  store fp128 %frem, fp128 *%p3
+  store fp128 %frem, ptr%p3
   ret void
 }
 
-define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, <16 x float> *%p3) nounwind {
+define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -227,11 +227,11 @@ define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, <16 x float> *%p3) 
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <16 x float> %a0, %a1
-  store <16 x float> %frem, <16 x float> *%p3
+  store <16 x float> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v8f32(<8 x float> %a0, <8 x float> %a1, <8 x float> *%p3) nounwind {
+define void @frem_v8f32(<8 x float> %a0, <8 x float> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -302,11 +302,11 @@ define void @frem_v8f32(<8 x float> %a0, <8 x float> %a1, <8 x float> *%p3) noun
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <8 x float> %a0, %a1
-  store <8 x float> %frem, <8 x float> *%p3
+  store <8 x float> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v4f32(<4 x float> %a0, <4 x float> %a1, <4 x float> *%p3) nounwind {
+define void @frem_v4f32(<4 x float> %a0, <4 x float> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -344,11 +344,11 @@ define void @frem_v4f32(<4 x float> %a0, <4 x float> %a1, <4 x float> *%p3) noun
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <4 x float> %a0, %a1
-  store <4 x float> %frem, <4 x float> *%p3
+  store <4 x float> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v8f64(<8 x double> %a0, <8 x double> %a1, <8 x double> *%p3) nounwind {
+define void @frem_v8f64(<8 x double> %a0, <8 x double> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -419,11 +419,11 @@ define void @frem_v8f64(<8 x double> %a0, <8 x double> %a1, <8 x double> *%p3) n
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <8 x double> %a0, %a1
-  store <8 x double> %frem, <8 x double> *%p3
+  store <8 x double> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v4f64(<4 x double> %a0, <4 x double> %a1, <4 x double> *%p3) nounwind {
+define void @frem_v4f64(<4 x double> %a0, <4 x double> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -462,11 +462,11 @@ define void @frem_v4f64(<4 x double> %a0, <4 x double> %a1, <4 x double> *%p3) n
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <4 x double> %a0, %a1
-  store <4 x double> %frem, <4 x double> *%p3
+  store <4 x double> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v2f64(<2 x double> %a0, <2 x double> %a1, <2 x double> *%p3) nounwind {
+define void @frem_v2f64(<2 x double> %a0, <2 x double> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -488,11 +488,11 @@ define void @frem_v2f64(<2 x double> %a0, <2 x double> %a1, <2 x double> *%p3) n
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <2 x double> %a0, %a1
-  store <2 x double> %frem, <2 x double> *%p3
+  store <2 x double> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, <32 x half> *%p3) nounwind {
+define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -1067,11 +1067,11 @@ define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, <32 x half> *%p3) nou
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %frem = frem <32 x half> %a0, %a1
-  store <32 x half> %frem, <32 x half> *%p3
+  store <32 x half> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nounwind {
+define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -1356,11 +1356,11 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <16 x half> %a0, %a1
-  store <16 x half> %frem, <16 x half> *%p3
+  store <16 x half> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwind {
+define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -1509,11 +1509,11 @@ define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwin
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <8 x half> %a0, %a1
-  store <8 x half> %frem, <8 x half> *%p3
+  store <8 x half> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v4f80(<4 x x86_fp80> %a0, <4 x x86_fp80> %a1, <4 x x86_fp80> *%p3) nounwind {
+define void @frem_v4f80(<4 x x86_fp80> %a0, <4 x x86_fp80> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v4f80:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -1565,6 +1565,6 @@ define void @frem_v4f80(<4 x x86_fp80> %a0, <4 x x86_fp80> %a1, <4 x x86_fp80> *
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <4 x x86_fp80> %a0, %a1
-  store <4 x x86_fp80> %frem, <4 x x86_fp80> *%p3
+  store <4 x x86_fp80> %frem, ptr%p3
   ret void
 }

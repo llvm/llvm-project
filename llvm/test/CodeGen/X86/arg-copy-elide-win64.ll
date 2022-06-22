@@ -41,8 +41,8 @@ define void @baz(<16 x double> %arg, <16 x double> %arg1) #0 {
 bb:
   %tmp = alloca <16 x double>
   %tmp2 = alloca <16 x double>
-  store <16 x double> %arg, <16 x double>* %tmp
-  store <16 x double> %arg1, <16 x double>* %tmp2
+  store <16 x double> %arg, ptr %tmp
+  store <16 x double> %arg1, ptr %tmp2
   ret void
 }
 

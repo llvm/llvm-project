@@ -13,9 +13,9 @@ declare i32 @llvm.cttz.i32(i32, i1)
 declare i64 @llvm.cttz.i64(i64, i1)
 declare i32 @llvm.ctlz.i32(i32, i1)
 
-define i32 @loopdep_popcnt32(i32* nocapture %x, double* nocapture %y) nounwind {
+define i32 @loopdep_popcnt32(ptr nocapture %x, ptr nocapture %y) nounwind {
 entry:
-  %vx = load i32, i32* %x
+  %vx = load i32, ptr %x
   br label %loop
 loop:
   %i = phi i32 [ 1, %entry ], [ %inc, %loop ]
@@ -39,9 +39,9 @@ ret:
 ;SKL-NEXT: popcntl {{.*}}, [[GPR0]]
 }
 
-define i64 @loopdep_popcnt64(i64* nocapture %x, double* nocapture %y) nounwind {
+define i64 @loopdep_popcnt64(ptr nocapture %x, ptr nocapture %y) nounwind {
 entry:
-  %vx = load i64, i64* %x
+  %vx = load i64, ptr %x
   br label %loop
 loop:
   %i = phi i64 [ 1, %entry ], [ %inc, %loop ]
@@ -65,9 +65,9 @@ ret:
 ;SKL-NEXT: popcntq {{.*}}, %r[[GPR0]]
 }
 
-define i32 @loopdep_tzct32(i32* nocapture %x, double* nocapture %y) nounwind {
+define i32 @loopdep_tzct32(ptr nocapture %x, ptr nocapture %y) nounwind {
 entry:
-  %vx = load i32, i32* %x
+  %vx = load i32, ptr %x
   br label %loop
 loop:
   %i = phi i32 [ 1, %entry ], [ %inc, %loop ]
@@ -92,9 +92,9 @@ ret:
 ;SKL: tzcntl
 }
 
-define i64 @loopdep_tzct64(i64* nocapture %x, double* nocapture %y) nounwind {
+define i64 @loopdep_tzct64(ptr nocapture %x, ptr nocapture %y) nounwind {
 entry:
-  %vx = load i64, i64* %x
+  %vx = load i64, ptr %x
   br label %loop
 loop:
   %i = phi i64 [ 1, %entry ], [ %inc, %loop ]
@@ -119,9 +119,9 @@ ret:
 ;SKL: tzcntq
 }
 
-define i32 @loopdep_lzct32(i32* nocapture %x, double* nocapture %y) nounwind {
+define i32 @loopdep_lzct32(ptr nocapture %x, ptr nocapture %y) nounwind {
 entry:
-  %vx = load i32, i32* %x
+  %vx = load i32, ptr %x
   br label %loop
 loop:
   %i = phi i32 [ 1, %entry ], [ %inc, %loop ]
@@ -146,9 +146,9 @@ ret:
 ;SKL: lzcntl
 }
 
-define i64 @loopdep_lzct64(i64* nocapture %x, double* nocapture %y) nounwind {
+define i64 @loopdep_lzct64(ptr nocapture %x, ptr nocapture %y) nounwind {
 entry:
-  %vx = load i64, i64* %x
+  %vx = load i64, ptr %x
   br label %loop
 loop:
   %i = phi i64 [ 1, %entry ], [ %inc, %loop ]

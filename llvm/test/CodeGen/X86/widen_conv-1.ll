@@ -4,7 +4,7 @@
 
 ; truncate v2i64 to v2i32
 
-define void @convert_v2i64_to_v2i32(<2 x i32>* %dst.addr, <2 x i64> %src) nounwind {
+define void @convert_v2i64_to_v2i32(ptr %dst.addr, <2 x i64> %src) nounwind {
 ; X86-LABEL: convert_v2i64_to_v2i32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -24,13 +24,13 @@ define void @convert_v2i64_to_v2i32(<2 x i32>* %dst.addr, <2 x i64> %src) nounwi
 entry:
 	%val = trunc <2 x i64> %src to <2 x i32>
 	%add = add <2 x i32> %val, < i32 1, i32 1 >
-	store <2 x i32> %add, <2 x i32>* %dst.addr
+	store <2 x i32> %add, ptr %dst.addr
 	ret void
 }
 
 ; truncate v3i32 to v3i8
 
-define void @convert_v3i32_to_v3i8(<3 x i8>* %dst.addr, <3 x i32>* %src.addr) nounwind {
+define void @convert_v3i32_to_v3i8(ptr %dst.addr, ptr %src.addr) nounwind {
 ; X86-LABEL: convert_v3i32_to_v3i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -53,16 +53,16 @@ define void @convert_v3i32_to_v3i8(<3 x i8>* %dst.addr, <3 x i32>* %src.addr) no
 ; X64-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:
-	%load = load <3 x i32>, <3 x i32>* %src.addr
+	%load = load <3 x i32>, ptr %src.addr
 	%val = trunc <3 x i32> %load to <3 x i8>
 	%add = add <3 x i8> %val, < i8 1, i8 1, i8 1 >
-	store <3 x i8> %add, <3 x i8>* %dst.addr
+	store <3 x i8> %add, ptr %dst.addr
 	ret void
 }
 
 ; truncate v5i16 to v5i8
 
-define void @convert_v5i16_to_v5i8(<5 x i8>* %dst.addr, <5 x i16>* %src.addr) nounwind {
+define void @convert_v5i16_to_v5i8(ptr %dst.addr, ptr %src.addr) nounwind {
 ; X86-LABEL: convert_v5i16_to_v5i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -85,9 +85,9 @@ define void @convert_v5i16_to_v5i8(<5 x i8>* %dst.addr, <5 x i16>* %src.addr) no
 ; X64-NEXT:    movd %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:
-	%load = load <5 x i16>, <5 x i16>* %src.addr
+	%load = load <5 x i16>, ptr %src.addr
 	%val = trunc <5 x i16> %load to <5 x i8>
 	%add = add <5 x i8> %val, < i8 1, i8 1, i8 1, i8 1, i8 1 >
-	store <5 x i8> %add, <5 x i8>* %dst.addr
+	store <5 x i8> %add, ptr %dst.addr
 	ret void
 }

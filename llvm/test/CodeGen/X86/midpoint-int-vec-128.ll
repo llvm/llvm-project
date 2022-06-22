@@ -349,7 +349,7 @@ define <4 x i32> @vec128_i32_unsigned_reg_reg(<4 x i32> %a1, <4 x i32> %a2) noun
 
 ; Values are loaded. Only check signed case.
 
-define <4 x i32> @vec128_i32_signed_mem_reg(<4 x i32>* %a1_addr, <4 x i32> %a2) nounwind {
+define <4 x i32> @vec128_i32_signed_mem_reg(ptr %a1_addr, <4 x i32> %a2) nounwind {
 ; SSE2-LABEL: vec128_i32_signed_mem_reg:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm1
@@ -504,7 +504,7 @@ define <4 x i32> @vec128_i32_signed_mem_reg(<4 x i32>* %a1_addr, <4 x i32> %a2) 
 ; AVX512BW-FALLBACK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512BW-FALLBACK-NEXT:    vzeroupper
 ; AVX512BW-FALLBACK-NEXT:    retq
-  %a1 = load <4 x i32>, <4 x i32>* %a1_addr
+  %a1 = load <4 x i32>, ptr %a1_addr
   %t3 = icmp sgt <4 x i32> %a1, %a2 ; signed
   %t4 = select <4 x i1> %t3, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %t5 = select <4 x i1> %t3, <4 x i32> %a2, <4 x i32> %a1
@@ -516,7 +516,7 @@ define <4 x i32> @vec128_i32_signed_mem_reg(<4 x i32>* %a1_addr, <4 x i32> %a2) 
   ret <4 x i32> %a10
 }
 
-define <4 x i32> @vec128_i32_signed_reg_mem(<4 x i32> %a1, <4 x i32>* %a2_addr) nounwind {
+define <4 x i32> @vec128_i32_signed_reg_mem(<4 x i32> %a1, ptr %a2_addr) nounwind {
 ; SSE2-LABEL: vec128_i32_signed_reg_mem:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm1
@@ -671,7 +671,7 @@ define <4 x i32> @vec128_i32_signed_reg_mem(<4 x i32> %a1, <4 x i32>* %a2_addr) 
 ; AVX512BW-FALLBACK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX512BW-FALLBACK-NEXT:    vzeroupper
 ; AVX512BW-FALLBACK-NEXT:    retq
-  %a2 = load <4 x i32>, <4 x i32>* %a2_addr
+  %a2 = load <4 x i32>, ptr %a2_addr
   %t3 = icmp sgt <4 x i32> %a1, %a2 ; signed
   %t4 = select <4 x i1> %t3, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %t5 = select <4 x i1> %t3, <4 x i32> %a2, <4 x i32> %a1
@@ -683,7 +683,7 @@ define <4 x i32> @vec128_i32_signed_reg_mem(<4 x i32> %a1, <4 x i32>* %a2_addr) 
   ret <4 x i32> %a10
 }
 
-define <4 x i32> @vec128_i32_signed_mem_mem(<4 x i32>* %a1_addr, <4 x i32>* %a2_addr) nounwind {
+define <4 x i32> @vec128_i32_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; SSE2-LABEL: vec128_i32_signed_mem_mem:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm1
@@ -846,8 +846,8 @@ define <4 x i32> @vec128_i32_signed_mem_mem(<4 x i32>* %a1_addr, <4 x i32>* %a2_
 ; AVX512BW-FALLBACK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX512BW-FALLBACK-NEXT:    vzeroupper
 ; AVX512BW-FALLBACK-NEXT:    retq
-  %a1 = load <4 x i32>, <4 x i32>* %a1_addr
-  %a2 = load <4 x i32>, <4 x i32>* %a2_addr
+  %a1 = load <4 x i32>, ptr %a1_addr
+  %a2 = load <4 x i32>, ptr %a2_addr
   %t3 = icmp sgt <4 x i32> %a1, %a2 ; signed
   %t4 = select <4 x i1> %t3, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %t5 = select <4 x i1> %t3, <4 x i32> %a2, <4 x i32> %a1
@@ -1307,7 +1307,7 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 
 ; Values are loaded. Only check signed case.
 
-define <2 x i64> @vec128_i64_signed_mem_reg(<2 x i64>* %a1_addr, <2 x i64> %a2) nounwind {
+define <2 x i64> @vec128_i64_signed_mem_reg(ptr %a1_addr, <2 x i64> %a2) nounwind {
 ; SSE2-LABEL: vec128_i64_signed_mem_reg:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm1
@@ -1519,7 +1519,7 @@ define <2 x i64> @vec128_i64_signed_mem_reg(<2 x i64>* %a1_addr, <2 x i64> %a2) 
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX512BW-FALLBACK-NEXT:    vzeroupper
 ; AVX512BW-FALLBACK-NEXT:    retq
-  %a1 = load <2 x i64>, <2 x i64>* %a1_addr
+  %a1 = load <2 x i64>, ptr %a1_addr
   %t3 = icmp sgt <2 x i64> %a1, %a2 ; signed
   %t4 = select <2 x i1> %t3, <2 x i64> <i64 -1, i64 -1>, <2 x i64> <i64 1, i64 1>
   %t5 = select <2 x i1> %t3, <2 x i64> %a2, <2 x i64> %a1
@@ -1531,7 +1531,7 @@ define <2 x i64> @vec128_i64_signed_mem_reg(<2 x i64>* %a1_addr, <2 x i64> %a2) 
   ret <2 x i64> %a10
 }
 
-define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, <2 x i64>* %a2_addr) nounwind {
+define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, ptr %a2_addr) nounwind {
 ; SSE2-LABEL: vec128_i64_signed_reg_mem:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm3
@@ -1742,7 +1742,7 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, <2 x i64>* %a2_addr) 
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX512BW-FALLBACK-NEXT:    vzeroupper
 ; AVX512BW-FALLBACK-NEXT:    retq
-  %a2 = load <2 x i64>, <2 x i64>* %a2_addr
+  %a2 = load <2 x i64>, ptr %a2_addr
   %t3 = icmp sgt <2 x i64> %a1, %a2 ; signed
   %t4 = select <2 x i1> %t3, <2 x i64> <i64 -1, i64 -1>, <2 x i64> <i64 1, i64 1>
   %t5 = select <2 x i1> %t3, <2 x i64> %a2, <2 x i64> %a1
@@ -1754,7 +1754,7 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, <2 x i64>* %a2_addr) 
   ret <2 x i64> %a10
 }
 
-define <2 x i64> @vec128_i64_signed_mem_mem(<2 x i64>* %a1_addr, <2 x i64>* %a2_addr) nounwind {
+define <2 x i64> @vec128_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; SSE2-LABEL: vec128_i64_signed_mem_mem:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm1
@@ -1971,8 +1971,8 @@ define <2 x i64> @vec128_i64_signed_mem_mem(<2 x i64>* %a1_addr, <2 x i64>* %a2_
 ; AVX512BW-FALLBACK-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX512BW-FALLBACK-NEXT:    vzeroupper
 ; AVX512BW-FALLBACK-NEXT:    retq
-  %a1 = load <2 x i64>, <2 x i64>* %a1_addr
-  %a2 = load <2 x i64>, <2 x i64>* %a2_addr
+  %a1 = load <2 x i64>, ptr %a1_addr
+  %a2 = load <2 x i64>, ptr %a2_addr
   %t3 = icmp sgt <2 x i64> %a1, %a2 ; signed
   %t4 = select <2 x i1> %t3, <2 x i64> <i64 -1, i64 -1>, <2 x i64> <i64 1, i64 1>
   %t5 = select <2 x i1> %t3, <2 x i64> %a2, <2 x i64> %a1
@@ -2246,7 +2246,7 @@ define <8 x i16> @vec128_i16_unsigned_reg_reg(<8 x i16> %a1, <8 x i16> %a2) noun
 
 ; Values are loaded. Only check signed case.
 
-define <8 x i16> @vec128_i16_signed_mem_reg(<8 x i16>* %a1_addr, <8 x i16> %a2) nounwind {
+define <8 x i16> @vec128_i16_signed_mem_reg(ptr %a1_addr, <8 x i16> %a2) nounwind {
 ; SSE-LABEL: vec128_i16_signed_mem_reg:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
@@ -2355,7 +2355,7 @@ define <8 x i16> @vec128_i16_signed_mem_reg(<8 x i16>* %a1_addr, <8 x i16> %a2) 
 ; AVX512VLBW-NEXT:    vpsubw %xmm0, %xmm2, %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    retq
-  %a1 = load <8 x i16>, <8 x i16>* %a1_addr
+  %a1 = load <8 x i16>, ptr %a1_addr
   %t3 = icmp sgt <8 x i16> %a1, %a2 ; signed
   %t4 = select <8 x i1> %t3, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %t5 = select <8 x i1> %t3, <8 x i16> %a2, <8 x i16> %a1
@@ -2367,7 +2367,7 @@ define <8 x i16> @vec128_i16_signed_mem_reg(<8 x i16>* %a1_addr, <8 x i16> %a2) 
   ret <8 x i16> %a10
 }
 
-define <8 x i16> @vec128_i16_signed_reg_mem(<8 x i16> %a1, <8 x i16>* %a2_addr) nounwind {
+define <8 x i16> @vec128_i16_signed_reg_mem(<8 x i16> %a1, ptr %a2_addr) nounwind {
 ; SSE-LABEL: vec128_i16_signed_reg_mem:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
@@ -2476,7 +2476,7 @@ define <8 x i16> @vec128_i16_signed_reg_mem(<8 x i16> %a1, <8 x i16>* %a2_addr) 
 ; AVX512VLBW-NEXT:    vpsubw %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    retq
-  %a2 = load <8 x i16>, <8 x i16>* %a2_addr
+  %a2 = load <8 x i16>, ptr %a2_addr
   %t3 = icmp sgt <8 x i16> %a1, %a2 ; signed
   %t4 = select <8 x i1> %t3, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %t5 = select <8 x i1> %t3, <8 x i16> %a2, <8 x i16> %a1
@@ -2488,7 +2488,7 @@ define <8 x i16> @vec128_i16_signed_reg_mem(<8 x i16> %a1, <8 x i16>* %a2_addr) 
   ret <8 x i16> %a10
 }
 
-define <8 x i16> @vec128_i16_signed_mem_mem(<8 x i16>* %a1_addr, <8 x i16>* %a2_addr) nounwind {
+define <8 x i16> @vec128_i16_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; SSE-LABEL: vec128_i16_signed_mem_mem:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
@@ -2604,8 +2604,8 @@ define <8 x i16> @vec128_i16_signed_mem_mem(<8 x i16>* %a1_addr, <8 x i16>* %a2_
 ; AVX512VLBW-NEXT:    vpsubw %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    retq
-  %a1 = load <8 x i16>, <8 x i16>* %a1_addr
-  %a2 = load <8 x i16>, <8 x i16>* %a2_addr
+  %a1 = load <8 x i16>, ptr %a1_addr
+  %a2 = load <8 x i16>, ptr %a2_addr
   %t3 = icmp sgt <8 x i16> %a1, %a2 ; signed
   %t4 = select <8 x i1> %t3, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %t5 = select <8 x i1> %t3, <8 x i16> %a2, <8 x i16> %a1
@@ -3091,7 +3091,7 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 
 ; Values are loaded. Only check signed case.
 
-define <16 x i8> @vec128_i8_signed_mem_reg(<16 x i8>* %a1_addr, <16 x i8> %a2) nounwind {
+define <16 x i8> @vec128_i8_signed_mem_reg(ptr %a1_addr, <16 x i8> %a2) nounwind {
 ; SSE2-LABEL: vec128_i8_signed_mem_reg:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -3324,7 +3324,7 @@ define <16 x i8> @vec128_i8_signed_mem_reg(<16 x i8>* %a1_addr, <16 x i8> %a2) n
 ; AVX512VLBW-NEXT:    vpsubb %xmm0, %xmm2, %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    retq
-  %a1 = load <16 x i8>, <16 x i8>* %a1_addr
+  %a1 = load <16 x i8>, ptr %a1_addr
   %t3 = icmp sgt <16 x i8> %a1, %a2 ; signed
   %t4 = select <16 x i1> %t3, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %t5 = select <16 x i1> %t3, <16 x i8> %a2, <16 x i8> %a1
@@ -3336,7 +3336,7 @@ define <16 x i8> @vec128_i8_signed_mem_reg(<16 x i8>* %a1_addr, <16 x i8> %a2) n
   ret <16 x i8> %a10
 }
 
-define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, <16 x i8>* %a2_addr) nounwind {
+define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, ptr %a2_addr) nounwind {
 ; SSE2-LABEL: vec128_i8_signed_reg_mem:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm3
@@ -3567,7 +3567,7 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, <16 x i8>* %a2_addr) n
 ; AVX512VLBW-NEXT:    vpsubb %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    retq
-  %a2 = load <16 x i8>, <16 x i8>* %a2_addr
+  %a2 = load <16 x i8>, ptr %a2_addr
   %t3 = icmp sgt <16 x i8> %a1, %a2 ; signed
   %t4 = select <16 x i1> %t3, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %t5 = select <16 x i1> %t3, <16 x i8> %a2, <16 x i8> %a1
@@ -3579,7 +3579,7 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, <16 x i8>* %a2_addr) n
   ret <16 x i8> %a10
 }
 
-define <16 x i8> @vec128_i8_signed_mem_mem(<16 x i8>* %a1_addr, <16 x i8>* %a2_addr) nounwind {
+define <16 x i8> @vec128_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; SSE2-LABEL: vec128_i8_signed_mem_mem:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm1
@@ -3820,8 +3820,8 @@ define <16 x i8> @vec128_i8_signed_mem_mem(<16 x i8>* %a1_addr, <16 x i8>* %a2_a
 ; AVX512VLBW-NEXT:    vpsubb %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    retq
-  %a1 = load <16 x i8>, <16 x i8>* %a1_addr
-  %a2 = load <16 x i8>, <16 x i8>* %a2_addr
+  %a1 = load <16 x i8>, ptr %a1_addr
+  %a2 = load <16 x i8>, ptr %a2_addr
   %t3 = icmp sgt <16 x i8> %a1, %a2 ; signed
   %t4 = select <16 x i1> %t3, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %t5 = select <16 x i1> %t3, <16 x i8> %a2, <16 x i8> %a1

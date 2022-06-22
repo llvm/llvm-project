@@ -24,8 +24,8 @@ define i8 @test1(){
 ; X86_64-NEXT: endbr64
 ; X86-NEXT:    endbr32
 entry:
-  %0 = select i1 undef, i8* blockaddress(@test1, %bb), i8* blockaddress(@test1, %bb6) ; <i8*> [#uses=1]
-  indirectbr i8* %0, [label %bb, label %bb6]
+  %0 = select i1 undef, ptr blockaddress(@test1, %bb), ptr blockaddress(@test1, %bb6) ; <ptr> [#uses=1]
+  indirectbr ptr %0, [label %bb, label %bb6]
 
 bb:                                               ; preds = %entry
   ret i8 1
@@ -53,8 +53,8 @@ define i32 @test2(i32 %a) {
 entry:
   %retval = alloca i32, align 4
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  %0 = load i32, i32* %a.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4
   switch i32 %0, label %sw.default [
     i32 0, label %sw.bb
     i32 1, label %sw.bb1
@@ -64,31 +64,31 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry
-  store i32 5, i32* %retval, align 4
+  store i32 5, ptr %retval, align 4
   br label %return
 
 sw.bb1:                                           ; preds = %entry
-  store i32 7, i32* %retval, align 4
+  store i32 7, ptr %retval, align 4
   br label %return
 
 sw.bb2:                                           ; preds = %entry
-  store i32 2, i32* %retval, align 4
+  store i32 2, ptr %retval, align 4
   br label %return
 
 sw.bb3:                                           ; preds = %entry
-  store i32 32, i32* %retval, align 4
+  store i32 32, ptr %retval, align 4
   br label %return
 
 sw.bb4:                                           ; preds = %entry
-  store i32 73, i32* %retval, align 4
+  store i32 73, ptr %retval, align 4
   br label %return
 
 sw.default:                                       ; preds = %entry
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %sw.default, %sw.bb4, %sw.bb3, %sw.bb2, %sw.bb1, %sw.bb
-  %1 = load i32, i32* %retval, align 4
+  %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
 
@@ -108,9 +108,9 @@ define void @test3() {
 ; X86:         endbr32
 ; ALL:         call{{q|l}} *
 entry:
-  %f = alloca i32 (...)*, align 8
-  store i32 (...)* bitcast (i32 (i32)* @test6 to i32 (...)*), i32 (...)** %f, align 8
-  %0 = load i32 (...)*, i32 (...)** %f, align 8
+  %f = alloca ptr, align 8
+  store ptr @test6, ptr %f, align 8
+  %0 = load ptr, ptr %f, align 8
   %call = call i32 (...) %0()
   ret void
 }
@@ -123,10 +123,10 @@ entry:
 ;; added to its first basic block.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-@buf = internal global [5 x i8*] zeroinitializer
-declare i8* @llvm.frameaddress(i32)
-declare i8* @llvm.stacksave()
-declare i32 @llvm.eh.sjlj.setjmp(i8*)
+@buf = internal global [5 x ptr] zeroinitializer
+declare ptr @llvm.frameaddress(i32)
+declare ptr @llvm.stacksave()
+declare i32 @llvm.eh.sjlj.setjmp(ptr)
 
 define i32 @test4() {
 ; ALL-LABEL:   test4
@@ -135,11 +135,11 @@ define i32 @test4() {
 ; ALL:         .LBB3_3:
 ; X86_64-NEXT: endbr64
 ; X86-NEXT:    endbr32
-  %fp = tail call i8* @llvm.frameaddress(i32 0)
-  store i8* %fp, i8** getelementptr inbounds ([5 x i8*], [5 x i8*]* @buf, i64 0, i64 0), align 16
-  %sp = tail call i8* @llvm.stacksave()
-  store i8* %sp, i8** getelementptr inbounds ([5 x i8*], [5 x i8*]* @buf, i64 0, i64 2), align 16
-  %r = tail call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([5 x i8*]* @buf to i8*))
+  %fp = tail call ptr @llvm.frameaddress(i32 0)
+  store ptr %fp, ptr @buf, align 16
+  %sp = tail call ptr @llvm.stacksave()
+  store ptr %sp, ptr getelementptr inbounds ([5 x ptr], ptr @buf, i64 0, i64 2), align 16
+  %r = tail call i32 @llvm.eh.sjlj.setjmp(ptr @buf)
   ret i32 %r
 }
 
@@ -196,10 +196,10 @@ define i32 @test7() {
 
 declare void @_Z20function_that_throwsv()
 declare i32 @__gxx_personality_sj0(...)
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
 
-define void @test8() personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+define void @test8() personality ptr @__gxx_personality_sj0 {
 ;SJLJ-LABEL:    test8
 ;SJLJ-NOT:      ds
 entry:
@@ -207,10 +207,10 @@ entry:
           to label %try.cont unwind label %lpad
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = tail call i8* @__cxa_begin_catch(i8* %1)
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = tail call ptr @__cxa_begin_catch(ptr %1)
   tail call void @__cxa_end_catch()
   br label %try.cont
 

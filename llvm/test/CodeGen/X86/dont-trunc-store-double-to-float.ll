@@ -22,12 +22,12 @@ entry-block:
   %a = alloca double
   %b = alloca float
 
-  store double 3.140000e+00, double* %a
-  %0 = load double, double* %a
+  store double 3.140000e+00, ptr %a
+  %0 = load double, ptr %a
 
   %1 = fptrunc double %0 to float
 
-  store float %1, float* %b
+  store float %1, ptr %b
 
   ret void
 }

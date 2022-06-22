@@ -5,7 +5,7 @@
 ; The register-pressure scheduler should be able to schedule this in a
 ; way that does not require spills.
 
-@X = external dso_local global i64		; <i64*> [#uses=25]
+@X = external dso_local global i64		; <ptr> [#uses=25]
 
 define fastcc i64 @foo() nounwind {
 ; CHECK-LABEL: foo:
@@ -231,30 +231,30 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    retq
-	%tmp = load volatile i64, i64* @X		; <i64> [#uses=7]
-	%tmp1 = load volatile i64, i64* @X		; <i64> [#uses=5]
-	%tmp2 = load volatile i64, i64* @X		; <i64> [#uses=3]
-	%tmp3 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp4 = load volatile i64, i64* @X		; <i64> [#uses=5]
-	%tmp5 = load volatile i64, i64* @X		; <i64> [#uses=3]
-	%tmp6 = load volatile i64, i64* @X		; <i64> [#uses=2]
-	%tmp7 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp8 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp9 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp10 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp11 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp12 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp13 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp14 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp15 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp16 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp17 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp18 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp19 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp20 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp21 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp22 = load volatile i64, i64* @X		; <i64> [#uses=1]
-	%tmp23 = load volatile i64, i64* @X		; <i64> [#uses=1]
+	%tmp = load volatile i64, ptr @X		; <i64> [#uses=7]
+	%tmp1 = load volatile i64, ptr @X		; <i64> [#uses=5]
+	%tmp2 = load volatile i64, ptr @X		; <i64> [#uses=3]
+	%tmp3 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp4 = load volatile i64, ptr @X		; <i64> [#uses=5]
+	%tmp5 = load volatile i64, ptr @X		; <i64> [#uses=3]
+	%tmp6 = load volatile i64, ptr @X		; <i64> [#uses=2]
+	%tmp7 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp8 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp9 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp10 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp11 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp12 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp13 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp14 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp15 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp16 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp17 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp18 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp19 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp20 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp21 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp22 = load volatile i64, ptr @X		; <i64> [#uses=1]
+	%tmp23 = load volatile i64, ptr @X		; <i64> [#uses=1]
 	%tmp24 = call i64 @llvm.bswap.i64(i64 %tmp8)		; <i64> [#uses=1]
 	%tmp25 = add i64 %tmp6, %tmp5		; <i64> [#uses=1]
 	%tmp26 = add i64 %tmp25, %tmp4		; <i64> [#uses=1]
@@ -451,7 +451,7 @@ define fastcc i64 @foo() nounwind {
 	%tmp217 = add i64 %tmp205, %tmp215		; <i64> [#uses=1]
 	%tmp218 = add i64 %tmp217, %tmp211		; <i64> [#uses=1]
 	%tmp219 = call i64 @llvm.bswap.i64(i64 %tmp23)		; <i64> [#uses=2]
-	store volatile i64 %tmp219, i64* @X, align 8
+	store volatile i64 %tmp219, ptr @X, align 8
 	%tmp220 = add i64 %tmp203, %tmp190		; <i64> [#uses=1]
 	%tmp221 = add i64 %tmp220, %tmp216		; <i64> [#uses=1]
 	%tmp222 = add i64 %tmp219, %tmp177		; <i64> [#uses=1]

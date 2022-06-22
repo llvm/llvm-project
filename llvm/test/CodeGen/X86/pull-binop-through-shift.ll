@@ -4,7 +4,7 @@
 
 ; shift left
 
-define i32 @and_signbit_shl(i32 %x, i32* %dst) {
+define i32 @and_signbit_shl(i32 %x, ptr %dst) {
 ; X64-LABEL: and_signbit_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -22,10 +22,10 @@ define i32 @and_signbit_shl(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
   %r = shl i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @and_nosignbit_shl(i32 %x, i32* %dst) {
+define i32 @and_nosignbit_shl(i32 %x, ptr %dst) {
 ; X64-LABEL: and_nosignbit_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -43,11 +43,11 @@ define i32 @and_nosignbit_shl(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
   %r = shl i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @or_signbit_shl(i32 %x, i32* %dst) {
+define i32 @or_signbit_shl(i32 %x, ptr %dst) {
 ; X64-LABEL: or_signbit_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -66,10 +66,10 @@ define i32 @or_signbit_shl(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
   %r = shl i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @or_nosignbit_shl(i32 %x, i32* %dst) {
+define i32 @or_nosignbit_shl(i32 %x, ptr %dst) {
 ; X64-LABEL: or_nosignbit_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -88,11 +88,11 @@ define i32 @or_nosignbit_shl(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 2147418112 ; 0x7FFF0000
   %r = shl i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @xor_signbit_shl(i32 %x, i32* %dst) {
+define i32 @xor_signbit_shl(i32 %x, ptr %dst) {
 ; X64-LABEL: xor_signbit_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -111,10 +111,10 @@ define i32 @xor_signbit_shl(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
   %r = shl i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @xor_nosignbit_shl(i32 %x, i32* %dst) {
+define i32 @xor_nosignbit_shl(i32 %x, ptr %dst) {
 ; X64-LABEL: xor_nosignbit_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -133,11 +133,11 @@ define i32 @xor_nosignbit_shl(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 2147418112 ; 0x7FFF0000
   %r = shl i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @add_signbit_shl(i32 %x, i32* %dst) {
+define i32 @add_signbit_shl(i32 %x, ptr %dst) {
 ; X64-LABEL: add_signbit_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -156,10 +156,10 @@ define i32 @add_signbit_shl(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 4294901760 ; 0xFFFF0000
   %r = shl i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @add_nosignbit_shl(i32 %x, i32* %dst) {
+define i32 @add_nosignbit_shl(i32 %x, ptr %dst) {
 ; X64-LABEL: add_nosignbit_shl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -178,13 +178,13 @@ define i32 @add_nosignbit_shl(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 2147418112 ; 0x7FFF0000
   %r = shl i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
 ; logical shift right
 
-define i32 @and_signbit_lshr(i32 %x, i32* %dst) {
+define i32 @and_signbit_lshr(i32 %x, ptr %dst) {
 ; X64-LABEL: and_signbit_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -202,10 +202,10 @@ define i32 @and_signbit_lshr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
   %r = lshr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @and_nosignbit_lshr(i32 %x, i32* %dst) {
+define i32 @and_nosignbit_lshr(i32 %x, ptr %dst) {
 ; X64-LABEL: and_nosignbit_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -224,11 +224,11 @@ define i32 @and_nosignbit_lshr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
   %r = lshr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @or_signbit_lshr(i32 %x, i32* %dst) {
+define i32 @or_signbit_lshr(i32 %x, ptr %dst) {
 ; X64-LABEL: or_signbit_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -247,10 +247,10 @@ define i32 @or_signbit_lshr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
   %r = lshr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @or_nosignbit_lshr(i32 %x, i32* %dst) {
+define i32 @or_nosignbit_lshr(i32 %x, ptr %dst) {
 ; X64-LABEL: or_nosignbit_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -269,11 +269,11 @@ define i32 @or_nosignbit_lshr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 2147418112 ; 0x7FFF0000
   %r = lshr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @xor_signbit_lshr(i32 %x, i32* %dst) {
+define i32 @xor_signbit_lshr(i32 %x, ptr %dst) {
 ; X64-LABEL: xor_signbit_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -292,10 +292,10 @@ define i32 @xor_signbit_lshr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
   %r = lshr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @xor_nosignbit_lshr(i32 %x, i32* %dst) {
+define i32 @xor_nosignbit_lshr(i32 %x, ptr %dst) {
 ; X64-LABEL: xor_nosignbit_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -314,11 +314,11 @@ define i32 @xor_nosignbit_lshr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 2147418112 ; 0x7FFF0000
   %r = lshr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @add_signbit_lshr(i32 %x, i32* %dst) {
+define i32 @add_signbit_lshr(i32 %x, ptr %dst) {
 ; X64-LABEL: add_signbit_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -337,10 +337,10 @@ define i32 @add_signbit_lshr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 4294901760 ; 0xFFFF0000
   %r = lshr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @add_nosignbit_lshr(i32 %x, i32* %dst) {
+define i32 @add_nosignbit_lshr(i32 %x, ptr %dst) {
 ; X64-LABEL: add_nosignbit_lshr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -359,13 +359,13 @@ define i32 @add_nosignbit_lshr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 2147418112 ; 0x7FFF0000
   %r = lshr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
 ; arithmetic shift right
 
-define i32 @and_signbit_ashr(i32 %x, i32* %dst) {
+define i32 @and_signbit_ashr(i32 %x, ptr %dst) {
 ; X64-LABEL: and_signbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -383,10 +383,10 @@ define i32 @and_signbit_ashr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
   %r = ashr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @and_nosignbit_ashr(i32 %x, i32* %dst) {
+define i32 @and_nosignbit_ashr(i32 %x, ptr %dst) {
 ; X64-LABEL: and_nosignbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -405,11 +405,11 @@ define i32 @and_nosignbit_ashr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
   %r = ashr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @or_signbit_ashr(i32 %x, i32* %dst) {
+define i32 @or_signbit_ashr(i32 %x, ptr %dst) {
 ; X64-LABEL: or_signbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -428,10 +428,10 @@ define i32 @or_signbit_ashr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
   %r = ashr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @or_nosignbit_ashr(i32 %x, i32* %dst) {
+define i32 @or_nosignbit_ashr(i32 %x, ptr %dst) {
 ; X64-LABEL: or_nosignbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -450,11 +450,11 @@ define i32 @or_nosignbit_ashr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 2147418112 ; 0x7FFF0000
   %r = ashr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @xor_signbit_ashr(i32 %x, i32* %dst) {
+define i32 @xor_signbit_ashr(i32 %x, ptr %dst) {
 ; X64-LABEL: xor_signbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -473,10 +473,10 @@ define i32 @xor_signbit_ashr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
   %r = ashr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @xor_nosignbit_ashr(i32 %x, i32* %dst) {
+define i32 @xor_nosignbit_ashr(i32 %x, ptr %dst) {
 ; X64-LABEL: xor_nosignbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
@@ -495,11 +495,11 @@ define i32 @xor_nosignbit_ashr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 2147418112 ; 0x7FFF0000
   %r = ashr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
 
-define i32 @add_signbit_ashr(i32 %x, i32* %dst) {
+define i32 @add_signbit_ashr(i32 %x, ptr %dst) {
 ; X64-LABEL: add_signbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -518,10 +518,10 @@ define i32 @add_signbit_ashr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 4294901760 ; 0xFFFF0000
   %r = ashr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }
-define i32 @add_nosignbit_ashr(i32 %x, i32* %dst) {
+define i32 @add_nosignbit_ashr(i32 %x, ptr %dst) {
 ; X64-LABEL: add_nosignbit_ashr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -540,6 +540,6 @@ define i32 @add_nosignbit_ashr(i32 %x, i32* %dst) {
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 2147418112 ; 0x7FFF0000
   %r = ashr i32 %t0, 8
-  store i32 %r, i32* %dst
+  store i32 %r, ptr %dst
   ret i32 %r
 }

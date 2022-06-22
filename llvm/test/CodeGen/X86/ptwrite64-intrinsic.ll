@@ -11,13 +11,13 @@ entry:
   ret void
 }
 
-define void @test_ptwrite64p(i64* %pointer) {
+define void @test_ptwrite64p(ptr %pointer) {
 ; CHECK-LABEL: test_ptwrite64p:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ptwriteq (%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  %value = load i64, i64* %pointer, align 8
+  %value = load i64, ptr %pointer, align 8
   call void @llvm.x86.ptwrite64(i64 %value)
   ret void
 }

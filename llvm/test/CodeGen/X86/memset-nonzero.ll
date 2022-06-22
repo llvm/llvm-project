@@ -12,7 +12,7 @@
 
 ; https://llvm.org/bugs/show_bug.cgi?id=27100
 
-define void @memset_16_nonzero_bytes(i8* %x) {
+define void @memset_16_nonzero_bytes(ptr %x) {
 ; SSE-LABEL: memset_16_nonzero_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movabsq $3038287259199220266, %rax # imm = 0x2A2A2A2A2A2A2A2A
@@ -31,11 +31,11 @@ define void @memset_16_nonzero_bytes(i8* %x) {
 ; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
 ; AVX-NEXT:    vmovups %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %call = tail call i8* @__memset_chk(i8* %x, i32 42, i64 16, i64 -1)
+  %call = tail call ptr @__memset_chk(ptr %x, i32 42, i64 16, i64 -1)
   ret void
 }
 
-define void @memset_32_nonzero_bytes(i8* %x) {
+define void @memset_32_nonzero_bytes(ptr %x) {
 ; SSE-LABEL: memset_32_nonzero_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movabsq $3038287259199220266, %rax # imm = 0x2A2A2A2A2A2A2A2A
@@ -58,11 +58,11 @@ define void @memset_32_nonzero_bytes(i8* %x) {
 ; AVX-NEXT:    vmovups %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %call = tail call i8* @__memset_chk(i8* %x, i32 42, i64 32, i64 -1)
+  %call = tail call ptr @__memset_chk(ptr %x, i32 42, i64 32, i64 -1)
   ret void
 }
 
-define void @memset_64_nonzero_bytes(i8* %x) {
+define void @memset_64_nonzero_bytes(ptr %x) {
 ; SSE-LABEL: memset_64_nonzero_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movabsq $3038287259199220266, %rax # imm = 0x2A2A2A2A2A2A2A2A
@@ -115,11 +115,11 @@ define void @memset_64_nonzero_bytes(i8* %x) {
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ; AVX512NW-NEXT: retq
-  %call = tail call i8* @__memset_chk(i8* %x, i32 42, i64 64, i64 -1)
+  %call = tail call ptr @__memset_chk(ptr %x, i32 42, i64 64, i64 -1)
   ret void
 }
 
-define void @memset_128_nonzero_bytes(i8* %x) {
+define void @memset_128_nonzero_bytes(ptr %x) {
 ; SSE-LABEL: memset_128_nonzero_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movabsq $3038287259199220266, %rax # imm = 0x2A2A2A2A2A2A2A2A
@@ -189,11 +189,11 @@ define void @memset_128_nonzero_bytes(i8* %x) {
 ; AVX512BW-NEXT:    vmovups %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %call = tail call i8* @__memset_chk(i8* %x, i32 42, i64 128, i64 -1)
+  %call = tail call ptr @__memset_chk(ptr %x, i32 42, i64 128, i64 -1)
   ret void
 }
 
-define void @memset_256_nonzero_bytes(i8* %x) {
+define void @memset_256_nonzero_bytes(ptr %x) {
 ; SSE-LABEL: memset_256_nonzero_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl $256, %edx # imm = 0x100
@@ -268,15 +268,15 @@ define void @memset_256_nonzero_bytes(i8* %x) {
 ; AVX512BW-NEXT:    vmovups %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %call = tail call i8* @__memset_chk(i8* %x, i32 42, i64 256, i64 -1)
+  %call = tail call ptr @__memset_chk(ptr %x, i32 42, i64 256, i64 -1)
   ret void
 }
 
-declare i8* @__memset_chk(i8*, i32, i64, i64)
+declare ptr @__memset_chk(ptr, i32, i64, i64)
 
 ; Repeat with a non-constant value for the stores.
 
-define void @memset_16_nonconst_bytes(i8* %x, i8 %c) {
+define void @memset_16_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE-LABEL: memset_16_nonconst_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -317,11 +317,11 @@ define void @memset_16_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX512-NEXT:    vpbroadcastb %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqu %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 16, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr %x, i8 %c, i64 16, i1 false)
   ret void
 }
 
-define void @memset_32_nonconst_bytes(i8* %x, i8 %c) {
+define void @memset_32_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE-LABEL: memset_32_nonconst_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -368,11 +368,11 @@ define void @memset_32_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX512-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 32, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr %x, i8 %c, i64 32, i1 false)
   ret void
 }
 
-define void @memset_64_nonconst_bytes(i8* %x, i8 %c) {
+define void @memset_64_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE-LABEL: memset_64_nonconst_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -436,11 +436,11 @@ define void @memset_64_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 64, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr %x, i8 %c, i64 64, i1 false)
   ret void
 }
 
-define void @memset_128_nonconst_bytes(i8* %x, i8 %c) {
+define void @memset_128_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE-LABEL: memset_128_nonconst_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -522,11 +522,11 @@ define void @memset_128_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 128, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr %x, i8 %c, i64 128, i1 false)
   ret void
 }
 
-define void @memset_256_nonconst_bytes(i8* %x, i8 %c) {
+define void @memset_256_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE-LABEL: memset_256_nonconst_bytes:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl $256, %edx # imm = 0x100
@@ -609,9 +609,9 @@ define void @memset_256_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 256, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr %x, i8 %c, i64 256, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #1
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) #1
 

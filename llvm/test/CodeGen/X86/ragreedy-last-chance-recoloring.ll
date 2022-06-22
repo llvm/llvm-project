@@ -19,7 +19,7 @@ target triple = "i386-apple-macosx"
 
 @fp_dh_36985b17790d59a27994eaab5dcb00ee = external constant [499 x i32]
 @fp_dh_18716afa4a5354de0a302c8edb3b0ee1 = external global i32
-@fp_dh_20a33cdeefab8f4c8887e82766cb9dcb = external global i8*
+@fp_dh_20a33cdeefab8f4c8887e82766cb9dcb = external global ptr
 @fp_dh_9d93c897906e39883c58b034c8e786b2 = external global [5419648 x i8], align 16
 
 ; Function Attrs: nounwind ssp
@@ -27,36 +27,35 @@ target triple = "i386-apple-macosx"
 ; CHECK-INTERF: error: register allocation failed: maximum interference for recoloring reached
 ; CHECK-DEPTH: error: register allocation failed: maximum depth for recoloring reached
 ; CHECK-EXHAUSTIVE-NOT: error: register allocation failed: maximum {{depth|interference}} for recoloring reached
-define void @fp_dh_f870bf31fd8ffe068450366e3f05389a(i8* %arg) #0 {
+define void @fp_dh_f870bf31fd8ffe068450366e3f05389a(ptr %arg) #0 {
 bb:
-  indirectbr i8* undef, [label %bb85, label %bb206]
+  indirectbr ptr undef, [label %bb85, label %bb206]
 
 bb85:                                             ; preds = %bb222, %bb85, %bb
-  store i8* blockaddress(@fp_dh_f870bf31fd8ffe068450366e3f05389a, %bb206), i8** undef, align 4
-  indirectbr i8* undef, [label %bb439, label %bb85]
+  store ptr blockaddress(@fp_dh_f870bf31fd8ffe068450366e3f05389a, %bb206), ptr undef, align 4
+  indirectbr ptr undef, [label %bb439, label %bb85]
 
 bb206:                                            ; preds = %bb
-  %tmp = getelementptr [499 x i32], [499 x i32]* @fp_dh_36985b17790d59a27994eaab5dcb00ee, i32 0, i32 undef
-  %tmp207 = load i32, i32* %tmp
+  %tmp = getelementptr [499 x i32], ptr @fp_dh_36985b17790d59a27994eaab5dcb00ee, i32 0, i32 undef
+  %tmp207 = load i32, ptr %tmp
   %tmp208 = add i32 %tmp207, 1
-  %tmp209 = inttoptr i32 %tmp208 to i8*
-  indirectbr i8* %tmp209, [label %bb213]
+  %tmp209 = inttoptr i32 %tmp208 to ptr
+  indirectbr ptr %tmp209, [label %bb213]
 
 bb213:                                            ; preds = %bb206
-  %tmp214 = load i32, i32* @fp_dh_18716afa4a5354de0a302c8edb3b0ee1, align 4
-  %tmp215 = load i8*, i8** @fp_dh_20a33cdeefab8f4c8887e82766cb9dcb, align 4
+  %tmp214 = load i32, ptr @fp_dh_18716afa4a5354de0a302c8edb3b0ee1, align 4
+  %tmp215 = load ptr, ptr @fp_dh_20a33cdeefab8f4c8887e82766cb9dcb, align 4
   %tmp216 = urem i32 -717428541, %tmp214
-  %tmp217 = getelementptr i8, i8* %tmp215, i32 %tmp216
-  %tmp218 = bitcast i8* %tmp217 to i32*
-  %tmp219 = load i32, i32* %tmp218, align 4
-  store i32 %tmp219, i32* undef, align 4
+  %tmp217 = getelementptr i8, ptr %tmp215, i32 %tmp216
+  %tmp219 = load i32, ptr %tmp217, align 4
+  store i32 %tmp219, ptr undef, align 4
   %tmp220 = select i1 false, i32 359373646, i32 1677237955
   %tmp221 = add i32 %tmp220, 0
-  indirectbr i8* undef, [label %bb432, label %bb222]
+  indirectbr ptr undef, [label %bb432, label %bb222]
 
 bb222:                                            ; preds = %bb213
-  %tmp224 = load i32, i32* undef, align 4
-  %tmp225 = load i32, i32* undef, align 4
+  %tmp224 = load i32, ptr undef, align 4
+  %tmp225 = load i32, ptr undef, align 4
   %tmp226 = xor i32 %tmp225, %tmp224
   %tmp227 = shl i32 %tmp226, 1
   %tmp228 = and i32 %tmp227, -2048880334
@@ -65,13 +64,13 @@ bb222:                                            ; preds = %bb213
   %tmp231 = xor i32 %tmp230, 1059356227
   %tmp232 = mul i32 %tmp231, 1603744721
   %tmp233 = urem i32 %tmp232, 259
-  %tmp234 = getelementptr [259 x i8], [259 x i8]* bitcast (i8* getelementptr inbounds ([5419648 x i8], [5419648 x i8]* @fp_dh_9d93c897906e39883c58b034c8e786b2, i32 0, i32 2039075) to [259 x i8]*), i32 0, i32 %tmp233
-  %tmp235 = load i8, i8* %tmp234, align 1
+  %tmp234 = getelementptr [259 x i8], ptr getelementptr inbounds ([5419648 x i8], ptr @fp_dh_9d93c897906e39883c58b034c8e786b2, i32 0, i32 2039075), i32 0, i32 %tmp233
+  %tmp235 = load i8, ptr %tmp234, align 1
   %tmp236 = add i32 %tmp233, 2
-  %tmp237 = getelementptr [264 x i8], [264 x i8]* bitcast (i8* getelementptr inbounds ([5419648 x i8], [5419648 x i8]* @fp_dh_9d93c897906e39883c58b034c8e786b2, i32 0, i32 3388166) to [264 x i8]*), i32 0, i32 %tmp236
-  %tmp238 = load i8, i8* %tmp237, align 1
-  %tmp239 = getelementptr [265 x i8], [265 x i8]* bitcast (i8* getelementptr inbounds ([5419648 x i8], [5419648 x i8]* @fp_dh_9d93c897906e39883c58b034c8e786b2, i32 0, i32 1325165) to [265 x i8]*), i32 0, i32 0
-  %tmp240 = load i8, i8* %tmp239, align 1
+  %tmp237 = getelementptr [264 x i8], ptr getelementptr inbounds ([5419648 x i8], ptr @fp_dh_9d93c897906e39883c58b034c8e786b2, i32 0, i32 3388166), i32 0, i32 %tmp236
+  %tmp238 = load i8, ptr %tmp237, align 1
+  %tmp239 = getelementptr [265 x i8], ptr getelementptr inbounds ([5419648 x i8], ptr @fp_dh_9d93c897906e39883c58b034c8e786b2, i32 0, i32 1325165), i32 0, i32 0
+  %tmp240 = load i8, ptr %tmp239, align 1
   %tmp241 = add i32 %tmp233, 6
   %tmp242 = trunc i32 %tmp241 to i8
   %tmp243 = mul i8 %tmp242, -3
@@ -80,7 +79,7 @@ bb222:                                            ; preds = %bb213
   %tmp246 = and i8 %tmp245, 6
   %tmp247 = sub i8 0, %tmp246
   %tmp248 = add i8 %tmp244, %tmp247
-  %tmp249 = load i8, i8* undef, align 1
+  %tmp249 = load i8, ptr undef, align 1
   %tmp250 = xor i8 %tmp235, 17
   %tmp251 = xor i8 %tmp250, %tmp238
   %tmp252 = xor i8 %tmp251, %tmp240
@@ -88,13 +87,12 @@ bb222:                                            ; preds = %bb213
   %tmp254 = xor i8 %tmp253, %tmp248
   %tmp255 = zext i8 %tmp254 to i16
   %tmp256 = shl nuw i16 %tmp255, 8
-  %tmp257 = load i8, i8* null, align 1
-  %tmp258 = load i32, i32* @fp_dh_18716afa4a5354de0a302c8edb3b0ee1, align 4
-  %tmp259 = load i8*, i8** @fp_dh_20a33cdeefab8f4c8887e82766cb9dcb, align 4
+  %tmp257 = load i8, ptr null, align 1
+  %tmp258 = load i32, ptr @fp_dh_18716afa4a5354de0a302c8edb3b0ee1, align 4
+  %tmp259 = load ptr, ptr @fp_dh_20a33cdeefab8f4c8887e82766cb9dcb, align 4
   %tmp260 = urem i32 -717428541, %tmp258
-  %tmp261 = getelementptr i8, i8* %tmp259, i32 %tmp260
-  %tmp262 = bitcast i8* %tmp261 to i32*
-  %tmp263 = load i32, i32* %tmp262, align 4
+  %tmp261 = getelementptr i8, ptr %tmp259, i32 %tmp260
+  %tmp263 = load i32, ptr %tmp261, align 4
   %tmp264 = xor i32 %tmp263, 0
   %tmp265 = shl i32 %tmp264, 1
   %tmp266 = and i32 %tmp265, -1312119832
@@ -104,8 +102,8 @@ bb222:                                            ; preds = %bb213
   %tmp270 = mul i32 %tmp269, 1603744721
   %tmp271 = urem i32 %tmp270, 259
   %tmp274 = add i32 %tmp271, 3
-  %tmp275 = getelementptr [265 x i8], [265 x i8]* bitcast (i8* getelementptr inbounds ([5419648 x i8], [5419648 x i8]* @fp_dh_9d93c897906e39883c58b034c8e786b2, i32 0, i32 1325165) to [265 x i8]*), i32 0, i32 %tmp274
-  %tmp276 = load i8, i8* %tmp275, align 1
+  %tmp275 = getelementptr [265 x i8], ptr getelementptr inbounds ([5419648 x i8], ptr @fp_dh_9d93c897906e39883c58b034c8e786b2, i32 0, i32 1325165), i32 0, i32 %tmp274
+  %tmp276 = load i8, ptr %tmp275, align 1
   %tmp277 = add i32 %tmp271, 6
   %tmp278 = trunc i32 %tmp277 to i8
   %tmp279 = mul i8 %tmp278, -3
@@ -161,20 +159,20 @@ bb222:                                            ; preds = %bb213
   %tmp334 = add i32 %tmp327, -1456704142
   %tmp335 = zext i1 %tmp333 to i32
   %tmp336 = add i32 %tmp334, %tmp335
-  %tmp337 = getelementptr [499 x i32], [499 x i32]* @fp_dh_36985b17790d59a27994eaab5dcb00ee, i32 0, i32 %tmp336
-  %tmp338 = load i32, i32* %tmp337
+  %tmp337 = getelementptr [499 x i32], ptr @fp_dh_36985b17790d59a27994eaab5dcb00ee, i32 0, i32 %tmp336
+  %tmp338 = load i32, ptr %tmp337
   %tmp339 = add i32 %tmp338, 1
-  %tmp340 = inttoptr i32 %tmp339 to i8*
-  indirectbr i8* %tmp340, [label %bb85, label %bb439]
+  %tmp340 = inttoptr i32 %tmp339 to ptr
+  indirectbr ptr %tmp340, [label %bb85, label %bb439]
 
 bb432:                                            ; preds = %bb432, %bb213
   %tmp433 = phi i32 [ %tmp221, %bb213 ], [ %tmp433, %bb432 ]
   %tmp434 = add i32 %tmp433, 1022523279
-  %tmp435 = getelementptr [499 x i32], [499 x i32]* @fp_dh_36985b17790d59a27994eaab5dcb00ee, i32 0, i32 %tmp434
-  %tmp436 = load i32, i32* %tmp435
+  %tmp435 = getelementptr [499 x i32], ptr @fp_dh_36985b17790d59a27994eaab5dcb00ee, i32 0, i32 %tmp434
+  %tmp436 = load i32, ptr %tmp435
   %tmp437 = add i32 %tmp436, 1
-  %tmp438 = inttoptr i32 %tmp437 to i8*
-  indirectbr i8* %tmp438, [label %bb432]
+  %tmp438 = inttoptr i32 %tmp437 to ptr
+  indirectbr ptr %tmp438, [label %bb432]
 
 bb439:                                            ; preds = %bb222, %bb85
   ret void

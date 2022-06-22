@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vnni | FileCheck %s --check-prefixes=AVX512,AVX512VNNI
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vnni -mattr=+avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VLVNNI
 
-define i32 @no_dpbusd(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @no_dpbusd(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: no_dpbusd:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
@@ -36,19 +36,17 @@ define i32 @no_dpbusd(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 16
-  %2 = zext <16 x i8> %1 to <16 x i32>
-  %3 = bitcast i8* %b to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3, align 16
-  %5 = zext <16 x i8> %4 to <16 x i32>
-  %6 = mul nsw <16 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
-  %op.extra = add nsw i32 %7, %c
+  %0 = load <16 x i8>, ptr %a, align 16
+  %1 = zext <16 x i8> %0 to <16 x i32>
+  %2 = load <16 x i8>, ptr %b, align 16
+  %3 = zext <16 x i8> %2 to <16 x i32>
+  %4 = mul nsw <16 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
+  %op.extra = add nsw i32 %5, %c
   ret i32 %op.extra
 }
 
-define i32 @vpdpbusd_mutate(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @vpdpbusd_mutate(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: vpdpbusd_mutate:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vmovdqa (%rsi), %xmm0
@@ -90,19 +88,17 @@ define i32 @vpdpbusd_mutate(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512VLVNNI-NEXT:    addl %edx, %eax
 ; AVX512VLVNNI-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 16
-  %2 = sext <16 x i8> %1 to <16 x i32>
-  %3 = bitcast i8* %b to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3, align 16
-  %5 = zext <16 x i8> %4 to <16 x i32>
-  %6 = mul nsw <16 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
-  %op.extra = add nsw i32 %7, %c
+  %0 = load <16 x i8>, ptr %a, align 16
+  %1 = sext <16 x i8> %0 to <16 x i32>
+  %2 = load <16 x i8>, ptr %b, align 16
+  %3 = zext <16 x i8> %2 to <16 x i32>
+  %4 = mul nsw <16 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
+  %op.extra = add nsw i32 %5, %c
   ret i32 %op.extra
 }
 
-define i32 @mul_zext(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @mul_zext(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: mul_zext:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
@@ -142,23 +138,21 @@ define i32 @mul_zext(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 16
-  %2 = zext <16 x i8> %1 to <16 x i16>
-  %3 = bitcast i8* %b to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3, align 16
-  %5 = sext <16 x i8> %4 to <16 x i16>
-  %6 = mul nsw <16 x i16> %5, %2
+  %0 = load <16 x i8>, ptr %a, align 16
+  %1 = zext <16 x i8> %0 to <16 x i16>
+  %2 = load <16 x i8>, ptr %b, align 16
+  %3 = sext <16 x i8> %2 to <16 x i16>
+  %4 = mul nsw <16 x i16> %3, %1
   ; We can't combine to vpdpbusd for zext, because each of the 4 multiplies
   ; done by vpdpbusd compute a signed 16-bit product that will be sign extended
   ; before adding into the accumulator.
-  %7 = zext <16 x i16> %6 to <16 x i32>
-  %8 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %7)
-  %op.extra = add nsw i32 %8, %c
+  %5 = zext <16 x i16> %4 to <16 x i32>
+  %6 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %5)
+  %op.extra = add nsw i32 %6, %c
   ret i32 %op.extra
 }
 
-define i32 @mul_sext(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @mul_sext(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: mul_sext:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
@@ -198,24 +192,22 @@ define i32 @mul_sext(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 16
-  %2 = zext <16 x i8> %1 to <16 x i16>
-  %3 = bitcast i8* %b to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3, align 16
-  %5 = sext <16 x i8> %4 to <16 x i16>
-  %6 = mul nsw <16 x i16> %5, %2
+  %0 = load <16 x i8>, ptr %a, align 16
+  %1 = zext <16 x i8> %0 to <16 x i16>
+  %2 = load <16 x i8>, ptr %b, align 16
+  %3 = sext <16 x i8> %2 to <16 x i16>
+  %4 = mul nsw <16 x i16> %3, %1
   ; TODO:
   ; We also need to verify that the multiply has at least 2x the number of bits
   ; of the input. We shouldn't match
   ; (sign_extend (mul (vXi9 (zext (vXi8 X))), (vXi9 (zext (vXi8 Y)))).
-  %7 = sext <16 x i16> %6 to <16 x i32>
-  %8 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %7)
-  %op.extra = add nsw i32 %8, %c
+  %5 = sext <16 x i16> %4 to <16 x i32>
+  %6 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %5)
+  %op.extra = add nsw i32 %6, %c
   ret i32 %op.extra
 }
 
-define i32 @vpdpbusd_512(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @vpdpbusd_512(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: vpdpbusd_512:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vmovdqa (%rdi), %xmm0
@@ -257,21 +249,19 @@ define i32 @vpdpbusd_512(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512VLVNNI-NEXT:    addl %edx, %eax
 ; AVX512VLVNNI-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 16
-  %2 = zext <16 x i8> %1 to <16 x i32>
-  %3 = bitcast i8* %b to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3, align 16
-  %5 = sext <16 x i8> %4 to <16 x i32>
-  %6 = mul nsw <16 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
-  %op.extra = add nsw i32 %7, %c
+  %0 = load <16 x i8>, ptr %a, align 16
+  %1 = zext <16 x i8> %0 to <16 x i32>
+  %2 = load <16 x i8>, ptr %b, align 16
+  %3 = sext <16 x i8> %2 to <16 x i32>
+  %4 = mul nsw <16 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
+  %op.extra = add nsw i32 %5, %c
   ret i32 %op.extra
 }
 
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
 
-define i32 @vpdpbusd_256(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @vpdpbusd_256(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: vpdpbusd_256:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
@@ -309,21 +299,19 @@ define i32 @vpdpbusd_256(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512VLVNNI-NEXT:    addl %edx, %eax
 ; AVX512VLVNNI-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0, align 8
-  %2 = zext <8 x i8> %1 to <8 x i32>
-  %3 = bitcast i8* %b to <8 x i8>*
-  %4 = load <8 x i8>, <8 x i8>* %3, align 8
-  %5 = sext <8 x i8> %4 to <8 x i32>
-  %6 = mul nsw <8 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
-  %op.extra = add nsw i32 %7, %c
+  %0 = load <8 x i8>, ptr %a, align 8
+  %1 = zext <8 x i8> %0 to <8 x i32>
+  %2 = load <8 x i8>, ptr %b, align 8
+  %3 = sext <8 x i8> %2 to <8 x i32>
+  %4 = mul nsw <8 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  %op.extra = add nsw i32 %5, %c
   ret i32 %op.extra
 }
 
 declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 
-define i32 @vpdpbusd_128(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @vpdpbusd_128(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: vpdpbusd_128:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
@@ -363,21 +351,19 @@ define i32 @vpdpbusd_128(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512VLVNNI-NEXT:    addl %edx, %eax
 ; AVX512VLVNNI-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <4 x i8>*
-  %1 = load <4 x i8>, <4 x i8>* %0, align 8
-  %2 = zext <4 x i8> %1 to <4 x i32>
-  %3 = bitcast i8* %b to <4 x i8>*
-  %4 = load <4 x i8>, <4 x i8>* %3, align 8
-  %5 = sext <4 x i8> %4 to <4 x i32>
-  %6 = mul nsw <4 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %6)
-  %op.extra = add nsw i32 %7, %c
+  %0 = load <4 x i8>, ptr %a, align 8
+  %1 = zext <4 x i8> %0 to <4 x i32>
+  %2 = load <4 x i8>, ptr %b, align 8
+  %3 = sext <4 x i8> %2 to <4 x i32>
+  %4 = mul nsw <4 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %4)
+  %op.extra = add nsw i32 %5, %c
   ret i32 %op.extra
 }
 
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
-define i32 @vpdpbusd_2xi32(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @vpdpbusd_2xi32(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: vpdpbusd_2xi32:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
@@ -416,21 +402,19 @@ define i32 @vpdpbusd_2xi32(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512VLVNNI-NEXT:    addl %edx, %eax
 ; AVX512VLVNNI-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <2 x i8>*
-  %1 = load <2 x i8>, <2 x i8>* %0, align 8
-  %2 = zext <2 x i8> %1 to <2 x i32>
-  %3 = bitcast i8* %b to <2 x i8>*
-  %4 = load <2 x i8>, <2 x i8>* %3, align 8
-  %5 = sext <2 x i8> %4 to <2 x i32>
-  %6 = mul nsw <2 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %6)
-  %op.extra = add nsw i32 %7, %c
+  %0 = load <2 x i8>, ptr %a, align 8
+  %1 = zext <2 x i8> %0 to <2 x i32>
+  %2 = load <2 x i8>, ptr %b, align 8
+  %3 = sext <2 x i8> %2 to <2 x i32>
+  %4 = mul nsw <2 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %4)
+  %op.extra = add nsw i32 %5, %c
   ret i32 %op.extra
 }
 
 declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
 
-define i32 @vpdpbusd_32xi32(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @vpdpbusd_32xi32(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: vpdpbusd_32xi32:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vmovdqu (%rdi), %ymm0
@@ -480,21 +464,19 @@ define i32 @vpdpbusd_32xi32(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512VLVNNI-NEXT:    vzeroupper
 ; AVX512VLVNNI-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <32 x i8>*
-  %1 = load <32 x i8>, <32 x i8>* %0, align 16
-  %2 = zext <32 x i8> %1 to <32 x i32>
-  %3 = bitcast i8* %b to <32 x i8>*
-  %4 = load <32 x i8>, <32 x i8>* %3, align 16
-  %5 = sext <32 x i8> %4 to <32 x i32>
-  %6 = mul nsw <32 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %6)
-  %op.extra = add nsw i32 %7, %c
+  %0 = load <32 x i8>, ptr %a, align 16
+  %1 = zext <32 x i8> %0 to <32 x i32>
+  %2 = load <32 x i8>, ptr %b, align 16
+  %3 = sext <32 x i8> %2 to <32 x i32>
+  %4 = mul nsw <32 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %4)
+  %op.extra = add nsw i32 %5, %c
   ret i32 %op.extra
 }
 
 declare i32 @llvm.vector.reduce.add.v32i32(<32 x i32>)
 
-define i32 @vpdpbusd_64xi32(i8 *%a, i8 *%b, i32 %c, i32 %n) {
+define i32 @vpdpbusd_64xi32(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVXVNNI-LABEL: vpdpbusd_64xi32:
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vmovdqu (%rdi), %ymm0
@@ -533,15 +515,13 @@ define i32 @vpdpbusd_64xi32(i8 *%a, i8 *%b, i32 %c, i32 %n) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <64 x i8>*
-  %1 = load <64 x i8>, <64 x i8>* %0, align 16
-  %2 = zext <64 x i8> %1 to <64 x i32>
-  %3 = bitcast i8* %b to <64 x i8>*
-  %4 = load <64 x i8>, <64 x i8>* %3, align 16
-  %5 = sext <64 x i8> %4 to <64 x i32>
-  %6 = mul nsw <64 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> %6)
-  %op.extra = add nsw i32 %7, %c
+  %0 = load <64 x i8>, ptr %a, align 16
+  %1 = zext <64 x i8> %0 to <64 x i32>
+  %2 = load <64 x i8>, ptr %b, align 16
+  %3 = sext <64 x i8> %2 to <64 x i32>
+  %4 = mul nsw <64 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> %4)
+  %op.extra = add nsw i32 %5, %c
   ret i32 %op.extra
 }
 

@@ -6,19 +6,19 @@ target triple = "i386-unknown-freebsd"
 
 define void @x3() #0 {
 entry:
-  %0 = load i32, i32* @x1, align 4
+  %0 = load i32, ptr @x1, align 4
   %cond = icmp eq i32 %0, 92
   br i1 %cond, label %sw.bb, label %sw.epilog
 
 sw.bb:                                            ; preds = %entry
-  call void @x2(i8* null)
+  call void @x2(ptr null)
   unreachable
 
 sw.epilog:                                        ; preds = %entry
   ret void
 }
 
-declare void @x2(i8*)
+declare void @x2(ptr)
 
 attributes #0 = { optsize }
 

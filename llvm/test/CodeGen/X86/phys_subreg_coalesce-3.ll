@@ -6,7 +6,7 @@
 ; 320L		%15 = COPY %19; GR32:%15 GR32_NOSP:%19
 ; 336L		%15 = SAR32rCL %15, implicit dead %eflags, implicit killed %cl; GR32:%15
 
-define void @foo(i32* nocapture %quadrant, i32* nocapture %ptr, i32 %bbSize, i32 %bbStart, i32 %shifts) nounwind ssp {
+define void @foo(ptr nocapture %quadrant, ptr nocapture %ptr, i32 %bbSize, i32 %bbStart, i32 %shifts) nounwind ssp {
 ; CHECK-LABEL: foo:
 entry:
   %j.03 = add i32 %bbSize, -1                     ; <i32> [#uses=2]
@@ -25,12 +25,12 @@ bb:                                               ; preds = %bb, %bb.nph
   %indvar = phi i32 [ 0, %bb.nph ], [ %indvar.next, %bb ] ; <i32> [#uses=3]
   %j.06 = sub i32 %j.03, %indvar                  ; <i32> [#uses=1]
   %tmp11 = sub i32 %tmp10, %indvar                ; <i32> [#uses=1]
-  %scevgep = getelementptr i32, i32* %ptr, i32 %tmp11  ; <i32*> [#uses=1]
-  %1 = load i32, i32* %scevgep, align 4                ; <i32> [#uses=1]
+  %scevgep = getelementptr i32, ptr %ptr, i32 %tmp11  ; <ptr> [#uses=1]
+  %1 = load i32, ptr %scevgep, align 4                ; <i32> [#uses=1]
   %2 = ashr i32 %j.06, %shifts                    ; <i32> [#uses=1]
   %3 = and i32 %2, 65535                          ; <i32> [#uses=1]
-  %4 = getelementptr inbounds i32, i32* %quadrant, i32 %1 ; <i32*> [#uses=1]
-  store i32 %3, i32* %4, align 4
+  %4 = getelementptr inbounds i32, ptr %quadrant, i32 %1 ; <ptr> [#uses=1]
+  store i32 %3, ptr %4, align 4
   %indvar.next = add i32 %indvar, 1               ; <i32> [#uses=2]
   %exitcond = icmp eq i32 %indvar.next, %bbSize   ; <i1> [#uses=1]
   br i1 %exitcond, label %return, label %bb

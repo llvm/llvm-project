@@ -2,7 +2,7 @@
 ; RUN: llc < %s -frame-pointer=all -mtriple=i686-- | FileCheck %s --check-prefix=i686
 ; RUN: llc < %s -frame-pointer=all -mtriple=x86_64-- | FileCheck %s --check-prefix=x86_64
 
-define i8* @h() nounwind readnone optsize {
+define ptr @h() nounwind readnone optsize {
 ; i686-LABEL: h:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
@@ -23,13 +23,13 @@ define i8* @h() nounwind readnone optsize {
 ; x86_64-NEXT:    popq %rbp
 ; x86_64-NEXT:    retq
 entry:
-	%0 = tail call i8* @llvm.returnaddress(i32 2)		; <i8*> [#uses=1]
-	ret i8* %0
+	%0 = tail call ptr @llvm.returnaddress(i32 2)		; <ptr> [#uses=1]
+	ret ptr %0
 }
 
-declare i8* @llvm.returnaddress(i32) nounwind readnone
+declare ptr @llvm.returnaddress(i32) nounwind readnone
 
-define i8* @g() nounwind readnone optsize {
+define ptr @g() nounwind readnone optsize {
 ; i686-LABEL: g:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
@@ -48,11 +48,11 @@ define i8* @g() nounwind readnone optsize {
 ; x86_64-NEXT:    popq %rbp
 ; x86_64-NEXT:    retq
 entry:
-	%0 = tail call i8* @llvm.returnaddress(i32 1)		; <i8*> [#uses=1]
-	ret i8* %0
+	%0 = tail call ptr @llvm.returnaddress(i32 1)		; <ptr> [#uses=1]
+	ret ptr %0
 }
 
-define i8* @f() nounwind readnone optsize {
+define ptr @f() nounwind readnone optsize {
 ; i686-LABEL: f:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
@@ -69,6 +69,6 @@ define i8* @f() nounwind readnone optsize {
 ; x86_64-NEXT:    popq %rbp
 ; x86_64-NEXT:    retq
 entry:
-	%0 = tail call i8* @llvm.returnaddress(i32 0)		; <i8*> [#uses=1]
-	ret i8* %0
+	%0 = tail call ptr @llvm.returnaddress(i32 0)		; <ptr> [#uses=1]
+	ret ptr %0
 }

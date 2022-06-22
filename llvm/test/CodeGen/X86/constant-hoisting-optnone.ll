@@ -12,8 +12,8 @@ define i64 @constant_hoisting_optnone() #0 {
 ; CHECK-DAG: movabsq {{.*#+}} imm = 0xBEEBEEBEC
 ; CHECK: ret
 entry:
-  %0 = load i64, i64* inttoptr (i64 51250129900 to i64*)
-  %1 = load i64, i64* inttoptr (i64 51250129908 to i64*)
+  %0 = load i64, ptr inttoptr (i64 51250129900 to ptr)
+  %1 = load i64, ptr inttoptr (i64 51250129908 to ptr)
   %2 = add i64 %0, %1
   ret i64 %2
 }

@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.2 | FileCheck %s --check-prefix=X64
 
 ; widening shuffle v3float and then a add
-define void @shuf(<3 x float>* %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind {
+define void @shuf(ptr %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind {
 ; X86-LABEL: shuf:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -22,13 +22,13 @@ define void @shuf(<3 x float>* %dst.addr, <3 x float> %src1,<3 x float> %src2) n
 entry:
 	%x = shufflevector <3 x float> %src1, <3 x float> %src2, <3 x i32> < i32 0, i32 1, i32 2>
 	%val = fadd <3 x float> %x, %src2
-	store <3 x float> %val, <3 x float>* %dst.addr
+	store <3 x float> %val, ptr %dst.addr
 	ret void
 }
 
 
 ; widening shuffle v3float with a different mask and then a add
-define void @shuf2(<3 x float>* %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind {
+define void @shuf2(ptr %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind {
 ; X86-LABEL: shuf2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -49,14 +49,14 @@ define void @shuf2(<3 x float>* %dst.addr, <3 x float> %src1,<3 x float> %src2) 
 entry:
 	%x = shufflevector <3 x float> %src1, <3 x float> %src2, <3 x i32> < i32 0, i32 4, i32 2>
 	%val = fadd <3 x float> %x, %src2
-	store <3 x float> %val, <3 x float>* %dst.addr
+	store <3 x float> %val, ptr %dst.addr
 	ret void
 }
 
 ; Example of when widening a v3float operation causes the DAG to replace a node
 ; with the operation that we are currently widening, i.e. when replacing
 ; opA with opB, the DAG will produce new operations with opA.
-define void @shuf3(<4 x float> %tmp10, <4 x float> %vecinit15, <4 x float>* %dst) nounwind {
+define void @shuf3(<4 x float> %tmp10, <4 x float> %vecinit15, ptr %dst) nounwind {
 ; X86-LABEL: shuf3:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -81,7 +81,7 @@ entry:
   %shr.i.i19 = lshr <4 x i32> %t5, <i32 19, i32 19, i32 19, i32 19>
   %and.i.i20 = and <4 x i32> %shr.i.i19, <i32 4080, i32 4080, i32 4080, i32 4080>
   %shuffle.i.i.i21 = shufflevector <4 x float> %tmp2.i18, <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
-  store <4 x float> %shuffle.i.i.i21, <4 x float>* %dst
+  store <4 x float> %shuffle.i.i.i21, ptr %dst
   ret void
 }
 
@@ -101,7 +101,7 @@ define <8 x i8> @shuf4(<4 x i8> %a, <4 x i8> %b) nounwind readnone {
 }
 
 ; PR11389: another CONCAT_VECTORS case
-define void @shuf5(<8 x i8>* %p) nounwind {
+define void @shuf5(ptr %p) nounwind {
 ; X86-LABEL: shuf5:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -115,6 +115,6 @@ define void @shuf5(<8 x i8>* %p) nounwind {
 ; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    retq
   %v = shufflevector <2 x i8> <i8 4, i8 33>, <2 x i8> undef, <8 x i32> <i32 1, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  store <8 x i8> %v, <8 x i8>* %p, align 8
+  store <8 x i8> %v, ptr %p, align 8
   ret void
 }

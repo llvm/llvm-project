@@ -3,10 +3,10 @@
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc"
 
-define void @try_except() #0 personality i8* bitcast (i32 (...)* @_except_handler3 to i8*) {
+define void @try_except() #0 personality ptr @_except_handler3 {
 entry:
   %__exception_code = alloca i32, align 4
-  call void (...) @llvm.localescape(i32* %__exception_code)
+  call void (...) @llvm.localescape(ptr %__exception_code)
   invoke void @f(i32 1) #3
           to label %invoke.cont unwind label %catch.dispatch
 
@@ -14,7 +14,7 @@ catch.dispatch:                                   ; preds = %entry
   %cs1 = catchswitch within none [label %__except.ret] unwind to caller
 
 __except.ret:                                     ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* bitcast (i32 ()* @try_except_filter_catchall to i8*)]
+  %0 = catchpad within %cs1 [ptr @try_except_filter_catchall]
   catchret from %0 to label %__except
 
 __except:                                         ; preds = %__except.ret
@@ -52,25 +52,22 @@ invoke.cont:                                      ; preds = %entry
 
 define internal i32 @try_except_filter_catchall() #0 {
 entry:
-  %0 = call i8* @llvm.frameaddress(i32 1)
-  %1 = call i8* @llvm.eh.recoverfp(i8* bitcast (void ()* @try_except to i8*), i8* %0)
-  %2 = call i8* @llvm.localrecover(i8* bitcast (void ()* @try_except to i8*), i8* %1, i32 0)
-  %__exception_code = bitcast i8* %2 to i32*
-  %3 = getelementptr inbounds i8, i8* %0, i32 -20
-  %4 = bitcast i8* %3 to i8**
-  %5 = load i8*, i8** %4, align 4
-  %6 = bitcast i8* %5 to { i32*, i8* }*
-  %7 = getelementptr inbounds { i32*, i8* }, { i32*, i8* }* %6, i32 0, i32 0
-  %8 = load i32*, i32** %7, align 4
-  %9 = load i32, i32* %8, align 4
-  store i32 %9, i32* %__exception_code, align 4
+  %0 = call ptr @llvm.frameaddress(i32 1)
+  %1 = call ptr @llvm.eh.recoverfp(ptr @try_except, ptr %0)
+  %2 = call ptr @llvm.localrecover(ptr @try_except, ptr %1, i32 0)
+  %3 = getelementptr inbounds i8, ptr %0, i32 -20
+  %4 = load ptr, ptr %3, align 4
+  %5 = getelementptr inbounds { ptr, ptr }, ptr %4, i32 0, i32 0
+  %6 = load ptr, ptr %5, align 4
+  %7 = load i32, ptr %6, align 4
+  store i32 %7, ptr %2, align 4
   ret i32 1
 }
 
-define void @nested_exceptions() #0 personality i8* bitcast (i32 (...)* @_except_handler3 to i8*) {
+define void @nested_exceptions() #0 personality ptr @_except_handler3 {
 entry:
   %__exception_code = alloca i32, align 4
-  call void (...) @llvm.localescape(i32* %__exception_code)
+  call void (...) @llvm.localescape(ptr %__exception_code)
   invoke void @crash() #3
           to label %__try.cont unwind label %catch.dispatch
 
@@ -78,7 +75,7 @@ catch.dispatch:                                   ; preds = %entry
   %cs1 = catchswitch within none [label %__except.ret] unwind label %catch.dispatch.11
 
 __except.ret:                                     ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
+  %0 = catchpad within %cs1 [ptr @nested_exceptions_filter_catchall]
   catchret from %0 to label %__try.cont
 
 __try.cont:                                       ; preds = %entry, %__except.ret
@@ -89,7 +86,7 @@ catch.dispatch.5:                                 ; preds = %__try.cont
   %cs2 = catchswitch within none [label %__except.ret.7] unwind label %catch.dispatch.11
 
 __except.ret.7:                                   ; preds = %catch.dispatch.5
-  %1 = catchpad within %cs2 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
+  %1 = catchpad within %cs2 [ptr @nested_exceptions_filter_catchall]
   catchret from %1 to label %__try.cont.9
 
 __try.cont.9:                                     ; preds = %__try.cont, %__except.ret.7
@@ -100,7 +97,7 @@ catch.dispatch.11:                                ; preds = %catchendblock, %cat
   %cs3 = catchswitch within none [label %__except.ret.13] unwind label %catch.dispatch.17
 
 __except.ret.13:                                  ; preds = %catch.dispatch.11
-  %2 = catchpad within %cs3 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
+  %2 = catchpad within %cs3 [ptr @nested_exceptions_filter_catchall]
   catchret from %2 to label %__try.cont.15
 
 __try.cont.15:                                    ; preds = %__try.cont.9, %__except.ret.13
@@ -111,7 +108,7 @@ catch.dispatch.17:                                ; preds = %catchendblock.12, %
   %cs4 = catchswitch within none [label %__except.ret.19] unwind to caller
 
 __except.ret.19:                                  ; preds = %catch.dispatch.17
-  %3 = catchpad within %cs4 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
+  %3 = catchpad within %cs4 [ptr @nested_exceptions_filter_catchall]
   catchret from %3 to label %__except.20
 
 __except.20:                                      ; preds = %__except.ret.19
@@ -122,7 +119,7 @@ catch.dispatch.23:                                ; preds = %__except.20
   %cs5 = catchswitch within none [label %__except.ret.25] unwind to caller
 
 __except.ret.25:                                  ; preds = %catch.dispatch.23
-  %4 = catchpad within %cs5 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
+  %4 = catchpad within %cs5 [ptr @nested_exceptions_filter_catchall]
   catchret from %4 to label %__try.cont.27
 
 __try.cont.27:                                    ; preds = %__except.20, %__except.ret.25
@@ -133,7 +130,7 @@ catch.dispatch.30:                                ; preds = %__try.cont.27
   %cs6 = catchswitch within none [label %__except.ret.32] unwind to caller
 
 __except.ret.32:                                  ; preds = %catch.dispatch.30
-  %5 = catchpad within %cs6 [i8* bitcast (i32 ()* @nested_exceptions_filter_catchall to i8*)]
+  %5 = catchpad within %cs6 [ptr @nested_exceptions_filter_catchall]
   catchret from %5 to label %__try.cont.35
 
 __try.cont.35:                                    ; preds = %__try.cont.15, %__try.cont.27, %__except.ret.32
@@ -168,22 +165,19 @@ declare void @crash() #0
 
 define internal i32 @nested_exceptions_filter_catchall() #0 {
 entry:
-  %0 = call i8* @llvm.frameaddress(i32 1)
-  %1 = call i8* @llvm.eh.recoverfp(i8* bitcast (void ()* @nested_exceptions to i8*), i8* %0)
-  %2 = call i8* @llvm.localrecover(i8* bitcast (void ()* @nested_exceptions to i8*), i8* %1, i32 0)
-  %__exception_code3 = bitcast i8* %2 to i32*
-  %3 = getelementptr inbounds i8, i8* %0, i32 -20
-  %4 = bitcast i8* %3 to i8**
-  %5 = load i8*, i8** %4, align 4
-  %6 = bitcast i8* %5 to { i32*, i8* }*
-  %7 = getelementptr inbounds { i32*, i8* }, { i32*, i8* }* %6, i32 0, i32 0
-  %8 = load i32*, i32** %7, align 4
-  %9 = load i32, i32* %8, align 4
-  store i32 %9, i32* %__exception_code3, align 4
+  %0 = call ptr @llvm.frameaddress(i32 1)
+  %1 = call ptr @llvm.eh.recoverfp(ptr @nested_exceptions, ptr %0)
+  %2 = call ptr @llvm.localrecover(ptr @nested_exceptions, ptr %1, i32 0)
+  %3 = getelementptr inbounds i8, ptr %0, i32 -20
+  %4 = load ptr, ptr %3, align 4
+  %5 = getelementptr inbounds { ptr, ptr }, ptr %4, i32 0, i32 0
+  %6 = load ptr, ptr %5, align 4
+  %7 = load i32, ptr %6, align 4
+  store i32 %7, ptr %2, align 4
   ret i32 1
 }
 
-define void @code_in_catchpad() #0 personality i8* bitcast (i32 (...)* @_except_handler3 to i8*) {
+define void @code_in_catchpad() #0 personality ptr @_except_handler3 {
 entry:
   invoke void @f(i32 1) #3
           to label %__except unwind label %catch.dispatch
@@ -192,7 +186,7 @@ catch.dispatch:                                   ; preds = %entry
   %cs1 = catchswitch within none [label %__except.ret] unwind to caller
 
 __except.ret:                                     ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* bitcast (i32 ()* @try_except_filter_catchall to i8*)]
+  %0 = catchpad within %cs1 [ptr @try_except_filter_catchall]
   call void @f(i32 2) [ "funclet"(token %0) ]
   catchret from %0 to label %__except
 
@@ -210,13 +204,13 @@ __except:
 
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.frameaddress(i32) #1
+declare ptr @llvm.frameaddress(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.eh.recoverfp(i8*, i8*) #1
+declare ptr @llvm.eh.recoverfp(ptr, ptr) #1
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.localrecover(i8*, i8*, i32) #1
+declare ptr @llvm.localrecover(ptr, ptr, i32) #1
 
 declare void @f(i32) #0
 

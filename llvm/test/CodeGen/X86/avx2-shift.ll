@@ -260,7 +260,7 @@ define <16 x i16> @vshift07(<16 x i16> %a) nounwind readnone {
   ret <16 x i16> %s
 }
 
-define <4 x i32> @variable_sra0_load(<4 x i32> %x, <4 x i32>* %y) {
+define <4 x i32> @variable_sra0_load(<4 x i32> %x, ptr %y) {
 ; X32-LABEL: variable_sra0_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -271,12 +271,12 @@ define <4 x i32> @variable_sra0_load(<4 x i32> %x, <4 x i32>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsravd (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %y1 = load <4 x i32>, <4 x i32>* %y
+  %y1 = load <4 x i32>, ptr %y
   %k = ashr <4 x i32> %x, %y1
   ret <4 x i32> %k
 }
 
-define <8 x i32> @variable_sra1_load(<8 x i32> %x, <8 x i32>* %y) {
+define <8 x i32> @variable_sra1_load(<8 x i32> %x, ptr %y) {
 ; X32-LABEL: variable_sra1_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -287,12 +287,12 @@ define <8 x i32> @variable_sra1_load(<8 x i32> %x, <8 x i32>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsravd (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %y1 = load <8 x i32>, <8 x i32>* %y
+  %y1 = load <8 x i32>, ptr %y
   %k = ashr <8 x i32> %x, %y1
   ret <8 x i32> %k
 }
 
-define <4 x i32> @variable_shl0_load(<4 x i32> %x, <4 x i32>* %y) {
+define <4 x i32> @variable_shl0_load(<4 x i32> %x, ptr %y) {
 ; X32-LABEL: variable_shl0_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -303,12 +303,12 @@ define <4 x i32> @variable_shl0_load(<4 x i32> %x, <4 x i32>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsllvd (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %y1 = load <4 x i32>, <4 x i32>* %y
+  %y1 = load <4 x i32>, ptr %y
   %k = shl <4 x i32> %x, %y1
   ret <4 x i32> %k
 }
 
-define <8 x i32> @variable_shl1_load(<8 x i32> %x, <8 x i32>* %y) {
+define <8 x i32> @variable_shl1_load(<8 x i32> %x, ptr %y) {
 ; X32-LABEL: variable_shl1_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -319,12 +319,12 @@ define <8 x i32> @variable_shl1_load(<8 x i32> %x, <8 x i32>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsllvd (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %y1 = load <8 x i32>, <8 x i32>* %y
+  %y1 = load <8 x i32>, ptr %y
   %k = shl <8 x i32> %x, %y1
   ret <8 x i32> %k
 }
 
-define <2 x i64> @variable_shl2_load(<2 x i64> %x, <2 x i64>* %y) {
+define <2 x i64> @variable_shl2_load(<2 x i64> %x, ptr %y) {
 ; X32-LABEL: variable_shl2_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -335,12 +335,12 @@ define <2 x i64> @variable_shl2_load(<2 x i64> %x, <2 x i64>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsllvq (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %y1 = load <2 x i64>, <2 x i64>* %y
+  %y1 = load <2 x i64>, ptr %y
   %k = shl <2 x i64> %x, %y1
   ret <2 x i64> %k
 }
 
-define <4 x i64> @variable_shl3_load(<4 x i64> %x, <4 x i64>* %y) {
+define <4 x i64> @variable_shl3_load(<4 x i64> %x, ptr %y) {
 ; X32-LABEL: variable_shl3_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -351,12 +351,12 @@ define <4 x i64> @variable_shl3_load(<4 x i64> %x, <4 x i64>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsllvq (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %y1 = load <4 x i64>, <4 x i64>* %y
+  %y1 = load <4 x i64>, ptr %y
   %k = shl <4 x i64> %x, %y1
   ret <4 x i64> %k
 }
 
-define <4 x i32> @variable_srl0_load(<4 x i32> %x, <4 x i32>* %y) {
+define <4 x i32> @variable_srl0_load(<4 x i32> %x, ptr %y) {
 ; X32-LABEL: variable_srl0_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -367,12 +367,12 @@ define <4 x i32> @variable_srl0_load(<4 x i32> %x, <4 x i32>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsrlvd (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %y1 = load <4 x i32>, <4 x i32>* %y
+  %y1 = load <4 x i32>, ptr %y
   %k = lshr <4 x i32> %x, %y1
   ret <4 x i32> %k
 }
 
-define <8 x i32> @variable_srl1_load(<8 x i32> %x, <8 x i32>* %y) {
+define <8 x i32> @variable_srl1_load(<8 x i32> %x, ptr %y) {
 ; X32-LABEL: variable_srl1_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -383,12 +383,12 @@ define <8 x i32> @variable_srl1_load(<8 x i32> %x, <8 x i32>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsrlvd (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %y1 = load <8 x i32>, <8 x i32>* %y
+  %y1 = load <8 x i32>, ptr %y
   %k = lshr <8 x i32> %x, %y1
   ret <8 x i32> %k
 }
 
-define <2 x i64> @variable_srl2_load(<2 x i64> %x, <2 x i64>* %y) {
+define <2 x i64> @variable_srl2_load(<2 x i64> %x, ptr %y) {
 ; X32-LABEL: variable_srl2_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -399,12 +399,12 @@ define <2 x i64> @variable_srl2_load(<2 x i64> %x, <2 x i64>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsrlvq (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %y1 = load <2 x i64>, <2 x i64>* %y
+  %y1 = load <2 x i64>, ptr %y
   %k = lshr <2 x i64> %x, %y1
   ret <2 x i64> %k
 }
 
-define <4 x i64> @variable_srl3_load(<4 x i64> %x, <4 x i64>* %y) {
+define <4 x i64> @variable_srl3_load(<4 x i64> %x, ptr %y) {
 ; X32-LABEL: variable_srl3_load:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -415,7 +415,7 @@ define <4 x i64> @variable_srl3_load(<4 x i64> %x, <4 x i64>* %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsrlvq (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %y1 = load <4 x i64>, <4 x i64>* %y
+  %y1 = load <4 x i64>, ptr %y
   %k = lshr <4 x i64> %x, %y1
   ret <4 x i64> %k
 }

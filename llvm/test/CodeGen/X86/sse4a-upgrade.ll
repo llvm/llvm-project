@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4a -show-mc-encoding | FileCheck %s --check-prefixes=X64
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4a,+avx -show-mc-encoding | FileCheck %s --check-prefixes=X64
 
-define void @test_movntss(i8* %p, <4 x float> %a) nounwind optsize ssp {
+define void @test_movntss(ptr %p, <4 x float> %a) nounwind optsize ssp {
 ; X86-LABEL: test_movntss:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -15,13 +15,13 @@ define void @test_movntss(i8* %p, <4 x float> %a) nounwind optsize ssp {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movntss %xmm0, (%rdi) # encoding: [0xf3,0x0f,0x2b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  tail call void @llvm.x86.sse4a.movnt.ss(i8* %p, <4 x float> %a) nounwind
+  tail call void @llvm.x86.sse4a.movnt.ss(ptr %p, <4 x float> %a) nounwind
   ret void
 }
 
-declare void @llvm.x86.sse4a.movnt.ss(i8*, <4 x float>)
+declare void @llvm.x86.sse4a.movnt.ss(ptr, <4 x float>)
 
-define void @test_movntsd(i8* %p, <2 x double> %a) nounwind optsize ssp {
+define void @test_movntsd(ptr %p, <2 x double> %a) nounwind optsize ssp {
 ; X86-LABEL: test_movntsd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -32,8 +32,8 @@ define void @test_movntsd(i8* %p, <2 x double> %a) nounwind optsize ssp {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movntsd %xmm0, (%rdi) # encoding: [0xf2,0x0f,0x2b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  tail call void @llvm.x86.sse4a.movnt.sd(i8* %p, <2 x double> %a) nounwind
+  tail call void @llvm.x86.sse4a.movnt.sd(ptr %p, <2 x double> %a) nounwind
   ret void
 }
 
-declare void @llvm.x86.sse4a.movnt.sd(i8*, <2 x double>)
+declare void @llvm.x86.sse4a.movnt.sd(ptr, <2 x double>)

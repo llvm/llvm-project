@@ -13,7 +13,7 @@ entry:
 
 ; Check that the register used for an indirect tail call doesn't
 ; clobber any of the arguments.
-define fastcc i32 @indirect_manyargs(i32(i32,i32,i32,i32,i32,i32,i32)* %target) {
+define fastcc i32 @indirect_manyargs(ptr %target) {
 ; Adjust the stack to enter the function.  (The amount of the
 ; adjustment may change in the future, in which case the location of
 ; the stack argument and the return adjustment will change too.)

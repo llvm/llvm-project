@@ -44,39 +44,36 @@
 ; REGULAR-NEXT: vinsertps $16, [[RES_Imm]], [[RES_Real]], [[RES_Vec:%xmm[0-9]+]]
 ; Put the results back into out[out_start].
 ; REGULAR-NEXT: vmovlps [[RES_Vec]], ([[BASE]])
-define void @t1(%class.Complex* nocapture %out, i64 %out_start) {
+define void @t1(ptr nocapture %out, i64 %out_start) {
 entry:
-  %arrayidx = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %out_start
-  %tmp = bitcast %class.Complex* %arrayidx to i64*
-  %tmp1 = load i64, i64* %tmp, align 8
+  %arrayidx = getelementptr inbounds %class.Complex, ptr %out, i64 %out_start
+  %tmp1 = load i64, ptr %arrayidx, align 8
   %t0.sroa.0.0.extract.trunc = trunc i64 %tmp1 to i32
   %tmp2 = bitcast i32 %t0.sroa.0.0.extract.trunc to float
   %t0.sroa.2.0.extract.shift = lshr i64 %tmp1, 32
   %t0.sroa.2.0.extract.trunc = trunc i64 %t0.sroa.2.0.extract.shift to i32
   %tmp3 = bitcast i32 %t0.sroa.2.0.extract.trunc to float
   %add = add i64 %out_start, 8
-  %arrayidx2 = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %add
-  %i.i = getelementptr inbounds %class.Complex, %class.Complex* %arrayidx2, i64 0, i32 0
-  %tmp4 = load float, float* %i.i, align 4
+  %arrayidx2 = getelementptr inbounds %class.Complex, ptr %out, i64 %add
+  %tmp4 = load float, ptr %arrayidx2, align 4
   %add.i = fadd float %tmp4, %tmp2
   %retval.sroa.0.0.vec.insert.i = insertelement <2 x float> undef, float %add.i, i32 0
-  %r.i = getelementptr inbounds %class.Complex, %class.Complex* %arrayidx2, i64 0, i32 1
-  %tmp5 = load float, float* %r.i, align 4
+  %r.i = getelementptr inbounds %class.Complex, ptr %arrayidx2, i64 0, i32 1
+  %tmp5 = load float, ptr %r.i, align 4
   %add5.i = fadd float %tmp5, %tmp3
   %retval.sroa.0.4.vec.insert.i = insertelement <2 x float> %retval.sroa.0.0.vec.insert.i, float %add5.i, i32 1
-  %ref.tmp.sroa.0.0.cast = bitcast %class.Complex* %arrayidx to <2 x float>*
-  store <2 x float> %retval.sroa.0.4.vec.insert.i, <2 x float>* %ref.tmp.sroa.0.0.cast, align 4
+  store <2 x float> %retval.sroa.0.4.vec.insert.i, ptr %arrayidx, align 4
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 ; Check that we do not read outside of the chunk of bits of the original loads.
 ;
@@ -99,10 +96,9 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 ; next to each other in memory. Here we have a hole with bytes #4-5.
 ; REGULAR-LABEL: _t2:
 ; REGULAR: shrq $48
-define i32 @t2(%class.Complex* nocapture %out, i64 %out_start) {
-  %arrayidx = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %out_start
-  %bitcast = bitcast %class.Complex* %arrayidx to i64*
-  %chunk64 = load i64, i64* %bitcast, align 8
+define i32 @t2(ptr nocapture %out, i64 %out_start) {
+  %arrayidx = getelementptr inbounds %class.Complex, ptr %out, i64 %out_start
+  %chunk64 = load i64, ptr %arrayidx, align 8
   %slice32_low = trunc i64 %chunk64 to i32
   %shift48 = lshr i64 %chunk64, 48
   %slice32_high = trunc i64 %shift48 to i32
@@ -124,10 +120,9 @@ define i32 @t2(%class.Complex* nocapture %out, i64 %out_start) {
 ; REGULAR-LABEL: _t3:
 ; REGULAR: shrq $48
 ; REGULAR: shrq $32
-define i32 @t3(%class.Complex* nocapture %out, i64 %out_start) {
-  %arrayidx = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %out_start
-  %bitcast = bitcast %class.Complex* %arrayidx to i64*
-  %chunk64 = load i64, i64* %bitcast, align 8
+define i32 @t3(ptr nocapture %out, i64 %out_start) {
+  %arrayidx = getelementptr inbounds %class.Complex, ptr %out, i64 %out_start
+  %chunk64 = load i64, ptr %arrayidx, align 8
   %slice32_low = trunc i64 %chunk64 to i32
   %shift48 = lshr i64 %chunk64, 48
   %slice32_high = trunc i64 %shift48 to i32

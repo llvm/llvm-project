@@ -617,7 +617,7 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; This test models the expansion of 'memcmp(a, b, 32) != 0'
 ; if we allowed 2 pairs of 16-byte loads per block.
 
-define i32 @ne_i128_pair(i128* %a, i128* %b) {
+define i32 @ne_i128_pair(ptr %a, ptr %b) {
 ; SSE2-LABEL: ne_i128_pair:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -658,13 +658,13 @@ define i32 @ne_i128_pair(i128* %a, i128* %b) {
 ; AVXANY-NEXT:    vptest %xmm0, %xmm0
 ; AVXANY-NEXT:    setne %al
 ; AVXANY-NEXT:    retq
-  %a0 = load i128, i128* %a
-  %b0 = load i128, i128* %b
+  %a0 = load i128, ptr %a
+  %b0 = load i128, ptr %b
   %xor1 = xor i128 %a0, %b0
-  %ap1 = getelementptr i128, i128* %a, i128 1
-  %bp1 = getelementptr i128, i128* %b, i128 1
-  %a1 = load i128, i128* %ap1
-  %b1 = load i128, i128* %bp1
+  %ap1 = getelementptr i128, ptr %a, i128 1
+  %bp1 = getelementptr i128, ptr %b, i128 1
+  %a1 = load i128, ptr %ap1
+  %b1 = load i128, ptr %bp1
   %xor2 = xor i128 %a1, %b1
   %or = or i128 %xor1, %xor2
   %cmp = icmp ne i128 %or, 0
@@ -675,7 +675,7 @@ define i32 @ne_i128_pair(i128* %a, i128* %b) {
 ; This test models the expansion of 'memcmp(a, b, 32) == 0'
 ; if we allowed 2 pairs of 16-byte loads per block.
 
-define i32 @eq_i128_pair(i128* %a, i128* %b) {
+define i32 @eq_i128_pair(ptr %a, ptr %b) {
 ; SSE2-LABEL: eq_i128_pair:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -716,13 +716,13 @@ define i32 @eq_i128_pair(i128* %a, i128* %b) {
 ; AVXANY-NEXT:    vptest %xmm0, %xmm0
 ; AVXANY-NEXT:    sete %al
 ; AVXANY-NEXT:    retq
-  %a0 = load i128, i128* %a
-  %b0 = load i128, i128* %b
+  %a0 = load i128, ptr %a
+  %b0 = load i128, ptr %b
   %xor1 = xor i128 %a0, %b0
-  %ap1 = getelementptr i128, i128* %a, i128 1
-  %bp1 = getelementptr i128, i128* %b, i128 1
-  %a1 = load i128, i128* %ap1
-  %b1 = load i128, i128* %bp1
+  %ap1 = getelementptr i128, ptr %a, i128 1
+  %bp1 = getelementptr i128, ptr %b, i128 1
+  %a1 = load i128, ptr %ap1
+  %b1 = load i128, ptr %bp1
   %xor2 = xor i128 %a1, %b1
   %or = or i128 %xor1, %xor2
   %cmp = icmp eq i128 %or, 0
@@ -733,7 +733,7 @@ define i32 @eq_i128_pair(i128* %a, i128* %b) {
 ; This test models the expansion of 'memcmp(a, b, 64) != 0'
 ; if we allowed 2 pairs of 32-byte loads per block.
 
-define i32 @ne_i256_pair(i256* %a, i256* %b) {
+define i32 @ne_i256_pair(ptr %a, ptr %b) {
 ; SSE2-LABEL: ne_i256_pair:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq 16(%rdi), %r9
@@ -830,13 +830,13 @@ define i32 @ne_i256_pair(i256* %a, i256* %b) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a0 = load i256, i256* %a
-  %b0 = load i256, i256* %b
+  %a0 = load i256, ptr %a
+  %b0 = load i256, ptr %b
   %xor1 = xor i256 %a0, %b0
-  %ap1 = getelementptr i256, i256* %a, i256 1
-  %bp1 = getelementptr i256, i256* %b, i256 1
-  %a1 = load i256, i256* %ap1
-  %b1 = load i256, i256* %bp1
+  %ap1 = getelementptr i256, ptr %a, i256 1
+  %bp1 = getelementptr i256, ptr %b, i256 1
+  %a1 = load i256, ptr %ap1
+  %b1 = load i256, ptr %bp1
   %xor2 = xor i256 %a1, %b1
   %or = or i256 %xor1, %xor2
   %cmp = icmp ne i256 %or, 0
@@ -847,7 +847,7 @@ define i32 @ne_i256_pair(i256* %a, i256* %b) {
 ; This test models the expansion of 'memcmp(a, b, 64) == 0'
 ; if we allowed 2 pairs of 32-byte loads per block.
 
-define i32 @eq_i256_pair(i256* %a, i256* %b) {
+define i32 @eq_i256_pair(ptr %a, ptr %b) {
 ; SSE2-LABEL: eq_i256_pair:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq 16(%rdi), %r9
@@ -944,13 +944,13 @@ define i32 @eq_i256_pair(i256* %a, i256* %b) {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a0 = load i256, i256* %a
-  %b0 = load i256, i256* %b
+  %a0 = load i256, ptr %a
+  %b0 = load i256, ptr %b
   %xor1 = xor i256 %a0, %b0
-  %ap1 = getelementptr i256, i256* %a, i256 1
-  %bp1 = getelementptr i256, i256* %b, i256 1
-  %a1 = load i256, i256* %ap1
-  %b1 = load i256, i256* %bp1
+  %ap1 = getelementptr i256, ptr %a, i256 1
+  %bp1 = getelementptr i256, ptr %b, i256 1
+  %a1 = load i256, ptr %ap1
+  %b1 = load i256, ptr %bp1
   %xor2 = xor i256 %a1, %b1
   %or = or i256 %xor1, %xor2
   %cmp = icmp eq i256 %or, 0
@@ -961,7 +961,7 @@ define i32 @eq_i256_pair(i256* %a, i256* %b) {
 ; This test models the expansion of 'memcmp(a, b, 64) != 0'
 ; if we allowed 2 pairs of 64-byte loads per block.
 
-define i32 @ne_i512_pair(i512* %a, i512* %b) {
+define i32 @ne_i512_pair(ptr %a, ptr %b) {
 ; NO512-LABEL: ne_i512_pair:
 ; NO512:       # %bb.0:
 ; NO512-NEXT:    movq 32(%rdi), %r8
@@ -1038,13 +1038,13 @@ define i32 @ne_i512_pair(i512* %a, i512* %b) {
 ; AVX512BW-NEXT:    setne %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %a0 = load i512, i512* %a
-  %b0 = load i512, i512* %b
+  %a0 = load i512, ptr %a
+  %b0 = load i512, ptr %b
   %xor1 = xor i512 %a0, %b0
-  %ap1 = getelementptr i512, i512* %a, i512 1
-  %bp1 = getelementptr i512, i512* %b, i512 1
-  %a1 = load i512, i512* %ap1
-  %b1 = load i512, i512* %bp1
+  %ap1 = getelementptr i512, ptr %a, i512 1
+  %bp1 = getelementptr i512, ptr %b, i512 1
+  %a1 = load i512, ptr %ap1
+  %b1 = load i512, ptr %bp1
   %xor2 = xor i512 %a1, %b1
   %or = or i512 %xor1, %xor2
   %cmp = icmp ne i512 %or, 0
@@ -1055,7 +1055,7 @@ define i32 @ne_i512_pair(i512* %a, i512* %b) {
 ; This test models the expansion of 'memcmp(a, b, 64) == 0'
 ; if we allowed 2 pairs of 64-byte loads per block.
 
-define i32 @eq_i512_pair(i512* %a, i512* %b) {
+define i32 @eq_i512_pair(ptr %a, ptr %b) {
 ; NO512-LABEL: eq_i512_pair:
 ; NO512:       # %bb.0:
 ; NO512-NEXT:    movq 32(%rdi), %r8
@@ -1132,13 +1132,13 @@ define i32 @eq_i512_pair(i512* %a, i512* %b) {
 ; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %a0 = load i512, i512* %a
-  %b0 = load i512, i512* %b
+  %a0 = load i512, ptr %a
+  %b0 = load i512, ptr %b
   %xor1 = xor i512 %a0, %b0
-  %ap1 = getelementptr i512, i512* %a, i512 1
-  %bp1 = getelementptr i512, i512* %b, i512 1
-  %a1 = load i512, i512* %ap1
-  %b1 = load i512, i512* %bp1
+  %ap1 = getelementptr i512, ptr %a, i512 1
+  %bp1 = getelementptr i512, ptr %b, i512 1
+  %a1 = load i512, ptr %ap1
+  %b1 = load i512, ptr %bp1
   %xor2 = xor i512 %a1, %b1
   %or = or i512 %xor1, %xor2
   %cmp = icmp eq i512 %or, 0
@@ -1272,7 +1272,7 @@ define i1 @eq_i512_op(i512 %a, i512 %b) {
   ret i1 %r
 }
 
-define i1 @eq_i128_load_arg(i128 *%p, i128 %b) {
+define i1 @eq_i128_load_arg(ptr%p, i128 %b) {
 ; ANY-LABEL: eq_i128_load_arg:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    xorq 8(%rdi), %rdx
@@ -1280,12 +1280,12 @@ define i1 @eq_i128_load_arg(i128 *%p, i128 %b) {
 ; ANY-NEXT:    orq %rdx, %rsi
 ; ANY-NEXT:    sete %al
 ; ANY-NEXT:    retq
-  %a = load i128, i128* %p
+  %a = load i128, ptr %p
   %r = icmp eq i128 %a, %b
   ret i1 %r
 }
 
-define i1 @eq_i256_load_arg(i256 *%p, i256 %b) {
+define i1 @eq_i256_load_arg(ptr%p, i256 %b) {
 ; ANY-LABEL: eq_i256_load_arg:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    xorq 24(%rdi), %r8
@@ -1297,12 +1297,12 @@ define i1 @eq_i256_load_arg(i256 *%p, i256 %b) {
 ; ANY-NEXT:    orq %rdx, %rsi
 ; ANY-NEXT:    sete %al
 ; ANY-NEXT:    retq
-  %a = load i256, i256* %p
+  %a = load i256, ptr %p
   %r = icmp eq i256 %a, %b
   ret i1 %r
 }
 
-define i1 @eq_i512_load_arg(i512 *%p, i512 %b) {
+define i1 @eq_i512_load_arg(ptr%p, i512 %b) {
 ; ANY-LABEL: eq_i512_load_arg:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    movq 40(%rdi), %r10
@@ -1325,7 +1325,7 @@ define i1 @eq_i512_load_arg(i512 *%p, i512 %b) {
 ; ANY-NEXT:    orq %r10, %rax
 ; ANY-NEXT:    sete %al
 ; ANY-NEXT:    retq
-  %a = load i512, i512* %p
+  %a = load i512, ptr %p
   %r = icmp eq i512 %a, %b
   ret i1 %r
 }

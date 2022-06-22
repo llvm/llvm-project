@@ -3,11 +3,11 @@
 %struct.TestStruct = type { %union.Int128 }
 %union.Int128 = type { i128 }
 %struct.SomeArrays = type { %struct.SillyArray, %struct.SillyArray, %struct.SillyArray }
-%struct.SillyArray = type { i8*, i32, i32 }
+%struct.SillyArray = type { ptr, i32, i32 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8*)
+declare void @llvm.lifetime.start.p0(i64, ptr)
 
-define void @foo(%struct.TestStruct* %arg) align 2 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define void @foo(ptr %arg) align 2 personality ptr @__CxxFrameHandler3 {
 ; Check that %rbx is being used for a frame pointer
 ; CHECK-LABEL: foo:
 ; CHECK:         movq %rsp, %rbx
@@ -30,37 +30,33 @@ define void @foo(%struct.TestStruct* %arg) align 2 personality i8* bitcast (i32 
 bb:
   %i = alloca %struct.SomeArrays, align 8
   %i1 = alloca %struct.SomeArrays, align 8
-  %i2 = getelementptr inbounds %struct.TestStruct, %struct.TestStruct* %arg, i64 0, i32 0, i32 0
-  %i3 = cmpxchg i128* %i2, i128 25710028567316702934644703134494809840, i128 25710028567316702934644703134494809840 seq_cst seq_cst
+  %i3 = cmpxchg ptr %arg, i128 25710028567316702934644703134494809840, i128 25710028567316702934644703134494809840 seq_cst seq_cst
   %i4 = extractvalue { i128, i1 } %i3, 0
   %i5 = trunc i128 %i4 to i64
   %i6 = icmp eq i64 %i5, 0
   br i1 %i6, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb
-  %i8 = cmpxchg i128* %i2, i128 25710028567316702934644703134494809840, i128 25710028567316702934644703134494809840 seq_cst seq_cst
+  %i8 = cmpxchg ptr %arg, i128 25710028567316702934644703134494809840, i128 25710028567316702934644703134494809840 seq_cst seq_cst
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb
-  %i10 = bitcast %struct.SomeArrays* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 48, i8* nonnull %i10)
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(48) %i10, i8 0, i64 48, i1 false)
-  %i11 = bitcast %struct.SomeArrays* %i1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 48, i8* nonnull %i11)
-  %i12 = bitcast %struct.SomeArrays* %i1 to i8*
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(48) %i12, i8 0, i64 48, i1 false)
-  %i13 = invoke nonnull align 8 dereferenceable(48) %struct.SomeArrays* @"??4SomeArrays@@QEAAAEAU0@$$QEAU0@@Z"(%struct.SomeArrays* nonnull %i, %struct.SomeArrays* nonnull align 8 dereferenceable(48) %i1)
+  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %i)
+  call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(48) %i, i8 0, i64 48, i1 false)
+  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %i1)
+  call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(48) %i1, i8 0, i64 48, i1 false)
+  %i13 = invoke nonnull align 8 dereferenceable(48) ptr @"??4SomeArrays@@QEAAAEAU0@$$QEAU0@@Z"(ptr nonnull %i, ptr nonnull align 8 dereferenceable(48) %i1)
           to label %bb14 unwind label %bb45
 
 bb14:                                             ; preds = %bb9
-  call void @llvm.lifetime.end.p0i8(i64 48, i8* nonnull %i10)
+  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %i)
   ret void
 
 bb45:                                             ; preds = %bb9
   %i46 = cleanuppad within none []
-  %i47 = getelementptr inbounds %struct.SomeArrays, %struct.SomeArrays* %i1, i64 0, i32 2, i32 0
-  %i48 = load i8*, i8** %i47, align 8
-  invoke void @"?free@@YAXPEAX@Z"(i8* %i48) [ "funclet"(token %i46) ]
+  %i47 = getelementptr inbounds %struct.SomeArrays, ptr %i1, i64 0, i32 2, i32 0
+  %i48 = load ptr, ptr %i47, align 8
+  invoke void @"?free@@YAXPEAX@Z"(ptr %i48) [ "funclet"(token %i46) ]
           to label %bb51 unwind label %bb49
 
 bb49:                                             ; preds = %bb45
@@ -69,9 +65,9 @@ bb49:                                             ; preds = %bb45
   unreachable
 
 bb51:                                             ; preds = %bb45
-  %i52 = getelementptr inbounds %struct.SomeArrays, %struct.SomeArrays* %i1, i64 0, i32 1, i32 0
-  %i53 = load i8*, i8** %i52, align 8
-  invoke void @"?free@@YAXPEAX@Z"(i8* %i53) [ "funclet"(token %i46) ]
+  %i52 = getelementptr inbounds %struct.SomeArrays, ptr %i1, i64 0, i32 1, i32 0
+  %i53 = load ptr, ptr %i52, align 8
+  invoke void @"?free@@YAXPEAX@Z"(ptr %i53) [ "funclet"(token %i46) ]
           to label %bb56 unwind label %bb54
 
 bb54:                                             ; preds = %bb51
@@ -80,18 +76,18 @@ bb54:                                             ; preds = %bb51
   unreachable
 
 bb56:                                             ; preds = %bb51
-  call void @llvm.lifetime.end.p0i8(i64 48, i8* nonnull %i10)
+  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %i)
   cleanupret from %i46 unwind to caller
 }
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
-declare void @llvm.memset.p0i8.i64(i8*, i8, i64, i1)
+declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
 
 declare dso_local i32 @__CxxFrameHandler3(...)
 
-declare nonnull align 8 dereferenceable(48) %struct.SomeArrays* @"??4SomeArrays@@QEAAAEAU0@$$QEAU0@@Z"(%struct.SomeArrays*, %struct.SomeArrays* nonnull align 8 dereferenceable(48)) align 2
+declare nonnull align 8 dereferenceable(48) ptr @"??4SomeArrays@@QEAAAEAU0@$$QEAU0@@Z"(ptr, ptr nonnull align 8 dereferenceable(48)) align 2
 
-declare void @"?free@@YAXPEAX@Z"(i8*)
+declare void @"?free@@YAXPEAX@Z"(ptr)
 
 declare void @__std_terminate()

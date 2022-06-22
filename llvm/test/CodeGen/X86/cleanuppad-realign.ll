@@ -2,10 +2,10 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc -stack-symbol-ordering=0 < %s | FileCheck --check-prefix=X64 %s
 
 declare i32 @__CxxFrameHandler3(...)
-declare void @Dtor(i64* %o)
+declare void @Dtor(ptr %o)
 declare void @f(i32)
 
-define void @realigned_cleanup() personality i32 (...)* @__CxxFrameHandler3 {
+define void @realigned_cleanup() personality ptr @__CxxFrameHandler3 {
 entry:
   ; Overalign %o to cause stack realignment.
   %o = alloca i64, align 32
@@ -13,12 +13,12 @@ entry:
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
-  call void @Dtor(i64* %o)
+  call void @Dtor(ptr %o)
   ret void
 
 ehcleanup:                                        ; preds = %entry
   %0 = cleanuppad within none []
-  call void @Dtor(i64* %o) [ "funclet"(token %0) ]
+  call void @Dtor(ptr %o) [ "funclet"(token %0) ]
   cleanupret from %0 unwind to caller
 }
 

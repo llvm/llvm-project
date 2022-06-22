@@ -81,7 +81,7 @@ define half @fdiv_f16(half %a, half %b) nounwind strictfp {
   ret half %ret
 }
 
-define void @fpext_f16_to_f32(half* %val, float* %ret) nounwind strictfp {
+define void @fpext_f16_to_f32(ptr %val, ptr %ret) nounwind strictfp {
 ; X86-LABEL: fpext_f16_to_f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -97,14 +97,14 @@ define void @fpext_f16_to_f32(half* %val, float* %ret) nounwind strictfp {
 ; X64-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
-  %1 = load half, half* %val, align 4
+  %1 = load half, ptr %val, align 4
   %res = call float @llvm.experimental.constrained.fpext.f32.f16(half %1,
                                                                  metadata !"fpexcept.strict") #0
-  store float %res, float* %ret, align 8
+  store float %res, ptr %ret, align 8
   ret void
 }
 
-define void @fpext_f16_to_f64(half* %val, double* %ret) nounwind strictfp {
+define void @fpext_f16_to_f64(ptr %val, ptr %ret) nounwind strictfp {
 ; X86-LABEL: fpext_f16_to_f64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -120,14 +120,14 @@ define void @fpext_f16_to_f64(half* %val, double* %ret) nounwind strictfp {
 ; X64-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovsd %xmm0, (%rsi)
 ; X64-NEXT:    retq
-  %1 = load half, half* %val, align 4
+  %1 = load half, ptr %val, align 4
   %res = call double @llvm.experimental.constrained.fpext.f64.f16(half %1,
                                                                   metadata !"fpexcept.strict") #0
-  store double %res, double* %ret, align 8
+  store double %res, ptr %ret, align 8
   ret void
 }
 
-define void @fptrunc_float_to_f16(float* %val, half *%ret) nounwind strictfp {
+define void @fptrunc_float_to_f16(ptr %val, ptr%ret) nounwind strictfp {
 ; X86-LABEL: fptrunc_float_to_f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -143,15 +143,15 @@ define void @fptrunc_float_to_f16(float* %val, half *%ret) nounwind strictfp {
 ; X64-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovsh %xmm0, (%rsi)
 ; X64-NEXT:    retq
-  %1 = load float, float* %val, align 8
+  %1 = load float, ptr %val, align 8
   %res = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %1,
                                                                   metadata !"round.dynamic",
                                                                   metadata !"fpexcept.strict") #0
-  store half %res, half* %ret, align 4
+  store half %res, ptr %ret, align 4
   ret void
 }
 
-define void @fptrunc_double_to_f16(double* %val, half *%ret) nounwind strictfp {
+define void @fptrunc_double_to_f16(ptr %val, ptr%ret) nounwind strictfp {
 ; X86-LABEL: fptrunc_double_to_f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -167,15 +167,15 @@ define void @fptrunc_double_to_f16(double* %val, half *%ret) nounwind strictfp {
 ; X64-NEXT:    vcvtsd2sh %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovsh %xmm0, (%rsi)
 ; X64-NEXT:    retq
-  %1 = load double, double* %val, align 8
+  %1 = load double, ptr %val, align 8
   %res = call half @llvm.experimental.constrained.fptrunc.f16.f64(double %1,
                                                                   metadata !"round.dynamic",
                                                                   metadata !"fpexcept.strict") #0
-  store half %res, half* %ret, align 4
+  store half %res, ptr %ret, align 4
   ret void
 }
 
-define void @fsqrt_f16(half* %a) nounwind strictfp {
+define void @fsqrt_f16(ptr %a) nounwind strictfp {
 ; X86-LABEL: fsqrt_f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -190,11 +190,11 @@ define void @fsqrt_f16(half* %a) nounwind strictfp {
 ; X64-NEXT:    vsqrtsh %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovsh %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  %1 = load half, half* %a, align 4
+  %1 = load half, ptr %a, align 4
   %res = call half @llvm.experimental.constrained.sqrt.f16(half %1,
                                                            metadata !"round.dynamic",
                                                            metadata !"fpexcept.strict") #0
-  store half %res, half* %a, align 4
+  store half %res, ptr %a, align 4
   ret void
 }
 

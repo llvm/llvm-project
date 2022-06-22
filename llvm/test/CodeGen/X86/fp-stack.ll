@@ -5,9 +5,9 @@ target triple = "i386-pc-linux-gnu"
 
 define void @foo() nounwind {
 entry:
-  %tmp6 = load x86_fp80, x86_fp80* undef                       ; <x86_fp80> [#uses=2]
-  %tmp15 = load x86_fp80, x86_fp80* undef                      ; <x86_fp80> [#uses=2]
-  %tmp24 = load x86_fp80, x86_fp80* undef                      ; <x86_fp80> [#uses=1]
+  %tmp6 = load x86_fp80, ptr undef                       ; <x86_fp80> [#uses=2]
+  %tmp15 = load x86_fp80, ptr undef                      ; <x86_fp80> [#uses=2]
+  %tmp24 = load x86_fp80, ptr undef                      ; <x86_fp80> [#uses=1]
   br i1 undef, label %return, label %bb.nph
 
 bb.nph:                                           ; preds = %entry

@@ -3,7 +3,7 @@
 
 ; Don't duplicate the load.
 
-define fastcc i32 @foo(i32* %p) nounwind {
+define fastcc i32 @foo(ptr %p) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%ecx), %eax
@@ -14,7 +14,7 @@ define fastcc i32 @foo(i32* %p) nounwind {
 ; CHECK-NEXT:  .LBB0_2: # %bb76
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
-	%t0 = load i32, i32* %p
+	%t0 = load i32, ptr %p
 	%t2 = and i32 %t0, 10
 	%t3 = icmp ne i32 %t2, 0
 	br i1 %t3, label %bb63, label %bb76

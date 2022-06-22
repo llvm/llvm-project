@@ -6,9 +6,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i32 @test() nounwind uwtable {
 entry:
-  %0 = load volatile %struct.thread*, %struct.thread* addrspace(256)* null
-  %c = getelementptr inbounds %struct.thread, %struct.thread* %0, i64 0, i32 2
-  %1 = load i32, i32* %c, align 4
+  %0 = load volatile ptr, ptr addrspace(256) null
+  %c = getelementptr inbounds %struct.thread, ptr %0, i64 0, i32 2
+  %1 = load i32, ptr %c, align 4
   ret i32 %1
 }
 

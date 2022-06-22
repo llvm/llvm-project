@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=DEFAULTCPU
 ; RUN: llc < %s -mcpu=x86-64 -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64CPU
 
-define void @merge_8_float_zero_stores(float* %ptr) {
+define void @merge_8_float_zero_stores(ptr %ptr) {
 ; DEFAULTCPU-LABEL: merge_8_float_zero_stores:
 ; DEFAULTCPU:       # %bb.0:
 ; DEFAULTCPU-NEXT:    movq $0, (%rdi)
@@ -17,21 +17,20 @@ define void @merge_8_float_zero_stores(float* %ptr) {
 ; X64CPU-NEXT:    movups %xmm0, (%rdi)
 ; X64CPU-NEXT:    movups %xmm0, 16(%rdi)
 ; X64CPU-NEXT:    retq
-  %idx0 = getelementptr float, float* %ptr, i64 0
-  %idx1 = getelementptr float, float* %ptr, i64 1
-  %idx2 = getelementptr float, float* %ptr, i64 2
-  %idx3 = getelementptr float, float* %ptr, i64 3
-  %idx4 = getelementptr float, float* %ptr, i64 4
-  %idx5 = getelementptr float, float* %ptr, i64 5
-  %idx6 = getelementptr float, float* %ptr, i64 6
-  %idx7 = getelementptr float, float* %ptr, i64 7
-  store float 0.0, float* %idx0, align 4
-  store float 0.0, float* %idx1, align 4
-  store float 0.0, float* %idx2, align 4
-  store float 0.0, float* %idx3, align 4
-  store float 0.0, float* %idx4, align 4
-  store float 0.0, float* %idx5, align 4
-  store float 0.0, float* %idx6, align 4
-  store float 0.0, float* %idx7, align 4
+  %idx1 = getelementptr float, ptr %ptr, i64 1
+  %idx2 = getelementptr float, ptr %ptr, i64 2
+  %idx3 = getelementptr float, ptr %ptr, i64 3
+  %idx4 = getelementptr float, ptr %ptr, i64 4
+  %idx5 = getelementptr float, ptr %ptr, i64 5
+  %idx6 = getelementptr float, ptr %ptr, i64 6
+  %idx7 = getelementptr float, ptr %ptr, i64 7
+  store float 0.0, ptr %ptr, align 4
+  store float 0.0, ptr %idx1, align 4
+  store float 0.0, ptr %idx2, align 4
+  store float 0.0, ptr %idx3, align 4
+  store float 0.0, ptr %idx4, align 4
+  store float 0.0, ptr %idx5, align 4
+  store float 0.0, ptr %idx6, align 4
+  store float 0.0, ptr %idx7, align 4
   ret void
 }

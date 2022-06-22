@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+avx2 | FileCheck %s --check-prefix=X32-AVX2
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx2 | FileCheck %s --check-prefix=X64-AVX2
 
-define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwind uwtable noinline ssp {
+define void @and_masks(ptr %a, ptr %b, ptr %c) nounwind uwtable noinline ssp {
 ; X32-LABEL: and_masks:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -62,18 +62,18 @@ define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X64-AVX2-NEXT:    vmovdqa %ymm0, (%rax)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
-  %v0 = load <8 x float>, <8 x float>* %a, align 16
-  %v1 = load <8 x float>, <8 x float>* %b, align 16
+  %v0 = load <8 x float>, ptr %a, align 16
+  %v1 = load <8 x float>, ptr %b, align 16
   %m0 = fcmp olt <8 x float> %v1, %v0
-  %v2 = load <8 x float>, <8 x float>* %c, align 16
+  %v2 = load <8 x float>, ptr %c, align 16
   %m1 = fcmp olt <8 x float> %v2, %v0
   %mand = and <8 x i1> %m1, %m0
   %r = zext <8 x i1> %mand to <8 x i32>
-  store <8 x i32> %r, <8 x i32>* undef, align 32
+  store <8 x i32> %r, ptr undef, align 32
   ret void
 }
 
-define void @neg_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwind uwtable noinline ssp {
+define void @neg_masks(ptr %a, ptr %b, ptr %c) nounwind uwtable noinline ssp {
 ; X32-LABEL: neg_masks:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -115,12 +115,12 @@ define void @neg_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X64-AVX2-NEXT:    vmovaps %ymm0, (%rax)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
-  %v0 = load <8 x float>, <8 x float>* %a, align 16
-  %v1 = load <8 x float>, <8 x float>* %b, align 16
+  %v0 = load <8 x float>, ptr %a, align 16
+  %v1 = load <8 x float>, ptr %b, align 16
   %m0 = fcmp olt <8 x float> %v1, %v0
   %mand = xor <8 x i1> %m0, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
   %r = zext <8 x i1> %mand to <8 x i32>
-  store <8 x i32> %r, <8 x i32>* undef, align 32
+  store <8 x i32> %r, ptr undef, align 32
   ret void
 }
 

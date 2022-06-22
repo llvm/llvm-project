@@ -1,16 +1,16 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10
 ; rdar://7059496
 
-	%struct.brinfo = type <{ %struct.brinfo*, %struct.brinfo*, i8*, i32, i32, i32, i8, i8, i8, i8 }>
-	%struct.cadata = type <{ i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i32, i32, %struct.cmatcher*, i8*, i8*, i8*, i8*, i8*, i8*, i32, i8, i8, i8, i8 }>
-	%struct.cline = type <{ %struct.cline*, i32, i8, i8, i8, i8, i8*, i32, i8, i8, i8, i8, i8*, i32, i8, i8, i8, i8, i8*, i32, i32, %struct.cline*, %struct.cline*, i32, i32 }>
-	%struct.cmatch = type <{ i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i32, i8, i8, i8, i8, i32*, i32*, i8*, i8*, i32, i32, i32, i32, i16, i8, i8, i16, i8, i8 }>
-	%struct.cmatcher = type <{ i32, i8, i8, i8, i8, %struct.cmatcher*, i32, i8, i8, i8, i8, %struct.cpattern*, i32, i8, i8, i8, i8, %struct.cpattern*, i32, i8, i8, i8, i8, %struct.cpattern*, i32, i8, i8, i8, i8, %struct.cpattern*, i32, i8, i8, i8, i8 }>
-	%struct.cpattern = type <{ %struct.cpattern*, i32, i8, i8, i8, i8, %union.anon }>
+	%struct.brinfo = type <{ ptr, ptr, ptr, i32, i32, i32, i8, i8, i8, i8 }>
+	%struct.cadata = type <{ ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i8, i8, i8, i8 }>
+	%struct.cline = type <{ ptr, i32, i8, i8, i8, i8, ptr, i32, i8, i8, i8, i8, ptr, i32, i8, i8, i8, i8, ptr, i32, i32, ptr, ptr, i32, i32 }>
+	%struct.cmatch = type <{ ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i8, i8, i8, i8, ptr, ptr, ptr, ptr, i32, i32, i32, i32, i16, i8, i8, i16, i8, i8 }>
+	%struct.cmatcher = type <{ i32, i8, i8, i8, i8, ptr, i32, i8, i8, i8, i8, ptr, i32, i8, i8, i8, i8, ptr, i32, i8, i8, i8, i8, ptr, i32, i8, i8, i8, i8, ptr, i32, i8, i8, i8, i8 }>
+	%struct.cpattern = type <{ ptr, i32, i8, i8, i8, i8, %union.anon }>
 	%struct.patprog = type <{ i64, i64, i64, i64, i32, i32, i32, i32, i8, i8, i8, i8, i8, i8, i8, i8 }>
 	%union.anon = type <{ [8 x i8] }>
 
-define i32 @addmatches(%struct.cadata* %dat, i8** nocapture %argv) nounwind ssp {
+define i32 @addmatches(ptr %dat, ptr nocapture %argv) nounwind ssp {
 entry:
 	br i1 undef, label %if.else, label %if.then91
 
@@ -138,7 +138,7 @@ if.end919:		; preds = %if.then893
 	br label %if.end972
 
 if.end972:		; preds = %if.end919, %if.end887
-	%sline.0 = phi %struct.cline* [ undef, %if.end919 ], [ null, %if.end887 ]		; <%struct.cline*> [#uses=5]
+	%sline.0 = phi ptr [ undef, %if.end919 ], [ null, %if.end887 ]		; <ptr> [#uses=5]
 	%bcs.0 = phi i32 [ undef, %if.end919 ], [ 0, %if.end887 ]		; <i32> [#uses=5]
 	br i1 undef, label %if.end1146, label %land.lhs.true975
 
@@ -161,7 +161,7 @@ if.then1074:		; preds = %if.then1071
 	br label %if.end1081
 
 if.end1081:		; preds = %if.then1074, %if.then1071
-	%call1083 = call %struct.patprog* @patcompile(i8* undef, i32 0, i8** null) nounwind ssp		; <%struct.patprog*> [#uses=2]
+	%call1083 = call ptr @patcompile(ptr undef, i32 0, ptr null) nounwind ssp		; <ptr> [#uses=2]
 	br i1 undef, label %if.end1146, label %if.then1086
 
 if.then1086:		; preds = %if.end1081
@@ -177,8 +177,8 @@ if.then1098:		; preds = %land.lhs.true1093
 	unreachable
 
 if.end1146:		; preds = %land.lhs.true1093, %if.else1090, %if.then1086, %if.end1081, %cond.false1025, %land.lhs.true975, %if.end972
-	%cp.0 = phi %struct.patprog* [ %call1083, %if.then1086 ], [ null, %if.end972 ], [ null, %land.lhs.true975 ], [ null, %cond.false1025 ], [ %call1083, %if.end1081 ], [ null, %if.else1090 ], [ null, %land.lhs.true1093 ]		; <%struct.patprog*> [#uses=1]
-	%sline.1 = phi %struct.cline* [ %sline.0, %if.then1086 ], [ %sline.0, %if.end972 ], [ %sline.0, %land.lhs.true975 ], [ %sline.0, %cond.false1025 ], [ %sline.0, %if.end1081 ], [ null, %if.else1090 ], [ null, %land.lhs.true1093 ]		; <%struct.cline*> [#uses=1]
+	%cp.0 = phi ptr [ %call1083, %if.then1086 ], [ null, %if.end972 ], [ null, %land.lhs.true975 ], [ null, %cond.false1025 ], [ %call1083, %if.end1081 ], [ null, %if.else1090 ], [ null, %land.lhs.true1093 ]		; <ptr> [#uses=1]
+	%sline.1 = phi ptr [ %sline.0, %if.then1086 ], [ %sline.0, %if.end972 ], [ %sline.0, %land.lhs.true975 ], [ %sline.0, %cond.false1025 ], [ %sline.0, %if.end1081 ], [ null, %if.else1090 ], [ null, %land.lhs.true1093 ]		; <ptr> [#uses=1]
 	%bcs.1 = phi i32 [ %bcs.0, %if.then1086 ], [ %bcs.0, %if.end972 ], [ %bcs.0, %land.lhs.true975 ], [ %bcs.0, %cond.false1025 ], [ %bcs.0, %if.end1081 ], [ 0, %if.else1090 ], [ 0, %land.lhs.true1093 ]		; <i32> [#uses=1]
 	br i1 undef, label %if.end1307, label %do.body1270
 
@@ -198,13 +198,13 @@ if.then1323:		; preds = %if.end1318
 	unreachable
 
 for.cond1330.preheader:		; preds = %if.end1318
-	%call1587 = call i8* @comp_match(i8* undef, i8* undef, i8* undef, %struct.patprog* %cp.0, %struct.cline** undef, i32 0, %struct.brinfo** undef, i32 0, %struct.brinfo** undef, i32 %bcs.1, i32* undef) nounwind ssp		; <i8*> [#uses=0]
-	%call1667 = call %struct.cmatch* @add_match_data(i32 0, i8* undef, i8* undef, %struct.cline* undef, i8* undef, i8* null, i8* undef, i8* undef, i8* undef, i8* undef, %struct.cline* null, i8* undef, %struct.cline* %sline.1, i8* undef, i32 undef, i32 undef) ssp		; <%struct.cmatch*> [#uses=0]
+	%call1587 = call ptr @comp_match(ptr undef, ptr undef, ptr undef, ptr %cp.0, ptr undef, i32 0, ptr undef, i32 0, ptr undef, i32 %bcs.1, ptr undef) nounwind ssp		; <ptr> [#uses=0]
+	%call1667 = call ptr @add_match_data(i32 0, ptr undef, ptr undef, ptr undef, ptr undef, ptr null, ptr undef, ptr undef, ptr undef, ptr undef, ptr null, ptr undef, ptr %sline.1, ptr undef, i32 undef, i32 undef) ssp		; <ptr> [#uses=0]
 	unreachable
 }
 
-declare %struct.patprog* @patcompile(i8*, i32, i8**) ssp
+declare ptr @patcompile(ptr, i32, ptr) ssp
 
-declare i8* @comp_match(i8*, i8*, i8*, %struct.patprog*, %struct.cline**, i32, %struct.brinfo**, i32, %struct.brinfo**, i32, i32*) ssp
+declare ptr @comp_match(ptr, ptr, ptr, ptr, ptr, i32, ptr, i32, ptr, i32, ptr) ssp
 
-declare %struct.cmatch* @add_match_data(i32, i8*, i8*, %struct.cline*, i8*, i8*, i8*, i8*, i8*, i8*, %struct.cline*, i8*, %struct.cline*, i8*, i32, i32) nounwind ssp
+declare ptr @add_match_data(i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32) nounwind ssp

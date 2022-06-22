@@ -16,14 +16,14 @@ source_filename = "test.cc"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @sum(i32* %arr, i32 %pos1, i32 %pos2) !dbg !35 !prof !37 {
+define i32 @sum(ptr %arr, i32 %pos1, i32 %pos2) !dbg !35 !prof !37 {
 entry:
   %idxprom = sext i32 %pos1 to i64, !dbg !38
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %idxprom, !dbg !38
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !38, !tbaa !39
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %idxprom, !dbg !38
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !38, !tbaa !39
   %idxprom1 = sext i32 %pos2 to i64, !dbg !43
-  %arrayidx2 = getelementptr inbounds i32, i32* %arr, i64 %idxprom1, !dbg !43
-  %1 = load i32, i32* %arrayidx2, align 4, !dbg !43, !tbaa !39
+  %arrayidx2 = getelementptr inbounds i32, ptr %arr, i64 %idxprom1, !dbg !43
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !43, !tbaa !39
   %add = add nsw i32 %1, %0, !dbg !44
   ret i32 %add, !dbg !45
 }

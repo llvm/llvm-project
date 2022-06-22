@@ -49,36 +49,36 @@ bb0:
 case_1_loop:
   ; We should replace 1 with %x
   %x0 = phi i32 [ 1, %bb0 ], [ %x5, %case_7 ]
-  store i32 1, i32* @effect, align 4
+  store i32 1, ptr @effect, align 4
   br label %case_5
 
 case_5:
   ; We should replace 5 with %x
   %x1 = phi i32 [ 5, %bb0 ], [ %x0, %case_1_loop ]
-  store i32 5, i32* @effect, align 4
+  store i32 5, ptr @effect, align 4
   br label %case_13
 
 case_13:
   ; We should replace 13 with %x
   %x2 = phi i32 [ 13, %bb0 ], [ %x1, %case_5 ]
-  store i32 13, i32* @effect, align 4
+  store i32 13, ptr @effect, align 4
   br label %case_42
 
 case_42:
   ; We should replace 42 with %x
   %x3 = phi i32 [ 42, %bb0 ], [ %x2, %case_13 ]
-  store i32 %x3, i32* @effect, align 4
+  store i32 %x3, ptr @effect, align 4
   br label %case_55
 
 case_55:
   ; We must not replace any of the PHI arguments!
   %x4 = phi i32 [ 42, %bb0 ], [ 55, %case_42 ]
-  store i32 %x4, i32* @effect, align 4
+  store i32 %x4, ptr @effect, align 4
   br label %default
 
 case_7:
-  %x5 = load i32, i32* @g, align 4
-  store i32 7, i32* @effect, align 4
+  %x5 = load i32, ptr @g, align 4
+  store i32 7, ptr @effect, align 4
   br label %case_1_loop
 
 default:
@@ -138,36 +138,36 @@ bb0:
 case_1_loop:
   ; We should replace 1 with %x
   %x0 = phi i64 [ 1, %bb0 ], [ %x5, %case_7 ]
-  store i64 1, i64* @effect64, align 4
+  store i64 1, ptr @effect64, align 4
   br label %case_5
 
 case_5:
   ; We should replace 5 with %x
   %x1 = phi i64 [ 5, %bb0 ], [ %x0, %case_1_loop ]
-  store i64 5, i64* @effect64, align 4
+  store i64 5, ptr @effect64, align 4
   br label %case_13
 
 case_13:
   ; We should replace 13 with %x
   %x2 = phi i64 [ 13, %bb0 ], [ %x1, %case_5 ]
-  store i64 13, i64* @effect64, align 4
+  store i64 13, ptr @effect64, align 4
   br label %case_42
 
 case_42:
   ; We should replace 42 with %x
   %x3 = phi i64 [ 42, %bb0 ], [ %x2, %case_13 ]
-  store i64 %x3, i64* @effect64, align 4
+  store i64 %x3, ptr @effect64, align 4
   br label %case_55
 
 case_55:
   ; We must not replace any of the PHI arguments! (3898 == 0xf00 + 55)
   %x4 = phi i64 [ 3895, %bb0 ], [ 55, %case_42 ]
-  store i64 %x4, i64* @effect64, align 4
+  store i64 %x4, ptr @effect64, align 4
   br label %case_7
 
 case_7:
-  %x5 = load i64, i64* @g64, align 4
-  store i64 7, i64* @effect64, align 4
+  %x5 = load i64, ptr @g64, align 4
+  store i64 7, ptr @effect64, align 4
   br label %case_1_loop
 
 default:

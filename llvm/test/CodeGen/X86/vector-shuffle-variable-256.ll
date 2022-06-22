@@ -590,7 +590,7 @@ define <16 x i16> @var_shuffle_v16i16_v8i16_xxxxxxxxxxxxxxxx_i16(<8 x i16> %x, i
 ; Unary shuffle indices from memory
 ;
 
-define <4 x i64> @mem_shuffle_v4i64_v4i64_xxxx_i64(<4 x i64> %x, i64* %i) nounwind {
+define <4 x i64> @mem_shuffle_v4i64_v4i64_xxxx_i64(<4 x i64> %x, ptr %i) nounwind {
 ; ALL-LABEL: mem_shuffle_v4i64_v4i64_xxxx_i64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
@@ -616,14 +616,13 @@ define <4 x i64> @mem_shuffle_v4i64_v4i64_xxxx_i64(<4 x i64> %x, i64* %i) nounwi
 ; ALL-NEXT:    movq %rbp, %rsp
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-  %p0  = getelementptr inbounds i64, i64* %i, i32 0
-  %p1  = getelementptr inbounds i64, i64* %i, i32 1
-  %p2  = getelementptr inbounds i64, i64* %i, i32 2
-  %p3  = getelementptr inbounds i64, i64* %i, i32 3
-  %i0  = load i64, i64* %p0, align 4
-  %i1  = load i64, i64* %p1, align 4
-  %i2  = load i64, i64* %p2, align 4
-  %i3  = load i64, i64* %p3, align 4
+  %p1  = getelementptr inbounds i64, ptr %i, i32 1
+  %p2  = getelementptr inbounds i64, ptr %i, i32 2
+  %p3  = getelementptr inbounds i64, ptr %i, i32 3
+  %i0  = load i64, ptr %i, align 4
+  %i1  = load i64, ptr %p1, align 4
+  %i2  = load i64, ptr %p2, align 4
+  %i3  = load i64, ptr %p3, align 4
   %x0 = extractelement <4 x i64> %x, i64 %i0
   %x1 = extractelement <4 x i64> %x, i64 %i1
   %x2 = extractelement <4 x i64> %x, i64 %i2
@@ -635,7 +634,7 @@ define <4 x i64> @mem_shuffle_v4i64_v4i64_xxxx_i64(<4 x i64> %x, i64* %i) nounwi
   ret <4 x i64> %r3
 }
 
-define <4 x i64> @mem_shuffle_v4i64_v2i64_xxxx_i64(<2 x i64> %x, i64* %i) nounwind {
+define <4 x i64> @mem_shuffle_v4i64_v2i64_xxxx_i64(<2 x i64> %x, ptr %i) nounwind {
 ; ALL-LABEL: mem_shuffle_v4i64_v2i64_xxxx_i64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movq (%rdi), %rax
@@ -655,14 +654,13 @@ define <4 x i64> @mem_shuffle_v4i64_v2i64_xxxx_i64(<2 x i64> %x, i64* %i) nounwi
 ; ALL-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; ALL-NEXT:    retq
-  %p0  = getelementptr inbounds i64, i64* %i, i32 0
-  %p1  = getelementptr inbounds i64, i64* %i, i32 1
-  %p2  = getelementptr inbounds i64, i64* %i, i32 2
-  %p3  = getelementptr inbounds i64, i64* %i, i32 3
-  %i0  = load i64, i64* %p0, align 4
-  %i1  = load i64, i64* %p1, align 4
-  %i2  = load i64, i64* %p2, align 4
-  %i3  = load i64, i64* %p3, align 4
+  %p1  = getelementptr inbounds i64, ptr %i, i32 1
+  %p2  = getelementptr inbounds i64, ptr %i, i32 2
+  %p3  = getelementptr inbounds i64, ptr %i, i32 3
+  %i0  = load i64, ptr %i, align 4
+  %i1  = load i64, ptr %p1, align 4
+  %i2  = load i64, ptr %p2, align 4
+  %i3  = load i64, ptr %p3, align 4
   %x0 = extractelement <2 x i64> %x, i64 %i0
   %x1 = extractelement <2 x i64> %x, i64 %i1
   %x2 = extractelement <2 x i64> %x, i64 %i2

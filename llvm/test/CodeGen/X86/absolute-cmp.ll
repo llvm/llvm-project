@@ -42,7 +42,7 @@ define void @foo8(i64 %val) {
 ; PIC-NEXT:    .cfi_def_cfa_offset 8
 ; PIC-NEXT:  .LBB0_2: # %f
 ; PIC-NEXT:    retq # encoding: [0xc3]
-  %cmp = icmp ule i64 %val, ptrtoint (i8* @cmp8 to i64)
+  %cmp = icmp ule i64 %val, ptrtoint (ptr @cmp8 to i64)
   br i1 %cmp, label %t, label %f
 
 t:
@@ -85,7 +85,7 @@ define void @foo32(i64 %val) {
 ; PIC-NEXT:    .cfi_def_cfa_offset 8
 ; PIC-NEXT:  .LBB1_2: # %f
 ; PIC-NEXT:    retq # encoding: [0xc3]
-  %cmp = icmp ule i64 %val, ptrtoint (i8* @cmp32 to i64)
+  %cmp = icmp ule i64 %val, ptrtoint (ptr @cmp32 to i64)
   br i1 %cmp, label %t, label %f
 
 t:

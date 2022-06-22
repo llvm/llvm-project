@@ -6,7 +6,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @t(<2 x i64>* %val) nounwind  {
+define i32 @t(ptr %val) nounwind  {
 ; X32-SSE2-LABEL: t:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -24,7 +24,7 @@ define i32 @t(<2 x i64>* %val) nounwind  {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movl 8(%rdi), %eax
 ; X64-AVX-NEXT:    retq
-  %tmp2 = load <2 x i64>, <2 x i64>* %val, align 16		; <<2 x i64>> [#uses=1]
+  %tmp2 = load <2 x i64>, ptr %val, align 16		; <<2 x i64>> [#uses=1]
   %tmp3 = bitcast <2 x i64> %tmp2 to <4 x i32>		; <<4 x i32>> [#uses=1]
   %tmp4 = extractelement <4 x i32> %tmp3, i32 2		; <i32> [#uses=1]
   ret i32 %tmp4
@@ -32,7 +32,7 @@ define i32 @t(<2 x i64>* %val) nounwind  {
 
 ; Case where extractelement of load ends up as undef.
 ; (Making sure this doesn't crash.)
-define i32 @t2(<8 x i32>* %xp) {
+define i32 @t2(ptr %xp) {
 ; X32-SSE2-LABEL: t2:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    retl
@@ -40,7 +40,7 @@ define i32 @t2(<8 x i32>* %xp) {
 ; X64-LABEL: t2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    retq
-  %x = load <8 x i32>, <8 x i32>* %xp
+  %x = load <8 x i32>, ptr %xp
   %Shuff68 = shufflevector <8 x i32> %x, <8 x i32> undef, <8 x i32> <i32 undef, i32 7, i32 9, i32 undef, i32 13, i32 15, i32 1, i32 3>
   %y = extractelement <8 x i32> %Shuff68, i32 0
   ret i32 %y
@@ -50,7 +50,7 @@ define i32 @t2(<8 x i32>* %xp) {
 ; low alignment load of the vector which prevents us from reliably forming a
 ; narrow load.
 
-define void @t3(<2 x double>* %a0) {
+define void @t3(ptr %a0) {
 ; X32-SSE2-LABEL: t3:
 ; X32-SSE2:       # %bb.0: # %bb
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -70,9 +70,9 @@ define void @t3(<2 x double>* %a0) {
 ; X64-AVX-NEXT:    vmovsd %xmm0, (%rax)
 ; X64-AVX-NEXT:    retq
 bb:
-  %tmp13 = load <2 x double>, <2 x double>* %a0, align 1
+  %tmp13 = load <2 x double>, ptr %a0, align 1
   %.sroa.3.24.vec.extract = extractelement <2 x double> %tmp13, i32 1
-  store double %.sroa.3.24.vec.extract, double* undef, align 8
+  store double %.sroa.3.24.vec.extract, ptr undef, align 8
   ret void
 }
 
@@ -80,7 +80,7 @@ bb:
 ; number of elements) before extractelement.
 ; This is testing for an assertion - the extraction was assuming that the undef
 ; second shuffle operand was a post-bitcast type instead of a pre-bitcast type.
-define i64 @t4(<2 x double>* %a) {
+define i64 @t4(ptr %a) {
 ; X32-SSE2-LABEL: t4:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -94,7 +94,7 @@ define i64 @t4(<2 x double>* %a) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    retq
-  %b = load <2 x double>, <2 x double>* %a, align 16
+  %b = load <2 x double>, ptr %a, align 16
   %c = shufflevector <2 x double> %b, <2 x double> %b, <2 x i32> <i32 1, i32 0>
   %d = bitcast <2 x double> %c to <2 x i64>
   %e = extractelement <2 x i64> %d, i32 1
@@ -102,7 +102,7 @@ define i64 @t4(<2 x double>* %a) {
 }
 
 ; Don't extract from a volatile.
-define void @t5(<2 x double> *%a0, double *%a1) {
+define void @t5(ptr%a0, ptr%a1) {
 ; X32-SSE2-LABEL: t5:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -122,14 +122,14 @@ define void @t5(<2 x double> *%a0, double *%a1) {
 ; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; X64-AVX-NEXT:    vmovhps %xmm0, (%rsi)
 ; X64-AVX-NEXT:    retq
-  %vecload = load volatile <2 x double>, <2 x double>* %a0, align 16
+  %vecload = load volatile <2 x double>, ptr %a0, align 16
   %vecext = extractelement <2 x double> %vecload, i32 1
-  store volatile double %vecext, double* %a1, align 8
+  store volatile double %vecext, ptr %a1, align 8
   ret void
 }
 
 ; Check for multiuse.
-define float @t6(<8 x float> *%a0) {
+define float @t6(ptr%a0) {
 ; X32-SSE2-LABEL: t6:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    pushl %eax
@@ -176,14 +176,14 @@ define float @t6(<8 x float> *%a0) {
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
-  %vecload = load <8 x float>, <8 x float>* %a0, align 32
+  %vecload = load <8 x float>, ptr %a0, align 32
   %vecext = extractelement <8 x float> %vecload, i32 1
   %cmp = fcmp oeq float %vecext, 0.000000e+00
   %cond = select i1 %cmp, float 1.000000e+00, float %vecext
   ret float %cond
 }
 
-define void @PR43971(<8 x float> *%a0, float *%a1) {
+define void @PR43971(ptr%a0, ptr%a1) {
 ; X32-SSE2-LABEL: PR43971:
 ; X32-SSE2:       # %bb.0: # %entry
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -221,16 +221,16 @@ define void @PR43971(<8 x float> *%a0, float *%a1) {
 ; X64-AVX-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load <8 x float>, <8 x float>* %a0, align 32
+  %0 = load <8 x float>, ptr %a0, align 32
   %vecext = extractelement <8 x float> %0, i32 6
   %cmp = fcmp ogt float %vecext, 0.000000e+00
-  %1 = load float, float* %a1, align 4
+  %1 = load float, ptr %a1, align 4
   %cond = select i1 %cmp, float %1, float %vecext
-  store float %cond, float* %a1, align 4
+  store float %cond, ptr %a1, align 4
   ret void
 }
 
-define float @PR43971_1(<8 x float> *%a0) nounwind {
+define float @PR43971_1(ptr%a0) nounwind {
 ; X32-SSE2-LABEL: PR43971_1:
 ; X32-SSE2:       # %bb.0: # %entry
 ; X32-SSE2-NEXT:    pushl %eax
@@ -276,7 +276,7 @@ define float @PR43971_1(<8 x float> *%a0) nounwind {
 ; X64-AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
 entry:
-  %0 = load <8 x float>, <8 x float>* %a0, align 32
+  %0 = load <8 x float>, ptr %a0, align 32
   %vecext = extractelement <8 x float> %0, i32 1
   %cmp = fcmp oeq float %vecext, 0.000000e+00
   %cond = select i1 %cmp, float 1.000000e+00, float %vecext
@@ -284,7 +284,7 @@ entry:
 }
 
 ; Test for bad extractions from a VBROADCAST_LOAD of the <2 x i16> non-uniform constant bitcast as <4 x i32>.
-define void @subextract_broadcast_load_constant(<2 x i16>* nocapture %0, i16* nocapture %1, i16* nocapture %2) nounwind {
+define void @subextract_broadcast_load_constant(ptr nocapture %0, ptr nocapture %1, ptr nocapture %2) nounwind {
 ; X32-SSE2-LABEL: subextract_broadcast_load_constant:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -301,25 +301,24 @@ define void @subextract_broadcast_load_constant(<2 x i16>* nocapture %0, i16* no
 ; X64-NEXT:    movw $-24674, (%rsi) # imm = 0x9F9E
 ; X64-NEXT:    movw $-24160, (%rdx) # imm = 0xA1A0
 ; X64-NEXT:    retq
-  %4 = bitcast <2 x i16>* %0 to i8*
-  store i8 -98, i8* %4, align 1
-  %5 = getelementptr inbounds i8, i8* %4, i64 1
-  store i8 -97, i8* %5, align 1
-  %6 = getelementptr inbounds i8, i8* %4, i64 2
-  store i8 -96, i8* %6, align 1
-  %7 = getelementptr inbounds i8, i8* %4, i64 3
-  store i8 -95, i8* %7, align 1
-  %8 = load <2 x i16>, <2 x i16>* %0, align 4
-  %9 = extractelement <2 x i16> %8, i32 0
-  store i16 %9, i16* %1, align 2
-  %10 = extractelement <2 x i16> %8, i32 1
-  store i16 %10, i16* %2, align 2
+  store i8 -98, ptr %0, align 1
+  %4 = getelementptr inbounds i8, ptr %0, i64 1
+  store i8 -97, ptr %4, align 1
+  %5 = getelementptr inbounds i8, ptr %0, i64 2
+  store i8 -96, ptr %5, align 1
+  %6 = getelementptr inbounds i8, ptr %0, i64 3
+  store i8 -95, ptr %6, align 1
+  %7 = load <2 x i16>, ptr %0, align 4
+  %8 = extractelement <2 x i16> %7, i32 0
+  store i16 %8, ptr %1, align 2
+  %9 = extractelement <2 x i16> %7, i32 1
+  store i16 %9, ptr %2, align 2
   ret void
 }
 
 ; A scalar load is favored over a XMM->GPR register transfer in this example.
 
-define i32 @multi_use_load_scalarization(<4 x i32>* %p) nounwind {
+define i32 @multi_use_load_scalarization(ptr %p) nounwind {
 ; X32-SSE2-LABEL: multi_use_load_scalarization:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -347,14 +346,14 @@ define i32 @multi_use_load_scalarization(<4 x i32>* %p) nounwind {
 ; X64-AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovdqa %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
-  %v = load <4 x i32>, <4 x i32>* %p, align 1
+  %v = load <4 x i32>, ptr %p, align 1
   %v1 = add <4 x i32> %v, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %v1, <4 x i32>* %p
+  store <4 x i32> %v1, ptr %p
   %r = extractelement <4 x i32> %v, i64 0
   ret i32 %r
 }
 
-define i32 @multi_use_volatile_load_scalarization(<4 x i32>* %p) nounwind {
+define i32 @multi_use_volatile_load_scalarization(ptr %p) nounwind {
 ; X32-SSE2-LABEL: multi_use_volatile_load_scalarization:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -382,9 +381,9 @@ define i32 @multi_use_volatile_load_scalarization(<4 x i32>* %p) nounwind {
 ; X64-AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; X64-AVX-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX-NEXT:    retq
-  %v = load volatile <4 x i32>, <4 x i32>* %p, align 1
+  %v = load volatile <4 x i32>, ptr %p, align 1
   %v1 = add <4 x i32> %v, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %v1, <4 x i32>* %p
+  store <4 x i32> %v1, ptr %p
   %r = extractelement <4 x i32> %v, i64 0
   ret i32 %r
 }
@@ -526,11 +525,11 @@ define i32 @main() nounwind {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
   %stackptr = alloca <8 x i32>, align 32
-  %z = load <8 x i32>, <8 x i32>* @zero, align 32
-  %t1 = load <8 x i32>, <8 x i32>* @n1, align 32
-  store <8 x i32> %t1, <8 x i32>* @zero, align 32
-  store volatile <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>, <8 x i32>* %stackptr, align 32
-  %stackload = load volatile <8 x i32>, <8 x i32>* %stackptr, align 32
+  %z = load <8 x i32>, ptr @zero, align 32
+  %t1 = load <8 x i32>, ptr @n1, align 32
+  store <8 x i32> %t1, ptr @zero, align 32
+  store volatile <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>, ptr %stackptr, align 32
+  %stackload = load volatile <8 x i32>, ptr %stackptr, align 32
   %div = udiv <8 x i32> %z, %stackload
   %e1 = extractelement <8 x i32> %div, i64 1
   %e2 = extractelement <8 x i32> %div, i64 2
