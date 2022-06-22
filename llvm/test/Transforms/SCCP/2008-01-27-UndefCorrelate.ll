@@ -7,21 +7,16 @@ define i32 @main() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[K:%.*]], [[BB_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[K]] = add i32 [[INDVAR]], 1
-; CHECK-NEXT:    br i1 false, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond_true:
-; CHECK-NEXT:    br i1 undef, label [[BB_BACKEDGE]], label [[BB12:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[BB_BACKEDGE:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb.backedge:
 ; CHECK-NEXT:    br label [[BB]]
 ; CHECK:       cond_false:
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i32 [[K]], 10
-; CHECK-NEXT:    br i1 [[TMP9]], label [[BB_BACKEDGE]], label [[BB12]]
+; CHECK-NEXT:    br i1 undef, label [[BB_BACKEDGE]], label [[BB12]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[K]], 10
-; CHECK-NEXT:    br i1 [[TMP14]], label [[COND_NEXT18:%.*]], label [[COND_TRUE17:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[COND_NEXT18:%.*]], label [[COND_TRUE17:%.*]]
 ; CHECK:       cond_true17:
-; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cond_next18:
 ; CHECK-NEXT:    ret i32 0

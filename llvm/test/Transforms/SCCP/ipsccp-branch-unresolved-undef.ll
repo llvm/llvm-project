@@ -13,9 +13,7 @@ define void @main() {
 define internal i1 @patatino(i1 %a) {
 ; CHECK-LABEL: define {{[^@]+}}@patatino
 ; CHECK-SAME: (i1 [[A:%.*]]) {
-; CHECK-NEXT:    br label [[ONFALSE:%.*]]
-; CHECK:       onfalse:
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    unreachable
 ;
   br i1 %a, label %ontrue, label %onfalse
 ontrue:

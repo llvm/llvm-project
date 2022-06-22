@@ -371,7 +371,19 @@ static bool removeNonFeasibleEdges(const SCCPSolver &Solver, BasicBlock *BB,
           isa<IndirectBrInst>(TI)) &&
          "Terminator must be a br, switch or indirectbr");
 
-  if (FeasibleSuccessors.size() == 1) {
+  if (FeasibleSuccessors.size() == 0) {
+    // Branch on undef/poison, replace with unreachable.
+    SmallPtrSet<BasicBlock *, 8> SeenSuccs;
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    for (BasicBlock *Succ : successors(BB)) {
+      Succ->removePredecessor(BB);
+      if (SeenSuccs.insert(Succ).second)
+        Updates.push_back({DominatorTree::Delete, BB, Succ});
+    }
+    TI->eraseFromParent();
+    new UnreachableInst(BB->getContext(), BB);
+    DTU.applyUpdatesPermissive(Updates);
+  } else if (FeasibleSuccessors.size() == 1) {
     // Replace with an unconditional branch to the only feasible successor.
     BasicBlock *OnlyFeasibleSuccessor = *FeasibleSuccessors.begin();
     SmallVector<DominatorTree::UpdateType, 8> Updates;
