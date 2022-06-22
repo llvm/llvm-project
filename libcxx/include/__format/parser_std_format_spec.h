@@ -1565,14 +1565,16 @@ public:
   /// \returns the `__parsed_specifications` with the resolved dynamic sizes..
   _LIBCPP_HIDE_FROM_ABI
   __parsed_specifications<_CharT> __get_parsed_std_specifications(auto& __ctx) const {
-    return __parsed_specifications<_CharT>{.__std_{.__alignment_ = __alignment_,
-                                                   .__sign_ = __sign_,
-                                                   .__alternate_form_ = __alternate_form_,
-                                                   .__locale_specific_form_ = __locale_specific_form_,
-                                                   .__type_ = __type_},
-                                           .__width_{__get_width(__ctx)},
-                                           .__precision_{__get_precision(__ctx)},
-                                           .__fill_{__fill_}};
+    return __parsed_specifications<_CharT>{
+        .__std_ =
+            __std{.__alignment_            = __alignment_,
+                  .__sign_                 = __sign_,
+                  .__alternate_form_       = __alternate_form_,
+                  .__locale_specific_form_ = __locale_specific_form_,
+                  .__type_                 = __type_},
+        .__width_{__get_width(__ctx)},
+        .__precision_{__get_precision(__ctx)},
+        .__fill_{__fill_}};
   }
 
   __alignment __alignment_ : 3 {__alignment::__default};
