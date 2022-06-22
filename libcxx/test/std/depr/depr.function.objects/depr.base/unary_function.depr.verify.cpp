@@ -7,23 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // <functional>
-// REQUIRES: c++03 || c++11 || c++14
+// REQUIRES: c++11 || c++14
 // unary_function was removed in C++17
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
-
-// unary_function
+// check that unary_function is marked deprecated
 
 #include <functional>
-#include <type_traits>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    typedef std::unary_function<int, bool> uf;
-    static_assert((std::is_same<uf::argument_type, int>::value), "");
-    static_assert((std::is_same<uf::result_type, bool>::value), "");
-
-  return 0;
-}
+std::unary_function<int, int> u; // expected-warning {{'unary_function<int, int>' is deprecated}}

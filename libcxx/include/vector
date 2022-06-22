@@ -3139,7 +3139,7 @@ vector<bool, _Allocator>::__hash_code() const _NOEXCEPT
 
 template <class _Allocator>
 struct _LIBCPP_TEMPLATE_VIS hash<vector<bool, _Allocator> >
-    : public unary_function<vector<bool, _Allocator>, size_t>
+    : public __unary_function<vector<bool, _Allocator>, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const vector<bool, _Allocator>& __vec) const _NOEXCEPT

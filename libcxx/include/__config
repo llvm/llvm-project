@@ -83,9 +83,6 @@
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // Enable optimized version of __do_get_(un)signed which avoids redundant copies.
 #    define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
-// In C++20 and later, don't derive std::plus from std::binary_function,
-// nor std::negate from std::unary_function.
-#    define _LIBCPP_ABI_NO_BINDER_BASES
 // Give reverse_iterator<T> one data member of type T, not two.
 // Also, in C++17 and later, don't derive iterator types from std::iterator.
 #    define _LIBCPP_ABI_NO_ITERATOR_BASES
@@ -1116,6 +1113,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
 #    define _LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE
 #    define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
+#    define _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
 #  endif // _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
 
 #  if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES)

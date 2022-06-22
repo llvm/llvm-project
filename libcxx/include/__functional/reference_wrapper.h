@@ -23,10 +23,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS reference_wrapper
-#if _LIBCPP_STD_VER <= 17 || !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public __weak_result_type<_Tp>
-#endif
+class _LIBCPP_TEMPLATE_VIS reference_wrapper : public __weak_result_type<_Tp>
 {
 public:
     // types
