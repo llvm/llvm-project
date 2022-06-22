@@ -14,9 +14,9 @@
 ; Function Attrs: uwtable
 define void @_Z3fooi(i32 %i) #0 !dbg !4 {
   %1 = alloca i32, align 4
-  store i32 %i, i32* %1, align 4
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !11, metadata !12), !dbg !13
-  %2 = load i32, i32* %1, align 4, !dbg !14
+  store i32 %i, ptr %1, align 4
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !11, metadata !12), !dbg !13
+  %2 = load i32, ptr %1, align 4, !dbg !14
   %3 = icmp sgt i32 %2, 10, !dbg !16
   br i1 %3, label %4, label %5, !dbg !17
 

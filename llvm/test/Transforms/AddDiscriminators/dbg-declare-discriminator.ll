@@ -8,9 +8,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-LABEL: @test_valid_metadata
 define void @test_valid_metadata() {
   %a = alloca i8
-  call void @llvm.dbg.declare(metadata i8* %a, metadata !2, metadata !5), !dbg !6
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !2, metadata !5), !dbg !6
   %b = alloca i8
-  call void @llvm.dbg.declare(metadata i8* %b, metadata !9, metadata !5), !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !9, metadata !5), !dbg !11
   ret void
 }
 
