@@ -11,7 +11,7 @@ function(_get_common_compile_options output_var flags)
 
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
   if(NOT ${LIBC_TARGET_OS} STREQUAL "windows")
-    set(compile_options ${compile_options} -fpie -ffreestanding)
+    set(compile_options ${compile_options} -fpie -ffreestanding -fno-builtin)
   endif()
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fno-exceptions")
