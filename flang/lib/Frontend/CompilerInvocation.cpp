@@ -53,10 +53,11 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 //===----------------------------------------------------------------------===//
 // Deserialization (from args)
 //===----------------------------------------------------------------------===//
-static bool parseShowColorsArgs(
-    const llvm::opt::ArgList &args, bool defaultColor) {
-  // Color diagnostics default to auto ("on" if terminal supports) in the driver
-  // but default to off in cc1, needing an explicit OPT_fdiagnostics_color.
+static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
+                                bool defaultColor = true) {
+  // Color diagnostics default to auto ("on" if terminal supports) in the
+  // compiler driver `flang-new` but default to off in the frontend driver
+  // `flang-new -fc1`, needing an explicit OPT_fdiagnostics_color.
   // Support both clang's -f[no-]color-diagnostics and gcc's
   // -f[no-]diagnostics-colors[=never|always|auto].
   enum {
@@ -88,9 +89,8 @@ static bool parseShowColorsArgs(
 }
 
 bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
-                                            llvm::opt::ArgList &args,
-                                            bool defaultDiagColor) {
-  opts.ShowColors = parseShowColorsArgs(args, defaultDiagColor);
+                                            llvm::opt::ArgList &args) {
+  opts.ShowColors = parseShowColorsArgs(args);
 
   return true;
 }
@@ -501,6 +501,10 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
   }
+
+  // Default to off for `flang-new -fc1`.
+  res.getFrontendOpts().showColors =
+      parseShowColorsArgs(args, /*defaultDiagColor=*/false);
 
   return diags.getNumErrors() == numErrorsBefore;
 }
