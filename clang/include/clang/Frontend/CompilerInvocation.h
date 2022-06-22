@@ -167,6 +167,9 @@ protected:
   PreprocessorOutputOptions PreprocessorOutputOpts;
 
 public:
+  CASOptions &getCASOpts() { return CASOpts; }
+  const CASOptions &getCASOpts() const { return CASOpts; }
+
   MigratorOptions &getMigratorOpts() { return MigratorOpts; }
   const MigratorOptions &getMigratorOpts() const { return MigratorOpts; }
 
@@ -260,47 +263,6 @@ public:
   static void GenerateCASArgs(const CASOptions &Opts,
                               SmallVectorImpl<const char *> &Args,
                               CompilerInvocation::StringAllocator SA);
-  /// @}
-  /// @name Option Subgroups
-  /// @{
-
-  CASOptions &getCASOpts() { return CASOpts; }
-  const CASOptions &getCASOpts() const { return CASOpts; }
-
-  AnalyzerOptionsRef getAnalyzerOpts() const { return AnalyzerOpts; }
-
-  MigratorOptions &getMigratorOpts() { return MigratorOpts; }
-  const MigratorOptions &getMigratorOpts() const { return MigratorOpts; }
-
-  CodeGenOptions &getCodeGenOpts() { return CodeGenOpts; }
-  const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
-
-  DependencyOutputOptions &getDependencyOutputOpts() {
-    return DependencyOutputOpts;
-  }
-
-  const DependencyOutputOptions &getDependencyOutputOpts() const {
-    return DependencyOutputOpts;
-  }
-
-  FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
-
-  const FileSystemOptions &getFileSystemOpts() const {
-    return FileSystemOpts;
-  }
-
-  FrontendOptions &getFrontendOpts() { return FrontendOpts; }
-  const FrontendOptions &getFrontendOpts() const { return FrontendOpts; }
-
-  PreprocessorOutputOptions &getPreprocessorOutputOpts() {
-    return PreprocessorOutputOpts;
-  }
-
-  const PreprocessorOutputOptions &getPreprocessorOutputOpts() const {
-    return PreprocessorOutputOpts;
-  }
-
-  /// @}
 
 private:
   static bool CreateFromArgsImpl(CompilerInvocation &Res,

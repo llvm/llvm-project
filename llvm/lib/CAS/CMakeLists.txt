@@ -13,7 +13,6 @@ add_llvm_component_library(LLVMCAS
   LazyMappedFileRegionBumpPtr.cpp
   OnDiskCAS.cpp
   OnDiskHashMappedTrie.cpp
-  PluginCAS.cpp
   Utils.cpp
 
   ADDITIONAL_HEADER_DIRS

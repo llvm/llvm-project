@@ -57,13 +57,6 @@
 #include <unistd.h>
 #endif
 
-#if defined(__APPLE__) &&                                                      \
-    __has_include(<libproc.h>) && __has_include(<sys/proc_info.h>)
-#define USE_APPLE_LIBPROC_FOR_DEPSCAN_ANCESTORS
-#include <libproc.h>
-#include <sys/proc_info.h>
-#endif
-
 using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
