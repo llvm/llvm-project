@@ -12,10 +12,10 @@
 # RUN: %lldb %t.dir/testmain.exe -b | FileCheck %s
 
 ## Test with exe on path, with .exe suffix
-# RUN: env "PATH=%t.dir;%PATH%" %lldb testmain.exe -b | FileCheck %s
+# RUN: env PATH="%t.dir;$PATH" %lldb testmain.exe -b | FileCheck %s
 
 ## Test with exe on path, without .exe suffix
-# RUN: env "PATH=%t.dir;%PATH%" %lldb testmain -b | FileCheck %s
+# RUN: env PATH="%t.dir;$PATH" %lldb testmain -b | FileCheck %s
 
 ## Test in cwd, with .exe suffix
 # RUN: cd "%t.dir" && %lldb testmain.exe -b | FileCheck %s
