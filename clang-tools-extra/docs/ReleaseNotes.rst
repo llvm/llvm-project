@@ -110,6 +110,9 @@ Improvements to clang-tidy
   from suppressing diagnostics associated with macro arguments. This fixes
   `Issue 55134 <https://github.com/llvm/llvm-project/issues/55134>`_.
 
+- Invalid parameters are no longer treated as being implicitly unused for the
+  `-misc-unused-parameters` check. This fixes `Issue 56152 <https://github.com/llvm/llvm-project/issues/56152>`_.
+
 New checks
 ^^^^^^^^^^
 
