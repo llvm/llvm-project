@@ -32,14 +32,13 @@ struct D {
 };
 
 struct E {
-  E();
   virtual ~E();
   virtual void func() {
   }
 };
 
 struct F {
-  struct inner {
+  struct F_inner {
   };
   static const int i = 2;
   virtual ~F();
@@ -47,7 +46,7 @@ struct F {
 
 struct G {
   virtual void func();
-  struct inner {
+  struct G_inner {
     int j;
   };
 };
@@ -83,7 +82,7 @@ void f1() {
   x.func();
   E y;
   int i = F::i;
-  F::inner z;
+  F::F_inner z;
   K k;
   k.func();
   L l;
@@ -92,7 +91,7 @@ void f1() {
 
 int main(int argc, char **argv) {
   B b;
-  G::inner c_i;
+  G::G_inner c_i;
   if (argc) {
     A a;
   }
@@ -116,11 +115,13 @@ int main(int argc, char **argv) {
 // CHECK-SAME:                             DIFlagFwdDecl
 // CHECK-NOT:                             identifier:
 // CHECK-SAME:                            ){{$}}
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "A"
+// CHECK: ![[INT:[0-9]+]] = !DIBasicType(name: "int"
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "HdrSize"
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "I"
 // CHECK-NOT:              DIFlagFwdDecl
 // CHECK-SAME:             ){{$}}
 
-// CHECK: ![[INT:[0-9]+]] = !DIBasicType(name: "int"
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "bar"
 // CHECK: !DICompositeType(tag: DW_TAG_union_type, name: "baz"
@@ -173,10 +174,10 @@ int main(int argc, char **argv) {
 // CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK-SAME:          declaration: [[L_FUNC_DECL]]
 
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "inner",{{.*}} line: 50
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "G_inner",
 // CHECK-NOT: DIFlagFwdDecl
 // CHECK-SAME: elements: [[G_INNER_MEM:![0-9]*]]
-// CHECK-SAME: identifier: "_ZTSN1G5innerE"
+// CHECK-SAME: identifier: "_ZTSN1G7G_innerE"
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "G"
 // CHECK-SAME:             DIFlagFwdDecl
@@ -186,8 +187,6 @@ int main(int argc, char **argv) {
 // CHECK: [[G_INNER_I]] = !DIDerivedType(tag: DW_TAG_member, name: "j"
 // CHECK-SAME:                           baseType: ![[INT]]
 
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "A"
-// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "HdrSize"
 //
-// CHECK: ![[EXCEPTLOC]] = !DILocation(line: 100,
-// CHECK: ![[RETLOC]] = !DILocation(line: 99,
+// CHECK: ![[EXCEPTLOC]] = !DILocation(line: 99,
+// CHECK: ![[RETLOC]] = !DILocation(line: 98,

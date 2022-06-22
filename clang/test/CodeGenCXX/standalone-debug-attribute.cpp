@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -DSETATTR=0 -triple x86_64-unknown-linux-gnu -emit-llvm -debug-info-kind=constructor %s -o - | FileCheck %s --check-prefix=DEBUG
-// RUN: %clang_cc1 -DSETATTR=1 -triple x86_64-unknown-linux-gnu -emit-llvm -debug-info-kind=constructor %s -o - | FileCheck %s --check-prefix=WITHATTR
-// Use -debug-info-kind=constructor because it includes all the optimizations.
+// RUN: %clang_cc1 -DSETATTR=0 -triple x86_64-unknown-linux-gnu -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=DEBUG
+// RUN: %clang_cc1 -DSETATTR=1 -triple x86_64-unknown-linux-gnu -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=WITHATTR
 
 #if SETATTR
 #define STANDALONEDEBUGATTR __attribute__((standalone_debug))
