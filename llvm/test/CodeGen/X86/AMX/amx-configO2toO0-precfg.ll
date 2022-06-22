@@ -46,113 +46,110 @@ define dso_local void @test_api(i32 %cond, i16 signext %row, i16 signext %col) l
 ; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW1:%.*]] = getelementptr i8, i8* [[TMP12]], i64 48
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, i8* [[TMP12]], i64 16
 ; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL2:%.*]] = bitcast i8* [[TMP14]] to i16*
-; CHECK-NEXT:    [[TMP15:%.*]] = trunc i16 8 to i8
-; CHECK-NEXT:    store i8 [[TMP15]], i8* [[AMX_TMM_0_SHAPE_ROW1]], align 1
+; CHECK-NEXT:    store i8 8, i8* [[AMX_TMM_0_SHAPE_ROW1]], align 1
 ; CHECK-NEXT:    store i16 [[COL:%.*]], i16* [[AMX_TMM_0_SHAPE_COL2]], align 2
 ; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP12]])
 ; CHECK-NEXT:    [[I9:%.*]] = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 [[COL]], i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 [[COL]], i8* [[I3]], i64 64, x86_amx [[I9]])
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <16 x i32>* [[TMP5]] to i8*
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <16 x i32>* [[TMP5]] to i8*
 ; CHECK-NEXT:    store <16 x i32> zeroinitializer, <16 x i32>* [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, i8* [[TMP16]], i64 0
-; CHECK-NEXT:    store i8 1, i8* [[TMP17]], align 1
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW3:%.*]] = getelementptr i8, i8* [[TMP16]], i64 48
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, i8* [[TMP16]], i64 16
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL4:%.*]] = bitcast i8* [[TMP18]] to i16*
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i16 [[ROW]] to i8
-; CHECK-NEXT:    store i8 [[TMP19]], i8* [[AMX_TMM_0_SHAPE_ROW3]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, i8* [[TMP15]], i64 0
+; CHECK-NEXT:    store i8 1, i8* [[TMP16]], align 1
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW3:%.*]] = getelementptr i8, i8* [[TMP15]], i64 48
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, i8* [[TMP15]], i64 16
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL4:%.*]] = bitcast i8* [[TMP17]] to i16*
+; CHECK-NEXT:    [[TMP18:%.*]] = trunc i16 [[ROW]] to i8
+; CHECK-NEXT:    store i8 [[TMP18]], i8* [[AMX_TMM_0_SHAPE_ROW3]], align 1
 ; CHECK-NEXT:    store i16 [[COL]], i16* [[AMX_TMM_0_SHAPE_COL4]], align 2
-; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP16]])
+; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP15]])
 ; CHECK-NEXT:    [[I10:%.*]] = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 [[ROW]], i16 [[COL]], i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[ROW]], i16 [[COL]], i8* [[I1]], i64 64, x86_amx [[I10]])
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <16 x i32>* [[TMP4]] to i8*
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <16 x i32>* [[TMP4]] to i8*
 ; CHECK-NEXT:    store <16 x i32> zeroinitializer, <16 x i32>* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, i8* [[TMP20]], i64 0
-; CHECK-NEXT:    store i8 1, i8* [[TMP21]], align 1
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW5:%.*]] = getelementptr i8, i8* [[TMP20]], i64 48
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, i8* [[TMP20]], i64 16
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL6:%.*]] = bitcast i8* [[TMP22]] to i16*
-; CHECK-NEXT:    [[TMP23:%.*]] = trunc i16 [[ROW]] to i8
-; CHECK-NEXT:    store i8 [[TMP23]], i8* [[AMX_TMM_0_SHAPE_ROW5]], align 1
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, i8* [[TMP19]], i64 0
+; CHECK-NEXT:    store i8 1, i8* [[TMP20]], align 1
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW5:%.*]] = getelementptr i8, i8* [[TMP19]], i64 48
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, i8* [[TMP19]], i64 16
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL6:%.*]] = bitcast i8* [[TMP21]] to i16*
+; CHECK-NEXT:    [[TMP22:%.*]] = trunc i16 [[ROW]] to i8
+; CHECK-NEXT:    store i8 [[TMP22]], i8* [[AMX_TMM_0_SHAPE_ROW5]], align 1
 ; CHECK-NEXT:    store i16 8, i16* [[AMX_TMM_0_SHAPE_COL6]], align 2
-; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP20]])
+; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP19]])
 ; CHECK-NEXT:    [[I11:%.*]] = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 [[ROW]], i16 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[ROW]], i16 8, i8* [[I5]], i64 64, x86_amx [[I11]])
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast <16 x i32>* [[TMP3]] to i8*
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <16 x i32>* [[TMP3]] to i8*
 ; CHECK-NEXT:    store <16 x i32> zeroinitializer, <16 x i32>* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, i8* [[TMP24]], i64 0
-; CHECK-NEXT:    store i8 1, i8* [[TMP25]], align 1
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW7:%.*]] = getelementptr i8, i8* [[TMP24]], i64 48
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, i8* [[TMP24]], i64 16
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL8:%.*]] = bitcast i8* [[TMP26]] to i16*
-; CHECK-NEXT:    [[TMP27:%.*]] = trunc i16 8 to i8
-; CHECK-NEXT:    store i8 [[TMP27]], i8* [[AMX_TMM_0_SHAPE_ROW7]], align 1
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, i8* [[TMP23]], i64 0
+; CHECK-NEXT:    store i8 1, i8* [[TMP24]], align 1
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW7:%.*]] = getelementptr i8, i8* [[TMP23]], i64 48
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, i8* [[TMP23]], i64 16
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL8:%.*]] = bitcast i8* [[TMP25]] to i16*
+; CHECK-NEXT:    store i8 8, i8* [[AMX_TMM_0_SHAPE_ROW7]], align 1
 ; CHECK-NEXT:    store i16 [[COL]], i16* [[AMX_TMM_0_SHAPE_COL8]], align 2
-; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP24]])
+; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP23]])
 ; CHECK-NEXT:    [[I12:%.*]] = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 [[COL]], i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 [[COL]], i8* [[I3]], i64 64, x86_amx [[I12]])
-; CHECK-NEXT:    [[TMP28:%.*]] = bitcast <16 x i32>* [[TMP2]] to i8*
+; CHECK-NEXT:    [[TMP26:%.*]] = bitcast <16 x i32>* [[TMP2]] to i8*
 ; CHECK-NEXT:    store <16 x i32> zeroinitializer, <16 x i32>* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, i8* [[TMP28]], i64 0
-; CHECK-NEXT:    store i8 1, i8* [[TMP29]], align 1
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW9:%.*]] = getelementptr i8, i8* [[TMP28]], i64 48
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, i8* [[TMP28]], i64 16
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL10:%.*]] = bitcast i8* [[TMP30]] to i16*
-; CHECK-NEXT:    [[TMP31:%.*]] = trunc i16 [[ROW]] to i8
-; CHECK-NEXT:    store i8 [[TMP31]], i8* [[AMX_TMM_0_SHAPE_ROW9]], align 1
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, i8* [[TMP26]], i64 0
+; CHECK-NEXT:    store i8 1, i8* [[TMP27]], align 1
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW9:%.*]] = getelementptr i8, i8* [[TMP26]], i64 48
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, i8* [[TMP26]], i64 16
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL10:%.*]] = bitcast i8* [[TMP28]] to i16*
+; CHECK-NEXT:    [[TMP29:%.*]] = trunc i16 [[ROW]] to i8
+; CHECK-NEXT:    store i8 [[TMP29]], i8* [[AMX_TMM_0_SHAPE_ROW9]], align 1
 ; CHECK-NEXT:    store i16 [[COL]], i16* [[AMX_TMM_0_SHAPE_COL10]], align 2
-; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP28]])
+; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP26]])
 ; CHECK-NEXT:    [[I13:%.*]] = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 [[ROW]], i16 [[COL]], i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[ROW]], i16 [[COL]], i8* [[I1]], i64 64, x86_amx [[I13]])
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast <16 x i32>* [[TMP1]] to i8*
+; CHECK-NEXT:    [[TMP30:%.*]] = bitcast <16 x i32>* [[TMP1]] to i8*
 ; CHECK-NEXT:    store <16 x i32> zeroinitializer, <16 x i32>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, i8* [[TMP32]], i64 0
-; CHECK-NEXT:    store i8 1, i8* [[TMP33]], align 1
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW11:%.*]] = getelementptr i8, i8* [[TMP32]], i64 48
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, i8* [[TMP32]], i64 16
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL12:%.*]] = bitcast i8* [[TMP34]] to i16*
-; CHECK-NEXT:    [[TMP35:%.*]] = trunc i16 [[ROW]] to i8
-; CHECK-NEXT:    store i8 [[TMP35]], i8* [[AMX_TMM_0_SHAPE_ROW11]], align 1
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, i8* [[TMP30]], i64 0
+; CHECK-NEXT:    store i8 1, i8* [[TMP31]], align 1
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW11:%.*]] = getelementptr i8, i8* [[TMP30]], i64 48
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, i8* [[TMP30]], i64 16
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL12:%.*]] = bitcast i8* [[TMP32]] to i16*
+; CHECK-NEXT:    [[TMP33:%.*]] = trunc i16 [[ROW]] to i8
+; CHECK-NEXT:    store i8 [[TMP33]], i8* [[AMX_TMM_0_SHAPE_ROW11]], align 1
 ; CHECK-NEXT:    store i16 [[COL]], i16* [[AMX_TMM_0_SHAPE_COL12]], align 2
-; CHECK-NEXT:    [[AMX_TMM_1_SHAPE_ROW:%.*]] = getelementptr i8, i8* [[TMP32]], i64 49
-; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i8, i8* [[TMP32]], i64 18
-; CHECK-NEXT:    [[AMX_TMM_1_SHAPE_COL:%.*]] = bitcast i8* [[TMP36]] to i16*
-; CHECK-NEXT:    [[TMP37:%.*]] = trunc i16 [[ROW]] to i8
-; CHECK-NEXT:    store i8 [[TMP37]], i8* [[AMX_TMM_1_SHAPE_ROW]], align 1
+; CHECK-NEXT:    [[AMX_TMM_1_SHAPE_ROW:%.*]] = getelementptr i8, i8* [[TMP30]], i64 49
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, i8* [[TMP30]], i64 18
+; CHECK-NEXT:    [[AMX_TMM_1_SHAPE_COL:%.*]] = bitcast i8* [[TMP34]] to i16*
+; CHECK-NEXT:    [[TMP35:%.*]] = trunc i16 [[ROW]] to i8
+; CHECK-NEXT:    store i8 [[TMP35]], i8* [[AMX_TMM_1_SHAPE_ROW]], align 1
 ; CHECK-NEXT:    store i16 8, i16* [[AMX_TMM_1_SHAPE_COL]], align 2
-; CHECK-NEXT:    [[AMX_TMM_2_SHAPE_ROW:%.*]] = getelementptr i8, i8* [[TMP32]], i64 50
-; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i8, i8* [[TMP32]], i64 20
-; CHECK-NEXT:    [[AMX_TMM_2_SHAPE_COL:%.*]] = bitcast i8* [[TMP38]] to i16*
-; CHECK-NEXT:    [[TMP39:%.*]] = trunc i16 8 to i8
-; CHECK-NEXT:    store i8 [[TMP39]], i8* [[AMX_TMM_2_SHAPE_ROW]], align 1
+; CHECK-NEXT:    [[AMX_TMM_2_SHAPE_ROW:%.*]] = getelementptr i8, i8* [[TMP30]], i64 50
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i8, i8* [[TMP30]], i64 20
+; CHECK-NEXT:    [[AMX_TMM_2_SHAPE_COL:%.*]] = bitcast i8* [[TMP36]] to i16*
+; CHECK-NEXT:    store i8 8, i8* [[AMX_TMM_2_SHAPE_ROW]], align 1
 ; CHECK-NEXT:    store i16 [[COL]], i16* [[AMX_TMM_2_SHAPE_COL]], align 2
-; CHECK-NEXT:    [[AMX_TMM_3_SHAPE_ROW:%.*]] = getelementptr i8, i8* [[TMP32]], i64 51
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i8, i8* [[TMP32]], i64 22
-; CHECK-NEXT:    [[AMX_TMM_3_SHAPE_COL:%.*]] = bitcast i8* [[TMP40]] to i16*
-; CHECK-NEXT:    [[TMP41:%.*]] = trunc i16 [[ROW]] to i8
-; CHECK-NEXT:    store i8 [[TMP41]], i8* [[AMX_TMM_3_SHAPE_ROW]], align 1
+; CHECK-NEXT:    [[AMX_TMM_3_SHAPE_ROW:%.*]] = getelementptr i8, i8* [[TMP30]], i64 51
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr i8, i8* [[TMP30]], i64 22
+; CHECK-NEXT:    [[AMX_TMM_3_SHAPE_COL:%.*]] = bitcast i8* [[TMP37]] to i16*
+; CHECK-NEXT:    [[TMP38:%.*]] = trunc i16 [[ROW]] to i8
+; CHECK-NEXT:    store i8 [[TMP38]], i8* [[AMX_TMM_3_SHAPE_ROW]], align 1
 ; CHECK-NEXT:    store i16 [[COL]], i16* [[AMX_TMM_3_SHAPE_COL]], align 2
-; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP32]])
+; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP30]])
 ; CHECK-NEXT:    [[I14:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[ROW]], i16 8, i8* [[I5]], i64 64)
 ; CHECK-NEXT:    [[I15:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 [[COL]], i8* [[I3]], i64 64)
 ; CHECK-NEXT:    [[I16:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[ROW]], i16 [[COL]], i8* [[I1]], i64 64)
 ; CHECK-NEXT:    [[I17:%.*]] = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 [[ROW]], i16 [[COL]], i16 8, x86_amx [[I16]], x86_amx [[I14]], x86_amx [[I15]])
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[ROW]], i16 [[COL]], i8* [[I7]], i64 64, x86_amx [[I17]])
-; CHECK-NEXT:    [[TMP42:%.*]] = bitcast <16 x i32>* [[TMP0]] to i8*
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast <16 x i32>* [[TMP0]] to i8*
 ; CHECK-NEXT:    store <16 x i32> zeroinitializer, <16 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr i8, i8* [[TMP42]], i64 0
-; CHECK-NEXT:    store i8 1, i8* [[TMP43]], align 1
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW13:%.*]] = getelementptr i8, i8* [[TMP42]], i64 48
-; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i8, i8* [[TMP42]], i64 16
-; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL14:%.*]] = bitcast i8* [[TMP44]] to i16*
-; CHECK-NEXT:    [[TMP45:%.*]] = trunc i16 [[ROW]] to i8
-; CHECK-NEXT:    store i8 [[TMP45]], i8* [[AMX_TMM_0_SHAPE_ROW13]], align 1
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i8, i8* [[TMP39]], i64 0
+; CHECK-NEXT:    store i8 1, i8* [[TMP40]], align 1
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_ROW13:%.*]] = getelementptr i8, i8* [[TMP39]], i64 48
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr i8, i8* [[TMP39]], i64 16
+; CHECK-NEXT:    [[AMX_TMM_0_SHAPE_COL14:%.*]] = bitcast i8* [[TMP41]] to i16*
+; CHECK-NEXT:    [[TMP42:%.*]] = trunc i16 [[ROW]] to i8
+; CHECK-NEXT:    store i8 [[TMP42]], i8* [[AMX_TMM_0_SHAPE_ROW13]], align 1
 ; CHECK-NEXT:    store i16 [[COL]], i16* [[AMX_TMM_0_SHAPE_COL14]], align 2
-; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP42]])
+; CHECK-NEXT:    call void @llvm.x86.ldtilecfg.internal(i8* [[TMP39]])
 ; CHECK-NEXT:    [[I18:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[ROW]], i16 [[COL]], i8* [[I7]], i64 64)
 ; CHECK-NEXT:    tail call void @llvm.x86.tilestored64.internal(i16 [[ROW]], i16 [[COL]], i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32, x86_amx [[I18]])
 ; CHECK-NEXT:    ret void
