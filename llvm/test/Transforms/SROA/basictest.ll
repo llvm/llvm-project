@@ -665,23 +665,17 @@ define void @test14(...) nounwind uwtable {
 entry:
   %a = alloca %test14.struct
   %p = alloca ptr
-  %0 = bitcast ptr %a to ptr
-  %1 = getelementptr i8, ptr %0, i64 12
-  %2 = bitcast ptr %1 to ptr
-  %3 = getelementptr inbounds %test14.struct, ptr %2, i32 0, i32 0
-  %4 = getelementptr inbounds %test14.struct, ptr %a, i32 0, i32 0
-  %5 = bitcast ptr %3 to ptr
-  %6 = bitcast ptr %4 to ptr
+  %0 = getelementptr i8, ptr %a, i64 12
+  %1 = load i32, ptr %a, align 4
+  store i32 %1, ptr %0, align 4
+  %2 = getelementptr inbounds i32, ptr %0, i32 1
+  %3 = getelementptr inbounds i32, ptr %a, i32 1
+  %4 = load i32, ptr %3, align 4
+  store i32 %4, ptr %2, align 4
+  %5 = getelementptr inbounds i32, ptr %0, i32 2
+  %6 = getelementptr inbounds i32, ptr %a, i32 2
   %7 = load i32, ptr %6, align 4
   store i32 %7, ptr %5, align 4
-  %8 = getelementptr inbounds i32, ptr %5, i32 1
-  %9 = getelementptr inbounds i32, ptr %6, i32 1
-  %10 = load i32, ptr %9, align 4
-  store i32 %10, ptr %8, align 4
-  %11 = getelementptr inbounds i32, ptr %5, i32 2
-  %12 = getelementptr inbounds i32, ptr %6, i32 2
-  %13 = load i32, ptr %12, align 4
-  store i32 %13, ptr %11, align 4
   ret void
 }
 
@@ -1121,21 +1115,20 @@ define void @PR14059.1(ptr %d) {
 
 entry:
   %X.sroa.0.i = alloca double, align 8
-  %0 = bitcast ptr %X.sroa.0.i to ptr
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %0)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %X.sroa.0.i)
 
   ; Store to the low 32-bits...
   store i32 0, ptr %X.sroa.0.i, align 8
 
   ; Also use a memset to the middle 32-bits for fun.
-  %X.sroa.0.2.raw_idx2.i = getelementptr inbounds i8, ptr %0, i32 2
+  %X.sroa.0.2.raw_idx2.i = getelementptr inbounds i8, ptr %X.sroa.0.i, i32 2
   call void @llvm.memset.p0.i64(ptr %X.sroa.0.2.raw_idx2.i, i8 0, i64 4, i1 false)
 
   ; Or a memset of the whole thing.
-  call void @llvm.memset.p0.i64(ptr %0, i8 0, i64 8, i1 false)
+  call void @llvm.memset.p0.i64(ptr %X.sroa.0.i, i8 0, i64 8, i1 false)
 
   ; Write to the high 32-bits with a memcpy.
-  %X.sroa.0.4.raw_idx4.i = getelementptr inbounds i8, ptr %0, i32 4
+  %X.sroa.0.4.raw_idx4.i = getelementptr inbounds i8, ptr %X.sroa.0.i, i32 4
   call void @llvm.memcpy.p0.p0.i32(ptr %X.sroa.0.4.raw_idx4.i, ptr %d, i32 4, i1 false)
 
   ; Store to the high 32-bits...
@@ -1146,7 +1139,7 @@ entry:
   %accum.real.i = load double, ptr %d, align 8
   %add.r.i = fadd double %accum.real.i, %X.sroa.0.0.load1.i
   store double %add.r.i, ptr %d, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %X.sroa.0.i)
   ret void
 }
 
@@ -1176,8 +1169,7 @@ define i64 @PR14059.2(ptr %phi) {
 entry:
   %retval = alloca { float, float }, align 4
 
-  %0 = bitcast ptr %retval to ptr
-  store i64 0, ptr %0
+  store i64 0, ptr %retval
 
   %phi.realp = getelementptr inbounds { float, float }, ptr %phi, i32 0, i32 0
   %phi.real = load float, ptr %phi.realp
@@ -1189,8 +1181,8 @@ entry:
   store float %phi.real, ptr %real
   store float %phi.imag, ptr %imag
 
-  %1 = load i64, ptr %0, align 1
-  ret i64 %1
+  %0 = load i64, ptr %retval, align 1
+  ret i64 %0
 }
 
 define void @PR14105(ptr %ptr) {
@@ -1781,11 +1773,10 @@ entry:
 define void @PR25873(ptr %outData) {
 ; CHECK-LABEL: @PR25873(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[OUTDATA:%.*]] to ptr
-; CHECK-NEXT:    store i32 1123418112, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[DOTSROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    store i32 1123418112, ptr [[OUTDATA:%.*]], align 4
+; CHECK-NEXT:    [[DOTSROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA:%.*]], i64 4
 ; CHECK-NEXT:    store i32 1139015680, ptr [[DOTSROA_IDX]], align 4
-; CHECK-NEXT:    [[TMPDATA_SROA_6_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
+; CHECK-NEXT:    [[TMPDATA_SROA_6_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA:%.*]], i64 8
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_EXT:%.*]] = zext i32 1139015680 to i64
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_SHIFT:%.*]] = shl i64 [[TMPDATA_SROA_6_SROA_4_0_INSERT_EXT]], 32
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_MASK:%.*]] = and i64 undef, 4294967295
@@ -1798,19 +1789,15 @@ define void @PR25873(ptr %outData) {
 ;
 entry:
   %tmpData = alloca %struct.STest, align 8
-  %0 = bitcast ptr %tmpData to ptr
-  call void @llvm.lifetime.start.p0(i64 16, ptr %0)
+  call void @llvm.lifetime.start.p0(i64 16, ptr %tmpData)
   store float 1.230000e+02, ptr %tmpData, align 8
   %y = getelementptr inbounds %struct.STest, ptr %tmpData, i64 0, i32 0, i32 1
   store float 4.560000e+02, ptr %y, align 4
   %m_posB = getelementptr inbounds %struct.STest, ptr %tmpData, i64 0, i32 1
-  %1 = bitcast ptr %tmpData to ptr
-  %2 = bitcast ptr %m_posB to ptr
-  %3 = load i64, ptr %1, align 8
-  store i64 %3, ptr %2, align 8
-  %4 = bitcast ptr %outData to ptr
-  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %4, ptr align 4 %0, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0(i64 16, ptr %0)
+  %0 = load i64, ptr %tmpData, align 8
+  store i64 %0, ptr %m_posB, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %outData, ptr align 4 %tmpData, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 16, ptr %tmpData)
   ret void
 }
 
@@ -1823,11 +1810,9 @@ define void @PR27999() unnamed_addr {
 ;
 entry-block:
   %0 = alloca [2 x i64], align 8
-  %1 = bitcast ptr %0 to ptr
-  call void @llvm.lifetime.start.p0(i64 16, ptr %1)
-  %2 = getelementptr inbounds [2 x i64], ptr %0, i32 0, i32 1
-  %3 = bitcast ptr %2 to ptr
-  call void @llvm.lifetime.end.p0(i64 8, ptr %3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr %0)
+  %1 = getelementptr inbounds [2 x i64], ptr %0, i32 0, i32 1
+  call void @llvm.lifetime.end.p0(i64 8, ptr %1)
   ret void
 }
 
@@ -1839,8 +1824,7 @@ define void @PR29139() {
 bb1:
   %e.7.sroa.6.i = alloca i32, align 1
   %e.7.sroa.6.0.load81.i = load i32, ptr %e.7.sroa.6.i, align 1
-  %0 = bitcast ptr %e.7.sroa.6.i to ptr
-  call void @llvm.lifetime.end.p0(i64 2, ptr %0)
+  call void @llvm.lifetime.end.p0(i64 2, ptr %e.7.sroa.6.i)
   ret void
 }
 
@@ -1884,12 +1868,11 @@ entry:
   %t = alloca { i64, i32, i32 }
 
   %b = getelementptr { i64, i32, i32 }, ptr %t, i32 0, i32 1
-  %0 = bitcast ptr %b to ptr
-  store i64 %v, ptr %0
+  store i64 %v, ptr %b
 
-  %1 = load i32, ptr %b
+  %0 = load i32, ptr %b
   %c = getelementptr { i64, i32, i32 }, ptr %t, i32 0, i32 2
-  store i32 %1, ptr %c
+  store i32 %0, ptr %c
   ret void
 }
 
@@ -1906,7 +1889,6 @@ define void @test29(i32 %num, i32 %tid) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TID:%.*]], 0
 ; CHECK-NEXT:    [[CONV_I:%.*]] = zext i32 [[TID]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [10 x float], ptr @array, i64 0, i64 [[CONV_I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[ARRAYIDX5]] to ptr
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ [[NUM]], [[BB1]] ], [ [[SUB:%.*]], [[BB5:%.*]] ]
@@ -1914,7 +1896,7 @@ define void @test29(i32 %num, i32 %tid) {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    store i32 undef, ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i32 undef, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[SUB]] = add i32 [[I_02]], -1
@@ -1936,10 +1918,8 @@ entry:
 bb1:
   %tobool = icmp eq i32 %tid, 0
   %conv.i = zext i32 %tid to i64
-  %0 = bitcast ptr %ra to ptr
-  %1 = load i32, ptr %0, align 4
+  %0 = load i32, ptr %ra, align 4
   %arrayidx5 = getelementptr inbounds [10 x float], ptr @array, i64 0, i64 %conv.i
-  %2 = bitcast ptr %arrayidx5 to ptr
   br label %bb2
 
 bb2:
@@ -1950,7 +1930,7 @@ bb3:
   br label %bb5
 
 bb4:
-  store i32 %1, ptr %2, align 4
+  store i32 %0, ptr %arrayidx5, align 4
   br label %bb5
 
 bb5:

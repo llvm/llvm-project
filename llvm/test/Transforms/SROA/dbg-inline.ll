@@ -12,17 +12,16 @@ target triple = "x86_64-apple-macosx10.15.0"
 define i64 @_Z1g4pair(i64 %p.coerce0, i64 %p.coerce1) #0 !dbg !8 {
 entry:
   %p = alloca %struct.pair, align 8
-  %0 = getelementptr inbounds %struct.pair, ptr %p, i32 0, i32 0
-  store i64 %p.coerce0, ptr %0, align 8
-  %1 = getelementptr inbounds %struct.pair, ptr %p, i32 0, i32 1
-  store i64 %p.coerce1, ptr %1, align 8
+  store i64 %p.coerce0, ptr %p, align 8
+  %0 = getelementptr inbounds %struct.pair, ptr %p, i32 0, i32 1
+  store i64 %p.coerce1, ptr %0, align 8
   ; CHECK-DAG: call void @llvm.dbg.value(metadata i64 %p.coerce0, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg ![[LOC:[0-9]+]]
   ; CHECK-DAG: call void @llvm.dbg.value(metadata i64 %p.coerce1, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg ![[LOC]]
   ; CHECK-DAG: call void @llvm.dbg.value(metadata i64 %p.coerce0, metadata ![[INLINED_VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg ![[INLINED_LOC:[0-9]+]]
   ; CHECK-DAG: call void @llvm.dbg.value(metadata i64 %p.coerce1, metadata ![[INLINED_VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg ![[INLINED_LOC]]
   call void @llvm.dbg.declare(metadata ptr %p, metadata !17, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.declare(metadata ptr %p, metadata !21, metadata !DIExpression()), !dbg !23
-  %x2 = load i64, ptr %0, align 8, !dbg !25
+  %x2 = load i64, ptr %p, align 8, !dbg !25
   ret i64 %x2, !dbg !26
 }
 

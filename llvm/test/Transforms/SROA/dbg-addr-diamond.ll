@@ -13,7 +13,6 @@ target triple = "x86_64-pc-windows-msvc19.0.24215"
 define void @if_else(i32 %cond, i32 %a, i32 %b) !dbg !8 {
 entry:
   %p = alloca %struct.Pair, align 4
-  %0 = bitcast ptr %p to ptr, !dbg !25
   call void @llvm.dbg.addr(metadata ptr %p, metadata !20, metadata !DIExpression()), !dbg !26
   store i32 %a, ptr %p, align 4, !dbg !28
   %y = getelementptr inbounds %struct.Pair, ptr %p, i32 0, i32 1, !dbg !34
@@ -34,9 +33,7 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %1 = bitcast ptr %p to ptr, !dbg !51
-  %2 = bitcast ptr @pair to ptr, !dbg !51
-  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %2, ptr align 4 %1, i64 8, i1 false), !dbg !51
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 @pair, ptr align 4 %p, i64 8, i1 false), !dbg !51
   ret void
 }
 

@@ -16,10 +16,8 @@ entry:
   call void @llvm.dbg.declare(metadata ptr %retval, metadata !1, metadata !7), !dbg !8
 ; Checks that SROA still inserts a bit_piece expression, even if it produces only one piece
 ; (as long as that piece is smaller than the whole thing)
-  %0 = bitcast ptr %retval to ptr
-  %1 = getelementptr inbounds i8, ptr %0, i64 8
-  %2 = bitcast ptr %1 to ptr
-  store ptr poison, ptr %2, align 8
+  %0 = getelementptr inbounds i8, ptr %retval, i64 8
+  store ptr poison, ptr %0, align 8
   ret void
 }
 

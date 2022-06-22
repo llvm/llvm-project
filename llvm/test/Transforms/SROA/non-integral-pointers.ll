@@ -88,11 +88,9 @@ alwaysTaken:
 ; CHECK-NOT: int2ptr
 define ptr@f2(ptr addrspace(4) %p) {
   %1 = alloca %union.anon, align 8
-  %2 = bitcast ptr %1 to ptr
-  store ptr addrspace(4) %p, ptr %2, align 8
-  %3 = bitcast ptr %1 to ptr
-  %4 = load ptr, ptr %3, align 8
-  ret ptr %4
+  store ptr addrspace(4) %p, ptr %1, align 8
+  %2 = load ptr, ptr %1, align 8
+  ret ptr %2
 }
 
 declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)

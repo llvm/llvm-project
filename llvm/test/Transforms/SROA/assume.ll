@@ -19,9 +19,7 @@ define void @_ZN2bg2baIiEC2ES_(i64 %v) {
 entry:
   %y = alloca i64, align 8
   store i64 %v, ptr %y, align 8
-  %0 = bitcast ptr %y to ptr
-  %1 = bitcast ptr %0 to ptr
-  call void @llvm.assume(i1 true) [ "nonnull"(ptr %1) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %y) ]
   ret void
 }
 

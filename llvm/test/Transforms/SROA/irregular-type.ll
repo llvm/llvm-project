@@ -17,11 +17,10 @@ define i8 @foo(i23 %0) {
 ;
 Entry:
   %1 = alloca %S
-  %2 = bitcast ptr %1 to ptr
-  store i23 %0, ptr %2
-  %3 = getelementptr inbounds %S, ptr %1, i64 0, i32 0, i32 1
-  %4 = load i8, ptr %3
-  ret i8 %4
+  store i23 %0, ptr %1
+  %2 = getelementptr inbounds %S, ptr %1, i64 0, i32 0, i32 1
+  %3 = load i8, ptr %2
+  ret i8 %3
 }
 
 define i32 @bar(i16 %0) {
@@ -35,10 +34,8 @@ define i32 @bar(i16 %0) {
 ;
 Entry:
   %1 = alloca %S
-  %2 = bitcast ptr %1 to ptr
-  store i16 %0, ptr %2
-  %3 = getelementptr inbounds %S, ptr %1, i64 0, i32 0
-  %4 = load i17, ptr %3
-  %5 = zext i17 %4 to i32
-  ret i32 %5
+  store i16 %0, ptr %1
+  %2 = load i17, ptr %1
+  %3 = zext i17 %2 to i32
+  ret i32 %3
 }

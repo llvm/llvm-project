@@ -10,9 +10,7 @@ define void @skipped_inttype_first(ptr) {
 ; CHECK-LABEL: @skipped_inttype_first
 ; CHECK: alloca ptr
   %arg = alloca { ptr, i32 }, align 8
-  %2 = bitcast ptr %0 to ptr
-  %3 = bitcast ptr %arg to ptr
-  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %3, ptr align 8 %2, i32 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %arg, ptr align 8 %0, i32 16, i1 false)
   %b = getelementptr inbounds { ptr, i32 }, ptr %arg, i64 0, i32 0
   %b0 = load i63, ptr %b
   %b1 = load ptr, ptr %b
@@ -23,9 +21,7 @@ define void @skipped_inttype_last(ptr) {
 ; CHECK-LABEL: @skipped_inttype_last
 ; CHECK: alloca ptr
   %arg = alloca { ptr, i32 }, align 8
-  %2 = bitcast ptr %0 to ptr
-  %3 = bitcast ptr %arg to ptr
-  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %3, ptr align 8 %2, i32 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %arg, ptr align 8 %0, i32 16, i1 false)
   %b = getelementptr inbounds { ptr, i32 }, ptr %arg, i64 0, i32 0
   %b1 = load ptr, ptr %b
   %b0 = load i63, ptr %b

@@ -78,9 +78,8 @@ for.body:                                         ; preds = %for.cond
   store float %add.i, ptr %ref.tmp, align 4, !alias.scope !3, !llvm.access.group !11
   %imaginary_.i.i4 = getelementptr inbounds %class.Complex, ptr %ref.tmp, i64 0, i32 1
   store float %add4.i, ptr %imaginary_.i.i4, align 4, !alias.scope !3, !llvm.access.group !11
-  %6 = bitcast ptr %arrayidx1 to ptr
-  %7 = load i64, ptr %ref.tmp, align 8, !llvm.access.group !11
-  store i64 %7, ptr %6, align 4, !llvm.access.group !11
+  %6 = load i64, ptr %ref.tmp, align 8, !llvm.access.group !11
+  store i64 %6, ptr %arrayidx1, align 4, !llvm.access.group !11
   %inc = add nsw i64 %offset.0, 1
   br label %for.cond, !llvm.loop !1
 

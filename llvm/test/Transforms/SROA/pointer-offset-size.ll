@@ -9,18 +9,15 @@ define i16 @test(ptr %ts2.i) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S_SROA_0:%.*]] = alloca [3 x i8], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[TS2_I:%.*]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TMP0]], ptr align 8 [[S_SROA_0]], i32 3, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TS2_I:%.*]], ptr align 8 [[S_SROA_0]], i32 3, i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[TS2_I]], align 2
 ; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
 entry:
   %s = alloca %struct.test
-  %0 = bitcast ptr %ts2.i to ptr
-  %1 = bitcast ptr %s to ptr
-  call void @llvm.memcpy.p0.p0.i32(ptr %0, ptr %1, i32 3, i1 false)
-  %2 = load i16, ptr %ts2.i
-  ret i16 %2
+  call void @llvm.memcpy.p0.p0.i32(ptr %ts2.i, ptr %s, i32 3, i1 false)
+  %0 = load i16, ptr %ts2.i
+  ret i16 %0
 }
 
 declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1)
