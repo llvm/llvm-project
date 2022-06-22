@@ -68,7 +68,7 @@ namespace mlir {
 ///      context and the key type for this storage.
 ///
 ///    - If they have a mutable component, this component must not be a part of
-//       the key.
+///      the key.
 class Type {
 public:
   /// Utility class for implementing types.
