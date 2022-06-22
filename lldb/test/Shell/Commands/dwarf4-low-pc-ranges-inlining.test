@@ -1,0 +1,13 @@
+# REQUIRES: system-linux
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir %t.dir
+# RUN: cd %t.dir
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-low-pc-ranges-inlining.s -o %t.dir/main4.o
+# RUN: %clang %t.dir/main4.o -o %t.dir/main4.exe
+# RUN: %lldb -b -o 'b main' %t.dir/main4.exe &> %t.dir/output.txt
+# RUN: cat %t.dir/output.txt | FileCheck %s
+
+# Test checks lldb handles a case of a DIE with DW_AT_low_pc with 0x0 address, and DW_AT_ranges that point to end of list.
+# CHECK-NOT: error: main4.exe
+# CHECK: Breakpoint 1: where
