@@ -140,7 +140,7 @@ def TestWrongNumberOfResultsOp
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
     ::mlir::FailureOr<::llvm::SmallVector<::mlir::Operation *>> applyToOne(
-        ::mlir::Operation *target);
+        ::mlir::Operation *target, transform::TransformState &state);
   }];
 }
 
