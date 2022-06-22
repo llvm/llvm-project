@@ -26,7 +26,7 @@ struct CodeGenIntrinsic {
   Record *TheDef;             // The actual record defining this intrinsic.
   std::string Name;           // The name of the LLVM function "llvm.bswap.i32"
   std::string EnumName;       // The name of the enum "bswap_i32"
-  std::string GCCBuiltinName; // Name of the corresponding GCC builtin, or "".
+  std::string ClangBuiltinName; // Name of the corresponding GCC builtin, or "".
   std::string MSBuiltinName;  // Name of the corresponding MS builtin, or "".
   std::string TargetPrefix;   // Target prefix, e.g. "ppc" for t-s intrinsics.
 

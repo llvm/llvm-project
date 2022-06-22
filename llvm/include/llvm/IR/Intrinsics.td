@@ -385,11 +385,11 @@ class DefaultAttrsIntrinsic<list<LLVMType> ret_types,
                             intr_properties, name,
                             sd_properties, /*disable_default_attributes*/ 0> {}
 
-/// GCCBuiltin - If this intrinsic exactly corresponds to a GCC builtin, this
+/// ClangBuiltin - If this intrinsic exactly corresponds to a Clang builtin, this
 /// specifies the name of the builtin.  This provides automatic CBE and CFE
 /// support.
-class GCCBuiltin<string name> {
-  string GCCBuiltinName = name;
+class ClangBuiltin<string name> {
+  string ClangBuiltinName = name;
 }
 
 class MSBuiltin<string name> {
@@ -545,14 +545,14 @@ def int_seh_scope_end : Intrinsic<[], [], [IntrNoMem]>;
 // Note: we treat stacksave/stackrestore as writemem because we don't otherwise
 // model their dependencies on allocas.
 def int_stacksave     : DefaultAttrsIntrinsic<[llvm_ptr_ty]>,
-                        GCCBuiltin<"__builtin_stack_save">;
+                        ClangBuiltin<"__builtin_stack_save">;
 def int_stackrestore  : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>,
-                        GCCBuiltin<"__builtin_stack_restore">;
+                        ClangBuiltin<"__builtin_stack_restore">;
 
 def int_get_dynamic_area_offset : DefaultAttrsIntrinsic<[llvm_anyint_ty]>;
 
 def int_thread_pointer : DefaultAttrsIntrinsic<[llvm_ptr_ty], [], [IntrNoMem]>,
-                         GCCBuiltin<"__builtin_thread_pointer">;
+                         ClangBuiltin<"__builtin_thread_pointer">;
 
 // IntrInaccessibleMemOrArgMemOnly is a little more pessimistic than strictly
 // necessary for prefetch, however it does conveniently prevent the prefetch
@@ -731,7 +731,7 @@ def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                [IntrNoMem, IntrSpeculatable, IntrWillReturn,
                                 ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
                                 ImmArg<ArgIndex<3>>]>,
-                               GCCBuiltin<"__builtin_object_size">;
+                               ClangBuiltin<"__builtin_object_size">;
 
 //===--------------- Access to Floating Point Environment -----------------===//
 //
@@ -1014,7 +1014,7 @@ def int_eh_exceptioncode : Intrinsic<[llvm_i32_ty], [llvm_token_ty], [IntrNoMem]
 // callee-saved registers to be saved and restored (regardless of whether they
 // are used) in the calling function. It is used by libgcc_eh.
 def int_eh_unwind_init: Intrinsic<[]>,
-                        GCCBuiltin<"__builtin_unwind_init">;
+                        ClangBuiltin<"__builtin_unwind_init">;
 
 def int_eh_dwarf_cfa  : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty]>;
 
@@ -1055,11 +1055,11 @@ def int_init_trampoline : DefaultAttrsIntrinsic<
     [], [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
     [IntrArgMemOnly, NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
      ReadNone<ArgIndex<1>>, ReadNone<ArgIndex<2>>]>,
-    GCCBuiltin<"__builtin_init_trampoline">;
+    ClangBuiltin<"__builtin_init_trampoline">;
 
 def int_adjust_trampoline : DefaultAttrsIntrinsic<
     [llvm_ptr_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>,
-    GCCBuiltin<"__builtin_adjust_trampoline">;
+    ClangBuiltin<"__builtin_adjust_trampoline">;
 
 //===------------------------ Overflow Intrinsics -------------------------===//
 //
@@ -1339,9 +1339,9 @@ def int_coro_subfn_addr : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i8_ty],
 ///===-------------------------- Other Intrinsics --------------------------===//
 //
 def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold]>,
-               GCCBuiltin<"__builtin_trap">;
+               ClangBuiltin<"__builtin_trap">;
 def int_debugtrap : Intrinsic<[]>,
-                    GCCBuiltin<"__builtin_debugtrap">;
+                    ClangBuiltin<"__builtin_debugtrap">;
 def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
                               [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
 

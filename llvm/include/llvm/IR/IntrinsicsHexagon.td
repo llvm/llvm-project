@@ -18,7 +18,7 @@ let TargetPrefix = "hexagon" in {
   class Hexagon_Intrinsic<string GCCIntSuffix, list<LLVMType> ret_types,
                               list<LLVMType> param_types,
                               list<IntrinsicProperty> properties>
-    : GCCBuiltin<!strconcat("__builtin_", GCCIntSuffix)>,
+    : ClangBuiltin<!strconcat("__builtin_", GCCIntSuffix)>,
       Intrinsic<ret_types, param_types, properties>;
 
   /// Hexagon_NonGCC_Intrinsic - Base class for bitcode convertible Hexagon
