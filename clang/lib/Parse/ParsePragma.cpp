@@ -804,7 +804,7 @@ void Parser::HandlePragmaFEnvRound() {
       reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
 
   SourceLocation PragmaLoc = ConsumeAnnotationToken();
-  Actions.setRoundingMode(PragmaLoc, RM);
+  Actions.ActOnPragmaFEnvRound(PragmaLoc, RM);
 }
 
 StmtResult Parser::HandlePragmaCaptured()

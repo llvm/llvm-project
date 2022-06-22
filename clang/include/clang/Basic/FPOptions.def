@@ -14,9 +14,10 @@
 
 // OPTION(name, type, width, previousName)
 OPTION(FPContractMode, LangOptions::FPModeKind, 2, First)
-OPTION(RoundingMode, LangOptions::RoundingMode, 3, FPContractMode)
-OPTION(FPExceptionMode, LangOptions::FPExceptionModeKind, 2, RoundingMode)
-OPTION(AllowFEnvAccess, bool, 1, FPExceptionMode)
+OPTION(RoundingMath, bool, 1, FPContractMode)
+OPTION(ConstRoundingMode, LangOptions::RoundingMode, 3, RoundingMath)
+OPTION(SpecifiedExceptionMode, LangOptions::FPExceptionModeKind, 2, ConstRoundingMode)
+OPTION(AllowFEnvAccess, bool, 1, SpecifiedExceptionMode)
 OPTION(AllowFPReassociate, bool, 1, AllowFEnvAccess)
 OPTION(NoHonorNaNs, bool, 1, AllowFPReassociate)
 OPTION(NoHonorInfs, bool, 1, NoHonorNaNs)
