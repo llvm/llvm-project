@@ -1561,7 +1561,7 @@ struct UndoComplexPattern : public mlir::RewritePattern {
       return mlir::failure();
     auto insval2 = mlir::dyn_cast_or_null<fir::InsertValueOp>(
         insval.getAdt().getDefiningOp());
-    if (!insval2 || !mlir::isa<fir::UndefOp>(insval2.getAdt().getDefiningOp()))
+    if (!insval2)
       return mlir::failure();
     auto binf = mlir::dyn_cast_or_null<FltOp>(insval.getVal().getDefiningOp());
     auto binf2 =

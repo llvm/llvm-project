@@ -138,6 +138,13 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       // two distinct double arguments
       marshal.emplace_back(eleTy, AT{});
       marshal.emplace_back(eleTy, AT{});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, byval, align 16
+      mlir::TypeRange range = {eleTy, eleTy};
+      marshal.emplace_back(fir::ReferenceType::get(
+                               mlir::TupleType::get(eleTy.getContext(), range)),
+                           AT{/*align=*/16, /*byval=*/true});
     } else {
       TODO(loc, "complex for this precision");
     }
@@ -157,6 +164,13 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       mlir::TypeRange range = {eleTy, eleTy};
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, sret, align 16
+      mlir::TypeRange range = {eleTy, eleTy};
+      marshal.emplace_back(fir::ReferenceType::get(
+                               mlir::TupleType::get(eleTy.getContext(), range)),
+                           AT{/*align=*/16, /*byval=*/false, /*sret=*/true});
     } else {
       TODO(loc, "complex for this precision");
     }
