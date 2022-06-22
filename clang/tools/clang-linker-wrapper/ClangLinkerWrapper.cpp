@@ -1022,7 +1022,7 @@ Expected<std::string> writeOffloadFile(const OffloadFile &File) {
   if (Error Err = createOutputFile(Prefix + "-" + Binary.getTriple() + "-" +
                                        Binary.getArch(),
                                    Suffix, TempFile))
-    return Err;
+    return std::move(Err);
 
   Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
       FileOutputBuffer::create(TempFile, Binary.getImage().size());
@@ -1032,7 +1032,7 @@ Expected<std::string> writeOffloadFile(const OffloadFile &File) {
   std::copy(Binary.getImage().bytes_begin(), Binary.getImage().bytes_end(),
             Output->getBufferStart());
   if (Error E = Output->commit())
-    return E;
+    return std::move(E);
 
   return static_cast<std::string>(TempFile);
 }
@@ -1188,7 +1188,7 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles) {
     // First link and remove all the input files containing bitcode.
     SmallVector<std::string> InputFiles;
     if (Error Err = linkBitcodeFiles(Input, InputFiles, Triple, Arch))
-      return Err;
+      return std::move(Err);
 
     // Write any remaining device inputs to an output file for the linker job.
     for (const OffloadFile &File : Input) {
