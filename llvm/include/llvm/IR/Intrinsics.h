@@ -104,8 +104,8 @@ namespace Intrinsic {
   int lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
                                 StringRef Name);
 
-  /// Map a GCC builtin name to an intrinsic ID.
-  ID getIntrinsicForGCCBuiltin(const char *Prefix, StringRef BuiltinName);
+  /// Map a Clang builtin name to an intrinsic ID.
+  ID getIntrinsicForClangBuiltin(const char *Prefix, StringRef BuiltinName);
 
   /// Map a MS builtin name to an intrinsic ID.
   ID getIntrinsicForMSBuiltin(const char *Prefix, StringRef BuiltinName);
