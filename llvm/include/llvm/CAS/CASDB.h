@@ -495,8 +495,6 @@ public:
 /// FIXME: Remove this after updating callers.
 using BlobProxy = LeafNodeProxy;
 
-Expected<std::unique_ptr<CASDB>>
-createPluginCAS(StringRef PluginPath, ArrayRef<std::string> PluginArgs = None);
 std::unique_ptr<CASDB> createInMemoryCAS();
 
 /// Gets or creates a persistent on-disk path at \p Path.

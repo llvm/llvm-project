@@ -243,7 +243,7 @@ static void checkWindows(sys::path::Style PathStyle) {
 TEST(PrefixMapperTest, mapWindows) { checkWindows(sys::path::Style::windows); }
 
 TEST(PrefixMapperTest, mapNative) {
-  if (sys::path::system_style() == sys::path::Style::posix)
+  if (sys::path::is_style_posix(sys::path::Style::native))
     checkPosix(sys::path::Style::native);
   else
     checkWindows(sys::path::Style::native);

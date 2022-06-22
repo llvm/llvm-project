@@ -73,7 +73,7 @@ static bool startsWith(StringRef Path, StringRef Prefix,
                        sys::path::Style PathStyle) {
   if (PathStyle == sys::path::Style::posix ||
       (PathStyle == sys::path::Style::native &&
-       sys::path::system_style() == sys::path::Style::posix))
+       sys::path::is_style_posix(sys::path::Style::native)))
     return Path.startswith(Prefix);
 
   if (Path.size() < Prefix.size())
