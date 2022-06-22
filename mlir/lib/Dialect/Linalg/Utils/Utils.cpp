@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -140,6 +141,41 @@ static void unpackRanges(ArrayRef<Range> ranges, SmallVectorImpl<Value> &lbs,
 
 namespace mlir {
 namespace linalg {
+
+bool allIndexingsAreProjectedPermutation(LinalgOp op) {
+  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
+    return m.isProjectedPermutation(/*allowZeroInResults=*/true);
+  });
+}
+
+bool hasOnlyScalarElementwiseOp(Region &r) {
+  if (!llvm::hasSingleElement(r))
+    return false;
+  for (Operation &op : r.front()) {
+    if (!(isa<arith::ConstantOp, func::ConstantOp, linalg::YieldOp,
+              linalg::IndexOp>(op) ||
+          OpTrait::hasElementwiseMappableTraits(&op)) ||
+        llvm::any_of(op.getResultTypes(),
+                     [](Type type) { return !type.isIntOrIndexOrFloat(); }))
+      return false;
+  }
+  return true;
+}
+
+bool isElementwise(LinalgOp op) {
+  if (op.getNumLoops() != op.getNumParallelLoops())
+    return false;
+
+  if (!allIndexingsAreProjectedPermutation(op))
+    return false;
+
+  // TODO: relax the restrictions on indexing map.
+  for (OpOperand *opOperand : op.getOutputOperands()) {
+    if (!op.getTiedIndexingMap(opOperand).isPermutation())
+      return false;
+  }
+  return hasOnlyScalarElementwiseOp(op->getRegion(0));
+}
 
 bool isPermutation(ArrayRef<int64_t> permutation) {
   // Count the number of appearances for all indices.
