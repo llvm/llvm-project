@@ -142,8 +142,9 @@ public:
 
   bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B) const;
 
-  void addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
-               unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
+  void addFact(CmpInst::Predicate Pred, Value *A, Value *B, bool IsNegated,
+               unsigned NumIn, unsigned NumOut,
+               SmallVectorImpl<StackEntry> &DFSInStack);
 
   /// Turn a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
   /// constraints, using indices from the corresponding constraint system.
@@ -526,19 +527,19 @@ void State::addInfoFor(BasicBlock &BB) {
     WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
 }
 
-void ConstraintInfo::addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
-                             unsigned NumOut,
+void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
+                             bool IsNegated, unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
   // If the constraint has a pre-condition, skip the constraint if it does not
   // hold.
   DenseMap<Value *, unsigned> NewIndices;
-  auto R = getConstraint(Condition, NewIndices);
+  auto R = getConstraint(Pred, A, B, NewIndices);
   if (!R.isValid(*this))
     return;
 
-  LLVM_DEBUG(dbgs() << "Adding " << *Condition << " " << IsNegated << "\n");
+  //LLVM_DEBUG(dbgs() << "Adding " << *Condition << " " << IsNegated << "\n");
   bool Added = false;
-  assert(CmpInst::isSigned(Condition->getPredicate()) == R.IsSigned &&
+  assert(CmpInst::isSigned(Pred) == R.IsSigned &&
          "condition and constraint signs must match");
   auto &CSToUse = getCS(R.IsSigned);
   if (R.Coefficients.empty())
@@ -759,9 +760,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       }
     }
 
-    // Otherwise, add the condition to the system and stack, if we can transform
-    // it into a constraint.
-    Info.addFact(CB.Condition, CB.Not, CB.NumIn, CB.NumOut, DFSInStack);
+    ICmpInst::Predicate Pred;
+    Value *A, *B;
+    if (match(CB.Condition, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+      // Otherwise, add the condition to the system and stack, if we can
+      // transform it into a constraint.
+      Info.addFact(Pred, A, B, CB.Not, CB.NumIn, CB.NumOut, DFSInStack);
+    }
   }
 
 #ifndef NDEBUG
