@@ -205,7 +205,7 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
         {
             Class isa = realized_class_list[i];
             const char *name_ptr = objc_debug_class_getNameRaw(isa);
-            if (name_ptr == NULL)
+            if (!name_ptr)
                 continue;
             const char *s = name_ptr;
             uint32_t h = 5381;
@@ -239,6 +239,7 @@ extern "C" {
     void free(void *ptr);
     size_t objc_getRealizedClassList_trylock(Class *buffer, size_t len);
     const char* objc_debug_class_getNameRaw(Class cls);
+    const char* class_getName(Class cls);
 }
 
 #define DEBUG_PRINTF(fmt, ...) if (should_log) printf(fmt, ## __VA_ARGS__)
@@ -278,7 +279,11 @@ __lldb_apple_objc_v2_get_dynamic_class_info3(void *gdb_objc_realized_classes_ptr
         {
             Class isa = realized_class_list[i];
             const char *name_ptr = objc_debug_class_getNameRaw(isa);
-            if (name_ptr == NULL)
+            if (!name_ptr) {
+               class_getName(isa); // Realize name of lazy classes.
+               name_ptr = objc_debug_class_getNameRaw(isa);
+            }
+            if (!name_ptr)
                 continue;
             const char *s = name_ptr;
             uint32_t h = 5381;
