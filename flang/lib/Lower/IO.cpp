@@ -161,7 +161,7 @@ template <typename E>
 static mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
                                            fir::FirOpBuilder &builder) {
   llvm::StringRef name = getName<E>();
-  auto func = builder.getNamedFunction(name);
+  mlir::func::FuncOp func = builder.getNamedFunction(name);
   if (func)
     return func;
   auto funTy = getTypeModel<E>()(builder.getContext());
@@ -179,7 +179,8 @@ static mlir::Value genEndIO(Fortran::lower::AbstractConverter &converter,
                             Fortran::lower::StatementContext &stmtCtx) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (csi.ioMsg) {
-    auto getIoMsg = getIORuntimeFunc<mkIOKey(GetIoMsg)>(loc, builder);
+    mlir::func::FuncOp getIoMsg =
+        getIORuntimeFunc<mkIOKey(GetIoMsg)>(loc, builder);
     builder.create<fir::CallOp>(
         loc, getIoMsg,
         mlir::ValueRange{
@@ -189,7 +190,8 @@ static mlir::Value genEndIO(Fortran::lower::AbstractConverter &converter,
             builder.createConvert(loc, getIoMsg.getFunctionType().getInput(2),
                                   fir::getLen(*csi.ioMsg))});
   }
-  auto endIoStatement = getIORuntimeFunc<mkIOKey(EndIoStatement)>(loc, builder);
+  mlir::func::FuncOp endIoStatement =
+      getIORuntimeFunc<mkIOKey(EndIoStatement)>(loc, builder);
   auto call = builder.create<fir::CallOp>(loc, endIoStatement,
                                           mlir::ValueRange{cookie});
   mlir::Value iostat = call.getResult(0);
@@ -478,7 +480,8 @@ static void genOutputItemList(
     if (!expr)
       fir::emitFatalError(loc, "internal error: could not get evaluate::Expr");
     mlir::Type itemTy = converter.genType(*expr);
-    auto outputFunc = getOutputFunc(loc, builder, itemTy, isFormatted);
+    mlir::func::FuncOp outputFunc =
+        getOutputFunc(loc, builder, itemTy, isFormatted);
     mlir::Type argType = outputFunc.getFunctionType().getInput(1);
     assert((isFormatted || argType.isa<fir::BoxType>()) &&
            "expect descriptor for unformatted IO runtime");
@@ -625,7 +628,7 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
     if (Fortran::evaluate::HasVectorSubscript(*expr)) {
       auto vectorSubscriptBox =
           Fortran::lower::genVectorSubscriptBox(loc, converter, stmtCtx, *expr);
-      auto inputFunc = getInputFunc(
+      mlir::func::FuncOp inputFunc = getInputFunc(
           loc, builder, vectorSubscriptBox.getElementType(), isFormatted);
       const bool mustBox =
           inputFunc.getFunctionType().getInput(1).isa<fir::BoxType>();
@@ -651,7 +654,8 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
       continue;
     }
     mlir::Type itemTy = converter.genType(*expr);
-    auto inputFunc = getInputFunc(loc, builder, itemTy, isFormatted);
+    mlir::func::FuncOp inputFunc =
+        getInputFunc(loc, builder, itemTy, isFormatted);
     auto itemExv = inputFunc.getFunctionType().getInput(1).isa<fir::BoxType>()
                        ? converter.genExprBox(loc, *expr, stmtCtx)
                        : converter.genExprAddr(loc, expr, stmtCtx);
@@ -873,7 +877,7 @@ mlir::Value genIntIOOption(Fortran::lower::AbstractConverter &converter,
                            const B &spec) {
   Fortran::lower::StatementContext localStatementCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto ioFunc = getIORuntimeFunc<A>(loc, builder);
+  mlir::func::FuncOp ioFunc = getIORuntimeFunc<A>(loc, builder);
   mlir::FunctionType ioFuncTy = ioFunc.getFunctionType();
   mlir::Value expr = fir::getBase(converter.genExprValue(
       loc, Fortran::semantics::GetExpr(spec.v), localStatementCtx));
@@ -890,7 +894,7 @@ mlir::Value genCharIOOption(Fortran::lower::AbstractConverter &converter,
                             const B &spec) {
   Fortran::lower::StatementContext localStatementCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto ioFunc = getIORuntimeFunc<A>(loc, builder);
+  mlir::func::FuncOp ioFunc = getIORuntimeFunc<A>(loc, builder);
   mlir::FunctionType ioFuncTy = ioFunc.getFunctionType();
   std::tuple<mlir::Value, mlir::Value, mlir::Value> tup =
       lowerStringLit(converter, loc, localStatementCtx, spec,
@@ -922,7 +926,7 @@ mlir::Value genIOOption<Fortran::parser::FileNameExpr>(
   Fortran::lower::StatementContext localStatementCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   // has an extra KIND argument
-  auto ioFunc = getIORuntimeFunc<mkIOKey(SetFile)>(loc, builder);
+  mlir::func::FuncOp ioFunc = getIORuntimeFunc<mkIOKey(SetFile)>(loc, builder);
   mlir::FunctionType ioFuncTy = ioFunc.getFunctionType();
   std::tuple<mlir::Value, mlir::Value, mlir::Value> tup =
       lowerStringLit(converter, loc, localStatementCtx, spec,
@@ -1093,7 +1097,8 @@ static void genIOReadSize(Fortran::lower::AbstractConverter &converter,
             std::get_if<Fortran::parser::IoControlSpec::Size>(&spec.u)) {
 
       fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-      auto ioFunc = getIORuntimeFunc<mkIOKey(GetSize)>(loc, builder);
+      mlir::func::FuncOp ioFunc =
+          getIORuntimeFunc<mkIOKey(GetSize)>(loc, builder);
       auto sizeValue =
           builder.create<fir::CallOp>(loc, ioFunc, mlir::ValueRange{cookie})
               .getResult(0);
@@ -1218,7 +1223,8 @@ genConditionHandlerCall(Fortran::lower::AbstractConverter &converter,
   if (!csi.hasAnyConditionSpec())
     return;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto enableHandlers = getIORuntimeFunc<mkIOKey(EnableHandlers)>(loc, builder);
+  mlir::func::FuncOp enableHandlers =
+      getIORuntimeFunc<mkIOKey(EnableHandlers)>(loc, builder);
   mlir::Type boolType = enableHandlers.getFunctionType().getInput(1);
   auto boolValue = [&](bool specifierIsPresent) {
     return builder.create<mlir::arith::ConstantOp>(
@@ -1549,7 +1555,7 @@ static mlir::Value genIOUnitNumber(Fortran::lower::AbstractConverter &converter,
   // overflow when passed to the IO runtime, check that the unit number is
   // in range before calling the BeginXXX.
   if (rawUnitWidth > runtimeArgWidth) {
-    auto check =
+    mlir::func::FuncOp check =
         rawUnitWidth <= 64
             ? getIORuntimeFunc<mkIOKey(CheckUnitNumberInRange64)>(loc, builder)
             : getIORuntimeFunc<mkIOKey(CheckUnitNumberInRange128)>(loc,
@@ -1625,7 +1631,7 @@ static mlir::Value genBasicIOStmt(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   mlir::Location loc = converter.getCurrentLocation();
   ConditionSpecInfo csi = lowerErrorSpec(converter, loc, stmt.v);
-  auto beginFunc = getIORuntimeFunc<K>(loc, builder);
+  mlir::func::FuncOp beginFunc = getIORuntimeFunc<K>(loc, builder);
   mlir::FunctionType beginFuncTy = beginFunc.getFunctionType();
   mlir::Value unit = genIOUnitNumber(
       converter, loc, getExpr<Fortran::parser::FileUnitNumber>(stmt),
@@ -1678,7 +1684,8 @@ genNewunitSpec(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
             std::get_if<Fortran::parser::ConnectSpec::Newunit>(&spec.u)) {
       Fortran::lower::StatementContext stmtCtx;
       fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-      auto ioFunc = getIORuntimeFunc<mkIOKey(GetNewUnit)>(loc, builder);
+      mlir::func::FuncOp ioFunc =
+          getIORuntimeFunc<mkIOKey(GetNewUnit)>(loc, builder);
       mlir::FunctionType ioFuncTy = ioFunc.getFunctionType();
       const auto *var = Fortran::semantics::GetExpr(newunit->v);
       mlir::Value addr = builder.createConvert(
@@ -1745,9 +1752,9 @@ Fortran::lower::genWaitStatement(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = converter.getCurrentLocation();
   ConditionSpecInfo csi = lowerErrorSpec(converter, loc, stmt.v);
   bool hasId = hasSpec<Fortran::parser::IdExpr>(stmt);
-  auto beginFunc = hasId
-                       ? getIORuntimeFunc<mkIOKey(BeginWait)>(loc, builder)
-                       : getIORuntimeFunc<mkIOKey(BeginWaitAll)>(loc, builder);
+  mlir::func::FuncOp beginFunc =
+      hasId ? getIORuntimeFunc<mkIOKey(BeginWait)>(loc, builder)
+            : getIORuntimeFunc<mkIOKey(BeginWaitAll)>(loc, builder);
   mlir::FunctionType beginFuncTy = beginFunc.getFunctionType();
   mlir::Value unit = genIOUnitNumber(
       converter, loc, getExpr<Fortran::parser::FileUnitNumber>(stmt),
@@ -1913,9 +1920,9 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
   }
 
   // Generate the begin data transfer function call.
-  auto ioFunc = getBeginDataTransferFunc<isInput>(loc, builder, isFormatted,
-                                                  isList || isNml, isInternal,
-                                                  isInternalWithDesc, isAsync);
+  mlir::func::FuncOp ioFunc = getBeginDataTransferFunc<isInput>(
+      loc, builder, isFormatted, isList || isNml, isInternal,
+      isInternalWithDesc, isAsync);
   llvm::SmallVector<mlir::Value> ioArgs;
   genBeginDataTransferCallArgs<hasIOCtrl>(
       ioArgs, converter, loc, stmt, ioFunc.getFunctionType(), isFormatted,
@@ -2026,7 +2033,8 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::CharVar>(
       Fortran::parser::InquireSpec::CharVar::Kind::Iomsg)
     return {};
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto specFunc = getIORuntimeFunc<mkIOKey(InquireCharacter)>(loc, builder);
+  mlir::func::FuncOp specFunc =
+      getIORuntimeFunc<mkIOKey(InquireCharacter)>(loc, builder);
   mlir::FunctionType specFuncTy = specFunc.getFunctionType();
   const auto *varExpr = Fortran::semantics::GetExpr(
       std::get<Fortran::parser::ScalarDefaultCharVariable>(var.t));
@@ -2055,7 +2063,8 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::IntVar>(
       Fortran::parser::InquireSpec::IntVar::Kind::Iostat)
     return {};
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto specFunc = getIORuntimeFunc<mkIOKey(InquireInteger64)>(loc, builder);
+  mlir::func::FuncOp specFunc =
+      getIORuntimeFunc<mkIOKey(InquireInteger64)>(loc, builder);
   mlir::FunctionType specFuncTy = specFunc.getFunctionType();
   const auto *varExpr = Fortran::semantics::GetExpr(
       std::get<Fortran::parser::ScalarIntVariable>(var.t));
@@ -2091,7 +2100,7 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::LogVar>(
   bool pendId =
       idExpr &&
       logVarKind == Fortran::parser::InquireSpec::LogVar::Kind::Pending;
-  auto specFunc =
+  mlir::func::FuncOp specFunc =
       pendId ? getIORuntimeFunc<mkIOKey(InquirePendingId)>(loc, builder)
              : getIORuntimeFunc<mkIOKey(InquireLogical)>(loc, builder);
   mlir::FunctionType specFuncTy = specFunc.getFunctionType();

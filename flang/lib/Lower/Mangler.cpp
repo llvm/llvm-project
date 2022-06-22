@@ -57,12 +57,13 @@ hostName(const Fortran::semantics::Symbol &symbol) {
 
 static const Fortran::semantics::Symbol *
 findInterfaceIfSeperateMP(const Fortran::semantics::Symbol &symbol) {
-  const auto &scope = symbol.owner();
+  const Fortran::semantics::Scope &scope = symbol.owner();
   if (symbol.attrs().test(Fortran::semantics::Attr::MODULE) &&
       scope.IsSubmodule()) {
     // FIXME symbol from MpSubprogramStmt do not seem to have
     // Attr::MODULE set.
-    const auto *iface = scope.parent().FindSymbol(symbol.name());
+    const Fortran::semantics::Symbol *iface =
+        scope.parent().FindSymbol(symbol.name());
     assert(iface && "Separate module procedure must be declared");
     return iface;
   }
@@ -108,10 +109,11 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
             // Separate module subprograms must be mangled according to the
             // scope where they were declared (the symbol we have is the
             // definition).
-            const auto *interface = &ultimateSymbol;
+            const Fortran::semantics::Symbol *interface = &ultimateSymbol;
             if (const auto *mpIface = findInterfaceIfSeperateMP(ultimateSymbol))
               interface = mpIface;
-            auto modNames = moduleNames(*interface);
+            llvm::SmallVector<llvm::StringRef> modNames =
+                moduleNames(*interface);
             return fir::NameUniquer::doProcedure(modNames, hostName(*interface),
                                                  symbolName);
           },
@@ -129,16 +131,18 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
                                                  symbolName);
           },
           [&](const Fortran::semantics::ObjectEntityDetails &) {
-            auto modNames = moduleNames(ultimateSymbol);
-            auto optHost = hostName(ultimateSymbol);
+            llvm::SmallVector<llvm::StringRef> modNames =
+                moduleNames(ultimateSymbol);
+            llvm::Optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
             if (Fortran::semantics::IsNamedConstant(ultimateSymbol))
               return fir::NameUniquer::doConstant(modNames, optHost,
                                                   symbolName);
             return fir::NameUniquer::doVariable(modNames, optHost, symbolName);
           },
           [&](const Fortran::semantics::NamelistDetails &) {
-            auto modNames = moduleNames(ultimateSymbol);
-            auto optHost = hostName(ultimateSymbol);
+            llvm::SmallVector<llvm::StringRef> modNames =
+                moduleNames(ultimateSymbol);
+            llvm::Optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
             return fir::NameUniquer::doNamelistGroup(modNames, optHost,
                                                      symbolName);
           },
@@ -159,21 +163,25 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
 std::string Fortran::lower::mangle::mangleName(
     const Fortran::semantics::DerivedTypeSpec &derivedType) {
   // Resolve host and module association before mangling
-  const auto &ultimateSymbol = derivedType.typeSymbol().GetUltimate();
-  auto symbolName = toStringRef(ultimateSymbol.name());
-  auto modNames = moduleNames(ultimateSymbol);
-  auto optHost = hostName(ultimateSymbol);
+  const Fortran::semantics::Symbol &ultimateSymbol =
+      derivedType.typeSymbol().GetUltimate();
+  llvm::StringRef symbolName = toStringRef(ultimateSymbol.name());
+  llvm::SmallVector<llvm::StringRef> modNames = moduleNames(ultimateSymbol);
+  llvm::Optional<llvm::StringRef> optHost = hostName(ultimateSymbol);
   llvm::SmallVector<std::int64_t> kinds;
   for (const auto &param :
        Fortran::semantics::OrderParameterDeclarations(ultimateSymbol)) {
     const auto &paramDetails =
         param->get<Fortran::semantics::TypeParamDetails>();
     if (paramDetails.attr() == Fortran::common::TypeParamAttr::Kind) {
-      const auto *paramValue = derivedType.FindParameter(param->name());
+      const Fortran::semantics::ParamValue *paramValue =
+          derivedType.FindParameter(param->name());
       assert(paramValue && "derived type kind parameter value not found");
-      auto paramExpr = paramValue->GetExplicit();
+      const Fortran::semantics::MaybeIntExpr paramExpr =
+          paramValue->GetExplicit();
       assert(paramExpr && "derived type kind param not explicit");
-      auto init = Fortran::evaluate::ToInt64(paramValue->GetExplicit());
+      std::optional<int64_t> init =
+          Fortran::evaluate::ToInt64(paramValue->GetExplicit());
       assert(init && "derived type kind param is not constant");
       kinds.emplace_back(*init);
     }
@@ -273,7 +281,7 @@ std::string fir::mangleIntrinsicProcedure(llvm::StringRef intrinsic,
   name.append(intrinsic.str()).append(".");
   assert(funTy.getNumResults() == 1 && "only function mangling supported");
   name.append(typeToString(funTy.getResult(0)));
-  auto e = funTy.getNumInputs();
+  unsigned e = funTy.getNumInputs();
   for (decltype(e) i = 0; i < e; ++i)
     name.append(".").append(typeToString(funTy.getInput(i)));
   return name;
