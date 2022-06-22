@@ -67,7 +67,7 @@ if (CAN_USE_ASSEMBLER)
         blake3_avx512_x86-64_unix.S
       )
       # Clang-6 needs this flag.
-      set_source_files_properties(blake3_avx512_x86-64_windows_gnu.S
+      set_source_files_properties(blake3_avx512_x86-64_unix.S
         PROPERTIES COMPILE_OPTIONS "-mavx512vl")
     else()
       disable_blake3_x86_simd()
