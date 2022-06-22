@@ -12,7 +12,7 @@ define <4 x i32> @test1(<4 x i32> %A, <4 x i32> %B) nounwind {
   ret <4 x i32> %C
 }
 
-define <4 x i32> @test1a(<4 x i32> %A, <4 x i32> *%Bp) nounwind {
+define <4 x i32> @test1a(<4 x i32> %A, ptr%Bp) nounwind {
 ; CHECK-LABEL: test1a:
 ; CHECK-NEXT: pmulld
 
@@ -20,7 +20,7 @@ define <4 x i32> @test1a(<4 x i32> %A, <4 x i32> *%Bp) nounwind {
 ; WIN64-NEXT: movdqa  (%rcx), %xmm0
 ; WIN64-NEXT: pmulld  (%rdx), %xmm0
 
-  %B = load <4 x i32>, <4 x i32>* %Bp
+  %B = load <4 x i32>, ptr %Bp
   %C = mul <4 x i32> %A, %B
   ret <4 x i32> %C
 }

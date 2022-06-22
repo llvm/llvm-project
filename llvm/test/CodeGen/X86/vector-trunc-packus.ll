@@ -166,7 +166,7 @@ define <2 x i32> @trunc_packus_v2i64_v2i32(<2 x i64> %a0) {
   ret <2 x i32> %5
 }
 
-define void @trunc_packus_v2i64_v2i32_store(<2 x i64> %a0, <2 x i32>* %p1) {
+define void @trunc_packus_v2i64_v2i32_store(<2 x i64> %a0, ptr %p1) {
 ; SSE2-LABEL: trunc_packus_v2i64_v2i32_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648]
@@ -314,7 +314,7 @@ define void @trunc_packus_v2i64_v2i32_store(<2 x i64> %a0, <2 x i32>* %p1) {
   %3 = icmp sgt <2 x i64> %2, zeroinitializer
   %4 = select <2 x i1> %3, <2 x i64> %2, <2 x i64> zeroinitializer
   %5 = trunc <2 x i64> %4 to <2 x i32>
-  store <2 x i32> %5, <2 x i32>* %p1
+  store <2 x i32> %5, ptr %p1
   ret void
 }
 
@@ -585,7 +585,7 @@ define <4 x i32> @trunc_packus_v4i64_v4i32(<4 x i64> %a0) {
 }
 
 
-define <8 x i32> @trunc_packus_v8i64_v8i32(<8 x i64>* %p0) "min-legal-vector-width"="256" {
+define <8 x i32> @trunc_packus_v8i64_v8i32(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_packus_v8i64_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm3
@@ -995,7 +995,7 @@ define <8 x i32> @trunc_packus_v8i64_v8i32(<8 x i64>* %p0) "min-legal-vector-wid
 ; SKX-NEXT:    vpmovusqd %ymm0, %xmm0
 ; SKX-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp slt <8 x i64> %a0, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %3 = icmp sgt <8 x i64> %2, zeroinitializer
@@ -1182,7 +1182,7 @@ define <2 x i16> @trunc_packus_v2i64_v2i16(<2 x i64> %a0) {
   ret <2 x i16> %5
 }
 
-define void @trunc_packus_v2i64_v2i16_store(<2 x i64> %a0, <2 x i16> *%p1) {
+define void @trunc_packus_v2i64_v2i16_store(<2 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_packus_v2i64_v2i16_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648]
@@ -1361,7 +1361,7 @@ define void @trunc_packus_v2i64_v2i16_store(<2 x i64> %a0, <2 x i16> *%p1) {
   %3 = icmp sgt <2 x i64> %2, zeroinitializer
   %4 = select <2 x i1> %3, <2 x i64> %2, <2 x i64> zeroinitializer
   %5 = trunc <2 x i64> %4 to <2 x i16>
-  store <2 x i16> %5, <2 x i16> *%p1
+  store <2 x i16> %5, ptr%p1
   ret void
 }
 
@@ -1617,7 +1617,7 @@ define <4 x i16> @trunc_packus_v4i64_v4i16(<4 x i64> %a0) {
   ret <4 x i16> %5
 }
 
-define void @trunc_packus_v4i64_v4i16_store(<4 x i64> %a0, <4 x i16> *%p1) {
+define void @trunc_packus_v4i64_v4i16_store(<4 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_packus_v4i64_v4i16_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [65535,65535]
@@ -1872,11 +1872,11 @@ define void @trunc_packus_v4i64_v4i16_store(<4 x i64> %a0, <4 x i16> *%p1) {
   %3 = icmp sgt <4 x i64> %2, zeroinitializer
   %4 = select <4 x i1> %3, <4 x i64> %2, <4 x i64> zeroinitializer
   %5 = trunc <4 x i64> %4 to <4 x i16>
-  store <4 x i16> %5, <4 x i16> *%p1
+  store <4 x i16> %5, ptr%p1
   ret void
 }
 
-define <8 x i16> @trunc_packus_v8i64_v8i16(<8 x i64>* %p0) "min-legal-vector-width"="256" {
+define <8 x i16> @trunc_packus_v8i64_v8i16(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_packus_v8i64_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm4
@@ -2278,7 +2278,7 @@ define <8 x i16> @trunc_packus_v8i64_v8i16(<8 x i64>* %p0) "min-legal-vector-wid
 ; SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp slt <8 x i64> %a0, <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
   %3 = icmp sgt <8 x i64> %2, zeroinitializer
@@ -2347,7 +2347,7 @@ define <4 x i16> @trunc_packus_v4i32_v4i16(<4 x i32> %a0) {
   ret <4 x i16> %5
 }
 
-define void @trunc_packus_v4i32_v4i16_store(<4 x i32> %a0, <4 x i16> *%p1) {
+define void @trunc_packus_v4i32_v4i16_store(<4 x i32> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_packus_v4i32_v4i16_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535]
@@ -2431,7 +2431,7 @@ define void @trunc_packus_v4i32_v4i16_store(<4 x i32> %a0, <4 x i16> *%p1) {
   %3 = icmp sgt <4 x i32> %2, zeroinitializer
   %4 = select <4 x i1> %3, <4 x i32> %2, <4 x i32> zeroinitializer
   %5 = trunc <4 x i32> %4 to <4 x i16>
-  store <4 x i16> %5, <4 x i16> *%p1
+  store <4 x i16> %5, ptr%p1
   ret void
 }
 
@@ -2553,7 +2553,7 @@ define <8 x i16> @trunc_packus_v8i32_v8i16(<8 x i32> %a0) {
   ret <8 x i16> %5
 }
 
-define <16 x i16> @trunc_packus_v16i32_v16i16(<16 x i32>* %p0) "min-legal-vector-width"="256" {
+define <16 x i16> @trunc_packus_v16i32_v16i16(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_packus_v16i32_v16i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm1
@@ -2695,7 +2695,7 @@ define <16 x i16> @trunc_packus_v16i32_v16i16(<16 x i32>* %p0) "min-legal-vector
 ; SKX-NEXT:    vpackusdw 32(%rdi), %ymm0, %ymm0
 ; SKX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i32>, <16 x i32>* %p0
+  %a0 = load <16 x i32>, ptr %p0
   %1 = icmp slt <16 x i32> %a0, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
   %2 = select <16 x i1> %1, <16 x i32> %a0, <16 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
   %3 = icmp sgt <16 x i32> %2, zeroinitializer
@@ -2858,7 +2858,7 @@ define <2 x i8> @trunc_packus_v2i64_v2i8(<2 x i64> %a0) {
   ret <2 x i8> %5
 }
 
-define void @trunc_packus_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8> *%p1) {
+define void @trunc_packus_v2i64_v2i8_store(<2 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_packus_v2i64_v2i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648]
@@ -3012,7 +3012,7 @@ define void @trunc_packus_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8> *%p1) {
   %3 = icmp sgt <2 x i64> %2, zeroinitializer
   %4 = select <2 x i1> %3, <2 x i64> %2, <2 x i64> zeroinitializer
   %5 = trunc <2 x i64> %4 to <2 x i8>
-  store <2 x i8> %5, <2 x i8> *%p1
+  store <2 x i8> %5, ptr%p1
   ret void
 }
 
@@ -3272,7 +3272,7 @@ define <4 x i8> @trunc_packus_v4i64_v4i8(<4 x i64> %a0) {
   ret <4 x i8> %5
 }
 
-define void @trunc_packus_v4i64_v4i8_store(<4 x i64> %a0, <4 x i8> *%p1) {
+define void @trunc_packus_v4i64_v4i8_store(<4 x i64> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_packus_v4i64_v4i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [255,255]
@@ -3531,11 +3531,11 @@ define void @trunc_packus_v4i64_v4i8_store(<4 x i64> %a0, <4 x i8> *%p1) {
   %3 = icmp sgt <4 x i64> %2, zeroinitializer
   %4 = select <4 x i1> %3, <4 x i64> %2, <4 x i64> zeroinitializer
   %5 = trunc <4 x i64> %4 to <4 x i8>
-  store <4 x i8> %5, <4 x i8> *%p1
+  store <4 x i8> %5, ptr%p1
   ret void
 }
 
-define <8 x i8> @trunc_packus_v8i64_v8i8(<8 x i64>* %p0) "min-legal-vector-width"="256" {
+define <8 x i8> @trunc_packus_v8i64_v8i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_packus_v8i64_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm5
@@ -3926,7 +3926,7 @@ define <8 x i8> @trunc_packus_v8i64_v8i8(<8 x i64>* %p0) "min-legal-vector-width
 ; SKX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp slt <8 x i64> %a0, <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %3 = icmp sgt <8 x i64> %2, zeroinitializer
@@ -3935,7 +3935,7 @@ define <8 x i8> @trunc_packus_v8i64_v8i8(<8 x i64>* %p0) "min-legal-vector-width
   ret <8 x i8> %5
 }
 
-define void @trunc_packus_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) "min-legal-vector-width"="256" {
+define void @trunc_packus_v8i64_v8i8_store(ptr %p0, ptr%p1) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_packus_v8i64_v8i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm5
@@ -4331,17 +4331,17 @@ define void @trunc_packus_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) "min-l
 ; SKX-NEXT:    vmovq %xmm0, (%rsi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <8 x i64>, <8 x i64>* %p0
+  %a0 = load <8 x i64>, ptr %p0
   %1 = icmp slt <8 x i64> %a0, <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %2 = select <8 x i1> %1, <8 x i64> %a0, <8 x i64> <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %3 = icmp sgt <8 x i64> %2, zeroinitializer
   %4 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> zeroinitializer
   %5 = trunc <8 x i64> %4 to <8 x i8>
-  store <8 x i8> %5, <8 x i8> *%p1
+  store <8 x i8> %5, ptr%p1
   ret void
 }
 
-define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64>* %p0) "min-legal-vector-width"="256" {
+define <16 x i8> @trunc_packus_v16i64_v16i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE2-LABEL: trunc_packus_v16i64_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm11
@@ -5074,7 +5074,7 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64>* %p0) "min-legal-vector-w
 ; SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i64>, <16 x i64>* %p0
+  %a0 = load <16 x i64>, ptr %p0
   %1 = icmp slt <16 x i64> %a0, <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %2 = select <16 x i1> %1, <16 x i64> %a0, <16 x i64> <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
   %3 = icmp sgt <16 x i64> %2, zeroinitializer
@@ -5188,7 +5188,7 @@ define <4 x i8> @trunc_packus_v4i32_v4i8(<4 x i32> %a0) "min-legal-vector-width"
   ret <4 x i8> %5
 }
 
-define void @trunc_packus_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
+define void @trunc_packus_v4i32_v4i8_store(<4 x i32> %a0, ptr%p1) {
 ; SSE2-LABEL: trunc_packus_v4i32_v4i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255]
@@ -5297,7 +5297,7 @@ define void @trunc_packus_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
   %3 = icmp sgt <4 x i32> %2, zeroinitializer
   %4 = select <4 x i1> %3, <4 x i32> %2, <4 x i32> zeroinitializer
   %5 = trunc <4 x i32> %4 to <4 x i8>
-  store <4 x i8> %5, <4 x i8> *%p1
+  store <4 x i8> %5, ptr%p1
   ret void
 }
 
@@ -5371,7 +5371,7 @@ define <8 x i8> @trunc_packus_v8i32_v8i8(<8 x i32> %a0) {
   ret <8 x i8> %5
 }
 
-define void @trunc_packus_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
+define void @trunc_packus_v8i32_v8i8_store(<8 x i32> %a0, ptr%p1) {
 ; SSE-LABEL: trunc_packus_v8i32_v8i8_store:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
@@ -5443,11 +5443,11 @@ define void @trunc_packus_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
   %3 = icmp sgt <8 x i32> %2, zeroinitializer
   %4 = select <8 x i1> %3, <8 x i32> %2, <8 x i32> zeroinitializer
   %5 = trunc <8 x i32> %4 to <8 x i8>
-  store <8 x i8> %5, <8 x i8> *%p1
+  store <8 x i8> %5, ptr%p1
   ret void
 }
 
-define <16 x i8> @trunc_packus_v16i32_v16i8(<16 x i32>* %p0) "min-legal-vector-width"="256" {
+define <16 x i8> @trunc_packus_v16i32_v16i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE-LABEL: trunc_packus_v16i32_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -5492,7 +5492,7 @@ define <16 x i8> @trunc_packus_v16i32_v16i8(<16 x i32>* %p0) "min-legal-vector-w
 ; SKX-NEXT:    vpmovuswb %ymm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a0 = load <16 x i32>, <16 x i32>* %p0
+  %a0 = load <16 x i32>, ptr %p0
   %1 = icmp slt <16 x i32> %a0, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %2 = select <16 x i1> %1, <16 x i32> %a0, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %3 = icmp sgt <16 x i32> %2, zeroinitializer
@@ -5501,7 +5501,7 @@ define <16 x i8> @trunc_packus_v16i32_v16i8(<16 x i32>* %p0) "min-legal-vector-w
   ret <16 x i8> %5
 }
 
-define void @trunc_packus_v16i32_v16i8_store(<16 x i32>* %p0, <16 x i8>* %p1) "min-legal-vector-width"="256" {
+define void @trunc_packus_v16i32_v16i8_store(ptr %p0, ptr %p1) "min-legal-vector-width"="256" {
 ; SSE-LABEL: trunc_packus_v16i32_v16i8_store:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -5549,13 +5549,13 @@ define void @trunc_packus_v16i32_v16i8_store(<16 x i32>* %p0, <16 x i8>* %p1) "m
 ; SKX-NEXT:    vpmovuswb %ymm0, (%rsi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-  %a = load <16 x i32>, <16 x i32>* %p0
+  %a = load <16 x i32>, ptr %p0
   %b = icmp slt <16 x i32> %a, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %c = select <16 x i1> %b, <16 x i32> %a, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %d = icmp sgt <16 x i32> %c, zeroinitializer
   %e = select <16 x i1> %d, <16 x i32> %c, <16 x i32> zeroinitializer
   %f = trunc <16 x i32> %e to <16 x i8>
-  store <16 x i8> %f, <16 x i8>* %p1
+  store <16 x i8> %f, ptr %p1
   ret void
 }
 
@@ -5587,7 +5587,7 @@ define <8 x i8> @trunc_packus_v8i16_v8i8(<8 x i16> %a0) {
   ret <8 x i8> %5
 }
 
-define void @trunc_packus_v8i16_v8i8_store(<8 x i16> %a0, <8 x i8> *%p1) {
+define void @trunc_packus_v8i16_v8i8_store(<8 x i16> %a0, ptr%p1) {
 ; SSE-LABEL: trunc_packus_v8i16_v8i8_store:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
@@ -5636,7 +5636,7 @@ define void @trunc_packus_v8i16_v8i8_store(<8 x i16> %a0, <8 x i8> *%p1) {
   %3 = icmp sgt <8 x i16> %2, zeroinitializer
   %4 = select <8 x i1> %3, <8 x i16> %2, <8 x i16> zeroinitializer
   %5 = trunc <8 x i16> %4 to <8 x i8>
-  store <8 x i8> %5, <8 x i8> *%p1
+  store <8 x i8> %5, ptr%p1
   ret void
 }
 
@@ -5704,7 +5704,7 @@ define <16 x i8> @trunc_packus_v16i16_v16i8(<16 x i16> %a0) {
   ret <16 x i8> %5
 }
 
-define <32 x i8> @trunc_packus_v32i16_v32i8(<32 x i16>* %p0) "min-legal-vector-width"="256" {
+define <32 x i8> @trunc_packus_v32i16_v32i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE-LABEL: trunc_packus_v32i16_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -5763,7 +5763,7 @@ define <32 x i8> @trunc_packus_v32i16_v32i8(<32 x i16>* %p0) "min-legal-vector-w
 ; SKX-NEXT:    vpackuswb 32(%rdi), %ymm0, %ymm0
 ; SKX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; SKX-NEXT:    retq
-  %a0 = load <32 x i16>, <32 x i16>* %p0
+  %a0 = load <32 x i16>, ptr %p0
   %1 = icmp slt <32 x i16> %a0, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %2 = select <32 x i1> %1, <32 x i16> %a0, <32 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %3 = icmp sgt <32 x i16> %2, zeroinitializer
@@ -5772,7 +5772,7 @@ define <32 x i8> @trunc_packus_v32i16_v32i8(<32 x i16>* %p0) "min-legal-vector-w
   ret <32 x i8> %5
 }
 
-define <32 x i8> @trunc_packus_v32i32_v32i8(<32 x i32>* %p0) "min-legal-vector-width"="256" {
+define <32 x i8> @trunc_packus_v32i32_v32i8(ptr %p0) "min-legal-vector-width"="256" {
 ; SSE-LABEL: trunc_packus_v32i32_v32i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -5835,7 +5835,7 @@ define <32 x i8> @trunc_packus_v32i32_v32i8(<32 x i32>* %p0) "min-legal-vector-w
 ; SKX-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; SKX-NEXT:    retq
-  %a0 = load <32 x i32>, <32 x i32>* %p0
+  %a0 = load <32 x i32>, ptr %p0
   %1 = icmp slt <32 x i32> %a0, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %2 = select <32 x i1> %1, <32 x i32> %a0, <32 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %3 = icmp sgt <32 x i32> %2, zeroinitializer

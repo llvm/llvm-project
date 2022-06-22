@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx  | FileCheck %s --check-prefixes=X64-AVX,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=X64-AVX,X64-AVX2
 
-@c = external dso_local global i32*, align 8
+@c = external dso_local global ptr, align 8
 
 ; %val1 = load <2 x i8>
 ; %op1 = zext<2 x i32> %val1
@@ -14,7 +14,7 @@
 ; %op2 = zext<2 x i32> %val2
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_2xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_2xi8:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -81,19 +81,16 @@ define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rdx,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = zext <2 x i8> %wide.load to <2 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <2 x i8>*
-  %wide.load17 = load <2 x i8>, <2 x i8>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <2 x i8>, ptr %tmp10, align 1
   %tmp12 = zext <2 x i8> %wide.load17 to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -103,7 +100,7 @@ entry:
 ; %op2 = zext<4 x i32> %val2
 ; %rst = mul <4 x i32> %op1, %op2
 ;
-define void @mul_4xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_4xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_4xi8:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -158,19 +155,16 @@ define void @mul_4xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X64-AVX-NEXT:    vmovdqu %xmm0, (%rax,%rdx,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <4 x i8>*
-  %wide.load = load <4 x i8>, <4 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <4 x i8>, ptr %tmp6, align 1
   %tmp8 = zext <4 x i8> %wide.load to <4 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <4 x i8>*
-  %wide.load17 = load <4 x i8>, <4 x i8>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <4 x i8>, ptr %tmp10, align 1
   %tmp12 = zext <4 x i8> %wide.load17 to <4 x i32>
   %tmp13 = mul nuw nsw <4 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <4 x i32>*
-  store <4 x i32> %tmp13, <4 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <4 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -180,7 +174,7 @@ entry:
 ; %op2 = zext<8 x i32> %val2
 ; %rst = mul <8 x i32> %op1, %op2
 ;
-define void @mul_8xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_8xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_8xi8:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -274,19 +268,16 @@ define void @mul_8xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <8 x i8>*
-  %wide.load = load <8 x i8>, <8 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <8 x i8>, ptr %tmp6, align 1
   %tmp8 = zext <8 x i8> %wide.load to <8 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <8 x i8>*
-  %wide.load17 = load <8 x i8>, <8 x i8>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <8 x i8>, ptr %tmp10, align 1
   %tmp12 = zext <8 x i8> %wide.load17 to <8 x i32>
   %tmp13 = mul nuw nsw <8 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <8 x i32>*
-  store <8 x i32> %tmp13, <8 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <8 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -296,7 +287,7 @@ entry:
 ; %op2 = zext<16 x i32> %val2
 ; %rst = mul <16 x i32> %op1, %op2
 ;
-define void @mul_16xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_16xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_16xi8:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -434,19 +425,16 @@ define void @mul_16xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <16 x i8>, ptr %tmp6, align 1
   %tmp8 = zext <16 x i8> %wide.load to <16 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <16 x i8>*
-  %wide.load17 = load <16 x i8>, <16 x i8>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <16 x i8>, ptr %tmp10, align 1
   %tmp12 = zext <16 x i8> %wide.load17 to <16 x i32>
   %tmp13 = mul nuw nsw <16 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <16 x i32>*
-  store <16 x i32> %tmp13, <16 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <16 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -456,7 +444,7 @@ entry:
 ; %op2 = zext<2 x i32> %val2
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_2xi16(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_2xi16:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -513,19 +501,16 @@ define void @mul_2xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rdx,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i16>*
-  %wide.load = load <2 x i16>, <2 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i16>, ptr %tmp6, align 1
   %tmp8 = zext <2 x i16> %wide.load to <2 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <2 x i16>*
-  %wide.load17 = load <2 x i16>, <2 x i16>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <2 x i16>, ptr %tmp10, align 1
   %tmp12 = zext <2 x i16> %wide.load17 to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -535,7 +520,7 @@ entry:
 ; %op2 = zext<4 x i32> %val2
 ; %rst = mul <4 x i32> %op1, %op2
 ;
-define void @mul_4xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_4xi16(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_4xi16:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -588,19 +573,16 @@ define void @mul_4xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X64-AVX-NEXT:    vmovdqu %xmm0, (%rax,%rdx,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <4 x i16>*
-  %wide.load = load <4 x i16>, <4 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <4 x i16>, ptr %tmp6, align 1
   %tmp8 = zext <4 x i16> %wide.load to <4 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <4 x i16>*
-  %wide.load17 = load <4 x i16>, <4 x i16>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <4 x i16>, ptr %tmp10, align 1
   %tmp12 = zext <4 x i16> %wide.load17 to <4 x i32>
   %tmp13 = mul nuw nsw <4 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <4 x i32>*
-  store <4 x i32> %tmp13, <4 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <4 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -610,7 +592,7 @@ entry:
 ; %op2 = zext<8 x i32> %val2
 ; %rst = mul <8 x i32> %op1, %op2
 ;
-define void @mul_8xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_8xi16(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_8xi16:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -702,19 +684,16 @@ define void @mul_8xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <8 x i16>, ptr %tmp6, align 1
   %tmp8 = zext <8 x i16> %wide.load to <8 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <8 x i16>*
-  %wide.load17 = load <8 x i16>, <8 x i16>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <8 x i16>, ptr %tmp10, align 1
   %tmp12 = zext <8 x i16> %wide.load17 to <8 x i32>
   %tmp13 = mul nuw nsw <8 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <8 x i32>*
-  store <8 x i32> %tmp13, <8 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <8 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -724,7 +703,7 @@ entry:
 ; %op2 = zext<16 x i32> %val2
 ; %rst = mul <16 x i32> %op1, %op2
 ;
-define void @mul_16xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_16xi16(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_16xi16:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -860,19 +839,16 @@ define void @mul_16xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i6
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <16 x i16>*
-  %wide.load = load <16 x i16>, <16 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <16 x i16>, ptr %tmp6, align 1
   %tmp8 = zext <16 x i16> %wide.load to <16 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <16 x i16>*
-  %wide.load17 = load <16 x i16>, <16 x i16>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <16 x i16>, ptr %tmp10, align 1
   %tmp12 = zext <16 x i16> %wide.load17 to <16 x i32>
   %tmp13 = mul nuw nsw <16 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <16 x i32>*
-  store <16 x i32> %tmp13, <16 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <16 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -882,7 +858,7 @@ entry:
 ; %op2 = sext<2 x i32> %val2
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi8_sext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_2xi8_sext(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_2xi8_sext:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -953,19 +929,16 @@ define void @mul_2xi8_sext(i8* nocapture readonly %a, i8* nocapture readonly %b,
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rdx,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = sext <2 x i8> %wide.load to <2 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <2 x i8>*
-  %wide.load17 = load <2 x i8>, <2 x i8>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <2 x i8>, ptr %tmp10, align 1
   %tmp12 = sext <2 x i8> %wide.load17 to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -975,7 +948,7 @@ entry:
 ; %op2 = zext<2 x i32> %val2
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi8_sext_zext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_2xi8_sext_zext(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_2xi8_sext_zext:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -1046,19 +1019,16 @@ define void @mul_2xi8_sext_zext(i8* nocapture readonly %a, i8* nocapture readonl
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rdx,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = sext <2 x i8> %wide.load to <2 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <2 x i8>*
-  %wide.load17 = load <2 x i8>, <2 x i8>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <2 x i8>, ptr %tmp10, align 1
   %tmp12 = zext <2 x i8> %wide.load17 to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1068,7 +1038,7 @@ entry:
 ; %op2 = sext<2 x i32> %val2
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_2xi16_sext(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_2xi16_sext:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -1125,19 +1095,16 @@ define void @mul_2xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %b
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rdx,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i16>*
-  %wide.load = load <2 x i16>, <2 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i16>, ptr %tmp6, align 1
   %tmp8 = sext <2 x i16> %wide.load to <2 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <2 x i16>*
-  %wide.load17 = load <2 x i16>, <2 x i16>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <2 x i16>, ptr %tmp10, align 1
   %tmp12 = sext <2 x i16> %wide.load17 to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1147,7 +1114,7 @@ entry:
 ; %op2 = zext<2 x i32> %val2
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi16_sext_zext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_2xi16_sext_zext(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_2xi16_sext_zext:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -1214,19 +1181,16 @@ define void @mul_2xi16_sext_zext(i8* nocapture readonly %a, i8* nocapture readon
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rdx,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i16>*
-  %wide.load = load <2 x i16>, <2 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i16>, ptr %tmp6, align 1
   %tmp8 = sext <2 x i16> %wide.load to <2 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <2 x i16>*
-  %wide.load17 = load <2 x i16>, <2 x i16>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <2 x i16>, ptr %tmp10, align 1
   %tmp12 = zext <2 x i16> %wide.load17 to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1236,7 +1200,7 @@ entry:
 ; %op2 = sext<16 x i32> %val2
 ; %rst = mul <16 x i32> %op1, %op2
 ;
-define void @mul_16xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_16xi16_sext(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; X86-SSE-LABEL: mul_16xi16_sext:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
@@ -1372,19 +1336,16 @@ define void @mul_16xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <16 x i16>*
-  %wide.load = load <16 x i16>, <16 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <16 x i16>, ptr %tmp6, align 1
   %tmp8 = sext <16 x i16> %wide.load to <16 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <16 x i16>*
-  %wide.load17 = load <16 x i16>, <16 x i16>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <16 x i16>, ptr %tmp10, align 1
   %tmp12 = sext <16 x i16> %wide.load17 to <16 x i32>
   %tmp13 = mul nuw nsw <16 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <16 x i32>*
-  store <16 x i32> %tmp13, <16 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <16 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1393,7 +1354,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (0 ~ 255)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi8_varconst1(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi8_varconst1(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi8_varconst1:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1442,15 +1403,13 @@ define void @mul_2xi8_varconst1(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = zext <2 x i8> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 0, i32 255>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1459,7 +1418,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (-128 ~ 127)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi8_varconst2(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi8_varconst2(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi8_varconst2:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1508,15 +1467,13 @@ define void @mul_2xi8_varconst2(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = sext <2 x i8> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 -128, i32 127>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1525,7 +1482,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (0 ~ 256)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi8_varconst3(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi8_varconst3(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi8_varconst3:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1574,15 +1531,13 @@ define void @mul_2xi8_varconst3(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = zext <2 x i8> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 0, i32 256>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1591,7 +1546,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (-1 ~ 255)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi8_varconst4(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi8_varconst4(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi8_varconst4:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1640,15 +1595,13 @@ define void @mul_2xi8_varconst4(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = zext <2 x i8> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 -1, i32 255>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1657,7 +1610,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (-129 ~ 127)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi8_varconst5(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi8_varconst5(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi8_varconst5:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1706,15 +1659,13 @@ define void @mul_2xi8_varconst5(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = sext <2 x i8> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 -129, i32 127>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1723,7 +1674,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (-128 ~ 128)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi8_varconst6(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi8_varconst6(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi8_varconst6:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1772,15 +1723,13 @@ define void @mul_2xi8_varconst6(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = sext <2 x i8> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 -128, i32 128>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1789,7 +1738,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (0 ~ 65535)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi16_varconst1(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi16_varconst1(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi16_varconst1:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1836,15 +1785,13 @@ define void @mul_2xi16_varconst1(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i16>*
-  %wide.load = load <2 x i16>, <2 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i16>, ptr %tmp6, align 1
   %tmp8 = zext <2 x i16> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 0, i32 65535>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1853,7 +1800,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (-32768 ~ 32767)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi16_varconst2(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi16_varconst2(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi16_varconst2:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1894,15 +1841,13 @@ define void @mul_2xi16_varconst2(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i16>*
-  %wide.load = load <2 x i16>, <2 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i16>, ptr %tmp6, align 1
   %tmp8 = sext <2 x i16> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 -32768, i32 32767>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1911,7 +1856,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (0 ~ 65536)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi16_varconst3(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi16_varconst3(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi16_varconst3:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1954,15 +1899,13 @@ define void @mul_2xi16_varconst3(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i16>*
-  %wide.load = load <2 x i16>, <2 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i16>, ptr %tmp6, align 1
   %tmp8 = zext <2 x i16> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 0, i32 65536>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -1971,7 +1914,7 @@ entry:
 ; %op2 = const <2 x i32> {c1, c2} // c1 and c2 are within (0 ~ 32768)
 ; %rst = mul <2 x i32> %op1, %op2
 ;
-define void @mul_2xi16_varconst4(i8* nocapture readonly %a, i64 %index) {
+define void @mul_2xi16_varconst4(ptr nocapture readonly %a, i64 %index) {
 ; X86-SSE-LABEL: mul_2xi16_varconst4:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2018,15 +1961,13 @@ define void @mul_2xi16_varconst4(i8* nocapture readonly %a, i64 %index) {
 ; X64-AVX-NEXT:    vmovq %xmm0, (%rax,%rsi,4)
 ; X64-AVX-NEXT:    retq
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i16>*
-  %wide.load = load <2 x i16>, <2 x i16>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i16>, ptr %tmp6, align 1
   %tmp8 = sext <2 x i16> %wide.load to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp8, <i32 0, i32 32768>
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }
 
@@ -2034,7 +1975,7 @@ entry:
 ; Illegal Types
 ;
 
-define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
+define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X86-SSE-LABEL: PR34947:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %ebp
@@ -2465,11 +2406,11 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X64-AVX2-NEXT:    vmovdqa %ymm0, (%rax)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
-  %a0 = load <9 x i16>, <9 x i16>* %p0, align 64
-  %a1 = load <9 x i32>, <9 x i32>* %p1, align 64
+  %a0 = load <9 x i16>, ptr %p0, align 64
+  %a1 = load <9 x i32>, ptr %p1, align 64
   %ext0 = zext <9 x i16> %a0 to <9 x i32>
   %rem = urem <9 x i32> %ext0, %a1
   %mul = mul <9 x i32> <i32 8199, i32 8199, i32 8199, i32 8199, i32 8199, i32 8199, i32 8199, i32 8199, i32 8199>, %rem
-  store <9 x i32> %mul, <9 x i32>* undef, align 64
+  store <9 x i32> %mul, ptr undef, align 64
   ret void
 }

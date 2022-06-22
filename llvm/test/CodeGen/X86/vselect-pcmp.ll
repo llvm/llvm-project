@@ -1248,7 +1248,7 @@ define <32 x i8> @blend_mask_cond_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %z
   ret <32 x i8> %r
 }
 
-define void @PR46531(i32* %x, i32* %y, i32* %z) {
+define void @PR46531(ptr %x, ptr %y, ptr %z) {
 ; AVX12-LABEL: PR46531:
 ; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vmovdqu (%rsi), %xmm0
@@ -1294,17 +1294,14 @@ define void @PR46531(i32* %x, i32* %y, i32* %z) {
 ; XOP-NEXT:    vblendvps %xmm3, %xmm0, %xmm2, %xmm0
 ; XOP-NEXT:    vmovups %xmm0, (%rdi)
 ; XOP-NEXT:    retq
-  %vy = bitcast i32* %y to <4 x i32>*
-  %a = load <4 x i32>, <4 x i32>* %vy, align 4
-  %vz = bitcast i32* %z to <4 x i32>*
-  %b = load <4 x i32>, <4 x i32>* %vz, align 4
+  %a = load <4 x i32>, ptr %y, align 4
+  %b = load <4 x i32>, ptr %z, align 4
   %or = or <4 x i32> %b, %a
   %and = and <4 x i32> %b, <i32 1, i32 1, i32 1, i32 1>
   %cmp = icmp eq <4 x i32> %and, zeroinitializer
   %xor = xor <4 x i32> %b, %a
   %sel = select <4 x i1> %cmp, <4 x i32> %or, <4 x i32> %xor
-  %vx = bitcast i32* %x to <4 x i32>*
-  store <4 x i32> %sel, <4 x i32>* %vx, align 4
+  store <4 x i32> %sel, ptr %x, align 4
   ret void
 }
 

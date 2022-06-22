@@ -27,7 +27,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i64 @fn2(i32 %a, i32 %b, i32 %c) local_unnamed_addr {
 entry:
-  %call = tail call i32 (i32, i32, i32, ...) bitcast (i32 (...)* @fn1 to i32 (i32, i32, i32, ...)*)(i32 -50, i32 50, i32 -7)
+  %call = tail call i32 (i32, i32, i32, ...) @fn1(i32 -50, i32 50, i32 -7)
   %add = mul i32 %a, 3
   %sub = sub i32 %add, %b
   %add2 = add i32 %sub, %c

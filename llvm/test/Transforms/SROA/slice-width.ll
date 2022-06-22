@@ -94,32 +94,26 @@ declare i32 @memcpy_vec3float_helper(ptr)
 define i32 @memcpy_vec3float_widening(ptr %x) {
 ; CHECK-LABEL: @memcpy_vec3float_widening(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[X:%.*]] to ptr
-; CHECK-NEXT:    [[TMP1_SROA_0_0_COPYLOAD:%.*]] = load <3 x float>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1_SROA_0_0_COPYLOAD:%.*]] = load <3 x float>, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <3 x float> [[TMP1_SROA_0_0_COPYLOAD]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
 ; CHECK-NEXT:    [[TMP1_SROA_0_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x float> [[TMP1_SROA_0_0_VEC_EXPAND]], <4 x float> undef
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [[S_VEC3FLOAT:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr [[TMP2]] to ptr
 ; CHECK-NEXT:    [[TMP1_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <4 x float> [[TMP1_SROA_0_0_VECBLEND]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    store <3 x float> [[TMP1_SROA_0_0_VEC_EXTRACT]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    store <3 x float> [[TMP1_SROA_0_0_VEC_EXTRACT]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @memcpy_vec3float_helper(ptr [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
   ; Create a temporary variable %tmp1 and copy %x[0] into it
   %tmp1 = alloca %S.vec3float, align 4
-  %0 = bitcast ptr %tmp1 to ptr
-  %1 = bitcast ptr %x to ptr
-  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %0, ptr align 4 %1, i32 12, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %tmp1, ptr align 4 %x, i32 12, i1 false)
 
   ; The following block does nothing; but appears to confuse SROA
   %unused3 = load <4 x float>, ptr %tmp1, align 1
 
   ; Create a second temporary and copy %tmp1 into it
   %tmp2 = alloca %S.vec3float, align 4
-  %2 = bitcast ptr %tmp2 to ptr
-  %3 = bitcast ptr %tmp1 to ptr
-  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %2, ptr align 4 %3, i32 12, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %tmp2, ptr align 4 %tmp1, i32 12, i1 false)
 
   %result = call i32 @memcpy_vec3float_helper(ptr %tmp2)
   ret i32 %result

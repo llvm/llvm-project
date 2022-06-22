@@ -10,7 +10,7 @@
 ; 16-NOT: movl   %edi, %edi
 ; 16-NOT: xchgw   %ax, %ax
 
-declare void @callee(i64*)
+declare void @callee(ptr)
 
 define void @f0() "patchable-function"="prologue-short-redirect" {
 ; CHECK-LABEL: _f0{{>?}}:
@@ -76,7 +76,7 @@ define void @f2() "patchable-function"="prologue-short-redirect" {
 ; 64-NEXT: subq    $200, %rsp
 		
   %ptr = alloca i64, i32 20
-  call void @callee(i64* %ptr)
+  call void @callee(ptr %ptr)
   ret void
 }
 
@@ -118,14 +118,13 @@ define void @f3() "patchable-function"="prologue-short-redirect" optsize {
 ; 64-NEXT: # %bb.0:
 ; 64-NOT: xchgw   %ax, %ax
 
-define i32 @f4(i8* %arg1, i64 %arg2, i32 %arg3) "patchable-function"="prologue-short-redirect" {
+define i32 @f4(ptr %arg1, i64 %arg2, i32 %arg3) "patchable-function"="prologue-short-redirect" {
 bb:
-  %tmp10 = getelementptr i8, i8* %arg1, i64 %arg2
-  %tmp11 = bitcast i8* %tmp10 to i32*
-  %tmp12 = load i32, i32* %tmp11, align 4
+  %tmp10 = getelementptr i8, ptr %arg1, i64 %arg2
+  %tmp12 = load i32, ptr %tmp10, align 4
   fence acquire
   %tmp13 = add i32 %tmp12, %arg3
-  %tmp14 = cmpxchg i32* %tmp11, i32 %tmp12, i32 %tmp13 seq_cst monotonic
+  %tmp14 = cmpxchg ptr %tmp10, i32 %tmp12, i32 %tmp13 seq_cst monotonic
   %tmp15 = extractvalue { i32, i1 } %tmp14, 1
   br i1 %tmp15, label %bb21, label %bb16
 

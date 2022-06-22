@@ -3,14 +3,14 @@
 
 declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>)
 
-define <2 x i16> @good(<4 x i32>*, <4 x i8>*) {
+define <2 x i16> @good(ptr, ptr) {
 ; CHECK-LABEL: good:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movdqa (%rdi), %xmm0
 ; CHECK-NEXT:    pminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %2 = load <4 x i32>, <4 x i32>* %0, align 16
+  %2 = load <4 x i32>, ptr %0, align 16
   %3 = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %2, <4 x i32> <i32 127, i32 127, i32 127, i32 127>)
   %4 = extractelement <4 x i32> %3, i32 0
   %5 = extractelement <4 x i32> %3, i32 1
@@ -21,14 +21,14 @@ entry:
   ret <2 x i16> %8
 }
 
-define <2 x i16> @bad(<4 x i32>*, <4 x i8>*) {
+define <2 x i16> @bad(ptr, ptr) {
 ; CHECK-LABEL: bad:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = mem[1,1,1,1]
 ; CHECK-NEXT:    pminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %2 = load <4 x i32>, <4 x i32>* %0, align 16
+  %2 = load <4 x i32>, ptr %0, align 16
   %3 = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %2, <4 x i32> <i32 127, i32 127, i32 127, i32 127>)
   %4 = extractelement <4 x i32> %3, i32 0
   %5 = extractelement <4 x i32> %3, i32 1

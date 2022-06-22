@@ -9,6 +9,7 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 
 package(
     default_visibility = ["//visibility:public"],
+    features = ["-use_header_modules"],
     licenses = ["notice"],
 )
 
@@ -826,11 +827,7 @@ libc_function(
     name = "memcpy",
     srcs = ["src/string/memcpy.cpp"],
     hdrs = ["src/string/memcpy.h"],
-    copts = [
-        "-fno-builtin-memcpy",
-        "-fno-builtin-memmove",
-        "-mllvm --tail-merge-threshold=0",
-    ],
+    copts = ["-mllvm --tail-merge-threshold=0"],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -842,9 +839,6 @@ libc_function(
     name = "memset",
     srcs = ["src/string/memset.cpp"],
     hdrs = ["src/string/memset.h"],
-    copts = [
-        "-fno-builtin-memset",
-    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -856,9 +850,6 @@ libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
-    copts = [
-        "-fno-builtin-memmove",
-    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -871,9 +862,6 @@ libc_function(
     name = "memcmp",
     srcs = ["src/string/memcmp.cpp"],
     hdrs = ["src/string/memcmp.h"],
-    copts = [
-        "-fno-builtin-memcmp",
-    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -886,10 +874,6 @@ libc_function(
     name = "bcmp",
     srcs = ["src/string/bcmp.cpp"],
     hdrs = ["src/string/bcmp.h"],
-    copts = [
-        "-fno-builtin-bcmp",
-        "-fno-builtin-memcmp",
-    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -901,10 +885,6 @@ libc_function(
     name = "bzero",
     srcs = ["src/string/bzero.cpp"],
     hdrs = ["src/string/bzero.h"],
-    copts = [
-        "-fno-builtin-bzero",
-        "-fno-builtin-memset",
-    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",

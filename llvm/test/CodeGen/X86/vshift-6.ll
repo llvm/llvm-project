@@ -24,7 +24,7 @@
 ; Where 'r' is a vector of type MVT::v16i8, and
 ; 'count' is the vector shift count.
 
-define <16 x i8> @do_not_crash(i8*, i32*, i64*, i32, i64, i8) {
+define <16 x i8> @do_not_crash(ptr, ptr, ptr, i32, i64, i8) {
 ; X86-LABEL: do_not_crash:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -91,8 +91,8 @@ define <16 x i8> @do_not_crash(i8*, i32*, i64*, i32, i64, i8) {
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    retq
 entry:
-  store i8 %5, i8* %0
-  %L5 = load i8, i8* %0
+  store i8 %5, ptr %0
+  %L5 = load i8, ptr %0
   %I8 = insertelement <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, i8 %L5, i32 7
   %B51 = shl <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, %I8
   ret <16 x i8> %B51

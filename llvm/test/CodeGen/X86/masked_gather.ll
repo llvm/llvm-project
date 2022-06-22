@@ -13,7 +13,7 @@
 %struct.b = type { i32, i32 }
 @c = external dso_local global %struct.a, align 4
 
-define <4 x float> @gather_v4f32_ptr_v4i32(<4 x float*> %ptr, <4 x i32> %trigger, <4 x float> %passthru) {
+define <4 x float> @gather_v4f32_ptr_v4i32(<4 x ptr> %ptr, <4 x i32> %trigger, <4 x float> %passthru) {
 ; SSE-LABEL: gather_v4f32_ptr_v4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm4, %xmm4
@@ -183,11 +183,11 @@ define <4 x float> @gather_v4f32_ptr_v4i32(<4 x float*> %ptr, <4 x i32> %trigger
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %ptr, i32 4, <4 x i1> %mask, <4 x float> %passthru)
+  %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %ptr, i32 4, <4 x i1> %mask, <4 x float> %passthru)
   ret <4 x float> %res
 }
 
-define <4 x float> @gather_v4f32_v4i32_v4i32(float* %base, <4 x i32> %idx, <4 x i32> %trigger, <4 x float> %passthru) {
+define <4 x float> @gather_v4f32_v4i32_v4i32(ptr %base, <4 x i32> %idx, <4 x i32> %trigger, <4 x float> %passthru) {
 ; SSE-LABEL: gather_v4f32_v4i32_v4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %xmm3
@@ -380,16 +380,16 @@ define <4 x float> @gather_v4f32_v4i32_v4i32(float* %base, <4 x i32> %idx, <4 x 
 ; AVX512VL-NEXT:    vgatherdps (%rdi,%xmm0,4), %xmm2 {%k1}
 ; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
-  %vptr0 = insertelement <4 x float*> undef, float* %base, i32 0
-  %vptr1 = shufflevector <4 x float*> %vptr0, <4 x float*> undef, <4 x i32> zeroinitializer
-  %vptr2 = getelementptr float, <4 x float*> %vptr1, <4 x i32> %idx
+  %vptr0 = insertelement <4 x ptr> undef, ptr %base, i32 0
+  %vptr1 = shufflevector <4 x ptr> %vptr0, <4 x ptr> undef, <4 x i32> zeroinitializer
+  %vptr2 = getelementptr float, <4 x ptr> %vptr1, <4 x i32> %idx
 
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %vptr2, i32 4, <4 x i1> %mask, <4 x float> %passthru)
+  %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %vptr2, i32 4, <4 x i1> %mask, <4 x float> %passthru)
   ret <4 x float> %res
 }
 
-define <4 x float> @gather_v4f32_v4i64_v4i32(float* %base, <4 x i64> %idx, <4 x i32> %trigger, <4 x float> %passthru) {
+define <4 x float> @gather_v4f32_v4i64_v4i32(ptr %base, <4 x i64> %idx, <4 x i32> %trigger, <4 x float> %passthru) {
 ; SSE-LABEL: gather_v4f32_v4i64_v4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %xmm4
@@ -576,12 +576,12 @@ define <4 x float> @gather_v4f32_v4i64_v4i32(float* %base, <4 x i64> %idx, <4 x 
 ; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
-  %vptr0 = insertelement <4 x float*> undef, float* %base, i32 0
-  %vptr1 = shufflevector <4 x float*> %vptr0, <4 x float*> undef, <4 x i32> zeroinitializer
-  %vptr2 = getelementptr float, <4 x float*> %vptr1, <4 x i64> %idx
+  %vptr0 = insertelement <4 x ptr> undef, ptr %base, i32 0
+  %vptr1 = shufflevector <4 x ptr> %vptr0, <4 x ptr> undef, <4 x i32> zeroinitializer
+  %vptr2 = getelementptr float, <4 x ptr> %vptr1, <4 x i64> %idx
 
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %vptr2, i32 4, <4 x i1> %mask, <4 x float> %passthru)
+  %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %vptr2, i32 4, <4 x i1> %mask, <4 x float> %passthru)
   ret <4 x float> %res
 }
 
@@ -589,7 +589,7 @@ define <4 x float> @gather_v4f32_v4i64_v4i32(float* %base, <4 x i64> %idx, <4 x 
 ; vXi8
 ;
 
-define <16 x i8> @gather_v16i8_v16i32_v16i8(i8* %base, <16 x i32> %idx, <16 x i8> %trigger, <16 x i8> %passthru) {
+define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8> %trigger, <16 x i8> %passthru) {
 ; SSE-LABEL: gather_v16i8_v16i32_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %xmm6
@@ -1125,12 +1125,12 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(i8* %base, <16 x i32> %idx, <16 x i8
 ; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %vptr0 = insertelement <16 x i8*> undef, i8* %base, i32 0
-  %vptr1 = shufflevector <16 x i8*> %vptr0, <16 x i8*> undef, <16 x i32> zeroinitializer
-  %vptr2 = getelementptr i8, <16 x i8*> %vptr1, <16 x i32> %idx
+  %vptr0 = insertelement <16 x ptr> undef, ptr %base, i32 0
+  %vptr1 = shufflevector <16 x ptr> %vptr0, <16 x ptr> undef, <16 x i32> zeroinitializer
+  %vptr2 = getelementptr i8, <16 x ptr> %vptr1, <16 x i32> %idx
 
   %mask = icmp eq <16 x i8> %trigger, zeroinitializer
-  %res = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> %vptr2, i32 4, <16 x i1> %mask, <16 x i8> %passthru)
+  %res = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %vptr2, i32 4, <16 x i1> %mask, <16 x i8> %passthru)
   ret <16 x i8> %res
 }
 
@@ -1772,20 +1772,20 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX512VL-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = icmp eq <8 x i32> %trigger, zeroinitializer
-  %2 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> getelementptr (%struct.a, <8 x %struct.a*> <%struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c>, <8 x i64> zeroinitializer, i32 0, <8 x i64> <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>), i32 4, <8 x i1> %1, <8 x i32> undef)
-  %3 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> getelementptr (%struct.a, <8 x %struct.a*> <%struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c>, <8 x i64> zeroinitializer, i32 3), i32 4, <8 x i1> %1, <8 x i32> undef)
+  %2 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> getelementptr (%struct.a, <8 x ptr> <ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c>, <8 x i64> zeroinitializer, i32 0, <8 x i64> <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>), i32 4, <8 x i1> %1, <8 x i32> undef)
+  %3 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> getelementptr (%struct.a, <8 x ptr> <ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c>, <8 x i64> zeroinitializer, i32 3), i32 4, <8 x i1> %1, <8 x i32> undef)
   %4 = add <8 x i32> %2, %3
-  %5 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> getelementptr (%struct.a, <8 x %struct.a*> <%struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c>, <8 x i64> zeroinitializer, i32 3), i32 4, <8 x i1> %1, <8 x i32> undef)
+  %5 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> getelementptr (%struct.a, <8 x ptr> <ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c>, <8 x i64> zeroinitializer, i32 3), i32 4, <8 x i1> %1, <8 x i32> undef)
   %6 = add <8 x i32> %4, %5
   ret <8 x i32> %6
 }
 
-declare <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*>, i32, <2 x i1>, <2 x double>)
-declare <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*>, i32, <4 x i1>, <4 x double>)
+declare <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x double>)
+declare <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x double>)
 
-declare <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*>, i32, <4 x i1>, <4 x float>)
-declare <8 x float> @llvm.masked.gather.v8f32.v8p0f32(<8 x float*>, i32, <8 x i1>, <8 x float>)
+declare <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x float>)
+declare <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x float>)
 
-declare <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*>, i32, <16 x i1>, <16 x i8>)
+declare <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i8>)
 
-declare <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*>, i32, <8 x i1>, <8 x i32>)
+declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i32>)

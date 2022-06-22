@@ -6,7 +6,7 @@
 
 define dso_local void @set_FP128(fp128 %x) {
 entry:
-  store fp128 %x, fp128* @myFP128, align 16
+  store fp128 %x, ptr @myFP128, align 16
   ret void
 ; CHECK-LABEL: set_FP128:
 ; CHECK:       movaps  %xmm0, myFP128(%rip)

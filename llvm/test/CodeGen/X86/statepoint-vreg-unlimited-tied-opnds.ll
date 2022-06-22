@@ -7,9 +7,9 @@ target triple = "x86_64-pc-linux-gnu"
 declare dso_local void @func()
 
 define i32 @test_spill(
-    i32 addrspace(1)* %arg00, i32 addrspace(1)* %arg01, i32 addrspace(1)* %arg02, i32 addrspace(1)* %arg03, i32 addrspace(1)* %arg04, i32 addrspace(1)* %arg05,
-    i32 addrspace(1)* %arg06, i32 addrspace(1)* %arg07, i32 addrspace(1)* %arg08, i32 addrspace(1)* %arg09, i32 addrspace(1)* %arg10, i32 addrspace(1)* %arg11,
-    i32 addrspace(1)* %arg12, i32 addrspace(1)* %arg13, i32 addrspace(1)* %arg14, i32 addrspace(1)* %arg15, i32 addrspace(1)* %arg16, i32 addrspace(1)* %arg17
+    ptr addrspace(1) %arg00, ptr addrspace(1) %arg01, ptr addrspace(1) %arg02, ptr addrspace(1) %arg03, ptr addrspace(1) %arg04, ptr addrspace(1) %arg05,
+    ptr addrspace(1) %arg06, ptr addrspace(1) %arg07, ptr addrspace(1) %arg08, ptr addrspace(1) %arg09, ptr addrspace(1) %arg10, ptr addrspace(1) %arg11,
+    ptr addrspace(1) %arg12, ptr addrspace(1) %arg13, ptr addrspace(1) %arg14, ptr addrspace(1) %arg15, ptr addrspace(1) %arg16, ptr addrspace(1) %arg17
     ) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: test_spill
 ; CHECK-VREG:     %5:gr64 = COPY $r9
@@ -108,89 +108,89 @@ define i32 @test_spill(
 ; CHECK-PREG:     renamable $eax = ADD32rm killed renamable $eax, killed renamable $r14, 1, $noreg, 68, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep16, addrspace 1)
 ; CHECK-PREG:     renamable $eax = ADD32rm killed renamable $eax, killed renamable $r15, 1, $noreg, 72, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep17, addrspace 1)
 
-    %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* %arg00, i32 addrspace(1)* %arg01, i32 addrspace(1)* %arg02, i32 addrspace(1)* %arg03, i32 addrspace(1)* %arg04, i32 addrspace(1)* %arg05, i32 addrspace(1)* %arg06, i32 addrspace(1)* %arg07, i32 addrspace(1)* %arg08,
-    i32 addrspace(1)* %arg09, i32 addrspace(1)* %arg10, i32 addrspace(1)* %arg11, i32 addrspace(1)* %arg12, i32 addrspace(1)* %arg13, i32 addrspace(1)* %arg14, i32 addrspace(1)* %arg15, i32 addrspace(1)* %arg16, i32 addrspace(1)* %arg17) ]
-    %rel00 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 0, i32 0) ; (%arg00, %arg00)
-    %rel01 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 1, i32 1) ; (%arg01, %arg01)
-    %rel02 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 2, i32 2) ; (%arg02, %arg02)
-    %rel03 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 3, i32 3) ; (%arg03, %arg03)
-    %rel04 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 4, i32 4) ; (%arg04, %arg04)
-    %rel05 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 5, i32 5) ; (%arg05, %arg05)
-    %rel06 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 6, i32 6) ; (%arg06, %arg06)
-    %rel07 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 7, i32 7) ; (%arg07, %arg07)
-    %rel08 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 8, i32 8) ; (%arg08, %arg08)
-    %rel09 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 9, i32 9) ; (%arg09, %arg09)
-    %rel10 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 10, i32 10) ; (%arg10, %arg10)
-    %rel11 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 11, i32 11) ; (%arg11, %arg11)
-    %rel12 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 12, i32 12) ; (%arg12, %arg12)
-    %rel13 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 13, i32 13) ; (%arg13, %arg13)
-    %rel14 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 14, i32 14) ; (%arg14, %arg14)
-    %rel15 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 15, i32 15) ; (%arg15, %arg15)
-    %rel16 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 16, i32 16) ; (%arg16, %arg16)
-    %rel17 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token, i32 17, i32 17) ; (%arg17, %arg17)
-    %gep00 = getelementptr i32, i32 addrspace(1)* %rel00, i64 1
-    %gep01 = getelementptr i32, i32 addrspace(1)* %rel01, i64 2
-    %gep02 = getelementptr i32, i32 addrspace(1)* %rel02, i64 3
-    %gep03 = getelementptr i32, i32 addrspace(1)* %rel03, i64 4
-    %gep04 = getelementptr i32, i32 addrspace(1)* %rel04, i64 5
-    %gep05 = getelementptr i32, i32 addrspace(1)* %rel05, i64 6
-    %gep06 = getelementptr i32, i32 addrspace(1)* %rel06, i64 7
-    %gep07 = getelementptr i32, i32 addrspace(1)* %rel07, i64 8
-    %gep08 = getelementptr i32, i32 addrspace(1)* %rel08, i64 9
-    %gep09 = getelementptr i32, i32 addrspace(1)* %rel09, i64 10
-    %gep10 = getelementptr i32, i32 addrspace(1)* %rel10, i64 11
-    %gep11 = getelementptr i32, i32 addrspace(1)* %rel11, i64 12
-    %gep12 = getelementptr i32, i32 addrspace(1)* %rel12, i64 13
-    %gep13 = getelementptr i32, i32 addrspace(1)* %rel13, i64 14
-    %gep14 = getelementptr i32, i32 addrspace(1)* %rel14, i64 15
-    %gep15 = getelementptr i32, i32 addrspace(1)* %rel15, i64 16
-    %gep16 = getelementptr i32, i32 addrspace(1)* %rel16, i64 17
-    %gep17 = getelementptr i32, i32 addrspace(1)* %rel17, i64 18
-    %val00 = load i32, i32 addrspace(1)* %gep00, align 4
-    %val01 = load i32, i32 addrspace(1)* %gep01, align 4
+    %token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %arg00, ptr addrspace(1) %arg01, ptr addrspace(1) %arg02, ptr addrspace(1) %arg03, ptr addrspace(1) %arg04, ptr addrspace(1) %arg05, ptr addrspace(1) %arg06, ptr addrspace(1) %arg07, ptr addrspace(1) %arg08,
+    ptr addrspace(1) %arg09, ptr addrspace(1) %arg10, ptr addrspace(1) %arg11, ptr addrspace(1) %arg12, ptr addrspace(1) %arg13, ptr addrspace(1) %arg14, ptr addrspace(1) %arg15, ptr addrspace(1) %arg16, ptr addrspace(1) %arg17) ]
+    %rel00 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 0, i32 0) ; (%arg00, %arg00)
+    %rel01 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 1, i32 1) ; (%arg01, %arg01)
+    %rel02 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 2, i32 2) ; (%arg02, %arg02)
+    %rel03 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 3, i32 3) ; (%arg03, %arg03)
+    %rel04 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 4, i32 4) ; (%arg04, %arg04)
+    %rel05 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 5, i32 5) ; (%arg05, %arg05)
+    %rel06 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 6, i32 6) ; (%arg06, %arg06)
+    %rel07 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 7, i32 7) ; (%arg07, %arg07)
+    %rel08 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 8, i32 8) ; (%arg08, %arg08)
+    %rel09 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 9, i32 9) ; (%arg09, %arg09)
+    %rel10 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 10, i32 10) ; (%arg10, %arg10)
+    %rel11 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 11, i32 11) ; (%arg11, %arg11)
+    %rel12 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 12, i32 12) ; (%arg12, %arg12)
+    %rel13 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 13, i32 13) ; (%arg13, %arg13)
+    %rel14 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 14, i32 14) ; (%arg14, %arg14)
+    %rel15 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 15, i32 15) ; (%arg15, %arg15)
+    %rel16 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 16, i32 16) ; (%arg16, %arg16)
+    %rel17 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 17, i32 17) ; (%arg17, %arg17)
+    %gep00 = getelementptr i32, ptr addrspace(1) %rel00, i64 1
+    %gep01 = getelementptr i32, ptr addrspace(1) %rel01, i64 2
+    %gep02 = getelementptr i32, ptr addrspace(1) %rel02, i64 3
+    %gep03 = getelementptr i32, ptr addrspace(1) %rel03, i64 4
+    %gep04 = getelementptr i32, ptr addrspace(1) %rel04, i64 5
+    %gep05 = getelementptr i32, ptr addrspace(1) %rel05, i64 6
+    %gep06 = getelementptr i32, ptr addrspace(1) %rel06, i64 7
+    %gep07 = getelementptr i32, ptr addrspace(1) %rel07, i64 8
+    %gep08 = getelementptr i32, ptr addrspace(1) %rel08, i64 9
+    %gep09 = getelementptr i32, ptr addrspace(1) %rel09, i64 10
+    %gep10 = getelementptr i32, ptr addrspace(1) %rel10, i64 11
+    %gep11 = getelementptr i32, ptr addrspace(1) %rel11, i64 12
+    %gep12 = getelementptr i32, ptr addrspace(1) %rel12, i64 13
+    %gep13 = getelementptr i32, ptr addrspace(1) %rel13, i64 14
+    %gep14 = getelementptr i32, ptr addrspace(1) %rel14, i64 15
+    %gep15 = getelementptr i32, ptr addrspace(1) %rel15, i64 16
+    %gep16 = getelementptr i32, ptr addrspace(1) %rel16, i64 17
+    %gep17 = getelementptr i32, ptr addrspace(1) %rel17, i64 18
+    %val00 = load i32, ptr addrspace(1) %gep00, align 4
+    %val01 = load i32, ptr addrspace(1) %gep01, align 4
     %sum01 = add i32 %val00, %val01
-    %val02 = load i32, i32 addrspace(1)* %gep02, align 4
+    %val02 = load i32, ptr addrspace(1) %gep02, align 4
     %sum02 = add i32 %sum01, %val02
-    %val03 = load i32, i32 addrspace(1)* %gep03, align 4
+    %val03 = load i32, ptr addrspace(1) %gep03, align 4
     %sum03 = add i32 %sum02, %val03
-    %val04 = load i32, i32 addrspace(1)* %gep04, align 4
+    %val04 = load i32, ptr addrspace(1) %gep04, align 4
     %sum04 = add i32 %sum03, %val04
-    %val05 = load i32, i32 addrspace(1)* %gep05, align 4
+    %val05 = load i32, ptr addrspace(1) %gep05, align 4
     %sum05 = add i32 %sum04, %val05
-    %val06 = load i32, i32 addrspace(1)* %gep06, align 4
+    %val06 = load i32, ptr addrspace(1) %gep06, align 4
     %sum06 = add i32 %sum05, %val06
-    %val07 = load i32, i32 addrspace(1)* %gep07, align 4
+    %val07 = load i32, ptr addrspace(1) %gep07, align 4
     %sum07 = add i32 %sum06, %val07
-    %val08 = load i32, i32 addrspace(1)* %gep08, align 4
+    %val08 = load i32, ptr addrspace(1) %gep08, align 4
     %sum08 = add i32 %sum07, %val08
-    %val09 = load i32, i32 addrspace(1)* %gep09, align 4
+    %val09 = load i32, ptr addrspace(1) %gep09, align 4
     %sum09 = add i32 %sum08, %val09
-    %val10 = load i32, i32 addrspace(1)* %gep10, align 4
+    %val10 = load i32, ptr addrspace(1) %gep10, align 4
     %sum10 = add i32 %sum09, %val10
-    %val11 = load i32, i32 addrspace(1)* %gep11, align 4
+    %val11 = load i32, ptr addrspace(1) %gep11, align 4
     %sum11 = add i32 %sum10, %val11
-    %val12 = load i32, i32 addrspace(1)* %gep12, align 4
+    %val12 = load i32, ptr addrspace(1) %gep12, align 4
     %sum12 = add i32 %sum11, %val12
-    %val13 = load i32, i32 addrspace(1)* %gep13, align 4
+    %val13 = load i32, ptr addrspace(1) %gep13, align 4
     %sum13 = add i32 %sum12, %val13
-    %val14 = load i32, i32 addrspace(1)* %gep14, align 4
+    %val14 = load i32, ptr addrspace(1) %gep14, align 4
     %sum14 = add i32 %sum13, %val14
-    %val15 = load i32, i32 addrspace(1)* %gep15, align 4
+    %val15 = load i32, ptr addrspace(1) %gep15, align 4
     %sum15 = add i32 %sum14, %val15
-    %val16 = load i32, i32 addrspace(1)* %gep16, align 4
+    %val16 = load i32, ptr addrspace(1) %gep16, align 4
     %sum16 = add i32 %sum15, %val16
-    %val17 = load i32, i32 addrspace(1)* %gep17, align 4
+    %val17 = load i32, ptr addrspace(1) %gep17, align 4
     %sum17 = add i32 %sum16, %val17
     ret i32 %sum17
 }
 
 ; Function Attrs: nounwind readonly
-declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32 immarg, i32 immarg) #0
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32 immarg, i32 immarg) #0
 
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 immarg, i32 immarg, void ()*, i32 immarg, i32 immarg, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
 
 ; Function Attrs: nounwind
-declare dso_local void @llvm.stackprotector(i8*, i8**) #1
+declare dso_local void @llvm.stackprotector(ptr, ptr) #1
 
 attributes #0 = { nounwind readonly }
 attributes #1 = { nounwind }

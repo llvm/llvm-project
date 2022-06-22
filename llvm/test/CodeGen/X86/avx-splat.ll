@@ -112,9 +112,8 @@ for_exit499:                                      ; preds = %for_test505.prehead
   br i1 undef, label %__load_and_broadcast_32.exit1249, label %load.i1247
 
 load.i1247:                                       ; preds = %for_exit499
-  %ptr1227 = getelementptr [18 x [18 x float]], [18 x [18 x float]]* %udx495, i64 0, i64 1, i64 1
-  %ptr.i1237 = bitcast float* %ptr1227 to i32*
-  %val.i1238 = load i32, i32* %ptr.i1237, align 4
+  %ptr1227 = getelementptr [18 x [18 x float]], ptr %udx495, i64 0, i64 1, i64 1
+  %val.i1238 = load i32, ptr %ptr1227, align 4
   %ret6.i1245 = insertelement <8 x i32> undef, i32 %val.i1238, i32 6
   %ret7.i1246 = insertelement <8 x i32> %ret6.i1245, i32 %val.i1238, i32 7
   %phitmp = bitcast <8 x i32> %ret7.i1246 to <8 x float>
@@ -165,7 +164,7 @@ entry:
   ret <8 x float> %shuffle
 }
 
-define <2 x double> @splat_load_2f64_11(<2 x double>* %ptr) {
+define <2 x double> @splat_load_2f64_11(ptr %ptr) {
 ; X86-LABEL: splat_load_2f64_11:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -176,12 +175,12 @@ define <2 x double> @splat_load_2f64_11(<2 x double>* %ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovddup 8(%rdi), %xmm0 # xmm0 = mem[0,0]
 ; X64-NEXT:    retq
-  %x = load <2 x double>, <2 x double>* %ptr
+  %x = load <2 x double>, ptr %ptr
   %x1 = shufflevector <2 x double> %x, <2 x double> undef, <2 x i32> <i32 1, i32 1>
   ret <2 x double> %x1
 }
 
-define <4 x double> @splat_load_4f64_2222(<4 x double>* %ptr) {
+define <4 x double> @splat_load_4f64_2222(ptr %ptr) {
 ; X86-LABEL: splat_load_4f64_2222:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -192,12 +191,12 @@ define <4 x double> @splat_load_4f64_2222(<4 x double>* %ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; X64-NEXT:    retq
-  %x = load <4 x double>, <4 x double>* %ptr
+  %x = load <4 x double>, ptr %ptr
   %x1 = shufflevector <4 x double> %x, <4 x double> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   ret <4 x double> %x1
 }
 
-define <4 x float> @splat_load_4f32_0000(<4 x float>* %ptr) {
+define <4 x float> @splat_load_4f32_0000(ptr %ptr) {
 ; X86-LABEL: splat_load_4f32_0000:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -208,12 +207,12 @@ define <4 x float> @splat_load_4f32_0000(<4 x float>* %ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastss (%rdi), %xmm0
 ; X64-NEXT:    retq
-  %x = load <4 x float>, <4 x float>* %ptr
+  %x = load <4 x float>, ptr %ptr
   %x1 = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x float> %x1
 }
 
-define <8 x float> @splat_load_8f32_77777777(<8 x float>* %ptr) {
+define <8 x float> @splat_load_8f32_77777777(ptr %ptr) {
 ; X86-LABEL: splat_load_8f32_77777777:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -224,7 +223,7 @@ define <8 x float> @splat_load_8f32_77777777(<8 x float>* %ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastss 28(%rdi), %ymm0
 ; X64-NEXT:    retq
-  %x = load <8 x float>, <8 x float>* %ptr
+  %x = load <8 x float>, ptr %ptr
   %x1 = shufflevector <8 x float> %x, <8 x float> undef, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   ret <8 x float> %x1
 }

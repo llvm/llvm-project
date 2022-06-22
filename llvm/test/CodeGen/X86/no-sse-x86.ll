@@ -52,18 +52,18 @@ define void @test() nounwind {
 ; NOSSE-NEXT:    addl $12, %esp
 ; NOSSE-NEXT:    retl
 entry:
-  %0 = load float, float* @f, align 4
+  %0 = load float, ptr @f, align 4
   %1 = tail call inreg float @foo1(float inreg %0) nounwind
-  store float %1, float* @f, align 4
-  %2 = load double, double* @d, align 8
+  store float %1, ptr @f, align 4
+  %2 = load double, ptr @d, align 8
   %3 = tail call inreg double @foo2(double inreg %2) nounwind
-  store double %3, double* @d, align 8
-  %4 = load float, float* @f, align 4
+  store double %3, ptr @d, align 8
+  %4 = load float, ptr @f, align 4
   %5 = tail call inreg float @foo3(float inreg %4) nounwind
-  store float %5, float* @f, align 4
-  %6 = load double, double* @d, align 8
+  store float %5, ptr @f, align 4
+  %6 = load double, ptr @d, align 8
   %7 = tail call inreg double @foo4(double inreg %6) nounwind
-  store double %7, double* @d, align 8
+  store double %7, ptr @d, align 8
   ret void
 }
 

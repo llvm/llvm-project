@@ -2491,8 +2491,8 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits) {
       if (Amt >= DemandedBits.getBitWidth())
         break;
       APInt SrcDemandedBits = DemandedBits << Amt;
-      if (SDValue SimplifyLHS =
-              GetDemandedBits(V.getOperand(0), SrcDemandedBits))
+      if (SDValue SimplifyLHS = TLI->SimplifyMultipleUseDemandedBits(
+              V.getOperand(0), SrcDemandedBits, *this))
         return getNode(ISD::SRL, SDLoc(V), V.getValueType(), SimplifyLHS,
                        V.getOperand(1));
     }

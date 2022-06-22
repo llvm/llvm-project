@@ -26,7 +26,7 @@
 ; test1a: array of [16 x i8] 
 ;         no ssp attribute
 ; Requires no protector.
-define void @test1a(i8* %a) {
+define void @test1a(ptr %a) {
 entry:
 ; LINUX-I386-LABEL: test1a:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -52,14 +52,12 @@ entry:
 ; MINGW-X64-NOT: callq __stack_chk_fail
 ; MINGW-X64: .seh_endproc
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
-  store i8* %a, i8** %a.addr, align 8
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %arraydecay1 = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay1)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %buf, ptr %0)
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %buf)
   ret void
 }
 
@@ -67,7 +65,7 @@ entry:
 ;         ssp attribute
 ; Requires protector.
 ; Function Attrs: ssp
-define void @test1b(i8* %a) #0 {
+define void @test1b(ptr %a) #0 {
 entry:
 ; LINUX-I386-LABEL: test1b:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -97,14 +95,12 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
-  store i8* %a, i8** %a.addr, align 8
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %arraydecay1 = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay1)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %buf, ptr %0)
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %buf)
   ret void
 }
 
@@ -112,7 +108,7 @@ entry:
 ;         sspstrong attribute
 ; Requires protector.
 ; Function Attrs: sspstrong 
-define void @test1c(i8* %a) #1 {
+define void @test1c(ptr %a) #1 {
 entry:
 ; LINUX-I386-LABEL: test1c:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -138,14 +134,12 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
-  store i8* %a, i8** %a.addr, align 8
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %arraydecay1 = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay1)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %buf, ptr %0)
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %buf)
   ret void
 }
 
@@ -153,7 +147,7 @@ entry:
 ;         sspreq attribute
 ; Requires protector.
 ; Function Attrs: sspreq 
-define void @test1d(i8* %a) #2 {
+define void @test1d(ptr %a) #2 {
 entry:
 ; LINUX-I386-LABEL: test1d:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -179,21 +173,19 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
-  store i8* %a, i8** %a.addr, align 8
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %arraydecay1 = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay1)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %buf, ptr %0)
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %buf)
   ret void
 }
 
 ; test2a: struct { [16 x i8] }
 ;         no ssp attribute
 ; Requires no protector.
-define void @test2a(i8* %a) {
+define void @test2a(ptr %a) {
 entry:
 ; LINUX-I386-LABEL: test2a:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -219,16 +211,12 @@ entry:
 ; MINGW-X64-NOT: callq __stack_chk_fail
 ; MINGW-X64: .seh_endproc
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo, align 1
-  store i8* %a, i8** %a.addr, align 8
-  %buf = getelementptr inbounds %struct.foo, %struct.foo* %b, i32 0, i32 0
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %buf1 = getelementptr inbounds %struct.foo, %struct.foo* %b, i32 0, i32 0
-  %arraydecay2 = getelementptr inbounds [16 x i8], [16 x i8]* %buf1, i32 0, i32 0
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay2)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %b, ptr %0)
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
   ret void
 }
 
@@ -236,7 +224,7 @@ entry:
 ;          ssp attribute
 ; Requires protector.
 ; Function Attrs: ssp
-define void @test2b(i8* %a) #0 {
+define void @test2b(ptr %a) #0 {
 entry:
 ; LINUX-I386-LABEL: test2b:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -258,16 +246,12 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo, align 1
-  store i8* %a, i8** %a.addr, align 8
-  %buf = getelementptr inbounds %struct.foo, %struct.foo* %b, i32 0, i32 0
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %buf1 = getelementptr inbounds %struct.foo, %struct.foo* %b, i32 0, i32 0
-  %arraydecay2 = getelementptr inbounds [16 x i8], [16 x i8]* %buf1, i32 0, i32 0
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay2)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %b, ptr %0)
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
   ret void
 }
 
@@ -275,7 +259,7 @@ entry:
 ;          sspstrong attribute
 ; Requires protector.
 ; Function Attrs: sspstrong 
-define void @test2c(i8* %a) #1 {
+define void @test2c(ptr %a) #1 {
 entry:
 ; LINUX-I386-LABEL: test2c:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -301,16 +285,12 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo, align 1
-  store i8* %a, i8** %a.addr, align 8
-  %buf = getelementptr inbounds %struct.foo, %struct.foo* %b, i32 0, i32 0
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %buf1 = getelementptr inbounds %struct.foo, %struct.foo* %b, i32 0, i32 0
-  %arraydecay2 = getelementptr inbounds [16 x i8], [16 x i8]* %buf1, i32 0, i32 0
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay2)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %b, ptr %0)
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
   ret void
 }
 
@@ -318,7 +298,7 @@ entry:
 ;          sspreq attribute
 ; Requires protector.
 ; Function Attrs: sspreq 
-define void @test2d(i8* %a) #2 {
+define void @test2d(ptr %a) #2 {
 entry:
 ; LINUX-I386-LABEL: test2d:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -344,23 +324,19 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo, align 1
-  store i8* %a, i8** %a.addr, align 8
-  %buf = getelementptr inbounds %struct.foo, %struct.foo* %b, i32 0, i32 0
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %buf1 = getelementptr inbounds %struct.foo, %struct.foo* %b, i32 0, i32 0
-  %arraydecay2 = getelementptr inbounds [16 x i8], [16 x i8]* %buf1, i32 0, i32 0
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay2)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %b, ptr %0)
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
   ret void
 }
 
 ; test3a:  array of [4 x i8]
 ;          no ssp attribute
 ; Requires no protector.
-define void @test3a(i8* %a) {
+define void @test3a(ptr %a) {
 entry:
 ; LINUX-I386-LABEL: test3a:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -386,14 +362,12 @@ entry:
 ; MINGW-X64-NOT: callq __stack_chk_fail
 ; MINGW-X64: .seh_endproc
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %buf = alloca [4 x i8], align 1
-  store i8* %a, i8** %a.addr, align 8
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %arraydecay1 = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay1)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %buf, ptr %0)
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %buf)
   ret void
 }
 
@@ -401,7 +375,7 @@ entry:
 ;          ssp attribute
 ; Requires no protector.
 ; Function Attrs: ssp
-define void @test3b(i8* %a) #0 {
+define void @test3b(ptr %a) #0 {
 entry:
 ; LINUX-I386-LABEL: test3b:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -427,14 +401,12 @@ entry:
 ; MINGW-X64-NOT: callq __stack_chk_fail
 ; MINGW-X64: .seh_endproc
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %buf = alloca [4 x i8], align 1
-  store i8* %a, i8** %a.addr, align 8
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %arraydecay1 = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay1)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %buf, ptr %0)
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %buf)
   ret void
 }
 
@@ -442,7 +414,7 @@ entry:
 ;          sspstrong attribute
 ; Requires protector.
 ; Function Attrs: sspstrong 
-define void @test3c(i8* %a) #1 {
+define void @test3c(ptr %a) #1 {
 entry:
 ; LINUX-I386-LABEL: test3c:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -468,14 +440,12 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %buf = alloca [4 x i8], align 1
-  store i8* %a, i8** %a.addr, align 8
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %arraydecay1 = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay1)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %buf, ptr %0)
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %buf)
   ret void
 }
 
@@ -483,7 +453,7 @@ entry:
 ;          sspreq attribute
 ; Requires protector.
 ; Function Attrs: sspreq 
-define void @test3d(i8* %a) #2 {
+define void @test3d(ptr %a) #2 {
 entry:
 ; LINUX-I386-LABEL: test3d:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -509,21 +479,19 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %buf = alloca [4 x i8], align 1
-  store i8* %a, i8** %a.addr, align 8
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %arraydecay1 = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay1)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %buf, ptr %0)
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %buf)
   ret void
 }
 
 ; test4a:  struct { [4 x i8] }
 ;          no ssp attribute
 ; Requires no protector.
-define void @test4a(i8* %a) {
+define void @test4a(ptr %a) {
 entry:
 ; LINUX-I386-LABEL: test4a:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -549,16 +517,12 @@ entry:
 ; MINGW-X64-NOT: callq __stack_chk_fail
 ; MINGW-X64: .seh_endproc
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo.0, align 1
-  store i8* %a, i8** %a.addr, align 8
-  %buf = getelementptr inbounds %struct.foo.0, %struct.foo.0* %b, i32 0, i32 0
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %buf1 = getelementptr inbounds %struct.foo.0, %struct.foo.0* %b, i32 0, i32 0
-  %arraydecay2 = getelementptr inbounds [4 x i8], [4 x i8]* %buf1, i32 0, i32 0
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay2)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %b, ptr %0)
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
   ret void
 }
 
@@ -566,7 +530,7 @@ entry:
 ;          ssp attribute
 ; Requires no protector.
 ; Function Attrs: ssp
-define void @test4b(i8* %a) #0 {
+define void @test4b(ptr %a) #0 {
 entry:
 ; LINUX-I386-LABEL: test4b:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -592,16 +556,12 @@ entry:
 ; MINGW-X64-NOT: callq __stack_chk_fail
 ; MINGW-X64: .seh_endproc
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo.0, align 1
-  store i8* %a, i8** %a.addr, align 8
-  %buf = getelementptr inbounds %struct.foo.0, %struct.foo.0* %b, i32 0, i32 0
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %buf1 = getelementptr inbounds %struct.foo.0, %struct.foo.0* %b, i32 0, i32 0
-  %arraydecay2 = getelementptr inbounds [4 x i8], [4 x i8]* %buf1, i32 0, i32 0
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay2)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %b, ptr %0)
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
   ret void
 }
 
@@ -609,7 +569,7 @@ entry:
 ;          sspstrong attribute
 ; Requires protector.
 ; Function Attrs: sspstrong 
-define void @test4c(i8* %a) #1 {
+define void @test4c(ptr %a) #1 {
 entry:
 ; LINUX-I386-LABEL: test4c:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -635,16 +595,12 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo.0, align 1
-  store i8* %a, i8** %a.addr, align 8
-  %buf = getelementptr inbounds %struct.foo.0, %struct.foo.0* %b, i32 0, i32 0
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %buf1 = getelementptr inbounds %struct.foo.0, %struct.foo.0* %b, i32 0, i32 0
-  %arraydecay2 = getelementptr inbounds [4 x i8], [4 x i8]* %buf1, i32 0, i32 0
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay2)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %b, ptr %0)
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
   ret void
 }
 
@@ -652,7 +608,7 @@ entry:
 ;          sspreq attribute
 ; Requires protector.
 ; Function Attrs: sspreq 
-define void @test4d(i8* %a) #2 {
+define void @test4d(ptr %a) #2 {
 entry:
 ; LINUX-I386-LABEL: test4d:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -678,23 +634,19 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %b = alloca %struct.foo.0, align 1
-  store i8* %a, i8** %a.addr, align 8
-  %buf = getelementptr inbounds %struct.foo.0, %struct.foo.0* %b, i32 0, i32 0
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i32 0, i32 0
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i8* @strcpy(i8* %arraydecay, i8* %0)
-  %buf1 = getelementptr inbounds %struct.foo.0, %struct.foo.0* %b, i32 0, i32 0
-  %arraydecay2 = getelementptr inbounds [4 x i8], [4 x i8]* %buf1, i32 0, i32 0
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay2)
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call ptr @strcpy(ptr %b, ptr %0)
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
   ret void
 }
 
 ; test5a:  no arrays / no nested arrays
 ;          no ssp attribute
 ; Requires no protector.
-define void @test5a(i8* %a) {
+define void @test5a(ptr %a) {
 entry:
 ; LINUX-I386-LABEL: test5a:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -720,10 +672,10 @@ entry:
 ; MINGW-X64-NOT: callq __stack_chk_fail
 ; MINGW-X64: .seh_endproc
 
-  %a.addr = alloca i8*, align 8
-  store i8* %a, i8** %a.addr, align 8
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %0)
+  %a.addr = alloca ptr, align 8
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
@@ -731,7 +683,7 @@ entry:
 ;          ssp attribute
 ; Requires no protector.
 ; Function Attrs: ssp
-define void @test5b(i8* %a) #0 {
+define void @test5b(ptr %a) #0 {
 entry:
 ; LINUX-I386-LABEL: test5b:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -757,10 +709,10 @@ entry:
 ; MINGW-X64-NOT: callq __stack_chk_fail
 ; MINGW-X64: .seh_endproc
 
-  %a.addr = alloca i8*, align 8
-  store i8* %a, i8** %a.addr, align 8
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %0)
+  %a.addr = alloca ptr, align 8
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
@@ -768,7 +720,7 @@ entry:
 ;          sspstrong attribute
 ; Requires no protector.
 ; Function Attrs: sspstrong 
-define void @test5c(i8* %a) #1 {
+define void @test5c(ptr %a) #1 {
 entry:
 ; LINUX-I386-LABEL: test5c:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -794,10 +746,10 @@ entry:
 ; MINGW-X64-NOT: callq __stack_chk_fail
 ; MINGW-X64: .seh_endproc
 
-  %a.addr = alloca i8*, align 8
-  store i8* %a, i8** %a.addr, align 8
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %0)
+  %a.addr = alloca ptr, align 8
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
@@ -805,7 +757,7 @@ entry:
 ;          sspreq attribute
 ; Requires protector.
 ; Function Attrs: sspreq 
-define void @test5d(i8* %a) #2 {
+define void @test5d(ptr %a) #2 {
 entry:
 ; LINUX-I386-LABEL: test5d:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -831,10 +783,10 @@ entry:
 ; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
-  %a.addr = alloca i8*, align 8
-  store i8* %a, i8** %a.addr, align 8
-  %0 = load i8*, i8** %a.addr, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %0)
+  %a.addr = alloca ptr, align 8
+  store ptr %a, ptr %a.addr, align 8
+  %0 = load ptr, ptr %a.addr, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
@@ -869,12 +821,12 @@ entry:
 
   %retval = alloca i32, align 4
   %a = alloca i32, align 4
-  %j = alloca i32*, align 8
-  store i32 0, i32* %retval
-  %0 = load i32, i32* %a, align 4
+  %j = alloca ptr, align 8
+  store i32 0, ptr %retval
+  %0 = load i32, ptr %a, align 4
   %add = add nsw i32 %0, 1
-  store i32 %add, i32* %a, align 4
-  store i32* %a, i32** %j, align 8
+  store i32 %add, ptr %a, align 4
+  store ptr %a, ptr %j, align 8
   ret void
 }
 
@@ -910,12 +862,12 @@ entry:
 
   %retval = alloca i32, align 4
   %a = alloca i32, align 4
-  %j = alloca i32*, align 8
-  store i32 0, i32* %retval
-  %0 = load i32, i32* %a, align 4
+  %j = alloca ptr, align 8
+  store i32 0, ptr %retval
+  %0 = load i32, ptr %a, align 4
   %add = add nsw i32 %0, 1
-  store i32 %add, i32* %a, align 4
-  store i32* %a, i32** %j, align 8
+  store i32 %add, ptr %a, align 4
+  store ptr %a, ptr %j, align 8
   ret void
 }
 
@@ -951,12 +903,12 @@ entry:
 
   %retval = alloca i32, align 4
   %a = alloca i32, align 4
-  %j = alloca i32*, align 8
-  store i32 0, i32* %retval
-  %0 = load i32, i32* %a, align 4
+  %j = alloca ptr, align 8
+  store i32 0, ptr %retval
+  %0 = load i32, ptr %a, align 4
   %add = add nsw i32 %0, 1
-  store i32 %add, i32* %a, align 4
-  store i32* %a, i32** %j, align 8
+  store i32 %add, ptr %a, align 4
+  store ptr %a, ptr %j, align 8
   ret void
 }
 
@@ -992,12 +944,12 @@ entry:
 
   %retval = alloca i32, align 4
   %a = alloca i32, align 4
-  %j = alloca i32*, align 8
-  store i32 0, i32* %retval
-  %0 = load i32, i32* %a, align 4
+  %j = alloca ptr, align 8
+  store i32 0, ptr %retval
+  %0 = load i32, ptr %a, align 4
   %add = add nsw i32 %0, 1
-  store i32 %add, i32* %a, align 4
-  store i32* %a, i32** %j, align 8
+  store i32 %add, ptr %a, align 4
+  store ptr %a, ptr %j, align 8
   ret void
 }
 
@@ -1031,8 +983,8 @@ entry:
 ; MINGW-X64: .seh_endproc
 
   %a = alloca i32, align 4
-  %0 = ptrtoint i32* %a to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
+  %0 = ptrtoint ptr %a to i64
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %0)
   ret void
 }
 
@@ -1067,8 +1019,8 @@ entry:
 ; MINGW-X64: .seh_endproc
 
   %a = alloca i32, align 4
-  %0 = ptrtoint i32* %a to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
+  %0 = ptrtoint ptr %a to i64
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %0)
   ret void
 }
 
@@ -1103,8 +1055,8 @@ entry:
 ; MINGW-X64: .seh_endproc
 
   %a = alloca i32, align 4
-  %0 = ptrtoint i32* %a to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
+  %0 = ptrtoint ptr %a to i64
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %0)
   ret void
 }
 
@@ -1139,8 +1091,8 @@ entry:
 ; MINGW-X64: callq __stack_chk_fail
 
   %a = alloca i32, align 4
-  %0 = ptrtoint i32* %a to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
+  %0 = ptrtoint ptr %a to i64
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %0)
   ret void
 }
 
@@ -1174,7 +1126,7 @@ entry:
 ; MINGW-X64: .seh_endproc
 
   %b = alloca i32, align 4
-  call void @funcall(i32* %b)
+  call void @funcall(ptr %b)
   ret void
 }
 
@@ -1209,7 +1161,7 @@ entry:
 ; MINGW-X64: .seh_endproc
 
   %b = alloca i32, align 4
-  call void @funcall(i32* %b)
+  call void @funcall(ptr %b)
   ret void
 }
 
@@ -1244,7 +1196,7 @@ entry:
 ; MINGW-X64: callq __stack_chk_fail
 
   %b = alloca i32, align 4
-  call void @funcall(i32* %b)
+  call void @funcall(ptr %b)
   ret void
 }
 
@@ -1279,7 +1231,7 @@ entry:
 ; MINGW-X64: callq __stack_chk_fail
 
   %b = alloca i32, align 4
-  call void @funcall(i32* %b)
+  call void @funcall(ptr %b)
   ret void
 }
 
@@ -1309,10 +1261,10 @@ entry:
 ; MSVC-I386: retl
   %x = alloca double, align 8
   %call = call double @testi_aux()
-  store double %call, double* %x, align 8
+  store double %call, ptr %x, align 8
   %cmp2 = fcmp ogt double %call, 0.000000e+00
-  %y.1 = select i1 %cmp2, double* %x, double* null
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), double* %y.1)
+  %y.1 = select i1 %cmp2, ptr %x, ptr null
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %y.1)
   ret void
 }
 
@@ -1343,10 +1295,10 @@ entry:
 ; MSVC-I386: retl
   %x = alloca double, align 8
   %call = call double @testi_aux()
-  store double %call, double* %x, align 8
+  store double %call, ptr %x, align 8
   %cmp2 = fcmp ogt double %call, 0.000000e+00
-  %y.1 = select i1 %cmp2, double* %x, double* null
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), double* %y.1)
+  %y.1 = select i1 %cmp2, ptr %x, ptr null
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %y.1)
   ret void
 }
 
@@ -1377,10 +1329,10 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
   %x = alloca double, align 8
   %call = call double @testi_aux()
-  store double %call, double* %x, align 8
+  store double %call, ptr %x, align 8
   %cmp2 = fcmp ogt double %call, 0.000000e+00
-  %y.1 = select i1 %cmp2, double* %x, double* null
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), double* %y.1)
+  %y.1 = select i1 %cmp2, ptr %x, ptr null
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %y.1)
   ret void
 }
 
@@ -1411,10 +1363,10 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
   %x = alloca double, align 8
   %call = call double @testi_aux()
-  store double %call, double* %x, align 8
+  store double %call, ptr %x, align 8
   %cmp2 = fcmp ogt double %call, 0.000000e+00
-  %y.1 = select i1 %cmp2, double* %x, double* null
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), double* %y.1)
+  %y.1 = select i1 %cmp2, ptr %x, ptr null
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, ptr %y.1)
   ret void
 }
 
@@ -1444,13 +1396,13 @@ entry:
 ; MSVC-I386: retl
   %x = alloca double, align 8
   %call = call double @testi_aux()
-  store double %call, double* %x, align 8
+  store double %call, ptr %x, align 8
   %cmp = fcmp ogt double %call, 3.140000e+00
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   %call1 = call double @testi_aux()
-  store double %call1, double* %x, align 8
+  store double %call1, ptr %x, align 8
   br label %if.end4
 
 if.else:                                          ; preds = %entry
@@ -1461,8 +1413,8 @@ if.then3:                                         ; preds = %if.else
   br label %if.end4
 
 if.end4:                                          ; preds = %if.else, %if.then3, %if.then
-  %y.0 = phi double* [ null, %if.then ], [ %x, %if.then3 ], [ null, %if.else ]
-  %call5 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), double* %y.0)
+  %y.0 = phi ptr [ null, %if.then ], [ %x, %if.then3 ], [ null, %if.else ]
+  %call5 = call i32 (ptr, ...) @printf(ptr @.str, ptr %y.0)
   ret void
 }
 
@@ -1493,13 +1445,13 @@ entry:
 ; MSVC-I386: retl
   %x = alloca double, align 8
   %call = call double @testi_aux()
-  store double %call, double* %x, align 8
+  store double %call, ptr %x, align 8
   %cmp = fcmp ogt double %call, 3.140000e+00
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   %call1 = call double @testi_aux()
-  store double %call1, double* %x, align 8
+  store double %call1, ptr %x, align 8
   br label %if.end4
 
 if.else:                                          ; preds = %entry
@@ -1510,8 +1462,8 @@ if.then3:                                         ; preds = %if.else
   br label %if.end4
 
 if.end4:                                          ; preds = %if.else, %if.then3, %if.then
-  %y.0 = phi double* [ null, %if.then ], [ %x, %if.then3 ], [ null, %if.else ]
-  %call5 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), double* %y.0)
+  %y.0 = phi ptr [ null, %if.then ], [ %x, %if.then3 ], [ null, %if.else ]
+  %call5 = call i32 (ptr, ...) @printf(ptr @.str, ptr %y.0)
   ret void
 }
 
@@ -1542,13 +1494,13 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
   %x = alloca double, align 8
   %call = call double @testi_aux()
-  store double %call, double* %x, align 8
+  store double %call, ptr %x, align 8
   %cmp = fcmp ogt double %call, 3.140000e+00
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   %call1 = call double @testi_aux()
-  store double %call1, double* %x, align 8
+  store double %call1, ptr %x, align 8
   br label %if.end4
 
 if.else:                                          ; preds = %entry
@@ -1559,8 +1511,8 @@ if.then3:                                         ; preds = %if.else
   br label %if.end4
 
 if.end4:                                          ; preds = %if.else, %if.then3, %if.then
-  %y.0 = phi double* [ null, %if.then ], [ %x, %if.then3 ], [ null, %if.else ]
-  %call5 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), double* %y.0)
+  %y.0 = phi ptr [ null, %if.then ], [ %x, %if.then3 ], [ null, %if.else ]
+  %call5 = call i32 (ptr, ...) @printf(ptr @.str, ptr %y.0)
   ret void
 }
 
@@ -1591,13 +1543,13 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
   %x = alloca double, align 8
   %call = call double @testi_aux()
-  store double %call, double* %x, align 8
+  store double %call, ptr %x, align 8
   %cmp = fcmp ogt double %call, 3.140000e+00
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   %call1 = call double @testi_aux()
-  store double %call1, double* %x, align 8
+  store double %call1, ptr %x, align 8
   br label %if.end4
 
 if.else:                                          ; preds = %entry
@@ -1608,8 +1560,8 @@ if.then3:                                         ; preds = %if.else
   br label %if.end4
 
 if.end4:                                          ; preds = %if.else, %if.then3, %if.then
-  %y.0 = phi double* [ null, %if.then ], [ %x, %if.then3 ], [ null, %if.else ]
-  %call5 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), double* %y.0)
+  %y.0 = phi ptr [ null, %if.then ], [ %x, %if.then3 ], [ null, %if.else ]
+  %call5 = call i32 (ptr, ...) @printf(ptr @.str, ptr %y.0)
   ret void
 }
 
@@ -1638,11 +1590,11 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.pair, align 4
-  %b = alloca i32*, align 8
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 1
-  store i32* %y, i32** %b, align 8
-  %0 = load i32*, i32** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32* %0)
+  %b = alloca ptr, align 8
+  %y = getelementptr inbounds %struct.pair, ptr %c, i32 0, i32 1
+  store ptr %y, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
@@ -1672,11 +1624,11 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.pair, align 4
-  %b = alloca i32*, align 8
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 1
-  store i32* %y, i32** %b, align 8
-  %0 = load i32*, i32** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32* %0)
+  %b = alloca ptr, align 8
+  %y = getelementptr inbounds %struct.pair, ptr %c, i32 0, i32 1
+  store ptr %y, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
@@ -1706,11 +1658,11 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %c = alloca %struct.pair, align 4
-  %b = alloca i32*, align 8
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 1
-  store i32* %y, i32** %b, align 8
-  %0 = load i32*, i32** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32* %0)
+  %b = alloca ptr, align 8
+  %y = getelementptr inbounds %struct.pair, ptr %c, i32 0, i32 1
+  store ptr %y, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
@@ -1740,11 +1692,11 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %c = alloca %struct.pair, align 4
-  %b = alloca i32*, align 8
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 1
-  store i32* %y, i32** %b, align 8
-  %0 = load i32*, i32** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32* %0)
+  %b = alloca ptr, align 8
+  %y = getelementptr inbounds %struct.pair, ptr %c, i32 0, i32 1
+  store ptr %y, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
@@ -1773,10 +1725,10 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.pair, align 4
-  %b = alloca i32*, align 8
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 1
-  %0 = ptrtoint i32* %y to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
+  %b = alloca ptr, align 8
+  %y = getelementptr inbounds %struct.pair, ptr %c, i32 0, i32 1
+  %0 = ptrtoint ptr %y to i64
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %0)
   ret void
 }
 
@@ -1806,10 +1758,10 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.pair, align 4
-  %b = alloca i32*, align 8
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 1
-  %0 = ptrtoint i32* %y to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
+  %b = alloca ptr, align 8
+  %y = getelementptr inbounds %struct.pair, ptr %c, i32 0, i32 1
+  %0 = ptrtoint ptr %y to i64
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %0)
   ret void
 }
 
@@ -1838,10 +1790,10 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %c = alloca %struct.pair, align 4
-  %b = alloca i32*, align 8
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 1
-  %0 = ptrtoint i32* %y to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
+  %b = alloca ptr, align 8
+  %y = getelementptr inbounds %struct.pair, ptr %c, i32 0, i32 1
+  %0 = ptrtoint ptr %y to i64
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %0)
   ret void
 }
 
@@ -1871,10 +1823,10 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %c = alloca %struct.pair, align 4
-  %b = alloca i32*, align 8
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 1
-  %0 = ptrtoint i32* %y to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %0)
+  %b = alloca ptr, align 8
+  %y = getelementptr inbounds %struct.pair, ptr %c, i32 0, i32 1
+  %0 = ptrtoint ptr %y to i64
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %0)
   ret void
 }
 
@@ -1903,8 +1855,8 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.pair, align 4
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i64 0, i32 1
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32* %y)
+  %y = getelementptr inbounds %struct.pair, ptr %c, i64 0, i32 1
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %y)
   ret void
 }
 
@@ -1934,8 +1886,8 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.pair, align 4
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i64 0, i32 1
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32* %y)
+  %y = getelementptr inbounds %struct.pair, ptr %c, i64 0, i32 1
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %y)
   ret void
 }
 
@@ -1965,8 +1917,8 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %c = alloca %struct.pair, align 4
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i64 0, i32 1
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32* %y)
+  %y = getelementptr inbounds %struct.pair, ptr %c, i64 0, i32 1
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %y)
   ret void
 }
 
@@ -1996,8 +1948,8 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %c = alloca %struct.pair, align 4
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i64 0, i32 1
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32* %y)
+  %y = getelementptr inbounds %struct.pair, ptr %c, i64 0, i32 1
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %y)
   ret void
 }
 
@@ -2026,8 +1978,8 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca i32, align 4
-  %add.ptr5 = getelementptr inbounds i32, i32* %a, i64 -12
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32* %add.ptr5)
+  %add.ptr5 = getelementptr inbounds i32, ptr %a, i64 -12
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr5)
   ret void
 }
 
@@ -2057,8 +2009,8 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca i32, align 4
-  %add.ptr5 = getelementptr inbounds i32, i32* %a, i64 -12
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32* %add.ptr5)
+  %add.ptr5 = getelementptr inbounds i32, ptr %a, i64 -12
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr5)
   ret void
 }
 
@@ -2088,8 +2040,8 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca i32, align 4
-  %add.ptr5 = getelementptr inbounds i32, i32* %a, i64 -12
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32* %add.ptr5)
+  %add.ptr5 = getelementptr inbounds i32, ptr %a, i64 -12
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr5)
   ret void
 }
 
@@ -2119,13 +2071,13 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca i32, align 4
-  %add.ptr5 = getelementptr inbounds i32, i32* %a, i64 -12
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32* %add.ptr5)
+  %add.ptr5 = getelementptr inbounds i32, ptr %a, i64 -12
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr5)
   ret void
 }
 
 ; test15a: Addr-of a local cast to a ptr of a different type
-;           (e.g., int a; ... ; float *b = &a;)
+;           (e.g., int a; ... ; ptr b = &a;)
 ;          no ssp attribute
 ; Requires no protector.
 define void @test15a() {
@@ -2150,17 +2102,16 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca i32, align 4
-  %b = alloca float*, align 8
-  store i32 0, i32* %a, align 4
-  %0 = bitcast i32* %a to float*
-  store float* %0, float** %b, align 8
-  %1 = load float*, float** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), float* %1)
+  %b = alloca ptr, align 8
+  store i32 0, ptr %a, align 4
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
 ; test15b: Addr-of a local cast to a ptr of a different type
-;           (e.g., int a; ... ; float *b = &a;)
+;           (e.g., int a; ... ; ptr b = &a;)
 ;          ssp attribute
 ; Requires no protector.
 ; Function Attrs: ssp
@@ -2186,17 +2137,16 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca i32, align 4
-  %b = alloca float*, align 8
-  store i32 0, i32* %a, align 4
-  %0 = bitcast i32* %a to float*
-  store float* %0, float** %b, align 8
-  %1 = load float*, float** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), float* %1)
+  %b = alloca ptr, align 8
+  store i32 0, ptr %a, align 4
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
 ; test15c: Addr-of a local cast to a ptr of a different type
-;           (e.g., int a; ... ; float *b = &a;)
+;           (e.g., int a; ... ; ptr b = &a;)
 ;          sspstrong attribute
 ; Requires protector.
 ; Function Attrs: sspstrong 
@@ -2222,17 +2172,16 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca i32, align 4
-  %b = alloca float*, align 8
-  store i32 0, i32* %a, align 4
-  %0 = bitcast i32* %a to float*
-  store float* %0, float** %b, align 8
-  %1 = load float*, float** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), float* %1)
+  %b = alloca ptr, align 8
+  store i32 0, ptr %a, align 4
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
 ; test15d: Addr-of a local cast to a ptr of a different type
-;           (e.g., int a; ... ; float *b = &a;)
+;           (e.g., int a; ... ; ptr b = &a;)
 ;          sspreq attribute
 ; Requires protector.
 ; Function Attrs: sspreq 
@@ -2258,17 +2207,16 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca i32, align 4
-  %b = alloca float*, align 8
-  store i32 0, i32* %a, align 4
-  %0 = bitcast i32* %a to float*
-  store float* %0, float** %b, align 8
-  %1 = load float*, float** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), float* %1)
+  %b = alloca ptr, align 8
+  store i32 0, ptr %a, align 4
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
 ; test16a: Addr-of a local cast to a ptr of a different type (optimized)
-;           (e.g., int a; ... ; float *b = &a;)
+;           (e.g., int a; ... ; ptr b = &a;)
 ;          no ssp attribute
 ; Requires no protector.
 define void @test16a() {
@@ -2293,14 +2241,13 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca i32, align 4
-  store i32 0, i32* %a, align 4
-  %0 = bitcast i32* %a to float*
-  call void @funfloat(float* %0)
+  store i32 0, ptr %a, align 4
+  call void @funfloat(ptr %a)
   ret void
 }
 
 ; test16b: Addr-of a local cast to a ptr of a different type (optimized)
-;           (e.g., int a; ... ; float *b = &a;)
+;           (e.g., int a; ... ; ptr b = &a;)
 ;          ssp attribute
 ; Requires no protector.
 ; Function Attrs: ssp
@@ -2326,14 +2273,13 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca i32, align 4
-  store i32 0, i32* %a, align 4
-  %0 = bitcast i32* %a to float*
-  call void @funfloat(float* %0)
+  store i32 0, ptr %a, align 4
+  call void @funfloat(ptr %a)
   ret void
 }
 
 ; test16c: Addr-of a local cast to a ptr of a different type (optimized)
-;           (e.g., int a; ... ; float *b = &a;)
+;           (e.g., int a; ... ; ptr b = &a;)
 ;          sspstrong attribute
 ; Requires protector.
 ; Function Attrs: sspstrong 
@@ -2359,14 +2305,13 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca i32, align 4
-  store i32 0, i32* %a, align 4
-  %0 = bitcast i32* %a to float*
-  call void @funfloat(float* %0)
+  store i32 0, ptr %a, align 4
+  call void @funfloat(ptr %a)
   ret void
 }
 
 ; test16d: Addr-of a local cast to a ptr of a different type (optimized)
-;           (e.g., int a; ... ; float *b = &a;)
+;           (e.g., int a; ... ; ptr b = &a;)
 ;          sspreq attribute
 ; Requires protector.
 ; Function Attrs: sspreq 
@@ -2392,9 +2337,8 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca i32, align 4
-  store i32 0, i32* %a, align 4
-  %0 = bitcast i32* %a to float*
-  call void @funfloat(float* %0)
+  store i32 0, ptr %a, align 4
+  call void @funfloat(ptr %a)
   ret void
 }
 
@@ -2423,9 +2367,8 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.vec, align 16
-  %y = getelementptr inbounds %struct.vec, %struct.vec* %c, i64 0, i32 0
-  %add.ptr = getelementptr inbounds <4 x i32>, <4 x i32>* %y, i64 -12
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), <4 x i32>* %add.ptr)
+  %add.ptr = getelementptr inbounds <4 x i32>, ptr %c, i64 -12
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr)
   ret void
 }
 
@@ -2455,9 +2398,8 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.vec, align 16
-  %y = getelementptr inbounds %struct.vec, %struct.vec* %c, i64 0, i32 0
-  %add.ptr = getelementptr inbounds <4 x i32>, <4 x i32>* %y, i64 -12
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), <4 x i32>* %add.ptr)
+  %add.ptr = getelementptr inbounds <4 x i32>, ptr %c, i64 -12
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr)
   ret void
 }
 
@@ -2487,9 +2429,8 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %c = alloca %struct.vec, align 16
-  %y = getelementptr inbounds %struct.vec, %struct.vec* %c, i64 0, i32 0
-  %add.ptr = getelementptr inbounds <4 x i32>, <4 x i32>* %y, i64 -12
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), <4 x i32>* %add.ptr)
+  %add.ptr = getelementptr inbounds <4 x i32>, ptr %c, i64 -12
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr)
   ret void
 }
 
@@ -2519,16 +2460,15 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %c = alloca %struct.vec, align 16
-  %y = getelementptr inbounds %struct.vec, %struct.vec* %c, i64 0, i32 0
-  %add.ptr = getelementptr inbounds <4 x i32>, <4 x i32>* %y, i64 -12
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), <4 x i32>* %add.ptr)
+  %add.ptr = getelementptr inbounds <4 x i32>, ptr %c, i64 -12
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr)
   ret void
 }
 
 ; test18a: Addr-of a variable passed into an invoke instruction.
 ;          no ssp attribute
 ; Requires no protector.
-define i32 @test18a() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test18a() personality ptr @__gxx_personality_v0 {
 entry:
 ; LINUX-I386-LABEL: test18a:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -2550,18 +2490,18 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca i32, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
-  store i32 0, i32* %a, align 4
-  invoke void @_Z3exceptPi(i32* %a)
+  store i32 0, ptr %a, align 4
+  invoke void @_Z3exceptPi(ptr %a)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret i32 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 0
 }
 
@@ -2569,7 +2509,7 @@ lpad:
 ;          ssp attribute
 ; Requires no protector.
 ; Function Attrs: ssp 
-define i32 @test18b() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test18b() #0 personality ptr @__gxx_personality_v0 {
 entry:
 ; LINUX-I386-LABEL: test18b:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -2591,18 +2531,18 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca i32, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
-  store i32 0, i32* %a, align 4
-  invoke void @_Z3exceptPi(i32* %a)
+  store i32 0, ptr %a, align 4
+  invoke void @_Z3exceptPi(ptr %a)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret i32 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 0
 }
 
@@ -2610,7 +2550,7 @@ lpad:
 ;          sspstrong attribute
 ; Requires protector.
 ; Function Attrs: sspstrong 
-define i32 @test18c() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test18c() #1 personality ptr @__gxx_personality_v0 {
 entry:
 ; LINUX-I386-LABEL: test18c:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -2632,18 +2572,18 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca i32, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
-  store i32 0, i32* %a, align 4
-  invoke void @_Z3exceptPi(i32* %a)
+  store i32 0, ptr %a, align 4
+  invoke void @_Z3exceptPi(ptr %a)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret i32 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 0
 }
 
@@ -2651,7 +2591,7 @@ lpad:
 ;          sspreq attribute
 ; Requires protector.
 ; Function Attrs: sspreq 
-define i32 @test18d() #2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test18d() #2 personality ptr @__gxx_personality_v0 {
 entry:
 ; LINUX-I386-LABEL: test18d:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -2673,25 +2613,25 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca i32, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
-  store i32 0, i32* %a, align 4
-  invoke void @_Z3exceptPi(i32* %a)
+  store i32 0, ptr %a, align 4
+  invoke void @_Z3exceptPi(ptr %a)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret i32 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 0
 }
 ; test19a: Addr-of a struct element passed into an invoke instruction.
 ;           (GEP followed by an invoke)
 ;          no ssp attribute
 ; Requires no protector.
-define i32 @test19a() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test19a() personality ptr @__gxx_personality_v0 {
 entry:
 ; LINUX-I386-LABEL: test19a:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -2713,20 +2653,18 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.pair, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
-  %a = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  store i32 0, i32* %a, align 4
-  %a1 = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  invoke void @_Z3exceptPi(i32* %a1)
+  store i32 0, ptr %c, align 4
+  invoke void @_Z3exceptPi(ptr %c)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret i32 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 0
 }
 
@@ -2735,7 +2673,7 @@ lpad:
 ;          ssp attribute
 ; Requires no protector.
 ; Function Attrs: ssp 
-define i32 @test19b() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test19b() #0 personality ptr @__gxx_personality_v0 {
 entry:
 ; LINUX-I386-LABEL: test19b:
 ; LINUX-I386-NOT: calll __stack_chk_fail
@@ -2757,20 +2695,18 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.pair, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
-  %a = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  store i32 0, i32* %a, align 4
-  %a1 = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  invoke void @_Z3exceptPi(i32* %a1)
+  store i32 0, ptr %c, align 4
+  invoke void @_Z3exceptPi(ptr %c)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret i32 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 0
 }
 
@@ -2779,7 +2715,7 @@ lpad:
 ;          sspstrong attribute
 ; Requires protector.
 ; Function Attrs: sspstrong 
-define i32 @test19c() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test19c() #1 personality ptr @__gxx_personality_v0 {
 entry:
 ; LINUX-I386-LABEL: test19c:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -2801,20 +2737,18 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %c = alloca %struct.pair, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
-  %a = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  store i32 0, i32* %a, align 4
-  %a1 = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  invoke void @_Z3exceptPi(i32* %a1)
+  store i32 0, ptr %c, align 4
+  invoke void @_Z3exceptPi(ptr %c)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret i32 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 0
 }
 
@@ -2823,7 +2757,7 @@ lpad:
 ;          sspreq attribute
 ; Requires protector.
 ; Function Attrs: sspreq 
-define i32 @test19d() #2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @test19d() #2 personality ptr @__gxx_personality_v0 {
 entry:
 ; LINUX-I386-LABEL: test19d:
 ; LINUX-I386: mov{{l|q}} %gs:
@@ -2854,20 +2788,18 @@ entry:
 ; MINGW-X64: callq __stack_chk_fail
 
   %c = alloca %struct.pair, align 4
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
-  %a = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  store i32 0, i32* %a, align 4
-  %a1 = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 0
-  invoke void @_Z3exceptPi(i32* %a1)
+  store i32 0, ptr %c, align 4
+  invoke void @_Z3exceptPi(ptr %c)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret i32 0
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 0
 }
 
@@ -2895,13 +2827,13 @@ entry:
 ; MSVC-I386-LABEL: test20a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-  %a = alloca i32*, align 8
-  %b = alloca i32**, align 8
-  %call = call i32* @getp()
-  store i32* %call, i32** %a, align 8
-  store i32** %a, i32*** %b, align 8
-  %0 = load i32**, i32*** %b, align 8
-  call void @funcall2(i32** %0)
+  %a = alloca ptr, align 8
+  %b = alloca ptr, align 8
+  %call = call ptr @getp()
+  store ptr %call, ptr %a, align 8
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  call void @funcall2(ptr %0)
   ret void
 }
 
@@ -2930,13 +2862,13 @@ entry:
 ; MSVC-I386-LABEL: test20b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-  %a = alloca i32*, align 8
-  %b = alloca i32**, align 8
-  %call = call i32* @getp()
-  store i32* %call, i32** %a, align 8
-  store i32** %a, i32*** %b, align 8
-  %0 = load i32**, i32*** %b, align 8
-  call void @funcall2(i32** %0)
+  %a = alloca ptr, align 8
+  %b = alloca ptr, align 8
+  %call = call ptr @getp()
+  store ptr %call, ptr %a, align 8
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  call void @funcall2(ptr %0)
   ret void
 }
 
@@ -2965,13 +2897,13 @@ entry:
 ; MSVC-I386-LABEL: test20c:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-  %a = alloca i32*, align 8
-  %b = alloca i32**, align 8
-  %call = call i32* @getp()
-  store i32* %call, i32** %a, align 8
-  store i32** %a, i32*** %b, align 8
-  %0 = load i32**, i32*** %b, align 8
-  call void @funcall2(i32** %0)
+  %a = alloca ptr, align 8
+  %b = alloca ptr, align 8
+  %call = call ptr @getp()
+  store ptr %call, ptr %a, align 8
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  call void @funcall2(ptr %0)
   ret void
 }
 
@@ -3000,13 +2932,13 @@ entry:
 ; MSVC-I386-LABEL: test20d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-  %a = alloca i32*, align 8
-  %b = alloca i32**, align 8
-  %call = call i32* @getp()
-  store i32* %call, i32** %a, align 8
-  store i32** %a, i32*** %b, align 8
-  %0 = load i32**, i32*** %b, align 8
-  call void @funcall2(i32** %0)
+  %a = alloca ptr, align 8
+  %b = alloca ptr, align 8
+  %call = call ptr @getp()
+  store ptr %call, ptr %a, align 8
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  call void @funcall2(ptr %0)
   ret void
 }
 
@@ -3034,14 +2966,13 @@ entry:
 ; MSVC-I386-LABEL: test21a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-  %a = alloca i32*, align 8
-  %b = alloca float**, align 8
-  %call = call i32* @getp()
-  store i32* %call, i32** %a, align 8
-  %0 = bitcast i32** %a to float**
-  store float** %0, float*** %b, align 8
-  %1 = load float**, float*** %b, align 8
-  call void @funfloat2(float** %1)
+  %a = alloca ptr, align 8
+  %b = alloca ptr, align 8
+  %call = call ptr @getp()
+  store ptr %call, ptr %a, align 8
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  call void @funfloat2(ptr %0)
   ret void
 }
 
@@ -3070,14 +3001,13 @@ entry:
 ; MSVC-I386-LABEL: test21b:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-  %a = alloca i32*, align 8
-  %b = alloca float**, align 8
-  %call = call i32* @getp()
-  store i32* %call, i32** %a, align 8
-  %0 = bitcast i32** %a to float**
-  store float** %0, float*** %b, align 8
-  %1 = load float**, float*** %b, align 8
-  call void @funfloat2(float** %1)
+  %a = alloca ptr, align 8
+  %b = alloca ptr, align 8
+  %call = call ptr @getp()
+  store ptr %call, ptr %a, align 8
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  call void @funfloat2(ptr %0)
   ret void
 }
 
@@ -3106,14 +3036,13 @@ entry:
 ; MSVC-I386-LABEL: test21c:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-  %a = alloca i32*, align 8
-  %b = alloca float**, align 8
-  %call = call i32* @getp()
-  store i32* %call, i32** %a, align 8
-  %0 = bitcast i32** %a to float**
-  store float** %0, float*** %b, align 8
-  %1 = load float**, float*** %b, align 8
-  call void @funfloat2(float** %1)
+  %a = alloca ptr, align 8
+  %b = alloca ptr, align 8
+  %call = call ptr @getp()
+  store ptr %call, ptr %a, align 8
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  call void @funfloat2(ptr %0)
   ret void
 }
 
@@ -3142,14 +3071,13 @@ entry:
 ; MSVC-I386-LABEL: test21d:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-  %a = alloca i32*, align 8
-  %b = alloca float**, align 8
-  %call = call i32* @getp()
-  store i32* %call, i32** %a, align 8
-  %0 = bitcast i32** %a to float**
-  store float** %0, float*** %b, align 8
-  %1 = load float**, float*** %b, align 8
-  call void @funfloat2(float** %1)
+  %a = alloca ptr, align 8
+  %b = alloca ptr, align 8
+  %call = call ptr @getp()
+  store ptr %call, ptr %a, align 8
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  call void @funfloat2(ptr %0)
   ret void
 }
 
@@ -3178,9 +3106,7 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca %class.A, align 1
-  %array = getelementptr inbounds %class.A, %class.A* %a, i32 0, i32 0
-  %arrayidx = getelementptr inbounds [2 x i8], [2 x i8]* %array, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %a, align 1
   ret i8 %0
 }
 
@@ -3210,9 +3136,7 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca %class.A, align 1
-  %array = getelementptr inbounds %class.A, %class.A* %a, i32 0, i32 0
-  %arrayidx = getelementptr inbounds [2 x i8], [2 x i8]* %array, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %a, align 1
   ret i8 %0
 }
 
@@ -3242,9 +3166,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca %class.A, align 1
-  %array = getelementptr inbounds %class.A, %class.A* %a, i32 0, i32 0
-  %arrayidx = getelementptr inbounds [2 x i8], [2 x i8]* %array, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %a, align 1
   ret i8 %0
 }
 
@@ -3274,9 +3196,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca %class.A, align 1
-  %array = getelementptr inbounds %class.A, %class.A* %a, i32 0, i32 0
-  %arrayidx = getelementptr inbounds [2 x i8], [2 x i8]* %array, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %a, align 1
   ret i8 %0
 }
 
@@ -3305,13 +3225,7 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %x = alloca %struct.deep, align 1
-  %b = getelementptr inbounds %struct.deep, %struct.deep* %x, i32 0, i32 0
-  %c = bitcast %union.anon* %b to %struct.anon*
-  %d = getelementptr inbounds %struct.anon, %struct.anon* %c, i32 0, i32 0
-  %e = getelementptr inbounds %struct.anon.0, %struct.anon.0* %d, i32 0, i32 0
-  %array = bitcast %union.anon.1* %e to [2 x i8]*
-  %arrayidx = getelementptr inbounds [2 x i8], [2 x i8]* %array, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %x, align 1
   ret i8 %0
 }
 
@@ -3341,13 +3255,7 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %x = alloca %struct.deep, align 1
-  %b = getelementptr inbounds %struct.deep, %struct.deep* %x, i32 0, i32 0
-  %c = bitcast %union.anon* %b to %struct.anon*
-  %d = getelementptr inbounds %struct.anon, %struct.anon* %c, i32 0, i32 0
-  %e = getelementptr inbounds %struct.anon.0, %struct.anon.0* %d, i32 0, i32 0
-  %array = bitcast %union.anon.1* %e to [2 x i8]*
-  %arrayidx = getelementptr inbounds [2 x i8], [2 x i8]* %array, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %x, align 1
   ret i8 %0
 }
 
@@ -3377,13 +3285,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %x = alloca %struct.deep, align 1
-  %b = getelementptr inbounds %struct.deep, %struct.deep* %x, i32 0, i32 0
-  %c = bitcast %union.anon* %b to %struct.anon*
-  %d = getelementptr inbounds %struct.anon, %struct.anon* %c, i32 0, i32 0
-  %e = getelementptr inbounds %struct.anon.0, %struct.anon.0* %d, i32 0, i32 0
-  %array = bitcast %union.anon.1* %e to [2 x i8]*
-  %arrayidx = getelementptr inbounds [2 x i8], [2 x i8]* %array, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %x, align 1
   ret i8 %0
 }
 
@@ -3413,13 +3315,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %x = alloca %struct.deep, align 1
-  %b = getelementptr inbounds %struct.deep, %struct.deep* %x, i32 0, i32 0
-  %c = bitcast %union.anon* %b to %struct.anon*
-  %d = getelementptr inbounds %struct.anon, %struct.anon* %c, i32 0, i32 0
-  %e = getelementptr inbounds %struct.anon.0, %struct.anon.0* %d, i32 0, i32 0
-  %array = bitcast %union.anon.1* %e to [2 x i8]*
-  %arrayidx = getelementptr inbounds [2 x i8], [2 x i8]* %array, i32 0, i64 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %x, align 1
   ret i8 %0
 }
 
@@ -3448,13 +3344,12 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %n.addr = alloca i32, align 4
-  %a = alloca i32*, align 8
-  store i32 %n, i32* %n.addr, align 4
-  %0 = load i32, i32* %n.addr, align 4
+  %a = alloca ptr, align 8
+  store i32 %n, ptr %n.addr, align 4
+  %0 = load i32, ptr %n.addr, align 4
   %conv = sext i32 %0 to i64
   %1 = alloca i8, i64 %conv
-  %2 = bitcast i8* %1 to i32*
-  store i32* %2, i32** %a, align 8
+  store ptr %1, ptr %a, align 8
   ret void
 }
 
@@ -3484,13 +3379,12 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %n.addr = alloca i32, align 4
-  %a = alloca i32*, align 8
-  store i32 %n, i32* %n.addr, align 4
-  %0 = load i32, i32* %n.addr, align 4
+  %a = alloca ptr, align 8
+  store i32 %n, ptr %n.addr, align 4
+  %0 = load i32, ptr %n.addr, align 4
   %conv = sext i32 %0 to i64
   %1 = alloca i8, i64 %conv
-  %2 = bitcast i8* %1 to i32*
-  store i32* %2, i32** %a, align 8
+  store ptr %1, ptr %a, align 8
   ret void
 }
 
@@ -3520,13 +3414,12 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %n.addr = alloca i32, align 4
-  %a = alloca i32*, align 8
-  store i32 %n, i32* %n.addr, align 4
-  %0 = load i32, i32* %n.addr, align 4
+  %a = alloca ptr, align 8
+  store i32 %n, ptr %n.addr, align 4
+  %0 = load i32, ptr %n.addr, align 4
   %conv = sext i32 %0 to i64
   %1 = alloca i8, i64 %conv
-  %2 = bitcast i8* %1 to i32*
-  store i32* %2, i32** %a, align 8
+  store ptr %1, ptr %a, align 8
   ret void
 }
 
@@ -3556,13 +3449,12 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %n.addr = alloca i32, align 4
-  %a = alloca i32*, align 8
-  store i32 %n, i32* %n.addr, align 4
-  %0 = load i32, i32* %n.addr, align 4
+  %a = alloca ptr, align 8
+  store i32 %n, ptr %n.addr, align 4
+  %0 = load i32, ptr %n.addr, align 4
   %conv = sext i32 %0 to i64
   %1 = alloca i8, i64 %conv
-  %2 = bitcast i8* %1 to i32*
-  store i32* %2, i32** %a, align 8
+  store ptr %1, ptr %a, align 8
   ret void
 }
 
@@ -3591,8 +3483,7 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %a = alloca [4 x i32], align 16
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %a, i32 0, i64 0
-  %0 = load i32, i32* %arrayidx, align 4
+  %0 = load i32, ptr %a, align 4
   ret i32 %0
 }
 
@@ -3627,8 +3518,7 @@ entry:
 ; MINGW-X64: .seh_endproc
 
   %a = alloca [4 x i32], align 16
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %a, i32 0, i64 0
-  %0 = load i32, i32* %arrayidx, align 4
+  %0 = load i32, ptr %a, align 4
   ret i32 %0
 }
 
@@ -3658,8 +3548,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca [4 x i32], align 16
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %a, i32 0, i64 0
-  %0 = load i32, i32* %arrayidx, align 4
+  %0 = load i32, ptr %a, align 4
   ret i32 %0
 }
 
@@ -3689,8 +3578,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %a = alloca [4 x i32], align 16
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %a, i32 0, i64 0
-  %0 = load i32, i32* %arrayidx, align 4
+  %0 = load i32, ptr %a, align 4
   ret i32 %0
 }
 
@@ -3722,10 +3610,9 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %c = alloca %struct.nest, align 4
-  %b = getelementptr inbounds %struct.nest, %struct.nest* %c, i32 0, i32 1
-  %_a = getelementptr inbounds %struct.pair, %struct.pair* %b, i32 0, i32 0
-  %0 = load i32, i32* %_a, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %0)
+  %b = getelementptr inbounds %struct.nest, ptr %c, i32 0, i32 1
+  %0 = load i32, ptr %b, align 4
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 %0)
   ret void
 }
 
@@ -3757,20 +3644,19 @@ bb:
 ; MSVC-I386-LABEL: test27:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-  %tmp = alloca %struct.small*, align 8
-  %tmp1 = call i32 (...) @dummy(%struct.small** %tmp)
-  %tmp2 = load %struct.small*, %struct.small** %tmp, align 8
-  %tmp3 = ptrtoint %struct.small* %tmp2 to i64
+  %tmp = alloca ptr, align 8
+  %tmp1 = call i32 (...) @dummy(ptr %tmp)
+  %tmp2 = load ptr, ptr %tmp, align 8
+  %tmp3 = ptrtoint ptr %tmp2 to i64
   %tmp4 = trunc i64 %tmp3 to i32
   %tmp5 = icmp sgt i32 %tmp4, 0
   br i1 %tmp5, label %bb6, label %bb21
 
 bb6:                                              ; preds = %bb17, %bb
-  %tmp7 = phi %struct.small* [ %tmp19, %bb17 ], [ %tmp2, %bb ]
+  %tmp7 = phi ptr [ %tmp19, %bb17 ], [ %tmp2, %bb ]
   %tmp8 = phi i64 [ %tmp20, %bb17 ], [ 1, %bb ]
   %tmp9 = phi i32 [ %tmp14, %bb17 ], [ %tmp1, %bb ]
-  %tmp10 = getelementptr inbounds %struct.small, %struct.small* %tmp7, i64 0, i32 0
-  %tmp11 = load i8, i8* %tmp10, align 1
+  %tmp11 = load i8, ptr %tmp7, align 1
   %tmp12 = icmp eq i8 %tmp11, 1
   %tmp13 = add nsw i32 %tmp9, 8
   %tmp14 = select i1 %tmp12, i32 %tmp13, i32 %tmp9
@@ -3779,8 +3665,8 @@ bb6:                                              ; preds = %bb17, %bb
   br i1 %tmp16, label %bb21, label %bb17
 
 bb17:                                             ; preds = %bb6
-  %tmp18 = getelementptr inbounds %struct.small*, %struct.small** %tmp, i64 %tmp8
-  %tmp19 = load %struct.small*, %struct.small** %tmp18, align 8
+  %tmp18 = getelementptr inbounds ptr, ptr %tmp, i64 %tmp8
+  %tmp19 = load ptr, ptr %tmp18, align 8
   %tmp20 = add i64 %tmp8, 1
   br label %bb6
 
@@ -3815,8 +3701,7 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %test = alloca [32 x i8], align 16
-  %arraydecay = getelementptr inbounds [32 x i8], [32 x i8]* %test, i32 0, i32 0
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay)
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %test)
   ret i32 %call
 }
 
@@ -3845,8 +3730,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %test = alloca [33 x i8], align 16
-  %arraydecay = getelementptr inbounds [33 x i8], [33 x i8]* %test, i32 0, i32 0
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay)
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %test)
   ret i32 %call
 }
 
@@ -3875,8 +3759,7 @@ entry:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
   %test = alloca [4 x i8], align 1
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %test, i32 0, i32 0
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay)
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %test)
   ret i32 %call
 }
 
@@ -3905,8 +3788,7 @@ entry:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
   %test = alloca [5 x i8], align 1
-  %arraydecay = getelementptr inbounds [5 x i8], [5 x i8]* %test, i32 0, i32 0
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %arraydecay)
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %test)
   ret i32 %call
 }
 
@@ -3937,14 +3819,12 @@ entry:
 ; MSVC-I386: retl
   %test = alloca %struct.small_char, align 4
   %test.coerce = alloca { i64, i8 }
-  %0 = bitcast { i64, i8 }* %test.coerce to i8*
-  %1 = bitcast %struct.small_char* %test to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 12, i1 false)
-  %2 = getelementptr { i64, i8 }, { i64, i8 }* %test.coerce, i32 0, i32 0
-  %3 = load i64, i64* %2, align 1
-  %4 = getelementptr { i64, i8 }, { i64, i8 }* %test.coerce, i32 0, i32 1
-  %5 = load i8, i8* %4, align 1
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %3, i8 %5)
+  call void @llvm.memcpy.p0.p0.i64(ptr %test.coerce, ptr %test, i64 12, i1 false)
+  %0 = getelementptr { i64, i8 }, ptr %test.coerce, i32 0, i32 0
+  %1 = load i64, ptr %0, align 1
+  %2 = getelementptr { i64, i8 }, ptr %test.coerce, i32 0, i32 1
+  %3 = load i8, ptr %2, align 1
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %1, i8 %3)
   ret i32 %call
 }
 
@@ -3975,14 +3855,12 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
   %test = alloca %struct.small_char, align 4
   %test.coerce = alloca { i64, i8 }
-  %0 = bitcast { i64, i8 }* %test.coerce to i8*
-  %1 = bitcast %struct.small_char* %test to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 12, i1 false)
-  %2 = getelementptr { i64, i8 }, { i64, i8 }* %test.coerce, i32 0, i32 0
-  %3 = load i64, i64* %2, align 1
-  %4 = getelementptr { i64, i8 }, { i64, i8 }* %test.coerce, i32 0, i32 1
-  %5 = load i8, i8* %4, align 1
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i64 %3, i8 %5)
+  call void @llvm.memcpy.p0.p0.i64(ptr %test.coerce, ptr %test, i64 12, i1 false)
+  %0 = getelementptr { i64, i8 }, ptr %test.coerce, i32 0, i32 0
+  %1 = load i64, ptr %0, align 1
+  %2 = getelementptr { i64, i8 }, ptr %test.coerce, i32 0, i32 1
+  %3 = load i8, ptr %2, align 1
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %1, i8 %3)
   ret i32 %call
 }
 
@@ -4011,11 +3889,11 @@ entry:
 ; MSVC-I386-LABEL: test31a:
 ; MSVC-I386-NOT: calll @__security_check_cookie@4
 ; MSVC-I386: retl
-  %test = alloca i8*, align 8
+  %test = alloca ptr, align 8
   %0 = alloca i8, i64 4
-  store i8* %0, i8** %test, align 8
-  %1 = load i8*, i8** %test, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %1)
+  store ptr %0, ptr %test, align 8
+  %1 = load ptr, ptr %test, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %1)
   ret i32 %call
 }
 
@@ -4043,11 +3921,11 @@ entry:
 ; MSVC-I386-LABEL: test31b:
 ; MSVC-I386: movl ___security_cookie,
 ; MSVC-I386: calll @__security_check_cookie@4
-  %test = alloca i8*, align 8
+  %test = alloca ptr, align 8
   %0 = alloca i8, i64 5
-  store i8* %0, i8** %test, align 8
-  %1 = load i8*, i8** %test, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %1)
+  store ptr %0, ptr %test, align 8
+  %1 = load ptr, ptr %test, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %1)
   ret i32 %call
 }
 
@@ -4085,31 +3963,30 @@ entry:
 define i32 @IgnoreIntrinsicTest() #1 {
 ; IGNORE_INTRIN: IgnoreIntrinsicTest:
   %1 = alloca i32, align 4
-  %2 = bitcast i32* %1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %2)
-  store volatile i32 1, i32* %1, align 4
-  %3 = load volatile i32, i32* %1, align 4
-  %4 = mul nsw i32 %3, 42
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2)
-  ret i32 %4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %1)
+  store volatile i32 1, ptr %1, align 4
+  %2 = load volatile i32, ptr %1, align 4
+  %3 = mul nsw i32 %2, 42
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
+  ret i32 %3
 ; IGNORE_INTRIN-NOT: callq __stack_chk_fail
 ; IGNORE_INTRIN:     .cfi_endproc
 }
 
 declare double @testi_aux()
-declare i8* @strcpy(i8*, i8*)
-declare i32 @printf(i8*, ...)
-declare void @funcall(i32*)
-declare void @funcall2(i32**)
-declare void @funfloat(float*)
-declare void @funfloat2(float**)
-declare void @_Z3exceptPi(i32*)
+declare ptr @strcpy(ptr, ptr)
+declare i32 @printf(ptr, ...)
+declare void @funcall(ptr)
+declare void @funcall2(ptr)
+declare void @funfloat(ptr)
+declare void @funfloat2(ptr)
+declare void @_Z3exceptPi(ptr)
 declare i32 @__gxx_personality_v0(...)
-declare i32* @getp()
+declare ptr @getp()
 declare i32 @dummy(...)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 attributes #0 = { ssp }
 attributes #1 = { sspstrong }

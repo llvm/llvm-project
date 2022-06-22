@@ -13,7 +13,7 @@ define void @foo() {
 ; CHECK-NEXT:    movdqu %xmm0, (%rax)
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    retq
-  indirectbr i8* undef, [label %9, label %1]
+  indirectbr ptr undef, [label %9, label %1]
 
 ; <label>:1:                                      ; preds = %0
   %2 = shufflevector <16 x i8> zeroinitializer, <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
@@ -23,7 +23,7 @@ define void @foo() {
   %6 = bitcast <16 x i8> %5 to <2 x i64>
   %7 = xor <2 x i64> %6, zeroinitializer
   %8 = xor <2 x i64> %7, <i64 -1, i64 -1>
-  store <2 x i64> %8, <2 x i64>* undef, align 1
+  store <2 x i64> %8, ptr undef, align 1
   unreachable
 
 ; <label>:9:                                      ; preds = %0

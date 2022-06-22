@@ -4,7 +4,7 @@
 ; Ensure vectorized FREMs are not widened/unrolled such that they get lowered
 ; into libcalls on undef elements.
 
-define float @frem(<2 x float> %a0, <2 x float> %a1, <2 x float> %a2, <2 x float> *%p3) nounwind {
+define float @frem(<2 x float> %a0, <2 x float> %a1, <2 x float> %a2, ptr%p3) nounwind {
 ; CHECK-LABEL: frem:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -35,7 +35,7 @@ define float @frem(<2 x float> %a0, <2 x float> %a1, <2 x float> %a2, <2 x float
   %ex0 = extractelement <2 x float> %fdiv, i32 0
   %ex1 = extractelement <2 x float> %fdiv, i32 1
   %res = fadd float %ex0, %ex1
-  store <2 x float> %fdiv, <2 x float> *%p3
+  store <2 x float> %fdiv, ptr%p3
   ret float %res
 }
 

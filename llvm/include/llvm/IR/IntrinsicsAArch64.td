@@ -2663,4 +2663,19 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_cntsh : AdvSIMD_SME_CNTSB_Intrinsic;
   def int_aarch64_sme_cntsw : AdvSIMD_SME_CNTSB_Intrinsic;
   def int_aarch64_sme_cntsd : AdvSIMD_SME_CNTSB_Intrinsic;
+
+  //
+  // PSTATE Functions
+  //
+
+  def int_aarch64_sme_get_pstatesm
+      : DefaultAttrsIntrinsic<[llvm_i64_ty], [],
+                              [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_sme_get_tpidr2
+      : DefaultAttrsIntrinsic<[llvm_i64_ty], [],
+                              [IntrNoMem, IntrHasSideEffects]>;
+  def int_aarch64_sme_set_tpidr2
+      : DefaultAttrsIntrinsic<[], [llvm_i64_ty],
+                              [IntrNoMem, IntrHasSideEffects]>;
 }

@@ -11,20 +11,19 @@ define void @foo() nounwind uwtable ssp {
 entry:
   %x.i = alloca i8, align 1
   %y.i = alloca [256 x i8], align 16
-  %0 = getelementptr inbounds [256 x i8], [256 x i8]* %y.i, i64 0, i64 0
   br label %for.body
 
 for.body:
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0) nounwind
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %x.i) nounwind
-  call void @llvm.dbg.declare(metadata i8* %x.i, metadata !22, metadata !DIExpression()) nounwind, !dbg !DILocation(scope: !2)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %y.i) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %x.i) nounwind
+  call void @llvm.dbg.declare(metadata ptr %x.i, metadata !22, metadata !DIExpression()) nounwind, !dbg !DILocation(scope: !2)
   br label %for.body
 }
 
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!23}

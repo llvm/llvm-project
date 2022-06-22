@@ -40,7 +40,7 @@ entry:
   ret i16 %0
 }
 
-define signext i16 @baz(i16* %x, i16 signext %y) nounwind {
+define signext i16 @baz(ptr %x, i16 signext %y) nounwind {
 ; X86-LABEL: baz:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -55,12 +55,12 @@ define signext i16 @baz(i16* %x, i16 signext %y) nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = load i16, i16* %x
+  %0 = load i16, ptr %x
   %sub = sub i16 %0, %y
   ret i16 %sub
 }
 
-define void @bat(i16* %a, i16* %x, i16 signext %y) nounwind {
+define void @bat(ptr %a, ptr %x, i16 signext %y) nounwind {
 ; X86-LABEL: bat:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -77,8 +77,8 @@ define void @bat(i16* %a, i16* %x, i16 signext %y) nounwind {
 ; X64-NEXT:    movw %ax, (%rdi)
 ; X64-NEXT:    retq
 entry:
-  %0 = load i16, i16* %x
+  %0 = load i16, ptr %x
   %sub = sub i16 %0, %y
-  store i16 %sub, i16* %a
+  store i16 %sub, ptr %a
   ret void
 }

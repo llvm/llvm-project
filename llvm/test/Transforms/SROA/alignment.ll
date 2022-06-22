@@ -219,8 +219,7 @@ define dso_local i32 @pr45010(ptr %A) {
   %B = alloca %struct, align 4
   %1 = load i32, ptr %A, align 4
   store atomic volatile i32 %1, ptr %B release, align 4
-  %2 = bitcast ptr %B to ptr
-  %x = load atomic volatile i32, ptr %2 acquire, align 4
+  %x = load atomic volatile i32, ptr %B acquire, align 4
   ret i32 %x
 }
 

@@ -69,7 +69,7 @@ public:
     return ExplicitKernArgSize;
   }
 
-  unsigned getMaxKernArgAlign() const { return MaxKernArgAlign.value(); }
+  Align getMaxKernArgAlign() const { return MaxKernArgAlign; }
 
   uint32_t getLDSSize() const {
     return LDSSize;

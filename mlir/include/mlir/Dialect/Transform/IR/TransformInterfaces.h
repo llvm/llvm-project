@@ -582,9 +582,9 @@ public:
 /// transformation to a single operation handle and producing one or multiple
 /// operation handles.
 /// The op must implement a method with one of the following signatures:
-///   - FailureOr<convertible-to-Operation*> applyToOne(OpTy)
-///   - FailureOr<SmallVector<convertible-to-Operation*>> applyToOne(OpTy)
-///   - LogicalResult applyToOne(OpTy)
+///   - FailureOr<convertible-to-Operation*> applyToOne(OpTy, state)
+///   - FailureOr<SmallVector<convertible-to-Operation*>>applyToOne(OpTy, state)
+///   - LogicalResult applyToOne(OpTy, state)
 /// to perform a transformation that is applied in turn to all payload IR
 /// operations that correspond to the handle of the transform IR operation.
 /// In the functions above, OpTy is either Operation * or a concrete payload IR
@@ -811,7 +811,7 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
   // produced.
   DiagnosedSilenceableFailure result = detail::applyTransformToEach(
       targets, results, [&](TransformOpType specificOp) {
-        return static_cast<OpTy *>(this)->applyToOne(specificOp);
+        return static_cast<OpTy *>(this)->applyToOne(specificOp, state);
       });
   if (!result.succeeded())
     return result;

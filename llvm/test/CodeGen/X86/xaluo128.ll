@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=x86_64-darwin-unknown < %s | FileCheck %s --check-prefix=X64
 ; RUN: llc -mtriple=i686-darwin-unknown < %s | FileCheck %s --check-prefix=X86
 
-define zeroext i1 @saddoi128(i128 %v1, i128 %v2, i128* %res) nounwind {
+define zeroext i1 @saddoi128(i128 %v1, i128 %v2, ptr %res) nounwind {
 ; X64-LABEL: saddoi128:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    addq %rdx, %rdi
@@ -38,11 +38,11 @@ define zeroext i1 @saddoi128(i128 %v1, i128 %v2, i128* %res) nounwind {
   %t = call {i128, i1} @llvm.sadd.with.overflow.i128(i128 %v1, i128 %v2)
   %val = extractvalue {i128, i1} %t, 0
   %obit = extractvalue {i128, i1} %t, 1
-  store i128 %val, i128* %res
+  store i128 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @uaddoi128(i128 %v1, i128 %v2, i128* %res) nounwind {
+define zeroext i1 @uaddoi128(i128 %v1, i128 %v2, ptr %res) nounwind {
 ; X64-LABEL: uaddoi128:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    addq %rdx, %rdi
@@ -78,12 +78,12 @@ define zeroext i1 @uaddoi128(i128 %v1, i128 %v2, i128* %res) nounwind {
   %t = call {i128, i1} @llvm.uadd.with.overflow.i128(i128 %v1, i128 %v2)
   %val = extractvalue {i128, i1} %t, 0
   %obit = extractvalue {i128, i1} %t, 1
-  store i128 %val, i128* %res
+  store i128 %val, ptr %res
   ret i1 %obit
 }
 
 
-define zeroext i1 @ssuboi128(i128 %v1, i128 %v2, i128* %res) nounwind {
+define zeroext i1 @ssuboi128(i128 %v1, i128 %v2, ptr %res) nounwind {
 ; X64-LABEL: ssuboi128:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    subq %rdx, %rdi
@@ -119,11 +119,11 @@ define zeroext i1 @ssuboi128(i128 %v1, i128 %v2, i128* %res) nounwind {
   %t = call {i128, i1} @llvm.ssub.with.overflow.i128(i128 %v1, i128 %v2)
   %val = extractvalue {i128, i1} %t, 0
   %obit = extractvalue {i128, i1} %t, 1
-  store i128 %val, i128* %res
+  store i128 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @usuboi128(i128 %v1, i128 %v2, i128* %res) nounwind {
+define zeroext i1 @usuboi128(i128 %v1, i128 %v2, ptr %res) nounwind {
 ; X64-LABEL: usuboi128:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    subq %rdx, %rdi
@@ -159,7 +159,7 @@ define zeroext i1 @usuboi128(i128 %v1, i128 %v2, i128* %res) nounwind {
   %t = call {i128, i1} @llvm.usub.with.overflow.i128(i128 %v1, i128 %v2)
   %val = extractvalue {i128, i1} %t, 0
   %obit = extractvalue {i128, i1} %t, 1
-  store i128 %val, i128* %res
+  store i128 %val, ptr %res
   ret i1 %obit
 }
 

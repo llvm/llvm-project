@@ -64,18 +64,18 @@ define dso_local i32 @test1() nounwind {
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 entry:
-  %bval = load i8, i8* @b
+  %bval = load i8, ptr @b
   %inc = add i8 %bval, 1
-  store volatile i8 %inc, i8* @b
-  %cval = load volatile i32, i32* @c
+  store volatile i8 %inc, ptr @b
+  %cval = load volatile i32, ptr @c
   %inc1 = add nsw i32 %cval, 1
-  store volatile i32 %inc1, i32* @c
-  %aval = load volatile i8, i8* @a
+  store volatile i32 %inc1, ptr @c
+  %aval = load volatile i8, ptr @a
   %inc2 = add i8 %aval, 1
-  store volatile i8 %inc2, i8* @a
+  store volatile i8 %inc2, ptr @a
   %cmp = icmp eq i8 %aval, %bval
   %conv5 = zext i1 %cmp to i8
-  store i8 %conv5, i8* @d
+  store i8 %conv5, ptr @d
   %tobool = icmp eq i32 %inc1, 0
   br i1 %tobool, label %if.end, label %if.then
 
@@ -89,7 +89,7 @@ if.end:
 }
 
 ; Preserve increment flags across a call.
-define dso_local i32 @test2(i32* %ptr) nounwind {
+define dso_local i32 @test2(ptr %ptr) nounwind {
 ; X32-LABEL: test2:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebx
@@ -128,9 +128,9 @@ define dso_local i32 @test2(i32* %ptr) nounwind {
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
 entry:
-  %val = load i32, i32* %ptr
+  %val = load i32, ptr %ptr
   %inc = add i32 %val, 1
-  store i32 %inc, i32* %ptr
+  store i32 %inc, ptr %ptr
   %cmp = icmp eq i32 %inc, 0
   call void @external(i32 42)
   br i1 %cmp, label %then, label %else
@@ -150,7 +150,7 @@ declare dso_local void @external_b()
 ; use volatile stores similar to test1 to force the save and restore of
 ; a condition without calling another function. We then set up subsequent calls
 ; in tail position.
-define dso_local void @test_tail_call(i32* %ptr) nounwind optsize {
+define dso_local void @test_tail_call(ptr %ptr) nounwind optsize {
 ; X32-LABEL: test_tail_call:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -174,16 +174,16 @@ define dso_local void @test_tail_call(i32* %ptr) nounwind optsize {
 ; X64-NEXT:  # %bb.1: # %then
 ; X64-NEXT:    jmp external_a # TAILCALL
 entry:
-  %val = load i32, i32* %ptr
+  %val = load i32, ptr %ptr
   %inc = add i32 %val, 1
-  store i32 %inc, i32* %ptr
+  store i32 %inc, ptr %ptr
   %cmp = icmp eq i32 %inc, 0
-  %aval = load volatile i8, i8* @a
+  %aval = load volatile i8, ptr @a
   %inc2 = add i8 %aval, 1
-  store volatile i8 %inc2, i8* @a
+  store volatile i8 %inc2, ptr @a
   %cmp2 = icmp eq i8 %inc2, 0
   %conv5 = zext i1 %cmp2 to i8
-  store i8 %conv5, i8* @d
+  store i8 %conv5, ptr @d
   br i1 %cmp, label %then, label %else
 
 then:
@@ -198,7 +198,7 @@ else:
 ; Test a function that gets special select lowering into CFG with copied EFLAGS
 ; threaded across the CFG. This requires our EFLAGS copy rewriting to handle
 ; cross-block rewrites in at least some narrow cases.
-define dso_local void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, i8* %ptr1, i32* %ptr2, i32 %x) nounwind {
+define dso_local void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, ptr %ptr1, ptr %ptr2, i32 %x) nounwind {
 ; X32-LABEL: PR37100:
 ; X32:       # %bb.0: # %bb
 ; X32-NEXT:    pushl %ebp
@@ -279,8 +279,8 @@ bb1:
   %tmp6 = icmp slt i64 %arg3, %tmp5
   %tmp7 = sext i1 %tmp6 to i32
   %tmp8 = select i1 %tmp6, i8 %tmp, i8 %arg4
-  store volatile i8 %tmp8, i8* %ptr1
-  %tmp9 = load volatile i32, i32* %ptr2
+  store volatile i8 %tmp8, ptr %ptr1
+  %tmp9 = load volatile i32, ptr %ptr2
   %tmp10 = select i1 %tmp6, i32 %tmp7, i32 %tmp9
   %tmp11 = srem i32 %x, %tmp10
   %tmp12 = trunc i32 %tmp11 to i16
@@ -290,7 +290,7 @@ bb1:
 ; Use a particular instruction pattern in order to lower to the post-RA pseudo
 ; used to lower SETB into an SBB pattern in order to make sure that kind of
 ; usage of a copied EFLAGS continues to work.
-define dso_local void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3, i32 %arg4, i64 %arg5) nounwind {
+define dso_local void @PR37431(ptr %arg1, ptr %arg2, ptr %arg3, i32 %arg4, i64 %arg5) nounwind {
 ; X32-LABEL: PR37431:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebp
@@ -333,15 +333,15 @@ define dso_local void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3, i32 %arg4, i64 
 ; X64-NEXT:    movb %dl, (%rcx)
 ; X64-NEXT:    retq
 entry:
-  %tmp = load i32, i32* %arg1
+  %tmp = load i32, ptr %arg1
   %tmp1 = sext i32 %tmp to i64
   %tmp2 = icmp ugt i64 %tmp1, %arg5
   %tmp3 = zext i1 %tmp2 to i8
   %tmp4 = sub i8 0, %tmp3
-  store i8 %tmp4, i8* %arg2
+  store i8 %tmp4, ptr %arg2
   %tmp5 = sext i8 %tmp4 to i32
   %tmp6 = srem i32 %arg4, %tmp5
   %tmp7 = trunc i32 %tmp6 to i8
-  store i8 %tmp7, i8* %arg3
+  store i8 %tmp7, ptr %arg3
   ret void
 }

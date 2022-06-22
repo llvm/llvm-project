@@ -198,7 +198,7 @@ bb34:                                             ; preds = %bb10
   ret void
 }
 
-define i32 @PR43159(<4 x i32>* %a0) {
+define i32 @PR43159(ptr %a0) {
 ; SSE-LABEL: PR43159:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -318,7 +318,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX512DQVL-NEXT:    vpextrd $3, %xmm0, %ecx
 ; AVX512DQVL-NEXT:    jmp foo # TAILCALL
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %a0, align 16
+  %0 = load <4 x i32>, ptr %a0, align 16
   %div = udiv <4 x i32> %0, <i32 167, i32 237, i32 254, i32 177>
   %ext0 = extractelement <4 x i32> %div, i32 0
   %ext1 = extractelement <4 x i32> %div, i32 1
@@ -329,7 +329,7 @@ entry:
 }
 declare dso_local i32 @foo(i32, i32, i32, i32)
 
-define <8 x i32> @PR49658_zext(i32* %ptr, i32 %mul) {
+define <8 x i32> @PR49658_zext(ptr %ptr, i32 %mul) {
 ; SSE-LABEL: PR49658_zext:
 ; SSE:       # %bb.0: # %start
 ; SSE-NEXT:    movl %esi, %eax
@@ -457,9 +457,8 @@ start:
 loop:
   %loopcnt = phi i64 [ 0, %start ], [ %nextcnt, %loop ]
   %sum = phi <8 x i32> [ zeroinitializer, %start ], [ %nextsum, %loop ]
-  %ptroff = getelementptr inbounds i32, i32* %ptr, i64 %loopcnt
-  %vptroff = bitcast i32* %ptroff to <8 x i32>*
-  %v = load <8 x i32>, <8 x i32>* %vptroff, align 4
+  %ptroff = getelementptr inbounds i32, ptr %ptr, i64 %loopcnt
+  %v = load <8 x i32>, ptr %ptroff, align 4
   %v64 = zext <8 x i32> %v to <8 x i64>
   %vmul = mul nuw <8 x i64> %mulvec, %v64
   %vmulhi = lshr <8 x i64> %vmul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
@@ -472,7 +471,7 @@ end:
   ret <8 x i32> %nextsum
 }
 
-define <8 x i32> @PR49658_sext(i32* %ptr, i32 %mul) {
+define <8 x i32> @PR49658_sext(ptr %ptr, i32 %mul) {
 ; SSE-LABEL: PR49658_sext:
 ; SSE:       # %bb.0: # %start
 ; SSE-NEXT:    movslq %esi, %rax
@@ -634,9 +633,8 @@ start:
 loop:
 	%loopcnt = phi i64 [ 0, %start ], [ %nextcnt, %loop ]
 	%sum = phi <8 x i32> [ zeroinitializer, %start ], [ %nextsum, %loop ]
-	%ptroff = getelementptr inbounds i32, i32* %ptr, i64 %loopcnt
-	%vptroff = bitcast i32* %ptroff to <8 x i32>*
-	%v = load <8 x i32>, <8 x i32>* %vptroff, align 4
+	%ptroff = getelementptr inbounds i32, ptr %ptr, i64 %loopcnt
+	%v = load <8 x i32>, ptr %ptroff, align 4
 	%v64 = sext <8 x i32> %v to <8 x i64>
 	%vmul = mul <8 x i64> %mulvec, %v64
 	%vmulhi = ashr <8 x i64> %vmul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>

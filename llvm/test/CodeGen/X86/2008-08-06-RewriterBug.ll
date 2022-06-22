@@ -1,19 +1,19 @@
 ; RUN: llc < %s -mtriple=i686--
 ; PR2596
 
-@data = external global [400 x i64]		; <[400 x i64]*> [#uses=5]
+@data = external global [400 x i64]		; <ptr> [#uses=5]
 
-define void @foo(double* noalias, double* noalias) {
-	load i64, i64* getelementptr ([400 x i64], [400 x i64]* @data, i32 0, i64 200), align 4		; <i64>:3 [#uses=1]
-	load i64, i64* getelementptr ([400 x i64], [400 x i64]* @data, i32 0, i64 199), align 4		; <i64>:4 [#uses=1]
-	load i64, i64* getelementptr ([400 x i64], [400 x i64]* @data, i32 0, i64 198), align 4		; <i64>:5 [#uses=2]
-	load i64, i64* getelementptr ([400 x i64], [400 x i64]* @data, i32 0, i64 197), align 4		; <i64>:6 [#uses=1]
+define void @foo(ptr noalias, ptr noalias) {
+	load i64, ptr getelementptr ([400 x i64], ptr @data, i32 0, i64 200), align 4		; <i64>:3 [#uses=1]
+	load i64, ptr getelementptr ([400 x i64], ptr @data, i32 0, i64 199), align 4		; <i64>:4 [#uses=1]
+	load i64, ptr getelementptr ([400 x i64], ptr @data, i32 0, i64 198), align 4		; <i64>:5 [#uses=2]
+	load i64, ptr getelementptr ([400 x i64], ptr @data, i32 0, i64 197), align 4		; <i64>:6 [#uses=1]
 	br i1 false, label %28, label %7
 
 ; <label>:7		; preds = %2
-	load double*, double** getelementptr (double*, double** bitcast ([400 x i64]* @data to double**), i64 180), align 8		; <double*>:8 [#uses=1]
-	bitcast double* %8 to double*		; <double*>:9 [#uses=1]
-	ptrtoint double* %9 to i64		; <i64>:10 [#uses=1]
+	load ptr, ptr getelementptr (ptr, ptr @data, i64 180), align 8		; <ptr>:8 [#uses=1]
+	bitcast ptr %8 to ptr		; <ptr>:9 [#uses=1]
+	ptrtoint ptr %9 to i64		; <i64>:10 [#uses=1]
 	mul i64 %4, %3		; <i64>:11 [#uses=1]
 	add i64 0, %11		; <i64>:12 [#uses=1]
 	shl i64 %12, 3		; <i64>:13 [#uses=1]

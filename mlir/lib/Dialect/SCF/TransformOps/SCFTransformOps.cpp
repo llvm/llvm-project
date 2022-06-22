@@ -127,7 +127,8 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
 // LoopPeelOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<scf::ForOp> transform::LoopPeelOp::applyToOne(scf::ForOp loop) {
+FailureOr<scf::ForOp> transform::LoopPeelOp::applyToOne(scf::ForOp loop,
+                                                        TransformState &state) {
   scf::ForOp result;
   IRRewriter rewriter(loop->getContext());
   LogicalResult status =
@@ -180,7 +181,8 @@ loopScheduling(scf::ForOp forOp,
   }
 }
 
-FailureOr<scf::ForOp> transform::LoopPipelineOp::applyToOne(scf::ForOp loop) {
+FailureOr<scf::ForOp>
+transform::LoopPipelineOp::applyToOne(scf::ForOp loop, TransformState &state) {
   scf::PipeliningOption options;
   options.getScheduleFn =
       [this](scf::ForOp forOp,
@@ -203,7 +205,8 @@ FailureOr<scf::ForOp> transform::LoopPipelineOp::applyToOne(scf::ForOp loop) {
 // LoopUnrollOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult transform::LoopUnrollOp::applyToOne(scf::ForOp loop) {
+LogicalResult transform::LoopUnrollOp::applyToOne(scf::ForOp loop,
+                                                  TransformState &state) {
   if (failed(loopUnrollByFactor(loop, getFactor())))
     return reportUnknownTransformError(loop);
   return success();
