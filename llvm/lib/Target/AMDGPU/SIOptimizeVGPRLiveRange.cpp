@@ -647,6 +647,10 @@ bool SIOptimizeVGPRLiveRange::runOnMachineFunction(MachineFunction &MF) {
         if (!Endif)
           continue;
 
+        // Skip unexpected control flow.
+        if (!MDT->dominates(&MBB, IfTarget) || !MDT->dominates(IfTarget, Endif))
+          continue;
+
         SmallSetVector<MachineBasicBlock *, 16> ElseBlocks;
         SmallVector<Register> CandidateRegs;
 
