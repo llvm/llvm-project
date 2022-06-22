@@ -118,20 +118,21 @@ define void @addsub_and_external_users(double *%A, double *%ptr) {
 ; CHECK-NEXT:    [[LD:%.*]] = load double, double* undef, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LD]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[LD]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], <double 1.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], <double 1.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP3]], <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x double> [[TMP4]], <double 2.200000e+00, double 2.100000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], <double 3.200000e+00, double 3.100000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], <double 1.100000e+00, double 1.200000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], <double 1.100000e+00, double 1.200000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x double> [[TMP4]], <double 2.100000e+00, double 2.200000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], <double 3.100000e+00, double 3.200000e+00>
 ; CHECK-NEXT:    [[PTRA0:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double* [[PTRA0]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP6]], <2 x double>* [[TMP7]], align 8
+; CHECK-NEXT:    store <2 x double> [[SHUFFLE]], <2 x double>* [[TMP7]], align 8
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP6]], <double 4.200000e+00, double 4.100000e+00>
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP6]], <double 4.100000e+00, double 4.200000e+00>
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i32 1
-; CHECK-NEXT:    [[SEED:%.*]] = fcmp ogt double [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[SEED:%.*]] = fcmp ogt double [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    ret void
 ;
 bb1:
