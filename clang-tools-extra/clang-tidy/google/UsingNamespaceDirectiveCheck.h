@@ -33,7 +33,7 @@ namespace build {
 /// Corresponding cpplint.py check name: `build/namespaces`.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/google-build-using-namespace.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/build-using-namespace.html
 class UsingNamespaceDirectiveCheck : public ClangTidyCheck {
 public:
   UsingNamespaceDirectiveCheck(StringRef Name, ClangTidyContext *Context)
