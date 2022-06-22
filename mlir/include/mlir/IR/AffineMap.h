@@ -240,6 +240,22 @@ public:
                           getContext());
   }
 
+  /// Returns a new AffineMap with the same number of dims and symbols and one
+  /// less result at `pos`, dropped.
+  AffineMap dropResult(unsigned pos) {
+    auto exprs = llvm::to_vector<4>(getResults());
+    exprs.erase(exprs.begin() + pos);
+    return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
+  }
+
+  /// Returns a new AffineMap with the same number of dims and symbols and an
+  /// extra result inserted at `pos`.
+  AffineMap insertResult(AffineExpr expr, unsigned pos) {
+    auto exprs = llvm::to_vector<4>(getResults());
+    exprs.insert(exprs.begin() + pos, expr);
+    return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
+  }
+
   /// Folds the results of the application of an affine map on the provided
   /// operands to a constant if possible.
   LogicalResult constantFold(ArrayRef<Attribute> operandConstants,

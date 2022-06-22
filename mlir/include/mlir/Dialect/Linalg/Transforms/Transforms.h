@@ -1532,6 +1532,56 @@ FailureOr<SplitReductionResult>
 splitReduction(PatternRewriter &b, LinalgOp op,
                const ControlSplitReductionFn &controlSplitReductionFn);
 
+/// Scaling-based implementation of the split reduction transformation.
+/// Instead of introducing an ExpandShapeOp, this rewrites a reduction dimension
+/// `k` into `k * scale + kk`.
+///
+/// Example:
+/// ```
+///  %0 = linalg.matmul ins(%A, %B: tensor<16x256xf32>, tensor<256x32xf32>)
+///    outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
+/// ```
+///
+/// Is transformed to:
+///
+/// ```
+///  #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2 * 4 + d3)>
+///  #map1 = affine_map<(d0, d1, d2, d3) -> (d2 * 4 + d3, d1)>
+///  #map2 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
+///  #map3 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+///  #map4 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+///  #map5 = affine_map<(d0, d1, d2) -> (d0, d1)>
+///  %0 = linalg.init_tensor [16, 32, 64] : tensor<16x32x64xf32>
+///  %cst = arith.constant 0.000000e+00 : f32
+///  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<16x32x64xf32>) ->
+///     tensor<16x32x64xf32>
+///  %2 = linalg.init_tensor [64, 4] : tensor<64x4xi1>
+///
+///  %3 = linalg.generic {indexing_maps = [#map0, #map1, #map2, #map3],
+///    iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+///    ins(%A, %B, %2 : tensor<16x256xf32>, tensor<256x32xf32>, tensor<64x4xi1>)
+///    outs(%1 : tensor<16x32x64xf32>) {
+///      ^bb0(%arg3: f32, %arg4: f32, %arg5: i1, %arg6: f32):
+///        %5 = arith.mulf %arg3, %arg4 : f32
+///        %6 = arith.addf %arg6, %5 : f32
+///        linalg.yield %6 : f32
+///  } -> tensor<16x32x64xf32>
+///
+///  %4 = linalg.generic {indexing_maps = [#map4, #map5],
+///    iterator_types = ["parallel", "parallel", "reduction"]}
+//     ins(%3 : tensor<16x32x64xf32>)
+///    outs(%C : tensor<16x32xf32>) {
+///      ^bb0(%arg3: f32, %arg4: f32):
+///        %5 = arith.addf %arg3, %arg4 : f32
+///        linalg.yield %5 : f32
+///  } -> tensor<16x32xf32>
+///
+///  return %4 : tensor<16x32xf32>
+/// ```
+FailureOr<SplitReductionResult>
+splitReductionByScaling(PatternRewriter &b, LinalgOp op,
+                        const ControlSplitReductionFn &controlSplitReductionFn);
+
 } // namespace linalg
 } // namespace mlir
 
