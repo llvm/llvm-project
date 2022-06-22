@@ -14,6 +14,7 @@
 
 #include "CMakeFileAPI.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
@@ -96,7 +97,13 @@ int main(int Argc, const char **Argv) {
   }
 
   auto setEnvVar = [&Verbose](const char *Var, const char *Value) {
+#if HAVE_SETENV
     ::setenv(Var, Value, 1);
+#elif defined(_WIN32)
+    _putenv_s(Var, Value);
+#else
+#error "unsupported environment"
+#endif
     if (Verbose) {
       errs() << "note: setting " << Var << '=' << Value << '\n';
     }
