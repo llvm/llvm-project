@@ -47,7 +47,6 @@ add_llvm_component_library(LLVMAnalysis
   CallPrinter.cpp
   CaptureTracking.cpp
   CmpInstAnalysis.cpp
-  ComputationGraph.cpp
   CostModel.cpp
   CodeMetrics.cpp
   ConstantFolding.cpp

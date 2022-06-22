@@ -2,13 +2,17 @@
 // Created by tanmay on 6/10/22.
 //
 
+#include <string>
 #include "llvm/Transforms/ErrorAnalysis/AtomicCondition/ACInstrumentation.h"
 #include "llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h"
 
+
 using namespace llvm;
 using namespace atomiccondition;
+using namespace std;
 
 int ACInstrumentation::VarCounter = 0;
+int ACInstrumentation::NodeCounter = 0;
 
 void confFunction(Function *FunctionToSave, Function **StorageLocation,
                   GlobalValue::LinkageTypes LinkageType)
@@ -31,8 +35,12 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
                                                                      ACfp32UnaryFunction(nullptr),
                                                                      ACfp64UnaryFunction(nullptr),
                                                                      ACfp32BinaryFunction(nullptr),
-                                                                     ACfp64BinaryFunction(nullptr){
+                                                                     ACfp64BinaryFunction(nullptr)
+//                                                                     ACStoreFunction(nullptr),
+//                                                                     ACAnalysisFunction(nullptr)
+{
   // Find and configure instrumentation functions
+//  CG = ComputationGraph();
   Module *M = FunctionToInstrument->getParent();
 
   // Configuring all runtime functions and saving pointers.
@@ -60,13 +68,199 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
       confFunction(CurrentFunction, &ACfp64BinaryFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
+//    else if (CurrentFunction->getName().str().find("fACStoreResult") != std::string::npos) {
+//      confFunction(CurrentFunction, &ACStoreFunction,
+//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+//    }
+//    else if (CurrentFunction->getName().str().find("fACAnalysis") != std::string::npos) {
+//      confFunction(CurrentFunction, &ACAnalysisFunction,
+//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+//    }
 
     // Setting linkage of runtime functions
   }
 }
 
 
-void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
+bool ACInstrumentation::instrumentUnaryCall(Instruction* BaseInstruction,
+                                            long *NumInstrumentedInstructions) {
+  Operation OpType;
+  string FunctionName;
+  switch (BaseInstruction->getOpcode()) {
+  case 45:
+    assert(static_cast<FPTruncInst*>(BaseInstruction)->getDestTy()->isFloatTy());
+    OpType = Operation::TruncToFloat;
+    break;
+  case 56:
+    FunctionName = static_cast<CallInst*>(BaseInstruction)->getCalledFunction()->getName().str();
+    transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
+    if (FunctionName.find("asin") != std::string::npos)
+      OpType = Operation::ArcSin;
+    else if(FunctionName.find("acos") != std::string::npos)
+      OpType = Operation::ArcCos;
+    else if(FunctionName.find("atan") != std::string::npos)
+      OpType = Operation::ArcTan;
+    else if(FunctionName.find("sinh") != std::string::npos)
+      OpType = Operation::Sinh;
+    else if(FunctionName.find("cosh") != std::string::npos)
+      OpType = Operation::Cosh;
+    else if(FunctionName.find("tanh") != std::string::npos)
+      OpType = Operation::Tanh;
+    else if(FunctionName.find("sin") != std::string::npos)
+      OpType = Operation::Sin;
+    else if(FunctionName.find("cos") != std::string::npos)
+      OpType = Operation::Cos;
+    else if(FunctionName.find("tan") != std::string::npos)
+      OpType = Operation::Tan;
+    else if(FunctionName.find("exp") != std::string::npos)
+      OpType = Operation::Exp;
+    else if(FunctionName.find("log") != std::string::npos)
+      OpType = Operation::Log;
+    else if(FunctionName.find("sqrt") != std::string::npos)
+      OpType = Operation::Sqrt;
+    else
+      return false;
+    break;
+  default:
+    errs() << BaseInstruction << " is not a Binary Instruction.\n";
+    return false;
+  }
+
+  // Creating a node for the instruction in the computation graph
+//  CG.NodeMap.insert(pair<int, CGNode> (CG.NodeNumber, UnaryInstructionCGNode(CG.NodeNumber, )));
+//  CG.NodeNumber++;
+
+  BasicBlock::iterator NextInst(BaseInstruction);
+  NextInst++;
+  IRBuilder<> InstructionBuilder( &(*NextInst) );
+
+  std::vector<Value *> Args;
+
+  Args.push_back(InstructionBuilder.getInt32(NodeCounter));
+  NodeCounter++;
+
+  string XString = BaseInstruction->getOperand(0)->getName().str();
+  if(XString == "")
+    XString = to_string(VarCounter);
+  VarCounter++;
+  Constant *XValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
+                                                  XString,
+                                                  true);
+  Value *X = new GlobalVariable(*BaseInstruction->getModule(),
+                                XValue->getType(),
+                                true,
+                                GlobalValue::InternalLinkage,
+                                XValue);
+
+  Args.push_back(X);
+  Args.push_back(BaseInstruction->getOperand(0));
+
+  Args.push_back(InstructionBuilder.getInt32(OpType));
+
+  ArrayRef<Value *> ArgsRef(Args);
+
+  CallInst *NewCallInstruction = nullptr;
+
+  // Branch based on data type of operation
+  if(isSingleFPOperation(BaseInstruction)) {
+    NewCallInstruction =
+        InstructionBuilder.CreateCall(ACfp32UnaryFunction, ArgsRef);
+    *NumInstrumentedInstructions+=1;
+  }
+  else if(isDoubleFPOperation(BaseInstruction)) {
+    NewCallInstruction =
+        InstructionBuilder.CreateCall(ACfp64UnaryFunction, ArgsRef);
+    *NumInstrumentedInstructions+=1;
+  }
+  assert(NewCallInstruction && "Invalid call instruction!");
+  return true;
+}
+
+
+bool ACInstrumentation::instrumentBinaryCall(Instruction* BaseInstruction,
+                                             long *NumInstrumentedInstructions) {
+  Operation OpType;
+  switch (BaseInstruction->getOpcode()) {
+  case 14:
+    OpType = Operation::Add;
+    break;
+  case 16:
+    OpType = Operation::Sub;
+    break;
+  case 18:
+    OpType = Operation::Mul;
+    break;
+  case 21:
+    OpType = Operation::Div;
+    break;
+  default:
+    errs() << BaseInstruction << " is not a Binary Instruction.\n";
+    return false;
+  }
+
+  BasicBlock::iterator NextInst(BaseInstruction);
+  NextInst++;
+  IRBuilder<> InstructionBuilder( &(*NextInst) );
+
+  std::vector<Value *> Args;
+
+  Args.push_back(InstructionBuilder.getInt32(NodeCounter));
+  NodeCounter++;
+
+  string XString = BaseInstruction->getOperand(0)->getName().str();
+  if(XString == "")
+    XString = to_string(VarCounter);
+  VarCounter++;
+  Constant *XValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
+                                                  XString,
+                                                  true);
+  Value *X = new GlobalVariable(*BaseInstruction->getModule(),
+                                XValue->getType(),
+                                true,
+                                GlobalValue::InternalLinkage,
+                                XValue);
+
+  string YString = BaseInstruction->getOperand(1)->getName().str();
+  if(YString == "")
+    YString = to_string(VarCounter);
+  VarCounter++;
+  Constant *YValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
+                                                  YString,
+                                                  true);
+  Value *Y = new GlobalVariable(*BaseInstruction->getModule(),
+                                YValue->getType(),
+                                true,
+                                GlobalValue::InternalLinkage,
+                                YValue);
+
+  Args.push_back(X);
+  Args.push_back(BaseInstruction->getOperand(0));
+  Args.push_back(Y);
+  Args.push_back(BaseInstruction->getOperand(1));
+  Args.push_back(InstructionBuilder.getInt32(OpType));
+
+  ArrayRef<Value *> ArgsRef(Args);
+
+  CallInst *NewCallInstruction = nullptr;
+
+  // Branch based on data type of operation
+  if(isSingleFPOperation(BaseInstruction)) {
+    NewCallInstruction =
+        InstructionBuilder.CreateCall(ACfp32BinaryFunction, ArgsRef);
+    *NumInstrumentedInstructions+=1;
+  }
+  else if(isDoubleFPOperation(BaseInstruction)) {
+    NewCallInstruction =
+        InstructionBuilder.CreateCall(ACfp64BinaryFunction, ArgsRef);
+    *NumInstrumentedInstructions+=1;
+  }
+
+  assert(NewCallInstruction && "Invalid call instruction!");
+  return true;
+}
+
+
+bool ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
                                              long *NumInstrumentedInstructions) {
 
 //  if (ACInstrumentation::isUnwantedFunction(BB->getParent()))
@@ -77,126 +271,32 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
   //  assert((ACfp64UnaryFunction!=nullptr) && "Function not initialized!");
   assert((ACfp64BinaryFunction!=nullptr) && "Function not initialized!");
 
-  long int NuminstrumentedOps = 0;
+  bool Instrumented = false;
   for (BasicBlock::iterator I = BB->begin();
        I != BB->end(); ++I) {
     Instruction* CurrentInstruction = &*I;
-
     // Branch based on kind of operation
     if(isUnaryOperation(CurrentInstruction)) {
-
+      Instrumented = instrumentUnaryCall(CurrentInstruction, &*NumInstrumentedInstructions) || Instrumented;
     }
     else if(isBinaryOperation(CurrentInstruction)) {
-      BasicBlock::iterator NextInst(CurrentInstruction);
-      NextInst++;
-      IRBuilder<> InstructionBuilder( &(*NextInst) );
-
-      std::vector<Value *> Call1Args;
-      std::vector<Value *> Call2Args;
-
-      string XString = CurrentInstruction->getOperand(0)->getName().str();
-      if(XString == "")
-        XString = to_string(VarCounter);
-      VarCounter++;
-      Constant *XValue = ConstantDataArray::getString(BB->getModule()->getContext(),
-                                                      XString,
-                                                      true);
-      Value *X = new GlobalVariable(*BB->getModule(),
-                                    XValue->getType(),
-                                    true,
-                                    GlobalValue::InternalLinkage,
-                                    XValue);
-
-      string YString = CurrentInstruction->getOperand(1)->getName().str();
-      if(YString == "")
-        YString = to_string(VarCounter);
-      VarCounter++;
-      Constant *YValue = ConstantDataArray::getString(BB->getModule()->getContext(),
-                                                      YString,
-                                                      true);
-      Value *Y = new GlobalVariable(*BB->getModule(),
-                                    XValue->getType(),
-                                    true,
-                                    GlobalValue::InternalLinkage,
-                                    YValue);
-
-      Call1Args.push_back(X);
-      Call1Args.push_back(CurrentInstruction->getOperand(0));
-      Call1Args.push_back(Y);
-      Call1Args.push_back(CurrentInstruction->getOperand(1));
-
-      Call2Args.push_back(X);
-      Call2Args.push_back(CurrentInstruction->getOperand(0));
-      Call2Args.push_back(Y);
-      Call2Args.push_back(CurrentInstruction->getOperand(1));
-
-      Operation OpType;
-      switch (CurrentInstruction->getOpcode()) {
-      case 14:
-        OpType = Operation::Add;
-        break;
-      case 16:
-        OpType = Operation::Sub;
-        break;
-      case 18:
-        OpType = Operation::Mul;
-        break;
-      case 21:
-        OpType = Operation::Div;
-        break;
-      default:
-        errs() << CurrentInstruction << " is not a Binary Instruction";
-        break;
-      }
-
-      Call1Args.push_back(InstructionBuilder.getInt32(OpType));
-      Call2Args.push_back(InstructionBuilder.getInt32(OpType));
-
-      Call1Args.push_back(InstructionBuilder.getInt32(1));
-      Call2Args.push_back(InstructionBuilder.getInt32(2));
-
-
-      ArrayRef<Value *> Call1ArgsRef(Call1Args);
-      ArrayRef<Value *> Call2ArgsRef(Call2Args);
-
-      CallInst *NewCall1Instruction;
-      CallInst *NewCall2Instruction;
-
-      // Branch based on data type of operation
-      if(isSingleFPOperation(CurrentInstruction)) {
-        NewCall1Instruction =
-            InstructionBuilder.CreateCall(ACfp32BinaryFunction, Call1ArgsRef);
-        NewCall2Instruction =
-            InstructionBuilder.CreateCall(ACfp32BinaryFunction, Call2ArgsRef);
-      }
-      else if(isDoubleFPOperation(CurrentInstruction)) {
-        NewCall1Instruction =
-            InstructionBuilder.CreateCall(ACfp64BinaryFunction, Call1ArgsRef);
-        NewCall2Instruction =
-            InstructionBuilder.CreateCall(ACfp64BinaryFunction, Call2ArgsRef);
-      }
-
-      NuminstrumentedOps++;
-
-      assert(NewCall1Instruction && NewCall2Instruction && "Invalid call instruction!");
+      Instrumented = instrumentBinaryCall(CurrentInstruction, &*NumInstrumentedInstructions) || Instrumented;
     }
-    else if(isCastOperation(CurrentInstruction)) {
-      
-    }
-
   }
-  *NumInstrumentedInstructions = NuminstrumentedOps;
 
+  return Instrumented;
 }
 
-void ACInstrumentation::instrumentMainFunction(Function *F) {
+bool ACInstrumentation::instrumentMainFunction(Function *F) {
   BasicBlock *BB = &(*(F->begin()));
   Instruction *Inst = BB->getFirstNonPHIOrDbg();
   IRBuilder<> InstructionBuilder(Inst);
-  std::vector<Value *> Args;
+  std::vector<Value *> InitCallArgs, StoreCallArgs, AnalysisCallArgs;
 
-  CallInst *CallInstruction = nullptr;
-  Args.push_back(InstructionBuilder.getInt64(1000));
+  CallInst *InitCallInstruction, *StoreCallInstruction, *AnalysisCallInstruction;
+
+  // Instrumenting Initialization call instruction
+//  Args.push_back(InstructionBuilder.getInt64(1000));
   // Check if function has arguments or not
   // TODO: Handle the case if program has arguments by creating a function
   //  initializing everything in case of arguments.
@@ -210,16 +310,44 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
 //    CallInstruction = InstructionBuilder.CreateCall(fpc_init_args, args_ref);
 //  } else
 //  {
-  CallInstruction = InstructionBuilder.CreateCall(ACInitFunction, Args);
+  InitCallInstruction = InstructionBuilder.CreateCall(ACInitFunction, InitCallArgs);
 //  }
 
-  assert(CallInstruction && "Invalid call instruction!");
+  // Instrument call to print table
+//  for (Function::iterator BBIter=F->begin(); BBIter != F->end(); ++BBIter) {
+//    for (BasicBlock::iterator InstIter=BBIter->begin(); InstIter != BBIter->end(); ++InstIter) {
+//      Instruction *CurrentInstruction = &(*InstIter);
+//      if (isa<ReturnInst>(CurrentInstruction) || isa<ResumeInst>(CurrentInstruction)) {
+//        ArrayRef<Value *> StoreCallArgsRef(StoreCallArgs);
+//        InstructionBuilder.SetInsertPoint(CurrentInstruction);
+//        StoreCallInstruction = InstructionBuilder.CreateCall(ACStoreFunction, StoreCallArgsRef);
+//
+//        std::string str;
+//        llvm::raw_string_ostream(str) << *CurrentInstruction;
+//        Constant *GraphFileName = ConstantDataArray::getString(InstIter->getModule()->getContext(),
+//                                                               str,
+//                                                               true);
+//        Value *GraphFileIdentifier = new GlobalVariable(*InstIter->getModule(),
+//                                      GraphFileName->getType(),
+//                                      true,
+//                                      GlobalValue::InternalLinkage,
+//                                      GraphFileName);
+//        AnalysisCallArgs.push_back(GraphFileIdentifier);
+//        ArrayRef<Value *> AnalysisCallArgsRef(AnalysisCallArgs);
+//        AnalysisCallInstruction = InstructionBuilder.CreateCall(ACAnalysisFunction, AnalysisCallArgsRef);
+//      }
+//    }
+//  }
+
+//  assert(InitCallInstruction && StoreCallInstruction && AnalysisCallInstruction && "Invalid call instruction!");
+  return true;
 }
 
 // TODO: Figure out which unary instructions you would want the atomic condition
 //  for and return true for those below.
 bool ACInstrumentation::isUnaryOperation(const Instruction *Inst) {
-  return false;
+  return Inst->getOpcode() == Instruction::FPTrunc ||
+         Inst->getOpcode() == Instruction::Call;
 }
 
 // TODO: Check for FRem case.
@@ -230,29 +358,45 @@ bool ACInstrumentation::isBinaryOperation(const Instruction *Inst) {
          Inst->getOpcode() == Instruction::FDiv;
 }
 
-// TODO: Figure out which cast instructions you would want the atomic condition
-//  for and return true for those below.
-bool ACInstrumentation::isCastOperation(const Instruction *Inst) {
+
+bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
+  if (isUnaryOperation(Inst)) {
+    switch (Inst->getOpcode()) {
+    case 45:
+      return static_cast<const FPTruncInst*>(Inst)->getSrcTy()->isFloatTy();
+    case 56:
+      // Assuming that operand 0 for this call instruction contains the operand
+      // used to calculate the AC.
+      return static_cast<const CallInst*>(Inst)->getArgOperand(0)->getType()->isFloatTy();
+    default:
+      errs() << "Not an FP32 operation.";
+    }
+  } else if(isBinaryOperation(Inst)) {
+    return Inst->getOperand(0)->getType()->isFloatTy() &&
+           Inst->getOperand(1)->getType()->isFloatTy();
+  }
+
   return false;
 }
 
-bool ACInstrumentation::isFPOperation(const Instruction *Inst) {
-  return Inst->getOpcode() == Instruction::FMul ||
-         Inst->getOpcode() == Instruction::FDiv ||
-         Inst->getOpcode() == Instruction::FAdd ||
-         Inst->getOpcode() == Instruction::FSub;
-}
-
-bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
-  return isFPOperation(Inst) &&
-         Inst->getOperand(0)->getType()->isFloatTy() &&
-         Inst->getOperand(1)->getType()->isFloatTy();
-}
-
 bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
-  return isFPOperation(Inst) &&
-         Inst->getOperand(0)->getType()->isDoubleTy() &&
-         Inst->getOperand(1)->getType()->isDoubleTy();
+  if (isUnaryOperation(Inst)) {
+    switch (Inst->getOpcode()) {
+    case 45:
+      return static_cast<const FPTruncInst*>(Inst)->getSrcTy()->isDoubleTy();
+    case 56:
+      // Assuming that operand 0 for this call instruction contains the operand
+      // used to calculate the AC.
+      return static_cast<const CallInst*>(Inst)->getArgOperand(0)->getType()->isDoubleTy();
+    default:
+      errs() << "Not an FP64 operation.";
+    }
+  } else if(isBinaryOperation(Inst)) {
+    return Inst->getOperand(0)->getType()->isDoubleTy() &&
+           Inst->getOperand(1)->getType()->isDoubleTy();
+  }
+
+  return false;
 }
 
 bool ACInstrumentation::isUnwantedFunction(const Function *Func) {

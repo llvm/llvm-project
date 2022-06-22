@@ -6,6 +6,7 @@
 #define LLVM_ACINSTRUMENTATION_H
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Transforms/ErrorAnalysis/ComputationGraph.h"
 
 using namespace llvm;
 
@@ -13,6 +14,7 @@ namespace atomiccondition {
 
 class ACInstrumentation {
 private:
+//  ComputationGraph CG;
   Function *FunctionToInstrument;
 
   Function *ACInitFunction;
@@ -22,20 +24,29 @@ private:
   Function *ACfp32BinaryFunction;
   Function *ACfp64BinaryFunction;
 
+//  Function *ACStoreFunction;
+//  Function *ACAnalysisFunction;
+
 public:
   static int VarCounter;
+  static int NodeCounter;
 
   ACInstrumentation(Function *F);
-  void instrumentBasicBlock(BasicBlock *BB,
+
+  bool instrumentUnaryCall(Instruction* BaseInstruction,
+                           long int *NumInstrumentedInstructions);
+  bool instrumentBinaryCall(Instruction* BaseInstruction,
                             long int *NumInstrumentedInstructions);
-  void instrumentMainFunction(Function *F);
+
+  bool instrumentBasicBlock(BasicBlock *BB,
+                            long int *NumInstrumentedInstructions);
+  bool instrumentMainFunction(Function *F);
 
   //// Helper Functions
   /// Instruction based functions
   // Categorized by operations
   static bool isUnaryOperation(const Instruction *Inst);
   static bool isBinaryOperation(const Instruction *Inst);
-  static bool isCastOperation(const Instruction *Inst);
 
   // Categorized by Data Type
   static bool isFPOperation(const Instruction *Inst);
