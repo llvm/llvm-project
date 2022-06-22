@@ -19,6 +19,15 @@
 #include <cstdlib>
 #include <cstring>
 
+EXTERN int ompx_get_team_procs(int device_num) {
+  TIMESCOPE();
+  PM->RTLsMtx.lock();
+  int TeamProcs = PM->Devices[device_num]->getTeamProcs();
+  PM->RTLsMtx.unlock();
+  DP("Call to ompx_get_team_procs returning %d\n", TeamProcs);
+  return TeamProcs;
+}
+
 EXTERN int omp_get_num_devices(void) {
   TIMESCOPE();
   PM->RTLsMtx.lock();

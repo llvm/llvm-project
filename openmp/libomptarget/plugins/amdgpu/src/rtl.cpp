@@ -2656,6 +2656,10 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
   return elf_machine_id_is_amdgcn(image);
 }
 
+int __tgt_rtl_number_of_team_procs(int device_id) {
+  return DeviceInfo.ComputeUnits[device_id];
+}
+
 int __tgt_rtl_number_of_devices() {
   // If the construction failed, no methods are safe to call
   if (DeviceInfo.ConstructionSucceeded) {

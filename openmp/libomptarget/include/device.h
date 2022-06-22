@@ -313,6 +313,10 @@ struct DeviceTy {
   int32_t DeviceID;
   RTLInfoTy *RTL;
   int32_t RTLDeviceID;
+  /// The physical number of processors that may concurrently execute a team
+  /// For cuda, this is number of SMs, for amdgcn, this is number of CUs.
+  /// This field is used by ompx_get_team_procs(devid).
+  int32_t TeamProcs;
 
   bool IsInit;
   std::once_flag InitFlag;
@@ -462,6 +466,9 @@ struct DeviceTy {
 
   /// Destroy the event.
   int32_t destroyEvent(void *Event);
+
+  void setTeamProcs(int32_t num_team_procs) { TeamProcs = num_team_procs; }
+  int32_t getTeamProcs() { return TeamProcs; }
   /// }
 
 private:

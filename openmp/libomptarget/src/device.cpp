@@ -595,6 +595,7 @@ void DeviceTy::init() {
   int32_t Ret = RTL->init_device(RTLDeviceID);
   if (Ret != OFFLOAD_SUCCESS)
     return;
+  setTeamProcs(RTL->number_of_team_procs(RTLDeviceID));
 
   IsInit = true;
 }

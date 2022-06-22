@@ -20,6 +20,10 @@
 extern "C" {
 #endif
 
+// Return the number of available physical processors to execute teams
+// supported by the RTL. AMD calls these CUs.  Nvidia calls the SMs.
+int32_t __tgt_rtl_number_of_team_procs(int32_t device_num);
+
 // Return the number of available devices of the type supported by the
 // target RTL.
 int32_t __tgt_rtl_number_of_devices(void);

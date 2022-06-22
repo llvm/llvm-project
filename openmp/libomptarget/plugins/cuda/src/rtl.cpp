@@ -350,6 +350,7 @@ class DeviceRTLTy {
 
   std::vector<DeviceDataTy> DeviceData;
   std::vector<std::vector<CUmodule>> Modules;
+  std::vector<int> NumberOfTeamProcs;
 
   /// Vector of flags indicating the initalization status of all associated
   /// devices.
@@ -521,6 +522,7 @@ public:
 
     DeviceData.resize(NumberOfDevices);
     Modules.resize(NumberOfDevices);
+    NumberOfTeamProcs.resize(NumberOfDevices);
     StreamPool.resize(NumberOfDevices);
     EventPool.resize(NumberOfDevices);
     PeerAccessMatrix.resize(NumberOfDevices);
@@ -583,6 +585,8 @@ public:
   }
 
   int getNumOfDevices() const { return NumberOfDevices; }
+
+  int getNumOfTeamProcs(int devid) const { return NumberOfTeamProcs[devid]; }
 
   void setRequiresFlag(const int64_t Flags) { this->RequiresFlags = Flags; }
 
@@ -650,6 +654,18 @@ public:
     } else {
       DP("Using %d CUDA blocks per grid\n", MaxGridDimX);
       DeviceData[DeviceId].BlocksPerGrid = MaxGridDimX;
+    }
+
+    // Query attributes to for number of SMs for ompx_get_team_procs(devid)
+    int TmpTeamProcs;
+    Err = cuDeviceGetAttribute(
+        &TmpTeamProcs, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, Device);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error: on CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, using %d\n", 16);
+      NumberOfTeamProcs[DeviceId] = 16;
+    } else {
+      DP("Device %d has %d procs for team execution\n", DeviceId, TmpTeamProcs);
+      NumberOfTeamProcs[DeviceId] = TmpTeamProcs;
     }
 
     // We are only exploiting threads along the x axis.
@@ -1523,6 +1539,10 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
 }
 
 int32_t __tgt_rtl_number_of_devices() { return DeviceRTL.getNumOfDevices(); }
+
+int32_t __tgt_rtl_number_of_team_procs(int devid) {
+  return DeviceRTL.getNumOfTeamProcs(devid);
+}
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   DP("Init requires flags to %" PRId64 "\n", RequiresFlags);

@@ -177,6 +177,9 @@ void RTLsTy::LoadRTLs() {
     if (!(*((void **)&R.is_valid_binary) =
               dlsym(dynlib_handle, "__tgt_rtl_is_valid_binary")))
       ValidPlugin = false;
+    if (!(*((void **)&R.number_of_team_procs) =
+              dlsym(dynlib_handle, "__tgt_rtl_number_of_team_procs")))
+      ValidPlugin = false;
     if (!(*((void **)&R.number_of_devices) =
               dlsym(dynlib_handle, "__tgt_rtl_number_of_devices")))
       ValidPlugin = false;

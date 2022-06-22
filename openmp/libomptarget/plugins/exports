@@ -2,6 +2,7 @@ VERS1.0 {
   global:
     __tgt_rtl_is_valid_binary;
     __tgt_rtl_is_data_exchangable;
+    __tgt_rtl_number_of_team_procs;
     __tgt_rtl_number_of_devices;
     __tgt_rtl_init_requires;
     __tgt_rtl_init_device;
