@@ -21,7 +21,7 @@ namespace {
 /// Information pertaining to a specific statistic.
 struct Statistic {
   const char *name, *desc;
-  unsigned value;
+  uint64_t value;
 };
 } // namespace
 
