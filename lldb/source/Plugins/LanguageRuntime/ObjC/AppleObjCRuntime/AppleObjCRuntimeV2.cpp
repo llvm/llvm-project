@@ -1724,7 +1724,8 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoArgs(Helper helper) {
 }
 
 AppleObjCRuntimeV2::DynamicClassInfoExtractor::Helper
-AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper() const {
+AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper(
+    ExecutionContext &exe_ctx) const {
   if (!m_runtime.m_has_objc_copyRealizedClassList &&
       !m_runtime.m_has_objc_getRealizedClassList_trylock)
     return DynamicClassInfoExtractor::gdb_objc_realized_classes;
@@ -1732,10 +1733,20 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper() const {
   if (Process *process = m_runtime.GetProcess()) {
     if (DynamicLoader *loader = process->GetDynamicLoader()) {
       if (loader->IsFullyInitialized()) {
-        if (m_runtime.m_has_objc_getRealizedClassList_trylock)
-          return DynamicClassInfoExtractor::objc_getRealizedClassList_trylock;
-        if (m_runtime.m_has_objc_copyRealizedClassList)
-          return DynamicClassInfoExtractor::objc_copyRealizedClassList;
+        switch (exe_ctx.GetTargetRef().GetDynamicClassInfoHelper()) {
+        case eDynamicClassInfoHelperAuto:
+          [[clang::fallthrough]];
+        case eDynamicClassInfoHelperGetRealizedClassList:
+          if (m_runtime.m_has_objc_getRealizedClassList_trylock)
+            return DynamicClassInfoExtractor::objc_getRealizedClassList_trylock;
+          [[clang::fallthrough]];
+        case eDynamicClassInfoHelperCopyRealizedClassList:
+          if (m_runtime.m_has_objc_copyRealizedClassList)
+            return DynamicClassInfoExtractor::objc_copyRealizedClassList;
+          [[clang::fallthrough]];
+        case eDynamicClassInfoHelperRealizedClassesStruct:
+          return DynamicClassInfoExtractor::gdb_objc_realized_classes;
+        }
       }
     }
   }
@@ -1872,7 +1883,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
   Status err;
 
   // Compute which helper we're going to use for this update.
-  const DynamicClassInfoExtractor::Helper helper = ComputeHelper();
+  const DynamicClassInfoExtractor::Helper helper = ComputeHelper(exe_ctx);
 
   // Read the total number of classes from the hash table
   const uint32_t num_classes =
