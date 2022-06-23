@@ -31,6 +31,14 @@ OffloadBinary::create(MemoryBufferRef Buf) {
   const Entry *TheEntry =
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntryOffset]);
 
+  // Make sure the offsets are inside the file.
+  if (TheHeader->EntryOffset > Buf.getBufferSize() ||
+      TheEntry->ImageOffset > Buf.getBufferSize() ||
+      TheEntry->StringOffset > Buf.getBufferSize())
+    return errorCodeToError(object_error::unexpected_eof);
+
+  return errorCodeToError(object_error::unexpected_eof);
+
   return std::unique_ptr<OffloadBinary>(
       new OffloadBinary(Buf, TheHeader, TheEntry));
 }
@@ -74,7 +82,8 @@ OffloadBinary::write(const OffloadingImage &OffloadingData) {
   TheEntry.ImageOffset = BinaryDataSize;
   TheEntry.ImageSize = OffloadingData.Image->getBufferSize();
 
-  SmallVector<char, 1024> Data;
+  SmallVector<char> Data;
+  Data.reserve(TheHeader.Size);
   raw_svector_ostream OS(Data);
   OS << StringRef(reinterpret_cast<char *>(&TheHeader), sizeof(Header));
   OS << StringRef(reinterpret_cast<char *>(&TheEntry), sizeof(Entry));
