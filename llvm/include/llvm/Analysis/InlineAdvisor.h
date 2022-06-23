@@ -194,7 +194,9 @@ public:
   }
 
   /// NOTE pass name is annotated only when inline advisor constructor provides InlineContext.
-  const char *getAnnotatedInlinePassName();
+  const char *getAnnotatedInlinePassName() const {
+    return AnnotatedInlinePassName.c_str();
+  }
 
 protected:
   InlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
@@ -206,6 +208,7 @@ protected:
   Module &M;
   FunctionAnalysisManager &FAM;
   const Optional<InlineContext> IC;
+  const std::string AnnotatedInlinePassName;
   std::unique_ptr<ImportedFunctionsInliningStatistics> ImportedFunctionsStats;
 
   enum class MandatoryInliningKind { NotMandatory, Always, Never };

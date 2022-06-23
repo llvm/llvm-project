@@ -1,7 +1,12 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.opt.yaml
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.opt.yaml
+
+; RUN: opt < %s -sample-profile -annotate-sample-profile-inline-phase -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t.opt.yaml
+; RUN: opt < %s -passes=sample-profile -annotate-sample-profile-inline-phase -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t.opt.yaml
 
 ; Original test case.
 ;
@@ -32,7 +37,8 @@
 
 ; Checking to see if YAML file is generated and contains remarks
 ;YAML:       --- !Passed
-;YAML-NEXT:  Pass:            sample-profile-inline
+;YAML-NO-ANNOTATE-NEXT:  Pass:            sample-profile-inline
+;YAML-ANNOTATE-NEXT:  Pass:            main-sample-profile-inline
 ;YAML-NEXT:  Name:            Inlined
 ;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 13, Column: 21 }
 ;YAML-NEXT:  Function:        main
@@ -60,7 +66,8 @@
 ;YAML-NEXT:    - String:          ';'
 ;YAML-NEXT:  ...
 ;YAML:       --- !Passed
-;YAML-NEXT:  Pass:            sample-profile-inline
+;YAML-NO-ANNOTATE-NEXT:  Pass:            sample-profile-inline
+;YAML-ANNOTATE-NEXT:  Pass:            main-sample-profile-inline
 ;YAML-NEXT:  Name:            AlwaysInline
 ;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 9, Column: 19 }
 ;YAML-NEXT:  Function:        main

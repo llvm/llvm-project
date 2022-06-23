@@ -508,7 +508,9 @@ void llvm::emitInlinedIntoBasedOnCost(
 
 InlineAdvisor::InlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
                              Optional<InlineContext> IC)
-    : M(M), FAM(FAM), IC(IC) {
+    : M(M), FAM(FAM), IC(IC),
+      AnnotatedInlinePassName(IC ? llvm::AnnotateInlinePassName(*IC)
+                                 : DEBUG_TYPE) {
   if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No) {
     ImportedFunctionsStats =
         std::make_unique<ImportedFunctionsInliningStatistics>();
@@ -570,17 +572,6 @@ static inline const char *getInlineAdvisorContext(InlinePass IP) {
 std::string llvm::AnnotateInlinePassName(InlineContext IC) {
   return std::string(getLTOPhase(IC.LTOPhase)) + "-" +
          std::string(getInlineAdvisorContext(IC.Pass));
-}
-
-const char *InlineAdvisor::getAnnotatedInlinePassName() {
-  if (!IC)
-    return DEBUG_TYPE;
-
-  // IC is constant and initialized in constructor, so compute the annotated
-  // name only once.
-  static const std::string PassName = llvm::AnnotateInlinePassName(*IC);
-
-  return PassName.c_str();
 }
 
 InlineAdvisor::MandatoryInliningKind
