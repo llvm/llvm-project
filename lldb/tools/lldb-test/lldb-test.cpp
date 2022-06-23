@@ -1120,7 +1120,7 @@ int main(int argc, const char *argv[]) {
       /*add_to_history*/ eLazyBoolNo, Result);
 
   if (!opts::Log.empty())
-    Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, errs());
+    Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, 0, errs());
 
   if (opts::BreakpointSubcommand)
     return opts::breakpoint::evaluateBreakpoints(*Dbg);
