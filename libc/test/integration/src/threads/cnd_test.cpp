@@ -1,4 +1,4 @@
-//===-- Unittests for condition variable broadcast fucntionality ----------===//
+//===-- Tests for standard condition variables ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/threads.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/threads/cnd_broadcast.h"
 #include "src/threads/cnd_destroy.h"
@@ -19,7 +18,10 @@
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
-#include "utils/UnitTest/Test.h"
+
+#include "utils/IntegrationTest/test.h"
+
+#include <threads.h>
 
 namespace wait_notify_broadcast_test {
 
@@ -54,7 +56,7 @@ int broadcast_thread_func(void *) {
   return 0;
 }
 
-TEST(LlvmLibcCndVarTest, WaitNotifyBroadcastTest) {
+void wait_notify_broadcast_test() {
   __llvm_libc::cnd_init(&broadcast_cnd);
   __llvm_libc::cnd_init(&threads_ready_cnd);
   __llvm_libc::mtx_init(&broadcast_mtx, mtx_plain);
@@ -111,7 +113,7 @@ int waiter_thread_func(void *unused) {
   return 0x600D;
 }
 
-TEST(LlvmLibcCndVarTest, SingleWaiterTest) {
+void single_waiter_test() {
   ASSERT_EQ(__llvm_libc::mtx_init(&waiter_mtx, mtx_plain), int(thrd_success));
   ASSERT_EQ(__llvm_libc::mtx_init(&main_thread_mtx, mtx_plain),
             int(thrd_success));
@@ -142,3 +144,9 @@ TEST(LlvmLibcCndVarTest, SingleWaiterTest) {
 }
 
 } // namespace single_waiter_test
+
+int main() {
+  wait_notify_broadcast_test::wait_notify_broadcast_test();
+  single_waiter_test::single_waiter_test();
+  return 0;
+}
