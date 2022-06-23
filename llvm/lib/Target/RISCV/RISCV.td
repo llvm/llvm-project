@@ -435,6 +435,10 @@ def FeatureUnalignedScalarMem
                       "true", "Has reasonably performant unaligned scalar "
                       "loads and stores">;
 
+def TuneLUIADDIFusion
+    : SubtargetFeature<"lui-addi-fusion", "HasLUIADDIFusion",
+                       "true", "Enable LUI+ADDI macrofusion">;
+
 def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
                        "Disable default unroll preference.">;
