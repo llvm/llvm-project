@@ -968,10 +968,13 @@ TEST(TBAAMetadataTest, BaseClass) {
       MConstInt(0)),
     MConstInt(0));
 
-  auto ClassDerived =
-      MMTuple(MMString("_ZTS7Derived"), ClassBase, MConstInt(0),
-              MMTuple(MMString("short"), OmnipotentCharCXX, MConstInt(0)),
-              MConstInt(4));
+  auto ClassDerived = MMTuple(
+    MMString("_ZTS7Derived"),
+    MMTuple(
+      MMString("short"),
+      OmnipotentCharCXX,
+      MConstInt(0)),
+    MConstInt(4));
 
   const Instruction *I = match(BB,
       MInstruction(Instruction::Store,
@@ -1044,10 +1047,13 @@ TEST(TBAAMetadataTest, PolymorphicClass) {
       MConstInt(0)),
     MConstInt(Compiler.PtrSize));
 
-  auto ClassDerived =
-      MMTuple(MMString("_ZTS7Derived"), ClassBase, MConstInt(0),
-              MMTuple(MMString("short"), OmnipotentCharCXX, MConstInt(0)),
-              MConstInt(Compiler.PtrSize + 4));
+  auto ClassDerived = MMTuple(
+    MMString("_ZTS7Derived"),
+    MMTuple(
+      MMString("short"),
+      OmnipotentCharCXX,
+      MConstInt(0)),
+    MConstInt(Compiler.PtrSize + 4));
 
   const Instruction *I = match(BB,
       MInstruction(Instruction::Store,
