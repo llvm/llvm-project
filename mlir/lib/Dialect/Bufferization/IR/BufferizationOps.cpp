@@ -152,6 +152,7 @@ void mlir::bufferization::populateDynamicDimSizes(
 LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
                                        const BufferizationOptions &options) {
   OpBuilder::InsertionGuard g(rewriter);
+  Operation *op = this->getOperation();
   Location loc = getLoc();
 
   // Nothing to do for dead AllocTensorOps.
@@ -185,8 +186,11 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   // Should the buffer be deallocated?
   AnalysisState analysisState(options);
   bool dealloc;
-  if (getEscape()) {
-    dealloc = !*getEscape();
+  if (op->hasAttr(BufferizationDialect::kEscapeAttrName)) {
+    // AllocTensorOp has one result.
+    ArrayAttr escapeAttr =
+        op->getAttr(BufferizationDialect::kEscapeAttrName).cast<ArrayAttr>();
+    dealloc = !escapeAttr[0].cast<BoolAttr>().getValue();
   } else {
     // No "escape" annotation found.
     if (options.createDeallocs) {
@@ -251,20 +255,7 @@ LogicalResult AllocTensorOp::verify() {
 
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes) {
-  build(builder, result, type, dynamicSizes, /*copy=*/Value(),
-        /*escape=*/BoolAttr());
-}
-
-void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
-                          RankedTensorType type, ValueRange dynamicSizes,
-                          Value copy) {
-  build(builder, result, type, dynamicSizes, copy, /*escape=*/BoolAttr());
-}
-
-void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
-                          RankedTensorType type, ValueRange dynamicSizes,
-                          Value copy, bool escape) {
-  build(builder, result, type, dynamicSizes, copy, builder.getBoolAttr(escape));
+  build(builder, result, type, dynamicSizes, /*copy=*/Value());
 }
 
 namespace {
@@ -305,8 +296,7 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
     if (newType == op.getType())
       return failure();
     auto newOp = rewriter.create<AllocTensorOp>(
-        op.getLoc(), newType, newDynamicSizes, /*copy=*/Value(),
-        /*escape=*/op.getEscapeAttr());
+        op.getLoc(), newType, newDynamicSizes, /*copy=*/Value());
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }

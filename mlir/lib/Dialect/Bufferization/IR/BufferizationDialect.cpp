@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -26,6 +27,9 @@ constexpr const ::llvm::StringLiteral BufferizationDialect::kWritableAttrName;
 /// during One-Shot Module Bufferize.
 constexpr const ::llvm::StringLiteral
     BufferizationDialect::kBufferLayoutAttrName;
+
+/// Attribute name used to mark escaping behavior of buffer allocations.
+constexpr const ::llvm::StringLiteral BufferizationDialect::kEscapeAttrName;
 
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Interfaces
@@ -78,6 +82,37 @@ BufferizationDialect::verifyOperationAttribute(Operation *op,
     if (!isa<FunctionOpInterface>(op))
       return op->emitError() << "expected " << attr.getName()
                              << " to be used on function-like operations";
+    return success();
+  }
+  if (attr.getName() == kEscapeAttrName) {
+    auto arrayAttr = attr.getValue().dyn_cast<ArrayAttr>();
+    if (!arrayAttr)
+      return op->emitError() << "'" << kEscapeAttrName
+                             << "' is expected to be a bool array attribute";
+    if (arrayAttr.size() != op->getNumResults())
+      return op->emitError()
+             << "'" << kEscapeAttrName
+             << "' has wrong number of elements, expected "
+             << op->getNumResults() << ", got " << arrayAttr.size();
+    auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
+    if (!bufferizableOp)
+      return op->emitError()
+             << "'" << kEscapeAttrName << "' only valid on bufferizable ops";
+    for (const auto &it : llvm::enumerate(arrayAttr)) {
+      auto attr = it.value();
+      auto boolAttr = attr.dyn_cast<BoolAttr>();
+      if (!boolAttr)
+        return op->emitError() << "'" << kEscapeAttrName
+                               << "' is expected to be a bool array attribute";
+      if (!boolAttr.getValue())
+        continue;
+      if (!op->getResult(it.index()).getType().isa<TensorType>())
+        return op->emitError()
+               << "'" << kEscapeAttrName << "' only valid for tensor results";
+      if (!bufferizableOp.bufferizesToAllocation(op->getOpResult(it.index())))
+        return op->emitError() << "'" << kEscapeAttrName
+                               << "' only valid for allocation results";
+    }
     return success();
   }
 

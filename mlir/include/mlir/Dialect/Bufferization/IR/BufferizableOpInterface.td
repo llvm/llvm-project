@@ -15,9 +15,29 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
   let description = [{
     An op interface for One-Shot Bufferize. Ops that implement this interface
     interface can be analyzed and bufferized using One-Shot Bufferize.
+
+    Note: All "bufferizesTo*" and "getAliasing*" interface methods must be
+    implemented conservatively. If it is not statically known whether an
+    OpOperand/OpResult bufferizes in a certain way (e.g., to a memory write),
+    the worst case must be assumed (e.g., that it does). Similarly,
+    "getAliasing*" interface methods may always return additional OpOperands or
+    OpResults, but must not miss an OpOperand or OpResult that could potentially
+    alias at runtime.
   }];
   let cppNamespace = "::mlir::bufferization";
   let methods = [
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given OpResult may bufferize to a new buffer
+          allocation. If it is statically unknown if the given OpResult
+          bufferizes to a buffer allocation, `true` should be returned.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"bufferizesToAllocation",
+        /*args=*/(ins "OpResult":$opResult),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return false;"
+      >,
       InterfaceMethod<
         /*desc=*/[{
           Return `true` if the given OpOperand bufferizes to a memory read. This
