@@ -677,7 +677,8 @@ bool IoStatementState::CheckForEndOfRecord() {
     if (auto length{connection.EffectiveRecordLength()}) {
       if (connection.positionInRecord >= *length) {
         IoErrorHandler &handler{GetIoErrorHandler()};
-        if (mutableModes().nonAdvancing) {
+        const auto &modes{mutableModes()};
+        if (modes.nonAdvancing) {
           if (connection.access == Access::Stream &&
               connection.unterminatedRecord) {
             // Reading final unterminated record left by a
@@ -687,10 +688,10 @@ bool IoStatementState::CheckForEndOfRecord() {
           } else {
             handler.SignalEor();
           }
-        } else if (!connection.modes.pad) {
+        } else if (!modes.pad) {
           handler.SignalError(IostatRecordReadOverrun);
         }
-        return connection.modes.pad; // PAD='YES'
+        return modes.pad; // PAD='YES'
       }
     }
   }
