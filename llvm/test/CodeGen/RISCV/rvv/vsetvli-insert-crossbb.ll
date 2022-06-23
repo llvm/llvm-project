@@ -889,6 +889,71 @@ if.end:                                           ; preds = %if.else, %if.then
   ret <vscale x 1 x double> %res
 }
 
+; Next two tests (which are the same except for swapped block order), make sure that the
+; demanded reasoning around vmv.s.x correctly handles a forward state with only a valid
+; SEWLMULRatio.  We previously had a crash bug in this case.
+define <vscale x 2 x i32> @test_ratio_only_vmv_s_x(<vscale x 2 x i32>* %x, <vscale x 2 x i16>* %y, i1 %cond) nounwind {
+; CHECK-LABEL: test_ratio_only_vmv_s_x:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    andi a0, a2, 1
+; CHECK-NEXT:    beqz a0, .LBB20_2
+; CHECK-NEXT:  # %bb.1: # %if
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vwcvt.x.x.v v8, v9
+; CHECK-NEXT:  .LBB20_2: # %if.end
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %x, i64 2)
+  br i1 %cond, label %if, label %if.end
+
+if:
+  %b = call <vscale x 2 x i16> @llvm.riscv.vle.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16>* %y, i64 2)
+  %c = call <vscale x 2 x i32> @llvm.riscv.vwadd.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i16> %b, i16 0, i64 2)
+  br label %if.end
+
+if.end:
+  %d = phi <vscale x 2 x i32> [ %a, %entry ], [ %c, %if ]
+  %e = insertelement <vscale x 2 x i32> %d, i32 0, i32 0
+  ret <vscale x 2 x i32> %e
+}
+
+define <vscale x 2 x i32> @test_ratio_only_vmv_s_x2(<vscale x 2 x i32>* %x, <vscale x 2 x i16>* %y, i1 %cond) nounwind {
+; CHECK-LABEL: test_ratio_only_vmv_s_x2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, ta, mu
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    andi a1, a2, 1
+; CHECK-NEXT:    beqz a1, .LBB21_2
+; CHECK-NEXT:  # %bb.1: # %if
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    j .LBB21_3
+; CHECK-NEXT:  .LBB21_2:
+; CHECK-NEXT:    vwcvt.x.x.v v8, v9
+; CHECK-NEXT:  .LBB21_3: # %if.end
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    ret
+entry:
+  %b = call <vscale x 2 x i16> @llvm.riscv.vle.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16>* %y, i64 2)
+  %c = call <vscale x 2 x i32> @llvm.riscv.vwadd.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i16> %b, i16 0, i64 2)
+  br i1 %cond, label %if, label %if.end
+
+if:
+  %a = call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %x, i64 2)
+  br label %if.end
+
+if.end:
+  %d = phi <vscale x 2 x i32> [ %a, %if ], [ %c, %entry ]
+  %e = insertelement <vscale x 2 x i32> %d, i32 0, i32 0
+  ret <vscale x 2 x i32> %e
+}
+
+
 declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)
 declare <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>* nocapture, i64)
 declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64)
