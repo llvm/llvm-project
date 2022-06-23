@@ -28,4 +28,4 @@ class TestCase(TestBase):
         self.build()
         self.createTestTarget()
         self.expect("target dump typesystem arg", error=True,
-                    substrs=["error: target dump typesystem doesn't take arguments."])
+                    substrs=["'target dump typesystem' doesn't take any arguments."])
