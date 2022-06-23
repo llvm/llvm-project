@@ -1126,8 +1126,10 @@ void Writer::writeUuid() {
 }
 
 void Writer::writeCodeSignature() {
-  if (codeSignatureSection)
+  if (codeSignatureSection) {
+    TimeTraceScope timeScope("Write code signature");
     codeSignatureSection->writeHashes(buffer->getBufferStart());
+  }
 }
 
 void Writer::writeOutputFile() {
