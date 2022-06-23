@@ -252,6 +252,14 @@ def AArch64uaba : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_uaba node:$op1, node:$op2, node:$op3),
                             (add node:$op1, (AArch64uabd_p (SVEAllActive), node:$op2, node:$op3))]>;
 
+def AArch64usra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                           [(int_aarch64_sve_usra node:$op1, node:$op2, node:$op3),
+                            (add node:$op1, (AArch64lsr_p (SVEAllActive), node:$op2, (SVEShiftSplatImmR (i32 node:$op3))))]>;
+
+def AArch64ssra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                           [(int_aarch64_sve_ssra node:$op1, node:$op2, node:$op3),
+                            (add node:$op1, (AArch64asr_p (SVEAllActive), node:$op2, (SVEShiftSplatImmR (i32 node:$op3))))]>;
+
 def SDT_AArch64FCVT : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
   SDTCVecEltisVT<1,i1>
@@ -3151,8 +3159,8 @@ let Predicates = [HasSVE2orSME] in {
   defm SLI_ZZI : sve2_int_bin_shift_imm_left< 0b1, "sli", int_aarch64_sve_sli>;
 
   // SVE2 bitwise shift right and accumulate
-  defm SSRA_ZZI  : sve2_int_bin_accum_shift_imm_right<0b00, "ssra",  int_aarch64_sve_ssra>;
-  defm USRA_ZZI  : sve2_int_bin_accum_shift_imm_right<0b01, "usra",  int_aarch64_sve_usra>;
+  defm SSRA_ZZI  : sve2_int_bin_accum_shift_imm_right<0b00, "ssra",  AArch64ssra>;
+  defm USRA_ZZI  : sve2_int_bin_accum_shift_imm_right<0b01, "usra",  AArch64usra>;
   defm SRSRA_ZZI : sve2_int_bin_accum_shift_imm_right<0b10, "srsra", int_aarch64_sve_srsra>;
   defm URSRA_ZZI : sve2_int_bin_accum_shift_imm_right<0b11, "ursra", int_aarch64_sve_ursra>;
 
