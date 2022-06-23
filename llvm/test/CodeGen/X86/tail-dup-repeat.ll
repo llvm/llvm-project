@@ -7,7 +7,7 @@
 ; and if.then64, and then the block dup2 gets duplicated into land.lhs.true
 ; and if.end70
 
-define void @repeated_tail_dup(i1 %a1, i1 %a2, i32* %a4, i32* %a5, i8* %a6, i32 %a7) #0 align 2 {
+define void @repeated_tail_dup(i1 %a1, i1 %a2, ptr %a4, ptr %a5, ptr %a6, i32 %a7) #0 align 2 {
 ; CHECK-LABEL: repeated_tail_dup:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    jmp .LBB0_1
@@ -48,26 +48,26 @@ for.cond:                                         ; preds = %dup1, %entry
   br i1 %a1, label %land.lhs.true, label %if.end56
 
 land.lhs.true:                                    ; preds = %for.cond
-  store i32 10, i32* %a4, align 8
+  store i32 10, ptr %a4, align 8
   br label %dup2
 
 if.end56:                                         ; preds = %for.cond
   br i1 %a2, label %if.then64, label %if.end70
 
 if.then64:                                        ; preds = %if.end56
-  store i8 1, i8* %a6, align 1
+  store i8 1, ptr %a6, align 1
   br label %dup1
 
 if.end70:                                         ; preds = %if.end56
-  store i32 12, i32* %a4, align 8
+  store i32 12, ptr %a4, align 8
   br label %dup2
 
 dup2:                                             ; preds = %if.end70, %land.lhs.true
-  store i32 2, i32* %a5, align 4
+  store i32 2, ptr %a5, align 4
   br label %dup1
 
 dup1:                                             ; preds = %dup2, %if.then64
-  %val = load i32, i32* %a4, align 8
+  %val = load i32, ptr %a4, align 8
   %switch = icmp ult i32 %a7, 1
   br i1 %switch, label %for.cond, label %for.end
 

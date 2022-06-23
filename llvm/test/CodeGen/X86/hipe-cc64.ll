@@ -49,32 +49,31 @@ entry:
   %arg1_var = alloca i64
   %arg2_var = alloca i64
   %arg3_var = alloca i64
-  store i64 %hp, i64* %hp_var
-  store i64 %p, i64* %p_var
-  store i64 %arg0, i64* %arg0_var
-  store i64 %arg1, i64* %arg1_var
-  store i64 %arg2, i64* %arg2_var
-  store i64 %arg3, i64* %arg3_var
+  store i64 %hp, ptr %hp_var
+  store i64 %p, ptr %p_var
+  store i64 %arg0, ptr %arg0_var
+  store i64 %arg1, ptr %arg1_var
+  store i64 %arg2, ptr %arg2_var
+  store i64 %arg3, ptr %arg3_var
 
   ; Loads are reading values just writen from corresponding register and are therefore noops. 
-  %0 = load i64, i64* %hp_var
-  %1 = load i64, i64* %p_var
-  %2 = load i64, i64* %arg0_var
-  %3 = load i64, i64* %arg1_var
-  %4 = load i64, i64* %arg2_var
-  %5 = load i64, i64* %arg3_var
+  %0 = load i64, ptr %hp_var
+  %1 = load i64, ptr %p_var
+  %2 = load i64, ptr %arg0_var
+  %3 = load i64, ptr %arg1_var
+  %4 = load i64, ptr %arg2_var
+  %5 = load i64, ptr %arg3_var
   ; CHECK:      jmp bar
   tail call cc 11 void @bar(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind
   ret void
 }
 
 define cc 11 void @baz() nounwind {
-  %tmp_clos = load i64, i64* @clos
-  %tmp_clos2 = inttoptr i64 %tmp_clos to i64*
-  %indirect_call = bitcast i64* %tmp_clos2 to void (i64, i64, i64)*
+  %tmp_clos = load i64, ptr @clos
+  %tmp_clos2 = inttoptr i64 %tmp_clos to ptr
   ; CHECK:      movl $42, %esi
   ; CHECK-NEXT: jmpq *(%rax)
-  tail call cc 11 void %indirect_call(i64 undef, i64 undef, i64 42) nounwind
+  tail call cc 11 void %tmp_clos2(i64 undef, i64 undef, i64 42) nounwind
   ret void
 }
 

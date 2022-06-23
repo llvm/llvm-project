@@ -74,8 +74,8 @@ module {
     //
     // Verify the results.
     //
-    // CHECK:     ( ( 2, 0, 4, 1 ), ( 0, 2.5, 0, 0 ), ( -1, -5, 2, 4 ), ( 1, 4, 0, 0 ) )
-    // CHECK-NEXST: ( 2, 4, 1, 2.5, -1, -5, 2, 4, 1, 4, -1, -1, -1, -1, -1, -1 )
+    // CHECK:    ( ( 2, 0, 4, 1 ), ( 0, 2.5, 0, 0 ), ( -1, -5, 2, 4 ), ( 1, 4, 0, 0 ) )
+    // CHECK-NEXT: ( 2, 4, 1, 2.5, -1, -5, 2, 4, 1, 4, -1, -1, -1, -1, -1, -1 )
     //
     %c = sparse_tensor.convert %0 : tensor<4x4xf64, #SparseMatrix> to tensor<4x4xf64>
     %m = bufferization.to_memref %c : memref<4x4xf64>

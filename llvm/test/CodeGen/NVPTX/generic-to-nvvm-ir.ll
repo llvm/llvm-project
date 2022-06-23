@@ -6,7 +6,8 @@ target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
 ; Generic space variables should be converted to global space AKA addrspace(1).
-; CHECK-DAG: @static_var = {{.*}}addrspace(1)
+; The debug info reference should be preserved.
+; CHECK-DAG: @static_var = {{.*}}addrspace(1) {{.*}} !dbg !{{[0-9]+}}
 @static_var = externally_initialized global i8 0, align 1, !dbg !4
 ; CHECK-DAG: @.str = {{.*}}addrspace(1)
 @.str = private unnamed_addr constant [4 x i8] c"XXX\00", align 1
@@ -36,18 +37,16 @@ declare void @extfunc(i8 signext)
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1,
       producer: "clang version 4.0.0",
       isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3)
-; CHECK: [[CUNODE]] = distinct !DICompileUnit({{.*}} globals: [[GLOBALSNODE:![0-9]+]]
+; CHECK-DAG: [[CUNODE]] = distinct !DICompileUnit({{.*}} globals: [[GLOBALSNODE:![0-9]+]]
 !1 = !DIFile(filename: "foo.cu", directory: "/usr/local/google/home/tra/work/llvm/build/gpu/debug")
 !2 = !{}
 !3 = !{!4}
 ; Find list of global variables and make sure it's the one used by DICompileUnit
-; CHECK: [[GLOBALSNODE]] = !{[[GVNODE:![0-9]+]]}
+; CHECK-DAG: [[GLOBALSNODE]] = !{[[GVNODE:![0-9]+]]}
 !4 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "static_var", scope: !0, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true), expr: !DIExpression())
-; Debug info must also be updated to reflect new address space.
-; CHECK: [[GVNODE]] = !DIGlobalVariableExpression(var: [[GVVAR:.*]], expr: !DIExpression())
-; CHECK: [[GVVAR]] = !DIGlobalVariable(name: "static_var"
-; CHECK-SAME: scope: [[CUNODE]]
-; CHECK-SAME: type: [[TYPENODE:![0-9]+]]
+; Debug info must be updated to reflect new address space.
+; CHECK-DAG: [[GVNODE]] = !DIGlobalVariableExpression(var: [[GVVAR:.*]], expr: !DIExpression())
+; CHECK-DAG: [[GVVAR]] = !DIGlobalVariable(name: "static_var", scope: [[CUNODE]],{{.*}} type: [[TYPENODE:![0-9]+]]
 !5 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 ; CHECK: [[TYPENODE]] = !DIBasicType(name: "char"
 !6 = !{i32 2, !"Dwarf Version", i32 4}

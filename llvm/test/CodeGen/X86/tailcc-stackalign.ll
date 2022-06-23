@@ -13,7 +13,7 @@ define tailcc i32 @tailcaller(i32 %in1, i32 %in2, i32 %in3, i32 %in4) {
        ret i32 %tmp11
 }
 
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, ptr %argv) {
  %tmp1 = call tailcc i32 @tailcaller( i32 1, i32 2, i32 3, i32 4 )
  ; expect match subl [stacksize] here
  ret i32 0

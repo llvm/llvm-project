@@ -44,11 +44,11 @@ define dso_local i32 @f1() {
 ; MINGW32-NEXT: retl
 
 entry:
-	%tmp1 = load i32, i32* @i1
+	%tmp1 = load i32, ptr @i1
 	ret i32 %tmp1
 }
 
-define dso_local i32* @f2() {
+define dso_local ptr @f2() {
 ; X86_LINUX-LABEL: f2:
 ; X86_LINUX:      movl %gs:0, %eax
 ; X86_LINUX-NEXT: leal i1@NTPOFF(%eax), %eax
@@ -77,7 +77,7 @@ define dso_local i32* @f2() {
 ; MINGW32-NEXT: retl
 
 entry:
-	ret i32* @i1
+	ret ptr @i1
 }
 
 define dso_local i32 @f3() nounwind {
@@ -109,11 +109,11 @@ define dso_local i32 @f3() nounwind {
 ; MINGW32-NEXT: retl
 
 entry:
-	%tmp1 = load i32, i32* @i2
+	%tmp1 = load i32, ptr @i2
 	ret i32 %tmp1
 }
 
-define dso_local i32* @f4() {
+define dso_local ptr @f4() {
 ; X86_LINUX-LABEL: f4:
 ; X86_LINUX:      movl %gs:0, %eax
 ; X86_LINUX-NEXT: addl i2@INDNTPOFF, %eax
@@ -142,7 +142,7 @@ define dso_local i32* @f4() {
 ; MINGW32-NEXT: retl
 
 entry:
-	ret i32* @i2
+	ret ptr @i2
 }
 
 define dso_local i32 @f5() nounwind {
@@ -172,11 +172,11 @@ define dso_local i32 @f5() nounwind {
 ; MINGW32-NEXT: retl
 
 entry:
-	%tmp1 = load i32, i32* @i3
+	%tmp1 = load i32, ptr @i3
 	ret i32 %tmp1
 }
 
-define dso_local i32* @f6() {
+define dso_local ptr @f6() {
 ; X86_LINUX-LABEL: f6:
 ; X86_LINUX:      movl %gs:0, %eax
 ; X86_LINUX-NEXT: leal i3@NTPOFF(%eax), %eax
@@ -205,7 +205,7 @@ define dso_local i32* @f6() {
 ; MINGW32-NEXT: retl
 
 entry:
-	ret i32* @i3
+	ret ptr @i3
 }
 
 define dso_local i32 @f7() {
@@ -223,11 +223,11 @@ define dso_local i32 @f7() {
 ; MINGW32-NEXT: retl
 
 entry:
-	%tmp1 = load i32, i32* @i4
+	%tmp1 = load i32, ptr @i4
 	ret i32 %tmp1
 }
 
-define dso_local i32* @f8() {
+define dso_local ptr @f8() {
 ; X86_LINUX-LABEL: f8:
 ; X86_LINUX:      movl %gs:0, %eax
 ; X86_LINUX-NEXT: leal i4@NTPOFF(%eax), %eax
@@ -244,7 +244,7 @@ define dso_local i32* @f8() {
 ; MINGW32-NEXT: retl
 
 entry:
-	ret i32* @i4
+	ret ptr @i4
 }
 
 define dso_local i32 @f9() {
@@ -262,11 +262,11 @@ define dso_local i32 @f9() {
 ; MINGW32-NEXT: retl
 
 entry:
-	%tmp1 = load i32, i32* @i5
+	%tmp1 = load i32, ptr @i5
 	ret i32 %tmp1
 }
 
-define dso_local i32* @f10() {
+define dso_local ptr @f10() {
 ; X86_LINUX-LABEL: f10:
 ; X86_LINUX:      movl %gs:0, %eax
 ; X86_LINUX-NEXT: leal i5@NTPOFF(%eax), %eax
@@ -283,7 +283,7 @@ define dso_local i32* @f10() {
 ; MINGW32-NEXT: retl
 
 entry:
-	ret i32* @i5
+	ret ptr @i5
 }
 
 define i16 @f11() {
@@ -313,7 +313,7 @@ define i16 @f11() {
 ; MINGW32: retl
 
 entry:
-	%tmp1 = load i16, i16* @s1
+	%tmp1 = load i16, ptr @s1
 	ret i16 %tmp1
 }
 
@@ -345,7 +345,7 @@ define dso_local i32 @f12() {
 
 
 entry:
-	%tmp1 = load i16, i16* @s1
+	%tmp1 = load i16, ptr @s1
   %tmp2 = sext i16 %tmp1 to i32
 	ret i32 %tmp2
 }
@@ -377,7 +377,7 @@ define dso_local i8 @f13() {
 ; MINGW32-NEXT: retl
 
 entry:
-	%tmp1 = load i8, i8* @b1
+	%tmp1 = load i8, ptr @b1
 	ret i8 %tmp1
 }
 
@@ -408,12 +408,12 @@ define dso_local i32 @f14() {
 ; MINGW32-NEXT: retl
 
 entry:
-	%tmp1 = load i8, i8* @b1
+	%tmp1 = load i8, ptr @b1
   %tmp2 = sext i8 %tmp1 to i32
 	ret i32 %tmp2
 }
 
-define dso_local i8* @f15() {
+define dso_local ptr @f15() {
 ; X86_LINUX-LABEL: f15:
 ; X86_LINUX:      movl %gs:0, %eax
 ; X86_LINUX-NEXT: leal b2@NTPOFF(%eax), %eax
@@ -438,11 +438,11 @@ define dso_local i8* @f15() {
 ; MINGW32-NEXT: leal _b2@SECREL32(%eax), %eax
 ; MINGW32-NEXT: ret
 entry:
-	ret i8* @b2
+	ret ptr @b2
 }
 
 
-define dso_local i32* @f16() {
+define dso_local ptr @f16() {
 ; X86_LINUX-LABEL: f16:
 ; X86_LINUX:       movl %gs:0, %eax
 ; X86_LINUX-NEXT:  leal i6@NTPOFF(%eax), %eax
@@ -453,7 +453,7 @@ define dso_local i32* @f16() {
 ; X64_LINUX-NEXT:  leaq i6@TPOFF(%rax), %rax
 ; X64_LINUX-NEXT:  ret
 
-  ret i32* @i6
+  ret ptr @i6
 }
 
 ; NOTE: Similar to f1() but with direct TLS segment access disabled
@@ -476,7 +476,7 @@ define dso_local i32 @f17() #0 {
 ; X64_ISEL_LINUX-NEXT: ret
 
 entry:
-	%tmp1 = load i32, i32* @i1
+	%tmp1 = load i32, ptr @i1
 	ret i32 %tmp1
 }
 
@@ -505,7 +505,7 @@ define dso_local i32 @f18() #1 {
 
 
 entry:
-	%tmp1 = load i32, i32* @i2
+	%tmp1 = load i32, ptr @i2
 	ret i32 %tmp1
 }
 

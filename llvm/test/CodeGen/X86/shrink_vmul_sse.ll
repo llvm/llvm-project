@@ -5,9 +5,9 @@
 ;
 ; RUN: llc -mtriple=i386-pc-linux-gnu -mattr=+sse < %s | FileCheck %s
 
-@c = external dso_local global i32*, align 8
+@c = external dso_local global ptr, align 8
 
-define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
+define void @mul_2xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; CHECK-LABEL: mul_2xi8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebx
@@ -30,18 +30,15 @@ define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    retl
 entry:
-  %pre = load i32*, i32** @c
-  %tmp6 = getelementptr inbounds i8, i8* %a, i64 %index
-  %tmp7 = bitcast i8* %tmp6 to <2 x i8>*
-  %wide.load = load <2 x i8>, <2 x i8>* %tmp7, align 1
+  %pre = load ptr, ptr @c
+  %tmp6 = getelementptr inbounds i8, ptr %a, i64 %index
+  %wide.load = load <2 x i8>, ptr %tmp6, align 1
   %tmp8 = zext <2 x i8> %wide.load to <2 x i32>
-  %tmp10 = getelementptr inbounds i8, i8* %b, i64 %index
-  %tmp11 = bitcast i8* %tmp10 to <2 x i8>*
-  %wide.load17 = load <2 x i8>, <2 x i8>* %tmp11, align 1
+  %tmp10 = getelementptr inbounds i8, ptr %b, i64 %index
+  %wide.load17 = load <2 x i8>, ptr %tmp10, align 1
   %tmp12 = zext <2 x i8> %wide.load17 to <2 x i32>
   %tmp13 = mul nuw nsw <2 x i32> %tmp12, %tmp8
-  %tmp14 = getelementptr inbounds i32, i32* %pre, i64 %index
-  %tmp15 = bitcast i32* %tmp14 to <2 x i32>*
-  store <2 x i32> %tmp13, <2 x i32>* %tmp15, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %pre, i64 %index
+  store <2 x i32> %tmp13, ptr %tmp14, align 4
   ret void
 }

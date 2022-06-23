@@ -28,7 +28,7 @@ define i8 @extractelt_bitcast(i32 %x) nounwind {
   ret i8 %ext
 }
 
-define i8 @extractelt_bitcast_extra_use(i32 %x, <4 x i8>* %p) nounwind {
+define i8 @extractelt_bitcast_extra_use(i32 %x, ptr %p) nounwind {
 ; X86-LABEL: extractelt_bitcast_extra_use:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -44,7 +44,7 @@ define i8 @extractelt_bitcast_extra_use(i32 %x, <4 x i8>* %p) nounwind {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %bc = bitcast i32 %x to <4 x i8>
-  store <4 x i8> %bc, <4 x i8>* %p
+  store <4 x i8> %bc, ptr %p
   %ext = extractelement <4 x i8> %bc, i32 0
   ret i8 %ext
 }

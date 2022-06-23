@@ -460,12 +460,21 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     TODO(loc, "global"); // Procedure pointer or something else
   }
   // Creates undefined initializer for globals without initializers
-  if (!globalIsInitialized(global))
+  if (!globalIsInitialized(global)) {
+    // TODO: Is it really required to add the undef init if the Public
+    // visibility is set ? We need to make sure the global is not optimized out
+    // by LLVM if unused in the current compilation unit, but at least for
+    // BIND(C) variables, an initial value may be given in another compilation
+    // unit (on the C side), and setting an undef init here creates linkage
+    // conflicts.
+    if (sym.attrs().test(Fortran::semantics::Attr::BIND_C))
+      TODO(loc, "BIND(C) module variable linkage");
     createGlobalInitialization(
         builder, global, [&](fir::FirOpBuilder &builder) {
           builder.create<fir::HasValueOp>(
               loc, builder.create<fir::UndefOp>(loc, symTy));
         });
+  }
   // Set public visibility to prevent global definition to be optimized out
   // even if they have no initializer and are unused in this compilation unit.
   global.setVisibility(mlir::SymbolTable::Visibility::Public);

@@ -200,10 +200,10 @@ define <4 x half> @doTheTestMod(<4 x half> %0, <4 x half> %1) nounwind {
 Entry:
   %x = alloca <4 x half>, align 8
   %y = alloca <4 x half>, align 8
-  store <4 x half> %0, <4 x half>* %x, align 8
-  store <4 x half> %1, <4 x half>* %y, align 8
-  %2 = load <4 x half>, <4 x half>* %x, align 8
-  %3 = load <4 x half>, <4 x half>* %y, align 8
+  store <4 x half> %0, ptr %x, align 8
+  store <4 x half> %1, ptr %y, align 8
+  %2 = load <4 x half>, ptr %x, align 8
+  %3 = load <4 x half>, ptr %y, align 8
   %4 = frem <4 x half> %2, %3
   ret <4 x half> %4
 }

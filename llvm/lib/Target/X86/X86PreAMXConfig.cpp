@@ -91,16 +91,17 @@ static bool brokenVolatile(Instruction *I) {
 
 namespace {
 class X86PreAMXConfig {
+  using PosAndShapesMap = MapVector<Instruction *, SmallVector<Value *, 8>>;
+
   Function &F;
 
 public:
   X86PreAMXConfig(Function &Func) : F(Func) {}
   bool preTileConfig();
-  bool addTileConfig(Instruction *ModelStart, SmallVector<Value *, 8> &Shapes);
-  bool findConfigShapes(
-      DenseMap<Instruction *, SmallVector<Value *, 8>> &PosAndShapes);
+  void addTileConfig(Instruction *ModelStart, SmallVector<Value *, 8> &Shapes);
+  bool findConfigShapes(PosAndShapesMap &PosAndShapes);
   bool getKeyAMXShapes(IntrinsicInst *KeyAMX, SmallVector<Value *, 8> &Shapes);
-  bool preWriteTileCfg(Value *I8Ptr, Instruction *Pos,
+  void preWriteTileCfg(Value *I8Ptr, IRBuilderBase &Builder,
                        SmallVector<Value *, 8> &Shapes);
   BasicBlock::iterator
   getShapesAndConfigPosEnd(BasicBlock::iterator Iter,
@@ -149,10 +150,9 @@ public:
 // %td = tail call x86_amx @llvm.x86.tdpbssd.internal(m, n, k, t1, t2, t3)
 // call void @llvm.x86.tilestored64.internal(... td)                     area
 // --------------------------------------------------------------------------
-bool X86PreAMXConfig::preWriteTileCfg(Value *I8Ptr, Instruction *Pos,
+void X86PreAMXConfig::preWriteTileCfg(Value *I8Ptr, IRBuilderBase &Builder,
                                       SmallVector<Value *, 8> &Shapes) {
-  bool Write = false;
-  LLVMContext &Ctx = Pos->getParent()->getContext();
+  LLVMContext &Ctx = Builder.getContext();
   Type *I8Ty = Type::getInt8Ty(Ctx);
   Type *I16Ty = Type::getInt16Ty(Ctx);
 
@@ -160,30 +160,27 @@ bool X86PreAMXConfig::preWriteTileCfg(Value *I8Ptr, Instruction *Pos,
   // other value in the future.
   Value *PaletteOffset = ConstantInt::get(Type::getInt64Ty(Ctx), 0);
   Value *PaletteValue = ConstantInt::get(Type::getInt8Ty(Ctx), 1);
-  Value *PalettePos =
-      GetElementPtrInst::Create(I8Ty, I8Ptr, PaletteOffset, "", Pos);
-  new StoreInst(PaletteValue, PalettePos, Pos);
+  Value *PalettePos = Builder.CreateGEP(I8Ty, I8Ptr, PaletteOffset);
+  Builder.CreateStore(PaletteValue, PalettePos);
 
   for (int I = 0, E = Shapes.size() / 2; I < E; I++) {
     Value *RowOffset = ConstantInt::get(Type::getInt64Ty(Ctx), 48 + I);
     Value *ColOffset = ConstantInt::get(Type::getInt64Ty(Ctx), 16 + I * 2);
     const std::string ShapeName = "amx.tmm." + itostr(I);
-    Value *RowPos = GetElementPtrInst::Create(I8Ty, I8Ptr, RowOffset,
-                                              ShapeName + ".shape.row", Pos);
-    Value *ColPos = GetElementPtrInst::Create(I8Ty, I8Ptr, ColOffset, "", Pos);
-    ColPos = new BitCastInst(ColPos, PointerType::get(I16Ty, 0),
-                             ShapeName + ".shape.col", Pos);
+    Value *RowPos = Builder.CreateGEP(I8Ty, I8Ptr, RowOffset,
+                                      ShapeName + ".shape.row");
+    Value *ColPos = Builder.CreateGEP(I8Ty, I8Ptr, ColOffset);
+    ColPos = Builder.CreateBitCast(ColPos, PointerType::get(I16Ty, 0),
+                                   ShapeName + ".shape.col");
     Value *Row = Shapes[I * 2];
     Value *Col = Shapes[I * 2 + 1];
-    Row = new TruncInst(Row, I8Ty, "", Pos);
-    new StoreInst(Row, RowPos, Pos);
-    new StoreInst(Col, ColPos, Pos);
-    Write = true;
+    Row = Builder.CreateTrunc(Row, I8Ty);
+    Builder.CreateStore(Row, RowPos);
+    Builder.CreateStore(Col, ColPos);
   }
-  return Write;
 }
 
-bool X86PreAMXConfig::addTileConfig(Instruction *ModelStart,
+void X86PreAMXConfig::addTileConfig(Instruction *ModelStart,
                                     SmallVector<Value *, 8> &Shapes) {
   Module *M = F.getParent();
   IRBuilder<> Builder(ModelStart);
@@ -198,17 +195,11 @@ bool X86PreAMXConfig::addTileConfig(Instruction *ModelStart,
   Addr->setAlignment(Alignment);
   Value *I8Ptr = Builder.CreateBitCast(Addr, Builder.getInt8PtrTy());
 
-  std::array<Value *, 1> Args = {I8Ptr};
-  Instruction *Cfg =
-      Builder.CreateIntrinsic(Intrinsic::x86_ldtilecfg_internal, None, Args);
+  Builder.CreateAlignedStore(Constant::getNullValue(V512Ty), Addr, Alignment);
 
-  Value *Val0 = Constant::getNullValue(V512Ty);
-  Instruction *Init0 = new StoreInst(Val0, Addr, false, Alignment, Cfg);
-  assert(Init0 && "Not Zero initilizate the cfg mem!");
+  preWriteTileCfg(I8Ptr, Builder, Shapes);
 
-  preWriteTileCfg(I8Ptr, Cfg, Shapes);
-
-  return Init0;
+  Builder.CreateIntrinsic(Intrinsic::x86_ldtilecfg_internal, None, {I8Ptr});
 }
 
 // Todo: We may need to handle "more than one store" case in the future.
@@ -315,8 +306,7 @@ X86PreAMXConfig::getShapesAndConfigPosEnd(BasicBlock::iterator Iter,
 // %td = call x86_amx @llvm.x86.tdpbssd.internal(...t1, t2, t3)    (m,k)(k,n)
 // call void @llvm.x86.tilestored64.internal(m, n,... td)          (m,n)(m,n)
 // --------------------------------------------------------------------------
-bool X86PreAMXConfig::findConfigShapes(
-    DenseMap<Instruction *, SmallVector<Value *, 8>> &PosAndShapes) {
+bool X86PreAMXConfig::findConfigShapes(PosAndShapesMap &PosAndShapes) {
   bool Find = false;
   for (BasicBlock &BB : F) {
     for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ++I) {
@@ -365,7 +355,7 @@ bool X86PreAMXConfig::findConfigShapes(
 // call void @llvm.x86.tilestored64.internal(... td)                     area
 // --------------------------------------------------------------------------
 bool X86PreAMXConfig::preTileConfig() {
-  DenseMap<Instruction *, SmallVector<Value *, 8>> PosAndShapes;
+  PosAndShapesMap PosAndShapes;
   bool NeedCfg = findConfigShapes(PosAndShapes);
   if (!NeedCfg)
     return false;

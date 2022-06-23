@@ -46,10 +46,10 @@
 target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-unknown-windows-msvc"
 
-%struct.Foo = type { i32*, i32 addrspace(272)*, i32 addrspace(9)* }
-declare dso_local void @use_foo(%struct.Foo*)
+%struct.Foo = type { ptr, ptr addrspace(272), ptr addrspace(9) }
+declare dso_local void @use_foo(ptr)
 
-define dso_local void @test_sign_ext(%struct.Foo* %f, i32* %i) {
+define dso_local void @test_sign_ext(ptr %f, ptr %i) {
 ; CHECK-LABEL: test_sign_ext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -69,14 +69,14 @@ define dso_local void @test_sign_ext(%struct.Foo* %f, i32* %i) {
 ; CHECK-O0-NEXT:    movl %ecx, 12(%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
-  %0 = addrspacecast i32* %i to i32 addrspace(272)*
-  %p64 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 1
-  store i32 addrspace(272)* %0, i32 addrspace(272)** %p64, align 8
-  tail call void @use_foo(%struct.Foo* %f)
+  %0 = addrspacecast ptr %i to ptr addrspace(272)
+  %p64 = getelementptr inbounds %struct.Foo, ptr %f, i32 0, i32 1
+  store ptr addrspace(272) %0, ptr %p64, align 8
+  tail call void @use_foo(ptr %f)
   ret void
 }
 
-define dso_local void @test_zero_ext(%struct.Foo* %f, i32 addrspace(271)* %i) {
+define dso_local void @test_zero_ext(ptr %f, ptr addrspace(271) %i) {
 ; CHECK-LABEL: test_zero_ext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -93,14 +93,14 @@ define dso_local void @test_zero_ext(%struct.Foo* %f, i32 addrspace(271)* %i) {
 ; CHECK-O0-NEXT:    movl $0, 12(%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
-  %0 = addrspacecast i32 addrspace(271)* %i to i32 addrspace(272)*
-  %p64 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 1
-  store i32 addrspace(272)* %0, i32 addrspace(272)** %p64, align 8
-  tail call void @use_foo(%struct.Foo* %f)
+  %0 = addrspacecast ptr addrspace(271) %i to ptr addrspace(272)
+  %p64 = getelementptr inbounds %struct.Foo, ptr %f, i32 0, i32 1
+  store ptr addrspace(272) %0, ptr %p64, align 8
+  tail call void @use_foo(ptr %f)
   ret void
 }
 
-define dso_local void @test_trunc(%struct.Foo* %f, i32 addrspace(272)* %i) {
+define dso_local void @test_trunc(ptr %f, ptr addrspace(272) %i) {
 ; CHECK-LABEL: test_trunc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -116,14 +116,13 @@ define dso_local void @test_trunc(%struct.Foo* %f, i32 addrspace(272)* %i) {
 ; CHECK-O0-NEXT:    movl %ecx, (%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
-  %0 = addrspacecast i32 addrspace(272)* %i to i32*
-  %p32 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 0
-  store i32* %0, i32** %p32, align 8
-  tail call void @use_foo(%struct.Foo* %f)
+  %0 = addrspacecast ptr addrspace(272) %i to ptr
+  store ptr %0, ptr %f, align 8
+  tail call void @use_foo(ptr %f)
   ret void
 }
 
-define dso_local void @test_noop1(%struct.Foo* %f, i32* %i) {
+define dso_local void @test_noop1(ptr %f, ptr %i) {
 ; CHECK-LABEL: test_noop1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -138,13 +137,12 @@ define dso_local void @test_noop1(%struct.Foo* %f, i32* %i) {
 ; CHECK-O0-NEXT:    movl %ecx, (%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
-  %p32 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 0
-  store i32* %i, i32** %p32, align 8
-  tail call void @use_foo(%struct.Foo* %f)
+  store ptr %i, ptr %f, align 8
+  tail call void @use_foo(ptr %f)
   ret void
 }
 
-define dso_local void @test_noop2(%struct.Foo* %f, i32 addrspace(272)* %i) {
+define dso_local void @test_noop2(ptr %f, ptr addrspace(272) %i) {
 ; CHECK-LABEL: test_noop2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -163,14 +161,14 @@ define dso_local void @test_noop2(%struct.Foo* %f, i32 addrspace(272)* %i) {
 ; CHECK-O0-NEXT:    movl %ecx, 12(%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
-  %p64 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 1
-  store i32 addrspace(272)* %i, i32 addrspace(272)** %p64, align 8
-  tail call void @use_foo(%struct.Foo* %f)
+  %p64 = getelementptr inbounds %struct.Foo, ptr %f, i32 0, i32 1
+  store ptr addrspace(272) %i, ptr %p64, align 8
+  tail call void @use_foo(ptr %f)
   ret void
 }
 
 ; Test that null can be passed as a 64-bit pointer.
-define dso_local void @test_null_arg(%struct.Foo* %f) {
+define dso_local void @test_null_arg(ptr %f) {
 ; CHECK-LABEL: test_null_arg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl $0
@@ -192,11 +190,11 @@ define dso_local void @test_null_arg(%struct.Foo* %f) {
 ; CHECK-O0-NEXT:    addl $12, %esp
 ; CHECK-O0-NEXT:    retl
 entry:
-  call void @test_noop2(%struct.Foo* %f, i32 addrspace(272)* null)
+  call void @test_noop2(ptr %f, ptr addrspace(272) null)
   ret void
 }
 
-define dso_local void @test_unrecognized(%struct.Foo* %f, i32 addrspace(14)* %i) {
+define dso_local void @test_unrecognized(ptr %f, ptr addrspace(14) %i) {
 ; CHECK-LABEL: test_unrecognized:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -216,14 +214,14 @@ define dso_local void @test_unrecognized(%struct.Foo* %f, i32 addrspace(14)* %i)
 ; CHECK-O0-NEXT:    movl %ecx, 12(%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
-  %0 = addrspacecast i32 addrspace(14)* %i to i32 addrspace(272)*
-  %p64 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 1
-  store i32 addrspace(272)* %0, i32 addrspace(272)** %p64, align 8
-  tail call void @use_foo(%struct.Foo* %f)
+  %0 = addrspacecast ptr addrspace(14) %i to ptr addrspace(272)
+  %p64 = getelementptr inbounds %struct.Foo, ptr %f, i32 0, i32 1
+  store ptr addrspace(272) %0, ptr %p64, align 8
+  tail call void @use_foo(ptr %f)
   ret void
 }
 
-define dso_local void @test_unrecognized2(%struct.Foo* %f, i32 addrspace(272)* %i) {
+define dso_local void @test_unrecognized2(ptr %f, ptr addrspace(272) %i) {
 ; CHECK-LABEL: test_unrecognized2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -239,36 +237,36 @@ define dso_local void @test_unrecognized2(%struct.Foo* %f, i32 addrspace(272)* %
 ; CHECK-O0-NEXT:    movl %ecx, 16(%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
-  %0 = addrspacecast i32 addrspace(272)* %i to i32 addrspace(9)*
-  %p_other = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 2
-  store i32 addrspace(9)* %0, i32 addrspace(9)** %p_other, align 8
-  tail call void @use_foo(%struct.Foo* %f)
+  %0 = addrspacecast ptr addrspace(272) %i to ptr addrspace(9)
+  %p_other = getelementptr inbounds %struct.Foo, ptr %f, i32 0, i32 2
+  store ptr addrspace(9) %0, ptr %p_other, align 8
+  tail call void @use_foo(ptr %f)
   ret void
 }
 
-define i32 @test_load_sptr32(i32 addrspace(270)* %i) {
+define i32 @test_load_sptr32(ptr addrspace(270) %i) {
 ; ALL-LABEL: test_load_sptr32:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ALL-NEXT:    movl (%eax), %eax
 ; ALL-NEXT:    retl
 entry:
-  %0 = load i32, i32 addrspace(270)* %i, align 4
+  %0 = load i32, ptr addrspace(270) %i, align 4
   ret i32 %0
 }
 
-define i32 @test_load_uptr32(i32 addrspace(271)* %i) {
+define i32 @test_load_uptr32(ptr addrspace(271) %i) {
 ; ALL-LABEL: test_load_uptr32:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ALL-NEXT:    movl (%eax), %eax
 ; ALL-NEXT:    retl
 entry:
-  %0 = load i32, i32 addrspace(271)* %i, align 4
+  %0 = load i32, ptr addrspace(271) %i, align 4
   ret i32 %0
 }
 
-define i32 @test_load_ptr64(i32 addrspace(272)* %i) {
+define i32 @test_load_ptr64(ptr addrspace(272) %i) {
 ; CHECK-LABEL: test_load_ptr64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -282,11 +280,11 @@ define i32 @test_load_ptr64(i32 addrspace(272)* %i) {
 ; CHECK-O0-NEXT:    movl (%eax), %eax
 ; CHECK-O0-NEXT:    retl
 entry:
-  %0 = load i32, i32 addrspace(272)* %i, align 8
+  %0 = load i32, ptr addrspace(272) %i, align 8
   ret i32 %0
 }
 
-define void @test_store_sptr32(i32 addrspace(270)* %s, i32 %i) {
+define void @test_store_sptr32(ptr addrspace(270) %s, i32 %i) {
 ; CHECK-LABEL: test_store_sptr32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -301,11 +299,11 @@ define void @test_store_sptr32(i32 addrspace(270)* %s, i32 %i) {
 ; CHECK-O0-NEXT:    movl %ecx, (%eax)
 ; CHECK-O0-NEXT:    retl
 entry:
-  store i32 %i, i32 addrspace(270)* %s, align 4
+  store i32 %i, ptr addrspace(270) %s, align 4
   ret void
 }
 
-define void @test_store_uptr32(i32 addrspace(271)* %s, i32 %i) {
+define void @test_store_uptr32(ptr addrspace(271) %s, i32 %i) {
 ; CHECK-LABEL: test_store_uptr32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -320,11 +318,11 @@ define void @test_store_uptr32(i32 addrspace(271)* %s, i32 %i) {
 ; CHECK-O0-NEXT:    movl %ecx, (%eax)
 ; CHECK-O0-NEXT:    retl
 entry:
-  store i32 %i, i32 addrspace(271)* %s, align 4
+  store i32 %i, ptr addrspace(271) %s, align 4
   ret void
 }
 
-define void @test_store_ptr64(i32 addrspace(272)* %s, i32 %i) {
+define void @test_store_ptr64(ptr addrspace(272) %s, i32 %i) {
 ; CHECK-LABEL: test_store_ptr64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -340,6 +338,6 @@ define void @test_store_ptr64(i32 addrspace(272)* %s, i32 %i) {
 ; CHECK-O0-NEXT:    movl %ecx, (%eax)
 ; CHECK-O0-NEXT:    retl
 entry:
-  store i32 %i, i32 addrspace(272)* %s, align 8
+  store i32 %i, ptr addrspace(272) %s, align 8
   ret void
 }

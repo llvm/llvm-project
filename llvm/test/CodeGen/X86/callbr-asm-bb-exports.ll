@@ -24,7 +24,7 @@ entry:
   %0 = add i32 %a, 4
   %1 = add i32 %b, 1
   %2 = add i32 %c, 1
-  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,i,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test, %fail)) to label %normal [label %fail]
+  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,i,~{dirflag},~{fpsr},~{flags}"(i32 %0, ptr blockaddress(@test, %fail)) to label %normal [label %fail]
 
 normal:
   ret i32 %1

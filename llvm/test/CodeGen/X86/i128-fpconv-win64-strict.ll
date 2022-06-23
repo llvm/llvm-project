@@ -54,7 +54,7 @@ define i64 @float_to_ui128(float %d) nounwind {
   ret i64 %2
 }
 
-define i64 @longdouble_to_i128(x86_fp80* nocapture readonly %0) nounwind {
+define i64 @longdouble_to_i128(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: longdouble_to_i128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -65,13 +65,13 @@ define i64 @longdouble_to_i128(x86_fp80* nocapture readonly %0) nounwind {
 ; WIN64-NEXT:    movq %xmm0, %rax
 ; WIN64-NEXT:    addq $56, %rsp
 ; WIN64-NEXT:    retq
-  %2 = load x86_fp80, x86_fp80* %0, align 16
+  %2 = load x86_fp80, ptr %0, align 16
   %3 = tail call i128 @llvm.experimental.constrained.fptosi.i128.f80(x86_fp80 %2, metadata !"fpexcept.strict")
   %4 = trunc i128 %3 to i64
   ret i64 %4
 }
 
-define i64 @longdouble_to_ui128(x86_fp80* nocapture readonly %0) nounwind {
+define i64 @longdouble_to_ui128(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: longdouble_to_ui128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -82,13 +82,13 @@ define i64 @longdouble_to_ui128(x86_fp80* nocapture readonly %0) nounwind {
 ; WIN64-NEXT:    movq %xmm0, %rax
 ; WIN64-NEXT:    addq $56, %rsp
 ; WIN64-NEXT:    retq
-  %2 = load x86_fp80, x86_fp80* %0, align 16
+  %2 = load x86_fp80, ptr %0, align 16
   %3 = tail call i128 @llvm.experimental.constrained.fptoui.i128.f80(x86_fp80 %2, metadata !"fpexcept.strict")
   %4 = trunc i128 %3 to i64
   ret i64 %4
 }
 
-define double @i128_to_double(i128* nocapture readonly %0) nounwind {
+define double @i128_to_double(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: i128_to_double:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -98,12 +98,12 @@ define double @i128_to_double(i128* nocapture readonly %0) nounwind {
 ; WIN64-NEXT:    callq __floattidf
 ; WIN64-NEXT:    addq $56, %rsp
 ; WIN64-NEXT:    retq
-  %2 = load i128, i128* %0, align 16
+  %2 = load i128, ptr %0, align 16
   %3 = tail call double @llvm.experimental.constrained.sitofp.f64.i128(i128 %2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %3
 }
 
-define double @ui128_to_double(i128* nocapture readonly %0) nounwind {
+define double @ui128_to_double(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: ui128_to_double:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -113,12 +113,12 @@ define double @ui128_to_double(i128* nocapture readonly %0) nounwind {
 ; WIN64-NEXT:    callq __floatuntidf
 ; WIN64-NEXT:    addq $56, %rsp
 ; WIN64-NEXT:    retq
-  %2 = load i128, i128* %0, align 16
+  %2 = load i128, ptr %0, align 16
   %3 = tail call double @llvm.experimental.constrained.uitofp.f64.i128(i128 %2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %3
 }
 
-define float @i128_to_float(i128* nocapture readonly %0) nounwind {
+define float @i128_to_float(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: i128_to_float:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -128,12 +128,12 @@ define float @i128_to_float(i128* nocapture readonly %0) nounwind {
 ; WIN64-NEXT:    callq __floattisf
 ; WIN64-NEXT:    addq $56, %rsp
 ; WIN64-NEXT:    retq
-  %2 = load i128, i128* %0, align 16
+  %2 = load i128, ptr %0, align 16
   %3 = tail call float @llvm.experimental.constrained.sitofp.f32.i128(i128 %2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %3
 }
 
-define float @ui128_to_float(i128* nocapture readonly %0) nounwind {
+define float @ui128_to_float(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: ui128_to_float:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -143,12 +143,12 @@ define float @ui128_to_float(i128* nocapture readonly %0) nounwind {
 ; WIN64-NEXT:    callq __floatuntisf
 ; WIN64-NEXT:    addq $56, %rsp
 ; WIN64-NEXT:    retq
-  %2 = load i128, i128* %0, align 16
+  %2 = load i128, ptr %0, align 16
   %3 = tail call float @llvm.experimental.constrained.uitofp.f32.i128(i128 %2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %3
 }
 
-define void @i128_to_longdouble(x86_fp80* noalias nocapture sret(x86_fp80) align 16 %agg.result, i128* nocapture readonly %0) nounwind {
+define void @i128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: i128_to_longdouble:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsi
@@ -165,13 +165,13 @@ define void @i128_to_longdouble(x86_fp80* noalias nocapture sret(x86_fp80) align
 ; WIN64-NEXT:    addq $64, %rsp
 ; WIN64-NEXT:    popq %rsi
 ; WIN64-NEXT:    retq
-  %2 = load i128, i128* %0, align 16
+  %2 = load i128, ptr %0, align 16
   %3 = tail call x86_fp80 @llvm.experimental.constrained.sitofp.f80.i128(i128 %2, metadata !"round.dynamic", metadata !"fpexcept.strict")
-  store x86_fp80 %3, x86_fp80* %agg.result, align 16
+  store x86_fp80 %3, ptr %agg.result, align 16
   ret void
 }
 
-define void @ui128_to_longdouble(x86_fp80* noalias nocapture sret(x86_fp80) align 16 %agg.result, i128* nocapture readonly %0) nounwind {
+define void @ui128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: ui128_to_longdouble:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsi
@@ -188,9 +188,9 @@ define void @ui128_to_longdouble(x86_fp80* noalias nocapture sret(x86_fp80) alig
 ; WIN64-NEXT:    addq $64, %rsp
 ; WIN64-NEXT:    popq %rsi
 ; WIN64-NEXT:    retq
-  %2 = load i128, i128* %0, align 16
+  %2 = load i128, ptr %0, align 16
   %3 = tail call x86_fp80 @llvm.experimental.constrained.uitofp.f80.i128(i128 %2, metadata !"round.dynamic", metadata !"fpexcept.strict")
-  store x86_fp80 %3, x86_fp80* %agg.result, align 16
+  store x86_fp80 %3, ptr %agg.result, align 16
   ret void
 }
 

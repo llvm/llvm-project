@@ -15,7 +15,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ;
 ; <rdar://problem/18675020>
 
-define void @test(<4 x i16>* %a, <4 x i16>* %b) {
+define void @test(ptr %a, ptr %b) {
 ; AVX-LABEL: test:
 ; AVX:       ## %bb.0: ## %body
 ; AVX-NEXT:    movabsq $4167800517033787389, %rax ## imm = 0x39D7007D007CFFFD
@@ -26,8 +26,8 @@ define void @test(<4 x i16>* %a, <4 x i16>* %b) {
 body:
   %predphi = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> <i16 -3, i16 545, i16 4385, i16 14807>, <4 x i16> <i16 123, i16 124, i16 125, i16 127>
   %predphi42 = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>, <4 x i16> zeroinitializer
-  store <4 x i16> %predphi, <4 x i16>* %a, align 8
-  store <4 x i16> %predphi42, <4 x i16>* %b, align 8
+  store <4 x i16> %predphi, ptr %a, align 8
+  store <4 x i16> %predphi42, ptr %b, align 8
   ret void
 }
 
@@ -37,7 +37,7 @@ body:
 ; test case exercises the path where the modified node is not the root
 ; of the condition.
 
-define void @test2(double** %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
+define void @test2(ptr %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX1-LABEL: test2:
 ; AVX1:       ## %bb.0: ## %bb
 ; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
@@ -64,11 +64,10 @@ define void @test2(double** %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 bb:
-  %arrayidx1928 = getelementptr inbounds double*, double** %call1559, i64 %indvars.iv4198
-  %tmp1888 = load double*, double** %arrayidx1928, align 8
+  %arrayidx1928 = getelementptr inbounds ptr, ptr %call1559, i64 %indvars.iv4198
+  %tmp1888 = load ptr, ptr %arrayidx1928, align 8
   %predphi.v.v = select <4 x i1> %tmp1895, <4 x double> <double -5.000000e-01, double -5.000000e-01, double -5.000000e-01, double -5.000000e-01>, <4 x double> <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>
-  %tmp1900 = bitcast double* %tmp1888 to <4 x double>*
-  store <4 x double> %predphi.v.v, <4 x double>* %tmp1900, align 8
+  store <4 x double> %predphi.v.v, ptr %tmp1888, align 8
   ret void
 }
 
@@ -81,7 +80,7 @@ bb:
 ;
 ; <rdar://problem/18819506>
 
-define void @test3(<4 x i32> %induction30, <4 x i16>* %tmp16, <4 x i16>* %tmp17,  <4 x i16> %tmp3, <4 x i16> %tmp12) {
+define void @test3(<4 x i32> %induction30, ptr %tmp16, ptr %tmp17,  <4 x i16> %tmp3, <4 x i16> %tmp12) {
 ; AVX1-LABEL: test3:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -119,8 +118,8 @@ define void @test3(<4 x i32> %induction30, <4 x i16>* %tmp16, <4 x i16>* %tmp17,
   %predphi = select <4 x i1> %tmp7, <4 x i16> %tmp3, <4 x i16> %tmp12
   %predphi31 = select <4 x i1> %tmp7, <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>, <4 x i16> zeroinitializer
 
-  store <4 x i16> %predphi31, <4 x i16>* %tmp16, align 8
-  store <4 x i16> %predphi, <4 x i16>* %tmp17, align 8
+  store <4 x i16> %predphi31, ptr %tmp16, align 8
+  store <4 x i16> %predphi, ptr %tmp17, align 8
  ret void
 }
 
@@ -159,7 +158,7 @@ define <32 x i8> @PR22706(<32 x i1> %x) {
 
 ; Split a 256-bit select into two 128-bit selects when the operands are concatenated.
 
-define void @blendv_split(<8 x i32>* %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z, <8 x i32> %w) {
+define void @blendv_split(ptr %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z, <8 x i32> %w) {
 ; AVX1-LABEL: blendv_split:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
@@ -194,7 +193,7 @@ define void @blendv_split(<8 x i32>* %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32
   %sh1 = shl <8 x i32> %a, %shamt1
   %sh2 = shl <8 x i32> %a, %shamt2
   %sel = select <8 x i1> %bool, <8 x i32> %sh1, <8 x i32> %sh2
-  store <8 x i32> %sel, <8 x i32>* %p, align 4
+  store <8 x i32> %sel, ptr %p, align 4
   ret void
 }
 
@@ -204,7 +203,7 @@ define void @vselect_concat() {
 ; AVX:       ## %bb.0: ## %entry
 ; AVX-NEXT:    retq
 entry:
-  %0 = load <8 x i32>, <8 x i32>* undef
+  %0 = load <8 x i32>, ptr undef
   %1 = shufflevector <8 x i32> zeroinitializer, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = shufflevector <8 x i32> %0, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = select <4 x i1> zeroinitializer, <4 x i32> %1, <4 x i32> %2
@@ -212,6 +211,6 @@ entry:
   %5 = shufflevector <8 x i32> %0, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %6 = select <4 x i1> zeroinitializer, <4 x i32> %4, <4 x i32> %5
   %7 = shufflevector <4 x i32> %3, <4 x i32> %6, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i32> %7, <8 x i32>* undef
+  store <8 x i32> %7, ptr undef
   ret void
 }

@@ -4,7 +4,7 @@
 
 ; widen extract subvector
 
-define void @convert(<2 x double>* %dst.addr, <3 x double> %src)  {
+define void @convert(ptr %dst.addr, <3 x double> %src)  {
 ; X32-LABEL: convert:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -19,6 +19,6 @@ define void @convert(<2 x double>* %dst.addr, <3 x double> %src)  {
 ; X64-NEXT:    retq
 entry:
   %val = shufflevector <3 x double> %src, <3 x double> undef, <2 x i32> <i32 0, i32 1>
-  store <2 x double> %val, <2 x double>* %dst.addr
+  store <2 x double> %val, ptr %dst.addr
   ret void
 }

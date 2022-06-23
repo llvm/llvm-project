@@ -94,7 +94,7 @@ entry:
   ret <2 x double> %vecins.i
 }
 
-define void @test_mm_mask_store_ss(float* %__W, i8 zeroext %__U, <4 x float> %__A) local_unnamed_addr #1 {
+define void @test_mm_mask_store_ss(ptr %__W, i8 zeroext %__U, <4 x float> %__A) local_unnamed_addr #1 {
 ; CHECK64-LABEL: test_mm_mask_store_ss:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %esi, %k1
@@ -109,16 +109,15 @@ define void @test_mm_mask_store_ss(float* %__W, i8 zeroext %__U, <4 x float> %__
 ; CHECK32-NEXT:    vmovss %xmm0, (%eax) {%k1}
 ; CHECK32-NEXT:    retl
 entry:
-  %0 = bitcast float* %__W to <16 x float>*
   %shuffle.i.i = shufflevector <4 x float> %__A, <4 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %1 = and i8 %__U, 1
-  %conv2.i = zext i8 %1 to i16
-  %2 = bitcast i16 %conv2.i to <16 x i1>
-  tail call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> %shuffle.i.i, <16 x float>* %0, i32 16, <16 x i1> %2) #5
+  %0 = and i8 %__U, 1
+  %conv2.i = zext i8 %0 to i16
+  %1 = bitcast i16 %conv2.i to <16 x i1>
+  tail call void @llvm.masked.store.v16f32.p0(<16 x float> %shuffle.i.i, ptr %__W, i32 16, <16 x i1> %1) #5
   ret void
 }
 
-define void @test_mm_mask_store_sd(double* %__W, i8 zeroext %__U, <2 x double> %__A) local_unnamed_addr #1 {
+define void @test_mm_mask_store_sd(ptr %__W, i8 zeroext %__U, <2 x double> %__A) local_unnamed_addr #1 {
 ; CHECK64-LABEL: test_mm_mask_store_sd:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %esi, %k1
@@ -133,15 +132,14 @@ define void @test_mm_mask_store_sd(double* %__W, i8 zeroext %__U, <2 x double> %
 ; CHECK32-NEXT:    vmovsd %xmm0, (%eax) {%k1}
 ; CHECK32-NEXT:    retl
 entry:
-  %0 = bitcast double* %__W to <8 x double>*
   %shuffle.i.i = shufflevector <2 x double> %__A, <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %1 = and i8 %__U, 1
-  %2 = bitcast i8 %1 to <8 x i1>
-  tail call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> %shuffle.i.i, <8 x double>* %0, i32 16, <8 x i1> %2) #5
+  %0 = and i8 %__U, 1
+  %1 = bitcast i8 %0 to <8 x i1>
+  tail call void @llvm.masked.store.v8f64.p0(<8 x double> %shuffle.i.i, ptr %__W, i32 16, <8 x i1> %1) #5
   ret void
 }
 
-define <4 x float> @test_mm_mask_load_ss(<4 x float> %__A, i8 zeroext %__U, float* %__W) local_unnamed_addr #2 {
+define <4 x float> @test_mm_mask_load_ss(<4 x float> %__A, i8 zeroext %__U, ptr %__W) local_unnamed_addr #2 {
 ; CHECK64-LABEL: test_mm_mask_load_ss:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %edi, %k1
@@ -157,17 +155,16 @@ define <4 x float> @test_mm_mask_load_ss(<4 x float> %__A, i8 zeroext %__U, floa
 ; CHECK32-NEXT:    retl
 entry:
   %shuffle.i = shufflevector <4 x float> %__A, <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, <4 x i32> <i32 0, i32 4, i32 4, i32 4>
-  %0 = bitcast float* %__W to <16 x float>*
   %shuffle.i.i = shufflevector <4 x float> %shuffle.i, <4 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %1 = and i8 %__U, 1
-  %conv2.i = zext i8 %1 to i16
-  %2 = bitcast i16 %conv2.i to <16 x i1>
-  %3 = tail call <16 x float> @llvm.masked.load.v16f32.p0v16f32(<16 x float>* %0, i32 16, <16 x i1> %2, <16 x float> %shuffle.i.i) #5
-  %shuffle4.i = shufflevector <16 x float> %3, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %0 = and i8 %__U, 1
+  %conv2.i = zext i8 %0 to i16
+  %1 = bitcast i16 %conv2.i to <16 x i1>
+  %2 = tail call <16 x float> @llvm.masked.load.v16f32.p0(ptr %__W, i32 16, <16 x i1> %1, <16 x float> %shuffle.i.i) #5
+  %shuffle4.i = shufflevector <16 x float> %2, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x float> %shuffle4.i
 }
 
-define <2 x double> @test_mm_mask_load_sd(<2 x double> %__A, i8 zeroext %__U, double* %__W) local_unnamed_addr #2 {
+define <2 x double> @test_mm_mask_load_sd(<2 x double> %__A, i8 zeroext %__U, ptr %__W) local_unnamed_addr #2 {
 ; CHECK64-LABEL: test_mm_mask_load_sd:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %edi, %k1
@@ -183,16 +180,15 @@ define <2 x double> @test_mm_mask_load_sd(<2 x double> %__A, i8 zeroext %__U, do
 ; CHECK32-NEXT:    retl
 entry:
   %shuffle5.i = insertelement <2 x double> %__A, double 0.000000e+00, i32 1
-  %0 = bitcast double* %__W to <8 x double>*
   %shuffle.i.i = shufflevector <2 x double> %shuffle5.i, <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %1 = and i8 %__U, 1
-  %2 = bitcast i8 %1 to <8 x i1>
-  %3 = tail call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %0, i32 16, <8 x i1> %2, <8 x double> %shuffle.i.i) #5
-  %shuffle3.i = shufflevector <8 x double> %3, <8 x double> undef, <2 x i32> <i32 0, i32 1>
+  %0 = and i8 %__U, 1
+  %1 = bitcast i8 %0 to <8 x i1>
+  %2 = tail call <8 x double> @llvm.masked.load.v8f64.p0(ptr %__W, i32 16, <8 x i1> %1, <8 x double> %shuffle.i.i) #5
+  %shuffle3.i = shufflevector <8 x double> %2, <8 x double> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x double> %shuffle3.i
 }
 
-define <4 x float> @test_mm_maskz_load_ss(i8 zeroext %__U, float* %__W) local_unnamed_addr #2 {
+define <4 x float> @test_mm_maskz_load_ss(i8 zeroext %__U, ptr %__W) local_unnamed_addr #2 {
 ; CHECK64-LABEL: test_mm_maskz_load_ss:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %edi, %k1
@@ -207,16 +203,15 @@ define <4 x float> @test_mm_maskz_load_ss(i8 zeroext %__U, float* %__W) local_un
 ; CHECK32-NEXT:    vmovss (%eax), %xmm0 {%k1} {z}
 ; CHECK32-NEXT:    retl
 entry:
-  %0 = bitcast float* %__W to <16 x float>*
-  %1 = and i8 %__U, 1
-  %conv2.i = zext i8 %1 to i16
-  %2 = bitcast i16 %conv2.i to <16 x i1>
-  %3 = tail call <16 x float> @llvm.masked.load.v16f32.p0v16f32(<16 x float>* %0, i32 16, <16 x i1> %2, <16 x float> zeroinitializer) #5
-  %shuffle.i = shufflevector <16 x float> %3, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %0 = and i8 %__U, 1
+  %conv2.i = zext i8 %0 to i16
+  %1 = bitcast i16 %conv2.i to <16 x i1>
+  %2 = tail call <16 x float> @llvm.masked.load.v16f32.p0(ptr %__W, i32 16, <16 x i1> %1, <16 x float> zeroinitializer) #5
+  %shuffle.i = shufflevector <16 x float> %2, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x float> %shuffle.i
 }
 
-define <2 x double> @test_mm_maskz_load_sd(i8 zeroext %__U, double* %__W) local_unnamed_addr #2 {
+define <2 x double> @test_mm_maskz_load_sd(i8 zeroext %__U, ptr %__W) local_unnamed_addr #2 {
 ; CHECK64-LABEL: test_mm_maskz_load_sd:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %edi, %k1
@@ -231,17 +226,16 @@ define <2 x double> @test_mm_maskz_load_sd(i8 zeroext %__U, double* %__W) local_
 ; CHECK32-NEXT:    vmovsd (%eax), %xmm0 {%k1} {z}
 ; CHECK32-NEXT:    retl
 entry:
-  %0 = bitcast double* %__W to <8 x double>*
-  %1 = and i8 %__U, 1
-  %2 = bitcast i8 %1 to <8 x i1>
-  %3 = tail call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %0, i32 16, <8 x i1> %2, <8 x double> zeroinitializer) #5
-  %shuffle.i = shufflevector <8 x double> %3, <8 x double> undef, <2 x i32> <i32 0, i32 1>
+  %0 = and i8 %__U, 1
+  %1 = bitcast i8 %0 to <8 x i1>
+  %2 = tail call <8 x double> @llvm.masked.load.v8f64.p0(ptr %__W, i32 16, <8 x i1> %1, <8 x double> zeroinitializer) #5
+  %shuffle.i = shufflevector <8 x double> %2, <8 x double> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x double> %shuffle.i
 }
 
 ; The tests below match clang's newer codegen that uses 128-bit masked load/stores.
 
-define void @test_mm_mask_store_ss_2(float* %__P, i8 zeroext %__U, <4 x float> %__A) {
+define void @test_mm_mask_store_ss_2(ptr %__P, i8 zeroext %__U, <4 x float> %__A) {
 ; CHECK64-LABEL: test_mm_mask_store_ss_2:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %esi, %k1
@@ -256,15 +250,14 @@ define void @test_mm_mask_store_ss_2(float* %__P, i8 zeroext %__U, <4 x float> %
 ; CHECK32-NEXT:    vmovss %xmm0, (%eax) {%k1}
 ; CHECK32-NEXT:    retl
 entry:
-  %0 = bitcast float* %__P to <4 x float>*
-  %1 = and i8 %__U, 1
-  %2 = bitcast i8 %1 to <8 x i1>
-  %extract.i = shufflevector <8 x i1> %2, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  tail call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %__A, <4 x float>* %0, i32 1, <4 x i1> %extract.i)
+  %0 = and i8 %__U, 1
+  %1 = bitcast i8 %0 to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  tail call void @llvm.masked.store.v4f32.p0(<4 x float> %__A, ptr %__P, i32 1, <4 x i1> %extract.i)
   ret void
 }
 
-define void @test_mm_mask_store_sd_2(double* %__P, i8 zeroext %__U, <2 x double> %__A) {
+define void @test_mm_mask_store_sd_2(ptr %__P, i8 zeroext %__U, <2 x double> %__A) {
 ; CHECK64-LABEL: test_mm_mask_store_sd_2:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %esi, %k1
@@ -279,15 +272,14 @@ define void @test_mm_mask_store_sd_2(double* %__P, i8 zeroext %__U, <2 x double>
 ; CHECK32-NEXT:    vmovsd %xmm0, (%eax) {%k1}
 ; CHECK32-NEXT:    retl
 entry:
-  %0 = bitcast double* %__P to <2 x double>*
-  %1 = and i8 %__U, 1
-  %2 = bitcast i8 %1 to <8 x i1>
-  %extract.i = shufflevector <8 x i1> %2, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
-  tail call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> %__A, <2 x double>* %0, i32 1, <2 x i1> %extract.i)
+  %0 = and i8 %__U, 1
+  %1 = bitcast i8 %0 to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  tail call void @llvm.masked.store.v2f64.p0(<2 x double> %__A, ptr %__P, i32 1, <2 x i1> %extract.i)
   ret void
 }
 
-define <4 x float> @test_mm_mask_load_ss_2(<4 x float> %__A, i8 zeroext %__U, float* readonly %__W) {
+define <4 x float> @test_mm_mask_load_ss_2(<4 x float> %__A, i8 zeroext %__U, ptr readonly %__W) {
 ; CHECK64-LABEL: test_mm_mask_load_ss_2:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %edi, %k1
@@ -303,15 +295,14 @@ define <4 x float> @test_mm_mask_load_ss_2(<4 x float> %__A, i8 zeroext %__U, fl
 ; CHECK32-NEXT:    retl
 entry:
   %shuffle.i = shufflevector <4 x float> %__A, <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, <4 x i32> <i32 0, i32 4, i32 4, i32 4>
-  %0 = bitcast float* %__W to <4 x float>*
-  %1 = and i8 %__U, 1
-  %2 = bitcast i8 %1 to <8 x i1>
-  %extract.i = shufflevector <8 x i1> %2, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %3 = tail call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 1, <4 x i1> %extract.i, <4 x float> %shuffle.i)
-  ret <4 x float> %3
+  %0 = and i8 %__U, 1
+  %1 = bitcast i8 %0 to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %__W, i32 1, <4 x i1> %extract.i, <4 x float> %shuffle.i)
+  ret <4 x float> %2
 }
 
-define <4 x float> @test_mm_maskz_load_ss_2(i8 zeroext %__U, float* readonly %__W) {
+define <4 x float> @test_mm_maskz_load_ss_2(i8 zeroext %__U, ptr readonly %__W) {
 ; CHECK64-LABEL: test_mm_maskz_load_ss_2:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %edi, %k1
@@ -326,15 +317,14 @@ define <4 x float> @test_mm_maskz_load_ss_2(i8 zeroext %__U, float* readonly %__
 ; CHECK32-NEXT:    vmovss (%eax), %xmm0 {%k1} {z}
 ; CHECK32-NEXT:    retl
 entry:
-  %0 = bitcast float* %__W to <4 x float>*
-  %1 = and i8 %__U, 1
-  %2 = bitcast i8 %1 to <8 x i1>
-  %extract.i = shufflevector <8 x i1> %2, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %3 = tail call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 1, <4 x i1> %extract.i, <4 x float> zeroinitializer)
-  ret <4 x float> %3
+  %0 = and i8 %__U, 1
+  %1 = bitcast i8 %0 to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %__W, i32 1, <4 x i1> %extract.i, <4 x float> zeroinitializer)
+  ret <4 x float> %2
 }
 
-define <2 x double> @test_mm_mask_load_sd_2(<2 x double> %__A, i8 zeroext %__U, double* readonly %__W) {
+define <2 x double> @test_mm_mask_load_sd_2(<2 x double> %__A, i8 zeroext %__U, ptr readonly %__W) {
 ; CHECK64-LABEL: test_mm_mask_load_sd_2:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %edi, %k1
@@ -350,15 +340,14 @@ define <2 x double> @test_mm_mask_load_sd_2(<2 x double> %__A, i8 zeroext %__U, 
 ; CHECK32-NEXT:    retl
 entry:
   %shuffle3.i = insertelement <2 x double> %__A, double 0.000000e+00, i32 1
-  %0 = bitcast double* %__W to <2 x double>*
-  %1 = and i8 %__U, 1
-  %2 = bitcast i8 %1 to <8 x i1>
-  %extract.i = shufflevector <8 x i1> %2, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
-  %3 = tail call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %0, i32 1, <2 x i1> %extract.i, <2 x double> %shuffle3.i)
-  ret <2 x double> %3
+  %0 = and i8 %__U, 1
+  %1 = bitcast i8 %0 to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %2 = tail call <2 x double> @llvm.masked.load.v2f64.p0(ptr %__W, i32 1, <2 x i1> %extract.i, <2 x double> %shuffle3.i)
+  ret <2 x double> %2
 }
 
-define <2 x double> @test_mm_maskz_load_sd_2(i8 zeroext %__U, double* readonly %__W) {
+define <2 x double> @test_mm_maskz_load_sd_2(i8 zeroext %__U, ptr readonly %__W) {
 ; CHECK64-LABEL: test_mm_maskz_load_sd_2:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    kmovw %edi, %k1
@@ -373,27 +362,26 @@ define <2 x double> @test_mm_maskz_load_sd_2(i8 zeroext %__U, double* readonly %
 ; CHECK32-NEXT:    vmovsd (%eax), %xmm0 {%k1} {z}
 ; CHECK32-NEXT:    retl
 entry:
-  %0 = bitcast double* %__W to <2 x double>*
-  %1 = and i8 %__U, 1
-  %2 = bitcast i8 %1 to <8 x i1>
-  %extract.i = shufflevector <8 x i1> %2, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
-  %3 = tail call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %0, i32 1, <2 x i1> %extract.i, <2 x double> zeroinitializer)
-  ret <2 x double> %3
+  %0 = and i8 %__U, 1
+  %1 = bitcast i8 %0 to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %2 = tail call <2 x double> @llvm.masked.load.v2f64.p0(ptr %__W, i32 1, <2 x i1> %extract.i, <2 x double> zeroinitializer)
+  ret <2 x double> %2
 }
 
 
-declare void @llvm.masked.store.v16f32.p0v16f32(<16 x float>, <16 x float>*, i32, <16 x i1>) #3
+declare void @llvm.masked.store.v16f32.p0(<16 x float>, ptr, i32, <16 x i1>) #3
 
-declare void @llvm.masked.store.v8f64.p0v8f64(<8 x double>, <8 x double>*, i32, <8 x i1>) #3
+declare void @llvm.masked.store.v8f64.p0(<8 x double>, ptr, i32, <8 x i1>) #3
 
-declare <16 x float> @llvm.masked.load.v16f32.p0v16f32(<16 x float>*, i32, <16 x i1>, <16 x float>) #4
+declare <16 x float> @llvm.masked.load.v16f32.p0(ptr, i32, <16 x i1>, <16 x float>) #4
 
-declare <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>*, i32, <8 x i1>, <8 x double>) #4
+declare <8 x double> @llvm.masked.load.v8f64.p0(ptr, i32, <8 x i1>, <8 x double>) #4
 
-declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v4f32.p0(<4 x float>, ptr, i32, <4 x i1>)
 
-declare void @llvm.masked.store.v2f64.p0v2f64(<2 x double>, <2 x double>*, i32, <2 x i1>)
+declare void @llvm.masked.store.v2f64.p0(<2 x double>, ptr, i32, <2 x i1>)
 
-declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
+declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32, <4 x i1>, <4 x float>)
 
-declare <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>*, i32, <2 x i1>, <2 x double>)
+declare <2 x double> @llvm.masked.load.v2f64.p0(ptr, i32, <2 x i1>, <2 x double>)

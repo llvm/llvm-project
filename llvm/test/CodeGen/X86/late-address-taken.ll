@@ -14,7 +14,7 @@
 declare void @ProcessCLRException()
 declare void @f()
 
-define void @catchret(i1 %b) personality void ()* @ProcessCLRException {
+define void @catchret(i1 %b) personality ptr @ProcessCLRException {
 entry:
   br i1 %b, label %body, label %early_out
 early_out:
@@ -47,11 +47,11 @@ exit:
 ; test @setjmp - similar to @catchret, but the MBB in question
 ; is the one generated when the setjmp's block is split
 
-@buf = internal global [5 x i8*] zeroinitializer
-declare i8* @llvm.frameaddress(i32) nounwind readnone
-declare i8* @llvm.stacksave() nounwind
-declare i32 @llvm.eh.sjlj.setjmp(i8*) nounwind
-declare void @llvm.eh.sjlj.longjmp(i8*) nounwind
+@buf = internal global [5 x ptr] zeroinitializer
+declare ptr @llvm.frameaddress(i32) nounwind readnone
+declare ptr @llvm.stacksave() nounwind
+declare i32 @llvm.eh.sjlj.setjmp(ptr) nounwind
+declare void @llvm.eh.sjlj.longjmp(ptr) nounwind
 
 define void @setjmp(i1 %b) nounwind {
 entry:
@@ -59,11 +59,11 @@ entry:
 early_out:
   ret void
 sj:
-  %fp = call i8* @llvm.frameaddress(i32 0)
-  store i8* %fp, i8** getelementptr inbounds ([5 x i8*], [5 x i8*]* @buf, i64 0, i64 0), align 16
-  %sp = call i8* @llvm.stacksave()
-  store i8* %sp, i8** getelementptr inbounds ([5 x i8*], [5 x i8*]* @buf, i64 0, i64 2), align 16
-  call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([5 x i8*]* @buf to i8*))
+  %fp = call ptr @llvm.frameaddress(i32 0)
+  store ptr %fp, ptr @buf, align 16
+  %sp = call ptr @llvm.stacksave()
+  store ptr %sp, ptr getelementptr inbounds ([5 x ptr], ptr @buf, i64 0, i64 2), align 16
+  call i32 @llvm.eh.sjlj.setjmp(ptr @buf)
   ret void
 }
 ; CHECK-LABEL: setjmp: # @setjmp

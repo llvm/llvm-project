@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+avx,+mmx | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx,+mmx | FileCheck %s --check-prefix=X64
 
-define <4 x i64> @A(i64* %ptr) nounwind uwtable readnone ssp {
+define <4 x i64> @A(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: A:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -14,7 +14,7 @@ define <4 x i64> @A(i64* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i64, i64* %ptr, align 8
+  %q = load i64, ptr %ptr, align 8
   %vecinit.i = insertelement <4 x i64> undef, i64 %q, i32 0
   %vecinit2.i = insertelement <4 x i64> %vecinit.i, i64 %q, i32 1
   %vecinit4.i = insertelement <4 x i64> %vecinit2.i, i64 %q, i32 2
@@ -22,7 +22,7 @@ entry:
   ret <4 x i64> %vecinit6.i
 }
 
-define <4 x i64> @A2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
+define <4 x i64> @A2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: A2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    pushl %esi
@@ -47,8 +47,8 @@ define <4 x i64> @A2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i64, i64* %ptr, align 8
-  store i64 %q, i64* %ptr2, align 8 ; to create a chain to prevent broadcast
+  %q = load i64, ptr %ptr, align 8
+  store i64 %q, ptr %ptr2, align 8 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <4 x i64> undef, i64 %q, i32 0
   %vecinit2.i = insertelement <4 x i64> %vecinit.i, i64 %q, i32 1
   %vecinit4.i = insertelement <4 x i64> %vecinit2.i, i64 %q, i32 2
@@ -56,7 +56,7 @@ entry:
   ret <4 x i64> %vecinit6.i
 }
 
-define <8 x i32> @B(i32* %ptr) nounwind uwtable readnone ssp {
+define <8 x i32> @B(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: B:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -68,7 +68,7 @@ define <8 x i32> @B(i32* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i32, i32* %ptr, align 4
+  %q = load i32, ptr %ptr, align 4
   %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
   %vecinit2.i = insertelement <8 x i32> %vecinit.i, i32 %q, i32 1
   %vecinit4.i = insertelement <8 x i32> %vecinit2.i, i32 %q, i32 2
@@ -76,7 +76,7 @@ entry:
   ret <8 x i32> %vecinit6.i
 }
 
-define <8 x i32> @B2(i32* %ptr) nounwind uwtable readnone ssp {
+define <8 x i32> @B2(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: B2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -88,7 +88,7 @@ define <8 x i32> @B2(i32* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i32, i32* %ptr, align 4
+  %q = load i32, ptr %ptr, align 4
   %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
   %vecinit2.i = insertelement <8 x i32> %vecinit.i, i32 %q, i32 1
   %vecinit4.i = insertelement <8 x i32> %vecinit2.i, i32 %q, i32 2
@@ -100,7 +100,7 @@ entry:
   ret <8 x i32> %vecinit14.i
 }
 
-define <8 x i32> @B3(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
+define <8 x i32> @B3(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: B3:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -121,8 +121,8 @@ define <8 x i32> @B3(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i32, i32* %ptr, align 4
-  store i32 %q, i32* %ptr2, align 4 ; to create a chain to prevent broadcast
+  %q = load i32, ptr %ptr, align 4
+  store i32 %q, ptr %ptr2, align 4 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
   %vecinit2.i = insertelement <8 x i32> %vecinit.i, i32 %q, i32 1
   %vecinit4.i = insertelement <8 x i32> %vecinit2.i, i32 %q, i32 2
@@ -134,7 +134,7 @@ entry:
   ret <8 x i32> %vecinit14.i
 }
 
-define <4 x double> @C(double* %ptr) nounwind uwtable readnone ssp {
+define <4 x double> @C(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: C:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -146,7 +146,7 @@ define <4 x double> @C(double* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load double, double* %ptr, align 8
+  %q = load double, ptr %ptr, align 8
   %vecinit.i = insertelement <4 x double> undef, double %q, i32 0
   %vecinit2.i = insertelement <4 x double> %vecinit.i, double %q, i32 1
   %vecinit4.i = insertelement <4 x double> %vecinit2.i, double %q, i32 2
@@ -154,7 +154,7 @@ entry:
   ret <4 x double> %vecinit6.i
 }
 
-define <4 x double> @C2(double* %ptr, double* %ptr2) nounwind uwtable readnone ssp {
+define <4 x double> @C2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: C2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -169,8 +169,8 @@ define <4 x double> @C2(double* %ptr, double* %ptr2) nounwind uwtable readnone s
 ; X64-NEXT:    vmovlps %xmm0, (%rsi)
 ; X64-NEXT:    retq
 entry:
-  %q = load double, double* %ptr, align 8
-  store double %q, double* %ptr2, align 8 ; to create a chain to prevent broadcast
+  %q = load double, ptr %ptr, align 8
+  store double %q, ptr %ptr2, align 8 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <4 x double> undef, double %q, i32 0
   %vecinit2.i = insertelement <4 x double> %vecinit.i, double %q, i32 1
   %vecinit4.i = insertelement <4 x double> %vecinit2.i, double %q, i32 2
@@ -178,7 +178,7 @@ entry:
   ret <4 x double> %vecinit6.i
 }
 
-define <8 x float> @D(float* %ptr) nounwind uwtable readnone ssp {
+define <8 x float> @D(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: D:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -190,7 +190,7 @@ define <8 x float> @D(float* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load float, float* %ptr, align 4
+  %q = load float, ptr %ptr, align 4
   %vecinit.i = insertelement <8 x float> undef, float %q, i32 0
   %vecinit2.i = insertelement <8 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <8 x float> %vecinit2.i, float %q, i32 2
@@ -198,7 +198,7 @@ entry:
   ret <8 x float> %vecinit6.i
 }
 
-define <8 x float> @D2(float* %ptr) nounwind uwtable readnone ssp {
+define <8 x float> @D2(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: D2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -210,7 +210,7 @@ define <8 x float> @D2(float* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %q = load float, float* %ptr, align 4
+  %q = load float, ptr %ptr, align 4
   %vecinit.i = insertelement <8 x float> undef, float %q, i32 0
   %vecinit2.i = insertelement <8 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <8 x float> %vecinit2.i, float %q, i32 2
@@ -222,7 +222,7 @@ entry:
   ret <8 x float> %vecinit14.i
 }
 
-define <8 x float> @D3(float* %ptr, float* %ptr2) nounwind uwtable readnone ssp {
+define <8 x float> @D3(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: D3:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -237,8 +237,8 @@ define <8 x float> @D3(float* %ptr, float* %ptr2) nounwind uwtable readnone ssp 
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
 entry:
-  %q = load float, float* %ptr, align 4
-  store float %q, float* %ptr2, align 4 ; to create a chain to prevent broadcast
+  %q = load float, ptr %ptr, align 4
+  store float %q, ptr %ptr2, align 4 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <8 x float> undef, float %q, i32 0
   %vecinit2.i = insertelement <8 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <8 x float> %vecinit2.i, float %q, i32 2
@@ -252,7 +252,7 @@ entry:
 
 ;;;; 128-bit versions
 
-define <4 x float> @e(float* %ptr) nounwind uwtable readnone ssp {
+define <4 x float> @e(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: e:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -264,7 +264,7 @@ define <4 x float> @e(float* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastss (%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %q = load float, float* %ptr, align 4
+  %q = load float, ptr %ptr, align 4
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <4 x float> %vecinit2.i, float %q, i32 2
@@ -272,7 +272,7 @@ entry:
   ret <4 x float> %vecinit6.i
 }
 
-define <4 x float> @e2(float* %ptr, float* %ptr2) nounwind uwtable readnone ssp {
+define <4 x float> @e2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: e2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -287,8 +287,8 @@ define <4 x float> @e2(float* %ptr, float* %ptr2) nounwind uwtable readnone ssp 
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
 entry:
-  %q = load float, float* %ptr, align 4
-  store float %q, float* %ptr2, align 4 ; to create a chain to prevent broadcast
+  %q = load float, ptr %ptr, align 4
+  store float %q, ptr %ptr2, align 4 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <4 x float> %vecinit2.i, float %q, i32 2
@@ -297,7 +297,7 @@ entry:
 }
 
 ; Don't broadcast constants on pre-AVX2 hardware.
-define <4 x float> @_e2(float* %ptr) nounwind uwtable readnone ssp {
+define <4 x float> @_e2(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: _e2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
@@ -316,7 +316,7 @@ entry:
 }
 
 
-define <4 x i32> @F(i32* %ptr) nounwind uwtable readnone ssp {
+define <4 x i32> @F(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: F:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -328,7 +328,7 @@ define <4 x i32> @F(i32* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastss (%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %q = load i32, i32* %ptr, align 4
+  %q = load i32, ptr %ptr, align 4
   %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
   %vecinit2.i = insertelement <4 x i32> %vecinit.i, i32 %q, i32 1
   %vecinit4.i = insertelement <4 x i32> %vecinit2.i, i32 %q, i32 2
@@ -336,7 +336,7 @@ entry:
   ret <4 x i32> %vecinit6.i
 }
 
-define <4 x i32> @F2(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
+define <4 x i32> @F2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: F2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -355,8 +355,8 @@ define <4 x i32> @F2(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    retq
 entry:
-  %q = load i32, i32* %ptr, align 4
-  store i32 %q, i32* %ptr2, align 4 ; to create a chain to prevent broadcast
+  %q = load i32, ptr %ptr, align 4
+  store i32 %q, ptr %ptr2, align 4 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
   %vecinit2.i = insertelement <4 x i32> %vecinit.i, i32 %q, i32 1
   %vecinit4.i = insertelement <4 x i32> %vecinit2.i, i32 %q, i32 2
@@ -366,7 +366,7 @@ entry:
 
 ; FIXME: Pointer adjusted broadcasts
 
-define <4 x i32> @load_splat_4i32_4i32_1111(<4 x i32>* %ptr) nounwind uwtable readnone ssp {
+define <4 x i32> @load_splat_4i32_4i32_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_4i32_4i32_1111:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -378,12 +378,12 @@ define <4 x i32> @load_splat_4i32_4i32_1111(<4 x i32>* %ptr) nounwind uwtable re
 ; X64-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,1,1,1]
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x i32>, <4 x i32>* %ptr
+  %ld = load <4 x i32>, ptr %ptr
   %ret = shufflevector <4 x i32> %ld, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %ret
 }
 
-define <8 x i32> @load_splat_8i32_4i32_33333333(<4 x i32>* %ptr) nounwind uwtable readnone ssp {
+define <8 x i32> @load_splat_8i32_4i32_33333333(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_8i32_4i32_33333333:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -395,12 +395,12 @@ define <8 x i32> @load_splat_8i32_4i32_33333333(<4 x i32>* %ptr) nounwind uwtabl
 ; X64-NEXT:    vbroadcastss 12(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x i32>, <4 x i32>* %ptr
+  %ld = load <4 x i32>, ptr %ptr
   %ret = shufflevector <4 x i32> %ld, <4 x i32> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <8 x i32> %ret
 }
 
-define <8 x i32> @load_splat_8i32_8i32_55555555(<8 x i32>* %ptr) nounwind uwtable readnone ssp {
+define <8 x i32> @load_splat_8i32_8i32_55555555(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_8i32_8i32_55555555:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -412,12 +412,12 @@ define <8 x i32> @load_splat_8i32_8i32_55555555(<8 x i32>* %ptr) nounwind uwtabl
 ; X64-NEXT:    vbroadcastss 20(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <8 x i32>, <8 x i32>* %ptr
+  %ld = load <8 x i32>, ptr %ptr
   %ret = shufflevector <8 x i32> %ld, <8 x i32> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   ret <8 x i32> %ret
 }
 
-define <4 x float> @load_splat_4f32_4f32_1111(<4 x float>* %ptr) nounwind uwtable readnone ssp {
+define <4 x float> @load_splat_4f32_4f32_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_4f32_4f32_1111:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -429,12 +429,12 @@ define <4 x float> @load_splat_4f32_4f32_1111(<4 x float>* %ptr) nounwind uwtabl
 ; X64-NEXT:    vbroadcastss 4(%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x float>, <4 x float>* %ptr
+  %ld = load <4 x float>, ptr %ptr
   %ret = shufflevector <4 x float> %ld, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x float> %ret
 }
 
-define <8 x float> @load_splat_8f32_4f32_33333333(<4 x float>* %ptr) nounwind uwtable readnone ssp {
+define <8 x float> @load_splat_8f32_4f32_33333333(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_8f32_4f32_33333333:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -446,12 +446,12 @@ define <8 x float> @load_splat_8f32_4f32_33333333(<4 x float>* %ptr) nounwind uw
 ; X64-NEXT:    vbroadcastss 12(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x float>, <4 x float>* %ptr
+  %ld = load <4 x float>, ptr %ptr
   %ret = shufflevector <4 x float> %ld, <4 x float> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <8 x float> %ret
 }
 
-define <8 x float> @load_splat_8f32_8f32_55555555(<8 x float>* %ptr) nounwind uwtable readnone ssp {
+define <8 x float> @load_splat_8f32_8f32_55555555(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_8f32_8f32_55555555:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -463,12 +463,12 @@ define <8 x float> @load_splat_8f32_8f32_55555555(<8 x float>* %ptr) nounwind uw
 ; X64-NEXT:    vbroadcastss 20(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <8 x float>, <8 x float>* %ptr
+  %ld = load <8 x float>, ptr %ptr
   %ret = shufflevector <8 x float> %ld, <8 x float> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   ret <8 x float> %ret
 }
 
-define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable readnone ssp {
+define <2 x i64> @load_splat_2i64_2i64_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_2i64_2i64_1111:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -480,12 +480,12 @@ define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ; X64-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,2,3]
 ; X64-NEXT:    retq
 entry:
-  %ld = load <2 x i64>, <2 x i64>* %ptr
+  %ld = load <2 x i64>, ptr %ptr
   %ret = shufflevector <2 x i64> %ld, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
   ret <2 x i64> %ret
 }
 
-define <4 x i64> @load_splat_4i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable readnone ssp {
+define <4 x i64> @load_splat_4i64_2i64_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_4i64_2i64_1111:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -497,12 +497,12 @@ define <4 x i64> @load_splat_4i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ; X64-NEXT:    vbroadcastsd 8(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <2 x i64>, <2 x i64>* %ptr
+  %ld = load <2 x i64>, ptr %ptr
   %ret = shufflevector <2 x i64> %ld, <2 x i64> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i64> %ret
 }
 
-define <4 x i64> @load_splat_4i64_4i64_2222(<4 x i64>* %ptr) nounwind uwtable readnone ssp {
+define <4 x i64> @load_splat_4i64_4i64_2222(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_4i64_4i64_2222:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -514,12 +514,12 @@ define <4 x i64> @load_splat_4i64_4i64_2222(<4 x i64>* %ptr) nounwind uwtable re
 ; X64-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x i64>, <4 x i64>* %ptr
+  %ld = load <4 x i64>, ptr %ptr
   %ret = shufflevector <4 x i64> %ld, <4 x i64> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   ret <4 x i64> %ret
 }
 
-define <2 x double> @load_splat_2f64_2f64_1111(<2 x double>* %ptr) nounwind uwtable readnone ssp {
+define <2 x double> @load_splat_2f64_2f64_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_2f64_2f64_1111:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -531,12 +531,12 @@ define <2 x double> @load_splat_2f64_2f64_1111(<2 x double>* %ptr) nounwind uwta
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
-  %ld = load <2 x double>, <2 x double>* %ptr
+  %ld = load <2 x double>, ptr %ptr
   %ret = shufflevector <2 x double> %ld, <2 x double> undef, <2 x i32> <i32 1, i32 1>
   ret <2 x double> %ret
 }
 
-define <4 x double> @load_splat_4f64_2f64_1111(<2 x double>* %ptr) nounwind uwtable readnone ssp {
+define <4 x double> @load_splat_4f64_2f64_1111(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_4f64_2f64_1111:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -548,12 +548,12 @@ define <4 x double> @load_splat_4f64_2f64_1111(<2 x double>* %ptr) nounwind uwta
 ; X64-NEXT:    vbroadcastsd 8(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <2 x double>, <2 x double>* %ptr
+  %ld = load <2 x double>, ptr %ptr
   %ret = shufflevector <2 x double> %ld, <2 x double> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x double> %ret
 }
 
-define <4 x double> @load_splat_4f64_4f64_2222(<4 x double>* %ptr) nounwind uwtable readnone ssp {
+define <4 x double> @load_splat_4f64_4f64_2222(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: load_splat_4f64_4f64_2222:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -565,14 +565,14 @@ define <4 x double> @load_splat_4f64_4f64_2222(<4 x double>* %ptr) nounwind uwta
 ; X64-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
-  %ld = load <4 x double>, <4 x double>* %ptr
+  %ld = load <4 x double>, ptr %ptr
   %ret = shufflevector <4 x double> %ld, <4 x double> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   ret <4 x double> %ret
 }
 
 ; Unsupported vbroadcasts
 
-define <2 x i64> @G(i64* %ptr) nounwind uwtable readnone ssp {
+define <2 x i64> @G(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: G:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -584,13 +584,13 @@ define <2 x i64> @G(i64* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
-  %q = load i64, i64* %ptr, align 8
+  %q = load i64, ptr %ptr, align 8
   %vecinit.i = insertelement <2 x i64> undef, i64 %q, i32 0
   %vecinit2.i = insertelement <2 x i64> %vecinit.i, i64 %q, i32 1
   ret <2 x i64> %vecinit2.i
 }
 
-define <2 x i64> @G2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
+define <2 x i64> @G2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: G2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    pushl %esi
@@ -614,8 +614,8 @@ define <2 x i64> @G2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-NEXT:    retq
 entry:
-  %q = load i64, i64* %ptr, align 8
-  store i64 %q, i64* %ptr2, align 8 ; to create a chain to prevent broadcast
+  %q = load i64, ptr %ptr, align 8
+  store i64 %q, ptr %ptr2, align 8 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <2 x i64> undef, i64 %q, i32 0
   %vecinit2.i = insertelement <2 x i64> %vecinit.i, i64 %q, i32 1
   ret <2 x i64> %vecinit2.i
@@ -636,7 +636,7 @@ entry:
   ret <4 x i32> %x
 }
 
-define <2 x double> @I(double* %ptr) nounwind uwtable readnone ssp {
+define <2 x double> @I(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: I:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -648,13 +648,13 @@ define <2 x double> @I(double* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
-  %q = load double, double* %ptr, align 4
+  %q = load double, ptr %ptr, align 4
   %vecinit.i = insertelement <2 x double> undef, double %q, i32 0
   %vecinit2.i = insertelement <2 x double> %vecinit.i, double %q, i32 1
   ret <2 x double> %vecinit2.i
 }
 
-define <2 x double> @I2(double* %ptr, double* %ptr2) nounwind uwtable readnone ssp {
+define <2 x double> @I2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: I2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -669,14 +669,14 @@ define <2 x double> @I2(double* %ptr, double* %ptr2) nounwind uwtable readnone s
 ; X64-NEXT:    vmovlps %xmm0, (%rsi)
 ; X64-NEXT:    retq
 entry:
-  %q = load double, double* %ptr, align 4
-  store double %q, double* %ptr2, align 4 ; to create a chain to prevent broadcast
+  %q = load double, ptr %ptr, align 4
+  store double %q, ptr %ptr2, align 4 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <2 x double> undef, double %q, i32 0
   %vecinit2.i = insertelement <2 x double> %vecinit.i, double %q, i32 1
   ret <2 x double> %vecinit2.i
 }
 
-define <4 x float> @_RR(float* %ptr, i32* %k) nounwind uwtable readnone ssp {
+define <4 x float> @_RR(ptr %ptr, ptr %k) nounwind uwtable readnone ssp {
 ; X86-LABEL: _RR:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -693,18 +693,18 @@ define <4 x float> @_RR(float* %ptr, i32* %k) nounwind uwtable readnone ssp {
 ; X64-NEXT:    movl %eax, (%rax)
 ; X64-NEXT:    retq
 entry:
-  %q = load float, float* %ptr, align 4
+  %q = load float, ptr %ptr, align 4
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <4 x float> %vecinit2.i, float %q, i32 2
   %vecinit6.i = insertelement <4 x float> %vecinit4.i, float %q, i32 3
   ; force a chain
-  %j = load i32, i32* %k, align 4
-  store i32 %j, i32* undef
+  %j = load i32, ptr %k, align 4
+  store i32 %j, ptr undef
   ret <4 x float> %vecinit6.i
 }
 
-define <4 x float> @_RR2(float* %ptr, i32* %k) nounwind uwtable readnone ssp {
+define <4 x float> @_RR2(ptr %ptr, ptr %k) nounwind uwtable readnone ssp {
 ; X86-LABEL: _RR2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -716,7 +716,7 @@ define <4 x float> @_RR2(float* %ptr, i32* %k) nounwind uwtable readnone ssp {
 ; X64-NEXT:    vbroadcastss (%rdi), %xmm0
 ; X64-NEXT:    retq
 entry:
-  %q = load float, float* %ptr, align 4
+  %q = load float, ptr %ptr, align 4
   %v = insertelement <4 x float> undef, float %q, i32 0
   %t = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %t
@@ -726,7 +726,7 @@ entry:
 ; formed from a concat_vectors (via the shufflevector) of two BUILD_VECTORs
 ; (via the insertelements).
 
-define <8 x float> @splat_concat1(float* %p) {
+define <8 x float> @splat_concat1(ptr %p) {
 ; X86-LABEL: splat_concat1:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -737,7 +737,7 @@ define <8 x float> @splat_concat1(float* %p) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load float, float* %p, align 4
+  %1 = load float, ptr %p, align 4
   %2 = insertelement <4 x float> undef, float %1, i32 0
   %3 = insertelement <4 x float> %2, float %1, i32 1
   %4 = insertelement <4 x float> %3, float %1, i32 2
@@ -746,7 +746,7 @@ define <8 x float> @splat_concat1(float* %p) {
   ret <8 x float> %6
 }
 
-define <8 x float> @splat_concat2(float* %p) {
+define <8 x float> @splat_concat2(ptr %p) {
 ; X86-LABEL: splat_concat2:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -757,7 +757,7 @@ define <8 x float> @splat_concat2(float* %p) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load float, float* %p, align 4
+  %1 = load float, ptr %p, align 4
   %2 = insertelement <4 x float> undef, float %1, i32 0
   %3 = insertelement <4 x float> %2, float %1, i32 1
   %4 = insertelement <4 x float> %3, float %1, i32 2
@@ -770,7 +770,7 @@ define <8 x float> @splat_concat2(float* %p) {
   ret <8 x float> %10
 }
 
-define <4 x double> @splat_concat3(double* %p) {
+define <4 x double> @splat_concat3(ptr %p) {
 ; X86-LABEL: splat_concat3:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -781,14 +781,14 @@ define <4 x double> @splat_concat3(double* %p) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load double, double* %p, align 8
+  %1 = load double, ptr %p, align 8
   %2 = insertelement <2 x double> undef, double %1, i32 0
   %3 = insertelement <2 x double> %2, double %1, i32 1
   %4 = shufflevector <2 x double> %3, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x double> %4
 }
 
-define <4 x double> @splat_concat4(double* %p) {
+define <4 x double> @splat_concat4(ptr %p) {
 ; X86-LABEL: splat_concat4:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -799,7 +799,7 @@ define <4 x double> @splat_concat4(double* %p) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load double, double* %p, align 8
+  %1 = load double, ptr %p, align 8
   %2 = insertelement <2 x double> undef, double %1, i32 0
   %3 = insertelement <2 x double> %2, double %1, i32 1
   %4 = insertelement <2 x double> undef, double %1, i32 0
@@ -809,7 +809,7 @@ define <4 x double> @splat_concat4(double* %p) {
 }
 
 ; PR34041
-define <4 x double> @broadcast_shuffle_1000(double* %p) {
+define <4 x double> @broadcast_shuffle_1000(ptr %p) {
 ; X86-LABEL: broadcast_shuffle_1000:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -820,13 +820,13 @@ define <4 x double> @broadcast_shuffle_1000(double* %p) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load double, double* %p
+  %1 = load double, ptr %p
   %2 = insertelement <2 x double> undef, double %1, i32 0
   %3 = shufflevector <2 x double> %2, <2 x double> undef, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
   ret <4 x double> %3
 }
 
-define <4 x double> @broadcast_shuffle1032(double* %p) {
+define <4 x double> @broadcast_shuffle1032(ptr %p) {
 ; X86-LABEL: broadcast_shuffle1032:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -837,14 +837,14 @@ define <4 x double> @broadcast_shuffle1032(double* %p) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %1 = load double, double* %p
+  %1 = load double, ptr %p
   %2 = insertelement <2 x double> undef, double %1, i32 1
   %3 = insertelement <2 x double> undef, double %1, i32 0
   %4 = shufflevector <2 x double> %2, <2 x double> %3, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   ret <4 x double> %4
 }
 
-define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
+define void @broadcast_v16i32(ptr %a, ptr %b) {
 ; X86-LABEL: broadcast_v16i32:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -862,18 +862,18 @@ define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
 ; X64-NEXT:    vmovups %ymm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %1 = load i32, i32* %a, align 4
+  %1 = load i32, ptr %a, align 4
   %2 = insertelement <8 x i32> undef, i32 %1, i32 0
   %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <8 x i32> zeroinitializer
   %4 = shufflevector <8 x i32> undef, <8 x i32> %3, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-  store <16 x i32> %4, <16 x i32>* %b, align 4
+  store <16 x i32> %4, ptr %b, align 4
   ret void
 }
 
 ;
 ; Broadcast scale factor for xyz vector - slp will have vectorized xy.
 ;
-define double @broadcast_scale_xyz(double* nocapture readonly, double* nocapture readonly) nounwind {
+define double @broadcast_scale_xyz(ptr nocapture readonly, ptr nocapture readonly) nounwind {
 ; X86-LABEL: broadcast_scale_xyz:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -899,20 +899,19 @@ define double @broadcast_scale_xyz(double* nocapture readonly, double* nocapture
 ; X64-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %3 = bitcast double* %1 to <2 x double>*
-  %4 = load <2 x double>, <2 x double>* %3, align 8
-  %5 = getelementptr inbounds double, double* %1, i64 2
-  %6 = load double, double* %5, align 8
-  %7 = load double, double* %0, align 8
-  %8 = insertelement <2 x double> undef, double %7, i32 0
-  %9 = shufflevector <2 x double> %8, <2 x double> undef, <2 x i32> zeroinitializer
-  %10 = fmul <2 x double> %4, %9
-  %11 = fmul double %6, %7
-  %12 = extractelement <2 x double> %10, i32 0
-  %13 = extractelement <2 x double> %10, i32 1
-  %14 = fadd double %12, %13
-  %15 = fadd double %11, %14
-  ret double %15
+  %3 = load <2 x double>, ptr %1, align 8
+  %4 = getelementptr inbounds double, ptr %1, i64 2
+  %5 = load double, ptr %4, align 8
+  %6 = load double, ptr %0, align 8
+  %7 = insertelement <2 x double> undef, double %6, i32 0
+  %8 = shufflevector <2 x double> %7, <2 x double> undef, <2 x i32> zeroinitializer
+  %9 = fmul <2 x double> %3, %8
+  %10 = fmul double %5, %6
+  %11 = extractelement <2 x double> %9, i32 0
+  %12 = extractelement <2 x double> %9, i32 1
+  %13 = fadd double %11, %12
+  %14 = fadd double %10, %13
+  ret double %14
 }
 
 ;
@@ -953,23 +952,21 @@ define float @broadcast_lifetime() nounwind {
 ; X64-NEXT:    retq
   %1 = alloca <4 x float>, align 16
   %2 = alloca <4 x float>, align 16
-  %3 = bitcast <4 x float>* %1 to i8*
-  %4 = bitcast <4 x float>* %2 to i8*
 
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %3)
-  call void @gfunc(<4 x float>* %1)
-  %5 = load <4 x float>, <4 x float>* %1, align 16
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %3)
+  call void @llvm.lifetime.start.p0(i64 16, ptr %1)
+  call void @gfunc(ptr %1)
+  %3 = load <4 x float>, ptr %1, align 16
+  call void @llvm.lifetime.end.p0(i64 16, ptr %1)
 
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %4)
-  call void @gfunc(<4 x float>* %2)
-  %6 = load <4 x float>, <4 x float>* %2, align 16
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %4)
+  call void @llvm.lifetime.start.p0(i64 16, ptr %2)
+  call void @gfunc(ptr %2)
+  %4 = load <4 x float>, ptr %2, align 16
+  call void @llvm.lifetime.end.p0(i64 16, ptr %2)
 
-  %7 = extractelement <4 x float> %5, i32 1
-  %8 = extractelement <4 x float> %6, i32 1
-  %9 = fsub float %8, %7
-  ret float %9
+  %5 = extractelement <4 x float> %3, i32 1
+  %6 = extractelement <4 x float> %4, i32 1
+  %7 = fsub float %6, %5
+  ret float %7
 }
 
 define <8 x i16> @broadcast_x86_mmx(x86_mmx %tmp) nounwind {
@@ -995,6 +992,6 @@ bb:
   ret <8 x i16> %tmp4
 }
 
-declare void @gfunc(<4 x float>*)
-declare void @llvm.lifetime.start.p0i8(i64, i8*)
-declare void @llvm.lifetime.end.p0i8(i64, i8*)
+declare void @gfunc(ptr)
+declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.end.p0(i64, ptr)

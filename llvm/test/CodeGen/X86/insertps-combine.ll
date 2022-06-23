@@ -159,7 +159,7 @@ define <4 x float> @insertps_undef_input1(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %res2
 }
 
-define <4 x float> @insertps_zero_from_v2f64(<4 x float> %a0, <2 x double>* %a1) nounwind {
+define <4 x float> @insertps_zero_from_v2f64(<4 x float> %a0, ptr %a1) nounwind {
 ; SSE-LABEL: insertps_zero_from_v2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd (%rdi), %xmm1
@@ -175,15 +175,15 @@ define <4 x float> @insertps_zero_from_v2f64(<4 x float> %a0, <2 x double>* %a1)
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; AVX-NEXT:    vmovapd %xmm1, (%rdi)
 ; AVX-NEXT:    retq
-  %1 = load <2 x double>, <2 x double>* %a1
+  %1 = load <2 x double>, ptr %a1
   %2 = bitcast <2 x double> <double 1.0, double 2.0> to <4 x float>
   %3 = fadd <2 x double> %1, <double 1.0, double 2.0>
   %4 = shufflevector <4 x float> %a0, <4 x float> %2, <4 x i32> <i32 6, i32 2, i32 2, i32 3>
-  store <2 x double> %3, <2 x double> *%a1
+  store <2 x double> %3, ptr%a1
   ret <4 x float> %4
 }
 
-define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, <2 x i64>* %a1) nounwind {
+define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, ptr %a1) nounwind {
 ; SSE-LABEL: insertps_zero_from_v2i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
@@ -199,15 +199,15 @@ define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, <2 x i64>* %a1) no
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX-NEXT:    retq
-  %1 = load <2 x i64>, <2 x i64>* %a1
+  %1 = load <2 x i64>, ptr %a1
   %2 = bitcast <2 x i64> <i64 1, i64 -2> to <4 x float>
   %3 = add <2 x i64> %1, <i64 1, i64 -2>
   %4 = shufflevector <4 x float> %a0, <4 x float> %2, <4 x i32> <i32 5, i32 2, i32 2, i32 3>
-  store <2 x i64> %3, <2 x i64> *%a1
+  store <2 x i64> %3, ptr%a1
   ret <4 x float> %4
 }
 
-define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, <8 x i16>* %a1) nounwind {
+define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, ptr %a1) nounwind {
 ; SSE-LABEL: insertps_zero_from_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
@@ -223,15 +223,15 @@ define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, <8 x i16>* %a1) no
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a1
+  %1 = load <8 x i16>, ptr %a1
   %2 = bitcast <8 x i16> <i16 0, i16 0, i16 1, i16 1, i16 2, i16 2, i16 3, i16 3> to <4 x float>
   %3 = add <8 x i16> %1, <i16 0, i16 0, i16 1, i16 1, i16 2, i16 2, i16 3, i16 3>
   %4 = shufflevector <4 x float> %a0, <4 x float> %2, <4 x i32> <i32 4, i32 2, i32 2, i32 3>
-  store <8 x i16> %3, <8 x i16> *%a1
+  store <8 x i16> %3, ptr%a1
   ret <4 x float> %4
 }
 
-define <4 x float> @consecutive_load_insertps_04zz(float* %p) {
+define <4 x float> @consecutive_load_insertps_04zz(ptr %p) {
 ; SSE-LABEL: consecutive_load_insertps_04zz:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd 4(%rdi), %xmm0 # xmm0 = mem[0],zero
@@ -241,10 +241,10 @@ define <4 x float> @consecutive_load_insertps_04zz(float* %p) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovsd 4(%rdi), %xmm0 # xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
-  %p0 = getelementptr inbounds float, float* %p, i64 1
-  %p1 = getelementptr inbounds float, float* %p, i64 2
-  %s0 = load float, float* %p0
-  %s1 = load float, float* %p1
+  %p0 = getelementptr inbounds float, ptr %p, i64 1
+  %p1 = getelementptr inbounds float, ptr %p, i64 2
+  %s0 = load float, ptr %p0
+  %s1 = load float, ptr %p1
   %v0 = insertelement <4 x float> undef, float %s0, i32 0
   %v1 = insertelement <4 x float> undef, float %s1, i32 0
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %v0, <4 x float> %v1, i8 28)
@@ -266,7 +266,7 @@ define float @extract_zero_insertps_z0z7(<4 x float> %a0, <4 x float> %a1) {
   ret float %ext
 }
 
-define float @extract_lane_insertps_5123(<4 x float> %a0, <4 x float> *%p1) {
+define float @extract_lane_insertps_5123(<4 x float> %a0, ptr%p1) {
 ; SSE-LABEL: extract_lane_insertps_5123:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movshdup (%rdi), %xmm0 # xmm0 = mem[1,1,3,3]
@@ -276,13 +276,13 @@ define float @extract_lane_insertps_5123(<4 x float> %a0, <4 x float> *%p1) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovshdup (%rdi), %xmm0 # xmm0 = mem[1,1,3,3]
 ; AVX-NEXT:    retq
-  %a1 = load <4 x float>, <4 x float> *%p1
+  %a1 = load <4 x float>, ptr%p1
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 64)
   %ext = extractelement <4 x float> %res, i32 0
   ret float %ext
 }
 
-define float @extract_lane_insertps_6123(<4 x float> %a0, <4 x float> *%p1) {
+define float @extract_lane_insertps_6123(<4 x float> %a0, ptr%p1) {
 ; SSE-LABEL: extract_lane_insertps_6123:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0
@@ -293,14 +293,14 @@ define float @extract_lane_insertps_6123(<4 x float> %a0, <4 x float> *%p1) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpermilpd $1, (%rdi), %xmm0 # xmm0 = mem[1,0]
 ; AVX-NEXT:    retq
-  %a1 = load <4 x float>, <4 x float> *%p1
+  %a1 = load <4 x float>, ptr%p1
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 128)
   %ext = extractelement <4 x float> %res, i32 0
   ret float %ext
 }
 
 ; PR40340
-define <4 x float> @commute_load_insertps(<4 x float>, <4 x float>* nocapture readonly) {
+define <4 x float> @commute_load_insertps(<4 x float>, ptr nocapture readonly) {
 ; SSE-LABEL: commute_load_insertps:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    insertps $53, 12(%rdi), %xmm0 # xmm0 = zero,xmm0[1],zero,mem[0]
@@ -310,7 +310,7 @@ define <4 x float> @commute_load_insertps(<4 x float>, <4 x float>* nocapture re
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vinsertps $53, 12(%rdi), %xmm0, %xmm0 # xmm0 = zero,xmm0[1],zero,mem[0]
 ; AVX-NEXT:    retq
-  %3 = load <4 x float>, <4 x float>* %1
+  %3 = load <4 x float>, ptr %1
   %4 = tail call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %3, <4 x float> %0, i8 85)
   ret <4 x float> %4
 }

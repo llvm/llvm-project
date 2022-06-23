@@ -6,14 +6,14 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 target triple = "i686-apple-darwin9.4.0"
 
 %struct.anon = type <{ float, float }>
-@.str = internal constant [17 x i8] c"pt: %.0f, %.0f\0A\00\00"		; <[17 x i8]*> [#uses=1]
+@.str = internal constant [17 x i8] c"pt: %.0f, %.0f\0A\00\00"		; <ptr> [#uses=1]
 
 ; We can not fold either stack load into an 'xor' instruction because that
 ; would change what should be a 4-byte load into a 16-byte load.
 ; We can fold the 16-byte constant load into either 'xor' instruction,
 ; but we do not. It has more than one use, so it gets loaded into a register.
 
-define void @foo(%struct.anon* byval(%struct.anon) %p) nounwind {
+define void @foo(ptr byval(%struct.anon) %p) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $28, %esp
@@ -32,15 +32,15 @@ define void @foo(%struct.anon* byval(%struct.anon) %p) nounwind {
 ; CHECK-NEXT:    addl $28, %esp
 ; CHECK-NEXT:    retl
 entry:
-	%tmp = getelementptr %struct.anon, %struct.anon* %p, i32 0, i32 0		; <float*> [#uses=1]
-	%tmp1 = load float, float* %tmp		; <float> [#uses=1]
-	%tmp2 = getelementptr %struct.anon, %struct.anon* %p, i32 0, i32 1		; <float*> [#uses=1]
-	%tmp3 = load float, float* %tmp2		; <float> [#uses=1]
+	%tmp = getelementptr %struct.anon, ptr %p, i32 0, i32 0		; <ptr> [#uses=1]
+	%tmp1 = load float, ptr %tmp		; <float> [#uses=1]
+	%tmp2 = getelementptr %struct.anon, ptr %p, i32 0, i32 1		; <ptr> [#uses=1]
+	%tmp3 = load float, ptr %tmp2		; <float> [#uses=1]
 	%neg = fsub float -0.000000e+00, %tmp1		; <float> [#uses=1]
 	%conv = fpext float %neg to double		; <double> [#uses=1]
 	%neg4 = fsub float -0.000000e+00, %tmp3		; <float> [#uses=1]
 	%conv5 = fpext float %neg4 to double		; <double> [#uses=1]
-	%call = call i32 (...) @printf( i8* getelementptr ([17 x i8], [17 x i8]* @.str, i32 0, i32 0), double %conv, double %conv5 )		; <i32> [#uses=0]
+	%call = call i32 (...) @printf( ptr @.str, double %conv, double %conv5 )		; <i32> [#uses=0]
 	ret void
 }
 

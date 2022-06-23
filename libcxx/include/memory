@@ -847,6 +847,7 @@ template<size_t N, class T>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/assume_aligned.h>
+#include <__memory/auto_ptr.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/concepts.h>
 #include <__memory/construct_at.h>
@@ -872,10 +873,6 @@ template<size_t N, class T>
 
 // standard-mandated includes
 #include <compare>
-
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
-#   include <__memory/auto_ptr.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

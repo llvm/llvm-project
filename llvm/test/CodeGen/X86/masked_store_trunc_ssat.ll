@@ -8,7 +8,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512bw | FileCheck %s --check-prefix=AVX512BW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512vl,avx512bw | FileCheck %s --check-prefixes=AVX512VL,AVX512BWVL
 
-define void @truncstore_v8i64_v8i32(<8 x i64> %x, <8 x i32>* %p, <8 x i32> %mask) {
+define void @truncstore_v8i64_v8i32(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v8i64_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -376,11 +376,11 @@ define void @truncstore_v8i64_v8i32(<8 x i64> %x, <8 x i32>* %p, <8 x i32> %mask
   %d = icmp sgt <8 x i64> %c, <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>
   %e = select <8 x i1> %d, <8 x i64> %c, <8 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>
   %f = trunc <8 x i64> %e to <8 x i32>
-  call void @llvm.masked.store.v8i32.p0v8i32(<8 x i32> %f, <8 x i32>* %p, i32 1, <8 x i1> %a)
+  call void @llvm.masked.store.v8i32.p0(<8 x i32> %f, ptr %p, i32 1, <8 x i1> %a)
   ret void
 }
 
-define void @truncstore_v8i64_v8i16(<8 x i64> %x, <8 x i16>* %p, <8 x i32> %mask) {
+define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v8i64_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -926,11 +926,11 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, <8 x i16>* %p, <8 x i32> %mask
   %d = icmp sgt <8 x i64> %c, <i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768>
   %e = select <8 x i1> %d, <8 x i64> %c, <8 x i64> <i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768>
   %f = trunc <8 x i64> %e to <8 x i16>
-  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %f, <8 x i16>* %p, i32 1, <8 x i1> %a)
+  call void @llvm.masked.store.v8i16.p0(<8 x i16> %f, ptr %p, i32 1, <8 x i1> %a)
   ret void
 }
 
-define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %p, <8 x i32> %mask) {
+define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v8i64_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -1473,11 +1473,11 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %p, <8 x i32> %mask) 
   %d = icmp sgt <8 x i64> %c, <i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128>
   %e = select <8 x i1> %d, <8 x i64> %c, <8 x i64> <i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128, i64 -128>
   %f = trunc <8 x i64> %e to <8 x i8>
-  call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %f, <8 x i8>* %p, i32 1, <8 x i1> %a)
+  call void @llvm.masked.store.v8i8.p0(<8 x i8> %f, ptr %p, i32 1, <8 x i1> %a)
   ret void
 }
 
-define void @truncstore_v4i64_v4i32(<4 x i64> %x, <4 x i32>* %p, <4 x i32> %mask) {
+define void @truncstore_v4i64_v4i32(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v4i64_v4i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -1702,11 +1702,11 @@ define void @truncstore_v4i64_v4i32(<4 x i64> %x, <4 x i32>* %p, <4 x i32> %mask
   %d = icmp sgt <4 x i64> %c, <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>
   %e = select <4 x i1> %d, <4 x i64> %c, <4 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>
   %f = trunc <4 x i64> %e to <4 x i32>
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %f, <4 x i32>* %p, i32 1, <4 x i1> %a)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %f, ptr %p, i32 1, <4 x i1> %a)
   ret void
 }
 
-define void @truncstore_v4i64_v4i16(<4 x i64> %x, <4 x i16>* %p, <4 x i32> %mask) {
+define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v4i64_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -2016,11 +2016,11 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, <4 x i16>* %p, <4 x i32> %mask
   %d = icmp sgt <4 x i64> %c, <i64 -32768, i64 -32768, i64 -32768, i64 -32768>
   %e = select <4 x i1> %d, <4 x i64> %c, <4 x i64> <i64 -32768, i64 -32768, i64 -32768, i64 -32768>
   %f = trunc <4 x i64> %e to <4 x i16>
-  call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> %f, <4 x i16>* %p, i32 1, <4 x i1> %a)
+  call void @llvm.masked.store.v4i16.p0(<4 x i16> %f, ptr %p, i32 1, <4 x i1> %a)
   ret void
 }
 
-define void @truncstore_v4i64_v4i8(<4 x i64> %x, <4 x i8>* %p, <4 x i32> %mask) {
+define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v4i64_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -2340,11 +2340,11 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, <4 x i8>* %p, <4 x i32> %mask) 
   %d = icmp sgt <4 x i64> %c, <i64 -128, i64 -128, i64 -128, i64 -128>
   %e = select <4 x i1> %d, <4 x i64> %c, <4 x i64> <i64 -128, i64 -128, i64 -128, i64 -128>
   %f = trunc <4 x i64> %e to <4 x i8>
-  call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %f, <4 x i8>* %p, i32 1, <4 x i1> %a)
+  call void @llvm.masked.store.v4i8.p0(<4 x i8> %f, ptr %p, i32 1, <4 x i1> %a)
   ret void
 }
 
-define void @truncstore_v2i64_v2i32(<2 x i64> %x, <2 x i32>* %p, <2 x i64> %mask) {
+define void @truncstore_v2i64_v2i32(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE2-LABEL: truncstore_v2i64_v2i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -2498,11 +2498,11 @@ define void @truncstore_v2i64_v2i32(<2 x i64> %x, <2 x i32>* %p, <2 x i64> %mask
   %d = icmp sgt <2 x i64> %c, <i64 -2147483648, i64 -2147483648>
   %e = select <2 x i1> %d, <2 x i64> %c, <2 x i64> <i64 -2147483648, i64 -2147483648>
   %f = trunc <2 x i64> %e to <2 x i32>
-  call void @llvm.masked.store.v2i32.p0v2i32(<2 x i32> %f, <2 x i32>* %p, i32 1, <2 x i1> %a)
+  call void @llvm.masked.store.v2i32.p0(<2 x i32> %f, ptr %p, i32 1, <2 x i1> %a)
   ret void
 }
 
-define void @truncstore_v2i64_v2i16(<2 x i64> %x, <2 x i16>* %p, <2 x i64> %mask) {
+define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE2-LABEL: truncstore_v2i64_v2i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -2666,11 +2666,11 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, <2 x i16>* %p, <2 x i64> %mask
   %d = icmp sgt <2 x i64> %c, <i64 -32768, i64 -32768>
   %e = select <2 x i1> %d, <2 x i64> %c, <2 x i64> <i64 -32768, i64 -32768>
   %f = trunc <2 x i64> %e to <2 x i16>
-  call void @llvm.masked.store.v2i16.p0v2i16(<2 x i16> %f, <2 x i16>* %p, i32 1, <2 x i1> %a)
+  call void @llvm.masked.store.v2i16.p0(<2 x i16> %f, ptr %p, i32 1, <2 x i1> %a)
   ret void
 }
 
-define void @truncstore_v2i64_v2i8(<2 x i64> %x, <2 x i8>* %p, <2 x i64> %mask) {
+define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE2-LABEL: truncstore_v2i64_v2i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -2833,11 +2833,11 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, <2 x i8>* %p, <2 x i64> %mask) 
   %d = icmp sgt <2 x i64> %c, <i64 -128, i64 -128>
   %e = select <2 x i1> %d, <2 x i64> %c, <2 x i64> <i64 -128, i64 -128>
   %f = trunc <2 x i64> %e to <2 x i8>
-  call void @llvm.masked.store.v2i8.p0v2i8(<2 x i8> %f, <2 x i8>* %p, i32 1, <2 x i1> %a)
+  call void @llvm.masked.store.v2i8.p0(<2 x i8> %f, ptr %p, i32 1, <2 x i1> %a)
   ret void
 }
 
-define void @truncstore_v16i32_v16i16(<16 x i32> %x, <16 x i16>* %p, <16 x i32> %mask) {
+define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v16i32_v16i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -3525,11 +3525,11 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, <16 x i16>* %p, <16 x i32> 
   %d = icmp sgt <16 x i32> %c, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
   %e = select <16 x i1> %d, <16 x i32> %c, <16 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
   %f = trunc <16 x i32> %e to <16 x i16>
-  call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> %f, <16 x i16>* %p, i32 1, <16 x i1> %a)
+  call void @llvm.masked.store.v16i16.p0(<16 x i16> %f, ptr %p, i32 1, <16 x i1> %a)
   ret void
 }
 
-define void @truncstore_v16i32_v16i8(<16 x i32> %x, <16 x i8>* %p, <16 x i32> %mask) {
+define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v16i32_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -4196,11 +4196,11 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, <16 x i8>* %p, <16 x i32> %m
   %d = icmp sgt <16 x i32> %c, <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
   %e = select <16 x i1> %d, <16 x i32> %c, <16 x i32> <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
   %f = trunc <16 x i32> %e to <16 x i8>
-  call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %f, <16 x i8>* %p, i32 1, <16 x i1> %a)
+  call void @llvm.masked.store.v16i8.p0(<16 x i8> %f, ptr %p, i32 1, <16 x i1> %a)
   ret void
 }
 
-define void @truncstore_v8i32_v8i16(<8 x i32> %x, <8 x i16>* %p, <8 x i32> %mask) {
+define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v8i32_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
@@ -4576,11 +4576,11 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, <8 x i16>* %p, <8 x i32> %mask
   %d = icmp sgt <8 x i32> %c, <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
   %e = select <8 x i1> %d, <8 x i32> %c, <8 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>
   %f = trunc <8 x i32> %e to <8 x i16>
-  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %f, <8 x i16>* %p, i32 1, <8 x i1> %a)
+  call void @llvm.masked.store.v8i16.p0(<8 x i16> %f, ptr %p, i32 1, <8 x i1> %a)
   ret void
 }
 
-define void @truncstore_v8i32_v8i8(<8 x i32> %x, <8 x i8>* %p, <8 x i32> %mask) {
+define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v8i32_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
@@ -4955,11 +4955,11 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, <8 x i8>* %p, <8 x i32> %mask) 
   %d = icmp sgt <8 x i32> %c, <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
   %e = select <8 x i1> %d, <8 x i32> %c, <8 x i32> <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
   %f = trunc <8 x i32> %e to <8 x i8>
-  call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %f, <8 x i8>* %p, i32 1, <8 x i1> %a)
+  call void @llvm.masked.store.v8i8.p0(<8 x i8> %f, ptr %p, i32 1, <8 x i1> %a)
   ret void
 }
 
-define void @truncstore_v4i32_v4i16(<4 x i32> %x, <4 x i16>* %p, <4 x i32> %mask) {
+define void @truncstore_v4i32_v4i16(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v4i32_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -5133,11 +5133,11 @@ define void @truncstore_v4i32_v4i16(<4 x i32> %x, <4 x i16>* %p, <4 x i32> %mask
   %d = icmp sgt <4 x i32> %c, <i32 -32768, i32 -32768, i32 -32768, i32 -32768>
   %e = select <4 x i1> %d, <4 x i32> %c, <4 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768>
   %f = trunc <4 x i32> %e to <4 x i16>
-  call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> %f, <4 x i16>* %p, i32 1, <4 x i1> %a)
+  call void @llvm.masked.store.v4i16.p0(<4 x i16> %f, ptr %p, i32 1, <4 x i1> %a)
   ret void
 }
 
-define void @truncstore_v4i32_v4i8(<4 x i32> %x, <4 x i8>* %p, <4 x i32> %mask) {
+define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v4i32_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -5374,11 +5374,11 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, <4 x i8>* %p, <4 x i32> %mask) 
   %d = icmp sgt <4 x i32> %c, <i32 -128, i32 -128, i32 -128, i32 -128>
   %e = select <4 x i1> %d, <4 x i32> %c, <4 x i32> <i32 -128, i32 -128, i32 -128, i32 -128>
   %f = trunc <4 x i32> %e to <4 x i8>
-  call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %f, <4 x i8>* %p, i32 1, <4 x i1> %a)
+  call void @llvm.masked.store.v4i8.p0(<4 x i8> %f, ptr %p, i32 1, <4 x i1> %a)
   ret void
 }
 
-define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %mask) {
+define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-LABEL: truncstore_v32i16_v32i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm6, %xmm6
@@ -6567,11 +6567,11 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
   %d = icmp sgt <32 x i16> %c, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
   %e = select <32 x i1> %d, <32 x i16> %c, <32 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
   %f = trunc <32 x i16> %e to <32 x i8>
-  call void @llvm.masked.store.v32i8.p0v32i8(<32 x i8> %f, <32 x i8>* %p, i32 1, <32 x i1> %a)
+  call void @llvm.masked.store.v32i8.p0(<32 x i8> %f, ptr %p, i32 1, <32 x i1> %a)
   ret void
 }
 
-define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %p, <16 x i8> %mask) {
+define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE2-LABEL: truncstore_v16i16_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
@@ -7195,11 +7195,11 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %p, <16 x i8> %ma
   %d = icmp sgt <16 x i16> %c, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
   %e = select <16 x i1> %d, <16 x i16> %c, <16 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
   %f = trunc <16 x i16> %e to <16 x i8>
-  call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %f, <16 x i8>* %p, i32 1, <16 x i1> %a)
+  call void @llvm.masked.store.v16i8.p0(<16 x i8> %f, ptr %p, i32 1, <16 x i1> %a)
   ret void
 }
 
-define void @truncstore_v8i16_v8i8(<8 x i16> %x, <8 x i8>* %p, <8 x i16> %mask) {
+define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; SSE2-LABEL: truncstore_v8i16_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -7491,19 +7491,19 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, <8 x i8>* %p, <8 x i16> %mask) 
   %d = icmp sgt <8 x i16> %c, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
   %e = select <8 x i1> %d, <8 x i16> %c, <8 x i16> <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
   %f = trunc <8 x i16> %e to <8 x i8>
-  call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %f, <8 x i8>* %p, i32 1, <8 x i1> %a)
+  call void @llvm.masked.store.v8i8.p0(<8 x i8> %f, ptr %p, i32 1, <8 x i1> %a)
   ret void
 }
 
-declare void @llvm.masked.store.v8i32.p0v8i32(<8 x i32>, <8 x i32>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v8i8.p0v8i8(<8 x i8>, <8 x i8>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v4i16.p0v4i16(<4 x i16>, <4 x i16>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v4i8.p0v4i8(<4 x i8>, <4 x i8>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v2i32.p0v2i32(<2 x i32>, <2 x i32>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v2i16.p0v2i16(<2 x i16>, <2 x i16>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v2i8.p0v2i8(<2 x i8>, <2 x i8>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v16i16.p0v16i16(<16 x i16>, <16 x i16>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v32i8.p0v32i8(<32 x i8>, <32 x i8>*, i32, <32 x i1>)
+declare void @llvm.masked.store.v8i32.p0(<8 x i32>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v8i16.p0(<8 x i16>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v8i8.p0(<8 x i8>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v4i16.p0(<4 x i16>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v4i8.p0(<4 x i8>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)
+declare void @llvm.masked.store.v2i16.p0(<2 x i16>, ptr, i32, <2 x i1>)
+declare void @llvm.masked.store.v2i8.p0(<2 x i8>, ptr, i32, <2 x i1>)
+declare void @llvm.masked.store.v16i16.p0(<16 x i16>, ptr, i32, <16 x i1>)
+declare void @llvm.masked.store.v16i8.p0(<16 x i8>, ptr, i32, <16 x i1>)
+declare void @llvm.masked.store.v32i8.p0(<32 x i8>, ptr, i32, <32 x i1>)

@@ -299,12 +299,6 @@ protected:
 
       const char *file_path = command.GetArgumentAtIndex(0);
       LLDB_SCOPED_TIMERF("(lldb) target create '%s'", file_path);
-      FileSpec file_spec;
-
-      if (file_path) {
-        file_spec.SetFile(file_path, FileSpec::Style::native);
-        FileSystem::Instance().Resolve(file_spec);
-      }
 
       bool must_set_platform_path = false;
 
@@ -332,6 +326,18 @@ protected:
       // CreateTarget() we can't rely on the selected platform.
 
       PlatformSP platform_sp = target_sp->GetPlatform();
+
+      FileSpec file_spec;
+      if (file_path) {
+        file_spec.SetFile(file_path, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(file_spec);
+
+        // Try to resolve the exe based on PATH and/or platform-specific
+        // suffixes, but only if using the host platform.
+        if (platform_sp && platform_sp->IsHost() &&
+            !FileSystem::Instance().Exists(file_spec))
+          FileSystem::Instance().ResolveExecutableLocation(file_spec);
+      }
 
       if (remote_file) {
         if (platform_sp) {

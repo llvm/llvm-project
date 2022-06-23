@@ -40,7 +40,7 @@ define i64 @test2(i8 %A, i8 %B) nounwind {
 ;; Test that OR is only emitted as LEA, not as ADD.
 
 ; No reason to emit an add here, should be an or.
-define void @test3(i32 %x, i32* %P) nounwind readnone ssp {
+define void @test3(i32 %x, ptr %P) nounwind readnone ssp {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shll $5, %edi
@@ -49,7 +49,7 @@ define void @test3(i32 %x, i32* %P) nounwind readnone ssp {
 ; CHECK-NEXT:    retq
   %t0 = shl i32 %x, 5
   %t1 = or i32 %t0, 3
-  store i32 %t1, i32* %P
+  store i32 %t1, ptr %P
   ret void
 }
 
@@ -68,7 +68,7 @@ define i32 @test4(i32 %a, i32 %b) nounwind readnone ssp {
   ret i32 %or
 }
 
-define void @test5(i32 %a, i32 %b, i32* nocapture %P) nounwind ssp {
+define void @test5(i32 %a, i32 %b, ptr nocapture %P) nounwind ssp {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $6, %edi
@@ -79,7 +79,7 @@ define void @test5(i32 %a, i32 %b, i32* nocapture %P) nounwind ssp {
   %and = and i32 %a, 6
   %and2 = and i32 %b, 16
   %or = or i32 %and2, %and
-  store i32 %or, i32* %P, align 4
+  store i32 %or, ptr %P, align 4
   ret void
 }
 

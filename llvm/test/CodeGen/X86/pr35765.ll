@@ -24,13 +24,13 @@ define dso_local void @PR35765() {
 ; CHECK-NEXT:    movq %rax, ll(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %bf.load.i = load i16, i16* bitcast ({ i8, i8 }* @s1 to i16*), align 2
+  %bf.load.i = load i16, ptr @s1, align 2
   %bf.clear.i = and i16 %bf.load.i, 2047
   %conv.i = zext i16 %bf.clear.i to i32
   %sub.i = add nsw i32 %conv.i, -1398
   %shl.i = shl i32 4, %sub.i
-  %0 = load i64, i64* @x, align 8
-  %bf.load1.i = load i16, i16* bitcast ({ i8, i8 }* @s2 to i16*), align 2
+  %0 = load i64, ptr @x, align 8
+  %bf.load1.i = load i16, ptr @s2, align 2
   %bf.clear2.i = and i16 %bf.load1.i, 2047
   %1 = xor i16 %bf.clear2.i, -1
   %neg.i = zext i16 %1 to i64
@@ -39,6 +39,6 @@ entry:
   %conv6.i = and i32 %conv5.i, 65535
   %xor.i = xor i32 %conv6.i, %shl.i
   %conv7.i = sext i32 %xor.i to i64
-  store i64 %conv7.i, i64* @ll, align 8
+  store i64 %conv7.i, ptr @ll, align 8
   ret void
 }

@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 %0 = type { %1, i64, %2 }
-%1 = type { i8* }
+%1 = type { ptr }
 %2 = type { i64, [8 x i8] }
 
 @0 = internal constant [10 x i8] c"asdf jkl;\00", align 1
@@ -13,14 +13,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Memcpy lowering should emit stores of immediates containing string data from
 ; the correct offsets.
 
-define void @foo(i8* %tmp2) {
+define void @foo(ptr %tmp2) {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl $3894379, 3(%rdi) # imm = 0x3B6C6B
 ; X86-NEXT:    movl $1802117222, (%rdi) # imm = 0x6B6A2066
 ; X86-NEXT:    retq
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp2, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @0, i64 0, i64 3), i64 7, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %tmp2, ptr getelementptr inbounds ([10 x i8], ptr @0, i64 0, i64 3), i64 7, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
