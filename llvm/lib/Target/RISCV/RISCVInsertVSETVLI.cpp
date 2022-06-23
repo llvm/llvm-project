@@ -990,6 +990,9 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   if (CurInfo.isCompatible(MI, Require))
     return false;
 
+  if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
+    return true;
+
   // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
   // VL=0 is uninteresting (as it should have been deleted already), so it is
   // compatible if we can prove both are non-zero.  Additionally, if writing
@@ -1009,8 +1012,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   // it might be defined by a VSET(I)VLI. If it has the same VLMAX we need
   // and the last VL/VTYPE we observed is the same, we don't need a
   // VSETVLI here.
-  if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
-      Require.getAVLReg().isVirtual() && !CurInfo.hasSEWLMULRatioOnly() &&
+  if (Require.hasAVLReg() && Require.getAVLReg().isVirtual() &&
       CurInfo.hasCompatibleVTYPE(MI, Require)) {
     if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
       if (isVectorConfigInstr(*DefMI)) {
