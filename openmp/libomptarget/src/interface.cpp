@@ -278,36 +278,9 @@ EXTERN int __tgt_target_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                                int64_t *ArgSizes, int64_t *ArgTypes,
                                map_var_info_t *ArgNames, void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
-  DP("Entering target region with entry point " DPxMOD " and device Id %" PRId64
-     "\n",
-     DPxPTR(HostPtr), DeviceId);
-  if (checkDeviceAndCtors(DeviceId, Loc)) {
-    DP("Not offloading to device %" PRId64 "\n", DeviceId);
-    return OMP_TGT_FAIL;
-  }
-
-  if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
-    printKernelArguments(Loc, DeviceId, ArgNum, ArgSizes, ArgTypes, ArgNames,
-                         "Entering OpenMP kernel");
-#ifdef OMPTARGET_DEBUG
-  for (int I = 0; I < ArgNum; ++I) {
-    DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
-       ", Type=0x%" PRIx64 ", Name=%s\n",
-       I, DPxPTR(ArgsBase[I]), DPxPTR(Args[I]), ArgSizes[I], ArgTypes[I],
-       (ArgNames) ? getNameFromMapping(ArgNames[I]).c_str() : "unknown");
-  }
-#endif
-
-  DeviceTy &Device = *PM->Devices[DeviceId];
-  AsyncInfoTy AsyncInfo(Device);
-  int Rc =
-      target(Loc, Device, HostPtr, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes,
-             ArgNames, ArgMappers, 0, 0, false /*team*/, AsyncInfo);
-  if (Rc == OFFLOAD_SUCCESS)
-    Rc = AsyncInfo.synchronize();
-  handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
-  assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_mapper unexpected failure!");
-  return OMP_TGT_SUCCESS;
+  __tgt_kernel_arguments KernelArgs{1,        ArgNum,   ArgsBase, Args,
+                                    ArgSizes, ArgTypes, ArgNames, ArgMappers};
+  return __tgt_target_kernel(Loc, DeviceId, -1, 0, HostPtr, &KernelArgs);
 }
 
 EXTERN int __tgt_target_nowait_mapper(
@@ -352,50 +325,78 @@ EXTERN int __tgt_target_teams_mapper(ident_t *Loc, int64_t DeviceId,
                                      map_var_info_t *ArgNames,
                                      void **ArgMappers, int32_t TeamNum,
                                      int32_t ThreadLimit) {
+  TIMESCOPE_WITH_IDENT(Loc);
+  __tgt_kernel_arguments KernelArgs{1,        ArgNum,   ArgsBase, Args,
+                                    ArgSizes, ArgTypes, ArgNames, ArgMappers};
+  return __tgt_target_kernel(Loc, DeviceId, TeamNum, ThreadLimit, HostPtr,
+                             &KernelArgs);
+}
+
+/// Implements a kernel entry that executes the target region on the specified
+/// device.
+///
+/// \param Loc Source location associated with this target region.
+/// \param DeviceId The device to execute this region, -1 indicated the default.
+/// \param NumTeams Number of teams to launch the region with, -1 indicates a
+///                 non-teams region and 0 indicates it was unspecified.
+/// \param ThreadLimit Limit to the number of threads to use in the kernel
+///                    launch, 0 indicates it was unspecified.
+/// \param HostPtr  The pointer to the host function registered with the kernel.
+/// \param Args     All arguments to this kernel launch (see struct definition).
+EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
+                               int32_t ThreadLimit, void *HostPtr,
+                               __tgt_kernel_arguments *Args) {
+  TIMESCOPE_WITH_IDENT(Loc);
   DP("Entering target region with entry point " DPxMOD " and device Id %" PRId64
      "\n",
      DPxPTR(HostPtr), DeviceId);
+  if (Args->Version != 1) {
+    DP("Unexpected ABI version: %d\n", Args->Version);
+  }
   if (checkDeviceAndCtors(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
     return OMP_TGT_FAIL;
   }
 
   if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
-    printKernelArguments(Loc, DeviceId, ArgNum, ArgSizes, ArgTypes, ArgNames,
+    printKernelArguments(Loc, DeviceId, Args->NumArgs, Args->ArgSizes,
+                         Args->ArgTypes, Args->ArgNames,
                          "Entering OpenMP kernel");
 #ifdef OMPTARGET_DEBUG
-  for (int I = 0; I < ArgNum; ++I) {
+  for (int I = 0; I < Args->NumArgs; ++I) {
     DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
        ", Type=0x%" PRIx64 ", Name=%s\n",
-       I, DPxPTR(ArgsBase[I]), DPxPTR(Args[I]), ArgSizes[I], ArgTypes[I],
-       (ArgNames) ? getNameFromMapping(ArgNames[I]).c_str() : "unknown");
+       I, DPxPTR(Args->ArgBasePtrs[I]), DPxPTR(Args->ArgPtrs[I]),
+       Args->ArgSizes[I], Args->ArgTypes[I],
+       (Args->ArgNames) ? getNameFromMapping(Args->ArgNames[I]).c_str()
+                        : "unknown");
   }
 #endif
 
+  bool IsTeams = NumTeams != -1;
+  if (!IsTeams)
+    NumTeams = 0;
+
   DeviceTy &Device = *PM->Devices[DeviceId];
   AsyncInfoTy AsyncInfo(Device);
-  int Rc = target(Loc, Device, HostPtr, ArgNum, ArgsBase, Args, ArgSizes,
-                  ArgTypes, ArgNames, ArgMappers, TeamNum, ThreadLimit,
-                  true /*team*/, AsyncInfo);
+  int Rc = target(Loc, Device, HostPtr, Args->NumArgs, Args->ArgBasePtrs,
+                  Args->ArgPtrs, Args->ArgSizes, Args->ArgTypes, Args->ArgNames,
+                  Args->ArgMappers, NumTeams, ThreadLimit, IsTeams, AsyncInfo);
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
-  assert(Rc == OFFLOAD_SUCCESS &&
-         "__tgt_target_teams_mapper unexpected failure!");
+  assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
   return OMP_TGT_SUCCESS;
 }
 
-EXTERN int __tgt_target_teams_nowait_mapper(
-    ident_t *Loc, int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-    void **ArgsBase, void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
-    map_var_info_t *ArgNames, void **ArgMappers, int32_t TeamNum,
-    int32_t ThreadLimit, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
-    void *NoAliasDepList) {
+EXTERN int __tgt_target_kernel_nowait(
+    ident_t *Loc, int64_t DeviceId, int32_t NumTeams, int32_t ThreadLimit,
+    void *HostPtr, __tgt_kernel_arguments *Args, int32_t DepNum, void *DepList,
+    int32_t NoAliasDepNum, void *NoAliasDepList) {
   TIMESCOPE_WITH_IDENT(Loc);
 
-  return __tgt_target_teams_mapper(Loc, DeviceId, HostPtr, ArgNum, ArgsBase,
-                                   Args, ArgSizes, ArgTypes, ArgNames,
-                                   ArgMappers, TeamNum, ThreadLimit);
+  return __tgt_target_kernel(Loc, DeviceId, NumTeams, ThreadLimit, HostPtr,
+                             Args);
 }
 
 // Get the current number of components for a user-defined mapper.
