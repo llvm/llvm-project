@@ -60,6 +60,24 @@ private:
   Dialect *dialect;
 };
 
+//===----------------------------------------------------------------------===//
+// SparseConstantPropagation
+//===----------------------------------------------------------------------===//
+
+/// This analysis implements sparse constant propagation, which attempts to
+/// determine constant-valued results for operations using constant-valued
+/// operands, by speculatively folding operations. When combined with dead-code
+/// analysis, this becomes sparse conditional constant propagation (SCCP).
+class SparseConstantPropagation
+    : public SparseDataFlowAnalysis<Lattice<ConstantValue>> {
+public:
+  using SparseDataFlowAnalysis::SparseDataFlowAnalysis;
+
+  void visitOperation(Operation *op,
+                      ArrayRef<const Lattice<ConstantValue> *> operands,
+                      ArrayRef<Lattice<ConstantValue> *> results) override;
+};
+
 } // end namespace dataflow
 } // end namespace mlir
 
