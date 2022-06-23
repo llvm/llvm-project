@@ -679,7 +679,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   // come before blocks and conditions dominated by them. If a block and a
   // condition have the same numbers, the condition comes before the block, as
   // it holds on entry to the block.
-  sort(S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
+  stable_sort(S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
     return std::tie(A.NumIn, A.IsBlock) < std::tie(B.NumIn, B.IsBlock);
   });
 
