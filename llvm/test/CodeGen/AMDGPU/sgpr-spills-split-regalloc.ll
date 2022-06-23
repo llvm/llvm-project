@@ -191,23 +191,23 @@ define void @spill_sgpr_with_tail_call() #0 {
 ; we have no VGPR to allocate for SGPR spills. We are forced to spill to memory.
 
 ; GCN-LABEL: {{^}}spill_sgpr_no_free_vgpr:
-; GCN: v_writelane_b32 v{{[0-9]+}}, s34, 0
-; GCN: v_writelane_b32 v{{[0-9]+}}, s35, 1
-; GCN: v_writelane_b32 v{{[0-9]+}}, s36, 2
-; GCN: v_writelane_b32 v{{[0-9]+}}, s37, 3
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32
+; GCN: v_writelane_b32 [[A:v[0-9]+]], s34, 0
+; GCN: buffer_store_dword [[A]], off, s[0:3], s32
+; GCN: v_writelane_b32 [[B:v[0-9]+]], s35, 0
+; GCN: buffer_store_dword [[B]], off, s[0:3], s32
+; GCN: v_writelane_b32 [[C:v[0-9]+]], s36, 0
+; GCN: buffer_store_dword [[C]], off, s[0:3], s32
+; GCN: v_writelane_b32 [[D:v[0-9]+]], s37, 0
+; GCN: buffer_store_dword [[D]], off, s[0:3], s32
 ; GCN: #ASMEND
-; GCN: buffer_load_dword v{{[0-9]+}}
-; GCN: buffer_load_dword v{{[0-9]+}}
-; GCN: buffer_load_dword v{{[0-9]+}}
-; GCN: buffer_load_dword v{{[0-9]+}}
-; GCN: v_readlane_b32 s37, v{{[0-9]+}}, 3
-; GCN: v_readlane_b32 s36, v{{[0-9]+}}, 2
-; GCN: v_readlane_b32 s35, v{{[0-9]+}}, 1
-; GCN: v_readlane_b32 s34, v{{[0-9]+}}, 0
+; GCN: buffer_load_dword [[E:v[0-9]+]]
+; GCN: v_readlane_b32 s37, [[E]], 0
+; GCN: buffer_load_dword [[F:v[0-9]+]]
+; GCN: v_readlane_b32 s36, [[F]], 0
+; GCN: buffer_load_dword [[G:v[0-9]+]]
+; GCN: v_readlane_b32 s35, [[G]], 0
+; GCN: buffer_load_dword [[H:v[0-9]+]]
+; GCN: v_readlane_b32 s34, [[H]], 0
 
 define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
   %a = load <4 x i32>, <4 x i32> addrspace(1)* %in
