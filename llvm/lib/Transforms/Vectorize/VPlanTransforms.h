@@ -50,8 +50,6 @@ struct VPlanTransforms {
   /// recipe, if it exists.
   static void removeRedundantCanonicalIVs(VPlan &Plan);
 
-  /// Try to remove dead recipes. At the moment, only dead header recipes are
-  /// removed.
   static void removeDeadRecipes(VPlan &Plan);
 
   /// If any user of a VPWidenIntOrFpInductionRecipe needs scalar values,

@@ -362,16 +362,19 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
 }
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
-  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  // Remove dead recipes in header block. The recipes in the block are processed
-  // in reverse order, to catch chains of dead recipes.
-  // TODO: Remove dead recipes across whole plan.
-  for (VPRecipeBase &R : make_early_inc_range(reverse(*Header))) {
-    if (R.mayHaveSideEffects() || any_of(R.definedValues(), [](VPValue *V) {
-          return V->getNumUsers() > 0;
-        }))
-      continue;
-    R.eraseFromParent();
+  ReversePostOrderTraversal<VPBlockRecursiveTraversalWrapper<VPBlockBase *>>
+      RPOT(Plan.getEntry());
+
+  for (VPBasicBlock *VPBB : reverse(VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))) {
+    // The recipes in the block are processed in reverse order, to catch chains
+    // of dead recipes.
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      if (R.mayHaveSideEffects() || any_of(R.definedValues(), [](VPValue *V) {
+            return V->getNumUsers() > 0;
+          }))
+        continue;
+      R.eraseFromParent();
+    }
   }
 }
 
