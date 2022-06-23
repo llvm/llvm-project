@@ -59,6 +59,23 @@ void PredecessorState::print(raw_ostream &os) const {
     os << "  " << *op << "\n";
 }
 
+ChangeResult PredecessorState::join(Operation *predecessor) {
+  return knownPredecessors.insert(predecessor) ? ChangeResult::Change
+                                               : ChangeResult::NoChange;
+}
+
+ChangeResult PredecessorState::join(Operation *predecessor, ValueRange inputs) {
+  ChangeResult result = join(predecessor);
+  if (!inputs.empty()) {
+    ValueRange &curInputs = successorInputs[predecessor];
+    if (curInputs != inputs) {
+      curInputs = inputs;
+      result |= ChangeResult::Change;
+    }
+  }
+  return result;
+}
+
 //===----------------------------------------------------------------------===//
 // CFGEdge
 //===----------------------------------------------------------------------===//
@@ -333,14 +350,18 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
   SmallVector<RegionSuccessor> successors;
   branch.getSuccessorRegions(/*index=*/{}, *operands, successors);
   for (const RegionSuccessor &successor : successors) {
+    // The successor can be either an entry block or the parent operation.
+    ProgramPoint point = successor.getSuccessor()
+                             ? &successor.getSuccessor()->front()
+                             : ProgramPoint(branch);
     // Mark the entry block as executable.
-    Region *region = successor.getSuccessor();
-    assert(region && "expected a region successor");
-    auto *state = getOrCreate<Executable>(&region->front());
+    auto *state = getOrCreate<Executable>(point);
     propagateIfChanged(state, state->setToLive());
     // Add the parent op as a predecessor.
-    auto *predecessors = getOrCreate<PredecessorState>(&region->front());
-    propagateIfChanged(predecessors, predecessors->join(branch));
+    auto *predecessors = getOrCreate<PredecessorState>(point);
+    propagateIfChanged(
+        predecessors,
+        predecessors->join(branch, successor.getSuccessorInputs()));
   }
 }
 
@@ -366,7 +387,8 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
       // Add this terminator as a predecessor to the parent op.
       predecessors = getOrCreate<PredecessorState>(branch);
     }
-    propagateIfChanged(predecessors, predecessors->join(op));
+    propagateIfChanged(predecessors,
+                       predecessors->join(op, successor.getSuccessorInputs()));
   }
 }
 
