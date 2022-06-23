@@ -76,6 +76,9 @@ public:
   /// Get the C++ storage type of this parameter.
   StringRef getCppStorageType() const;
 
+  /// Get the C++ code to convert from the storage type to the parameter type.
+  StringRef getConvertFromStorage() const;
+
   /// Get an optional C++ parameter parser.
   Optional<StringRef> getParser() const;
 

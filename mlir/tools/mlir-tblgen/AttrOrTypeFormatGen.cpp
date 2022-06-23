@@ -297,18 +297,21 @@ void DefFormat::genParser(MethodBody &os) {
   }
   for (const AttrOrTypeParameter &param : params) {
     os << ",\n    ";
+    std::string paramSelfStr;
+    llvm::raw_string_ostream selfOs(paramSelfStr);
     if (param.isOptional()) {
-      os << formatv("_result_{0}.value_or(", param.getName());
+      selfOs << formatv("(_result_{0}.value_or(", param.getName());
       if (Optional<StringRef> defaultValue = param.getDefaultValue())
-        os << tgfmt(*defaultValue, &ctx);
+        selfOs << tgfmt(*defaultValue, &ctx);
       else
-        os << param.getCppStorageType() << "()";
-      os << ")";
+        selfOs << param.getCppStorageType() << "()";
+      selfOs << "))";
     } else if (isa<AttributeSelfTypeParameter>(param)) {
-      os << tgfmt("$_type", &ctx);
+      selfOs << tgfmt("$_type", &ctx);
     } else {
-      os << formatv("*_result_{0}", param.getName());
+      selfOs << formatv("(*_result_{0})", param.getName());
     }
+    os << tgfmt(param.getConvertFromStorage(), &ctx.withSelf(selfOs.str()));
   }
   os << ");";
 }
