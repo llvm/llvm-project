@@ -45,3 +45,4 @@ def help_q : Flag<["/??", "-??", "/?", "-?"], "">, Alias<help>;
 
 def ltcg : F<"ltcg">;
 def nologo : F<"nologo">;
+def subsystem : P<"subsystem", "">;
