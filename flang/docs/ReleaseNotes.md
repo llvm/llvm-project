@@ -30,6 +30,13 @@ page](https://llvm.org/releases/).
 * The bash wrapper script, `flang`, is renamed as `flang-to-external-fc`.
 
 ## New Compiler Flags
+* Refined how `-f{no-}color-diagnostics` is treated to better align with Clang.
+  In particular, both `-fcolor-diagnostics` and `-fno-color-diagnostics` are
+  now available in `flang-new` (the diagnostics are formatted by default). In
+  the frontend driver, `flang-new -fc1`, only `-fcolor-diagnostics` is
+  available (by default, the diagnostics are not formatted). Note that this
+  will only affect the diagnostics printed by driver (scanning, parsing and
+  semantic diagnostics are not affected).
 
 ## Windows Support
 
