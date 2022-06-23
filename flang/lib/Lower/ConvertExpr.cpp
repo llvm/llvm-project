@@ -1301,10 +1301,20 @@ public:
             // to "0xE2 0x82 0xAC" : UTF-8.
             mlir::Value bufferSize = boxchar.getLen();
             auto kindMap = builder.getKindMap();
-            auto fromBits = kindMap.getCharacterBitsize(
-                fir::unwrapRefType(boxchar.getAddr().getType())
-                    .cast<fir::CharacterType>()
-                    .getFKind());
+            mlir::Value boxCharAddr = boxchar.getAddr();
+            auto fromTy = boxCharAddr.getType();
+            if (auto charTy = fromTy.dyn_cast<fir::CharacterType>()) {
+              // boxchar is a value, not a variable. Turn it into a temporary.
+              // As a value, it ought to have a constant LEN value.
+              assert(charTy.hasConstantLen() && "must have constant length");
+              mlir::Value tmp = builder.createTemporary(loc, charTy);
+              builder.create<fir::StoreOp>(loc, boxCharAddr, tmp);
+              boxCharAddr = tmp;
+            }
+            auto fromBits =
+                kindMap.getCharacterBitsize(fir::unwrapRefType(fromTy)
+                                                .cast<fir::CharacterType>()
+                                                .getFKind());
             auto toBits = kindMap.getCharacterBitsize(
                 ty.cast<fir::CharacterType>().getFKind());
             if (toBits < fromBits) {
@@ -1316,7 +1326,7 @@ public:
             }
             auto dest = builder.create<fir::AllocaOp>(
                 loc, ty, mlir::ValueRange{bufferSize});
-            builder.create<fir::CharConvertOp>(loc, boxchar.getAddr(),
+            builder.create<fir::CharConvertOp>(loc, boxCharAddr,
                                                boxchar.getLen(), dest);
             return fir::CharBoxValue{dest, boxchar.getLen()};
           } else {
