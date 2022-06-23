@@ -75,9 +75,8 @@ getIntrinsicArgumentLowering(llvm::StringRef intrinsicName);
 
 /// Return how argument \p argName should be lowered given the rules for the
 /// intrinsic function. The argument names are the one defined by the standard.
-ArgLoweringRule lowerIntrinsicArgumentAs(mlir::Location,
-                                         const IntrinsicArgumentLoweringRules &,
-                                         llvm::StringRef argName);
+ArgLoweringRule lowerIntrinsicArgumentAs(const IntrinsicArgumentLoweringRules &,
+                                         unsigned position);
 
 /// Return place-holder for absent intrinsic arguments.
 fir::ExtendedValue getAbsentIntrinsicArgument();
