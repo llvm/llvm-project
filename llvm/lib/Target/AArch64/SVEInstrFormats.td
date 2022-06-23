@@ -1225,6 +1225,23 @@ multiclass sve_int_perm_dup_i<string asm> {
             (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
   def : Pat<(nxv2f64 (splat_vector (f64 (vector_extract (nxv2f64 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
             (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
+
+  def : Pat<(nxv16i8 (AArch64duplane128 nxv16i8:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv8i16 (AArch64duplane128 nxv8i16:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv4i32 (AArch64duplane128 nxv4i32:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv2i64 (AArch64duplane128 nxv2i64:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv8f16 (AArch64duplane128 nxv8f16:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv4f32 (AArch64duplane128 nxv4f32:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv2f64 (AArch64duplane128 nxv2f64:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv8bf16 (AArch64duplane128 nxv8bf16:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
 }
 
 class sve_int_perm_tbl<bits<2> sz8_64, bits<2> opc, string asm, ZPRRegOp zprty,
