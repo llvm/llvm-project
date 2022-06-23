@@ -1904,44 +1904,40 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 ArgumentCondition(1, WithinRange, Range(0, SizeMax))));
 
     // int mkdir(const char *pathname, mode_t mode);
-    // FIXME: returns 0 on success, ReturnsValidFileDescriptor is incorrect
     addToFunctionSummaryMap(
         "mkdir", Signature(ArgTypes{ConstCharPtrTy, Mode_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int mkdirat(int dirfd, const char *pathname, mode_t mode);
-    // FIXME: returns 0 on success, ReturnsValidFileDescriptor is incorrect
     addToFunctionSummaryMap(
         "mkdirat",
         Signature(ArgTypes{IntTy, ConstCharPtrTy, Mode_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
             .ArgConstraint(NotNull(ArgNo(1))));
 
     Optional<QualType> Dev_tTy = lookupTy("dev_t");
 
     // int mknod(const char *pathname, mode_t mode, dev_t dev);
-    // FIXME: returns 0 on success, ReturnsValidFileDescriptor is incorrect
     addToFunctionSummaryMap(
         "mknod",
         Signature(ArgTypes{ConstCharPtrTy, Mode_tTy, Dev_tTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int mknodat(int dirfd, const char *pathname, mode_t mode, dev_t dev);
-    // FIXME: returns 0 on success, ReturnsValidFileDescriptor is incorrect
     addToFunctionSummaryMap(
         "mknodat",
         Signature(ArgTypes{IntTy, ConstCharPtrTy, Mode_tTy, Dev_tTy},
                   RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked)
+            .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
             .ArgConstraint(NotNull(ArgNo(1))));
 
