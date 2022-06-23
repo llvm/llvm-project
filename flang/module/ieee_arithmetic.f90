@@ -514,7 +514,7 @@ module ieee_arithmetic
     real(XKIND), intent(in) :: x(..); \
   end function ieee_support_rounding_a##XKIND;
   interface ieee_support_rounding
-    pure logical function ieee_support_rounding(round_value)
+    logical function ieee_support_rounding(round_value)
       import ieee_round_type
       type(ieee_round_type), intent(in) :: round_value
     end function ieee_support_rounding

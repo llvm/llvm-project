@@ -571,6 +571,16 @@ const Fortran::semantics::Symbol &getLastSym(const A &obj) {
   return obj.GetLastSymbol().GetUltimate();
 }
 
+static bool
+isIntrinsicModuleProcRef(const Fortran::evaluate::ProcedureRef &procRef) {
+  const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();
+  if (!symbol)
+    return false;
+  const Fortran::semantics::Symbol *module =
+      symbol->GetUltimate().owner().GetSymbol();
+  return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC);
+}
+
 namespace {
 
 /// Lowering of Fortran::evaluate::Expr<T> expressions
@@ -2099,17 +2109,20 @@ public:
         fir::factory::getNonDeferredLengthParams(exv));
   }
 
-  /// Generate a call to an intrinsic function.
-  ExtValue
-  genIntrinsicRef(const Fortran::evaluate::ProcedureRef &procRef,
-                  const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-                  llvm::Optional<mlir::Type> resultType) {
+  /// Generate a call to a Fortran intrinsic or intrinsic module procedure.
+  ExtValue genIntrinsicRef(
+      const Fortran::evaluate::ProcedureRef &procRef,
+      llvm::Optional<mlir::Type> resultType,
+      llvm::Optional<const Fortran::evaluate::SpecificIntrinsic> intrinsic =
+          llvm::None) {
     llvm::SmallVector<ExtValue> operands;
 
-    llvm::StringRef name = intrinsic.name;
+    std::string name =
+        intrinsic ? intrinsic->name
+                  : procRef.proc().GetSymbol()->GetUltimate().name().ToString();
     mlir::Location loc = getLoc();
-    if (Fortran::lower::intrinsicRequiresCustomOptionalHandling(
-            procRef, intrinsic, converter)) {
+    if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+                         procRef, *intrinsic, converter)) {
       using ExvAndPresence = std::pair<ExtValue, llvm::Optional<mlir::Value>>;
       llvm::SmallVector<ExvAndPresence, 4> operands;
       auto prepareOptionalArg = [&](const Fortran::lower::SomeExpr &expr) {
@@ -2122,7 +2135,7 @@ public:
         operands.emplace_back(genval(expr), llvm::None);
       };
       Fortran::lower::prepareCustomIntrinsicArgument(
-          procRef, intrinsic, resultType, prepareOptionalArg, prepareOtherArg,
+          procRef, *intrinsic, resultType, prepareOptionalArg, prepareOtherArg,
           converter);
 
       auto getArgument = [&](std::size_t i) -> ExtValue {
@@ -2141,10 +2154,9 @@ public:
 
     const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering =
         Fortran::lower::getIntrinsicArgumentLowering(name);
-    for (const auto &[arg, dummy] :
-         llvm::zip(procRef.arguments(),
-                   intrinsic.characteristics.value().dummyArguments)) {
-      auto *expr = Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg);
+    for (const auto &arg : llvm::enumerate(procRef.arguments())) {
+      auto *expr =
+          Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
       if (!expr) {
         // Absent optional.
         operands.emplace_back(Fortran::lower::getAbsentIntrinsicArgument());
@@ -2157,8 +2169,7 @@ public:
       }
       // Ad-hoc argument lowering handling.
       Fortran::lower::ArgLoweringRule argRules =
-          Fortran::lower::lowerIntrinsicArgumentAs(loc, *argLowering,
-                                                   dummy.name);
+          Fortran::lower::lowerIntrinsicArgumentAs(*argLowering, arg.index());
       if (argRules.handleDynamicOptional &&
           Fortran::evaluate::MayBePassedAsAbsentOptional(
               *expr, converter.getFoldingContext())) {
@@ -2204,13 +2215,6 @@ public:
                                             operands, stmtCtx);
   }
 
-  template <typename A>
-  bool isCharacterType(const A &exp) {
-    if (auto type = exp.GetType())
-      return type->category() == Fortran::common::TypeCategory::Character;
-    return false;
-  }
-
   /// helper to detect statement functions
   static bool
   isStatementFunctionCall(const Fortran::evaluate::ProcedureRef &procRef) {
@@ -2220,6 +2224,7 @@ public:
         return details->stmtFunction().has_value();
     return false;
   }
+
   /// Generate Statement function calls
   ExtValue genStmtFunctionRef(const Fortran::evaluate::ProcedureRef &procRef) {
     const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();
@@ -2832,6 +2837,13 @@ public:
             Fortran::lower::getAdaptToByRefAttr(builder)});
   }
 
+  template <typename A>
+  bool isCharacterType(const A &exp) {
+    if (auto type = exp.GetType())
+      return type->category() == Fortran::common::TypeCategory::Character;
+    return false;
+  }
+
   /// Lower an actual argument that must be passed via an address.
   /// This generates of the copy-in/copy-out if the actual is not contiguous, or
   /// the creation of the temp if the actual is a variable and \p byValue is
@@ -2930,9 +2942,13 @@ public:
     if (isElementalProcWithArrayArgs(procRef))
       fir::emitFatalError(loc, "trying to lower elemental procedure with array "
                                "arguments as normal procedure");
+
     if (const Fortran::evaluate::SpecificIntrinsic *intrinsic =
             procRef.proc().GetSpecificIntrinsic())
-      return genIntrinsicRef(procRef, *intrinsic, resultType);
+      return genIntrinsicRef(procRef, resultType, *intrinsic);
+
+    if (isIntrinsicModuleProcRef(procRef))
+      return genIntrinsicRef(procRef, resultType);
 
     if (isStatementFunctionCall(procRef))
       return genStmtFunctionRef(procRef);
@@ -4685,18 +4701,22 @@ private:
     return genarr(x);
   }
 
-  // A procedure reference to a Fortran elemental intrinsic procedure.
+  // A reference to a Fortran elemental intrinsic or intrinsic module procedure.
   CC genElementalIntrinsicProcRef(
       const Fortran::evaluate::ProcedureRef &procRef,
       llvm::Optional<mlir::Type> retTy,
-      const Fortran::evaluate::SpecificIntrinsic &intrinsic) {
+      llvm::Optional<const Fortran::evaluate::SpecificIntrinsic> intrinsic =
+          llvm::None) {
+
     llvm::SmallVector<CC> operands;
-    llvm::StringRef name = intrinsic.name;
+    std::string name =
+        intrinsic ? intrinsic->name
+                  : procRef.proc().GetSymbol()->GetUltimate().name().ToString();
     const Fortran::lower::IntrinsicArgumentLoweringRules *argLowering =
         Fortran::lower::getIntrinsicArgumentLowering(name);
     mlir::Location loc = getLoc();
-    if (Fortran::lower::intrinsicRequiresCustomOptionalHandling(
-            procRef, intrinsic, converter)) {
+    if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+                         procRef, *intrinsic, converter)) {
       using CcPairT = std::pair<CC, llvm::Optional<mlir::Value>>;
       llvm::SmallVector<CcPairT> operands;
       auto prepareOptionalArg = [&](const Fortran::lower::SomeExpr &expr) {
@@ -4719,11 +4739,10 @@ private:
         operands.emplace_back(genElementalArgument(expr), llvm::None);
       };
       Fortran::lower::prepareCustomIntrinsicArgument(
-          procRef, intrinsic, retTy, prepareOptionalArg, prepareOtherArg,
+          procRef, *intrinsic, retTy, prepareOptionalArg, prepareOtherArg,
           converter);
 
       fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
-      llvm::StringRef name = intrinsic.name;
       return [=](IterSpace iters) -> ExtValue {
         auto getArgument = [&](std::size_t i) -> ExtValue {
           return operands[i].first(iters);
@@ -4737,11 +4756,9 @@ private:
       };
     }
     /// Otherwise, pre-lower arguments and use intrinsic lowering utility.
-    for (const auto &[arg, dummy] :
-         llvm::zip(procRef.arguments(),
-                   intrinsic.characteristics.value().dummyArguments)) {
+    for (const auto &arg : llvm::enumerate(procRef.arguments())) {
       const auto *expr =
-          Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg);
+          Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
       if (!expr) {
         // Absent optional.
         operands.emplace_back([=](IterSpace) { return mlir::Value{}; });
@@ -4752,8 +4769,7 @@ private:
       } else {
         // Ad-hoc argument lowering handling.
         Fortran::lower::ArgLoweringRule argRules =
-            Fortran::lower::lowerIntrinsicArgumentAs(getLoc(), *argLowering,
-                                                     dummy.name);
+            Fortran::lower::lowerIntrinsicArgumentAs(*argLowering, arg.index());
         if (argRules.handleDynamicOptional &&
             Fortran::evaluate::MayBePassedAsAbsentOptional(
                 *expr, converter.getFoldingContext())) {
@@ -4955,6 +4971,8 @@ private:
         // The intrinsic procedure is called once per element of the array.
         return genElementalIntrinsicProcRef(procRef, retTy, *intrin);
       }
+      if (isIntrinsicModuleProcRef(procRef))
+        return genElementalIntrinsicProcRef(procRef, retTy);
       if (ScalarExprLowering::isStatementFunctionCall(procRef))
         fir::emitFatalError(loc, "statement function cannot be elemental");
 
@@ -4971,12 +4989,12 @@ private:
         // Elide any implicit loop iters.
         return [=, &procRef](IterSpace) {
           return ScalarExprLowering{loc, converter, symMap, stmtCtx}
-              .genIntrinsicRef(procRef, *intrinsic, retTy);
+              .genIntrinsicRef(procRef, retTy, *intrinsic);
         };
       }
       return genarr(
           ScalarExprLowering{loc, converter, symMap, stmtCtx}.genIntrinsicRef(
-              procRef, *intrinsic, retTy));
+              procRef, retTy, *intrinsic));
     }
 
     if (explicitSpaceIsActive() && procRef.Rank() == 0) {

@@ -124,13 +124,13 @@ module __Fortran_ieee_exceptions
   end interface
 
 #define IEEE_SUPPORT_FLAG_R(XKIND) \
-  pure logical function ieee_support_flag_a##XKIND(flag, x); \
+  logical function ieee_support_flag_a##XKIND(flag, x); \
     import ieee_flag_type; \
     type(ieee_flag_type), intent(in) :: flag; \
     real(XKIND), intent(in) :: x(..); \
   end function ieee_support_flag_a##XKIND;
   interface ieee_support_flag
-    pure logical function ieee_support_flag(flag)
+    logical function ieee_support_flag(flag)
       import ieee_flag_type
       type(ieee_flag_type), intent(in) :: flag
     end function ieee_support_flag
