@@ -37,8 +37,6 @@ OffloadBinary::create(MemoryBufferRef Buf) {
       TheEntry->StringOffset > Buf.getBufferSize())
     return errorCodeToError(object_error::unexpected_eof);
 
-  return errorCodeToError(object_error::unexpected_eof);
-
   return std::unique_ptr<OffloadBinary>(
       new OffloadBinary(Buf, TheHeader, TheEntry));
 }
