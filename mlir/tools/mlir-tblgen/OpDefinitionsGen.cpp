@@ -4303,31 +4303,14 @@ void OpOperandAdaptorEmitter::emitDef(
   emitter.adaptor.writeDefTo(os);
 }
 
-// Emits the opcode enum and op classes.
-static void emitOpClasses(const RecordKeeper &recordKeeper,
-                          const std::vector<Record *> &defs, raw_ostream &os,
-                          bool emitDecl) {
-  // First emit forward declaration for each class, this allows them to refer
-  // to each others in traits for example.
-  if (emitDecl) {
-    os << "#if defined(GET_OP_CLASSES) || defined(GET_OP_FWD_DEFINES)\n";
-    os << "#undef GET_OP_FWD_DEFINES\n";
-    for (auto *def : defs) {
-      Operator op(*def);
-      NamespaceEmitter emitter(os, op.getCppNamespace());
-      os << "class " << op.getCppClassName() << ";\n";
-    }
-    os << "#endif\n\n";
-  }
-
-  IfDefScope scope("GET_OP_CLASSES", os);
+/// Emit the class declarations or definitions for the given op defs.
+static void
+emitOpClasses(const RecordKeeper &recordKeeper,
+              const std::vector<Record *> &defs, raw_ostream &os,
+              const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+              bool emitDecl) {
   if (defs.empty())
     return;
-
-  // Generate all of the locally instantiated methods first.
-  StaticVerifierFunctionEmitter staticVerifierEmitter(os, recordKeeper);
-  os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
-  staticVerifierEmitter.emitOpConstraints(defs, emitDecl);
 
   for (auto *def : defs) {
     Operator op(*def);
@@ -4358,34 +4341,145 @@ static void emitOpClasses(const RecordKeeper &recordKeeper,
   }
 }
 
-// Emits a comma-separated list of the ops.
-static void emitOpList(const std::vector<Record *> &defs, raw_ostream &os) {
-  IfDefScope scope("GET_OP_LIST", os);
+/// Emit the declarations for the provided op classes.
+static void emitOpClassDecls(const RecordKeeper &recordKeeper,
+                             const std::vector<Record *> &defs,
+                             raw_ostream &os) {
+  // First emit forward declaration for each class, this allows them to refer
+  // to each others in traits for example.
+  for (auto *def : defs) {
+    Operator op(*def);
+    NamespaceEmitter emitter(os, op.getCppNamespace());
+    os << "class " << op.getCppClassName() << ";\n";
+  }
 
-  interleave(
-      // TODO: We are constructing the Operator wrapper instance just for
-      // getting it's qualified class name here. Reduce the overhead by having a
-      // lightweight version of Operator class just for that purpose.
-      defs, [&os](Record *def) { os << Operator(def).getQualCppClassName(); },
-      [&os]() { os << ",\n"; });
+  // Emit the op class declarations.
+  IfDefScope scope("GET_OP_CLASSES", os);
+  if (defs.empty())
+    return;
+  StaticVerifierFunctionEmitter staticVerifierEmitter(os, recordKeeper);
+  staticVerifierEmitter.collectOpConstraints(defs);
+  emitOpClasses(recordKeeper, defs, os, staticVerifierEmitter,
+                /*emitDecl=*/true);
 }
 
+/// Emit the definitions for the provided op classes.
+static void emitOpClassDefs(const RecordKeeper &recordKeeper,
+                            ArrayRef<Record *> defs, raw_ostream &os,
+                            StringRef constraintPrefix = "") {
+  if (defs.empty())
+    return;
+
+  // Generate all of the locally instantiated methods first.
+  StaticVerifierFunctionEmitter staticVerifierEmitter(os, recordKeeper,
+                                                      constraintPrefix);
+  os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
+  staticVerifierEmitter.collectOpConstraints(defs);
+  staticVerifierEmitter.emitOpConstraints(defs);
+
+  // Emit the classes.
+  emitOpClasses(recordKeeper, defs, os, staticVerifierEmitter,
+                /*emitDecl=*/false);
+}
+
+/// Emit op declarations for all op records.
 static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os, recordKeeper);
 
   std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
-  emitOpClasses(recordKeeper, defs, os, /*emitDecl=*/true);
+  emitOpClassDecls(recordKeeper, defs, os);
+
+  // If we are generating sharded op definitions, emit the sharded op
+  // registration hooks.
+  SmallVector<ArrayRef<Record *>, 4> shardedDefs;
+  shardOpDefinitions(defs, shardedDefs);
+  if (defs.empty() || shardedDefs.size() <= 1)
+    return false;
+
+  Dialect dialect = Operator(defs.front()).getDialect();
+  NamespaceEmitter ns(os, dialect);
+
+  const char *const opRegistrationHook =
+      "void register{0}Operations{1}({2}::{0} *dialect);\n";
+  os << formatv(opRegistrationHook, dialect.getCppClassName(), "",
+                dialect.getCppNamespace());
+  for (unsigned i = 0; i < shardedDefs.size(); ++i) {
+    os << formatv(opRegistrationHook, dialect.getCppClassName(), i,
+                  dialect.getCppNamespace());
+  }
 
   return false;
 }
 
+/// Generate the dialect op registration hook and the op class definitions for a
+/// shard of ops.
+static void emitOpDefShard(const RecordKeeper &recordKeeper,
+                           ArrayRef<Record *> defs, const Dialect &dialect,
+                           unsigned shardIndex, unsigned shardCount,
+                           raw_ostream &os) {
+  std::string shardGuard = "GET_OP_DEFS_";
+  std::string indexStr = std::to_string(shardIndex);
+  shardGuard += indexStr;
+  IfDefScope scope(shardGuard, os);
+
+  // Emit the op registration hook in the first shard.
+  const char *const opRegistrationHook =
+      "void {0}::register{1}Operations{2}({0}::{1} *dialect) {{\n";
+  if (shardIndex == 0) {
+    os << formatv(opRegistrationHook, dialect.getCppNamespace(),
+                  dialect.getCppClassName(), "");
+    for (unsigned i = 0; i < shardCount; ++i) {
+      os << formatv("  {0}::register{1}Operations{2}(dialect);\n",
+                    dialect.getCppNamespace(), dialect.getCppClassName(), i);
+    }
+    os << "}\n";
+  }
+
+  // Generate the per-shard op registration hook.
+  os << formatv(opCommentHeader, dialect.getCppClassName(),
+                "Op Registration Hook")
+     << formatv(opRegistrationHook, dialect.getCppNamespace(),
+                dialect.getCppClassName(), shardIndex);
+  for (Record *def : defs) {
+    os << formatv("  ::mlir::RegisteredOperationName::insert<{0}>(*dialect);\n",
+                  Operator(def).getQualCppClassName());
+  }
+  os << "}\n";
+
+  // Generate the per-shard op definitions.
+  emitOpClassDefs(recordKeeper, defs, os, indexStr);
+}
+
+/// Emit op definitions for all op records.
 static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Definitions", os, recordKeeper);
 
   std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
-  emitOpList(defs, os);
-  emitOpClasses(recordKeeper, defs, os, /*emitDecl=*/false);
+  SmallVector<ArrayRef<Record *>, 4> shardedDefs;
+  shardOpDefinitions(defs, shardedDefs);
 
+  // If no shard was requested, emit the regular op list and class definitions.
+  if (shardedDefs.size() == 1) {
+    {
+      IfDefScope scope("GET_OP_LIST", os);
+      interleave(
+          defs, os,
+          [&](Record *def) { os << Operator(def).getQualCppClassName(); },
+          ",\n");
+    }
+    {
+      IfDefScope scope("GET_OP_CLASSES", os);
+      emitOpClassDefs(recordKeeper, defs, os);
+    }
+    return false;
+  }
+
+  if (defs.empty())
+    return false;
+  Dialect dialect = Operator(defs.front()).getDialect();
+  for (auto [idx, value] : llvm::enumerate(shardedDefs)) {
+    emitOpDefShard(recordKeeper, value, dialect, idx, shardedDefs.size(), os);
+  }
   return false;
 }
 
