@@ -380,7 +380,7 @@ private:
       RID = A.getReduceRule();
     }
     if (!RID.hasValue())
-      return false;
+      return true; // no reductions available, but we've processed the head!
     const auto &Rule = Params.G.lookupRule(*RID);
     const GSS::Node *Base = Head;
     TempSequence.resize_for_overwrite(Rule.Size);
