@@ -583,6 +583,7 @@ def AArch64duplane8  : SDNode<"AArch64ISD::DUPLANE8", SDT_AArch64DupLane>;
 def AArch64duplane16 : SDNode<"AArch64ISD::DUPLANE16", SDT_AArch64DupLane>;
 def AArch64duplane32 : SDNode<"AArch64ISD::DUPLANE32", SDT_AArch64DupLane>;
 def AArch64duplane64 : SDNode<"AArch64ISD::DUPLANE64", SDT_AArch64DupLane>;
+def AArch64duplane128 : SDNode<"AArch64ISD::DUPLANE128", SDT_AArch64DupLane>;
 
 def AArch64insr      : SDNode<"AArch64ISD::INSR", SDT_AArch64Insr>;
 

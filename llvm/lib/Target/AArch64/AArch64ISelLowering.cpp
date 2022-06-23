@@ -2049,6 +2049,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::DUPLANE16)
     MAKE_CASE(AArch64ISD::DUPLANE32)
     MAKE_CASE(AArch64ISD::DUPLANE64)
+    MAKE_CASE(AArch64ISD::DUPLANE128)
     MAKE_CASE(AArch64ISD::MOVI)
     MAKE_CASE(AArch64ISD::MOVIshift)
     MAKE_CASE(AArch64ISD::MOVIedit)
@@ -10558,17 +10559,16 @@ SDValue AArch64TargetLowering::LowerDUPQLane(SDValue Op,
     return SDValue();
 
   // The DUPQ operation is indepedent of element type so normalise to i64s.
-  SDValue V = DAG.getNode(ISD::BITCAST, DL, MVT::nxv2i64, Op.getOperand(1));
   SDValue Idx128 = Op.getOperand(2);
 
   // DUPQ can be used when idx is in range.
   auto *CIdx = dyn_cast<ConstantSDNode>(Idx128);
   if (CIdx && (CIdx->getZExtValue() <= 3)) {
     SDValue CI = DAG.getTargetConstant(CIdx->getZExtValue(), DL, MVT::i64);
-    SDNode *DUPQ =
-        DAG.getMachineNode(AArch64::DUP_ZZI_Q, DL, MVT::nxv2i64, V, CI);
-    return DAG.getNode(ISD::BITCAST, DL, VT, SDValue(DUPQ, 0));
+    return DAG.getNode(AArch64ISD::DUPLANE128, DL, VT, Op.getOperand(1), CI);
   }
+
+  SDValue V = DAG.getNode(ISD::BITCAST, DL, MVT::nxv2i64, Op.getOperand(1));
 
   // The ACLE says this must produce the same result as:
   //   svtbl(data, svadd_x(svptrue_b64(),
