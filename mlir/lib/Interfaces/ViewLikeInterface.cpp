@@ -242,3 +242,31 @@ mlir::getMixedStrides(OffsetSizeAndStrideOpInterface op,
   }
   return res;
 }
+
+static std::pair<ArrayAttr, SmallVector<Value>>
+decomposeMixedImpl(OpBuilder &b,
+                   const SmallVectorImpl<OpFoldResult> &mixedValues,
+                   const int64_t dynamicValuePlaceholder) {
+  SmallVector<int64_t> staticValues;
+  SmallVector<Value> dynamicValues;
+  for (const auto &it : mixedValues) {
+    if (it.is<Attribute>()) {
+      staticValues.push_back(it.get<Attribute>().cast<IntegerAttr>().getInt());
+    } else {
+      staticValues.push_back(ShapedType::kDynamicStrideOrOffset);
+      dynamicValues.push_back(it.get<Value>());
+    }
+  }
+  return {b.getI64ArrayAttr(staticValues), dynamicValues};
+}
+
+std::pair<ArrayAttr, SmallVector<Value>> mlir::decomposeMixedStridesOrOffsets(
+    OpBuilder &b, const SmallVectorImpl<OpFoldResult> &mixedValues) {
+  return decomposeMixedImpl(b, mixedValues, ShapedType::kDynamicStrideOrOffset);
+}
+
+std::pair<ArrayAttr, SmallVector<Value>>
+mlir::decomposeMixedSizes(OpBuilder &b,
+                          const SmallVectorImpl<OpFoldResult> &mixedValues) {
+  return decomposeMixedImpl(b, mixedValues, ShapedType::kDynamicSize);
+}
