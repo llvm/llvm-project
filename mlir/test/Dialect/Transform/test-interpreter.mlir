@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file --verify-diagnostics
+// RUN: mlir-opt %s --test-transform-dialect-interpreter -allow-unregistered-dialect --split-input-file --verify-diagnostics
 
 // expected-remark @below {{applying transformation}}
 transform.test_transform_op
@@ -384,4 +384,55 @@ transform.sequence {
 ^bb0(%arg0: !pdl.operation):
   // expected-error @below {{unexpected number of results (got 0 expected 3)}}
   transform.test_wrong_number_of_results %arg0
+}
+
+// -----
+
+func.func @foo() {
+  "op" () : () -> ()
+  "op" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // expected-error @below {{expected all applications of transform.test_wrong_number_of_multi_results to produce 1 results}}
+    transform.test_wrong_number_of_multi_results %0
+  }
+}
+
+// -----
+
+func.func @foo() {
+  "op" () : () -> ()
+  "op" () : () -> ()
+  "op" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // Transform matches 3 ops and produces 2 results.
+    %1:2 = transform.test_correct_number_of_multi_results %0
+  }
 }
