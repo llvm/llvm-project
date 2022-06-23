@@ -408,8 +408,10 @@ defm threads
          "Number of threads. '1' disables multi-threading. By default all "
          "available hardware threads are used">;
 
-def time_trace: FF<"time-trace">, HelpText<"Record time trace">;
-def time_trace_file_eq: JJ<"time-trace-file=">, HelpText<"Specify time trace output file">;
+def time_trace_eq: JJ<"time-trace=">, MetaVarName<"<file>">,
+  HelpText<"Record time trace to <file>">;
+def : FF<"time-trace">, Alias<time_trace_eq>,
+  HelpText<"Record time trace to file next to output">;
 
 defm time_trace_granularity: EEq<"time-trace-granularity",
   "Minimum time granularity (in microseconds) traced by time profiler">;
