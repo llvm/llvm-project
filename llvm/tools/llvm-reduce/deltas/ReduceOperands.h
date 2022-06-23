@@ -12,7 +12,6 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceOperandsUndefDeltaPass(TestRunner &Test);
 void reduceOperandsOneDeltaPass(TestRunner &Test);
 void reduceOperandsZeroDeltaPass(TestRunner &Test);
 } // namespace llvm

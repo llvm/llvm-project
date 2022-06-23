@@ -1,5 +1,5 @@
 ; Test that llvm-reduce can remove uninteresting Global Variables as well as
-; their direct uses (which in turn are replaced with 'undef').
+; their direct uses (which in turn are replaced with '0').
 
 ; RUN: llvm-reduce --delta-passes=global-variables,global-initializers --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL --implicit-check-not=uninteresting %s
@@ -31,11 +31,11 @@ entry:
   %0 = load i32, i32* @uninteresting, align 4
 
   ; CHECK-INTERESTINGNESS: store i32 {{.*}}, i32* @interesting, align 4
-  ; CHECK-FINAL: store i32 undef, i32* @interesting, align 4
+  ; CHECK-FINAL: store i32 0, i32* @interesting, align 4
   store i32 %0, i32* @interesting, align 4
 
   ; CHECK-INTERESTINGNESS: store i32 {{.*}}, i32* @interesting3, align 4
-  ; CHECK-FINAL: store i32 undef, i32* @interesting3, align 4
+  ; CHECK-FINAL: store i32 0, i32* @interesting3, align 4
   store i32 %0, i32* @interesting3, align 4
 
   ; CHECK-ALL: load i32, i32* @interesting, align 4

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceBasicBlocks.h"
+#include "Utils.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -43,7 +44,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
   if (auto *IndBI = dyn_cast<IndirectBrInst>(Term))
     Address = IndBI->getAddress();
 
-  Term->replaceAllUsesWith(UndefValue::get(Term->getType()));
+  Term->replaceAllUsesWith(getDefaultValue(Term->getType()));
   Term->eraseFromParent();
 
   if (ChunkSuccessors.empty()) {
@@ -62,7 +63,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
     // If that fails then resort to replacing with a ret.
     auto *FnRetTy = BB.getParent()->getReturnType();
     ReturnInst::Create(BB.getContext(),
-                       FnRetTy->isVoidTy() ? nullptr : UndefValue::get(FnRetTy),
+                       FnRetTy->isVoidTy() ? nullptr : getDefaultValue(FnRetTy),
                        &BB);
     return;
   }
@@ -87,7 +88,7 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
   if (!BBsToKeep.count(SwInst.getDefaultDest())) {
     auto *FnRetTy = SwInst.getParent()->getParent()->getReturnType();
     ReturnInst::Create(SwInst.getContext(),
-                       FnRetTy->isVoidTy() ? nullptr : UndefValue::get(FnRetTy),
+                       FnRetTy->isVoidTy() ? nullptr : getDefaultValue(FnRetTy),
                        SwInst.getParent());
     SwInst.eraseFromParent();
   } else
@@ -133,7 +134,7 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
   for (auto &BB : BBsToDelete) {
     // Instructions might be referenced in other BBs
     for (auto &I : *BB)
-      I.replaceAllUsesWith(UndefValue::get(I.getType()));
+      I.replaceAllUsesWith(getDefaultValue(I.getType()));
     if (BB->getParent()->size() == 1) {
       // this is the last basic block of the function, thus we must also make
       // sure to remove comdat and set linkage to external

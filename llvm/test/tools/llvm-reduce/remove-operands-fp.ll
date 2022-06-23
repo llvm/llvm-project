@@ -1,8 +1,5 @@
 ; Test that llvm-reduce can reduce floating point operands
 ;
-; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-undef --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: FileCheck --check-prefixes=CHECK,UNDEF %s < %t
-
 ; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-one --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK,ONE %s < %t
 
@@ -27,19 +24,6 @@
 ; CHECK-INTERESTINGNESS: = fadd <2 x float>
 
 ; CHECK-LABEL: define void @foo(
-
-; UNDEF: %fadd0 = fadd float %arg0, undef
-; UNDEF: %fadd1 = fadd float undef, undef
-; UNDEF: %fadd2 = fadd float undef, 0.000000e+00
-; UNDEF: %fadd3 = fadd float undef, 1.000000e+00
-; UNDEF: %fadd4 = fadd float undef, 0x7FF8000000000000
-; UNDEF: %fadd5 = fadd float undef, undef
-; UNDEF: %fadd6 = fadd <2 x float> %arg2, undef
-; UNDEF: %fadd7 = fadd <2 x float> undef, undef
-; UNDEF: %fadd8 = fadd <2 x float> undef, zeroinitializer
-; UNDEF: %fadd9 = fadd <2 x float> undef, <float 1.000000e+00, float 1.000000e+00>
-; UNDEF: %fadd10 = fadd <2 x float> undef, undef
-; UNDEF: %fadd11 = fadd <2 x float> undef, <float 0x7FF8000000000000, float 0x7FF8000000000000>
 
 
 ; ONE: %fadd0 = fadd float %arg0, 1.000000e+00
