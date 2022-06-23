@@ -11,6 +11,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
@@ -21,7 +22,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#define LLDB_OPTIONS_log
+#define LLDB_OPTIONS_log_enable
 #include "CommandOptions.inc"
 
 /// Common completion logic for log enable/disable.
@@ -89,6 +90,10 @@ public:
         log_file.SetFile(option_arg, FileSpec::Style::native);
         FileSystem::Instance().Resolve(log_file);
         break;
+      case 'b':
+        error =
+            buffer_size.SetValueFromString(option_arg, eVarSetOperationAssign);
+        break;
       case 't':
         log_options |= LLDB_LOG_OPTION_THREADSAFE;
         break;
@@ -125,16 +130,16 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       log_file.Clear();
+      buffer_size.Clear();
       log_options = 0;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_log_options);
+      return llvm::makeArrayRef(g_log_enable_options);
     }
 
-    // Instance variables to hold the values for command options.
-
     FileSpec log_file;
+    OptionValueUInt64 buffer_size;
     uint32_t log_options = 0;
   };
 
@@ -164,9 +169,9 @@ protected:
 
     std::string error;
     llvm::raw_string_ostream error_stream(error);
-    bool success =
-        GetDebugger().EnableLog(channel, args.GetArgumentArrayRef(), log_file,
-                                m_options.log_options, error_stream);
+    bool success = GetDebugger().EnableLog(
+        channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
+        m_options.buffer_size.GetCurrentValue(), error_stream);
     result.GetErrorStream() << error_stream.str();
 
     if (success)

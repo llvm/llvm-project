@@ -58,9 +58,11 @@ private:
 
 class StreamLogHandler : public LogHandler {
 public:
-  StreamLogHandler(int fd, bool should_close, bool unbuffered = true);
+  StreamLogHandler(int fd, bool should_close, size_t buffer_size = 0);
+  ~StreamLogHandler() override;
 
   void Emit(llvm::StringRef message) override;
+  void Flush();
 
 private:
   llvm::raw_fd_ostream m_stream;
