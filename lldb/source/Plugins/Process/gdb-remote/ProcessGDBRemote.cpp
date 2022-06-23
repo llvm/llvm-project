@@ -5008,19 +5008,12 @@ public:
   ~CommandObjectProcessGDBRemotePacketHistory() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    const size_t argc = command.GetArgumentCount();
-    if (argc == 0) {
-      ProcessGDBRemote *process =
-          (ProcessGDBRemote *)m_interpreter.GetExecutionContext()
-              .GetProcessPtr();
-      if (process) {
-        process->GetGDBRemote().DumpHistory(result.GetOutputStream());
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-        return true;
-      }
-    } else {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
+    ProcessGDBRemote *process =
+        (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
+    if (process) {
+      process->GetGDBRemote().DumpHistory(result.GetOutputStream());
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
     }
     result.SetStatus(eReturnStatusFailed);
     return false;
@@ -5034,7 +5027,10 @@ public:
       : CommandObjectParsed(
             interpreter, "process plugin packet xfer-size",
             "Maximum size that lldb will try to read/write one one chunk.",
-            nullptr) {}
+            nullptr) {
+    CommandArgumentData max_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
+    m_arguments.push_back({max_arg});
+  }
 
   ~CommandObjectProcessGDBRemotePacketXferSize() override = default;
 
@@ -5075,7 +5071,10 @@ public:
                             "The packet header and footer will automatically "
                             "be added to the packet prior to sending and "
                             "stripped from the result.",
-                            nullptr) {}
+                            nullptr) {
+    CommandArgumentData packet_arg{eArgTypeNone, eArgRepeatStar};
+    m_arguments.push_back({packet_arg});
+  }
 
   ~CommandObjectProcessGDBRemotePacketSend() override = default;
 
