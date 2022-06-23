@@ -277,6 +277,18 @@ struct VOPC64DPPInfo {
   uint16_t Opcode;
 };
 
+struct VOPDComponentInfo {
+  uint16_t BaseVOP;
+  uint16_t VOPDOp;
+  bool CanBeVOPDX;
+};
+
+struct VOPDInfo {
+  uint16_t Opcode;
+  uint16_t OpX;
+  uint16_t OpY;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -293,6 +305,10 @@ struct VOPC64DPPInfo {
 #define GET_VOPC64DPPTable_IMPL
 #define GET_VOPC64DPP8Table_DECL
 #define GET_VOPC64DPP8Table_IMPL
+#define GET_VOPDComponentTable_DECL
+#define GET_VOPDComponentTable_IMPL
+#define GET_VOPDPairs_DECL
+#define GET_VOPDPairs_IMPL
 #define GET_WMMAOpcode2AddrMappingTable_DECL
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
 #define GET_WMMAOpcode3AddrMappingTable_DECL
@@ -398,6 +414,19 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info ? Info->is_gfx940_xdl : false;
 }
 
+CanBeVOPD getCanBeVOPD(unsigned Opc) {
+  const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
+  if (Info)
+    return {Info->CanBeVOPDX, 1};
+  else
+    return {0, 0};
+}
+
+unsigned getVOPDOpcode(unsigned Opc) {
+  const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
+  return Info ? Info->VOPDOp : ~0u;
+}
+
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
   const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom2AddrOpcode(Opc);
   return Info ? Info->Opcode3Addr : ~0u;
@@ -413,6 +442,11 @@ unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc) {
 // instead.
 int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
+}
+
+int getVOPDFull(unsigned OpX, unsigned OpY) {
+  const VOPDInfo *Info = getVOPDInfoFromComponentOpcodes(OpX, OpY);
+  return Info ? Info->Opcode : -1;
 }
 
 namespace IsaInfo {

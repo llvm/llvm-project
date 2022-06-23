@@ -124,17 +124,14 @@ define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ;
 ; GFX11-LABEL: load_1d_tfe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v6, 0
-; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v7, v6
-; GFX11-NEXT:    v_mov_b32_e32 v8, v6
+; GFX11-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v9, v6
 ; GFX11-NEXT:    v_mov_b32_e32 v10, v6
+; GFX11-NEXT:    v_mov_b32_e32 v8, v6
+; GFX11-NEXT:    v_mov_b32_e32 v7, v6
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v6
-; GFX11-NEXT:    v_mov_b32_e32 v1, v7
-; GFX11-NEXT:    v_mov_b32_e32 v2, v8
-; GFX11-NEXT:    v_mov_b32_e32 v3, v9
-; GFX11-NEXT:    v_mov_b32_e32 v4, v10
+; GFX11-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v1, v7
+; GFX11-NEXT:    v_dual_mov_b32 v3, v9 :: v_dual_mov_b32 v4, v10
 ; GFX11-NEXT:    image_load v[0:4], v5, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v6, v4, s[8:9]
@@ -231,17 +228,14 @@ define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ;
 ; GFX11-LABEL: load_1d_lwe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v6, 0
-; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v7, v6
-; GFX11-NEXT:    v_mov_b32_e32 v8, v6
+; GFX11-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v9, v6
 ; GFX11-NEXT:    v_mov_b32_e32 v10, v6
+; GFX11-NEXT:    v_mov_b32_e32 v8, v6
+; GFX11-NEXT:    v_mov_b32_e32 v7, v6
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v6
-; GFX11-NEXT:    v_mov_b32_e32 v1, v7
-; GFX11-NEXT:    v_mov_b32_e32 v2, v8
-; GFX11-NEXT:    v_mov_b32_e32 v3, v9
-; GFX11-NEXT:    v_mov_b32_e32 v4, v10
+; GFX11-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v1, v7
+; GFX11-NEXT:    v_dual_mov_b32 v3, v9 :: v_dual_mov_b32 v4, v10
 ; GFX11-NEXT:    image_load v[0:4], v5, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm lwe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v6, v4, s[8:9]
@@ -377,18 +371,15 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ;
 ; GFX11-LABEL: load_2d_tfe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v7, 0
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
+; GFX11-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v8, v7
 ; GFX11-NEXT:    v_mov_b32_e32 v9, v7
-; GFX11-NEXT:    v_mov_b32_e32 v10, v7
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v7
+; GFX11-NEXT:    v_mov_b32_e32 v10, v7
+; GFX11-NEXT:    v_mov_b32_e32 v8, v7
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v7
-; GFX11-NEXT:    v_mov_b32_e32 v1, v8
-; GFX11-NEXT:    v_mov_b32_e32 v2, v9
-; GFX11-NEXT:    v_mov_b32_e32 v3, v10
-; GFX11-NEXT:    v_mov_b32_e32 v4, v11
+; GFX11-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; GFX11-NEXT:    v_dual_mov_b32 v1, v8 :: v_dual_mov_b32 v4, v11
 ; GFX11-NEXT:    image_load v[0:4], v[5:6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v7, v4, s[8:9]
@@ -528,19 +519,15 @@ define amdgpu_ps <4 x float> @load_3d_tfe_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ;
 ; GFX11-LABEL: load_3d_tfe_lwe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v8, 0
-; GFX11-NEXT:    v_mov_b32_e32 v7, v2
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
-; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v9, v8
-; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v8, 0
+; GFX11-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v12, v8
+; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_mov_b32_e32 v9, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v8
-; GFX11-NEXT:    v_mov_b32_e32 v1, v9
-; GFX11-NEXT:    v_mov_b32_e32 v2, v10
-; GFX11-NEXT:    v_mov_b32_e32 v3, v11
-; GFX11-NEXT:    v_mov_b32_e32 v4, v12
+; GFX11-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v1, v9
+; GFX11-NEXT:    v_dual_mov_b32 v3, v11 :: v_dual_mov_b32 v4, v12
 ; GFX11-NEXT:    image_load v[0:4], v[5:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm tfe lwe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v8, v4, s[8:9]
@@ -680,19 +667,15 @@ define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, i32 addrspace
 ;
 ; GFX11-LABEL: load_cube_lwe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v8, 0
-; GFX11-NEXT:    v_mov_b32_e32 v7, v2
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
-; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v9, v8
-; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v8, 0
+; GFX11-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v12, v8
+; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_mov_b32_e32 v9, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v8
-; GFX11-NEXT:    v_mov_b32_e32 v1, v9
-; GFX11-NEXT:    v_mov_b32_e32 v2, v10
-; GFX11-NEXT:    v_mov_b32_e32 v3, v11
-; GFX11-NEXT:    v_mov_b32_e32 v4, v12
+; GFX11-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v1, v9
+; GFX11-NEXT:    v_dual_mov_b32 v3, v11 :: v_dual_mov_b32 v4, v12
 ; GFX11-NEXT:    image_load v[0:4], v[5:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm lwe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v8, v4, s[8:9]
@@ -828,18 +811,15 @@ define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, i32 addrsp
 ;
 ; GFX11-LABEL: load_1darray_tfe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v7, 0
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
+; GFX11-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v8, v7
 ; GFX11-NEXT:    v_mov_b32_e32 v9, v7
-; GFX11-NEXT:    v_mov_b32_e32 v10, v7
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v7
+; GFX11-NEXT:    v_mov_b32_e32 v10, v7
+; GFX11-NEXT:    v_mov_b32_e32 v8, v7
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v7
-; GFX11-NEXT:    v_mov_b32_e32 v1, v8
-; GFX11-NEXT:    v_mov_b32_e32 v2, v9
-; GFX11-NEXT:    v_mov_b32_e32 v3, v10
-; GFX11-NEXT:    v_mov_b32_e32 v4, v11
+; GFX11-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; GFX11-NEXT:    v_dual_mov_b32 v1, v8 :: v_dual_mov_b32 v4, v11
 ; GFX11-NEXT:    image_load v[0:4], v[5:6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v7, v4, s[8:9]
@@ -979,19 +959,15 @@ define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, i32 addrsp
 ;
 ; GFX11-LABEL: load_2darray_lwe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v8, 0
-; GFX11-NEXT:    v_mov_b32_e32 v7, v2
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
-; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v9, v8
-; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v8, 0
+; GFX11-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v12, v8
+; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_mov_b32_e32 v9, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v8
-; GFX11-NEXT:    v_mov_b32_e32 v1, v9
-; GFX11-NEXT:    v_mov_b32_e32 v2, v10
-; GFX11-NEXT:    v_mov_b32_e32 v3, v11
-; GFX11-NEXT:    v_mov_b32_e32 v4, v12
+; GFX11-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v1, v9
+; GFX11-NEXT:    v_dual_mov_b32 v3, v11 :: v_dual_mov_b32 v4, v12
 ; GFX11-NEXT:    image_load v[0:4], v[5:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm lwe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v8, v4, s[8:9]
@@ -1131,19 +1107,15 @@ define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, i32 addrsp
 ;
 ; GFX11-LABEL: load_2dmsaa_both:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v8, 0
-; GFX11-NEXT:    v_mov_b32_e32 v7, v2
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
-; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v9, v8
-; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v8, 0
+; GFX11-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v12, v8
+; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_mov_b32_e32 v9, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v8
-; GFX11-NEXT:    v_mov_b32_e32 v1, v9
-; GFX11-NEXT:    v_mov_b32_e32 v2, v10
-; GFX11-NEXT:    v_mov_b32_e32 v3, v11
-; GFX11-NEXT:    v_mov_b32_e32 v4, v12
+; GFX11-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v1, v9
+; GFX11-NEXT:    v_dual_mov_b32 v3, v11 :: v_dual_mov_b32 v4, v12
 ; GFX11-NEXT:    image_load v[0:4], v[5:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA unorm tfe lwe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v8, v4, s[8:9]
@@ -1287,20 +1259,16 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 ad
 ;
 ; GFX11-LABEL: load_2darraymsaa_tfe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v9, 0
-; GFX11-NEXT:    v_mov_b32_e32 v8, v3
-; GFX11-NEXT:    v_mov_b32_e32 v7, v2
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
+; GFX11-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v8, v3
+; GFX11-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v10, v9
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v9
-; GFX11-NEXT:    v_mov_b32_e32 v12, v9
 ; GFX11-NEXT:    v_mov_b32_e32 v13, v9
+; GFX11-NEXT:    v_mov_b32_e32 v12, v9
+; GFX11-NEXT:    v_mov_b32_e32 v10, v9
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v9
-; GFX11-NEXT:    v_mov_b32_e32 v1, v10
-; GFX11-NEXT:    v_mov_b32_e32 v2, v11
-; GFX11-NEXT:    v_mov_b32_e32 v3, v12
-; GFX11-NEXT:    v_mov_b32_e32 v4, v13
+; GFX11-NEXT:    v_dual_mov_b32 v2, v11 :: v_dual_mov_b32 v3, v12
+; GFX11-NEXT:    v_dual_mov_b32 v1, v10 :: v_dual_mov_b32 v4, v13
 ; GFX11-NEXT:    image_load v[0:4], v[5:8], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v9, v4, s[8:9]
@@ -1436,18 +1404,15 @@ define amdgpu_ps <4 x float> @load_mip_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ;
 ; GFX11-LABEL: load_mip_1d_lwe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v7, 0
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
+; GFX11-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v8, v7
 ; GFX11-NEXT:    v_mov_b32_e32 v9, v7
-; GFX11-NEXT:    v_mov_b32_e32 v10, v7
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v7
+; GFX11-NEXT:    v_mov_b32_e32 v10, v7
+; GFX11-NEXT:    v_mov_b32_e32 v8, v7
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v7
-; GFX11-NEXT:    v_mov_b32_e32 v1, v8
-; GFX11-NEXT:    v_mov_b32_e32 v2, v9
-; GFX11-NEXT:    v_mov_b32_e32 v3, v10
-; GFX11-NEXT:    v_mov_b32_e32 v4, v11
+; GFX11-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; GFX11-NEXT:    v_dual_mov_b32 v1, v8 :: v_dual_mov_b32 v4, v11
 ; GFX11-NEXT:    image_load_mip v[0:4], v[5:6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm lwe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v7, v4, s[8:9]
@@ -1587,19 +1552,15 @@ define amdgpu_ps <4 x float> @load_mip_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspa
 ;
 ; GFX11-LABEL: load_mip_2d_tfe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v8, 0
-; GFX11-NEXT:    v_mov_b32_e32 v7, v2
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
-; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    v_mov_b32_e32 v9, v8
-; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v8, 0
+; GFX11-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v11, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v12, v8
+; GFX11-NEXT:    v_mov_b32_e32 v10, v8
+; GFX11-NEXT:    v_mov_b32_e32 v9, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v8
-; GFX11-NEXT:    v_mov_b32_e32 v1, v9
-; GFX11-NEXT:    v_mov_b32_e32 v2, v10
-; GFX11-NEXT:    v_mov_b32_e32 v3, v11
-; GFX11-NEXT:    v_mov_b32_e32 v4, v12
+; GFX11-NEXT:    v_dual_mov_b32 v2, v10 :: v_dual_mov_b32 v1, v9
+; GFX11-NEXT:    v_dual_mov_b32 v3, v11 :: v_dual_mov_b32 v4, v12
 ; GFX11-NEXT:    image_load_mip v[0:4], v[5:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v8, v4, s[8:9]
@@ -1996,15 +1957,12 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(<8 x i32> inreg %rsrc, i32 a
 ;
 ; GFX11-LABEL: load_1d_tfe_V4_dmask3:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v5, 0
-; GFX11-NEXT:    v_mov_b32_e32 v4, v0
-; GFX11-NEXT:    v_mov_b32_e32 v6, v5
+; GFX11-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX11-NEXT:    v_mov_b32_e32 v8, v5
-; GFX11-NEXT:    v_mov_b32_e32 v0, v5
-; GFX11-NEXT:    v_mov_b32_e32 v1, v6
-; GFX11-NEXT:    v_mov_b32_e32 v2, v7
-; GFX11-NEXT:    v_mov_b32_e32 v3, v8
+; GFX11-NEXT:    v_mov_b32_e32 v6, v5
+; GFX11-NEXT:    v_dual_mov_b32 v0, v5 :: v_dual_mov_b32 v3, v8
+; GFX11-NEXT:    v_dual_mov_b32 v1, v6 :: v_dual_mov_b32 v2, v7
 ; GFX11-NEXT:    image_load v[0:3], v4, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v5, v3, s[8:9]
@@ -2089,13 +2047,11 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(<8 x i32> inreg %rsrc, i32 a
 ;
 ; GFX11-LABEL: load_1d_tfe_V4_dmask2:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
-; GFX11-NEXT:    v_mov_b32_e32 v3, v0
-; GFX11-NEXT:    v_mov_b32_e32 v5, v4
+; GFX11-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v6, v4
+; GFX11-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v4
-; GFX11-NEXT:    v_mov_b32_e32 v1, v5
-; GFX11-NEXT:    v_mov_b32_e32 v2, v6
+; GFX11-NEXT:    v_dual_mov_b32 v2, v6 :: v_dual_mov_b32 v1, v5
 ; GFX11-NEXT:    image_load v[0:2], v3, s[0:7] dmask:0x6 dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v4, v2, s[8:9]
@@ -2174,11 +2130,9 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(<8 x i32> inreg %rsrc, i32 a
 ;
 ; GFX11-LABEL: load_1d_tfe_V4_dmask1:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v3, 0
-; GFX11-NEXT:    v_mov_b32_e32 v2, v0
+; GFX11-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v3
-; GFX11-NEXT:    v_mov_b32_e32 v0, v3
-; GFX11-NEXT:    v_mov_b32_e32 v1, v4
+; GFX11-NEXT:    v_dual_mov_b32 v0, v3 :: v_dual_mov_b32 v1, v4
 ; GFX11-NEXT:    image_load v[0:1], v2, s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v3, v1, s[8:9]
@@ -2257,11 +2211,9 @@ define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(<8 x i32> inreg %rsrc, i32 a
 ;
 ; GFX11-LABEL: load_1d_tfe_V2_dmask1:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v3, 0
-; GFX11-NEXT:    v_mov_b32_e32 v2, v0
+; GFX11-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v3
-; GFX11-NEXT:    v_mov_b32_e32 v0, v3
-; GFX11-NEXT:    v_mov_b32_e32 v1, v4
+; GFX11-NEXT:    v_dual_mov_b32 v0, v3 :: v_dual_mov_b32 v1, v4
 ; GFX11-NEXT:    image_load v[0:1], v2, s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_1D unorm tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v3, v1, s[8:9]

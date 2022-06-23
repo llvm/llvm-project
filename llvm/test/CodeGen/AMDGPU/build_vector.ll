@@ -2,7 +2,7 @@
 ; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefixes=GFX6,GFX678,ALL
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefixes=GFX8,GFX678,ALL
 ; RUN: llc < %s -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -verify-machineinstrs | FileCheck %s --check-prefixes=GFX10,GFX1011,ALL
-; RUN: llc < %s -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -verify-machineinstrs | FileCheck %s --check-prefixes=GFX11,GFX1011,ALL
+; RUN: llc < %s -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck %s --check-prefixes=GFX11,GFX1011,ALL
 
 ; ALL-LABEL: {{^}}build_vector2:
 ; R600: MOV

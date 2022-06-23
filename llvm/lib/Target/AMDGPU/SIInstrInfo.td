@@ -2961,6 +2961,27 @@ def getVCMPXOpFromVCMP : InstrMapping {
   let ValueCols = [["1"]];
 }
 
+def VOPDComponentTable : GenericTable {
+  let FilterClass = "VOPD_Component";
+  let CppTypeName = "VOPDComponentInfo";
+  let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX"];
+  let PrimaryKey = ["BaseVOP"];
+  let PrimaryKeyName = "getVOPDComponentHelper";
+}
+
+def VOPDPairs : GenericTable {
+  let FilterClass = "VOPD_Base";
+  let CppTypeName = "VOPDInfo";
+  let Fields = ["Opcode", "OpX", "OpY"];
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getVOPDOpcodeHelper";
+}
+
+def getVOPDInfoFromComponentOpcodes : SearchIndex {
+  let Table = VOPDPairs;
+  let Key = ["OpX", "OpY"];
+}
+
 include "SIInstructions.td"
 
 include "DSInstructions.td"

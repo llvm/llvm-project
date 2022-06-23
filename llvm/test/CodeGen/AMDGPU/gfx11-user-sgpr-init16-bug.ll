@@ -1,7 +1,7 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GCN %s
 
 ; There aren't any stack objects, but we still enable the
 ; private_segment_wavefront_offset to get to 16, and the workgroup ID

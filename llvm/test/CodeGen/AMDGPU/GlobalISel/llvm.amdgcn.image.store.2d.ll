@@ -622,8 +622,7 @@ define amdgpu_ps void @image_store_f32_dmask_1111(<8 x i32> inreg %rsrc, i32 inr
 ;
 ; GFX11-LABEL: image_store_f32_dmask_1111:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v1, s10
-; GFX11-NEXT:    v_mov_b32_e32 v2, s11
+; GFX11-NEXT:    v_dual_mov_b32 v1, s10 :: v_dual_mov_b32 v2, s11
 ; GFX11-NEXT:    s_mov_b32 s0, s2
 ; GFX11-NEXT:    s_mov_b32 s1, s3
 ; GFX11-NEXT:    s_mov_b32 s2, s4
