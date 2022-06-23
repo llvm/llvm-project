@@ -2698,6 +2698,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     if (isKnownNonZero(Op, Depth, Q) &&
         isGuaranteedNotToBePoison(Op, Q.AC, Q.CxtI, Q.DT, Depth))
       return true;
+  } else if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (II->getIntrinsicID() == Intrinsic::vscale)
+      return true;
   }
 
   KnownBits Known(BitWidth);
