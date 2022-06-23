@@ -1128,6 +1128,9 @@ public:
     // TODO: If one of the types get legalized by splitting, handle this
     // similarly to what getCastInstrCost() does.
     if (auto *ValVTy = dyn_cast<VectorType>(ValTy)) {
+      if (isa<ScalableVectorType>(ValTy))
+        return InstructionCost::getInvalid();
+
       unsigned Num = cast<FixedVectorType>(ValVTy)->getNumElements();
       if (CondTy)
         CondTy = CondTy->getScalarType();
