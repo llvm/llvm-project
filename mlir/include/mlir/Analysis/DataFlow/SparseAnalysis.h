@@ -16,10 +16,12 @@
 #define MLIR_ANALYSIS_DATAFLOW_SPARSEANALYSIS_H
 
 #include "mlir/Analysis/DataFlowFramework.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace mlir {
+
+class RegionBranchOpInterface;
+
 namespace dataflow {
 
 //===----------------------------------------------------------------------===//
@@ -80,11 +82,10 @@ private:
 template <typename ValueT>
 class Lattice : public AbstractSparseLattice {
 public:
-  using AbstractSparseLattice::AbstractSparseLattice;
-
-  /// Get a lattice element with a known value.
-  Lattice(const ValueT &knownValue = ValueT())
-      : AbstractSparseLattice(Value()), knownValue(knownValue) {}
+  /// Construct a lattice with a known value.
+  explicit Lattice(Value value)
+      : AbstractSparseLattice(value),
+        knownValue(ValueT::getPessimisticValueState(value)) {}
 
   /// Return the value held by this lattice. This requires that the value is
   /// initialized.
