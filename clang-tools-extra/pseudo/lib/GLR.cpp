@@ -215,8 +215,9 @@ class GLRReduce {
   // They specify a sequence ForestNode we may build (but we dedup first).
   // (The RuleID is not stored here, but rather in the Family).
   struct PushSpec {
-    // A base node is the head after popping the GSS nodes we are reducing.
-    const GSS::Node* Base = nullptr;
+    // The last node popped before pushing. Its parent is the reduction base(s).
+    // (Base is more fundamental, but this is cheaper to store).
+    const GSS::Node* LastPop = nullptr;
     Sequence *Seq = nullptr;
   };
   KeyedQueue<Family, PushSpec> Sequences; // FIXME: rename => PendingPushes?
@@ -256,9 +257,13 @@ private:
     Family F{/*Start=*/0, /*Symbol=*/Rule.Target, /*Rule=*/RID};
     TempSequence.resize_for_overwrite(Rule.Size);
     auto DFS = [&](const GSS::Node *N, unsigned I, auto &DFS) {
-      if (I == Rule.Size) {
+      TempSequence[Rule.Size - 1 - I] = N->Payload;
+      if (I + 1 == Rule.Size) {
         F.Start = TempSequence.front()->startTokenIndex();
-        LLVM_DEBUG(llvm::dbgs() << "    --> base at S" << N->State << "\n");
+        LLVM_DEBUG({
+          for (const auto *B : N->parents())
+            llvm::dbgs() << "    --> base at S" << B->State << "\n";
+        });
 
         // Copy the chain to stable storage so it can be enqueued.
         if (SequenceStorageCount == SequenceStorage.size())
@@ -269,7 +274,6 @@ private:
         Sequences.emplace(F, PushSpec{N, Seq});
         return;
       }
-      TempSequence[Rule.Size - 1 - I] = N->Payload;
       for (const GSS::Node *Parent : N->parents())
         DFS(Parent, I + 1, DFS);
     };
@@ -313,12 +317,11 @@ private:
     FamilySequences.clear();
     FamilyBases.clear();
     do {
-      FamilySequences.emplace_back(Sequences.top().first.Rule,
-                                   *Sequences.top().second.Seq);
-      FamilyBases.emplace_back(
-          Params.Table.getGoToState(Sequences.top().second.Base->State,
-                                    F.Symbol),
-          Sequences.top().second.Base);
+      const PushSpec &Push = Sequences.top().second;
+      FamilySequences.emplace_back(Sequences.top().first.Rule, *Push.Seq);
+      for (const GSS::Node *Base : Push.LastPop->parents())
+        FamilyBases.emplace_back(
+            Params.Table.getGoToState(Base->State, F.Symbol), Base);
 
       Sequences.pop();
     } while (!Sequences.empty() && Sequences.top().first == F);
