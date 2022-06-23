@@ -87,19 +87,6 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
         return failure();
     }
 
-    // "Nudge" the state of the analysis by forcefully initializing states that
-    // are still uninitialized. All uninitialized states in the graph can be
-    // initialized in any order because the analysis reached fixpoint, meaning
-    // that there are no work items that would have further nudged the analysis.
-    for (AnalysisState &state :
-         llvm::make_pointee_range(llvm::make_second_range(analysisStates))) {
-      if (!state.isUninitialized())
-        continue;
-      DATAFLOW_DEBUG(llvm::dbgs() << "Default initializing " << state.debugName
-                                  << " of " << state.point << "\n");
-      propagateIfChanged(&state, state.defaultInitialize());
-    }
-
     // Iterate until all states are in some initialized state and the worklist
     // is exhausted.
   } while (!worklist.empty());
