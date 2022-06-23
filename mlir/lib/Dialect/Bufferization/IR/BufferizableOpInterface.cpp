@@ -84,8 +84,11 @@ Value bufferization::allocateTensorForShapedValue(OpBuilder &b, Location loc,
       populateDynamicDimSizes(b, loc, tensor, dynamicSizes);
   }
 
-  return b.create<AllocTensorOp>(loc, tensorType, dynamicSizes,
-                                 copy ? tensor : Value(), escape);
+  auto allocTensorOp = b.create<AllocTensorOp>(loc, tensorType, dynamicSizes,
+                                               copy ? tensor : Value());
+  allocTensorOp->setAttr(BufferizationDialect::kEscapeAttrName,
+                         b.getBoolArrayAttr({escape}));
+  return allocTensorOp;
 }
 
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
