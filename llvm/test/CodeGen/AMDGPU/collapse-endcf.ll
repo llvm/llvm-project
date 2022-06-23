@@ -422,11 +422,11 @@ bb.end:                                           ; preds = %bb.then, %bb
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_1:[0-9]+]]
 ; GCN-O0: [[INNER_LOOP:.LBB[0-9]+_[0-9]+]]:
+; GCN-O0: buffer_load_dword
 ; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_0]]
 ; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_1]]
 ; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_IN_EXEC_SPILL_LANE_0]]
 ; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_IN_EXEC_SPILL_LANE_1]]
-; GCN-O0: buffer_load_dword
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_LOOP_EXEC_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_LOOP_EXEC_SPILL_LANE_1:[0-9]+]]
 ; GCN-O0:      s_or_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
