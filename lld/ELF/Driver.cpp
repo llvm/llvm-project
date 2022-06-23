@@ -593,8 +593,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (config->timeTraceEnabled) {
     checkError(timeTraceProfilerWrite(
-        args.getLastArgValue(OPT_time_trace_file_eq).str(),
-        config->outputFile));
+        args.getLastArgValue(OPT_time_trace_eq).str(), config->outputFile));
     timeTraceProfilerCleanup();
   }
 }
@@ -1195,7 +1194,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
   config->thinLTOModulesToCompile =
       args::getStrings(args, OPT_thinlto_single_module_eq);
-  config->timeTraceEnabled = args.hasArg(OPT_time_trace);
+  config->timeTraceEnabled = args.hasArg(OPT_time_trace_eq);
   config->timeTraceGranularity =
       args::getInteger(args, OPT_time_trace_granularity, 500);
   config->trace = args.hasArg(OPT_trace);

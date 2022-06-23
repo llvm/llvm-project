@@ -1494,8 +1494,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   config->progName = argsArr[0];
 
-  config->timeTraceEnabled = args.hasArg(
-      OPT_time_trace, OPT_time_trace_granularity_eq, OPT_time_trace_file_eq);
+  config->timeTraceEnabled = args.hasArg(OPT_time_trace_eq);
   config->timeTraceGranularity =
       args::getInteger(args, OPT_time_trace_granularity_eq, 500);
 
@@ -1631,8 +1630,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (config->timeTraceEnabled) {
     checkError(timeTraceProfilerWrite(
-        args.getLastArgValue(OPT_time_trace_file_eq).str(),
-        config->outputFile));
+        args.getLastArgValue(OPT_time_trace_eq).str(), config->outputFile));
 
     timeTraceProfilerCleanup();
   }
