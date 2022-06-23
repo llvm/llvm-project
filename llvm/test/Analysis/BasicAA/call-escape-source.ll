@@ -1,11 +1,11 @@
 ; RUN: opt -aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
-; FIXME: A call return value is not always an escape source, because
+; A call return value is not always an escape source, because
 ; CaptureTracking can look through some calls. The test is constructed to
 ; hit the getUnderlyingObject() recursion limit.
 define i32 @test() {
 ; CHECK-LABEL: Function: test
-; CHECK-NEXT: NoAlias: i32* %a, i32* %p7
+; CHECK-NEXT: MustAlias: i32* %a, i32* %p7
   %a = alloca i32
   %p1 = call ptr @llvm.strip.invariant.group.p0(ptr %a)
   %p2 = getelementptr i8, ptr %p1, i64 1
