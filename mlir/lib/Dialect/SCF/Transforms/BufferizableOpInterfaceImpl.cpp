@@ -461,9 +461,8 @@ struct ForOpInterface
         yieldValues.push_back(value);
         continue;
       }
-      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
-          yieldOp.getLoc(), value.getType().cast<RankedTensorType>(),
-          /*dynamicSizes=*/ValueRange(), value, /*escape=*/true);
+      Value alloc = allocateTensorForShapedValue(rewriter, yieldOp.getLoc(),
+                                                 value, /*escape=*/true);
       yieldValues.push_back(alloc);
     }
 
@@ -673,9 +672,8 @@ struct WhileOpInterface
         beforeYieldValues.push_back(value);
         continue;
       }
-      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
-          conditionOp.getLoc(), value.getType().cast<RankedTensorType>(),
-          /*dynamicSizes=*/ValueRange(), value, /*escape=*/true);
+      Value alloc = allocateTensorForShapedValue(rewriter, conditionOp.getLoc(),
+                                                 value, /*escape=*/true);
       beforeYieldValues.push_back(alloc);
     }
     rewriter.updateRootInPlace(conditionOp, [&]() {
@@ -692,9 +690,8 @@ struct WhileOpInterface
         afterYieldValues.push_back(value);
         continue;
       }
-      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
-          yieldOp.getLoc(), value.getType().cast<RankedTensorType>(),
-          /*dynamicSizes=*/ValueRange(), value, /*escape=*/true);
+      Value alloc = allocateTensorForShapedValue(rewriter, yieldOp.getLoc(),
+                                                 value, /*escape=*/true);
       afterYieldValues.push_back(alloc);
     }
     rewriter.updateRootInPlace(yieldOp, [&]() {
@@ -938,13 +935,11 @@ struct ForeachThreadOpInterface
       if (state.isInPlace(*destOperands.front()))
         continue;
 
-      // Create AllocTensorOp.
+      // Insert tensor allocation.
       bool isYielded = state.isTensorYielded(opResult);
-      auto resultType = opResult.getType().cast<RankedTensorType>();
-      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
-          op->getLoc(), resultType, /*dynamicDims=*/ValueRange(),
-          /*copy=*/destOperands.front()->get(),
-          /*escape=*/isYielded);
+      Value alloc = allocateTensorForShapedValue(rewriter, op->getLoc(),
+                                                 destOperands.front()->get(),
+                                                 /*escape=*/isYielded);
 
       // Update terminator operand.
       rewriter.updateRootInPlace(destOperands.front()->getOwner(),
