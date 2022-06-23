@@ -915,6 +915,10 @@ bool MachineBasicBlock::isLayoutSuccessor(const MachineBasicBlock *MBB) const {
   return std::next(I) == MachineFunction::const_iterator(MBB);
 }
 
+const MachineBasicBlock *MachineBasicBlock::getSingleSuccessor() const {
+  return Successors.size() == 1 ? Successors[0] : nullptr;
+}
+
 MachineBasicBlock *MachineBasicBlock::getFallThrough() {
   MachineFunction::iterator Fallthrough = getIterator();
   ++Fallthrough;
