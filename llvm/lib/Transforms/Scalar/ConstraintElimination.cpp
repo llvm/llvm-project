@@ -403,6 +403,10 @@ void ConstraintInfo::transferToOtherSystem(
   switch (Pred) {
   default:
     break;
+  case CmpInst::ICMP_SLT:
+    if (doesHold(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0)))
+      addFact(CmpInst::ICMP_ULT, A, B, IsNegated, NumIn, NumOut, DFSInStack);
+    break;
   case CmpInst::ICMP_SGT:
     if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), -1)))
       addFact(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0),
