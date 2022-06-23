@@ -8,6 +8,17 @@
     },
     {
       "name": "allow-pcm-with-compiler-errors"
+    },
+    {
+      "name": "deployment-target-environment-variables",
+      "value": [
+        "MACOSX_DEPLOYMENT_TARGET",
+        "IPHONEOS_DEPLOYMENT_TARGET",
+        "TVOS_DEPLOYMENT_TARGET",
+        "WATCHOS_DEPLOYMENT_TARGET",
+        "BRIDGEOS_DEPLOYMENT_TARGET",
+        "DRIVERKIT_DEPLOYMENT_TARGET"
+      ]
     }
   ]
 }
