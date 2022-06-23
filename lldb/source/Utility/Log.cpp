@@ -339,13 +339,18 @@ void LogHandler::EmitThreadSafe(llvm::StringRef message) {
   Emit(message);
 }
 
-StreamLogHandler::StreamLogHandler(int fd, bool should_close, bool unbuffered)
-    : m_stream(fd, should_close, unbuffered) {}
-
-void StreamLogHandler::Emit(llvm::StringRef message) {
-  m_stream << message;
-  m_stream.flush();
+StreamLogHandler::StreamLogHandler(int fd, bool should_close,
+                                   size_t buffer_size)
+    : m_stream(fd, should_close, buffer_size == 0) {
+  if (buffer_size > 0)
+    m_stream.SetBufferSize(buffer_size);
 }
+
+StreamLogHandler::~StreamLogHandler() { Flush(); }
+
+void StreamLogHandler::Flush() { m_stream.flush(); }
+
+void StreamLogHandler::Emit(llvm::StringRef message) { m_stream << message; }
 
 CallbackLogHandler::CallbackLogHandler(lldb::LogOutputCallback callback,
                                        void *baton)

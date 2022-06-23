@@ -428,9 +428,11 @@ let Command = "history" in {
     Desc<"Clears the current command history.">;
 }
 
-let Command = "log" in {
+let Command = "log enable" in {
   def log_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
     Desc<"Set the destination file to log to.">;
+  def log_buffer_size : Option<"buffer", "b">, Group<1>, Arg<"UnsignedInteger">,
+    Desc<"Set the log to be buffered, using the specified buffer size.">;
   def log_threadsafe : Option<"threadsafe", "t">, Group<1>,
     Desc<"Enable thread safe logging to avoid interweaved log lines.">;
   def log_verbose : Option<"verbose", "v">, Group<1>,
