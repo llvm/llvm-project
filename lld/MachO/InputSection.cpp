@@ -85,7 +85,7 @@ std::string InputSection::getLocation(uint64_t off) const {
 }
 
 std::string InputSection::getSourceLocation(uint64_t off) const {
-  auto *obj = dyn_cast<ObjFile>(getFile());
+  auto *obj = dyn_cast_or_null<ObjFile>(getFile());
   if (!obj)
     return {};
 
