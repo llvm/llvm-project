@@ -27,8 +27,6 @@
 
 namespace __llvm_libc {
 
-template <typename ReturnType> struct Thread;
-
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
 #elif SYS_mmap
@@ -72,16 +70,16 @@ static inline void free_stack(void *stack, size_t size) {
   __llvm_libc::syscall(SYS_munmap, stack, size);
 }
 
-template <typename ReturnType> using ThreadRunner = ReturnType(void *);
+struct Thread;
 
 // We align the start args to 16-byte boundary as we adjust the allocated
 // stack memory with its size. We want the adjusted address to be at a
 // 16-byte boundary to satisfy the x86_64 and aarch64 ABI requirements.
 // If different architecture in future requires higher alignment, then we
 // can add a platform specific alignment spec.
-template <typename ReturnType> struct alignas(STACK_ALIGNMENT) StartArgs {
-  Thread<ReturnType> *thread;
-  ThreadRunner<ReturnType> *func;
+struct alignas(STACK_ALIGNMENT) StartArgs {
+  Thread *thread;
+  ThreadRunner runner;
   void *arg;
 };
 
@@ -104,19 +102,57 @@ __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
 #endif
 }
 
-template <typename ReturnType> struct Thread {
+struct Thread {
 private:
-  ThreadAttributes<ReturnType> *attrib;
+  ThreadAttributes *attrib;
   cpp::Atomic<FutexWordType> *clear_tid;
 
 public:
   Thread() = default;
 
-  static void start_thread() __attribute__((noinline));
+  static void start_thread() __attribute__((noinline)) {
+    auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
+    auto *thread = start_args->thread;
+    auto *attrib = thread->attrib;
+    long retval;
+    if (attrib->style == ThreadStyle::POSIX) {
+      attrib->retval.posix_retval =
+          start_args->runner.posix_runner(start_args->arg);
+      retval = long(attrib->retval.posix_retval);
+    } else {
+      attrib->retval.stdc_retval =
+          start_args->runner.stdc_runner(start_args->arg);
+      retval = long(attrib->retval.stdc_retval);
+    }
+
+    uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
+    if (!thread->attrib->detach_state.compare_exchange_strong(
+            joinable_state, uint32_t(DetachState::EXITING))) {
+      // Thread is detached so cleanup the resources.
+      if (thread->attrib->owned_stack)
+        free_stack(thread->attrib->stack, thread->attrib->stack_size);
+    }
+
+    __llvm_libc::syscall(SYS_exit, retval);
+  }
+
+  int run(ThreadRunnerPosix *func, void *arg, void *stack, size_t size,
+          bool detached = false) {
+    ThreadRunner runner;
+    runner.posix_runner = func;
+    return run(ThreadStyle::POSIX, runner, arg, stack, size, detached);
+  }
+
+  int run(ThreadRunnerStdc *func, void *arg, void *stack, size_t size,
+          bool detached = false) {
+    ThreadRunner runner;
+    runner.stdc_runner = func;
+    return run(ThreadStyle::STDC, runner, arg, stack, size, detached);
+  }
 
   // Return 0 on success or an error value on failure.
-  int run(ThreadRunner<ReturnType> *f, void *arg, void *stack, size_t size,
-          bool detached = false) {
+  int run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
+          size_t size, bool detached) {
     bool owned_stack = false;
     if (stack == nullptr) {
       if (size == 0)
@@ -139,19 +175,18 @@ public:
     // Likewise, the actual thread state information is also stored on the
     // stack memory.
     uintptr_t adjusted_stack = reinterpret_cast<uintptr_t>(stack) + size -
-                               sizeof(StartArgs<ReturnType>) -
-                               sizeof(ThreadAttributes<ReturnType>) -
+                               sizeof(StartArgs) - sizeof(ThreadAttributes) -
                                sizeof(cpp::Atomic<FutexWordType>);
     adjusted_stack &= ~(uintptr_t(STACK_ALIGNMENT) - 1);
 
-    auto *start_args =
-        reinterpret_cast<StartArgs<ReturnType> *>(adjusted_stack);
+    auto *start_args = reinterpret_cast<StartArgs *>(adjusted_stack);
     start_args->thread = this;
-    start_args->func = f;
+    start_args->runner = runner;
     start_args->arg = arg;
 
-    attrib = reinterpret_cast<ThreadAttributes<ReturnType> *>(
-        adjusted_stack + sizeof(StartArgs<ReturnType>));
+    attrib = reinterpret_cast<ThreadAttributes *>(adjusted_stack +
+                                                  sizeof(StartArgs));
+    attrib->style = style;
     attrib->detach_state =
         uint32_t(detached ? DetachState::DETACHED : DetachState::JOINABLE);
     attrib->stack = stack;
@@ -159,8 +194,7 @@ public:
     attrib->owned_stack = owned_stack;
 
     clear_tid = reinterpret_cast<cpp::Atomic<FutexWordType> *>(
-        adjusted_stack + sizeof(StartArgs<ReturnType>) +
-        sizeof(ThreadAttributes<ReturnType>));
+        adjusted_stack + sizeof(StartArgs) + sizeof(ThreadAttributes));
     clear_tid->val = CLEAR_TID_VALUE;
 
     // The clone syscall takes arguments in an architecture specific order.
@@ -203,10 +237,32 @@ public:
     return 0;
   }
 
-  int join(ReturnType *retval) {
+  int join(int *val) {
+    ThreadReturnValue retval;
+    int status = join(retval);
+    if (status != 0)
+      return status;
+    *val = retval.stdc_retval;
+    return 0;
+  }
+
+  int join(void **val) {
+    ThreadReturnValue retval;
+    int status = join(retval);
+    if (status != 0)
+      return status;
+    *val = retval.posix_retval;
+    return 0;
+  }
+
+  int join(ThreadReturnValue &retval) {
     wait();
 
-    *retval = attrib->retval;
+    if (attrib->style == ThreadStyle::POSIX)
+      retval.posix_retval = attrib->retval.posix_retval;
+    else
+      retval.stdc_retval = attrib->retval.stdc_retval;
+
     if (attrib->owned_stack)
       free_stack(attrib->stack, attrib->stack_size);
 
@@ -257,25 +313,6 @@ public:
     }
   }
 };
-
-template <typename ReturnType>
-__attribute__((noinline)) void Thread<ReturnType>::start_thread() {
-  auto *start_args =
-      reinterpret_cast<StartArgs<ReturnType> *>(get_start_args_addr());
-  auto *thread = start_args->thread;
-  ReturnType retval = thread->attrib->retval =
-      start_args->func(start_args->arg);
-
-  uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
-  if (!thread->attrib->detach_state.compare_exchange_strong(
-          joinable_state, uint32_t(DetachState::EXITING))) {
-    // Thread is detached so cleanup the resources.
-    if (thread->attrib->owned_stack)
-      free_stack(thread->attrib->stack, thread->attrib->stack_size);
-  }
-
-  __llvm_libc::syscall(SYS_exit, retval);
-}
 
 } // namespace __llvm_libc
 
