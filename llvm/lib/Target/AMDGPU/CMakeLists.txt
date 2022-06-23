@@ -100,6 +100,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUUnifyDivergentExitNodes.cpp
   AMDGPUUnifyMetadata.cpp
   R600MachineCFGStructurizer.cpp
+  GCNCreateVOPD.cpp
   GCNDPPCombine.cpp
   GCNHazardRecognizer.cpp
   GCNILPSched.cpp
@@ -109,6 +110,7 @@ add_llvm_target(AMDGPUCodeGen
   GCNPreRAOptimizations.cpp
   GCNRegPressure.cpp
   GCNSchedStrategy.cpp
+  GCNVOPDUtils.cpp
   R600AsmPrinter.cpp
   R600ClauseMergePass.cpp
   R600ControlFlowFinalizer.cpp

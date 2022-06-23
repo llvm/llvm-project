@@ -106,15 +106,13 @@ define amdgpu_kernel void @cluster_load_cluster_store(i32* noalias %lb, i32* noa
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11-NEXT:    v_mov_b32_e32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    s_clause 0x3
 ; GFX11-NEXT:    flat_load_b32 v2, v[0:1]
 ; GFX11-NEXT:    flat_load_b32 v3, v[0:1] offset:8
 ; GFX11-NEXT:    flat_load_b32 v4, v[0:1] offset:16
 ; GFX11-NEXT:    flat_load_b32 v5, v[0:1] offset:24
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(3)
@@ -246,15 +244,13 @@ define amdgpu_kernel void @cluster_load_valu_cluster_store(i32* noalias %lb, i32
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11-NEXT:    v_mov_b32_e32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    s_clause 0x3
 ; GFX11-NEXT:    flat_load_b32 v2, v[0:1] offset:8
 ; GFX11-NEXT:    flat_load_b32 v3, v[0:1]
 ; GFX11-NEXT:    flat_load_b32 v4, v[0:1] offset:16
 ; GFX11-NEXT:    flat_load_b32 v5, v[0:1] offset:24
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
 ; GFX11-NEXT:    v_add_nc_u32_e32 v2, 1, v2
 ; GFX11-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
@@ -341,10 +337,8 @@ define amdgpu_ps void @cluster_image_load(<8 x i32> inreg %src, <8 x i32> inreg 
 ; GFX11-NEXT:    image_load v[2:5], v[2:3], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    image_load v[6:9], v[6:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_add_f32_e32 v5, v5, v9
-; GFX11-NEXT:    v_add_f32_e32 v4, v4, v8
-; GFX11-NEXT:    v_add_f32_e32 v3, v3, v7
-; GFX11-NEXT:    v_add_f32_e32 v2, v2, v6
+; GFX11-NEXT:    v_dual_add_f32 v2, v2, v6 :: v_dual_add_f32 v5, v5, v9
+; GFX11-NEXT:    v_dual_add_f32 v4, v4, v8 :: v_dual_add_f32 v3, v3, v7
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
@@ -398,10 +392,8 @@ define amdgpu_ps void @no_cluster_image_load(<8 x i32> inreg %src1, <8 x i32> in
 ; GFX11-NEXT:    image_load_mip v[2:5], [v0, v1, v6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    image_load_mip v[6:9], [v0, v1, v6], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_add_f32_e32 v5, v5, v9
-; GFX11-NEXT:    v_add_f32_e32 v4, v4, v8
-; GFX11-NEXT:    v_add_f32_e32 v3, v3, v7
-; GFX11-NEXT:    v_add_f32_e32 v2, v2, v6
+; GFX11-NEXT:    v_dual_add_f32 v5, v5, v9 :: v_dual_add_f32 v4, v4, v8
+; GFX11-NEXT:    v_dual_add_f32 v3, v3, v7 :: v_dual_add_f32 v2, v2, v6
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[16:23] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
@@ -476,30 +468,23 @@ define amdgpu_ps void @cluster_image_sample(<8 x i32> inreg %src, <4 x i32> inre
 ;
 ; GFX11-LABEL: cluster_image_sample:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    v_cvt_f32_i32_e32 v8, v0
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v9, v1
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
-; GFX11-NEXT:    v_mov_b32_e32 v10, 1.0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_add_f32_e32 v2, 1.0, v8
-; GFX11-NEXT:    v_add_f32_e32 v3, 1.0, v9
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX11-NEXT:    v_mov_b32_e32 v5, v4
-; GFX11-NEXT:    v_mov_b32_e32 v6, v4
-; GFX11-NEXT:    v_mov_b32_e32 v7, v4
-; GFX11-NEXT:    v_add_f32_e32 v8, 2.0, v8
-; GFX11-NEXT:    v_add_f32_e32 v9, 2.0, v9
-; GFX11-NEXT:    v_mov_b32_e32 v11, v10
+; GFX11-NEXT:    v_cvt_f32_i32_e32 v8, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_add_f32 v3, 1.0, v9
+; GFX11-NEXT:    v_dual_mov_b32 v10, 1.0 :: v_dual_mov_b32 v7, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_dual_add_f32 v2, 1.0, v8 :: v_dual_mov_b32 v5, v4
+; GFX11-NEXT:    v_dual_mov_b32 v6, v4 :: v_dual_add_f32 v9, 2.0, v9
+; GFX11-NEXT:    v_dual_add_f32 v8, 2.0, v8 :: v_dual_mov_b32 v11, v10
 ; GFX11-NEXT:    v_mov_b32_e32 v12, v10
 ; GFX11-NEXT:    v_mov_b32_e32 v13, v10
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    image_sample_d v[2:5], v[2:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX11-NEXT:    image_sample_d v[6:9], v[8:13], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_add_f32_e32 v5, v5, v9
-; GFX11-NEXT:    v_add_f32_e32 v4, v4, v8
-; GFX11-NEXT:    v_add_f32_e32 v3, v3, v7
-; GFX11-NEXT:    v_add_f32_e32 v2, v2, v6
+; GFX11-NEXT:    v_dual_add_f32 v4, v4, v8 :: v_dual_add_f32 v5, v5, v9
+; GFX11-NEXT:    v_dual_add_f32 v3, v3, v7 :: v_dual_add_f32 v2, v2, v6
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[12:19] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm

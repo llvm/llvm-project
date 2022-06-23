@@ -1358,8 +1358,7 @@ define amdgpu_kernel void @v_clamp_constants_to_one_f32(float addrspace(1)* %out
 ; GFX11-LABEL: v_clamp_constants_to_one_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 1.0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 1.0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1407,8 +1406,7 @@ define amdgpu_kernel void @v_clamp_constants_to_zero_f32(float addrspace(1)* %ou
 ; GFX11-LABEL: v_clamp_constants_to_zero_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1457,8 +1455,7 @@ define amdgpu_kernel void @v_clamp_constant_preserve_f32(float addrspace(1)* %ou
 ; GFX11-LABEL: v_clamp_constant_preserve_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0.5
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0.5 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1507,8 +1504,7 @@ define amdgpu_kernel void @v_clamp_constant_preserve_denorm_f32(float addrspace(
 ; GFX11-LABEL: v_clamp_constant_preserve_denorm_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0x7fffff
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0x7fffff :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1556,8 +1552,7 @@ define amdgpu_kernel void @v_clamp_constant_qnan_f32(float addrspace(1)* %out) #
 ; GFX11-LABEL: v_clamp_constant_qnan_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1605,8 +1600,7 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32(float addrspace(1)* %out) #
 ; GFX11-LABEL: v_clamp_constant_snan_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -2335,8 +2329,7 @@ define amdgpu_kernel void @v_clamp_constant_qnan_f32_no_dx10_clamp(float addrspa
 ; GFX11-LABEL: v_clamp_constant_qnan_f32_no_dx10_clamp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0x7fc00000 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -2385,8 +2378,7 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32_no_dx10_clamp(float addrspa
 ; GFX11-LABEL: v_clamp_constant_snan_f32_no_dx10_clamp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0x7f800001
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0x7f800001 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

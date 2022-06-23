@@ -470,6 +470,14 @@ bool getMAIIsDGEMM(unsigned Opc);
 LLVM_READONLY
 bool getMAIIsGFX940XDL(unsigned Opc);
 
+struct CanBeVOPD {
+  bool X;
+  bool Y;
+};
+
+LLVM_READONLY
+CanBeVOPD getCanBeVOPD(unsigned Opc);
+
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
@@ -481,6 +489,12 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
 
 LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
+
+LLVM_READONLY
+unsigned getVOPDOpcode(unsigned Opc);
+
+LLVM_READONLY
+int getVOPDFull(unsigned OpX, unsigned OpY);
 
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
