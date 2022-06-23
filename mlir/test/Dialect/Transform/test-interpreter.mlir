@@ -436,3 +436,27 @@ transform.with_pdl_patterns {
     %1:2 = transform.test_correct_number_of_multi_results %0
   }
 }
+
+// -----
+
+func.func @foo() {
+  "wrong_op_name" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // Transform fails to match any but still produces 2 results.
+    %1:2 = transform.test_correct_number_of_multi_results %0
+  }
+}
