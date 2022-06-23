@@ -109,6 +109,18 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_DEFAULT
 };
 
+/// This struct contains all of the arguments to a target kernel region launch.
+struct __tgt_kernel_arguments {
+  int32_t Version;    // Version of this struct for ABI compatibility.
+  int32_t NumArgs;    // Number of arguments in each input pointer.
+  void **ArgBasePtrs; // Base pointer of each argument (e.g. a struct).
+  void **ArgPtrs;     // Pointer to the argument data.
+  int64_t *ArgSizes;  // Size of the argument data in bytes.
+  int64_t *ArgTypes;  // Type of the data (e.g. to / from).
+  void **ArgNames;    // Name of the data for debugging, possibly null.
+  void **ArgMappers;  // User-defined mappers, possible null.
+};
+
 /// This struct is a record of an entry point or global. For a function
 /// entry point the size is expected to be zero
 struct __tgt_offload_entry {
@@ -345,11 +357,19 @@ int __tgt_target_teams_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                               map_var_info_t *ArgNames, void **ArgMappers,
                               int32_t NumTeams, int32_t ThreadLimit);
 int __tgt_target_teams_nowait_mapper(
-    ident_t *Loc, int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-    void **ArgsBase, void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
-    map_var_info_t *ArgNames, void **ArgMappers, int32_t NumTeams,
-    int32_t ThreadLimit, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
-    void *NoAliasDepList);
+    ident_t *loc, int64_t device_id, void *host_ptr, int32_t arg_num,
+    void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types,
+    map_var_info_t *arg_names, void **arg_mappers, int32_t num_teams,
+    int32_t thread_limit, int32_t depNum, void *depList, int32_t noAliasDepNum,
+    void *noAliasDepList);
+int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
+                        int32_t ThreadLimit, void *HostPtr,
+                        __tgt_kernel_arguments *Args);
+int __tgt_target_kernel_nowait(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
+                               int32_t ThreadLimit, void *HostPtr,
+                               __tgt_kernel_arguments *Args, int32_t DepNum,
+                               void *DepList, int32_t NoAliasDepNum,
+                               void *NoAliasDepList);
 
 void __kmpc_push_target_tripcount(int64_t DeviceId, uint64_t LoopTripcount);
 
