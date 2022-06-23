@@ -230,7 +230,7 @@ let Definition = "process" in {
   def StopOnExec: Property<"stop-on-exec", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"If true, stop when a shared library is loaded or unloaded.">;
+    Desc<"If true, stop when the inferior exec's.">;
   def UtilityExpressionTimeout: Property<"utility-expression-timeout", "UInt64">,
     DefaultUnsignedValue<15>,
     Desc<"The time in seconds to wait for LLDB-internal utility expressions.">;
