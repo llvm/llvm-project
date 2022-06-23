@@ -1,4 +1,4 @@
-//===-- Unittests for pthread_t -------------------------------------------===//
+//===-- Tests for pthread_t -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
-#include "utils/UnitTest/Test.h"
+#include "utils/IntegrationTest/test.h"
 
 #include <pthread.h>
 
@@ -19,7 +19,7 @@ static void *thread_func(void *) {
   return nullptr;
 }
 
-TEST(LlvmLibcThreadTest, CreateAndJoin) {
+void create_and_join() {
   for (counter = 0; counter <= thread_count;) {
     pthread_t thread;
     int old_counter_val = counter;
@@ -36,7 +36,7 @@ TEST(LlvmLibcThreadTest, CreateAndJoin) {
 
 static void *return_arg(void *arg) { return arg; }
 
-TEST(LlvmLibcThreadTest, SpawnAndJoin) {
+void spawn_and_join() {
   pthread_t thread_list[thread_count];
   int args[thread_count];
 
@@ -53,4 +53,10 @@ TEST(LlvmLibcThreadTest, SpawnAndJoin) {
     ASSERT_EQ(__llvm_libc::pthread_join(thread_list[i], &retval), 0);
     ASSERT_EQ(*reinterpret_cast<int *>(retval), i);
   }
+}
+
+int main() {
+  create_and_join();
+  spawn_and_join();
+  return 0;
 }

@@ -1,4 +1,4 @@
-//===-- Unittests for pthread_mutex_t -------------------------------------===//
+//===-- Tests for pthread_mutex_t -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
 
-#include "utils/UnitTest/Test.h"
+#include "utils/IntegrationTest/test.h"
 
 #include <pthread.h>
 
@@ -39,7 +39,7 @@ void *counter(void *arg) {
   return nullptr;
 }
 
-TEST(LlvmLibcMutexTest, RelayCounter) {
+void relay_counter() {
   ASSERT_EQ(__llvm_libc::pthread_mutex_init(&mutex, nullptr), 0);
 
   // The idea of this test is that two competing threads will update
@@ -84,7 +84,7 @@ void *stepper(void *arg) {
   return nullptr;
 }
 
-TEST(LlvmLibcMutexTest, WaitAndStep) {
+void wait_and_step() {
   ASSERT_EQ(__llvm_libc::pthread_mutex_init(&start_lock, nullptr), 0);
   ASSERT_EQ(__llvm_libc::pthread_mutex_init(&step_lock, nullptr), 0);
 
@@ -151,7 +151,7 @@ void *waiter_func(void *) {
   return nullptr;
 }
 
-TEST(LlvmLibcMutexTest, MultipleWaiters) {
+void multiple_waiters() {
   __llvm_libc::pthread_mutex_init(&multiple_waiter_lock, nullptr);
   __llvm_libc::pthread_mutex_init(&counter_lock, nullptr);
 
@@ -183,4 +183,11 @@ TEST(LlvmLibcMutexTest, MultipleWaiters) {
 
   __llvm_libc::pthread_mutex_destroy(&multiple_waiter_lock);
   __llvm_libc::pthread_mutex_destroy(&counter_lock);
+}
+
+int main() {
+  relay_counter();
+  wait_and_step();
+  multiple_waiters();
+  return 0;
 }
