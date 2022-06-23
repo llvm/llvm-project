@@ -9,11 +9,14 @@
 #include "cc1depscanProtocol.h"
 #include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
+
+#if LLVM_ON_UNIX
 #include <sys/socket.h> // FIXME: Unix-only. Not portable.
 #include <sys/types.h>  // FIXME: Unix-only. Not portable.
 #include <sys/un.h>     // FIXME: Unix-only. Not portable.
@@ -393,3 +396,5 @@ llvm::Error CC1DepScanDProtocol::putScanResultFailed(StringRef Reason) {
     return E;
   return putString(Reason);
 }
+
+#endif /* LLVM_ON_UNIX */

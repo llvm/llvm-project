@@ -48,6 +48,8 @@
 #include <cstdio>
 #include <mutex>
 #include <shared_mutex>
+
+#if LLVM_ON_UNIX
 #include <sys/file.h> // FIXME: Unix-only. Not portable.
 #include <sys/signal.h> // FIXME: Unix-only. Not portable.
 
@@ -1110,3 +1112,4 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
                                         WorkingDirectory, OutputArgs,
                                         PrefixMapping, SaveArg);
 }
+#endif /* LLVM_ON_UNIX */

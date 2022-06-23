@@ -13,6 +13,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
+
+#if LLVM_ON_UNIX
 #include <spawn.h>      // FIXME: Unix-only. Not portable.
 #include <sys/socket.h> // FIXME: Unix-only. Not portable.
 #include <sys/types.h>  // FIXME: Unix-only. Not portable.
@@ -237,4 +239,5 @@ private:
 } // namespace cc1depscand
 } // namespace clang
 
+#endif /* LLVM_ON_UNIX */
 #endif // LLVM_CLANG_TOOLS_DRIVER_CC1DEPSCANPROTOCOL_H
