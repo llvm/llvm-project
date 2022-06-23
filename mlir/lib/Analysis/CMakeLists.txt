@@ -12,6 +12,7 @@ set(LLVM_OPTIONAL_SOURCES
 
   DataFlow/ConstantPropagationAnalysis.cpp
   DataFlow/DeadCodeAnalysis.cpp
+  DataFlow/DenseAnalysis.cpp
   DataFlow/SparseAnalysis.cpp
   )
 
@@ -30,6 +31,7 @@ add_mlir_library(MLIRAnalysis
 
   DataFlow/ConstantPropagationAnalysis.cpp
   DataFlow/DeadCodeAnalysis.cpp
+  DataFlow/DenseAnalysis.cpp
   DataFlow/SparseAnalysis.cpp
 
   ADDITIONAL_HEADER_DIRS
