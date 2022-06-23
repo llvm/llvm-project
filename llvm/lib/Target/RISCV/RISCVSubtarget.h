@@ -93,6 +93,7 @@ private:
   bool EnableDefaultUnroll = true;
   bool EnableSaveRestore = false;
   bool EnableUnalignedScalarMem = false;
+  bool HasLUIADDIFusion = false;
   unsigned XLen = 32;
   unsigned ZvlLen = 0;
   MVT XLenVT = MVT::i32;
@@ -184,6 +185,7 @@ public:
   bool enableDefaultUnroll() const { return EnableDefaultUnroll; }
   bool enableSaveRestore() const { return EnableSaveRestore; }
   bool enableUnalignedScalarMem() const { return EnableUnalignedScalarMem; }
+  bool hasLUIADDIFusion() const { return HasLUIADDIFusion; }
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }
   unsigned getFLen() const {
@@ -214,6 +216,8 @@ public:
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
   }
+
+  bool hasMacroFusion() const { return hasLUIADDIFusion(); }
 
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
@@ -257,6 +261,9 @@ public:
   bool useRVVForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
+
+  void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
+                              &Mutations) const override;
 };
 } // End llvm namespace
 
