@@ -11,7 +11,6 @@
 // template <class... Types> class tuple;
 
 // template <class Alloc, class... UTypes>
-// constexpr                                        // since c++20
 //   tuple(allocator_arg_t, const Alloc& a, const tuple<UTypes...>&);
 
 // UNSUPPORTED: c++03
@@ -22,7 +21,6 @@
 
 #include "test_macros.h"
 #include "allocators.h"
-#include "test_allocator.h"
 #include "../alloc_first.h"
 #include "../alloc_last.h"
 
@@ -35,15 +33,6 @@ struct Implicit {
   int value;
   Implicit(int x) : value(x) {}
 };
-
-#if _LIBCPP_STD_VER > 17
-constexpr bool alloc_copy_constructor_is_constexpr() {
-  const std::tuple<int> t1 = 1;
-  std::tuple<int> t2 = {std::allocator_arg, test_allocator<int>{}, t1};
-  assert(std::get<0>(t2) == 1);
-  return true;
-}
-#endif
 
 int main(int, char**)
 {
@@ -106,8 +95,5 @@ int main(int, char**)
         std::tuple<long long> t0(derived, A1<int>(), from);
     }
 
-#if _LIBCPP_STD_VER > 17
-    static_assert(alloc_copy_constructor_is_constexpr());
-#endif
     return 0;
 }
