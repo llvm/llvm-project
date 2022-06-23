@@ -97,8 +97,13 @@ private:
 LRTable LRTable::buildForTests(const GrammarTable &GT,
                                llvm::ArrayRef<Entry> Entries) {
   StateID MaxState = 0;
-  for (const auto &Entry : Entries)
+  for (const auto &Entry : Entries) {
     MaxState = std::max(MaxState, Entry.State);
+    if (Entry.Act.kind() == LRTable::Action::Shift)
+      MaxState = std::max(MaxState, Entry.Act.getShiftState());
+    if (Entry.Act.kind() == LRTable::Action::GoTo)
+      MaxState = std::max(MaxState, Entry.Act.getGoToState());
+  }
   Builder Build({});
   for (const Entry &E : Entries)
     Build.insert(E);
