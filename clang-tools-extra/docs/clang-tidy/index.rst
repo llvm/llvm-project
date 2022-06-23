@@ -244,6 +244,9 @@ An overview of all the command-line options:
                                     standard output supports colors.
                                     This option overrides the 'UseColor' option in
                                     .clang-tidy file, if any.
+    --verify-config                -
+                                     Check the config files to ensure each check and
+                                     option is recognized.
     --vfsoverlay=<filename>        -
                                      Overlay the virtual filesystem described by file
                                      over the real file system.
