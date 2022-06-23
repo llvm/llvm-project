@@ -143,11 +143,15 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
   patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::ExpM1Op>,
                VecOpToScalarOp<math::TanhOp>, VecOpToScalarOp<math::CosOp>,
                VecOpToScalarOp<math::SinOp>, VecOpToScalarOp<math::ErfOp>,
-               VecOpToScalarOp<math::RoundOp>>(patterns.getContext(), benefit);
+               VecOpToScalarOp<math::RoundOp>, VecOpToScalarOp<math::AtanOp>>(
+      patterns.getContext(), benefit);
   patterns.add<PromoteOpToF32<math::Atan2Op>, PromoteOpToF32<math::ExpM1Op>,
                PromoteOpToF32<math::TanhOp>, PromoteOpToF32<math::CosOp>,
                PromoteOpToF32<math::SinOp>, PromoteOpToF32<math::ErfOp>,
-               PromoteOpToF32<math::RoundOp>>(patterns.getContext(), benefit);
+               PromoteOpToF32<math::RoundOp>, PromoteOpToF32<math::AtanOp>>(
+      patterns.getContext(), benefit);
+  patterns.add<ScalarOpToLibmCall<math::AtanOp>>(patterns.getContext(), "atanf",
+                                                 "atan", benefit);
   patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(patterns.getContext(),
                                                   "atan2f", "atan2", benefit);
   patterns.add<ScalarOpToLibmCall<math::ErfOp>>(patterns.getContext(), "erff",
