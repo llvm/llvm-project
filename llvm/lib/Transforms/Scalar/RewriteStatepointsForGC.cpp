@@ -476,6 +476,14 @@ static Value *findBaseDefiningValueOfVector(Value *I, DefiningValueMapTy &Cache,
     return BDV;
   }
 
+  // The behavior of freeze instructions is the same for vector and
+  // non-vector data types.
+  if (auto *Freeze = dyn_cast<FreezeInst>(I)) {
+    auto *BDV = findBaseDefiningValue(Freeze->getOperand(0), Cache, KnownBases);
+    Cache[Freeze] = BDV;
+    return BDV;
+  }
+
   // If the pointer comes through a bitcast of a vector of pointers to
   // a vector of another type of pointer, then look through the bitcast
   if (auto *BC = dyn_cast<BitCastInst>(I)) {
