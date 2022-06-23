@@ -584,6 +584,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("find", tgtok::XFind)
     .Cases("setdagop", "setop", tgtok::XSetDagOp) // !setop is deprecated.
     .Cases("getdagop", "getop", tgtok::XGetDagOp) // !getop is deprecated.
+    .Case("exists", tgtok::XExists)
     .Default(tgtok::Error);
 
   return Kind != tgtok::Error ? Kind : ReturnError(Start-1, "Unknown operator");
