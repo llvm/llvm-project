@@ -19,6 +19,7 @@
 #include "../ClangTidyForceLinker.h"
 #include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
@@ -257,6 +258,12 @@ This option overrides the 'UseColor' option in
 )"),
                               cl::init(false), cl::cat(ClangTidyCategory));
 
+static cl::opt<bool> VerifyConfig("verify-config", cl::desc(R"(
+Check the config files to ensure each check and
+option is recognized.
+)"),
+                                  cl::init(false), cl::cat(ClangTidyCategory));
+
 namespace clang {
 namespace tidy {
 
@@ -385,6 +392,74 @@ getVfsFromFile(const std::string &OverlayFile,
   return FS;
 }
 
+static StringRef closest(StringRef Value, const StringSet<> &Allowed) {
+  unsigned MaxEdit = 5U;
+  StringRef Closest;
+  for (auto Item : Allowed.keys()) {
+    unsigned Cur = Value.edit_distance_insensitive(Item, true, MaxEdit);
+    if (Cur < MaxEdit) {
+      Closest = Item;
+      MaxEdit = Cur;
+    }
+  }
+  return Closest;
+}
+
+static constexpr StringLiteral VerifyConfigWarningEnd = " [-verify-config]\n";
+
+static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
+                         StringRef Source) {
+  llvm::StringRef Cur, Rest;
+  bool AnyInvalid = false;
+  for (std::tie(Cur, Rest) = CheckGlob.split(',');
+       !(Cur.empty() && Rest.empty()); std::tie(Cur, Rest) = Rest.split(',')) {
+    Cur = Cur.trim();
+    if (Cur.empty())
+      continue;
+    Cur.consume_front("-");
+    if (Cur.startswith("clang-diagnostic"))
+      continue;
+    if (Cur.contains('*')) {
+      SmallString<128> RegexText("^");
+      StringRef MetaChars("()^$|*+?.[]\\{}");
+      for (char C : Cur) {
+        if (C == '*')
+          RegexText.push_back('.');
+        else if (MetaChars.contains(C))
+          RegexText.push_back('\\');
+        RegexText.push_back(C);
+      }
+      RegexText.push_back('$');
+      llvm::Regex Glob(RegexText);
+      std::string Error;
+      if (!Glob.isValid(Error)) {
+        AnyInvalid = true;
+        llvm::WithColor::error(llvm::errs(), Source)
+            << "building check glob '" << Cur << "' " << Error << "'\n";
+        continue;
+      }
+      if (llvm::none_of(AllChecks.keys(),
+                        [&Glob](StringRef S) { return Glob.match(S); })) {
+        AnyInvalid = true;
+        llvm::WithColor::warning(llvm::errs(), Source)
+            << "check glob '" << Cur << "' doesn't match any known check"
+            << VerifyConfigWarningEnd;
+      }
+    } else {
+      if (AllChecks.contains(Cur))
+        continue;
+      AnyInvalid = true;
+      llvm::raw_ostream &Output = llvm::WithColor::warning(llvm::errs(), Source)
+                                  << "unknown check '" << Cur << '\'';
+      llvm::StringRef Closest = closest(Cur, AllChecks);
+      if (!Closest.empty())
+        Output << "; did you mean '" << Closest << '\'';
+      Output << VerifyConfigWarningEnd;
+    }
+  }
+  return AnyInvalid;
+}
+
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
 
@@ -475,6 +550,38 @@ int clangTidyMain(int argc, const char **argv) {
     llvm::outs() << configurationAsText(ClangTidyOptions::getDefaults().merge(
                         EffectiveOptions, 0))
                  << "\n";
+    return 0;
+  }
+
+  if (VerifyConfig) {
+    std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
+        OptionsProvider->getRawOptions(FileName);
+    NamesAndOptions Valid =
+        getAllChecksAndOptions(AllowEnablingAnalyzerAlphaCheckers);
+    bool AnyInvalid = false;
+    for (const std::pair<ClangTidyOptions, std::string> &OptionWithSource :
+         RawOptions) {
+      const ClangTidyOptions &Opts = OptionWithSource.first;
+      if (Opts.Checks)
+        AnyInvalid |=
+            verifyChecks(Valid.Names, *Opts.Checks, OptionWithSource.second);
+
+      for (auto Key : Opts.CheckOptions.keys()) {
+        if (Valid.Options.contains(Key))
+          continue;
+        AnyInvalid = true;
+        auto &Output =
+            llvm::WithColor::warning(llvm::errs(), OptionWithSource.second)
+            << "unknown check option '" << Key << '\'';
+        llvm::StringRef Closest = closest(Key, Valid.Options);
+        if (!Closest.empty())
+          Output << "; did you mean '" << Closest << '\'';
+        Output << VerifyConfigWarningEnd;
+      }
+    }
+    if (AnyInvalid)
+      return 1;
+    llvm::outs() << "No config errors detected.\n";
     return 0;
   }
 
