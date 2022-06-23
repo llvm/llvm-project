@@ -317,12 +317,7 @@ void Log::WriteMessage(const std::string &message) {
   auto handler_sp = GetHandler();
   if (!handler_sp)
     return;
-
-  Flags options = GetOptions();
-  if (options.Test(LLDB_LOG_OPTION_THREADSAFE))
-    handler_sp->EmitThreadSafe(message);
-  else
-    handler_sp->Emit(message);
+  handler_sp->Emit(message);
 }
 
 void Log::Format(llvm::StringRef file, llvm::StringRef function,
@@ -334,11 +329,6 @@ void Log::Format(llvm::StringRef file, llvm::StringRef function,
   WriteMessage(message.str());
 }
 
-void LogHandler::EmitThreadSafe(llvm::StringRef message) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  Emit(message);
-}
-
 StreamLogHandler::StreamLogHandler(int fd, bool should_close,
                                    size_t buffer_size)
     : m_stream(fd, should_close, buffer_size == 0) {
@@ -348,9 +338,19 @@ StreamLogHandler::StreamLogHandler(int fd, bool should_close,
 
 StreamLogHandler::~StreamLogHandler() { Flush(); }
 
-void StreamLogHandler::Flush() { m_stream.flush(); }
+void StreamLogHandler::Flush() {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  m_stream.flush();
+}
 
-void StreamLogHandler::Emit(llvm::StringRef message) { m_stream << message; }
+void StreamLogHandler::Emit(llvm::StringRef message) {
+  if (m_stream.GetBufferSize() > 0) {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    m_stream << message;
+  } else {
+    m_stream << message;
+  }
+}
 
 CallbackLogHandler::CallbackLogHandler(lldb::LogOutputCallback callback,
                                        void *baton)
@@ -364,6 +364,7 @@ RotatingLogHandler::RotatingLogHandler(size_t size)
     : m_messages(std::make_unique<std::string[]>(size)), m_size(size) {}
 
 void RotatingLogHandler::Emit(llvm::StringRef message) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   ++m_total_count;
   const size_t index = m_next_index;
   m_next_index = NormalizeIndex(index + 1);
@@ -381,6 +382,7 @@ size_t RotatingLogHandler::GetFirstMessageIndex() const {
 }
 
 void RotatingLogHandler::Dump(llvm::raw_ostream &stream) const {
+  std::lock_guard<std::mutex> guard(m_mutex);
   const size_t start_idx = GetFirstMessageIndex();
   const size_t stop_idx = start_idx + GetNumMessages();
   for (size_t i = start_idx; i < stop_idx; ++i) {
