@@ -226,7 +226,6 @@ public:
   /// Push a work item onto the worklist.
   void enqueue(WorkItem item) { worklist.push(std::move(item)); }
 
-protected:
   /// Get the state associated with the given program point. If it does not
   /// exist, create an uninitialized state.
   template <typename StateT, typename PointT>

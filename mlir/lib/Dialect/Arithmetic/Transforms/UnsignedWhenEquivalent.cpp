@@ -9,33 +9,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Analysis/IntRangeAnalysis.h"
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 using namespace mlir::arith;
+using namespace mlir::dataflow;
 
 /// Succeeds when a value is statically non-negative in that it has a lower
 /// bound on its value (if it is treated as signed) and that bound is
 /// non-negative.
-static LogicalResult staticallyNonNegative(IntRangeAnalysis &analysis,
-                                           Value v) {
-  Optional<ConstantIntRanges> result = analysis.getResult(v);
-  if (!result.hasValue())
+static LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v) {
+  auto *result = solver.lookupState<IntegerValueRangeLattice>(v);
+  if (!result)
     return failure();
-  const ConstantIntRanges &range = result.getValue();
+  const ConstantIntRanges &range = result->getValue().getValue();
   return success(range.smin().isNonNegative());
 }
 
 /// Succeeds if an op can be converted to its unsigned equivalent without
 /// changing its semantics. This is the case when none of its openands or
 /// results can be below 0 when analyzed from a signed perspective.
-static LogicalResult staticallyNonNegative(IntRangeAnalysis &analysis,
+static LogicalResult staticallyNonNegative(DataFlowSolver &solver,
                                            Operation *op) {
-  auto nonNegativePred = [&analysis](Value v) -> bool {
-    return succeeded(staticallyNonNegative(analysis, v));
+  auto nonNegativePred = [&solver](Value v) -> bool {
+    return succeeded(staticallyNonNegative(solver, v));
   };
   return success(llvm::all_of(op->getOperands(), nonNegativePred) &&
                  llvm::all_of(op->getResults(), nonNegativePred));
@@ -44,15 +45,15 @@ static LogicalResult staticallyNonNegative(IntRangeAnalysis &analysis,
 /// Succeeds when the comparison predicate is a signed operation and all the
 /// operands are non-negative, indicating that the cmpi operation `op` can have
 /// its predicate changed to an unsigned equivalent.
-static LogicalResult isCmpIConvertable(IntRangeAnalysis &analysis, CmpIOp op) {
+static LogicalResult isCmpIConvertable(DataFlowSolver &solver, CmpIOp op) {
   CmpIPredicate pred = op.getPredicate();
   switch (pred) {
   case CmpIPredicate::sle:
   case CmpIPredicate::slt:
   case CmpIPredicate::sge:
   case CmpIPredicate::sgt:
-    return success(llvm::all_of(op.getOperands(), [&analysis](Value v) -> bool {
-      return succeeded(staticallyNonNegative(analysis, v));
+    return success(llvm::all_of(op.getOperands(), [&solver](Value v) -> bool {
+      return succeeded(staticallyNonNegative(solver, v));
     }));
   default:
     return failure();
@@ -109,19 +110,23 @@ struct ArithmeticUnsignedWhenEquivalentPass
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
-    IntRangeAnalysis analysis(op);
+    DataFlowSolver solver;
+    solver.load<DeadCodeAnalysis>();
+    solver.load<IntegerRangeAnalysis>();
+    if (failed(solver.initializeAndRun(op)))
+      return signalPassFailure();
 
     ConversionTarget target(*ctx);
     target.addLegalDialect<ArithmeticDialect>();
     target
         .addDynamicallyLegalOp<DivSIOp, CeilDivSIOp, CeilDivUIOp, FloorDivSIOp,
                                RemSIOp, MinSIOp, MaxSIOp, ExtSIOp>(
-            [&analysis](Operation *op) -> Optional<bool> {
-              return failed(staticallyNonNegative(analysis, op));
+            [&solver](Operation *op) -> Optional<bool> {
+              return failed(staticallyNonNegative(solver, op));
             });
     target.addDynamicallyLegalOp<CmpIOp>(
-        [&analysis](CmpIOp op) -> Optional<bool> {
-          return failed(isCmpIConvertable(analysis, op));
+        [&solver](CmpIOp op) -> Optional<bool> {
+          return failed(isCmpIConvertable(solver, op));
         });
 
     RewritePatternSet patterns(ctx);

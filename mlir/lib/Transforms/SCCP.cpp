@@ -38,7 +38,7 @@ static LogicalResult replaceWithConstant(DataFlowSolver &solver,
                                          OpBuilder &builder,
                                          OperationFolder &folder, Value value) {
   auto *lattice = solver.lookupState<Lattice<ConstantValue>>(value);
-  if (!lattice)
+  if (!lattice || lattice->isUninitialized())
     return failure();
   const ConstantValue &latticeValue = lattice->getValue();
   if (!latticeValue.getConstantValue())
