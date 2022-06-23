@@ -147,6 +147,18 @@ Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
       format, formatLength, scratchArea, scratchBytes, sourceFile, sourceLine);
 }
 
+static Cookie NoopUnit(const Terminator &terminator, int unitNumber,
+    enum Iostat iostat = IostatOk) {
+  Cookie cookie{&New<NoopStatementState>{terminator}(
+      terminator.sourceFileName(), terminator.sourceLine(), unitNumber)
+                     .release()
+                     ->ioStatementState()};
+  if (iostat != IostatOk) {
+    cookie->GetIoErrorHandler().SetPendingError(iostat);
+  }
+  return cookie;
+}
+
 static ExternalFileUnit *GetOrCreateUnit(int unitNumber, Direction direction,
     std::optional<bool> isUnformatted, const Terminator &terminator,
     Cookie &errorCookie) {
@@ -156,11 +168,7 @@ static ExternalFileUnit *GetOrCreateUnit(int unitNumber, Direction direction,
     errorCookie = nullptr;
     return unit;
   } else {
-    errorCookie = &New<NoopStatementState>{terminator}(
-        terminator.sourceFileName(), terminator.sourceLine(), unitNumber)
-                       .release()
-                       ->ioStatementState();
-    errorCookie->GetIoErrorHandler().SetPendingError(IostatBadUnitNumber);
+    errorCookie = NoopUnit(terminator, unitNumber, IostatBadUnitNumber);
     return nullptr;
   }
 }
@@ -358,12 +366,7 @@ Cookie IONAME(BeginOpenUnit)( // OPEN(without NEWUNIT=)
     return &unit->BeginIoStatement<OpenStatementState>(
         *unit, wasExtant, sourceFile, sourceLine);
   } else {
-    auto &io{
-        New<NoopStatementState>{terminator}(sourceFile, sourceLine, unitNumber)
-            .release()
-            ->ioStatementState()};
-    io.GetIoErrorHandler().SetPendingError(IostatBadUnitNumber);
-    return &io;
+    return NoopUnit(terminator, unitNumber, IostatBadUnitNumber);
   }
 }
 
@@ -378,7 +381,6 @@ Cookie IONAME(BeginOpenNewUnit)( // OPEN(NEWUNIT=j)
 
 Cookie IONAME(BeginWait)(ExternalUnit unitNumber, AsynchronousId id,
     const char *sourceFile, int sourceLine) {
-  Terminator terminator{sourceFile, sourceLine};
   if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
     if (unit->Wait(id)) {
       return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
@@ -388,14 +390,9 @@ Cookie IONAME(BeginWait)(ExternalUnit unitNumber, AsynchronousId id,
           IostatBadWaitId, unit, sourceFile, sourceLine);
     }
   } else {
-    auto &io{
-        New<NoopStatementState>{terminator}(sourceFile, sourceLine, unitNumber)
-            .release()
-            ->ioStatementState()};
-    if (id != 0) {
-      io.GetIoErrorHandler().SetPendingError(IostatBadWaitUnit);
-    }
-    return &io;
+    Terminator terminator{sourceFile, sourceLine};
+    return NoopUnit(
+        terminator, unitNumber, id == 0 ? IostatOk : IostatBadWaitUnit);
   }
 }
 Cookie IONAME(BeginWaitAll)(
@@ -410,10 +407,8 @@ Cookie IONAME(BeginClose)(
         *unit, sourceFile, sourceLine);
   } else {
     // CLOSE(UNIT=bad unit) is just a no-op
-    Terminator oom{sourceFile, sourceLine};
-    return &New<NoopStatementState>{oom}(sourceFile, sourceLine, unitNumber)
-                .release()
-                ->ioStatementState();
+    Terminator terminator{sourceFile, sourceLine};
+    return NoopUnit(terminator, unitNumber);
   }
 }
 
@@ -423,11 +418,10 @@ Cookie IONAME(BeginFlush)(
     return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
         *unit, ExternalMiscIoStatementState::Flush, sourceFile, sourceLine);
   } else {
-    // FLUSH(UNIT=unknown) is a no-op
-    Terminator oom{sourceFile, sourceLine};
-    return &New<NoopStatementState>{oom}(sourceFile, sourceLine, unitNumber)
-                .release()
-                ->ioStatementState();
+    // FLUSH(UNIT=bad unit) is an error; an unconnected unit is a no-op
+    Terminator terminator{sourceFile, sourceLine};
+    return NoopUnit(terminator, unitNumber,
+        unitNumber >= 0 ? IostatOk : IostatBadFlushUnit);
   }
 }
 
@@ -438,12 +432,7 @@ Cookie IONAME(BeginBackspace)(
     return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
         *unit, ExternalMiscIoStatementState::Backspace, sourceFile, sourceLine);
   } else {
-    auto &io{
-        New<NoopStatementState>{terminator}(sourceFile, sourceLine, unitNumber)
-            .release()
-            ->ioStatementState()};
-    io.GetIoErrorHandler().SetPendingError(IostatBadBackspaceUnit);
-    return &io;
+    return NoopUnit(terminator, unitNumber, IostatBadBackspaceUnit);
   }
 }
 
