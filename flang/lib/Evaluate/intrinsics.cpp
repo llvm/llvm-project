@@ -1561,14 +1561,14 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             (std::strcmp(name, "shape") == 0 ||
                 std::strcmp(name, "size") == 0 ||
                 std::strcmp(name, "ubound") == 0)) {
-          // Check for an assumed-size array argument.
+          // Check for a whole assumed-size array argument.
           // These are disallowed for SHAPE, and require DIM= for
           // SIZE and UBOUND.
           // (A previous error message for UBOUND will take precedence
           // over this one, as this error is caught by the second entry
           // for UBOUND.)
-          if (const Symbol * argSym{GetLastSymbol(*arg)}) {
-            if (semantics::IsAssumedSizeArray(*argSym)) {
+          if (auto named{ExtractNamedEntity(*arg)}) {
+            if (semantics::IsAssumedSizeArray(named->GetLastSymbol())) {
               if (strcmp(name, "shape") == 0) {
                 messages.Say(arg->sourceLocation(),
                     "The '%s=' argument to the intrinsic function '%s' may not be assumed-size"_err_en_US,
