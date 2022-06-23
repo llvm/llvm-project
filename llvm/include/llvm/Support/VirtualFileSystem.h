@@ -44,6 +44,10 @@ class MemoryBuffer;
 class MemoryBufferRef;
 class Twine;
 
+namespace cas {
+class ObjectRef;
+}
+
 namespace vfs {
 
 /// The result of a \p status operation.
@@ -135,6 +139,11 @@ public:
   virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBuffer(const Twine &Name, int64_t FileSize = -1,
             bool RequiresNullTerminator = true, bool IsVolatile = false) = 0;
+
+  /// Get the CAS reference for the contents of the file.
+  /// \returns \p None if the underlying \p FileSystem doesn't support providing
+  /// CAS references.
+  virtual llvm::ErrorOr<Optional<cas::ObjectRef>> getCASContents();
 
   /// Closes the file.
   virtual std::error_code close() = 0;
@@ -282,7 +291,8 @@ public:
   /// closes the file.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(const Twine &Name, int64_t FileSize = -1,
-                   bool RequiresNullTerminator = true, bool IsVolatile = false);
+                   bool RequiresNullTerminator = true, bool IsVolatile = false,
+                   Optional<cas::ObjectRef> *CASContents = nullptr);
 
   /// Get a directory_iterator for \p Dir.
   /// \note The 'end' iterator is directory_iterator().

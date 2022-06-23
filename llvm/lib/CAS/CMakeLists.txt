@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMCAS
   CASFileSystem.cpp
   CASNodeSchema.cpp
   CASOutputBackend.cpp
+  CASProvidingFileSystem.cpp
   CachingOnDiskFileSystem.cpp
   FileSystemCache.cpp
   HashMappedTrie.cpp

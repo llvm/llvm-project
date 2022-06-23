@@ -17,6 +17,8 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -27,6 +29,7 @@
 #include <string>
 
 using namespace clang;
+using namespace clang::cas;
 using namespace tooling;
 using namespace dependencies;
 
@@ -239,4 +242,51 @@ TEST(DependencyScanner, ScanDepsWithFS) {
   using llvm::sys::path::convert_to_slash;
   EXPECT_EQ(convert_to_slash(DepFile),
             "test.cpp.o: /root/test.cpp /root/header.h\n");
+}
+
+TEST(DependencyScanner, DepScanFSWithCASProvider) {
+  std::shared_ptr<CASDB> DB = llvm::cas::createInMemoryCAS();
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  StringRef Path = "a.h";
+  StringRef Contents = "a";
+  FS->addFile(Path, 0, llvm::MemoryBuffer::getMemBuffer(Contents));
+  std::unique_ptr<llvm::vfs::FileSystem> CASFS =
+      llvm::cas::createCASProvidingFileSystem(DB, FS);
+
+  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
+                                    ScanningOutputFormat::Make, CASOptions(),
+                                    nullptr);
+  {
+    DependencyScanningWorkerFilesystem DepFS(Service.getSharedCache(),
+                                             std::move(CASFS));
+    Optional<ObjectRef> CASContents;
+    auto Buf = DepFS.getBufferForFile(Path, /*FileSize*/ -1,
+                                      /*RequiresNullTerminator*/ false,
+                                      /*IsVolatile*/ false, &CASContents);
+    ASSERT_TRUE(Buf);
+    EXPECT_EQ(Contents, (*Buf)->getBuffer());
+    ASSERT_TRUE(CASContents);
+    Optional<ObjectProxy> BlobContents;
+    ASSERT_THAT_ERROR(DB->getProxy(*CASContents).moveInto(BlobContents),
+                      llvm::Succeeded());
+    EXPECT_EQ(BlobContents->getData(), Contents);
+  }
+  {
+    // Check that even though we pass a new InMemoryFileSystem instance here the
+    // DependencyScanningService's SharedCache cached the file's buffer and
+    // cas::ObjectRef and will be able to provide it.
+    DependencyScanningWorkerFilesystem DepFS(Service.getSharedCache(),
+                                             new llvm::vfs::InMemoryFileSystem);
+    llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> File =
+        DepFS.openFileForRead(Path);
+    ASSERT_TRUE(File);
+    ASSERT_TRUE(*File);
+    llvm::ErrorOr<Optional<ObjectRef>> Ref = (*File)->getCASContents();
+    ASSERT_TRUE(Ref);
+    ASSERT_TRUE(*Ref);
+    Optional<ObjectProxy> BlobContents;
+    ASSERT_THAT_ERROR(DB->getProxy(**Ref).moveInto(BlobContents),
+                      llvm::Succeeded());
+    EXPECT_EQ(BlobContents->getData(), Contents);
+  }
 }

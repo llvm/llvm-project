@@ -10,6 +10,8 @@
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/FileSystemStatCache.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -17,6 +19,7 @@
 
 using namespace llvm;
 using namespace clang;
+using namespace clang::cas;
 
 namespace {
 
@@ -556,6 +559,50 @@ TEST_F(FileManagerTest, getBypassFile) {
   ASSERT_THAT_ERROR(Manager.getFileRef("/tmp/test").moveInto(SearchRef),
                     Succeeded());
   EXPECT_EQ(&FE, &SearchRef->getFileEntry());
+}
+
+TEST_F(FileManagerTest, CASProvider) {
+  std::shared_ptr<CASDB> DB = llvm::cas::createInMemoryCAS();
+  auto FS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  StringRef Path = "a.txt";
+  StringRef Contents = "a";
+  FS->addFile(Path, 0, MemoryBuffer::getMemBuffer(Contents));
+  llvm::IntrusiveRefCntPtr<vfs::FileSystem> CASFS =
+      llvm::cas::createCASProvidingFileSystem(DB, FS);
+
+  FileSystemOptions Opts;
+  {
+    FileManager Manager(Opts, CASFS);
+    Optional<ObjectRef> CASContents;
+    auto Buf = Manager.getBufferForFile(Path, /*IsVolatile*/ false,
+                                        /*RequiresNullTerminator*/ false,
+                                        &CASContents);
+    ASSERT_TRUE(Buf);
+    EXPECT_EQ(Contents, (*Buf)->getBuffer());
+    ASSERT_TRUE(CASContents);
+    Optional<ObjectProxy> BlobContents;
+    ASSERT_THAT_ERROR(DB->getProxy(*CASContents).moveInto(BlobContents),
+                      llvm::Succeeded());
+    EXPECT_EQ(BlobContents->getData(), Contents);
+  }
+  {
+    FileManager Manager(Opts, CASFS);
+    Optional<FileEntryRef> FERef;
+    ASSERT_THAT_ERROR(
+        Manager.getFileRef(Path, /*OpenFile*/ true).moveInto(FERef),
+        llvm::Succeeded());
+    Optional<ObjectRef> CASContents;
+    auto Buf = Manager.getBufferForFile(*FERef, /*IsVolatile*/ false,
+                                        /*RequiresNullTerminator*/ false,
+                                        &CASContents);
+    ASSERT_TRUE(Buf);
+    EXPECT_EQ(Contents, (*Buf)->getBuffer());
+    ASSERT_TRUE(CASContents);
+    Optional<ObjectProxy> BlobContents;
+    ASSERT_THAT_ERROR(DB->getProxy(*CASContents).moveInto(BlobContents),
+                      llvm::Succeeded());
+    EXPECT_EQ(BlobContents->getData(), Contents);
+  }
 }
 
 } // anonymous namespace
