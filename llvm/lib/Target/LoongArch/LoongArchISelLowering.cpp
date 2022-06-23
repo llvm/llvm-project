@@ -75,6 +75,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(FunctionAlignment);
 
   setTargetDAGCombine(ISD::AND);
+  setTargetDAGCombine(ISD::SRL);
 }
 
 SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
@@ -303,6 +304,47 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(lsb, DL, GRLenVT));
 }
 
+static SDValue performSRLCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  // $dst = srl (and $src, Mask), Shamt
+  // =>
+  // BSTRPICK $dst, $src, MaskIdx+MaskLen-1, Shamt
+  // when Mask is a shifted mask, and MaskIdx <= Shamt <= MaskIdx+MaskLen-1
+  //
+
+  SDValue FirstOperand = N->getOperand(0);
+  ConstantSDNode *CN;
+  EVT ValTy = N->getValueType(0);
+  SDLoc DL(N);
+  MVT GRLenVT = Subtarget.getGRLenVT();
+  unsigned MaskIdx, MaskLen;
+  uint64_t Shamt;
+
+  // The first operand must be an AND and the second operand of the AND must be
+  // a shifted mask.
+  if (FirstOperand.getOpcode() != ISD::AND ||
+      !(CN = dyn_cast<ConstantSDNode>(FirstOperand.getOperand(1))) ||
+      !isShiftedMask_64(CN->getZExtValue(), MaskIdx, MaskLen))
+    return SDValue();
+
+  // The second operand (shift amount) must be an immediate.
+  if (!(CN = dyn_cast<ConstantSDNode>(N->getOperand(1))))
+    return SDValue();
+
+  Shamt = CN->getZExtValue();
+  if (MaskIdx <= Shamt && Shamt <= MaskIdx + MaskLen - 1)
+    return DAG.getNode(LoongArchISD::BSTRPICK, DL, ValTy,
+                       FirstOperand->getOperand(0),
+                       DAG.getConstant(MaskIdx + MaskLen - 1, DL, GRLenVT),
+                       DAG.getConstant(Shamt, DL, GRLenVT));
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -311,6 +353,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::AND:
     return performANDCombine(N, DAG, DCI, Subtarget);
+  case ISD::SRL:
+    return performSRLCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
