@@ -52,8 +52,7 @@ Configuration files:
     InheritParentConfig: true
     User:                user
     CheckOptions:
-      - key:             some-check.SomeOption
-        value:           'some value'
+      some-check.SomeOption: 'some value'
     ...
 
 )");
@@ -171,8 +170,7 @@ line or a specific configuration file.
 static cl::opt<std::string> Config("config", cl::desc(R"(
 Specifies a configuration in YAML/JSON format:
   -config="{Checks: '*',
-            CheckOptions: [{key: x,
-                            value: y}]}"
+            CheckOptions: {x: y}}"
 When the value is empty, clang-tidy will
 attempt to find a file named .clang-tidy for
 each source file in its parent directories.
