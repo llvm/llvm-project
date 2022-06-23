@@ -94,7 +94,8 @@ public:
   void Endfile(IoErrorHandler &);
   void Rewind(IoErrorHandler &);
   void EndIoStatement();
-  void SetPosition(std::int64_t, IoErrorHandler &); // zero-based
+  bool SetStreamPos(std::int64_t, IoErrorHandler &); // one-based, for POS=
+  bool SetDirectRec(std::int64_t, IoErrorHandler &); // one-based, for REC=
   std::int64_t InquirePos() const {
     // 12.6.2.11 defines POS=1 as the beginning of file
     return frameOffsetInFile_ + recordOffsetInFrame_ + positionInRecord + 1;
@@ -110,6 +111,7 @@ public:
 private:
   static UnitMap &GetUnitMap();
   const char *FrameNextInput(IoErrorHandler &, std::size_t);
+  void SetPosition(std::int64_t, IoErrorHandler &); // zero-based
   void BeginSequentialVariableUnformattedInputRecord(IoErrorHandler &);
   void BeginVariableFormattedInputRecord(IoErrorHandler &);
   void BackspaceFixedRecord(IoErrorHandler &);
