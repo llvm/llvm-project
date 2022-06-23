@@ -138,6 +138,12 @@ def : InstAlias<"smstop",     (MSRpstatesvcrImm1 0b011, 0b0)>;
 def : InstAlias<"smstop sm",  (MSRpstatesvcrImm1 0b001, 0b0)>;
 def : InstAlias<"smstop za",  (MSRpstatesvcrImm1 0b010, 0b0)>;
 
+// Read and write TPIDR2_EL0
+def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
+          (MSR 0xde85, GPR64:$val)>;
+def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
+          (MRS 0xde85)>;
+
 //===----------------------------------------------------------------------===//
 // SVE2 instructions
 //===----------------------------------------------------------------------===//

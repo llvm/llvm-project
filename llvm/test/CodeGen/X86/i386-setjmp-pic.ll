@@ -14,10 +14,10 @@ target triple = "i386-apple-macosx"
 ; CHECK-NEXT: popl [[BP:%[a-z]+]]
 ;
 ; CHECK: leal [[BLOCK_ADDR:LBB[$0-9a-zA-Z_-]+]]-[[BP_SETUP_LABEL]]([[BP]]),
-define i32 @test(i8* %tmp) {
+define i32 @test(ptr %tmp) {
 entry:
-  %tmp9 = call i32 @llvm.eh.sjlj.setjmp(i8* %tmp)
+  %tmp9 = call i32 @llvm.eh.sjlj.setjmp(ptr %tmp)
   ret i32 %tmp9
 }
 
-declare i32 @llvm.eh.sjlj.setjmp(i8*)
+declare i32 @llvm.eh.sjlj.setjmp(ptr)

@@ -37,7 +37,7 @@ define <8 x i16> @test_x86_vcvtps2ph_256(<8 x float> %a0) {
 declare <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float>, i32) nounwind readonly
 
 
-define void @test_x86_vcvtps2ph_256_m(<8 x i16>* nocapture %d, <8 x float> %a) nounwind {
+define void @test_x86_vcvtps2ph_256_m(ptr nocapture %d, <8 x float> %a) nounwind {
 ; X86-LABEL: test_x86_vcvtps2ph_256_m:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -65,11 +65,11 @@ define void @test_x86_vcvtps2ph_256_m(<8 x i16>* nocapture %d, <8 x float> %a) n
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a, i32 3)
-  store <8 x i16> %0, <8 x i16>* %d, align 16
+  store <8 x i16> %0, ptr %d, align 16
   ret void
 }
 
-define void @test_x86_vcvtps2ph_128_m(<4 x i16>* nocapture %d, <4 x float> %a) nounwind {
+define void @test_x86_vcvtps2ph_128_m(ptr nocapture %d, <4 x float> %a) nounwind {
 ; X86-LABEL: test_x86_vcvtps2ph_128_m:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -94,11 +94,11 @@ define void @test_x86_vcvtps2ph_128_m(<4 x i16>* nocapture %d, <4 x float> %a) n
 entry:
   %0 = tail call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a, i32 3)
   %1 = shufflevector <8 x i16> %0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  store <4 x i16> %1, <4 x i16>* %d, align 8
+  store <4 x i16> %1, ptr %d, align 8
   ret void
 }
 
-define void @test_x86_vcvtps2ph_128_m2(double* nocapture %hf4x16, <4 x float> %f4X86) #0 {
+define void @test_x86_vcvtps2ph_128_m2(ptr nocapture %hf4x16, <4 x float> %f4X86) #0 {
 ; X86-LABEL: test_x86_vcvtps2ph_128_m2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -124,11 +124,11 @@ entry:
   %0 = tail call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %f4X86, i32 3)
   %1 = bitcast <8 x i16> %0 to <2 x double>
   %vecext = extractelement <2 x double> %1, i32 0
-  store double %vecext, double* %hf4x16, align 8
+  store double %vecext, ptr %hf4x16, align 8
   ret void
 }
 
-define void @test_x86_vcvtps2ph_128_m3(i64* nocapture %hf4x16, <4 x float> %f4X86) #0 {
+define void @test_x86_vcvtps2ph_128_m3(ptr nocapture %hf4x16, <4 x float> %f4X86) #0 {
 ; X86-LABEL: test_x86_vcvtps2ph_128_m3:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -154,6 +154,6 @@ entry:
   %0 = tail call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %f4X86, i32 3)
   %1 = bitcast <8 x i16> %0 to <2 x i64>
   %vecext = extractelement <2 x i64> %1, i32 0
-  store i64 %vecext, i64* %hf4x16, align 8
+  store i64 %vecext, ptr %hf4x16, align 8
   ret void
 }

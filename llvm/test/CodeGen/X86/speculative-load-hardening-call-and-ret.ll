@@ -7,7 +7,7 @@
 
 declare void @f()
 
-define i32 @test_calls_and_rets(i32 *%ptr) nounwind {
+define i32 @test_calls_and_rets(ptr%ptr) nounwind {
 ; X64-NOPIC-LABEL: test_calls_and_rets:
 ; X64-NOPIC:       # %bb.0: # %entry
 ; X64-NOPIC-NEXT:    pushq %rbp
@@ -127,14 +127,14 @@ define i32 @test_calls_and_rets(i32 *%ptr) nounwind {
 ; X64-PIC-NEXT:    retq
 entry:
   call void @f()
-  %x = load i32, i32* %ptr
+  %x = load i32, ptr %ptr
   call void @f()
-  %y = load i32, i32* %ptr
+  %y = load i32, ptr %ptr
   %z = add i32 %x, %y
   ret i32 %z
 }
 
-define i32 @test_calls_and_rets_noredzone(i32 *%ptr) nounwind noredzone {
+define i32 @test_calls_and_rets_noredzone(ptr%ptr) nounwind noredzone {
 ; X64-NOPIC-LABEL: test_calls_and_rets_noredzone:
 ; X64-NOPIC:       # %bb.0: # %entry
 ; X64-NOPIC-NEXT:    pushq %rbp
@@ -266,18 +266,18 @@ define i32 @test_calls_and_rets_noredzone(i32 *%ptr) nounwind noredzone {
 ; X64-PIC-NEXT:    retq
 entry:
   call void @f()
-  %x = load i32, i32* %ptr
+  %x = load i32, ptr %ptr
   call void @f()
-  %y = load i32, i32* %ptr
+  %y = load i32, ptr %ptr
   %z = add i32 %x, %y
   ret i32 %z
 }
 
-declare i32 @setjmp(i8* %env) returns_twice
-declare i32 @sigsetjmp(i8* %env, i32 %savemask) returns_twice
-declare i32 @__sigsetjmp(i8* %foo, i8* %bar, i32 %baz) returns_twice
+declare i32 @setjmp(ptr %env) returns_twice
+declare i32 @sigsetjmp(ptr %env, i32 %savemask) returns_twice
+declare i32 @__sigsetjmp(ptr %foo, ptr %bar, i32 %baz) returns_twice
 
-define i32 @test_call_setjmp(i32 *%ptr) nounwind {
+define i32 @test_call_setjmp(ptr%ptr) nounwind {
 ; X64-NOPIC-LABEL: test_call_setjmp:
 ; X64-NOPIC:       # %bb.0: # %entry
 ; X64-NOPIC-NEXT:    pushq %rbp
@@ -481,16 +481,16 @@ define i32 @test_call_setjmp(i32 *%ptr) nounwind {
 entry:
   %env = alloca i8, i32 16
   ; Call a normal setjmp function.
-  call i32 @setjmp(i8* %env)
-  %x = load i32, i32* %ptr
+  call i32 @setjmp(ptr %env)
+  %x = load i32, ptr %ptr
   ; Call something like sigsetjmp.
-  call i32 @sigsetjmp(i8* %env, i32 42)
-  %y = load i32, i32* %ptr
+  call i32 @sigsetjmp(ptr %env, i32 42)
+  %y = load i32, ptr %ptr
   ; Call something that might be an implementation detail expanded out of a
   ; macro that has a weird signature but still gets annotated as returning
   ; twice.
-  call i32 @__sigsetjmp(i8* %env, i8* %env, i32 42)
-  %z = load i32, i32* %ptr
+  call i32 @__sigsetjmp(ptr %env, ptr %env, i32 42)
+  %z = load i32, ptr %ptr
   %s1 = add i32 %x, %y
   %s2 = add i32 %s1, %z
   ret i32 %s2

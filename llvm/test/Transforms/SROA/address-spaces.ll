@@ -65,8 +65,7 @@ define void @copy_struct([5 x i64] %in.coerce, ptr addrspace(1) align 4 %ptr) {
 ;
 for.end:
   %in = alloca %struct.struct_test_27.0.13, align 8
-  %0 = bitcast ptr %in to ptr
-  store [5 x i64] %in.coerce, ptr %0, align 8
+  store [5 x i64] %in.coerce, ptr %in, align 8
   %scevgep9 = getelementptr %struct.struct_test_27.0.13, ptr %in, i32 0, i32 4, i32 0
   call void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) align 4 %ptr, ptr align 4 %scevgep9, i32 16, i1 false)
   ret void
@@ -87,10 +86,8 @@ define void @pr27557() {
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca %union.anon, align 8
-  %2 = bitcast ptr %1 to ptr
-  store ptr @g, ptr %2, align 8
-  %3 = bitcast ptr %1 to ptr
-  store ptr addrspace(3) @l, ptr %3, align 8
+  store ptr @g, ptr %1, align 8
+  store ptr addrspace(3) @l, ptr %1, align 8
   ret void
 }
 
@@ -103,11 +100,9 @@ define ptr @pr27557.alt() {
 ; CHECK-NEXT:    ret ptr inttoptr (i64 ptrtoint (ptr addrspace(2) @l2 to i64) to ptr)
 ;
   %1 = alloca %union.anon, align 8
-  %2 = bitcast ptr %1 to ptr
-  store ptr addrspace(2) @l2, ptr %2, align 8
-  %3 = bitcast ptr %1 to ptr
-  %4 = load ptr, ptr %3, align 8
-  ret ptr %4
+  store ptr addrspace(2) @l2, ptr %1, align 8
+  %2 = load ptr, ptr %1, align 8
+  ret ptr %2
 }
 
 ; Make sure pre-splitting doesn't try to introduce an illegal bitcast

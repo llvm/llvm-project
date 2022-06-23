@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefixes=X64
 
-define zeroext i1 @PR22473(i8*, i8) {
+define zeroext i1 @PR22473(ptr, i8) {
 ; X86-LABEL: PR22473:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -16,7 +16,7 @@ define zeroext i1 @PR22473(i8*, i8) {
 ; X64-NEXT:    cmpb %sil, (%rdi)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
-  %3 = load i8, i8* %0, align 1
+  %3 = load i8, ptr %0, align 1
   %4 = icmp eq i8 %3, %1
   ret i1 %4
 }

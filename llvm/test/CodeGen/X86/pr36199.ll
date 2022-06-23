@@ -17,6 +17,6 @@ define void @foo(<16 x float> %x) {
   %4 = shufflevector <4 x float> %3, <4 x float> undef, <16 x i32> <i32 0, i32
 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0,
 i32 1, i32 2, i32 3>
-  store <16 x float> %4, <16 x float>* undef, align 4
+  store <16 x float> %4, ptr undef, align 4
   ret void
 }

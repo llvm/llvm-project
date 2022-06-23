@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefix=X64
 
-define void @test_1024(i1024* %a, i1024* %b, i1024* %out) nounwind {
+define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; X32-LABEL: test_1024:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
@@ -5926,9 +5926,9 @@ define void @test_1024(i1024* %a, i1024* %b, i1024* %out) nounwind {
 ; X64-NEXT:    popq %r15
 ; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
-  %av = load i1024, i1024* %a
-  %bv = load i1024, i1024* %b
+  %av = load i1024, ptr %a
+  %bv = load i1024, ptr %b
   %r = mul i1024 %av, %bv
-  store i1024 %r, i1024* %out
+  store i1024 %r, ptr %out
   ret void
 }

@@ -28,6 +28,71 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
             substrs=["error: Process is not being traced"],
             error=True)
 
+    def testRawDumpInstructionsInJSON(self):
+        self.expect("trace load -v " +
+            os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
+            substrs=["intel-pt"])
+
+        self.expect("thread trace dump instructions --raw --count 5 --forwards --json",
+            substrs=['''[{"id":0,"loadAddress":"0x400511"},{"id":1,"loadAddress":"0x400518"},{"id":2,"loadAddress":"0x40051f"},{"id":3,"loadAddress":"0x400529"},{"id":4,"loadAddress":"0x40052d"}]'''])
+
+        self.expect("thread trace dump instructions --raw --count 5 --forwards --pretty-json",
+            substrs=['''[
+  {
+    "id": 0,
+    "loadAddress": "0x400511"
+  },
+  {
+    "id": 1,
+    "loadAddress": "0x400518"
+  },
+  {
+    "id": 2,
+    "loadAddress": "0x40051f"
+  },
+  {
+    "id": 3,
+    "loadAddress": "0x400529"
+  },
+  {
+    "id": 4,
+    "loadAddress": "0x40052d"
+  }
+]'''])
+
+    def testRawDumpInstructionsInJSONToFile(self):
+        self.expect("trace load -v " +
+            os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
+            substrs=["intel-pt"])
+
+        outfile = os.path.join(self.getBuildDir(), "output.json")
+
+        self.expect("thread trace dump instructions --raw --count 5 --forwards --pretty-json --file " + outfile)
+
+        with open(outfile, "r") as out:
+            self.assertEqual(out.read(), '''[
+  {
+    "id": 0,
+    "loadAddress": "0x400511"
+  },
+  {
+    "id": 1,
+    "loadAddress": "0x400518"
+  },
+  {
+    "id": 2,
+    "loadAddress": "0x40051f"
+  },
+  {
+    "id": 3,
+    "loadAddress": "0x400529"
+  },
+  {
+    "id": 4,
+    "loadAddress": "0x40052d"
+  }
+]''')
+
     def testRawDumpInstructions(self):
         self.expect("trace load -v " +
             os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
@@ -162,6 +227,7 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
             os.path.join(self.getSourceDir(), "intelpt-trace", "trace_bad_image.json"))
         self.expect("thread trace dump instructions --forwards",
             substrs=['''thread #1: tid = 3842849
+    ...missing instructions
     0: 0x0000000000400511    error: no memory mapped at this address
     1: 0x0000000000400518    error: no memory mapped at this address'''])
 
@@ -170,7 +236,75 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
             os.path.join(self.getSourceDir(), "intelpt-trace", "trace_wrong_cpu.json"))
         self.expect("thread trace dump instructions --forwards",
             substrs=['''thread #1: tid = 3842849
+    ...missing instructions
     0: error: unknown cpu'''])
+
+    def testMultiFileTraceWithMissingModuleInJSON(self):
+        self.expect("trace load " +
+            os.path.join(self.getSourceDir(), "intelpt-trace-multi-file", "multi-file-no-ld.json"))
+
+        self.expect("thread trace dump instructions --count 3 --id 4 --forwards --pretty-json",
+            substrs=['''[
+  {
+    "id": 4,
+    "loadAddress": "0x400510",
+    "module": "a.out",
+    "symbol": null,
+    "mnemonic": "pushq"
+  },
+  {
+    "id": 5,
+    "loadAddress": "0x400516",
+    "module": "a.out",
+    "symbol": null,
+    "mnemonic": "jmpq"
+  },
+  {
+    "id": 6,
+    "error": "0x00007ffff7df1950    error: no memory mapped at this address"
+  }
+]'''])
+
+        self.expect("thread trace dump instructions --count 4 --id 20 --forwards --pretty-json",
+                substrs=['''[
+  {
+    "id": 20,
+    "loadAddress": "0x400540",
+    "module": "a.out",
+    "symbol": "foo()",
+    "mnemonic": "jmpq"
+  },
+  {
+    "id": 21,
+    "loadAddress": "0x7ffff7bd96e0",
+    "module": "libfoo.so",
+    "symbol": "foo()",
+    "mnemonic": "pushq",
+    "source": "/home/wallace/llvm-sand/external/llvm-project/lldb/test/API/commands/trace/intelpt-trace-multi-file/foo.cpp",
+    "line": 3,
+    "column": 0
+  },
+  {
+    "id": 22,
+    "loadAddress": "0x7ffff7bd96e1",
+    "module": "libfoo.so",
+    "symbol": "foo()",
+    "mnemonic": "movq",
+    "source": "/home/wallace/llvm-sand/external/llvm-project/lldb/test/API/commands/trace/intelpt-trace-multi-file/foo.cpp",
+    "line": 3,
+    "column": 0
+  },
+  {
+    "id": 23,
+    "loadAddress": "0x7ffff7bd96e4",
+    "module": "libfoo.so",
+    "symbol": "foo()",
+    "mnemonic": "subq",
+    "source": "/home/wallace/llvm-sand/external/llvm-project/lldb/test/API/commands/trace/intelpt-trace-multi-file/foo.cpp",
+    "line": 4,
+    "column": 0
+  }
+]'''])
 
     def testMultiFileTraceWithMissingModule(self):
         self.expect("trace load " +
@@ -201,8 +335,8 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
   a.out`(none)
     4: 0x0000000000400510    pushq  0x200af2(%rip)            ; _GLOBAL_OFFSET_TABLE_ + 8
     5: 0x0000000000400516    jmpq   *0x200af4(%rip)           ; _GLOBAL_OFFSET_TABLE_ + 16
-    6: 0x00007ffff7df1950    error: no memory mapped at this address
     ...missing instructions
+    6: 0x00007ffff7df1950    error: no memory mapped at this address
   a.out`main + 20 at main.cpp:10
     7: 0x0000000000400674    movl   %eax, -0xc(%rbp)
   a.out`main + 23 at main.cpp:12
@@ -340,4 +474,16 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     no more data'''])
 
         self.expect("", substrs=['''thread #1: tid = 815455
+    no more data'''])
+
+
+        self.expect("thread trace dump instructions --raw --all --forwards",
+            substrs=['''thread #1: tid = 815455
+    0: 0x000000000040066f
+    1: 0x0000000000400540''', '''5: 0x0000000000400516
+    ...missing instructions
+    6: 0x00007ffff7df1950    error: no memory mapped at this address
+    7: 0x0000000000400674''', '''43: 0x00000000004006a4
+    44: 0x00000000004006a7
+    45: 0x00000000004006a9
     no more data'''])

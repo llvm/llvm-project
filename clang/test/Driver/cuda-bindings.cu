@@ -40,6 +40,7 @@
 // Test two gpu architectures with complete compilation.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --offload-arch=sm_30,sm_35 %s 2>&1 \
 // RUN: | FileCheck -check-prefix=BIN2 %s
 // BIN2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output:
 // BIN2-NOT: cuda-bindings-device-cuda-nvptx64

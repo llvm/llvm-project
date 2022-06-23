@@ -33,7 +33,7 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
 
   let extraClassDeclaration = [{
     ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target);
+        ::mlir::linalg::LinalgOp target, TransformState &state);
   }];
 }
 
@@ -74,7 +74,7 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
 
   let extraClassDeclaration = [{
     ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target);
+        ::mlir::linalg::LinalgOp target, TransformState &state);
   }];
 }
 
@@ -96,7 +96,7 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
 
   let extraClassDeclaration = [{
     ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target);
+        ::mlir::linalg::LinalgOp target, TransformState &state);
   }];
 }
 
@@ -124,7 +124,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
 
   let extraClassDeclaration = [{
     ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target);
+        ::mlir::linalg::LinalgOp target, TransformState &state);
   }];
 }
 
@@ -149,7 +149,7 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
 
   let extraClassDeclaration = [{
     ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target);
+        ::mlir::linalg::LinalgOp target, TransformState &state);
   }];
 }
 
@@ -218,7 +218,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
 
   let extraClassDeclaration = [{
     ::mlir::FailureOr<::llvm::SmallVector<::mlir::Operation *>> applyToOne(
-        ::mlir::linalg::LinalgOp target);
+        ::mlir::linalg::LinalgOp target, TransformState &state);
   }];
 }
 
@@ -275,7 +275,8 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<Operation *> applyToOne(::mlir::Operation *target);
+    ::mlir::FailureOr<Operation *> applyToOne(
+      ::mlir::Operation *target, TransformState &state);
   }];
 }
 

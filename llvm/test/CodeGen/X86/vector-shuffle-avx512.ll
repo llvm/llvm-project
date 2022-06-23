@@ -466,7 +466,7 @@ entry:
 }
 
 ; PR34370
-define <8 x float> @test_masked_permps_v8f32(<8 x float>* %vp, <8 x float> %vec2) {
+define <8 x float> @test_masked_permps_v8f32(ptr %vp, <8 x float> %vec2) {
 ; SKX64-LABEL: test_masked_permps_v8f32:
 ; SKX64:       # %bb.0:
 ; SKX64-NEXT:    vmovaps (%rdi), %ymm2
@@ -502,13 +502,13 @@ define <8 x float> @test_masked_permps_v8f32(<8 x float>* %vp, <8 x float> %vec2
 ; KNL32-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
 ; KNL32-NEXT:    vmovaps %ymm1, %ymm0
 ; KNL32-NEXT:    retl
-  %vec = load <8 x float>, <8 x float>* %vp
+  %vec = load <8 x float>, ptr %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 3, i32 0, i32 7, i32 6, i32 3, i32 0>
   %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x float> %shuf, <8 x float> %vec2
   ret <8 x float> %res
 }
 
-define <16 x float> @test_masked_permps_v16f32(<16 x float>* %vp, <16 x float> %vec2) {
+define <16 x float> @test_masked_permps_v16f32(ptr %vp, <16 x float> %vec2) {
 ; X64-LABEL: test_masked_permps_v16f32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %zmm2
@@ -525,13 +525,13 @@ define <16 x float> @test_masked_permps_v16f32(<16 x float>* %vp, <16 x float> %
 ; X86-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
 ; X86-NEXT:    vmovaps %zmm1, %zmm0
 ; X86-NEXT:    retl
-  %vec = load <16 x float>, <16 x float>* %vp
+  %vec = load <16 x float>, ptr %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 15, i32 13, i32 11, i32 9, i32 14, i32 12, i32 10, i32 8, i32 7, i32 6, i32 3, i32 0, i32 7, i32 6, i32 3, i32 0>
   %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
 
-define void @test_demandedelts_pshufb_v32i8_v16i8(<2 x i32>* %src, <8 x i32>* %dst) {
+define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; SKX64-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; SKX64:       # %bb.0:
 ; SKX64-NEXT:    vmovdqa 32(%rdi), %xmm0
@@ -577,22 +577,20 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(<2 x i32>* %src, <8 x i32>* %d
 ; KNL32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
 ; KNL32-NEXT:    vmovdqa %ymm0, 832(%ecx)
 ; KNL32-NEXT:    retl
-  %t64 = bitcast <2 x i32>* %src to <16 x i32>*
-  %t87 = load <16 x i32>, <16 x i32>* %t64, align 64
+  %t87 = load <16 x i32>, ptr %src, align 64
   %t88 = extractelement <16 x i32> %t87, i64 11
   %t89 = insertelement <8 x i32> <i32 undef, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 %t88, i64 0
   %t90 = insertelement <8 x i32> %t89, i32 %t88, i64 1
-  %ptridx49.i = getelementptr inbounds <8 x i32>, <8 x i32>* %dst, i64 21
-  store <8 x i32> %t90, <8 x i32>* %ptridx49.i, align 32
-  %ptridx56.i = getelementptr inbounds <2 x i32>, <2 x i32>* %src, i64 24
-  %t00 = bitcast <2 x i32>* %ptridx56.i to <16 x i32>*
-  %t09 = load <16 x i32>, <16 x i32>* %t00, align 64
+  %ptridx49.i = getelementptr inbounds <8 x i32>, ptr %dst, i64 21
+  store <8 x i32> %t90, ptr %ptridx49.i, align 32
+  %ptridx56.i = getelementptr inbounds <2 x i32>, ptr %src, i64 24
+  %t09 = load <16 x i32>, ptr %ptridx56.i, align 64
   %t10 = extractelement <16 x i32> %t09, i64 5
   %t11 = insertelement <8 x i32> <i32 undef, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 %t10, i64 0
   %t12 = extractelement <16 x i32> %t09, i64 4
   %t13 = insertelement <8 x i32> %t11, i32 %t12, i64 1
-  %ptridx64.i = getelementptr inbounds <8 x i32>, <8 x i32>* %dst, i64 26
-  store <8 x i32> %t13, <8 x i32>* %ptridx64.i, align 32
+  %ptridx64.i = getelementptr inbounds <8 x i32>, ptr %dst, i64 26
+  store <8 x i32> %t13, ptr %ptridx64.i, align 32
   ret void
 }
 
@@ -614,7 +612,7 @@ define <32 x float> @PR47534(<8 x float> %tmp) {
 %union1= type { <16 x float> }
 @src1 = external dso_local local_unnamed_addr global %union1, align 64
 
-define void @PR43170(<16 x float>* %a0) {
+define void @PR43170(ptr %a0) {
 ; SKX64-LABEL: PR43170:
 ; SKX64:       # %bb.0: # %entry
 ; SKX64-NEXT:    vmovaps src1(%rip), %ymm0
@@ -643,8 +641,8 @@ define void @PR43170(<16 x float>* %a0) {
 ; KNL32-NEXT:    vmovaps %zmm0, (%eax)
 ; KNL32-NEXT:    retl
 entry:
-  %0 = load <8 x float>, <8 x float>* bitcast (%union1* @src1 to <8 x float>*), align 64
+  %0 = load <8 x float>, ptr @src1, align 64
   %1 = shufflevector <8 x float> %0, <8 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <16 x float> %1, <16 x float>* %a0, align 64
+  store <16 x float> %1, ptr %a0, align 64
   ret void
 }

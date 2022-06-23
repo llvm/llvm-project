@@ -10,7 +10,7 @@ target triple = "x86_64-apple-darwin10.0"
 	%struct.__Rec = type opaque
 	%struct.__vv = type {  }
 
-define %struct.__vv* @t(%struct.Key* %desc, i64 %p) nounwind ssp {
+define ptr @t(ptr %desc, i64 %p) nounwind ssp {
 ; CHECK-LABEL: t:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %r14
@@ -57,7 +57,7 @@ bb4:		; preds = %bb.i, %bb26, %bb4, %entry
 
 	%0 = call i32 (...) @xxGetOffsetForCode(i32 undef) nounwind		; <i32> [#uses=0]
 	%ins = or i64 %p, 2097152		; <i64> [#uses=1]
-	%1 = call i32 (...) @xxCalculateMidType(%struct.Key* %desc, i32 0) nounwind		; <i32> [#uses=1]
+	%1 = call i32 (...) @xxCalculateMidType(ptr %desc, i32 0) nounwind		; <i32> [#uses=1]
 	%cond = icmp eq i32 %1, 1		; <i1> [#uses=1]
 	br i1 %cond, label %bb26, label %bb4
 
@@ -67,22 +67,20 @@ bb26:		; preds = %bb4
 	br i1 %cond.i, label %bb.i, label %bb4
 
 bb.i:		; preds = %bb26
-	%3 = load i32, i32* null, align 4		; <i32> [#uses=1]
+	%3 = load i32, ptr null, align 4		; <i32> [#uses=1]
 	%4 = uitofp i32 %3 to float		; <float> [#uses=1]
 	%.sum13.i = add i64 0, 4		; <i64> [#uses=1]
-	%5 = getelementptr i8, i8* null, i64 %.sum13.i		; <i8*> [#uses=1]
-	%6 = bitcast i8* %5 to i32*		; <i32*> [#uses=1]
-	%7 = load i32, i32* %6, align 4		; <i32> [#uses=1]
-	%8 = uitofp i32 %7 to float		; <float> [#uses=1]
+	%5 = getelementptr i8, ptr null, i64 %.sum13.i		; <ptr> [#uses=1]
+	%6 = load i32, ptr %5, align 4		; <i32> [#uses=1]
+	%7 = uitofp i32 %6 to float		; <float> [#uses=1]
 	%.sum.i = add i64 0, 8		; <i64> [#uses=1]
-	%9 = getelementptr i8, i8* null, i64 %.sum.i		; <i8*> [#uses=1]
-	%10 = bitcast i8* %9 to i32*		; <i32*> [#uses=1]
-	%11 = load i32, i32* %10, align 4		; <i32> [#uses=1]
-	%12 = uitofp i32 %11 to float		; <float> [#uses=1]
-	%13 = insertelement <4 x float> undef, float %4, i32 0		; <<4 x float>> [#uses=1]
-	%14 = insertelement <4 x float> %13, float %8, i32 1		; <<4 x float>> [#uses=1]
-	%15 = insertelement <4 x float> %14, float %12, i32 2		; <<4 x float>> [#uses=1]
-	store <4 x float> %15, <4 x float>* null, align 16
+	%8 = getelementptr i8, ptr null, i64 %.sum.i		; <ptr> [#uses=1]
+	%9 = load i32, ptr %8, align 4		; <i32> [#uses=1]
+	%10 = uitofp i32 %9 to float		; <float> [#uses=1]
+	%11 = insertelement <4 x float> undef, float %4, i32 0		; <<4 x float>> [#uses=1]
+	%12 = insertelement <4 x float> %11, float %7, i32 1		; <<4 x float>> [#uses=1]
+	%13 = insertelement <4 x float> %12, float %10, i32 2		; <<4 x float>> [#uses=1]
+	store <4 x float> %13, ptr null, align 16
 	br label %bb4
 }
 

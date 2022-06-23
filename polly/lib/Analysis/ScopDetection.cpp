@@ -1885,7 +1885,7 @@ static void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
   if (!OnlyProfitable) {
     NumLoopsInScop += Stats.NumLoops;
     MaxNumLoopsInScop =
-        std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
+        std::max(MaxNumLoopsInScop.getValue(), (uint64_t)Stats.NumLoops);
     if (Stats.MaxDepth == 0)
       NumScopsDepthZero++;
     else if (Stats.MaxDepth == 1)
@@ -1903,7 +1903,7 @@ static void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
   } else {
     NumLoopsInProfScop += Stats.NumLoops;
     MaxNumLoopsInProfScop =
-        std::max(MaxNumLoopsInProfScop.getValue(), (unsigned)Stats.NumLoops);
+        std::max(MaxNumLoopsInProfScop.getValue(), (uint64_t)Stats.NumLoops);
     if (Stats.MaxDepth == 0)
       NumProfScopsDepthZero++;
     else if (Stats.MaxDepth == 1)

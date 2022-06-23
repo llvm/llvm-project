@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 
-define i64 @test1(i8* %data) {
+define i64 @test1(ptr %data) {
 ; X86-LABEL: test1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -19,14 +19,14 @@ define i64 @test1(i8* %data) {
 ; X64-NEXT:    andl $60, %eax
 ; X64-NEXT:    retq
 entry:
-  %bf.load = load i8, i8* %data, align 4
+  %bf.load = load i8, ptr %data, align 4
   %bf.clear = shl i8 %bf.load, 2
   %0 = and i8 %bf.clear, 60
   %mul = zext i8 %0 to i64
   ret i64 %mul
 }
 
-define i8* @test2(i8* %data) {
+define ptr @test2(ptr %data) {
 ; X86-LABEL: test2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -42,16 +42,16 @@ define i8* @test2(i8* %data) {
 ; X64-NEXT:    leaq (%rdi,%rax,4), %rax
 ; X64-NEXT:    retq
 entry:
-  %bf.load = load i8, i8* %data, align 4
+  %bf.load = load i8, ptr %data, align 4
   %bf.clear = shl i8 %bf.load, 2
   %0 = and i8 %bf.clear, 60
   %mul = zext i8 %0 to i64
-  %add.ptr = getelementptr inbounds i8, i8* %data, i64 %mul
-  ret i8* %add.ptr
+  %add.ptr = getelementptr inbounds i8, ptr %data, i64 %mul
+  ret ptr %add.ptr
 }
 
 ; If the shift op is SHL, the logic op can only be AND.
-define i64 @test3(i8* %data) {
+define i64 @test3(ptr %data) {
 ; X86-LABEL: test3:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -70,14 +70,14 @@ define i64 @test3(i8* %data) {
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
 entry:
-  %bf.load = load i8, i8* %data, align 4
+  %bf.load = load i8, ptr %data, align 4
   %bf.clear = shl i8 %bf.load, 2
   %0 = xor i8 %bf.clear, 60
   %mul = zext i8 %0 to i64
   ret i64 %mul
 }
 
-define i64 @test4(i8* %data) {
+define i64 @test4(ptr %data) {
 ; X86-LABEL: test4:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -94,14 +94,14 @@ define i64 @test4(i8* %data) {
 ; X64-NEXT:    andl $60, %eax
 ; X64-NEXT:    retq
 entry:
-  %bf.load = load i8, i8* %data, align 4
+  %bf.load = load i8, ptr %data, align 4
   %bf.clear = lshr i8 %bf.load, 2
   %0 = and i8 %bf.clear, 60
   %1 = zext i8 %0 to i64
   ret i64 %1
 }
 
-define i64 @test5(i8* %data) {
+define i64 @test5(ptr %data) {
 ; X86-LABEL: test5:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -118,14 +118,14 @@ define i64 @test5(i8* %data) {
 ; X64-NEXT:    xorq $60, %rax
 ; X64-NEXT:    retq
 entry:
-  %bf.load = load i8, i8* %data, align 4
+  %bf.load = load i8, ptr %data, align 4
   %bf.clear = lshr i8 %bf.load, 2
   %0 = xor i8 %bf.clear, 60
   %1 = zext i8 %0 to i64
   ret i64 %1
 }
 
-define i64 @test6(i8* %data) {
+define i64 @test6(ptr %data) {
 ; X86-LABEL: test6:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -142,7 +142,7 @@ define i64 @test6(i8* %data) {
 ; X64-NEXT:    orq $60, %rax
 ; X64-NEXT:    retq
 entry:
-  %bf.load = load i8, i8* %data, align 4
+  %bf.load = load i8, ptr %data, align 4
   %bf.clear = lshr i8 %bf.load, 2
   %0 = or i8 %bf.clear, 60
   %1 = zext i8 %0 to i64
@@ -150,7 +150,7 @@ entry:
 }
 
 ; Load is folded with sext.
-define i64 @test8(i8* %data) {
+define i64 @test8(ptr %data) {
 ; X86-LABEL: test8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -169,7 +169,7 @@ define i64 @test8(i8* %data) {
 ; X64-NEXT:    orl $60, %eax
 ; X64-NEXT:    retq
 entry:
-  %bf.load = load i8, i8* %data, align 4
+  %bf.load = load i8, ptr %data, align 4
   %ext = sext i8 %bf.load to i16
   %bf.clear = lshr i16 %ext, 2
   %0 = or i16 %bf.clear, 60

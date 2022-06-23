@@ -4,7 +4,7 @@
 
 ; If there is no explicit MMX type usage, always promote to XMM.
 
-define void @test0(<1 x i64>* %x) {
+define void @test0(ptr %x) {
 ; X32-LABEL: test0:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -20,11 +20,11 @@ define void @test0(<1 x i64>* %x) {
 ; X64-NEXT:    movq %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:
-  %tmp2 = load <1 x i64>, <1 x i64>* %x
+  %tmp2 = load <1 x i64>, ptr %x
   %tmp6 = bitcast <1 x i64> %tmp2 to <2 x i32>
   %tmp9 = shufflevector <2 x i32> %tmp6, <2 x i32> undef, <2 x i32> < i32 1, i32 1 >
   %tmp10 = bitcast <2 x i32> %tmp9 to <1 x i64>
-  store <1 x i64> %tmp10, <1 x i64>* %x
+  store <1 x i64> %tmp10, ptr %x
   ret void
 }
 
@@ -56,7 +56,7 @@ entry:
   %tmp555 = bitcast <4 x i16> %tmp543 to <8 x i8>
   %tmp556 = bitcast <8 x i8> %tmp555 to x86_mmx
   %tmp557 = bitcast <8 x i8> zeroinitializer to x86_mmx
-  tail call void @llvm.x86.mmx.maskmovq( x86_mmx %tmp557, x86_mmx %tmp556, i8* null)
+  tail call void @llvm.x86.mmx.maskmovq( x86_mmx %tmp557, x86_mmx %tmp556, ptr null)
   ret void
 }
 
@@ -79,9 +79,9 @@ define void @test2() nounwind {
 ; X64-NEXT:    movq %xmm0, (%rax)
 ; X64-NEXT:    retq
 entry:
-  %0 = load <2 x i32>, <2 x i32>* @tmp_V2i, align 8
+  %0 = load <2 x i32>, ptr @tmp_V2i, align 8
   %1 = shufflevector <2 x i32> %0, <2 x i32> undef, <2 x i32> zeroinitializer
-  store <2 x i32> %1, <2 x i32>* @tmp_V2i, align 8
+  store <2 x i32> %1, ptr @tmp_V2i, align 8
   ret void
 }
 
@@ -127,7 +127,7 @@ define <4 x float> @pr35869() nounwind {
   ret <4 x float> %7
 }
 
-declare void @llvm.x86.mmx.maskmovq(x86_mmx, x86_mmx, i8*)
+declare void @llvm.x86.mmx.maskmovq(x86_mmx, x86_mmx, ptr)
 declare x86_mmx @llvm.x86.mmx.pcmpgt.w(x86_mmx, x86_mmx)
 declare x86_mmx @llvm.x86.mmx.punpcklbw(x86_mmx, x86_mmx)
 declare x86_mmx @llvm.x86.mmx.punpcklwd(x86_mmx, x86_mmx)

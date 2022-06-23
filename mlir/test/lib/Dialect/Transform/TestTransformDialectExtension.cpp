@@ -227,7 +227,8 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
 }
 
 FailureOr<SmallVector<Operation *>>
-mlir::test::TestWrongNumberOfResultsOp::applyToOne(Operation *) {
+mlir::test::TestWrongNumberOfResultsOp::applyToOne(
+    Operation *, transform::TransformState &state) {
   return SmallVector<Operation *>{};
 }
 

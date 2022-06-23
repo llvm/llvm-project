@@ -1,9 +1,9 @@
 ; RUN: llc < %s -mtriple=x86_64--
 
 	%struct.blktkntype = type { i32, i32 }
-	%struct.fieldstruc = type { [128 x i8], %struct.blktkntype*, i32, i32 }
+	%struct.fieldstruc = type { [128 x i8], ptr, i32, i32 }
 
-define fastcc i32 @Env_GetFieldStruc(i8* %FieldName, i32* %Status, %struct.fieldstruc* %FieldStruc) nounwind  {
+define fastcc i32 @Env_GetFieldStruc(ptr %FieldName, ptr %Status, ptr %FieldStruc) nounwind  {
 entry:
 	br label %bb137.i
 
@@ -16,6 +16,6 @@ bb137.i:		; preds = %bb137.i, %entry
 	br i1 false, label %bb137.i, label %bb149.i.loopexit
 
 bb149.i.loopexit:		; preds = %bb137.i
-	%tmp139.i = getelementptr i8, i8* %FieldName, i64 %tmp139.rec.i		; <i8*> [#uses=0]
+	%tmp139.i = getelementptr i8, ptr %FieldName, i64 %tmp139.rec.i		; <ptr> [#uses=0]
 	unreachable
 }

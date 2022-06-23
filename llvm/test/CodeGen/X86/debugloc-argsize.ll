@@ -3,17 +3,17 @@
 ; CHECK-LABEL: _Z3foov:
 ; CHECK: .loc    1 4 3 prologue_end
 ; CHECK: .cfi_escape 0x2e, 0x10
-define void @_Z3foov() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !4 {
+define void @_Z3foov() #0 personality ptr @__gxx_personality_v0 !dbg !4 {
 entry:
   tail call void @_Z3bariii(i32 0, i32 1, i32 2) #1, !dbg !10
   invoke void @_Z3bariii(i32 4, i32 5, i32 6) #1
           to label %try.cont unwind label %lpad, !dbg !11
 
 lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
-          catch i8* null, !dbg !13
-  %1 = extractvalue { i8*, i32 } %0, 0, !dbg !13
-  %2 = tail call i8* @__cxa_begin_catch(i8* %1) #2, !dbg !14
+  %0 = landingpad { ptr, i32 }
+          catch ptr null, !dbg !13
+  %1 = extractvalue { ptr, i32 } %0, 0, !dbg !13
+  %2 = tail call ptr @__cxa_begin_catch(ptr %1) #2, !dbg !14
   tail call void @__cxa_end_catch(), !dbg !15
   br label %try.cont, !dbg !15
 
@@ -26,7 +26,7 @@ declare void @_Z3bariii(i32, i32, i32) #0
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 

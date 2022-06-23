@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+avx -mcpu=corei7-avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+avx512vl -mcpu=skx | FileCheck %s --check-prefixes=AVX,AVX512VL
 
-define dso_local double @t1(float* nocapture %x) nounwind readonly ssp {
+define dso_local double @t1(ptr nocapture %x) nounwind readonly ssp {
 ; SSE-LABEL: t1:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -18,12 +18,12 @@ define dso_local double @t1(float* nocapture %x) nounwind readonly ssp {
 ; AVX-NEXT:    retq
 entry:
 
-  %0 = load float, float* %x, align 4
+  %0 = load float, ptr %x, align 4
   %1 = fpext float %0 to double
   ret double %1
 }
 
-define dso_local float @t2(double* nocapture %x) nounwind readonly ssp optsize {
+define dso_local float @t2(ptr nocapture %x) nounwind readonly ssp optsize {
 ; SSE-LINUX-LABEL: t2:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    cvtsd2ss (%rdi), %xmm0
@@ -39,12 +39,12 @@ define dso_local float @t2(double* nocapture %x) nounwind readonly ssp optsize {
 ; AVX-NEXT:    vcvtsd2ss (%rcx), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load double, double* %x, align 8
+  %0 = load double, ptr %x, align 8
   %1 = fptrunc double %0 to float
   ret float %1
 }
 
-define dso_local float @squirtf(float* %x) nounwind {
+define dso_local float @squirtf(ptr %x) nounwind {
 ; SSE-LABEL: squirtf:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -57,12 +57,12 @@ define dso_local float @squirtf(float* %x) nounwind {
 ; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %z = load float, float* %x
+  %z = load float, ptr %x
   %t = call float @llvm.sqrt.f32(float %z)
   ret float %t
 }
 
-define dso_local double @squirt(double* %x) nounwind {
+define dso_local double @squirt(ptr %x) nounwind {
 ; SSE-LABEL: squirt:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -75,12 +75,12 @@ define dso_local double @squirt(double* %x) nounwind {
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %z = load double, double* %x
+  %z = load double, ptr %x
   %t = call double @llvm.sqrt.f64(double %z)
   ret double %t
 }
 
-define dso_local float @squirtf_size(float* %x) nounwind optsize {
+define dso_local float @squirtf_size(ptr %x) nounwind optsize {
 ; SSE-LINUX-LABEL: squirtf_size:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    sqrtss (%rdi), %xmm0
@@ -96,12 +96,12 @@ define dso_local float @squirtf_size(float* %x) nounwind optsize {
 ; AVX-NEXT:    vsqrtss (%rcx), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %z = load float, float* %x
+  %z = load float, ptr %x
   %t = call float @llvm.sqrt.f32(float %z)
   ret float %t
 }
 
-define dso_local double @squirt_size(double* %x) nounwind optsize {
+define dso_local double @squirt_size(ptr %x) nounwind optsize {
 ; SSE-LINUX-LABEL: squirt_size:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    sqrtsd (%rdi), %xmm0
@@ -117,7 +117,7 @@ define dso_local double @squirt_size(double* %x) nounwind optsize {
 ; AVX-NEXT:    vsqrtsd (%rcx), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %z = load double, double* %x
+  %z = load double, ptr %x
   %t = call double @llvm.sqrt.f64(double %z)
   ret double %t
 }
@@ -271,7 +271,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; to avoid cyclic dependence on a write to the same register in a
 ; previous iteration.
 
-define i64 @loopdep2(i64* nocapture %x, double* nocapture %y) nounwind {
+define i64 @loopdep2(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; SSE-LINUX-LABEL: loopdep2:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    movq (%rdi), %rax
@@ -385,14 +385,14 @@ define i64 @loopdep2(i64* nocapture %x, double* nocapture %y) nounwind {
 ; AVX-NEXT:    addq $184, %rsp
 ; AVX-NEXT:    retq
 entry:
-  %vx = load i64, i64* %x
+  %vx = load i64, ptr %x
   br label %loop
 loop:
   %i = phi i64 [ 1, %entry ], [ %inc, %loop ]
   %s1 = phi i64 [ %vx, %entry ], [ %s2, %loop ]
   %fi = sitofp i64 %i to double
   tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
-  %vy = load double, double* %y
+  %vy = load double, ptr %y
   %fipy = fadd double %fi, %vy
   %iipy = fptosi double %fipy to i64
   %s2 = add i64 %s1, %iipy
@@ -605,20 +605,20 @@ for.cond1.preheader:                              ; preds = %for.inc14, %entry
 
 for.body3:
   %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.body3 ]
-  %arrayidx = getelementptr inbounds [1024 x i32], [1024 x i32]* @v, i64 0, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [1024 x i32], ptr @v, i64 0, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %conv = sitofp i32 %0 to double
-  %arrayidx5 = getelementptr inbounds [1024 x double], [1024 x double]* @x, i64 0, i64 %indvars.iv
-  %1 = load double, double* %arrayidx5, align 8
+  %arrayidx5 = getelementptr inbounds [1024 x double], ptr @x, i64 0, i64 %indvars.iv
+  %1 = load double, ptr %arrayidx5, align 8
   %mul = fmul double %conv, %1
-  %arrayidx7 = getelementptr inbounds [1024 x double], [1024 x double]* @y, i64 0, i64 %indvars.iv
-  %2 = load double, double* %arrayidx7, align 8
+  %arrayidx7 = getelementptr inbounds [1024 x double], ptr @y, i64 0, i64 %indvars.iv
+  %2 = load double, ptr %arrayidx7, align 8
   %mul8 = fmul double %mul, %2
-  %arrayidx10 = getelementptr inbounds [1024 x double], [1024 x double]* @z, i64 0, i64 %indvars.iv
-  %3 = load double, double* %arrayidx10, align 8
+  %arrayidx10 = getelementptr inbounds [1024 x double], ptr @z, i64 0, i64 %indvars.iv
+  %3 = load double, ptr %arrayidx10, align 8
   %mul11 = fmul double %mul8, %3
-  %arrayidx13 = getelementptr inbounds [1024 x double], [1024 x double]* @w, i64 0, i64 %indvars.iv
-  store double %mul11, double* %arrayidx13, align 8
+  %arrayidx13 = getelementptr inbounds [1024 x double], ptr @w, i64 0, i64 %indvars.iv
+  store double %mul11, ptr %arrayidx13, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
@@ -1109,7 +1109,7 @@ top:
 ; avoid a cyclic dependence on a write to the same register in a previous
 ; iteration, especially when we cannot zero out the undef register because it
 ; is alive.
-define i64 @loopclearence(i64* nocapture %x, double* nocapture %y) nounwind {
+define i64 @loopclearence(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; SSE-LINUX-LABEL: loopclearence:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    movq (%rdi), %rax
@@ -1241,7 +1241,7 @@ define i64 @loopclearence(i64* nocapture %x, double* nocapture %y) nounwind {
 ; AVX-NEXT:    addq $136, %rsp
 ; AVX-NEXT:    retq
 entry:
-  %vx = load i64, i64* %x
+  %vx = load i64, ptr %x
   br label %loop
 loop:
   %i = phi i64 [ 1, %entry ], [ %inc, %loop ]
@@ -1254,7 +1254,7 @@ loop:
   tail call void asm sideeffect "", "~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
-  %vy = load double, double* %y
+  %vy = load double, ptr %y
   %fipy = fadd double %fi, %vy
   %iipy = fptosi double %fipy to i64
   %s2 = add i64 %s1, %iipy
@@ -1269,7 +1269,7 @@ ret:
 ; complicated loop structures. This example is the inner loop from
 ; julia> a = falses(10000); a[1:4:end] = true
 ; julia> linspace(1.0,2.0,10000)[a]
-define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c2, double %c3, double %c4, i64 %size) {
+define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, double %c2, double %c3, double %c4, i64 %size) {
 ; SSE-LINUX-LABEL: loopclearance2:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    #APP
@@ -1582,8 +1582,8 @@ loop:
 inner_loop:
   %phi = phi i64 [ %phi_k, %loop ], [ %nextk, %inner_loop ]
   %idx = lshr i64 %phi, 6
-  %inputptr = getelementptr i64, i64* %x, i64 %idx
-  %input = load i64, i64* %inputptr, align 8
+  %inputptr = getelementptr i64, ptr %x, i64 %idx
+  %input = load i64, ptr %inputptr, align 8
   %masked = and i64 %phi, 63
   %shiftedmasked = shl i64 1, %masked
   %maskedinput = and i64 %input, %shiftedmasked
@@ -1605,8 +1605,8 @@ loop_end:
   %add2 = fadd double %mul, %mul2
   %div = fdiv double %add2, %c4
   %prev_j = add i64 %phi_j, -1
-  %outptr = getelementptr double, double* %y, i64 %prev_j
-  store double %div, double* %outptr, align 8
+  %outptr = getelementptr double, ptr %y, i64 %prev_j
+  store double %div, ptr %outptr, align 8
   %done = icmp slt i64 %size, %nexti
   br i1 %done, label %loopdone, label %loop
 

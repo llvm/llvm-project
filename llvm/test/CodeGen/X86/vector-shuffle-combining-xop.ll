@@ -278,7 +278,7 @@ define <16 x i8> @combine_shuffle_proti_v4i32(<4 x i32> %a0) {
 }
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 
-define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
+define void @buildvector_v4f32_0404(float %a, float %b, ptr %ptr) {
 ; X86-LABEL: buildvector_v4f32_0404:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -302,11 +302,11 @@ define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
   %v1 = insertelement <4 x float> %v0,   float %b, i32 1
   %v2 = insertelement <4 x float> %v1,   float %a, i32 2
   %v3 = insertelement <4 x float> %v2,   float %b, i32 3
-  store <4 x float> %v3, <4 x float>* %ptr
+  store <4 x float> %v3, ptr %ptr
   ret void
 }
 
-define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, <4 x float>* %ptr) {
+define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, ptr %ptr) {
 ; X86-LABEL: buildvector_v4f32_07z6:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -326,7 +326,7 @@ define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, <4 x float>* %ptr)
   %v1 = insertelement <4 x float> %v0,   float %b3, i32 1
   %v2 = insertelement <4 x float> %v1,   float 0.0, i32 2
   %v3 = insertelement <4 x float> %v2,   float %b2, i32 3
-  store <4 x float> %v3, <4 x float>* %ptr
+  store <4 x float> %v3, ptr %ptr
   ret void
 }
 
@@ -375,7 +375,7 @@ define <16 x i8> @constant_fold_vpperm() {
   ret <16 x i8> %1
 }
 
-define <4 x float> @PR31296(i8* %in) {
+define <4 x float> @PR31296(ptr %in) {
 ; X86-LABEL: PR31296:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -390,11 +390,9 @@ define <4 x float> @PR31296(i8* %in) {
 ; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,mem[0]
 ; X64-NEXT:    retq
 entry:
-  %0 = getelementptr i8, i8* %in, i32 0
-  %1 = bitcast i8* %0 to i32*
-  %2 = load i32, i32* %1
-  %3 = zext i32 %2 to i128
-  %4 = bitcast i128 %3 to <4 x float>
-  %5 = shufflevector <4 x float> %4, <4 x float> <float 0.000000e+00, float 1.000000e+00, float undef, float undef>, <4 x i32> <i32 0, i32 4, i32 4, i32 5>
-  ret <4 x float> %5
+  %0 = load i32, ptr %in
+  %1 = zext i32 %0 to i128
+  %2 = bitcast i128 %1 to <4 x float>
+  %3 = shufflevector <4 x float> %2, <4 x float> <float 0.000000e+00, float 1.000000e+00, float undef, float undef>, <4 x i32> <i32 0, i32 4, i32 4, i32 5>
+  ret <4 x float> %3
 }

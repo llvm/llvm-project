@@ -5,7 +5,7 @@
 
 ; PR37427 - https://bugs.llvm.org/show_bug.cgi?id=37427
 
-define <8 x i32> @eq_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
+define <8 x i32> @eq_zero(ptr %p, <8 x i32> %x, <8 x i32> %y) {
 ; AVX1-LABEL: eq_zero:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -32,13 +32,13 @@ define <8 x i32> @eq_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 ; AVX512-NEXT:    vptestnmb %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
-  %load = load <8 x i8>, <8 x i8>* %p
+  %load = load <8 x i8>, ptr %p
   %cmp = icmp eq <8 x i8> %load, zeroinitializer
   %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %y
   ret <8 x i32> %sel
 }
 
-define <4 x i64> @ne_zero(<4 x i16>* %p, <4 x i64> %x, <4 x i64> %y) {
+define <4 x i64> @ne_zero(ptr %p, <4 x i64> %x, <4 x i64> %y) {
 ; AVX1-LABEL: ne_zero:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -67,13 +67,13 @@ define <4 x i64> @ne_zero(<4 x i16>* %p, <4 x i64> %x, <4 x i64> %y) {
 ; AVX512-NEXT:    vptestmw %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
-  %load = load <4 x i16>, <4 x i16>* %p
+  %load = load <4 x i16>, ptr %p
   %cmp = icmp ne <4 x i16> %load, zeroinitializer
   %sel = select <4 x i1> %cmp, <4 x i64> %x, <4 x i64> %y
   ret <4 x i64> %sel
 }
 
-define <16 x i16> @sgt_zero(<16 x i8>* %p, <16 x i16> %x, <16 x i16> %y) {
+define <16 x i16> @sgt_zero(ptr %p, <16 x i16> %x, <16 x i16> %y) {
 ; AVX1-LABEL: sgt_zero:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm2
@@ -102,13 +102,13 @@ define <16 x i16> @sgt_zero(<16 x i8>* %p, <16 x i16> %x, <16 x i16> %y) {
 ; AVX512-NEXT:    vpcmpltb (%rdi), %xmm2, %k1
 ; AVX512-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
-  %load = load <16 x i8>, <16 x i8>* %p
+  %load = load <16 x i8>, ptr %p
   %cmp = icmp sgt <16 x i8> %load, zeroinitializer
   %sel = select <16 x i1> %cmp, <16 x i16> %x, <16 x i16> %y
   ret <16 x i16> %sel
 }
 
-define <8 x i32> @slt_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
+define <8 x i32> @slt_zero(ptr %p, <8 x i32> %x, <8 x i32> %y) {
 ; AVX1-LABEL: slt_zero:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -131,13 +131,13 @@ define <8 x i32> @slt_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 ; AVX512-NEXT:    vpmovb2m %xmm2, %k1
 ; AVX512-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
-  %load = load <8 x i8>, <8 x i8>* %p
+  %load = load <8 x i8>, ptr %p
   %cmp = icmp slt <8 x i8> %load, zeroinitializer
   %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %y
   ret <8 x i32> %sel
 }
 
-define <4 x double> @eq_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x double> %y) {
+define <4 x double> @eq_zero_fp_select(ptr %p, <4 x double> %x, <4 x double> %y) {
 ; AVX1-LABEL: eq_zero_fp_select:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -164,13 +164,13 @@ define <4 x double> @eq_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x doubl
 ; AVX512-NEXT:    vptestnmb %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
-  %load = load <4 x i8>, <4 x i8>* %p
+  %load = load <4 x i8>, ptr %p
   %cmp = icmp eq <4 x i8> %load, zeroinitializer
   %sel = select <4 x i1> %cmp, <4 x double> %x, <4 x double> %y
   ret <4 x double> %sel
 }
 
-define <8 x float> @ne_zero_fp_select(<8 x i8>* %p, <8 x float> %x, <8 x float> %y) {
+define <8 x float> @ne_zero_fp_select(ptr %p, <8 x float> %x, <8 x float> %y) {
 ; AVX1-LABEL: ne_zero_fp_select:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
@@ -199,13 +199,13 @@ define <8 x float> @ne_zero_fp_select(<8 x i8>* %p, <8 x float> %x, <8 x float> 
 ; AVX512-NEXT:    vptestmb %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
-  %load = load <8 x i8>, <8 x i8>* %p
+  %load = load <8 x i8>, ptr %p
   %cmp = icmp ne <8 x i8> %load, zeroinitializer
   %sel = select <8 x i1> %cmp, <8 x float> %x, <8 x float> %y
   ret <8 x float> %sel
 }
 
-define <4 x double> @sgt_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x double> %y) {
+define <4 x double> @sgt_zero_fp_select(ptr %p, <4 x double> %x, <4 x double> %y) {
 ; AVX1-LABEL: sgt_zero_fp_select:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -233,13 +233,13 @@ define <4 x double> @sgt_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x doub
 ; AVX512-NEXT:    vpcmpgtb %xmm3, %xmm2, %k1
 ; AVX512-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
-  %load = load <4 x i8>, <4 x i8>* %p
+  %load = load <4 x i8>, ptr %p
   %cmp = icmp sgt <4 x i8> %load, zeroinitializer
   %sel = select <4 x i1> %cmp, <4 x double> %x, <4 x double> %y
   ret <4 x double> %sel
 }
 
-define <8 x float> @slt_zero_fp_select(<8 x i16>* %p, <8 x float> %x, <8 x float> %y) {
+define <8 x float> @slt_zero_fp_select(ptr %p, <8 x float> %x, <8 x float> %y) {
 ; AVX1-LABEL: slt_zero_fp_select:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovsxwd 8(%rdi), %xmm2
@@ -260,7 +260,7 @@ define <8 x float> @slt_zero_fp_select(<8 x i16>* %p, <8 x float> %x, <8 x float
 ; AVX512-NEXT:    vpcmpgtw (%rdi), %xmm2, %k1
 ; AVX512-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
-  %load = load <8 x i16>, <8 x i16>* %p
+  %load = load <8 x i16>, ptr %p
   %cmp = icmp slt <8 x i16> %load, zeroinitializer
   %sel = select <8 x i1> %cmp, <8 x float> %x, <8 x float> %y
   ret <8 x float> %sel

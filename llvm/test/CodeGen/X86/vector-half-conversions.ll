@@ -143,54 +143,54 @@ declare <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x ha
 ; Half to Float (Load)
 ;
 
-define float @load_cvt_i16_to_f32(i16* %a0) nounwind {
+define float @load_cvt_i16_to_f32(ptr %a0) nounwind {
 ; ALL-LABEL: load_cvt_i16_to_f32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movzwl (%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    retq
-  %1 = load i16, i16* %a0
+  %1 = load i16, ptr %a0
   %2 = bitcast i16 %1 to half
   %3 = fpext half %2 to float
   ret float %3
 }
 
-define <4 x float> @load_cvt_4i16_to_4f32(<4 x i16>* %a0) nounwind {
+define <4 x float> @load_cvt_4i16_to_4f32(ptr %a0) nounwind {
 ; ALL-LABEL: load_cvt_4i16_to_4f32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtph2ps (%rdi), %xmm0
 ; ALL-NEXT:    retq
-  %1 = load <4 x i16>, <4 x i16>* %a0
+  %1 = load <4 x i16>, ptr %a0
   %2 = bitcast <4 x i16> %1 to <4 x half>
   %3 = fpext <4 x half> %2 to <4 x float>
   ret <4 x float> %3
 }
 
-define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
+define <4 x float> @load_cvt_8i16_to_4f32(ptr %a0) nounwind {
 ; ALL-LABEL: load_cvt_8i16_to_4f32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtph2ps (%rdi), %xmm0
 ; ALL-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a0
+  %1 = load <8 x i16>, ptr %a0
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = bitcast <4 x i16> %2 to <4 x half>
   %4 = fpext <4 x half> %3 to <4 x float>
   ret <4 x float> %4
 }
 
-define <8 x float> @load_cvt_8i16_to_8f32(<8 x i16>* %a0) nounwind {
+define <8 x float> @load_cvt_8i16_to_8f32(ptr %a0) nounwind {
 ; ALL-LABEL: load_cvt_8i16_to_8f32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtph2ps (%rdi), %ymm0
 ; ALL-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a0
+  %1 = load <8 x i16>, ptr %a0
   %2 = bitcast <8 x i16> %1 to <8 x half>
   %3 = fpext <8 x half> %2 to <8 x float>
   ret <8 x float> %3
 }
 
-define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
+define <16 x float> @load_cvt_16i16_to_16f32(ptr %a0) nounwind {
 ; AVX1-LABEL: load_cvt_16i16_to_16f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcvtph2ps (%rdi), %ymm0
@@ -207,29 +207,29 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcvtph2ps (%rdi), %zmm0
 ; AVX512-NEXT:    retq
-  %1 = load <16 x i16>, <16 x i16>* %a0
+  %1 = load <16 x i16>, ptr %a0
   %2 = bitcast <16 x i16> %1 to <16 x half>
   %3 = fpext <16 x half> %2 to <16 x float>
   ret <16 x float> %3
 }
 
-define <4 x float> @load_cvt_4i16_to_4f32_constrained(<4 x i16>* %a0) nounwind strictfp {
+define <4 x float> @load_cvt_4i16_to_4f32_constrained(ptr %a0) nounwind strictfp {
 ; ALL-LABEL: load_cvt_4i16_to_4f32_constrained:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtph2ps (%rdi), %xmm0
 ; ALL-NEXT:    retq
-  %1 = load <4 x i16>, <4 x i16>* %a0
+  %1 = load <4 x i16>, ptr %a0
   %2 = bitcast <4 x i16> %1 to <4 x half>
   %3 = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %2, metadata !"fpexcept.strict") strictfp
   ret <4 x float> %3
 }
 
-define <4 x float> @load_cvt_8i16_to_4f32_constrained(<8 x i16>* %a0) nounwind strictfp {
+define <4 x float> @load_cvt_8i16_to_4f32_constrained(ptr %a0) nounwind strictfp {
 ; ALL-LABEL: load_cvt_8i16_to_4f32_constrained:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtph2ps (%rdi), %xmm0
 ; ALL-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a0
+  %1 = load <8 x i16>, ptr %a0
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = bitcast <4 x i16> %2 to <4 x half>
   %4 = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %3, metadata !"fpexcept.strict") strictfp
@@ -385,7 +385,7 @@ declare <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f16(<8 x half>
 ; Half to Double (Load)
 ;
 
-define double @load_cvt_i16_to_f64(i16* %a0) nounwind {
+define double @load_cvt_i16_to_f64(ptr %a0) nounwind {
 ; ALL-LABEL: load_cvt_i16_to_f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movzwl (%rdi), %eax
@@ -393,13 +393,13 @@ define double @load_cvt_i16_to_f64(i16* %a0) nounwind {
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; ALL-NEXT:    retq
-  %1 = load i16, i16* %a0
+  %1 = load i16, ptr %a0
   %2 = bitcast i16 %1 to half
   %3 = fpext half %2 to double
   ret double %3
 }
 
-define <2 x double> @load_cvt_2i16_to_2f64(<2 x i16>* %a0) nounwind {
+define <2 x double> @load_cvt_2i16_to_2f64(ptr %a0) nounwind {
 ; ALL-LABEL: load_cvt_2i16_to_2f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -407,38 +407,38 @@ define <2 x double> @load_cvt_2i16_to_2f64(<2 x i16>* %a0) nounwind {
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; ALL-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; ALL-NEXT:    retq
-  %1 = load <2 x i16>, <2 x i16>* %a0
+  %1 = load <2 x i16>, ptr %a0
   %2 = bitcast <2 x i16> %1 to <2 x half>
   %3 = fpext <2 x half> %2 to <2 x double>
   ret <2 x double> %3
 }
 
-define <4 x double> @load_cvt_4i16_to_4f64(<4 x i16>* %a0) nounwind {
+define <4 x double> @load_cvt_4i16_to_4f64(ptr %a0) nounwind {
 ; ALL-LABEL: load_cvt_4i16_to_4f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtph2ps (%rdi), %xmm0
 ; ALL-NEXT:    vcvtps2pd %xmm0, %ymm0
 ; ALL-NEXT:    retq
-  %1 = load <4 x i16>, <4 x i16>* %a0
+  %1 = load <4 x i16>, ptr %a0
   %2 = bitcast <4 x i16> %1 to <4 x half>
   %3 = fpext <4 x half> %2 to <4 x double>
   ret <4 x double> %3
 }
 
-define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
+define <4 x double> @load_cvt_8i16_to_4f64(ptr %a0) nounwind {
 ; ALL-LABEL: load_cvt_8i16_to_4f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtph2ps (%rdi), %xmm0
 ; ALL-NEXT:    vcvtps2pd %xmm0, %ymm0
 ; ALL-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a0
+  %1 = load <8 x i16>, ptr %a0
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = bitcast <4 x i16> %2 to <4 x half>
   %4 = fpext <4 x half> %3 to <4 x double>
   ret <4 x double> %4
 }
 
-define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
+define <8 x double> @load_cvt_8i16_to_8f64(ptr %a0) nounwind {
 ; AVX1-LABEL: load_cvt_8i16_to_8f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcvtph2ps (%rdi), %ymm1
@@ -460,7 +460,7 @@ define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 ; AVX512-NEXT:    vcvtph2ps (%rdi), %ymm0
 ; AVX512-NEXT:    vcvtps2pd %ymm0, %zmm0
 ; AVX512-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a0
+  %1 = load <8 x i16>, ptr %a0
   %2 = bitcast <8 x i16> %1 to <8 x half>
   %3 = fpext <8 x half> %2 to <8 x double>
   ret <8 x double> %3
@@ -553,7 +553,7 @@ define <16 x i16> @cvt_16f32_to_16i16(<16 x float> %a0) nounwind {
 ; Float to Half (Store)
 ;
 
-define void @store_cvt_f32_to_i16(float %a0, i16* %a1) nounwind {
+define void @store_cvt_f32_to_i16(float %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_f32_to_i16:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -562,22 +562,22 @@ define void @store_cvt_f32_to_i16(float %a0, i16* %a1) nounwind {
 ; ALL-NEXT:    retq
   %1 = fptrunc float %a0 to half
   %2 = bitcast half %1 to i16
-  store i16 %2, i16* %a1
+  store i16 %2, ptr %a1
   ret void
 }
 
-define void @store_cvt_4f32_to_4i16(<4 x float> %a0, <4 x i16>* %a1) nounwind {
+define void @store_cvt_4f32_to_4i16(<4 x float> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f32_to_4i16:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, (%rdi)
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
-  store <4 x i16> %2, <4 x i16>* %a1
+  store <4 x i16> %2, ptr %a1
   ret void
 }
 
-define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounwind {
+define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f32_to_8i16_undef:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -586,11 +586,11 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
   %3 = shufflevector <4 x i16> %2, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i16> %3, <8 x i16>* %a1
+  store <8 x i16> %3, ptr %a1
   ret void
 }
 
-define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwind {
+define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f32_to_8i16_zero:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -599,11 +599,11 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
   %3 = shufflevector <4 x i16> %2, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i16> %3, <8 x i16>* %a1
+  store <8 x i16> %3, ptr %a1
   ret void
 }
 
-define void @store_cvt_8f32_to_8i16(<8 x float> %a0, <8 x i16>* %a1) nounwind {
+define void @store_cvt_8f32_to_8i16(<8 x float> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_8f32_to_8i16:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtps2ph $4, %ymm0, (%rdi)
@@ -611,11 +611,11 @@ define void @store_cvt_8f32_to_8i16(<8 x float> %a0, <8 x i16>* %a1) nounwind {
 ; ALL-NEXT:    retq
   %1 = fptrunc <8 x float> %a0 to <8 x half>
   %2 = bitcast <8 x half> %1 to <8 x i16>
-  store <8 x i16> %2, <8 x i16>* %a1
+  store <8 x i16> %2, ptr %a1
   ret void
 }
 
-define void @store_cvt_16f32_to_16i16(<16 x float> %a0, <16 x i16>* %a1) nounwind {
+define void @store_cvt_16f32_to_16i16(<16 x float> %a0, ptr %a1) nounwind {
 ; AVX1-LABEL: store_cvt_16f32_to_16i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcvtps2ph $4, %ymm1, 16(%rdi)
@@ -637,7 +637,7 @@ define void @store_cvt_16f32_to_16i16(<16 x float> %a0, <16 x i16>* %a1) nounwin
 ; AVX512-NEXT:    retq
   %1 = fptrunc <16 x float> %a0 to <16 x half>
   %2 = bitcast <16 x half> %1 to <16 x i16>
-  store <16 x i16> %2, <16 x i16>* %a1
+  store <16 x i16> %2, ptr %a1
   ret void
 }
 
@@ -941,7 +941,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; Double to Half (Store)
 ;
 
-define void @store_cvt_f64_to_i16(double %a0, i16* %a1) nounwind {
+define void @store_cvt_f64_to_i16(double %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_f64_to_i16:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
@@ -951,11 +951,11 @@ define void @store_cvt_f64_to_i16(double %a0, i16* %a1) nounwind {
 ; ALL-NEXT:    retq
   %1 = fptrunc double %a0 to half
   %2 = bitcast half %1 to i16
-  store i16 %2, i16* %a1
+  store i16 %2, ptr %a1
   ret void
 }
 
-define void @store_cvt_2f64_to_2i16(<2 x double> %a0, <2 x i16>* %a1) nounwind {
+define void @store_cvt_2f64_to_2i16(<2 x double> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_2f64_to_2i16:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
@@ -970,11 +970,11 @@ define void @store_cvt_2f64_to_2i16(<2 x double> %a0, <2 x i16>* %a1) nounwind {
 ; ALL-NEXT:    retq
   %1 = fptrunc <2 x double> %a0 to <2 x half>
   %2 = bitcast <2 x half> %1 to <2 x i16>
-  store <2 x i16> %2, <2 x i16>* %a1
+  store <2 x i16> %2, ptr %a1
   ret void
 }
 
-define void @store_cvt_4f64_to_4i16(<4 x double> %a0, <4 x i16>* %a1) nounwind {
+define void @store_cvt_4f64_to_4i16(<4 x double> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f64_to_4i16:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
@@ -1000,11 +1000,11 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, <4 x i16>* %a1) nounwind {
 ; ALL-NEXT:    retq
   %1 = fptrunc <4 x double> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
-  store <4 x i16> %2, <4 x i16>* %a1
+  store <4 x i16> %2, ptr %a1
   ret void
 }
 
-define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) nounwind {
+define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f64_to_8i16_undef:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
@@ -1033,11 +1033,11 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
   %1 = fptrunc <4 x double> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
   %3 = shufflevector <4 x i16> %2, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i16> %3, <8 x i16>* %a1
+  store <8 x i16> %3, ptr %a1
   ret void
 }
 
-define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounwind {
+define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, ptr %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f64_to_8i16_zero:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
@@ -1066,11 +1066,11 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
   %1 = fptrunc <4 x double> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
   %3 = shufflevector <4 x i16> %2, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i16> %3, <8 x i16>* %a1
+  store <8 x i16> %3, ptr %a1
   ret void
 }
 
-define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) nounwind {
+define void @store_cvt_8f64_to_8i16(<8 x double> %a0, ptr %a1) nounwind {
 ; AVX1-LABEL: store_cvt_8f64_to_8i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
@@ -1202,11 +1202,11 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) nounwind {
 ; AVX512-NEXT:    retq
   %1 = fptrunc <8 x double> %a0 to <8 x half>
   %2 = bitcast <8 x half> %1 to <8 x i16>
-  store <8 x i16> %2, <8 x i16>* %a1
+  store <8 x i16> %2, ptr %a1
   ret void
 }
 
-define void @store_cvt_32f32_to_32f16(<32 x float> %a0, <32 x half>* %a1) nounwind {
+define void @store_cvt_32f32_to_32f16(<32 x float> %a0, ptr %a1) nounwind {
 ; AVX1-LABEL: store_cvt_32f32_to_32f16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcvtps2ph $4, %ymm3, 48(%rdi)
@@ -1232,6 +1232,6 @@ define void @store_cvt_32f32_to_32f16(<32 x float> %a0, <32 x half>* %a1) nounwi
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = fptrunc <32 x float> %a0 to <32 x half>
-  store <32 x half> %1, <32 x half>* %a1
+  store <32 x half> %1, ptr %a1
   ret void
 }
