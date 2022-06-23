@@ -14,7 +14,7 @@ declare <2 x double> @llvm.x86.fma.vfmsub.sd(<2 x double>, <2 x double>, <2 x do
 declare <2 x double> @llvm.x86.fma.vfnmadd.sd(<2 x double>, <2 x double>, <2 x double>)
 declare <2 x double> @llvm.x86.fma.vfnmsub.sd(<2 x double>, <2 x double>, <2 x double>)
 
-define void @fmadd_aab_ss(float* %a, float* %b) {
+define void @fmadd_aab_ss(ptr %a, ptr %b) {
 ; AVX2-LABEL: fmadd_aab_ss:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovss (%rdi), %xmm0 # encoding: [0xc5,0xfa,0x10,0x07]
@@ -32,13 +32,13 @@ define void @fmadd_aab_ss(float* %a, float* %b) {
 ; AVX512-NEXT:    # xmm0 = (xmm0 * xmm0) + mem
 ; AVX512-NEXT:    vmovss %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -47,11 +47,11 @@ define void @fmadd_aab_ss(float* %a, float* %b) {
   %vr = call <4 x float> @llvm.x86.fma.vfmadd.ss(<4 x float> %av, <4 x float> %av, <4 x float> %bv)
 
   %sr = extractelement <4 x float> %vr, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fmadd_aba_ss(float* %a, float* %b) {
+define void @fmadd_aba_ss(ptr %a, ptr %b) {
 ; AVX2-LABEL: fmadd_aba_ss:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovss (%rdi), %xmm0 # encoding: [0xc5,0xfa,0x10,0x07]
@@ -69,13 +69,13 @@ define void @fmadd_aba_ss(float* %a, float* %b) {
 ; AVX512-NEXT:    # xmm0 = (xmm0 * mem) + xmm0
 ; AVX512-NEXT:    vmovss %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -84,11 +84,11 @@ define void @fmadd_aba_ss(float* %a, float* %b) {
   %vr = call <4 x float> @llvm.x86.fma.vfmadd.ss(<4 x float> %av, <4 x float> %bv, <4 x float> %av)
 
   %sr = extractelement <4 x float> %vr, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fmsub_aab_ss(float* %a, float* %b) {
+define void @fmsub_aab_ss(ptr %a, ptr %b) {
 ; AVX2-LABEL: fmsub_aab_ss:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovss (%rdi), %xmm0 # encoding: [0xc5,0xfa,0x10,0x07]
@@ -106,13 +106,13 @@ define void @fmsub_aab_ss(float* %a, float* %b) {
 ; AVX512-NEXT:    # xmm0 = (xmm0 * xmm0) - mem
 ; AVX512-NEXT:    vmovss %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -121,11 +121,11 @@ define void @fmsub_aab_ss(float* %a, float* %b) {
   %vr = call <4 x float> @llvm.x86.fma.vfmsub.ss(<4 x float> %av, <4 x float> %av, <4 x float> %bv)
 
   %sr = extractelement <4 x float> %vr, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fmsub_aba_ss(float* %a, float* %b) {
+define void @fmsub_aba_ss(ptr %a, ptr %b) {
 ; AVX2-LABEL: fmsub_aba_ss:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovss (%rdi), %xmm0 # encoding: [0xc5,0xfa,0x10,0x07]
@@ -143,13 +143,13 @@ define void @fmsub_aba_ss(float* %a, float* %b) {
 ; AVX512-NEXT:    # xmm0 = (xmm0 * mem) - xmm0
 ; AVX512-NEXT:    vmovss %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -158,11 +158,11 @@ define void @fmsub_aba_ss(float* %a, float* %b) {
   %vr = call <4 x float> @llvm.x86.fma.vfmsub.ss(<4 x float> %av, <4 x float> %bv, <4 x float> %av)
 
   %sr = extractelement <4 x float> %vr, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fnmadd_aab_ss(float* %a, float* %b) {
+define void @fnmadd_aab_ss(ptr %a, ptr %b) {
 ; AVX2-LABEL: fnmadd_aab_ss:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovss (%rdi), %xmm0 # encoding: [0xc5,0xfa,0x10,0x07]
@@ -180,13 +180,13 @@ define void @fnmadd_aab_ss(float* %a, float* %b) {
 ; AVX512-NEXT:    # xmm0 = -(xmm0 * xmm0) + mem
 ; AVX512-NEXT:    vmovss %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -195,11 +195,11 @@ define void @fnmadd_aab_ss(float* %a, float* %b) {
   %vr = call <4 x float> @llvm.x86.fma.vfnmadd.ss(<4 x float> %av, <4 x float> %av, <4 x float> %bv)
 
   %sr = extractelement <4 x float> %vr, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fnmadd_aba_ss(float* %a, float* %b) {
+define void @fnmadd_aba_ss(ptr %a, ptr %b) {
 ; AVX2-LABEL: fnmadd_aba_ss:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovss (%rdi), %xmm0 # encoding: [0xc5,0xfa,0x10,0x07]
@@ -217,13 +217,13 @@ define void @fnmadd_aba_ss(float* %a, float* %b) {
 ; AVX512-NEXT:    # xmm0 = -(xmm0 * mem) + xmm0
 ; AVX512-NEXT:    vmovss %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -232,11 +232,11 @@ define void @fnmadd_aba_ss(float* %a, float* %b) {
   %vr = call <4 x float> @llvm.x86.fma.vfnmadd.ss(<4 x float> %av, <4 x float> %bv, <4 x float> %av)
 
   %sr = extractelement <4 x float> %vr, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fnmsub_aab_ss(float* %a, float* %b) {
+define void @fnmsub_aab_ss(ptr %a, ptr %b) {
 ; AVX2-LABEL: fnmsub_aab_ss:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovss (%rdi), %xmm0 # encoding: [0xc5,0xfa,0x10,0x07]
@@ -254,13 +254,13 @@ define void @fnmsub_aab_ss(float* %a, float* %b) {
 ; AVX512-NEXT:    # xmm0 = -(xmm0 * xmm0) - mem
 ; AVX512-NEXT:    vmovss %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -269,11 +269,11 @@ define void @fnmsub_aab_ss(float* %a, float* %b) {
   %vr = call <4 x float> @llvm.x86.fma.vfnmsub.ss(<4 x float> %av, <4 x float> %av, <4 x float> %bv)
 
   %sr = extractelement <4 x float> %vr, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fnmsub_aba_ss(float* %a, float* %b) {
+define void @fnmsub_aba_ss(ptr %a, ptr %b) {
 ; AVX2-LABEL: fnmsub_aba_ss:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovss (%rdi), %xmm0 # encoding: [0xc5,0xfa,0x10,0x07]
@@ -291,13 +291,13 @@ define void @fnmsub_aba_ss(float* %a, float* %b) {
 ; AVX512-NEXT:    # xmm0 = -(xmm0 * mem) - xmm0
 ; AVX512-NEXT:    vmovss %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load float, float* %a
+  %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
   %av1 = insertelement <4 x float> %av0, float 0.000000e+00, i32 1
   %av2 = insertelement <4 x float> %av1, float 0.000000e+00, i32 2
   %av  = insertelement <4 x float> %av2, float 0.000000e+00, i32 3
 
-  %b.val = load float, float* %b
+  %b.val = load float, ptr %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0
   %bv1 = insertelement <4 x float> %bv0, float 0.000000e+00, i32 1
   %bv2 = insertelement <4 x float> %bv1, float 0.000000e+00, i32 2
@@ -306,11 +306,11 @@ define void @fnmsub_aba_ss(float* %a, float* %b) {
   %vr = call <4 x float> @llvm.x86.fma.vfnmsub.ss(<4 x float> %av, <4 x float> %bv, <4 x float> %av)
 
   %sr = extractelement <4 x float> %vr, i32 0
-  store float %sr, float* %a
+  store float %sr, ptr %a
   ret void
 }
 
-define void @fmadd_aab_sd(double* %a, double* %b) {
+define void @fmadd_aab_sd(ptr %a, ptr %b) {
 ; AVX2-LABEL: fmadd_aab_sd:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovsd (%rdi), %xmm0 # encoding: [0xc5,0xfb,0x10,0x07]
@@ -328,22 +328,22 @@ define void @fmadd_aab_sd(double* %a, double* %b) {
 ; AVX512-NEXT:    # xmm0 = (xmm0 * xmm0) + mem
 ; AVX512-NEXT:    vmovsd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av  = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv  = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
 
   %vr = call <2 x double> @llvm.x86.fma.vfmadd.sd(<2 x double> %av, <2 x double> %av, <2 x double> %bv)
 
   %sr = extractelement <2 x double> %vr, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 
-define void @fmadd_aba_sd(double* %a, double* %b) {
+define void @fmadd_aba_sd(ptr %a, ptr %b) {
 ; AVX2-LABEL: fmadd_aba_sd:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovsd (%rdi), %xmm0 # encoding: [0xc5,0xfb,0x10,0x07]
@@ -361,22 +361,22 @@ define void @fmadd_aba_sd(double* %a, double* %b) {
 ; AVX512-NEXT:    # xmm0 = (xmm0 * mem) + xmm0
 ; AVX512-NEXT:    vmovsd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av  = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv  = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
 
   %vr = call <2 x double> @llvm.x86.fma.vfmadd.sd(<2 x double> %av, <2 x double> %bv, <2 x double> %av)
 
   %sr = extractelement <2 x double> %vr, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 
-define void @fmsub_aab_sd(double* %a, double* %b) {
+define void @fmsub_aab_sd(ptr %a, ptr %b) {
 ; AVX2-LABEL: fmsub_aab_sd:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovsd (%rdi), %xmm0 # encoding: [0xc5,0xfb,0x10,0x07]
@@ -394,22 +394,22 @@ define void @fmsub_aab_sd(double* %a, double* %b) {
 ; AVX512-NEXT:    # xmm0 = (xmm0 * xmm0) - mem
 ; AVX512-NEXT:    vmovsd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av  = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv  = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
 
   %vr = call <2 x double> @llvm.x86.fma.vfmsub.sd(<2 x double> %av, <2 x double> %av, <2 x double> %bv)
 
   %sr = extractelement <2 x double> %vr, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 
-define void @fmsub_aba_sd(double* %a, double* %b) {
+define void @fmsub_aba_sd(ptr %a, ptr %b) {
 ; AVX2-LABEL: fmsub_aba_sd:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovsd (%rdi), %xmm0 # encoding: [0xc5,0xfb,0x10,0x07]
@@ -427,22 +427,22 @@ define void @fmsub_aba_sd(double* %a, double* %b) {
 ; AVX512-NEXT:    # xmm0 = (xmm0 * mem) - xmm0
 ; AVX512-NEXT:    vmovsd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av  = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv  = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
 
   %vr = call <2 x double> @llvm.x86.fma.vfmsub.sd(<2 x double> %av, <2 x double> %bv, <2 x double> %av)
 
   %sr = extractelement <2 x double> %vr, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 
-define void @fnmadd_aab_sd(double* %a, double* %b) {
+define void @fnmadd_aab_sd(ptr %a, ptr %b) {
 ; AVX2-LABEL: fnmadd_aab_sd:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovsd (%rdi), %xmm0 # encoding: [0xc5,0xfb,0x10,0x07]
@@ -460,22 +460,22 @@ define void @fnmadd_aab_sd(double* %a, double* %b) {
 ; AVX512-NEXT:    # xmm0 = -(xmm0 * xmm0) + mem
 ; AVX512-NEXT:    vmovsd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av  = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv  = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
 
   %vr = call <2 x double> @llvm.x86.fma.vfnmadd.sd(<2 x double> %av, <2 x double> %av, <2 x double> %bv)
 
   %sr = extractelement <2 x double> %vr, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 
-define void @fnmadd_aba_sd(double* %a, double* %b) {
+define void @fnmadd_aba_sd(ptr %a, ptr %b) {
 ; AVX2-LABEL: fnmadd_aba_sd:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovsd (%rdi), %xmm0 # encoding: [0xc5,0xfb,0x10,0x07]
@@ -493,22 +493,22 @@ define void @fnmadd_aba_sd(double* %a, double* %b) {
 ; AVX512-NEXT:    # xmm0 = -(xmm0 * mem) + xmm0
 ; AVX512-NEXT:    vmovsd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av  = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv  = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
 
   %vr = call <2 x double> @llvm.x86.fma.vfnmadd.sd(<2 x double> %av, <2 x double> %bv, <2 x double> %av)
 
   %sr = extractelement <2 x double> %vr, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 
-define void @fnmsub_aab_sd(double* %a, double* %b) {
+define void @fnmsub_aab_sd(ptr %a, ptr %b) {
 ; AVX2-LABEL: fnmsub_aab_sd:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovsd (%rdi), %xmm0 # encoding: [0xc5,0xfb,0x10,0x07]
@@ -526,22 +526,22 @@ define void @fnmsub_aab_sd(double* %a, double* %b) {
 ; AVX512-NEXT:    # xmm0 = -(xmm0 * xmm0) - mem
 ; AVX512-NEXT:    vmovsd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av  = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv  = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
 
   %vr = call <2 x double> @llvm.x86.fma.vfnmsub.sd(<2 x double> %av, <2 x double> %av, <2 x double> %bv)
 
   %sr = extractelement <2 x double> %vr, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 
-define void @fnmsub_aba_sd(double* %a, double* %b) {
+define void @fnmsub_aba_sd(ptr %a, ptr %b) {
 ; AVX2-LABEL: fnmsub_aba_sd:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovsd (%rdi), %xmm0 # encoding: [0xc5,0xfb,0x10,0x07]
@@ -559,18 +559,18 @@ define void @fnmsub_aba_sd(double* %a, double* %b) {
 ; AVX512-NEXT:    # xmm0 = -(xmm0 * mem) - xmm0
 ; AVX512-NEXT:    vmovsd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x07]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-  %a.val = load double, double* %a
+  %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
   %av  = insertelement <2 x double> %av0, double 0.000000e+00, i32 1
 
-  %b.val = load double, double* %b
+  %b.val = load double, ptr %b
   %bv0 = insertelement <2 x double> undef, double %b.val, i32 0
   %bv  = insertelement <2 x double> %bv0, double 0.000000e+00, i32 1
 
   %vr = call <2 x double> @llvm.x86.fma.vfnmsub.sd(<2 x double> %av, <2 x double> %bv, <2 x double> %av)
 
   %sr = extractelement <2 x double> %vr, i32 0
-  store double %sr, double* %a
+  store double %sr, ptr %a
   ret void
 }
 

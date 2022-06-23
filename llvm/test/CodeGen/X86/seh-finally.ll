@@ -6,19 +6,19 @@
 
 declare void @crash()
 
-define i32 @main() personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
+define i32 @main() personality ptr @__C_specific_handler {
 entry:
   invoke void @crash()
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
-  %call = call i32 @puts(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @str_recovered, i64 0, i64 0))
+  %call = call i32 @puts(ptr @str_recovered)
   call void @abort()
   ret i32 0
 
 lpad:                                             ; preds = %entry
   %p = cleanuppad within none []
-  %call2 = call i32 @puts(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @str_recovered, i64 0, i64 0)) [ "funclet"(token %p) ]
+  %call2 = call i32 @puts(ptr @str_recovered) [ "funclet"(token %p) ]
   cleanupret from %p unwind to caller
 }
 
@@ -55,6 +55,6 @@ lpad:                                             ; preds = %entry
 
 declare i32 @__C_specific_handler(...)
 
-declare i32 @puts(i8*)
+declare i32 @puts(ptr)
 
 declare void @abort()

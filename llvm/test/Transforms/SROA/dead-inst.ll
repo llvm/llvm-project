@@ -59,15 +59,14 @@ a.exit:
   %22 = phi i64 [ -1, %12 ], [ %21, %18 ]
   %23 = load ptr, ptr %13, align 8
   %24 = sub nsw i64 %22, %14
-  %25 = bitcast ptr %3 to ptr
-  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %25)
-  %26 = icmp ult i64 %24, 2
-  br i1 %26, label %G.exit, label %27
+  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %3)
+  %25 = icmp ult i64 %24, 2
+  br i1 %25, label %G.exit, label %26
 
 ; <label>:27:
-  %28 = getelementptr inbounds i8, ptr %23, i64 %idx
-  %29 = icmp eq ptr %28, null
-  br i1 %29, label %30, label %31
+  %27 = getelementptr inbounds i8, ptr %23, i64 %idx
+  %28 = icmp eq ptr %27, null
+  br i1 %28, label %29, label %30
 
 ; <label>:30:
   unreachable
@@ -77,7 +76,7 @@ a.exit:
   br label %G.exit
 
 G.exit:
-  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %25)
+  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %3)
   br label %foo
 
 foo:

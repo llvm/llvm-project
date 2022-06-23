@@ -20,4 +20,4 @@ declare void @foo()
 @a = global i32 1, !associated !0
 @b = global i32 1, !associated !0
 
-!0 = !{void ()* @foo}
+!0 = !{ptr @foo}

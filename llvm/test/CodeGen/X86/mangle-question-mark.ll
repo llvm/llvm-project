@@ -36,25 +36,25 @@
 
 define i32 @main() {
 entry:
-  tail call void @"\01?withescape@A@@QBEXXZ"(%struct.A* null)
-  tail call void @"?withquestion@A@@QBEXXZ"(%struct.A* null)
-  tail call void @"?privatequestion@A@@QBEXXZ"(%struct.A* null)
-  tail call x86_fastcallcc void @"?privatequestionfast@A@@QBEXXZ"(%struct.A* null)
-  tail call void @"\01?escapedprivate@A@@QBEXXZ"(%struct.A* null)
+  tail call void @"\01?withescape@A@@QBEXXZ"(ptr null)
+  tail call void @"?withquestion@A@@QBEXXZ"(ptr null)
+  tail call void @"?privatequestion@A@@QBEXXZ"(ptr null)
+  tail call x86_fastcallcc void @"?privatequestionfast@A@@QBEXXZ"(ptr null)
+  tail call void @"\01?escapedprivate@A@@QBEXXZ"(ptr null)
   ret i32 0
 }
 
-declare void @"\01?withescape@A@@QBEXXZ"(%struct.A*)
-declare void @"?withquestion@A@@QBEXXZ"(%struct.A*)
+declare void @"\01?withescape@A@@QBEXXZ"(ptr)
+declare void @"?withquestion@A@@QBEXXZ"(ptr)
 
-define private void @"?privatequestion@A@@QBEXXZ"(%struct.A*) {
+define private void @"?privatequestion@A@@QBEXXZ"(ptr) {
   ret void
 }
 
-define private x86_fastcallcc void @"?privatequestionfast@A@@QBEXXZ"(%struct.A*) {
+define private x86_fastcallcc void @"?privatequestionfast@A@@QBEXXZ"(ptr) {
   ret void
 }
 
-define private void @"\01?escapedprivate@A@@QBEXXZ"(%struct.A*) {
+define private void @"\01?escapedprivate@A@@QBEXXZ"(ptr) {
   ret void
 }

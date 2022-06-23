@@ -10,7 +10,7 @@ declare hidden { i8, ptr } @getType(ptr) align 2
 define internal void @foo(ptr %TLI, ptr %DL, ptr %Ty, ptr %ValueVTs, ptr %Offsets, i64 %StartingOffset) {
 entry:
   %VT = alloca i64, align 8
-  br i1 undef, label %if.then, label %if.end4
+  br i1 false, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %entry
   ret void

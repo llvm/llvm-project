@@ -9,7 +9,7 @@ define signext i16 @t()   {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
 entry:
-	%tmp180 = load i16, i16* null, align 2		; <i16> [#uses=3]
+	%tmp180 = load i16, ptr null, align 2		; <i16> [#uses=3]
 	%tmp180181 = sext i16 %tmp180 to i32		; <i32> [#uses=1]
 	%tmp185 = icmp slt i16 %tmp180, 0		; <i1> [#uses=1]
 	br i1 %tmp185, label %cond_true188, label %cond_next245

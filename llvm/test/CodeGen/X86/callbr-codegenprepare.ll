@@ -12,7 +12,7 @@ declare void @foo(i32)
 
 define dso_local i32 @futex_lock_pi_atomic() local_unnamed_addr {
 entry:
-  %0 = callbr i32 asm "", "=r,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@futex_lock_pi_atomic, %b.exit))
+  %0 = callbr i32 asm "", "=r,i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@futex_lock_pi_atomic, %b.exit))
           to label %asm.fallthrough.i [label %b.exit]
 
 asm.fallthrough.i:

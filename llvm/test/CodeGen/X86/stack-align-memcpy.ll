@@ -3,12 +3,12 @@
 
 %struct.foo = type { [88 x i8] }
 
-declare void @bar(i8* nocapture, %struct.foo* align 4 byval(%struct.foo)) nounwind
-declare void @baz(i8*) nounwind
+declare void @bar(ptr nocapture, ptr align 4 byval(%struct.foo)) nounwind
+declare void @baz(ptr) nounwind
 
 ; PR15249
 ; We can't use rep;movsl here because it clobbers the base pointer in %esi.
-define void @test1(%struct.foo* nocapture %x, i32 %y) nounwind {
+define void @test1(ptr nocapture %x, i32 %y) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushl %ebp
@@ -99,13 +99,13 @@ define void @test1(%struct.foo* nocapture %x, i32 %y) nounwind {
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
   %dynalloc = alloca i8, i32 %y, align 1
-  call void @bar(i8* %dynalloc, %struct.foo* align 4 byval(%struct.foo) %x)
+  call void @bar(ptr %dynalloc, ptr align 4 byval(%struct.foo) %x)
   ret void
 }
 
 ; PR19012
 ; Also don't clobber %esi if the dynamic alloca comes after the memcpy.
-define void @test2(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
+define void @test2(ptr nocapture %x, i32 %y, ptr %z) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushl %ebp
@@ -199,14 +199,14 @@ define void @test2(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-  call void @bar(i8* %z, %struct.foo* align 4 byval(%struct.foo) %x)
+  call void @bar(ptr %z, ptr align 4 byval(%struct.foo) %x)
   %dynalloc = alloca i8, i32 %y, align 1
-  call void @baz(i8* %dynalloc)
+  call void @baz(ptr %dynalloc)
   ret void
 }
 
 ; Check that we do use rep movs if we make the alloca static.
-define void @test3(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
+define void @test3(ptr nocapture %x, i32 %y, ptr %z) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushl %ebp
@@ -230,8 +230,8 @@ define void @test3(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-  call void @bar(i8* %z, %struct.foo* align 4 byval(%struct.foo) %x)
+  call void @bar(ptr %z, ptr align 4 byval(%struct.foo) %x)
   %statalloc = alloca i8, i32 8, align 1
-  call void @baz(i8* %statalloc)
+  call void @baz(ptr %statalloc)
   ret void
 }

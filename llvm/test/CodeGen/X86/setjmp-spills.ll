@@ -78,7 +78,7 @@ second:
 ; This is the same as above, but using "invoke" rather than "call" to
 ; call setjmp().
 
-define void @setjmp_invoker() personality void ()* @personality {
+define void @setjmp_invoker() personality ptr @personality {
 ; X86-32-LABEL: setjmp_invoker:
 ; X86-64-LABEL: setjmp_invoker:
   %a1 = call i32 @get_val()
@@ -103,7 +103,7 @@ cont:
   br i1 %setjmp_result, label %second, label %first
 
 lpad:
-  %lp = landingpad { i8*, i32 } cleanup
+  %lp = landingpad { ptr, i32 } cleanup
   unreachable
 
 first:

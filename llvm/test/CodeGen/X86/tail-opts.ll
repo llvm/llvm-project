@@ -61,21 +61,21 @@ next:
 
 A:
   call void @bar(i32 0)
-  store i32 0, i32* @GHJK
+  store i32 0, ptr @GHJK
   br label %M
 
 B:
   call void @car(i32 1)
-  store i32 0, i32* @GHJK
+  store i32 0, ptr @GHJK
   br label %M
 
 C:
   call void @dar(i32 2)
-  store i32 0, i32* @GHJK
+  store i32 0, ptr @GHJK
   br label %M
 
 M:
-  store i32 1, i32* @HABC
+  store i32 1, ptr @HABC
   %c = call i1 @qux()
   br i1 %c, label %return, label %altret
 
@@ -87,7 +87,7 @@ altret:
   ret void
 }
 
-declare i8* @choose(i8*, i8*)
+declare ptr @choose(ptr, ptr)
 
 ; BranchFolding should tail-duplicate the indirect jump to avoid
 ; redundant branching.
@@ -141,8 +141,8 @@ define dso_local void @tail_duplicate_me() nounwind {
 ; CHECK-NEXT:    jmpq *%r14
 entry:
   %a = call i1 @qux()
-  %c = call i8* @choose(i8* blockaddress(@tail_duplicate_me, %return),
-                        i8* blockaddress(@tail_duplicate_me, %altret))
+  %c = call ptr @choose(ptr blockaddress(@tail_duplicate_me, %return),
+                        ptr blockaddress(@tail_duplicate_me, %altret))
   br i1 %a, label %A, label %next
 next:
   %b = call i1 @qux()
@@ -150,21 +150,21 @@ next:
 
 A:
   call void @bar(i32 0)
-  store i32 0, i32* @GHJK
+  store i32 0, ptr @GHJK
   br label %M
 
 B:
   call void @car(i32 1)
-  store i32 0, i32* @GHJK
+  store i32 0, ptr @GHJK
   br label %M
 
 C:
   call void @dar(i32 2)
-  store i32 0, i32* @GHJK
+  store i32 0, ptr @GHJK
   br label %M
 
 M:
-  indirectbr i8* %c, [label %return, label %altret]
+  indirectbr ptr %c, [label %return, label %altret]
 
 return:
   call void @ear(i32 1000)
@@ -177,7 +177,7 @@ altret:
 ; BranchFolding shouldn't try to merge the tails of two blocks
 ; with only a branch in common, regardless of the fallthrough situation.
 
-define i1 @dont_merge_oddly(float* %result) nounwind {
+define i1 @dont_merge_oddly(ptr %result) nounwind {
 ; CHECK-LABEL: dont_merge_oddly:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -198,12 +198,12 @@ define i1 @dont_merge_oddly(float* %result) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %tmp4 = getelementptr float, float* %result, i32 2
-  %tmp5 = load float, float* %tmp4, align 4
-  %tmp7 = getelementptr float, float* %result, i32 4
-  %tmp8 = load float, float* %tmp7, align 4
-  %tmp10 = getelementptr float, float* %result, i32 6
-  %tmp11 = load float, float* %tmp10, align 4
+  %tmp4 = getelementptr float, ptr %result, i32 2
+  %tmp5 = load float, ptr %tmp4, align 4
+  %tmp7 = getelementptr float, ptr %result, i32 4
+  %tmp8 = load float, ptr %tmp7, align 4
+  %tmp10 = getelementptr float, ptr %result, i32 6
+  %tmp11 = load float, ptr %tmp10, align 4
   %tmp12 = fcmp olt float %tmp8, %tmp11
   br i1 %tmp12, label %bb, label %bb21
 
@@ -228,15 +228,15 @@ bb30:
 ; This test only works when register allocation happens to use %rax for both
 ; load addresses.
 
-%0 = type { %struct.rtx_def* }
+%0 = type { ptr }
 %struct.lang_decl = type opaque
 %struct.rtx_def = type { i16, i8, i8, [1 x %union.rtunion] }
-%struct.tree_decl = type { [24 x i8], i8*, i32, %union.tree_node*, i32, i8, i8, i8, i8, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %struct.rtx_def*, %union..2anon, %0, %union.tree_node*, %struct.lang_decl* }
+%struct.tree_decl = type { [24 x i8], ptr, i32, ptr, i32, i8, i8, i8, i8, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, %union..2anon, %0, ptr, ptr }
 %union..2anon = type { i32 }
-%union.rtunion = type { i8* }
+%union.rtunion = type { ptr }
 %union.tree_node = type { %struct.tree_decl }
 
-define fastcc void @c_expand_expr_stmt(%union.tree_node* %expr) nounwind {
+define fastcc void @c_expand_expr_stmt(ptr %expr) nounwind {
 ; CHECK-LABEL: c_expand_expr_stmt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
@@ -305,7 +305,7 @@ define fastcc void @c_expand_expr_stmt(%union.tree_node* %expr) nounwind {
 ; CHECK-NEXT:    je .LBB3_16
 ; CHECK-NEXT:    jmp .LBB3_9
 entry:
-  %tmp4 = load i8, i8* null, align 8                  ; <i8> [#uses=3]
+  %tmp4 = load i8, ptr null, align 8                  ; <i8> [#uses=3]
   switch i8 %tmp4, label %bb3 [
     i8 18, label %bb
   ]
@@ -325,9 +325,9 @@ bb2.i:                                            ; preds = %bb
   br label %bb3
 
 lvalue_p.exit:                                    ; preds = %bb.i
-  %tmp21 = load %union.tree_node*, %union.tree_node** null, align 8  ; <%union.tree_node*> [#uses=3]
-  %tmp22 = getelementptr inbounds %union.tree_node, %union.tree_node* %tmp21, i64 0, i32 0, i32 0, i64 0 ; <i8*> [#uses=1]
-  %tmp23 = load i8, i8* %tmp22, align 8               ; <i8> [#uses=1]
+  %tmp21 = load ptr, ptr null, align 8  ; <ptr> [#uses=3]
+  %tmp22 = getelementptr inbounds %union.tree_node, ptr %tmp21, i64 0, i32 0, i32 0, i64 0 ; <ptr> [#uses=1]
+  %tmp23 = load i8, ptr %tmp22, align 8               ; <i8> [#uses=1]
   %tmp24 = zext i8 %tmp23 to i32                  ; <i32> [#uses=1]
   switch i32 %tmp24, label %lvalue_p.exit4 [
     i32 0, label %bb2.i3
@@ -335,11 +335,10 @@ lvalue_p.exit:                                    ; preds = %bb.i
   ]
 
 bb.i1:                                            ; preds = %lvalue_p.exit
-  %tmp25 = getelementptr inbounds %union.tree_node, %union.tree_node* %tmp21, i64 0, i32 0, i32 2 ; <i32*> [#uses=1]
-  %tmp26 = bitcast i32* %tmp25 to %union.tree_node** ; <%union.tree_node**> [#uses=1]
-  %tmp27 = load %union.tree_node*, %union.tree_node** %tmp26, align 8 ; <%union.tree_node*> [#uses=2]
-  %tmp28 = getelementptr inbounds %union.tree_node, %union.tree_node* %tmp27, i64 0, i32 0, i32 0, i64 16 ; <i8*> [#uses=1]
-  %tmp29 = load i8, i8* %tmp28, align 8               ; <i8> [#uses=1]
+  %tmp25 = getelementptr inbounds %union.tree_node, ptr %tmp21, i64 0, i32 0, i32 2 ; <ptr> [#uses=1]
+  %tmp27 = load ptr, ptr %tmp25, align 8 ; <ptr> [#uses=2]
+  %tmp28 = getelementptr inbounds %union.tree_node, ptr %tmp27, i64 0, i32 0, i32 0, i64 16 ; <ptr> [#uses=1]
+  %tmp29 = load i8, ptr %tmp28, align 8               ; <i8> [#uses=1]
   %tmp30 = zext i8 %tmp29 to i32                  ; <i32> [#uses=1]
   switch i32 %tmp30, label %lvalue_p.exit4 [
     i32 0, label %bb2.i.i2
@@ -347,27 +346,25 @@ bb.i1:                                            ; preds = %lvalue_p.exit
   ]
 
 bb.i.i:                                           ; preds = %bb.i1
-  %tmp34 = tail call fastcc i32 @lvalue_p(%union.tree_node* null) nounwind ; <i32> [#uses=1]
+  %tmp34 = tail call fastcc i32 @lvalue_p(ptr null) nounwind ; <i32> [#uses=1]
   %phitmp = icmp ne i32 %tmp34, 0                 ; <i1> [#uses=1]
   br label %lvalue_p.exit4
 
 bb2.i.i2:                                         ; preds = %bb.i1
-  %tmp35 = getelementptr inbounds %union.tree_node, %union.tree_node* %tmp27, i64 0, i32 0, i32 0, i64 8 ; <i8*> [#uses=1]
-  %tmp36 = bitcast i8* %tmp35 to %union.tree_node** ; <%union.tree_node**> [#uses=1]
-  %tmp37 = load %union.tree_node*, %union.tree_node** %tmp36, align 8 ; <%union.tree_node*> [#uses=1]
-  %tmp38 = getelementptr inbounds %union.tree_node, %union.tree_node* %tmp37, i64 0, i32 0, i32 0, i64 16 ; <i8*> [#uses=1]
-  %tmp39 = load i8, i8* %tmp38, align 8               ; <i8> [#uses=1]
+  %tmp35 = getelementptr inbounds %union.tree_node, ptr %tmp27, i64 0, i32 0, i32 0, i64 8 ; <ptr> [#uses=1]
+  %tmp37 = load ptr, ptr %tmp35, align 8 ; <ptr> [#uses=1]
+  %tmp38 = getelementptr inbounds %union.tree_node, ptr %tmp37, i64 0, i32 0, i32 0, i64 16 ; <ptr> [#uses=1]
+  %tmp39 = load i8, ptr %tmp38, align 8               ; <i8> [#uses=1]
   switch i8 %tmp39, label %bb2 [
     i8 16, label %lvalue_p.exit4
     i8 23, label %lvalue_p.exit4
   ]
 
 bb2.i3:                                           ; preds = %lvalue_p.exit
-  %tmp40 = getelementptr inbounds %union.tree_node, %union.tree_node* %tmp21, i64 0, i32 0, i32 0, i64 8 ; <i8*> [#uses=1]
-  %tmp41 = bitcast i8* %tmp40 to %union.tree_node** ; <%union.tree_node**> [#uses=1]
-  %tmp42 = load %union.tree_node*, %union.tree_node** %tmp41, align 8 ; <%union.tree_node*> [#uses=1]
-  %tmp43 = getelementptr inbounds %union.tree_node, %union.tree_node* %tmp42, i64 0, i32 0, i32 0, i64 16 ; <i8*> [#uses=1]
-  %tmp44 = load i8, i8* %tmp43, align 8               ; <i8> [#uses=1]
+  %tmp40 = getelementptr inbounds %union.tree_node, ptr %tmp21, i64 0, i32 0, i32 0, i64 8 ; <ptr> [#uses=1]
+  %tmp42 = load ptr, ptr %tmp40, align 8 ; <ptr> [#uses=1]
+  %tmp43 = getelementptr inbounds %union.tree_node, ptr %tmp42, i64 0, i32 0, i32 0, i64 16 ; <ptr> [#uses=1]
+  %tmp44 = load i8, ptr %tmp43, align 8               ; <i8> [#uses=1]
   switch i8 %tmp44, label %bb2 [
     i8 16, label %lvalue_p.exit4
     i8 23, label %lvalue_p.exit4
@@ -387,13 +384,13 @@ bb2:                                              ; preds = %bb1, %lvalue_p.exit
   br label %bb3
 
 bb3:                                              ; preds = %bb2, %bb1, %lvalue_p.exit4, %bb2.i, %entry
-  %expr_addr.0 = phi %union.tree_node* [ null, %bb2 ], [ %expr, %bb2.i ], [ %expr, %entry ], [ %expr, %bb1 ], [ %expr, %lvalue_p.exit4 ] ; <%union.tree_node*> [#uses=0]
+  %expr_addr.0 = phi ptr [ null, %bb2 ], [ %expr, %bb2.i ], [ %expr, %entry ], [ %expr, %bb1 ], [ %expr, %lvalue_p.exit4 ] ; <ptr> [#uses=0]
   unreachable
 }
 
-declare fastcc i32 @lvalue_p(%union.tree_node* nocapture) nounwind readonly
+declare fastcc i32 @lvalue_p(ptr nocapture) nounwind readonly
 
-declare fastcc %union.tree_node* @default_conversion(%union.tree_node*) nounwind
+declare fastcc ptr @default_conversion(ptr) nounwind
 
 
 ; If one tail merging candidate falls through into the other,
@@ -401,7 +398,7 @@ declare fastcc %union.tree_node* @default_conversion(%union.tree_node*) nounwind
 ; instructions are involved. This function should have only
 ; one ret instruction.
 
-define dso_local void @foo(i1* %V) nounwind {
+define dso_local void @foo(ptr %V) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
@@ -413,7 +410,7 @@ define dso_local void @foo(i1* %V) nounwind {
 ; CHECK-NEXT:  .LBB4_2: # %return
 ; CHECK-NEXT:    retq
 entry:
-  %t0 = icmp eq i1* %V, null
+  %t0 = icmp eq ptr %V, null
   br i1 %t0, label %return, label %bb
 
 bb:
@@ -541,8 +538,8 @@ bby:
   ]
 
 bb7:
-  store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
+  store volatile i32 0, ptr @XYZ
+  store volatile i32 1, ptr @XYZ
   unreachable
 
 bbx:
@@ -551,8 +548,8 @@ bbx:
   ]
 
 bb12:
-  store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
+  store volatile i32 0, ptr @XYZ
+  store volatile i32 1, ptr @XYZ
   unreachable
 
 return:
@@ -582,8 +579,8 @@ bby:
   ]
 
 bb7:
-  store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
+  store volatile i32 0, ptr @XYZ
+  store volatile i32 1, ptr @XYZ
   unreachable
 
 bbx:
@@ -592,8 +589,8 @@ bbx:
   ]
 
 bb12:
-  store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
+  store volatile i32 0, ptr @XYZ
+  store volatile i32 1, ptr @XYZ
   unreachable
 
 return:
@@ -625,8 +622,8 @@ bby:
   ]
 
 bb7:
-  store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
+  store volatile i32 0, ptr @XYZ
+  store volatile i32 1, ptr @XYZ
   unreachable
 
 bbx:
@@ -635,8 +632,8 @@ bbx:
   ]
 
 bb12:
-  store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
+  store volatile i32 0, ptr @XYZ
+  store volatile i32 1, ptr @XYZ
   unreachable
 
 return:
@@ -675,7 +672,7 @@ bby:
   ]
 
 bb7:
-  store volatile i32 0, i32* @XYZ
+  store volatile i32 0, ptr @XYZ
   tail call void @tail_call_me()
   ret void
 
@@ -685,7 +682,7 @@ bbx:
   ]
 
 bb12:
-  store volatile i32 0, i32* @XYZ
+  store volatile i32 0, ptr @XYZ
   tail call void @tail_call_me()
   ret void
 
@@ -891,7 +888,7 @@ bb2:
   br label %bb4
 
 bb3:
-  store i32 0, i32* @GV
+  store i32 0, ptr @GV
   call void @func()
   br label %bb4
 

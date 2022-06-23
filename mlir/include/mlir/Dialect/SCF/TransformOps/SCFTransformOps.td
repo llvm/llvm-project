@@ -88,7 +88,8 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::mlir::scf::ForOp> applyToOne(::mlir::scf::ForOp loop);
+    ::mlir::FailureOr<::mlir::scf::ForOp> applyToOne(
+      ::mlir::scf::ForOp loop, TransformState &state);
   }];
 }
  
@@ -115,7 +116,8 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::mlir::scf::ForOp> applyToOne(::mlir::scf::ForOp loop);
+    ::mlir::FailureOr<::mlir::scf::ForOp> applyToOne(
+      ::mlir::scf::ForOp loop, TransformState &state);
   }];
 }
 
@@ -137,7 +139,8 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::LogicalResult applyToOne(::mlir::scf::ForOp loop);
+    ::mlir::LogicalResult applyToOne(
+      ::mlir::scf::ForOp loop, TransformState &state);
   }];
 }
 

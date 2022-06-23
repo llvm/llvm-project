@@ -8,7 +8,7 @@ entry:
 
 define dso_local void @main() {
 entry:
-  call void asm sideeffect inteldialect "call ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(void ()* elementtype(void ()) @func)
+  call void asm sideeffect inteldialect "call ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void ()) @func)
   ret void
 ; CHECK-LABEL: main:
 ; CHECK: {{## InlineAsm Start|#APP}}

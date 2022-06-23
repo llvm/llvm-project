@@ -442,6 +442,7 @@ kmp_uint64 __kmp_pause_init = 1; // for tpause
 KMP_ALIGN_CACHE
 kmp_info_t **__kmp_threads = NULL;
 kmp_root_t **__kmp_root = NULL;
+kmp_old_threads_list_t *__kmp_old_threads_list = NULL;
 
 /* data read/written to often by primary threads */
 KMP_ALIGN_CACHE

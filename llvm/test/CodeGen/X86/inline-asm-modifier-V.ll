@@ -7,8 +7,8 @@
 ; X86: call __x86_indirect_thunk_e{{[abcd]}}x
 ; X64: call __x86_indirect_thunk_r
 
-define void @q_modifier(i32* %p) {
+define void @q_modifier(ptr %p) {
 entry:
-  tail call void asm sideeffect "call __x86_indirect_thunk_${0:V}", "r,~{dirflag},~{fpsr},~{flags}"(i32* %p)
+  tail call void asm sideeffect "call __x86_indirect_thunk_${0:V}", "r,~{dirflag},~{fpsr},~{flags}"(ptr %p)
   ret void
 }

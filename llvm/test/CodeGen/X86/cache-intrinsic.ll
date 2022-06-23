@@ -9,18 +9,18 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @main() {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([32 x i8], [32 x i8]* @buffer, i32 0, i32 0))
-  %call1 = call i8* @strcpy(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @buffer, i32 0, i32 0), i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str1, i32 0, i32 0)) #3
-  call void @llvm.clear_cache(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @buffer, i32 0, i32 0), i8* getelementptr inbounds (i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @buffer, i32 0, i32 0), i32 32)) #3
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([32 x i8], [32 x i8]* @buffer, i32 0, i32 0))
+  store i32 0, ptr %retval
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr @buffer)
+  %call1 = call ptr @strcpy(ptr @buffer, ptr @.str1) #3
+  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds (i8, ptr @buffer, i32 32)) #3
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, ptr @buffer)
   ret i32 0
 }
 
 ; CHECK-NOT: __clear_cache
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
-declare i8* @strcpy(i8*, i8*)
+declare ptr @strcpy(ptr, ptr)
 
-declare void @llvm.clear_cache(i8*, i8*)
+declare void @llvm.clear_cache(ptr, ptr)

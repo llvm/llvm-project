@@ -3,7 +3,7 @@
 
 %"struct.std::array" = type { [4 x i64] }
 
-define void @PR47857(%"struct.std::array"* noalias nocapture writeonly sret(%"struct.std::array") align 8 %0, %"struct.std::array"* nocapture noundef nonnull readonly align 8 dereferenceable(32) %1, %"struct.std::array"* nocapture noundef nonnull readonly align 8 dereferenceable(32) %2) {
+define void @PR47857(ptr noalias nocapture writeonly sret(%"struct.std::array") align 8 %0, ptr nocapture noundef nonnull readonly align 8 dereferenceable(32) %1, ptr nocapture noundef nonnull readonly align 8 dereferenceable(32) %2) {
 ; CHECK-LABEL: PR47857:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -33,90 +33,87 @@ define void @PR47857(%"struct.std::array"* noalias nocapture writeonly sret(%"st
 ; CHECK-NEXT:    movq %rcx, 16(%rax)
 ; CHECK-NEXT:    movq %rdx, 24(%rax)
 ; CHECK-NEXT:    retq
-  %4 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %1, i64 0, i32 0, i64 0
-  %5 = load i64, i64* %4, align 8
-  %6 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %1, i64 0, i32 0, i64 1
-  %7 = load i64, i64* %6, align 8
-  %8 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %1, i64 0, i32 0, i64 2
-  %9 = load i64, i64* %8, align 8
-  %10 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %1, i64 0, i32 0, i64 3
-  %11 = load i64, i64* %10, align 8
-  %12 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %2, i64 0, i32 0, i64 0
-  %13 = load i64, i64* %12, align 8
-  %14 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %13, i64 %5)
-  %15 = extractvalue { i64, i1 } %14, 0
-  %16 = extractvalue { i64, i1 } %14, 1
-  %17 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %2, i64 0, i32 0, i64 1
-  %18 = load i64, i64* %17, align 8
-  %19 = zext i1 %16 to i8
-  %20 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %19, i64 %18, i64 %7)
-  %21 = extractvalue { i8, i64 } %20, 1
-  %22 = extractvalue { i8, i64 } %20, 0
-  %23 = icmp ne i8 %22, 0
-  %24 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %2, i64 0, i32 0, i64 2
-  %25 = load i64, i64* %24, align 8
-  %26 = zext i1 %23 to i8
-  %27 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %26, i64 %25, i64 %9)
-  %28 = extractvalue { i8, i64 } %27, 1
-  %29 = extractvalue { i8, i64 } %27, 0
-  %30 = icmp ne i8 %29, 0
-  %31 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %2, i64 0, i32 0, i64 3
-  %32 = load i64, i64* %31, align 8
-  %33 = zext i1 %30 to i8
-  %34 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %33, i64 %32, i64 %11)
-  %35 = extractvalue { i8, i64 } %34, 1
-  %36 = extractvalue { i8, i64 } %34, 0
-  %37 = icmp ne i8 %36, 0
-  %38 = zext i1 %37 to i8
-  %39 = tail call { i8, i64 } @llvm.x86.subborrow.64(i8 %38, i64 0, i64 0)
-  %40 = extractvalue { i8, i64 } %39, 1
-  %41 = and i64 %40, 38
-  %42 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %41, i64 %15)
-  %43 = extractvalue { i64, i1 } %42, 0
-  %44 = extractvalue { i64, i1 } %42, 1
-  %45 = zext i1 %44 to i8
-  %46 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %45, i64 0, i64 %21)
-  %47 = extractvalue { i8, i64 } %46, 1
-  %48 = extractvalue { i8, i64 } %46, 0
-  %49 = icmp ne i8 %48, 0
-  %50 = zext i1 %49 to i8
-  %51 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %50, i64 0, i64 %28)
-  %52 = extractvalue { i8, i64 } %51, 1
-  %53 = extractvalue { i8, i64 } %51, 0
-  %54 = icmp ne i8 %53, 0
-  %55 = zext i1 %54 to i8
-  %56 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %55, i64 0, i64 %35)
-  %57 = extractvalue { i8, i64 } %56, 1
-  %58 = extractvalue { i8, i64 } %56, 0
-  %59 = icmp ne i8 %58, 0
-  %60 = zext i1 %59 to i8
-  %61 = tail call { i8, i64 } @llvm.x86.subborrow.64(i8 %60, i64 %41, i64 %41)
-  %62 = extractvalue { i8, i64 } %61, 1
-  %63 = and i64 %62, 38
-  %64 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %63, i64 %43)
-  %65 = extractvalue { i64, i1 } %64, 0
-  %66 = extractvalue { i64, i1 } %64, 1
-  %67 = zext i1 %66 to i8
-  %68 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %67, i64 0, i64 %47)
-  %69 = extractvalue { i8, i64 } %68, 1
-  %70 = extractvalue { i8, i64 } %68, 0
-  %71 = icmp ne i8 %70, 0
-  %72 = zext i1 %71 to i8
-  %73 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %72, i64 0, i64 %52)
-  %74 = extractvalue { i8, i64 } %73, 1
-  %75 = extractvalue { i8, i64 } %73, 0
-  %76 = icmp ne i8 %75, 0
-  %77 = zext i1 %76 to i8
-  %78 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %77, i64 0, i64 %57)
-  %79 = extractvalue { i8, i64 } %78, 1
-  %80 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %0, i64 0, i32 0, i64 0
-  store i64 %65, i64* %80, align 8
-  %81 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %0, i64 0, i32 0, i64 1
-  store i64 %69, i64* %81, align 8
-  %82 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %0, i64 0, i32 0, i64 2
-  store i64 %74, i64* %82, align 8
-  %83 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %0, i64 0, i32 0, i64 3
-  store i64 %79, i64* %83, align 8
+  %4 = load i64, ptr %1, align 8
+  %5 = getelementptr inbounds %"struct.std::array", ptr %1, i64 0, i32 0, i64 1
+  %6 = load i64, ptr %5, align 8
+  %7 = getelementptr inbounds %"struct.std::array", ptr %1, i64 0, i32 0, i64 2
+  %8 = load i64, ptr %7, align 8
+  %9 = getelementptr inbounds %"struct.std::array", ptr %1, i64 0, i32 0, i64 3
+  %10 = load i64, ptr %9, align 8
+  %11 = load i64, ptr %2, align 8
+  %12 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %11, i64 %4)
+  %13 = extractvalue { i64, i1 } %12, 0
+  %14 = extractvalue { i64, i1 } %12, 1
+  %15 = getelementptr inbounds %"struct.std::array", ptr %2, i64 0, i32 0, i64 1
+  %16 = load i64, ptr %15, align 8
+  %17 = zext i1 %14 to i8
+  %18 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %17, i64 %16, i64 %6)
+  %19 = extractvalue { i8, i64 } %18, 1
+  %20 = extractvalue { i8, i64 } %18, 0
+  %21 = icmp ne i8 %20, 0
+  %22 = getelementptr inbounds %"struct.std::array", ptr %2, i64 0, i32 0, i64 2
+  %23 = load i64, ptr %22, align 8
+  %24 = zext i1 %21 to i8
+  %25 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %24, i64 %23, i64 %8)
+  %26 = extractvalue { i8, i64 } %25, 1
+  %27 = extractvalue { i8, i64 } %25, 0
+  %28 = icmp ne i8 %27, 0
+  %29 = getelementptr inbounds %"struct.std::array", ptr %2, i64 0, i32 0, i64 3
+  %30 = load i64, ptr %29, align 8
+  %31 = zext i1 %28 to i8
+  %32 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %31, i64 %30, i64 %10)
+  %33 = extractvalue { i8, i64 } %32, 1
+  %34 = extractvalue { i8, i64 } %32, 0
+  %35 = icmp ne i8 %34, 0
+  %36 = zext i1 %35 to i8
+  %37 = tail call { i8, i64 } @llvm.x86.subborrow.64(i8 %36, i64 0, i64 0)
+  %38 = extractvalue { i8, i64 } %37, 1
+  %39 = and i64 %38, 38
+  %40 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %39, i64 %13)
+  %41 = extractvalue { i64, i1 } %40, 0
+  %42 = extractvalue { i64, i1 } %40, 1
+  %43 = zext i1 %42 to i8
+  %44 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %43, i64 0, i64 %19)
+  %45 = extractvalue { i8, i64 } %44, 1
+  %46 = extractvalue { i8, i64 } %44, 0
+  %47 = icmp ne i8 %46, 0
+  %48 = zext i1 %47 to i8
+  %49 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %48, i64 0, i64 %26)
+  %50 = extractvalue { i8, i64 } %49, 1
+  %51 = extractvalue { i8, i64 } %49, 0
+  %52 = icmp ne i8 %51, 0
+  %53 = zext i1 %52 to i8
+  %54 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %53, i64 0, i64 %33)
+  %55 = extractvalue { i8, i64 } %54, 1
+  %56 = extractvalue { i8, i64 } %54, 0
+  %57 = icmp ne i8 %56, 0
+  %58 = zext i1 %57 to i8
+  %59 = tail call { i8, i64 } @llvm.x86.subborrow.64(i8 %58, i64 %39, i64 %39)
+  %60 = extractvalue { i8, i64 } %59, 1
+  %61 = and i64 %60, 38
+  %62 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %61, i64 %41)
+  %63 = extractvalue { i64, i1 } %62, 0
+  %64 = extractvalue { i64, i1 } %62, 1
+  %65 = zext i1 %64 to i8
+  %66 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %65, i64 0, i64 %45)
+  %67 = extractvalue { i8, i64 } %66, 1
+  %68 = extractvalue { i8, i64 } %66, 0
+  %69 = icmp ne i8 %68, 0
+  %70 = zext i1 %69 to i8
+  %71 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %70, i64 0, i64 %50)
+  %72 = extractvalue { i8, i64 } %71, 1
+  %73 = extractvalue { i8, i64 } %71, 0
+  %74 = icmp ne i8 %73, 0
+  %75 = zext i1 %74 to i8
+  %76 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %75, i64 0, i64 %55)
+  %77 = extractvalue { i8, i64 } %76, 1
+  store i64 %63, ptr %0, align 8
+  %78 = getelementptr inbounds %"struct.std::array", ptr %0, i64 0, i32 0, i64 1
+  store i64 %67, ptr %78, align 8
+  %79 = getelementptr inbounds %"struct.std::array", ptr %0, i64 0, i32 0, i64 2
+  store i64 %72, ptr %79, align 8
+  %80 = getelementptr inbounds %"struct.std::array", ptr %0, i64 0, i32 0, i64 3
+  store i64 %77, ptr %80, align 8
   ret void
 }
 declare { i8, i64 } @llvm.x86.addcarry.64(i8, i64, i64)

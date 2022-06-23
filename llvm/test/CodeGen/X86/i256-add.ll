@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefix=X64
 
-define void @add(i256* %p, i256* %q) nounwind {
+define void @add(ptr %p, ptr %q) nounwind {
 ; X32-LABEL: add:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
@@ -50,13 +50,13 @@ define void @add(i256* %p, i256* %q) nounwind {
 ; X64-NEXT:    adcq %rcx, 16(%rdi)
 ; X64-NEXT:    adcq %rax, 24(%rdi)
 ; X64-NEXT:    retq
-  %a = load i256, i256* %p
-  %b = load i256, i256* %q
+  %a = load i256, ptr %p
+  %b = load i256, ptr %q
   %c = add i256 %a, %b
-  store i256 %c, i256* %p
+  store i256 %c, ptr %p
   ret void
 }
-define void @sub(i256* %p, i256* %q) nounwind {
+define void @sub(ptr %p, ptr %q) nounwind {
 ; X32-LABEL: sub:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
@@ -104,9 +104,9 @@ define void @sub(i256* %p, i256* %q) nounwind {
 ; X64-NEXT:    sbbq %rcx, 16(%rdi)
 ; X64-NEXT:    sbbq %rax, 24(%rdi)
 ; X64-NEXT:    retq
-  %a = load i256, i256* %p
-  %b = load i256, i256* %q
+  %a = load i256, ptr %p
+  %b = load i256, ptr %q
   %c = sub i256 %a, %b
-  store i256 %c, i256* %p
+  store i256 %c, ptr %p
   ret void
 }

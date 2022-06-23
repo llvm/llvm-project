@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=clflushopt | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=clflushopt | FileCheck %s --check-prefix=X64
 
-define void @clflushopt(i8* %p) nounwind {
+define void @clflushopt(ptr %p) nounwind {
 ; X86-LABEL: clflushopt:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -13,7 +13,7 @@ define void @clflushopt(i8* %p) nounwind {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    clflushopt (%rdi)
 ; X64-NEXT:    retq
-  tail call void @llvm.x86.clflushopt(i8* %p)
+  tail call void @llvm.x86.clflushopt(ptr %p)
   ret void
 }
-declare void @llvm.x86.clflushopt(i8*) nounwind
+declare void @llvm.x86.clflushopt(ptr) nounwind

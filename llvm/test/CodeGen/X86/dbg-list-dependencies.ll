@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %class.anon = type { i8 }
 %class.D = type { %class.f }
 %class.f = type { i32, i32 }
-%class.l = type { i8*, i64 }
+%class.l = type { ptr, i64 }
 %class.d = type { i8 }
 
 @q = internal global %class.anon zeroinitializer, align 1, !dbg !0
@@ -18,53 +18,51 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_Z1rv() local_unnamed_addr !dbg !30 {
 entry:
   %t = alloca %class.D, align 4
-  %call = tail call { i8*, i64 } @"_ZN3$_05m_fn3Ev"(%class.anon* nonnull dereferenceable(1) @q), !dbg !60
-  %0 = extractvalue { i8*, i64 } %call, 0, !dbg !60
-  call void @llvm.dbg.value(metadata i8* %0, metadata !34, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !61
-  %1 = extractvalue { i8*, i64 } %call, 1, !dbg !60
+  %call = tail call { ptr, i64 } @"_ZN3$_05m_fn3Ev"(ptr nonnull dereferenceable(1) @q), !dbg !60
+  %0 = extractvalue { ptr, i64 } %call, 0, !dbg !60
+  call void @llvm.dbg.value(metadata ptr %0, metadata !34, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !61
+  %1 = extractvalue { ptr, i64 } %call, 1, !dbg !60
   call void @llvm.dbg.value(metadata i64 %1, metadata !34, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !61
-  %2 = bitcast %class.D* %t to i8*, !dbg !62
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %2) #4, !dbg !62
-  call void @llvm.dbg.declare(metadata %class.D* %t, metadata !35, metadata !DIExpression()), !dbg !63
-  call void @llvm.dbg.value(metadata i8* %0, metadata !64, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !69
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %t) #4, !dbg !62
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !35, metadata !DIExpression()), !dbg !63
+  call void @llvm.dbg.value(metadata ptr %0, metadata !64, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !69
   call void @llvm.dbg.value(metadata i64 %1, metadata !64, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !69
-  call void @llvm.dbg.value(metadata %class.D* %t, metadata !67, metadata !DIExpression()), !dbg !69
-  call void @llvm.dbg.value(metadata %class.l* undef, metadata !71, metadata !DIExpression()), !dbg !75
-  call void @llvm.dbg.value(metadata %class.D* %t, metadata !77, metadata !DIExpression()), !dbg !91
-  call void @llvm.dbg.value(metadata i8* %0, metadata !86, metadata !DIExpression()), !dbg !91
-  call void @llvm.dbg.value(metadata !DIArgList(i8* %0, i64 %1), metadata !87, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !91
-  %3 = bitcast %class.D* %t to %class.d*, !dbg !93
-  call void @_ZN1dC2EPvl(%class.d* nonnull dereferenceable(1) %3, i8* nonnull %2, i64 8), !dbg !94
-  call void @llvm.dbg.value(metadata !DIArgList(i8* %0, i8* %0, i64 %1), metadata !88, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_stack_value)), !dbg !95
+  call void @llvm.dbg.value(metadata ptr %t, metadata !67, metadata !DIExpression()), !dbg !69
+  call void @llvm.dbg.value(metadata ptr undef, metadata !71, metadata !DIExpression()), !dbg !75
+  call void @llvm.dbg.value(metadata ptr %t, metadata !77, metadata !DIExpression()), !dbg !91
+  call void @llvm.dbg.value(metadata ptr %0, metadata !86, metadata !DIExpression()), !dbg !91
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %0, i64 %1), metadata !87, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !91
+  call void @_ZN1dC2EPvl(ptr nonnull dereferenceable(1) %t, ptr nonnull %t, i64 8), !dbg !94
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %0, ptr %0, i64 %1), metadata !88, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_stack_value)), !dbg !95
   %tobool.not.i.i = icmp eq i64 %1, 0, !dbg !96
   br i1 %tobool.not.i.i, label %_ZN1DILi8EEC2E1l.exit, label %if.then.i.i, !dbg !98
 
 if.then.i.i:                                      ; preds = %entry
-  %add.ptr.i.i = getelementptr inbounds i8, i8* %0, i64 %1, !dbg !99
-  call void @llvm.dbg.value(metadata i8* %add.ptr.i.i, metadata !87, metadata !DIExpression()), !dbg !91
-  call void @llvm.dbg.value(metadata !DIArgList(i8* %add.ptr.i.i, i8* %0), metadata !88, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_stack_value)), !dbg !95
-  call void @llvm.dbg.value(metadata %class.D* %t, metadata !77, metadata !DIExpression()), !dbg !91
-  %k.i.i = getelementptr inbounds %class.D, %class.D* %t, i64 0, i32 0, i32 1, !dbg !100
-  %4 = load i32, i32* %k.i.i, align 4, !dbg !100, !tbaa !101
-  call void @_Z1cIPKciEvT_S2_T0_(i8* %0, i8* nonnull %add.ptr.i.i, i32 %4), !dbg !106
+  %add.ptr.i.i = getelementptr inbounds i8, ptr %0, i64 %1, !dbg !99
+  call void @llvm.dbg.value(metadata ptr %add.ptr.i.i, metadata !87, metadata !DIExpression()), !dbg !91
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %add.ptr.i.i, ptr %0), metadata !88, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_stack_value)), !dbg !95
+  call void @llvm.dbg.value(metadata ptr %t, metadata !77, metadata !DIExpression()), !dbg !91
+  %k.i.i = getelementptr inbounds %class.D, ptr %t, i64 0, i32 0, i32 1, !dbg !100
+  %2 = load i32, ptr %k.i.i, align 4, !dbg !100, !tbaa !101
+  call void @_Z1cIPKciEvT_S2_T0_(ptr %0, ptr nonnull %add.ptr.i.i, i32 %2), !dbg !106
   br label %_ZN1DILi8EEC2E1l.exit, !dbg !106
 
 _ZN1DILi8EEC2E1l.exit:                            ; preds = %entry, %if.then.i.i
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %2) #4, !dbg !107
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %t) #4, !dbg !107
   ret void, !dbg !107
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare { i8*, i64 } @"_ZN3$_05m_fn3Ev"(%class.anon* nonnull dereferenceable(1)) local_unnamed_addr
+declare { ptr, i64 } @"_ZN3$_05m_fn3Ev"(ptr nonnull dereferenceable(1)) local_unnamed_addr
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
-declare void @_ZN1dC2EPvl(%class.d* nonnull dereferenceable(1), i8*, i64) unnamed_addr
+declare void @_ZN1dC2EPvl(ptr nonnull dereferenceable(1), ptr, i64) unnamed_addr
 
-declare !dbg !108 void @_Z1cIPKciEvT_S2_T0_(i8*, i8*, i32) local_unnamed_addr
+declare !dbg !108 void @_Z1cIPKciEvT_S2_T0_(ptr, ptr, i32) local_unnamed_addr
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

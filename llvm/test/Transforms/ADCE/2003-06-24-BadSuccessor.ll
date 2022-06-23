@@ -28,7 +28,7 @@ endif.14:		; preds = %loopentry.0
 	br i1 false, label %loopentry.1, label %loopentry.0
 
 loopentry.1:		; preds = %then.53, %endif.14
-	%SubArrays.10 = phi i32* [ %SubArrays.8, %then.53 ], [ null, %endif.14 ]		; <i32*> [#uses=3]
+	%SubArrays.10 = phi ptr [ %SubArrays.8, %then.53 ], [ null, %endif.14 ]		; <ptr> [#uses=3]
 	br i1 false, label %no_exit.1, label %loopentry.0
 
 no_exit.1:		; preds = %loopentry.1
@@ -51,9 +51,9 @@ shortcirc_next.4:		; preds = %then.44
 	br i1 false, label %no_exit.2, label %loopexit.2
 
 no_exit.2:		; preds = %shortcirc_next.4
-	%tmp.897 = getelementptr i32, i32* %SubArrays.10, i64 0		; <i32*> [#uses=1]
-	%tmp.899 = load i32, i32* %tmp.897		; <i32> [#uses=1]
-	store i32 %tmp.899, i32* null
+	%tmp.897 = getelementptr i32, ptr %SubArrays.10, i64 0		; <ptr> [#uses=1]
+	%tmp.899 = load i32, ptr %tmp.897		; <i32> [#uses=1]
+	store i32 %tmp.899, ptr null
 	ret i32 0
 
 loopexit.2:		; preds = %shortcirc_next.4
@@ -81,8 +81,8 @@ shortcirc_next.8:		; preds = %shortcirc_next.7
 	ret i32 0
 
 then.53:		; preds = %shortcirc_next.7, %label.17
-	%SubArrays.8 = phi i32* [ %SubArrays.10, %shortcirc_next.7 ], [ %SubArrays.10, %label.17 ]		; <i32*> [#uses=1]
-	%tmp.1023 = load i32, i32* null		; <i32> [#uses=1]
+	%SubArrays.8 = phi ptr [ %SubArrays.10, %shortcirc_next.7 ], [ %SubArrays.10, %label.17 ]		; <ptr> [#uses=1]
+	%tmp.1023 = load i32, ptr null		; <i32> [#uses=1]
 	switch i32 %tmp.1023, label %loopentry.1 [
 	]
 

@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -O3 -mtriple=x86_64-apple-macosx -enable-implicit-null-checks < %s | FileCheck %s
 
-define i32 @imp_null_check_load(i32* %x) {
+define i32 @imp_null_check_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp0:
@@ -12,19 +12,19 @@ define i32 @imp_null_check_load(i32* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   ret i32 %t
 }
 
 ; TODO: can make implicit
-define i32 @imp_null_check_unordered_load(i32* %x) {
+define i32 @imp_null_check_unordered_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_unordered_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp1:
@@ -36,21 +36,21 @@ define i32 @imp_null_check_unordered_load(i32* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load atomic i32, i32* %x unordered, align 4
+  %t = load atomic i32, ptr %x unordered, align 4
   ret i32 %t
 }
 
 
 ; TODO: Can be converted into implicit check.
 ;; Probably could be implicit, but we're conservative for now
-define i32 @imp_null_check_seq_cst_load(i32* %x) {
+define i32 @imp_null_check_seq_cst_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_seq_cst_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
@@ -63,19 +63,19 @@ define i32 @imp_null_check_seq_cst_load(i32* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load atomic i32, i32* %x seq_cst, align 4
+  %t = load atomic i32, ptr %x seq_cst, align 4
   ret i32 %t
 }
 
 ;; Might be memory mapped IO, so can't rely on fault behavior
-define i32 @imp_null_check_volatile_load(i32* %x) {
+define i32 @imp_null_check_volatile_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_volatile_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
@@ -88,19 +88,19 @@ define i32 @imp_null_check_volatile_load(i32* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load volatile i32, i32* %x, align 4
+  %t = load volatile i32, ptr %x, align 4
   ret i32 %t
 }
 
 
-define i8 @imp_null_check_load_i8(i8* %x) {
+define i8 @imp_null_check_load_i8(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_i8:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp2:
@@ -112,18 +112,18 @@ define i8 @imp_null_check_load_i8(i8* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i8* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i8 42
 
  not_null:
-  %t = load i8, i8* %x
+  %t = load i8, ptr %x
   ret i8 %t
 }
 
-define i256 @imp_null_check_load_i256(i256* %x) {
+define i256 @imp_null_check_load_i256(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_i256:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -146,20 +146,20 @@ define i256 @imp_null_check_load_i256(i256* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i256* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i256 42
 
  not_null:
-  %t = load i256, i256* %x
+  %t = load i256, ptr %x
   ret i256 %t
 }
 
 
 
-define i32 @imp_null_check_gep_load(i32* %x) {
+define i32 @imp_null_check_gep_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_gep_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp4:
@@ -171,19 +171,19 @@ define i32 @imp_null_check_gep_load(i32* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %x.gep = getelementptr i32, i32* %x, i32 32
-  %t = load i32, i32* %x.gep
+  %x.gep = getelementptr i32, ptr %x, i32 32
+  %t = load i32, ptr %x.gep
   ret i32 %t
 }
 
-define i32 @imp_null_check_add_result(i32* %x, i32 %p) {
+define i32 @imp_null_check_add_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_add_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp5:
@@ -196,19 +196,19 @@ define i32 @imp_null_check_add_result(i32* %x, i32 %p) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   %p1 = add i32 %t, %p
   ret i32 %p1
 }
 
-define i32 @imp_null_check_sub_result(i32* %x, i32 %p) {
+define i32 @imp_null_check_sub_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_sub_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp6:
@@ -221,19 +221,19 @@ define i32 @imp_null_check_sub_result(i32* %x, i32 %p) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   %p1 = sub i32 %t, %p
   ret i32 %p1
 }
 
-define i32 @imp_null_check_mul_result(i32* %x, i32 %p) {
+define i32 @imp_null_check_mul_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_mul_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp7:
@@ -246,19 +246,19 @@ define i32 @imp_null_check_mul_result(i32* %x, i32 %p) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   %p1 = mul i32 %t, %p
   ret i32 %p1
 }
 
-define i32 @imp_null_check_udiv_result(i32* %x, i32 %p) {
+define i32 @imp_null_check_udiv_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_udiv_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp8:
@@ -272,19 +272,19 @@ define i32 @imp_null_check_udiv_result(i32* %x, i32 %p) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   %p1 = udiv i32 %t, %p
   ret i32 %p1
 }
 
-define i32 @imp_null_check_shl_result(i32* %x, i32 %p) {
+define i32 @imp_null_check_shl_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_shl_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp9:
@@ -298,19 +298,19 @@ define i32 @imp_null_check_shl_result(i32* %x, i32 %p) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   %p1 = shl i32 %t, %p
   ret i32 %p1
 }
 
-define i32 @imp_null_check_lshr_result(i32* %x, i32 %p) {
+define i32 @imp_null_check_lshr_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_lshr_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp10:
@@ -324,14 +324,14 @@ define i32 @imp_null_check_lshr_result(i32* %x, i32 %p) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   %p1 = lshr i32 %t, %p
   ret i32 %p1
 }
@@ -339,7 +339,7 @@ define i32 @imp_null_check_lshr_result(i32* %x, i32 %p) {
 
 
 
-define i32 @imp_null_check_hoist_over_unrelated_load(i32* %x, i32* %y, i32* %z) {
+define i32 @imp_null_check_hoist_over_unrelated_load(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: imp_null_check_hoist_over_unrelated_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp11:
@@ -353,20 +353,20 @@ define i32 @imp_null_check_hoist_over_unrelated_load(i32* %x, i32* %y, i32* %z) 
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t0 = load i32, i32* %y
-  %t1 = load i32, i32* %x
-  store i32 %t0, i32* %z
+  %t0 = load i32, ptr %y
+  %t1 = load i32, ptr %x
+  store i32 %t0, ptr %z
   ret i32 %t1
 }
 
-define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
+define i32 @imp_null_check_via_mem_comparision(ptr %x, i32 %val) {
 ; CHECK-LABEL: imp_null_check_via_mem_comparision:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp12:
@@ -384,15 +384,15 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %x.loc = getelementptr i32, i32* %x, i32 1
-  %t = load i32, i32* %x.loc
+  %x.loc = getelementptr i32, ptr %x, i32 1
+  %t = load i32, ptr %x.loc
   %m = icmp slt i32 %t, %val
   br i1 %m, label %ret_100, label %ret_200
 
@@ -403,7 +403,7 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
   ret i32 200
 }
 
-define i32 @imp_null_check_gep_load_with_use_dep(i32* %x, i32 %a) {
+define i32 @imp_null_check_gep_load_with_use_dep(ptr %x, i32 %a) {
 ; CHECK-LABEL: imp_null_check_gep_load_with_use_dep:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    ## kill: def $esi killed $esi def $rsi
@@ -418,24 +418,24 @@ define i32 @imp_null_check_gep_load_with_use_dep(i32* %x, i32 %a) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %x.loc = getelementptr i32, i32* %x, i32 1
-  %y = ptrtoint i32* %x.loc to i32
+  %x.loc = getelementptr i32, ptr %x, i32 1
+  %y = ptrtoint ptr %x.loc to i32
   %b = add i32 %a, %y
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   %z = add i32 %t, %b
   ret i32 %z
 }
 
 ;; TODO: We could handle this case as we can lift the fence into the
 ;; previous block before the conditional without changing behavior.
-define i32 @imp_null_check_load_fence1(i32* %x) {
+define i32 @imp_null_check_load_fence1(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_fence1:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
@@ -449,7 +449,7 @@ define i32 @imp_null_check_load_fence1(i32* %x) {
 ; CHECK-NEXT:    retq
 
 entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
 is_null:
@@ -457,13 +457,13 @@ is_null:
 
 not_null:
   fence acquire
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   ret i32 %t
 }
 
 ;; TODO: We could handle this case as we can lift the fence into the
 ;; previous block before the conditional without changing behavior.
-define i32 @imp_null_check_load_fence2(i32* %x) {
+define i32 @imp_null_check_load_fence2(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_fence2:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
@@ -477,7 +477,7 @@ define i32 @imp_null_check_load_fence2(i32* %x) {
 ; CHECK-NEXT:    retq
 
 entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
 is_null:
@@ -485,11 +485,11 @@ is_null:
 
 not_null:
   fence seq_cst
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   ret i32 %t
 }
 
-define void @imp_null_check_store(i32* %x) {
+define void @imp_null_check_store(ptr %x) {
 ; CHECK-LABEL: imp_null_check_store:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp14:
@@ -500,19 +500,19 @@ define void @imp_null_check_store(i32* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret void
 
  not_null:
-  store i32 1, i32* %x
+  store i32 1, ptr %x
   ret void
 }
 
 ;; TODO: can be implicit
-define void @imp_null_check_unordered_store(i32* %x) {
+define void @imp_null_check_unordered_store(ptr %x) {
 ; CHECK-LABEL: imp_null_check_unordered_store:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp15:
@@ -523,18 +523,18 @@ define void @imp_null_check_unordered_store(i32* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret void
 
  not_null:
-  store atomic i32 1, i32* %x unordered, align 4
+  store atomic i32 1, ptr %x unordered, align 4
   ret void
 }
 
-define i32 @imp_null_check_neg_gep_load(i32* %x) {
+define i32 @imp_null_check_neg_gep_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_neg_gep_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp16:
@@ -546,15 +546,15 @@ define i32 @imp_null_check_neg_gep_load(i32* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %x.gep = getelementptr i32, i32* %x, i32 -32
-  %t = load i32, i32* %x.gep
+  %x.gep = getelementptr i32, ptr %x, i32 -32
+  %t = load i32, ptr %x.gep
   ret i32 %t
 }
 
@@ -562,7 +562,7 @@ define i32 @imp_null_check_neg_gep_load(i32* %x) {
 ; itself.
 ; Converted into implicit null check since both of these operations do not
 ; change the nullness of %x (i.e. if it is null, it remains null).
-define i64 @imp_null_check_load_shift_addr(i64* %x) {
+define i64 @imp_null_check_load_shift_addr(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_shift_addr:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    shlq $6, %rdi
@@ -575,24 +575,24 @@ define i64 @imp_null_check_load_shift_addr(i64* %x) {
 ; CHECK-NEXT:    retq
 
   entry:
-   %c = icmp eq i64* %x, null
+   %c = icmp eq ptr %x, null
    br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
   is_null:
    ret i64 42
 
   not_null:
-   %y = ptrtoint i64* %x to i64
+   %y = ptrtoint ptr %x to i64
    %shry = shl i64 %y, 6
-   %y.ptr = inttoptr i64 %shry to i64*
-   %x.loc = getelementptr i64, i64* %y.ptr, i64 1
-   %t = load i64, i64* %x.loc
+   %y.ptr = inttoptr i64 %shry to ptr
+   %x.loc = getelementptr i64, ptr %y.ptr, i64 1
+   %t = load i64, ptr %x.loc
    ret i64 %t
 }
 
 ; Same as imp_null_check_load_shift_addr but shift is by 3 and this is now
 ; converted into complex addressing.
-define i64 @imp_null_check_load_shift_by_3_addr(i64* %x) {
+define i64 @imp_null_check_load_shift_by_3_addr(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_shift_by_3_addr:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp18:
@@ -604,22 +604,22 @@ define i64 @imp_null_check_load_shift_by_3_addr(i64* %x) {
 ; CHECK-NEXT:    retq
 
   entry:
-   %c = icmp eq i64* %x, null
+   %c = icmp eq ptr %x, null
    br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
   is_null:
    ret i64 42
 
   not_null:
-   %y = ptrtoint i64* %x to i64
+   %y = ptrtoint ptr %x to i64
    %shry = shl i64 %y, 3
-   %y.ptr = inttoptr i64 %shry to i64*
-   %x.loc = getelementptr i64, i64* %y.ptr, i64 1
-   %t = load i64, i64* %x.loc
+   %y.ptr = inttoptr i64 %shry to ptr
+   %x.loc = getelementptr i64, ptr %y.ptr, i64 1
+   %t = load i64, ptr %x.loc
    ret i64 %t
 }
 
-define i64 @imp_null_check_load_shift_add_addr(i64* %x) {
+define i64 @imp_null_check_load_shift_add_addr(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_shift_add_addr:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK:         movq 3526(,%rdi,8), %rax ## on-fault: LBB23_1
@@ -630,19 +630,19 @@ define i64 @imp_null_check_load_shift_add_addr(i64* %x) {
 ; CHECK-NEXT:    retq
 
   entry:
-   %c = icmp eq i64* %x, null
+   %c = icmp eq ptr %x, null
    br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
   is_null:
    ret i64 42
 
   not_null:
-   %y = ptrtoint i64* %x to i64
+   %y = ptrtoint ptr %x to i64
    %shry = shl i64 %y, 3
    %shry.add = add i64 %shry, 3518
-   %y.ptr = inttoptr i64 %shry.add to i64*
-   %x.loc = getelementptr i64, i64* %y.ptr, i64 1
-   %t = load i64, i64* %x.loc
+   %y.ptr = inttoptr i64 %shry.add to ptr
+   %x.loc = getelementptr i64, ptr %y.ptr, i64 1
+   %t = load i64, ptr %x.loc
    ret i64 %t
 }
 !0 = !{}

@@ -11,7 +11,7 @@
 ; This is explained (with the motivation for such an optimization) in
 ; http://www.hpl.hp.com/techreports/2012/HPL-2012-68.pdf
 
-define i8 @add8(i8* %p) {
+define i8 @add8(ptr %p) {
 ; X64-LABEL: add8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    mfence
@@ -42,11 +42,11 @@ define i8 @add8(i8* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  %1 = atomicrmw add i8* %p, i8 0 monotonic
+  %1 = atomicrmw add ptr %p, i8 0 monotonic
   ret i8 %1
 }
 
-define i16 @or16(i16* %p) {
+define i16 @or16(ptr %p) {
 ; X64-LABEL: or16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    mfence
@@ -83,11 +83,11 @@ define i16 @or16(i16* %p) {
 ; X86-ATOM-NEXT:    jne .LBB1_1
 ; X86-ATOM-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-ATOM-NEXT:    retl
-  %1 = atomicrmw or i16* %p, i16 0 acquire
+  %1 = atomicrmw or ptr %p, i16 0 acquire
   ret i16 %1
 }
 
-define i32 @xor32(i32* %p) {
+define i32 @xor32(ptr %p) {
 ; X64-LABEL: xor32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    mfence
@@ -124,11 +124,11 @@ define i32 @xor32(i32* %p) {
 ; X86-ATOM-NEXT:    jne .LBB2_1
 ; X86-ATOM-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-ATOM-NEXT:    retl
-  %1 = atomicrmw xor i32* %p, i32 0 release
+  %1 = atomicrmw xor ptr %p, i32 0 release
   ret i32 %1
 }
 
-define i64 @sub64(i64* %p) {
+define i64 @sub64(ptr %p) {
 ; X64-LABEL: sub64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    mfence
@@ -159,11 +159,11 @@ define i64 @sub64(i64* %p) {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-  %1 = atomicrmw sub i64* %p, i64 0 seq_cst
+  %1 = atomicrmw sub ptr %p, i64 0 seq_cst
   ret i64 %1
 }
 
-define i128 @or128(i128* %p) {
+define i128 @or128(ptr %p) {
 ; X64-LABEL: or128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
@@ -293,12 +293,12 @@ define i128 @or128(i128* %p) {
 ; X86-ATOM-NEXT:    popl %ebp
 ; X86-ATOM-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-ATOM-NEXT:    retl $4
-  %1 = atomicrmw or i128* %p, i128 0 monotonic
+  %1 = atomicrmw or ptr %p, i128 0 monotonic
   ret i128 %1
 }
 
 ; For 'and', the idempotent value is (-1)
-define i32 @and32 (i32* %p) {
+define i32 @and32 (ptr %p) {
 ; X64-LABEL: and32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    mfence
@@ -335,11 +335,11 @@ define i32 @and32 (i32* %p) {
 ; X86-ATOM-NEXT:    jne .LBB5_1
 ; X86-ATOM-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-ATOM-NEXT:    retl
-  %1 = atomicrmw and i32* %p, i32 -1 acq_rel
+  %1 = atomicrmw and ptr %p, i32 -1 acq_rel
   ret i32 %1
 }
 
-define void @or32_nouse_monotonic(i32* %p) {
+define void @or32_nouse_monotonic(ptr %p) {
 ; X64-LABEL: or32_nouse_monotonic:
 ; X64:       # %bb.0:
 ; X64-NEXT:    #MEMBARRIER
@@ -360,12 +360,12 @@ define void @or32_nouse_monotonic(i32* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or i32* %p, i32 0 monotonic
+  atomicrmw or ptr %p, i32 0 monotonic
   ret void
 }
 
 
-define void @or32_nouse_acquire(i32* %p) {
+define void @or32_nouse_acquire(ptr %p) {
 ; X64-LABEL: or32_nouse_acquire:
 ; X64:       # %bb.0:
 ; X64-NEXT:    #MEMBARRIER
@@ -386,11 +386,11 @@ define void @or32_nouse_acquire(i32* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or i32* %p, i32 0 acquire
+  atomicrmw or ptr %p, i32 0 acquire
   ret void
 }
 
-define void @or32_nouse_release(i32* %p) {
+define void @or32_nouse_release(ptr %p) {
 ; X64-LABEL: or32_nouse_release:
 ; X64:       # %bb.0:
 ; X64-NEXT:    #MEMBARRIER
@@ -411,11 +411,11 @@ define void @or32_nouse_release(i32* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or i32* %p, i32 0 release
+  atomicrmw or ptr %p, i32 0 release
   ret void
 }
 
-define void @or32_nouse_acq_rel(i32* %p) {
+define void @or32_nouse_acq_rel(ptr %p) {
 ; X64-LABEL: or32_nouse_acq_rel:
 ; X64:       # %bb.0:
 ; X64-NEXT:    #MEMBARRIER
@@ -436,11 +436,11 @@ define void @or32_nouse_acq_rel(i32* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or i32* %p, i32 0 acq_rel
+  atomicrmw or ptr %p, i32 0 acq_rel
   ret void
 }
 
-define void @or32_nouse_seq_cst(i32* %p) {
+define void @or32_nouse_seq_cst(ptr %p) {
 ; X64-LABEL: or32_nouse_seq_cst:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -461,12 +461,12 @@ define void @or32_nouse_seq_cst(i32* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or i32* %p, i32 0 seq_cst
+  atomicrmw or ptr %p, i32 0 seq_cst
   ret void
 }
 
 ; TODO: The value isn't used on 32 bit, so the cmpxchg8b is unneeded
-define void @or64_nouse_seq_cst(i64* %p) {
+define void @or64_nouse_seq_cst(ptr %p) {
 ; X64-LABEL: or64_nouse_seq_cst:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -496,12 +496,12 @@ define void @or64_nouse_seq_cst(i64* %p) {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-  atomicrmw or i64* %p, i64 0 seq_cst
+  atomicrmw or ptr %p, i64 0 seq_cst
   ret void
 }
 
 ; TODO: Don't need to lower as sync_and_fetch call
-define void @or128_nouse_seq_cst(i128* %p) {
+define void @or128_nouse_seq_cst(ptr %p) {
 ; X64-LABEL: or128_nouse_seq_cst:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
@@ -583,12 +583,12 @@ define void @or128_nouse_seq_cst(i128* %p) {
 ; X86-ATOM-NEXT:    popl %ebp
 ; X86-ATOM-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or i128* %p, i128 0 seq_cst
+  atomicrmw or ptr %p, i128 0 seq_cst
   ret void
 }
 
 
-define void @or16_nouse_seq_cst(i16* %p) {
+define void @or16_nouse_seq_cst(ptr %p) {
 ; X64-LABEL: or16_nouse_seq_cst:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -609,11 +609,11 @@ define void @or16_nouse_seq_cst(i16* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or i16* %p, i16 0 seq_cst
+  atomicrmw or ptr %p, i16 0 seq_cst
   ret void
 }
 
-define void @or8_nouse_seq_cst(i8* %p) {
+define void @or8_nouse_seq_cst(ptr %p) {
 ; X64-LABEL: or8_nouse_seq_cst:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
@@ -634,6 +634,6 @@ define void @or8_nouse_seq_cst(i8* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or i8* %p, i8 0 seq_cst
+  atomicrmw or ptr %p, i8 0 seq_cst
   ret void
 }
