@@ -72,6 +72,17 @@ std::string LRTable::dumpForTests(const Grammar &G) const {
   return OS.str();
 }
 
+llvm::Optional<LRTable::StateID>
+LRTable::getShiftState(StateID State, SymbolID Terminal) const {
+  // FIXME: we spend a significant amount of time on misses here.
+  // We could consider storing a std::bitset for a cheaper test?
+  assert(pseudo::isToken(Terminal) && "expected terminal symbol!");
+  for (const auto &Result : getActions(State, Terminal))
+    if (Result.kind() == Action::Shift)
+      return Result.getShiftState(); // unique: no shift/shift conflicts.
+  return llvm::None;
+}
+
 llvm::ArrayRef<LRTable::Action> LRTable::getActions(StateID State,
                                                     SymbolID Terminal) const {
   assert(pseudo::isToken(Terminal) && "expect terminal symbol!");
