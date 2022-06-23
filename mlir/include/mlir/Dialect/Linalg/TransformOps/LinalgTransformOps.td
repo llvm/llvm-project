@@ -348,7 +348,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     does **not** fail when no ops were vectorized.
 
     Note that this transformation is invalidating the handles to any payload IR
-    operation that is contained inside the vectoriztaion target.
+    operation that is contained inside the vectorization target.
   }];
 
   let arguments = (ins PDL_Operation:$target,
