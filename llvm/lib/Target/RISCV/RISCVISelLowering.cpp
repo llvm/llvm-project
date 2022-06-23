@@ -112,6 +112,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasVInstructions()) {
     auto addRegClassForRVV = [this](MVT VT) {
+      // Disable the smallest fractional LMUL types if ELEN is less than
+      // RVVBitsPerBlock.
+      unsigned MinElts = RISCV::RVVBitsPerBlock / Subtarget.getELEN();
+      if (VT.getVectorMinNumElements() < MinElts)
+        return;
+
       unsigned Size = VT.getSizeInBits().getKnownMinValue();
       const TargetRegisterClass *RC;
       if (Size <= RISCV::RVVBitsPerBlock)
@@ -472,6 +478,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
 
     for (MVT VT : BoolVecVTs) {
+      if (!isTypeLegal(VT))
+        continue;
+
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
 
       // Mask VTs are custom-expanded into a series of standard nodes
@@ -519,8 +528,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
 
     for (MVT VT : IntVecVTs) {
-      if (VT.getVectorElementType() == MVT::i64 &&
-          !Subtarget.hasVInstructionsI64())
+      if (!isTypeLegal(VT))
         continue;
 
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
@@ -704,21 +712,31 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           }
         };
 
-    if (Subtarget.hasVInstructionsF16())
-      for (MVT VT : F16VecVTs)
+    if (Subtarget.hasVInstructionsF16()) {
+      for (MVT VT : F16VecVTs) {
+        if (!isTypeLegal(VT))
+          continue;
         SetCommonVFPActions(VT);
-
-    for (MVT VT : F32VecVTs) {
-      if (Subtarget.hasVInstructionsF32())
-        SetCommonVFPActions(VT);
-      SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
+      }
     }
 
-    for (MVT VT : F64VecVTs) {
-      if (Subtarget.hasVInstructionsF64())
+    if (Subtarget.hasVInstructionsF32()) {
+      for (MVT VT : F32VecVTs) {
+        if (!isTypeLegal(VT))
+          continue;
         SetCommonVFPActions(VT);
-      SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
-      SetCommonVFPExtLoadTruncStoreActions(VT, F32VecVTs);
+        SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
+      }
+    }
+
+    if (Subtarget.hasVInstructionsF64()) {
+      for (MVT VT : F64VecVTs) {
+        if (!isTypeLegal(VT))
+          continue;
+        SetCommonVFPActions(VT);
+        SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
+        SetCommonVFPExtLoadTruncStoreActions(VT, F32VecVTs);
+      }
     }
 
     if (Subtarget.useRVVForFixedLengthVectors()) {
