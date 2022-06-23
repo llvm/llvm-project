@@ -113,6 +113,8 @@ Improvements to clang-tidy
 - Added an option -verify-config which will check the config file to ensure each
   `Checks` and `CheckOptions` entries are recognised.
 
+- .clang-tidy files can now use the more natural dictionary syntax for specifying `CheckOptions`.
+
 New checks
 ^^^^^^^^^^
 
