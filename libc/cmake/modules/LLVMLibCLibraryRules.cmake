@@ -153,16 +153,24 @@ function(create_header_library fq_target_name)
       endforeach()
     endif()
   endif()
+  set(interface_target_name "${fq_target_name}.__header_library__")
 
-  add_library(${fq_target_name} INTERFACE)
-  target_sources(${fq_target_name} INTERFACE ${FULL_HDR_PATHS})
+  add_library(${interface_target_name} INTERFACE)
+  target_sources(${interface_target_name} INTERFACE ${FULL_HDR_PATHS})
   if(ADD_HEADER_DEPENDS)
-    add_dependencies(${fq_target_name} ${ADD_HEADER_DEPENDS})
+    add_dependencies(${interface_target_name} ${ADD_HEADER_DEPENDS})
   endif()
+  set_target_properties(
+    ${interface_target_name}
+    PROPERTIES
+      INTERFACE_FLAGS "${ADD_HEADER_FLAGS}"
+  )
+
+  add_custom_target(${fq_target_name})
+  add_dependencies(${fq_target_name} ${interface_target_name})
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
-      INTERFACE_FLAGS "${ADD_HEADER_FLAGS}"
       TARGET_TYPE "${HDR_LIBRARY_TARGET_TYPE}"
       DEPS "${ADD_HEADER_DEPENDS}"
       FLAGS "${ADD_HEADER_FLAGS}"
