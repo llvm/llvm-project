@@ -2839,10 +2839,10 @@ private:
     if (!funit.isMainProgram()) {
       const Fortran::semantics::Symbol &procSymbol =
           funit.getSubprogramSymbol();
-      if (procSymbol.owner().IsSubmodule()) {
+      if (procSymbol.owner().IsSubmodule())
         TODO(toLocation(), "support for submodules");
-        return;
-      }
+      if (Fortran::semantics::IsSeparateModuleProcedureInterface(&procSymbol))
+        TODO(toLocation(), "separate module procedure");
     }
     setCurrentPosition(funit.getStartingSourceLoc());
     for (int entryIndex = 0, last = funit.entryPointList.size();
