@@ -66,13 +66,14 @@ define <4 x float> @buildvector_powi_4f32_3(<4 x float> %a) {
 ; AVX1-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
 ; AVX1-NEXT:    [[C0:%.*]] = call float @llvm.powi.f32.i32(float [[A0]], i32 3)
 ; AVX1-NEXT:    [[C1:%.*]] = call float @llvm.powi.f32.i32(float [[A1]], i32 3)
-; AVX1-NEXT:    [[C2:%.*]] = call float @llvm.powi.f32.i32(float [[A2]], i32 3)
-; AVX1-NEXT:    [[C3:%.*]] = call float @llvm.powi.f32.i32(float [[A3]], i32 3)
+; AVX1-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A2]], i32 0
+; AVX1-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[A3]], i32 1
+; AVX1-NEXT:    [[TMP3:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[TMP2]], i32 3)
 ; AVX1-NEXT:    [[R0:%.*]] = insertelement <4 x float> poison, float [[C0]], i32 0
 ; AVX1-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[C1]], i32 1
-; AVX1-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[R1]], float [[C2]], i32 2
-; AVX1-NEXT:    [[R3:%.*]] = insertelement <4 x float> [[R2]], float [[C3]], i32 3
-; AVX1-NEXT:    ret <4 x float> [[R3]]
+; AVX1-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; AVX1-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[R1]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; AVX1-NEXT:    ret <4 x float> [[R31]]
 ;
 ; AVX2-LABEL: @buildvector_powi_4f32_3(
 ; AVX2-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
@@ -81,13 +82,14 @@ define <4 x float> @buildvector_powi_4f32_3(<4 x float> %a) {
 ; AVX2-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
 ; AVX2-NEXT:    [[C0:%.*]] = call float @llvm.powi.f32.i32(float [[A0]], i32 3)
 ; AVX2-NEXT:    [[C1:%.*]] = call float @llvm.powi.f32.i32(float [[A1]], i32 3)
-; AVX2-NEXT:    [[C2:%.*]] = call float @llvm.powi.f32.i32(float [[A2]], i32 3)
-; AVX2-NEXT:    [[C3:%.*]] = call float @llvm.powi.f32.i32(float [[A3]], i32 3)
+; AVX2-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A2]], i32 0
+; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[A3]], i32 1
+; AVX2-NEXT:    [[TMP3:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[TMP2]], i32 3)
 ; AVX2-NEXT:    [[R0:%.*]] = insertelement <4 x float> poison, float [[C0]], i32 0
 ; AVX2-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[C1]], i32 1
-; AVX2-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[R1]], float [[C2]], i32 2
-; AVX2-NEXT:    [[R3:%.*]] = insertelement <4 x float> [[R2]], float [[C3]], i32 3
-; AVX2-NEXT:    ret <4 x float> [[R3]]
+; AVX2-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; AVX2-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[R1]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; AVX2-NEXT:    ret <4 x float> [[R31]]
 ;
 ; AVX512-LABEL: @buildvector_powi_4f32_3(
 ; AVX512-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
@@ -216,21 +218,23 @@ define <8 x float> @buildvector_powi_8f32_4(<8 x float> %a) {
 ; AVX1-NEXT:    [[A7:%.*]] = extractelement <8 x float> [[A]], i32 7
 ; AVX1-NEXT:    [[C0:%.*]] = call float @llvm.powi.f32.i32(float [[A0]], i32 4)
 ; AVX1-NEXT:    [[C1:%.*]] = call float @llvm.powi.f32.i32(float [[A1]], i32 4)
-; AVX1-NEXT:    [[C2:%.*]] = call float @llvm.powi.f32.i32(float [[A2]], i32 4)
-; AVX1-NEXT:    [[C3:%.*]] = call float @llvm.powi.f32.i32(float [[A3]], i32 4)
+; AVX1-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A2]], i32 0
+; AVX1-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[A3]], i32 1
+; AVX1-NEXT:    [[TMP3:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[TMP2]], i32 4)
 ; AVX1-NEXT:    [[C4:%.*]] = call float @llvm.powi.f32.i32(float [[A4]], i32 4)
 ; AVX1-NEXT:    [[C5:%.*]] = call float @llvm.powi.f32.i32(float [[A5]], i32 4)
-; AVX1-NEXT:    [[C6:%.*]] = call float @llvm.powi.f32.i32(float [[A6]], i32 4)
-; AVX1-NEXT:    [[C7:%.*]] = call float @llvm.powi.f32.i32(float [[A7]], i32 4)
+; AVX1-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[A6]], i32 0
+; AVX1-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[A7]], i32 1
+; AVX1-NEXT:    [[TMP6:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[TMP5]], i32 4)
 ; AVX1-NEXT:    [[R0:%.*]] = insertelement <8 x float> poison, float [[C0]], i32 0
 ; AVX1-NEXT:    [[R1:%.*]] = insertelement <8 x float> [[R0]], float [[C1]], i32 1
-; AVX1-NEXT:    [[R2:%.*]] = insertelement <8 x float> [[R1]], float [[C2]], i32 2
-; AVX1-NEXT:    [[R3:%.*]] = insertelement <8 x float> [[R2]], float [[C3]], i32 3
-; AVX1-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R3]], float [[C4]], i32 4
+; AVX1-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:    [[R32:%.*]] = shufflevector <8 x float> [[R1]], <8 x float> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
+; AVX1-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R32]], float [[C4]], i32 4
 ; AVX1-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[C5]], i32 5
-; AVX1-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[C6]], i32 6
-; AVX1-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[C7]], i32 7
-; AVX1-NEXT:    ret <8 x float> [[R7]]
+; AVX1-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:    [[R71:%.*]] = shufflevector <8 x float> [[R5]], <8 x float> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; AVX1-NEXT:    ret <8 x float> [[R71]]
 ;
 ; AVX2-LABEL: @buildvector_powi_8f32_4(
 ; AVX2-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.powi.v8f32.i32(<8 x float> [[A:%.*]], i32 4)
@@ -470,37 +474,41 @@ define <16 x float> @buildvector_powi_16f32_n13(<16 x float> %a) {
 ; AVX1-NEXT:    [[A15:%.*]] = extractelement <16 x float> [[A]], i32 15
 ; AVX1-NEXT:    [[C0:%.*]] = call float @llvm.powi.f32.i32(float [[A0]], i32 -13)
 ; AVX1-NEXT:    [[C1:%.*]] = call float @llvm.powi.f32.i32(float [[A1]], i32 -13)
-; AVX1-NEXT:    [[C2:%.*]] = call float @llvm.powi.f32.i32(float [[A2]], i32 -13)
-; AVX1-NEXT:    [[C3:%.*]] = call float @llvm.powi.f32.i32(float [[A3]], i32 -13)
+; AVX1-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A2]], i32 0
+; AVX1-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[A3]], i32 1
+; AVX1-NEXT:    [[TMP3:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[TMP2]], i32 -13)
 ; AVX1-NEXT:    [[C4:%.*]] = call float @llvm.powi.f32.i32(float [[A4]], i32 -13)
 ; AVX1-NEXT:    [[C5:%.*]] = call float @llvm.powi.f32.i32(float [[A5]], i32 -13)
-; AVX1-NEXT:    [[C6:%.*]] = call float @llvm.powi.f32.i32(float [[A6]], i32 -13)
-; AVX1-NEXT:    [[C7:%.*]] = call float @llvm.powi.f32.i32(float [[A7]], i32 -13)
+; AVX1-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[A6]], i32 0
+; AVX1-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[A7]], i32 1
+; AVX1-NEXT:    [[TMP6:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[TMP5]], i32 -13)
 ; AVX1-NEXT:    [[C8:%.*]] = call float @llvm.powi.f32.i32(float [[A8]], i32 -13)
 ; AVX1-NEXT:    [[C9:%.*]] = call float @llvm.powi.f32.i32(float [[A9]], i32 -13)
-; AVX1-NEXT:    [[C10:%.*]] = call float @llvm.powi.f32.i32(float [[A10]], i32 -13)
-; AVX1-NEXT:    [[C11:%.*]] = call float @llvm.powi.f32.i32(float [[A11]], i32 -13)
+; AVX1-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[A10]], i32 0
+; AVX1-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[A11]], i32 1
+; AVX1-NEXT:    [[TMP9:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[TMP8]], i32 -13)
 ; AVX1-NEXT:    [[C12:%.*]] = call float @llvm.powi.f32.i32(float [[A12]], i32 -13)
 ; AVX1-NEXT:    [[C13:%.*]] = call float @llvm.powi.f32.i32(float [[A13]], i32 -13)
-; AVX1-NEXT:    [[C14:%.*]] = call float @llvm.powi.f32.i32(float [[A14]], i32 -13)
-; AVX1-NEXT:    [[C15:%.*]] = call float @llvm.powi.f32.i32(float [[A15]], i32 -13)
+; AVX1-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[A14]], i32 0
+; AVX1-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> [[TMP10]], float [[A15]], i32 1
+; AVX1-NEXT:    [[TMP12:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[TMP11]], i32 -13)
 ; AVX1-NEXT:    [[R0:%.*]] = insertelement <16 x float> poison, float [[C0]], i32 0
 ; AVX1-NEXT:    [[R1:%.*]] = insertelement <16 x float> [[R0]], float [[C1]], i32 1
-; AVX1-NEXT:    [[R2:%.*]] = insertelement <16 x float> [[R1]], float [[C2]], i32 2
-; AVX1-NEXT:    [[R3:%.*]] = insertelement <16 x float> [[R2]], float [[C3]], i32 3
-; AVX1-NEXT:    [[R4:%.*]] = insertelement <16 x float> [[R3]], float [[C4]], i32 4
+; AVX1-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:    [[R34:%.*]] = shufflevector <16 x float> [[R1]], <16 x float> [[TMP13]], <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; AVX1-NEXT:    [[R4:%.*]] = insertelement <16 x float> [[R34]], float [[C4]], i32 4
 ; AVX1-NEXT:    [[R5:%.*]] = insertelement <16 x float> [[R4]], float [[C5]], i32 5
-; AVX1-NEXT:    [[R6:%.*]] = insertelement <16 x float> [[R5]], float [[C6]], i32 6
-; AVX1-NEXT:    [[R7:%.*]] = insertelement <16 x float> [[R6]], float [[C7]], i32 7
-; AVX1-NEXT:    [[R8:%.*]] = insertelement <16 x float> [[R7]], float [[C8]], i32 8
+; AVX1-NEXT:    [[TMP14:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:    [[R73:%.*]] = shufflevector <16 x float> [[R5]], <16 x float> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 16, i32 17, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; AVX1-NEXT:    [[R8:%.*]] = insertelement <16 x float> [[R73]], float [[C8]], i32 8
 ; AVX1-NEXT:    [[R9:%.*]] = insertelement <16 x float> [[R8]], float [[C9]], i32 9
-; AVX1-NEXT:    [[R10:%.*]] = insertelement <16 x float> [[R9]], float [[C10]], i32 10
-; AVX1-NEXT:    [[R11:%.*]] = insertelement <16 x float> [[R10]], float [[C11]], i32 11
-; AVX1-NEXT:    [[R12:%.*]] = insertelement <16 x float> [[R11]], float [[C12]], i32 12
+; AVX1-NEXT:    [[TMP15:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:    [[R112:%.*]] = shufflevector <16 x float> [[R9]], <16 x float> [[TMP15]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 16, i32 17, i32 12, i32 13, i32 14, i32 15>
+; AVX1-NEXT:    [[R12:%.*]] = insertelement <16 x float> [[R112]], float [[C12]], i32 12
 ; AVX1-NEXT:    [[R13:%.*]] = insertelement <16 x float> [[R12]], float [[C13]], i32 13
-; AVX1-NEXT:    [[R14:%.*]] = insertelement <16 x float> [[R13]], float [[C14]], i32 14
-; AVX1-NEXT:    [[R15:%.*]] = insertelement <16 x float> [[R14]], float [[C15]], i32 15
-; AVX1-NEXT:    ret <16 x float> [[R15]]
+; AVX1-NEXT:    [[TMP16:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:    [[R151:%.*]] = shufflevector <16 x float> [[R13]], <16 x float> [[TMP16]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
+; AVX1-NEXT:    ret <16 x float> [[R151]]
 ;
 ; AVX2-LABEL: @buildvector_powi_16f32_n13(
 ; AVX2-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.powi.v16f32.i32(<16 x float> [[A:%.*]], i32 -13)

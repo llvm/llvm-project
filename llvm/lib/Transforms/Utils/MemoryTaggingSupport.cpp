@@ -22,7 +22,8 @@ namespace llvm {
 namespace memtag {
 namespace {
 bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
-                                 const DominatorTree *DT, size_t MaxLifetimes) {
+                                 const DominatorTree *DT, const LoopInfo *LI,
+                                 size_t MaxLifetimes) {
   // If we have too many lifetime ends, give up, as the algorithm below is N^2.
   if (Insts.size() > MaxLifetimes)
     return true;
@@ -30,7 +31,7 @@ bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
     for (size_t J = 0; J < Insts.size(); ++J) {
       if (I == J)
         continue;
-      if (isPotentiallyReachable(Insts[I], Insts[J], nullptr, DT))
+      if (isPotentiallyReachable(Insts[I], Insts[J], nullptr, DT, LI))
         return true;
     }
   }
@@ -39,7 +40,7 @@ bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
 } // namespace
 
 bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
-                          const Instruction *Start,
+                          const LoopInfo &LI, const Instruction *Start,
                           const SmallVectorImpl<IntrinsicInst *> &Ends,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback) {
@@ -54,7 +55,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   SmallVector<Instruction *, 8> ReachableRetVec;
   unsigned NumCoveredExits = 0;
   for (auto *RI : RetVec) {
-    if (!isPotentiallyReachable(Start, RI, nullptr, &DT))
+    if (!isPotentiallyReachable(Start, RI, nullptr, &DT, &LI))
       continue;
     ReachableRetVec.push_back(RI);
     // If there is an end in the same basic block as the return, we know for
@@ -62,7 +63,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     // is a way to reach the RI from the start of the lifetime without passing
     // through an end.
     if (EndBlocks.count(RI->getParent()) > 0 ||
-        !isPotentiallyReachable(Start, RI, &EndBlocks, &DT)) {
+        !isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
       ++NumCoveredExits;
     }
   }
@@ -83,14 +84,15 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
 
 bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
                         const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree *DT, size_t MaxLifetimes) {
+                        const DominatorTree *DT, const LoopInfo *LI,
+                        size_t MaxLifetimes) {
   // An alloca that has exactly one start and end in every possible execution.
   // If it has multiple ends, they have to be unreachable from each other, so
   // at most one of them is actually used for each execution of the function.
   return LifetimeStart.size() == 1 &&
          (LifetimeEnd.size() == 1 ||
           (LifetimeEnd.size() > 0 &&
-           !maybeReachableFromEachOther(LifetimeEnd, DT, MaxLifetimes)));
+           !maybeReachableFromEachOther(LifetimeEnd, DT, LI, MaxLifetimes)));
 }
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {

@@ -417,48 +417,6 @@ vectorizeOneOp(OpBuilder &b, LinalgOp linalgOp, Operation *op,
                llvm::to_vector<4>(returnTypes), op->getAttrs())};
 }
 
-/// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.
-static bool hasOnlyScalarElementwiseOp(Region &r) {
-  if (!llvm::hasSingleElement(r))
-    return false;
-  for (Operation &op : r.front()) {
-    if (!(isa<arith::ConstantOp, func::ConstantOp, linalg::YieldOp,
-              linalg::IndexOp>(op) ||
-          OpTrait::hasElementwiseMappableTraits(&op)) ||
-        llvm::any_of(op.getResultTypes(),
-                     [](Type type) { return !type.isIntOrIndexOrFloat(); }))
-      return false;
-  }
-  return true;
-}
-
-/// Returns `true` if all indexing maps of the linalg op are projected
-/// permutations.
-static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
-  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
-    return m.isProjectedPermutation(/*allowZeroInResults=*/true);
-  });
-}
-
-// Return true if the op is an element-wise linalg op.
-static bool isElementwise(Operation *op) {
-  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
-  if (!linalgOp)
-    return false;
-  if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
-    return false;
-
-  if (!allIndexingsAreProjectedPermutation(linalgOp))
-    return false;
-
-  // TODO: relax the restrictions on indexing map.
-  for (OpOperand *opOperand : linalgOp.getOutputOperands()) {
-    if (!linalgOp.getTiedIndexingMap(opOperand).isPermutation())
-      return false;
-  }
-  return hasOnlyScalarElementwiseOp(linalgOp->getRegion(0));
-}
-
 /// Generic vectorization function that rewrites the body of a `linalgOp` into
 /// vector form. Generic vectorization proceeds as follows:
 ///   1. Verify the `linalgOp` has one non-empty region.
@@ -594,6 +552,19 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 }
 
 static LogicalResult vectorizeStaticLinalgOpPrecondition(linalg::LinalgOp op) {
+  // All types in the body should be a supported element type for VectorType.
+  for (Operation &innerOp : op->getRegion(0).front()) {
+    if (llvm::any_of(innerOp.getOperandTypes(), [](Type type) {
+          return !VectorType::isValidElementType(type);
+        })) {
+      return failure();
+    }
+    if (llvm::any_of(innerOp.getResultTypes(), [](Type type) {
+          return !VectorType::isValidElementType(type);
+        })) {
+      return failure();
+    }
+  }
   if (isElementwise(op))
     return success();
   // TODO: isaConvolutionOpInterface that can also infer from generic features.

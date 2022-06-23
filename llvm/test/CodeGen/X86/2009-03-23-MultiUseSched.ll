@@ -12,222 +12,222 @@ define fastcc i64 @foo() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    movq X(%rip), %r8
+; CHECK-NEXT:    movq X(%rip), %r10
 ; CHECK-NEXT:    movq X(%rip), %r9
-; CHECK-NEXT:    movq X(%rip), %r15
-; CHECK-NEXT:    movq X(%rip), %rax
-; CHECK-NEXT:    movq X(%rip), %rdx
 ; CHECK-NEXT:    movq X(%rip), %r12
+; CHECK-NEXT:    movq X(%rip), %r15
 ; CHECK-NEXT:    movq X(%rip), %r14
 ; CHECK-NEXT:    movq X(%rip), %r11
-; CHECK-NEXT:    movq X(%rip), %rdi
-; CHECK-NEXT:    addq %r12, %rdi
-; CHECK-NEXT:    movq X(%rip), %rcx
-; CHECK-NEXT:    movq X(%rip), %rbx
-; CHECK-NEXT:    bswapq %rcx
-; CHECK-NEXT:    leaq (%r11,%r14), %rsi
-; CHECK-NEXT:    addq %r12, %rsi
-; CHECK-NEXT:    addq %rdi, %rsi
-; CHECK-NEXT:    addq %rcx, %rsi
-; CHECK-NEXT:    leaq (%r15,%r9), %r8
-; CHECK-NEXT:    leaq (%r8,%rax), %r10
-; CHECK-NEXT:    addq %rsi, %rdx
-; CHECK-NEXT:    addq %r10, %r10
-; CHECK-NEXT:    bswapq %rbx
-; CHECK-NEXT:    addq %rsi, %r10
-; CHECK-NEXT:    addq %r11, %rbx
-; CHECK-NEXT:    leaq (%r12,%r14), %rcx
-; CHECK-NEXT:    addq %rdx, %rcx
-; CHECK-NEXT:    addq %rcx, %rbx
-; CHECK-NEXT:    addq %r8, %r8
-; CHECK-NEXT:    addq %r10, %r8
-; CHECK-NEXT:    movq X(%rip), %rcx
-; CHECK-NEXT:    addq %rdx, %rbx
-; CHECK-NEXT:    addq %rbx, %rax
-; CHECK-NEXT:    addq %r10, %r8
-; CHECK-NEXT:    addq %rbx, %r8
-; CHECK-NEXT:    bswapq %rcx
-; CHECK-NEXT:    leaq (%rdx,%r12), %rsi
-; CHECK-NEXT:    addq %rax, %rsi
-; CHECK-NEXT:    addq %r14, %rcx
-; CHECK-NEXT:    addq %rsi, %rcx
-; CHECK-NEXT:    leaq (%r10,%r9), %rbx
-; CHECK-NEXT:    addq %rbx, %rbx
-; CHECK-NEXT:    addq %r8, %rbx
-; CHECK-NEXT:    movq X(%rip), %rdi
-; CHECK-NEXT:    addq %rax, %rcx
-; CHECK-NEXT:    addq %rcx, %r15
-; CHECK-NEXT:    addq %r8, %rbx
-; CHECK-NEXT:    addq %rcx, %rbx
-; CHECK-NEXT:    bswapq %rdi
-; CHECK-NEXT:    leaq (%rax,%rdx), %rcx
-; CHECK-NEXT:    addq %r15, %rcx
-; CHECK-NEXT:    addq %r12, %rdi
-; CHECK-NEXT:    addq %rcx, %rdi
-; CHECK-NEXT:    leaq (%r8,%r10), %r12
-; CHECK-NEXT:    addq %r12, %r12
-; CHECK-NEXT:    addq %rbx, %r12
-; CHECK-NEXT:    movq X(%rip), %rcx
-; CHECK-NEXT:    addq %r15, %rdi
-; CHECK-NEXT:    addq %rdi, %r9
-; CHECK-NEXT:    addq %rbx, %r12
-; CHECK-NEXT:    addq %rdi, %r12
-; CHECK-NEXT:    bswapq %rcx
-; CHECK-NEXT:    leaq (%r15,%rax), %rdi
-; CHECK-NEXT:    addq %r9, %rdi
-; CHECK-NEXT:    addq %rdx, %rcx
-; CHECK-NEXT:    addq %rdi, %rcx
-; CHECK-NEXT:    leaq (%rbx,%r8), %r13
-; CHECK-NEXT:    addq %r13, %r13
-; CHECK-NEXT:    addq %r12, %r13
 ; CHECK-NEXT:    movq X(%rip), %rdx
-; CHECK-NEXT:    addq %r9, %rcx
-; CHECK-NEXT:    addq %rcx, %r10
-; CHECK-NEXT:    addq %r12, %r13
-; CHECK-NEXT:    addq %rcx, %r13
-; CHECK-NEXT:    bswapq %rdx
-; CHECK-NEXT:    leaq (%r9,%r15), %rcx
-; CHECK-NEXT:    addq %r10, %rcx
-; CHECK-NEXT:    addq %rax, %rdx
-; CHECK-NEXT:    addq %rcx, %rdx
-; CHECK-NEXT:    leaq (%r12,%rbx), %r14
-; CHECK-NEXT:    addq %r14, %r14
-; CHECK-NEXT:    addq %r13, %r14
-; CHECK-NEXT:    movq X(%rip), %rax
-; CHECK-NEXT:    addq %r10, %rdx
-; CHECK-NEXT:    addq %rdx, %r8
-; CHECK-NEXT:    addq %r13, %r14
-; CHECK-NEXT:    addq %rdx, %r14
-; CHECK-NEXT:    bswapq %rax
-; CHECK-NEXT:    leaq (%r10,%r9), %rcx
-; CHECK-NEXT:    addq %r8, %rcx
-; CHECK-NEXT:    addq %r15, %rax
-; CHECK-NEXT:    addq %rcx, %rax
-; CHECK-NEXT:    leaq (%r13,%r12), %r11
-; CHECK-NEXT:    addq %r11, %r11
-; CHECK-NEXT:    addq %r14, %r11
-; CHECK-NEXT:    movq X(%rip), %rcx
-; CHECK-NEXT:    addq %r8, %rax
-; CHECK-NEXT:    addq %rax, %rbx
-; CHECK-NEXT:    addq %r14, %r11
-; CHECK-NEXT:    addq %rax, %r11
-; CHECK-NEXT:    bswapq %rcx
-; CHECK-NEXT:    leaq (%r8,%r10), %rax
-; CHECK-NEXT:    addq %rbx, %rax
-; CHECK-NEXT:    addq %r9, %rcx
-; CHECK-NEXT:    addq %rax, %rcx
-; CHECK-NEXT:    leaq (%r14,%r13), %r9
-; CHECK-NEXT:    addq %r9, %r9
-; CHECK-NEXT:    addq %r11, %r9
-; CHECK-NEXT:    movq X(%rip), %rax
-; CHECK-NEXT:    addq %rbx, %rcx
-; CHECK-NEXT:    addq %rcx, %r12
-; CHECK-NEXT:    addq %r11, %r9
-; CHECK-NEXT:    addq %rcx, %r9
-; CHECK-NEXT:    bswapq %rax
-; CHECK-NEXT:    leaq (%rbx,%r8), %rcx
-; CHECK-NEXT:    addq %r12, %rcx
-; CHECK-NEXT:    addq %r10, %rax
-; CHECK-NEXT:    addq %rcx, %rax
-; CHECK-NEXT:    leaq (%r11,%r14), %r10
-; CHECK-NEXT:    addq %r10, %r10
-; CHECK-NEXT:    addq %r9, %r10
+; CHECK-NEXT:    addq %r15, %rdx
 ; CHECK-NEXT:    movq X(%rip), %rsi
-; CHECK-NEXT:    addq %r12, %rax
-; CHECK-NEXT:    addq %rax, %r13
-; CHECK-NEXT:    addq %r9, %r10
-; CHECK-NEXT:    addq %rax, %r10
 ; CHECK-NEXT:    bswapq %rsi
-; CHECK-NEXT:    leaq (%r12,%rbx), %rax
-; CHECK-NEXT:    addq %r13, %rax
-; CHECK-NEXT:    addq %r8, %rsi
-; CHECK-NEXT:    addq %rax, %rsi
-; CHECK-NEXT:    leaq (%r9,%r11), %rdx
+; CHECK-NEXT:    leaq (%r11,%r14), %rbx
+; CHECK-NEXT:    addq %r15, %rbx
+; CHECK-NEXT:    addq %rdx, %rbx
+; CHECK-NEXT:    addq %rsi, %rbx
+; CHECK-NEXT:    leaq (%r9,%r10), %rdx
 ; CHECK-NEXT:    addq %rdx, %rdx
-; CHECK-NEXT:    addq %r10, %rdx
-; CHECK-NEXT:    movq X(%rip), %rax
-; CHECK-NEXT:    addq %r13, %rsi
-; CHECK-NEXT:    addq %rsi, %r14
-; CHECK-NEXT:    addq %r10, %rdx
-; CHECK-NEXT:    addq %rsi, %rdx
-; CHECK-NEXT:    bswapq %rax
-; CHECK-NEXT:    leaq (%r13,%r12), %rsi
-; CHECK-NEXT:    addq %r14, %rsi
-; CHECK-NEXT:    addq %rbx, %rax
-; CHECK-NEXT:    addq %rsi, %rax
-; CHECK-NEXT:    leaq (%r10,%r9), %r8
-; CHECK-NEXT:    addq %r8, %r8
-; CHECK-NEXT:    addq %rdx, %r8
-; CHECK-NEXT:    movq X(%rip), %rsi
-; CHECK-NEXT:    addq %r14, %rax
-; CHECK-NEXT:    addq %rax, %r11
-; CHECK-NEXT:    addq %rdx, %r8
-; CHECK-NEXT:    addq %rax, %r8
-; CHECK-NEXT:    bswapq %rsi
-; CHECK-NEXT:    leaq (%r14,%r13), %rax
-; CHECK-NEXT:    addq %r11, %rax
-; CHECK-NEXT:    addq %r12, %rsi
-; CHECK-NEXT:    addq %rax, %rsi
-; CHECK-NEXT:    leaq (%rdx,%r10), %rax
-; CHECK-NEXT:    addq %rax, %rax
-; CHECK-NEXT:    addq %r8, %rax
+; CHECK-NEXT:    addq %r8, %rdx
 ; CHECK-NEXT:    movq X(%rip), %rdi
-; CHECK-NEXT:    addq %r11, %rsi
-; CHECK-NEXT:    addq %rsi, %r9
-; CHECK-NEXT:    addq %r8, %rax
-; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    addq %rbx, %r12
+; CHECK-NEXT:    addq %r8, %rdx
+; CHECK-NEXT:    addq %rbx, %rdx
 ; CHECK-NEXT:    bswapq %rdi
-; CHECK-NEXT:    leaq (%r11,%r14), %rsi
-; CHECK-NEXT:    addq %r9, %rsi
-; CHECK-NEXT:    addq %r13, %rdi
+; CHECK-NEXT:    leaq (%r15,%r14), %rsi
+; CHECK-NEXT:    addq %r12, %rsi
+; CHECK-NEXT:    addq %r11, %rdi
 ; CHECK-NEXT:    addq %rsi, %rdi
-; CHECK-NEXT:    leaq (%r8,%rdx), %rsi
+; CHECK-NEXT:    leaq (%r10,%r8), %rsi
 ; CHECK-NEXT:    addq %rsi, %rsi
-; CHECK-NEXT:    addq %rax, %rsi
-; CHECK-NEXT:    movq X(%rip), %rcx
-; CHECK-NEXT:    addq %r9, %rdi
-; CHECK-NEXT:    addq %rdi, %r10
-; CHECK-NEXT:    addq %rax, %rsi
+; CHECK-NEXT:    addq %rdx, %rsi
+; CHECK-NEXT:    movq X(%rip), %rbx
+; CHECK-NEXT:    addq %r12, %rdi
+; CHECK-NEXT:    addq %rdi, %r9
+; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    addq %rdi, %rsi
-; CHECK-NEXT:    bswapq %rcx
-; CHECK-NEXT:    leaq (%r9,%r11), %rdi
-; CHECK-NEXT:    addq %r10, %rdi
-; CHECK-NEXT:    addq %r14, %rcx
-; CHECK-NEXT:    addq %rdi, %rcx
-; CHECK-NEXT:    leaq (%rax,%r8), %rdi
+; CHECK-NEXT:    bswapq %rbx
+; CHECK-NEXT:    leaq (%r12,%r15), %rdi
+; CHECK-NEXT:    addq %r9, %rdi
+; CHECK-NEXT:    addq %r14, %rbx
+; CHECK-NEXT:    addq %rdi, %rbx
+; CHECK-NEXT:    leaq (%rdx,%r8), %rdi
 ; CHECK-NEXT:    addq %rdi, %rdi
 ; CHECK-NEXT:    addq %rsi, %rdi
-; CHECK-NEXT:    addq %r10, %rcx
-; CHECK-NEXT:    addq %rcx, %rdx
-; CHECK-NEXT:    addq %rsi, %rdi
-; CHECK-NEXT:    addq %rcx, %rdi
 ; CHECK-NEXT:    movq X(%rip), %rcx
+; CHECK-NEXT:    addq %r9, %rbx
+; CHECK-NEXT:    addq %rbx, %r10
+; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    addq %rbx, %rdi
 ; CHECK-NEXT:    bswapq %rcx
-; CHECK-NEXT:    addq %r11, %rcx
-; CHECK-NEXT:    leaq (%r10,%r9), %rbx
-; CHECK-NEXT:    addq %rdx, %rbx
-; CHECK-NEXT:    addq %rbx, %rcx
-; CHECK-NEXT:    addq %rax, %rsi
-; CHECK-NEXT:    addq %rsi, %rsi
-; CHECK-NEXT:    addq %rdi, %rsi
-; CHECK-NEXT:    addq %rdi, %rsi
-; CHECK-NEXT:    addq %rdx, %rcx
+; CHECK-NEXT:    leaq (%r9,%r12), %rax
+; CHECK-NEXT:    addq %r10, %rax
+; CHECK-NEXT:    addq %r15, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    leaq (%rsi,%rdx), %r11
+; CHECK-NEXT:    addq %r11, %r11
+; CHECK-NEXT:    addq %rdi, %r11
+; CHECK-NEXT:    movq X(%rip), %rbx
+; CHECK-NEXT:    addq %r10, %rcx
 ; CHECK-NEXT:    addq %rcx, %r8
-; CHECK-NEXT:    addq %rcx, %rsi
+; CHECK-NEXT:    addq %rdi, %r11
+; CHECK-NEXT:    addq %rcx, %r11
+; CHECK-NEXT:    bswapq %rbx
+; CHECK-NEXT:    leaq (%r10,%r9), %rcx
+; CHECK-NEXT:    addq %r8, %rcx
+; CHECK-NEXT:    addq %r12, %rbx
+; CHECK-NEXT:    addq %rcx, %rbx
+; CHECK-NEXT:    leaq (%rdi,%rsi), %r14
+; CHECK-NEXT:    addq %r14, %r14
+; CHECK-NEXT:    addq %r11, %r14
+; CHECK-NEXT:    movq X(%rip), %rax
+; CHECK-NEXT:    addq %r8, %rbx
+; CHECK-NEXT:    addq %rbx, %rdx
+; CHECK-NEXT:    addq %r11, %r14
+; CHECK-NEXT:    addq %rbx, %r14
+; CHECK-NEXT:    bswapq %rax
+; CHECK-NEXT:    leaq (%r8,%r10), %rbx
+; CHECK-NEXT:    addq %rdx, %rbx
+; CHECK-NEXT:    addq %r9, %rax
+; CHECK-NEXT:    addq %rbx, %rax
+; CHECK-NEXT:    leaq (%r11,%rdi), %r9
+; CHECK-NEXT:    addq %r9, %r9
+; CHECK-NEXT:    addq %r14, %r9
+; CHECK-NEXT:    movq X(%rip), %rbx
+; CHECK-NEXT:    addq %rdx, %rax
+; CHECK-NEXT:    addq %rax, %rsi
+; CHECK-NEXT:    addq %r14, %r9
+; CHECK-NEXT:    addq %rax, %r9
+; CHECK-NEXT:    bswapq %rbx
+; CHECK-NEXT:    leaq (%rdx,%r8), %rax
+; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    addq %r10, %rbx
+; CHECK-NEXT:    addq %rax, %rbx
+; CHECK-NEXT:    leaq (%r14,%r11), %r10
+; CHECK-NEXT:    addq %r10, %r10
+; CHECK-NEXT:    addq %r9, %r10
+; CHECK-NEXT:    movq X(%rip), %rax
+; CHECK-NEXT:    addq %rsi, %rbx
+; CHECK-NEXT:    addq %rbx, %rdi
+; CHECK-NEXT:    addq %r9, %r10
+; CHECK-NEXT:    addq %rbx, %r10
+; CHECK-NEXT:    bswapq %rax
+; CHECK-NEXT:    leaq (%rsi,%rdx), %rbx
+; CHECK-NEXT:    addq %rdi, %rbx
+; CHECK-NEXT:    addq %r8, %rax
+; CHECK-NEXT:    addq %rbx, %rax
+; CHECK-NEXT:    leaq (%r9,%r14), %r8
+; CHECK-NEXT:    addq %r8, %r8
+; CHECK-NEXT:    addq %r10, %r8
+; CHECK-NEXT:    movq X(%rip), %rbx
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    addq %rax, %r11
+; CHECK-NEXT:    addq %r10, %r8
+; CHECK-NEXT:    addq %rax, %r8
+; CHECK-NEXT:    bswapq %rbx
+; CHECK-NEXT:    leaq (%rdi,%rsi), %rax
+; CHECK-NEXT:    addq %r11, %rax
+; CHECK-NEXT:    addq %rdx, %rbx
+; CHECK-NEXT:    addq %rax, %rbx
+; CHECK-NEXT:    leaq (%r10,%r9), %r15
+; CHECK-NEXT:    addq %r15, %r15
+; CHECK-NEXT:    addq %r8, %r15
+; CHECK-NEXT:    movq X(%rip), %rax
+; CHECK-NEXT:    addq %r11, %rbx
+; CHECK-NEXT:    addq %rbx, %r14
+; CHECK-NEXT:    addq %r8, %r15
+; CHECK-NEXT:    addq %rbx, %r15
+; CHECK-NEXT:    bswapq %rax
+; CHECK-NEXT:    leaq (%r11,%rdi), %rbx
+; CHECK-NEXT:    addq %r14, %rbx
+; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    addq %rbx, %rax
+; CHECK-NEXT:    leaq (%r8,%r10), %rsi
+; CHECK-NEXT:    addq %rsi, %rsi
+; CHECK-NEXT:    addq %r15, %rsi
+; CHECK-NEXT:    movq X(%rip), %rbx
+; CHECK-NEXT:    addq %r14, %rax
+; CHECK-NEXT:    addq %rax, %r9
+; CHECK-NEXT:    addq %r15, %rsi
+; CHECK-NEXT:    addq %rax, %rsi
+; CHECK-NEXT:    bswapq %rbx
+; CHECK-NEXT:    leaq (%r14,%r11), %rax
+; CHECK-NEXT:    addq %r9, %rax
+; CHECK-NEXT:    addq %rdi, %rbx
+; CHECK-NEXT:    addq %rax, %rbx
+; CHECK-NEXT:    leaq (%r15,%r8), %r12
+; CHECK-NEXT:    addq %r12, %r12
+; CHECK-NEXT:    addq %rsi, %r12
+; CHECK-NEXT:    movq X(%rip), %rcx
+; CHECK-NEXT:    addq %r9, %rbx
+; CHECK-NEXT:    addq %rbx, %r10
+; CHECK-NEXT:    addq %rsi, %r12
+; CHECK-NEXT:    addq %rbx, %r12
+; CHECK-NEXT:    bswapq %rcx
+; CHECK-NEXT:    leaq (%r9,%r14), %rax
+; CHECK-NEXT:    addq %r10, %rax
+; CHECK-NEXT:    addq %r11, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    leaq (%rsi,%r15), %rax
+; CHECK-NEXT:    addq %rax, %rax
+; CHECK-NEXT:    addq %r12, %rax
+; CHECK-NEXT:    movq X(%rip), %rbx
+; CHECK-NEXT:    addq %r10, %rcx
+; CHECK-NEXT:    addq %rcx, %r8
+; CHECK-NEXT:    addq %r12, %rax
+; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    bswapq %rbx
+; CHECK-NEXT:    leaq (%r10,%r9), %rcx
+; CHECK-NEXT:    addq %r8, %rcx
+; CHECK-NEXT:    addq %r14, %rbx
+; CHECK-NEXT:    addq %rcx, %rbx
+; CHECK-NEXT:    leaq (%r12,%rsi), %rcx
+; CHECK-NEXT:    addq %rcx, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    movq X(%rip), %rdx
+; CHECK-NEXT:    addq %r8, %rbx
+; CHECK-NEXT:    addq %rbx, %r15
+; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    addq %rbx, %rcx
+; CHECK-NEXT:    bswapq %rdx
+; CHECK-NEXT:    leaq (%r8,%r10), %rbx
+; CHECK-NEXT:    addq %r15, %rbx
+; CHECK-NEXT:    addq %r9, %rdx
+; CHECK-NEXT:    addq %rbx, %rdx
+; CHECK-NEXT:    leaq (%rax,%r12), %rbx
+; CHECK-NEXT:    addq %rbx, %rbx
+; CHECK-NEXT:    addq %rcx, %rbx
+; CHECK-NEXT:    addq %r15, %rdx
+; CHECK-NEXT:    addq %rdx, %rsi
+; CHECK-NEXT:    addq %rcx, %rbx
+; CHECK-NEXT:    addq %rdx, %rbx
+; CHECK-NEXT:    movq X(%rip), %rdx
+; CHECK-NEXT:    bswapq %rdx
+; CHECK-NEXT:    addq %r10, %rdx
+; CHECK-NEXT:    leaq (%r15,%r8), %rdi
+; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    addq %rdi, %rdx
+; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    addq %rcx, %rcx
+; CHECK-NEXT:    addq %rbx, %rcx
+; CHECK-NEXT:    addq %rbx, %rcx
+; CHECK-NEXT:    addq %rsi, %rdx
+; CHECK-NEXT:    addq %rdx, %r12
+; CHECK-NEXT:    addq %rdx, %rcx
 ; CHECK-NEXT:    movq X(%rip), %rax
 ; CHECK-NEXT:    bswapq %rax
-; CHECK-NEXT:    addq %r10, %rdx
+; CHECK-NEXT:    addq %r15, %rsi
 ; CHECK-NEXT:    movq %rax, X(%rip)
-; CHECK-NEXT:    addq %r9, %rax
-; CHECK-NEXT:    addq %r8, %rdx
-; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    addq %r8, %rax
+; CHECK-NEXT:    addq %r12, %rsi
 ; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    addq %r12, %rax
+; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    retq

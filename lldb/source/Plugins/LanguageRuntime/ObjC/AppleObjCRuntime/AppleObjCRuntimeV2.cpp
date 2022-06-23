@@ -199,7 +199,7 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
     DEBUG_PRINTF ("count = %u\n", count);
 
     uint32_t idx = 0;
-    for (uint32_t i=0; i<=count; ++i)
+    for (uint32_t i=0; i<count; ++i)
     {
         if (idx < max_class_infos)
         {
@@ -273,7 +273,7 @@ __lldb_apple_objc_v2_get_dynamic_class_info3(void *gdb_objc_realized_classes_ptr
     DEBUG_PRINTF ("count = %u\n", count);
 
     uint32_t idx = 0;
-    for (uint32_t i=0; i<=count; ++i)
+    for (uint32_t i=0; i<count; ++i)
     {
         if (idx < max_class_infos)
         {
@@ -1700,11 +1700,11 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunction(
   }
   case objc_getRealizedClassList_trylock: {
     if (!m_objc_getRealizedClassList_trylock_helper.utility_function)
-      m_objc_copyRealizedClassList_helper.utility_function =
+      m_objc_getRealizedClassList_trylock_helper.utility_function =
           GetClassInfoUtilityFunctionImpl(exe_ctx, helper,
                                           g_get_dynamic_class_info3_body,
                                           g_get_dynamic_class_info3_name);
-    return m_objc_copyRealizedClassList_helper.utility_function.get();
+    return m_objc_getRealizedClassList_trylock_helper.utility_function.get();
   }
   }
   llvm_unreachable("Unexpected helper");

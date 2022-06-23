@@ -6502,6 +6502,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_uses_allocators:
       case OMPC_affinity:
       case OMPC_bind:
+      case OMPC_filter:
         continue;
       case OMPC_allocator:
       case OMPC_flush:

@@ -62,19 +62,6 @@ static bool shouldReduceOperand(Use &Op) {
   return true;
 }
 
-void llvm::reduceOperandsUndefDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Operands to undef...\n";
-  auto ReduceValue = [](Use &Op) -> Value * {
-    if (!shouldReduceOperand(Op))
-      return nullptr;
-    // Don't replace existing ConstantData Uses.
-    return isa<ConstantData>(*Op) ? nullptr : UndefValue::get(Op->getType());
-  };
-  runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
-    extractOperandsFromModule(O, Program, ReduceValue);
-  });
-}
-
 void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
   errs() << "*** Reducing Operands to one...\n";
   auto ReduceValue = [](Use &Op) -> Value * {

@@ -7472,6 +7472,7 @@ cc_library(
         ":ArithmeticDialect",
         ":ArithmeticUtils",
         ":DialectUtils",
+        ":FuncDialect",
         ":IR",
         ":LinalgAnalysis",
         ":LinalgDialect",
