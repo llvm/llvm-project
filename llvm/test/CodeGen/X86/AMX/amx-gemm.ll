@@ -25,7 +25,7 @@
 
 ; CHECK:  ldtilecfg
 
-define dso_local void @inner_product(i32* %A_mem, i32* %B_mem, i32* %C_mem, i32 %M, i32 %N, i32 %K) local_unnamed_addr {
+define dso_local void @inner_product(ptr %A_mem, ptr %B_mem, ptr %C_mem, i32 %M, i32 %N, i32 %K) local_unnamed_addr {
 entry:
   %mul = shl i32 %K, 4
   %conv = sext i32 %K to i64
@@ -57,10 +57,10 @@ for.cond3.preheader:                              ; preds = %for.cond.cleanup5, 
   %i2 = trunc i64 %indvars.iv205 to i32
   %mul11 = mul i32 %mul, %i2
   %idx.ext = sext i32 %mul11 to i64
-  %add.ptr = getelementptr inbounds i32, i32* %A_mem, i64 %idx.ext
+  %add.ptr = getelementptr inbounds i32, ptr %A_mem, i64 %idx.ext
   %mul26 = mul i32 %mul25, %i2
   %idx.ext27 = sext i32 %mul26 to i64
-  %add.ptr28 = getelementptr inbounds i32, i32* %C_mem, i64 %idx.ext27
+  %add.ptr28 = getelementptr inbounds i32, ptr %C_mem, i64 %idx.ext27
   br i1 %cmp4173, label %for.body6, label %for.cond.cleanup5
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup5, %entry
@@ -78,7 +78,7 @@ for.body6:                                        ; preds = %for.cond.cleanup9, 
   br i1 %cmp8163, label %for.body10.preheader, label %for.cond.cleanup9
 
 for.body10.preheader:                             ; preds = %for.body6
-  %add.ptr19 = getelementptr inbounds i32, i32* %B_mem, i64 %i4
+  %add.ptr19 = getelementptr inbounds i32, ptr %B_mem, i64 %i4
   br i1 %i1, label %for.cond.cleanup9.loopexit.unr-lcssa, label %for.body10
 
 for.cond.cleanup9.loopexit.unr-lcssa:             ; preds = %for.body10, %for.body10.preheader
@@ -92,13 +92,11 @@ for.body10.epil:                                  ; preds = %for.body10.epil, %f
   %c.sroa.8127.2.in164.epil = phi x86_amx [ %i11, %for.body10.epil ], [ %c.sroa.8127.2.in164.unr, %for.cond.cleanup9.loopexit.unr-lcssa ]
   %epil.iter = phi i64 [ %epil.iter.sub, %for.body10.epil ], [ %xtraiter, %for.cond.cleanup9.loopexit.unr-lcssa ]
   %i5 = shl nsw i64 %indvars.iv.epil, 4
-  %add.ptr14.epil = getelementptr inbounds i32, i32* %add.ptr, i64 %i5
-  %i6 = bitcast i32* %add.ptr14.epil to i8*
-  %i7 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* %i6, i64 %mul15)
+  %add.ptr14.epil = getelementptr inbounds i32, ptr %add.ptr, i64 %i5
+  %i7 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr %add.ptr14.epil, i64 %mul15)
   %i8 = mul nsw i64 %i5, %conv23
-  %add.ptr22.epil = getelementptr inbounds i32, i32* %add.ptr19, i64 %i8
-  %i9 = bitcast i32* %add.ptr22.epil to i8*
-  %i10 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* %i9, i64 %mul24)
+  %add.ptr22.epil = getelementptr inbounds i32, ptr %add.ptr19, i64 %i8
+  %i10 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr %add.ptr22.epil, i64 %mul24)
   %i11 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %c.sroa.8127.2.in164.epil, x86_amx %i7, x86_amx %i10)
   %indvars.iv.next.epil = add nuw nsw i64 %indvars.iv.epil, 1
   %epil.iter.sub = add i64 %epil.iter, -1
@@ -107,9 +105,8 @@ for.body10.epil:                                  ; preds = %for.body10.epil, %f
 
 for.cond.cleanup9:                                ; preds = %for.body10.epil, %for.cond.cleanup9.loopexit.unr-lcssa, %for.body6
   %c.sroa.8127.2.in.lcssa = phi x86_amx [ %i3, %for.body6 ], [ %.lcssa.ph, %for.cond.cleanup9.loopexit.unr-lcssa ], [ %i11, %for.body10.epil ]
-  %add.ptr31 = getelementptr inbounds i32, i32* %add.ptr28, i64 %i4
-  %i12 = bitcast i32* %add.ptr31 to i8*
-  tail call void @llvm.x86.tilestored64.internal(i16 16, i16 64, i8* %i12, i64 %mul24, x86_amx %c.sroa.8127.2.in.lcssa)
+  %add.ptr31 = getelementptr inbounds i32, ptr %add.ptr28, i64 %i4
+  tail call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr %add.ptr31, i64 %mul24, x86_amx %c.sroa.8127.2.in.lcssa)
   %indvars.iv.next200 = add nuw nsw i64 %indvars.iv199, 1
   %exitcond204.not = icmp eq i64 %indvars.iv.next200, %wide.trip.count203
   br i1 %exitcond204.not, label %for.cond.cleanup5, label %for.body6
@@ -119,83 +116,67 @@ for.body10:                                       ; preds = %for.body10, %for.bo
   %c.sroa.8127.2.in164 = phi x86_amx [ %i68, %for.body10 ], [ %i3, %for.body10.preheader ]
   %niter = phi i64 [ %niter.nsub.7, %for.body10 ], [ %unroll_iter, %for.body10.preheader ]
   %i13 = shl nsw i64 %indvars.iv, 4
-  %add.ptr14 = getelementptr inbounds i32, i32* %add.ptr, i64 %i13
-  %i14 = bitcast i32* %add.ptr14 to i8*
-  %i15 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* %i14, i64 %mul15)
+  %add.ptr14 = getelementptr inbounds i32, ptr %add.ptr, i64 %i13
+  %i15 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr %add.ptr14, i64 %mul15)
   %i16 = mul nsw i64 %i13, %conv23
-  %add.ptr22 = getelementptr inbounds i32, i32* %add.ptr19, i64 %i16
-  %i17 = bitcast i32* %add.ptr22 to i8*
-  %i18 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* %i17, i64 %mul24)
+  %add.ptr22 = getelementptr inbounds i32, ptr %add.ptr19, i64 %i16
+  %i18 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr %add.ptr22, i64 %mul24)
   %i19 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %c.sroa.8127.2.in164, x86_amx %i15, x86_amx %i18)
   %indvars.iv.next = shl i64 %indvars.iv, 4
   %i20 = or i64 %indvars.iv.next, 16
-  %add.ptr14.1 = getelementptr inbounds i32, i32* %add.ptr, i64 %i20
-  %i21 = bitcast i32* %add.ptr14.1 to i8*
-  %i22 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i21, i64 %mul15)
+  %add.ptr14.1 = getelementptr inbounds i32, ptr %add.ptr, i64 %i20
+  %i22 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr14.1, i64 %mul15)
   %i23 = mul nsw i64 %i20, %conv23
-  %add.ptr22.1 = getelementptr inbounds i32, i32* %add.ptr19, i64 %i23
-  %i24 = bitcast i32* %add.ptr22.1 to i8*
-  %i25 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i24, i64 %mul24)
+  %add.ptr22.1 = getelementptr inbounds i32, ptr %add.ptr19, i64 %i23
+  %i25 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr22.1, i64 %mul24)
   %i26 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %i19, x86_amx %i22, x86_amx %i25)
   %indvars.iv.next.1 = shl i64 %indvars.iv, 4
   %i27 = or i64 %indvars.iv.next.1, 32
-  %add.ptr14.2 = getelementptr inbounds i32, i32* %add.ptr, i64 %i27
-  %i28 = bitcast i32* %add.ptr14.2 to i8*
-  %i29 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i28, i64 %mul15)
+  %add.ptr14.2 = getelementptr inbounds i32, ptr %add.ptr, i64 %i27
+  %i29 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr14.2, i64 %mul15)
   %i30 = mul nsw i64 %i27, %conv23
-  %add.ptr22.2 = getelementptr inbounds i32, i32* %add.ptr19, i64 %i30
-  %i31 = bitcast i32* %add.ptr22.2 to i8*
-  %i32 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i31, i64 %mul24)
+  %add.ptr22.2 = getelementptr inbounds i32, ptr %add.ptr19, i64 %i30
+  %i32 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr22.2, i64 %mul24)
   %i33 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %i26, x86_amx %i29, x86_amx %i32)
   %indvars.iv.next.2 = shl i64 %indvars.iv, 4
   %i34 = or i64 %indvars.iv.next.2, 48
-  %add.ptr14.3 = getelementptr inbounds i32, i32* %add.ptr, i64 %i34
-  %i35 = bitcast i32* %add.ptr14.3 to i8*
-  %i36 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i35, i64 %mul15)
+  %add.ptr14.3 = getelementptr inbounds i32, ptr %add.ptr, i64 %i34
+  %i36 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr14.3, i64 %mul15)
   %i37 = mul nsw i64 %i34, %conv23
-  %add.ptr22.3 = getelementptr inbounds i32, i32* %add.ptr19, i64 %i37
-  %i38 = bitcast i32* %add.ptr22.3 to i8*
-  %i39 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i38, i64 %mul24)
+  %add.ptr22.3 = getelementptr inbounds i32, ptr %add.ptr19, i64 %i37
+  %i39 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr22.3, i64 %mul24)
   %i40 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %i33, x86_amx %i36, x86_amx %i39)
   %indvars.iv.next.3 = shl i64 %indvars.iv, 4
   %i41 = or i64 %indvars.iv.next.3, 64
-  %add.ptr14.4 = getelementptr inbounds i32, i32* %add.ptr, i64 %i41
-  %i42 = bitcast i32* %add.ptr14.4 to i8*
-  %i43 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i42, i64 %mul15)
+  %add.ptr14.4 = getelementptr inbounds i32, ptr %add.ptr, i64 %i41
+  %i43 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr14.4, i64 %mul15)
   %i44 = mul nsw i64 %i41, %conv23
-  %add.ptr22.4 = getelementptr inbounds i32, i32* %add.ptr19, i64 %i44
-  %i45 = bitcast i32* %add.ptr22.4 to i8*
-  %i46 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i45, i64 %mul24)
+  %add.ptr22.4 = getelementptr inbounds i32, ptr %add.ptr19, i64 %i44
+  %i46 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr22.4, i64 %mul24)
   %i47 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %i40, x86_amx %i43, x86_amx %i46)
   %indvars.iv.next.4 = shl i64 %indvars.iv, 4
   %i48 = or i64 %indvars.iv.next.4, 80
-  %add.ptr14.5 = getelementptr inbounds i32, i32* %add.ptr, i64 %i48
-  %i49 = bitcast i32* %add.ptr14.5 to i8*
-  %i50 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i49, i64 %mul15)
+  %add.ptr14.5 = getelementptr inbounds i32, ptr %add.ptr, i64 %i48
+  %i50 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr14.5, i64 %mul15)
   %i51 = mul nsw i64 %i48, %conv23
-  %add.ptr22.5 = getelementptr inbounds i32, i32* %add.ptr19, i64 %i51
-  %i52 = bitcast i32* %add.ptr22.5 to i8*
-  %i53 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i52, i64 %mul24)
+  %add.ptr22.5 = getelementptr inbounds i32, ptr %add.ptr19, i64 %i51
+  %i53 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr22.5, i64 %mul24)
   %i54 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %i47, x86_amx %i50, x86_amx %i53)
   %indvars.iv.next.5 = shl i64 %indvars.iv, 4
   %i55 = or i64 %indvars.iv.next.5, 96
-  %add.ptr14.6 = getelementptr inbounds i32, i32* %add.ptr, i64 %i55
-  %i56 = bitcast i32* %add.ptr14.6 to i8*
-  %i57 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i56, i64 %mul15)
+  %add.ptr14.6 = getelementptr inbounds i32, ptr %add.ptr, i64 %i55
+  %i57 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr14.6, i64 %mul15)
   %i58 = mul nsw i64 %i55, %conv23
-  %add.ptr22.6 = getelementptr inbounds i32, i32* %add.ptr19, i64 %i58
-  %i59 = bitcast i32* %add.ptr22.6 to i8*
-  %i60 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i59, i64 %mul24)
+  %add.ptr22.6 = getelementptr inbounds i32, ptr %add.ptr19, i64 %i58
+  %i60 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr22.6, i64 %mul24)
   %i61 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %i54, x86_amx %i57, x86_amx %i60)
   %indvars.iv.next.6 = shl i64 %indvars.iv, 4
   %i62 = or i64 %indvars.iv.next.6, 112
-  %add.ptr14.7 = getelementptr inbounds i32, i32* %add.ptr, i64 %i62
-  %i63 = bitcast i32* %add.ptr14.7 to i8*
-  %i64 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i63, i64 %mul15)
+  %add.ptr14.7 = getelementptr inbounds i32, ptr %add.ptr, i64 %i62
+  %i64 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr14.7, i64 %mul15)
   %i65 = mul nsw i64 %i62, %conv23
-  %add.ptr22.7 = getelementptr inbounds i32, i32* %add.ptr19, i64 %i65
-  %i66 = bitcast i32* %add.ptr22.7 to i8*
-  %i67 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, i8* nonnull %i66, i64 %mul24)
+  %add.ptr22.7 = getelementptr inbounds i32, ptr %add.ptr19, i64 %i65
+  %i67 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr nonnull %add.ptr22.7, i64 %mul24)
   %i68 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 64, i16 64, x86_amx %i61, x86_amx %i64, x86_amx %i67)
   %indvars.iv.next.7 = add nuw nsw i64 %indvars.iv, 8
   %niter.nsub.7 = add i64 %niter, -8
@@ -204,6 +185,6 @@ for.body10:                                       ; preds = %for.body10, %for.bo
 }
 
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
-declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
+declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, ptr, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
-declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
+declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)
