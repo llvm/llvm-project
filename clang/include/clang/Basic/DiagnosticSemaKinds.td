@@ -9400,6 +9400,12 @@ def warn_array_index_exceeds_max_addressable_bounds : Warning<
 def note_array_declared_here : Note<
   "array %0 declared here">;
 
+def warn_inconsistent_array_form : Warning<
+  "argument %0 of type %1 with mismatched bound">,
+  InGroup<ArrayParameter>, DefaultIgnore;
+def note_previous_declaration_as : Note<
+  "previously declared as %0 here">;
+
 def warn_printf_insufficient_data_args : Warning<
   "more '%%' conversions than data arguments">, InGroup<FormatInsufficientArgs>;
 def warn_printf_data_arg_not_used : Warning<
