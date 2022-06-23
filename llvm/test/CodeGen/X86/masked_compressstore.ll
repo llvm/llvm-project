@@ -11,7 +11,7 @@
 ; vXf64
 ;
 
-define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %mask) {
+define void @compressstore_v8f64_v8i1(ptr %base, <8 x double> %V, <8 x i1> %mask) {
 ; SSE-LABEL: compressstore_v8f64_v8i1:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    psllw $15, %xmm4
@@ -242,11 +242,11 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; AVX512VLBW-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v8f64(<8 x double> %V, double* %base, <8 x i1> %mask)
+  call void @llvm.masked.compressstore.v8f64(<8 x double> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i1> %mask) {
+define void @compressstore_v16f64_v16i1(ptr %base, <16 x double> %V, <16 x i1> %mask) {
 ; SSE-LABEL: compressstore_v16f64_v16i1:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
@@ -592,7 +592,7 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX512VLBW-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v16f64(<16 x double> %V, double* %base, <16 x i1> %mask)
+  call void @llvm.masked.compressstore.v16f64(<16 x double> %V, ptr %base, <16 x i1> %mask)
   ret void
 }
 
@@ -600,7 +600,7 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; vXf32
 ;
 
-define void @compressstore_v2f32_v2i32(float* %base, <2 x float> %V, <2 x i32> %trigger) {
+define void @compressstore_v2f32_v2i32(ptr %base, <2 x float> %V, <2 x i32> %trigger) {
 ; SSE2-LABEL: compressstore_v2f32_v2i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
@@ -695,11 +695,11 @@ define void @compressstore_v2f32_v2i32(float* %base, <2 x float> %V, <2 x i32> %
 ; AVX512VLBW-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v2f32(<2 x float> %V, float* %base, <2 x i1> %mask)
+  call void @llvm.masked.compressstore.v2f32(<2 x float> %V, ptr %base, <2 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v4f32_v4i1(float* %base, <4 x float> %V, <4 x i1> %mask) {
+define void @compressstore_v4f32_v4i1(ptr %base, <4 x float> %V, <4 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v4f32_v4i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pslld $31, %xmm1
@@ -837,11 +837,11 @@ define void @compressstore_v4f32_v4i1(float* %base, <4 x float> %V, <4 x i1> %ma
 ; AVX512VLBW-NEXT:    vptestmd %xmm1, %xmm1, %k1
 ; AVX512VLBW-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v4f32(<4 x float> %V, float* %base, <4 x i1> %mask)
+  call void @llvm.masked.compressstore.v4f32(<4 x float> %V, ptr %base, <4 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %mask) {
+define void @compressstore_v8f32_v8i1(ptr %base, <8 x float> %V, <8 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v8f32_v8i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    psllw $15, %xmm2
@@ -1158,11 +1158,11 @@ define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %ma
 ; AVX512VLBW-NEXT:    vcompressps %ymm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v8f32(<8 x float> %V, float* %base, <8 x i1> %mask)
+  call void @llvm.masked.compressstore.v8f32(<8 x float> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v16f32_const(float* %base, <16 x float> %V) {
+define void @compressstore_v16f32_const(ptr %base, <16 x float> %V) {
 ; SSE2-LABEL: compressstore_v16f32_const:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
@@ -1259,11 +1259,11 @@ define void @compressstore_v16f32_const(float* %base, <16 x float> %V) {
 ; AVX512VLBW-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v16f32(<16 x float> %V, float* %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>)
+  call void @llvm.masked.compressstore.v16f32(<16 x float> %V, ptr %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
 
-define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i32> %trigger) {
+define void @compressstore_v32f32_v32i32(ptr %base, <32 x float> %V, <32 x i32> %trigger) {
 ; SSE2-LABEL: compressstore_v32f32_v32i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -2452,7 +2452,7 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %mask = icmp eq <32 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v32f32(<32 x float> %V, float* %base, <32 x i1> %mask)
+  call void @llvm.masked.compressstore.v32f32(<32 x float> %V, ptr %base, <32 x i1> %mask)
   ret void
 }
 
@@ -2460,7 +2460,7 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; vXi64
 ;
 
-define void @compressstore_v2i64_v2i1(i64* %base, <2 x i64> %V, <2 x i1> %mask) {
+define void @compressstore_v2i64_v2i1(ptr %base, <2 x i64> %V, <2 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v2i64_v2i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    psllq $63, %xmm1
@@ -2546,11 +2546,11 @@ define void @compressstore_v2i64_v2i1(i64* %base, <2 x i64> %V, <2 x i1> %mask) 
 ; AVX512VLBW-NEXT:    vptestmq %xmm1, %xmm1, %k1
 ; AVX512VLBW-NEXT:    vpcompressq %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v2i64(<2 x i64> %V, i64* %base, <2 x i1> %mask)
+  call void @llvm.masked.compressstore.v2i64(<2 x i64> %V, ptr %base, <2 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v4i64_v4i1(i64* %base, <4 x i64> %V, <4 x i1> %mask) {
+define void @compressstore_v4i64_v4i1(ptr %base, <4 x i64> %V, <4 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v4i64_v4i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pslld $31, %xmm2
@@ -2721,11 +2721,11 @@ define void @compressstore_v4i64_v4i1(i64* %base, <4 x i64> %V, <4 x i1> %mask) 
 ; AVX512VLBW-NEXT:    vpcompressq %ymm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v4i64(<4 x i64> %V, i64* %base, <4 x i1> %mask)
+  call void @llvm.masked.compressstore.v4i64(<4 x i64> %V, ptr %base, <4 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) {
+define void @compressstore_v8i64_v8i1(ptr %base, <8 x i64> %V, <8 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v8i64_v8i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    psllw $15, %xmm4
@@ -3029,7 +3029,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; AVX512VLBW-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v8i64(<8 x i64> %V, i64* %base, <8 x i1> %mask)
+  call void @llvm.masked.compressstore.v8i64(<8 x i64> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
 
@@ -3037,7 +3037,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; vXi32
 ;
 
-define void @compressstore_v4i32_v4i32(i32* %base, <4 x i32> %V, <4 x i32> %trigger) {
+define void @compressstore_v4i32_v4i32(ptr %base, <4 x i32> %V, <4 x i32> %trigger) {
 ; SSE2-LABEL: compressstore_v4i32_v4i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -3169,7 +3169,7 @@ define void @compressstore_v4i32_v4i32(i32* %base, <4 x i32> %V, <4 x i32> %trig
 ; AVX512VL-NEXT:    vpcompressd %xmm0, (%rdi) {%k1}
 ; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v4i32(<4 x i32> %V, i32* %base, <4 x i1> %mask)
+  call void @llvm.masked.compressstore.v4i32(<4 x i32> %V, ptr %base, <4 x i1> %mask)
   ret void
 }
 
@@ -3177,7 +3177,7 @@ define void @compressstore_v4i32_v4i32(i32* %base, <4 x i32> %V, <4 x i32> %trig
 ; vXi16
 ;
 
-define void @compressstore_v8i16_v8i16(i16* %base, <8 x i16> %V, <8 x i16> %trigger) {
+define void @compressstore_v8i16_v8i16(ptr %base, <8 x i16> %V, <8 x i16> %trigger) {
 ; SSE2-LABEL: compressstore_v8i16_v8i16:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -3610,7 +3610,7 @@ define void @compressstore_v8i16_v8i16(i16* %base, <8 x i16> %V, <8 x i16> %trig
 ; AVX512VLBW-NEXT:    vpextrw $7, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <8 x i16> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v8i16(<8 x i16> %V, i16* %base, <8 x i1> %mask)
+  call void @llvm.masked.compressstore.v8i16(<8 x i16> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
 
@@ -3618,7 +3618,7 @@ define void @compressstore_v8i16_v8i16(i16* %base, <8 x i16> %V, <8 x i16> %trig
 ; vXi8
 ;
 
-define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigger) {
+define void @compressstore_v16i8_v16i8(ptr %base, <16 x i8> %V, <16 x i8> %trigger) {
 ; SSE2-LABEL: compressstore_v16i8_v16i8:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -4405,38 +4405,38 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX512VLBW-NEXT:    vpextrb $15, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <16 x i8> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v16i8(<16 x i8> %V, i8* %base, <16 x i1> %mask)
+  call void @llvm.masked.compressstore.v16i8(<16 x i8> %V, ptr %base, <16 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.compressstore.v16f64(<16 x double>, double*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8f64(<8 x double>, double*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4f64(<4 x double>, double*, <4 x i1>)
-declare void @llvm.masked.compressstore.v2f64(<2 x double>, double*, <2 x i1>)
-declare void @llvm.masked.compressstore.v1f64(<1 x double>, double*, <1 x i1>)
+declare void @llvm.masked.compressstore.v16f64(<16 x double>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8f64(<8 x double>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4f64(<4 x double>, ptr, <4 x i1>)
+declare void @llvm.masked.compressstore.v2f64(<2 x double>, ptr, <2 x i1>)
+declare void @llvm.masked.compressstore.v1f64(<1 x double>, ptr, <1 x i1>)
 
-declare void @llvm.masked.compressstore.v32f32(<32 x float>, float*, <32 x i1>)
-declare void @llvm.masked.compressstore.v16f32(<16 x float>, float*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8f32(<8 x float>, float*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4f32(<4 x float>, float*, <4 x i1>)
-declare void @llvm.masked.compressstore.v2f32(<2 x float>, float*, <2 x i1>)
+declare void @llvm.masked.compressstore.v32f32(<32 x float>, ptr, <32 x i1>)
+declare void @llvm.masked.compressstore.v16f32(<16 x float>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8f32(<8 x float>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4f32(<4 x float>, ptr, <4 x i1>)
+declare void @llvm.masked.compressstore.v2f32(<2 x float>, ptr, <2 x i1>)
 
-declare void @llvm.masked.compressstore.v8i64(<8 x i64>, i64*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4i64(<4 x i64>, i64*, <4 x i1>)
-declare void @llvm.masked.compressstore.v2i64(<2 x i64>, i64*, <2 x i1>)
-declare void @llvm.masked.compressstore.v1i64(<1 x i64>, i64*, <1 x i1>)
+declare void @llvm.masked.compressstore.v8i64(<8 x i64>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4i64(<4 x i64>, ptr, <4 x i1>)
+declare void @llvm.masked.compressstore.v2i64(<2 x i64>, ptr, <2 x i1>)
+declare void @llvm.masked.compressstore.v1i64(<1 x i64>, ptr, <1 x i1>)
 
-declare void @llvm.masked.compressstore.v16i32(<16 x i32>, i32*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8i32(<8 x i32>, i32*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4i32(<4 x i32>, i32*, <4 x i1>)
-declare void @llvm.masked.compressstore.v2i32(<2 x i32>, i32*, <2 x i1>)
+declare void @llvm.masked.compressstore.v16i32(<16 x i32>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8i32(<8 x i32>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4i32(<4 x i32>, ptr, <4 x i1>)
+declare void @llvm.masked.compressstore.v2i32(<2 x i32>, ptr, <2 x i1>)
 
-declare void @llvm.masked.compressstore.v32i16(<32 x i16>, i16*, <32 x i1>)
-declare void @llvm.masked.compressstore.v16i16(<16 x i16>, i16*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8i16(<8 x i16>, i16*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4i16(<4 x i16>, i16*, <4 x i1>)
+declare void @llvm.masked.compressstore.v32i16(<32 x i16>, ptr, <32 x i1>)
+declare void @llvm.masked.compressstore.v16i16(<16 x i16>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8i16(<8 x i16>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4i16(<4 x i16>, ptr, <4 x i1>)
 
-declare void @llvm.masked.compressstore.v64i8(<64 x i8>, i8*, <64 x i1>)
-declare void @llvm.masked.compressstore.v32i8(<32 x i8>, i8*, <32 x i1>)
-declare void @llvm.masked.compressstore.v16i8(<16 x i8>, i8*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8i8(<8 x i8>, i8*, <8 x i1>)
+declare void @llvm.masked.compressstore.v64i8(<64 x i8>, ptr, <64 x i1>)
+declare void @llvm.masked.compressstore.v32i8(<32 x i8>, ptr, <32 x i1>)
+declare void @llvm.masked.compressstore.v16i8(<16 x i8>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8i8(<8 x i8>, ptr, <8 x i1>)

@@ -64,8 +64,7 @@ define void @copy_struct([5 x i64] %in.coerce, ptr addrspace(1) align 4 %ptr) {
 ;
 for.end:
   %in = alloca %struct.struct_test_27.0.13, align 8, addrspace(2)
-  %0 = bitcast ptr addrspace(2) %in to ptr addrspace(2)
-  store [5 x i64] %in.coerce, ptr addrspace(2) %0, align 8
+  store [5 x i64] %in.coerce, ptr addrspace(2) %in, align 8
   %scevgep9 = getelementptr %struct.struct_test_27.0.13, ptr addrspace(2) %in, i32 0, i32 4, i32 0
   call void @llvm.memcpy.p1.p2.i32(ptr addrspace(1) align 4 %ptr, ptr addrspace(2) align 4 %scevgep9, i32 16, i1 false)
   ret void
@@ -86,10 +85,8 @@ define void @pr27557() {
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca %union.anon, align 8, addrspace(2)
-  %2 = bitcast ptr addrspace(2) %1 to ptr addrspace(2)
-  store ptr @g, ptr addrspace(2) %2, align 8
-  %3 = bitcast ptr addrspace(2) %1 to ptr addrspace(2)
-  store ptr addrspace(3) @l, ptr addrspace(2) %3, align 8
+  store ptr @g, ptr addrspace(2) %1, align 8
+  store ptr addrspace(3) @l, ptr addrspace(2) %1, align 8
   ret void
 }
 
@@ -102,11 +99,9 @@ define ptr @pr27557.alt() {
 ; CHECK-NEXT:    ret ptr inttoptr (i64 ptrtoint (ptr addrspace(4) @l4 to i64) to ptr)
 ;
   %1 = alloca %union.anon, align 8, addrspace(2)
-  %2 = bitcast ptr addrspace(2) %1 to ptr addrspace(2)
-  store ptr addrspace(4) @l4, ptr addrspace(2) %2, align 8
-  %3 = bitcast ptr addrspace(2) %1 to ptr addrspace(2)
-  %4 = load ptr, ptr addrspace(2) %3, align 8
-  ret ptr %4
+  store ptr addrspace(4) @l4, ptr addrspace(2) %1, align 8
+  %2 = load ptr, ptr addrspace(2) %1, align 8
+  ret ptr %2
 }
 
 ; Test load from and store to non-zero address space.

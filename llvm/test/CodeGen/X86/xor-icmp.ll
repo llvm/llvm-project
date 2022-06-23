@@ -140,7 +140,7 @@ define zeroext i1 @xor_not_cmps(i32 %x, i32 %y) nounwind {
   ret i1 %not
 }
 
-define zeroext i1 @xor_not_cmps_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
+define zeroext i1 @xor_not_cmps_extra_use(i32 %x, i32 %y, ptr %p) nounwind {
 ; X86-LABEL: xor_not_cmps_extra_use:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -170,7 +170,7 @@ define zeroext i1 @xor_not_cmps_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
   %cmpy = icmp eq i32 %y, 235
   %xor = xor i1 %cmpx, %cmpy
   %z = zext i1 %xor to i32
-  store i32 %z, i32* %p
+  store i32 %z, ptr %p
   %not = xor i1 %xor, 1
   ret i1 %not
 }

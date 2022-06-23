@@ -8,7 +8,7 @@
 ; But if the target does have a single div/rem operation,
 ; the opposite transform is likely beneficial.
 
-define i8 @scalar_i8(i8 %x, i8 %y, i8* %divdst) nounwind {
+define i8 @scalar_i8(i8 %x, i8 %y, ptr %divdst) nounwind {
 ; X86-LABEL: scalar_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -33,13 +33,13 @@ define i8 @scalar_i8(i8 %x, i8 %y, i8* %divdst) nounwind {
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %div = sdiv i8 %x, %y
-  store i8 %div, i8* %divdst, align 4
+  store i8 %div, ptr %divdst, align 4
   %t1 = mul i8 %div, %y
   %t2 = sub i8 %x, %t1
   ret i8 %t2
 }
 
-define i16 @scalar_i16(i16 %x, i16 %y, i16* %divdst) nounwind {
+define i16 @scalar_i16(i16 %x, i16 %y, ptr %divdst) nounwind {
 ; X86-LABEL: scalar_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
@@ -72,13 +72,13 @@ define i16 @scalar_i16(i16 %x, i16 %y, i16* %divdst) nounwind {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
   %div = sdiv i16 %x, %y
-  store i16 %div, i16* %divdst, align 4
+  store i16 %div, ptr %divdst, align 4
   %t1 = mul i16 %div, %y
   %t2 = sub i16 %x, %t1
   ret i16 %t2
 }
 
-define i32 @scalar_i32(i32 %x, i32 %y, i32* %divdst) nounwind {
+define i32 @scalar_i32(i32 %x, i32 %y, ptr %divdst) nounwind {
 ; X86-LABEL: scalar_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
@@ -109,13 +109,13 @@ define i32 @scalar_i32(i32 %x, i32 %y, i32* %divdst) nounwind {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
   %div = sdiv i32 %x, %y
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %div, %y
   %t2 = sub i32 %x, %t1
   ret i32 %t2
 }
 
-define i64 @scalar_i64(i64 %x, i64 %y, i64* %divdst) nounwind {
+define i64 @scalar_i64(i64 %x, i64 %y, ptr %divdst) nounwind {
 ; X86-LABEL: scalar_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -163,13 +163,13 @@ define i64 @scalar_i64(i64 %x, i64 %y, i64* %divdst) nounwind {
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
   %div = sdiv i64 %x, %y
-  store i64 %div, i64* %divdst, align 4
+  store i64 %div, ptr %divdst, align 4
   %t1 = mul i64 %div, %y
   %t2 = sub i64 %x, %t1
   ret i64 %t2
 }
 
-define i128 @scalar_i128(i128 %x, i128 %y, i128* %divdst) nounwind {
+define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-LABEL: scalar_i128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -299,13 +299,13 @@ define i128 @scalar_i128(i128 %x, i128 %y, i128* %divdst) nounwind {
 ; X64-NEXT:    popq %r15
 ; X64-NEXT:    retq
   %div = sdiv i128 %x, %y
-  store i128 %div, i128* %divdst, align 4
+  store i128 %div, ptr %divdst, align 4
   %t1 = mul i128 %div, %y
   %t2 = sub i128 %x, %t1
   ret i128 %t2
 }
 
-define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, <16 x i8>* %divdst) nounwind {
+define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, ptr %divdst) nounwind {
 ; X86-LABEL: vector_i128_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -533,13 +533,13 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, <16 x i8>* %divdst)
 ; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
   %div = sdiv <16 x i8> %x, %y
-  store <16 x i8> %div, <16 x i8>* %divdst, align 16
+  store <16 x i8> %div, ptr %divdst, align 16
   %t1 = mul <16 x i8> %div, %y
   %t2 = sub <16 x i8> %x, %t1
   ret <16 x i8> %t2
 }
 
-define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y, <8 x i16>* %divdst) nounwind {
+define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y, ptr %divdst) nounwind {
 ; X86-LABEL: vector_i128_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -683,13 +683,13 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y, <8 x i16>* %divdst
 ; X64-NEXT:    psubw %xmm5, %xmm0
 ; X64-NEXT:    retq
   %div = sdiv <8 x i16> %x, %y
-  store <8 x i16> %div, <8 x i16>* %divdst, align 16
+  store <8 x i16> %div, ptr %divdst, align 16
   %t1 = mul <8 x i16> %div, %y
   %t2 = sub <8 x i16> %x, %t1
   ret <8 x i16> %t2
 }
 
-define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %divdst) nounwind {
+define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y, ptr %divdst) nounwind {
 ; X86-LABEL: vector_i128_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -777,13 +777,13 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %divdst
 ; X64-NEXT:    psubd %xmm2, %xmm0
 ; X64-NEXT:    retq
   %div = sdiv <4 x i32> %x, %y
-  store <4 x i32> %div, <4 x i32>* %divdst, align 16
+  store <4 x i32> %div, ptr %divdst, align 16
   %t1 = mul <4 x i32> %div, %y
   %t2 = sub <4 x i32> %x, %t1
   ret <4 x i32> %t2
 }
 
-define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst) nounwind {
+define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, ptr %divdst) nounwind {
 ; X86-LABEL: vector_i128_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -865,7 +865,7 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst
 ; X64-NEXT:    psubq %xmm2, %xmm0
 ; X64-NEXT:    retq
   %div = sdiv <2 x i64> %x, %y
-  store <2 x i64> %div, <2 x i64>* %divdst, align 16
+  store <2 x i64> %div, ptr %divdst, align 16
   %t1 = mul <2 x i64> %div, %y
   %t2 = sub <2 x i64> %x, %t1
   ret <2 x i64> %t2
@@ -873,7 +873,7 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst
 
 ; Special tests.
 
-define i32 @scalar_i32_commutative(i32 %x, i32* %ysrc, i32* %divdst) nounwind {
+define i32 @scalar_i32_commutative(i32 %x, ptr %ysrc, ptr %divdst) nounwind {
 ; X86-LABEL: scalar_i32_commutative:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
@@ -905,16 +905,16 @@ define i32 @scalar_i32_commutative(i32 %x, i32* %ysrc, i32* %divdst) nounwind {
 ; X64-NEXT:    subl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
-  %y = load i32, i32* %ysrc, align 4
+  %y = load i32, ptr %ysrc, align 4
   %div = sdiv i32 %x, %y
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %y, %div ; commutative
   %t2 = sub i32 %x, %t1
   ret i32 %t2
 }
 
 ; We do not care about extra uses.
-define i32 @extrause(i32 %x, i32 %y, i32* %divdst, i32* %t1dst) nounwind {
+define i32 @extrause(i32 %x, i32 %y, ptr %divdst, ptr %t1dst) nounwind {
 ; X86-LABEL: extrause:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
@@ -950,15 +950,15 @@ define i32 @extrause(i32 %x, i32 %y, i32* %divdst, i32* %t1dst) nounwind {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
   %div = sdiv i32 %x, %y
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %div, %y
-  store i32 %t1, i32* %t1dst, align 4
+  store i32 %t1, ptr %t1dst, align 4
   %t2 = sub i32 %x, %t1
   ret i32 %t2
 }
 
 ; 'rem' should appear next to 'div'.
-define i32 @multiple_bb(i32 %x, i32 %y, i32* %divdst, i1 zeroext %store_srem, i32* %sremdst) nounwind {
+define i32 @multiple_bb(i32 %x, i32 %y, ptr %divdst, i1 zeroext %store_srem, ptr %sremdst) nounwind {
 ; X86-LABEL: multiple_bb:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
@@ -1003,18 +1003,18 @@ define i32 @multiple_bb(i32 %x, i32 %y, i32* %divdst, i1 zeroext %store_srem, i3
 ; X64-NEXT:  .LBB11_2: # %end
 ; X64-NEXT:    retq
   %div = sdiv i32 %x, %y
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   br i1 %store_srem, label %do_srem, label %end
 do_srem:
   %t1 = mul i32 %div, %y
   %t2 = sub i32 %x, %t1
-  store i32 %t2, i32* %sremdst, align 4
+  store i32 %t2, ptr %sremdst, align 4
   br label %end
 end:
   ret i32 %div
 }
 
-define i32 @negative_different_x(i32 %x0, i32 %x1, i32 %y, i32* %divdst) nounwind {
+define i32 @negative_different_x(i32 %x0, i32 %x1, i32 %y, ptr %divdst) nounwind {
 ; X86-LABEL: negative_different_x:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
@@ -1045,13 +1045,13 @@ define i32 @negative_different_x(i32 %x0, i32 %x1, i32 %y, i32* %divdst) nounwin
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    retq
   %div = sdiv i32 %x0, %y ; not %x1
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %div, %y
   %t2 = sub i32 %x1, %t1 ; not %x0
   ret i32 %t2
 }
 
-define i32 @negative_different_y(i32 %x0, i32 %x1, i32 %y, i32 %z, i32* %divdst) nounwind {
+define i32 @negative_different_y(i32 %x0, i32 %x1, i32 %y, i32 %z, ptr %divdst) nounwind {
 ; X86-LABEL: negative_different_y:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -1079,13 +1079,13 @@ define i32 @negative_different_y(i32 %x0, i32 %x1, i32 %y, i32 %z, i32* %divdst)
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    retq
   %div = sdiv i32 %x1, %z ; not %x0
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %div, %y
   %t2 = sub i32 %x1, %t1
   ret i32 %t2
 }
 
-define i32 @negative_inverted_division(i32 %x0, i32 %x1, i32 %y, i32* %divdst) nounwind {
+define i32 @negative_inverted_division(i32 %x0, i32 %x1, i32 %y, ptr %divdst) nounwind {
 ; X86-LABEL: negative_inverted_division:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -1112,7 +1112,7 @@ define i32 @negative_inverted_division(i32 %x0, i32 %x1, i32 %y, i32* %divdst) n
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    retq
   %div = sdiv i32 %x0, %x1 ; inverted division
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %div, %x1
   %t2 = sub i32 %x1, %t1
   ret i32 %t2

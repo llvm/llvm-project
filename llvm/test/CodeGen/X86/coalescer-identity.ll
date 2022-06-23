@@ -12,10 +12,10 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 define void @func() nounwind uwtable ssp {
 for.body.lr.ph:
-  %0 = load i32, i32* @g2, align 4
+  %0 = load i32, ptr @g2, align 4
   %tobool6 = icmp eq i32 %0, 0
-  %s.promoted = load i16, i16* @s, align 2
-  %.pre = load i32, i32* @g1, align 4
+  %s.promoted = load i16, ptr @s, align 2
+  %.pre = load i32, ptr @g1, align 4
   br i1 %tobool6, label %for.body.us, label %for.body
 
 for.body.us:                                      ; preds = %for.body.lr.ph, %for.inc.us
@@ -43,11 +43,11 @@ for.inc.us:                                       ; preds = %cond.end.us, %for.b
 cond.end.us:                                      ; preds = %if.then7.us, %cond.false.us
   %4 = phi i32 [ 0, %cond.false.us ], [ %1, %if.then7.us ]
   %cond.us = phi i32 [ 0, %cond.false.us ], [ %v.010.us, %if.then7.us ]
-  store i32 %cond.us, i32* @g0, align 4
+  store i32 %cond.us, ptr @g0, align 4
   br label %for.inc.us
 
 cond.false.us:                                    ; preds = %if.then7.us
-  store i32 0, i32* @g1, align 4
+  store i32 0, ptr @g1, align 4
   br label %cond.end.us
 
 if.then7.us:                                      ; preds = %for.body.us
@@ -73,6 +73,6 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 
 for.end:                                          ; preds = %for.inc.us, %for.body
   %dec12.lcssa = phi i16 [ %dec12.us, %for.inc.us ], [ %dec12, %for.body ]
-  store i16 %dec12.lcssa, i16* @s, align 2
+  store i16 %dec12.lcssa, ptr @s, align 2
   ret void
 }

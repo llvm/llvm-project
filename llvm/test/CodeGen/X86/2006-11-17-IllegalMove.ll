@@ -16,7 +16,7 @@ define void @handle_vector_size_attribute() nounwind {
 ; CHECK-NEXT:  .LBB0_2: # %bb84
 ; CHECK-NEXT:    retq
 entry:
-	%tmp69 = load i32, i32* null		; <i32> [#uses=1]
+	%tmp69 = load i32, ptr null		; <i32> [#uses=1]
 	switch i32 %tmp69, label %bb84 [
 		 i32 2, label %bb77
 		 i32 1, label %bb77
@@ -24,7 +24,7 @@ entry:
 
 bb77:		; preds = %entry, %entry
 	%tmp99 = udiv i64 0, 0		; <i64> [#uses=1]
-	%tmp = load volatile i8, i8* null		; <i8> [#uses=1]
+	%tmp = load volatile i8, ptr null		; <i8> [#uses=1]
 	%tmp114 = icmp eq i64 0, 0		; <i1> [#uses=1]
 	br label %cond_true115
 
@@ -32,7 +32,7 @@ bb84:		; preds = %entry
 	ret void
 
 cond_true115:		; preds = %bb77
-	%tmp118 = load volatile i8, i8* null		; <i8> [#uses=1]
+	%tmp118 = load volatile i8, ptr null		; <i8> [#uses=1]
 	br label %cond_true120
 
 cond_true120:		; preds = %cond_true115

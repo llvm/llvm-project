@@ -161,3 +161,22 @@ TEST(LlvmLibcUInt128ClassTest, EqualsTests) {
   ASSERT_FALSE(a1 == a_upper);
   ASSERT_TRUE(a_lower != a_upper);
 }
+
+TEST(LlvmLibcUInt128ClassTest, ComparisonTests) {
+  UInt128 a({0xffffffff00000000, 0xffff00000000ffff});
+  UInt128 b({0xff00ff0000ff00ff, 0xf0f0f0f00f0f0f0f});
+  EXPECT_GT(a, b);
+  EXPECT_GE(a, b);
+  EXPECT_LT(b, a);
+  EXPECT_LE(b, a);
+
+  UInt128 x(0xffffffff00000000);
+  UInt128 y(0x00000000ffffffff);
+  EXPECT_GT(x, y);
+  EXPECT_GE(x, y);
+  EXPECT_LT(y, x);
+  EXPECT_LE(y, x);
+
+  EXPECT_LE(a, a);
+  EXPECT_GE(a, a);
+}

@@ -8,10 +8,10 @@
 
 @.str = private constant [65 x i8] c"0123456789012345678901234567890123456789012345678901234567890123\00", align 1
 
-declare dso_local i32 @memcmp(i8*, i8*, i64)
-declare dso_local i32 @bcmp(i8*, i8*, i64)
+declare dso_local i32 @memcmp(ptr, ptr, i64)
+declare dso_local i32 @bcmp(ptr, ptr, i64)
 
-define i32 @length2(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length2(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
@@ -22,35 +22,35 @@ define i32 @length2(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    movzwl %cx, %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 2) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) nounwind
   ret i32 %m
 }
 
-define i1 @length2_eq(i8* %X, i8* %Y) nounwind optsize {
+define i1 @length2_eq(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length2_eq:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    cmpw (%rsi), %ax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 2) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
 }
 
-define i1 @length2_eq_const(i8* %X) nounwind optsize {
+define i1 @length2_eq_const(ptr %X) nounwind optsize {
 ; X64-LABEL: length2_eq_const:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    cmpl $12849, %eax # imm = 0x3231
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 1), i64 2) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([65 x i8], ptr @.str, i32 0, i32 1), i64 2) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
 }
 
-define i1 @length2_eq_nobuiltin_attr(i8* %X, i8* %Y) nounwind optsize {
+define i1 @length2_eq_nobuiltin_attr(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length2_eq_nobuiltin_attr:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
@@ -60,12 +60,12 @@ define i1 @length2_eq_nobuiltin_attr(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 2) nounwind nobuiltin
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) nounwind nobuiltin
   %c = icmp eq i32 %m, 0
   ret i1 %c
 }
 
-define i32 @length3(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length3(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length3:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
@@ -84,11 +84,11 @@ define i32 @length3(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    leal -1(%rax,%rax), %eax
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 3) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) nounwind
   ret i32 %m
 }
 
-define i1 @length3_eq(i8* %X, i8* %Y) nounwind optsize {
+define i1 @length3_eq(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length3_eq:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
@@ -99,12 +99,12 @@ define i1 @length3_eq(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    orw %ax, %cx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 3) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
 }
 
-define i32 @length4(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length4(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length4:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %ecx
@@ -116,34 +116,34 @@ define i32 @length4(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    seta %al
 ; X64-NEXT:    sbbl $0, %eax
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   ret i32 %m
 }
 
-define i1 @length4_eq(i8* %X, i8* %Y) nounwind optsize {
+define i1 @length4_eq(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length4_eq:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    cmpl (%rsi), %eax
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
 }
 
-define i1 @length4_eq_const(i8* %X) nounwind optsize {
+define i1 @length4_eq_const(ptr %X) nounwind optsize {
 ; X64-LABEL: length4_eq_const:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl $875770417, (%rdi) # imm = 0x34333231
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 1), i64 4) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([65 x i8], ptr @.str, i32 0, i32 1), i64 4) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
 }
 
-define i32 @length5(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length5(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length5:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
@@ -162,11 +162,11 @@ define i32 @length5(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    leal -1(%rax,%rax), %eax
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 5) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) nounwind
   ret i32 %m
 }
 
-define i1 @length5_eq(i8* %X, i8* %Y) nounwind optsize {
+define i1 @length5_eq(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length5_eq:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
@@ -177,12 +177,12 @@ define i1 @length5_eq(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    orl %eax, %ecx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 5) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
 }
 
-define i32 @length8(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length8(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rcx
@@ -194,35 +194,35 @@ define i32 @length8(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    seta %al
 ; X64-NEXT:    sbbl $0, %eax
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 8) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 8) nounwind
   ret i32 %m
 }
 
-define i1 @length8_eq(i8* %X, i8* %Y) nounwind optsize {
+define i1 @length8_eq(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length8_eq:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    cmpq (%rsi), %rax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 8) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 8) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
 }
 
-define i1 @length8_eq_const(i8* %X) nounwind optsize {
+define i1 @length8_eq_const(ptr %X) nounwind optsize {
 ; X64-LABEL: length8_eq_const:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movabsq $3978425819141910832, %rax # imm = 0x3736353433323130
 ; X64-NEXT:    cmpq %rax, (%rdi)
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 8) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 8) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
 }
 
-define i1 @length12_eq(i8* %X, i8* %Y) nounwind optsize {
+define i1 @length12_eq(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length12_eq:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
@@ -232,12 +232,12 @@ define i1 @length12_eq(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 12) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 12) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
 }
 
-define i32 @length12(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length12(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length12:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rcx
@@ -261,13 +261,13 @@ define i32 @length12(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    leal -1(%rax,%rax), %eax
 ; X64-NEXT:  .LBB15_3: # %endblock
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 12) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 12) nounwind
   ret i32 %m
 }
 
 ; PR33329 - https://bugs.llvm.org/show_bug.cgi?id=33329
 
-define i32 @length16(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length16(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rcx
@@ -291,11 +291,11 @@ define i32 @length16(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    leal -1(%rax,%rax), %eax
 ; X64-NEXT:  .LBB16_3: # %endblock
 ; X64-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 16) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 16) nounwind
   ret i32 %m
 }
 
-define i1 @length16_eq(i8* %x, i8* %y) nounwind optsize {
+define i1 @length16_eq(ptr %x, ptr %y) nounwind optsize {
 ; X64-SSE2-LABEL: length16_eq:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -313,12 +313,12 @@ define i1 @length16_eq(i8* %x, i8* %y) nounwind optsize {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    setne %al
 ; X64-AVX-NEXT:    retq
-  %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 16) nounwind
+  %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 16) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
 }
 
-define i1 @length16_eq_const(i8* %X) nounwind optsize {
+define i1 @length16_eq_const(ptr %X) nounwind optsize {
 ; X64-SSE2-LABEL: length16_eq_const:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -335,23 +335,23 @@ define i1 @length16_eq_const(i8* %X) nounwind optsize {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 16) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 16) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
 }
 
 ; PR33914 - https://bugs.llvm.org/show_bug.cgi?id=33914
 
-define i32 @length24(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length24(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length24:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $24, %edx
 ; X64-NEXT:    jmp memcmp # TAILCALL
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 24) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 24) nounwind
   ret i32 %m
 }
 
-define i1 @length24_eq(i8* %x, i8* %y) nounwind optsize {
+define i1 @length24_eq(ptr %x, ptr %y) nounwind optsize {
 ; X64-SSE2-LABEL: length24_eq:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -377,12 +377,12 @@ define i1 @length24_eq(i8* %x, i8* %y) nounwind optsize {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq
-  %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 24) nounwind
+  %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 24) nounwind
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
 }
 
-define i1 @length24_eq_const(i8* %X) nounwind optsize {
+define i1 @length24_eq_const(ptr %X) nounwind optsize {
 ; X64-SSE2-LABEL: length24_eq_const:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -405,23 +405,23 @@ define i1 @length24_eq_const(i8* %X) nounwind optsize {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    setne %al
 ; X64-AVX-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 24) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 24) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
 }
 
-define i32 @length32(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length32(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $32, %edx
 ; X64-NEXT:    jmp memcmp # TAILCALL
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 32) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 32) nounwind
   ret i32 %m
 }
 
 ; PR33325 - https://bugs.llvm.org/show_bug.cgi?id=33325
 
-define i1 @length32_eq(i8* %x, i8* %y) nounwind optsize {
+define i1 @length32_eq(ptr %x, ptr %y) nounwind optsize {
 ; X64-SSE2-LABEL: length32_eq:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -453,12 +453,12 @@ define i1 @length32_eq(i8* %x, i8* %y) nounwind optsize {
 ; X64-AVX2-NEXT:    sete %al
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
-  %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 32) nounwind
+  %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 32) nounwind
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
 }
 
-define i1 @length32_eq_const(i8* %X) nounwind optsize {
+define i1 @length32_eq_const(ptr %X) nounwind optsize {
 ; X64-SSE2-LABEL: length32_eq_const:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -488,21 +488,21 @@ define i1 @length32_eq_const(i8* %X) nounwind optsize {
 ; X64-AVX2-NEXT:    setne %al
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 32) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 32) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
 }
 
-define i32 @length64(i8* %X, i8* %Y) nounwind optsize {
+define i32 @length64(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $64, %edx
 ; X64-NEXT:    jmp memcmp # TAILCALL
-  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 64) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 64) nounwind
   ret i32 %m
 }
 
-define i1 @length64_eq(i8* %x, i8* %y) nounwind optsize {
+define i1 @length64_eq(ptr %x, ptr %y) nounwind optsize {
 ; X64-SSE2-LABEL: length64_eq:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    pushq %rax
@@ -536,12 +536,12 @@ define i1 @length64_eq(i8* %x, i8* %y) nounwind optsize {
 ; X64-AVX2-NEXT:    setne %al
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
-  %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 64) nounwind
+  %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 64) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
 }
 
-define i1 @length64_eq_const(i8* %X) nounwind optsize {
+define i1 @length64_eq_const(ptr %X) nounwind optsize {
 ; X64-SSE2-LABEL: length64_eq_const:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    pushq %rax
@@ -576,12 +576,12 @@ define i1 @length64_eq_const(i8* %X) nounwind optsize {
 ; X64-AVX2-NEXT:    sete %al
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
-  %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 64) nounwind
+  %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 64) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
 }
 
-define i32 @bcmp_length2(i8* %X, i8* %Y) nounwind optsize {
+define i32 @bcmp_length2(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: bcmp_length2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %ecx
@@ -589,6 +589,6 @@ define i32 @bcmp_length2(i8* %X, i8* %Y) nounwind optsize {
 ; X64-NEXT:    cmpw (%rsi), %cx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
-  %m = tail call i32 @bcmp(i8* %X, i8* %Y, i64 2) nounwind
+  %m = tail call i32 @bcmp(ptr %X, ptr %Y, i64 2) nounwind
   ret i32 %m
 }

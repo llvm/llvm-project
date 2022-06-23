@@ -15,7 +15,7 @@ target triple = "x86_64-apple-darwin11.2.0"
 ; Make sure that the sign_extend_inreg is simplified and that we
 ; don't generate psll, psraw and pblendvb from the vselect.
 
-define void @foo8(float* nocapture %RET) nounwind {
+define void @foo8(ptr nocapture %RET) nounwind {
 ; CHECK-LABEL: foo8:
 ; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+2,2.0E+0,1.0E+2,4.0E+0]
@@ -26,8 +26,7 @@ define void @foo8(float* nocapture %RET) nounwind {
 allocas:
   %resultvec.i = select <8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, <8 x i8> <i8 100, i8 100, i8 100, i8 100, i8 100, i8 100, i8 100, i8 100>
   %uint2float = uitofp <8 x i8> %resultvec.i to <8 x float>
-  %ptr = bitcast float * %RET to <8 x float> *
-  store <8 x float> %uint2float, <8 x float>* %ptr, align 4
+  store <8 x float> %uint2float, ptr %RET, align 4
   ret void
 }
 

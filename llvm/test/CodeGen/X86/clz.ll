@@ -1074,7 +1074,7 @@ define i8 @PR47603_trunc(i32 %0) {
 }
 
 ; Ensure we fold away the XOR(ZEXT(XOR(BSR(X),31)),31).
-define i32 @PR47603_zext(i32 %a0, [32 x i8]* %a1) {
+define i32 @PR47603_zext(i32 %a0, ptr %a1) {
 ; X86-LABEL: PR47603_zext:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1105,8 +1105,8 @@ define i32 @PR47603_zext(i32 %a0, [32 x i8]* %a1) {
   %ctlz = tail call i32 @llvm.ctlz.i32(i32 %a0, i1 true)
   %xor = xor i32 %ctlz, 31
   %zext = zext i32 %xor to i64
-  %gep = getelementptr inbounds [32 x i8], [32 x i8]* %a1, i64 0, i64 %zext
-  %load = load i8, i8* %gep, align 1
+  %gep = getelementptr inbounds [32 x i8], ptr %a1, i64 0, i64 %zext
+  %load = load i8, ptr %gep, align 1
   %sext = sext i8 %load to i32
   ret i32 %sext
 }

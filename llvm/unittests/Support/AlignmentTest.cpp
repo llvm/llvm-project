@@ -50,9 +50,7 @@ std::vector<uint64_t> getValidAlignments() {
   return Out;
 }
 
-TEST(AlignmentTest, AlignDefaultCTor) {
-  EXPECT_EQ(Align().value(), 1ULL);
-}
+TEST(AlignmentTest, AlignDefaultCTor) { EXPECT_EQ(Align().value(), 1ULL); }
 
 TEST(AlignmentTest, MaybeAlignDefaultCTor) {
   EXPECT_FALSE(MaybeAlign().hasValue());
@@ -94,18 +92,8 @@ TEST(AlignmentTest, AlignTo) {
     }
   } kTests[] = {
       // Align
-      {1, 0, 0},
-      {1, 1, 1},
-      {1, 5, 5},
-      {2, 0, 0},
-      {2, 1, 2},
-      {2, 2, 2},
-      {2, 7, 8},
-      {2, 16, 16},
-      {4, 0, 0},
-      {4, 1, 4},
-      {4, 4, 4},
-      {4, 6, 8},
+      {1, 0, 0}, {1, 1, 1},   {1, 5, 5}, {2, 0, 0}, {2, 1, 2}, {2, 2, 2},
+      {2, 7, 8}, {2, 16, 16}, {4, 0, 0}, {4, 1, 4}, {4, 4, 4}, {4, 6, 8},
   };
   for (const auto &T : kTests) {
     Align A = Align(T.alignment);
@@ -133,26 +121,12 @@ TEST(AlignmentTest, MinAlign) {
     uint64_t B;
     uint64_t MinAlign;
   } kTests[] = {
-      // MaybeAlign
-      {0, 0, 0},
-      {0, 8, 8},
-      {2, 0, 2},
-      // MaybeAlign / Align
       {1, 2, 1},
       {8, 4, 4},
   };
   for (const auto &T : kTests) {
-    EXPECT_EQ(commonAlignment(MaybeAlign(T.A), MaybeAlign(T.B)), T.MinAlign);
     EXPECT_EQ(MinAlign(T.A, T.B), T.MinAlign);
-    if (T.A) {
-      EXPECT_EQ(commonAlignment(Align(T.A), MaybeAlign(T.B)), T.MinAlign);
-    }
-    if (T.B) {
-      EXPECT_EQ(commonAlignment(MaybeAlign(T.A), Align(T.B)), T.MinAlign);
-    }
-    if (T.A && T.B) {
-      EXPECT_EQ(commonAlignment(Align(T.A), Align(T.B)), T.MinAlign);
-    }
+    EXPECT_EQ(commonAlignment(Align(T.A), Align(T.B)), T.MinAlign);
   }
 }
 

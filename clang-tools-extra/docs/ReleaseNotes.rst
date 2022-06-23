@@ -110,6 +110,9 @@ Improvements to clang-tidy
   from suppressing diagnostics associated with macro arguments. This fixes
   `Issue 55134 <https://github.com/llvm/llvm-project/issues/55134>`_.
 
+- Invalid parameters are no longer treated as being implicitly unused for the
+  `-misc-unused-parameters` check. This fixes `Issue 56152 <https://github.com/llvm/llvm-project/issues/56152>`_.
+
 New checks
 ^^^^^^^^^^
 
@@ -120,8 +123,12 @@ New checks
 - New :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check.
 
-   Warns when the code is unwrapping a `std::optional<T>`, `absl::optional<T>`,
-   or `base::Optional<T>` object without assuring that it contains a value.
+  Warns when the code is unwrapping a `std::optional<T>`, `absl::optional<T>`,
+  or `base::Optional<T>` object without assuring that it contains a value.
+
+- New :doc:`misc-confusable-identifiers <clang-tidy/checks/misc/confusable-identifiers>` check.
+
+  Detects confusable Unicode identifiers.
 
 - New :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize/macro-to-enum>` check.

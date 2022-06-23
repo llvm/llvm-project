@@ -83,6 +83,7 @@ bool GenericToNVVM::runOnModule(Module &M) {
           GV.hasInitializer() ? GV.getInitializer() : nullptr, "", &GV,
           GV.getThreadLocalMode(), llvm::ADDRESS_SPACE_GLOBAL);
       NewGV->copyAttributesFrom(&GV);
+      NewGV->copyMetadata(&GV, /*Offset=*/0);
       GVMap[&GV] = NewGV;
     }
   }

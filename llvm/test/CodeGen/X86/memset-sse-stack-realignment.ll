@@ -79,9 +79,9 @@ define void @test1(i32 %t) nounwind {
 ; AVX-NEXT:    popl %ebp
 ; AVX-NEXT:    retl
   %tmp1210 = alloca i8, i32 32, align 4
-  call void @llvm.memset.p0i8.i64(i8* align 4 %tmp1210, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 4 %tmp1210, i8 0, i64 32, i1 false)
   %x = alloca i8, i32 %t
-  call void @dummy(i8* %x)
+  call void @dummy(ptr %x)
   ret void
 }
 
@@ -150,12 +150,12 @@ define void @test2(i32 %t) nounwind {
 ; AVX-NEXT:    popl %ebp
 ; AVX-NEXT:    retl
   %tmp1210 = alloca i8, i32 16, align 4
-  call void @llvm.memset.p0i8.i64(i8* align 4 %tmp1210, i8 0, i64 16, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 4 %tmp1210, i8 0, i64 16, i1 false)
   %x = alloca i8, i32 %t
-  call void @dummy(i8* %x)
+  call void @dummy(ptr %x)
   ret void
 }
 
-declare void @dummy(i8*)
+declare void @dummy(ptr)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind

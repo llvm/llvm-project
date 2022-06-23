@@ -4,7 +4,7 @@
 
 ; PR34292
 @_ZL1c = external dso_local global i8
-define void @sum_unroll(i64* nocapture readonly, i64* nocapture) {
+define void @sum_unroll(ptr nocapture readonly, ptr nocapture) {
 ; CHECK-LABEL: sum_unroll:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb _ZL1c(%rip), %al
@@ -19,38 +19,38 @@ define void @sum_unroll(i64* nocapture readonly, i64* nocapture) {
 ; CHECK-NEXT:    adcq %rax, 24(%rsi)
 ; CHECK-NEXT:    setb _ZL1c(%rip)
 ; CHECK-NEXT:    retq
-  %3 = load i8, i8* @_ZL1c, align 1
-  %4 = load i64, i64* %0, align 8
-  %5 = load i64, i64* %1, align 8
+  %3 = load i8, ptr @_ZL1c, align 1
+  %4 = load i64, ptr %0, align 8
+  %5 = load i64, ptr %1, align 8
   %6 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %3, i64 %4, i64 %5)
   %7 = extractvalue { i8, i64 } %6, 1
-  store i64 %7, i64* %1, align 8
+  store i64 %7, ptr %1, align 8
   %8 = extractvalue { i8, i64 } %6, 0
-  %9 = getelementptr inbounds i64, i64* %0, i64 1
-  %10 = load i64, i64* %9, align 8
-  %11 = getelementptr inbounds i64, i64* %1, i64 1
-  %12 = load i64, i64* %11, align 8
+  %9 = getelementptr inbounds i64, ptr %0, i64 1
+  %10 = load i64, ptr %9, align 8
+  %11 = getelementptr inbounds i64, ptr %1, i64 1
+  %12 = load i64, ptr %11, align 8
   %13 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %8, i64 %10, i64 %12)
   %14 = extractvalue { i8, i64 } %13, 1
-  store i64 %14, i64* %11, align 8
+  store i64 %14, ptr %11, align 8
   %15 = extractvalue { i8, i64 } %13, 0
-  %16 = getelementptr inbounds i64, i64* %0, i64 2
-  %17 = load i64, i64* %16, align 8
-  %18 = getelementptr inbounds i64, i64* %1, i64 2
-  %19 = load i64, i64* %18, align 8
+  %16 = getelementptr inbounds i64, ptr %0, i64 2
+  %17 = load i64, ptr %16, align 8
+  %18 = getelementptr inbounds i64, ptr %1, i64 2
+  %19 = load i64, ptr %18, align 8
   %20 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %15, i64 %17, i64 %19)
   %21 = extractvalue { i8, i64 } %20, 1
-  store i64 %21, i64* %18, align 8
+  store i64 %21, ptr %18, align 8
   %22 = extractvalue { i8, i64 } %20, 0
-  %23 = getelementptr inbounds i64, i64* %0, i64 3
-  %24 = load i64, i64* %23, align 8
-  %25 = getelementptr inbounds i64, i64* %1, i64 3
-  %26 = load i64, i64* %25, align 8
+  %23 = getelementptr inbounds i64, ptr %0, i64 3
+  %24 = load i64, ptr %23, align 8
+  %25 = getelementptr inbounds i64, ptr %1, i64 3
+  %26 = load i64, ptr %25, align 8
   %27 = tail call { i8, i64 } @llvm.x86.addcarry.64(i8 %22, i64 %24, i64 %26)
   %28 = extractvalue { i8, i64 } %27, 1
-  store i64 %28, i64* %25, align 8
+  store i64 %28, ptr %25, align 8
   %29 = extractvalue { i8, i64 } %27, 0
-  store i8 %29, i8* @_ZL1c, align 1
+  store i8 %29, ptr @_ZL1c, align 1
   ret void
 }
 
