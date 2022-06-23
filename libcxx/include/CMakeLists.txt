@@ -99,6 +99,8 @@ set(files
   __algorithm/ranges_minmax.h
   __algorithm/ranges_minmax_element.h
   __algorithm/ranges_mismatch.h
+  __algorithm/ranges_move.h
+  __algorithm/ranges_move_backward.h
   __algorithm/ranges_none_of.h
   __algorithm/ranges_replace.h
   __algorithm/ranges_replace_if.h

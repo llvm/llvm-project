@@ -450,6 +450,27 @@ namespace ranges {
       ranges::lexicographical_compare(R1&& r1, R2&& r2, Comp comp = {},
                                       Proj1 proj1 = {}, Proj2 proj2 = {});                    // since C++20
 
+  template<bidirectional_iterator I1, sentinel_for<I1> S1, bidirectional_iterator I2>
+    requires indirectly_movable<I1, I2>
+    constexpr ranges::move_backward_result<I1, I2>
+      ranges::move_backward(I1 first, S1 last, I2 result);                                          // since C++20
+
+  template<bidirectional_range R, bidirectional_iterator I>
+    requires indirectly_movable<iterator_t<R>, I>
+    constexpr ranges::move_backward_result<borrowed_iterator_t<R>, I>
+      ranges::move_backward(R&& r, I result);                                                       // since C++20
+
+  template<input_iterator I, sentinel_for<I> S, weakly_incrementable O>
+    requires indirectly_movable<I, O>
+    constexpr ranges::move_result<I, O>
+      ranges::move(I first, S last, O result);                                                      // since C++20
+
+  template<input_range R, weakly_incrementable O>
+    requires indirectly_movable<iterator_t<R>, O>
+    constexpr ranges::move_result<borrowed_iterator_t<R>, O>
+      ranges::move(R&& r, O result);                                                                // since C++20
+
+
 }
 
     constexpr bool     // constexpr in C++20
@@ -1195,6 +1216,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_minmax.h>
 #include <__algorithm/ranges_minmax_element.h>
 #include <__algorithm/ranges_mismatch.h>
+#include <__algorithm/ranges_move.h>
+#include <__algorithm/ranges_move_backward.h>
 #include <__algorithm/ranges_none_of.h>
 #include <__algorithm/ranges_replace.h>
 #include <__algorithm/ranges_replace_if.h>
