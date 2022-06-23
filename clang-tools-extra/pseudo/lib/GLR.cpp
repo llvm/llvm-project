@@ -15,7 +15,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <memory>
@@ -35,67 +34,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GSS::Node &N) {
   OS << llvm::formatv("state {0}, parsed symbol {1}, parents {2}", N.State,
                       N.Payload->symbol(), llvm::join(ParentStates, ", "));
   return OS;
-}
-
-const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
-                           SymbolID StartSymbol) {
-  assert(isNonterminal(StartSymbol) && "Start symbol must be a nonterminal");
-  llvm::ArrayRef<ForestNode> Terminals = Params.Forest.createTerminals(Tokens);
-  auto &G = Params.G;
-  (void)G;
-  auto &GSS = Params.GSStack;
-
-  StateID StartState = Params.Table.getStartState(StartSymbol);
-  // Heads correspond to the parse of tokens [0, I), NextHeads to [0, I+1).
-  std::vector<const GSS::Node *> Heads = {GSS.addNode(/*State=*/StartState,
-                                                      /*ForestNode=*/nullptr,
-                                                      {})};
-  std::vector<const GSS::Node *> NextHeads;
-  auto MaybeGC = [&, Roots(std::vector<const GSS::Node *>{}), I(0u)]() mutable {
-    assert(NextHeads.empty() && "Running GC at the wrong time!");
-    if (++I != 20) // Run periodically to balance CPU and memory usage.
-      return;
-    I = 0;
-
-    // We need to copy the list: Roots is consumed by the GC.
-    Roots = Heads;
-    GSS.gc(std::move(Roots));
-  };
-  // Each iteration fully processes a single token.
-  for (unsigned I = 0; I < Terminals.size(); ++I) {
-    LLVM_DEBUG(llvm::dbgs() << llvm::formatv(
-                   "Next token {0} (id={1})\n",
-                   G.symbolName(Terminals[I].symbol()), Terminals[I].symbol()));
-    // Consume the token.
-    glrShift(Heads, Terminals[I], Params, NextHeads);
-    // Form nonterminals containing the token we just consumed.
-    SymbolID Lookahead = I + 1 == Terminals.size() ? tokenSymbol(tok::eof)
-                                                   : Terminals[I + 1].symbol();
-    glrReduce(NextHeads, Lookahead, Params);
-    // Prepare for the next token.
-    std::swap(Heads, NextHeads);
-    NextHeads.clear();
-    MaybeGC();
-  }
-  LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Reached eof\n"));
-
-  StateID AcceptState = Params.Table.getGoToState(StartState, StartSymbol);
-  const ForestNode *Result = nullptr;
-  for (const auto *Head : Heads) {
-    if (Head->State == AcceptState) {
-      assert(Head->Payload->symbol() == StartSymbol);
-      assert(Result == nullptr && "multiple results!");
-      Result = Head->Payload;
-    }
-  }
-  if (Result)
-    return *Result;
-  // We failed to parse the input, returning an opaque forest node for recovery.
-  //
-  // FIXME: We will need to invoke our generic error-recovery handlers when we
-  // reach EOF without reaching accept state, and involving the eof
-  // token in the above main for-loopmay be the best way to reuse the code).
-  return Params.Forest.createOpaque(StartSymbol, /*Token::Index=*/0);
 }
 
 // Apply all pending shift actions.
@@ -158,7 +96,6 @@ template <typename T> void sortAndUnique(std::vector<T> &Vec) {
   llvm::sort(Vec);
   Vec.erase(std::unique(Vec.begin(), Vec.end()), Vec.end());
 }
-} // namespace
 
 // Perform reduces until no more are possible.
 //
@@ -202,9 +139,12 @@ template <typename T> void sortAndUnique(std::vector<T> &Vec) {
 //   After reducing 3 by `pointer := class-name STAR` and
 //                  2 by`enum-name := class-name STAR`:
 //     0--5(pointer)       // 5 is goto(0, pointer)
-void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
-               const ParseParams &Params) {
-  assert(isToken(Lookahead));
+//
+// (This is a functor rather than a function to allow it to reuse scratch
+// storage across calls).
+class GLRReduce {
+  const ParseParams &Params;
+
   // There are two interacting complications:
   // 1.  Performing one reduce can unlock new reduces on the newly-created head.
   // 2a. The ambiguous ForestNodes must be complete (have all sequence nodes).
@@ -260,57 +200,37 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
     const GSS::Node* Base = nullptr;
     Sequence Seq;
   };
-  KeyedQueue<Family, PushSpec> Sequences;
-
-  Sequence TempSequence;
+  KeyedQueue<Family, PushSpec> Sequences; // FIXME: rename => PendingPushes?
 
   // We treat Heads as a queue of Pop operations still to be performed.
-  // NextPopHead is our position within it.
-  unsigned NextPopHead = 0;
-  // In general we split a reduce into a pop/push, so concurrently-available
-  // reductions can run in the correct order. The data structures are expensive.
-  //
-  // When only one reduction is possible at a time, we can skip this:
-  // we pop and immediately push, as an LR parser (as opposed to GLR) would.
-  // This is valid whenever there's only one concurrent PushSpec.
-  //
-  // This function handles a trivial but common subset of these cases:
-  //  - there must be no pending pushes, and only one poppable head
-  //  - the head must have only one reduction rule
-  //  - the reduction path must be a straight line (no multiple parents)
-  // (Roughly this means there's no local ambiguity, so the LR algorithm works).
-  auto PopAndPushTrivial = [&]() -> bool {
-    if (!Sequences.empty() || Heads.size() != NextPopHead + 1)
-      return false;
-    const GSS::Node *Head = Heads.back();
-    llvm::Optional<RuleID> RID;
-    for (auto &A : Params.Table.getActions(Head->State, Lookahead)) {
-      if (A.kind() != LRTable::Action::Reduce)
-        continue;
-      if (RID.hasValue())
-        return false;
-      RID = A.getReduceRule();
+  // PoppedHeads is our position within it.
+  std::vector<const GSS::Node *> *Heads;
+  unsigned NextPopHead;
+  SymbolID Lookahead;
+
+  Sequence TempSequence;
+public:
+  GLRReduce(const ParseParams &Params) : Params(Params) {}
+
+  void operator()(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead) {
+    assert(isToken(Lookahead));
+
+    NextPopHead = 0;
+    this->Heads = &Heads;
+    this->Lookahead = Lookahead;
+    assert(Sequences.empty());
+
+    popPending();
+    while (!Sequences.empty()) {
+      pushNext();
+      popPending();
     }
-    if (!RID.hasValue())
-      return false;
-    const auto &Rule = Params.G.lookupRule(*RID);
-    const GSS::Node *Base = Head;
-    TempSequence.resize_for_overwrite(Rule.Size);
-    for (unsigned I = 0; I < Rule.Size; ++I) {
-      if (Base->parents().size() != 1)
-        return false;
-      TempSequence[Rule.Size - 1 - I] = Base->Payload;
-      Base = Base->parents().front();
-    }
-    const ForestNode *Parsed =
-        &Params.Forest.createSequence(Rule.Target, *RID, TempSequence);
-    StateID NextState = Params.Table.getGoToState(Base->State, Rule.Target);
-    Heads.push_back(Params.GSStack.addNode(NextState, Parsed, {Base}));
-    return true;
-  };
-  // Pop walks up the parent chain(s) for a reduction from Head by to Rule.
+  }
+
+private:
+  // pop walks up the parent chain(s) for a reduction from Head by to Rule.
   // Once we reach the end, record the bases and sequences.
-  auto Pop = [&](const GSS::Node *Head, RuleID RID) {
+  void pop(const GSS::Node *Head, RuleID RID) {
     LLVM_DEBUG(llvm::dbgs() << "  Pop " << Params.G.dumpRule(RID) << "\n");
     const auto &Rule = Params.G.lookupRule(RID);
     Family F{/*Start=*/0, /*Symbol=*/Rule.Target, /*Rule=*/RID};
@@ -327,33 +247,33 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
         DFS(Parent, I + 1, DFS);
     };
     DFS(Head, 0, DFS);
-  };
-  auto PopPending = [&] {
-    for (; NextPopHead < Heads.size(); ++NextPopHead) {
+  }
+
+  // popPending pops every available reduction.
+  void popPending() {
+    for (; NextPopHead < Heads->size(); ++NextPopHead) {
       // In trivial cases, we perform the complete reduce here!
-      if (PopAndPushTrivial())
+      if (popAndPushTrivial())
         continue;
       for (const auto &A :
-           Params.Table.getActions(Heads[NextPopHead]->State, Lookahead)) {
+           Params.Table.getActions((*Heads)[NextPopHead]->State, Lookahead)) {
         if (A.kind() != LRTable::Action::Reduce)
           continue;
-        Pop(Heads[NextPopHead], A.getReduceRule());
+        pop((*Heads)[NextPopHead], A.getReduceRule());
       }
     }
-  };
+  }
 
+  // Storage reused by each call to pushNext.
   std::vector<std::pair</*Goto*/ StateID, const GSS::Node *>> FamilyBases;
   std::vector<std::pair<RuleID, Sequence>> FamilySequences;
+  std::vector<const GSS::Node *> Parents;
+  std::vector<const ForestNode *> SequenceNodes;
 
-  std::vector<const GSS::Node *> TempGSSNodes;
-  std::vector<const ForestNode *> TempForestNodes;
-
-  // Main reduction loop:
-  //  - pop as much as we can
-  //  - process one family at a time, forming a forest node
-  //  - produces new GSS heads which may enable more pops
-  PopPending();
-  while (!Sequences.empty()) {
+  // Process one push family, forming a forest node.
+  // This produces new GSS heads which may enable more pops.
+  void pushNext() {
+    assert(!Sequences.empty());
     Family F = Sequences.top().first;
 
     LLVM_DEBUG(llvm::dbgs() << "  Push " << Params.G.symbolName(F.Symbol)
@@ -377,7 +297,6 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
     } while (!Sequences.empty() && Sequences.top().first == F);
     // Build a forest node for each unique sequence.
     sortAndUnique(FamilySequences);
-    auto &SequenceNodes = TempForestNodes;
     SequenceNodes.clear();
     for (const auto &SequenceSpec : FamilySequences)
       SequenceNodes.push_back(&Params.Forest.createSequence(
@@ -395,7 +314,6 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
     llvm::ArrayRef<decltype(FamilyBases)::value_type> BasesLeft = FamilyBases;
     while (!BasesLeft.empty()) {
       StateID NextState = BasesLeft.front().first;
-      auto &Parents = TempGSSNodes;
       Parents.clear();
       for (const auto &Base : BasesLeft) {
         if (Base.first != NextState)
@@ -403,11 +321,121 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
         Parents.push_back(Base.second);
       }
       BasesLeft = BasesLeft.drop_front(Parents.size());
-      Heads.push_back(Params.GSStack.addNode(NextState, Parsed, Parents));
+      Heads->push_back(Params.GSStack.addNode(NextState, Parsed, Parents));
     }
-    PopPending();
   }
-  assert(Sequences.empty());
+
+  // In general we split a reduce into a pop/push, so concurrently-available
+  // reductions can run in the correct order. The data structures are expensive.
+  //
+  // When only one reduction is possible at a time, we can skip this:
+  // we pop and immediately push, as an LR parser (as opposed to GLR) would.
+  // This is valid whenever there's only one concurrent PushSpec.
+  //
+  // This function handles a trivial but common subset of these cases:
+  //  - there must be no pending pushes, and only one poppable head
+  //  - the head must have only one reduction rule
+  //  - the reduction path must be a straight line (no multiple parents)
+  // (Roughly this means there's no local ambiguity, so the LR algorithm works).
+  bool popAndPushTrivial() {
+    if (!Sequences.empty() || Heads->size() != NextPopHead + 1)
+      return false;
+    const GSS::Node *Head = Heads->back();
+    llvm::Optional<RuleID> RID;
+    for (auto &A : Params.Table.getActions(Head->State, Lookahead)) {
+      if (A.kind() != LRTable::Action::Reduce)
+        continue;
+      if (RID.hasValue())
+        return false;
+      RID = A.getReduceRule();
+    }
+    if (!RID.hasValue())
+      return false;
+    const auto &Rule = Params.G.lookupRule(*RID);
+    const GSS::Node *Base = Head;
+    TempSequence.resize_for_overwrite(Rule.Size);
+    for (unsigned I = 0; I < Rule.Size; ++I) {
+      if (Base->parents().size() != 1)
+        return false;
+      TempSequence[Rule.Size - 1 - I] = Base->Payload;
+      Base = Base->parents().front();
+    }
+    const ForestNode *Parsed =
+        &Params.Forest.createSequence(Rule.Target, *RID, TempSequence);
+    StateID NextState = Params.Table.getGoToState(Base->State, Rule.Target);
+    Heads->push_back(Params.GSStack.addNode(NextState, Parsed, {Base}));
+    return true;
+  }
+};
+
+} // namespace
+
+const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
+                           SymbolID StartSymbol) {
+  GLRReduce Reduce(Params);
+  assert(isNonterminal(StartSymbol) && "Start symbol must be a nonterminal");
+  llvm::ArrayRef<ForestNode> Terminals = Params.Forest.createTerminals(Tokens);
+  auto &G = Params.G;
+  (void)G;
+  auto &GSS = Params.GSStack;
+
+  StateID StartState = Params.Table.getStartState(StartSymbol);
+  // Heads correspond to the parse of tokens [0, I), NextHeads to [0, I+1).
+  std::vector<const GSS::Node *> Heads = {GSS.addNode(/*State=*/StartState,
+                                                      /*ForestNode=*/nullptr,
+                                                      {})};
+  std::vector<const GSS::Node *> NextHeads;
+  auto MaybeGC = [&, Roots(std::vector<const GSS::Node *>{}), I(0u)]() mutable {
+    assert(NextHeads.empty() && "Running GC at the wrong time!");
+    if (++I != 20) // Run periodically to balance CPU and memory usage.
+      return;
+    I = 0;
+
+    // We need to copy the list: Roots is consumed by the GC.
+    Roots = Heads;
+    GSS.gc(std::move(Roots));
+  };
+  // Each iteration fully processes a single token.
+  for (unsigned I = 0; I < Terminals.size(); ++I) {
+    LLVM_DEBUG(llvm::dbgs() << llvm::formatv(
+                   "Next token {0} (id={1})\n",
+                   G.symbolName(Terminals[I].symbol()), Terminals[I].symbol()));
+    // Consume the token.
+    glrShift(Heads, Terminals[I], Params, NextHeads);
+    // Form nonterminals containing the token we just consumed.
+    SymbolID Lookahead = I + 1 == Terminals.size() ? tokenSymbol(tok::eof)
+                                                   : Terminals[I + 1].symbol();
+    Reduce(NextHeads, Lookahead);
+    // Prepare for the next token.
+    std::swap(Heads, NextHeads);
+    NextHeads.clear();
+    MaybeGC();
+  }
+  LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Reached eof\n"));
+
+  StateID AcceptState = Params.Table.getGoToState(StartState, StartSymbol);
+  const ForestNode *Result = nullptr;
+  for (const auto *Head : Heads) {
+    if (Head->State == AcceptState) {
+      assert(Head->Payload->symbol() == StartSymbol);
+      assert(Result == nullptr && "multiple results!");
+      Result = Head->Payload;
+    }
+  }
+  if (Result)
+    return *Result;
+  // We failed to parse the input, returning an opaque forest node for recovery.
+  //
+  // FIXME: We will need to invoke our generic error-recovery handlers when we
+  // reach EOF without reaching accept state, and involving the eof
+  // token in the above main for-loopmay be the best way to reuse the code).
+  return Params.Forest.createOpaque(StartSymbol, /*Token::Index=*/0);
+}
+
+void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
+               const ParseParams &Params) {
+  // Create a new GLRReduce each time for tests, performance doesn't matter.
+  GLRReduce{Params}(Heads, Lookahead);
 }
 
 const GSS::Node *GSS::addNode(LRTable::StateID State, const ForestNode *Symbol,
