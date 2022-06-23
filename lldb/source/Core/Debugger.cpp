@@ -1448,8 +1448,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
   assert(log_handler_sp);
 
   if (log_options == 0)
-    log_options =
-        LLDB_LOG_OPTION_PREPEND_THREAD_NAME | LLDB_LOG_OPTION_THREADSAFE;
+    log_options = LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
 
   return Log::EnableLogChannel(log_handler_sp, log_options, channel, categories,
                                error_stream);
