@@ -1,9 +1,10 @@
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
+; RUN: opt < %s -basic-aa -loop-interchange -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa -stats 2>&1 | FileCheck %s
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
 
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange

@@ -1,14 +1,15 @@
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' \
+; RUN: opt < %s -basic-aa -loop-interchange -pass-remarks-missed='loop-interchange' \
 ; RUN:   -pass-remarks-output=%t -verify-loop-info -verify-dom-info -S | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --input-file=%t %s
 
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' \
+; RUN: opt < %s -basic-aa -loop-interchange -pass-remarks-missed='loop-interchange' \
 ; RUN:   -da-disable-delinearization-checks -pass-remarks-output=%t             \
 ; RUN:   -verify-loop-info -verify-dom-info -S | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --check-prefix=DELIN --input-file=%t %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-
+target triple = "x86_64-unknown-linux-gnu"
+ 
 @A = common global [100 x [100 x i32]] zeroinitializer
 @B = common global [100 x [100 x [100 x i32]]] zeroinitializer
 @C = common global [100 x [100 x i64]] zeroinitializer

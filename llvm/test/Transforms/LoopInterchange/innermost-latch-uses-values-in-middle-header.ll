@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info \
+; RUN: opt < %s -basic-aa -loop-interchange -verify-dom-info -verify-loop-info \
 ; RUN:     -S -debug 2>&1 | FileCheck %s
 
 @a = common global i32 0, align 4
