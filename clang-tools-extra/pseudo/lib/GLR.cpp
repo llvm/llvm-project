@@ -251,9 +251,8 @@ public:
 private:
   // pop walks up the parent chain(s) for a reduction from Head by to Rule.
   // Once we reach the end, record the bases and sequences.
-  void pop(const GSS::Node *Head, RuleID RID) {
+  void pop(const GSS::Node *Head, RuleID RID, const Rule &Rule) {
     LLVM_DEBUG(llvm::dbgs() << "  Pop " << Params.G.dumpRule(RID) << "\n");
-    const auto &Rule = Params.G.lookupRule(RID);
     Family F{/*Start=*/0, /*Symbol=*/Rule.Target, /*Rule=*/RID};
     TempSequence.resize_for_overwrite(Rule.Size);
     auto DFS = [&](const GSS::Node *N, unsigned I, auto &DFS) {
@@ -286,11 +285,11 @@ private:
       // In trivial cases, we perform the complete reduce here!
       if (popAndPushTrivial())
         continue;
-      for (const auto &A :
-           Params.Table.getActions((*Heads)[NextPopHead]->State, Lookahead)) {
-        if (A.kind() != LRTable::Action::Reduce)
-          continue;
-        pop((*Heads)[NextPopHead], A.getReduceRule());
+      for (RuleID RID :
+           Params.Table.getReduceRules((*Heads)[NextPopHead]->State)) {
+        const auto &Rule = Params.G.lookupRule(RID);
+        if (Params.Table.canFollow(Rule.Target, Lookahead))
+          pop((*Heads)[NextPopHead], RID, Rule);
       }
     }
   }
@@ -367,21 +366,23 @@ private:
   //  - the head must have only one reduction rule
   //  - the reduction path must be a straight line (no multiple parents)
   // (Roughly this means there's no local ambiguity, so the LR algorithm works).
+  //
+  // Returns true if we successfully consumed the next unpopped head.
   bool popAndPushTrivial() {
     if (!Sequences.empty() || Heads->size() != NextPopHead + 1)
       return false;
     const GSS::Node *Head = Heads->back();
     llvm::Optional<RuleID> RID;
-    for (auto &A : Params.Table.getActions(Head->State, Lookahead)) {
-      if (A.kind() != LRTable::Action::Reduce)
-        continue;
-      if (RID)
+    for (RuleID R : Params.Table.getReduceRules(Head->State)) {
+      if (RID.hasValue())
         return false;
-      RID = A.getReduceRule();
+      RID = R;
     }
     if (!RID)
       return true; // no reductions available, but we've processed the head!
     const auto &Rule = Params.G.lookupRule(*RID);
+    if (!Params.Table.canFollow(Rule.Target, Lookahead))
+      return true; // reduction is not available
     const GSS::Node *Base = Head;
     TempSequence.resize_for_overwrite(Rule.Size);
     for (unsigned I = 0; I < Rule.Size; ++I) {

@@ -10,6 +10,7 @@
 #include "clang-pseudo/grammar/LRGraph.h"
 #include "clang-pseudo/grammar/LRTable.h"
 #include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/SmallSet.h"
 #include <cstdint>
 
 namespace llvm {
@@ -38,13 +39,13 @@ template <> struct DenseMapInfo<clang::pseudo::LRTable::Entry> {
 namespace clang {
 namespace pseudo {
 
-class LRTable::Builder {
-public:
-  Builder(llvm::ArrayRef<std::pair<SymbolID, StateID>> StartStates)
-      : StartStates(StartStates) {}
+struct LRTable::Builder {
+  std::vector<std::pair<SymbolID, StateID>> StartStates;
+  llvm::DenseSet<Entry> Entries;
+  llvm::DenseMap<StateID, llvm::SmallSet<RuleID, 4>> Reduces;
+  std::vector<llvm::DenseSet<SymbolID>> FollowSets;
 
-  bool insert(Entry E) { return Entries.insert(std::move(E)).second; }
-  LRTable build(const GrammarTable &GT, unsigned NumStates) && {
+  LRTable build(unsigned NumStates) && {
     // E.g. given the following parsing table with 3 states and 3 terminals:
     //
     //            a    b     c
@@ -86,16 +87,34 @@ public:
         ++SortedIndex;
     }
     Table.StartStates = std::move(StartStates);
+
+    // Compile the follow sets into a bitmap.
+    Table.FollowSets.resize(tok::NUM_TOKENS * FollowSets.size());
+    for (SymbolID NT = 0; NT < FollowSets.size(); ++NT)
+      for (SymbolID Follow : FollowSets[NT])
+        Table.FollowSets.set(NT * tok::NUM_TOKENS + symbolToToken(Follow));
+
+    // Store the reduce actions in a vector partitioned by state.
+    Table.ReduceOffset.reserve(NumStates + 1);
+    std::vector<RuleID> StateRules;
+    for (StateID S = 0; S < NumStates; ++S) {
+      Table.ReduceOffset.push_back(Table.Reduces.size());
+      auto It = Reduces.find(S);
+      if (It == Reduces.end())
+        continue;
+      Table.Reduces.insert(Table.Reduces.end(), It->second.begin(),
+                           It->second.end());
+      std::sort(Table.Reduces.begin() + Table.ReduceOffset.back(),
+                Table.Reduces.end());
+    }
+    Table.ReduceOffset.push_back(Table.Reduces.size());
+
     return Table;
   }
-
-private:
-  llvm::DenseSet<Entry> Entries;
-  std::vector<std::pair<SymbolID, StateID>> StartStates;
 };
 
-LRTable LRTable::buildForTests(const GrammarTable &GT,
-                               llvm::ArrayRef<Entry> Entries) {
+LRTable LRTable::buildForTests(const Grammar &G, llvm::ArrayRef<Entry> Entries,
+                               llvm::ArrayRef<ReduceEntry> Reduces) {
   StateID MaxState = 0;
   for (const auto &Entry : Entries) {
     MaxState = std::max(MaxState, Entry.State);
@@ -104,22 +123,26 @@ LRTable LRTable::buildForTests(const GrammarTable &GT,
     if (Entry.Act.kind() == LRTable::Action::GoTo)
       MaxState = std::max(MaxState, Entry.Act.getGoToState());
   }
-  Builder Build({});
-  for (const Entry &E : Entries)
-    Build.insert(E);
-  return std::move(Build).build(GT, /*NumStates=*/MaxState + 1);
+  Builder Build;
+  Build.Entries.insert(Entries.begin(), Entries.end());
+  for (const ReduceEntry &E : Reduces)
+    Build.Reduces[E.State].insert(E.Rule);
+  Build.FollowSets = followSets(G);
+  return std::move(Build).build(/*NumStates=*/MaxState + 1);
 }
 
 LRTable LRTable::buildSLR(const Grammar &G) {
   auto Graph = LRGraph::buildLR0(G);
-  Builder Build(Graph.startStates());
+  Builder Build;
+  Build.StartStates = Graph.startStates();
   for (const auto &T : Graph.edges()) {
     Action Act = isToken(T.Label) ? Action::shift(T.Dst) : Action::goTo(T.Dst);
-    Build.insert({T.Src, T.Label, Act});
+    Build.Entries.insert({T.Src, T.Label, Act});
   }
+  Build.FollowSets = followSets(G);
   assert(Graph.states().size() <= (1 << StateBits) &&
          "Graph states execceds the maximum limit!");
-  auto FollowSets = followSets(G);
+  // Add reduce actions.
   for (StateID SID = 0; SID < Graph.states().size(); ++SID) {
     for (const Item &I : Graph.states()[SID].Items) {
       // If we've just parsed the start symbol, this means we successfully parse
@@ -127,17 +150,13 @@ LRTable LRTable::buildSLR(const Grammar &G) {
       // LRTable (the GLR parser handles it specifically).
       if (G.lookupRule(I.rule()).Target == G.underscore() && !I.hasNext())
         continue;
-      if (!I.hasNext()) {
+      if (!I.hasNext())
         // If we've reached the end of a rule A := ..., then we can reduce if
         // the next token is in the follow set of A.
-        for (SymbolID Follow : FollowSets[G.lookupRule(I.rule()).Target]) {
-          assert(isToken(Follow));
-          Build.insert({SID, Follow, Action::reduce(I.rule())});
-        }
-      }
+        Build.Reduces[SID].insert(I.rule());
     }
   }
-  return std::move(Build).build(G.table(), Graph.states().size());
+  return std::move(Build).build(Graph.states().size());
 }
 
 } // namespace pseudo
