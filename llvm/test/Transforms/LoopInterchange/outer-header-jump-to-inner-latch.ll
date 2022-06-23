@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info -verify-loop-lcssa -S %s | FileCheck %s
+; RUN: opt -basic-aa -loop-interchange -verify-dom-info -verify-loop-info -verify-loop-lcssa -S %s | FileCheck %s
 
 @b = global [3 x [5 x [8 x i16]]] [[5 x [8 x i16]] zeroinitializer, [5 x [8 x i16]] [[8 x i16] zeroinitializer, [8 x i16] [i16 0, i16 0, i16 0, i16 6, i16 1, i16 6, i16 0, i16 0], [8 x i16] zeroinitializer, [8 x i16] zeroinitializer, [8 x i16] zeroinitializer], [5 x [8 x i16]] zeroinitializer], align 2
 @a = common global i32 0, align 4
