@@ -41,6 +41,9 @@ Breaking changes
 * Support for the legacy ``.zdebug`` format has been removed. Run
   ``objcopy --decompress-debug-sections`` in case old object files use ``.zdebug``.
   (`D126793 <https://reviews.llvm.org/D126793>`_)
+* ``--time-trace-file=<file>`` has been removed.
+  Use ``--time-trace=<file>`` instead.
+  (`D128451 <https://reviews.llvm.org/D128451>`_)
 
 COFF Improvements
 -----------------
