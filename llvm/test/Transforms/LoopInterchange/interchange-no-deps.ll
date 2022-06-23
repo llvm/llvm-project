@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-interchange -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -pass-remarks-output=%t \
+; RUN: opt < %s -loop-interchange -cache-line-size=64 -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -pass-remarks-output=%t \
 ; RUN:     -pass-remarks=loop-interchange -pass-remarks-missed=loop-interchange -stats -S 2>&1 \
 ; RUN:     | FileCheck -check-prefix=STATS %s
 ; RUN: FileCheck -input-file %t %s
@@ -32,35 +32,6 @@ for1.inc:
 exit:                                 ; preds = %for1.inc
   ret i32 0
 
-}
-
-; Only the inner loop induction variable is used for memory accesses.
-; Interchanging is not beneficial.
-; CHECK:      Name:       InterchangeNotProfitable
-; CHECK-NEXT: Function:   no_bad_order
-define i32 @no_bad_order(i32* %Arr) {
-entry:
-  br label %for1.header
-
-for1.header:                                         ; preds = %entry, %for1.inc
-  %indvars.iv19 = phi i64 [ 0, %entry ], [ %indvars.iv.next20, %for1.inc ]
-  br label %for2
-
-for2:                                        ; preds = %for1.header, %for2
-  %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next, %for2 ]
-  %arrayidx6 = getelementptr inbounds i32, i32* %Arr, i64 %indvars.iv
-  store i32 0, i32* %arrayidx6, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp ne i64 %indvars.iv.next, 1024
-  br i1 %exitcond, label %for2, label %for1.inc
-
-for1.inc:
-  %indvars.iv.next20 = add nuw nsw i64 %indvars.iv19, 1
-  %exitcond21 = icmp ne i64 %indvars.iv.next20, 1024
-  br i1 %exitcond21, label %for1.header, label %exit
-
-exit:                                 ; preds = %for1.inc
-  ret i32 0
 }
 
 ; No memory access using any induction variables, interchanging not beneficial.
