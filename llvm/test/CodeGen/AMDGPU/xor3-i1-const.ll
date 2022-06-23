@@ -5,15 +5,17 @@
 define amdgpu_ps float @xor3_i1_const(float inreg %arg1, i32 inreg %arg2) {
 ; GCN-LABEL: xor3_i1_const:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    s_mov_b32 m0, s1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x42640000
-; GCN-NEXT:    v_cmp_nlt_f32_e64 s[2:3], s0, 0
+; GCN-NEXT:    s_mov_b32 m0, s1
+; GCN-NEXT:    v_cmp_lt_f32_e64 s[2:3], s0, 0
+; GCN-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v1
 ; GCN-NEXT:    v_interp_p2_f32 v0, v0, attr0.x
-; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v1
+; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], vcc
 ; GCN-NEXT:    v_cmp_gt_f32_e64 s[0:1], 0, v0
-; GCN-NEXT:    s_or_b64 s[2:3], s[2:3], vcc
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GCN-NEXT:    s_xor_b64 s[2:3], s[2:3], s[0:1]
+; GCN-NEXT:    s_xor_b64 s[4:5], s[2:3], -1
+; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], s[4:5]
+; GCN-NEXT:    s_xor_b64 s[2:3], s[0:1], s[2:3]
+; GCN-NEXT:    s_xor_b64 s[2:3], s[2:3], -1
 ; GCN-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s[0:1]
 ; GCN-NEXT:    ; return to shader part epilog
