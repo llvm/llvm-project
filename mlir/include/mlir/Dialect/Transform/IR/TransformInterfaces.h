@@ -824,6 +824,17 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
       decltype(&OpTy::applyToOne)>::template arg_t<0>;
   ArrayRef<Operation *> targets =
       state.getPayloadOps(this->getOperation()->getOperand(0));
+  // Handle the corner case where no target is specified.
+  // This is typically the case when the matcher fails to apply and we need to
+  // propagate gracefully.
+  // In this case, we fill all results with an empty vector.
+  if (targets.empty()) {
+    SmallVector<Operation *> emptyResult;
+    for (auto r : this->getOperation()->getResults())
+      transformResults.set(r.template cast<OpResult>(), emptyResult);
+    return DiagnosedSilenceableFailure::success();
+  }
+
   SmallVector<SmallVector<Operation *>, 1> results;
   // In the multi-result case, collect the number of results each transform
   // produced.
@@ -831,14 +842,17 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
       targets, results, [&](TransformOpType specificOp) {
         return static_cast<OpTy *>(this)->applyToOne(specificOp, state);
       });
+  // Propagate the failure (definite or silencable) if any.
   if (!result.succeeded())
     return result;
-  if (results.empty())
+
+  // Legitimately no results, bail early.
+  if (results.empty() && OpTy::template hasTrait<OpTrait::ZeroResults>())
     return DiagnosedSilenceableFailure::success();
 
   // Ensure all applications return the same number of results.
   // Variadic cases are much trickier to handle in a generic fashion.
-  int64_t nRes = results[0].size();
+  int64_t nRes = results.empty() ? 0 : results[0].size();
   if (llvm::any_of(results, [&](const auto &r) {
         return static_cast<int64_t>(r.size()) != nRes;
       })) {
@@ -849,6 +863,8 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
               "generic `apply` instead of the specialized `applyToOne`";
   }
   // Ensure the number of results agrees with what the transform op expects.
+  // Unless we see empty results, in which case we just want to propagate the
+  // emptiness.
   if (this->getOperation()->getNumResults() != nRes) {
     InFlightDiagnostic diag = static_cast<OpTy *>(this)->emitError()
                               << "unexpected number of results (got " << nRes
@@ -856,10 +872,6 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
                               << this->getOperation()->getNumResults() << ")";
     return DiagnosedSilenceableFailure::definiteFailure();
   }
-
-  // If no results, bail early.
-  if (OpTy::template hasTrait<OpTrait::ZeroResults>())
-    return DiagnosedSilenceableFailure::success();
 
   // Perform transposition of M applications producing N results each into N
   // results for each of the M applications.
