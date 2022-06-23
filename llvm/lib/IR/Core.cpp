@@ -1445,6 +1445,10 @@ LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
                                   DontNullTerminate);
 }
 
+LLVMValueRef LLVMGetAggregateElement(LLVMValueRef C, unsigned Idx) {
+  return wrap(unwrap<Constant>(C)->getAggregateElement(Idx));
+}
+
 LLVMValueRef LLVMGetElementAsConstant(LLVMValueRef C, unsigned idx) {
   return wrap(unwrap<ConstantDataSequential>(C)->getElementAsConstant(idx));
 }
