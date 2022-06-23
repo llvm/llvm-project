@@ -42,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 
 using namespace llvm;
 
@@ -123,6 +124,13 @@ static cl::opt<int> HotCallSiteRelFreq(
 static cl::opt<int> CallPenalty(
     "inline-call-penalty", cl::Hidden, cl::init(25),
     cl::desc("Call penalty that is applied per callsite when inlining"));
+
+static cl::opt<size_t>
+    StackSizeThreshold("inline-max-stacksize", cl::Hidden,
+                       cl::init(std::numeric_limits<size_t>::max()),
+                       cl::ZeroOrMore,
+                       cl::desc("Do not inline functions with a stack size "
+                                "that exceeds the specified limit"));
 
 static cl::opt<bool> OptComputeFullInlineCost(
     "inline-cost-full", cl::Hidden,
@@ -2706,6 +2714,11 @@ InlineResult CallAnalyzer::analyze() {
   // is not actually duplicated, just moved).
   if (!OnlyOneCallAndLocalLinkage && ContainsNoDuplicateCall)
     return InlineResult::failure("noduplicate");
+
+  // If the callee's stack size exceeds the user-specified threshold,
+  // do not let it be inlined.
+  if (AllocatedSize > StackSizeThreshold)
+    return InlineResult::failure("stacksize");
 
   return finalizeAnalysis();
 }
