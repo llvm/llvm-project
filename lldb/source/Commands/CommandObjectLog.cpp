@@ -94,9 +94,6 @@ public:
         error =
             buffer_size.SetValueFromString(option_arg, eVarSetOperationAssign);
         break;
-      case 't':
-        log_options |= LLDB_LOG_OPTION_THREADSAFE;
-        break;
       case 'v':
         log_options |= LLDB_LOG_OPTION_VERBOSE;
         break;
