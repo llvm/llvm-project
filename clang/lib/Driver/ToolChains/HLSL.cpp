@@ -177,5 +177,7 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
                         Opts.getOption(options::OPT_dxil_validator_version),
                         DefaultValidatorVer);
   }
+  // FIXME: add validation for enable_16bit_types should be after HLSL 2018 and
+  // shader model 6.2.
   return DAL;
 }
