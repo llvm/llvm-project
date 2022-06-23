@@ -55,3 +55,27 @@ func.func @escape_attr_non_bufferizable(%m0: memref<?xf32>) {
   %0 = memref.cast %m0 {bufferization.escape = [true]} : memref<?xf32> to memref<10xf32>
   return
 }
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
+
+func.func @sparse_alloc_direct_return() -> tensor<20x40xf32, #DCSR> {
+  // expected-error @+1{{sparse tensor allocation should not escape function}}
+  %0 = bufferization.alloc_tensor() : tensor<20x40xf32, #DCSR>
+  return %0 : tensor<20x40xf32, #DCSR>
+}
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
+
+func.func private @foo(tensor<20x40xf32, #DCSR>) -> ()
+
+func.func @sparse_alloc_call() {
+  // expected-error @+1{{sparse tensor allocation should not escape function}}
+  %0 = bufferization.alloc_tensor() : tensor<20x40xf32, #DCSR>
+  call @foo(%0) : (tensor<20x40xf32, #DCSR>) -> ()
+  return
+}
+
