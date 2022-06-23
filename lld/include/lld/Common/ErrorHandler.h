@@ -134,7 +134,7 @@ private:
   // We wrap stdout and stderr so that you can pass alternative stdout/stderr as
   // arguments to lld::*::link() functions. Since lld::outs() or lld::errs() can
   // be indirectly called from multiple threads, we protect them using a mutex.
-  // In the future, we plan on supporting several concurent linker contexts,
+  // In the future, we plan on supporting several concurrent linker contexts,
   // which explains why the mutex is not a global but part of this context.
   std::mutex mu;
   llvm::raw_ostream *stdoutOS{};
