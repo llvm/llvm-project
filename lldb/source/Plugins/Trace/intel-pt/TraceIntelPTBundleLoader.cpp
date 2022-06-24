@@ -1,4 +1,4 @@
-//===-- TraceIntelPTSessionFileParser.cpp ---------------------------------===//
+//===-- TraceIntelPTBundleLoader.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TraceIntelPTSessionFileParser.h"
+#include "TraceIntelPTBundleLoader.h"
 
 #include "../common/ThreadPostMortemTrace.h"
 #include "TraceIntelPT.h"
@@ -22,14 +22,14 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
-FileSpec TraceIntelPTSessionFileParser::NormalizePath(const std::string &path) {
+FileSpec TraceIntelPTBundleLoader::NormalizePath(const std::string &path) {
   FileSpec file_spec(path);
   if (file_spec.IsRelative())
-    file_spec.PrependPathComponent(m_session_file_dir);
+    file_spec.PrependPathComponent(m_bundle_dir);
   return file_spec;
 }
 
-Error TraceIntelPTSessionFileParser::ParseModule(Target &target,
+Error TraceIntelPTBundleLoader::ParseModule(Target &target,
                                                  const JSONModule &module) {
   auto do_parse = [&]() -> Error {
     FileSpec system_file_spec(module.system_path);
@@ -63,7 +63,7 @@ Error TraceIntelPTSessionFileParser::ParseModule(Target &target,
   return Error::success();
 }
 
-Error TraceIntelPTSessionFileParser::CreateJSONError(json::Path::Root &root,
+Error TraceIntelPTBundleLoader::CreateJSONError(json::Path::Root &root,
                                                      const json::Value &value) {
   std::string err;
   raw_string_ostream os(err);
@@ -74,7 +74,7 @@ Error TraceIntelPTSessionFileParser::CreateJSONError(json::Path::Root &root,
 }
 
 ThreadPostMortemTraceSP
-TraceIntelPTSessionFileParser::ParseThread(Process &process,
+TraceIntelPTBundleLoader::ParseThread(Process &process,
                                            const JSONThread &thread) {
   lldb::tid_t tid = static_cast<lldb::tid_t>(thread.tid);
 
@@ -88,8 +88,8 @@ TraceIntelPTSessionFileParser::ParseThread(Process &process,
   return thread_sp;
 }
 
-Expected<TraceIntelPTSessionFileParser::ParsedProcess>
-TraceIntelPTSessionFileParser::ParseProcess(const JSONProcess &process) {
+Expected<TraceIntelPTBundleLoader::ParsedProcess>
+TraceIntelPTBundleLoader::ParseProcess(const JSONProcess &process) {
   TargetSP target_sp;
   Status error = m_debugger.GetTargetList().CreateTarget(
       m_debugger, /*user_exe_path*/ StringRef(), process.triple.getValueOr(""),
@@ -127,9 +127,9 @@ TraceIntelPTSessionFileParser::ParseProcess(const JSONProcess &process) {
   return parsed_process;
 }
 
-Expected<std::vector<TraceIntelPTSessionFileParser::ParsedProcess>>
-TraceIntelPTSessionFileParser::ParseSessionFile(
-    const JSONTraceSession &session) {
+Expected<std::vector<TraceIntelPTBundleLoader::ParsedProcess>>
+TraceIntelPTBundleLoader::LoadBundle(
+    const JSONTraceBundleDescription &bundle_description) {
   std::vector<ParsedProcess> parsed_processes;
 
   auto HandleError = [&](Error &&err) {
@@ -139,7 +139,7 @@ TraceIntelPTSessionFileParser::ParseSessionFile(
     return std::move(err);
   };
 
-  for (const JSONProcess &process : session.processes) {
+  for (const JSONProcess &process : bundle_description.processes) {
     if (Expected<ParsedProcess> parsed_process = ParseProcess(process))
       parsed_processes.push_back(std::move(*parsed_process));
     else
@@ -149,7 +149,7 @@ TraceIntelPTSessionFileParser::ParseSessionFile(
   return parsed_processes;
 }
 
-StringRef TraceIntelPTSessionFileParser::GetSchema() {
+StringRef TraceIntelPTBundleLoader::GetSchema() {
   static std::string schema;
   if (schema.empty()) {
     schema = R"({
@@ -218,7 +218,7 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
 
 Notes:
 
-- All paths are either absolute or relative to folder containing the session file.
+- All paths are either absolute or relative to folder containing the bundle description file.
 - "cpus" is provided if and only if processes[].threads[].iptTrace is not provided.
 - "tscPerfZeroConversion" must be provided if "cpus" is provided.
  })";
@@ -226,12 +226,12 @@ Notes:
   return schema;
 }
 
-Error TraceIntelPTSessionFileParser::AugmentThreadsFromContextSwitches(
-    JSONTraceSession &session) {
-  if (!session.cpus)
+Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
+    JSONTraceBundleDescription &bundle_description) {
+  if (!bundle_description.cpus)
     return Error::success();
 
-  if (!session.tsc_perf_zero_conversion)
+  if (!bundle_description.tsc_perf_zero_conversion)
     return createStringError(inconvertibleErrorCode(),
                              "TSC to nanos conversion values are needed when "
                              "context switch information is provided.");
@@ -239,7 +239,7 @@ Error TraceIntelPTSessionFileParser::AugmentThreadsFromContextSwitches(
   DenseMap<lldb::pid_t, JSONProcess *> indexed_processes;
   DenseMap<JSONProcess *, DenseSet<tid_t>> indexed_threads;
 
-  for (JSONProcess &process : session.processes) {
+  for (JSONProcess &process : bundle_description.processes) {
     indexed_processes[process.pid] = &process;
     for (JSONThread &thread : process.threads)
       indexed_threads[&process].insert(thread.tid);
@@ -255,13 +255,13 @@ Error TraceIntelPTSessionFileParser::AugmentThreadsFromContextSwitches(
     proc->second->threads.push_back({tid, /*ipt_trace=*/None});
   };
 
-  for (const JSONCpu &cpu : *session.cpus) {
+  for (const JSONCpu &cpu : *bundle_description.cpus) {
     Error err = Trace::OnDataFileRead(
         FileSpec(cpu.context_switch_trace),
         [&](ArrayRef<uint8_t> data) -> Error {
           Expected<std::vector<ThreadContinuousExecution>> executions =
               DecodePerfContextSwitchTrace(data, cpu.id,
-                                           *session.tsc_perf_zero_conversion);
+                                           *bundle_description.tsc_perf_zero_conversion);
           if (!executions)
             return executions.takeError();
           for (const ThreadContinuousExecution &execution : *executions)
@@ -274,8 +274,8 @@ Error TraceIntelPTSessionFileParser::AugmentThreadsFromContextSwitches(
   return Error::success();
 }
 
-Expected<TraceSP> TraceIntelPTSessionFileParser::CreateTraceIntelPTInstance(
-    JSONTraceSession &session, std::vector<ParsedProcess> &parsed_processes) {
+Expected<TraceSP> TraceIntelPTBundleLoader::CreateTraceIntelPTInstance(
+    JSONTraceBundleDescription &bundle_description, std::vector<ParsedProcess> &parsed_processes) {
   std::vector<ThreadPostMortemTraceSP> threads;
   std::vector<ProcessSP> processes;
   for (const ParsedProcess &parsed_process : parsed_processes) {
@@ -285,16 +285,16 @@ Expected<TraceSP> TraceIntelPTSessionFileParser::CreateTraceIntelPTInstance(
   }
 
   TraceSP trace_instance = TraceIntelPT::CreateInstanceForPostmortemTrace(
-      session, processes, threads);
+      bundle_description, processes, threads);
   for (const ParsedProcess &parsed_process : parsed_processes)
     parsed_process.target_sp->SetTrace(trace_instance);
 
   return trace_instance;
 }
 
-void TraceIntelPTSessionFileParser::NormalizeAllPaths(
-    JSONTraceSession &session) {
-  for (JSONProcess &process : session.processes) {
+void TraceIntelPTBundleLoader::NormalizeAllPaths(
+    JSONTraceBundleDescription &bundle_description) {
+  for (JSONProcess &process : bundle_description.processes) {
     for (JSONModule &module : process.modules) {
       module.system_path = NormalizePath(module.system_path).GetPath();
       if (module.file)
@@ -305,8 +305,8 @@ void TraceIntelPTSessionFileParser::NormalizeAllPaths(
         thread.ipt_trace = NormalizePath(*thread.ipt_trace).GetPath();
     }
   }
-  if (session.cpus) {
-    for (JSONCpu &cpu : *session.cpus) {
+  if (bundle_description.cpus) {
+    for (JSONCpu &cpu : *bundle_description.cpus) {
       cpu.context_switch_trace =
           NormalizePath(cpu.context_switch_trace).GetPath();
       cpu.ipt_trace = NormalizePath(cpu.ipt_trace).GetPath();
@@ -314,20 +314,20 @@ void TraceIntelPTSessionFileParser::NormalizeAllPaths(
   }
 }
 
-Expected<TraceSP> TraceIntelPTSessionFileParser::Parse() {
-  json::Path::Root root("traceSession");
-  JSONTraceSession session;
-  if (!fromJSON(m_trace_session_file, session, root))
-    return CreateJSONError(root, m_trace_session_file);
+Expected<TraceSP> TraceIntelPTBundleLoader::Load() {
+  json::Path::Root root("traceBundle");
+  JSONTraceBundleDescription bundle_description;
+  if (!fromJSON(m_bundle_description, bundle_description, root))
+    return CreateJSONError(root, m_bundle_description);
 
-  NormalizeAllPaths(session);
+  NormalizeAllPaths(bundle_description);
 
-  if (Error err = AugmentThreadsFromContextSwitches(session))
+  if (Error err = AugmentThreadsFromContextSwitches(bundle_description))
     return std::move(err);
 
   if (Expected<std::vector<ParsedProcess>> parsed_processes =
-          ParseSessionFile(session))
-    return CreateTraceIntelPTInstance(session, *parsed_processes);
+          LoadBundle(bundle_description))
+    return CreateTraceIntelPTInstance(bundle_description, *parsed_processes);
   else
     return parsed_processes.takeError();
 }

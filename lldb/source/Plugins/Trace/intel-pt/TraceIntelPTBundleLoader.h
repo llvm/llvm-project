@@ -1,4 +1,4 @@
-//===-- TraceIntelPTSessionFileParser.h -----------------------*- C++ //-*-===//
+//===-- TraceIntelPTBundleLoader.h ----------------------------*- C++ //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONFILEPARSER_H
-#define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONFILEPARSER_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLELOADER_H
+#define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLELOADER_H
 
 #include "../common/ThreadPostMortemTrace.h"
 #include "TraceIntelPTJSONStructs.h"
@@ -17,7 +17,7 @@ namespace trace_intel_pt {
 
 class TraceIntelPT;
 
-class TraceIntelPTSessionFileParser {
+class TraceIntelPTBundleLoader {
 public:
   /// Helper struct holding the objects created when parsing a process
   struct ParsedProcess {
@@ -28,32 +28,31 @@ public:
   /// \param[in] debugger
   ///   The debugger that will own the targets to create.
   ///
-  /// \param[in] trace_session_file
-  ///   The contents of the main trace session definition file that follows the
-  ///   schema of the intel pt trace plug-in.
+  /// \param[in] bundle_description
+  ///   The JSON description of a trace bundle that follows the schema of the intel pt trace plug-in.
   ///
-  /// \param[in] session_file_dir
-  ///   The folder where the trace session file is located.
-  TraceIntelPTSessionFileParser(Debugger &debugger,
-                                const llvm::json::Value &trace_session_file,
-                                llvm::StringRef session_file_dir)
-      : m_debugger(debugger), m_trace_session_file(trace_session_file),
-        m_session_file_dir(session_file_dir) {}
+  /// \param[in] bundle_dir
+  ///   The folder where the trace bundle is located.
+  TraceIntelPTBundleLoader(Debugger &debugger,
+                                const llvm::json::Value &bundle_description,
+                                llvm::StringRef bundle_dir)
+      : m_debugger(debugger), m_bundle_description(bundle_description),
+        m_bundle_dir(bundle_dir) {}
 
   /// \return
-  ///   The JSON schema for the session data.
+  ///   The JSON schema for the bundle description.
   static llvm::StringRef GetSchema();
 
-  /// Parse the structured data trace session and create the corresponding \a
+  /// Parse the trace bundle description and create the corresponding \a
   /// Target objects. In case of an error, no targets are created.
   ///
   /// \return
-  ///   A \a lldb::TraceSP instance with the trace session data. In case of
+  ///   A \a lldb::TraceSP instance created according to the trace bundle information. In case of
   ///   errors, return a null pointer.
-  llvm::Expected<lldb::TraceSP> Parse();
+  llvm::Expected<lldb::TraceSP> Load();
 
 private:
-  /// Resolve non-absolute paths relative to the session file folder.
+  /// Resolve non-absolute paths relative to the bundle folder.
   FileSpec NormalizePath(const std::string &path);
 
   /// Create a post-mortem thread associated with the given \p process
@@ -61,10 +60,10 @@ private:
   lldb::ThreadPostMortemTraceSP ParseThread(Process &process,
                                             const JSONThread &thread);
 
-  /// Given a session description and a list of fully parsed processes,
+  /// Given a bundle description and a list of fully parsed processes,
   /// create an actual Trace instance that "traces" these processes.
   llvm::Expected<lldb::TraceSP>
-  CreateTraceIntelPTInstance(JSONTraceSession &session,
+  CreateTraceIntelPTInstance(JSONTraceBundleDescription &bundle_description,
                              std::vector<ParsedProcess> &parsed_processes);
 
   /// Create the corresponding Threads and Process objects given the JSON
@@ -74,8 +73,7 @@ private:
   ///   The JSON process definition
   llvm::Expected<ParsedProcess> ParseProcess(const JSONProcess &process);
 
-  /// Create a moddule associated with the given \p target
-  /// using the definition from \p module.
+  /// Create a module associated with the given \p target using the definition from \p module.
   llvm::Error ParseModule(Target &target, const JSONModule &module);
 
   /// Create a user-friendly error message upon a JSON-parsing failure using the
@@ -93,30 +91,30 @@ private:
                               const llvm::json::Value &value);
 
   /// Create the corresponding Process, Thread and Module objects given this
-  /// session file.
+  /// bundle description.
   llvm::Expected<std::vector<ParsedProcess>>
-  ParseSessionFile(const JSONTraceSession &session);
+  LoadBundle(const JSONTraceBundleDescription &bundle_description);
 
-  /// When applicable, augment the list of threads in the session file by
+  /// When applicable, augment the list of threads in the trace bundle by
   /// inspecting the context switch trace. This only applies for threads of
-  /// processes already specified in this session file.
+  /// processes already specified in this bundle description.
   ///
   /// \return
   ///   An \a llvm::Error in case if failures, or \a llvm::Error::success
   ///   otherwise.
-  llvm::Error AugmentThreadsFromContextSwitches(JSONTraceSession &session);
+  llvm::Error AugmentThreadsFromContextSwitches(JSONTraceBundleDescription &bundle_description);
 
-  /// Modifiy the session file by normalizing all the paths relative to the
+  /// Modifiy the bundle description by normalizing all the paths relative to the
   /// session file directory.
-  void NormalizeAllPaths(JSONTraceSession &session);
+  void NormalizeAllPaths(JSONTraceBundleDescription &bundle_description);
 
   Debugger &m_debugger;
-  const llvm::json::Value &m_trace_session_file;
-  const std::string m_session_file_dir;
+  const llvm::json::Value &m_bundle_description;
+  const std::string m_bundle_dir;
 };
 
 } // namespace trace_intel_pt
 } // namespace lldb_private
 
 
-#endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONFILEPARSER_H
+#endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLELOADER_H
