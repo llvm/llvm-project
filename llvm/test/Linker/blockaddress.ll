@@ -1,5 +1,5 @@
-; RUN: llvm-as %s -o %t.bc
-; RUN: llvm-link %t.bc -S | FileCheck %s
+; RUN: llvm-as --opaque-pointers=0 %s -o %t.bc
+; RUN: llvm-link --opaque-pointers=0 %t.bc -S | FileCheck %s
 
 declare void @f(i8*)
 

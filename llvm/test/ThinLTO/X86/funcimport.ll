@@ -1,14 +1,14 @@
 ; Do setup work for all below tests: generate bitcode and combined index
-; RUN: opt -module-summary %s -o %t.bc
-; RUN: opt -module-summary %p/Inputs/funcimport.ll -o %t2.bc
-; RUN: llvm-lto -thinlto-action=thinlink -o %t3.bc %t.bc %t2.bc
+; RUN: opt --opaque-pointers=0 -module-summary %s -o %t.bc
+; RUN: opt --opaque-pointers=0 -module-summary %p/Inputs/funcimport.ll -o %t2.bc
+; RUN: llvm-lto --opaque-pointers=0 -thinlto-action=thinlink -o %t3.bc %t.bc %t2.bc
 
-; RUN: llvm-lto -thinlto-index-stats %t3.bc | FileCheck %s -check-prefix=STATS
+; RUN: llvm-lto --opaque-pointers=0 -thinlto-index-stats %t3.bc | FileCheck %s -check-prefix=STATS
 ; STATS: Index {{.*}} contains 24 nodes (13 functions, 3 alias, 8 globals) and 19 edges (8 refs and 11 calls)
 
 ; Ensure statics are promoted/renamed correctly from this file (all but
 ; constant variable need promotion).
-; RUN: llvm-lto -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTSTATIC
+; RUN: llvm-lto --opaque-pointers=0 -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - | llvm-dis --opaque-pointers=0 -o - | FileCheck %s --check-prefix=EXPORTSTATIC
 ; EXPORTSTATIC-DAG: @staticvar.llvm.0 = hidden global
 ; Eventually @staticconstvar can be exported as a copy and not promoted
 ; EXPORTSTATIC-DAG: @staticconstvar.llvm.0 = hidden unnamed_addr constant
@@ -21,7 +21,7 @@
 ; Also ensures that alias to a linkonce function is turned into a declaration
 ; and that the associated linkonce function is not in the output, as it is
 ; lazily linked and never referenced/materialized.
-; RUN: llvm-lto -thinlto-action=import %t2.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORTGLOB1
+; RUN: llvm-lto --opaque-pointers=0 -thinlto-action=import %t2.bc -thinlto-index=%t3.bc -o - | llvm-dis --opaque-pointers=0 -o - | FileCheck %s --check-prefix=IMPORTGLOB1
 ; IMPORTGLOB1-DAG: define available_externally void @globalfunc1
 ; IMPORTGLOB1-DAG: declare void @weakalias
 ; IMPORTGLOB1-NOT: @linkoncealias
@@ -32,15 +32,15 @@
 ; IMPORTGLOB1-NOT: declare void @globalfunc2
 
 ; Verify that the optimizer run
-; RUN: llvm-lto -thinlto-action=optimize %t2.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=OPTIMIZED
+; RUN: llvm-lto --opaque-pointers=0 -thinlto-action=optimize %t2.bc -o - | llvm-dis --opaque-pointers=0 -o - | FileCheck %s --check-prefix=OPTIMIZED
 ; OPTIMIZED: define i32 @main()
 
 ; Verify that the codegen run
-; RUN: llvm-lto -thinlto-action=codegen %t2.bc -o - | llvm-nm -o - | FileCheck %s --check-prefix=CODEGEN
+; RUN: llvm-lto --opaque-pointers=0 -thinlto-action=codegen %t2.bc -o - | llvm-nm -o - | FileCheck %s --check-prefix=CODEGEN
 ; CODEGEN: T _main
 
 ; Verify that all run together
-; RUN: llvm-lto -thinlto-action=run %t2.bc  %t.bc  -exported-symbol=_main
+; RUN: llvm-lto --opaque-pointers=0 -thinlto-action=run %t2.bc  %t.bc  -exported-symbol=_main
 ; RUN: llvm-nm -o - < %t.bc.thinlto.o | FileCheck %s --check-prefix=ALL
 ; RUN: llvm-nm -o - < %t2.bc.thinlto.o | FileCheck %s --check-prefix=ALL2
 ; ALL: T _callfuncptr

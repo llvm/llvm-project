@@ -4,10 +4,10 @@
 ;
 ; rdar://13727199
 
-; RUN: llvm-as -disable-verify < %s | \
-; RUN: llvm-dis | \
-; RUN: llvm-as -disable-verify | \
-; RUN: llvm-dis | \
+; RUN: llvm-as --opaque-pointers=0 -disable-verify < %s | \
+; RUN: llvm-dis --opaque-pointers=0 | \
+; RUN: llvm-as --opaque-pointers=0 -disable-verify | \
+; RUN: llvm-dis --opaque-pointers=0 | \
 ; RUN: FileCheck -check-prefix=CHECK-ASSEMBLES %s
 
 ; CHECK-ASSEMBLES: declare i8* @foo(i8*) [[NOBUILTIN:#[0-9]+]]

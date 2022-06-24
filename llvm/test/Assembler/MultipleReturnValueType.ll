@@ -1,5 +1,5 @@
-; RUN: llvm-as < %s
-; RUN: verify-uselistorder %s
+; RUN: llvm-as --opaque-pointers=0 < %s
+; RUN: verify-uselistorder --opaque-pointers=0 %s
 
         %struct.S_102 = type { float, float }
 

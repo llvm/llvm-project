@@ -14,8 +14,8 @@
 ;
 ; The if-then-else blocks should be in just one function.
 ; CHECK: [[FOO_DIAMOND_LABEL]]:
-; CHECK: call void [[FOO_DIAMOND:@[^(]*]](i32 %arg1, i32 %arg, i32* [[RES_VAL_ADDR]])
-; CHECK-NEXT: [[RES_VAL:%[^ ]*]] = load i32, i32* [[RES_VAL_ADDR]]
+; CHECK: call void [[FOO_DIAMOND:@[^(]*]](i32 %arg1, i32 %arg, ptr [[RES_VAL_ADDR]])
+; CHECK-NEXT: [[RES_VAL:%[^ ]*]] = load i32, ptr [[RES_VAL_ADDR]]
 ; Then it should directly jump to end.
 ; CHECK: br label %[[FOO_END_LABEL:.*$]]
 ;
@@ -61,7 +61,7 @@ ret1:
 ; CHECK: br i1 %or.cond, label %bb9, label %[[BAR_DIAMOND_LABEL:.*$]]
 ;
 ; CHECK: [[BAR_DIAMOND_LABEL]]:
-; CHECK: [[CMP:%[^ ]*]] = call i1 [[BAR_DIAMOND:@[^(]*]](i32 %arg1, i32 %arg, i32*
+; CHECK: [[CMP:%[^ ]*]] = call i1 [[BAR_DIAMOND:@[^(]*]](i32 %arg1, i32 %arg, ptr
 ; CHECK: br i1 [[CMP]], label %bb26, label %bb30
 define i32 @bar(i32 %arg, i32 %arg1) {
 bb:

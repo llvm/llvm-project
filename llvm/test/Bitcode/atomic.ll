@@ -1,5 +1,5 @@
-; RUN: llvm-as %s -o - | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder < %s
+; RUN: llvm-as --opaque-pointers=0 %s -o - | llvm-dis --opaque-pointers=0 | FileCheck %s
+; RUN: verify-uselistorder --opaque-pointers=0 < %s
 
 define void @test_cmpxchg(i32* %addr, i32 %desired, i32 %new) {
   cmpxchg i32* %addr, i32 %desired, i32 %new seq_cst seq_cst

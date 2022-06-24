@@ -1,4 +1,4 @@
-; RUN:  llvm-dis < %s.bc| FileCheck %s
+; RUN: llvm-dis --opaque-pointers=0  < %s.bc| FileCheck %s
 ; RUN:  verify-uselistorder < %s.bc
 
 ; The 2-field form @llvm.global_ctors will be upgraded when reading bitcode.

@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

@@ -11,7 +11,7 @@
 ; CHECK:         %p_escaping = select i1 undef, i32 undef, i32 undef
 ;
 ; CHECK-LABEL: polly.stmt.polly.merge_new_and_old.exit:
-; CHECK:         store i32 %p_escaping, i32* %escaping.s2a
+; CHECK:         store i32 %p_escaping, ptr %escaping.s2a
 
 define i32 @func() {
 entry:

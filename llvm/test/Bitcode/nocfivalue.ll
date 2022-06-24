@@ -1,5 +1,5 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder %s
+; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck %s
+; RUN: verify-uselistorder --opaque-pointers=0 %s
 
 ; CHECK: @a = global [4 x void ()*] [void ()* no_cfi @f1, void ()* @f1, void ()* @f2, void ()* no_cfi @f2]
 @a = global [4 x void ()*] [void ()* no_cfi @f1, void ()* @f1, void ()* @f2, void ()* no_cfi @f2]

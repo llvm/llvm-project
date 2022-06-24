@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers -emit-llvm-bc -disable-llvm-passes -o %t.bc %s
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
+// RUN: llvm-dis --opaque-pointers=0 %t.bc -o - | FileCheck %s
 
 // Test case for PR45426. Make sure we do not crash while writing bitcode
 // containing a simplify-able fneg constant expression. Check that the created

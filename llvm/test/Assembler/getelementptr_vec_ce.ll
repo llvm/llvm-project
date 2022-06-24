@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck %s
 
 @G = global [4 x i32] zeroinitializer
 

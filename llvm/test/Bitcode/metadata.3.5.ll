@@ -1,4 +1,4 @@
-; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: llvm-dis --opaque-pointers=0 < %s.bc | FileCheck %s
 
 ; Check that metadata encoded in 3.5 is correctly understood going forward.
 ;

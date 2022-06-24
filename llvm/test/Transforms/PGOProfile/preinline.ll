@@ -5,8 +5,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @foo(i32 %i) {
 entry:
-; GEN: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_foo
-; GEN-NOT: %pgocount.i = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc__stdin__bar
+; GEN: %pgocount = load i64, ptr @__profc_foo
+; GEN-NOT: %pgocount.i = load i64, ptr @__profc__stdin__bar
   %call = call i32 @bar()
   %add = add nsw i32 %i, %call
   ret i32 %add

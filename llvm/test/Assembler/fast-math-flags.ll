@@ -1,6 +1,6 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck -strict-whitespace %s
-; RUN: opt -S < %s | FileCheck -strict-whitespace %s
-; RUN: verify-uselistorder %s
+; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck -strict-whitespace %s
+; RUN: opt --opaque-pointers=0 -S < %s | FileCheck -strict-whitespace %s
+; RUN: verify-uselistorder --opaque-pointers=0 %s
 
 @addr   = external global i64
 @select = external global i1

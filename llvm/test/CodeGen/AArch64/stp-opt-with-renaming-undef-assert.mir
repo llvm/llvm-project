@@ -15,8 +15,8 @@
 # CHECK-LABLE: test
 # CHECK: bb.0:
 # CHECK-NEXT: liveins: $x0, $x17, $x18
-# CHECK: renamable $q13_q14_q15 = LD3Threev16b undef renamable $x17 :: (load (s384) from `<16 x i8>* undef`, align 64)
-# CHECK-NEXT: renamable $q23_q24_q25 = LD3Threev16b undef renamable $x18 :: (load (s384) from `<16 x i8>* undef`, align 64)
+# CHECK: renamable $q13_q14_q15 = LD3Threev16b undef renamable $x17 :: (load (s384) from `ptr undef`, align 64)
+# CHECK-NEXT: renamable $q23_q24_q25 = LD3Threev16b undef renamable $x18 :: (load (s384) from `ptr undef`, align 64)
 # CHECK-NEXT: $q16 = EXTv16i8 renamable $q23, renamable $q23, 8
 # CHECK-NEXT: renamable $q20 = EXTv16i8 renamable $q14, renamable $q14, 8
 # CHECK-NEXT: STRQui killed renamable $q20, $sp, 4 :: (store (s128))

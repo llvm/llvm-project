@@ -1,7 +1,7 @@
 ; Test that nullary clang.arc.attachedcall operand bundles are "upgraded".
 
-; RUN: llvm-dis %s.bc -o - | FileCheck %s
-; RUN: verify-uselistorder %s.bc
+; RUN: llvm-dis --opaque-pointers=0 %s.bc -o - | FileCheck %s
+; RUN: verify-uselistorder --opaque-pointers=0 %s.bc
 
 define i8* @invalid() {
 ; CHECK-LABEL: define i8* @invalid() {

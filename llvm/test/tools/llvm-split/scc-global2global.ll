@@ -1,9 +1,9 @@
 ; All of the functions and globals in this module must end up
 ; in the same partition.
 
-; RUN: llvm-split -j=2 -preserve-locals -o %t %s
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK1 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK0 %s
+; RUN: llvm-split --opaque-pointers=0 -j=2 -preserve-locals -o %t %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t0 | FileCheck --check-prefix=CHECK1 %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t1 | FileCheck --check-prefix=CHECK0 %s
 
 ; CHECK0: declare dso_local %struct.anon* @local0
 ; CHECK0: declare dso_local i8** @local1

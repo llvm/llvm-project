@@ -1,10 +1,10 @@
 ; Test that blockaddress target is in the same partition.
-; RUN: llvm-split -j5 -o %t %s
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1234 %s
-; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK1234 %s
-; RUN: llvm-dis -o - %t3 | FileCheck --check-prefix=CHECK1234 %s
-; RUN: llvm-dis -o - %t4 | FileCheck --check-prefix=CHECK1234 %s
+; RUN: llvm-split --opaque-pointers=0 -j5 -o %t %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t0 | FileCheck --check-prefix=CHECK0 %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t1 | FileCheck --check-prefix=CHECK1234 %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t2 | FileCheck --check-prefix=CHECK1234 %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t3 | FileCheck --check-prefix=CHECK1234 %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t4 | FileCheck --check-prefix=CHECK1234 %s
 
 ; CHECK0:    @xxx = global [2 x i8*] [i8* blockaddress(@f, %exit), i8* blockaddress(@g, %exit)]
 ; CHECK1234: @xxx = external global [2 x i8*]

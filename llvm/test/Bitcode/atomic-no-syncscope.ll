@@ -1,4 +1,4 @@
-; RUN: llvm-dis -o - %s.bc | FileCheck %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %s.bc | FileCheck %s
 
 ; Backwards compatibility test: make sure we can process bitcode without
 ; synchronization scope names encoded in it.

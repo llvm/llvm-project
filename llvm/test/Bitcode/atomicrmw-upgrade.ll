@@ -1,5 +1,5 @@
-; RUN: llvm-dis < %s.bc | FileCheck %s
-; RUN: verify-uselistorder < %s.bc
+; RUN: llvm-dis --opaque-pointers=0 < %s.bc | FileCheck %s
+; RUN: verify-uselistorder --opaque-pointers=0 < %s.bc
 
 ; atomicrmw-upgrade.ll.bc was produced by running a version of llvm-as from just
 ; before the IR change on this file.

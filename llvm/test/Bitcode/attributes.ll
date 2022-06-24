@@ -1,6 +1,6 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s --check-prefixes=CHECK,CHECK-TYPED
-; RUN: llvm-as -opaque-pointers < %s | llvm-dis -opaque-pointers | FileCheck %s --check-prefixes=CHECK,CHECK-OPAQUE
-; RUN: verify-uselistorder < %s
+; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck %s --check-prefixes=CHECK,CHECK-TYPED
+; RUN: llvm-as --opaque-pointers=0 -opaque-pointers < %s | llvm-dis --opaque-pointers=0 -opaque-pointers | FileCheck %s --check-prefixes=CHECK,CHECK-OPAQUE
+; RUN: verify-uselistorder --opaque-pointers=0 < %s
 ; PR12696
 
 define void @f1(i8 zeroext %0)

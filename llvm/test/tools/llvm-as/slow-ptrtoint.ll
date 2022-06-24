@@ -1,4 +1,4 @@
-; RUN: llvm-as %s -o - | llvm-dis -o - | FileCheck %s
+; RUN: llvm-as --opaque-pointers=0 %s -o - | llvm-dis --opaque-pointers=0 -o - | FileCheck %s
 
 %0 = type { %1, %1, %1, %1, %1, %1, %1, %1 }
 %1 = type { %2, %2, %2, %2, %2, %2, %2, %2 }

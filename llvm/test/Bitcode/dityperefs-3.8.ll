@@ -1,5 +1,5 @@
-; RUN: llvm-dis < %s.bc | FileCheck %s
-; RUN: verify-uselistorder %s.bc
+; RUN: llvm-dis --opaque-pointers=0 < %s.bc | FileCheck %s
+; RUN: verify-uselistorder --opaque-pointers=0 %s.bc
 
 ; Establish a stable order.
 !named = !{!0, !1, !2, !3, !4, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16}

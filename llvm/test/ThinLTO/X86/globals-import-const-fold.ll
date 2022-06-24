@@ -18,6 +18,6 @@ target triple = "x86_64-pc-linux-gnu"
 @baz = external local_unnamed_addr constant i32, align 4
 
 define i32 @main() local_unnamed_addr {
-  %1 = load i32, i32* @baz, align 4
+  %1 = load i32, ptr @baz, align 4
   ret i32 %1
 }

@@ -1,4 +1,4 @@
-; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: llvm-dis --opaque-pointers=0 < %s.bc | FileCheck %s
 
 define void @f2(i32* %x, i32 %y.orig, i32 %z) {
 entry:

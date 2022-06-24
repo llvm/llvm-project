@@ -1,5 +1,5 @@
-; RUN: llvm-link %s %p/DbgDeclare2.ll -o %t.bc
-; RUN: llvm-dis < %t.bc | FileCheck %s
+; RUN: llvm-link --opaque-pointers=0 %s %p/DbgDeclare2.ll -o %t.bc
+; RUN: llvm-dis --opaque-pointers=0 < %t.bc | FileCheck %s
 ; Test if metadata in dbg.declare is mapped properly or not.
 
 ; rdar://13089880

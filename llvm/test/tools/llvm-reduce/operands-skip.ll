@@ -1,11 +1,11 @@
-; RUN: llvm-reduce %s -o %t --delta-passes=operands-skip --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
+; RUN: llvm-reduce --opaque-pointers=1 %s -o %t --delta-passes=operands-skip --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
 ; RUN: FileCheck %s --input-file %t --check-prefixes=REDUCED
 
-; INTERESTING: store i32 43, ptr {{(%imm|%indirect)}}, align 4
-; REDUCED:     store i32 43, ptr %imm, align 4
+; RUN: llvm-reduce --opaque-pointers=1 -j 2 %s -o %t.1 --delta-passes=operands-skip --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
+; RUN: FileCheck %s --input-file %t.1 --check-prefixes=REDUCED
 
-; INTERESTING: store i32 44, ptr {{(%imm|%indirect|%phi)}}, align 4
-; REDUCED:     store i32 44, ptr %phi, align 4
+; RUN: llvm-reduce --opaque-pointers=1 -j 4 %s -o %t.2 --delta-passes=operands-skip --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
+; RUN: FileCheck %s --input-file %t.2 --check-prefixes=REDUCED
 
 ; INTERESTING: store i32 45, ptr {{(%imm|%indirect|%phi|%val)}}, align 4
 ; REDUCED:     store i32 45, ptr %val, align 4

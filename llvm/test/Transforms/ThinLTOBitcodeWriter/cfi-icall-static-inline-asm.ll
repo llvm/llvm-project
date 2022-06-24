@@ -1,5 +1,5 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o - %s | llvm-modextract -b -n 0 -o - | llvm-dis | FileCheck %s
+; RUN: opt --opaque-pointers=0 -thinlto-bc -thinlto-split-lto-unit -o - %s | llvm-modextract -b -n 0 -o - | llvm-dis --opaque-pointers=0 | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

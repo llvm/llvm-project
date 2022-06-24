@@ -1,6 +1,6 @@
-; RUN: llvm-as %s -o %t1.bc
-; RUN: llvm-as %p/Inputs/remangle_intrinsics_tbaa.ll -o %t2.bc
-; RUN: llvm-link -disable-lazy-loading %t2.bc %t1.bc -S | FileCheck %s
+; RUN: llvm-as --opaque-pointers=0 %s -o %t1.bc
+; RUN: llvm-as --opaque-pointers=0 %p/Inputs/remangle_intrinsics_tbaa.ll -o %t2.bc
+; RUN: llvm-link --opaque-pointers=0 -disable-lazy-loading %t2.bc %t1.bc -S | FileCheck %s
 
 ; Verify that we correctly rename the intrinsic and don't crash
 ; CHECK: @llvm.masked.store.v4p0s_some_named_struct.0s.p0v4p0s_some_named_struct.0s

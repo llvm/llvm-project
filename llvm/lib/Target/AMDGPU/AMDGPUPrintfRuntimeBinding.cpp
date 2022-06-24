@@ -62,7 +62,7 @@ private:
   void getConversionSpecifiers(SmallVectorImpl<char> &OpConvSpecifiers,
                                StringRef fmt, size_t num_ops) const;
 
-  bool shouldPrintAsStr(char Specifier, Type *OpType) const;
+  bool shouldPrintAsStr(char Specifier, Value *Op) const;
   bool lowerPrintfForGpu(Module &M);
 
   Value *simplify(Instruction *I, const TargetLibraryInfo *TLI,
@@ -132,17 +132,31 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::shouldPrintAsStr(char Specifier,
-                                                      Type *OpType) const {
+                                                      Value *Op) const {
   if (Specifier != 's')
     return false;
+  Type *OpType = Op->getType();
   const PointerType *PT = dyn_cast<PointerType>(OpType);
   if (!PT || PT->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
     return false;
-  Type *ElemType = PT->getContainedType(0);
-  if (ElemType->getTypeID() != Type::IntegerTyID)
-    return false;
-  IntegerType *ElemIType = cast<IntegerType>(ElemType);
-  return ElemIType->getBitWidth() == 8;
+
+  // String literals are usually globals with a [N x i8] initializer.
+  if (auto *GV = dyn_cast<GlobalVariable>(Op)) {
+    if (!GV->hasInitializer())
+      return false;
+
+    Type *InitType = GV->getInitializer()->getType();
+    if (!InitType->isArrayTy())
+      return false;
+
+    if (!cast<ArrayType>(InitType)->getElementType()->isIntegerTy(8))
+      return false;
+
+    return true;
+  }
+
+  // TODO: handle more cases?
+  return false;
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
@@ -177,10 +191,9 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     }
 
     ConstantExpr *ConstExpr = dyn_cast<ConstantExpr>(Op);
+    GlobalVariable *GVar = !Ctx.supportsTypedPointers() ? dyn_cast<GlobalVariable>(Op) : ConstExpr ? dyn_cast<GlobalVariable>(ConstExpr->getOperand(0)) : nullptr;
 
-    if (ConstExpr) {
-      GlobalVariable *GVar = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
-
+    if (GVar) {
       StringRef Str("unknown");
       if (GVar && GVar->hasInitializer()) {
         auto *Init = GVar->getInitializer();
@@ -246,29 +259,25 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
               ArgSize = 4;
           }
         }
-        if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
-          if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
-            auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
-            if (GV && GV->hasInitializer()) {
-              Constant *Init = GV->getInitializer();
-              bool IsZeroValue = Init->isZeroValue();
-              auto *CA = dyn_cast<ConstantDataArray>(Init);
-              if (IsZeroValue || (CA && CA->isString())) {
-                size_t SizeStr =
-                    IsZeroValue ? 1 : (strlen(CA->getAsCString().data()) + 1);
-                size_t Rem = SizeStr % DWORD_ALIGN;
-                size_t NSizeStr = 0;
-                LLVM_DEBUG(dbgs() << "Printf string original size = " << SizeStr
-                                  << '\n');
-                if (Rem) {
-                  NSizeStr = SizeStr + (DWORD_ALIGN - Rem);
-                } else {
-                  NSizeStr = SizeStr;
-                }
-                ArgSize = NSizeStr;
+        if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], Arg)) {
+          auto *GV = dyn_cast<GlobalVariable>(Arg);
+          if (GV && GV->hasInitializer()) {
+            Constant *Init = GV->getInitializer();
+            bool IsZeroValue = Init->isZeroValue();
+            auto *CA = dyn_cast<ConstantDataArray>(Init);
+            if (IsZeroValue || (CA && CA->isString())) {
+              size_t SizeStr =
+                  IsZeroValue ? 1 : (strlen(CA->getAsCString().data()) + 1);
+              size_t Rem = SizeStr % DWORD_ALIGN;
+              size_t NSizeStr = 0;
+              LLVM_DEBUG(dbgs() << "Printf string original size = " << SizeStr
+                                << '\n');
+              if (Rem) {
+                NSizeStr = SizeStr + (DWORD_ALIGN - Rem);
+              } else {
+                NSizeStr = SizeStr;
               }
-            } else {
-              ArgSize = sizeof(NonLiteralStr);
+              ArgSize = NSizeStr;
             }
           } else {
             ArgSize = sizeof(NonLiteralStr);
@@ -417,17 +426,15 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           Arg = new BitCastInst(Arg, IType, "PrintArgFP", Brnch);
           WhatToStore.push_back(Arg);
         } else if (ArgType->getTypeID() == Type::PointerTyID) {
-          if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
+          if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], Arg)) {
             const char *S = NonLiteralStr;
-            if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
-              auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
-              if (GV && GV->hasInitializer()) {
-                Constant *Init = GV->getInitializer();
-                bool IsZeroValue = Init->isZeroValue();
-                auto *CA = dyn_cast<ConstantDataArray>(Init);
-                if (IsZeroValue || (CA && CA->isString())) {
-                  S = IsZeroValue ? "" : CA->getAsCString().data();
-                }
+            auto *GV = dyn_cast<GlobalVariable>(Arg);
+            if (GV && GV->hasInitializer()) {
+              Constant *Init = GV->getInitializer();
+              bool IsZeroValue = Init->isZeroValue();
+              auto *CA = dyn_cast<ConstantDataArray>(Init);
+              if (IsZeroValue || (CA && CA->isString())) {
+                S = IsZeroValue ? "" : CA->getAsCString().data();
               }
             }
             size_t SizeStr = strlen(S) + 1;

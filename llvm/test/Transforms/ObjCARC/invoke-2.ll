@@ -1,4 +1,4 @@
-; RUN: opt -mtriple x86_64-unknown-windows-msvc -objc-arc -o - %s | llvm-dis -o - - | FileCheck %s
+; RUN: opt --opaque-pointers=0 -mtriple x86_64-unknown-windows-msvc -objc-arc -o - %s | llvm-dis --opaque-pointers=0 -o - - | FileCheck %s
 
 target triple = "x86_64-unknown-windows-msvc"
 

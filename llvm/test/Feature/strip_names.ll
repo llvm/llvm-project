@@ -1,5 +1,5 @@
-; RUN: opt < %s -S | FileCheck %s
-; RUN: opt < %s  | opt -S -discard-value-names | FileCheck --check-prefix=NONAME %s
+; RUN: opt --opaque-pointers=0 < %s -S | FileCheck %s
+; RUN: opt --opaque-pointers=0 < %s  | opt --opaque-pointers=0 -S -discard-value-names | FileCheck --check-prefix=NONAME %s
 
 
 ; CHECK: @GlobalValueName

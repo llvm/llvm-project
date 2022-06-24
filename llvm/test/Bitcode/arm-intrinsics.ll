@@ -1,4 +1,4 @@
-; RUN: llvm-dis < %S/arm-intrinsics.bc | FileCheck %s
+; RUN: llvm-dis --opaque-pointers=0 < %S/arm-intrinsics.bc | FileCheck %s
 
 define void @f(i32* %p) {
 ; CHECK: call i32 @llvm.arm.ldrex.p0i32(i32* elementtype(i32)

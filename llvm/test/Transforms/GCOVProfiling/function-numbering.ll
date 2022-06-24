@@ -22,43 +22,43 @@ target triple = "x86_64-apple-macosx10.10.0"
 ;
 ; GCDA:       [[FILE_LOOP_HEADER]]:
 ; GCDA-NEXT:    %[[IV:.*]] = phi i32 [ 0, %entry ], [ %[[NEXT_IV:.*]], %[[FILE_LOOP_LATCH:.*]] ]
-; GCDA-NEXT:    %[[FILE_INFO:.*]] = getelementptr inbounds {{.*}}, {{.*}}* @__llvm_internal_gcov_emit_file_info, i32 0, i32 %[[IV]]
-; GCDA-NEXT:    %[[START_FILE_ARGS:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[FILE_INFO]], i32 0, i32 0
-; GCDA-NEXT:    %[[START_FILE_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[START_FILE_ARGS]], i32 0, i32 0
-; GCDA-NEXT:    %[[START_FILE_ARG_0:.*]] = load i8*, i8** %[[START_FILE_ARG_0_PTR]]
-; GCDA-NEXT:    %[[START_FILE_ARG_1_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[START_FILE_ARGS]], i32 0, i32 1
-; GCDA-NEXT:    %[[START_FILE_ARG_1:.*]] = load i32, i32* %[[START_FILE_ARG_1_PTR]]
-; GCDA-NEXT:    %[[START_FILE_ARG_2_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[START_FILE_ARGS]], i32 0, i32 2
-; GCDA-NEXT:    %[[START_FILE_ARG_2:.*]] = load i32, i32* %[[START_FILE_ARG_2_PTR]]
-; GCDA-NEXT:    call void @llvm_gcda_start_file(i8* %[[START_FILE_ARG_0]], i32 %[[START_FILE_ARG_1]], i32 %[[START_FILE_ARG_2]])
-; GCDA-NEXT:    %[[NUM_COUNTERS_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[FILE_INFO]], i32 0, i32 1
-; GCDA-NEXT:    %[[NUM_COUNTERS:.*]] = load i32, i32* %[[NUM_COUNTERS_PTR]]
-; GCDA-NEXT:    %[[EMIT_FUN_ARGS_ARRAY_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[FILE_INFO]], i32 0, i32 2
-; GCDA-NEXT:    %[[EMIT_FUN_ARGS_ARRAY:.*]] = load {{.*}}*, {{.*}}** %[[EMIT_FUN_ARGS_ARRAY_PTR]]
-; GCDA-NEXT:    %[[EMIT_ARCS_ARGS_ARRAY_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[FILE_INFO]], i32 0, i32 3
-; GCDA-NEXT:    %[[EMIT_ARCS_ARGS_ARRAY:.*]] = load {{.*}}*, {{.*}}** %[[EMIT_ARCS_ARGS_ARRAY_PTR]]
+; GCDA-NEXT:    %[[FILE_INFO:.*]] = getelementptr inbounds {{.*}}, ptr @__llvm_internal_gcov_emit_file_info, i32 0, i32 %[[IV]]
+; GCDA-NEXT:    %[[START_FILE_ARGS:.*]] = getelementptr inbounds {{.*}}, ptr %[[FILE_INFO]], i32 0, i32 0
+; GCDA-NEXT:    %[[START_FILE_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[START_FILE_ARGS]], i32 0, i32 0
+; GCDA-NEXT:    %[[START_FILE_ARG_0:.*]] = load ptr, ptr %[[START_FILE_ARG_0_PTR]]
+; GCDA-NEXT:    %[[START_FILE_ARG_1_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[START_FILE_ARGS]], i32 0, i32 1
+; GCDA-NEXT:    %[[START_FILE_ARG_1:.*]] = load i32, ptr %[[START_FILE_ARG_1_PTR]]
+; GCDA-NEXT:    %[[START_FILE_ARG_2_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[START_FILE_ARGS]], i32 0, i32 2
+; GCDA-NEXT:    %[[START_FILE_ARG_2:.*]] = load i32, ptr %[[START_FILE_ARG_2_PTR]]
+; GCDA-NEXT:    call void @llvm_gcda_start_file(ptr %[[START_FILE_ARG_0]], i32 %[[START_FILE_ARG_1]], i32 %[[START_FILE_ARG_2]])
+; GCDA-NEXT:    %[[NUM_COUNTERS_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[FILE_INFO]], i32 0, i32 1
+; GCDA-NEXT:    %[[NUM_COUNTERS:.*]] = load i32, ptr %[[NUM_COUNTERS_PTR]]
+; GCDA-NEXT:    %[[EMIT_FUN_ARGS_ARRAY_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[FILE_INFO]], i32 0, i32 2
+; GCDA-NEXT:    %[[EMIT_FUN_ARGS_ARRAY:.*]] = load ptr, ptr %[[EMIT_FUN_ARGS_ARRAY_PTR]]
+; GCDA-NEXT:    %[[EMIT_ARCS_ARGS_ARRAY_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[FILE_INFO]], i32 0, i32 3
+; GCDA-NEXT:    %[[EMIT_ARCS_ARGS_ARRAY:.*]] = load ptr, ptr %[[EMIT_ARCS_ARGS_ARRAY_PTR]]
 ; GCDA-NEXT:    %[[ENTER_COUNTER_LOOP_COND:.*]] = icmp slt i32 0, %[[NUM_COUNTERS]]
 ; GCDA-NEXT:    br i1 %[[ENTER_COUNTER_LOOP_COND]], label %[[COUNTER_LOOP:.*]], label %[[FILE_LOOP_LATCH]]
 ;
 ; GCDA:       [[COUNTER_LOOP]]:
 ; GCDA-NEXT:    %[[JV:.*]] = phi i32 [ 0, %[[FILE_LOOP_HEADER]] ], [ %[[NEXT_JV:.*]], %[[COUNTER_LOOP]] ]
-; GCDA-NEXT:    %[[EMIT_FUN_ARGS:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_FUN_ARGS_ARRAY]], i32 %[[JV]]
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_FUN_ARGS]], i32 0, i32 0
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_0:.*]] = load i32, i32* %[[EMIT_FUN_ARG_0_PTR]]
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_1_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_FUN_ARGS]], i32 0, i32 1
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_1:.*]] = load i32, i32* %[[EMIT_FUN_ARG_1_PTR]]
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_2_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_FUN_ARGS]], i32 0, i32 2
-; GCDA-NEXT:    %[[EMIT_FUN_ARG_2:.*]] = load i32, i32* %[[EMIT_FUN_ARG_2_PTR]]
+; GCDA-NEXT:    %[[EMIT_FUN_ARGS:.*]] = getelementptr inbounds {{.*}}, ptr %[[EMIT_FUN_ARGS_ARRAY]], i32 %[[JV]]
+; GCDA-NEXT:    %[[EMIT_FUN_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[EMIT_FUN_ARGS]], i32 0, i32 0
+; GCDA-NEXT:    %[[EMIT_FUN_ARG_0:.*]] = load i32, ptr %[[EMIT_FUN_ARG_0_PTR]]
+; GCDA-NEXT:    %[[EMIT_FUN_ARG_1_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[EMIT_FUN_ARGS]], i32 0, i32 1
+; GCDA-NEXT:    %[[EMIT_FUN_ARG_1:.*]] = load i32, ptr %[[EMIT_FUN_ARG_1_PTR]]
+; GCDA-NEXT:    %[[EMIT_FUN_ARG_2_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[EMIT_FUN_ARGS]], i32 0, i32 2
+; GCDA-NEXT:    %[[EMIT_FUN_ARG_2:.*]] = load i32, ptr %[[EMIT_FUN_ARG_2_PTR]]
 ; GCDA-NEXT:    call void @llvm_gcda_emit_function(i32 %[[EMIT_FUN_ARG_0]],
 ; GCDA-SAME:                                       i32 %[[EMIT_FUN_ARG_1]],
 ; GCDA-SAME:                                       i32 %[[EMIT_FUN_ARG_2]])
-; GCDA-NEXT:    %[[EMIT_ARCS_ARGS:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_ARCS_ARGS_ARRAY]], i32 %[[JV]]
-; GCDA-NEXT:    %[[EMIT_ARCS_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_ARCS_ARGS]], i32 0, i32 0
-; GCDA-NEXT:    %[[EMIT_ARCS_ARG_0:.*]] = load i32, i32* %[[EMIT_ARCS_ARG_0_PTR]]
-; GCDA-NEXT:    %[[EMIT_ARCS_ARG_1_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[EMIT_ARCS_ARGS]], i32 0, i32 1
-; GCDA-NEXT:    %[[EMIT_ARCS_ARG_1:.*]] = load i64*, i64** %[[EMIT_ARCS_ARG_1_PTR]]
+; GCDA-NEXT:    %[[EMIT_ARCS_ARGS:.*]] = getelementptr inbounds {{.*}}, ptr %[[EMIT_ARCS_ARGS_ARRAY]], i32 %[[JV]]
+; GCDA-NEXT:    %[[EMIT_ARCS_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[EMIT_ARCS_ARGS]], i32 0, i32 0
+; GCDA-NEXT:    %[[EMIT_ARCS_ARG_0:.*]] = load i32, ptr %[[EMIT_ARCS_ARG_0_PTR]]
+; GCDA-NEXT:    %[[EMIT_ARCS_ARG_1_PTR:.*]] = getelementptr inbounds {{.*}}, ptr %[[EMIT_ARCS_ARGS]], i32 0, i32 1
+; GCDA-NEXT:    %[[EMIT_ARCS_ARG_1:.*]] = load ptr, ptr %[[EMIT_ARCS_ARG_1_PTR]]
 ; GCDA-NEXT:    call void @llvm_gcda_emit_arcs(i32 %[[EMIT_ARCS_ARG_0]],
-; GCDA-SAME:                                   i64* %[[EMIT_ARCS_ARG_1]])
+; GCDA-SAME:                                   ptr %[[EMIT_ARCS_ARG_1]])
 ; GCDA-NEXT:    %[[NEXT_JV]] = add i32 %[[JV]], 1
 ; GCDA-NEXT:    %[[COUNTER_LOOP_COND:.*]] = icmp slt i32 %[[NEXT_JV]], %[[NUM_COUNTERS]]
 ; GCDA-NEXT:    br i1 %[[COUNTER_LOOP_COND]], label %[[COUNTER_LOOP]], label %[[FILE_LOOP_LATCH]]

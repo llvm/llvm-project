@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck %s
 
 ; Tests parsing for the dso_local keyword as well as the serialization/
 ; deserialization of the dso_local value on GlobalValues.

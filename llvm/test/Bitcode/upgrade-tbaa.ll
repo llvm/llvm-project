@@ -1,5 +1,5 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder < %s
+; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck %s
+; RUN: verify-uselistorder --opaque-pointers=0 < %s
 
 ; Function Attrs: nounwind
 define void @_Z4testPiPf(i32* nocapture %pI, float* nocapture %pF) #0 {

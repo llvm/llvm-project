@@ -1,4 +1,4 @@
-; RUN: opt -S < %s.bc | FileCheck %s
+; RUN: opt --opaque-pointers=0 -S < %s.bc | FileCheck %s
 
 %struct.s = type { i32, i32 }
 

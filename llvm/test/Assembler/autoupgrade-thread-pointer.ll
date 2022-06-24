@@ -1,5 +1,5 @@
 ; Test autoupgrade of arch-specific thread pointer intrinsics
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 | FileCheck %s
 
 declare i8* @llvm.aarch64.thread.pointer()
 declare i8* @llvm.arm.thread.pointer()

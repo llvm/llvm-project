@@ -1,5 +1,5 @@
-; RUN: llvm-as < %s | llvm-dis > %t1.ll
-; RUN: llvm-as %t1.ll -o - | llvm-dis > %t2.ll
+; RUN: llvm-as --opaque-pointers=0 < %s | llvm-dis --opaque-pointers=0 > %t1.ll
+; RUN: llvm-as --opaque-pointers=0 %t1.ll -o - | llvm-dis --opaque-pointers=0 > %t2.ll
 ; RUN: diff %t1.ll %t2.ll
 ; RUN: FileCheck %s < %t1.ll
 

@@ -1,5 +1,5 @@
-; RUN: opt < %s | opt -S | FileCheck %s
-; RUN: verify-uselistorder %s
+; RUN: opt --opaque-pointers=0 < %s | opt --opaque-pointers=0 -S | FileCheck %s
+; RUN: verify-uselistorder --opaque-pointers=0 %s
 ; Basic smoke test for atomic operations.
 
 define void @f(i32* %x) {

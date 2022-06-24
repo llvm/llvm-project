@@ -1,6 +1,6 @@
-; RUN: llvm-split -o %t %s
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
+; RUN: llvm-split --opaque-pointers=0 -o %t %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t0 | FileCheck --check-prefix=CHECK0 %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t1 | FileCheck --check-prefix=CHECK1 %s
 
 ; CHECK0-DAG: @afoo = alias [2 x i8*], [2 x i8*]* @foo
 ; CHECK1-DAG: @afoo = external global [2 x i8*]

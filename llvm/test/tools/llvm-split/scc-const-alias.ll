@@ -1,8 +1,8 @@
 ; We should never separate alias from aliasee.
-; RUN: llvm-split -j=3 -preserve-locals -o %t %s
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
-; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 %s
+; RUN: llvm-split --opaque-pointers=0 -j=3 -preserve-locals -o %t %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t0 | FileCheck --check-prefix=CHECK0 %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t1 | FileCheck --check-prefix=CHECK1 %s
+; RUN: llvm-dis --opaque-pointers=0 -o - %t2 | FileCheck --check-prefix=CHECK2 %s
 
 ; Checks are not critical here - verifier will assert if we fail.
 ; CHECK0: @g1 = global i32 99

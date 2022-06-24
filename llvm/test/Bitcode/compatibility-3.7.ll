@@ -4,7 +4,7 @@
 ;      the IR used to generate the bitcode, and may need to be updated. These
 ;      locations are tagged with an 'XXX'.
 
-; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: llvm-dis --opaque-pointers=0 < %s.bc | FileCheck %s
 
 target datalayout = "E"
 ; CHECK: target datalayout = "E"

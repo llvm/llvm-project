@@ -501,7 +501,7 @@ RValue CodeGenFunction::EmitHostrpcVargsFn(const CallExpr *E,
         // update BufferPtrByteAddr for next string memcpy
         llvm::Value *PtrAsInt = BufferPtrByteAddr.getPointer();
         BufferPtrByteAddr = Address(
-            Builder.CreateGEP(PtrAsInt->getType()->getScalarType()->getPointerElementType(),
+            Builder.CreateGEP(Int8Ty,
 		    PtrAsInt, ArrayRef<llvm::Value*>(varStrLength)),
             Int8Ty, CharUnits::fromQuantity(1));
       } else {

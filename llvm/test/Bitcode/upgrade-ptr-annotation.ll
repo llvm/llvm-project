@@ -1,6 +1,6 @@
 ; Test upgrade of ptr.annotation intrinsics.
 ;
-; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: llvm-dis --opaque-pointers=0 < %s.bc | FileCheck %s
 
 ; Unused return values
 ; The arguments passed to the intrinisic wouldn't normally be arguments to

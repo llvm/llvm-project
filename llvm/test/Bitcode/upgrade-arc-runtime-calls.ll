@@ -6,9 +6,9 @@
 ; metadata. upgrade-arc-runtime-calls-new.bc has the new module flag format of
 ; marker, it should not be upgraded.
 
-; RUN: llvm-dis < %S/upgrade-arc-runtime-calls.bc | FileCheck -check-prefixes=ARC %s
-; RUN: llvm-dis < %S/upgrade-mrr-runtime-calls.bc | FileCheck -check-prefixes=NOUPGRADE %s
-; RUN: llvm-dis < %S/upgrade-arc-runtime-calls-new.bc | FileCheck -check-prefixes=NOUPGRADE %s
+; RUN: llvm-dis --opaque-pointers=0 < %S/upgrade-arc-runtime-calls.bc | FileCheck -check-prefixes=ARC %s
+; RUN: llvm-dis --opaque-pointers=0 < %S/upgrade-mrr-runtime-calls.bc | FileCheck -check-prefixes=NOUPGRADE %s
+; RUN: llvm-dis --opaque-pointers=0 < %S/upgrade-arc-runtime-calls-new.bc | FileCheck -check-prefixes=NOUPGRADE %s
 
 define void @testRuntimeCalls(i8* %a, i8** %b, i8** %c, i32* %d, i32** %e) personality i32 (...)* @__gxx_personality_v0 {
 entry:

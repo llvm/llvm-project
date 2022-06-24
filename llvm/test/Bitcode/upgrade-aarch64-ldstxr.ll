@@ -1,4 +1,4 @@
-; RUN: llvm-dis < %S/upgrade-aarch64-ldstxr.bc | FileCheck %s
+; RUN: llvm-dis --opaque-pointers=0 < %S/upgrade-aarch64-ldstxr.bc | FileCheck %s
 
 define void @f(i32* %p) {
 ; CHECK: call i64 @llvm.aarch64.ldxr.p0i32(i32* elementtype(i32)

@@ -1,5 +1,5 @@
 ; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
-; RUN: llvm-as %s -data-layout=P42 -o - | llvm-dis - -o - | FileCheck %s -check-prefix PROGAS42
+; RUN: llvm-as --opaque-pointers=0 %s -data-layout=P42 -o - | llvm-dis --opaque-pointers=0 - -o - | FileCheck %s -check-prefix PROGAS42
 
 ; Check that numbered variables in a nonzero program address space 200 can be used in a call instruction
 

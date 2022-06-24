@@ -735,7 +735,7 @@ void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
 
   // FIXME: Need to distinguish in memory alignment from pointer alignment.
   if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
-    if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    if (!PtrTy->isOpaque() && PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
       PointeeAlign = DL.getValueOrABITypeAlignment(
           Arg.getParamAlign(), PtrTy->getPointerElementType());
     }

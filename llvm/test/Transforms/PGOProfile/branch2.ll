@@ -16,7 +16,7 @@ define i32 @test_br_2(i32 %i) {
 entry:
 ; GEN: entry:
 ; NOTENTRY-NOT: llvm.instrprof.increment
-; ENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @__profn_test_br_2, i32 0, i32 0), i64 {{[0-9]+}}, i32 2, i32 0)
+; ENTRY: call void @llvm.instrprof.increment(ptr @__profn_test_br_2, i64 {{[0-9]+}}, i32 2, i32 0)
   %cmp = icmp sgt i32 %i, 0
   br i1 %cmp, label %if.then, label %if.else
 ; USE: br i1 %cmp, label %if.then, label %if.else
@@ -25,14 +25,14 @@ entry:
 
 if.then:
 ; GEN: if.then:
-; NOTENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @__profn_test_br_2, i32 0, i32 0), i64 {{[0-9]+}}, i32 2, i32 0)
+; NOTENTRY: call void @llvm.instrprof.increment(ptr @__profn_test_br_2, i64 {{[0-9]+}}, i32 2, i32 0)
 ; ENTRY-NOT: llvm.instrprof.increment
   %add = add nsw i32 %i, 2
   br label %if.end
 
 if.else:
 ; GEN: if.else:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @__profn_test_br_2, i32 0, i32 0), i64 {{[0-9]+}}, i32 2, i32 1)
+; GEN: call void @llvm.instrprof.increment(ptr @__profn_test_br_2, i64 {{[0-9]+}}, i32 2, i32 1)
   %sub = sub nsw i32 %i, 2
   br label %if.end
 

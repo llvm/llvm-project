@@ -3,4 +3,4 @@
 @llvm.compiler.used = appending global [1 x i32] [i32 0], section "llvm.metadata"
 
 ; CHECK:       wrong type for intrinsic global variable
-; CHECK-NEXT: [1 x i32]* @llvm.compiler.used
+; CHECK-NEXT: ptr @llvm.compiler.used

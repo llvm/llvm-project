@@ -5,61 +5,61 @@
 ; CHECK: $__JustMyCode_Default = comdat any
 
 ; CHECK: @"__7DF23CF5_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !0
-; CHECK: @llvm.used = appending global [1 x i8*] [i8* bitcast (void (i8*)* @__JustMyCode_Default to i8*)], section "llvm.metadata"
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @__JustMyCode_Default], section "llvm.metadata"
 ; CHECK: @"__A8764FDD_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !5
 ; CHECK: @"__0C712A50_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !9
 ; CHECK: @"__A3605329_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !12
 
 ; CHECK: define void @l1() !dbg !19 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__7DF23CF5_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__7DF23CF5_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @l2() !dbg !23 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__7DF23CF5_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__7DF23CF5_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w1() !dbg !25 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w2() !dbg !26 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w3() !dbg !28 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w4() !dbg !30 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w5() !dbg !32 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__0C712A50_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__0C712A50_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w6() !dbg !33 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A3605329_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__A3605329_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w7() !dbg !34 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__0C712A50_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__0C712A50_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK: define void @__JustMyCode_Default(i8* noundef %0) unnamed_addr comdat {
+; CHECK: define void @__JustMyCode_Default(ptr noundef %0) unnamed_addr comdat {
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK: declare void @__CheckForDebuggerJustMyCode(i8* noundef) unnamed_addr
+; CHECK: declare void @__CheckForDebuggerJustMyCode(ptr noundef) unnamed_addr
 
 ; CHECK: !llvm.linker.options = !{!18}
 

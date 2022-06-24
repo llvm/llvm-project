@@ -21,7 +21,7 @@
 // OPT-NOT: @llvm.public.type.test
 // We should have only one @llvm.assume call, the one that was expanded
 // from the builtin in the IR below, not the one fed by the type test.
-// OPT: %cmp = icmp ne %struct.A* %{{.*}}, null
+// OPT: %cmp = icmp ne ptr %{{.*}}, null
 // OPT: void @llvm.assume(i1 %cmp)
 // Check after the builtin assume again that we don't have any type tests
 // OPT-NOT: @llvm.type.test

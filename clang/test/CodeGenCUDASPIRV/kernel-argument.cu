@@ -12,6 +12,6 @@
 // RUN: FileCheck %s --input-file=%t.ll
 
 // CHECK: define
-// CHECK-SAME: spir_kernel void @_Z6kernelPi(i32 addrspace(1)* noundef
+// CHECK-SAME: spir_kernel void @_Z6kernelPi(ptr addrspace(1) noundef
 
 __attribute__((global)) void kernel(int* output) { *output = 1; }
