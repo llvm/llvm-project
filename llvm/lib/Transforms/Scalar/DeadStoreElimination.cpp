@@ -1796,10 +1796,9 @@ struct DSEState {
     if (!isRemovable(DefI))
       return false;
 
-    if (StoredConstant && isAllocationFn(DefUO, &TLI)) {
-      auto *CB = cast<CallBase>(DefUO);
-      auto *InitC = getInitialValueOfAllocation(CB, &TLI,
-                                                StoredConstant->getType());
+    if (StoredConstant) {
+      Constant *InitC =
+          getInitialValueOfAllocation(DefUO, &TLI, StoredConstant->getType());
       // If the clobbering access is LiveOnEntry, no instructions between them
       // can modify the memory location.
       if (InitC && InitC == StoredConstant)
