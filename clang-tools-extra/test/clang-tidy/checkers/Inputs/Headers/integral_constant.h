@@ -1,3 +1,6 @@
+#ifndef _INTEGRAL_CONSTANT_H_
+#define _INTEGRAL_CONSTANT_H_
+
 template <class T, T v>
 struct integral_constant {
   static constexpr T value = v;
@@ -14,3 +17,5 @@ struct is_same : false_type {};
 
 template <class T>
 struct is_same<T, T> : true_type {};
+
+#endif
