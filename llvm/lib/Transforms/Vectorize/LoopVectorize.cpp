@@ -9000,16 +9000,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       }
   }
 
-  // From this point onwards, VPlan-to-VPlan transformations may change the plan
-  // in ways that accessing values using original IR values is incorrect.
-  Plan->disableValue2VPValue();
-
-  VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
-  VPlanTransforms::sinkScalarOperands(*Plan);
-  VPlanTransforms::mergeReplicateRegions(*Plan);
-  VPlanTransforms::removeDeadRecipes(*Plan);
-  VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
-
   std::string PlanName;
   raw_string_ostream RSO(PlanName);
   ElementCount VF = Range.Start;
@@ -9022,6 +9012,16 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   RSO << "},UF>=1";
   RSO.flush();
   Plan->setName(PlanName);
+
+  // From this point onwards, VPlan-to-VPlan transformations may change the plan
+  // in ways that accessing values using original IR values is incorrect.
+  Plan->disableValue2VPValue();
+
+  VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
+  VPlanTransforms::sinkScalarOperands(*Plan);
+  VPlanTransforms::mergeReplicateRegions(*Plan);
+  VPlanTransforms::removeDeadRecipes(*Plan);
+  VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
 
   // Fold Exit block into its predecessor if possible.
   // TODO: Fold block earlier once all VPlan transforms properly maintain a
