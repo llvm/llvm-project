@@ -434,6 +434,33 @@ GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
   return {};
 }
 
+/// Detect the AnyObject type alias.
+static bool IsAnyObjectTypeAlias(swift::Demangle::NodePointer node) {
+  using namespace swift::Demangle;
+  if (!node || node->getKind() != Node::Kind::TypeAlias)
+    return false;
+  if (node->getNumChildren() < 2)
+    return false;
+  NodePointer module = node->getChild(0);
+  if (!module || !module->hasText() || module->getText() != swift::STDLIB_NAME)
+    return false;
+  NodePointer ident = node->getChild(1);
+  if (!ident || !ident->hasText() || ident->getText() != "AnyObject")
+    return false;
+  return true;
+}
+
+/// Build a demangle tree for the builtin AnyObject type.
+static swift::Demangle::NodePointer
+GetBuiltinAnyObjectNode(swift::Demangle::Demangler &dem) {
+  auto proto_list_any = dem.createNode(Node::Kind::ProtocolListWithAnyObject);
+  auto proto_list = dem.createNode(Node::Kind::ProtocolList);
+  auto type_list = dem.createNode(Node::Kind::TypeList);
+  proto_list_any->addChild(proto_list, dem);
+  proto_list->addChild(type_list, dem);
+  return proto_list_any;
+}
+
 /// Resolve a type alias node and return a demangle tree for the
 /// resolved type. If the type alias resolves to a Clang type, return
 /// a Clang CompilerType.
@@ -462,6 +489,11 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
 
     return clang_type.GetCanonicalType();
   };
+
+  // Hardcode that the Swift.AnyObject type alias always resolves to
+  // the builtin AnyObject type.
+  if (IsAnyObjectTypeAlias(node))
+    return {GetBuiltinAnyObjectNode(dem), {}};
 
   using namespace swift::Demangle;
   // Try to look this up as a Swift type alias. For each *Swift*
