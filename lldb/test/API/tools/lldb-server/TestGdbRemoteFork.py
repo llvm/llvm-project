@@ -553,3 +553,90 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
             "send packet: $E03#00",
         ], True)
         self.expect_gdbremote_sequence()
+
+    @add_test_categories(["fork"])
+    def test_memory_read_write(self):
+        self.build()
+        INITIAL_DATA = "Initial message"
+        self.prep_debug_monitor_and_inferior(
+            inferior_args=["set-message:{}".format(INITIAL_DATA),
+                           "get-data-address-hex:g_message",
+                           "fork",
+                           "print-message:",
+                           "trap",
+                           ])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"type": "output_match",
+             "regex": self.maybe_strict_output_regex(r"data address: 0x([0-9a-fA-F]+)\r\n"),
+             "capture": {1: "addr"}},
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        pidtids = {
+            "parent": (ret["parent_pid"], ret["parent_tid"]),
+            "child": (ret["child_pid"], ret["child_tid"]),
+        }
+        addr = ret["addr"]
+        self.reset_test_sequence()
+
+        for name, pidtid in pidtids.items():
+            self.test_sequence.add_log_lines(
+                ["read packet: $Hgp{}.{}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 # read the current memory contents
+                 "read packet: $m{},{:x}#00".format(addr,
+                                                    len(INITIAL_DATA) + 1),
+                 {"direction": "send",
+                  "regex": r"^[$](.+)#.*$",
+                  "capture": {1: "data"}},
+                 # write a new value
+                 "read packet: $M{},{:x}:{}#00".format(addr,
+                                                       len(name) + 1,
+                                                       seven.hexlify(
+                                                           name + "\0")),
+                 "send packet: $OK#00",
+                 # resume the process and wait for the trap
+                 "read packet: $Hcp{}.{}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 "read packet: $c#00",
+                 {"type": "output_match",
+                  "regex": self.maybe_strict_output_regex(r"message: (.*)\r\n"),
+                  "capture": {1: "printed_message"}},
+                 {"direction": "send",
+                  "regex": "^[$]T05thread:p{}.{}.*".format(*pidtid),
+                  },
+                 ], True)
+            ret = self.expect_gdbremote_sequence()
+            data = seven.unhexlify(ret["data"])
+            self.assertEqual(data, INITIAL_DATA + "\0")
+            self.assertEqual(ret["printed_message"], name);
+            self.reset_test_sequence()
+
+        # we do the second round separately to make sure that initial data
+        # is correctly preserved while writing into the first process
+
+        for name, pidtid in pidtids.items():
+            self.test_sequence.add_log_lines(
+                ["read packet: $Hgp{}.{}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 # read the current memory contents
+                 "read packet: $m{},{:x}#00".format(addr,
+                                                    len(name) + 1),
+                 {"direction": "send",
+                  "regex": r"^[$](.+)#.*$",
+                  "capture": {1: "data"}},
+                 ], True)
+            ret = self.expect_gdbremote_sequence()
+            self.assertIsNotNone(ret.get("data"))
+            data = seven.unhexlify(ret.get("data"))
+            self.assertEqual(data, name + "\0")
+            self.reset_test_sequence()
