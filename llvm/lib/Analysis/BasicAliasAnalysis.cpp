@@ -106,8 +106,9 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
 /// Returns true if the pointer is one which would have been considered an
 /// escape by isNonEscapingLocalObject.
 static bool isEscapeSource(const Value *V) {
-  if (isa<CallBase>(V))
-    return true;
+  if (auto *CB = dyn_cast<CallBase>(V))
+    return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB,
+                                                                        true);
 
   // The load case works because isNonEscapingLocalObject considers all
   // stores to be escapes (it passes true for the StoreCaptures argument
