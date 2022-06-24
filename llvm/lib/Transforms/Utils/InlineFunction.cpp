@@ -1079,7 +1079,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
 
       // Figure out if we're derived from anything that is not a noalias
       // argument.
-      bool CanDeriveViaCapture = false, UsesAliasingPtr = false;
+      bool RequiresNoCaptureBefore = false, UsesAliasingPtr = false;
       for (const Value *V : ObjSet) {
         // Is this value a constant that cannot be derived from any pointer
         // value (we need to exclude constant expressions, for example, that
@@ -1104,15 +1104,14 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         // directly alias a noalias argument), or some other argument (which,
         // by definition, also cannot alias a noalias argument), then we could
         // alias a noalias argument that has been captured).
-        if (!isa<Argument>(V) &&
-            !isIdentifiedFunctionLocal(const_cast<Value*>(V)))
-          CanDeriveViaCapture = true;
+        if (!isa<Argument>(V) && !isIdentifiedFunctionLocal(V))
+          RequiresNoCaptureBefore = true;
       }
 
       // A function call can always get captured noalias pointers (via other
       // parameters, globals, etc.).
       if (IsFuncCall && !IsArgMemOnlyCall)
-        CanDeriveViaCapture = true;
+        RequiresNoCaptureBefore = true;
 
       // First, we want to figure out all of the sets with which we definitely
       // don't alias. Iterate over all noalias set, and add those for which:
@@ -1123,16 +1122,16 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       // noalias arguments via other noalias arguments or globals, and so we
       // must always check for prior capture.
       for (const Argument *A : NoAliasArgs) {
-        if (!ObjSet.count(A) && (!CanDeriveViaCapture ||
-                                 // It might be tempting to skip the
-                                 // PointerMayBeCapturedBefore check if
-                                 // A->hasNoCaptureAttr() is true, but this is
-                                 // incorrect because nocapture only guarantees
-                                 // that no copies outlive the function, not
-                                 // that the value cannot be locally captured.
-                                 !PointerMayBeCapturedBefore(A,
-                                   /* ReturnCaptures */ false,
-                                   /* StoreCaptures */ false, I, &DT)))
+        if (ObjSet.contains(A))
+          continue; // May be based on a noalias argument.
+
+        // It might be tempting to skip the PointerMayBeCapturedBefore check if
+        // A->hasNoCaptureAttr() is true, but this is incorrect because
+        // nocapture only guarantees that no copies outlive the function, not
+        // that the value cannot be locally captured.
+        if (!RequiresNoCaptureBefore ||
+            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false,
+                                        /* StoreCaptures */ false, I, &DT))
           NoAliases.push_back(NewScopes[A]);
       }
 
