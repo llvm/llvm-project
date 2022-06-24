@@ -107,6 +107,8 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
                                 &GDBRemoteCommunicationServerLLGS::Handle_P);
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_qC,
                                 &GDBRemoteCommunicationServerLLGS::Handle_qC);
+  RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_T,
+                                &GDBRemoteCommunicationServerLLGS::Handle_T);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qfThreadInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qfThreadInfo);
@@ -3895,6 +3897,36 @@ GDBRemoteCommunicationServerLLGS::Handle_vCtrlC(
   if (interrupt_res != PacketResult::Success)
     return interrupt_res;
   // Otherwise, vCtrlC should issue an OK response (normal interrupts do not).
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
+  packet.SetFilePos(strlen("T"));
+  auto pid_tid = packet.GetPidTid(m_current_process ? m_current_process->GetID()
+                                                    : LLDB_INVALID_PROCESS_ID);
+  if (!pid_tid)
+    return SendErrorResponse(llvm::make_error<StringError>(
+        inconvertibleErrorCode(), "Malformed thread-id"));
+
+  lldb::pid_t pid = pid_tid->first;
+  lldb::tid_t tid = pid_tid->second;
+
+  // Technically, this would also be caught by the PID check but let's be more
+  // explicit about the error.
+  if (pid == LLDB_INVALID_PROCESS_ID)
+    return SendErrorResponse(llvm::make_error<StringError>(
+        inconvertibleErrorCode(), "No current process and no PID provided"));
+
+  // Check the process ID and find respective process instance.
+  auto new_process_it = m_debugged_processes.find(pid);
+  if (new_process_it == m_debugged_processes.end())
+    return SendErrorResponse(1);
+
+  // Check the thread ID
+  if (!new_process_it->second->GetThreadByID(tid))
+    return SendErrorResponse(2);
+
   return SendOKResponse();
 }
 

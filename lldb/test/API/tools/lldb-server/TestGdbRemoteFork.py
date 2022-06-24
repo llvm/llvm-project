@@ -866,3 +866,76 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
                  "send packet: $QCp{:x}.{:x}#00".format(*pidtid),
                  ], True)
         self.expect_gdbremote_sequence()
+
+    @add_test_categories(["fork"])
+    def test_T(self):
+        self.build()
+        self.prep_debug_monitor_and_inferior(
+            inferior_args=["fork",
+                           "thread:new",
+                           "trap",
+                           ])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        self.add_threadinfo_collection_packets()
+        ret = self.expect_gdbremote_sequence()
+        pidtids = [
+            (ret["parent_pid"], ret["parent_tid"]),
+            (ret["child_pid"], ret["child_tid"]),
+        ]
+        self.reset_test_sequence()
+
+        for pidtid in pidtids:
+            self.test_sequence.add_log_lines(
+                ["read packet: $Hcp{}.{}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 "read packet: $c#00",
+                 {"direction": "send",
+                  "regex": "^[$]T05thread:p{}.{}.*".format(*pidtid),
+                  },
+                 ], True)
+
+        self.add_threadinfo_collection_packets()
+        ret = self.expect_gdbremote_sequence()
+        self.reset_test_sequence()
+
+        pidtids = set(self.parse_threadinfo_packets(ret))
+        self.assertEqual(len(pidtids), 4)
+        max_pid = max(pid for pid, tid in pidtids)
+        max_tid = max(tid for pid, tid in pidtids)
+        bad_pidtids = (
+            (max_pid, max_tid + 1, "E02"),
+            (max_pid + 1, max_tid, "E01"),
+            (max_pid + 1, max_tid + 1, "E01"),
+        )
+
+        for pidtid in pidtids:
+            self.test_sequence.add_log_lines(
+                [
+                 # test explicit PID+TID
+                 "read packet: $Tp{:x}.{:x}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 # test implicit PID via Hg
+                 "read packet: $Hgp{:x}.{:x}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 "read packet: $T{:x}#00".format(max_tid + 1),
+                 "send packet: $E02#00",
+                 "read packet: $T{:x}#00".format(pidtid[1]),
+                 "send packet: $OK#00",
+                 ], True)
+        for pid, tid, expected in bad_pidtids:
+            self.test_sequence.add_log_lines(
+                ["read packet: $Tp{:x}.{:x}#00".format(pid, tid),
+                 "send packet: ${}#00".format(expected),
+                 ], True)
+        self.expect_gdbremote_sequence()
