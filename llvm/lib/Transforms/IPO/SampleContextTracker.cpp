@@ -595,4 +595,24 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
 
   return *ToNode;
 }
+
+void SampleContextTracker::createContextLessProfileMap(
+    SampleProfileMap &ContextLessProfiles) {
+  std::queue<ContextTrieNode *> NodeQueue;
+  NodeQueue.push(&RootContext);
+
+  while (!NodeQueue.empty()) {
+    ContextTrieNode *Node = NodeQueue.front();
+    FunctionSamples *FProfile = Node->getFunctionSamples();
+    NodeQueue.pop();
+
+    if (FProfile) {
+      // Profile's context can be empty, use ContextNode's func name.
+      ContextLessProfiles[Node->getFuncName()].merge(*FProfile);
+    }
+
+    for (auto &It : Node->getAllChildContext())
+      NodeQueue.push(&It.second);
+  }
+}
 } // namespace llvm

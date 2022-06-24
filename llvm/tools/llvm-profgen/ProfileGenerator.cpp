@@ -91,6 +91,7 @@ static cl::opt<bool> UpdateTotalSamples(
     llvm::cl::Optional);
 
 extern cl::opt<int> ProfileSummaryCutoffHot;
+extern cl::opt<bool> UseContextLessSummary;
 
 static cl::opt<bool> GenCSNestedProfile(
     "gen-cs-nested-profile", cl::Hidden, cl::init(true),
@@ -128,14 +129,13 @@ ProfileGeneratorBase::create(ProfiledBinary *Binary,
 }
 
 std::unique_ptr<ProfileGeneratorBase>
-ProfileGeneratorBase::create(ProfiledBinary *Binary,
-                             const SampleProfileMap &&Profiles,
+ProfileGeneratorBase::create(ProfiledBinary *Binary, SampleProfileMap &Profiles,
                              bool ProfileIsCS) {
   std::unique_ptr<ProfileGeneratorBase> Generator;
   if (ProfileIsCS) {
     if (Binary->useFSDiscriminator())
       exitWithError("FS discriminator is not supported in CS profile.");
-    Generator.reset(new CSProfileGenerator(Binary, std::move(Profiles)));
+    Generator.reset(new CSProfileGenerator(Binary, Profiles));
   } else {
     Generator.reset(new ProfileGenerator(Binary, std::move(Profiles)));
   }
@@ -403,43 +403,73 @@ void ProfileGeneratorBase::updateFunctionSamples() {
 
 void ProfileGeneratorBase::collectProfiledFunctions() {
   std::unordered_set<const BinaryFunction *> ProfiledFunctions;
-  if (SampleCounters) {
-    // Go through all the stacks, ranges and branches in sample counters, use
-    // the start of the range to look up the function it belongs and record the
-    // function.
-    for (const auto &CI : *SampleCounters) {
-      if (const auto *CtxKey = dyn_cast<AddrBasedCtxKey>(CI.first.getPtr())) {
-        for (auto Addr : CtxKey->Context) {
-          if (FuncRange *FRange = Binary->findFuncRangeForOffset(
-                  Binary->virtualAddrToOffset(Addr)))
-            ProfiledFunctions.insert(FRange->Func);
-        }
-      }
+  if (collectFunctionsFromRawProfile(ProfiledFunctions))
+    Binary->setProfiledFunctions(ProfiledFunctions);
+  else if (collectFunctionsFromLLVMProfile(ProfiledFunctions))
+    Binary->setProfiledFunctions(ProfiledFunctions);
+  else
+    llvm_unreachable("Unsupported input profile");
+}
 
-      for (auto Item : CI.second.RangeCounter) {
-        uint64_t StartOffset = Item.first.first;
-        if (FuncRange *FRange = Binary->findFuncRangeForOffset(StartOffset))
-          ProfiledFunctions.insert(FRange->Func);
-      }
-
-      for (auto Item : CI.second.BranchCounter) {
-        uint64_t SourceOffset = Item.first.first;
-        uint64_t TargetOffset = Item.first.first;
-        if (FuncRange *FRange = Binary->findFuncRangeForOffset(SourceOffset))
-          ProfiledFunctions.insert(FRange->Func);
-        if (FuncRange *FRange = Binary->findFuncRangeForOffset(TargetOffset))
+bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
+    std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
+  if (!SampleCounters)
+    return false;
+  // Go through all the stacks, ranges and branches in sample counters, use
+  // the start of the range to look up the function it belongs and record the
+  // function.
+  for (const auto &CI : *SampleCounters) {
+    if (const auto *CtxKey = dyn_cast<AddrBasedCtxKey>(CI.first.getPtr())) {
+      for (auto Addr : CtxKey->Context) {
+        if (FuncRange *FRange = Binary->findFuncRangeForOffset(
+                Binary->virtualAddrToOffset(Addr)))
           ProfiledFunctions.insert(FRange->Func);
       }
     }
-  } else {
-    // This is for the case the input is a llvm sample profile.
-    for (const auto &FS : ProfileMap) {
-      if (auto *Func = Binary->getBinaryFunction(FS.first.getName()))
-        ProfiledFunctions.insert(Func);
+
+    for (auto Item : CI.second.RangeCounter) {
+      uint64_t StartOffset = Item.first.first;
+      if (FuncRange *FRange = Binary->findFuncRangeForOffset(StartOffset))
+        ProfiledFunctions.insert(FRange->Func);
+    }
+
+    for (auto Item : CI.second.BranchCounter) {
+      uint64_t SourceOffset = Item.first.first;
+      uint64_t TargetOffset = Item.first.first;
+      if (FuncRange *FRange = Binary->findFuncRangeForOffset(SourceOffset))
+        ProfiledFunctions.insert(FRange->Func);
+      if (FuncRange *FRange = Binary->findFuncRangeForOffset(TargetOffset))
+        ProfiledFunctions.insert(FRange->Func);
     }
   }
+  return true;
+}
 
-  Binary->setProfiledFunctions(ProfiledFunctions);
+bool ProfileGenerator::collectFunctionsFromLLVMProfile(
+    std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
+  for (const auto &FS : ProfileMap) {
+    if (auto *Func = Binary->getBinaryFunction(FS.first.getName()))
+      ProfiledFunctions.insert(Func);
+  }
+  return true;
+}
+
+bool CSProfileGenerator::collectFunctionsFromLLVMProfile(
+    std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
+  std::queue<ContextTrieNode *> NodeQueue;
+  NodeQueue.push(&getRootContext());
+  while (!NodeQueue.empty()) {
+    ContextTrieNode *Node = NodeQueue.front();
+    NodeQueue.pop();
+
+    if (!Node->getFuncName().empty())
+      if (auto *Func = Binary->getBinaryFunction(Node->getFuncName()))
+        ProfiledFunctions.insert(Func);
+
+    for (auto &It : Node->getAllChildContext())
+      NodeQueue.push(&It.second);
+  }
+  return true;
 }
 
 FunctionSamples &
@@ -471,7 +501,7 @@ void ProfileGenerator::generateProfile() {
 }
 
 void ProfileGenerator::postProcessProfiles() {
-  computeSummaryAndThreshold();
+  computeSummaryAndThreshold(ProfileMap);
   trimColdProfiles(ProfileMap, ColdCountThreshold);
   calculateAndShowDensity(ProfileMap);
 }
@@ -965,12 +995,11 @@ void CSProfileGenerator::convertToProfileMap() {
 }
 
 void CSProfileGenerator::postProcessProfiles() {
-  if (SampleCounters)
-    convertToProfileMap();
-
   // Compute hot/cold threshold based on profile. This will be used for cold
   // context profile merging/trimming.
   computeSummaryAndThreshold();
+
+  convertToProfileMap();
 
   // Run global pre-inliner to adjust/merge context profile based on estimated
   // inline decisions.
@@ -1003,13 +1032,31 @@ void CSProfileGenerator::postProcessProfiles() {
   }
 }
 
-void ProfileGeneratorBase::computeSummaryAndThreshold() {
+void ProfileGeneratorBase::computeSummaryAndThreshold(
+    SampleProfileMap &Profiles) {
   SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
-  Summary = Builder.computeSummaryForProfiles(ProfileMap);
+  Summary = Builder.computeSummaryForProfiles(Profiles);
   HotCountThreshold = ProfileSummaryBuilder::getHotCountThreshold(
       (Summary->getDetailedSummary()));
   ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
       (Summary->getDetailedSummary()));
+}
+
+void CSProfileGenerator::computeSummaryAndThreshold() {
+  // Always merge and use context-less profile map to compute summary.
+  SampleProfileMap ContextLessProfiles;
+  ContextTracker.createContextLessProfileMap(ContextLessProfiles);
+
+  // Set the flag below to avoid merging the profile again in
+  // computeSummaryAndThreshold
+  FunctionSamples::ProfileIsCS = false;
+  assert(
+      (!UseContextLessSummary.getNumOccurrences() || UseContextLessSummary) &&
+      "Don't set --profile-summary-contextless to false for profile "
+      "generation");
+  ProfileGeneratorBase::computeSummaryAndThreshold(ContextLessProfiles);
+  // Recover the old value.
+  FunctionSamples::ProfileIsCS = true;
 }
 
 void ProfileGeneratorBase::extractProbesFromRange(
