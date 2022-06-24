@@ -281,11 +281,12 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
   // Separate hot from cold starting from the bottom.
   Strategy.partition(BF.layout_rbegin(), BF.layout_rend());
 
-  // For shared objects, place invoke instructions and corresponding landing
-  // pads in the same fragment. To reduce hot code size, create trampoline
-  // landing pads that will redirect the execution to the real LP.
+  // For shared objects, invoke instructions and corresponding landing pads
+  // have to be placed in the same fragment. When we split them, create
+  // trampoline landing pads that will redirect the execution to real LPs.
+  TrampolineSetType Trampolines;
   if (!BC.HasFixedLoadAddress && BF.hasEHRanges() && BF.isSplit())
-    createEHTrampolines(BF);
+    Trampolines = createEHTrampolines(BF);
 
   // Check the new size to see if it's worth splitting the function.
   if (BC.isX86() && BF.isSplit()) {
@@ -300,6 +301,12 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
                         << Twine::utohexstr(ColdSize) << " -> 0x"
                         << Twine::utohexstr(OriginalHotSize) << '\n');
 
+      // Reverse the action of createEHTrampolines(). The trampolines will be
+      // placed immediately before the matching destination resulting in no
+      // extra code.
+      if (PreSplitLayout.size() != BF.size())
+        PreSplitLayout = mergeEHTrampolines(BF, PreSplitLayout, Trampolines);
+
       BF.updateBasicBlockLayout(PreSplitLayout);
       for (BinaryBasicBlock &BB : BF)
         BB.setIsCold(false);
@@ -310,11 +317,12 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
   }
 }
 
-void SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
+SplitFunctions::TrampolineSetType
+SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
   const auto &MIB = BF.getBinaryContext().MIB;
 
   // Map real landing pads to the corresponding trampolines.
-  std::unordered_map<const MCSymbol *, const MCSymbol *> LPTrampolines;
+  TrampolineSetType LPTrampolines;
 
   // Iterate over the copy of basic blocks since we are adding new blocks to the
   // function which will invalidate its iterators.
@@ -344,7 +352,7 @@ void SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
         TrampolineBB->addSuccessor(LPBlock, TrampolineBB->getExecutionCount());
         TrampolineBB->setCFIState(LPBlock->getCFIState());
         TrampolineLabel = TrampolineBB->getLabel();
-        LPTrampolines.emplace(std::make_pair(LPLabel, TrampolineLabel));
+        LPTrampolines.insert(std::make_pair(LPLabel, TrampolineLabel));
       }
 
       // Substitute the landing pad with the trampoline.
@@ -354,7 +362,7 @@ void SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
   }
 
   if (LPTrampolines.empty())
-    return;
+    return LPTrampolines;
 
   // All trampoline blocks were added to the end of the function. Place them at
   // the end of corresponding fragments.
@@ -368,6 +376,25 @@ void SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
 
   // Update exception-handling CFG for the function.
   BF.recomputeLandingPads();
+
+  return LPTrampolines;
+}
+
+SplitFunctions::BasicBlockOrderType SplitFunctions::mergeEHTrampolines(
+    BinaryFunction &BF, SplitFunctions::BasicBlockOrderType &Layout,
+    const SplitFunctions::TrampolineSetType &Trampolines) const {
+  BasicBlockOrderType MergedLayout;
+  for (BinaryBasicBlock *BB : Layout) {
+    auto Iter = Trampolines.find(BB->getLabel());
+    if (Iter != Trampolines.end()) {
+      BinaryBasicBlock *LPBlock = BF.getBasicBlockForLabel(Iter->second);
+      assert(LPBlock && "Could not find matching landing pad block.");
+      MergedLayout.push_back(LPBlock);
+    }
+    MergedLayout.push_back(BB);
+  }
+
+  return MergedLayout;
 }
 
 } // namespace bolt
