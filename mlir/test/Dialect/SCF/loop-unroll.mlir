@@ -271,7 +271,7 @@ func.func @static_loop_unroll_up_to_factor(%arg0 : memref<?xf32>) {
 //   UNROLL-UP-TO-DAG:  %[[C0:.*]] = arith.constant 0 : index
 //   UNROLL-UP-TO-DAG:  %[[C2:.*]] = arith.constant 2 : index
 //   UNROLL-UP-TO-NEXT: %[[V0:.*]] = affine.apply {{.*}}
-//   UNROLL-UP-TO-NEXT: store %{{.*}}, %[[MEM]][%[[V0]]] : memref<?xf32>
+//   UNROLL-UP-TO-NEXT: affine.store %{{.*}}, %[[MEM]][%[[V0]]] : memref<?xf32>
 //   UNROLL-UP-TO-NEXT: %[[V1:.*]] = affine.apply {{.*}}
 //   UNROLL-UP-TO-NEXT: affine.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
 //   UNROLL-UP-TO-NEXT: return
