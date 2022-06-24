@@ -151,17 +151,29 @@ public:
   /// `RHS`. Subsequent calls with the same arguments, regardless of their
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
-  BoolValue &getOrCreateConjunctionValue(BoolValue &LHS, BoolValue &RHS);
+  BoolValue &getOrCreateConjunction(BoolValue &LHS, BoolValue &RHS);
 
   /// Returns a boolean value that represents the disjunction of `LHS` and
   /// `RHS`. Subsequent calls with the same arguments, regardless of their
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
-  BoolValue &getOrCreateDisjunctionValue(BoolValue &LHS, BoolValue &RHS);
+  BoolValue &getOrCreateDisjunction(BoolValue &LHS, BoolValue &RHS);
 
   /// Returns a boolean value that represents the negation of `Val`. Subsequent
   /// calls with the same argument will return the same result.
-  BoolValue &getOrCreateNegationValue(BoolValue &Val);
+  BoolValue &getOrCreateNegation(BoolValue &Val);
+
+  /// Returns a boolean value that represents `LHS => RHS`. Subsequent calls
+  /// with the same arguments, will return the same result. If the given boolean
+  /// values represent the same value, the result will be a value that
+  /// represents the true boolean literal.
+  BoolValue &getOrCreateImplication(BoolValue &LHS, BoolValue &RHS);
+
+  /// Returns a boolean value that represents `LHS <=> RHS`. Subsequent calls
+  /// with the same arguments, regardless of their order, will return the same
+  /// result. If the given boolean values represent the same value, the result
+  /// will be a value that represents the true boolean literal.
+  BoolValue &getOrCreateIff(BoolValue &LHS, BoolValue &RHS);
 
   /// Creates a fresh flow condition and returns a token that identifies it. The
   /// token can be used to perform various operations on the flow condition such
