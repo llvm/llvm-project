@@ -203,8 +203,8 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
       }
     }
 
-    // FIXME: Do not reset the pragma handlers.
-    Diags.Reset();
+    Diags.Reset(/*soft=*/true);
+    Diags.getClient()->clear();
     return llvm::make_error<llvm::StringError>("Parsing failed.",
                                                std::error_code());
   }
