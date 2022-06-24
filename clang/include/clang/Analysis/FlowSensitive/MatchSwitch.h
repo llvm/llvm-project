@@ -46,8 +46,8 @@ template <typename LatticeT> struct TransferState {
 
 /// Matches against `Stmt` and, based on its structure, dispatches to an
 /// appropriate handler.
-template <typename State>
-using MatchSwitch = std::function<void(const Stmt &, ASTContext &, State &)>;
+template <typename State, typename Result = void>
+using MatchSwitch = std::function<Result(const Stmt &, ASTContext &, State &)>;
 
 /// Collects cases of a "match switch": a collection of matchers paired with
 /// callbacks, which together define a switch that can be applied to a
@@ -68,7 +68,7 @@ using MatchSwitch = std::function<void(const Stmt &, ASTContext &, State &)>;
 ///     .Build();
 /// }
 /// \endcode
-template <typename State> class MatchSwitchBuilder {
+template <typename State, typename Result = void> class MatchSwitchBuilder {
 public:
   /// Registers an action that will be triggered by the match of a pattern
   /// against the input statement.
@@ -79,24 +79,24 @@ public:
   template <typename Node>
   MatchSwitchBuilder &&
   CaseOf(ast_matchers::internal::Matcher<Stmt> M,
-         std::function<void(const Node *,
-                            const ast_matchers::MatchFinder::MatchResult &,
-                            State &)>
+         std::function<Result(const Node *,
+                              const ast_matchers::MatchFinder::MatchResult &,
+                              State &)>
              A) && {
     Matchers.push_back(std::move(M));
     Actions.push_back(
         [A = std::move(A)](const Stmt *Stmt,
                            const ast_matchers::MatchFinder::MatchResult &R,
-                           State &S) { A(cast<Node>(Stmt), R, S); });
+                           State &S) { return A(cast<Node>(Stmt), R, S); });
     return std::move(*this);
   }
 
-  MatchSwitch<State> Build() && {
+  MatchSwitch<State, Result> Build() && {
     return [Matcher = BuildMatcher(), Actions = std::move(Actions)](
-               const Stmt &Stmt, ASTContext &Context, State &S) {
+               const Stmt &Stmt, ASTContext &Context, State &S) -> Result {
       auto Results = ast_matchers::matchDynamic(Matcher, Stmt, Context);
       if (Results.empty())
-        return;
+        return {};
       // Look through the map for the first binding of the form "TagN..." use
       // that to select the action.
       for (const auto &Element : Results[0].getMap()) {
@@ -104,12 +104,12 @@ public:
         size_t Index = 0;
         if (ID.consume_front("Tag") && !ID.getAsInteger(10, Index) &&
             Index < Actions.size()) {
-          Actions[Index](
+          return Actions[Index](
               &Stmt,
               ast_matchers::MatchFinder::MatchResult(Results[0], &Context), S);
-          return;
         }
       }
+      return {};
     };
   }
 
@@ -142,7 +142,7 @@ private:
   }
 
   std::vector<ast_matchers::internal::DynTypedMatcher> Matchers;
-  std::vector<std::function<void(
+  std::vector<std::function<Result(
       const Stmt *, const ast_matchers::MatchFinder::MatchResult &, State &)>>
       Actions;
 };
