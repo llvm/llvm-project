@@ -165,6 +165,7 @@ The following table contains a list of {function} currently supported by OCML, a
 | pow | general power | 16 | 16 | 4 |
 | pown | power with integral exponent | 16 | 16 | 4 |
 | powr | power with positive floating point exponent | 16 | 16 | 4 |
+| pred | predecessor | c | c | c |
 | rcbrt | reciprocal cube root | 2 | 2 | 2 |
 | remainder | floating point remainder | 0 | 0 | 0 |
 | remquo | floating point remainder and lowest integral quotient bits | 0 | 0 | 0 |
@@ -185,6 +186,7 @@ The following table contains a list of {function} currently supported by OCML, a
 | sinpi | sine of argument times pi | 4 | 4 | 2 |
 | sqrt | square root | 3/c | 3/c | c |
 | sub_{rm} | subtract with specific rounding mode | c | c | c |
+| succ | successor | c | c | c |
 | tan | tangent | 5 | 5 | 2 |
 | tanh | hyperbolic tangent | 5 | 5 | 2 |
 | tanpi | tangent of argument times pi | 6 | 6 | 2 |
