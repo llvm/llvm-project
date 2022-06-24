@@ -37,11 +37,11 @@ subroutine lbound_test_2(a, dim, res)
   res = lbound(a, dim, 8)
 end subroutine
 
-! CHECK:  %[[VAL_0:.*]] = fir.undefined index
 subroutine lbound_test_3(a, dim, res)
   real, dimension(2:10, 3:*) :: a
   integer(8):: dim, res
 ! CHECK:  %[[VAL_1:.*]] = fir.load %arg1 : !fir.ref<i64>
+! CHECK:  %[[VAL_0:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_2:.*]] = fir.shape_shift %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_0]] : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:         %[[VAL_3:.*]] = fir.embox %arg0(%[[VAL_2]]) : (!fir.ref<!fir.array<9x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<9x?xf32>>
 ! CHECK:         %[[VAL_4:.*]] = fir.address_of(
