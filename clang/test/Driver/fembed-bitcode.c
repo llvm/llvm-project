@@ -30,7 +30,7 @@
 // RUN:     | FileCheck --check-prefix=CHECK-HEXAGON %s
 // CHECK-HEXAGON: "-target-feature"
 // CHECK-HEXAGON: "+reserved-r19"
-//
+
 // RUN: %clang -target wasm32-unknown-unknown -fembed-bitcode=all -pthread -c %s -o /dev/null -### 2>&1 \
 // RUN:     | FileCheck --check-prefix=CHECK-WASM %s
 

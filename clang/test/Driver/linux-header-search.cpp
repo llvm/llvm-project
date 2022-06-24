@@ -1,6 +1,6 @@
 // General tests that the header search paths detected by the driver and passed
 // to CC1 are sane.
-//
+
 // Test a simulated installation of libc++ on Linux, both through sysroot and
 // the installation path of Clang.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
@@ -45,7 +45,7 @@
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/x86_64-unknown-linux-gnu/c++/v1"
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v1"
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
@@ -148,7 +148,7 @@
 // CHECK-GENTOO-4-9-3: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-GENTOO-4-9-3: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-3: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
-//
+
 // Test support for Gentoo's gcc-config -- clang should prefer the older
 // (4.9.3) version over the newer (5.4.0) due to preference specified
 // in /etc/env.d/gcc/x86_64-pc-linux-gnu.
@@ -157,7 +157,7 @@
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3 %s
-//
+
 // Test that gcc-config support does not break multilib.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -stdlib=libstdc++ \
@@ -174,7 +174,7 @@
 // CHECK-GENTOO-4-9-3-X32: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-GENTOO-4-9-3-X32: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-3-X32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=i386-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
@@ -190,7 +190,7 @@
 // CHECK-GENTOO-4-9-3-32: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-GENTOO-4-9-3-32: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-3-32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
-//
+
 // Test support for parsing Gentoo's gcc-config -- clang should parse the
 // /etc/env.d/gcc/config-x86_64-pc-linux-gnu file to find CURRENT gcc used.
 // Then should pick the multilibs from version 4.9.x specified in
@@ -200,7 +200,7 @@
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X %s
-//
+
 // CHECK-GENTOO-4-9-X: "-cc1"
 // CHECK-GENTOO-4-9-X: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-GENTOO-4-9-X: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -211,7 +211,7 @@
 // CHECK-GENTOO-4-9-X: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-GENTOO-4-9-X: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-X: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
@@ -227,7 +227,7 @@
 // CHECK-GENTOO-4-9-X-X32: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-GENTOO-4-9-X-X32: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-X-X32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=i386-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
@@ -243,7 +243,7 @@
 // CHECK-GENTOO-4-9-X-32: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-GENTOO-4-9-X-32: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-9-X-32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
-//
+
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=mips64-unknown-linux-gnuabi64 -stdlib=libstdc++ \
@@ -261,7 +261,7 @@
 // CHECK-MIPS64-GNUABI: "-internal-externc-isystem" "[[SYSROOT]]/usr/include/mips64-linux-gnuabi64"
 // CHECK-MIPS64-GNUABI: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-MIPS64-GNUABI: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
-//
+
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=mips64el-unknown-linux-gnuabi64 -stdlib=libstdc++ \

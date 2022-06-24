@@ -5,7 +5,7 @@
 
 // Check system headers (everything below <sysroot> and <resource-dir>).  Ensure
 // that both sysroot and isysroot are checked, and that isysroot has precedence.
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
@@ -14,7 +14,7 @@
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
 // RUN:               -DRESOURCE=%S/Inputs/resource_dir \
 // RUN:               --check-prefix=CHECK-SYSTEM %s
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
@@ -23,7 +23,7 @@
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
 // RUN:               -DRESOURCE=%S/Inputs/resource_dir \
 // RUN:               --check-prefix=CHECK-SYSTEM %s
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
@@ -33,14 +33,14 @@
 // RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
 // RUN:               -DRESOURCE=%S/Inputs/resource_dir \
 // RUN:               --check-prefix=CHECK-SYSTEM %s
-//
+
 // CHECK-SYSTEM: "-cc1"
 // CHECK-SYSTEM: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-SYSTEM: "-internal-isystem" "[[RESOURCE]]/include"
 // CHECK-SYSTEM: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 
 // Make sure that using -nobuiltininc will drop resource headers
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
@@ -57,7 +57,7 @@
 
 // Make sure that using -nostdlibinc will drop <sysroot>/usr/local/include and
 // <sysroot>/usr/include.
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
@@ -74,7 +74,7 @@
 
 // Make sure that -nostdinc drops all the system include paths, including
 // <resource>/include.
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
@@ -90,7 +90,7 @@
 // CHECK-NOSTDINC-NOT: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 
 // Check search paths without -isysroot
-//
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \

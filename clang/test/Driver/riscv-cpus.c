@@ -134,10 +134,10 @@
 
 // Check interaction between mcpu and mtune, mtune won't affect arch related
 // target feature, but mcpu will.
-//
+
 // In this case, sifive-e31 is rv32imac, sifive-e76 is rv32imafc, so M-extension
 // should not enabled.
-//
+
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=sifive-e31 -mtune=sifive-e76 | FileCheck -check-prefix=MTUNE-E31-MCPU-E76 %s
 // MTUNE-E31-MCPU-E76: "-target-cpu" "sifive-e31"
 // MTUNE-E31-MCPU-E76-NOT: "-target-feature" "+f"
