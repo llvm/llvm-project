@@ -66,19 +66,16 @@ BoolValue &DataflowAnalysisContext::getOrCreateNegationValue(BoolValue &Val) {
 }
 
 AtomicBoolValue &DataflowAnalysisContext::makeFlowConditionToken() {
-  AtomicBoolValue &Token = createAtomicBoolValue();
-  FlowConditionRemainingConjuncts[&Token] = {};
-  FlowConditionFirstConjuncts[&Token] = &Token;
-  return Token;
+  return createAtomicBoolValue();
 }
 
 void DataflowAnalysisContext::addFlowConditionConstraint(
     AtomicBoolValue &Token, BoolValue &Constraint) {
-  FlowConditionRemainingConjuncts[&Token].insert(&getOrCreateDisjunctionValue(
-      Constraint, getOrCreateNegationValue(Token)));
-  FlowConditionFirstConjuncts[&Token] =
-      &getOrCreateDisjunctionValue(*FlowConditionFirstConjuncts[&Token],
-                                   getOrCreateNegationValue(Constraint));
+  auto Res = FlowConditionConstraints.try_emplace(&Token, &Constraint);
+  if (!Res.second) {
+    Res.first->second =
+        &getOrCreateConjunctionValue(*Res.first->second, Constraint);
+  }
 }
 
 AtomicBoolValue &
@@ -133,24 +130,30 @@ bool DataflowAnalysisContext::flowConditionIsTautology(AtomicBoolValue &Token) {
 
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
     AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
-    llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) const {
+    llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) {
   auto Res = VisitedTokens.insert(&Token);
   if (!Res.second)
     return;
 
-  auto FirstConjunctIT = FlowConditionFirstConjuncts.find(&Token);
-  if (FirstConjunctIT != FlowConditionFirstConjuncts.end())
-    Constraints.insert(FirstConjunctIT->second);
-  auto RemainingConjunctsIT = FlowConditionRemainingConjuncts.find(&Token);
-  if (RemainingConjunctsIT != FlowConditionRemainingConjuncts.end())
-    Constraints.insert(RemainingConjunctsIT->second.begin(),
-                       RemainingConjunctsIT->second.end());
+  auto ConstraintsIT = FlowConditionConstraints.find(&Token);
+  if (ConstraintsIT == FlowConditionConstraints.end()) {
+    Constraints.insert(&Token);
+  } else {
+    // Bind flow condition token via `iff` to its set of constraints:
+    // FC <=> (C1 ^ C2 ^ ...), where Ci are constraints
+    Constraints.insert(&getOrCreateConjunctionValue(
+        getOrCreateDisjunctionValue(
+            Token, getOrCreateNegationValue(*ConstraintsIT->second)),
+        getOrCreateDisjunctionValue(getOrCreateNegationValue(Token),
+                                    *ConstraintsIT->second)));
+  }
 
   auto DepsIT = FlowConditionDeps.find(&Token);
   if (DepsIT != FlowConditionDeps.end()) {
-    for (AtomicBoolValue *DepToken : DepsIT->second)
+    for (AtomicBoolValue *DepToken : DepsIT->second) {
       addTransitiveFlowConditionConstraints(*DepToken, Constraints,
                                             VisitedTokens);
+    }
   }
 }
 
