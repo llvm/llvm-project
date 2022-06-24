@@ -20,7 +20,7 @@
 int main(int, char**)
 {
   static_assert(std::barrier<>::max() > 0, "");
-  auto l = [](){};
+  auto l = []() noexcept {};
   static_assert(std::barrier<decltype(l)>::max() > 0, "");
   return 0;
 }
