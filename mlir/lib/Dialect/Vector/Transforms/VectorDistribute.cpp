@@ -717,7 +717,8 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
     rewriter.setInsertionPoint(innerWarp.getBody(), innerWarp.getBody()->end());
     rewriter.create<vector::YieldOp>(innerWarp.getLoc(), yieldOperands);
     rewriter.setInsertionPointAfter(innerWarp);
-    rewriter.create<scf::YieldOp>(forOp.getLoc(), innerWarp.getResults());
+    if (!innerWarp.getResults().empty())
+      rewriter.create<scf::YieldOp>(forOp.getLoc(), innerWarp.getResults());
     rewriter.eraseOp(forOp);
     // Replace the warpOp result coming from the original ForOp.
     for (const auto &res : llvm::enumerate(resultIdx)) {

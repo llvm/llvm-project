@@ -387,6 +387,26 @@ func.func @warp_scf_for_swap(%arg0: index) {
 
 // -----
 
+// CHECK-PROP-LABEL:   func @warp_scf_for_swap_no_yield(
+// CHECK-PROP:           scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK-PROP-NEXT:        vector.warp_execute_on_lane_0(%{{.*}})[32] {
+// CHECK-PROP-NEXT:          "some_op"() : () -> ()
+// CHECK-PROP-NEXT:        }
+// CHECK-PROP-NEXT:      }
+func.func @warp_scf_for_swap_no_yield(%arg0: index) {
+  %c128 = arith.constant 128 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  vector.warp_execute_on_lane_0(%arg0)[32] {
+    scf.for %arg3 = %c0 to %c128 step %c1 {
+      "some_op"() : () -> ()
+    }
+  }
+  return
+}
+
+// -----
+
 #map = affine_map<()[s0] -> (s0 * 4)>
 #map1 = affine_map<()[s0] -> (s0 * 128 + 128)>
 #map2 = affine_map<()[s0] -> (s0 * 4 + 128)>
