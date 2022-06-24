@@ -5,7 +5,7 @@
 // CHECK-ARM64: "-cc1" "-triple" "aarch64-pc-freebsd11"
 // CHECK-ARM64: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-ARM64: "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld-elf{{.*}}" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "-L[[SYSROOT]]/usr/lib" "{{.*}}.o" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "{{.*}}crtend.o" "{{.*}}crtn.o"
-
+//
 // RUN: %clang \
 // RUN:   --target=powerpc-pc-freebsd8 %s    \
 // RUN:   --sysroot=%S/Inputs/basic_freebsd_tree -### 2>&1 \
@@ -13,7 +13,7 @@
 // CHECK-PPC: "-cc1" "-triple" "powerpc-pc-freebsd8"
 // CHECK-PPC: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-PPC: "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld-elf{{.*}}" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "-L[[SYSROOT]]/usr/lib" "{{.*}}.o" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "{{.*}}crtend.o" "{{.*}}crtn.o"
-
+//
 // RUN: %clang \
 // RUN:   --target=powerpc64-pc-freebsd8 %s                              \
 // RUN:   --sysroot=%S/Inputs/basic_freebsd64_tree -### 2>&1 \
@@ -30,28 +30,28 @@
 // CHECK-PPC64LE: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-PPC64LE: "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld-elf{{.*}}" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "-L[[SYSROOT]]/usr/lib" "{{.*}}.o" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "{{.*}}crtend.o" "{{.*}}crtn.o"
 
-
+//
 // Check that -m32 properly adjusts the toolchain flags.
-
+//
 // RUN: %clang --target=x86_64-pc-freebsd8 -m32 %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LIB32 %s
 // CHECK-LIB32: "-cc1" "-triple" "i386-pc-freebsd8"
 // CHECK-LIB32: ld{{.*}}" {{.*}} "-m" "elf_i386_fbsd"
-
+//
 // RUN: %clang --target=x86_64-pc-freebsd8 -m32 %s 2>&1 \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -print-search-dirs 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LIB32PATHS %s
 // CHECK-LIB32PATHS: libraries: ={{.*:?}}/usr/lib32
-
+//
 // Check that O32 MIPS uses /usr/lib32 on a 64-bit tree.
-
+//
 // RUN: %clang --target=mips-freebsd12 %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -print-search-dirs 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LIB32PATHS %s
-
+//
 // Check that MIPS passes the correct linker emulation.
-
+//
 // RUN: %clang --target=mips-freebsd -### %s %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS-LD %s
 // CHECK-MIPS-LD: ld{{.*}}" {{.*}} "-m" "elf32btsmip_fbsd"
@@ -70,16 +70,16 @@
 // RUN: %clang --target=mips64el-freebsd -mabi=n32 -### %s %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSN32EL-LD %s
 // CHECK-MIPSN32EL-LD: ld{{.*}}" {{.*}} "-m" "elf32ltsmipn32_fbsd"
-
+//
 // Check that RISC-V passes the correct linker emulation.
-
+//
 // RUN: %clang --target=riscv32-freebsd -### %s %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-RV32I-LD %s
 // CHECK-RV32I-LD: ld{{.*}}" {{.*}} "-m" "elf32lriscv"
 // RUN: %clang --target=riscv64-freebsd -### %s %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-RV64I-LD %s
 // CHECK-RV64I-LD: ld{{.*}}" {{.*}} "-m" "elf64lriscv"
-
+//
 // Check that the new linker flags are passed to FreeBSD
 // RUN: %clang --target=x86_64-pc-freebsd8 -m32 %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
@@ -94,7 +94,7 @@
 // CHECK-LDFLAGS8: --enable-new-dtags
 // CHECK-LDFLAGS9: --hash-style=both
 // CHECK-LDFLAGS9: --enable-new-dtags
-
+//
 // Check that we do not pass --hash-style=gnu and --hash-style=both to linker
 // and provide correct path to the dynamic linker for MIPS platforms.
 // Also verify that we tell the assembler to target the right ISA and ABI.

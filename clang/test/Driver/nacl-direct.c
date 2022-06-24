@@ -1,6 +1,6 @@
 // Test clang changes for NaCl Support including:
 //    include paths, library paths, emulation, default static
-
+//
 // RUN: %clang -### %s \
 // RUN:     --target=i686-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-I686 %s
@@ -20,7 +20,7 @@
 // CHECK-I686: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}i686-nacl{{/|\\\\}}usr{{/|\\\\}}lib"
 // CHECK-I686: "-Lfoo{{/|\\\\}}lib{{/|\\\\}}i686-nacl"
 // CHECK-I686-NOT: -lpthread
-
+//
 // RUN: %clang -### %s \
 // RUN:     --target=x86_64-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-x86_64 %s
@@ -40,7 +40,7 @@
 // CHECK-x86_64: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}x86_64-nacl{{/|\\\\}}usr{{/|\\\\}}lib"
 // CHECK-x86_64: "-Lfoo{{/|\\\\}}lib{{/|\\\\}}x86_64-nacl"
 // CHECK-X86_64-NOT: -lpthread
-
+//
 // RUN: %clang -### %s \
 // RUN:     --target=armv7a-unknown-nacl-gnueabihf -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM %s
@@ -63,7 +63,7 @@
 // CHECK-ARM: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}arm-nacl{{/|\\\\}}usr{{/|\\\\}}lib"
 // CHECK-ARM: "-Lfoo{{/|\\\\}}lib{{/|\\\\}}arm-nacl"
 // CHECK-ARM-NOT: -lpthread
-
+//
 // RUN: %clang -### %s \
 // RUN:     --target=mipsel-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS %s

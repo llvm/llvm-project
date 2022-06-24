@@ -6,17 +6,17 @@
 
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
-
+//
 // Test single gpu architecture with complete compilation.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN,NRD %s
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 -fgpu-rdc %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN,RDC %s
-
+//
 // BIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
 // BIN-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
 // BIN-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (host-[[T]])
@@ -41,9 +41,9 @@
 // NRD-DAG: [[P14:[0-9]+]]: linker, {[[P13]]}, image, (host-[[T]])
 // RDC-DAG: [[P14:[0-9]+]]: linker, {[[P13]], [[P11]]}, image, (host-[[T]])
 
-
+//
 // Test single gpu architecture up to the assemble phase.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=ASM %s
@@ -56,9 +56,9 @@
 // ASM-DAG: [[P7:[0-9]+]]: compiler, {[[P6]]}, ir, (host-[[T]])
 // ASM-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, assembler, (host-[[T]])
 
-
+//
 // Test two gpu architectures with complete compilation with -fno-gpu-rdc.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=NRD2,NCL2 %s
@@ -92,9 +92,9 @@
 // NRD2-DAG: [[P20:[0-9]+]]: assembler, {[[P19]]}, object, (host-[[T]])
 // NCL2-DAG: [[P21:[0-9]+]]: linker, {[[P20]]}, image, (host-[[T]])
 
-
+//
 // Test two gpu architectures with complete compilation with -fgpu-rdc.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -fgpu-rdc 2>&1 \
 // RUN: | FileCheck -check-prefixes=RDC2,RCL2 %s
@@ -136,9 +136,9 @@
 // RCL2-DAG: [[P23:[0-9]+]]: linker, {[[P20]], [[P22]]}, image, (host-[[T]])
 // RC2-DAG: [[P23:[0-9]+]]: clang-offload-bundler, {[[P9]], [[P16]], [[P20]]}, object, (host-[[T]])
 
-
+//
 // Test two gpu architecturess up to the assemble phase.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=ASM2 %s
@@ -153,10 +153,10 @@
 // ASM2-DAG: [[P12:[0-9]+]]: compiler, {[[P11]]}, ir, (host-[[T]])
 // ASM2-DAG: [[P13:[0-9]+]]: backend, {[[P12]]}, assembler, (host-[[T]])
 
-
+//
 // Test single gpu architecture with complete compilation in host-only
 // compilation mode.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 %s --cuda-host-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=HBIN %s
@@ -167,10 +167,10 @@
 // HBIN-DAG: [[P4:[0-9]+]]: assembler, {[[P3]]}, object, (host-[[T]])
 // HBIN-DAG: [[P5:[0-9]+]]: linker, {[[P4]]}, image, (host-[[T]])
 // HBIN-NOT: device
-
+//
 // Test single gpu architecture up to the assemble phase in host-only
 // compilation mode.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 %s --cuda-host-only -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=HASM %s
@@ -180,10 +180,10 @@
 // HASM-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (host-[[T]])
 // HASM-NOT: device
 
-
+//
 // Test two gpu architectures with complete compilation in host-only
 // compilation mode.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-host-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=HBIN2 %s
@@ -195,10 +195,10 @@
 // HBIN2-DAG: [[P5:[0-9]+]]: linker, {[[P4]]}, image, (host-[[T]])
 // HBIN2-NOT: device
 
-
+//
 // Test two gpu architectures up to the assemble phase in host-only
 // compilation mode.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-host-only -S \
 // RUN: 2>&1 | FileCheck -check-prefixes=HASM2 %s
@@ -208,10 +208,10 @@
 // HASM2-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (host-[[T]])
 // HASM2-NOT: device
 
-
+//
 // Test single gpu architecture with complete compilation in device-only
 // compilation mode.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=DBIN %s
@@ -225,10 +225,10 @@
 // DBIN-DAG: [[P7:[0-9]+]]: linker, {[[P6]]}, hip-fatbin, (device-hip, )
 // DBIN-DAG: [[P8:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:)" {[[P7]]}, hip-fatbin
 // DBIN-NOT: host
-
+//
 // Test single gpu architecture up to the assemble phase in device-only
 // compilation mode.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -S --no-gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=DASM %s
@@ -240,10 +240,10 @@
 // DASM-NOT: clang-offload-bundler
 // DASM-NOT: host
 
-
+//
 // Test two gpu architectures with complete compilation in device-only
 // compilation mode.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s --cuda-device-only \
 // RUN: 2>&1 | FileCheck -check-prefixes=DBIN2 %s
@@ -264,10 +264,10 @@
 // DBIN2-DAG: [[P14:[0-9]+]]: linker, {[[P6]], [[P13]]}, hip-fatbin, (device-hip, )
 // DBIN2-DAG: [[P15:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:)" {[[P14]]}, hip-fatbin
 // DBIN2-NOT: host
-
+//
 // Test two gpu architectures up to the assemble phase in device-only
 // compilation mode.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN: --cuda-device-only -S -o %t.s 2>&1 \
@@ -298,20 +298,20 @@
 // DASM2-NOBUNDLE-NOT: clang-offload-bundler, {[[P4]], [[P9]]}, assembler, (device-hip, )
 // DASM2-NOT: host
 
-
+//
 // Test linking two objects with two gpu architectures.
-
+//
 // RUN: touch %T/obj1.o
 // RUN: touch %T/obj2.o
-
+//
 // RUN: %clang -target x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o 2>&1 \
 // RUN: | FileCheck -check-prefixes=L2,NL2 %s
-
+//
 // RUN: %clang -target x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o \
 // RUN: -fgpu-rdc 2>&1 | FileCheck -check-prefixes=L2,RL2,RL2-EM %s
-
+//
 // RUN: %clang -target x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o \
 // RUN: -fgpu-rdc --cuda-device-only 2>&1 | FileCheck -check-prefixes=L2,RL2,RL2-DEV %s
@@ -343,7 +343,7 @@
 
 // Test one gpu architectures up to the preprocessor expansion output phase in device-only
 // compilation mode. no bundle.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
 // RUN: --cuda-device-only -E 2>&1 \
@@ -385,7 +385,7 @@
 
 // Test one gpu architectures up to the LLVM IR output phase in device-only
 // compilation mode. no bundle.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
 // RUN: --cuda-device-only -c -emit-llvm 2>&1 \
@@ -393,7 +393,7 @@
 
 // Test two gpu architectures up to the LLVM IR output phase in device-only
 // compilation mode. bundle.
-
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN: --cuda-device-only -c -emit-llvm -o %t.bc --gpu-bundle-output 2>&1 \
@@ -401,7 +401,7 @@
 
 // Test two gpu architectures up to the LLVM IR output phase in device-only
 // compilation mode with bundled preprocessor expansion as input. bundle.
-
+//
 // RUN: %clang -x hip-cpp-output -target x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN: --cuda-device-only -c -emit-llvm -o %t.bc --gpu-bundle-output 2>&1 \

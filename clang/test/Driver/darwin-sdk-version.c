@@ -2,7 +2,7 @@
 // RUN:   | FileCheck %s
 // RUN: env SDKROOT=%S/Inputs/MacOSX10.14.sdk %clang -target x86_64-apple-macosx10.13 -c -### %s 2>&1 \
 // RUN:   | FileCheck %s
-
+//
 // RUN: rm -rf %t/SDKs/MacOSX10.10.sdk
 // RUN: mkdir -p %t/SDKs/MacOSX10.10.sdk
 // RUN: %clang -m64 -isysroot %t/SDKs/MacOSX10.10.sdk -c -### %s 2>&1 \
@@ -11,18 +11,18 @@
 // RUN: %clang -m64 -isysroot %t/SDKs/MacOSX10.10.sdk -c -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=INFER_DEPLOYMENT_TARGET_VERSION %s
 // REQUIRES: system-darwin && native
-
+//
 // RUN: rm -rf %t/SDKs/MacOSX10.14.sdk
 // RUN: mkdir -p %t/SDKs/MacOSX10.14.sdk
 // RUN: %clang -target x86_64-apple-macosx10.13 -isysroot %t/SDKs/MacOSX10.14.sdk -c -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NO_VERSION %s
-
+//
 // RUN: rm -rf %t/SDKs/MacOSX10.14.sdk
 // RUN: mkdir -p %t/SDKs/MacOSX10.14.sdk
 // RUN: echo '{broken json' > %t/SDKs/MacOSX10.14.sdk/SDKSettings.json
 // RUN: %clang -target x86_64-apple-macosx10.13 -isysroot %t/SDKs/MacOSX10.14.sdk -c -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=NO_VERSION,ERROR %s
-
+//
 // RUN: rm -rf %t/SDKs/MacOSX10.14.sdk
 // RUN: mkdir -p %t/SDKs/MacOSX10.14.sdk
 // RUN: echo '{"Version":1}' > %t/SDKs/MacOSX10.14.sdk/SDKSettings.json

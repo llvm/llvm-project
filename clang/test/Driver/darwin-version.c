@@ -153,7 +153,7 @@
 // RUN:   %clang -target x86_64-apple-darwin -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-DRIVERKIT %s
 // CHECK-VERSION-DRIVERKIT: "x86_64-apple-driverkit19.0.0"
-
+//
 // Make sure stdlib is not mistaken
 // RUN: env DRIVERKIT_DEPLOYMENT_TARGET=2.0 \
 // RUN:   %clang -target arm64-apple-darwin -c -x c++ %s -stdlib=libc++ -### 2>&1
