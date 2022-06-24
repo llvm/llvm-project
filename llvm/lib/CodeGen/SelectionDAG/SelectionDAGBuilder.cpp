@@ -4103,11 +4103,6 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   SDValue Ptr = getValue(SV);
 
   Type *Ty = I.getType();
-  Align Alignment = I.getAlign();
-
-  AAMDNodes AAInfo = I.getAAMetadata();
-  const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
-
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<uint64_t, 4> Offsets;
   ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets);
@@ -4115,6 +4110,9 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (NumValues == 0)
     return;
 
+  Align Alignment = I.getAlign();
+  AAMDNodes AAInfo = I.getAAMetadata();
+  const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
   bool isVolatile = I.isVolatile();
   MachineMemOperand::Flags MMOFlags =
       TLI.getLoadMemOperandFlags(I, DAG.getDataLayout());
