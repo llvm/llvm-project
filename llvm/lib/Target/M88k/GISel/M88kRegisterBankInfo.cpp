@@ -297,7 +297,9 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         /*NumOperands*/ Opc == TargetOpcode::G_BITCAST ? 2 : 1);
   }
   default:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     MI.dump();
+#endif
     return getInvalidInstructionMapping();
   }
 
