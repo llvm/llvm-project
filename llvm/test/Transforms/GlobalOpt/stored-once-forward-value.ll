@@ -7,15 +7,16 @@
 @g4 = internal unnamed_addr global i32 0
 @g5 = internal unnamed_addr global i32 0
 @g6 = internal unnamed_addr global i32 0
+@g7 = internal unnamed_addr global i32 0
+@g8 = internal unnamed_addr global ptr null
+@tl = internal thread_local unnamed_addr global i32 0
 
 declare void @b()
 
 define i1 @dom_const() {
 ; CHECK-LABEL: @dom_const(
-; CHECK-NEXT:    store i1 true, ptr @g1, align 1
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    [[R:%.*]] = load i1, ptr @g1, align 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   store i1 true, ptr @g1
   call void @b()
@@ -36,16 +37,29 @@ define i32 @dom_arg(i32 %a) {
   ret i32 %r
 }
 
+define ptr @dom_thread_local_global() {
+; CHECK-LABEL: @dom_thread_local_global(
+; CHECK-NEXT:    store ptr @tl, ptr @g3, align 8
+; CHECK-NEXT:    call void @b()
+; CHECK-NEXT:    [[R:%.*]] = load ptr, ptr @g3, align 8
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  store ptr @tl, ptr @g3
+  call void @b()
+  %r = load ptr, ptr @g3
+  ret ptr %r
+}
+
 define i32 @dom_different_types() {
 ; CHECK-LABEL: @dom_different_types(
-; CHECK-NEXT:    store i1 true, ptr @g3, align 1
+; CHECK-NEXT:    store i1 true, ptr @g4, align 1
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    [[R:%.*]] = load i32, ptr @g3, align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr @g4, align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  store i1 true, ptr @g3
+  store i1 true, ptr @g4
   call void @b()
-  %r = load i32, ptr @g3
+  %r = load i32, ptr @g4
   ret i32 %r
 }
 
@@ -53,57 +67,70 @@ define i1 @no_dom(i1 %i) {
 ; CHECK-LABEL: @no_dom(
 ; CHECK-NEXT:    br i1 [[I:%.*]], label [[BB1:%.*]], label [[END:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i1 true, ptr @g4, align 1
+; CHECK-NEXT:    store i1 true, ptr @g5, align 1
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    [[R:%.*]] = load i1, ptr @g4, align 1
+; CHECK-NEXT:    [[R:%.*]] = load i1, ptr @g5, align 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   br i1 %i, label %bb1, label %end
 bb1:
-  store i1 true, ptr @g4
+  store i1 true, ptr @g5
   br label %end
 end:
   call void @b()
-  %r = load i1, ptr @g4
+  %r = load i1, ptr @g5
   ret i1 %r
 }
 
 define i1 @dom_multiple_function_loads() {
 ; CHECK-LABEL: @dom_multiple_function_loads(
-; CHECK-NEXT:    store i1 true, ptr @g5, align 1
+; CHECK-NEXT:    store i1 true, ptr @g6, align 1
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    [[R:%.*]] = load i1, ptr @g5, align 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
-  store i1 true, ptr @g5
+  store i1 true, ptr @g6
   call void @b()
-  %r = load i1, ptr @g5
+  %r = load i1, ptr @g6
   ret i1 %r
 }
 
 define i1 @other() {
 ; CHECK-LABEL: @other(
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    [[R:%.*]] = load i1, ptr @g5, align 1
+; CHECK-NEXT:    [[R:%.*]] = load i1, ptr @g6, align 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   call void @b()
-  %r = load i1, ptr @g5
+  %r = load i1, ptr @g6
   ret i1 %r
 }
 
 define i1 @dom_volatile() {
 ; CHECK-LABEL: @dom_volatile(
-; CHECK-NEXT:    store i1 true, ptr @g6, align 1
+; CHECK-NEXT:    store i1 true, ptr @g7, align 1
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    [[R:%.*]] = load volatile i1, ptr @g6, align 1
+; CHECK-NEXT:    [[R:%.*]] = load volatile i1, ptr @g7, align 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  store i1 true, ptr @g6
+  store i1 true, ptr @g7
   call void @b()
-  %r = load volatile i1, ptr @g6
+  %r = load volatile i1, ptr @g7
   ret i1 %r
 }
 
+define i1 @dom_store_const_and_initializer() {
+; CHECK-LABEL: @dom_store_const_and_initializer(
+; CHECK-NEXT:    store i1 true, ptr @g8, align 1
+; CHECK-NEXT:    store i1 false, ptr @g8, align 1
+; CHECK-NEXT:    call void @b()
+; CHECK-NEXT:    [[R:%.*]] = load i1, ptr @g8, align 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  store i1 true, ptr @g8
+  store i1 false, ptr @g8
+  call void @b()
+  %r = load i1, ptr @g8
+  ret i1 %r
+}

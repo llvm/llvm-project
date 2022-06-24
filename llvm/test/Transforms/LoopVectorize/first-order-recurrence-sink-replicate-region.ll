@@ -65,7 +65,6 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-NEXT: Successor(s): loop.1.split
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1.split:
-; CHECK-NEXT:   WIDEN ir<%add> = add ir<%conv>, vp<[[PRED2]]>
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -310,9 +309,6 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-NEXT: }
 
 ; CHECK:      loop.2:
-; CHECK-NEXT:   WIDEN ir<%add.1> = add ir<%conv>, vp<[[PRED1]]>
-; CHECK-NEXT:   WIDEN ir<%conv.lv.2> = sext vp<[[PRED2]]>
-; CHECK-NEXT:   WIDEN ir<%add> = add ir<%add.1>, ir<%conv.lv.2>
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors

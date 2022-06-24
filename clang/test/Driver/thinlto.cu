@@ -4,14 +4,14 @@
 // -flto=thin causes a switch to llvm-bc object files.
 // RUN: %clangxx -ccc-print-phases -nocudainc -nocudalib -c %s -flto=thin 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILE-ACTIONS < %t %s
-//
+
 // CHECK-COMPILE-ACTIONS: 2: compiler, {1}, ir, (host-cuda)
 // CHECK-COMPILE-ACTIONS-NOT: lto-bc
 // CHECK-COMPILE-ACTIONS: 12: backend, {11}, lto-bc, (host-cuda)
 
 // RUN: %clangxx -ccc-print-phases -nocudainc -nocudalib %s -flto=thin 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILELINK-ACTIONS < %t %s
-//
+
 // CHECK-COMPILELINK-ACTIONS: 0: input, "{{.*}}thinlto.cu", cuda, (host-cuda)
 // CHECK-COMPILELINK-ACTIONS: 1: preprocessor, {0}, cuda-cpp-output
 // CHECK-COMPILELINK-ACTIONS: 2: compiler, {1}, ir, (host-cuda)

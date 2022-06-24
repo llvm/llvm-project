@@ -183,6 +183,11 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> &operator<<=(size_t s) {
+    shift_left(s);
+    return *this;
+  }
+
   constexpr void shift_right(size_t s) {
     const size_t drop = s / 64;  // Number of words to drop
     const size_t shift = s % 64; // Bit shift in the remaining words.
@@ -208,6 +213,11 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> &operator>>=(size_t s) {
+    shift_right(s);
+    return *this;
+  }
+
   constexpr UInt<Bits> operator&(const UInt<Bits> &other) const {
     UInt<Bits> result;
     for (size_t i = 0; i < WordCount; ++i)
@@ -229,6 +239,13 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> operator~() const {
+    UInt<Bits> result;
+    for (size_t i = 0; i < WordCount; ++i)
+      result.val[i] = ~val[i];
+    return result;
+  }
+
   constexpr bool operator==(const UInt<Bits> &other) const {
     for (size_t i = 0; i < WordCount; ++i) {
       if (val[i] != other.val[i])
@@ -247,33 +264,53 @@ public:
 
   constexpr bool operator>(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] <= other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
+        return true;
+      else if (word < other_word)
         return false;
     }
-    return true;
+    // Equal
+    return false;
   }
 
   constexpr bool operator>=(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] < other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
+        return true;
+      else if (word < other_word)
         return false;
     }
+    // Equal
     return true;
   }
 
   constexpr bool operator<(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] >= other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
         return false;
+      else if (word < other_word)
+        return true;
     }
-    return true;
+    // Equal
+    return false;
   }
 
   constexpr bool operator<=(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] > other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
         return false;
+      else if (word < other_word)
+        return true;
     }
+    // Equal
     return true;
   }
 
@@ -324,11 +361,5 @@ constexpr UInt<128> UInt<128>::operator*(const UInt<128> &other) const {
 
 } // namespace cpp
 } // namespace __llvm_libc
-
-/* TODO: determine the best way to support uint128 using this class.
-#if !defined(__SIZEOF_INT128__)
-using __uint128_t = __llvm_libc::internal::UInt<128>;
-#endif // uint128 is not defined, define it with this class.
-*/
 
 #endif // LLVM_LIBC_UTILS_CPP_UINT_H

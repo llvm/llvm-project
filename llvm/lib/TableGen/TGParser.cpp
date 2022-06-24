@@ -1096,6 +1096,52 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return (IsAOpInit::get(Type, LHS))->Fold();
   }
 
+  case tgtok::XExists: {
+    // Value ::= !exists '<' Type '>' '(' Value ')'
+    Lex.Lex(); // eat the operation
+
+    RecTy *Type = ParseOperatorType();
+    if (!Type)
+      return nullptr;
+
+    if (!consume(tgtok::l_paren)) {
+      TokError("expected '(' after type of !exists");
+      return nullptr;
+    }
+
+    SMLoc ExprLoc = Lex.getLoc();
+    Init *Expr = ParseValue(CurRec);
+    if (!Expr)
+      return nullptr;
+
+    TypedInit *ExprType = dyn_cast<TypedInit>(Expr);
+    if (!ExprType) {
+      Error(ExprLoc, "expected string type argument in !exists operator");
+      return nullptr;
+    }
+
+    RecordRecTy *RecType = dyn_cast<RecordRecTy>(ExprType->getType());
+    if (RecType) {
+      Error(ExprLoc,
+            "expected string type argument in !exists operator, please "
+            "use !isa instead");
+      return nullptr;
+    }
+
+    StringRecTy *SType = dyn_cast<StringRecTy>(ExprType->getType());
+    if (!SType) {
+      Error(ExprLoc, "expected string type argument in !exists operator");
+      return nullptr;
+    }
+
+    if (!consume(tgtok::r_paren)) {
+      TokError("expected ')' in !exists");
+      return nullptr;
+    }
+
+    return (ExistsOpInit::get(Type, Expr))->Fold(CurRec);
+  }
+
   case tgtok::XConcat:
   case tgtok::XADD:
   case tgtok::XSUB:
@@ -2358,6 +2404,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XEmpty:
   case tgtok::XCast:
   case tgtok::XGetDagOp: // Value ::= !unop '(' Value ')'
+  case tgtok::XExists:
   case tgtok::XIsA:
   case tgtok::XConcat:
   case tgtok::XDag:

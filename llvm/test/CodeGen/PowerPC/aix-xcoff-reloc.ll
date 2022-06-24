@@ -159,7 +159,7 @@ declare i32 @bar(i32)
 ; SYM:      Symbols [
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 0
-; SYM-NEXT:     Name: .file
+; SYM-NEXT:     Name: <stdin>
 ; SYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYM-NEXT:     Section: N_DEBUG
 ; SYM-NEXT:     Source Language ID: TB_C (0x0)

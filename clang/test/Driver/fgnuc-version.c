@@ -1,6 +1,6 @@
-//
+
 // Verify -fgnuc-version parsing
-//
+
 
 // RUN: %clang -c %s -target i686-linux -### 2>&1 | FileCheck %s -check-prefix GNUC-DEFAULT
 // GNUC-DEFAULT: "-fgnuc-version=4.2.1"

@@ -249,6 +249,16 @@ public:
     return *this;
   }
 
+  /// Insert a val into shape @pos.
+  Builder &insertDim(int64_t val, unsigned pos) {
+    assert(pos <= shape.size() && "overflow");
+    if (storage.empty())
+      storage.append(shape.begin(), shape.end());
+    storage.insert(storage.begin() + pos, val);
+    shape = {storage.data(), storage.size()};
+    return *this;
+  }
+
   operator RankedTensorType() {
     return RankedTensorType::get(shape, elementType, encoding);
   }

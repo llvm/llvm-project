@@ -4539,14 +4539,12 @@ const typename basic_string<_CharT, _Traits, _Allocator>::size_type
 template <class _CharT, class _Allocator>
 struct _LIBCPP_TEMPLATE_VIS
     hash<basic_string<_CharT, char_traits<_CharT>, _Allocator> >
-    : public unary_function<
-          basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t>
+    : public __unary_function<basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t>
 {
     size_t
     operator()(const basic_string<_CharT, char_traits<_CharT>, _Allocator>& __val) const _NOEXCEPT
     { return __do_string_hash(__val.data(), __val.data() + __val.size()); }
 };
-
 
 template<class _CharT, class _Traits, class _Allocator>
 basic_ostream<_CharT, _Traits>&

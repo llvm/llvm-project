@@ -1019,16 +1019,16 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
     return false;
 
   const APInt &C2APIntVal = C2->getAPIntValue();
+  if (C2APIntVal.getSignificantBits() > 64)
+    return false;
+
   if (auto *C1 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
     if (N0.hasOneUse())
       return false;
 
     const APInt &C1APIntVal = C1->getAPIntValue();
-    if (C1APIntVal.getBitWidth() > 64 || C2APIntVal.getBitWidth() > 64)
-      return false;
-
     const APInt CombinedValueIntVal = C1APIntVal + C2APIntVal;
-    if (CombinedValueIntVal.getBitWidth() > 64)
+    if (CombinedValueIntVal.getSignificantBits() > 64)
       return false;
     const int64_t CombinedValue = CombinedValueIntVal.getSExtValue();
 
@@ -1125,17 +1125,25 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
   }
 
   if (TLI.isReassocProfitable(DAG, N0, N1)) {
-    // Reassociate if (op N00, N1) already exist
-    if (N1 != N01)
-      if (SDNode *ExistNode =
-              DAG.getNodeIfExists(Opc, DAG.getVTList(VT), {N00, N1}))
-        return DAG.getNode(Opc, DL, VT, SDValue(ExistNode, 0), N01);
+    if (N1 != N01) {
+      // Reassociate if (op N00, N1) already exist
+      if (SDNode *NE = DAG.getNodeIfExists(Opc, DAG.getVTList(VT), {N00, N1})) {
+        // if Op (Op N00, N1), N01 already exist
+        // we need to stop reassciate to avoid dead loop
+        if (!DAG.doesNodeExist(Opc, DAG.getVTList(VT), {SDValue(NE, 0), N01}))
+          return DAG.getNode(Opc, DL, VT, SDValue(NE, 0), N01);
+      }
+    }
 
-    // Reassociate if (op N01, N1) already exist
-    if (N1 != N00)
-      if (SDNode *ExistNode =
-              DAG.getNodeIfExists(Opc, DAG.getVTList(VT), {N01, N1}))
-        return DAG.getNode(Opc, DL, VT, SDValue(ExistNode, 0), N00);
+    if (N1 != N00) {
+      // Reassociate if (op N01, N1) already exist
+      if (SDNode *NE = DAG.getNodeIfExists(Opc, DAG.getVTList(VT), {N01, N1})) {
+        // if Op (Op N01, N1), N00 already exist
+        // we need to stop reassciate to avoid dead loop
+        if (!DAG.doesNodeExist(Opc, DAG.getVTList(VT), {SDValue(NE, 0), N00}))
+          return DAG.getNode(Opc, DL, VT, SDValue(NE, 0), N00);
+      }
+    }
   }
 
   return SDValue();

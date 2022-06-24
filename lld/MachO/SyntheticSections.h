@@ -435,7 +435,7 @@ public:
   uint32_t getNumUndefinedSymbols() const { return undefinedSymbols.size(); }
 
 private:
-  void emitBeginSourceStab(llvm::DWARFUnit *compileUnit);
+  void emitBeginSourceStab(StringRef);
   void emitEndSourceStab();
   void emitObjectFileStab(ObjFile *);
   void emitEndFunStab(Defined *);

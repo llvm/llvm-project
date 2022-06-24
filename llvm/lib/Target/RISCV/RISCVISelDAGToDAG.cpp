@@ -220,9 +220,45 @@ static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   return Result;
 }
 
-static SDValue createTupleImpl(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                               unsigned RegClassID, unsigned SubReg0) {
+static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
+                           unsigned NF, RISCVII::VLMUL LMUL) {
+  static const unsigned M1TupleRegClassIDs[] = {
+      RISCV::VRN2M1RegClassID, RISCV::VRN3M1RegClassID, RISCV::VRN4M1RegClassID,
+      RISCV::VRN5M1RegClassID, RISCV::VRN6M1RegClassID, RISCV::VRN7M1RegClassID,
+      RISCV::VRN8M1RegClassID};
+  static const unsigned M2TupleRegClassIDs[] = {RISCV::VRN2M2RegClassID,
+                                                RISCV::VRN3M2RegClassID,
+                                                RISCV::VRN4M2RegClassID};
+
   assert(Regs.size() >= 2 && Regs.size() <= 8);
+
+  unsigned RegClassID;
+  unsigned SubReg0;
+  switch (LMUL) {
+  default:
+    llvm_unreachable("Invalid LMUL.");
+  case RISCVII::VLMUL::LMUL_F8:
+  case RISCVII::VLMUL::LMUL_F4:
+  case RISCVII::VLMUL::LMUL_F2:
+  case RISCVII::VLMUL::LMUL_1:
+    static_assert(RISCV::sub_vrm1_7 == RISCV::sub_vrm1_0 + 7,
+                  "Unexpected subreg numbering");
+    SubReg0 = RISCV::sub_vrm1_0;
+    RegClassID = M1TupleRegClassIDs[NF - 2];
+    break;
+  case RISCVII::VLMUL::LMUL_2:
+    static_assert(RISCV::sub_vrm2_3 == RISCV::sub_vrm2_0 + 3,
+                  "Unexpected subreg numbering");
+    SubReg0 = RISCV::sub_vrm2_0;
+    RegClassID = M2TupleRegClassIDs[NF - 2];
+    break;
+  case RISCVII::VLMUL::LMUL_4:
+    static_assert(RISCV::sub_vrm4_1 == RISCV::sub_vrm4_0 + 1,
+                  "Unexpected subreg numbering");
+    SubReg0 = RISCV::sub_vrm4_0;
+    RegClassID = RISCV::VRN2M4RegClassID;
+    break;
+  }
 
   SDLoc DL(Regs[0]);
   SmallVector<SDValue, 8> Ops;
@@ -236,48 +272,6 @@ static SDValue createTupleImpl(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
   SDNode *N =
       CurDAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::Untyped, Ops);
   return SDValue(N, 0);
-}
-
-static SDValue createM1Tuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                             unsigned NF) {
-  static const unsigned RegClassIDs[] = {
-      RISCV::VRN2M1RegClassID, RISCV::VRN3M1RegClassID, RISCV::VRN4M1RegClassID,
-      RISCV::VRN5M1RegClassID, RISCV::VRN6M1RegClassID, RISCV::VRN7M1RegClassID,
-      RISCV::VRN8M1RegClassID};
-
-  return createTupleImpl(CurDAG, Regs, RegClassIDs[NF - 2], RISCV::sub_vrm1_0);
-}
-
-static SDValue createM2Tuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                             unsigned NF) {
-  static const unsigned RegClassIDs[] = {RISCV::VRN2M2RegClassID,
-                                         RISCV::VRN3M2RegClassID,
-                                         RISCV::VRN4M2RegClassID};
-
-  return createTupleImpl(CurDAG, Regs, RegClassIDs[NF - 2], RISCV::sub_vrm2_0);
-}
-
-static SDValue createM4Tuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                             unsigned NF) {
-  return createTupleImpl(CurDAG, Regs, RISCV::VRN2M4RegClassID,
-                         RISCV::sub_vrm4_0);
-}
-
-static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                           unsigned NF, RISCVII::VLMUL LMUL) {
-  switch (LMUL) {
-  default:
-    llvm_unreachable("Invalid LMUL.");
-  case RISCVII::VLMUL::LMUL_F8:
-  case RISCVII::VLMUL::LMUL_F4:
-  case RISCVII::VLMUL::LMUL_F2:
-  case RISCVII::VLMUL::LMUL_1:
-    return createM1Tuple(CurDAG, Regs, NF);
-  case RISCVII::VLMUL::LMUL_2:
-    return createM2Tuple(CurDAG, Regs, NF);
-  case RISCVII::VLMUL::LMUL_4:
-    return createM4Tuple(CurDAG, Regs, NF);
-  }
 }
 
 void RISCVDAGToDAGISel::addVectorLoadStoreOperands(

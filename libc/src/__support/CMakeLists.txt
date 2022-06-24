@@ -45,6 +45,7 @@ add_header_library(
     libc.include.errno
     libc.src.errno.errno
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.uint128
     libc.src.__support.FPUtil.fputil
 )
 

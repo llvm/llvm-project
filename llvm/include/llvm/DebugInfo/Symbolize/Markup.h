@@ -21,6 +21,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 
 namespace llvm {
@@ -52,7 +53,7 @@ struct MarkupNode {
 /// Parses a log containing symbolizer markup into a sequence of nodes.
 class MarkupParser {
 public:
-  MarkupParser();
+  MarkupParser(StringSet<> MultilineTags = {});
 
   /// Parses an individual \p Line of input.
   ///
@@ -60,34 +61,54 @@ public:
   /// by nextNode() are discarded. The nodes returned by nextNode() may
   /// reference the input string, so it must be retained by the caller until the
   /// last use.
+  ///
+  /// Note that some elements may span multiple lines. If a line ends with the
+  /// start of one of these elements, then no nodes will be produced until the
+  /// either the end or something that cannot be part of an element is
+  /// encountered. This may only occur after multiple calls to parseLine(),
+  /// corresponding to the lines of the multi-line element.
   void parseLine(StringRef Line);
 
-  /// Returns the next node from the most recent parseLine() call.
+  /// Inform the parser of that the input stream has ended.
+  ///
+  /// This allows the parser to finish any deferred processing (e.g., an
+  /// in-progress multi-line element) and may cause nextNode() to return
+  /// additional nodes.
+  void flush();
+
+  /// Returns the next node in the input sequence.
   ///
   /// Calling nextNode() may invalidate the contents of the node returned by the
   /// previous call.
   ///
   /// \returns the next markup node or None if none remain.
-  Optional<MarkupNode> nextNode() {
-    if (!NextIdx)
-      NextIdx = 0;
-    if (*NextIdx == Buffer.size()) {
-      NextIdx.reset();
-      Buffer.clear();
-      return None;
-    }
-    return std::move(Buffer[(*NextIdx)++]);
-  }
+  Optional<MarkupNode> nextNode();
 
 private:
   Optional<MarkupNode> parseElement(StringRef Line);
   void parseTextOutsideMarkup(StringRef Text);
+  Optional<StringRef> parseMultiLineBegin(StringRef Line);
+  Optional<StringRef> parseMultiLineEnd(StringRef Line);
+
+  // Tags of elements that can span multiple lines.
+  const StringSet<> MultilineTags;
+
+  // Contents of a multi-line element that has finished being parsed. Retained
+  // to keep returned StringRefs for the contents valid.
+  std::string FinishedMultiline;
+
+  // Contents of a multi-line element that is still in the process of receiving
+  // lines.
+  std::string InProgressMultiline;
+
+  // The line currently being parsed.
+  StringRef Line;
 
   // Buffer for nodes parsed from the current line.
   SmallVector<MarkupNode> Buffer;
 
-  // Next buffer index to return or None if nextNode has not yet been called.
-  Optional<size_t> NextIdx;
+  // Next buffer index to return.
+  size_t NextIdx;
 
   // Regular expression matching supported ANSI SGR escape sequences.
   const Regex SGRSyntax;

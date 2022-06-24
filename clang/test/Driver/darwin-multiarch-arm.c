@@ -1,5 +1,5 @@
 // Check that we compile correctly with multiple ARM -arch options.
-//
+
 // RUN: %clang -target arm7-apple-darwin10 -### \
 // RUN:   -arch armv7 -arch armv7s %s 2>&1 | FileCheck %s
 

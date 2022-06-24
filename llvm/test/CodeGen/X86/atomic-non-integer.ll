@@ -4,9 +4,9 @@
 ; RUN: llc < %s -mtriple=i386-linux-generic -verify-machineinstrs -mattr=avx | FileCheck %s --check-prefixes=X86,X86-AVX
 ; RUN: llc < %s -mtriple=i386-linux-generic -verify-machineinstrs -mattr=avx512f | FileCheck %s --check-prefixes=X86,X86-AVX
 ; RUN: llc < %s -mtriple=i386-linux-generic -verify-machineinstrs | FileCheck %s --check-prefixes=X86,X86-NOSSE
-; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=sse2 | FileCheck %s --check-prefixes=X64,X64-SSE
-; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=avx | FileCheck %s --check-prefixes=X64,X64-AVX
-; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
+; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=sse2 | FileCheck %s --check-prefixes=X64-SSE
+; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=avx | FileCheck %s --check-prefixes=X64-AVX
+; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=avx512f | FileCheck %s --check-prefixes=X64-AVX
 
 ; Note: This test is testing that the lowering for atomics matches what we
 ; currently emit for non-atomics + the atomic restriction.  The presence of
@@ -23,10 +23,15 @@ define void @store_half(half* %fptr, half %v) {
 ; X86-NEXT:    movw %ax, (%ecx)
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: store_half:
-; X64:       # %bb.0:
-; X64-NEXT:    movw %si, (%rdi)
-; X64-NEXT:    retq
+; X64-SSE-LABEL: store_half:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movw %si, (%rdi)
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX-LABEL: store_half:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    movw %si, (%rdi)
+; X64-AVX-NEXT:    retq
   store atomic half %v, half* %fptr unordered, align 2
   ret void
 }
@@ -199,10 +204,15 @@ define half @load_half(half* %fptr) {
 ; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: load_half:
-; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    retq
+; X64-SSE-LABEL: load_half:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movzwl (%rdi), %eax
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX-LABEL: load_half:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    movzwl (%rdi), %eax
+; X64-AVX-NEXT:    retq
   %v = load atomic half, half* %fptr unordered, align 2
   ret half %v
 }

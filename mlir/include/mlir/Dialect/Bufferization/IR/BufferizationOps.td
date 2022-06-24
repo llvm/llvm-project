@@ -38,11 +38,6 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     If `copy` is specified, no dynamic sizes should be passed, since they are
     the same as the dynamic sizes of the `copy` operand.
 
-    The optional `escape` attribute indicates whether the buffer escapes the
-    parent block or not. In the latter case, the buffer is deallocated at the
-    of the block (during bufferization). In the former case, the buffer is not
-    deallocated and must be deallocated through some other mechanism.
-
     `alloc_tensor` is a helper op for bufferization. The operation is provided
     as an anchor that marks the beginning of a new tensor SSA use-def chain. It
     can be used to control in-place bufferization decisions during One-Shot
@@ -54,19 +49,22 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     Both dense and sparse tensor types are supported. The result of a
     `bufferization.alloc_tensor` is a tensor value that can be used like any
     other tensor value. In practice, it is often used as the "out" operand of
-    another op. E.g.:
+    another op. Sparse tensor allocations should always be used in a local
+    construction operation and never escape the function boundary directly.
+
+    Example:
 
     ```mlir
     %c = bufferization.alloc_tensor [%d1, %d2] : tensor<?x?xf32, #SparseMatrix>
     %0 = linalg.matmul
       ins(%a, %b: tensor<?x?xf32, #SparseMatrix>, tensor<?x?xf32, #SparseMatrix>)
       outs(%c: tensor<?x?xf32, #SparseMatrix>) -> tensor<?x?xf32, #SparseMatrix>
+    return %0 : tensor<?x?xf32, #SparseMatrix>
     ```
   }];
 
   let arguments = (ins Variadic<Index>:$dynamic_sizes,
-                       Optional<AnyTensor>:$copy,
-                       OptionalAttr<BoolAttr>:$escape);
+                       Optional<AnyTensor>:$copy);
 
   let results = (outs AnyTensor:$result);
 
@@ -75,6 +73,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
                             const BufferizationOptions &options);
 
     bool isMemoryWrite(OpResult opResult, const AnalysisState &state);
+
+    bool bufferizesToAllocation(OpResult opResult) { return true; }
 
     bool bufferizesToMemoryRead(OpOperand &opOperand,
                                 const AnalysisState &state);
@@ -119,16 +119,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   }];
 
   let builders = [
-    // Build an op without `copy` operand and `escape` attribute.
+    // Build an op without `copy` operand.
     OpBuilder<(ins "RankedTensorType":$type, "ValueRange":$dynamicSizes)>,
-
-    // Build an op without `escape` attribute.
-    OpBuilder<(ins "RankedTensorType":$type, "ValueRange":$dynamicSizes,
-                   "Value":$copy)>,
-
-    // Build an op with `copy` and `escape` attribute.
-    OpBuilder<(ins "RankedTensorType":$type, "ValueRange":$dynamicSizes,
-                   "Value":$copy, "bool":$escape)>,
   ];
 
   let hasCanonicalizer = 1;

@@ -337,11 +337,11 @@ bool DynamicLoaderDarwin::UnloadModuleSections(Module *module,
                     section_sp, old_section_load_addr))
               changed = true;
           } else {
-            Host::SystemLog(Host::eSystemLogWarning,
-                            "warning: unable to find and unload segment named "
-                            "'%s' in '%s' in macosx dynamic loader plug-in.\n",
-                            info.segments[i].name.AsCString("<invalid>"),
-                            image_object_file->GetFileSpec().GetPath().c_str());
+            Debugger::ReportWarning(
+                llvm::formatv("unable to find and unload segment named "
+                              "'{0}' in '{1}' in macosx dynamic loader plug-in",
+                              info.segments[i].name.AsCString("<invalid>"),
+                              image_object_file->GetFileSpec().GetPath()));
           }
         }
       }

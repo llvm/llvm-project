@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACECURSORINTELPT_H
 
 #include "ThreadDecoder.h"
-#include "TraceIntelPTSessionFileParser.h"
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -40,6 +39,8 @@ public:
   bool GoToId(lldb::user_id_t id) override;
 
   lldb::user_id_t GetId() const override;
+
+  bool HasId(lldb::user_id_t id) const override;
 
 private:
   size_t GetInternalInstructionSize();

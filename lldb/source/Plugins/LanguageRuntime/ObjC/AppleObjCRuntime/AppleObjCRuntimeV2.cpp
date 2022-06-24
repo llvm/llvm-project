@@ -199,13 +199,13 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
     DEBUG_PRINTF ("count = %u\n", count);
 
     uint32_t idx = 0;
-    for (uint32_t i=0; i<=count; ++i)
+    for (uint32_t i=0; i<count; ++i)
     {
         if (idx < max_class_infos)
         {
             Class isa = realized_class_list[i];
             const char *name_ptr = objc_debug_class_getNameRaw(isa);
-            if (name_ptr == NULL)
+            if (!name_ptr)
                 continue;
             const char *s = name_ptr;
             uint32_t h = 5381;
@@ -239,6 +239,7 @@ extern "C" {
     void free(void *ptr);
     size_t objc_getRealizedClassList_trylock(Class *buffer, size_t len);
     const char* objc_debug_class_getNameRaw(Class cls);
+    const char* class_getName(Class cls);
 }
 
 #define DEBUG_PRINTF(fmt, ...) if (should_log) printf(fmt, ## __VA_ARGS__)
@@ -272,13 +273,17 @@ __lldb_apple_objc_v2_get_dynamic_class_info3(void *gdb_objc_realized_classes_ptr
     DEBUG_PRINTF ("count = %u\n", count);
 
     uint32_t idx = 0;
-    for (uint32_t i=0; i<=count; ++i)
+    for (uint32_t i=0; i<count; ++i)
     {
         if (idx < max_class_infos)
         {
             Class isa = realized_class_list[i];
             const char *name_ptr = objc_debug_class_getNameRaw(isa);
-            if (name_ptr == NULL)
+            if (!name_ptr) {
+               class_getName(isa); // Realize name of lazy classes.
+               name_ptr = objc_debug_class_getNameRaw(isa);
+            }
+            if (!name_ptr)
                 continue;
             const char *s = name_ptr;
             uint32_t h = 5381;
@@ -1538,6 +1543,12 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
     return objc_class_sp;
 
   objc_class_sp = GetClassDescriptorFromISA(isa);
+  if (!objc_class_sp) {
+    if (ABISP abi_sp = process->GetABI())
+      isa = abi_sp->FixCodeAddress(isa);
+    objc_class_sp = GetClassDescriptorFromISA(isa);
+  }
+
   if (isa && !objc_class_sp) {
     Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
     LLDB_LOGF(log,
@@ -1695,11 +1706,11 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunction(
   }
   case objc_getRealizedClassList_trylock: {
     if (!m_objc_getRealizedClassList_trylock_helper.utility_function)
-      m_objc_copyRealizedClassList_helper.utility_function =
+      m_objc_getRealizedClassList_trylock_helper.utility_function =
           GetClassInfoUtilityFunctionImpl(exe_ctx, helper,
                                           g_get_dynamic_class_info3_body,
                                           g_get_dynamic_class_info3_name);
-    return m_objc_copyRealizedClassList_helper.utility_function.get();
+    return m_objc_getRealizedClassList_trylock_helper.utility_function.get();
   }
   }
   llvm_unreachable("Unexpected helper");
@@ -1719,7 +1730,8 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoArgs(Helper helper) {
 }
 
 AppleObjCRuntimeV2::DynamicClassInfoExtractor::Helper
-AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper() const {
+AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper(
+    ExecutionContext &exe_ctx) const {
   if (!m_runtime.m_has_objc_copyRealizedClassList &&
       !m_runtime.m_has_objc_getRealizedClassList_trylock)
     return DynamicClassInfoExtractor::gdb_objc_realized_classes;
@@ -1727,10 +1739,20 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper() const {
   if (Process *process = m_runtime.GetProcess()) {
     if (DynamicLoader *loader = process->GetDynamicLoader()) {
       if (loader->IsFullyInitialized()) {
-        if (m_runtime.m_has_objc_getRealizedClassList_trylock)
-          return DynamicClassInfoExtractor::objc_getRealizedClassList_trylock;
-        if (m_runtime.m_has_objc_copyRealizedClassList)
-          return DynamicClassInfoExtractor::objc_copyRealizedClassList;
+        switch (exe_ctx.GetTargetRef().GetDynamicClassInfoHelper()) {
+        case eDynamicClassInfoHelperAuto:
+          [[clang::fallthrough]];
+        case eDynamicClassInfoHelperGetRealizedClassList:
+          if (m_runtime.m_has_objc_getRealizedClassList_trylock)
+            return DynamicClassInfoExtractor::objc_getRealizedClassList_trylock;
+          [[clang::fallthrough]];
+        case eDynamicClassInfoHelperCopyRealizedClassList:
+          if (m_runtime.m_has_objc_copyRealizedClassList)
+            return DynamicClassInfoExtractor::objc_copyRealizedClassList;
+          [[clang::fallthrough]];
+        case eDynamicClassInfoHelperRealizedClassesStruct:
+          return DynamicClassInfoExtractor::gdb_objc_realized_classes;
+        }
       }
     }
   }
@@ -1867,7 +1889,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
   Status err;
 
   // Compute which helper we're going to use for this update.
-  const DynamicClassInfoExtractor::Helper helper = ComputeHelper();
+  const DynamicClassInfoExtractor::Helper helper = ComputeHelper(exe_ctx);
 
   // Read the total number of classes from the hash table
   const uint32_t num_classes =

@@ -136,6 +136,8 @@ END-SCRIPT
 #include <__algorithm/ranges_minmax.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_minmax.h'}}
 #include <__algorithm/ranges_minmax_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_minmax_element.h'}}
 #include <__algorithm/ranges_mismatch.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_mismatch.h'}}
+#include <__algorithm/ranges_move.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move.h'}}
+#include <__algorithm/ranges_move_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move_backward.h'}}
 #include <__algorithm/ranges_none_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_none_of.h'}}
 #include <__algorithm/ranges_replace.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_replace.h'}}
 #include <__algorithm/ranges_replace_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_replace_if.h'}}
@@ -280,6 +282,7 @@ END-SCRIPT
 #include <__format/formatter_floating_point.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_floating_point.h'}}
 #include <__format/formatter_integer.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_integer.h'}}
 #include <__format/formatter_integral.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_integral.h'}}
+#include <__format/formatter_output.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_output.h'}}
 #include <__format/formatter_pointer.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_pointer.h'}}
 #include <__format/formatter_string.h> // expected-error@*:* {{use of private header from outside its module: '__format/formatter_string.h'}}
 #include <__format/parser_std_format_spec.h> // expected-error@*:* {{use of private header from outside its module: '__format/parser_std_format_spec.h'}}

@@ -4,7 +4,7 @@
 // driver and passed to CC1 are correct on Darwin platforms.
 
 // Check x86 and x86_64
-//
+
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target i686-apple-darwin \
 // RUN:     -stdlib=libstdc++ \
@@ -17,7 +17,7 @@
 // CHECK-LIBSTDCXX-X86: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0"
 // CHECK-LIBSTDCXX-X86: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0/i686-apple-darwin8"
 // CHECK-LIBSTDCXX-X86: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0/backward"
-//
+
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target x86_64-apple-darwin \
 // RUN:     -stdlib=libstdc++ \
@@ -32,7 +32,7 @@
 // CHECK-LIBSTDCXX-X86_64: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0/backward"
 
 // Check arm and thumb
-//
+
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target arm-apple-darwin \
 // RUN:     -stdlib=libstdc++ \
@@ -45,7 +45,7 @@
 // CHECK-LIBSTDCXX-ARM: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1"
 // CHECK-LIBSTDCXX-ARM: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1/arm-apple-darwin10/v6"
 // CHECK-LIBSTDCXX-ARM: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1/backward"
-//
+
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target arm-apple-darwin \
 // RUN:     -stdlib=libstdc++ \
@@ -60,7 +60,7 @@
 // CHECK-LIBSTDCXX-THUMB: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1/backward"
 
 // Check aarch64
-//
+
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target arm64-apple-darwin \
 // RUN:     -stdlib=libstdc++ \
@@ -72,20 +72,20 @@
 // CHECK-LIBSTDCXX-AARCH64: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1/backward"
 
 // Make sure we issue a warning when we can't find the path
-//
+
 // RUN: %clang -no-canonical-prefixes %s -fsyntax-only 2>&1 \
 // RUN:     -target x86_64-apple-darwin \
 // RUN:     -stdlib=libstdc++ \
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_no_libstdcxx \
 // RUN:   | FileCheck --check-prefix=CHECK-LIBSTDCXX-MISSING %s
 // CHECK-LIBSTDCXX-MISSING: clang: warning: include path for libstdc++ headers not found; pass '-stdlib=libc++' on the command line to use the libc++ standard library instead
-//
+
 // RUN: %clang %s -target x86_64-apple-darwin -fsyntax-only 2>&1 \
 // RUN:           -isysroot %S/Inputs/basic_darwin_sdk_no_libstdcxx \
 // RUN:           -stdlib=libc++ \
 // RUN:    | FileCheck -allow-empty --check-prefix=CHECK-LIBSTDCXX-MISSING-1 %s
 // CHECK-LIBSTDCXX-MISSING-1-NOT: warning
-//
+
 // RUN: %clang %s -target x86_64-apple-darwin16 -fsyntax-only 2>&1 \
 // RUN:           -isysroot %S/Inputs/basic_darwin_sdk_no_libstdcxx -stdlib=platform \
 // RUN:    | FileCheck -allow-empty --check-prefix=CHECK-LIBSTDCXX-MISSING-2 %s

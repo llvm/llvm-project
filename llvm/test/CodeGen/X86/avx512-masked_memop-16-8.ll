@@ -153,7 +153,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 declare void @llvm.masked.store.v32i16.p0v32i16(<32 x i16>, <32 x i16>*, i32, <32 x i1>)
 
 ; Make sure we scalarize masked loads of f16.
-define <16 x half> @test_mask_load_16xf16(<16 x i1> %mask, <16 x half>* %addr, <16 x half> %val) {
+define <16 x half> @test_mask_load_16xf16(<16 x i1> %mask, <16 x half>* %addr) {
 ; CHECK-LABEL: test_mask_load_16xf16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp

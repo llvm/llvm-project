@@ -9,8 +9,10 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Matchers.h"
 
@@ -152,6 +154,7 @@ void mlir::bufferization::populateDynamicDimSizes(
 LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
                                        const BufferizationOptions &options) {
   OpBuilder::InsertionGuard g(rewriter);
+  Operation *op = this->getOperation();
   Location loc = getLoc();
 
   // Nothing to do for dead AllocTensorOps.
@@ -185,8 +188,11 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   // Should the buffer be deallocated?
   AnalysisState analysisState(options);
   bool dealloc;
-  if (getEscape()) {
-    dealloc = !*getEscape();
+  if (op->hasAttr(BufferizationDialect::kEscapeAttrName)) {
+    // AllocTensorOp has one result.
+    ArrayAttr escapeAttr =
+        op->getAttr(BufferizationDialect::kEscapeAttrName).cast<ArrayAttr>();
+    dealloc = !escapeAttr[0].cast<BoolAttr>().getValue();
   } else {
     // No "escape" annotation found.
     if (options.createDeallocs) {
@@ -246,25 +252,22 @@ LogicalResult AllocTensorOp::verify() {
            << getType().getNumDynamicDims() << " dynamic sizes";
   if (getCopy() && getCopy().getType() != getType())
     return emitError("expected that `copy` and return type match");
+
+  // For sparse tensor allocation, we require that none of its
+  // uses escapes the function boundary directly.
+  if (sparse_tensor::getSparseTensorEncoding(getType())) {
+    for (auto &use : getOperation()->getUses())
+      if (isa<func::ReturnOp, func::CallOp, func::CallIndirectOp>(
+              use.getOwner()))
+        return emitError("sparse tensor allocation should not escape function");
+  }
+
   return success();
 }
 
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes) {
-  build(builder, result, type, dynamicSizes, /*copy=*/Value(),
-        /*escape=*/BoolAttr());
-}
-
-void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
-                          RankedTensorType type, ValueRange dynamicSizes,
-                          Value copy) {
-  build(builder, result, type, dynamicSizes, copy, /*escape=*/BoolAttr());
-}
-
-void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
-                          RankedTensorType type, ValueRange dynamicSizes,
-                          Value copy, bool escape) {
-  build(builder, result, type, dynamicSizes, copy, builder.getBoolAttr(escape));
+  build(builder, result, type, dynamicSizes, /*copy=*/Value());
 }
 
 namespace {
@@ -305,8 +308,7 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
     if (newType == op.getType())
       return failure();
     auto newOp = rewriter.create<AllocTensorOp>(
-        op.getLoc(), newType, newDynamicSizes, /*copy=*/Value(),
-        /*escape=*/op.getEscapeAttr());
+        op.getLoc(), newType, newDynamicSizes, /*copy=*/Value());
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }

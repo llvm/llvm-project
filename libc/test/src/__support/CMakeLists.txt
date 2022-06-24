@@ -18,6 +18,7 @@ add_libc_unittest(
   high_precision_decimal_test.cpp
   DEPENDS
     libc.src.__support.high_precision_decimal
+    libc.src.__support.CPP.uint128
 )
 
 add_libc_unittest(
@@ -28,6 +29,7 @@ add_libc_unittest(
     str_to_float_test.cpp
   DEPENDS
     libc.src.__support.str_to_float
+    libc.src.__support.CPP.uint128
 )
 
 add_libc_unittest(

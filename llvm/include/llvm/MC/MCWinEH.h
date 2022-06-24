@@ -9,7 +9,6 @@
 #ifndef LLVM_MC_MCWINEH_H
 #define LLVM_MC_MCWINEH_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include <vector>
 

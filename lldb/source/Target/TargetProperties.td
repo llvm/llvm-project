@@ -54,6 +54,10 @@ let Definition = "target" in {
     EnumValues<"OptionEnumValues(g_import_std_module_value_types)">,
     Desc<"Import the 'std' C++ module to improve expression parsing involving "
          " C++ standard library types.">;
+  def DynamicClassInfoHelper: Property<"objc-dynamic-class-extractor", "Enum">,
+    DefaultEnumValue<"eDynamicClassInfoHelperAuto">,
+    EnumValues<"OptionEnumValues(g_dynamic_class_info_helper_value_types)">,
+    Desc<"Configure how LLDB parses dynamic Objective-C class metadata. By default LLDB will choose the most appropriate method for the target OS.">;
   def AutoApplyFixIts: Property<"auto-apply-fixits", "Boolean">,
     DefaultTrue,
     Desc<"Automatically apply fix-it hints to expressions.">;
@@ -226,7 +230,7 @@ let Definition = "process" in {
   def StopOnExec: Property<"stop-on-exec", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"If true, stop when a shared library is loaded or unloaded.">;
+    Desc<"If true, stop when the inferior exec's.">;
   def UtilityExpressionTimeout: Property<"utility-expression-timeout", "UInt64">,
     DefaultUnsignedValue<15>,
     Desc<"The time in seconds to wait for LLDB-internal utility expressions.">;

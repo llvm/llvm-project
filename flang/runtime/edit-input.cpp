@@ -730,7 +730,17 @@ bool EditCharacterInput(
         chunk = 1;
       }
       --remaining;
-    } else {
+    } else if constexpr (sizeof *x > 1) {
+      // Read single byte with expansion into multi-byte CHARACTER
+      chunk = 1;
+      if (skipping) {
+        --skip;
+      } else {
+        *x++ = static_cast<unsigned char>(*input);
+        --length;
+      }
+      --remaining;
+    } else { // single bytes -> default CHARACTER
       if (skipping) {
         chunk = std::min<std::size_t>(skip, ready);
         skip -= chunk;

@@ -22,6 +22,7 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 
 #if defined(__APPLE__)
@@ -852,16 +853,9 @@ SymtabSection::SymtabSection(StringTableSection &stringTableSection)
     : LinkEditSection(segment_names::linkEdit, section_names::symbolTable),
       stringTableSection(stringTableSection) {}
 
-void SymtabSection::emitBeginSourceStab(DWARFUnit *compileUnit) {
+void SymtabSection::emitBeginSourceStab(StringRef sourceFile) {
   StabsEntry stab(N_SO);
-  SmallString<261> dir(compileUnit->getCompilationDir());
-  StringRef sep = sys::path::get_separator();
-  // We don't use `path::append` here because we want an empty `dir` to result
-  // in an absolute path. `append` would give us a relative path for that case.
-  if (!dir.endswith(sep))
-    dir += sep;
-  stab.strx = stringTableSection.addString(
-      saver().save(dir + compileUnit->getUnitDIE().getShortName()));
+  stab.strx = stringTableSection.addString(saver().save(sourceFile));
   stabs.emplace_back(std::move(stab));
 }
 
@@ -956,7 +950,7 @@ void SymtabSection::emitStabs() {
         emitEndSourceStab();
       lastFile = file;
 
-      emitBeginSourceStab(file->compileUnit);
+      emitBeginSourceStab(file->sourceFile());
       emitObjectFileStab(file);
     }
 
@@ -1254,11 +1248,12 @@ void CodeSignatureSection::writeHashes(uint8_t *buf) const {
   // NOTE: Changes to this functionality should be repeated in llvm-objcopy's
   // MachOWriter::writeSignatureData.
   uint8_t *hashes = buf + fileOff + allHeadersSize;
-  for (uint64_t i = 0; i < getBlockCount(); ++i) {
+  parallelFor(0, getBlockCount(), [&](size_t i) {
     sha256(buf + i * blockSize,
-           std::min(static_cast<size_t>(fileOff - i * blockSize), blockSize),
+           std::min(static_cast<size_t>(fileOff - i * blockSize),
+                    static_cast<size_t>(blockSize)),
            hashes + i * hashSize);
-  }
+  });
 #if defined(__APPLE__)
   // This is macOS-specific work-around and makes no sense for any
   // other host OS. See https://openradar.appspot.com/FB8914231

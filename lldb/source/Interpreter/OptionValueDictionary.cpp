@@ -8,11 +8,12 @@
 
 #include "lldb/Interpreter/OptionValueDictionary.h"
 
-#include "llvm/ADT/StringRef.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/State.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -161,16 +162,26 @@ Status OptionValueDictionary::SetArgs(const Args &args,
         return error;
       }
 
-      lldb::OptionValueSP value_sp(CreateValueFromCStringForTypeMask(
-          value.str().c_str(), m_type_mask, error));
-      if (value_sp) {
+      if (m_type_mask == 1u << eTypeEnum) {
+        auto enum_value =
+            std::make_shared<OptionValueEnumeration>(m_enum_values, 0);
+        error = enum_value->SetValueFromString(value);
         if (error.Fail())
           return error;
         m_value_was_set = true;
-        SetValueForKey(ConstString(key), value_sp, true);
+        SetValueForKey(ConstString(key), enum_value, true);
       } else {
-        error.SetErrorString("dictionaries that can contain multiple types "
-                             "must subclass OptionValueArray");
+        lldb::OptionValueSP value_sp(CreateValueFromCStringForTypeMask(
+            value.str().c_str(), m_type_mask, error));
+        if (value_sp) {
+          if (error.Fail())
+            return error;
+          m_value_was_set = true;
+          SetValueForKey(ConstString(key), value_sp, true);
+        } else {
+          error.SetErrorString("dictionaries that can contain multiple types "
+                               "must subclass OptionValueArray");
+        }
       }
     }
     break;

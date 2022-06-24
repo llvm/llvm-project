@@ -12,7 +12,7 @@
 // CHECK: "-o" "a.out"
 
 // Check -save-temps=cwd which should work the same as -save-temps above
-//
+
 // RUN: %clang -target x86_64-apple-darwin -save-temps=cwd -arch x86_64 %s -### 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CWD
 // CWD: "-o" "save-temps.i"
@@ -62,7 +62,7 @@
 
 // Check that temp files are saved in the same directory as the output file
 // regardless of whether -o is specified.
-//
+
 // RUN: %clang -target x86_64-apple-darwin -save-temps=obj -o obj/dir/a.out -arch x86_64 %s -### 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CHECK-OBJ
 // CHECK-OBJ: "-o" "obj/dir{{/|\\\\}}save-temps.i"
@@ -71,7 +71,7 @@
 // CHECK-OBJ: "-o" "obj/dir{{/|\\\\}}save-temps.s"
 // CHECK-OBJ: "-o" "obj/dir{{/|\\\\}}save-temps.o"
 // CHECK-OBJ: "-o" "obj/dir{{/|\\\\}}a.out"
-//
+
 // RUN: %clang -target x86_64-apple-darwin -save-temps=obj -arch x86_64 %s -### 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CHECK-OBJ-NOO
 // CHECK-OBJ-NOO: "-o" "save-temps.i"

@@ -92,3 +92,14 @@
 
 // LINKER_ARGS: lld{{.*}}-flavor gnu --no-undefined -shared -o {{.*}}.out {{.*}}.o a
 // LINKER_ARGS: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_70 {{.*}}.o a b
+
+// RUN: clang-offload-packager -o %t-lib.out \
+// RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_52
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out
+// RUN: llvm-ar rcs %t.a %t.o
+// RUN: rm -f %t.o
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-obj.o
+// RUN: clang-linker-wrapper --host-triple x86_64-unknown-linux-gnu --dry-run -save-temps \
+// RUN:   -linker-path /usr/bin/ld -- %t.a %t-obj.o -o a.out
+// RUN: not ls *-device-*

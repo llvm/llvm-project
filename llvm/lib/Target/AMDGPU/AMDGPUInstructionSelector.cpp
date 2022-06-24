@@ -1328,11 +1328,13 @@ bool AMDGPUInstructionSelector::selectDSOrderedIntrinsic(
   unsigned ShaderType = SIInstrInfo::getDSShaderTypeValue(*MF);
 
   unsigned Offset0 = OrderedCountIndex << 2;
-  unsigned Offset1 = WaveRelease | (WaveDone << 1) | (ShaderType << 2) |
-                     (Instruction << 4);
+  unsigned Offset1 = WaveRelease | (WaveDone << 1) | (Instruction << 4);
 
   if (STI.getGeneration() >= AMDGPUSubtarget::GFX10)
     Offset1 |= (CountDw - 1) << 6;
+
+  if (STI.getGeneration() < AMDGPUSubtarget::GFX11)
+    Offset1 |= ShaderType << 2;
 
   unsigned Offset = Offset0 | (Offset1 << 8);
 
@@ -2992,13 +2994,15 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
 
 bool AMDGPUInstructionSelector::selectAMDGPU_BUFFER_ATOMIC_FADD(
   MachineInstr &MI) const {
-  if (STI.hasGFX90AInsts())
+  const Register DefReg = MI.getOperand(0).getReg();
+  LLT DefTy = MRI->getType(DefReg);
+  if (AMDGPU::hasAtomicFaddRtnForTy(STI, DefTy))
     return selectImpl(MI, *CoverageInfo);
 
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  if (!MRI->use_nodbg_empty(MI.getOperand(0).getReg())) {
+  if (!MRI->use_nodbg_empty(DefReg)) {
     Function &F = MBB->getParent()->getFunction();
     DiagnosticInfoUnsupported
       NoFpRet(F, "return versions of fp atomics not supported",

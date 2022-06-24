@@ -338,6 +338,8 @@ module std [system] {
       module ranges_minmax                   { private header "__algorithm/ranges_minmax.h" }
       module ranges_minmax_element           { private header "__algorithm/ranges_minmax_element.h" }
       module ranges_mismatch                 { private header "__algorithm/ranges_mismatch.h" }
+      module ranges_move                     { private header "__algorithm/ranges_move.h" }
+      module ranges_move_backward            { private header "__algorithm/ranges_move_backward.h" }
       module ranges_none_of                  { private header "__algorithm/ranges_none_of.h" }
       module ranges_replace                  { private header "__algorithm/ranges_replace.h" }
       module ranges_replace_if               { private header "__algorithm/ranges_replace_if.h" }
@@ -597,6 +599,7 @@ module std [system] {
       module formatter_floating_point { private header "__format/formatter_floating_point.h" }
       module formatter_integer        { private header "__format/formatter_integer.h" }
       module formatter_integral       { private header "__format/formatter_integral.h" }
+      module formatter_output         { private header "__format/formatter_output.h" }
       module formatter_pointer        { private header "__format/formatter_pointer.h" }
       module formatter_string         { private header "__format/formatter_string.h" }
       module parser_std_format_spec   { private header "__format/parser_std_format_spec.h" }

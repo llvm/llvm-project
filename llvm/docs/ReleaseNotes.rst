@@ -151,6 +151,13 @@ Changes to the C API
   resolving the best cast operation given a source value and destination type.
   This function is a direct wrapper of ``CastInst::getCastOpcode``.
 
+* Add ``LLVMGetAggregateElement`` function as a wrapper for
+  ``Constant::getAggregateElement``, which can be used to fetch an element of a
+  constant struct, array or vector, independently of the underlying
+  representation. The ``LLVMGetElementAsConstant`` function is deprecated in
+  favor of the new function, which works on all constant aggregates, rather than
+  only instances of ``ConstantDataSequential``.
+
 Changes to the Go bindings
 --------------------------
 

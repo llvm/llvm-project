@@ -14,9 +14,8 @@ entry:
   %arrayidx2 = getelementptr inbounds [2 x ppc_fp128], ptr %z, i32 0, i64 1
   store ppc_fp128 0xM4093B400000000000000000000000000, ptr %arrayidx2, align 16
   %0 = load ptr, ptr %v.addr, align 8
-  %1 = bitcast ptr %z to ptr
-  %2 = load [2 x i128], ptr %1, align 1
-  call void @bar(ptr %0, [2 x i128] %2)
+  %1 = load [2 x i128], ptr %z, align 1
+  call void @bar(ptr %0, [2 x i128] %1)
   ret void
 }
 

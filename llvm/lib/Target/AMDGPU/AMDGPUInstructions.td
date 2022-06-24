@@ -87,6 +87,17 @@ class PredConcat<list<Predicate> lst, Predicate pred> {
       !listconcat([pred], !filter(item, lst, !ne(item, pred)));
 }
 
+// Add a Register to the list if does not already exist
+class RegAppend<list<Register> lst, Register reg> {
+  list<Register> ret =
+      !listconcat([reg], !filter(item, lst, !ne(item, reg)));
+}
+// Get the union of two Register lists
+class RegListUnion<list<Register> lstA, list<Register> lstB> {
+  list<Register> ret =
+      !foldl(lstA, lstB, temp, item, RegAppend<temp, item>.ret);
+}
+
 class PredicateControl {
   Predicate SubtargetPredicate = TruePredicate;
   Predicate AssemblerPredicate = TruePredicate;

@@ -1444,22 +1444,19 @@ void SCCPInstVisitor::solve() {
   }
 }
 
-/// resolvedUndefsIn - While solving the dataflow for a function, we assume
-/// that branches on undef values cannot reach any of their successors.
-/// However, this is not a safe assumption.  After we solve dataflow, this
-/// method should be use to handle this.  If this returns true, the solver
-/// should be rerun.
+/// While solving the dataflow for a function, we don't compute a result for
+/// operations with an undef operand, to allow undef to be lowered to a
+/// constant later. For example, constant folding of "zext i8 undef to i16"
+/// would result in "i16 0", and if undef is later lowered to "i8 1", then the
+/// zext result would become "i16 1" and would result into an overdefined
+/// lattice value once merged with the previous result. Not computing the
+/// result of the zext (treating undef the same as unknown) allows us to handle
+/// a later undef->constant lowering more optimally.
 ///
-/// This method handles this by finding an unresolved branch and marking it one
-/// of the edges from the block as being feasible, even though the condition
-/// doesn't say it would otherwise be.  This allows SCCP to find the rest of the
-/// CFG and only slightly pessimizes the analysis results (by marking one,
-/// potentially infeasible, edge feasible).  This cannot usefully modify the
-/// constraints on the condition of the branch, as that would impact other users
-/// of the value.
-///
-/// This scan also checks for values that use undefs. It conservatively marks
-/// them as overdefined.
+/// However, if the operand remains undef when the solver returns, we do need
+/// to assign some result to the instruction (otherwise we would treat it as
+/// unreachable). For simplicity, we mark any instructions that are still
+/// unknown/undef as overdefined.
 bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
@@ -1519,91 +1516,6 @@ bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
 
       markOverdefined(&I);
       MadeChange = true;
-    }
-
-    // Check to see if we have a branch or switch on an undefined value.  If so
-    // we force the branch to go one way or the other to make the successor
-    // values live.  It doesn't really matter which way we force it.
-    Instruction *TI = BB.getTerminator();
-    if (auto *BI = dyn_cast<BranchInst>(TI)) {
-      if (!BI->isConditional())
-        continue;
-      if (!getValueState(BI->getCondition()).isUnknownOrUndef())
-        continue;
-
-      // If the input to SCCP is actually branch on undef, fix the undef to
-      // false.
-      if (isa<UndefValue>(BI->getCondition())) {
-        BI->setCondition(ConstantInt::getFalse(BI->getContext()));
-        markEdgeExecutable(&BB, TI->getSuccessor(1));
-        MadeChange = true;
-        continue;
-      }
-
-      // Otherwise, it is a branch on a symbolic value which is currently
-      // considered to be undef.  Make sure some edge is executable, so a
-      // branch on "undef" always flows somewhere.
-      // FIXME: Distinguish between dead code and an LLVM "undef" value.
-      BasicBlock *DefaultSuccessor = TI->getSuccessor(1);
-      if (markEdgeExecutable(&BB, DefaultSuccessor))
-        MadeChange = true;
-
-      continue;
-    }
-
-    if (auto *IBR = dyn_cast<IndirectBrInst>(TI)) {
-      // Indirect branch with no successor ?. Its ok to assume it branches
-      // to no target.
-      if (IBR->getNumSuccessors() < 1)
-        continue;
-
-      if (!getValueState(IBR->getAddress()).isUnknownOrUndef())
-        continue;
-
-      // If the input to SCCP is actually branch on undef, fix the undef to
-      // the first successor of the indirect branch.
-      if (isa<UndefValue>(IBR->getAddress())) {
-        IBR->setAddress(BlockAddress::get(IBR->getSuccessor(0)));
-        markEdgeExecutable(&BB, IBR->getSuccessor(0));
-        MadeChange = true;
-        continue;
-      }
-
-      // Otherwise, it is a branch on a symbolic value which is currently
-      // considered to be undef.  Make sure some edge is executable, so a
-      // branch on "undef" always flows somewhere.
-      // FIXME: IndirectBr on "undef" doesn't actually need to go anywhere:
-      // we can assume the branch has undefined behavior instead.
-      BasicBlock *DefaultSuccessor = IBR->getSuccessor(0);
-      if (markEdgeExecutable(&BB, DefaultSuccessor))
-        MadeChange = true;
-
-      continue;
-    }
-
-    if (auto *SI = dyn_cast<SwitchInst>(TI)) {
-      if (!SI->getNumCases() ||
-          !getValueState(SI->getCondition()).isUnknownOrUndef())
-        continue;
-
-      // If the input to SCCP is actually switch on undef, fix the undef to
-      // the first constant.
-      if (isa<UndefValue>(SI->getCondition())) {
-        SI->setCondition(SI->case_begin()->getCaseValue());
-        markEdgeExecutable(&BB, SI->case_begin()->getCaseSuccessor());
-        MadeChange = true;
-        continue;
-      }
-
-      // Otherwise, it is a branch on a symbolic value which is currently
-      // considered to be undef.  Make sure some edge is executable, so a
-      // branch on "undef" always flows somewhere.
-      // FIXME: Distinguish between dead code and an LLVM "undef" value.
-      BasicBlock *DefaultSuccessor = SI->case_begin()->getCaseSuccessor();
-      if (markEdgeExecutable(&BB, DefaultSuccessor))
-        MadeChange = true;
-
-      continue;
     }
   }
 

@@ -128,7 +128,12 @@ public:
   llvm::ArrayRef<Action> getActions(StateID State, SymbolID Terminal) const;
   // Returns the state after we reduce a nonterminal.
   // Expected to be called by LR parsers.
+  // REQUIRES: Nonterminal is valid here.
   StateID getGoToState(StateID State, SymbolID Nonterminal) const;
+  // Returns the state after we shift a terminal.
+  // Expected to be called by LR parsers.
+  // If the terminal is invalid here, returns None.
+  llvm::Optional<StateID> getShiftState(StateID State, SymbolID Terminal) const;
 
   // Looks up available actions.
   // Returns empty if no available actions in the table.

@@ -243,13 +243,12 @@ std::string InstrumentationRuntimeLibrary::buildTables(BinaryContext &BC) {
   };
 
   // Indirect targets need to be sorted for fast lookup during runtime
-  std::sort(Summary->IndCallTargetDescriptions.begin(),
-            Summary->IndCallTargetDescriptions.end(),
-            [&](const IndCallTargetDescription &A,
-                const IndCallTargetDescription &B) {
-              return getOutputAddress(*A.Target, A.ToLoc.Offset) <
-                     getOutputAddress(*B.Target, B.ToLoc.Offset);
-            });
+  llvm::sort(Summary->IndCallTargetDescriptions,
+             [&](const IndCallTargetDescription &A,
+                 const IndCallTargetDescription &B) {
+               return getOutputAddress(*A.Target, A.ToLoc.Offset) <
+                      getOutputAddress(*B.Target, B.ToLoc.Offset);
+             });
 
   // Start of the vector with descriptions (one CounterDescription for each
   // counter), vector size is Counters.size() CounterDescription-sized elmts

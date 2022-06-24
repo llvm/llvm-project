@@ -2112,11 +2112,23 @@ LLVMValueRef LLVMConstNamedStruct(LLVMTypeRef StructTy,
                                   unsigned Count);
 
 /**
+ * Get element of a constant aggregate (struct, array or vector) at the
+ * specified index. Returns null if the index is out of range, or it's not
+ * possible to determine the element (e.g., because the constant is a
+ * constant expression.)
+ *
+ * @see llvm::Constant::getAggregateElement()
+ */
+LLVMValueRef LLVMGetAggregateElement(LLVMValueRef C, unsigned Idx);
+
+/**
  * Get an element at specified index as a constant.
  *
  * @see ConstantDataSequential::getElementAsConstant()
  */
-LLVMValueRef LLVMGetElementAsConstant(LLVMValueRef C, unsigned idx);
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMGetElementAsConstant(LLVMValueRef C, unsigned idx),
+    "Use LLVMGetAggregateElement instead");
 
 /**
  * Create a ConstantVector from values.
