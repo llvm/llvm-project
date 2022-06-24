@@ -10,14 +10,14 @@ define void @f_0(i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1:%.*]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -53,7 +53,7 @@ define void @f_1(i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1:%.*]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -66,7 +66,7 @@ define void @f_1(i1 %cond_0, i1 %cond_1) {
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -114,7 +114,7 @@ define void @f_2(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B:%.*]], 10
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0]], [[COND_1]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -127,7 +127,7 @@ define void @f_2(i32 %a, i32 %b) {
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -175,7 +175,7 @@ define void @f_3(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 10
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -185,7 +185,7 @@ define void @f_3(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B:%.*]], 10
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -235,7 +235,7 @@ define void @f_4(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B:%.*]], 10
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0]], [[COND_1]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -244,7 +244,7 @@ define void @f_4(i32 %a, i32 %b) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -292,7 +292,7 @@ define void @f_5(i32 %a) {
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = icmp uge i32 [[A]], 11
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -302,7 +302,7 @@ define void @f_5(i32 %a) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ugt i32 [[A]], 10
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -347,19 +347,19 @@ right:                                            ; preds = %guarded
 define void @f_6(i1* dereferenceable(32) %a, i1* %b, i1 %unknown) {
 ; CHECK-LABEL: @f_6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_0:%.*]] = load i1, i1* [[A:%.*]]
+; CHECK-NEXT:    [[COND_0:%.*]] = load i1, i1* [[A:%.*]], align 1
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    store i1 [[UNKNOWN:%.*]], i1* [[B:%.*]]
-; CHECK-NEXT:    [[COND_1:%.*]] = load i1, i1* [[A]]
+; CHECK-NEXT:    store i1 [[UNKNOWN:%.*]], i1* [[B:%.*]], align 1
+; CHECK-NEXT:    [[COND_1:%.*]] = load i1, i1* [[A]], align 1
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -396,20 +396,20 @@ guarded1:                                         ; preds = %guarded
 define void @f_7(i32 %a, i1* %cond_buf) {
 ; CHECK-LABEL: @f_7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_1:%.*]] = load volatile i1, i1* [[COND_BUF:%.*]]
+; CHECK-NEXT:    [[COND_1:%.*]] = load volatile i1, i1* [[COND_BUF:%.*]], align 1
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[COND_3:%.*]] = icmp ult i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_3]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[COND_2:%.*]] = load volatile i1, i1* [[COND_BUF]]
+; CHECK-NEXT:    [[COND_2:%.*]] = load volatile i1, i1* [[COND_BUF]], align 1
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_2]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -418,7 +418,7 @@ define void @f_7(i32 %a, i1* %cond_buf) {
 ; CHECK:       left:
 ; CHECK-NEXT:    [[WIDENABLE_COND7:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND8:%.*]] = and i1 [[COND_3]], [[WIDENABLE_COND7]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED5:%.*]], label [[DEOPT6:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED5:%.*]], label [[DEOPT6:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt6:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -477,7 +477,7 @@ define void @f_8(i32 %a, i1 %cond_1, i1 %cond_2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_1:%.*]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -488,7 +488,7 @@ define void @f_8(i32 %a, i1 %cond_1, i1 %cond_2) {
 ; CHECK-NEXT:    [[COND_3:%.*]] = icmp ult i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_2:%.*]], [[COND_3]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -497,7 +497,7 @@ define void @f_8(i32 %a, i1 %cond_1, i1 %cond_2) {
 ; CHECK:       loop2:
 ; CHECK-NEXT:    [[WIDENABLE_COND7:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND8:%.*]] = and i1 [[COND_3]], [[WIDENABLE_COND7]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED5:%.*]], label [[DEOPT6:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED5:%.*]], label [[DEOPT6:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt6:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -559,7 +559,7 @@ define void @f_9(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK:       first_loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0:%.*]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -568,7 +568,7 @@ define void @f_9(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK:       second_loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1:%.*]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -612,7 +612,7 @@ define void @f_10(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0:%.*]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -621,7 +621,7 @@ define void @f_10(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK:       no_loop:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1:%.*]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -666,7 +666,7 @@ define void @f_11(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1:%.*]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -675,7 +675,7 @@ define void @f_11(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -759,14 +759,14 @@ define void @f_12(i32 %a0) {
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[A30]] to i1
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 true, [[COND]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -833,7 +833,7 @@ define void @f_13(i32 %a) {
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = icmp ult i32 [[A]], 10
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -843,7 +843,7 @@ define void @f_13(i32 %a) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp slt i32 [[A]], 10
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -888,7 +888,7 @@ define void @f_14(i32 %a) {
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 14
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -898,7 +898,7 @@ define void @f_14(i32 %a) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp sgt i32 [[A]], 10
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -943,14 +943,14 @@ define void @f_15(i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0:%.*]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 true, [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -985,14 +985,14 @@ define void @f_16(i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0:%.*]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 false, [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND4]], label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -1028,14 +1028,14 @@ define void @swapped_wb(i1 %cond_0, i1 %cond_1) {
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1:%.*]]
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDENABLE_COND]], [[WIDE_CHK]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_1]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -1070,14 +1070,14 @@ define void @trivial_wb(i1 %cond_0) {
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 true, [[COND_0:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[WIDENABLE_COND3:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND4:%.*]] = and i1 [[COND_0]], [[WIDENABLE_COND3]]
-; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1:%.*]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
