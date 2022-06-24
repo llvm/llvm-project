@@ -26,7 +26,7 @@ template <typename T>
 static inline T find_leading_one(T mant, int &shift_length) {
   shift_length = 0;
   if (mant > 0) {
-    shift_length = (sizeof(mant) * 8) - 1 - clz(mant);
+    shift_length = (sizeof(mant) * 8) - 1 - unsafe_clz(mant);
   }
   return T(1) << shift_length;
 }

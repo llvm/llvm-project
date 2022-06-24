@@ -56,6 +56,7 @@ enum class Operation : int {
   // input and produce a single floating point number of the same type as
   // output.
   BeginBinaryOperationsSingleOutput,
+  Fmod,
   Hypot,
   EndBinaryOperationsSingleOutput,
 
