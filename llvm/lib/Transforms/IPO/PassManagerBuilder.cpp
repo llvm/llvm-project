@@ -732,8 +732,6 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createOpenMPOptCGSCCLegacyPass());
 
   MPM.add(createPostOrderFunctionAttrsLegacyPass());
-  if (OptLevel > 2)
-    MPM.add(createArgumentPromotionPass()); // Scalarize uninlined fn args
 
   addExtensionsToPM(EP_CGSCCOptimizerLate, MPM);
   addFunctionSimplificationPasses(MPM);
@@ -1002,10 +1000,6 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   if (RunInliner)
     PM.add(createGlobalOptimizerPass());
   PM.add(createGlobalDCEPass()); // Remove dead functions.
-
-  // If we didn't decide to inline a function, check to see if we can
-  // transform it to pass arguments by value instead of by reference.
-  PM.add(createArgumentPromotionPass());
 
   // The IPO passes may leave cruft around.  Clean up after them.
   PM.add(createInstructionCombiningPass());
