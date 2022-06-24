@@ -12,7 +12,7 @@
 #include "TaskTimer.h"
 #include "ThreadDecoder.h"
 #include "TraceIntelPTMultiCpuDecoder.h"
-#include "TraceIntelPTSessionFileParser.h"
+#include "TraceIntelPTBundleLoader.h"
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
@@ -39,12 +39,11 @@ public:
 
   /// Create an instance of this class from a trace bundle.
   ///
-  /// \param[in] trace_session_file
-  ///     The contents of the trace session file. See \a Trace::FindPlugin.
+  /// \param[in] trace_bundle_description
+  ///     The description of the trace bundle. See \a Trace::FindPlugin.
   ///
-  /// \param[in] session_file_dir
-  ///     The path to the directory that contains the session file. It's used to
-  ///     resolved relative paths in the session file.
+  /// \param[in] bundle_dir
+  ///     The path to the directory that contains the trace bundle.
   ///
   /// \param[in] debugger
   ///     The debugger instance where new Targets will be created as part of the
@@ -53,8 +52,8 @@ public:
   /// \return
   ///     A trace instance or an error in case of failures.
   static llvm::Expected<lldb::TraceSP>
-  CreateInstanceForSessionFile(const llvm::json::Value &trace_session_file,
-                               llvm::StringRef session_file_dir,
+  CreateInstanceForTraceBundle(const llvm::json::Value &trace_bundle_description,
+                               llvm::StringRef bundle_dir,
                                Debugger &debugger);
 
   static llvm::Expected<lldb::TraceSP>
@@ -161,14 +160,14 @@ public:
   TraceIntelPTSP GetSharedPtr();
 
 private:
-  friend class TraceIntelPTSessionFileParser;
+  friend class TraceIntelPTBundleLoader;
 
   llvm::Expected<pt_cpu> GetCPUInfoForLiveProcess();
 
   /// Postmortem trace constructor
   ///
-  /// \param[in] session
-  ///     The definition file for the postmortem session.
+  /// \param[in] bundle_description
+  ///     The definition file for the postmortem bundle.
   ///
   /// \param[in] traced_processes
   ///     The processes traced in the live session.
@@ -181,13 +180,13 @@ private:
   ///     A TraceIntelPT shared pointer instance.
   /// \{
   static TraceIntelPTSP CreateInstanceForPostmortemTrace(
-      JSONTraceSession &session,
+      JSONTraceBundleDescription &bundle_description,
       llvm::ArrayRef<lldb::ProcessSP> traced_processes,
       llvm::ArrayRef<lldb::ThreadPostMortemTraceSP> traced_threads);
 
   /// This constructor is used by CreateInstanceForPostmortemTrace to get the
   /// instance ready before using shared pointers, which is a limitation of C++.
-  TraceIntelPT(JSONTraceSession &session,
+  TraceIntelPT(JSONTraceBundleDescription &bundle_description,
                llvm::ArrayRef<lldb::ProcessSP> traced_processes);
   /// \}
 
@@ -216,12 +215,12 @@ private:
     llvm::DenseMap<lldb::tid_t, std::unique_ptr<ThreadDecoder>> thread_decoders;
     /// Helper variable used to track long running operations for telemetry.
     TaskTimer task_timer;
-    /// It is provided by either a session file or a live process to convert TSC
+    /// It is provided by either a trace bundle or a live process to convert TSC
     /// counters to and from nanos. It might not be available on all hosts.
     llvm::Optional<LinuxPerfZeroTscConversion> tsc_conversion;
   } m_storage;
 
-  /// It is provided by either a session file or a live process' "cpuInfo"
+  /// It is provided by either a trace bundle or a live process' "cpuInfo"
   /// binary data. We don't put it in the Storage because this variable doesn't
   /// change.
   llvm::Optional<pt_cpu> m_cpu_info;

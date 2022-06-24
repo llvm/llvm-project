@@ -72,9 +72,10 @@ public:
   };
 
   CommandObjectTraceLoad(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "trace load",
-                            "Load a processor trace session from a JSON file.",
-                            "trace load") {}
+      : CommandObjectParsed(
+            interpreter, "trace load",
+            "Load a post-mortem processor trace session from a trace bundle.",
+            "trace load") {}
 
   ~CommandObjectTraceLoad() override = default;
 
@@ -83,9 +84,8 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.size() != 1) {
-      result.AppendError(
-          "a single path to a JSON file containing a trace session"
-          " is required");
+      result.AppendError("a single path to a JSON file containing a the "
+                         "description of the trace bundle is required");
       return false;
     }
 

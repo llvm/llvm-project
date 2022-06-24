@@ -1,4 +1,4 @@
-//===-- TraceIntelPTSessionSaver.cpp --------------------------------------===//
+//===-- TraceIntelPTBundleSaver.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TraceIntelPTSessionSaver.h"
+#include "TraceIntelPTBundleSaver.h"
 #include "TraceIntelPT.h"
 #include "TraceIntelPTJSONStructs.h"
 #include "lldb/Core/Module.h"
@@ -47,11 +47,11 @@ static llvm::Error WriteBytesToDisk(FileSpec &output_file,
   return Error::success();
 }
 
-/// Save the trace session description JSON object inside the given directory
+/// Save the trace bundle description JSON object inside the given directory
 /// as a file named \a trace.json.
 ///
-/// \param[in] trace_session_json
-///     The trace's session, as JSON Object.
+/// \param[in] trace_bundle_description
+///     The trace bundle description as JSON Object.
 ///
 /// \param[in] directory
 ///     The directory where the JSON file will be saved.
@@ -60,12 +60,12 @@ static llvm::Error WriteBytesToDisk(FileSpec &output_file,
 ///     \a llvm::Success if the operation was successful, or an \a llvm::Error
 ///     otherwise.
 static llvm::Error
-WriteSessionToFile(const llvm::json::Value &trace_session_json,
+SaveTraceBundleDescription(const llvm::json::Value &trace_bundle_description,
                    const FileSpec &directory) {
   FileSpec trace_path = directory;
   trace_path.AppendPathComponent("trace.json");
   std::ofstream os(trace_path.GetPath());
-  os << formatv("{0:2}", trace_session_json).str();
+  os << formatv("{0:2}", trace_bundle_description).str();
   os.close();
   if (!os)
     return createStringError(inconvertibleErrorCode(),
@@ -74,7 +74,7 @@ WriteSessionToFile(const llvm::json::Value &trace_session_json,
   return Error::success();
 }
 
-/// Build the threads sub-section of the trace session description file.
+/// Build the threads sub-section of the trace bundle description file.
 /// Any associated binary files are created inside the given directory.
 ///
 /// \param[in] process
@@ -170,10 +170,10 @@ BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory) {
   return json_cpus;
 }
 
-/// Build modules sub-section of the trace's session. The original modules
+/// Build modules sub-section of the trace bundle. The original modules
 /// will be copied over to the \a <directory/modules> folder. Invalid modules
 /// are skipped.
-/// Copying the modules has the benefit of making these trace session
+/// Copying the modules has the benefit of making these
 /// directories self-contained, as the raw traces and modules are part of the
 /// output directory and can be sent to another machine, where lldb can load
 /// them and replicate exactly the same trace session.
@@ -235,7 +235,7 @@ BuildModulesSection(Process &process, FileSpec directory) {
   return json_modules;
 }
 
-/// Build the processes section of the trace session description file. Besides
+/// Build the processes section of the trace bundle description object. Besides
 /// returning the processes information, this method saves to disk all modules
 /// and raw traces corresponding to the traced threads of the given process.
 ///
@@ -280,7 +280,7 @@ BuildProcessesSection(TraceIntelPT &trace_ipt, const FileSpec &directory) {
   return processes;
 }
 
-Error TraceIntelPTSessionSaver::SaveToDisk(TraceIntelPT &trace_ipt,
+Error TraceIntelPTBundleSaver::SaveToDisk(TraceIntelPT &trace_ipt,
                                            FileSpec directory) {
   if (std::error_code ec =
           sys::fs::create_directories(directory.GetPath().c_str()))
@@ -303,9 +303,9 @@ Error TraceIntelPTSessionSaver::SaveToDisk(TraceIntelPT &trace_ipt,
   if (!json_cpus)
     return json_cpus.takeError();
 
-  JSONTraceSession json_intel_pt_session{"intel-pt", *cpu_info, *json_processes,
+  JSONTraceBundleDescription json_intel_pt_bundle_desc{"intel-pt", *cpu_info, *json_processes,
                                          *json_cpus,
                                          trace_ipt.GetPerfZeroTscConversion()};
 
-  return WriteSessionToFile(toJSON(json_intel_pt_session), directory);
+  return SaveTraceBundleDescription(toJSON(json_intel_pt_bundle_desc), directory);
 }
