@@ -5246,6 +5246,11 @@ def mrelocation_model : Separate<["-"], "mrelocation-model">,
 def fno_math_builtin : Flag<["-"], "fno-math-builtin">,
   HelpText<"Disable implicit builtin knowledge of math functions">,
   MarshallingInfoFlag<LangOpts<"NoMathBuiltin">>;
+def fno_use_ctor_homing: Flag<["-"], "fno-use-ctor-homing">,
+    HelpText<"Don't use constructor homing for debug info">;
+def fuse_ctor_homing: Flag<["-"], "fuse-ctor-homing">,
+    HelpText<"Use constructor homing if we are using limited debug info already">;
+
 } // let Flags = [CC1Option, CC1AsOption, NoDriverOption]
 
 let Flags = [CC1Option, NoDriverOption] in {

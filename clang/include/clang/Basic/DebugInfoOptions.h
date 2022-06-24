@@ -34,6 +34,12 @@ enum DebugInfoKind {
   /// (-gline-tables-only).
   DebugLineTablesOnly,
 
+  /// Limit generated debug info for classes to reduce size. This emits class
+  /// type info only where the constructor is emitted, if it is a class that
+  /// has a constructor.
+  /// FIXME: Consider combining this with LimitedDebugInfo.
+  DebugInfoConstructor,
+
   /// Limit generated debug info to reduce size (-fno-standalone-debug). This
   /// emits forward decls for types that could be replaced with forward decls in
   /// the source code. For dynamic C++ classes type info is only emitted into

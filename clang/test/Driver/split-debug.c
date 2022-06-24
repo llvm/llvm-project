@@ -9,7 +9,7 @@
 
 // INLINE:     "-fsplit-dwarf-inlining"
 // NOINLINE-NOT: "-fsplit-dwarf-inlining"
-// SPLIT:      "-debug-info-kind=limited"
+// SPLIT:      "-debug-info-kind=constructor"
 // SPLIT-SAME: "-ggnu-pubnames"
 // SPLIT-SAME: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
 
@@ -38,14 +38,14 @@
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
 // RUN: %clang -### -c -target x86_64 -gno-split-dwarf -g -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
 
-// NOSPLIT:     "-debug-info-kind=limited"
+// NOSPLIT:     "-debug-info-kind=constructor"
 // NOSPLIT-NOT: "-ggnu-pubnames"
 // NOSPLIT-NOT: "-split-dwarf
 
 /// Test -gsplit-dwarf=single.
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=single -g %s 2>&1 | FileCheck %s --check-prefix=SINGLE
 
-// SINGLE: "-debug-info-kind=limited"
+// SINGLE: "-debug-info-kind=constructor"
 // SINGLE: "-split-dwarf-file" "split-debug.o"
 // SINGLE-NOT: "-split-dwarf-output"
 
@@ -62,7 +62,7 @@
 
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=split -g -gno-pubnames %s 2>&1 | FileCheck %s --check-prefixes=NOPUBNAMES
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=split -g -gno-gnu-pubnames %s 2>&1 | FileCheck %s --check-prefixes=NOPUBNAMES
-// NOPUBNAMES:      "-debug-info-kind=limited"
+// NOPUBNAMES:      "-debug-info-kind=constructor"
 // NOPUBNAMES-NOT:  "-ggnu-pubnames"
 // NOPUBNAMES-SAME: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
 
