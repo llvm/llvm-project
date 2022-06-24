@@ -10,6 +10,7 @@ add_clang_unittest(BasicTests
   FileManagerTest.cpp
   LineOffsetMappingTest.cpp
   SanitizersTest.cpp
+  SarifTest.cpp
   SourceManagerTest.cpp
   )
 
