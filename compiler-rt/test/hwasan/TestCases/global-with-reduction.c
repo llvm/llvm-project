@@ -24,24 +24,27 @@
 
 #include <stdlib.h>
 
-int a = 1;
+// GlobalOpt may replace the current GV with a new boolean-typed GV. Previously,
+// this resulted in the "nosanitize" getting dropped because while the data/code
+// references to the GV were updated, the old metadata references weren't.
+int* f() {
 #ifdef USE_NOSANITIZE
-__attribute__((no_sanitize("hwaddress"))) int x = 1;
+__attribute__((no_sanitize("hwaddress"))) static int x = 1;
 #else // USE_NOSANITIZE
-int x = 1;
+  static int x = 1;
 #endif // USE_NOSANITIZE
-int b = 1;
-
-int atoi(const char *);
+  if (x == 1) x = 0;
+  return &x;
+}
 
 int main(int argc, char **argv) {
   // CHECK: Cause: global-overflow
-  // RSYM: is located 0 bytes to the right of 4-byte global variable x {{.*}} in {{.*}}global.c.tmp
+  // RSYM: is located 0 bytes to the right of 4-byte global variable f.x {{.*}} in {{.*}}global-with-reduction.c.tmp
   // RNOSYM: is located to the right of a 4-byte global variable in
-  // RNOSYM-NEXT: #0 0x{{.*}} ({{.*}}global.c.tmp+{{.*}})
-  // LSYM: is located 4 bytes to the left of 4-byte global variable x {{.*}} in {{.*}}global.c.tmp
+  // RNOSYM-NEXT: #0 0x{{.*}} ({{.*}}global-with-reduction.c.tmp+{{.*}})
+  // LSYM: is located 4 bytes to the left of 4-byte global variable f.x {{.*}} in {{.*}}global-with-reduction.c.tmp
   // LNOSYM: is located to the left of a 4-byte global variable in
-  // LNOSYM-NEXT: #0 0x{{.*}} ({{.*}}global.c.tmp+{{.*}})
+  // LNOSYM-NEXT: #0 0x{{.*}} ({{.*}}global-with-reduction.c.tmp+{{.*}})
   // CHECK-NOT: can not describe
-  (&x)[atoi(argv[1])] = 1;
+  f()[atoi(argv[1])] = 1;
 }
