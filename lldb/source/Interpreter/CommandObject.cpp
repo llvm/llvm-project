@@ -1126,7 +1126,8 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeCommand, "command", CommandCompletions::eNoCompletion, { nullptr, false }, "An LLDB Command line command element." },
     { eArgTypeColumnNum, "column", CommandCompletions::eNoCompletion, { nullptr, false }, "Column number in a source file." },
     { eArgTypeModuleUUID, "module-uuid", CommandCompletions::eModuleUUIDCompletion, { nullptr, false }, "A module UUID value." },
-    { eArgTypeSaveCoreStyle, "corefile-style", CommandCompletions::eNoCompletion, { nullptr, false }, "The type of corefile that lldb will try to create, dependant on this target's capabilities." }
+    { eArgTypeSaveCoreStyle, "corefile-style", CommandCompletions::eNoCompletion, { nullptr, false }, "The type of corefile that lldb will try to create, dependant on this target's capabilities." },
+    { eArgTypeLogHandler, "log-handler", CommandCompletions::eNoCompletion, { nullptr, false }, "The log handle that will be used to write out log messages." },
     // clang-format on
 };
 
