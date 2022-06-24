@@ -106,6 +106,10 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
   });
 }
 
+#if !defined(__APPLE__)
+void Host::SystemLog(llvm::StringRef message) { llvm::errs() << message; }
+#endif
+
 #ifndef __linux__
 // Scoped class that will disable thread canceling when it is constructed, and
 // exception safely restore the previous value it when it goes out of scope.
@@ -626,4 +630,10 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   }
 
   return result;
+}
+
+SystemLogHandler::SystemLogHandler() {}
+
+void SystemLogHandler::Emit(llvm::StringRef message) {
+  Host::SystemLog(message);
 }

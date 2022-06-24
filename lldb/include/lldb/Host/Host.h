@@ -13,6 +13,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
@@ -85,6 +86,9 @@ public:
   static llvm::Expected<HostThread>
   StartMonitoringChildProcess(const MonitorChildProcessCallback &callback,
                               lldb::pid_t pid);
+
+  /// Emit the given message to the operating system log.
+  static void SystemLog(llvm::StringRef message);
 
   /// Get the process ID for the calling process.
   ///
@@ -250,6 +254,13 @@ public:
 protected:
   static uint32_t FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                     ProcessInstanceInfoList &proc_infos);
+};
+
+/// Log handler that emits log messages to the operating system log.
+class SystemLogHandler : public LogHandler {
+public:
+  SystemLogHandler();
+  void Emit(llvm::StringRef message) override;
 };
 
 } // namespace lldb_private
