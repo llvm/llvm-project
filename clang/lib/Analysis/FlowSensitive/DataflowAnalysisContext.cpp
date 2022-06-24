@@ -137,6 +137,13 @@ bool DataflowAnalysisContext::flowConditionIsTautology(AtomicBoolValue &Token) {
   return isUnsatisfiable(std::move(Constraints));
 }
 
+bool DataflowAnalysisContext::equivalentBoolValues(BoolValue &Val1,
+                                                   BoolValue &Val2) {
+  llvm::DenseSet<BoolValue *> Constraints = {
+      &getOrCreateNegation(getOrCreateIff(Val1, Val2))};
+  return isUnsatisfiable(Constraints);
+}
+
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
     AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
     llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) {
