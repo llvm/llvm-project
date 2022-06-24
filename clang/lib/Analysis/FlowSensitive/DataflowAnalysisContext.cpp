@@ -108,6 +108,13 @@ DataflowAnalysisContext::joinFlowConditions(AtomicBoolValue &FirstToken,
   return Token;
 }
 
+Solver::Result
+DataflowAnalysisContext::querySolver(llvm::DenseSet<BoolValue *> Constraints) {
+  Constraints.insert(&getBoolLiteralValue(true));
+  Constraints.insert(&getOrCreateNegation(getBoolLiteralValue(false)));
+  return S->solve(std::move(Constraints));
+}
+
 bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
                                                    BoolValue &Val) {
   // Returns true if and only if truth assignment of the flow condition implies
@@ -115,28 +122,19 @@ bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
   // reducing the problem to satisfiability checking. In other words, we attempt
   // to show that assuming `Val` is false makes the constraints induced by the
   // flow condition unsatisfiable.
-  llvm::DenseSet<BoolValue *> Constraints = {
-      &Token,
-      &getBoolLiteralValue(true),
-      &getOrCreateNegation(getBoolLiteralValue(false)),
-      &getOrCreateNegation(Val),
-  };
+  llvm::DenseSet<BoolValue *> Constraints = {&Token, &getOrCreateNegation(Val)};
   llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
-  return S->solve(std::move(Constraints)) == Solver::Result::Unsatisfiable;
+  return isUnsatisfiable(std::move(Constraints));
 }
 
 bool DataflowAnalysisContext::flowConditionIsTautology(AtomicBoolValue &Token) {
   // Returns true if and only if we cannot prove that the flow condition can
   // ever be false.
-  llvm::DenseSet<BoolValue *> Constraints = {
-      &getBoolLiteralValue(true),
-      &getOrCreateNegation(getBoolLiteralValue(false)),
-      &getOrCreateNegation(Token),
-  };
+  llvm::DenseSet<BoolValue *> Constraints = {&getOrCreateNegation(Token)};
   llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
-  return S->solve(std::move(Constraints)) == Solver::Result::Unsatisfiable;
+  return isUnsatisfiable(std::move(Constraints));
 }
 
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
