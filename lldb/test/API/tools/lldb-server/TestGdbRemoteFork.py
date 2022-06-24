@@ -354,7 +354,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_vkill_both(self):
         self.vkill_test(kill_parent=True, kill_child=True)
 
-    def resume_one_test(self, run_order):
+    def resume_one_test(self, run_order, use_vCont=False):
         self.build()
         self.prep_debug_monitor_and_inferior(inferior_args=["fork", "trap"])
         self.add_qSupported_packets(["multiprocess+",
@@ -395,11 +395,19 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
             else:
                 assert False, "unexpected x={}".format(x)
 
+            if use_vCont:
+                self.test_sequence.add_log_lines([
+                    # continue the selected process
+                    "read packet: $vCont;c:p{}.{}#00".format(*pidtid),
+                ], True)
+            else:
+                self.test_sequence.add_log_lines([
+                    # continue the selected process
+                    "read packet: $Hcp{}.{}#00".format(*pidtid),
+                    "send packet: $OK#00",
+                    "read packet: $c#00",
+                ], True)
             self.test_sequence.add_log_lines([
-                # continue the selected process
-                "read packet: $Hcp{}.{}#00".format(*pidtid),
-                "send packet: $OK#00",
-                "read packet: $c#00",
                 {"direction": "send", "regex": expect},
             ], True)
             # if at least one process remained, check both PIDs
@@ -431,3 +439,117 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
     @add_test_categories(["fork"])
     def test_c_interspersed(self):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"])
+
+    @add_test_categories(["fork"])
+    def test_vCont_parent(self):
+        self.resume_one_test(run_order=["parent", "parent"], use_vCont=True)
+
+    @add_test_categories(["fork"])
+    def test_vCont_child(self):
+        self.resume_one_test(run_order=["child", "child"], use_vCont=True)
+
+    @add_test_categories(["fork"])
+    def test_vCont_parent_then_child(self):
+        self.resume_one_test(run_order=["parent", "parent", "child", "child"],
+                             use_vCont=True)
+
+    @add_test_categories(["fork"])
+    def test_vCont_child_then_parent(self):
+        self.resume_one_test(run_order=["child", "child", "parent", "parent"],
+                             use_vCont=True)
+
+    @add_test_categories(["fork"])
+    def test_vCont_interspersed(self):
+        self.resume_one_test(run_order=["parent", "child", "parent", "child"],
+                             use_vCont=True)
+
+    @add_test_categories(["fork"])
+    def test_vCont_two_processes(self):
+        self.build()
+        self.prep_debug_monitor_and_inferior(inferior_args=["fork", "trap"])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        parent_pid = ret["parent_pid"]
+        parent_tid = ret["parent_tid"]
+        child_pid = ret["child_pid"]
+        child_tid = ret["child_tid"]
+        self.reset_test_sequence()
+
+        self.test_sequence.add_log_lines([
+            # try to resume both processes
+            "read packet: $vCont;c:p{}.{};c:p{}.{}#00".format(
+                parent_pid, parent_tid, child_pid, child_tid),
+            "send packet: $E03#00",
+        ], True)
+        self.expect_gdbremote_sequence()
+
+    @add_test_categories(["fork"])
+    def test_vCont_all_processes_explicit(self):
+        self.build()
+        self.prep_debug_monitor_and_inferior(inferior_args=["fork", "trap"])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        parent_pid = ret["parent_pid"]
+        parent_tid = ret["parent_tid"]
+        child_pid = ret["child_pid"]
+        child_tid = ret["child_tid"]
+        self.reset_test_sequence()
+
+        self.test_sequence.add_log_lines([
+            # try to resume all processes implicitly
+            "read packet: $vCont;c:p-1.-1#00",
+            "send packet: $E03#00",
+        ], True)
+        self.expect_gdbremote_sequence()
+
+    @add_test_categories(["fork"])
+    def test_vCont_all_processes_implicit(self):
+        self.build()
+        self.prep_debug_monitor_and_inferior(inferior_args=["fork", "trap"])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        parent_pid = ret["parent_pid"]
+        parent_tid = ret["parent_tid"]
+        child_pid = ret["child_pid"]
+        child_tid = ret["child_tid"]
+        self.reset_test_sequence()
+
+        self.test_sequence.add_log_lines([
+            # try to resume all processes implicitly
+            "read packet: $vCont;c#00",
+            "send packet: $E03#00",
+        ], True)
+        self.expect_gdbremote_sequence()
