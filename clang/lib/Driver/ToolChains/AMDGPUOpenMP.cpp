@@ -26,7 +26,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetParser.h"
-#include "clang/Config/config.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -155,8 +154,6 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
   // If more than 1 input or need to link any SDLs, we need a pre-link step.
   if ((input_count > 1) || !CmdArgs.empty()) {
-    if (CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL)
-      CmdArgs.push_back(Args.MakeArgString("-opaque-pointers"));
     // ArgStringList CmdArgs;
     for (const auto &II : Inputs)
       if (II.isFilename())
@@ -192,8 +189,6 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
   LastLinkArgs.push_back(Args.MakeArgString("--internalize"));
   LastLinkArgs.push_back(Args.MakeArgString("--only-needed"));
-  if (CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL)
-    LastLinkArgs.push_back(Args.MakeArgString("-opaque-pointers"));
   StringRef GPUArch =
       getProcessorFromTargetID(getToolChain().getTriple(), TargetID);
 

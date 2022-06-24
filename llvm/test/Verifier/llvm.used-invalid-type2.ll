@@ -2,4 +2,4 @@
 @llvm.used = appending global i32 0, section "llvm.metadata"
 
 ; CHECK: Only global arrays can have appending linkage!
-; CHECK-NEXT: ptr @llvm.used
+; CHECK-NEXT: i32* @llvm.used

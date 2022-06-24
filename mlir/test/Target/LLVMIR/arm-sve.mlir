@@ -242,23 +242,25 @@ llvm.func @memcopy(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>,
   %17 = llvm.icmp "slt" %16, %arg10 : i64
   llvm.cond_br %17, ^bb2, ^bb3
 ^bb2:
-  // CHECK: extractvalue { ptr, ptr, i64, [1 x i64], [1 x i64] }
+  // CHECK: extractvalue { float*, float*, i64, [1 x i64], [1 x i64] }
   %18 = llvm.extractvalue %5[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                                 array<1 x i64>,
                                                 array<1 x i64>)>
-  // CHECK: getelementptr float, ptr
+  // CHECK: etelementptr float, float*
   %19 = llvm.getelementptr %18[%16] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  // CHECK: bitcast float* %{{[0-9]+}} to <vscale x 4 x float>*
   %20 = llvm.bitcast %19 : !llvm.ptr<f32> to !llvm.ptr<vector<[4]xf32>>
-  // CHECK: load <vscale x 4 x float>, ptr
+  // CHECK: load <vscale x 4 x float>, <vscale x 4 x float>*
   %21 = llvm.load %20 : !llvm.ptr<vector<[4]xf32>>
-  // CHECK: extractvalue { ptr, ptr, i64, [1 x i64], [1 x i64] }
+  // CHECK: extractvalue { float*, float*, i64, [1 x i64], [1 x i64] }
   %22 = llvm.extractvalue %11[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                                  array<1 x i64>,
                                                  array<1 x i64>)>
-  // CHECK: getelementptr float, ptr
+  // CHECK: getelementptr float, float* %32
   %23 = llvm.getelementptr %22[%16] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  // CHECK: bitcast float* %33 to <vscale x 4 x float>*
   %24 = llvm.bitcast %23 : !llvm.ptr<f32> to !llvm.ptr<vector<[4]xf32>>
-  // CHECK: store <vscale x 4 x float> %{{[0-9]+}}, ptr %{{[0-9]+}}
+  // CHECK: store <vscale x 4 x float> %{{[0-9]+}}, <vscale x 4 x float>* %{{[0-9]+}}
   llvm.store %21, %24 : !llvm.ptr<vector<[4]xf32>>
   %25 = llvm.add %16, %15  : i64
   llvm.br ^bb1(%25 : i64)

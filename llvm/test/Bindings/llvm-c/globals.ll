@@ -1,7 +1,7 @@
 ; RUN: llvm-as < %s | llvm-c-test --module-list-globals | FileCheck %s
 
 @foo = constant [7 x i8] c"foobar\00", align 1
-;CHECK: GlobalDefinition: foo ptr
+;CHECK: GlobalDefinition: foo [7 x i8]*
 
 @bar = common global i32 0, align 4
-;CHECK: GlobalDefinition: bar ptr
+;CHECK: GlobalDefinition: bar i32*

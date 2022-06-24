@@ -14,7 +14,7 @@ entry:
   ret i32 0
 }
 
-@analias = alias void (), ptr @globalfunc
+@analias = alias void (), void ()* @globalfunc
 
 define void @globalfunc() #0 {
 entry:
