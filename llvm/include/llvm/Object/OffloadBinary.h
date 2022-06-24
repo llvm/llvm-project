@@ -62,6 +62,9 @@ public:
   using string_iterator = StringMap<StringRef>::const_iterator;
   using string_iterator_range = iterator_range<string_iterator>;
 
+  /// The current version of the binary used for backwards compatibility.
+  static const uint32_t Version = 1;
+
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
     ImageKind TheImageKind;
@@ -103,7 +106,7 @@ public:
 private:
   struct Header {
     uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
-    uint32_t Version = 1;                        // Version identifier.
+    uint32_t Version = OffloadBinary::Version;   // Version identifier.
     uint64_t Size;        // Size in bytes of this entire binary.
     uint64_t EntryOffset; // Offset of the metadata entry in bytes.
     uint64_t EntrySize;   // Size of the metadata entry in bytes.

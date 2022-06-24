@@ -321,10 +321,6 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
       return BinaryOrErr.takeError();
     OffloadBinary &Binary = **BinaryOrErr;
 
-    if (Binary.getVersion() != 1)
-      return createStringError(inconvertibleErrorCode(),
-                               "Incompatible device image version");
-
     // Create a new owned binary with a copy of the original memory.
     std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
         Binary.getData().take_front(Binary.getSize()),
