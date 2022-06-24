@@ -167,9 +167,9 @@ public:
   ///
   /// \return
   ///     A \a TraceCursorUP. If the thread is not traced or its trace
-  ///     information failed to load, the corresponding error is embedded in the
-  ///     trace.
-  virtual lldb::TraceCursorUP GetCursor(Thread &thread) = 0;
+  ///     information failed to load, an \a llvm::Error is returned.
+  virtual llvm::Expected<lldb::TraceCursorUP>
+  CreateNewCursor(Thread &thread) = 0;
 
   /// Dump general info about a given thread's trace. Each Trace plug-in
   /// decides which data to show.
