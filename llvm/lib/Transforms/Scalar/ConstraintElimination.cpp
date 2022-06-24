@@ -403,6 +403,14 @@ void ConstraintInfo::transferToOtherSystem(
   switch (Pred) {
   default:
     break;
+  case CmpInst::ICMP_ULT:
+    //  If B is a signed positive constant, A >=s 0 and A <s B.
+    if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0))) {
+      addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0),
+              IsNegated, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_SLT, A, B, IsNegated, NumIn, NumOut, DFSInStack);
+    }
+    break;
   case CmpInst::ICMP_SLT:
     if (doesHold(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0)))
       addFact(CmpInst::ICMP_ULT, A, B, IsNegated, NumIn, NumOut, DFSInStack);
