@@ -555,41 +555,19 @@ public:
     return (isRV64() && isUInt<5>(Imm)) || isUInt<4>(Imm);
   }
 
-  bool isUImm2() const {
+  template <unsigned N> bool IsUImm() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     if (!isImm())
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<2>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && isUInt<N>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
-  bool isUImm3() const {
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (!isImm())
-      return false;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<3>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
-  }
-
-  bool isUImm5() const {
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (!isImm())
-      return false;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
-  }
-
-  bool isUImm7() const {
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (!isImm())
-      return false;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<7>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
-  }
+  bool isUImm2() { return IsUImm<2>(); }
+  bool isUImm3() { return IsUImm<3>(); }
+  bool isUImm5() { return IsUImm<5>(); }
+  bool isUImm7() { return IsUImm<7>(); }
 
   bool isRnumArg() const {
     int64_t Imm;
