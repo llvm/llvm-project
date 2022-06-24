@@ -24,7 +24,7 @@
 //        because of the triple.
 // RUN: %clang -target mips64-linux-gnu -### -fintegrated-as -c %s -mips64 2>&1 | \
 // RUN:   FileCheck -check-prefix=ABI-N64 %s
-
+//
 // RUN: %clang -target mips-linux-gnu -### -fintegrated-as -c %s -mips64 -mabi=64 2>&1 | \
 // RUN:   FileCheck -check-prefix=ABI-N64 %s
 // RUN: %clang -target mips-linux-gnu -### -fintegrated-as -c %s -mips64 -mabi=n64 2>&1 | \

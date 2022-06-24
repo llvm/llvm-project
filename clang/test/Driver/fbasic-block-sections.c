@@ -13,7 +13,7 @@
 // RUN: %clang -### -x cuda -nocudainc -nocudalib -target x86_64 -fbasic-block-sections=all %s -c 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-CUDA %s
 
-
+//
 // CHECK-NOOPT-NOT:  -fbasic-block-sections=
 // CHECK-OPT-NONE:   "-fbasic-block-sections=none"
 // CHECK-OPT-ALL:    "-fbasic-block-sections=all"

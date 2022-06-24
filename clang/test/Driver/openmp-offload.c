@@ -1,6 +1,6 @@
-/
+///
 /// Perform several driver tests for OpenMP offloading
-/
+///
 
 // REQUIRES: x86-registered-target
 // REQUIRES: powerpc-registered-target
@@ -249,15 +249,15 @@
 /// -fopenmp-host-ir-file-path: specifies the host IR file that can be loaded by
 /// the target code generation to gather information about which declaration
 /// really need to be emitted.
-/
+///
 // RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -o %t.out --target=powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-COMMANDS %s
 // RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -o %t.out --target=powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -save-temps 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-COMMANDS-ST %s
 
-
+//
 // Generate host BC file and host object.
-
+//
 // CHK-COMMANDS: "-cc1" "-triple" "powerpc64le-unknown-linux" {{.*}}"-emit-llvm-bc" {{.*}}"-disable-llvm-passes"
 // CHK-COMMANDS-SAME: "-fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu"
 // CHK-COMMANDS-SAME: "-o" "
@@ -275,9 +275,9 @@
 // CHK-COMMANDS-ST: clang{{.*}}" "-cc1as" "-triple" "powerpc64le-unknown-linux" "-filetype" "obj" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[HOSTOBJ:[^\\/]+\.o]]" "{{.*}}[[HOSTASM]]"
 
-
+//
 // Compile for the powerpc device.
-
+//
 // CHK-COMMANDS: "-cc1" "-triple" "powerpc64le-ibm-linux-gnu" "-aux-triple" "powerpc64le-unknown-linux" {{.*}}"-emit-obj" {{.*}}"-pic-level" "2" {{.*}}"-fopenmp"
 // CHK-COMMANDS-SAME: "-fopenmp-is-device" "-fopenmp-host-ir-file-path" "{{.*}}[[HOSTBC]]" {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[T1OBJ:[^\\/]+\.o]]" "-x" "c" "{{.*}}[[INPUT]]"
@@ -293,9 +293,9 @@
 // CHK-COMMANDS-ST-SAME: [[T1OBJ:[^\\/]+\.o]]" "{{.*}}[[T1ASM]]"
 // CHK-COMMANDS-ST: ld{{(\.exe)?}}" {{.*}}"-shared" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[T1BIN:[^\\/]+\.out-openmp-powerpc64le-ibm-linux-gnu]]" {{.*}}"{{.*}}[[T1OBJ]]"
-
+//
 // Compile for the x86 device.
-
+//
 // CHK-COMMANDS: "-cc1" "-triple" "x86_64-pc-linux-gnu" "-aux-triple" "powerpc64le-unknown-linux" {{.*}}"-emit-obj" {{.*}}"-pic-level" "2" {{.*}}"-fopenmp"
 // CHK-COMMANDS-SAME: "-fopenmp-is-device" "-fopenmp-host-ir-file-path" "{{.*}}[[HOSTBC]]" {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[T2OBJ:[^\\/]+\.o]]" "-x" "c" "{{.*}}[[INPUT]]"
@@ -312,9 +312,9 @@
 // CHK-COMMANDS-ST: ld{{(\.exe)?}}" {{.*}}"-shared" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[T2BIN:[^\\/]+\.out-openmp-x86_64-pc-linux-gnu]]" {{.*}}"{{.*}}[[T2OBJ]]"
 
-
+//
 // Create wrapper BC file and wrapper object.
-
+//
 // CHK-COMMANDS: clang-offload-wrapper{{(\.exe)?}}" "-target" "powerpc64le-unknown-linux" {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[WRAPPERBC:[^\\/]+\.bc]]" "{{.*}}[[T1BIN]]" "{{.*}}[[T2BIN]]"
 // CHK-COMMANDS: "-cc1" "-triple" "powerpc64le-unknown-linux" {{.*}}"-emit-obj" {{.*}}"-fopenmp" {{.*}}"-o" "
@@ -326,9 +326,9 @@
 // CHK-COMMANDS-ST: "-cc1as" "-triple" "powerpc64le-unknown-linux" "-filetype" "obj" {{.*}}"-o" "
 // CHK-COMMANDS-ST-SAME: [[WRAPPEROBJ:[^\\/]+\.o]]" "{{.*}}[[WRAPPERASM]]"
 
-
+//
 // Link host binary.
-
+//
 // CHK-COMMANDS: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-COMMANDS-SAME: [[HOSTBIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[HOSTOBJ]]" "{{.*}}[[WRAPPEROBJ]]" {{.*}}"-lomptarget"
 // CHK-COMMANDS-ST: ld{{(\.exe)?}}" {{.*}}"-o" "

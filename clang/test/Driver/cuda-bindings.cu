@@ -12,10 +12,10 @@
 // REQUIRES: powerpc-registered-target
 // REQUIRES: nvptx-registered-target
 
-
+//
 // Test single gpu architecture with complete compilation.
 // No intermediary device files should have "-device-cuda..." in the name.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --cuda-gpu-arch=sm_30 %s 2>&1 \
 // RUN: | FileCheck -check-prefix=BIN %s
 // BIN: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output:
@@ -28,17 +28,17 @@
 // BIN-NOT: cuda-bindings-device-cuda-nvptx64
 // BIN: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "a.out"
 
-
+//
 // Test single gpu architecture up to the assemble phase.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --cuda-gpu-arch=sm_30 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefix=ASM %s
 // ASM-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_30.s"
 // ASM-DAG: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}} output: "cuda-bindings.s"
 
-
+//
 // Test two gpu architectures with complete compilation.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --offload-arch=sm_30,sm_35 %s 2>&1 \
 // RUN: | FileCheck -check-prefix=BIN2 %s
@@ -56,9 +56,9 @@
 // BIN2-NOT: cuda-bindings-device-cuda-nvptx64
 // BIN2: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "a.out"
 
-
+//
 // Test two gpu architectures up to the assemble phase.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
 // RUN:        --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefix=ASM2 %s
@@ -66,10 +66,10 @@
 // ASM2-DAG: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_35.s"
 // ASM2-DAG: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}} output: "cuda-bindings.s"
 
-
+//
 // Test one or more gpu architecture with complete compilation in host-only
 // compilation mode.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
 // RUN:        --cuda-gpu-arch=sm_30 %s --cuda-host-only 2>&1 \
 // RUN: | FileCheck -check-prefix=HBIN %s
@@ -80,10 +80,10 @@
 // HBIN-NOT: cuda-bindings-device-cuda-nvptx64
 // HBIN: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "a.out"
 
-
+//
 // Test one or more gpu architecture up to the assemble phase in host-only
 // compilation mode.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
 // RUN:        --cuda-gpu-arch=sm_30 %s --cuda-host-only -S 2>&1 \
 // RUN: | FileCheck -check-prefix=HASM %s
@@ -92,10 +92,10 @@
 // RUN: | FileCheck -check-prefix=HASM %s
 // HASM: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}} output: "cuda-bindings.s"
 
-
+//
 // Test single gpu architecture with complete compilation in device-only
 // compilation mode.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
 // RUN:        --cuda-gpu-arch=sm_30 %s --cuda-device-only 2>&1 \
 // RUN: | FileCheck -check-prefix=DBIN %s
@@ -103,19 +103,19 @@
 // DBIN-NOT: cuda-bindings-device-cuda-nvptx64
 // DBIN: # "nvptx64-nvidia-cuda" - "NVPTX::Assembler",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_30.o"
 
-
+//
 // Test single gpu architecture up to the assemble phase in device-only
 // compilation mode.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
 // RUN:        --cuda-gpu-arch=sm_30 %s --cuda-device-only -S 2>&1 \
 // RUN: | FileCheck -check-prefix=DASM %s
 // DASM: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_30.s"
 
-
+//
 // Test two gpu architectures with complete compilation in device-only
 // compilation mode.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
 // RUN:        --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only 2>&1 \
 // RUN: | FileCheck -check-prefix=DBIN2 %s
@@ -126,10 +126,10 @@
 // DBIN2-NOT: cuda-bindings-device-cuda-nvptx64
 // DBIN2: # "nvptx64-nvidia-cuda" - "NVPTX::Assembler",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_35.o"
 
-
+//
 // Test two gpu architectures up to the assemble phase in device-only
 // compilation mode.
-
+//
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
 // RUN:        --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only -S 2>&1 \
 // RUN: | FileCheck -check-prefix=DASM2 %s

@@ -1,6 +1,6 @@
-/
+///
 /// Perform several driver tests for OpenMP offloading
-/
+///
 
 // REQUIRES: x86-registered-target
 // REQUIRES: powerpc-registered-target
