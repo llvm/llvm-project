@@ -18,18 +18,20 @@
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 # RUN:   --defsym RNGLISTX=0 %s > %t-rnglistx
 # RUN: %lldb %t-rnglistx -o "image lookup -v -s lookup_rnglists" \
-# RUN:   -o exit 2>&1 | FileCheck --check-prefix=RNGLISTX %s
+# RUN:   -o exit 2>%t.error | FileCheck --check-prefix=RNGLISTX %s
+# RUN: cat %t.error | FileCheck --check-prefix=ERROR %s
 
 # RNGLISTX-LABEL: image lookup -v -s lookup_rnglists
-# RNGLISTX: error: {{.*}} {0x0000003f}: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0) attribute, but range extraction failed (DW_FORM_rnglistx cannot be used without DW_AT_rnglists_base for CU at 0x00000000), please file a bug and attach the file at the start of this error message
+# ERROR: error: {{.*}} {0x0000003f}: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0) attribute, but range extraction failed (DW_FORM_rnglistx cannot be used without DW_AT_rnglists_base for CU at 0x00000000), please file a bug and attach the file at the start of this error message
 
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 # RUN:   --defsym RNGLISTX=0 --defsym RNGLISTBASE=0 %s > %t-rnglistbase
 # RUN: %lldb %t-rnglistbase -o "image lookup -v -s lookup_rnglists" \
-# RUN:   -o exit 2>&1 | FileCheck --check-prefix=RNGLISTBASE %s
+# RUN:   -o exit 2>%t.error | FileCheck --check-prefix=RNGLISTBASE %s
+# RUN: cat %t.error | FileCheck --check-prefix=ERRORBASE %s
 
 # RNGLISTBASE-LABEL: image lookup -v -s lookup_rnglists
-# RNGLISTBASE: error: {{.*}}-rnglistbase {0x00000043}: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0) attribute, but range extraction failed (invalid range list table index 0; OffsetEntryCount is 0, DW_AT_rnglists_base is 24), please file a bug and attach the file at the start of this error message
+# ERRORBASE: error: {{.*}}-rnglistbase {0x00000043}: DIE has DW_AT_ranges(DW_FORM_rnglistx 0x0) attribute, but range extraction failed (invalid range list table index 0; OffsetEntryCount is 0, DW_AT_rnglists_base is 24), please file a bug and attach the file at the start of this error message
 
         .text
 rnglists:
