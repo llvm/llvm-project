@@ -481,16 +481,20 @@ public:
     assert(sym.has<Fortran::semantics::HostAssocDetails>() &&
            "No host-association found");
     const Fortran::semantics::Symbol &hsym = sym.GetUltimate();
-    Fortran::lower::SymbolBox hsb = lookupSymbol(hsym);
+    Fortran::lower::SymbolBox hsb = lookupOneLevelUpSymbol(hsym);
+    assert(hsb && "Host symbol box not found");
     fir::ExtendedValue hexv = getExtendedValue(hsb);
 
-    // 2) Create a copy that will mask the original.
-    createHostAssociateVarClone(sym);
-    Fortran::lower::SymbolBox sb = lookupSymbol(sym);
+    // 2) Fetch the copied one that will mask the original.
+    Fortran::lower::SymbolBox sb = shallowLookupSymbol(sym);
+    assert(sb && "Host-associated symbol box not found");
+    assert(hsb.getAddr() != sb.getAddr() &&
+           "Host and associated symbol boxes are the same");
     fir::ExtendedValue exv = getExtendedValue(sb);
 
     // 3) Perform the assignment.
-    mlir::Location loc = genLocation(sym.name());
+    builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
+    mlir::Location loc = getCurrentLocation();
     mlir::Type symType = genType(sym);
     if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
       Fortran::lower::StatementContext stmtCtx;
@@ -514,11 +518,13 @@ public:
   void collectSymbolSet(
       Fortran::lower::pft::Evaluation &eval,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
-      Fortran::semantics::Symbol::Flag flag) override final {
+      Fortran::semantics::Symbol::Flag flag,
+      bool isUltimateSymbol) override final {
     auto addToList = [&](const Fortran::semantics::Symbol &sym) {
-      const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
-      if (ultimate.test(flag))
-        symbolSet.insert(&ultimate);
+      const Fortran::semantics::Symbol &symbol =
+          isUltimateSymbol ? sym.GetUltimate() : sym;
+      if (symbol.test(flag))
+        symbolSet.insert(&symbol);
     };
     Fortran::lower::pft::visitAllSymbols(eval, addToList);
   }
@@ -605,6 +611,15 @@ private:
   Fortran::lower::SymbolBox
   shallowLookupSymbol(const Fortran::semantics::Symbol &sym) {
     if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
+      return v;
+    return {};
+  }
+
+  /// Find the symbol in one level up of symbol map such as for host-association
+  /// in OpenMP code or return null.
+  Fortran::lower::SymbolBox
+  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) {
+    if (Fortran::lower::SymbolBox v = localSymbols.lookupOneLevelUpSymbol(sym))
       return v;
     return {};
   }
