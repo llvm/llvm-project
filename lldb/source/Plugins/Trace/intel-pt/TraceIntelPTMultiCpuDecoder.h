@@ -36,8 +36,9 @@ public:
 
   /// \return
   ///   A \a DecodedThread for the \p thread by decoding its instructions on all
-  ///   CPUs, sorted by TSCs.
-  DecodedThreadSP Decode(Thread &thread);
+  ///   CPUs, sorted by TSCs. An \a llvm::Error is returned if the decoder
+  ///   couldn't be properly set up.
+  llvm::Expected<DecodedThreadSP> Decode(Thread &thread);
 
   /// \return
   ///   \b true if the given \p tid is managed by this decoder, regardless of

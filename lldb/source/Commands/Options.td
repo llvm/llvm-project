@@ -1136,8 +1136,8 @@ let Command = "thread trace dump instructions" in {
     "id can be provided in decimal or hexadecimal representation.">;
   def thread_trace_dump_instructions_skip: Option<"skip", "s">, Group<1>,
     Arg<"Index">,
-    Desc<"How many instruction to skip from the starting position of the trace "
-    "before starting the traversal.">;
+    Desc<"How many trace items (instructions, errors and events) to skip from "
+    "the starting position of the trace before starting the traversal.">;
   def thread_trace_dump_instructions_raw : Option<"raw", "r">, Group<1>,
     Desc<"Dump only instruction address without disassembly nor symbol "
     "information.">;

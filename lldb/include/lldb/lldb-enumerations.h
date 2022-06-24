@@ -1150,17 +1150,23 @@ enum SaveCoreStyle {
 // Type of counter values associated with instructions in a trace.
 enum TraceCounter {
   // Timestamp counter, like the one offered by Intel CPUs (TSC).
-  eTraceCounterTSC,
+  eTraceCounterTSC = 0,
 };
 
 // Events that might happen during a trace session.
-FLAGS_ENUM(TraceEvents){
-    // Tracing was paused. If instructions were executed after pausing
-    // and before resuming, the TraceCursor used to traverse the trace
-    // should provide an error signalinig this data loss.
-    eTraceEventPaused = (1u << 0),
+enum TraceEvent {
+  // Tracing was disabled for some time due to a software trigger
+  eTraceEventDisabledSW,
+  // Tracing was disable for some time due to a hardware trigger
+  eTraceEventDisabledHW,
 };
-LLDB_MARK_AS_BITMASK_ENUM(TraceEvents)
+
+// Enum used to identify which kind of item a \a TraceCursor is pointing at
+enum TraceItemKind {
+  eTraceItemKindError = 0,
+  eTraceItemKindEvent,
+  eTraceItemKindInstruction,
+};
 
 } // namespace lldb
 

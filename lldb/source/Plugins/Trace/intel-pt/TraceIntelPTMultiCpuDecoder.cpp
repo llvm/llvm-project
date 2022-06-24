@@ -35,10 +35,10 @@ bool TraceIntelPTMultiCpuDecoder::TracesThread(lldb::tid_t tid) const {
   return m_tids.count(tid);
 }
 
-DecodedThreadSP TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
+Expected<DecodedThreadSP> TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
   if (Error err = CorrelateContextSwitchesAndIntelPtTraces())
-    return std::make_shared<DecodedThread>(thread.shared_from_this(),
-                                           std::move(err));
+    return std::move(err);
+
   auto it = m_decoded_threads.find(thread.GetID());
   if (it != m_decoded_threads.end())
     return it->second;
@@ -53,13 +53,13 @@ DecodedThreadSP TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
       [&](const DenseMap<cpu_id_t, ArrayRef<uint8_t>> &buffers) -> Error {
         auto it = m_continuous_executions_per_thread->find(thread.GetID());
         if (it != m_continuous_executions_per_thread->end())
-          DecodeSystemWideTraceForThread(*decoded_thread_sp, *trace_sp, buffers,
-                                         it->second);
+          return DecodeSystemWideTraceForThread(*decoded_thread_sp, *trace_sp,
+                                                buffers, it->second);
 
         return Error::success();
       });
   if (err)
-    decoded_thread_sp->SetAsFailed(std::move(err));
+    return std::move(err);
 
   m_decoded_threads.try_emplace(thread.GetID(), decoded_thread_sp);
   return decoded_thread_sp;

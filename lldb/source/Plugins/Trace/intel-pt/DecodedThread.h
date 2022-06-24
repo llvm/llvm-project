@@ -53,32 +53,13 @@ public:
     return llvm::errc::not_supported;
   }
 
+  int GetLibiptErrorCode() const { return m_libipt_error_code; }
+
   void log(llvm::raw_ostream &OS) const override;
 
 private:
   int m_libipt_error_code;
   lldb::addr_t m_address;
-};
-
-/// Helper struct for building an instruction or error from the decoder.
-/// It holds associated events and timing information.
-struct DecodedInstruction {
-  DecodedInstruction() {
-    pt_insn.ip = LLDB_INVALID_ADDRESS;
-    libipt_error = pte_ok;
-  }
-
-  DecodedInstruction(int libipt_error_code) : DecodedInstruction() {
-    libipt_error = libipt_error_code;
-  }
-
-  /// \return \b true if and only if this struct holds a libipt error.
-  explicit operator bool() const;
-
-  int libipt_error;
-  lldb::TraceEvents events = (lldb::TraceEvents)0;
-  llvm::Optional<uint64_t> tsc = llvm::None;
-  pt_insn pt_insn;
 };
 
 /// \class DecodedThread
@@ -143,11 +124,10 @@ public:
   struct EventsStats {
     /// A count for each individual event kind. We use an unordered map instead
     /// of a DenseMap because DenseMap can't understand enums.
-    std::unordered_map<lldb::TraceEvents, size_t> events_counts;
+    std::unordered_map<lldb::TraceEvent, size_t> events_counts;
     size_t total_count = 0;
-    size_t total_instructions_with_events = 0;
 
-    void RecordEventsForInstruction(lldb::TraceEvents events);
+    void RecordEvent(lldb::TraceEvent event);
   };
 
   DecodedThread(lldb::ThreadSP thread_sp);
@@ -155,35 +135,9 @@ public:
   /// Utility constructor that initializes the trace with a provided error.
   DecodedThread(lldb::ThreadSP thread_sp, llvm::Error &&err);
 
-  /// Append an instruction or a libipt error.
-  void Append(const DecodedInstruction &insn);
-
-  /// Append an error signaling that decoding completely failed.
-  void SetAsFailed(llvm::Error &&error);
-
-  /// Get a bitmask with the events that happened chronologically right before
-  /// the instruction pointed by the given instruction index, but after the
-  /// previous instruction.
-  lldb::TraceEvents GetEvents(int insn_index);
-
-  /// Get the total number of instruction pointers from the decoded trace.
-  /// This will include instructions that indicate errors (or gaps) in the
-  /// trace. For an instruction error, you can access its underlying error
-  /// message with the \a GetErrorByInstructionIndex() method.
-  size_t GetInstructionsCount() const;
-
-  /// \return
-  ///     The load address of the instruction at the given index, or \a
-  ///     LLDB_INVALID_ADDRESS if it is an error.
-  lldb::addr_t GetInstructionLoadAddress(size_t insn_index) const;
-
-  /// Get the \a lldb::TraceInstructionControlFlowType categories of the
-  /// instruction.
-  ///
-  /// \return
-  ///     The control flow categories, or \b 0 if the instruction is an error.
-  lldb::TraceInstructionControlFlowType
-  GetInstructionControlFlowType(size_t insn_index) const;
+  /// Get the total number of instruction, errors and events from the decoded
+  /// trace.
+  int64_t GetItemsCount() const;
 
   /// Construct the TSC range that covers the given instruction index.
   /// This operation is O(logn) and should be used sparingly.
@@ -202,18 +156,24 @@ public:
       size_t insn_index,
       const llvm::Optional<DecodedThread::TscRange> &hint_range) const;
 
-  /// Check if an instruction given by its index is an error.
-  bool IsInstructionAnError(size_t insn_idx) const;
-
-  /// Get the error associated with a given instruction index.
-  ///
   /// \return
-  ///   The error message of \b nullptr if the given index
-  ///   points to a valid instruction.
-  const char *GetErrorByInstructionIndex(size_t ins_idx);
+  ///   The error associated with a given trace item.
+  const char *GetErrorByIndex(size_t item_index) const;
+
+  /// \return
+  ///   The trace item kind given an item index.
+  lldb::TraceItemKind GetItemKindByIndex(size_t item_index) const;
+
+  /// \return
+  ///   The underlying event type for the given trace item index.
+  lldb::TraceEvent GetEventByIndex(int item_index) const;
+
+  /// \return
+  ///     The load address of the instruction at the given index.
+  lldb::addr_t GetInstructionLoadAddress(size_t item_index) const;
 
   /// Get a new cursor for the decoded thread.
-  lldb::TraceCursorUP GetCursor();
+  lldb::TraceCursorUP CreateNewCursor();
 
   /// Return an object with statistics of the TSC decoding errors that happened.
   /// A TSC error is not a fatal error and doesn't create gaps in the trace.
@@ -243,24 +203,50 @@ public:
 
   lldb::ThreadSP GetThread();
 
-  /// Append a decoding error given an llvm::Error.
-  void AppendError(llvm::Error &&error);
+  /// Notify this object that a new tsc has been seen.
+  void NotifyTsc(uint64_t tsc);
+
+  /// Append a decoding error.
+  void AppendError(const IntelPTError &error);
+
+  /// Append a custom decoding.
+  void AppendCustomError(llvm::StringRef error);
+
+  /// Append an event.
+  void AppendEvent(lldb::TraceEvent);
+
+  /// Append an instruction.
+  void AppendInstruction(const pt_insn &insn);
 
 private:
-  /// Notify this class that the last added instruction or error has
-  /// an associated TSC.
-  void RecordTscForLastInstruction(uint64_t tsc);
-
   /// When adding new members to this class, make sure
   /// to update \a CalculateApproximateMemoryUsage() accordingly.
   lldb::ThreadSP m_thread_sp;
-  /// The low level storage of all instruction addresses. Each instruction has
-  /// an index in this vector and it will be used in other parts of the code.
-  std::vector<lldb::addr_t> m_instruction_ips;
-  /// The size in bytes of each instruction.
-  std::vector<uint8_t> m_instruction_sizes;
-  /// The libipt instruction class for each instruction.
-  std::vector<pt_insn_class> m_instruction_classes;
+
+  /// We use a union to optimize the memory usage for the different kinds of
+  /// trace items.
+  union TraceItemStorage {
+    /// The load addresses of this item if it's an instruction.
+    uint64_t load_address;
+
+    /// The event kind of this item if it's an event
+    lldb::TraceEvent event;
+
+    /// The string message of this item if it's an error
+    const char *error;
+  };
+
+  /// Create a new trace item.
+  ///
+  /// \return
+  ///   The index of the new item.
+  DecodedThread::TraceItemStorage &CreateNewTraceItem(lldb::TraceItemKind kind);
+
+  /// Most of the trace data is stored here.
+  std::vector<TraceItemStorage> m_item_data;
+  /// The TraceItemKind for each trace item encoded as uint8_t. We don't include
+  /// it in TraceItemStorage to avoid padding.
+  std::vector<uint8_t> m_item_kinds;
 
   /// This map contains the TSCs of the decoded instructions. It maps
   /// `instruction index -> TSC`, where `instruction index` is the first index
@@ -271,12 +257,6 @@ private:
   std::map<uint64_t, uint64_t> m_instruction_timestamps;
   /// This is the chronologically last TSC that has been added.
   llvm::Optional<uint64_t> m_last_tsc = llvm::None;
-  // This variables stores the messages of all the error instructions in the
-  // trace. It maps `instruction index -> error message`.
-  llvm::DenseMap<uint64_t, std::string> m_errors;
-  /// This variable stores the bitmask of events that happened right before
-  /// the instruction given as a key. It maps `instruction index -> events`.
-  llvm::DenseMap<uint64_t, lldb::TraceEvents> m_events;
 
   /// Statistics of all tracing events.
   EventsStats m_events_stats;

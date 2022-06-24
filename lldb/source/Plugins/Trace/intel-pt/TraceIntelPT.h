@@ -70,7 +70,7 @@ public:
 
   llvm::StringRef GetSchema() override;
 
-  lldb::TraceCursorUP GetCursor(Thread &thread) override;
+  llvm::Expected<lldb::TraceCursorUP> CreateNewCursor(Thread &thread) override;
 
   void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) override;
 
@@ -202,8 +202,9 @@ private:
   ///
   /// \return
   ///     A \a DecodedThread shared pointer with the decoded instructions. Any
-  ///     errors are embedded in the instruction list.
-  DecodedThreadSP Decode(Thread &thread);
+  ///     errors are embedded in the instruction list. An \a llvm::Error is
+  ///     returned if the decoder couldn't be properly set up.
+  llvm::Expected<DecodedThreadSP> Decode(Thread &thread);
 
   /// We package all the data that can change upon process stops to make sure
   /// this contract is very visible.

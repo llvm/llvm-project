@@ -100,8 +100,8 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         self.expect("continue")
         self.expect("thread trace dump instructions", substrs=['main.cpp:4'])
         self.expect("thread trace dump instructions 3", substrs=['main.cpp:4'])
-        self.expect("thread trace dump instructions 1", substrs=['not traced'])
-        self.expect("thread trace dump instructions 2", substrs=['not traced'])
+        self.expect("thread trace dump instructions 1", substrs=['not traced'], error=True)
+        self.expect("thread trace dump instructions 2", substrs=['not traced'], error=True)
 
         self.traceStopProcess()
 
@@ -133,9 +133,9 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
 
         # We'll stop at the next breakpoint in thread 3, and nothing should be traced
         self.expect("continue")
-        self.expect("thread trace dump instructions 3", substrs=['not traced'])
-        self.expect("thread trace dump instructions 1", substrs=['not traced'])
-        self.expect("thread trace dump instructions 2", substrs=['not traced'])
+        self.expect("thread trace dump instructions 3", substrs=['not traced'], error=True)
+        self.expect("thread trace dump instructions 1", substrs=['not traced'], error=True)
+        self.expect("thread trace dump instructions 2", substrs=['not traced'], error=True)
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     @testSBAPIAndCommands
