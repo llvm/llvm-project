@@ -479,6 +479,31 @@ void DWARFRewriter::updateUnitDebugInfo(
                                      AbbrevWriter);
       break;
     }
+    case dwarf::DW_TAG_call_site: {
+      auto patchPC = [&](AttrInfo &AttrVal, StringRef Entry) -> void {
+        Optional<uint64_t> Address = AttrVal.V.getAsAddress();
+        const BinaryFunction *Function =
+            BC.getBinaryFunctionContainingAddress(*Address);
+        const uint64_t UpdatedAddress =
+            Function->translateInputToOutputAddress(*Address);
+        const uint32_t Index =
+            AddrWriter->getIndexFromAddress(UpdatedAddress, Unit);
+        if (AttrVal.V.getForm() == dwarf::DW_FORM_addrx)
+          DebugInfoPatcher.addUDataPatch(AttrVal.Offset, Index, AttrVal.Size);
+        else
+          errs() << "BOLT-ERROR: unsupported form for " << Entry << "\n";
+      };
+
+      if (Optional<AttrInfo> AttrVal =
+              findAttributeInfo(DIE, dwarf::DW_AT_call_pc))
+        patchPC(*AttrVal, "DW_AT_call_pc");
+
+      if (Optional<AttrInfo> AttrVal =
+              findAttributeInfo(DIE, dwarf::DW_AT_call_return_pc))
+        patchPC(*AttrVal, "DW_AT_call_return_pc");
+
+      break;
+    }
     default: {
       // Handle any tag that can have DW_AT_location attribute.
       DWARFFormValue Value;
