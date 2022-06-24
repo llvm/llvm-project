@@ -2,9 +2,9 @@
 // Check that appropriate macros are defined for every supported AMDGPU
 // "-target" and "-mcpu" options.
 
-
+//
 // R600-based processors.
-
+//
 
 // RUN: %clang -E -dM -target r600 -mcpu=r600 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,R600 %s -DCPU=r600
 // RUN: %clang -E -dM -target r600 -mcpu=rv630 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,R600 %s -DCPU=r600
@@ -63,9 +63,9 @@
 
 // ARCH-R600-DAG:    #define __[[CPU]]__ 1
 
-
+//
 // AMDGCN-based processors.
-
+//
 
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx600 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx600 -DFAMILY=GFX6
 // RUN: %clang -E -dM -target amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx600 -DFAMILY=GFX6

@@ -1,6 +1,6 @@
 // RUN: %clang -target s390x-linux-gnu -march=z13 -S %s -o - -msoft-float | FileCheck %s
 // REQUIRES: systemz-registered-target
-
+//
 // Check that -msoft-float works all the way to assembly output.
 
 double fun0(double *A) {

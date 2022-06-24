@@ -1,12 +1,12 @@
 // REQUIRES: powerpc-registered-target
 // REQUIRES: nvptx-registered-target
 
-
+//
 // Verify that CUDA device commands do not get OpenMP flags.
-
+//
 // RUN: %clang -### -x cuda --target=powerpc64le-linux-gnu -std=c++11 --cuda-gpu-arch=sm_35 -fopenmp=libomp %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix NO-OPENMP-FLAGS-FOR-CUDA-DEVICE
-
+//
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE:      "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NOT:  -fopenmp
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: ptxas" "-m64"

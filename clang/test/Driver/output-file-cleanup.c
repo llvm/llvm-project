@@ -1,5 +1,5 @@
 // RUN: rm -f "%t.d" "%t1.s" "%t2.s" "%t3.s" "%t4.s" "%t5.s"
-
+//
 // RUN: touch %t.s
 // RUN: not %clang -S -DCRASH -o %t.s -MMD -MF %t.d %s
 // RUN: test ! -f %t.s

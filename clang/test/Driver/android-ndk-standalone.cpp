@@ -1,6 +1,6 @@
 // Test header and library paths when Clang is used with Android standalone
 // toolchain.
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi21 \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
@@ -31,7 +31,7 @@
 // CHECK-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a/thumb"
 // CHECK-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a"
 // CHECK-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi14 \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
@@ -39,7 +39,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-14 %s
 // CHECK-14: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi/14"
 // CHECK-14: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi21 -stdlib=libstdc++ \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
@@ -73,7 +73,7 @@
 // CHECK-STDCXX-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a/thumb"
 // CHECK-STDCXX-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a"
 // CHECK-STDCXX-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=armv7a-none-linux-androideabi21 \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
@@ -104,7 +104,7 @@
 // CHECK-ARMV7-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/thumb"
 // CHECK-ARMV7-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7-a/thumb"
 // CHECK-ARMV7-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib"
-
+//
 // Other flags that can trigger armv7 mode.
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi21 \
@@ -124,7 +124,7 @@
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7 %s
-
+//
 // ARM thumb mode.
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi21 \
@@ -158,7 +158,7 @@
 // CHECK-THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib/armv7/thumb"
 // CHECK-THUMB-NOT: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.9/../{{[^ ]*}}/lib"
 // CHECK-THUMB: "-L{{.*}}/sysroot/usr/lib"
-
+//
 // ARM V7 thumb mode.
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi21 \
@@ -205,14 +205,14 @@
 // CHECK-ARM-MULTILIBS-NEXT: armv7-a/thumb;@march=armv7-a@mthumb
 // CHECK-ARM-MULTILIBS-NEXT: .;
 
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=armv7a-none-linux-androideabi21 \
 // RUN:     -mthumb \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7THUMB %s
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=aarch64-linux-android21 \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
@@ -228,7 +228,7 @@
 // CHECK-AARCH64: "-L{{.*}}/sysroot/usr/lib/aarch64-linux-android/21"
 // CHECK-AARCH64: "-L{{.*}}/sysroot/usr/lib/aarch64-linux-android"
 // CHECK-AARCH64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.9/../../../../aarch64-linux-android/lib"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm64-linux-android21 \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
@@ -244,7 +244,7 @@
 // CHECK-ARM64: "-L{{.*}}/sysroot/usr/lib/aarch64-linux-android/21"
 // CHECK-ARM64: "-L{{.*}}/sysroot/usr/lib/aarch64-linux-android"
 // CHECK-ARM64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.9/../../../../aarch64-linux-android/lib"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-android21 \
 // RUN:     -mips32 \
@@ -260,7 +260,7 @@
 // CHECK-MIPS: "-L{{.*}}/sysroot/usr/lib/mipsel-linux-android/21"
 // CHECK-MIPS: "-L{{.*}}/sysroot/usr/lib/mipsel-linux-android"
 // CHECK-MIPS: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/../../../../mipsel-linux-android/lib"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i686-linux-android21 \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
@@ -276,7 +276,7 @@
 // CHECK-I686: "-L{{.*}}/sysroot/usr/lib/i686-linux-android/21"
 // CHECK-I686: "-L{{.*}}/sysroot/usr/lib/i686-linux-android"
 // CHECK-I686: "-L{{.*}}/lib/gcc/i686-linux-android/4.9/../../../../i686-linux-android/lib"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-linux-android21 \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
@@ -302,13 +302,13 @@
 
 // RUN: %clang -v --target=i686-linux-android \
 // RUN:     2>&1 | FileCheck --check-prefix=CHECK-I686-GCC-NOSYS %s
-
+//
 // CHECK-I686-GCC-NOSYS-NOT: Found candidate GCC installation: /usr{{.*}}
-
+//
 // RUN: %clang -v --target=i686-linux-android \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree \
 // RUN:     2>&1 | FileCheck --check-prefix=CHECK-I686-GCC %s
-
+//
 // CHECK-I686-GCC-NOT: Found candidate GCC installation: /usr{{.*}}
 // CHECK-I686-GCC: Found candidate GCC installation: {{.*}}i686-linux-android{{[/\\]}}4.9
 // CHECK-I686-GCC-NEXT: Found candidate GCC installation: {{.*}}x86_64-linux-android{{[/\\]}}4.9
@@ -316,13 +316,13 @@
 
 // RUN: %clang -v --target=x86_64-linux-android \
 // RUN:     2>&1 | FileCheck --check-prefix=CHECK-X86_64-GCC-NOSYS %s
-
+//
 // CHECK-X86_64-GCC-NOSYS-NOT: Found candidate GCC installation: /usr{{.*}}
 
 // RUN: %clang -v --target=x86_64-linux-android \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree \
 // RUN:     2>&1 | FileCheck --check-prefix=CHECK-X86_64-GCC %s
-
+//
 // CHECK-X86_64-GCC-NOT: Found candidate GCC installation: /usr{{.*}}
 // CHECK-X86_64-GCC: Found candidate GCC installation: {{.*}}i686-linux-android{{[/\\]}}4.9
 // CHECK-X86_64-GCC-NEXT: Found candidate GCC installation: {{.*}}x86_64-linux-android{{[/\\]}}4.9

@@ -1,7 +1,7 @@
 // UNSUPPORTED: system-windows
 // General tests that ld invocations on Linux targets sane. Note that we use
 // sysroot to make these tests independent of the host system.
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -14,7 +14,7 @@
 // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-LD-32: "-L[[SYSROOT]]/lib"
 // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -33,7 +33,7 @@
 // CHECK-LD-64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-64: "-lc"
 // CHECK-LD-64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -47,7 +47,7 @@
 // CHECK-LD-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-X32: "-lc"
 // CHECK-LD-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
@@ -70,7 +70,7 @@
 // CHECK-LD-RT: "-lc"
 // CHECK-LD-RT: libclang_rt.builtins-x86_64.a"
 // CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtend-x86_64.o"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
@@ -93,7 +93,7 @@
 // CHECK-LD-RT-I686: "-lc"
 // CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
 // CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtend-i386.o"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
 // RUN:     --gcc-toolchain="" \
@@ -108,7 +108,7 @@
 // CHECK-LD-RT-ANDROID: libclang_rt.builtins-arm-android.a"
 // CHECK-LD-RT-ANDROID: "-lc"
 // CHECK-LD-RT-ANDROID: libclang_rt.builtins-arm-android.a"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -127,7 +127,7 @@
 // CHECK-LD-GCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-GCC: "-lc"
 // CHECK-LD-GCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     -static-libgcc \
@@ -147,7 +147,7 @@
 // CHECK-LD-64-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
 // CHECK-LD-64-STATIC-LIBGCC: "-lc"
 // CHECK-LD-64-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -157,7 +157,7 @@
 // CHECK-CLANG-NO-LIBGCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-CLANG-NO-LIBGCC: "-lc"
 // CHECK-CLANG-NO-LIBGCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-
+//
 // RUN: %clangxx -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -167,7 +167,7 @@
 // CHECK-CLANGXX-NO-LIBGCC: "-lgcc_s" "-lgcc"
 // CHECK-CLANGXX-NO-LIBGCC: "-lc"
 // CHECK-CLANGXX-NO-LIBGCC: "-lgcc_s" "-lgcc"
-
+//
 // RUN: %clang -static -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -175,7 +175,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-NO-LIBGCC-STATIC %s
 // CHECK-CLANG-NO-LIBGCC-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-CLANG-NO-LIBGCC-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
-
+//
 // RUN: %clang -static-pie -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -190,7 +190,7 @@
 // CHECK-CLANG-LD-STATIC-PIE: "-m" "elf_x86_64"
 // CHECK-CLANG-LD-STATIC-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
-
+//
 // RUN: %clang -static-pie -pie -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -205,7 +205,7 @@
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "-m" "elf_x86_64"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
-
+//
 // RUN: %clang -static-pie -static -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -220,14 +220,14 @@
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "-m" "elf_x86_64"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
-
+//
 // RUN: %clang -static-pie -nopie -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE-NOPIE %s
 // CHECK-CLANG-LD-STATIC-PIE-NOPIE: error: cannot specify 'nopie' along with 'static-pie'
-
+//
 // RUN: %clang -dynamic -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -237,7 +237,7 @@
 // CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lc"
 // CHECK-CLANG-NO-LIBGCC-DYNAMIC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-
+//
 // RUN: %clang -static-libgcc -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -247,7 +247,7 @@
 // CHECK-CLANG-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
 // CHECK-CLANG-STATIC-LIBGCC: "-lc"
 // CHECK-CLANG-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
-
+//
 // RUN: %clang -static-libgcc -dynamic -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -257,7 +257,7 @@
 // CHECK-CLANG-STATIC-LIBGCC-DYNAMIC: "-lgcc" "-lgcc_eh"
 // CHECK-CLANG-STATIC-LIBGCC-DYNAMIC: "-lc"
 // CHECK-CLANG-STATIC-LIBGCC-DYNAMIC: "-lgcc" "-lgcc_eh"
-
+//
 // RUN: %clang -shared-libgcc -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -267,7 +267,7 @@
 // CHECK-CLANG-SHARED-LIBGCC: "-lgcc_s" "-lgcc"
 // CHECK-CLANG-SHARED-LIBGCC: "-lc"
 // CHECK-CLANG-SHARED-LIBGCC: "-lgcc_s" "-lgcc"
-
+//
 // RUN: %clang -shared-libgcc -dynamic -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -276,7 +276,7 @@
 // CHECK-CLANG-SHARED-LIBGCC-DYNAMIC: "-lgcc_s" "-lgcc"
 // CHECK-CLANG-SHARED-LIBGCC-DYNAMIC: "-lc"
 // CHECK-CLANG-SHARED-LIBGCC-DYNAMIC: "-lgcc_s" "-lgcc"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -284,7 +284,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-NONE %s
 // CHECK-CLANG-ANDROID-NONE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-CLANG-ANDROID-NONE: "-l:libunwind.a" "-ldl" "-lc"
-
+//
 // RUN: %clang -shared -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -292,7 +292,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-SHARED %s
 // CHECK-CLANG-ANDROID-SHARED: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-CLANG-ANDROID-SHARED: "-l:libunwind.a" "-ldl" "-lc"
-
+//
 // RUN: %clang -static -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -300,7 +300,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-STATIC %s
 // CHECK-CLANG-ANDROID-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-CLANG-ANDROID-STATIC: "--start-group" "{{[^"]*}}{{/|\\\\}}libclang_rt.builtins-aarch64-android.a" "-l:libunwind.a" "-lc" "--end-group"
-
+//
 // RUN: %clang -### %s 2>&1      \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     -static \
@@ -333,7 +333,7 @@
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64-STATIC %s
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform -m32 \
 // RUN:     --gcc-toolchain="" \
@@ -349,7 +349,7 @@
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform -m64 \
 // RUN:     --gcc-toolchain="" \
@@ -365,7 +365,7 @@
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform -m64 \
 // RUN:     --gcc-toolchain="" \
@@ -381,7 +381,7 @@
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=plaform -m32 \
 // RUN:     --gcc-toolchain="" \
@@ -397,7 +397,7 @@
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -413,7 +413,7 @@
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32: "-L[[SYSROOT]]/lib"
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform -mx32 \
 // RUN:     --gcc-toolchain="" \
@@ -429,7 +429,7 @@
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform -mx32 \
 // RUN:     --gcc-toolchain="" \
@@ -445,7 +445,7 @@
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform -m64 \
 // RUN:     --gcc-toolchain="" \
@@ -461,7 +461,7 @@
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform -m32 \
 // RUN:     --gcc-toolchain="" \
@@ -477,7 +477,7 @@
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform -m32 \
 // RUN:     --gcc-toolchain=%S/Inputs/multilib_64bit_linux_tree/usr \
@@ -490,7 +490,7 @@
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr/lib/../lib32"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr/lib"
-
+//
 // Check that we support unusual patch version formats, including missing that
 // component.
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -530,7 +530,7 @@
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v1"
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-BASIC-LIBCXX-INSTALL: "--sysroot=[[SYSROOT]]"
-
+//
 // Test that we can use -stdlib=libc++ in a build system even when it
 // occasionally links C code instead of C++ code.
 // RUN: %clang -x c -### %s -no-pie 2>&1 \
@@ -546,7 +546,7 @@
 // CHECK-BASIC-LIBCXX-C-LINK-NOT: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v1"
 // CHECK-BASIC-LIBCXX-C-LINK: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-BASIC-LIBCXX-C-LINK: "--sysroot=[[SYSROOT]]"
-
+//
 // Check multi arch support on Ubuntu 12.04 LTS.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-unknown-linux-gnueabihf -rtlib=platform \
@@ -562,7 +562,7 @@
 // CHECK-UBUNTU-12-04-ARM-HF: "-L[[SYSROOT]]/usr/lib/arm-linux-gnueabihf"
 // CHECK-UBUNTU-12-04-ARM-HF: "{{.*}}/usr/lib/gcc/arm-linux-gnueabihf/4.6.3{{/|\\\\}}crtend.o"
 // CHECK-UBUNTU-12-04-ARM-HF: "{{.*}}/usr/lib/arm-linux-gnueabihf{{/|\\\\}}crtn.o"
-
+//
 // Check Ubuntu 13.10 on x86-64 targeting arm-linux-gnueabihf.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-gnueabihf -rtlib=platform \
@@ -581,7 +581,7 @@
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8{{/|\\\\}}crtend.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // Check Ubuntu 13.10 on x86-64 targeting arm-linux-gnueabi.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-gnueabi -rtlib=platform \
@@ -600,7 +600,7 @@
 // CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabi/4.7{{/|\\\\}}crtend.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // Check Ubuntu 14.04 on powerpc64le.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64le-unknown-linux-gnu -rtlib=platform \
@@ -616,7 +616,7 @@
 // CHECK-UBUNTU-14-04-PPC64LE: "-L[[SYSROOT]]/usr/lib/powerpc64le-linux-gnu"
 // CHECK-UBUNTU-14-04-PPC64LE: "{{.*}}/usr/lib/gcc/powerpc64le-linux-gnu/4.8{{/|\\\\}}crtend.o"
 // CHECK-UBUNTU-14-04-PPC64LE: "{{.*}}/usr/lib/powerpc64le-linux-gnu{{/|\\\\}}crtn.o"
-
+//
 // Check Ubuntu 14.04 on x32.
 // "/usr/lib/gcc/x86_64-linux-gnu/4.8/x32/crtend.o" "/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../libx32/crtn.o"
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -634,7 +634,7 @@
 // CHECK-UBUNTU-14-04-X32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../libx32"
 // CHECK-UBUNTU-14-04-X32: "{{.*}}/usr/lib/gcc/x86_64-linux-gnu/4.8/x32{{/|\\\\}}crtend.o"
 // CHECK-UBUNTU-14-04-X32: "{{.*}}/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../libx32{{/|\\\\}}crtn.o"
-
+//
 // Check fedora 18 on arm.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=armv7-unknown-linux-gnueabihf -rtlib=platform \
@@ -649,7 +649,7 @@
 // CHECK-FEDORA-18-ARM-HF: "-L[[SYSROOT]]/usr/lib/gcc/armv7hl-redhat-linux-gnueabi/4.7.2/../../../../lib"
 // CHECK-FEDORA-18-ARM-HF: "{{.*}}/usr/lib/gcc/armv7hl-redhat-linux-gnueabi/4.7.2{{/|\\\\}}crtend.o"
 // CHECK-FEDORA-18-ARM-HF: "{{.*}}/usr/lib/gcc/armv7hl-redhat-linux-gnueabi/4.7.2/../../../../lib{{/|\\\\}}crtn.o"
-
+//
 // Check Fedora 21 on AArch64.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm64-unknown-linux-gnu -rtlib=platform \
@@ -669,7 +669,7 @@
 // CHECK-FEDORA-21-AARCH64: "-L[[SYSROOT]]/usr/lib/gcc/aarch64-redhat-linux/4.9.0/../../../../lib64"
 // CHECK-FEDORA-21-AARCH64: "{{.*}}/usr/lib/gcc/aarch64-redhat-linux/4.9.0{{/|\\\\}}crtend.o"
 // CHECK-FEDORA-21-AARCH64: "{{.*}}/usr/lib/gcc/aarch64-redhat-linux/4.9.0/../../../../lib64{{/|\\\\}}crtn.o"
-
+//
 // Check Fedora 31 on riscv64.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=riscv64-redhat-linux -rtlib=platform \
@@ -684,7 +684,7 @@
 // CHECK-FEDORA-31-RISCV64: "-L[[SYSROOT]]/usr/lib/gcc/riscv64-redhat-linux/9/../../../../lib64"
 // CHECK-FEDORA-31-RISCV64: "{{.*}}/usr/lib/gcc/riscv64-redhat-linux/9{{/|\\\\}}crtend.o"
 // CHECK-FEDORA-31-RISCV64: "{{.*}}/usr/lib/gcc/riscv64-redhat-linux/9{{/|\\\\}}crtn.o"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-unknown-linux-gnueabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -699,7 +699,7 @@
 // CHECK-UBUNTU-12-04-ARM: "-L[[SYSROOT]]/usr/lib/arm-linux-gnueabi"
 // CHECK-UBUNTU-12-04-ARM: "{{.*}}/usr/lib/gcc/arm-linux-gnueabi/4.6.1{{/|\\\\}}crtend.o"
 // CHECK-UBUNTU-12-04-ARM: "{{.*}}/usr/lib/arm-linux-gnueabi{{/|\\\\}}crtn.o"
-
+//
 // Test the setup that shipped in SUSE 10.3 on ppc64.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64-suse-linux -rtlib=platform \
@@ -712,7 +712,7 @@
 // CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-suse-linux/4.1.2/../../../../lib64"
 // CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/lib/../lib64"
 // CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr/lib/../lib64"
-
+//
 // Check openSuse Leap 42.2 on AArch64
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm64-unknown-linux-gnu -rtlib=platform \
@@ -732,7 +732,7 @@
 // CHECK-OPENSUSE-42-2-AARCH64: "-L[[SYSROOT]]/usr/lib64/gcc/aarch64-suse-linux/4.8/../../../../lib64"
 // CHECK-OPENSUSE-42-2-AARCH64: "{{.*}}/usr/lib64/gcc/aarch64-suse-linux/4.8{{/|\\\\}}crtend.o"
 // CHECK-OPENSUSE-42-2-AARCH64: "{{.*}}/usr/lib64/gcc/aarch64-suse-linux/4.8/../../../../lib64{{/|\\\\}}crtn.o"
-
+//
 // Check openSUSE Tumbleweed on armv6hl
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=armv6hl-suse-linux-gnueabi -rtlib=platform \
@@ -752,7 +752,7 @@
 // CHECK-OPENSUSE-TW-ARMV6HL: "-L[[SYSROOT]]/usr/lib/gcc/armv6hl-suse-linux-gnueabi/5/../../../../lib"
 // CHECK-OPENSUSE-TW-ARMV6HL: "{{.*}}/usr/lib/gcc/armv6hl-suse-linux-gnueabi/5{{/|\\\\}}crtend.o"
 // CHECK-OPENSUSE-TW-ARMV6HL: "{{.*}}/usr/lib/gcc/armv6hl-suse-linux-gnueabi/5/../../../../lib{{/|\\\\}}crtn.o"
-
+//
 // Check openSUSE Tumbleweed on armv7hl
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=armv7hl-suse-linux-gnueabi -rtlib=platform \
@@ -772,7 +772,7 @@
 // CHECK-OPENSUSE-TW-ARMV7HL: "-L[[SYSROOT]]/usr/lib/gcc/armv7hl-suse-linux-gnueabi/5/../../../../lib"
 // CHECK-OPENSUSE-TW-ARMV7HL: "{{.*}}/usr/lib/gcc/armv7hl-suse-linux-gnueabi/5{{/|\\\\}}crtend.o"
 // CHECK-OPENSUSE-TW-ARMV7HL: "{{.*}}/usr/lib/gcc/armv7hl-suse-linux-gnueabi/5/../../../../lib{{/|\\\\}}crtn.o"
-
+//
 // Check openSUSE Tumbleweed on riscv64
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=riscv64-suse-linux -rtlib=platform \
@@ -792,7 +792,7 @@
 // CHECK-OPENSUSE-TW-RISCV64: "-L[[SYSROOT]]/usr/lib64/gcc/riscv64-suse-linux/9/../../../../lib64"
 // CHECK-OPENSUSE-TW-RISCV64: "{{.*}}/usr/lib64/gcc/riscv64-suse-linux/9{{/|\\\\}}crtend.o"
 // CHECK-OPENSUSE-TW-RISCV64: "{{.*}}/usr/lib64/gcc/riscv64-suse-linux/9/../../../../lib64{{/|\\\\}}crtn.o"
-
+//
 // Check openSUSE Tumbleweed on ppc
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc-unknown-linux-gnu -rtlib=platform \
@@ -806,7 +806,7 @@
 // CHECK-OPENSUSE-TW-PPC: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-suse-linux/9"
 // CHECK-OPENSUSE-TW-PPC: "{{.*}}/usr/lib/gcc/powerpc64-suse-linux/9{{/|\\\\}}crtend.o"
 // CHECK-OPENSUSE-TW-PPC: "{{.*}}/usr/lib/crtn.o"
-
+//
 // Check dynamic-linker for different archs
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-gnueabi \
@@ -814,63 +814,63 @@
 // CHECK-ARM: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ARM: "-m" "armelf_linux_eabi"
 // CHECK-ARM: "-dynamic-linker" "{{.*}}/lib/ld-linux.so.3"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-gnueabi -mfloat-abi=hard \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-ABIHF %s
 // CHECK-ARM-ABIHF: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ARM-ABIHF: "-m" "armelf_linux_eabi"
 // CHECK-ARM-ABIHF: "-dynamic-linker" "{{.*}}/lib/ld-linux-armhf.so.3"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-gnueabihf \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-HF %s
 // CHECK-ARM-HF: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ARM-HF: "-m" "armelf_linux_eabi"
 // CHECK-ARM-HF: "-dynamic-linker" "{{.*}}/lib/ld-linux-armhf.so.3"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64 %s
 // CHECK-PPC64: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64: "-m" "elf64ppc"
 // CHECK-PPC64: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.1"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64-linux-gnu -mabi=elfv1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64-ELFv1 %s
 // CHECK-PPC64-ELFv1: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64-ELFv1: "-m" "elf64ppc"
 // CHECK-PPC64-ELFv1: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.1"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64-linux-gnu -mabi=elfv2 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64-ELFv2 %s
 // CHECK-PPC64-ELFv2: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64-ELFv2: "-m" "elf64ppc"
 // CHECK-PPC64-ELFv2: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.2"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64le-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LE %s
 // CHECK-PPC64LE: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64LE: "-m" "elf64lppc"
 // CHECK-PPC64LE: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.2"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64le-linux-gnu -mabi=elfv1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LE-ELFv1 %s
 // CHECK-PPC64LE-ELFv1: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64LE-ELFv1: "-m" "elf64lppc"
 // CHECK-PPC64LE-ELFv1: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.1"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64le-linux-gnu -mabi=elfv2 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LE-ELFv2 %s
 // CHECK-PPC64LE-ELFv2: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64LE-ELFv2: "-m" "elf64lppc"
 // CHECK-PPC64LE-ELFv2: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.2"
-
+//
 // Check that we do not pass --hash-style=gnu or --hash-style=both to
 // hexagon linux linker
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -878,7 +878,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-HEXAGON %s
 // CHECK-HEXAGON: "{{.*}}{{hexagon-link|ld}}{{(.exe)?}}"
 // CHECK-HEXAGON-NOT: "--hash-style={{gnu|both}}"
-
+//
 // Check that we do not pass --hash-style=gnu and --hash-style=both to linker
 // and provide correct path to the dynamic linker and emulation mode when build
 // for MIPS platforms.
@@ -889,7 +889,7 @@
 // CHECK-MIPS: "-m" "elf32btsmip"
 // CHECK-MIPS: "-dynamic-linker" "{{.*}}/lib/ld.so.1"
 // CHECK-MIPS-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mipsel-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSEL %s
@@ -897,21 +897,21 @@
 // CHECK-MIPSEL: "-m" "elf32ltsmip"
 // CHECK-MIPSEL: "-dynamic-linker" "{{.*}}/lib/ld.so.1"
 // CHECK-MIPSEL-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 --target=mipsel-linux-gnu -mnan=2008 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSEL-NAN2008 %s
 // CHECK-MIPSEL-NAN2008: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPSEL-NAN2008: "-m" "elf32ltsmip"
 // CHECK-MIPSEL-NAN2008: "-dynamic-linker" "{{.*}}/lib/ld-linux-mipsn8.so.1"
 // CHECK-MIPSEL-NAN2008-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 --target=mipsel-linux-gnu -mcpu=mips32r6 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS32R6EL %s
 // CHECK-MIPS32R6EL: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS32R6EL: "-m" "elf32ltsmip"
 // CHECK-MIPS32R6EL: "-dynamic-linker" "{{.*}}/lib/ld-linux-mipsn8.so.1"
 // CHECK-MIPS32R6EL-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mips64-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64 %s
@@ -919,7 +919,7 @@
 // CHECK-MIPS64: "-m" "elf64btsmip"
 // CHECK-MIPS64: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld.so.1"
 // CHECK-MIPS64-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mips64el-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL %s
@@ -927,21 +927,21 @@
 // CHECK-MIPS64EL: "-m" "elf64ltsmip"
 // CHECK-MIPS64EL: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld.so.1"
 // CHECK-MIPS64EL-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64el-linux-gnu -mnan=2008 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-NAN2008 %s
 // CHECK-MIPS64EL-NAN2008: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64EL-NAN2008: "-m" "elf64ltsmip"
 // CHECK-MIPS64EL-NAN2008: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld-linux-mipsn8.so.1"
 // CHECK-MIPS64EL-NAN2008-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64el-linux-gnu -mcpu=mips64r6 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64R6EL %s
 // CHECK-MIPS64R6EL: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64R6EL: "-m" "elf64ltsmip"
 // CHECK-MIPS64R6EL: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld-linux-mipsn8.so.1"
 // CHECK-MIPS64R6EL-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mips64-linux-gnu -mabi=n32 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64-N32 %s
@@ -949,7 +949,7 @@
 // CHECK-MIPS64-N32: "-m" "elf32btsmipn32"
 // CHECK-MIPS64-N32: "-dynamic-linker" "{{.*}}/lib{{(32)?}}/ld.so.1"
 // CHECK-MIPS64-N32-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mips64el-linux-gnu -mabi=n32 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-N32 %s
@@ -957,14 +957,14 @@
 // CHECK-MIPS64EL-N32: "-m" "elf32ltsmipn32"
 // CHECK-MIPS64EL-N32: "-dynamic-linker" "{{.*}}/lib{{(32)?}}/ld.so.1"
 // CHECK-MIPS64EL-N32-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64el-linux-gnu -mabi=n32 \
 // RUN:   -mnan=2008 | FileCheck --check-prefix=CHECK-MIPS64EL-N32-NAN2008 %s
 // CHECK-MIPS64EL-N32-NAN2008: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64EL-N32-NAN2008: "-m" "elf32ltsmipn32"
 // CHECK-MIPS64EL-N32-NAN2008: "-dynamic-linker" "{{.*}}/lib{{(32)?}}/ld-linux-mipsn8.so.1"
 // CHECK-MIPS64EL-N32-NAN2008-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64el-redhat-linux \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-REDHAT %s
 // CHECK-MIPS64EL-REDHAT: "{{.*}}ld{{(.exe)?}}"
@@ -980,7 +980,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-L %s
 // CHECK-ANDROID-HASH-STYLE-L: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-HASH-STYLE-L: "--hash-style=both"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=armv7-linux-android23 \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-M %s
@@ -993,28 +993,28 @@
 // CHECK-MIPS64EL-GNUABIN32: "-m" "elf32btsmipn32"
 // CHECK-MIPS64EL-GNUABIN32: "-dynamic-linker" "{{.*}}/lib{{(32)?}}/ld.so.1"
 // CHECK-MIPS64EL-GNUABIN32-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64-linux-gnuabi64 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABI64 %s
 // CHECK-MIPS64EL-GNUABI64: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64EL-GNUABI64: "-m" "elf64btsmip"
 // CHECK-MIPS64EL-GNUABI64: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld.so.1"
 // CHECK-MIPS64EL-GNUABI64-NOT: "--hash-style={{gnu|both}}"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=sparc-unknown-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARCV8 %s
 // CHECK-SPARCV8: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SPARCV8: "-m" "elf32_sparc"
 // CHECK-SPARCV8: "-dynamic-linker" "{{(/usr/sparc-unknown-linux-gnu)?}}/lib/ld-linux.so.2"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=sparcel-unknown-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARCV8EL %s
 // CHECK-SPARCV8EL: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SPARCV8EL: "-m" "elf32_sparc"
 // CHECK-SPARCV8EL: "-dynamic-linker" "{{(/usr/sparcel-unknown-linux-gnu)?}}/lib/ld-linux.so.2"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=sparcv9-unknown-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARCV9 %s
@@ -1289,7 +1289,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-64 %s
 // CHECK-ANDROID-32: "-dynamic-linker" "/system/bin/linker"
 // CHECK-ANDROID-64: "-dynamic-linker" "/system/bin/linker64"
-
+//
 // Test that -pthread does not add -lpthread on Android.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-androideabi -pthread \
@@ -1379,14 +1379,14 @@
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD %s
 // CHECK-ANDROID-PTHREAD-NOT: -lpthread
-
+//
 // RUN: %clang %t.o -no-pie -### -o %t 2>&1 \
 // RUN:     --target=arm-linux-androideabi -pthread \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD-LINK %s
 // CHECK-ANDROID-PTHREAD-LINK-NOT: argument unused during compilation: '-pthread'
-
+//
 // Check linker invocation on Debian 6 MIPS 32/64-bit.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -rtlib=platform \
@@ -1403,7 +1403,7 @@
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib/../lib"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mips64el-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -1419,7 +1419,7 @@
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib/../lib64"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mips64el-linux-gnu -rtlib=platform -mabi=n32 \
 // RUN:     --gcc-toolchain="" \
@@ -1435,7 +1435,7 @@
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/../lib32"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mips64el-linux-gnuabi64 -rtlib=platform -mabi=32 \
 // RUN:     --gcc-toolchain="" \
@@ -1451,7 +1451,7 @@
 // CHECK-DEBIAN-ML-MIPS64EL-O32: "-L[[SYSROOT]]/usr/libo32"
 // CHECK-DEBIAN-ML-MIPS64EL-O32: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPS64EL-O32: "-L[[SYSROOT]]/usr/lib"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mips64-unknown-linux-gnu --rtlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -1473,7 +1473,7 @@
 // CHECK-DEBIAN-ML-MIPS64-GNUABI: "-L[[SYSROOT]]/usr/lib"
 // CHECK-DEBIAN-ML-MIPS64-GNUABI: "{{.*}}/usr/lib/gcc/mips64-linux-gnuabi64/4.9{{/|\\\\}}crtend.o"
 // CHECK-DEBIAN-ML-MIPS64-GNUABI: "{{.*}}/usr/lib/mips64-linux-gnuabi64{{/|\\\\}}crtn.o"
-
+//
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=mips64el-unknown-linux-gnu -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
@@ -1495,7 +1495,7 @@
 // CHECK-DEBIAN-ML-MIPS64EL-GNUABI: "-L[[SYSROOT]]/usr/lib"
 // CHECK-DEBIAN-ML-MIPS64EL-GNUABI: "{{.*}}/usr/lib/gcc/mips64el-linux-gnuabi64/4.9{{/|\\\\}}crtend.o"
 // CHECK-DEBIAN-ML-MIPS64EL-GNUABI: "{{.*}}/usr/lib/mips64el-linux-gnuabi64{{/|\\\\}}crtn.o"
-
+//
 // Test linker invocation for Freescale SDK (OpenEmbedded).
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc-fsl-linux -rtlib=platform \
@@ -1516,7 +1516,7 @@
 // CHECK-FSL-PPC64: "-m" "elf64ppc"
 // CHECK-FSL-PPC64: "{{.*}}{{/|\\\\}}crt1.o"
 // CHECK-FSL-PPC64: "{{.*}}{{/|\\\\}}crtbegin.o"
-
+//
 // Check that crtfastmath.o is linked with -ffast-math and with -Ofast.
 // RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s \
 // RUN:        --gcc-toolchain="" \

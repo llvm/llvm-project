@@ -1,6 +1,6 @@
 // Test header and library paths when Clang is used with Android standalone
 // toolchain.
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -stdlib=libstdc++ \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree \
@@ -15,7 +15,7 @@
 // CHECK: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.4.3"
 // CHECK: "-L{{.*}}/lib/gcc/arm-linux-androideabi/4.4.3/../../../../arm-linux-androideabi/lib"
 // CHECK: "-L{{.*}}/sysroot/usr/lib"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=aarch64-linux-android -stdlib=libstdc++ \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree \
@@ -30,7 +30,7 @@
 // CHECK-AARCH64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.8"
 // CHECK-AARCH64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.8/../../../../aarch64-linux-android/lib"
 // CHECK-AARCH64: "-L{{.*}}/sysroot/usr/lib"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm64-linux-android -stdlib=libstdc++ \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree \
@@ -45,7 +45,7 @@
 // CHECK-ARM64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.8"
 // CHECK-ARM64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.8/../../../../aarch64-linux-android/lib"
 // CHECK-ARM64: "-L{{.*}}/sysroot/usr/lib"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-android \
 // RUN:     -mips32 -stdlib=libstdc++ \
@@ -61,7 +61,7 @@
 // CHECK-MIPS: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.4.3"
 // CHECK-MIPS: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.4.3/../../../../mipsel-linux-android/lib"
 // CHECK-MIPS: "-L{{.*}}/sysroot/usr/lib"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-android \
 // RUN:     -march=mips32 -mips32r2 -stdlib=libstdc++ \
@@ -77,7 +77,7 @@
 // CHECK-MIPSR2: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.4.3/mips-r2"
 // CHECK-MIPSR2: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.4.3/../../../../mipsel-linux-android/lib"
 // CHECK-MIPSR2: "-L{{.*}}/sysroot/usr/lib"
-
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-android \
 // RUN:     -mips32 -march=mips32r2 -stdlib=libstdc++ \

@@ -2,7 +2,7 @@
 /// via -Wa or -Xassembler are applied correctly to assembler inputs.
 /// Also we check that the same priority rules apply to compiler and
 /// assembler options.
-/
+///
 /// Note that the cortex-a8 is armv7-a, the cortex-a32 is armv8-a
 /// and clang's default Arm architecture is armv4t.
 

@@ -19,7 +19,7 @@
 // RUN: %clang -target s390x-unknown-linux-gnu %s -mno-vx -mvx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-VX %s
 // CHECK-VX: "-target-feature" "+vector"
 // CHECK-VX-NOT: "-target-feature" "-vector"
-
+//
 // RUN: %clang -target s390x-unknown-linux-gnu %s -mno-vx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOVX %s
 // RUN: %clang -target s390x-unknown-linux-gnu %s -mvx -mno-vx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOVX %s
 // CHECK-NOVX: "-target-feature" "-vector"

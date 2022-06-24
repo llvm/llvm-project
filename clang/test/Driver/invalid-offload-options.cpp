@@ -12,7 +12,7 @@
 
 // In the future we should be able to specify multiple targets for HIP
 // compilation but currently it is not supported.
-
+//
 // RUN: %clang -### -x hip -target x86_64-linux-gnu --offload=foo,bar \
 // RUN:   --hip-path=%S/Inputs/hipspv -nogpuinc -nogpulib %s \
 // RUN: 2>&1 | FileCheck --check-prefix=TOO-MANY-TARGETS %s

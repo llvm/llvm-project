@@ -1,4 +1,4 @@
-
+//
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g -O1 --no-cuda-noopt-device-debug 2>&1 | \
 // RUN:   FileCheck %s -check-prefix DEBUG_DIRECTIVES
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g -O3 2>&1 | \

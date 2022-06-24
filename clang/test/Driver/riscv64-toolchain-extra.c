@@ -10,7 +10,7 @@
 // and runtime starting from the directory tree above the driver itself.
 // The test below checks that the driver correctly finds the linker and
 // runtime if and only if they exist.
-
+//
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/riscv64-nogcc/bin
 // RUN: ln -s %clang %t/riscv64-nogcc/bin/clang

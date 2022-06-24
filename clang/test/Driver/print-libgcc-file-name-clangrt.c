@@ -13,7 +13,7 @@
 // CHECK-CLANGRT-I386: libclang_rt.builtins-i386.a
 
 // Check whether alternate arch values map to the correct library.
-
+//
 // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
 // RUN:     --target=i686-pc-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
