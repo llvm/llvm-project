@@ -30,6 +30,7 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   const LLT S64 = LLT::scalar(64);
   const LLT S80 = LLT::scalar(80);
   const LLT P0 = LLT::pointer(0, 32);
+  getActionDefinitionsBuilder(G_PHI).legalFor({S32, P0});
   getActionDefinitionsBuilder(G_SELECT)
       .customForCartesianProduct({S32, S64, P0}, {S1});
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE}).legalFor({S32});

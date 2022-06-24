@@ -790,6 +790,13 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_MERGE_VALUES:
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectMergeUnmerge(I, MBB, MRI);
+  case TargetOpcode::G_PHI: {
+    I.setDesc(TII.get(TargetOpcode::PHI));
+
+    Register DstReg = I.getOperand(0).getReg();
+    const TargetRegisterClass *RC = guessRegClass(DstReg, MRI, TRI, RBI);
+    return RBI.constrainGenericRegister(DstReg, *RC, MRI);
+  }
   default:
     return false;
   }
