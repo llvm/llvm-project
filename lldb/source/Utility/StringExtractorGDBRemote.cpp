@@ -372,6 +372,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_vCont;
       if (PACKET_MATCHES("vCont?"))
         return eServerPacketType_vCont_actions;
+      if (PACKET_STARTS_WITH("vKill;"))
+        return eServerPacketType_vKill;
       if (PACKET_STARTS_WITH("vRun;"))
         return eServerPacketType_vRun;
       if (PACKET_MATCHES("vStopped"))
