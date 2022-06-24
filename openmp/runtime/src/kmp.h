@@ -3061,6 +3061,8 @@ extern int __kmp_storage_map_verbose_specified;
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 extern kmp_cpuinfo_t __kmp_cpuinfo;
 static inline bool __kmp_is_hybrid_cpu() { return __kmp_cpuinfo.flags.hybrid; }
+#elif KMP_OS_DARWIN && KMP_ARCH_AARCH64
+static inline bool __kmp_is_hybrid_cpu() { return true; }
 #else
 static inline bool __kmp_is_hybrid_cpu() { return false; }
 #endif
