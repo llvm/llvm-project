@@ -2082,6 +2082,7 @@ cc_library(
         "lib/Dialect/SparseTensor/Transforms/*.h",
     ]),
     hdrs = [
+        "include/mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/SparseTensor/Transforms/Passes.h",
         "include/mlir/ExecutionEngine/SparseTensorUtils.h",
     ],
@@ -2090,6 +2091,7 @@ cc_library(
         ":AffineDialect",
         ":ArithmeticDialect",
         ":BufferizationDialect",
+        ":BufferizationTransforms",
         ":ComplexDialect",
         ":FuncDialect",
         ":FuncTransforms",
