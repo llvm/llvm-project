@@ -115,28 +115,36 @@ namespace generic {
 //   https://man7.org/linux/man-pages/man3/fmod.3p.html
 // C standard for the function is not full, so not by default (although it can
 // be implemented in another handler.
+// Signaling NaN converted to quiet NaN with FE_INVALID exception.
+//    https://www.open-std.org/JTC1/SC22/WG14/www/docs/n1011.htm
 template <typename T> struct FModExceptionalInputHandler {
 
   static_assert(cpp::IsFloatingPointType<T>::Value,
                 "FModCStandardWrapper instantiated with invalid type.");
 
   static bool PreCheck(T x, T y, T &out) {
-    if (likely(y != 0 && fputil::isfinite(y) && fputil::isfinite(x))) {
+    using FPB = fputil::FPBits<T>;
+    const T quiet_NaN = FPB::build_nan(FPB::FloatProp::QUIET_NAN_MASK);
+    FPB sx(x), sy(y);
+    if (likely(!sy.is_zero() && !sy.is_inf_or_nan() && !sx.is_inf_or_nan())) {
       return false;
     }
 
-    if (fputil::isnan(x) || fputil::isnan(y)) {
-      out = fputil::quiet_NaN(T(0));
+    if (sx.is_nan() || sy.is_nan()) {
+      if ((sx.is_nan() && !sx.is_quiet_nan()) ||
+          (sy.is_nan() && !sy.is_quiet_nan()))
+        fputil::set_except(FE_INVALID);
+      out = quiet_NaN;
       return true;
     }
 
-    if (fputil::isinf(x) || y == 0) {
+    if (sx.is_inf() || sy.is_zero()) {
       fputil::set_except(FE_INVALID);
-      out = with_errno(fputil::quiet_NaN(T(0)), EDOM);
+      out = with_errno(quiet_NaN, EDOM);
       return true;
     }
 
-    if (fputil::isinf(y)) {
+    if (sy.is_inf()) {
       out = x;
       return true;
     }
