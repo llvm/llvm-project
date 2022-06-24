@@ -1390,6 +1390,8 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
       LLVM_READOBJ_ENUM_CASE(ELF, PT_MIPS_ABIFLAGS);
     }
     break;
+  case ELF::EM_RISCV:
+    switch (Type) { LLVM_READOBJ_ENUM_CASE(ELF, PT_RISCV_ATTRIBUTES); }
   }
 
   switch (Type) {
@@ -1428,6 +1430,10 @@ static std::string getGNUPtType(unsigned Arch, unsigned Type) {
 
   // E.g. "PT_MIPS_REGINFO" -> "REGINFO".
   if (Seg.consume_front("PT_MIPS_"))
+    return Seg.str();
+
+  // E.g. "PT_RISCV_ATTRIBUTES"
+  if (Seg.consume_front("PT_RISCV_"))
     return Seg.str();
 
   // E.g. "PT_LOAD" -> "LOAD".
