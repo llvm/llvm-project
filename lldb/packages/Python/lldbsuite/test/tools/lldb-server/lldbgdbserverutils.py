@@ -284,9 +284,14 @@ def parse_threadinfo_response(response_packet):
     response_packet = _STRIP_COMMAND_PREFIX_M_REGEX.sub("", response_packet)
     response_packet = _STRIP_CHECKSUM_REGEX.sub("", response_packet)
 
-    # Return list of thread ids
-    return [int(thread_id_hex, 16) for thread_id_hex in response_packet.split(
-        ",") if len(thread_id_hex) > 0]
+    for tid in response_packet.split(","):
+        if not tid:
+            continue
+        if tid.startswith("p"):
+            pid, _, tid = tid.partition(".")
+            yield (int(pid[1:], 16), int(tid, 16))
+        else:
+            yield int(tid, 16)
 
 
 def unpack_endian_binary_string(endian, value_string):
