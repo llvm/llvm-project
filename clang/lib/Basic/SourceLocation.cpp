@@ -270,30 +270,3 @@ StringRef FullSourceLoc::getBufferData(bool *Invalid) const {
 std::pair<FileID, unsigned> FullSourceLoc::getDecomposedLoc() const {
   return SrcMgr->getDecomposedLoc(*this);
 }
-
-//===----------------------------------------------------------------------===//
-// FullSourceRange
-//===----------------------------------------------------------------------===//
-
-void FullSourceRange::print(raw_ostream &OS) const {
-
-  OS << '<';
-  PresumedLoc PrintedLoc = PrintDifference(OS, B.getManager(), B, {});
-  if (B != E) {
-    OS << ", ";
-    PrintDifference(OS, E.getManager(), E, PrintedLoc);
-  }
-  OS << '>';
-}
-
-LLVM_DUMP_METHOD std::string FullSourceRange::printToString() const {
-  std::string S;
-  llvm::raw_string_ostream OS(S);
-  print(OS);
-  return OS.str();
-}
-
-LLVM_DUMP_METHOD void FullSourceRange::dump() const {
-  this->print(llvm::errs());
-  llvm::errs() << '\n';
-}
