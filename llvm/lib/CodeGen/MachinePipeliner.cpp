@@ -706,11 +706,11 @@ static bool isSuccOrder(SUnit *SUa, SUnit *SUb) {
 
 /// Return true if the instruction causes a chain between memory
 /// references before and after it.
-static bool isDependenceBarrier(MachineInstr &MI, AliasAnalysis *AA) {
+static bool isDependenceBarrier(MachineInstr &MI) {
   return MI.isCall() || MI.mayRaiseFPException() ||
          MI.hasUnmodeledSideEffects() ||
          (MI.hasOrderedMemoryRef() &&
-          (!MI.mayLoad() || !MI.isDereferenceableInvariantLoad(AA)));
+          (!MI.mayLoad() || !MI.isDereferenceableInvariantLoad()));
 }
 
 /// Return the underlying objects for the memory references of an instruction.
@@ -743,7 +743,7 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
     UndefValue::get(Type::getVoidTy(MF.getFunction().getContext()));
   for (auto &SU : SUnits) {
     MachineInstr &MI = *SU.getInstr();
-    if (isDependenceBarrier(MI, AA))
+    if (isDependenceBarrier(MI))
       PendingLoads.clear();
     else if (MI.mayLoad()) {
       SmallVector<const Value *, 4> Objs;

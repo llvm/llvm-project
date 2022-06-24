@@ -6726,8 +6726,8 @@ bool ARMBaseInstrInfo::shouldOutlineFromFunctionByDefault(
   return Subtarget.isMClass() && MF.getFunction().hasMinSize();
 }
 
-bool ARMBaseInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                         AAResults *AA) const {
+bool ARMBaseInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
   // Try hard to rematerialize any VCTPs because if we spill P0, it will block
   // the tail predication conversion. This means that the element count
   // register has to be live for longer, but that has to be better than

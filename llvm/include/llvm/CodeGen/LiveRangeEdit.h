@@ -32,7 +32,6 @@
 
 namespace llvm {
 
-class AAResults;
 class LiveIntervals;
 class MachineInstr;
 class MachineOperand;
@@ -93,7 +92,7 @@ private:
   SmallPtrSet<const VNInfo *, 4> Rematted;
 
   /// scanRemattable - Identify the Parent values that may rematerialize.
-  void scanRemattable(AAResults *aa);
+  void scanRemattable();
 
   /// foldAsLoad - If LI has a single use and a single def that can be folded as
   /// a load, eliminate the register by folding the def into the use.
@@ -103,8 +102,7 @@ private:
                                 SmallPtrSet<LiveInterval *, 8>>;
 
   /// Helper for eliminateDeadDefs.
-  void eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
-                        AAResults *AA);
+  void eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink);
 
   /// MachineRegisterInfo callback to notify when new virtual
   /// registers are created.
@@ -184,12 +182,11 @@ public:
   /// anyRematerializable - Return true if any parent values may be
   /// rematerializable.
   /// This function must be called before any rematerialization is attempted.
-  bool anyRematerializable(AAResults *);
+  bool anyRematerializable();
 
   /// checkRematerializable - Manually add VNI to the list of rematerializable
   /// values if DefMI may be rematerializable.
-  bool checkRematerializable(VNInfo *VNI, const MachineInstr *DefMI,
-                             AAResults *);
+  bool checkRematerializable(VNInfo *VNI, const MachineInstr *DefMI);
 
   /// Remat - Information needed to rematerialize at a specific location.
   struct Remat {
@@ -242,8 +239,7 @@ public:
   /// allocator.  These registers should not be split into new intervals
   /// as currently those new intervals are not guaranteed to spill.
   void eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
-                         ArrayRef<Register> RegsBeingSpilled = None,
-                         AAResults *AA = nullptr);
+                         ArrayRef<Register> RegsBeingSpilled = None);
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new
   /// register.

@@ -19,7 +19,6 @@
 
 namespace llvm {
 
-class AAResults;
 class MachineBasicBlock;
 class MachineBlockFrequencyInfo;
 class MachineFunction;
@@ -62,8 +61,7 @@ public:
 /// different policies, the better policy would have a smaller score.
 /// The implementation is the overload below (which is also easily unittestable)
 RegAllocScore calculateRegAllocScore(const MachineFunction &MF,
-                                     const MachineBlockFrequencyInfo &MBFI,
-                                     AAResults &AAResults);
+                                     const MachineBlockFrequencyInfo &MBFI);
 
 /// Implementation of the above, which is also more easily unittestable.
 RegAllocScore calculateRegAllocScore(
