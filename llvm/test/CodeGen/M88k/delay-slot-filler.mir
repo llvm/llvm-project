@@ -1,0 +1,252 @@
+# RUN: llc -mtriple=m88k -global-isel -run-pass=m88k-delay-slot-filler -verify-machineinstrs -o - %s | FileCheck %s
+---
+name:            f1
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$r2' }
+  - { reg: '$r3' }
+  - { reg: '$r1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r1, $r2, $r3
+
+    renamable $r4 = CMPrr renamable $r2, renamable $r3
+    BB1 2, killed renamable $r4, %bb.2
+    ; There is no instruction for the delay slot.
+    ; CHECK: BB1 2, killed renamable $r4, %bb.2
+
+  bb.1:
+    liveins: $r1, $r2, $r3
+
+    renamable $r2 = ANDrr killed renamable $r2, killed renamable $r3
+    ; CHECK-NOT: renamable $r2 = ANDrr killed renamable $r2, killed renamable $r3
+    RET implicit $r1, implicit $r2
+    ; The ANDrr moves into the delay slot.
+    ; CHECK:      RETn implicit $r1, implicit $r2 {
+    ; CHECK-NEXT:   renamable $r2 = ANDrr killed renamable $r2, killed renamable $r3
+    ; CHECK-NEXT: }
+
+  bb.2:
+    liveins: $r1, $r2, $r3
+
+    renamable $r2 = ORrr killed renamable $r2, killed renamable $r3
+    ; CHECK-NOT: renamable $r2 = ORrr killed renamable $r2, killed renamable $r3
+    RET implicit $r1, implicit $r2
+    ; The ORrr moves into the delay slot.
+    ; CHECK:      RETn implicit $r1, implicit $r2 {
+    ; CHECK-NEXT:   renamable $r2 = ORrr killed renamable $r2, killed renamable $r3
+    ; CHECK-NEXT: }
+...
+---
+name:            f2
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$r2' }
+  - { reg: '$r3' }
+  - { reg: '$r1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r1, $r2, $r3
+
+    renamable $r2 = ADDUrr renamable $r3, killed renamable $r2
+
+  bb.1:
+    liveins: $r1, $r2, $r3
+
+    renamable $r2 = SUBUrr killed renamable $r2, renamable $r3
+    renamable $r4 = CMPrr renamable $r2, renamable $r3
+    BB1 4, killed renamable $r4, %bb.1
+    ; There is no instruction for the delay slot.
+    ; CHECK: BB1 4, killed renamable $r4, %bb.1
+
+  bb.2:
+    liveins: $r1, $r2
+
+    RET implicit $r1, implicit $r2
+    ; There is no instruction for the delay slot.
+    ; CHECK: RET implicit $r1, implicit $r2
+...
+---
+name:            f3
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$r2' }
+  - { reg: '$r3' }
+  - { reg: '$r1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r1, $r2, $r3
+
+    renamable $r2 = ADDUrr renamable $r3, killed renamable $r2
+
+  bb.1:
+    liveins: $r1, $r2, $r3
+
+    renamable $r2 = SUBUrr killed renamable $r2, renamable $r3
+    renamable $r4 = CMPrr renamable $r2, renamable $r3
+    BB1 4, killed renamable $r4, %bb.1
+    ; There is no instruction for the delay slot.
+    ; CHECK: BB1 4, killed renamable $r4, %bb.1
+
+  bb.2:
+    liveins: $r1, $r2
+
+    renamable $r2 = ADDUri killed renamable $r2, 42
+    ; CHECK-NOT: renamable $r2 = ADDUri killed renamable $r2, 42
+    RET implicit $r1, implicit $r2
+    ; The ADDUri moves into the delay slot.
+    ; CHECK:      RETn implicit $r1, implicit $r2 {
+    ; CHECK-NEXT:   renamable $r2 = ADDUri killed renamable $r2, 42
+    ; CHECK-NEXT: }
+...
+---
+name:            f4
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$r2' }
+  - { reg: '$r3' }
+  - { reg: '$r1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r1, $r2, $r3
+
+    renamable $r4 = ORri $r0, 0
+
+  bb.1:
+    liveins: $r1, $r2, $r3, $r4
+
+    renamable $r4 = nuw ADDUri killed renamable $r4, 1
+    ; CHECK-NOT: renamable $r4 = nuw ADDUri killed renamable $r4, 1
+    renamable $r2 = SUBUrr killed renamable $r2, renamable $r3
+    renamable $r5 = CMPrr renamable $r2, renamable $r3
+    BB1 4, killed renamable $r5, %bb.1
+    ; The ADDUri moves into the delay slot.
+    ; CHECK:      BB1n 4, killed renamable $r5, %bb.1 {
+    ; CHECK-NEXT:   renamable $r4 = nuw ADDUri killed renamable $r4, 1
+    ; CHECK-NEXT: }
+
+  bb.2:
+    liveins: $r1, $r4
+
+    $r2 = ORrr $r0, killed $r4
+    ; CHECK-NOT: $r2 = ORrr $r0, killed $r4
+    RET implicit $r1, implicit $r2
+    ; The ORrr moves into the delay slot.
+    ; CHECK:      RETn implicit $r1, implicit $r2 {
+    ; CHECK-NEXT:   $r2 = ORrr $r0, killed $r4
+    ; CHECK-NEXT: }
+...
+---
+name:            f5
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$r2' }
+  - { reg: '$r1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r1, $r2
+
+    ; Non-ABI compliant. Check that a call can't move into the delay slot.
+    JSR killed renamable $r2
+    RET implicit $r1
+    ; CHECK: JSR killed renamable $r2
+    ; CHECK-NEXT: RET implicit $r1
+...
+---
+name:            f6
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$r2' }
+  - { reg: '$r1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r1, $r2
+
+    ; Non-ABI compliant. Check that loading of return address does not move into
+    ; delay slot.
+    $r1 = ORrr $r0, killed $r2
+    RET implicit $r1
+    ; CHECK:      $r1 = ORrr $r0, killed $r2
+    ; CHECK-NEXT: RET implicit $r1
+...
+---
+name:            f7
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$r3' }
+  - { reg: '$r2' }
+  - { reg: '$r1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r1, $r2, $r3
+
+    ; Non-ABI compliant. Check that loading of target address does not move into
+    ; delay slot.
+    $r1 = LDAw killed $r2, killed $r3
+    JMP $r1
+    ; CHECK:      $r1 = LDAw killed $r2, killed $r3
+    ; CHECK-NEXT: JMP $r1
+...
