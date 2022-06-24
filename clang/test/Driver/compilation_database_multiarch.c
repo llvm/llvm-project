@@ -4,7 +4,7 @@
 // RUN: %clang -fdriver-only -o %t/out %s -mtargetos=macos12 -arch arm64 -arch x86_64 -MJ %t/compilation_database.json
 
 // Let's run that again and verify we're not accumulating redundant entries in the same file.
-//
+
 // RUN: %clang -fdriver-only -o %t/out %s -mtargetos=macos12 -arch arm64 -arch x86_64 -MJ %t/compilation_database.json
 // RUN: echo EOF >> %t/compilation_database.json
 

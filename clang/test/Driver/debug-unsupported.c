@@ -9,5 +9,5 @@
 // RUN: not %clang -c -gxcoff3 %s 2>&1 | FileCheck %s
 // RUN: not %clang -c -gvms0 %s 2>&1 | FileCheck %s
 // RUN: not %clang -c -gtoggle %s 2>&1 | FileCheck %s
-//
+
 // CHECK: error: unsupported option

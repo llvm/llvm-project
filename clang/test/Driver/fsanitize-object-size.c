@@ -1,5 +1,5 @@
 // Check that the object size check is disabled at -O0.
-//
+
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=object-size %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OSIZE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=object-size %s -O0 -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OSIZE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=null,object-size %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OSIZE
@@ -7,7 +7,7 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OSIZE-NO-WARNING
 
 // Check that the object size check is enabled at other optimization levels.
-//
+
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined -O1 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HAS-OSIZE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=object-size -O2 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HAS-OSIZE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=object-size -O3 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HAS-OSIZE
@@ -18,7 +18,7 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=object-size -Og %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HAS-OSIZE
 
 // Use of trap mode shouldn't affect the object size check.
-//
+
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -O1 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HAS-OSIZE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined-trap -O1 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HAS-OSIZE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error -O1 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HAS-OSIZE

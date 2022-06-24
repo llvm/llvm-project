@@ -18,7 +18,7 @@
 // RUN: %clang -### -S -o FOO -fsave-optimization-record -fsave-optimization-record=some-format %s 2>&1 | FileCheck %s -check-prefix=CHECK-EQ-FORMAT
 // RUN: %clang -### -S -o FOO -fsave-optimization-record=some-format %s 2>&1 | FileCheck %s -check-prefix=CHECK-EQ-FORMAT
 // RUN: %clang -### -S -o FOO -fsave-optimization-record=some-format -fno-save-optimization-record %s 2>&1 | FileCheck %s --check-prefix=CHECK-FOPT-DISABLE-FORMAT
-//
+
 // CHECK: "-cc1"
 // CHECK: "-opt-record-file" "FOO.opt.yaml"
 

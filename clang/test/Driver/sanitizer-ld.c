@@ -5,7 +5,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX %s
-//
+
 // CHECK-ASAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-LINUX-NOT: "-lc"
 // CHECK-ASAN-LINUX: libclang_rt.asan-i386.a"
@@ -22,7 +22,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-LINUX %s
-//
+
 // CHECK-ASAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.asan-x86_64
 
 // RUN: %clang -fsanitize=address -### %s 2>&1 \
@@ -30,7 +30,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-EXECUTABLE-LINUX %s
-//
+
 // CHECK-ASAN-EXECUTABLE-LINUX: libclang_rt.asan_static-x86_64
 // CHECK-ASAN-EXECUTABLE-LINUX: libclang_rt.asan-x86_64
 
@@ -39,7 +39,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-SHARED-LINUX %s
-//
+
 // CHECK-ASAN-SHARED-LINUX: libclang_rt.asan_static-x86_64
 // CHECK-ASAN-SHARED-LINUX-NOT: libclang_rt.asan-x86_64
 
@@ -61,7 +61,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SHARED-ASAN-LINUX %s
-//
+
 // CHECK-SHARED-ASAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SHARED-ASAN-LINUX-NOT: "-lc"
 // CHECK-SHARED-ASAN-LINUX-NOT: libclang_rt.asan-i386.a"
@@ -79,7 +79,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DSO-SHARED-ASAN-LINUX %s
-//
+
 // CHECK-DSO-SHARED-ASAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-DSO-SHARED-ASAN-LINUX-NOT: "-lc"
 // CHECK-DSO-SHARED-ASAN-LINUX-NOT: libclang_rt.asan-i386.a"
@@ -97,7 +97,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_freebsd_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-FREEBSD %s
-//
+
 // CHECK-ASAN-FREEBSD: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-FREEBSD-NOT: "-lc"
 // CHECK-ASAN-FREEBSD-NOT: libclang_rt.asan_cxx
@@ -113,7 +113,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_freebsd_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-FREEBSD-LDL %s
-//
+
 // CHECK-ASAN-FREEBSD-LDL: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-FREEBSD-LDL-NOT: "-ldl"
 
@@ -122,7 +122,7 @@
 // RUN:     -resource-dir=%S/Inputs/empty_resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-CXX %s
-//
+
 // CHECK-ASAN-LINUX-CXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-LINUX-CXX-NOT: "-lc"
 // CHECK-ASAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan-i386.a" "--no-whole-archive"
@@ -140,7 +140,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree -lstdc++ -static 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-CXX-STATIC %s
-//
+
 // CHECK-ASAN-LINUX-CXX-STATIC: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-LINUX-CXX-STATIC-NOT: stdc++
 // CHECK-ASAN-LINUX-CXX-STATIC: "--whole-archive" "{{.*}}libclang_rt.asan-i386.a" "--no-whole-archive"
@@ -150,16 +150,16 @@
 // RUN:     --target=arm-linux-gnueabi -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ARM %s
-//
+
 // CHECK-ASAN-ARM: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ARM-NOT: "-lc"
 // CHECK-ASAN-ARM: libclang_rt.asan-arm.a"
-//
+
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=armv7l-linux-gnueabi -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ARMv7 %s
-//
+
 // CHECK-ASAN-ARMv7: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ARMv7-NOT: "-lc"
 // CHECK-ASAN-ARMv7: libclang_rt.asan-arm.a"
@@ -168,7 +168,7 @@
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID %s
-//
+
 // CHECK-ASAN-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID: "-pie"
 // CHECK-ASAN-ANDROID-NOT: "-lc"
@@ -183,7 +183,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static-libsan \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-STATICLIBASAN %s
-//
+
 // CHECK-ASAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.asan-arm-android.a"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
@@ -194,7 +194,7 @@
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=undefined \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-ANDROID %s
-//
+
 // CHECK-UBSAN-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-UBSAN-ANDROID: "-pie"
 // CHECK-UBSAN-ANDROID-NOT: "-lc"
@@ -209,19 +209,19 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static-libsan \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-ANDROID-STATICLIBASAN %s
-//
+
 // CHECK-UBSAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN: libclang_rt.ubsan_standalone-arm-android.a"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lresolv"
 
-//
+
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i686-linux-android -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-X86 %s
-//
+
 // CHECK-ASAN-ANDROID-X86: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-X86: "-pie"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lc"
@@ -230,21 +230,21 @@
 // CHECK-ASAN-ANDROID-X86: libclang_rt.asan-i686-android.so"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lresolv"
-//
+
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared-libsan \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-SHARED-LIBASAN %s
-//
+
 // CHECK-ASAN-ANDROID-SHARED-LIBASAN-NOT: argument unused during compilation: '-shared-libsan'
-//
+
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-SHARED %s
-//
+
 // CHECK-ASAN-ANDROID-SHARED: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lc"
 // CHECK-ASAN-ANDROID-SHARED: libclang_rt.asan-arm-android.so"
@@ -255,7 +255,7 @@
 // RUN:     --target=sparcel-myriad-rtems-elf -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_myriad_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-MYRIAD %s
-//
+
 // CHECK-ASAN-MYRIAD: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-MYRIAD-NOT: "-lc"
 // CHECK-ASAN-MYRIAD: libclang_rt.asan-sparcel.a"
@@ -266,7 +266,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-TSAN-LINUX-CXX %s
-//
+
 // CHECK-TSAN-LINUX-CXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-TSAN-LINUX-CXX-NOT: stdc++
 // CHECK-TSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.tsan-x86_64.a" "--no-whole-archive"
@@ -285,7 +285,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-TSAN-NO-LINK-RUNTIME-LINUX %s
-//
+
 // CHECK-TSAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.tsan
 
 // RUN: %clangxx -### %s 2>&1 \
@@ -294,7 +294,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-MSAN-LINUX-CXX %s
-//
+
 // CHECK-MSAN-LINUX-CXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-MSAN-LINUX-CXX-NOT: stdc++
 // CHECK-MSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.msan-x86_64.a" "--no-whole-archive"
@@ -313,7 +313,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-MSAN-NO-LINK-RUNTIME-LINUX %s
-//
+
 // CHECK-MSAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.msan
 
 // RUN: %clang -fsanitize=undefined -### %s 2>&1 \
@@ -350,7 +350,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-NO-LINK-RUNTIME-LINUX %s
-//
+
 // CHECK-UBSAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.undefined
 
 // RUN: %clang -fsanitize=undefined -### %s 2>&1 \
@@ -485,7 +485,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LSAN-LINUX %s
-//
+
 // CHECK-LSAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-LSAN-LINUX-NOT: "-lc"
 // CHECK-LSAN-LINUX-NOT: libclang_rt.ubsan
@@ -499,7 +499,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LSAN-NO-LINK-RUNTIME-LINUX %s
-//
+
 // CHECK-LSAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.lsan
 
 // RUN: %clang -### %s 2>&1 \
@@ -507,7 +507,7 @@
 // RUN:  -resource-dir=%S/Inputs/resource_dir \
 // RUN:  --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LSAN-COV-LINUX %s
-//
+
 // CHECK-LSAN-COV-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-LSAN-COV-LINUX-NOT: "-lc"
 // CHECK-LSAN-COV-LINUX-NOT: libclang_rt.ubsan
@@ -670,7 +670,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SAFESTACK-LINUX %s
-//
+
 // CHECK-SAFESTACK-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SAFESTACK-LINUX-NOT: "-lc"
 // CHECK-SAFESTACK-LINUX-NOT: whole-archive
@@ -759,7 +759,7 @@
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=safe-stack \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SAFESTACK-ANDROID-ARM %s
-//
+
 // CHECK-SAFESTACK-ANDROID-ARM: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SAFESTACK-ANDROID-ARM-NOT: libclang_rt.safestack
 
@@ -767,7 +767,7 @@
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=safe-stack \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SAFESTACK-SHARED-ANDROID-ARM %s
-//
+
 // CHECK-SAFESTACK-SHARED-ANDROID-ARM: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SAFESTACK-SHARED-ANDROID-ARM-NOT: libclang_rt.safestack
 
@@ -775,7 +775,7 @@
 // RUN:     --target=aarch64-linux-android -fuse-ld=ld -fsanitize=safe-stack \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SAFESTACK-ANDROID-AARCH64 %s
-//
+
 // CHECK-SAFESTACK-ANDROID-AARCH64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SAFESTACK-ANDROID-AARCH64-NOT: libclang_rt.safestack
 
@@ -874,7 +874,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SCUDO-SHARED-LINUX %s
-//
+
 // CHECK-SCUDO-SHARED-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SCUDO-SHARED-LINUX-NOT: "-lc"
 // CHECK-SCUDO-SHARED-LINUX-NOT: libclang_rt.scudo-i386.a"
@@ -890,7 +890,7 @@
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=scudo \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-SCUDO-ANDROID %s
-//
+
 // CHECK-SCUDO-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SCUDO-ANDROID-NOT: "-lc"
 // CHECK-SCUDO-ANDROID: "-pie"
@@ -918,7 +918,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-HWASAN-X86-64-LINUX %s
-//
+
 // CHECK-HWASAN-X86-64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-HWASAN-X86-64-LINUX: "-pie"
 // CHECK-HWASAN-X86-64-LINUX-NOT: "-lc"
@@ -936,7 +936,7 @@
 // RUN:     -shared-libsan -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SHARED-HWASAN-X86-64-LINUX %s
-//
+
 // CHECK-SHARED-HWASAN-X86-64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SHARED-HWASAN-X86-64-LINUX: "-pie"
 // CHECK-SHARED-HWASAN-X86-64-LINUX-NOT: "-lc"
@@ -953,7 +953,7 @@
 // RUN:     -shared-libsan -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DSO-SHARED-HWASAN-X86-64-LINUX %s
-//
+
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-DSO_SHARED-HWASAN-X86-64-LINUX: "-pie"
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX-NOT: "-lc"
@@ -970,7 +970,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-HWASAN-AARCH64-LINUX %s
-//
+
 // CHECK-HWASAN-AARCH64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-HWASAN-AARCH64-LINUX: "-pie"
 // CHECK-HWASAN-AARCH64-LINUX-NOT: "-lc"
@@ -989,7 +989,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SHARED-HWASAN-AARCH64-LINUX %s
-//
+
 // CHECK-SHARED-HWASAN-AARCH64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SHARED-HWASAN-AARCH64-LINUX: "-pie"
 // CHECK-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lc"
@@ -1006,7 +1006,7 @@
 // RUN:     -shared-libsan -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX %s
-//
+
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-DSO_SHARED-HWASAN-AARCH64-LINUX: "-pie"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lc"

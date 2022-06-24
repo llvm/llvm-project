@@ -1,7 +1,7 @@
 // Android, Cygwin and OpenBSD use emutls by default.
 // Clang should pass -femulated-tls or -fno-emulated-tls to cc1 if they are used,
 // and cc1 should set up EmulatedTLS and ExplicitEmulatedTLS to LLVM CodeGen.
-//
+
 // RUN: %clang -### -target arm-linux-androideabi %s 2>&1 \
 // RUN: | FileCheck -check-prefix=DEFAULT %s
 // RUN: %clang -### -target arm-linux-gnu %s 2>&1 \

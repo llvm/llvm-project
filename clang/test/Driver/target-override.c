@@ -5,11 +5,11 @@
 // RUN: ln -s %clang %t/i386-clang
 
 // Check if invocation of "foo-clang" adds option "-target foo".
-//
+
 // RUN: %t/i386-clang -c -### %s 2>&1 | FileCheck -check-prefix CHECK-TG1 %s
 // CHECK-TG1: Target: i386
 
 // Check if invocation of "foo-clang --target=bar" overrides option "-target foo".
-//
+
 // RUN: %t/i386-clang -c --target=x86_64 -### %s 2>&1 | FileCheck -check-prefix CHECK-TG2 %s
 // CHECK-TG2: Target: x86_64

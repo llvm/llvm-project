@@ -1,7 +1,7 @@
 // REQUIRES: mips-registered-target
-//
+
 // Check frontend and linker invocations on Mentor Graphics MIPS toolchain.
-//
+
 // = Big-endian, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -no-pie \
@@ -29,7 +29,7 @@
 // CHECK-BE-HF-32: "-L[[TC]]/../../../../mips-linux-gnu/libc/usr/lib"
 // CHECK-BE-HF-32: "[[TC]]{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-32: "[[TC]]/../../../../mips-linux-gnu/libc/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, hard float, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -muclibc -no-pie \
@@ -58,7 +58,7 @@
 // CHECK-BE-UC-HF-32: "-L[[TC]]/../../../../mips-linux-gnu/libc/uclibc/usr/lib/../lib"
 // CHECK-BE-UC-HF-32: "[[TC]]/uclibc{{/|\\\\}}crtend.o"
 // CHECK-BE-UC-HF-32: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, hard float, mips16
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -mips16 -no-pie \
@@ -87,7 +87,7 @@
 // CHECK-BE-HF-16: "-L[[TC]]/../../../../mips-linux-gnu/libc/mips16/usr/lib/../lib"
 // CHECK-BE-HF-16: "[[TC]]/mips16{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-16: "[[TC]]/../../../../mips-linux-gnu/libc/mips16/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, hard float, mmicromips
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -mmicromips -no-pie \
@@ -116,7 +116,7 @@
 // CHECK-BE-HF-MICRO: "-L[[TC]]/../../../../mips-linux-gnu/libc/micromips/usr/lib/../lib"
 // CHECK-BE-HF-MICRO: "[[TC]]/micromips{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-MICRO: "[[TC]]/../../../../mips-linux-gnu/libc/micromips/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, hard float, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -mnan=2008 -no-pie \
@@ -145,7 +145,7 @@
 // CHECK-BE-HF-NAN: "-L[[TC]]/../../../../mips-linux-gnu/libc/nan2008/usr/lib/../lib"
 // CHECK-BE-HF-NAN: "[[TC]]/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-NAN: "[[TC]]/../../../../mips-linux-gnu/libc/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, hard float, uclibc, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -muclibc -mnan=2008 -no-pie \
@@ -174,7 +174,7 @@
 // CHECK-BE-UC-HF-NAN: "-L[[TC]]/../../../../mips-linux-gnu/libc/uclibc/nan2008/usr/lib/../lib"
 // CHECK-BE-UC-HF-NAN: "[[TC]]/uclibc/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-UC-HF-NAN: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -msoft-float -no-pie \
@@ -203,7 +203,7 @@
 // CHECK-BE-SF-32: "-L[[TC]]/../../../../mips-linux-gnu/libc/soft-float/usr/lib/../lib"
 // CHECK-BE-SF-32: "[[TC]]/soft-float{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-32: "[[TC]]/../../../../mips-linux-gnu/libc/soft-float/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, soft float, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -muclibc -msoft-float -no-pie \
@@ -232,7 +232,7 @@
 // CHECK-BE-UC-SF-32: "-L[[TC]]/../../../../mips-linux-gnu/libc/uclibc/soft-float/usr/lib/../lib"
 // CHECK-BE-UC-SF-32: "[[TC]]/uclibc/soft-float{{/|\\\\}}crtend.o"
 // CHECK-BE-UC-SF-32: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/soft-float/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, soft float, mips16
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -msoft-float -mips16 -no-pie \
@@ -261,7 +261,7 @@
 // CHECK-BE-SF-16: "-L[[TC]]/../../../../mips-linux-gnu/libc/mips16/soft-float/usr/lib/../lib"
 // CHECK-BE-SF-16: "[[TC]]/mips16/soft-float{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-16: "[[TC]]/../../../../mips-linux-gnu/libc/mips16/soft-float/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, soft float, micromips
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -msoft-float -mmicromips -no-pie \
@@ -290,7 +290,7 @@
 // CHECK-BE-SF-MICRO: "-L[[TC]]/../../../../mips-linux-gnu/libc/micromips/soft-float/usr/lib/../lib"
 // CHECK-BE-SF-MICRO: "[[TC]]/micromips/soft-float{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-MICRO: "[[TC]]/../../../../mips-linux-gnu/libc/micromips/soft-float/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, hard float, 64-bit
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-linux-gnu -no-pie \
@@ -319,7 +319,7 @@
 // CHECK-BE-HF-64-NOT: "-L[[TC]]"
 // CHECK-BE-HF-64: "{{.*}}/lib/gcc/mips-linux-gnu/4.6.3/64{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-64: "[[TC]]/../../../../mips-linux-gnu/libc/usr/lib/../lib64{{/|\\\\}}crtn.o"
-//
+
 // = Big-endian, soft float, 64-bit
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-linux-gnu -msoft-float -no-pie \
@@ -348,7 +348,7 @@
 // CHECK-BE-SF-64-NOT: "-L[[TC]]"
 // CHECK-BE-SF-64: "[[TC]]/soft-float/64{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-64: "[[TC]]/../../../../mips-linux-gnu/libc/soft-float/usr/lib/../lib64{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mhard-float -no-pie \
@@ -377,7 +377,7 @@
 // CHECK-EL-HF-32: "-L[[TC]]/../../../../mips-linux-gnu/libc/el/usr/lib/../lib"
 // CHECK-EL-HF-32: "[[TC]]/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-32: "[[TC]]/../../../../mips-linux-gnu/libc/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, hard float, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mhard-float -muclibc -no-pie \
@@ -406,7 +406,7 @@
 // CHECK-EL-UC-HF-32: "-L[[TC]]/../../../../mips-linux-gnu/libc/uclibc/el/usr/lib/../lib"
 // CHECK-EL-UC-HF-32: "[[TC]]/uclibc/el{{/|\\\\}}crtend.o"
 // CHECK-EL-UC-HF-32: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, hard float, mips16
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mips16 -no-pie \
@@ -435,7 +435,7 @@
 // CHECK-EL-HF-16: "-L[[TC]]/../../../../mips-linux-gnu/libc/mips16/el/usr/lib/../lib"
 // CHECK-EL-HF-16: "[[TC]]/mips16/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-16: "[[TC]]/../../../../mips-linux-gnu/libc/mips16/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, hard float, micromips
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mmicromips -no-pie \
@@ -464,7 +464,7 @@
 // CHECK-EL-HF-MICRO: "-L[[TC]]/../../../../mips-linux-gnu/libc/micromips/el/usr/lib/../lib"
 // CHECK-EL-HF-MICRO: "[[TC]]/micromips/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-MICRO: "[[TC]]/../../../../mips-linux-gnu/libc/micromips/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, hard float, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mnan=2008 -no-pie \
@@ -493,7 +493,7 @@
 // CHECK-EL-HF-NAN: "-L[[TC]]/../../../../mips-linux-gnu/libc/nan2008/el/usr/lib/../lib"
 // CHECK-EL-HF-NAN: "[[TC]]/nan2008/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-NAN: "[[TC]]/../../../../mips-linux-gnu/libc/nan2008/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, hard float, uclibc, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -muclibc -mnan=2008 -no-pie \
@@ -522,7 +522,7 @@
 // CHECK-EL-UC-HF-NAN: "-L[[TC]]/../../../../mips-linux-gnu/libc/uclibc/nan2008/el/usr/lib/../lib"
 // CHECK-EL-UC-HF-NAN: "[[TC]]/uclibc/nan2008/el{{/|\\\\}}crtend.o"
 // CHECK-EL-UC-HF-NAN: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/nan2008/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mfloat-abi=soft -no-pie \
@@ -551,7 +551,7 @@
 // CHECK-EL-SF-32: "-L[[TC]]/../../../../mips-linux-gnu/libc/soft-float/el/usr/lib/../lib"
 // CHECK-EL-SF-32: "[[TC]]/soft-float/el{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-32: "[[TC]]/../../../../mips-linux-gnu/libc/soft-float/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, soft float, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mfloat-abi=soft -muclibc -no-pie \
@@ -580,7 +580,7 @@
 // CHECK-EL-UC-SF-32: "-L[[TC]]/../../../../mips-linux-gnu/libc/uclibc/soft-float/el/usr/lib/../lib"
 // CHECK-EL-UC-SF-32: "[[TC]]/uclibc/soft-float/el{{/|\\\\}}crtend.o"
 // CHECK-EL-UC-SF-32: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/soft-float/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, soft float, mips16
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mips16 -msoft-float -no-pie \
@@ -609,7 +609,7 @@
 // CHECK-EL-SF-16: "-L[[TC]]/../../../../mips-linux-gnu/libc/mips16/soft-float/el/usr/lib/../lib"
 // CHECK-EL-SF-16: "[[TC]]/mips16/soft-float/el{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-16: "[[TC]]/../../../../mips-linux-gnu/libc/mips16/soft-float/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, soft float, micromips
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mmicromips -msoft-float -no-pie \
@@ -638,7 +638,7 @@
 // CHECK-EL-SF-MICRO: "-L[[TC]]/../../../../mips-linux-gnu/libc/micromips/soft-float/el/usr/lib/../lib"
 // CHECK-EL-SF-MICRO: "[[TC]]/micromips/soft-float/el{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-MICRO: "[[TC]]/../../../../mips-linux-gnu/libc/micromips/soft-float/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, hard float, 64-bit
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-linux-gnu -no-pie \
@@ -667,7 +667,7 @@
 // CHECK-EL-HF-64-NOT: "-L[[TC]]"
 // CHECK-EL-HF-64: "[[TC]]/el/64{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-64: "[[TC]]/../../../../mips-linux-gnu/libc/el/usr/lib/../lib64{{/|\\\\}}crtn.o"
-//
+
 // = Little-endian, soft float, 64-bit
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-linux-gnu -msoft-float -no-pie \

@@ -69,27 +69,27 @@
 
 // RUN: %clang -target i386-apple-darwin9 -### -fpie %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_EXPLICIT_PIE %s < %t.log
-//
+
 // LINK_EXPLICIT_PIE: {{ld(.exe)?"}}
 // LINK_EXPLICIT_PIE: "-pie"
 
 // RUN: %clang -target i386-apple-darwin9 -### -fno-pie %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_EXPLICIT_NO_PIE %s < %t.log
-//
+
 // LINK_EXPLICIT_NO_PIE: {{ld(.exe)?"}}
 // LINK_EXPLICIT_NO_PIE: "-no_pie"
 
 // RUN: %clang -target x86_64-apple-darwin10 -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=100 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_NEWER_DEMANGLE %s < %t.log
-//
+
 // LINK_NEWER_DEMANGLE: {{ld(.exe)?"}}
 // LINK_NEWER_DEMANGLE: "-demangle"
 
 // RUN: %clang -target x86_64-apple-darwin10 -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=100 -Wl,--no-demangle 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_NEWER_NODEMANGLE %s < %t.log
-//
+
 // LINK_NEWER_NODEMANGLE: {{ld(.exe)?"}}
 // LINK_NEWER_NODEMANGLE-NOT: "-demangle"
 // LINK_NEWER_NODEMANGLE: "-lSystem"
@@ -97,7 +97,7 @@
 // RUN: %clang -target x86_64-apple-darwin10 -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=95 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_OLDER_NODEMANGLE %s < %t.log
-//
+
 // LINK_OLDER_NODEMANGLE: {{ld(.exe)?"}}
 // LINK_OLDER_NODEMANGLE-NOT: "-demangle"
 // LINK_OLDER_NODEMANGLE: "-lSystem"
@@ -106,7 +106,7 @@
 // RUN:   -fuse-ld= -mlinker-version=117 -flto 2> %t.log
 // RUN: cat %t.log
 // RUN: FileCheck -check-prefix=LINK_OBJECT_LTO_PATH %s < %t.log
-//
+
 // LINK_OBJECT_LTO_PATH: {{ld(.exe)?"}}
 // LINK_OBJECT_LTO_PATH: "-object_path_lto"
 
@@ -114,20 +114,20 @@
 // RUN:   -force_load a -force_load b 2> %t.log
 // RUN: cat %t.log
 // RUN: FileCheck -check-prefix=FORCE_LOAD %s < %t.log
-//
+
 // FORCE_LOAD: {{ld(.exe)?"}}
 // FORCE_LOAD: "-force_load" "a" "-force_load" "b"
 
 // RUN: %clang -target x86_64-apple-darwin10 -### %t.o \
 // RUN:   -lazy_framework Framework 2> %t.log
-//
+
 // RUN: FileCheck -check-prefix=LINK_LAZY_FRAMEWORK %s < %t.log
 // LINK_LAZY_FRAMEWORK: {{ld(.exe)?"}}
 // LINK_LAZY_FRAMEWORK: "-lazy_framework" "Framework"
 
 // RUN: %clang -target x86_64-apple-darwin10 -### %t.o \
 // RUN:   -lazy_library Library 2> %t.log
-//
+
 // RUN: FileCheck -check-prefix=LINK_LAZY_LIBRARY %s < %t.log
 // LINK_LAZY_LIBRARY: {{ld(.exe)?"}}
 // LINK_LAZY_LIBRARY: "-lazy_library" "Library"
@@ -253,16 +253,16 @@
 
 // RUN: %clang -target x86_64h-apple-darwin -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_X86_64H_ARCH %s < %t.log
-//
+
 // LINK_X86_64H_ARCH: {{ld(.exe)?"}}
 // LINK_X86_64H_ARCH: "x86_64h"
 
 // RUN: %clang -target x86_64-apple-darwin -arch x86_64 -arch x86_64h -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_X86_64H_MULTIARCH %s < %t.log
-//
+
 // LINK_X86_64H_MULTIARCH: {{ld(.exe)?"}}
 // LINK_X86_64H_MULTIARCH: "x86_64"
-//
+
 // LINK_X86_64H_MULTIARCH: {{ld(.exe)?"}}
 // LINK_X86_64H_MULTIARCH: "x86_64h"
 
@@ -345,11 +345,11 @@
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Xlinker -exported_symbols_list -Xlinker /dev/null -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
 // PROFILE_EXPORT: "-exported_symbol" "___llvm_profile_filename" "-exported_symbol" "___llvm_profile_raw_version"
-//
+
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate --coverage -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=NO_PROFILE_EXPORT %s < %t.log
 // NO_PROFILE_EXPORT-NOT: "-exported_symbol"
-//
+
 // RUN: %clang -target x86_64-apple-darwin12 --coverage -exported_symbols_list /dev/null -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-arcs -Wl,-exported_symbols_list,/dev/null -### %t.o 2> %t.log
@@ -362,7 +362,7 @@
 // RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
 // GCOV_EXPORT: "-exported_symbol" "___gcov_dump"
 // GCOV_EXPORT: "-exported_symbol" "___gcov_reset"
-//
+
 // Check that we can pass the outliner down to the linker.
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \
 // RUN:   %clang -target arm64-apple-darwin -moutline -### %t.o 2> %t.log

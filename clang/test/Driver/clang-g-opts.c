@@ -18,7 +18,7 @@
 
 // These should be semantically the same as not having given 'g0' at all,
 // as the last 'g' option wins.
-//
+
 // RUN: %clang -### -S %s -g0 -g -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G %s
 // RUN: %clang -### -S %s -g0 -g -target x86_64-apple-darwin8 2>&1 \
