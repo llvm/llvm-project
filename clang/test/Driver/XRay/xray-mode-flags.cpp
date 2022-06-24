@@ -14,9 +14,9 @@
 // RUN:     2>&1 | FileCheck --check-prefixes FDR,BASIC %s
 // RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=none -### %s \
 // RUN:     2>&1 | FileCheck --check-prefixes NONE %s
-//
+
 // We also should support overriding the modes in an additive manner.
-//
+
 // RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=none,xray-fdr \
 // RUN:     -### %s \
 // RUN:     2>&1 | FileCheck --check-prefixes FDR %s
@@ -26,16 +26,16 @@
 // RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=none,all \
 // RUN:     -### %s \
 // RUN:     2>&1 | FileCheck --check-prefixes FDR,BASIC %s
-//
+
 // We also should support having the individual modes be concatenated.
-//
+
 // RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=none \
 // RUN:     -fxray-modes=xray-fdr \
 // RUN:     -### %s \
 // RUN:     2>&1 | FileCheck --check-prefixes FDR %s
-//
+
 // Order also matters.
-//
+
 // RUN: %clang -v -o /dev/null -fxray-instrument -fxray-modes=xray-fdr \
 // RUN:     -fxray-modes=none \
 // RUN:     -### %s \

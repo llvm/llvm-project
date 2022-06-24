@@ -2,7 +2,7 @@
 // across multiple files, to avoid excessive test times for large single
 // test files.
 // TODO: The files should be split up by categories, e.g. by architecture versions.
-//
+
 // ================== Check default CPU on each major architecture
 // RUN: %clang -target arm -mcpu=generic -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-GENERIC %s
 // CHECK-GENERIC: "-cc1"{{.*}} "-triple" "armv4t-{{.*}} "-target-cpu" "generic"

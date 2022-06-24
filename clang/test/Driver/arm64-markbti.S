@@ -5,7 +5,7 @@
 // RUN: %clang -target arm64-linux-none -DNOTE_PRESENT -c %s -o - | llvm-readobj -n - | FileCheck -check-prefix=CHECK  -check-prefix=CHECK_PRESET %s
 // RUN: %clang -target arm64-linux-none -mmark-bti-property -DNOTE_PRESENT -c %s -o - | llvm-readobj -n - | FileCheck -check-prefix=CHECK  -check-prefix=CHECK_PRESET %s
 // RUN: %clang -target arm64-linux-none -mmark-bti-property -DNOTE_PRESENT -c %s -o - 2>&1 |  FileCheck -check-prefix=CHECK_WARNING %s
-//
+
 // CHECK_WARNING: The .note.gnu.property is not emitted because it is already present.
 // CHECK: Name: .note.gnu.property
 // CHECK: Type: NT_GNU_PROPERTY_TYPE_0

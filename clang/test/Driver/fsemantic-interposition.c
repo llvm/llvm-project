@@ -26,5 +26,5 @@
 // RUN: %clang -target ppc64le %s -Werror -fPIC -fno-semantic-interposition -c -### 2>&1 | FileCheck --check-prefix=HALF %s
 
 // RUN: %clang -target x86_64 %s -Werror -fPIC -c -### 2>&1 | FileCheck --check-prefix=HALF %s
-//
+
 // HALF: "-fhalf-no-semantic-interposition"

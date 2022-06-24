@@ -1,8 +1,8 @@
 // REQUIRES: x86-registered-target
 
-//
+
 // Check help message.
-//
+
 // RUN: clang-offload-wrapper --help | FileCheck %s --check-prefix CHECK-HELP
 // CHECK-HELP: {{.*}}OVERVIEW: A tool to create a wrapper bitcode for offload target binaries. Takes offload
 // CHECK-HELP: {{.*}}target binaries as input and produces bitcode file containing target binaries packaged
@@ -11,14 +11,14 @@
 // CHECK-HELP: {{.*}}  -o=<filename>               - Output filename
 // CHECK-HELP: {{.*}}  --target=<triple>           - Target triple for the output module
 
-//
+
 // Generate a file to wrap.
-//
+
 // RUN: echo 'Content of device file' > %t.tgt
 
-//
+
 // Check bitcode produced by the wrapper tool.
-//
+
 // RUN: clang-offload-wrapper -add-omp-offload-notes -target=x86_64-pc-linux-gnu -o %t.wrapper.bc %t.tgt 2>&1 | FileCheck %s --check-prefix ELF-WARNING
 // RUN: llvm-dis %t.wrapper.bc -o - | FileCheck %s --check-prefix CHECK-IR
 

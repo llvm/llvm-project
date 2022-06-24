@@ -9,7 +9,7 @@
 
 // Make sure -lstdc++ isn't rewritten to the default stdlib when -nostdlib++ is
 // used.
-//
+
 // RUN: %clangxx -target i686-pc-linux-gnu -### \
 // RUN:     -nostdlib++ -stdlib=libc++ -lstdc++ %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-RESERVED-LIB-REWRITE < %t %s

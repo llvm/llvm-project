@@ -82,18 +82,18 @@
 
 // RUN: %clang -target arm64-apple-ios10 -### -ffreestanding -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-FREESTANDING-APPLE %s
-//
+
 // RUN: %clang -target arm64-apple-ios10 -### -fno-unwind-tables -ffreestanding -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-FREESTANDING-APPLE %s
-//
+
 // ARM64-FREESTANDING-APPLE-NOT: -funwind-tables
 
 // RUN: %clang -target arm64-apple-ios10 -### -funwind-tables -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-EXPLICIT-UWTABLE-APPLE %s
-//
+
 // RUN: %clang -target arm64-apple-ios10 -### -ffreestanding -funwind-tables -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-EXPLICIT-UWTABLE-APPLE %s
-//
+
 // ARM64-EXPLICIT-UWTABLE-APPLE: -funwind-tables
 
 // RUN: %clang -target arm64-apple-ios10 -fno-exceptions -### -S %s -arch arm64 2>&1 | \
