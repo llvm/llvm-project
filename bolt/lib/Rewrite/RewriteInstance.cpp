@@ -308,10 +308,9 @@ namespace {
 
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
   auto Itr =
-      std::find_if(opts::ReorderData.begin(), opts::ReorderData.end(),
-                   [&](const std::string &SectionName) {
-                     return (Section && Section->getName() == SectionName);
-                   });
+      llvm::find_if(opts::ReorderData, [&](const std::string &SectionName) {
+        return (Section && Section->getName() == SectionName);
+      });
   return Itr != opts::ReorderData.end();
 }
 
@@ -839,8 +838,8 @@ void RewriteInstance::discoverFileObjects() {
     return Section.isAllocatable();
   };
   std::vector<SymbolRef> SortedFileSymbols;
-  std::copy_if(InputFile->symbol_begin(), InputFile->symbol_end(),
-               std::back_inserter(SortedFileSymbols), isSymbolInMemory);
+  llvm::copy_if(InputFile->symbols(), std::back_inserter(SortedFileSymbols),
+                isSymbolInMemory);
   auto CompareSymbols = [this](const SymbolRef &A, const SymbolRef &B) {
     // Marker symbols have the highest precedence, while
     // SECTIONs have the lowest.
@@ -865,8 +864,7 @@ void RewriteInstance::discoverFileObjects() {
     return false;
   };
 
-  std::stable_sort(SortedFileSymbols.begin(), SortedFileSymbols.end(),
-                   CompareSymbols);
+  llvm::stable_sort(SortedFileSymbols, CompareSymbols);
 
   auto LastSymbol = SortedFileSymbols.end() - 1;
 
@@ -2702,11 +2700,10 @@ void RewriteInstance::selectFunctionsToProcess() {
       if (ProfileReader->mayHaveProfileData(Function))
         TopFunctions.push_back(&Function);
     }
-    std::sort(TopFunctions.begin(), TopFunctions.end(),
-              [](const BinaryFunction *A, const BinaryFunction *B) {
-                return
-                    A->getKnownExecutionCount() < B->getKnownExecutionCount();
-              });
+    llvm::sort(
+        TopFunctions, [](const BinaryFunction *A, const BinaryFunction *B) {
+          return A->getKnownExecutionCount() < B->getKnownExecutionCount();
+        });
 
     size_t Index = TopFunctions.size() * opts::LiteThresholdPct / 100;
     if (Index)
@@ -3295,7 +3292,7 @@ void RewriteInstance::updatePseudoProbes() {
     std::vector<uint64_t> Addresses;
     for (auto &Entry : Address2ProbesMap)
       Addresses.push_back(Entry.first);
-    std::sort(Addresses.begin(), Addresses.end());
+    llvm::sort(Addresses);
     for (uint64_t Key : Addresses) {
       for (MCDecodedPseudoProbe &Probe : Address2ProbesMap[Key]) {
         if (Probe.getAddress() == INT64_MAX)
@@ -3569,7 +3566,7 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
   };
 
   // Determine the order of sections.
-  std::stable_sort(CodeSections.begin(), CodeSections.end(), compareSections);
+  llvm::stable_sort(CodeSections, compareSections);
 
   return CodeSections;
 }
@@ -3601,12 +3598,9 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
     std::vector<BinarySection *> CodeSections = getCodeSections();
 
     // Remove sections that were pre-allocated (patch sections).
-    CodeSections.erase(
-        std::remove_if(CodeSections.begin(), CodeSections.end(),
-                       [](BinarySection *Section) {
-                         return Section->getOutputAddress();
-                       }),
-        CodeSections.end());
+    llvm::erase_if(CodeSections, [](BinarySection *Section) {
+      return Section->getOutputAddress();
+    });
     LLVM_DEBUG(dbgs() << "Code sections in the order of output:\n";
       for (const BinarySection *Section : CodeSections)
         dbgs() << Section->getName() << '\n';
@@ -4263,11 +4257,11 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   }
 
   // Sort all allocatable sections by their offset.
-  std::stable_sort(OutputSections.begin(), OutputSections.end(),
-      [] (const std::pair<std::string, ELFShdrTy> &A,
-          const std::pair<std::string, ELFShdrTy> &B) {
-        return A.second.sh_offset < B.second.sh_offset;
-      });
+  llvm::stable_sort(OutputSections,
+                    [](const std::pair<std::string, ELFShdrTy> &A,
+                       const std::pair<std::string, ELFShdrTy> &B) {
+                      return A.second.sh_offset < B.second.sh_offset;
+                    });
 
   // Fix section sizes to prevent overlapping.
   ELFShdrTy *PrevSection = nullptr;
@@ -4376,11 +4370,10 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   }
 
   std::vector<ELFShdrTy> SectionsOnly(OutputSections.size());
-  std::transform(OutputSections.begin(), OutputSections.end(),
-                 SectionsOnly.begin(),
-                 [](std::pair<std::string, ELFShdrTy> &SectionInfo) {
-                   return SectionInfo.second;
-                 });
+  llvm::transform(OutputSections, SectionsOnly.begin(),
+                  [](std::pair<std::string, ELFShdrTy> &SectionInfo) {
+                    return SectionInfo.second;
+                  });
 
   return SectionsOnly;
 }
@@ -4777,13 +4770,11 @@ void RewriteInstance::updateELFSymbolTable(
   }
 
   // Put local symbols at the beginning.
-  std::stable_sort(Symbols.begin(), Symbols.end(),
-                   [](const ELFSymTy &A, const ELFSymTy &B) {
-                     if (A.getBinding() == ELF::STB_LOCAL &&
-                         B.getBinding() != ELF::STB_LOCAL)
-                       return true;
-                     return false;
-                   });
+  llvm::stable_sort(Symbols, [](const ELFSymTy &A, const ELFSymTy &B) {
+    if (A.getBinding() == ELF::STB_LOCAL && B.getBinding() != ELF::STB_LOCAL)
+      return true;
+    return false;
+  });
 
   for (const ELFSymTy &Symbol : Symbols)
     Write(0, Symbol);

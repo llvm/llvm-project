@@ -191,10 +191,9 @@ std::vector<DataInCodeRegion> readDataInCode(const MachOObjectFile &O) {
   DataInCode.reserve(NumberOfEntries);
   for (auto I = O.begin_dices(), E = O.end_dices(); I != E; ++I)
     DataInCode.emplace_back(*I);
-  std::stable_sort(DataInCode.begin(), DataInCode.end(),
-                   [](DataInCodeRegion LHS, DataInCodeRegion RHS) {
-                     return LHS.Offset < RHS.Offset;
-                   });
+  llvm::stable_sort(DataInCode, [](DataInCodeRegion LHS, DataInCodeRegion RHS) {
+    return LHS.Offset < RHS.Offset;
+  });
   return DataInCode;
 }
 
@@ -244,10 +243,10 @@ void MachORewriteInstance::discoverFileObjects() {
   }
   if (FunctionSymbols.empty())
     return;
-  std::stable_sort(FunctionSymbols.begin(), FunctionSymbols.end(),
-                   [](const SymbolRef &LHS, const SymbolRef &RHS) {
-                     return cantFail(LHS.getValue()) < cantFail(RHS.getValue());
-                   });
+  llvm::stable_sort(
+      FunctionSymbols, [](const SymbolRef &LHS, const SymbolRef &RHS) {
+        return cantFail(LHS.getValue()) < cantFail(RHS.getValue());
+      });
   for (size_t Index = 0; Index < FunctionSymbols.size(); ++Index) {
     const uint64_t Address = cantFail(FunctionSymbols[Index].getValue());
     ErrorOr<BinarySection &> Section = BC->getSectionForAddress(Address);

@@ -578,9 +578,8 @@ void Instrumentation::runOnFunctions(BinaryContext &BC) {
       MCSymbol *Target = BC.registerNameAtAddress(
           "__bolt_instr_fini", FiniSection->getAddress(), 0, 0);
       auto IsLEA = [&BC](const MCInst &Inst) { return BC.MIB->isLEA64r(Inst); };
-      const auto LEA =
-          std::find_if(std::next(std::find_if(BB.rbegin(), BB.rend(), IsLEA)),
-                       BB.rend(), IsLEA);
+      const auto LEA = std::find_if(
+          std::next(llvm::find_if(reverse(BB), IsLEA)), BB.rend(), IsLEA);
       LEA->getOperand(4).setExpr(
           MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *BC.Ctx));
     } else {

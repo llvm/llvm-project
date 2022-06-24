@@ -313,10 +313,10 @@ void DebugAddrWriter::AddressForDWOCU::dump() {
   std::vector<IndexAddressPair> SortedMap(indexToAddressBegin(),
                                           indexToAdddessEnd());
   // Sorting address in increasing order of indices.
-  std::sort(SortedMap.begin(), SortedMap.end(),
-            [](const IndexAddressPair &A, const IndexAddressPair &B) {
-              return A.first < B.first;
-            });
+  llvm::sort(SortedMap,
+             [](const IndexAddressPair &A, const IndexAddressPair &B) {
+               return A.first < B.first;
+             });
   for (auto &Pair : SortedMap)
     dbgs() << Twine::utohexstr(Pair.second) << "\t" << Pair.first << "\n";
 }
@@ -375,10 +375,10 @@ AddressSectionBuffer DebugAddrWriter::finalize() {
     std::vector<IndexAddressPair> SortedMap(AM->second.indexToAddressBegin(),
                                             AM->second.indexToAdddessEnd());
     // Sorting address in increasing order of indices.
-    std::sort(SortedMap.begin(), SortedMap.end(),
-              [](const IndexAddressPair &A, const IndexAddressPair &B) {
-                return A.first < B.first;
-              });
+    llvm::sort(SortedMap,
+               [](const IndexAddressPair &A, const IndexAddressPair &B) {
+                 return A.first < B.first;
+               });
 
     uint8_t AddrSize = CU->getAddressByteSize();
     uint32_t Counter = 0;
@@ -449,10 +449,10 @@ AddressSectionBuffer DebugAddrWriterDwarf5::finalize() {
         AMIter->second.indexToAddressBegin(),
         AMIter->second.indexToAdddessEnd());
     // Sorting address in increasing order of indices.
-    std::sort(SortedMap.begin(), SortedMap.end(),
-              [](const IndexAddressPair &A, const IndexAddressPair &B) {
-                return A.first < B.first;
-              });
+    llvm::sort(SortedMap,
+               [](const IndexAddressPair &A, const IndexAddressPair &B) {
+                 return A.first < B.first;
+               });
     // Writing out Header
     const uint32_t Length = SortedMap.size() * AddrSize + 4;
     support::endian::write(AddressStream, Length, Endian);
@@ -841,22 +841,20 @@ std::string SimpleBinaryPatcher::patchBinary(StringRef BinaryContents) {
 CUOffsetMap DebugInfoBinaryPatcher::computeNewOffsets(DWARFContext &DWCtx,
                                                       bool IsDWOContext) {
   CUOffsetMap CUMap;
-  std::sort(DebugPatches.begin(), DebugPatches.end(),
-            [](const UniquePatchPtrType &V1, const UniquePatchPtrType &V2) {
-              if (V1.get()->Offset == V2.get()->Offset) {
-                if (V1->Kind == DebugPatchKind::NewDebugEntry &&
-                    V2->Kind == DebugPatchKind::NewDebugEntry)
-                  return reinterpret_cast<const NewDebugEntry *>(V1.get())
-                             ->CurrentOrder <
-                         reinterpret_cast<const NewDebugEntry *>(V2.get())
-                             ->CurrentOrder;
+  llvm::sort(DebugPatches, [](const UniquePatchPtrType &V1,
+                              const UniquePatchPtrType &V2) {
+    if (V1.get()->Offset == V2.get()->Offset) {
+      if (V1->Kind == DebugPatchKind::NewDebugEntry &&
+          V2->Kind == DebugPatchKind::NewDebugEntry)
+        return reinterpret_cast<const NewDebugEntry *>(V1.get())->CurrentOrder <
+               reinterpret_cast<const NewDebugEntry *>(V2.get())->CurrentOrder;
 
-                // This is a case where we are modifying first entry of next
-                // DIE, and adding a new one.
-                return V1->Kind == DebugPatchKind::NewDebugEntry;
-              }
-              return V1.get()->Offset < V2.get()->Offset;
-            });
+      // This is a case where we are modifying first entry of next
+      // DIE, and adding a new one.
+      return V1->Kind == DebugPatchKind::NewDebugEntry;
+    }
+    return V1.get()->Offset < V2.get()->Offset;
+  });
 
   DWARFUnitVector::compile_unit_range CompileUnits =
       IsDWOContext ? DWCtx.dwo_compile_units() : DWCtx.compile_units();
