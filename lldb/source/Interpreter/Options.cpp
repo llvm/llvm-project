@@ -224,21 +224,25 @@ Option *Options::GetLongOptions() {
             option_seen.find(short_opt);
         StreamString strm;
         if (defs[i].HasShortOption())
-          Host::SystemLog(Host::eSystemLogError,
-                          "option[%u] --%s has a short option -%c that "
-                          "conflicts with option[%u] --%s, short option won't "
-                          "be used for --%s\n",
-                          (int)i, defs[i].long_option, short_opt, pos->second,
-                          m_getopt_table[pos->second].definition->long_option,
-                          defs[i].long_option);
+          Debugger::ReportError(
+              llvm::formatv(
+                  "option[{0}] --{1} has a short option -{2} that "
+                  "conflicts with option[{3}] --{4}, short option won't "
+                  "be used for --{5}",
+                  i, defs[i].long_option, short_opt, pos->second,
+                  m_getopt_table[pos->second].definition->long_option,
+                  defs[i].long_option)
+                  .str());
         else
-          Host::SystemLog(Host::eSystemLogError,
-                          "option[%u] --%s has a short option 0x%x that "
-                          "conflicts with option[%u] --%s, short option won't "
-                          "be used for --%s\n",
-                          (int)i, defs[i].long_option, short_opt, pos->second,
-                          m_getopt_table[pos->second].definition->long_option,
-                          defs[i].long_option);
+          Debugger::ReportError(
+              llvm::formatv(
+                  "option[{0}] --{1} has a short option {2:x} that "
+                  "conflicts with option[{3}] --{4}, short option won't "
+                  "be used for --{5}n",
+                  (int)i, defs[i].long_option, short_opt, pos->second,
+                  m_getopt_table[pos->second].definition->long_option,
+                  defs[i].long_option)
+                  .str());
       }
     }
 

@@ -219,32 +219,6 @@ MonitorChildProcessThreadFunction(::pid_t pid,
 
 #endif // #if !defined (__APPLE__) && !defined (_WIN32)
 
-#if !defined(__APPLE__)
-
-void Host::SystemLog(SystemLogType type, const char *format, va_list args) {
-  vfprintf(stderr, format, args);
-}
-
-#endif
-
-void Host::SystemLog(SystemLogType type, const char *format, ...) {
-  {
-    va_list args;
-    va_start(args, format);
-    SystemLog(type, format, args);
-    va_end(args);
-  }
-
-  Log *log = GetLog(LLDBLog::Host);
-  if (log && log->GetVerbose()) {
-    // Log to log channel. This allows testcases to grep for log output.
-    va_list args;
-    va_start(args, format);
-    log->VAPrintf(format, args);
-    va_end(args);
-  }
-}
-
 lldb::pid_t Host::GetCurrentProcessID() { return ::getpid(); }
 
 #ifndef _WIN32

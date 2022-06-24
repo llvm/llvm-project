@@ -86,13 +86,6 @@ public:
   StartMonitoringChildProcess(const MonitorChildProcessCallback &callback,
                               lldb::pid_t pid);
 
-  enum SystemLogType { eSystemLogWarning, eSystemLogError };
-
-  static void SystemLog(SystemLogType type, const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
-
-  static void SystemLog(SystemLogType type, const char *format, va_list args);
-
   /// Get the process ID for the calling process.
   ///
   /// \return
