@@ -203,6 +203,11 @@ public:
   /// identified by `Token` are always true.
   bool flowConditionIsTautology(AtomicBoolValue &Token);
 
+  /// Returns true if `Val1` is equivalent to `Val2`.
+  /// Note: This function doesn't take into account constraints on `Val1` and
+  /// `Val2` imposed by the flow condition.
+  bool equivalentBoolValues(BoolValue &Val1, BoolValue &Val2);
+
 private:
   /// Adds all constraints of the flow condition identified by `Token` and all
   /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
