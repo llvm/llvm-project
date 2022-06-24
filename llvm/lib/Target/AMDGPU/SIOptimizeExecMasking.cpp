@@ -488,6 +488,12 @@ static bool optimizeVCMPSaveExecSequence(MachineInstr &SaveExecInstr,
 
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
 
+  // The kill flags may no longer be correct.
+  if (Src0->isReg())
+    MRI.clearKillFlags(Src0->getReg());
+  if (Src1->isReg())
+    MRI.clearKillFlags(Src1->getReg());
+
   return true;
 }
 
