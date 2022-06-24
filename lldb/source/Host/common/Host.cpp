@@ -90,6 +90,10 @@ int __pthread_fchdir(int fildes);
 using namespace lldb;
 using namespace lldb_private;
 
+#if !defined(__APPLE__)
+void Host::SystemLog(llvm::StringRef message) { llvm::errs() << message; }
+#endif
+
 #if !defined(__APPLE__) && !defined(_WIN32)
 static thread_result_t
 MonitorChildProcessThreadFunction(::pid_t pid,
@@ -105,10 +109,6 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
     return MonitorChildProcessThreadFunction(pid, callback);
   });
 }
-
-#if !defined(__APPLE__)
-void Host::SystemLog(llvm::StringRef message) { llvm::errs() << message; }
-#endif
 
 #ifndef __linux__
 // Scoped class that will disable thread canceling when it is constructed, and
