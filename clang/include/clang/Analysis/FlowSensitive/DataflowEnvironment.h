@@ -268,7 +268,7 @@ public:
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
   BoolValue &makeAnd(BoolValue &LHS, BoolValue &RHS) const {
-    return DACtx->getOrCreateConjunctionValue(LHS, RHS);
+    return DACtx->getOrCreateConjunction(LHS, RHS);
   }
 
   /// Returns a boolean value that represents the disjunction of `LHS` and
@@ -276,21 +276,21 @@ public:
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
   BoolValue &makeOr(BoolValue &LHS, BoolValue &RHS) const {
-    return DACtx->getOrCreateDisjunctionValue(LHS, RHS);
+    return DACtx->getOrCreateDisjunction(LHS, RHS);
   }
 
   /// Returns a boolean value that represents the negation of `Val`. Subsequent
   /// calls with the same argument will return the same result.
   BoolValue &makeNot(BoolValue &Val) const {
-    return DACtx->getOrCreateNegationValue(Val);
+    return DACtx->getOrCreateNegation(Val);
   }
 
   /// Returns a boolean value represents `LHS` => `RHS`. Subsequent calls with
-  /// the same arguments, regardless of their order, will return the same
-  /// result. If the given boolean values represent the same value, the result
-  /// will be a value that represents the true boolean literal.
+  /// the same arguments, will return the same result. If the given boolean
+  /// values represent the same value, the result will be a value that
+  /// represents the true boolean literal.
   BoolValue &makeImplication(BoolValue &LHS, BoolValue &RHS) const {
-    return &LHS == &RHS ? getBoolLiteralValue(true) : makeOr(makeNot(LHS), RHS);
+    return DACtx->getOrCreateImplication(LHS, RHS);
   }
 
   /// Returns a boolean value represents `LHS` <=> `RHS`. Subsequent calls with
@@ -298,9 +298,7 @@ public:
   /// result. If the given boolean values represent the same value, the result
   /// will be a value that represents the true boolean literal.
   BoolValue &makeIff(BoolValue &LHS, BoolValue &RHS) const {
-    return &LHS == &RHS
-               ? getBoolLiteralValue(true)
-               : makeAnd(makeImplication(LHS, RHS), makeImplication(RHS, LHS));
+    return DACtx->getOrCreateIff(LHS, RHS);
   }
 
   /// Returns the token that identifies the flow condition of the environment.

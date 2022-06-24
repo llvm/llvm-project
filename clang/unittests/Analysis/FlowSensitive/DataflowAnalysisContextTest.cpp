@@ -33,61 +33,106 @@ TEST_F(DataflowAnalysisContextTest,
 }
 
 TEST_F(DataflowAnalysisContextTest,
-       GetOrCreateConjunctionValueReturnsSameExprGivenSameArgs) {
+       GetOrCreateConjunctionReturnsSameExprGivenSameArgs) {
   auto &X = Context.createAtomicBoolValue();
-  auto &XAndX = Context.getOrCreateConjunctionValue(X, X);
+  auto &XAndX = Context.getOrCreateConjunction(X, X);
   EXPECT_EQ(&XAndX, &X);
 }
 
 TEST_F(DataflowAnalysisContextTest,
-       GetOrCreateConjunctionValueReturnsSameExprOnSubsequentCalls) {
+       GetOrCreateConjunctionReturnsSameExprOnSubsequentCalls) {
   auto &X = Context.createAtomicBoolValue();
   auto &Y = Context.createAtomicBoolValue();
-  auto &XAndY1 = Context.getOrCreateConjunctionValue(X, Y);
-  auto &XAndY2 = Context.getOrCreateConjunctionValue(X, Y);
+  auto &XAndY1 = Context.getOrCreateConjunction(X, Y);
+  auto &XAndY2 = Context.getOrCreateConjunction(X, Y);
   EXPECT_EQ(&XAndY1, &XAndY2);
 
-  auto &YAndX = Context.getOrCreateConjunctionValue(Y, X);
+  auto &YAndX = Context.getOrCreateConjunction(Y, X);
   EXPECT_EQ(&XAndY1, &YAndX);
 
   auto &Z = Context.createAtomicBoolValue();
-  auto &XAndZ = Context.getOrCreateConjunctionValue(X, Z);
+  auto &XAndZ = Context.getOrCreateConjunction(X, Z);
   EXPECT_NE(&XAndY1, &XAndZ);
 }
 
 TEST_F(DataflowAnalysisContextTest,
-       GetOrCreateDisjunctionValueReturnsSameExprGivenSameArgs) {
+       GetOrCreateDisjunctionReturnsSameExprGivenSameArgs) {
   auto &X = Context.createAtomicBoolValue();
-  auto &XOrX = Context.getOrCreateDisjunctionValue(X, X);
+  auto &XOrX = Context.getOrCreateDisjunction(X, X);
   EXPECT_EQ(&XOrX, &X);
 }
 
 TEST_F(DataflowAnalysisContextTest,
-       GetOrCreateDisjunctionValueReturnsSameExprOnSubsequentCalls) {
+       GetOrCreateDisjunctionReturnsSameExprOnSubsequentCalls) {
   auto &X = Context.createAtomicBoolValue();
   auto &Y = Context.createAtomicBoolValue();
-  auto &XOrY1 = Context.getOrCreateDisjunctionValue(X, Y);
-  auto &XOrY2 = Context.getOrCreateDisjunctionValue(X, Y);
+  auto &XOrY1 = Context.getOrCreateDisjunction(X, Y);
+  auto &XOrY2 = Context.getOrCreateDisjunction(X, Y);
   EXPECT_EQ(&XOrY1, &XOrY2);
 
-  auto &YOrX = Context.getOrCreateDisjunctionValue(Y, X);
+  auto &YOrX = Context.getOrCreateDisjunction(Y, X);
   EXPECT_EQ(&XOrY1, &YOrX);
 
   auto &Z = Context.createAtomicBoolValue();
-  auto &XOrZ = Context.getOrCreateDisjunctionValue(X, Z);
+  auto &XOrZ = Context.getOrCreateDisjunction(X, Z);
   EXPECT_NE(&XOrY1, &XOrZ);
 }
 
 TEST_F(DataflowAnalysisContextTest,
-       GetOrCreateNegationValueReturnsSameExprOnSubsequentCalls) {
+       GetOrCreateNegationReturnsSameExprOnSubsequentCalls) {
   auto &X = Context.createAtomicBoolValue();
-  auto &NotX1 = Context.getOrCreateNegationValue(X);
-  auto &NotX2 = Context.getOrCreateNegationValue(X);
+  auto &NotX1 = Context.getOrCreateNegation(X);
+  auto &NotX2 = Context.getOrCreateNegation(X);
   EXPECT_EQ(&NotX1, &NotX2);
 
   auto &Y = Context.createAtomicBoolValue();
-  auto &NotY = Context.getOrCreateNegationValue(Y);
+  auto &NotY = Context.getOrCreateNegation(Y);
   EXPECT_NE(&NotX1, &NotY);
+}
+
+TEST_F(DataflowAnalysisContextTest,
+       GetOrCreateImplicationReturnsTrueGivenSameArgs) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &XImpliesX = Context.getOrCreateImplication(X, X);
+  EXPECT_EQ(&XImpliesX, &Context.getBoolLiteralValue(true));
+}
+
+TEST_F(DataflowAnalysisContextTest,
+       GetOrCreateImplicationReturnsSameExprOnSubsequentCalls) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &Y = Context.createAtomicBoolValue();
+  auto &XImpliesY1 = Context.getOrCreateImplication(X, Y);
+  auto &XImpliesY2 = Context.getOrCreateImplication(X, Y);
+  EXPECT_EQ(&XImpliesY1, &XImpliesY2);
+
+  auto &YImpliesX = Context.getOrCreateImplication(Y, X);
+  EXPECT_NE(&XImpliesY1, &YImpliesX);
+
+  auto &Z = Context.createAtomicBoolValue();
+  auto &XImpliesZ = Context.getOrCreateImplication(X, Z);
+  EXPECT_NE(&XImpliesY1, &XImpliesZ);
+}
+
+TEST_F(DataflowAnalysisContextTest, GetOrCreateIffReturnsTrueGivenSameArgs) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &XIffX = Context.getOrCreateIff(X, X);
+  EXPECT_EQ(&XIffX, &Context.getBoolLiteralValue(true));
+}
+
+TEST_F(DataflowAnalysisContextTest,
+       GetOrCreateIffReturnsSameExprOnSubsequentCalls) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &Y = Context.createAtomicBoolValue();
+  auto &XIffY1 = Context.getOrCreateIff(X, Y);
+  auto &XIffY2 = Context.getOrCreateIff(X, Y);
+  EXPECT_EQ(&XIffY1, &XIffY2);
+
+  auto &YIffX = Context.getOrCreateIff(Y, X);
+  EXPECT_EQ(&XIffY1, &YIffX);
+
+  auto &Z = Context.createAtomicBoolValue();
+  auto &XIffZ = Context.getOrCreateIff(X, Z);
+  EXPECT_NE(&XIffY1, &XIffZ);
 }
 
 TEST_F(DataflowAnalysisContextTest, EmptyFlowCondition) {
@@ -164,8 +209,7 @@ TEST_F(DataflowAnalysisContextTest, FlowConditionTautologies) {
   // ... but we can prove A || !A is true.
   auto &FC5 = Context.makeFlowConditionToken();
   Context.addFlowConditionConstraint(
-      FC5, Context.getOrCreateDisjunctionValue(
-               C1, Context.getOrCreateNegationValue(C1)));
+      FC5, Context.getOrCreateDisjunction(C1, Context.getOrCreateNegation(C1)));
   EXPECT_TRUE(Context.flowConditionIsTautology(FC5));
 }
 
