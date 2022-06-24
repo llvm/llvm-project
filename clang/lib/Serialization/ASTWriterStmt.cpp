@@ -2458,6 +2458,13 @@ void ASTStmtWriter::VisitOMPMasterTaskLoopDirective(
   Code = serialization::STMT_OMP_MASTER_TASKLOOP_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPMaskedTaskLoopDirective(
+    OMPMaskedTaskLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+  Record.writeBool(D->hasCancel());
+  Code = serialization::STMT_OMP_MASKED_TASKLOOP_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPMasterTaskLoopSimdDirective(
     OMPMasterTaskLoopSimdDirective *D) {
   VisitOMPLoopDirective(D);
