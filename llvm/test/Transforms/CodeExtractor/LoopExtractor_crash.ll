@@ -1,5 +1,5 @@
-; RUN: opt < %s -inline -loop-simplify -loop-extract -S | FileCheck %s
-; RUN: opt < %s -argpromotion -loop-simplify -loop-extract -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline,loop-simplify),loop-extract' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(argpromotion,loop-simplify),loop-extract' -S | FileCheck %s
 
 ; This test used to trigger an assert (PR8929).
 
