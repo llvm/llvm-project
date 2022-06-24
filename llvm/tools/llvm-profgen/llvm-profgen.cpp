@@ -164,8 +164,7 @@ int main(int argc, const char *argv[]) {
         std::move(ReaderOrErr.get());
     Reader->read();
     std::unique_ptr<ProfileGeneratorBase> Generator =
-        ProfileGeneratorBase::create(Binary.get(),
-                                     std::move(Reader->getProfiles()),
+        ProfileGeneratorBase::create(Binary.get(), Reader->getProfiles(),
                                      Reader->profileIsCS());
     Generator->generateProfile();
     Generator->write();
