@@ -455,12 +455,14 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
                                                       indices.back(), oneValue);
       auto componentAcOp =
           rewriter.create<spirv::AccessChainOp>(loc, acOp.base_ptr(), indices);
+      // Assuming little endian, this reads lower-ordered bits of the number to
+      // lower-numbered components of the vector.
       components.push_back(rewriter.create<spirv::LoadOp>(loc, componentAcOp));
     }
-    std::reverse(components.begin(), components.end()); // For little endian..
 
     // Create a vector of the components and then cast back to the larger
-    // bitwidth element type.
+    // bitwidth element type. For spv.bitcast, the lower-numbered components of
+    // the vector map to lower-ordered bits of the larger bitwidth element type.
     auto vectorType = VectorType::get({ratio}, dstElemType);
     Value vectorValue = rewriter.create<spirv::CompositeConstructOp>(
         loc, vectorType, components);
