@@ -177,10 +177,10 @@ TypeSystemSwiftTypeRef::GetBaseName(swift::Demangle::NodePointer node) {
   }
 }
 
-/// Create a mangled name for a type alias node.
+/// Create a mangled name for a type node.
 static swift::Demangle::ManglingErrorOr<std::string>
-GetTypeAlias(swift::Demangle::Demangler &dem,
-             swift::Demangle::NodePointer node) {
+GetMangledName(swift::Demangle::Demangler &dem,
+               swift::Demangle::NodePointer node) {
   using namespace swift::Demangle;
   auto global = dem.createNode(Node::Kind::Global);
   auto type_mangling = dem.createNode(Node::Kind::TypeMangling);
@@ -467,7 +467,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   // Try to look this up as a Swift type alias. For each *Swift*
   // type alias there is a debug info entry that has the mangled
   // name as name and the aliased type as a type.
-  auto mangling = GetTypeAlias(dem, node);
+  auto mangling = GetMangledName(dem, node);
   if (!mangling.isSuccess()) {
     LLDB_LOGF(GetLog(LLDBLog::Types),
               "Failed while mangling type alias (%d:%u)", mangling.error().code,
