@@ -1420,10 +1420,10 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   if (ProfiledFunctions.size() > 10) {
     if (opts::Verbosity >= 1) {
       outs() << "BOLT-INFO: top called functions are:\n";
-      std::sort(ProfiledFunctions.begin(), ProfiledFunctions.end(),
-                [](const BinaryFunction *A, const BinaryFunction *B) {
-                  return B->getExecutionCount() < A->getExecutionCount();
-                });
+      llvm::sort(ProfiledFunctions,
+                 [](const BinaryFunction *A, const BinaryFunction *B) {
+                   return B->getExecutionCount() < A->getExecutionCount();
+                 });
       auto SFI = ProfiledFunctions.begin();
       auto SFIend = ProfiledFunctions.end();
       for (unsigned I = 0u; I < opts::TopCalledLimit && SFI != SFIend;
@@ -1433,8 +1433,7 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   }
 
   if (!opts::PrintSortedBy.empty() &&
-      std::find(opts::PrintSortedBy.begin(), opts::PrintSortedBy.end(),
-                DynoStats::FIRST_DYNO_STAT) == opts::PrintSortedBy.end()) {
+      !llvm::is_contained(opts::PrintSortedBy, DynoStats::FIRST_DYNO_STAT)) {
 
     std::vector<const BinaryFunction *> Functions;
     std::map<const BinaryFunction *, DynoStats> Stats;
@@ -1448,24 +1447,22 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
 
     const bool SortAll =
-        std::find(opts::PrintSortedBy.begin(), opts::PrintSortedBy.end(),
-                  DynoStats::LAST_DYNO_STAT) != opts::PrintSortedBy.end();
+        llvm::is_contained(opts::PrintSortedBy, DynoStats::LAST_DYNO_STAT);
 
     const bool Ascending =
         opts::DynoStatsSortOrderOpt == opts::DynoStatsSortOrder::Ascending;
 
     if (SortAll) {
-      std::stable_sort(Functions.begin(), Functions.end(),
-                       [Ascending, &Stats](const BinaryFunction *A,
-                                           const BinaryFunction *B) {
-                         return Ascending ? Stats.at(A) < Stats.at(B)
-                                          : Stats.at(B) < Stats.at(A);
-                       });
+      llvm::stable_sort(Functions,
+                        [Ascending, &Stats](const BinaryFunction *A,
+                                            const BinaryFunction *B) {
+                          return Ascending ? Stats.at(A) < Stats.at(B)
+                                           : Stats.at(B) < Stats.at(A);
+                        });
     } else {
-      std::stable_sort(
-          Functions.begin(), Functions.end(),
-          [Ascending, &Stats](const BinaryFunction *A,
-                              const BinaryFunction *B) {
+      llvm::stable_sort(
+          Functions, [Ascending, &Stats](const BinaryFunction *A,
+                                         const BinaryFunction *B) {
             const DynoStats &StatsA = Stats.at(A);
             const DynoStats &StatsB = Stats.at(B);
             return Ascending ? StatsA.lessThan(StatsB, opts::PrintSortedBy)
@@ -1564,11 +1561,11 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
 
     if (!SuboptimalFuncs.empty()) {
-      std::sort(SuboptimalFuncs.begin(), SuboptimalFuncs.end(),
-                [](const BinaryFunction *A, const BinaryFunction *B) {
-                  return A->getKnownExecutionCount() / A->getSize() >
-                         B->getKnownExecutionCount() / B->getSize();
-                });
+      llvm::sort(SuboptimalFuncs,
+                 [](const BinaryFunction *A, const BinaryFunction *B) {
+                   return A->getKnownExecutionCount() / A->getSize() >
+                          B->getKnownExecutionCount() / B->getSize();
+                 });
 
       outs() << "BOLT-INFO: " << SuboptimalFuncs.size()
              << " functions have "

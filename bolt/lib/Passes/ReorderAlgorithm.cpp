@@ -244,7 +244,7 @@ void PHGreedyClusterAlgorithm::initQueue(std::vector<EdgeTy> &Queue,
   };
 
   // Sort edges in increasing profile count order.
-  std::sort(Queue.begin(), Queue.end(), Comp);
+  llvm::sort(Queue, Comp);
 }
 
 void PHGreedyClusterAlgorithm::adjustQueue(std::vector<EdgeTy> &Queue,
@@ -385,7 +385,7 @@ void MinBranchGreedyClusterAlgorithm::adjustQueue(std::vector<EdgeTy> &Queue,
 
   // Sort remaining edges in increasing weight order.
   Queue.swap(NewQueue);
-  std::sort(Queue.begin(), Queue.end(), Comp);
+  llvm::sort(Queue, Comp);
 }
 
 bool MinBranchGreedyClusterAlgorithm::areClustersCompatible(

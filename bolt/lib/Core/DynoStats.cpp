@@ -107,7 +107,7 @@ void DynoStats::print(raw_ostream &OS, const DynoStats *Other,
       SortedHistogram.emplace_back(Stat.second.first, Stat.first);
 
     // Sort using lexicographic ordering
-    std::sort(SortedHistogram.begin(), SortedHistogram.end());
+    llvm::sort(SortedHistogram);
 
     // Dump in ascending order: Start with Opcode with Highest execution
     // count.

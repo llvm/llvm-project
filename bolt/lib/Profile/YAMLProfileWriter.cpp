@@ -106,7 +106,7 @@ void convert(const BinaryFunction &BF,
       }
     }
 
-    std::sort(YamlBB.CallSites.begin(), YamlBB.CallSites.end());
+    llvm::sort(YamlBB.CallSites);
 
     // Skip printing if there's no profile data for non-entry basic block.
     // Include landing pads with non-zero execution count.
