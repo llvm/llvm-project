@@ -15687,6 +15687,41 @@ static SDValue foldADCToCINC(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(AArch64ISD::CSINC, DL, VT, LHS, LHS, CC, Cond);
 }
 
+// Transform vector add(zext i8 to i32, zext i8 to i32)
+//  into sext(add(zext(i8 to i16), zext(i8 to i16)) to i32)
+// This allows extra uses of saddl/uaddl at the lower vector widths, and less
+// extends.
+static SDValue performVectorAddSubExtCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isFixedLengthVector() || VT.getSizeInBits() <= 128 ||
+      (N->getOperand(0).getOpcode() != ISD::ZERO_EXTEND &&
+       N->getOperand(0).getOpcode() != ISD::SIGN_EXTEND) ||
+      (N->getOperand(1).getOpcode() != ISD::ZERO_EXTEND &&
+       N->getOperand(1).getOpcode() != ISD::SIGN_EXTEND) ||
+      N->getOperand(0).getOperand(0).getValueType() !=
+          N->getOperand(1).getOperand(0).getValueType())
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0).getOperand(0);
+  SDValue N1 = N->getOperand(1).getOperand(0);
+  EVT InVT = N0.getValueType();
+
+  EVT S1 = InVT.getScalarType();
+  EVT S2 = VT.getScalarType();
+  if ((S2 == MVT::i32 && S1 == MVT::i8) ||
+      (S2 == MVT::i64 && (S1 == MVT::i8 || S1 == MVT::i16))) {
+    SDLoc DL(N);
+    EVT HalfVT = EVT::getVectorVT(*DAG.getContext(),
+                                  S2.getHalfSizedIntegerVT(*DAG.getContext()),
+                                  VT.getVectorElementCount());
+    SDValue NewN0 = DAG.getNode(N->getOperand(0).getOpcode(), DL, HalfVT, N0);
+    SDValue NewN1 = DAG.getNode(N->getOperand(1).getOpcode(), DL, HalfVT, N1);
+    SDValue NewOp = DAG.getNode(N->getOpcode(), DL, HalfVT, NewN0, NewN1);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, NewOp);
+  }
+  return SDValue();
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -15698,6 +15733,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performAddCSelIntoCSinc(N, DAG))
     return Val;
   if (SDValue Val = performNegCSelCombine(N, DAG))
+    return Val;
+  if (SDValue Val = performVectorAddSubExtCombine(N, DAG))
     return Val;
 
   return performAddSubLongCombine(N, DCI, DAG);
