@@ -77,6 +77,7 @@ add_libc_unittest(
   SRCS
     strtold_test.cpp
   DEPENDS
+    libc.src.__support.CPP.uint128
     libc.src.stdlib.strtold
 )
 

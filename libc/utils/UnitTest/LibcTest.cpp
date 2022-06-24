@@ -8,7 +8,7 @@
 
 #include "LibcTest.h"
 
-#include "src/__support/CPP/UInt.h"
+#include "src/__support/CPP/UInt128.h"
 #include "utils/testutils/ExecuteFunction.h"
 #include <cassert>
 #include <iostream>
@@ -42,11 +42,15 @@ describeValue(ValType Value) {
 }
 
 std::string describeValue(std::string Value) { return std::string(Value); }
-#ifdef __SIZEOF_INT128__
-// When the value is __uint128_t, also show its hexadecimal digits.
-// Using template to force exact match, prevent ambiguous promotion.
-std::string describeValue128(__uint128_t Value) {
-  std::string S(sizeof(__uint128_t) * 2, '0');
+
+// When the value is UInt128 or __uint128_t, show its hexadecimal digits.
+// We cannot just use a UInt128 specialization as that resolves to only
+// one type, UInt<128> or __uint128_t. We want both overloads as we want to
+// be able to unittest UInt<128> on platforms where UInt128 resolves to
+// UInt128.
+template <typename UInt128Type>
+std::string describeValue128(UInt128Type Value) {
+  std::string S(sizeof(UInt128) * 2, '0');
 
   for (auto I = S.rbegin(), End = S.rend(); I != End; ++I, Value >>= 4) {
     unsigned char Mod = static_cast<unsigned char>(Value) & 15;
@@ -56,26 +60,16 @@ std::string describeValue128(__uint128_t Value) {
   return "0x" + S;
 }
 
-template <> std::string describeValue<__int128_t>(__int128_t Value) {
-  return describeValue128(Value);
-}
+#ifdef __SIZEOF_INT128__
 template <> std::string describeValue<__uint128_t>(__uint128_t Value) {
   return describeValue128(Value);
 }
 #endif
 
-// When the value is UInt<128>, also show its hexadecimal digits.
 template <>
 std::string
 describeValue<__llvm_libc::cpp::UInt<128>>(__llvm_libc::cpp::UInt<128> Value) {
-  std::string S(sizeof(__llvm_libc::cpp::UInt<128>) * 2, '0');
-
-  for (auto I = S.rbegin(), End = S.rend(); I != End; ++I, Value = Value >> 4) {
-    unsigned char Mod = static_cast<unsigned char>(Value) & 15;
-    *I = Mod < 10 ? '0' + Mod : 'a' + Mod - 10;
-  }
-
-  return "0x" + S;
+  return describeValue128(Value);
 }
 
 template <typename ValType>
@@ -234,17 +228,6 @@ template bool test<long long>(RunContext *Ctx, TestCondition Cond,
                               const char *RHSStr, const char *File,
                               unsigned long Line);
 
-#ifdef __SIZEOF_INT128__
-template bool test<__int128_t>(RunContext *Ctx, TestCondition Cond,
-                               __int128_t LHS, __int128_t RHS,
-                               const char *LHSStr, const char *RHSStr,
-                               const char *File, unsigned long Line);
-#endif
-template bool test<__llvm_libc::cpp::UInt<128>>(
-    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<128> LHS,
-    __llvm_libc::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
-    const char *File, unsigned long Line);
-
 template bool test<unsigned char>(RunContext *Ctx, TestCondition Cond,
                                   unsigned char LHS, unsigned char RHS,
                                   const char *LHSStr, const char *RHSStr,
@@ -275,12 +258,23 @@ template bool test<unsigned long long>(RunContext *Ctx, TestCondition Cond,
                                        const char *LHSStr, const char *RHSStr,
                                        const char *File, unsigned long Line);
 
+// We cannot just use a single UInt128 specialization as that resolves to only
+// one type, UInt<128> or __uint128_t. We want both overloads as we want to
+// be able to unittest UInt<128> on platforms where UInt128 resolves to
+// UInt128.
 #ifdef __SIZEOF_INT128__
+// When builtin __uint128_t type is available, include its specialization
+// also.
 template bool test<__uint128_t>(RunContext *Ctx, TestCondition Cond,
                                 __uint128_t LHS, __uint128_t RHS,
                                 const char *LHSStr, const char *RHSStr,
                                 const char *File, unsigned long Line);
 #endif
+
+template bool test<__llvm_libc::cpp::UInt<128>>(
+    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<128> LHS,
+    __llvm_libc::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
+    const char *File, unsigned long Line);
 
 } // namespace internal
 

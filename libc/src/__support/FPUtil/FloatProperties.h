@@ -10,6 +10,9 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FLOAT_PROPERTIES_H
 
 #include "PlatformDefs.h"
+
+#include "src/__support/CPP/UInt128.h"
+
 #include <stdint.h>
 
 namespace __llvm_libc {
@@ -104,7 +107,7 @@ template <> struct FloatProperties<long double> {
 // Properties for numbers represented in 80 bits long double on non-Windows x86
 // platforms.
 template <> struct FloatProperties<long double> {
-  typedef __uint128_t BitsType;
+  typedef UInt128 BitsType;
   static_assert(sizeof(BitsType) == sizeof(long double),
                 "Unexpected size of 'long double' type.");
 
@@ -140,7 +143,7 @@ template <> struct FloatProperties<long double> {
 // Properties for numbers represented in 128 bits long double on non x86
 // platform.
 template <> struct FloatProperties<long double> {
-  typedef __uint128_t BitsType;
+  typedef UInt128 BitsType;
   static_assert(sizeof(BitsType) == sizeof(long double),
                 "Unexpected size of 'long double' type.");
 
