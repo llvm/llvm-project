@@ -12,8 +12,8 @@
 #include "CommandObjectTraceStartIntelPT.h"
 #include "DecodedThread.h"
 #include "TraceIntelPTConstants.h"
-#include "TraceIntelPTSessionFileParser.h"
-#include "TraceIntelPTSessionSaver.h"
+#include "TraceIntelPTBundleLoader.h"
+#include "TraceIntelPTBundleSaver.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -40,32 +40,32 @@ TraceIntelPT::GetThreadTraceStartCommand(CommandInterpreter &interpreter) {
 
 void TraceIntelPT::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Intel Processor Trace",
-                                CreateInstanceForSessionFile,
+                                CreateInstanceForTraceBundle,
                                 CreateInstanceForLiveProcess,
-                                TraceIntelPTSessionFileParser::GetSchema());
+                                TraceIntelPTBundleLoader::GetSchema());
 }
 
 void TraceIntelPT::Terminate() {
-  PluginManager::UnregisterPlugin(CreateInstanceForSessionFile);
+  PluginManager::UnregisterPlugin(CreateInstanceForTraceBundle);
 }
 
 StringRef TraceIntelPT::GetSchema() {
-  return TraceIntelPTSessionFileParser::GetSchema();
+  return TraceIntelPTBundleLoader::GetSchema();
 }
 
 void TraceIntelPT::Dump(Stream *s) const {}
 
 llvm::Error TraceIntelPT::SaveLiveTraceToDisk(FileSpec directory) {
   RefreshLiveProcessState();
-  return TraceIntelPTSessionSaver().SaveToDisk(*this, directory);
+  return TraceIntelPTBundleSaver().SaveToDisk(*this, directory);
 }
 
-Expected<TraceSP> TraceIntelPT::CreateInstanceForSessionFile(
-    const json::Value &trace_session_file, StringRef session_file_dir,
+Expected<TraceSP> TraceIntelPT::CreateInstanceForTraceBundle(
+    const json::Value &bundle_description, StringRef bundle_dir,
     Debugger &debugger) {
-  return TraceIntelPTSessionFileParser(debugger, trace_session_file,
-                                       session_file_dir)
-      .Parse();
+  return TraceIntelPTBundleLoader(debugger, bundle_description,
+                                       bundle_dir)
+      .Load();
 }
 
 Expected<TraceSP> TraceIntelPT::CreateInstanceForLiveProcess(Process &process) {
@@ -79,15 +79,15 @@ TraceIntelPTSP TraceIntelPT::GetSharedPtr() {
 }
 
 TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
-    JSONTraceSession &session, ArrayRef<ProcessSP> traced_processes,
+    JSONTraceBundleDescription &bundle_description, ArrayRef<ProcessSP> traced_processes,
     ArrayRef<ThreadPostMortemTraceSP> traced_threads) {
-  TraceIntelPTSP trace_sp(new TraceIntelPT(session, traced_processes));
-  trace_sp->m_storage.tsc_conversion = session.tsc_perf_zero_conversion;
+  TraceIntelPTSP trace_sp(new TraceIntelPT(bundle_description, traced_processes));
+  trace_sp->m_storage.tsc_conversion = bundle_description.tsc_perf_zero_conversion;
 
-  if (session.cpus) {
+  if (bundle_description.cpus) {
     std::vector<cpu_id_t> cpus;
 
-    for (const JSONCpu &cpu : *session.cpus) {
+    for (const JSONCpu &cpu : *bundle_description.cpus) {
       trace_sp->SetPostMortemCpuDataFile(cpu.id, IntelPTDataKinds::kIptTrace,
                                          FileSpec(cpu.ipt_trace));
 
@@ -98,7 +98,7 @@ TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
     }
 
     std::vector<tid_t> tids;
-    for (const JSONProcess &process : session.processes)
+    for (const JSONProcess &process : bundle_description.processes)
       for (const JSONThread &thread : process.threads)
         tids.push_back(thread.tid);
 
@@ -119,10 +119,10 @@ TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
   return trace_sp;
 }
 
-TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
+TraceIntelPT::TraceIntelPT(JSONTraceBundleDescription &bundle_description,
                            ArrayRef<ProcessSP> traced_processes)
-    : Trace(traced_processes, session.GetCpuIds()),
-      m_cpu_info(session.cpu_info) {}
+    : Trace(traced_processes, bundle_description.GetCpuIds()),
+      m_cpu_info(bundle_description.cpu_info) {}
 
 DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
   if (const char *error = RefreshLiveProcessState())

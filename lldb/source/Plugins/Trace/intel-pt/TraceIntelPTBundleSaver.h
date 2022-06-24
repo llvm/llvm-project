@@ -1,4 +1,4 @@
-//===-- TraceIntelPTSessionSaver.h ---------------------------*- C++ //-*-===//
+//===-- TraceIntelPTBundleSaver.h ----------------------------*- C++ //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONSAVER_H
-#define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONSAVER_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLESAVER_H
+#define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLESAVER_H
 
 #include "TraceIntelPT.h"
 
@@ -16,12 +16,12 @@
 namespace lldb_private {
 namespace trace_intel_pt {
 
-class TraceIntelPTSessionSaver {
+class TraceIntelPTBundleSaver {
 public:
   /// Save the Intel PT trace of a live process to the specified directory,
   /// which will be created if needed. This will also create a file
-  /// \a <directory>/trace.json with the main properties of the trace
-  /// session, along with others files which contain the actual trace data.
+  /// \a <directory>/trace.json with the description of the trace
+  /// bundle, along with others files which contain the actual trace data.
   /// The trace.json file can be used later as input for the "trace load"
   /// command to load the trace in LLDB.
   ///
@@ -29,7 +29,7 @@ public:
   ///     The Intel PT trace to be saved to disk.
   ///
   /// \param[in] directory
-  ///     The directory where the trace files will be saved.
+  ///     The directory where the trace bundle will be created.
   ///
   /// \return
   ///     \a llvm::success if the operation was successful, or an \a llvm::Error
@@ -40,4 +40,4 @@ public:
 } // namespace trace_intel_pt
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONSAVER_H
+#endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLESAVER_H

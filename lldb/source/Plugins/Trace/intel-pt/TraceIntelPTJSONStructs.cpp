@@ -20,7 +20,7 @@ using namespace llvm::json;
 namespace lldb_private {
 namespace trace_intel_pt {
 
-Optional<std::vector<lldb::cpu_id_t>> JSONTraceSession::GetCpuIds() {
+Optional<std::vector<lldb::cpu_id_t>> JSONTraceBundleDescription::GetCpuIds() {
   if (!cpus)
     return None;
   std::vector<lldb::cpu_id_t> cpu_ids;
@@ -116,30 +116,30 @@ bool fromJSON(const json::Value &value, pt_cpu &cpu_info, Path path) {
   return true;
 }
 
-json::Value toJSON(const JSONTraceSession &session) {
-  return Object{{"type", session.type},
-                {"processes", session.processes},
+json::Value toJSON(const JSONTraceBundleDescription &bundle_description) {
+  return Object{{"type", bundle_description.type},
+                {"processes", bundle_description.processes},
                 // We have to do this because the compiler fails at doing it
                 // automatically because pt_cpu is not in a namespace
-                {"cpuInfo", toJSON(session.cpu_info)},
-                {"cpus", session.cpus},
-                {"tscPerfZeroConversion", session.tsc_perf_zero_conversion}};
+                {"cpuInfo", toJSON(bundle_description.cpu_info)},
+                {"cpus", bundle_description.cpus},
+                {"tscPerfZeroConversion", bundle_description.tsc_perf_zero_conversion}};
 }
 
-bool fromJSON(const json::Value &value, JSONTraceSession &session, Path path) {
+bool fromJSON(const json::Value &value, JSONTraceBundleDescription &bundle_description, Path path) {
   ObjectMapper o(value, path);
-  if (!(o && o.map("processes", session.processes) &&
-        o.map("type", session.type) && o.map("cpus", session.cpus) &&
-        o.map("tscPerfZeroConversion", session.tsc_perf_zero_conversion)))
+  if (!(o && o.map("processes", bundle_description.processes) &&
+        o.map("type", bundle_description.type) && o.map("cpus", bundle_description.cpus) &&
+        o.map("tscPerfZeroConversion", bundle_description.tsc_perf_zero_conversion)))
     return false;
-  if (session.cpus && !session.tsc_perf_zero_conversion) {
+  if (bundle_description.cpus && !bundle_description.tsc_perf_zero_conversion) {
     path.report(
         "\"tscPerfZeroConversion\" is required when \"cpus\" is provided");
     return false;
   }
   // We have to do this because the compiler fails at doing it automatically
   // because pt_cpu is not in a namespace
-  if (!fromJSON(*value.getAsObject()->get("cpuInfo"), session.cpu_info,
+  if (!fromJSON(*value.getAsObject()->get("cpuInfo"), bundle_description.cpu_info,
                 path.field("cpuInfo")))
     return false;
   return true;

@@ -98,7 +98,7 @@ thread #1: tid = 3842849
 
         # We test first an invalid type
         trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad.json")
-        expected_substrs = ['''error: expected object at traceSession.processes[0]
+        expected_substrs = ['''error: expected object at traceBundle.processes[0]
 
 Context:
 {
@@ -124,15 +124,15 @@ Schema:
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
 
 
-        # Now we test a wrong cpu family field in the global session file
+        # Now we test a wrong cpu family field in the global bundle description file
         trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad2.json")
-        expected_substrs = ['error: expected uint64_t at traceSession.cpuInfo.family', "Context", "Schema"]
+        expected_substrs = ['error: expected uint64_t at traceBundle.cpuInfo.family', "Context", "Schema"]
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
 
 
         # Now we test a missing field in the intel-pt settings
         trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad4.json")
-        expected_substrs = ['''error: missing value at traceSession.cpuInfo.family
+        expected_substrs = ['''error: missing value at traceBundle.cpuInfo.family
 
 Context:
 {
@@ -149,7 +149,7 @@ Context:
 
         # Now we test an incorrect load address in the intel-pt settings
         trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad5.json")
-        expected_substrs = ['error: missing value at traceSession.processes[1].pid', "Schema"]
+        expected_substrs = ['error: missing value at traceBundle.processes[1].pid', "Schema"]
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
 
 
@@ -157,6 +157,6 @@ Context:
         # no targets should be created.
         self.assertEqual(self.dbg.GetNumTargets(), 0)
         trace_description_file_path = os.path.join(src_dir, "intelpt-trace", "trace_bad3.json")
-        expected_substrs = ['error: missing value at traceSession.processes[1].pid']
+        expected_substrs = ['error: missing value at traceBundle.processes[1].pid']
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
         self.assertEqual(self.dbg.GetNumTargets(), 0)
