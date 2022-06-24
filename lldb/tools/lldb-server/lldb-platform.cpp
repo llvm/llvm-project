@@ -77,10 +77,9 @@ static void signal_handler(int signo) {
   case SIGHUP:
     // Use SIGINT first, if that does not work, use SIGHUP as a last resort.
     // And we should not call exit() here because it results in the global
-    // destructors
-    // to be invoked and wreaking havoc on the threads still running.
-    Host::SystemLog(Host::eSystemLogWarning,
-                    "SIGHUP received, exiting lldb-server...\n");
+    // destructors to be invoked and wreaking havoc on the threads still
+    // running.
+    llvm::errs() << "SIGHUP received, exiting lldb-server...\n";
     abort();
     break;
   }

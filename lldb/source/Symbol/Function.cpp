@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/Function.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -348,12 +349,9 @@ Block &Function::GetBlock(bool can_create) {
     if (module_sp) {
       module_sp->GetSymbolFile()->ParseBlocksRecursive(*this);
     } else {
-      Host::SystemLog(Host::eSystemLogError,
-                      "error: unable to find module "
-                      "shared pointer for function '%s' "
-                      "in %s\n",
-                      GetName().GetCString(),
-                      m_comp_unit->GetPrimaryFile().GetPath().c_str());
+      Debugger::ReportError(llvm::formatv(
+          "unable to find module shared pointer for function '{0}' in {1}",
+          GetName().GetCString(), m_comp_unit->GetPrimaryFile().GetPath()));
     }
     m_block.SetBlockInfoHasBeenParsed(true, true);
   }
