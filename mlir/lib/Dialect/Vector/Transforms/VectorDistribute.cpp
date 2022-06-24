@@ -346,8 +346,9 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
     Location loc = writeOp.getLoc();
     VectorType vecType = writeOp.getVectorType();
 
-    // Only vector<1x> is supported at the moment.
-    if (vecType.getShape().size() != 1 || vecType.getShape()[0] != 1)
+    // Only sink out vector of 1 element for now to not serialize large vector
+    // store. This can later be controlled by user.
+    if (vecType.getNumElements() != 1)
       return failure();
 
     // Do not process warp ops that contain only TransferWriteOps.
