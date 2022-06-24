@@ -66,125 +66,149 @@ int explicit_maps_inside_captured(int a){
   // CK23: call void @{{.*}}explicit_maps_inside_captured{{.*}}([[SA:%.+]]* {{.*}})
   // CK23: define {{.*}}explicit_maps_inside_captured{{.*}}
   [&](void){
-    // Region 00
-    // CK23-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null, i8** null)
-    // CK23-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK23-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 00
+// CK23-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK23-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK23-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK23-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK23-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK23-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK23-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
-    // CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
-    // CK23-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
-    // CK23-DAG: store i32* [[VAR00:%.+]], i32** [[CP0]]
-    // CK23-DAG: [[VAR0]] = load i32*, i32** [[CAP0:%[^,]+]]
-    // CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
-    // CK23-DAG: [[VAR00]] = load i32*, i32** [[CAP00:%[^,]+]]
-    // CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
+// CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+// CK23-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
+// CK23-DAG: store i32* [[VAR00:%.+]], i32** [[CP0]]
+// CK23-DAG: [[VAR0]] = load i32*, i32** [[CAP0:%[^,]+]]
+// CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[VAR00]] = load i32*, i32** [[CAP00:%[^,]+]]
+// CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
 
-    // CK23: call void [[CALL00:@.+]](i32* {{[^,]+}})
-    #pragma omp target map(a)
+// CK23: call void [[CALL00:@.+]](i32* {{[^,]+}})
+#pragma omp target map(a)
       { a+=1; }
-    // Region 01
-    // CK23-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null, i8** null)
-    // CK23-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK23-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 01
+// CK23-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK23-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK23-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK23-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK23-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK23-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK23-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float**
-    // CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
-    // CK23-DAG: store float* [[VAR0:%.+]], float** [[CBP0]]
-    // CK23-DAG: store float* [[VAR00:%.+]], float** [[CP0]]
-    // CK23-DAG: [[VAR0]] = load float*, float** [[CAP0:%[^,]+]]
-    // CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
-    // CK23-DAG: [[VAR00]] = load float*, float** [[CAP00:%[^,]+]]
-    // CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float**
+// CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
+// CK23-DAG: store float* [[VAR0:%.+]], float** [[CBP0]]
+// CK23-DAG: store float* [[VAR00:%.+]], float** [[CP0]]
+// CK23-DAG: [[VAR0]] = load float*, float** [[CAP0:%[^,]+]]
+// CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[VAR00]] = load float*, float** [[CAP00:%[^,]+]]
+// CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
 
-    // CK23: call void [[CALL01:@.+]](float* {{[^,]+}})
-    #pragma omp target map(b)
+// CK23: call void [[CALL01:@.+]](float* {{[^,]+}})
+#pragma omp target map(b)
       { b+=1; }
-    // Region 02
-    // CK23-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}}, i8** null, i8** null)
-    // CK23-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK23-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 02
+// CK23-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK23-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK23-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK23-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK23-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK23-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK23-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [100 x float]**
-    // CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [100 x float]**
-    // CK23-DAG: store [100 x float]* [[VAR0:%.+]], [100 x float]** [[CBP0]]
-    // CK23-DAG: store [100 x float]* [[VAR00:%.+]], [100 x float]** [[CP0]]
-    // CK23-DAG: [[VAR0]] = load [100 x float]*, [100 x float]** [[CAP0:%[^,]+]]
-    // CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
-    // CK23-DAG: [[VAR00]] = load [100 x float]*, [100 x float]** [[CAP00:%[^,]+]]
-    // CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [100 x float]**
+// CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [100 x float]**
+// CK23-DAG: store [100 x float]* [[VAR0:%.+]], [100 x float]** [[CBP0]]
+// CK23-DAG: store [100 x float]* [[VAR00:%.+]], [100 x float]** [[CP0]]
+// CK23-DAG: [[VAR0]] = load [100 x float]*, [100 x float]** [[CAP0:%[^,]+]]
+// CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[VAR00]] = load [100 x float]*, [100 x float]** [[CAP00:%[^,]+]]
+// CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
 
-    // CK23: call void [[CALL02:@.+]]([100 x float]* {{[^,]+}})
-    #pragma omp target map(c)
+// CK23: call void [[CALL02:@.+]]([100 x float]* {{[^,]+}})
+#pragma omp target map(c)
       { c[3]+=1; }
 
-    // Region 03
-    // CK23-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE03]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE03]]{{.+}}, i8** null, i8** null)
-    // CK23-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK23-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 03
+// CK23-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK23-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK23-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK23-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK23-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK23-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK23-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float***
-    // CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float***
-    // CK23-DAG: store float** [[VAR0:%.+]], float*** [[CBP0]]
-    // CK23-DAG: store float** [[VAR00:%.+]], float*** [[CP0]]
-    // CK23-DAG: [[VAR0]] = load float**, float*** [[CAP0:%[^,]+]]
-    // CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
-    // CK23-DAG: [[VAR00]] = load float**, float*** [[CAP00:%[^,]+]]
-    // CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float***
+// CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float***
+// CK23-DAG: store float** [[VAR0:%.+]], float*** [[CBP0]]
+// CK23-DAG: store float** [[VAR00:%.+]], float*** [[CP0]]
+// CK23-DAG: [[VAR0]] = load float**, float*** [[CAP0:%[^,]+]]
+// CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[VAR00]] = load float**, float*** [[CAP00:%[^,]+]]
+// CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
 
-    // CK23: call void [[CALL03:@.+]](float** {{[^,]+}})
-    #pragma omp target map(d)
+// CK23: call void [[CALL03:@.+]](float** {{[^,]+}})
+#pragma omp target map(d)
       { d[3]+=1; }
-    // Region 04
-    // CK23-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE04]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE04]]{{.+}}, i8** null, i8** null)
-    // CK23-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK23-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 04
+// CK23-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK23-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK23-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK23-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK23-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK23-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK23-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [100 x float]**
-    // CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
-    // CK23-DAG: store [100 x float]* [[VAR0:%.+]], [100 x float]** [[CBP0]]
-    // CK23-DAG: store float* [[SEC0:%.+]], float** [[CP0]]
-    // CK23-DAG: [[SEC0]] = getelementptr {{.*}}[100 x float]* [[VAR00:%.+]], i{{.+}} 0, i{{.+}} 2
-    // CK23-DAG: [[VAR0]] = load [100 x float]*, [100 x float]** [[CAP0:%[^,]+]]
-    // CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
-    // CK23-DAG: [[VAR00]] = load [100 x float]*, [100 x float]** [[CAP00:%[^,]+]]
-    // CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [100 x float]**
+// CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
+// CK23-DAG: store [100 x float]* [[VAR0:%.+]], [100 x float]** [[CBP0]]
+// CK23-DAG: store float* [[SEC0:%.+]], float** [[CP0]]
+// CK23-DAG: [[SEC0]] = getelementptr {{.*}}[100 x float]* [[VAR00:%.+]], i{{.+}} 0, i{{.+}} 2
+// CK23-DAG: [[VAR0]] = load [100 x float]*, [100 x float]** [[CAP0:%[^,]+]]
+// CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[VAR00]] = load [100 x float]*, [100 x float]** [[CAP00:%[^,]+]]
+// CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
 
-    // CK23: call void [[CALL04:@.+]]([100 x float]* {{[^,]+}})
-    #pragma omp target map(c[2:4])
+// CK23: call void [[CALL04:@.+]]([100 x float]* {{[^,]+}})
+#pragma omp target map(c [2:4])
       { c[3]+=1; }
 
-    // Region 05
-    // CK23-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE05]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE05]]{{.+}}, i8** null, i8** null)
-    // CK23-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK23-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 05
+// CK23-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK23-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK23-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK23-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK23-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK23-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK23-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float**
-    // CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
-    // CK23-DAG: store float* [[RVAR0:%.+]], float** [[CBP0]]
-    // CK23-DAG: store float* [[SEC0:%.+]], float** [[CP0]]
-    // CK23-DAG: [[RVAR0]] = load float*, float** [[VAR0:%[^,]+]]
-    // CK23-DAG: [[SEC0]] = getelementptr {{.*}}float* [[RVAR00:%.+]], i{{.+}} 2
-    // CK23-DAG: [[RVAR00]] = load float*, float** [[VAR00:%[^,]+]]
-    // CK23-DAG: [[VAR0]] = load float**, float*** [[CAP0:%[^,]+]]
-    // CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
-    // CK23-DAG: [[VAR00]] = load float**, float*** [[CAP00:%[^,]+]]
-    // CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK23-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float**
+// CK23-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
+// CK23-DAG: store float* [[RVAR0:%.+]], float** [[CBP0]]
+// CK23-DAG: store float* [[SEC0:%.+]], float** [[CP0]]
+// CK23-DAG: [[RVAR0]] = load float*, float** [[VAR0:%[^,]+]]
+// CK23-DAG: [[SEC0]] = getelementptr {{.*}}float* [[RVAR00:%.+]], i{{.+}} 2
+// CK23-DAG: [[RVAR00]] = load float*, float** [[VAR00:%[^,]+]]
+// CK23-DAG: [[VAR0]] = load float**, float*** [[CAP0:%[^,]+]]
+// CK23-DAG: [[CAP0]] = getelementptr inbounds [[SA]], [[SA]]
+// CK23-DAG: [[VAR00]] = load float**, float*** [[CAP00:%[^,]+]]
+// CK23-DAG: [[CAP00]] = getelementptr inbounds [[SA]], [[SA]]
 
-    // CK23: call void [[CALL05:@.+]](float* {{[^,]+}})
-    #pragma omp target map(d[2:4])
+// CK23: call void [[CALL05:@.+]](float* {{[^,]+}})
+#pragma omp target map(d [2:4])
       { d[3]+=1; }
   }();
   return b;

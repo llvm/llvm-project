@@ -105,164 +105,195 @@ struct CC {
     float la[X];
     T *lb;
 
-    // Region 00
-    // CK21-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]]{{.+}}, {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null, i8** null)
-    // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK21-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 00
+// CK21-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK21-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK21-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK21-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK21-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK21-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK21-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-    // CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
-    // CK21-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-    // CK21-DAG: store i32* [[SEC0:%.+]], i32** [[CP0]]
-    // CK21-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0:%.+]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+// CK21-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK21-DAG: store i32* [[SEC0:%.+]], i32** [[CP0]]
+// CK21-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0:%.+]], i{{.+}} 0, i{{.+}} 0
 
-    // CK21-USE: call void [[CALL00:@.+]]([[ST]]* {{[^,]+}})
-    // CK21-NOUSE: call void [[CALL00:@.+]]()
-    #pragma omp target map(A)
+// CK21-USE: call void [[CALL00:@.+]]([[ST]]* {{[^,]+}})
+// CK21-NOUSE: call void [[CALL00:@.+]]()
+#pragma omp target map(A)
     {
 #ifdef USE
       A += 1;
 #endif
     }
 
-    // Region 01
-    // CK21-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null, i8** null)
-    // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK21-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 01
+// CK21-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK21-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK21-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK21-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK21-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK21-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK21-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
-    // CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
-    // CK21-DAG: store i32* [[RVAR0:%.+]], i32** [[CBP0]]
-    // CK21-DAG: store i32* [[SEC0:%.+]], i32** [[CP0]]
-    // CK21-DAG: [[RVAR0]] = load i32*, i32** [[VAR0:%[^,]+]]
-    // CK21-DAG: [[SEC0]] = getelementptr {{.*}}i32* [[RVAR00:%.+]], i{{.+}} 0
-    // CK21-DAG: [[RVAR00]] = load i32*, i32** [[VAR0]]
+// CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
+// CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+// CK21-DAG: store i32* [[RVAR0:%.+]], i32** [[CBP0]]
+// CK21-DAG: store i32* [[SEC0:%.+]], i32** [[CP0]]
+// CK21-DAG: [[RVAR0]] = load i32*, i32** [[VAR0:%[^,]+]]
+// CK21-DAG: [[SEC0]] = getelementptr {{.*}}i32* [[RVAR00:%.+]], i{{.+}} 0
+// CK21-DAG: [[RVAR00]] = load i32*, i32** [[VAR0]]
 
-    // CK21-USE: call void [[CALL01:@.+]](i32* {{[^,]+}})
-    // CK21-NOUSE: call void [[CALL01:@.+]]()
-    #pragma omp target map(lb[:X])
+// CK21-USE: call void [[CALL01:@.+]](i32* {{[^,]+}})
+// CK21-NOUSE: call void [[CALL01:@.+]]()
+#pragma omp target map(lb[:X])
     {
 #ifdef USE
       lb[4] += 1;
 #endif
     }
 
-    // Region 02
-    // CK21-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE02]]{{.+}}, i8** null, i8** null)
-    // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK21-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-    // CK21-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+// Region 02
+// CK21-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK21-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK21-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK21-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK21-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK21-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+// CK21-DAG: store i64* [[SIZES:%.+]], i64** [[SARG]]
+// CK21-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK21-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// CK21-DAG: [[SIZES]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
 
-    // CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-    // CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float***
-    // CK21-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-    // CK21-DAG: store float** [[SEC0:%.+]], float*** [[CP0]]
-    // CK21-DAG: store i64 {{%.+}}, i64* [[S0]]
-    // CK21-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0]], i{{.+}} 0, i{{.+}} 2
+// CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float***
+// CK21-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK21-DAG: store float** [[SEC0:%.+]], float*** [[CP0]]
+// CK21-DAG: store i64 {{%.+}}, i64* [[S0]]
+// CK21-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0]], i{{.+}} 0, i{{.+}} 2
 
-    // CK21-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-    // CK21-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-    // CK21-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float***
-    // CK21-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
-    // CK21-DAG: store float** [[SEC0]], float*** [[CBP1]]
-    // CK21-DAG: store float* [[SEC1:%.+]], float** [[CP1]]
-    // CK21-DAG: [[SEC1]] = getelementptr {{.*}}float* [[RVAR1:%[^,]+]], i{{.+}} 123
-    // CK21-DAG: [[RVAR1]] = load float*, float** [[SEC1_:%[^,]+]]
-    // CK21-DAG: [[SEC1_]] = getelementptr {{.*}}[[ST]]* [[VAR0]], i{{.+}} 0, i{{.+}} 2
+// CK21-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK21-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK21-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float***
+// CK21-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
+// CK21-DAG: store float** [[SEC0]], float*** [[CBP1]]
+// CK21-DAG: store float* [[SEC1:%.+]], float** [[CP1]]
+// CK21-DAG: [[SEC1]] = getelementptr {{.*}}float* [[RVAR1:%[^,]+]], i{{.+}} 123
+// CK21-DAG: [[RVAR1]] = load float*, float** [[SEC1_:%[^,]+]]
+// CK21-DAG: [[SEC1_]] = getelementptr {{.*}}[[ST]]* [[VAR0]], i{{.+}} 0, i{{.+}} 2
 
-    // CK21-USE: call void [[CALL02:@.+]]([[ST]]* {{[^,]+}})
-    // CK21-NOUSE: call void [[CALL02:@.+]]()
-    #pragma omp target map(from:B[X:X+2])
+// CK21-USE: call void [[CALL02:@.+]]([[ST]]* {{[^,]+}})
+// CK21-NOUSE: call void [[CALL02:@.+]]()
+#pragma omp target map(from \
+                       : B [X:X + 2])
     {
 #ifdef USE
       B[2] += 1.0f;
 #endif
     }
 
-    // Region 03
-    // CK21-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE03]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE03]]{{.+}}, i8** null, i8** null)
-    // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK21-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 03
+// CK21-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK21-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK21-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK21-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK21-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK21-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK21-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [123 x float]**
-    // CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [123 x float]**
-    // CK21-DAG: store [123 x float]* [[VAR0:%.+]], [123 x float]** [[CBP0]]
-    // CK21-DAG: store [123 x float]* [[VAR0]], [123 x float]** [[CP0]]
+// CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [123 x float]**
+// CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [123 x float]**
+// CK21-DAG: store [123 x float]* [[VAR0:%.+]], [123 x float]** [[CBP0]]
+// CK21-DAG: store [123 x float]* [[VAR0]], [123 x float]** [[CP0]]
 
-    // CK21-USE: call void [[CALL03:@.+]]([123 x float]* {{[^,]+}})
-    // CK21-NOUSE: call void [[CALL03:@.+]]()
-    #pragma omp target map(from:la)
+// CK21-USE: call void [[CALL03:@.+]]([123 x float]* {{[^,]+}})
+// CK21-NOUSE: call void [[CALL03:@.+]]()
+#pragma omp target map(from \
+                       : la)
     {
 #ifdef USE
       la[3] += 1.0f;
 #endif
     }
 
-    // Region 04
-    // CK21-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE04]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE04]]{{.+}}, i8** null, i8** null)
-    // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK21-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 04
+// CK21-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK21-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK21-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK21-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK21-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK21-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK21-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
-    // CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
-    // CK21-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
-    // CK21-DAG: store i32* [[VAR0]], i32** [[CP0]]
+// CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
+// CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+// CK21-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
+// CK21-DAG: store i32* [[VAR0]], i32** [[CP0]]
 
-    // CK21-USE: call void [[CALL04:@.+]](i32* {{[^,]+}})
-    // CK21-NOUSE: call void [[CALL04:@.+]]()
-    #pragma omp target map(from:arg)
+// CK21-USE: call void [[CALL04:@.+]](i32* {{[^,]+}})
+// CK21-NOUSE: call void [[CALL04:@.+]]()
+#pragma omp target map(from \
+                       : arg)
     {
 #ifdef USE
       arg +=1;
 #endif
     }
 
-    // Make sure the extra flag is passed to the second map.
-    // Region 05
-    // CK21-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 3, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[3 x i{{.+}}]* [[MTYPE05]]{{.+}}, i8** null, i8** null)
-    // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK21-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-    // CK21-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+// Make sure the extra flag is passed to the second map.
+// Region 05
+// CK21-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK21-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK21-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK21-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK21-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK21-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+// CK21-DAG: store i64* [[SIZES:%.+]], i64** [[SARG]]
+// CK21-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK21-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// CK21-DAG: [[SIZES]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
 
-    // CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
-    // CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-    // CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
-    // CK21-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-    // CK21-DAG: store i32* [[SEC0:%.+]], i32** [[CP0]]
-    // CK21-DAG: store i64 {{%.+}}, i64* [[S0]]
-    // CK21-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+// CK21-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK21-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+// CK21-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK21-DAG: store i32* [[SEC0:%.+]], i32** [[CP0]]
+// CK21-DAG: store i64 {{%.+}}, i64* [[S0]]
+// CK21-DAG: [[SEC0]] = getelementptr {{.*}}[[ST]]* [[VAR0]], i{{.+}} 0, i{{.+}} 0
 
-    // CK21-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-    // CK21-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-    // CK21-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to [[ST]]**
-    // CK21-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
-    // CK21-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CBP1]]
-    // CK21-DAG: store i32* [[SEC0]], i32** [[CP1]]
+// CK21-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK21-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK21-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to [[ST]]**
+// CK21-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
+// CK21-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CBP1]]
+// CK21-DAG: store i32* [[SEC0]], i32** [[CP1]]
 
-    // CK21-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
-    // CK21-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-    // CK21-DAG: [[CBP2:%.+]] = bitcast i8** [[BP2]] to [[ST]]**
-    // CK21-DAG: [[CP2:%.+]] = bitcast i8** [[P2]] to i32**
-    // CK21-DAG: store [[ST]]* [[VAR2:%.+]], [[ST]]** [[CBP2]]
-    // CK21-DAG: store i32* [[SEC2:%.+]], i32** [[CP2]]
-    // CK21-DAG: [[SEC2]] = getelementptr {{.*}}[[ST]]* [[VAR2]], i{{.+}} 0, i{{.+}} 1
+// CK21-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
+// CK21-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
+// CK21-DAG: [[CBP2:%.+]] = bitcast i8** [[BP2]] to [[ST]]**
+// CK21-DAG: [[CP2:%.+]] = bitcast i8** [[P2]] to i32**
+// CK21-DAG: store [[ST]]* [[VAR2:%.+]], [[ST]]** [[CBP2]]
+// CK21-DAG: store i32* [[SEC2:%.+]], i32** [[CP2]]
+// CK21-DAG: [[SEC2]] = getelementptr {{.*}}[[ST]]* [[VAR2]], i{{.+}} 0, i{{.+}} 1
 
-    // CK21-USE: call void [[CALL05:@.+]]([[ST]]* {{[^,]+}})
-    // CK21-NOUSE: call void [[CALL05:@.+]]()
-    #pragma omp target map(A, A2)
+// CK21-USE: call void [[CALL05:@.+]]([[ST]]* {{[^,]+}})
+// CK21-NOUSE: call void [[CALL05:@.+]]()
+#pragma omp target map(A, A2)
     {
 #ifdef USE
       A += 1;

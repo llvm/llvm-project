@@ -24,56 +24,70 @@
 
 void array_shaping(float *f, int sa) {
 
-  // CK32-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE_TO]]{{.+}}, i8** null, i8** null)
-  // CK32-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK32-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-  // CK32-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+// CK32-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK32-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK32-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK32-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK32-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK32-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+// CK32-DAG: store i64* [[SIZES:%.+]], i64** [[SARG]]
+// CK32-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK32-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// CK32-DAG: [[SIZES]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
 
-  // CK32-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK32-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK32-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+// CK32-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK32-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK32-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
 
-  // CK32-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to float**
-  // CK32-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to float**
+// CK32-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to float**
+// CK32-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to float**
 
-  // CK32-DAG: store float* [[F1:%.+]], float** [[BPC0]],
-  // CK32-DAG: store float* [[F2:%.+]], float** [[PC0]],
-  // CK32-DAG: store i64 [[SIZE:%.+]], i64* [[S0]],
+// CK32-DAG: store float* [[F1:%.+]], float** [[BPC0]],
+// CK32-DAG: store float* [[F2:%.+]], float** [[PC0]],
+// CK32-DAG: store i64 [[SIZE:%.+]], i64* [[S0]],
 
-  // CK32-DAG: [[F1]] = load float*, float** [[F_ADDR:%.+]],
-  // CK32-DAG: [[F2]] = load float*, float** [[F_ADDR]],
-  // CK32-64-DAG: [[SIZE]] = mul nuw i64 [[SZ1:%.+]], 4
-  // CK32-64-DAG: [[SZ1]] = mul nuw i64 12, %{{.+}}
-  // CK32-32-DAG: [[SIZE]] = sext i32 [[SZ1:%.+]] to i64
-  // CK32-32-DAG: [[SZ1]] = mul nuw i32 [[SZ2:%.+]], 4
-  // CK32-32-DAG: [[SZ2]] = mul nuw i32 12, %{{.+}}
-  #pragma omp target map(to:([3][sa][4])f)
+// CK32-DAG: [[F1]] = load float*, float** [[F_ADDR:%.+]],
+// CK32-DAG: [[F2]] = load float*, float** [[F_ADDR]],
+// CK32-64-DAG: [[SIZE]] = mul nuw i64 [[SZ1:%.+]], 4
+// CK32-64-DAG: [[SZ1]] = mul nuw i64 12, %{{.+}}
+// CK32-32-DAG: [[SIZE]] = sext i32 [[SZ1:%.+]] to i64
+// CK32-32-DAG: [[SZ1]] = mul nuw i32 [[SZ2:%.+]], 4
+// CK32-32-DAG: [[SZ2]] = mul nuw i32 12, %{{.+}}
+#pragma omp target map(to \
+                       : ([3][sa][4])f)
   f[0] = 1;
   sa = 1;
-  // CK32-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE_FROM]]{{.+}}, i8** null, i8** null)
-  // CK32-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK32-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-  // CK32-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+// CK32-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK32-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK32-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK32-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK32-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK32-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+// CK32-DAG: store i64* [[SIZES:%.+]], i64** [[SARG]]
+// CK32-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK32-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// CK32-DAG: [[SIZES]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
 
-  // CK32-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK32-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK32-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+// CK32-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK32-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK32-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
 
-  // CK32-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to float**
-  // CK32-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to float**
+// CK32-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to float**
+// CK32-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to float**
 
-  // CK32-DAG: store float* [[F1:%.+]], float** [[BPC0]],
-  // CK32-DAG: store float* [[F2:%.+]], float** [[PC0]],
-  // CK32-DAG: store i64 [[SIZE:%.+]], i64* [[S0]],
+// CK32-DAG: store float* [[F1:%.+]], float** [[BPC0]],
+// CK32-DAG: store float* [[F2:%.+]], float** [[PC0]],
+// CK32-DAG: store i64 [[SIZE:%.+]], i64* [[S0]],
 
-  // CK32-DAG: [[F1]] = load float*, float** [[F_ADDR:%.+]],
-  // CK32-DAG: [[F2]] = load float*, float** [[F_ADDR]],
-  // CK32-64-DAG: [[SIZE]] = mul nuw i64 [[SZ1:%.+]], 5
-  // CK32-64-DAG: [[SZ1]] = mul nuw i64 4, %{{.+}}
-  // CK32-32-DAG: [[SIZE]] = sext i32 [[SZ1:%.+]] to i64
-  // CK32-32-DAG: [[SZ1]] = mul nuw i32 [[SZ2:%.+]], 5
-  // CK32-32-DAG: [[SZ2]] = mul nuw i32 4, %{{.+}}
-  #pragma omp target map(from: ([sa][5])f)
+// CK32-DAG: [[F1]] = load float*, float** [[F_ADDR:%.+]],
+// CK32-DAG: [[F2]] = load float*, float** [[F_ADDR]],
+// CK32-64-DAG: [[SIZE]] = mul nuw i64 [[SZ1:%.+]], 5
+// CK32-64-DAG: [[SZ1]] = mul nuw i64 4, %{{.+}}
+// CK32-32-DAG: [[SIZE]] = sext i32 [[SZ1:%.+]] to i64
+// CK32-32-DAG: [[SZ1]] = mul nuw i32 [[SZ2:%.+]], 5
+// CK32-32-DAG: [[SZ2]] = mul nuw i32 4, %{{.+}}
+#pragma omp target map(from \
+                       : ([sa][5])f)
   f[0] = 1;
 }
 

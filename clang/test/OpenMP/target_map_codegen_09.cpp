@@ -43,18 +43,22 @@
 void implicit_maps_pointer (){
   double *ddyn;
 
-  // CK10-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** null)
-  // CK10-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK10-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK10-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK10-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK10-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to double**
-  // CK10-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double**
-  // CK10-DAG: store double* [[PTR:%[^,]+]], double** [[CBP1]]
-  // CK10-DAG: store double* [[PTR]], double** [[CP1]]
+// CK10-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK10-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK10-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK10-DAG: [[PGEP:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK10-DAG: store i8** [[PGEP:%.+]], i8*** [[BPARG]]
+// CK10-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK10-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK10-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK10-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK10-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to double**
+// CK10-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double**
+// CK10-DAG: store double* [[PTR:%[^,]+]], double** [[CBP1]]
+// CK10-DAG: store double* [[PTR]], double** [[CP1]]
 
-  // CK10: call void [[KERNEL:@.+]](double* [[PTR]])
-  #pragma omp target
+// CK10: call void [[KERNEL:@.+]](double* [[PTR]])
+#pragma omp target
   {
     ddyn[0] += 1.0;
     ddyn[1] += 1.0;

@@ -49,134 +49,162 @@ void foo(float *&lr, T *&tr) {
   float *l;
   T *t;
 
-  // CK1-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES00]]{{.+}}, {{.+}}[[TYPES00]]{{.+}}, i8** null, i8** null)
-  // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to double**
-  // CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double**
-  // CK1-DAG: store double* [[VAL:%.+]], double** [[CBP1]]
-  // CK1-DAG: store double* [[VAL]], double** [[CP1]]
-  // CK1-DAG: [[VAL]] = load double*, double** [[ADDR:@g]],
+// CK1-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK1-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK1-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK1-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK1-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to double**
+// CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double**
+// CK1-DAG: store double* [[VAL:%.+]], double** [[CBP1]]
+// CK1-DAG: store double* [[VAL]], double** [[CP1]]
+// CK1-DAG: [[VAL]] = load double*, double** [[ADDR:@g]],
 
-  // CK1: call void [[KERNEL:@.+]](double* [[VAL]])
-  #pragma omp target is_device_ptr(g)
+// CK1: call void [[KERNEL:@.+]](double* [[VAL]])
+#pragma omp target is_device_ptr(g)
   {
     ++g;
   }
 
-  // CK1-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES01]]{{.+}}, {{.+}}[[TYPES01]]{{.+}}, i8** null, i8** null)
-  // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float**
-  // CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
-  // CK1-DAG: store float* [[VAL:%.+]], float** [[CBP1]]
-  // CK1-DAG: store float* [[VAL]], float** [[CP1]]
-  // CK1-DAG: [[VAL]] = load float*, float** [[ADDR:%.+]],
+// CK1-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK1-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK1-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK1-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK1-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float**
+// CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
+// CK1-DAG: store float* [[VAL:%.+]], float** [[CBP1]]
+// CK1-DAG: store float* [[VAL]], float** [[CP1]]
+// CK1-DAG: [[VAL]] = load float*, float** [[ADDR:%.+]],
 
-  // CK1: call void [[KERNEL:@.+]](float* [[VAL]])
-  #pragma omp target is_device_ptr(l)
+// CK1: call void [[KERNEL:@.+]](float* [[VAL]])
+#pragma omp target is_device_ptr(l)
   {
     ++l;
   }
 
-  // CK1-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES02]]{{.+}}, {{.+}}[[TYPES02]]{{.+}}, i8** null, i8** null)
-  // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
-  // CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
-  // CK1-DAG: store i32* [[VAL:%.+]], i32** [[CBP1]]
-  // CK1-DAG: store i32* [[VAL]], i32** [[CP1]]
-  // CK1-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
+// CK1-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK1-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK1-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK1-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK1-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
+// CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
+// CK1-DAG: store i32* [[VAL:%.+]], i32** [[CBP1]]
+// CK1-DAG: store i32* [[VAL]], i32** [[CP1]]
+// CK1-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
 
-  // CK1: call void [[KERNEL:@.+]](i32* [[VAL]])
-  #pragma omp target is_device_ptr(t)
+// CK1: call void [[KERNEL:@.+]](i32* [[VAL]])
+#pragma omp target is_device_ptr(t)
   {
     ++t;
   }
 
-  // CK1-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES03]]{{.+}}, {{.+}}[[TYPES03]]{{.+}}, i8** null, i8** null)
-  // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float**
-  // CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
-  // CK1-DAG: store float* [[VAL:%.+]], float** [[CBP1]]
-  // CK1-DAG: store float* [[VAL]], float** [[CP1]]
-  // CK1-DAG: [[VAL]] = load float*, float** [[ADDR:%.+]],
-  // CK1-DAG: [[ADDR]] = load float**, float*** [[ADDR2:%.+]],
+// CK1-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK1-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK1-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK1-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK1-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float**
+// CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
+// CK1-DAG: store float* [[VAL:%.+]], float** [[CBP1]]
+// CK1-DAG: store float* [[VAL]], float** [[CP1]]
+// CK1-DAG: [[VAL]] = load float*, float** [[ADDR:%.+]],
+// CK1-DAG: [[ADDR]] = load float**, float*** [[ADDR2:%.+]],
 
-  // CK1: call void [[KERNEL:@.+]](float* [[VAL]])
-  #pragma omp target is_device_ptr(lr)
+// CK1: call void [[KERNEL:@.+]](float* [[VAL]])
+#pragma omp target is_device_ptr(lr)
   {
     ++lr;
   }
 
-  // CK1-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES04]]{{.+}}, {{.+}}[[TYPES04]]{{.+}}, i8** null, i8** null)
-  // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
-  // CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
-  // CK1-DAG: store i32* [[VAL:%.+]], i32** [[CBP1]]
-  // CK1-DAG: store i32* [[VAL]], i32** [[CP1]]
-  // CK1-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
-  // CK1-DAG: [[ADDR]] = load i32**, i32*** [[ADDR2:%.+]],
+// CK1-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK1-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK1-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK1-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK1-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
+// CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
+// CK1-DAG: store i32* [[VAL:%.+]], i32** [[CBP1]]
+// CK1-DAG: store i32* [[VAL]], i32** [[CP1]]
+// CK1-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
+// CK1-DAG: [[ADDR]] = load i32**, i32*** [[ADDR2:%.+]],
 
-  // CK1: call void [[KERNEL:@.+]](i32* [[VAL]])
-  #pragma omp target is_device_ptr(tr)
+// CK1: call void [[KERNEL:@.+]](i32* [[VAL]])
+#pragma omp target is_device_ptr(tr)
   {
     ++tr;
   }
 
-  // CK1-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES05]]{{.+}}, {{.+}}[[TYPES05]]{{.+}}, i8** null, i8** null)
-  // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
-  // CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
-  // CK1-DAG: store i32* [[VAL:%.+]], i32** [[CBP1]]
-  // CK1-DAG: store i32* [[VAL]], i32** [[CP1]]
-  // CK1-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
-  // CK1-DAG: [[ADDR]] = load i32**, i32*** [[ADDR2:%.+]],
+// CK1-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK1-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK1-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK1-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK1-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
+// CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
+// CK1-DAG: store i32* [[VAL:%.+]], i32** [[CBP1]]
+// CK1-DAG: store i32* [[VAL]], i32** [[CP1]]
+// CK1-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
+// CK1-DAG: [[ADDR]] = load i32**, i32*** [[ADDR2:%.+]],
 
-  // CK1: call void [[KERNEL:@.+]](i32* [[VAL]])
-  #pragma omp target is_device_ptr(tr,lr)
+// CK1: call void [[KERNEL:@.+]](i32* [[VAL]])
+#pragma omp target is_device_ptr(tr, lr)
   {
     ++tr;
   }
 
-  // CK1-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 2, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES06]]{{.+}}, {{.+}}[[TYPES06]]{{.+}}, i8** null, i8** null)
-  // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
-  // CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
-  // CK1-DAG: store i32* [[VAL:%.+]], i32** [[CBP1]]
-  // CK1-DAG: store i32* [[VAL]], i32** [[CP1]]
-  // CK1-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
-  // CK1-DAG: [[ADDR]] = load i32**, i32*** [[ADDR2:%.+]],
+// CK1-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK1-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK1-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK1-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK1-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
+// CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
+// CK1-DAG: store i32* [[VAL:%.+]], i32** [[CBP1]]
+// CK1-DAG: store i32* [[VAL]], i32** [[CP1]]
+// CK1-DAG: [[VAL]] = load i32*, i32** [[ADDR:%.+]],
+// CK1-DAG: [[ADDR]] = load i32**, i32*** [[ADDR2:%.+]],
 
-  // CK1-DAG: [[_BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 1
-  // CK1-DAG: [[_P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 1
-  // CK1-DAG: [[_CBP1:%.+]] = bitcast i8** [[_BP1]] to float**
-  // CK1-DAG: [[_CP1:%.+]] = bitcast i8** [[_P1]] to float**
-  // CK1-DAG: store float* [[_VAL:%.+]], float** [[_CBP1]]
-  // CK1-DAG: store float* [[_VAL]], float** [[_CP1]]
-  // CK1-DAG: [[_VAL]] = load float*, float** [[_ADDR:%.+]],
-  // CK1-DAG: [[_ADDR]] = load float**, float*** [[_ADDR2:%.+]],
+// CK1-DAG: [[_BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 1
+// CK1-DAG: [[_P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 1
+// CK1-DAG: [[_CBP1:%.+]] = bitcast i8** [[_BP1]] to float**
+// CK1-DAG: [[_CP1:%.+]] = bitcast i8** [[_P1]] to float**
+// CK1-DAG: store float* [[_VAL:%.+]], float** [[_CBP1]]
+// CK1-DAG: store float* [[_VAL]], float** [[_CP1]]
+// CK1-DAG: [[_VAL]] = load float*, float** [[_ADDR:%.+]],
+// CK1-DAG: [[_ADDR]] = load float**, float*** [[_ADDR2:%.+]],
 
-  // CK1: call void [[KERNEL:@.+]](i32* [[VAL]], float* [[_VAL]])
-  #pragma omp target is_device_ptr(tr,lr)
+// CK1: call void [[KERNEL:@.+]](i32* [[VAL]], float* [[_VAL]])
+#pragma omp target is_device_ptr(tr, lr)
   {
     ++tr,++lr;
   }
@@ -206,21 +234,6 @@ void bar(float *&a, int *&b) {
 
 // CK2: [[ST:%.+]] = type { double*, double** }
 
-// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l244.region_id = weak{{.*}} constant i8 0
-
-// CK2: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 288]
-
-// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l259.region_id = weak{{.*}} constant i8 0
-
-// CK2: [[SIZE01:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK2: [[MTYPE01:@.+]] = {{.+}}constant [1 x i64] [i64 288]
-
-// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l274.region_id = weak{{.*}} constant i8 0
-
-// CK2: [[SIZE02:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK2: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 288]
-
 template <typename T>
 struct ST {
   T *a;
@@ -231,47 +244,59 @@ struct ST {
   void foo(double *&arg) {
     int *la = 0;
 
-    // CK2-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null, i8** null)
-    // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// CK2-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK2-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK2-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK2-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK2-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-    // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-    // CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-    // CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
-    #pragma omp target is_device_ptr(a)
+// CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
+// CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+#pragma omp target is_device_ptr(a)
     {
       a++;
     }
 
-    // CK2-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null, i8** null)
-    // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// CK2-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK2-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK2-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK2-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK2-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-    // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-    // CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-    // CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
-    #pragma omp target is_device_ptr(b)
+// CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
+// CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+#pragma omp target is_device_ptr(b)
     {
       b++;
     }
 
-    // CK2-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}}, i8** null, i8** null)
-    // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-    // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// CK2-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK2-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK2-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK2-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK2-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-    // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-    // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-    // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-    // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-    // CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-    // CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
-    #pragma omp target is_device_ptr(a, b)
+// CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
+// CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+#pragma omp target is_device_ptr(a, b)
     {
       a++;
       b++;
@@ -307,7 +332,11 @@ void bar(double *arg){
 // CK3-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x21]]]
 void bar() {
   __attribute__((aligned(64))) double *ptr;
-  // CK3-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** null)
+  // CK3-DAG: [[RET:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 [[DEVICE:.+]], i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+  // CK3-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+  // CK3-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+  // CK3-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+  // CK3-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
   // CK3-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK3-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK3-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0

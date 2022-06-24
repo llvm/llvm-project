@@ -46,40 +46,50 @@ void explicit_maps_single (int ii){
   // Map of a scalar.
   int a = ii;
 
-  // Close.
-  // Region 00
-  // CK31-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null, i8** null)
-  // CK31-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK31-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Close.
+// Region 00
+// CK31-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK31-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK31-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK31-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK31-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK31-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK31-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-  // CK31-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK31-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK31-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
-  // CK31-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
-  // CK31-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
-  // CK31-DAG: store i32* [[VAR0]], i32** [[CP0]]
+// CK31-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK31-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK31-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
+// CK31-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+// CK31-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
+// CK31-DAG: store i32* [[VAR0]], i32** [[CP0]]
 
-  // CK31: call void [[CALL00:@.+]](i32* {{[^,]+}})
-  #pragma omp target map(close, tofrom: a)
+// CK31: call void [[CALL00:@.+]](i32* {{[^,]+}})
+#pragma omp target map(close, tofrom \
+                       : a)
   {
    a++;
   }
 
-  // Always Close.
-  // Region 01
-  // CK31-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null, i8** null)
-  // CK31-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK31-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Always Close.
+// Region 01
+// CK31-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK31-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK31-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK31-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK31-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK31-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK31-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-  // CK31-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK31-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK31-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
-  // CK31-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
-  // CK31-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
-  // CK31-DAG: store i32* [[VAR0]], i32** [[CP0]]
+// CK31-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK31-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK31-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
+// CK31-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+// CK31-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
+// CK31-DAG: store i32* [[VAR0]], i32** [[CP0]]
 
-  // CK31: call void [[CALL01:@.+]](i32* {{[^,]+}})
-  #pragma omp target map(always close tofrom: a)
+// CK31: call void [[CALL01:@.+]](i32* {{[^,]+}})
+#pragma omp target map(always close tofrom \
+                       : a)
   {
    a++;
   }
