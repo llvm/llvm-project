@@ -1,7 +1,7 @@
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals -filetype=obj %s -o %t.o
 ; RUN: wasm-ld --no-gc-sections --experimental-pic -pie -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
-; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DISASSEM
+; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DISASSEM
 
 target triple = "wasm32-unknown-emscripten"
 
@@ -91,10 +91,12 @@ declare void @external_func()
 ; CHECK-NEXT:         Name:            _start
 ; CHECK-NEXT:     GlobalNames:
 
-; DISASSEM:       <__wasm_call_ctors>:
+; DISASSEM-LABEL:  <__wasm_call_ctors>:
 ; DISASSEM-EMPTY:
-; DISASSEM-NEXT:   call 2
 ; DISASSEM-NEXT:   end
+
+; DISASSEM-LABEL:  <__wasm_apply_data_relocs>:
+; DISASSEM:        end
 
 ; Run the same test with extended-const support.  When this is available
 ; we don't need __wasm_apply_global_relocs and instead rely on the add
@@ -153,10 +155,10 @@ declare void @external_func()
 ; SHMEM:         - Type:            START
 ; SHMEM-NEXT:      StartFunction:   6
 
-; DISASSEM-SHMEM:       <__wasm_start>:
+; DISASSEM-SHMEM-LABEL:  <__wasm_start>:
 ; DISASSEM-SHMEM-EMPTY:
 ; DISASSEM-SHMEM-NEXT:   call 5
-; DISASSEM-SHMEM-NEXT:   call 3
+; DISASSEM-SHMEM-NEXT:   call 4
 ; DISASSEM-SHMEM-NEXT:   end
 
 ; SHMEM:         FunctionNames:
@@ -167,9 +169,9 @@ declare void @external_func()
 ; SHMEM-NEXT:      - Index:           2
 ; SHMEM-NEXT:        Name:            __wasm_init_tls
 ; SHMEM-NEXT:      - Index:           3
-; SHMEM-NEXT:        Name:            __wasm_init_memory
-; SHMEM-NEXT:      - Index:           4
 ; SHMEM-NEXT:        Name:            __wasm_apply_data_relocs
+; SHMEM-NEXT:      - Index:           4
+; SHMEM-NEXT:        Name:            __wasm_init_memory
 ; SHMEM-NEXT:      - Index:           5
 ; SHMEM-NEXT:        Name:            __wasm_apply_global_relocs
 ; SHMEM-NEXT:      - Index:           6

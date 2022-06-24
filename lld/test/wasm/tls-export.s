@@ -40,6 +40,9 @@ tls1:
 # CHECK-NEXT:      - Name:            __wasm_call_ctors
 # CHECK-NEXT:        Kind:            FUNCTION
 # CHECK-NEXT:        Index:           0
+# CHECK-NEXT:      - Name:            __wasm_apply_data_relocs
+# CHECK-NEXT:        Kind:            FUNCTION
+# CHECK-NEXT:        Index:           1
 # CHECK-NEXT:      - Name:            tls1
 # CHECK-NEXT:        Kind:            GLOBAL
 # CHECK-NEXT:        Index:           2

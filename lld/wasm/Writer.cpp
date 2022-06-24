@@ -1018,17 +1018,6 @@ void Writer::createSyntheticInitFunctions() {
     WasmSym::tlsBase->markLive();
   }
 
-  if (config->isPic ||
-      config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
-    // For PIC code, or when dynamically importing addresses, we create
-    // synthetic functions that apply relocations.  These get called from
-    // __wasm_call_ctors before the user-level constructors.
-    WasmSym::applyDataRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_data_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
-    WasmSym::applyDataRelocs->markLive();
-  }
-
   if (config->isPic && out.globalSec->needsRelocations()) {
     WasmSym::applyGlobalRelocs = symtab->addSyntheticFunction(
         "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
@@ -1298,8 +1287,8 @@ void Writer::createStartFunction() {
 
 // For -shared (PIC) output, we create create a synthetic function which will
 // apply any relocations to the data segments on startup.  This function is
-// called `__wasm_apply_data_relocs` and is added at the beginning of
-// `__wasm_call_ctors` before any of the constructors run.
+// called `__wasm_apply_data_relocs` and is expected to be called before
+// any user code (i.e. before `__wasm_call_ctors`).
 void Writer::createApplyDataRelocationsFunction() {
   LLVM_DEBUG(dbgs() << "createApplyDataRelocationsFunction\n");
   // First write the body's contents to a string.
@@ -1352,11 +1341,9 @@ void Writer::createApplyGlobalTLSRelocationsFunction() {
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
 // in input object.
 void Writer::createCallCtorsFunction() {
-  // If __wasm_call_ctors isn't referenced, there aren't any ctors, and we
-  // aren't calling `__wasm_apply_data_relocs` for Emscripten-style PIC, don't
+  // If __wasm_call_ctors isn't referenced, there aren't any ctors, don't
   // define the `__wasm_call_ctors` function.
-  if (!WasmSym::callCtors->isLive() && !WasmSym::applyDataRelocs &&
-      initFunctions.empty())
+  if (!WasmSym::callCtors->isLive() && initFunctions.empty())
     return;
 
   // First write the body's contents to a string.
@@ -1364,12 +1351,6 @@ void Writer::createCallCtorsFunction() {
   {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
-
-    if (WasmSym::applyDataRelocs) {
-      writeU8(os, WASM_OPCODE_CALL, "CALL");
-      writeUleb128(os, WasmSym::applyDataRelocs->getFunctionIndex(),
-                   "function index");
-    }
 
     // Call constructors
     for (const WasmInitEntry &f : initFunctions) {
