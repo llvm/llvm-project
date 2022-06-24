@@ -7012,7 +7012,8 @@ private:
       return genImplicitArrayAccess(x, components);
     }
     if (pathIsEmpty(components))
-      return genAsScalar(x);
+      return components.substring ? genAsScalar(*components.substring)
+                                  : genAsScalar(x);
     mlir::Location loc = getLoc();
     return [=](IterSpace) -> ExtValue {
       fir::emitFatalError(loc, "reached symbol with path");
