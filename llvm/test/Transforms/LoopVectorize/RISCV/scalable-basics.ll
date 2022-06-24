@@ -89,6 +89,134 @@ for.end:
   ret void
 }
 
+; Same as above, but with op type of i32.  We currently have a bug around
+; etype=ELEN profitability in the vectorizer, and having a smaller element
+; width test allows us to highlight different aspects of codegen.
+define void @vector_add_i32(ptr noalias nocapture %a, i32 %v, i64 %n) {
+; VLENUNK-LABEL: @vector_add_i32(
+; VLENUNK-NEXT:  entry:
+; VLENUNK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; VLENUNK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; VLENUNK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; VLENUNK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VLENUNK:       vector.ph:
+; VLENUNK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; VLENUNK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; VLENUNK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
+; VLENUNK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[V:%.*]], i32 0
+; VLENUNK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[V]], i32 0
+; VLENUNK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; VLENUNK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; VLENUNK:       vector.body:
+; VLENUNK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; VLENUNK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
+; VLENUNK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; VLENUNK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
+; VLENUNK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 0
+; VLENUNK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 1
+; VLENUNK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], [[TMP8]]
+; VLENUNK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP4]]
+; VLENUNK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP9]]
+; VLENUNK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 0
+; VLENUNK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP12]], align 4
+; VLENUNK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
+; VLENUNK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 2
+; VLENUNK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 [[TMP14]]
+; VLENUNK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x i32>, ptr [[TMP15]], align 4
+; VLENUNK-NEXT:    [[TMP16:%.*]] = add <vscale x 2 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; VLENUNK-NEXT:    [[TMP17:%.*]] = add <vscale x 2 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT3]]
+; VLENUNK-NEXT:    store <vscale x 2 x i32> [[TMP16]], ptr [[TMP12]], align 4
+; VLENUNK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vscale.i32()
+; VLENUNK-NEXT:    [[TMP19:%.*]] = mul i32 [[TMP18]], 2
+; VLENUNK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 [[TMP19]]
+; VLENUNK-NEXT:    store <vscale x 2 x i32> [[TMP17]], ptr [[TMP20]], align 4
+; VLENUNK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
+; VLENUNK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], 4
+; VLENUNK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP22]]
+; VLENUNK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VLENUNK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VLENUNK:       middle.block:
+; VLENUNK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; VLENUNK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; VLENUNK:       scalar.ph:
+; VLENUNK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; VLENUNK-NEXT:    br label [[FOR_BODY:%.*]]
+; VLENUNK:       for.body:
+; VLENUNK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; VLENUNK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; VLENUNK-NEXT:    [[ELEM:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; VLENUNK-NEXT:    [[ADD:%.*]] = add i32 [[ELEM]], [[V]]
+; VLENUNK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4
+; VLENUNK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; VLENUNK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; VLENUNK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; VLENUNK:       for.end:
+; VLENUNK-NEXT:    ret void
+;
+; VLEN128-LABEL: @vector_add_i32(
+; VLEN128-NEXT:  entry:
+; VLEN128-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VLEN128:       vector.ph:
+; VLEN128-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[V:%.*]], i32 0
+; VLEN128-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; VLEN128-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[V]], i32 0
+; VLEN128-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; VLEN128-NEXT:    br label [[VECTOR_BODY:%.*]]
+; VLEN128:       vector.body:
+; VLEN128-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; VLEN128-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; VLEN128-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
+; VLEN128-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
+; VLEN128-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP1]]
+; VLEN128-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
+; VLEN128-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; VLEN128-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 4
+; VLEN128-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
+; VLEN128-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; VLEN128-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT3]]
+; VLEN128-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP4]], align 4
+; VLEN128-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP5]], align 4
+; VLEN128-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; VLEN128-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; VLEN128-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VLEN128:       middle.block:
+; VLEN128-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
+; VLEN128-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; VLEN128:       scalar.ph:
+; VLEN128-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; VLEN128-NEXT:    br label [[FOR_BODY:%.*]]
+; VLEN128:       for.body:
+; VLEN128-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; VLEN128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; VLEN128-NEXT:    [[ELEM:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; VLEN128-NEXT:    [[ADD:%.*]] = add i32 [[ELEM]], [[V]]
+; VLEN128-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4
+; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; VLEN128:       for.end:
+; VLEN128-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %elem = load i32, ptr %arrayidx
+  %add = add i32 %elem, %v
+  store i32 %add, ptr %arrayidx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+
 ; a[b[i]] += v, mostly to exercise scatter/gather costing
 ; TODO: Currently fails to vectorize due to a memory conflict
 define void @indexed_add(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) {
@@ -187,7 +315,7 @@ define void @indexed_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; VLEN128-NEXT:    call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> [[BROADCAST_SPLAT3]], <2 x ptr> [[TMP7]], i32 8, <2 x i1> <i1 true, i1 true>)
 ; VLEN128-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VLEN128-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VLEN128:       middle.block:
 ; VLEN128-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; VLEN128-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -202,7 +330,7 @@ define void @indexed_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; VLEN128-NEXT:    store i64 [[V]], ptr [[AADDR]], align 8
 ; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VLEN128:       for.end:
 ; VLEN128-NEXT:    ret void
 ;
@@ -267,7 +395,7 @@ define i64 @indexed_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64
 ; VLEN128-NEXT:    [[TMP9]] = add <2 x i64> [[VEC_PHI1]], [[WIDE_MASKED_GATHER3]]
 ; VLEN128-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VLEN128-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VLEN128:       middle.block:
 ; VLEN128-NEXT:    [[BIN_RDX:%.*]] = add <2 x i64> [[TMP9]], [[TMP8]]
 ; VLEN128-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[BIN_RDX]])
@@ -287,7 +415,7 @@ define i64 @indexed_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64
 ; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLEN128-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[ELEM]]
 ; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; VLEN128:       for.end:
 ; VLEN128-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT]], [[FOR_BODY]] ], [ [[TMP11]], [[MIDDLE_BLOCK]] ]
 ; VLEN128-NEXT:    ret i64 [[SUM_NEXT_LCSSA]]
@@ -346,7 +474,7 @@ define void @splat_int(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; VLEN128-NEXT:    store <2 x i64> [[BROADCAST_SPLAT2]], ptr [[TMP5]], align 8
 ; VLEN128-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VLEN128-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VLEN128:       middle.block:
 ; VLEN128-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; VLEN128-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -359,7 +487,7 @@ define void @splat_int(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; VLEN128-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
 ; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; VLEN128:       for.end:
 ; VLEN128-NEXT:    ret void
 ;
@@ -413,7 +541,7 @@ define void @splat_ptr(ptr noalias nocapture %a, ptr %v, i64 %n) {
 ; VLEN128-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT2]], ptr [[TMP5]], align 8
 ; VLEN128-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VLEN128-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VLEN128:       middle.block:
 ; VLEN128-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; VLEN128-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -426,7 +554,7 @@ define void @splat_ptr(ptr noalias nocapture %a, ptr %v, i64 %n) {
 ; VLEN128-NEXT:    store ptr [[V]], ptr [[ARRAYIDX]], align 8
 ; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; VLEN128:       for.end:
 ; VLEN128-NEXT:    ret void
 ;
@@ -485,7 +613,7 @@ define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; VLEN128-NEXT:    store <2 x i64> [[BROADCAST_SPLAT2]], ptr [[TMP5]], align 8
 ; VLEN128-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VLEN128-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; VLEN128:       middle.block:
 ; VLEN128-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; VLEN128-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -499,7 +627,7 @@ define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; VLEN128-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
 ; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; VLEN128:       for.end:
 ; VLEN128-NEXT:    ret void
 ;
@@ -559,7 +687,7 @@ define void @uniform_store_unaligned(ptr noalias nocapture %a, ptr noalias nocap
 ; VLEN128-NEXT:    store <2 x i64> [[BROADCAST_SPLAT2]], ptr [[TMP5]], align 8
 ; VLEN128-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VLEN128-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VLEN128:       middle.block:
 ; VLEN128-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; VLEN128-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -573,7 +701,7 @@ define void @uniform_store_unaligned(ptr noalias nocapture %a, ptr noalias nocap
 ; VLEN128-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
 ; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; VLEN128:       for.end:
 ; VLEN128-NEXT:    ret void
 ;
@@ -632,7 +760,7 @@ define i64 @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64
 ; VLEN128-NEXT:    store <2 x i64> [[BROADCAST_SPLAT2]], ptr [[TMP7]], align 8
 ; VLEN128-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VLEN128-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VLEN128:       middle.block:
 ; VLEN128-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; VLEN128-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -646,7 +774,7 @@ define i64 @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64
 ; VLEN128-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
 ; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; VLEN128:       for.end:
 ; VLEN128-NEXT:    [[V_LCSSA:%.*]] = phi i64 [ [[V]], [[FOR_BODY]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
 ; VLEN128-NEXT:    ret i64 [[V_LCSSA]]
@@ -706,7 +834,7 @@ define i64 @uniform_load_unaligned(ptr noalias nocapture %a, ptr noalias nocaptu
 ; VLEN128-NEXT:    store <2 x i64> [[BROADCAST_SPLAT2]], ptr [[TMP7]], align 8
 ; VLEN128-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VLEN128-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; VLEN128:       middle.block:
 ; VLEN128-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; VLEN128-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -720,7 +848,7 @@ define i64 @uniform_load_unaligned(ptr noalias nocapture %a, ptr noalias nocaptu
 ; VLEN128-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
 ; VLEN128-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLEN128-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; VLEN128-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; VLEN128:       for.end:
 ; VLEN128-NEXT:    [[V_LCSSA:%.*]] = phi i64 [ [[V]], [[FOR_BODY]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
 ; VLEN128-NEXT:    ret i64 [[V_LCSSA]]
