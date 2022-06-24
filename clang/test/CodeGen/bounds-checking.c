@@ -35,8 +35,9 @@ union U { int a[0]; int b[1]; int c[2]; };
 
 // CHECK-LABEL: define {{.*}} @f4
 int f4(union U *u, int i) {
-  // a and b are treated as flexible array members.
-  // CHECK-NOT: @llvm.ubsantrap
+  // a and b bounds are treated as flexible array members, but they are inside a union
+  // and that prevent them from being considered as flexible array members.
+  // NONLOCAL: @llvm.ubsantrap
   return u->a[i] + u->b[i];
   // CHECK: }
 }

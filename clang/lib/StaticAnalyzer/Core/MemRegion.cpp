@@ -789,6 +789,9 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
       if (isa<IncompleteArrayType>(AT))
         return true;
 
+      if (getContext().getLangOpts().StrictFlexArrays)
+        return false;
+
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
         const llvm::APInt &Size = CAT->getSize();
         if (Size.isZero())
