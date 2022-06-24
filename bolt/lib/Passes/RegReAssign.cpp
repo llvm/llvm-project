@@ -197,8 +197,8 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
     }
   }
   std::iota(RankedRegs.begin(), RankedRegs.end(), 0); // 0, 1, 2, 3...
-  std::sort(RankedRegs.begin(), RankedRegs.end(),
-            [&](size_t A, size_t B) { return RegScore[A] > RegScore[B]; });
+  llvm::sort(RankedRegs,
+             [&](size_t A, size_t B) { return RegScore[A] > RegScore[B]; });
 
   LLVM_DEBUG({
     for (size_t Reg : RankedRegs) {

@@ -233,7 +233,7 @@ void Heatmap::printCDF(raw_ostream &OS) const {
     NumTotalCounts += KV.second;
   }
 
-  std::sort(Counts.begin(), Counts.end(), std::greater<uint64_t>());
+  llvm::sort(Counts, std::greater<uint64_t>());
 
   double RatioLeftInKB = (1.0 * BucketSize) / 1024;
   assert(NumTotalCounts > 0 &&

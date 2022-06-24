@@ -353,10 +353,10 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
 
     // Add CFG edges to the basic blocks of the inlined instance.
     std::vector<BinaryBasicBlock *> Successors(BB.succ_size());
-    std::transform(BB.succ_begin(), BB.succ_end(), Successors.begin(),
-                   [&InlinedBBMap](const BinaryBasicBlock *BB) {
-                     return InlinedBBMap.at(BB);
-                   });
+    llvm::transform(BB.successors(), Successors.begin(),
+                    [&InlinedBBMap](const BinaryBasicBlock *BB) {
+                      return InlinedBBMap.at(BB);
+                    });
 
     if (CallerFunction.hasValidProfile() && Callee.hasValidProfile())
       InlinedBB->addSuccessors(Successors.begin(), Successors.end(),
@@ -397,11 +397,10 @@ bool Inliner::inlineCallsInFunction(BinaryFunction &Function) {
   BinaryContext &BC = Function.getBinaryContext();
   std::vector<BinaryBasicBlock *> Blocks(Function.layout().begin(),
                                          Function.layout().end());
-  std::sort(Blocks.begin(), Blocks.end(),
-            [](const BinaryBasicBlock *BB1, const BinaryBasicBlock *BB2) {
-              return BB1->getKnownExecutionCount() >
-                     BB2->getKnownExecutionCount();
-            });
+  llvm::sort(
+      Blocks, [](const BinaryBasicBlock *BB1, const BinaryBasicBlock *BB2) {
+        return BB1->getKnownExecutionCount() > BB2->getKnownExecutionCount();
+      });
 
   bool DidInlining = false;
   for (BinaryBasicBlock *BB : Blocks) {
@@ -520,11 +519,10 @@ void Inliner::runOnFunctions(BinaryContext &BC) {
         continue;
       ConsideredFunctions.push_back(&Function);
     }
-    std::sort(ConsideredFunctions.begin(), ConsideredFunctions.end(),
-              [](const BinaryFunction *A, const BinaryFunction *B) {
-                return B->getKnownExecutionCount() <
-                       A->getKnownExecutionCount();
-              });
+    llvm::sort(ConsideredFunctions, [](const BinaryFunction *A,
+                                       const BinaryFunction *B) {
+      return B->getKnownExecutionCount() < A->getKnownExecutionCount();
+    });
     for (BinaryFunction *Function : ConsideredFunctions) {
       if (opts::InlineLimit && NumInlinedCallSites >= opts::InlineLimit)
         break;

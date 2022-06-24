@@ -479,11 +479,10 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
         // Fold functions. Keep the order consistent across invocations with
         // different options.
-        std::stable_sort(Twins.begin(), Twins.end(),
-                         [](const BinaryFunction *A, const BinaryFunction *B) {
-                           return A->getFunctionNumber() <
-                                  B->getFunctionNumber();
-                         });
+        llvm::stable_sort(
+            Twins, [](const BinaryFunction *A, const BinaryFunction *B) {
+              return A->getFunctionNumber() < B->getFunctionNumber();
+            });
 
         BinaryFunction *ParentBF = Twins[0];
         for (unsigned I = 1; I < Twins.size(); ++I) {

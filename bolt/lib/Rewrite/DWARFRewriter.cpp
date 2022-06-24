@@ -1243,10 +1243,9 @@ static std::string extractDWOTUFromDWP(
 
   // Sorting so it's easy to compare output.
   // They should be sharing the same Abbrev.
-  std::sort(TUContributions.begin(), TUContributions.end(),
-            [](const TUEntry &V1, const TUEntry &V2) -> bool {
-              return V1.second->Offset < V2.second->Offset;
-            });
+  llvm::sort(TUContributions, [](const TUEntry &V1, const TUEntry &V2) -> bool {
+    return V1.second->Offset < V2.second->Offset;
+  });
 
   for (auto &PairEntry : TUContributions) {
     const DWARFUnitIndex::Entry::SectionContribution *C = PairEntry.second;
@@ -1289,11 +1288,11 @@ static void extractTypesFromDWPDWARF5(
   }
   // Sorting so it's easy to compare output.
   // They should be sharing the same Abbrev.
-  std::sort(TUContributions.begin(), TUContributions.end(),
-            [](const DWARFUnitIndex::Entry::SectionContribution *V1,
-               const DWARFUnitIndex::Entry::SectionContribution *V2) -> bool {
-              return V1->Offset < V2->Offset;
-            });
+  llvm::sort(TUContributions,
+             [](const DWARFUnitIndex::Entry::SectionContribution *V1,
+                const DWARFUnitIndex::Entry::SectionContribution *V2) -> bool {
+               return V1->Offset < V2->Offset;
+             });
   Streamer.switchSection(MCOFI.getDwarfInfoDWOSection());
   for (const auto *C : TUContributions)
     Streamer.emitBytes(Contents.slice(C->Offset, C->Offset + C->Length));

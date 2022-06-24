@@ -333,8 +333,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
       // Only write CIE CFI insns that LLVM will not already emit
       const std::vector<MCCFIInstruction> &FrameInstrs =
           MAI->getInitialFrameState();
-      if (std::find(FrameInstrs.begin(), FrameInstrs.end(), CFIInstr) ==
-          FrameInstrs.end())
+      if (!llvm::is_contained(FrameInstrs, CFIInstr))
         emitCFIInstruction(CFIInstr);
     }
   }
@@ -1087,7 +1086,7 @@ void BinaryEmitter::emitDebugLineInfoForUnprocessedCUs() {
 
     StmtListOffsets.push_back(*StmtList);
   }
-  std::sort(StmtListOffsets.begin(), StmtListOffsets.end());
+  llvm::sort(StmtListOffsets);
 
   // For each CU that was not processed, emit its line info as a binary blob.
   for (const std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units()) {
@@ -1105,8 +1104,7 @@ void BinaryEmitter::emitDebugLineInfoForUnprocessedCUs() {
 
     // Statement list ends where the next unit contribution begins, or at the
     // end of the section.
-    auto It =
-        std::upper_bound(StmtListOffsets.begin(), StmtListOffsets.end(), Begin);
+    auto It = llvm::upper_bound(StmtListOffsets, Begin);
     const uint64_t End =
         It == StmtListOffsets.end() ? DebugLineContents.size() : *It;
 

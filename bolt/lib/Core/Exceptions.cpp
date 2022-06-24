@@ -657,7 +657,7 @@ std::vector<char> CFIReaderWriter::generateEHFrameHeader(
   std::map<uint64_t, uint64_t> PCToFDE;
 
   // Presort array for binary search.
-  std::sort(FailedAddresses.begin(), FailedAddresses.end());
+  llvm::sort(FailedAddresses);
 
   // Initialize PCToFDE using NewEHFrame.
   for (dwarf::FrameEntry &Entry : NewEHFrame.entries()) {
@@ -683,9 +683,7 @@ std::vector<char> CFIReaderWriter::generateEHFrameHeader(
   };
 
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: new .eh_frame contains "
-                    << std::distance(NewEHFrame.entries().begin(),
-                                     NewEHFrame.entries().end())
-                    << " entries\n");
+                    << llvm::size(NewEHFrame.entries()) << " entries\n");
 
   // Add entries from the original .eh_frame corresponding to the functions
   // that we did not update.
@@ -707,9 +705,7 @@ std::vector<char> CFIReaderWriter::generateEHFrameHeader(
   };
 
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: old .eh_frame contains "
-                    << std::distance(OldEHFrame.entries().begin(),
-                                     OldEHFrame.entries().end())
-                    << " entries\n");
+                    << llvm::size(OldEHFrame.entries()) << " entries\n");
 
   // Generate a new .eh_frame_hdr based on the new map.
 
