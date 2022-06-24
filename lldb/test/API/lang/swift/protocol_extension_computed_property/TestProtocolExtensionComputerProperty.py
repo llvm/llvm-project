@@ -5,6 +5,6 @@ lldbinline.MakeInlineTest(
     __file__, globals(),
         decorators=[
             swiftTest,skipUnlessDarwin,
-            skipIf(bugnumber="rdar://60396797", # should work but crashes.
+            expectedFailureAll(bugnumber="rdar://60396797",
                    setting=('symbols.use-swift-clangimporter', 'false'))
     ])
