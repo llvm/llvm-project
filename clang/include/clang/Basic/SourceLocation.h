@@ -458,6 +458,42 @@ public:
   }
 };
 
+/// A pair of FullSourceLoc objects
+///
+/// Useful for passing to methods that expect SourceRanges and SourceManagers
+/// together.
+class FullSourceRange {
+  FullSourceLoc B;
+  FullSourceLoc E;
+
+public:
+  FullSourceRange() = default;
+  FullSourceRange(FullSourceLoc Begin, FullSourceLoc End) : B(Begin), E(End) {}
+
+  FullSourceLoc getBegin() const { return B; }
+  FullSourceLoc getEnd() const { return E; }
+
+  bool isValid() const { return B.isValid() && E.isValid(); }
+  bool isInvalid() const { return !isValid(); }
+
+  bool operator==(const FullSourceRange &X) const {
+    return B == X.B && E == X.E;
+  }
+
+  bool operator!=(const FullSourceRange &X) const {
+    return B != X.B || E != X.E;
+  }
+
+  // Returns true iff other is wholly contained within this range.
+  bool fullyContains(const FullSourceRange &other) const {
+    return B <= other.B && E >= other.E;
+  }
+
+  void print(raw_ostream &OS) const;
+  std::string printToString() const;
+  void dump() const;
+};
+
 } // namespace clang
 
 namespace llvm {
