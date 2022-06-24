@@ -198,7 +198,7 @@ private:
   /// calls.
   void addTransitiveFlowConditionConstraints(
       AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
-      llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) const;
+      llvm::DenseSet<AtomicBoolValue *> &VisitedTokens);
 
   std::unique_ptr<Solver> S;
 
@@ -232,21 +232,16 @@ private:
   // defines the flow condition. Conceptually, each binding corresponds to an
   // "iff" of the form `FC <=> (C1 ^ C2 ^ ...)` where `FC` is a flow condition
   // token (an atomic boolean) and `Ci`s are the set of constraints in the flow
-  // flow condition clause. Internally, we do not record the formula directly as
-  // an "iff". Instead, a flow condition clause is encoded as conjuncts of the
-  // form `(FC v !C1 v !C2 v ...) ^ (C1 v !FC) ^ (C2 v !FC) ^ ...`. The first
-  // conjuct is stored in the `FlowConditionFirstConjuncts` map and the set of
-  // remaining conjuncts are stored in the `FlowConditionRemainingConjuncts`
-  // map, both keyed by the token of the flow condition.
+  // flow condition clause. The set of constraints (C1 ^ C2 ^ ...) are stored in
+  // the `FlowConditionConstraints` map, keyed by the token of the flow
+  // condition.
   //
   // Flow conditions depend on other flow conditions if they are created using
   // `forkFlowCondition` or `joinFlowConditions`. The graph of flow condition
   // dependencies is stored in the `FlowConditionDeps` map.
   llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<AtomicBoolValue *>>
       FlowConditionDeps;
-  llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionFirstConjuncts;
-  llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<BoolValue *>>
-      FlowConditionRemainingConjuncts;
+  llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionConstraints;
 };
 
 } // namespace dataflow
