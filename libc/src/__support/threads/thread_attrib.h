@@ -27,6 +27,8 @@ enum class DetachState : uint32_t {
   DETACHED = 0x33
 };
 
+enum class ThreadStyle : uint8_t { POSIX = 0x1, STDC = 0x2 };
+
 // Detach type is useful in testing the detach operation.
 enum class DetachType : int {
   // Indicates that the detach operation just set the detach state to DETACHED
@@ -44,7 +46,6 @@ enum class DetachType : int {
 //
 // Thread attributes are typically stored on the stack. So, we align as required
 // for the target architecture.
-template <typename ReturnType>
 struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   // We want the "detach_state" attribute to be an atomic value as it could be
   // updated by one thread while the self thread is reading it. It is a tristate
@@ -66,12 +67,13 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   //          exits.
   cpp::Atomic<uint32_t> detach_state;
   void *stack;                   // Pointer to the thread stack
+  void *tls;
   unsigned long long stack_size; // Size of the stack
   unsigned char owned_stack; // Indicates if the thread owns this stack memory
-  ReturnType retval;         // The return value of thread runner is saved here
   int tid;
+  ThreadStyle style;
+  ThreadReturnValue retval;
 };
-
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_ATTRIB_H
