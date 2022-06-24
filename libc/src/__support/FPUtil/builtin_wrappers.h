@@ -65,22 +65,6 @@ template <typename T> static inline int unsafe_clz(T val) {
   return __internal::clz(val);
 }
 
-template <typename T> static inline bool isnan(T val) {
-  return __builtin_isnan(val);
-}
-
-template <typename T> static inline bool isinf(T val) {
-  return __builtin_isinf(val);
-}
-
-template <typename T> static inline bool isfinite(T val) {
-  return __builtin_isfinite(val);
-}
-
-inline float quiet_NaN(float) { return __builtin_nanf(""); }
-inline double quiet_NaN(double) { return __builtin_nan(""); }
-inline long double quiet_NaN(long double) { return __builtin_nanl(""); }
-
 } // namespace fputil
 } // namespace __llvm_libc
 

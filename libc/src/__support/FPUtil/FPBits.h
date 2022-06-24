@@ -135,6 +135,11 @@ template <typename T> struct FPBits {
     return (bits & FloatProp::EXP_MANT_MASK) > FloatProp::EXPONENT_MASK;
   }
 
+  bool is_quiet_nan() const {
+    return (bits & FloatProp::EXP_MANT_MASK) ==
+           (FloatProp::EXPONENT_MASK | FloatProp::QUIET_NAN_MASK);
+  }
+
   bool is_inf_or_nan() const {
     return (bits & FloatProp::EXPONENT_MASK) == FloatProp::EXPONENT_MASK;
   }
