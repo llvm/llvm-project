@@ -17,6 +17,8 @@
 // time.
 #if defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_X86)
 #define LLVM_LIBC_CACHELINE_SIZE 64
+#elif defined(LLVM_LIBC_ARCH_ARM)
+#define LLVM_LIBC_CACHELINE_SIZE 32
 #else
 #error "Unsupported platform for memory functions."
 #endif
