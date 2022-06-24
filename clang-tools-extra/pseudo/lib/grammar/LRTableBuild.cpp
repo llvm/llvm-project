@@ -45,48 +45,23 @@ struct LRTable::Builder {
   llvm::DenseMap<StateID, llvm::SmallSet<RuleID, 4>> Reduces;
   std::vector<llvm::DenseSet<SymbolID>> FollowSets;
 
-  LRTable build(unsigned NumStates) && {
-    // E.g. given the following parsing table with 3 states and 3 terminals:
-    //
-    //            a    b     c
-    // +-------+----+-------+-+
-    // |state0 |    | s0,r0 | |
-    // |state1 | acc|       | |
-    // |state2 |    |  r1   | |
-    // +-------+----+-------+-+
-    //
-    // The final LRTable:
-    //  - StateOffset: [s0] = 0, [s1] = 2, [s2] = 3, [sentinel] = 4
-    //  - Symbols:     [ b,   b,   a,  b]
-    //    Actions:     [ s0, r0, acc, r1]
-    //                   ~~~~~~ range for state 0
-    //                           ~~~~ range for state 1
-    //                                ~~ range for state 2
-    // First step, we sort all entries by (State, Symbol, Action).
-    std::vector<Entry> Sorted(Entries.begin(), Entries.end());
-    llvm::sort(Sorted, [](const Entry &L, const Entry &R) {
-      return std::forward_as_tuple(L.State, L.Symbol, L.Act.opaque()) <
-             std::forward_as_tuple(R.State, R.Symbol, R.Act.opaque());
-    });
-
+  LRTable build(unsigned NumStates, unsigned NumNonterminals) && {
     LRTable Table;
-    Table.Actions.reserve(Sorted.size());
-    Table.Symbols.reserve(Sorted.size());
-    // We are good to finalize the States and Actions.
-    for (const auto &E : Sorted) {
-      Table.Actions.push_back(E.Act);
-      Table.Symbols.push_back(E.Symbol);
-    }
-    // Initialize the terminal and nonterminal offset, all ranges are empty by
-    // default.
-    Table.StateOffset = std::vector<uint32_t>(NumStates + 1, 0);
-    size_t SortedIndex = 0;
-    for (StateID State = 0; State < Table.StateOffset.size(); ++State) {
-      Table.StateOffset[State] = SortedIndex;
-      while (SortedIndex < Sorted.size() && Sorted[SortedIndex].State == State)
-        ++SortedIndex;
-    }
     Table.StartStates = std::move(StartStates);
+
+    // Compile the goto and shift actions into transition tables.
+    llvm::DenseMap<unsigned, SymbolID> Gotos;
+    llvm::DenseMap<unsigned, SymbolID> Shifts;
+    for (const auto &E : Entries) {
+      if (E.Act.kind() == Action::Shift)
+        Shifts.try_emplace(shiftIndex(E.State, E.Symbol, NumStates),
+                           E.Act.getShiftState());
+      else if (E.Act.kind() == Action::GoTo)
+        Gotos.try_emplace(gotoIndex(E.State, E.Symbol, NumStates),
+                          E.Act.getGoToState());
+    }
+    Table.Shifts = TransitionTable(Shifts, NumStates * NumTerminals);
+    Table.Gotos = TransitionTable(Gotos, NumStates * NumNonterminals);
 
     // Compile the follow sets into a bitmap.
     Table.FollowSets.resize(tok::NUM_TOKENS * FollowSets.size());
@@ -128,7 +103,8 @@ LRTable LRTable::buildForTests(const Grammar &G, llvm::ArrayRef<Entry> Entries,
   for (const ReduceEntry &E : Reduces)
     Build.Reduces[E.State].insert(E.Rule);
   Build.FollowSets = followSets(G);
-  return std::move(Build).build(/*NumStates=*/MaxState + 1);
+  return std::move(Build).build(/*NumStates=*/MaxState + 1,
+                                G.table().Nonterminals.size());
 }
 
 LRTable LRTable::buildSLR(const Grammar &G) {
@@ -156,7 +132,8 @@ LRTable LRTable::buildSLR(const Grammar &G) {
         Build.Reduces[SID].insert(I.rule());
     }
   }
-  return std::move(Build).build(Graph.states().size());
+  return std::move(Build).build(Graph.states().size(),
+                                G.table().Nonterminals.size());
 }
 
 } // namespace pseudo

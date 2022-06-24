@@ -40,6 +40,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Capacity.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <vector>
 
@@ -123,12 +125,18 @@ public:
 
   // Returns the state after we reduce a nonterminal.
   // Expected to be called by LR parsers.
-  // REQUIRES: Nonterminal is valid here.
-  StateID getGoToState(StateID State, SymbolID Nonterminal) const;
+  // If the nonterminal is invalid here, returns None.
+  llvm::Optional<StateID> getGoToState(StateID State,
+                                       SymbolID Nonterminal) const {
+    return Gotos.get(gotoIndex(State, Nonterminal, numStates()));
+  }
   // Returns the state after we shift a terminal.
   // Expected to be called by LR parsers.
   // If the terminal is invalid here, returns None.
-  llvm::Optional<StateID> getShiftState(StateID State, SymbolID Terminal) const;
+  llvm::Optional<StateID> getShiftState(StateID State,
+                                        SymbolID Terminal) const {
+    return Shifts.get(shiftIndex(State, Terminal, numStates()));
+  }
 
   // Returns the possible reductions from a state.
   //
@@ -164,9 +172,7 @@ public:
   StateID getStartState(SymbolID StartSymbol) const;
 
   size_t bytes() const {
-    return sizeof(*this) + llvm::capacity_in_bytes(Actions) +
-           llvm::capacity_in_bytes(Symbols) +
-           llvm::capacity_in_bytes(StateOffset) +
+    return sizeof(*this) + Gotos.bytes() + Shifts.bytes() +
            llvm::capacity_in_bytes(Reduces) +
            llvm::capacity_in_bytes(ReduceOffset) +
            llvm::capacity_in_bytes(FollowSets);
@@ -194,22 +200,92 @@ public:
                                llvm::ArrayRef<ReduceEntry>);
 
 private:
-  // Looks up actions stored in the generic table.
-  llvm::ArrayRef<Action> find(StateID State, SymbolID Symbol) const;
+  unsigned numStates() const { return ReduceOffset.size() - 1; }
 
-  // Conceptually the LR table is a multimap from (State, SymbolID) => Action.
-  // Our physical representation is quite different for compactness.
+  // A map from unsigned key => StateID, used to store actions.
+  // The keys should be sequential but the values are somewhat sparse.
+  //
+  // In practice, the keys encode (origin state, symbol) pairs, and the values
+  // are the state we should move to after seeing that symbol.
+  //
+  // We store one bit for presence/absence of the value for each key.
+  // At every 64th key, we store the offset into the table of values.
+  //   e.g. key 0x500 is checkpoint 0x500/64 = 20
+  //                     Checkpoints[20] = 34
+  //        get(0x500) = Values[34]                (assuming it has a value)
+  // To look up values in between, we count the set bits:
+  //        get(0x509) has a value if HasValue[20] & (1<<9)
+  //        #values between 0x500 and 0x509: popcnt(HasValue[20] & (1<<9 - 1))
+  //        get(0x509) = Values[34 + popcnt(...)]
+  //
+  // Overall size is 1.25 bits/key + 16 bits/value.
+  // Lookup is constant time with a low factor (no hashing).
+  class TransitionTable {
+    using Word = uint64_t;
+    constexpr static unsigned WordBits = CHAR_BIT * sizeof(Word);
 
-  // Index is StateID, value is the offset into Symbols/Actions
-  // where the entries for this state begin.
-  // Give a state id, the corresponding half-open range of Symbols/Actions is
-  // [StateOffset[id], StateOffset[id+1]).
-  std::vector<uint32_t> StateOffset;
-  // Parallel to Actions, the value is SymbolID (columns of the matrix).
-  // Grouped by the StateID, and only subranges are sorted.
-  std::vector<SymbolID> Symbols;
-  // A flat list of available actions, sorted by (State, SymbolID).
-  std::vector<Action> Actions;
+    std::vector<StateID> Values;
+    std::vector<Word> HasValue;
+    std::vector<uint16_t> Checkpoints;
+
+  public:
+    TransitionTable() = default;
+    TransitionTable(const llvm::DenseMap<unsigned, StateID> &Entries,
+                    unsigned NumKeys) {
+      assert(
+          Entries.size() <
+              std::numeric_limits<decltype(Checkpoints)::value_type>::max() &&
+          "16 bits too small for value offsets!");
+      unsigned NumWords = (NumKeys + WordBits - 1) / WordBits;
+      HasValue.resize(NumWords, 0);
+      Checkpoints.reserve(NumWords);
+      Values.reserve(Entries.size());
+      for (unsigned I = 0; I < NumKeys; ++I) {
+        if ((I % WordBits) == 0)
+          Checkpoints.push_back(Values.size());
+        auto It = Entries.find(I);
+        if (It != Entries.end()) {
+          HasValue[I / WordBits] |= (Word(1) << (I % WordBits));
+          Values.push_back(It->second);
+        }
+      }
+    }
+
+    llvm::Optional<StateID> get(unsigned Key) const {
+      // Do we have a value for this key?
+      Word KeyMask = Word(1) << (Key % WordBits);
+      unsigned KeyWord = Key / WordBits;
+      if ((HasValue[KeyWord] & KeyMask) == 0)
+        return llvm::None;
+      // Count the number of values since the checkpoint.
+      Word BelowKeyMask = KeyMask - 1;
+      unsigned CountSinceCheckpoint =
+          llvm::countPopulation(HasValue[KeyWord] & BelowKeyMask);
+      // Find the value relative to the last checkpoint.
+      return Values[Checkpoints[KeyWord] + CountSinceCheckpoint];
+    }
+
+    unsigned size() const { return Values.size(); }
+
+    size_t bytes() const {
+      return llvm::capacity_in_bytes(HasValue) +
+             llvm::capacity_in_bytes(Values) +
+             llvm::capacity_in_bytes(Checkpoints);
+    }
+  };
+  // Shift and Goto tables are keyed by encoded (State, Symbol).
+  static unsigned shiftIndex(StateID State, SymbolID Terminal,
+                             unsigned NumStates) {
+    return NumStates * symbolToToken(Terminal) + State;
+  }
+  static unsigned gotoIndex(StateID State, SymbolID Nonterminal,
+                            unsigned NumStates) {
+    assert(isNonterminal(Nonterminal));
+    return NumStates * Nonterminal + State;
+  }
+  TransitionTable Shifts;
+  TransitionTable Gotos;
+
   // A sorted table, storing the start state for each target parsing symbol.
   std::vector<std::pair<SymbolID, StateID>> StartStates;
 

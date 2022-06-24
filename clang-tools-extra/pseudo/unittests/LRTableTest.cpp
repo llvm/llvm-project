@@ -60,7 +60,7 @@ TEST(LRTable, Builder) {
 
   EXPECT_EQ(T.getShiftState(1, Eof), llvm::None);
   EXPECT_EQ(T.getShiftState(1, Identifier), llvm::None);
-  EXPECT_EQ(T.getGoToState(1, Term), 3);
+  EXPECT_THAT(T.getGoToState(1, Term), ValueIs(3));
   EXPECT_THAT(T.getReduceRules(1), ElementsAre(2));
 
   // Verify the behaivor for other non-available-actions terminals.
