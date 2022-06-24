@@ -14,7 +14,7 @@ define i32 @caller(ptr %p) {
 ; CHECK-NEXT:    [[P_6_I:%.*]] = getelementptr i8, ptr [[P_5_I]], i64 1
 ; CHECK-NEXT:    [[P_7_I:%.*]] = getelementptr i8, ptr [[P_6_I]], i64 1
 ; CHECK-NEXT:    [[P_8_ALIAS_I:%.*]] = getelementptr i8, ptr [[P_7_I]], i64 1
-; CHECK-NEXT:    store i32 42, ptr [[P_8_ALIAS_I]], align 4, !noalias !0
+; CHECK-NEXT:    store i32 42, ptr [[P_8_ALIAS_I]], align 4
 ; CHECK-NEXT:    ret i32 [[V_I]]
 ;
   %v = call i32 @callee(ptr %p)

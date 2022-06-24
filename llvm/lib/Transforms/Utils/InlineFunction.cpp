@@ -1077,7 +1077,8 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
 
       // Figure out if we're derived from anything that is not a noalias
       // argument.
-      bool RequiresNoCaptureBefore = false, UsesAliasingPtr = false;
+      bool RequiresNoCaptureBefore = false, UsesAliasingPtr = false,
+           UsesUnknownObject = false;
       for (const Value *V : ObjSet) {
         // Is this value a constant that cannot be derived from any pointer
         // value (we need to exclude constant expressions, for example, that
@@ -1098,13 +1099,23 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
           UsesAliasingPtr = true;
         }
 
-        // If this is not some identified function-local object (which cannot
-        // directly alias a noalias argument), or some other argument (which,
-        // by definition, also cannot alias a noalias argument), then we could
-        // alias a noalias argument that has been captured).
-        if (!isa<Argument>(V) && !isIdentifiedFunctionLocal(V))
+        if (isEscapeSource(V)) {
+          // An escape source can only alias with a noalias argument if it has
+          // been captured beforehand.
           RequiresNoCaptureBefore = true;
+        } else if (!isa<Argument>(V) && !isIdentifiedObject(V)) {
+          // If this is neither an escape source, nor some identified object
+          // (which cannot directly alias a noalias argument), nor some other
+          // argument (which, by definition, also cannot alias a noalias
+          // argument), conservatively do not make any assumptions.
+          UsesUnknownObject = true;
+        }
       }
+
+      // Nothing we can do if the used underlying object cannot be reliably
+      // determined.
+      if (UsesUnknownObject)
+        continue;
 
       // A function call can always get captured noalias pointers (via other
       // parameters, globals, etc.).
