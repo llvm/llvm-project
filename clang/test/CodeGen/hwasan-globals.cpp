@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target || x86-registered-target
+
 // RUN: %clang_cc1 -include %S/Inputs/sanitizer-extra-source.cpp \
 // RUN:   -fsanitize-ignorelist=%S/Inputs/sanitizer-ignorelist-global.txt \
 // RUN:   -fsanitize=hwaddress -emit-llvm -o - %s | FileCheck %s
@@ -29,14 +31,14 @@ void func() {
 // CHECK: ![[EXTRA_GLOBAL]] = !{{{.*}} ![[EXTRA_GLOBAL_LOC:[0-9]+]], !"extra_global", i1 false, i1 false}
 // CHECK: ![[EXTRA_GLOBAL_LOC]] = !{!"{{.*}}extra-source.cpp", i32 1, i32 5}
 // CHECK: ![[GLOBAL]] = !{{{.*}} ![[GLOBAL_LOC:[0-9]+]], !"global", i1 false, i1 false}
-// CHECK: ![[GLOBAL_LOC]] = !{!"{{.*}}hwasan-globals.cpp", i32 10, i32 5}
+// CHECK: ![[GLOBAL_LOC]] = !{!"{{.*}}hwasan-globals.cpp", i32 12, i32 5}
 // CHECK: ![[ATTR_GLOBAL]] = !{{{.*attributed_global.*}}, null, null, i1 false, i1 true}
 // CHECK: ![[DISABLE_INSTR_GLOBAL]] = !{{{.*disable_instrumentation_global.*}}, null, null, i1 false, i1 true}
 // CHECK: ![[IGNORELISTED_GLOBAL]] = !{{{.*ignorelisted_global.*}}, null, null, i1 false, i1 true}
 // CHECK: ![[STATIC_VAR]] = !{{{.*}} ![[STATIC_LOC:[0-9]+]], !"static_var", i1 false, i1 false}
-// CHECK: ![[STATIC_LOC]] = !{!"{{.*}}hwasan-globals.cpp", i32 16, i32 14}
+// CHECK: ![[STATIC_LOC]] = !{!"{{.*}}hwasan-globals.cpp", i32 18, i32 14}
 // CHECK: ![[LITERAL]] = !{{{.*}} ![[LITERAL_LOC:[0-9]+]], !"<string literal>", i1 false, i1 false}
-// CHECK: ![[LITERAL_LOC]] = !{!"{{.*}}hwasan-globals.cpp", i32 17, i32 25}
+// CHECK: ![[LITERAL_LOC]] = !{!"{{.*}}hwasan-globals.cpp", i32 19, i32 25}
 
 // IGNORELIST: @{{.*}}global{{.*}} ={{.*}} global {{.*}}, no_sanitize_hwaddress
 // IGNORELIST: @{{.*}}attributed_global{{.*}} ={{.*}} global {{.*}}, no_sanitize_hwaddress
