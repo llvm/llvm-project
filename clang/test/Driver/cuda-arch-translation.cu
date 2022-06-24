@@ -1,6 +1,6 @@
 // Tests that "sm_XX" gets correctly converted to "compute_YY" when we invoke
 // fatbinary.
-//
+
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 

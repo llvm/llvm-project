@@ -1,8 +1,8 @@
 // REQUIRES: system-windows
-//
+
 // RUN: rm -rf %t
 // RUN: mkdir %t
-//
+
 // Note: %s and %S must be preceded by --, otherwise it may be interpreted as a
 // command-line option, e.g. on Mac where %s is commonly under /Users.
 

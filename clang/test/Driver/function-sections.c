@@ -1,5 +1,5 @@
 // Test handling of -f(no-)function-sections and -f(no-)data-sections
-//
+
 // CHECK-FS: -ffunction-sections
 // CHECK-NOFS-NOT: -ffunction-sections
 // CHECK-DS: -fdata-sections

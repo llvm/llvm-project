@@ -12,7 +12,7 @@
 // We generate a 2MB response file to attempt to surpass any system limit.
 // But there's no guarantee that we actually will (the system limit could be
 // *huge*), so just check that invoking cc1 succeeds under these conditions.
-//
+
 // RUN: %python  -c 'print(*("-DTEST" for x in range(300000)))' >%t.1.txt
 // RUN: %clang -E @%t.1.txt %s -v 2>&1 | FileCheck %s -check-prefix=LONG
 // LONG: extern int it_works;

@@ -58,7 +58,7 @@
 // RUN: %clang -### -S -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 | FileCheck -check-prefix=CHECK-SAMPLE-PROFILE %s
 // CHECK-SAMPLE-PROFILE: "-fprofile-sample-use={{.*}}/file.prof"
 
-//
+
 // RUN: %clang -### -x cuda -nocudainc -nocudalib \
 // RUN:    -c -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 \
 // RUN:  | FileCheck -check-prefix=CHECK-CUDA-SAMPLE-PROFILE %s
@@ -446,7 +446,7 @@
 // Test that an ignored optimization argument only prints 1 warning,
 // not both a warning about not claiming the arg, *and* about not supporting
 // the arg; and that adding -Wno-ignored-optimization silences the warning.
-//
+
 // RUN: %clang -### -fprofile-correction %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-WARNING3 %s
 // CHECK-NO-WARNING3: optimization flag '-fprofile-correction' is not supported
