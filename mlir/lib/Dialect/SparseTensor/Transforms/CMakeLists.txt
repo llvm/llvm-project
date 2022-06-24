@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRSparseTensorTransforms
+  BufferizableOpInterfaceImpl.cpp
   CodegenUtils.cpp
   Sparsification.cpp
   SparseTensorConversion.cpp
@@ -13,6 +14,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   LINK_LIBS PUBLIC
   MLIRArithmeticDialect
   MLIRBufferizationDialect
+  MLIRBufferizationTransforms
   MLIRComplexDialect
   MLIRFuncDialect
   MLIRIR
