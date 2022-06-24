@@ -16673,7 +16673,7 @@ void Sema::DiagnoseEmptyLoopBody(const Stmt *S,
     Body = FS->getBody();
     DiagID = diag::warn_empty_for_body;
   } else if (const WhileStmt *WS = dyn_cast<WhileStmt>(S)) {
-    StmtLoc = WS->getCond()->getSourceRange().getEnd();
+    StmtLoc = WS->getRParenLoc();
     Body = WS->getBody();
     DiagID = diag::warn_empty_while_body;
   } else
