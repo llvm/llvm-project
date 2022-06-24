@@ -119,7 +119,7 @@
 // ANALYZER: unix.Malloc
 // RUN: %clang --autocomplete=-std= | FileCheck %s -check-prefix=STDVAL
 // STDVAL: c99
-
+//
 // Clang shouldn't autocomplete CC1 options unless -cc1 or -Xclang were provided
 // RUN: %clang --autocomplete=-mrelocation-mode | FileCheck %s -check-prefix=MRELOCMODEL_CLANG
 // MRELOCMODEL_CLANG-NOT: -mrelocation-model

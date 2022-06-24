@@ -1,7 +1,7 @@
 // REQUIRES: mips-registered-target
 
 // Check frontend and linker invocations on FSF MIPS toolchain.
-
+//
 // = Big-endian, mips32, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mhard-float -no-pie \
@@ -28,7 +28,7 @@
 // CHECK-BE-HF-32: "-L[[TC]]/../../../../sysroot/mips32/usr/lib/../lib"
 // CHECK-BE-HF-32: "[[TC]]/mips32{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-32: "[[TC]]/../../../../sysroot/mips32/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32, hard float, fp64
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mfp64 -mhard-float -no-pie \
@@ -55,7 +55,7 @@
 // CHECK-BE-HF64-32: "-L[[TC]]/../../../../sysroot/mips32/usr/lib/../lib"
 // CHECK-BE-HF64-32: "[[TC]]/mips32{{/|\\\\}}crtend.o"
 // CHECK-BE-HF64-32: "[[TC]]/../../../../sysroot/mips32/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -msoft-float -no-pie \
@@ -82,7 +82,7 @@
 // CHECK-BE-SF-32: "-L[[TC]]/../../../../sysroot/mips32/sof/usr/lib/../lib"
 // CHECK-BE-SF-32: "[[TC]]/mips32/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-32: "[[TC]]/../../../../sysroot/mips32/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips16 / mips32, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -mhard-float -no-pie \
@@ -109,7 +109,7 @@
 // CHECK-BE-HF-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/usr/lib/../lib"
 // CHECK-BE-HF-16: "[[TC]]/mips32/mips16{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-16: "[[TC]]/../../../../sysroot/mips32/mips16/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips16 / mips32, hard float, fp64
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -mfp64 -mhard-float -no-pie \
@@ -136,7 +136,7 @@
 // CHECK-BE-HF64-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/usr/lib/../lib"
 // CHECK-BE-HF64-16: "[[TC]]/mips32/mips16{{/|\\\\}}crtend.o"
 // CHECK-BE-HF64-16: "[[TC]]/../../../../sysroot/mips32/mips16/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips16 / mips32, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -msoft-float -no-pie \
@@ -163,7 +163,7 @@
 // CHECK-BE-SF-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/sof/usr/lib/../lib"
 // CHECK-BE-SF-16: "[[TC]]/mips32/mips16/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-16: "[[TC]]/../../../../sysroot/mips32/mips16/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32 / mips16, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -mnan=2008 -no-pie \
@@ -190,7 +190,7 @@
 // CHECK-BE-NAN-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN-16: "[[TC]]/mips32/mips16/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN-16: "[[TC]]/../../../../sysroot/mips32/mips16/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32 / mips16, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -mfp64 -mnan=2008 -no-pie \
@@ -217,7 +217,7 @@
 // CHECK-BE-NAN64-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN64-16: "[[TC]]/mips32/mips16/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-16: "[[TC]]/../../../../sysroot/mips32/mips16/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mnan=2008 -no-pie \
@@ -244,7 +244,7 @@
 // CHECK-BE-NAN-32: "-L[[TC]]/../../../../sysroot/mips32/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN-32: "[[TC]]/mips32/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN-32: "[[TC]]/../../../../sysroot/mips32/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mfp64 -mnan=2008 -no-pie \
@@ -271,7 +271,7 @@
 // CHECK-BE-NAN64-32: "-L[[TC]]/../../../../sysroot/mips32/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN64-32: "[[TC]]/mips32/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-32: "[[TC]]/../../../../sysroot/mips32/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mhard-float -no-pie \
@@ -298,7 +298,7 @@
 // CHECK-BE-HF-32R2: "-L[[TC]]/../../../../sysroot/usr/lib/../lib"
 // CHECK-BE-HF-32R2: "[[TC]]{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-32R2: "[[TC]]/../../../../sysroot/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2, hard float, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mhard-float -muclibc -no-pie \
@@ -325,7 +325,7 @@
 // CHECK-BE-UC-HF-32R2: "-L[[TC]]/../../../../sysroot/uclibc/usr/lib/../lib"
 // CHECK-BE-UC-HF-32R2: "[[TC]]/uclibc{{/|\\\\}}crtend.o"
 // CHECK-BE-UC-HF-32R2: "[[TC]]/../../../../sysroot/uclibc/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mfp64 -mhard-float -no-pie \
@@ -352,7 +352,7 @@
 // CHECK-BE-HF64-32R2: "-L[[TC]]/../../../../sysroot/usr/lib/../lib"
 // CHECK-BE-HF64-32R2: "[[TC]]{{/|\\\\}}crtend.o"
 // CHECK-BE-HF64-32R2: "[[TC]]/../../../../sysroot/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -msoft-float -no-pie \
@@ -379,7 +379,7 @@
 // CHECK-BE-SF-32R2: "-L[[TC]]/../../../../sysroot/sof/usr/lib/../lib"
 // CHECK-BE-SF-32R2: "[[TC]]/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-32R2: "[[TC]]/../../../../sysroot/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2, soft float, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -msoft-float -muclibc -no-pie \
@@ -406,7 +406,7 @@
 // CHECK-BE-UC-SF-32R2: "-L[[TC]]/../../../../sysroot/uclibc/sof/usr/lib/../lib"
 // CHECK-BE-UC-SF-32R2: "[[TC]]/uclibc/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-UC-SF-32R2: "[[TC]]/../../../../sysroot/uclibc/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2 / mips16, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -mhard-float -no-pie \
@@ -433,7 +433,7 @@
 // CHECK-BE-HF-16R2: "-L[[TC]]/../../../../sysroot/mips16/usr/lib/../lib"
 // CHECK-BE-HF-16R2: "[[TC]]/mips16{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-16R2: "[[TC]]/../../../../sysroot/mips16/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2 / mips16, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -mfp64 -mhard-float -no-pie \
@@ -460,7 +460,7 @@
 // CHECK-BE-HF64-16R2: "-L[[TC]]/../../../../sysroot/mips16/usr/lib/../lib"
 // CHECK-BE-HF64-16R2: "[[TC]]/mips16{{/|\\\\}}crtend.o"
 // CHECK-BE-HF64-16R2: "[[TC]]/../../../../sysroot/mips16/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2 / mips16, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -msoft-float -no-pie \
@@ -487,7 +487,7 @@
 // CHECK-BE-SF-16R2: "-L[[TC]]/../../../../sysroot/mips16/sof/usr/lib/../lib"
 // CHECK-BE-SF-16R2: "[[TC]]/mips16/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-16R2: "[[TC]]/../../../../sysroot/mips16/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2 / mips16, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -mnan=2008 -no-pie \
@@ -514,7 +514,7 @@
 // CHECK-BE-NAN-16R2: "-L[[TC]]/../../../../sysroot/mips16/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN-16R2: "[[TC]]/mips16/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN-16R2: "[[TC]]/../../../../sysroot/mips16/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2 / mips16, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -mfp64 -mnan=2008 -no-pie \
@@ -541,7 +541,7 @@
 // CHECK-BE-NAN64-16R2: "-L[[TC]]/../../../../sysroot/mips16/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN64-16R2: "[[TC]]/mips16/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-16R2: "[[TC]]/../../../../sysroot/mips16/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mnan=2008 -no-pie \
@@ -568,7 +568,7 @@
 // CHECK-BE-NAN-32R2: "-L[[TC]]/../../../../sysroot/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN-32R2: "[[TC]]/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN-32R2: "[[TC]]/../../../../sysroot/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2, nan2008, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mnan=2008 -muclibc -no-pie \
@@ -595,7 +595,7 @@
 // CHECK-BE-UC-NAN-32R2: "-L[[TC]]/../../../../sysroot/uclibc/nan2008/usr/lib/../lib"
 // CHECK-BE-UC-NAN-32R2: "[[TC]]/uclibc/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-UC-NAN-32R2: "[[TC]]/../../../../sysroot/uclibc/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r2, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mfp64 -mnan=2008 -no-pie \
@@ -622,7 +622,7 @@
 // CHECK-BE-NAN64-32R2: "-L[[TC]]/../../../../sysroot/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN64-32R2: "[[TC]]/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-32R2: "[[TC]]/../../../../sysroot/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, default (mips32r2), fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mfp64 -mnan=2008 -no-pie \
@@ -649,7 +649,7 @@
 // CHECK-BE-NAN64-32R2-DEF: "-L[[TC]]/../../../../sysroot/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN64-32R2-DEF: "[[TC]]/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-32R2-DEF: "[[TC]]/../../../../sysroot/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, micromips, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -mhard-float -no-pie \
@@ -676,7 +676,7 @@
 // CHECK-BE-HF-MM: "-L[[TC]]/../../../../sysroot/micromips/usr/lib/../lib"
 // CHECK-BE-HF-MM: "[[TC]]/micromips{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-MM: "[[TC]]/../../../../sysroot/micromips/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, micromips, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -mfp64 -mhard-float -no-pie \
@@ -703,7 +703,7 @@
 // CHECK-BE-HF64-MM: "-L[[TC]]/../../../../sysroot/micromips/usr/lib/../lib"
 // CHECK-BE-HF64-MM: "[[TC]]/micromips{{/|\\\\}}crtend.o"
 // CHECK-BE-HF64-MM: "[[TC]]/../../../../sysroot/micromips/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, micromips, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -msoft-float -no-pie \
@@ -730,7 +730,7 @@
 // CHECK-BE-SF-MM: "-L[[TC]]/../../../../sysroot/micromips/sof/usr/lib/../lib"
 // CHECK-BE-SF-MM: "[[TC]]/micromips/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-MM: "[[TC]]/../../../../sysroot/micromips/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, micromips, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -mnan=2008 -no-pie \
@@ -757,7 +757,7 @@
 // CHECK-BE-NAN-MM: "-L[[TC]]/../../../../sysroot/micromips/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN-MM: "[[TC]]/micromips/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN-MM: "[[TC]]/../../../../sysroot/micromips/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, micromips, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -mfp64 -mnan=2008 -no-pie \
@@ -784,7 +784,7 @@
 // CHECK-BE-NAN64-MM: "-L[[TC]]/../../../../sysroot/micromips/nan2008/usr/lib/../lib"
 // CHECK-BE-NAN64-MM: "[[TC]]/micromips/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-MM: "[[TC]]/../../../../sysroot/micromips/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI n32, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -mhard-float -no-pie \
@@ -811,7 +811,7 @@
 // CHECK-BE-HF-64-N32: "-L[[TC]]/../../../../sysroot/mips64/usr/lib"
 // CHECK-BE-HF-64-N32: "[[TC]]/mips64{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-64-N32: "[[TC]]/../../../../sysroot/mips64/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI n32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -mfp64 -mhard-float -no-pie \
@@ -838,7 +838,7 @@
 // CHECK-BE-HF64-64-N32: "-L[[TC]]/../../../../sysroot/mips64/usr/lib"
 // CHECK-BE-HF64-64-N32: "[[TC]]/mips64{{/|\\\\}}crtend.o"
 // CHECK-BE-HF64-64-N32: "[[TC]]/../../../../sysroot/mips64/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI n32, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -msoft-float -no-pie \
@@ -865,7 +865,7 @@
 // CHECK-BE-SF-64-N32: "-L[[TC]]/../../../../sysroot/mips64/sof/usr/lib"
 // CHECK-BE-SF-64-N32: "[[TC]]/mips64/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-64-N32: "[[TC]]/../../../../sysroot/mips64/sof/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI n32, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -mnan=2008 -no-pie \
@@ -892,7 +892,7 @@
 // CHECK-BE-NAN-64-N32: "-L[[TC]]/../../../../sysroot/mips64/nan2008/usr/lib"
 // CHECK-BE-NAN-64-N32: "[[TC]]/mips64/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN-64-N32: "[[TC]]/../../../../sysroot/mips64/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI n32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -mfp64 -mnan=2008 -no-pie \
@@ -919,7 +919,7 @@
 // CHECK-BE-NAN64-64-N32: "-L[[TC]]/../../../../sysroot/mips64/nan2008/usr/lib"
 // CHECK-BE-NAN64-64-N32: "[[TC]]/mips64/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-64-N32: "[[TC]]/../../../../sysroot/mips64/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -mhard-float -no-pie \
@@ -946,7 +946,7 @@
 // CHECK-BE-HF-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/usr/lib"
 // CHECK-BE-HF-64-64: "[[TC]]/mips64/64{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-64-64: "[[TC]]/../../../../sysroot/mips64/64/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI 64, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -mfp64 -mhard-float -no-pie \
@@ -973,7 +973,7 @@
 // CHECK-BE-HF64-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/usr/lib"
 // CHECK-BE-HF64-64-64: "[[TC]]/mips64/64{{/|\\\\}}crtend.o"
 // CHECK-BE-HF64-64-64: "[[TC]]/../../../../sysroot/mips64/64/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI 64, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -msoft-float -no-pie \
@@ -1000,7 +1000,7 @@
 // CHECK-BE-SF-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/sof/usr/lib"
 // CHECK-BE-SF-64-64: "[[TC]]/mips64/64/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-64-64: "[[TC]]/../../../../sysroot/mips64/64/sof/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI 64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -mnan=2008 -no-pie \
@@ -1027,7 +1027,7 @@
 // CHECK-BE-NAN-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/nan2008/usr/lib"
 // CHECK-BE-NAN-64-64: "[[TC]]/mips64/64/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN-64-64: "[[TC]]/../../../../sysroot/mips64/64/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64, ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -mfp64 -mnan=2008 -no-pie \
@@ -1054,7 +1054,7 @@
 // CHECK-BE-NAN64-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/nan2008/usr/lib"
 // CHECK-BE-NAN64-64-64: "[[TC]]/mips64/64/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-64-64: "[[TC]]/../../../../sysroot/mips64/64/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI n32, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -mhard-float -no-pie \
@@ -1081,7 +1081,7 @@
 // CHECK-BE-HF-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/usr/lib"
 // CHECK-BE-HF-64R2-N32: "[[TC]]/mips64r2{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI n32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -mfp64 -mhard-float -no-pie \
@@ -1108,7 +1108,7 @@
 // CHECK-BE-HF64-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/usr/lib"
 // CHECK-BE-HF64-64R2-N32: "[[TC]]/mips64r2{{/|\\\\}}crtend.o"
 // CHECK-BE-HF64-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI n32, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -msoft-float -no-pie \
@@ -1135,7 +1135,7 @@
 // CHECK-BE-SF-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/sof/usr/lib"
 // CHECK-BE-SF-64R2-N32: "[[TC]]/mips64r2/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/sof/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI n32, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -mnan=2008 -no-pie \
@@ -1162,7 +1162,7 @@
 // CHECK-BE-NAN-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/nan2008/usr/lib"
 // CHECK-BE-NAN-64R2-N32: "[[TC]]/mips64r2/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI n32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -mfp64 -mnan=2008 -no-pie \
@@ -1189,7 +1189,7 @@
 // CHECK-BE-NAN64-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/nan2008/usr/lib"
 // CHECK-BE-NAN64-64R2-N32: "[[TC]]/mips64r2/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -mhard-float -no-pie \
@@ -1216,7 +1216,7 @@
 // CHECK-BE-HF-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/usr/lib"
 // CHECK-BE-HF-64R2-64: "[[TC]]/mips64r2/64{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI 64, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -mfp64 -mhard-float -no-pie \
@@ -1243,7 +1243,7 @@
 // CHECK-BE-HF64-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/usr/lib"
 // CHECK-BE-HF64-64R2-64: "[[TC]]/mips64r2/64{{/|\\\\}}crtend.o"
 // CHECK-BE-HF64-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI 64, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -msoft-float -no-pie \
@@ -1270,7 +1270,7 @@
 // CHECK-BE-SF-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/sof/usr/lib"
 // CHECK-BE-SF-64R2-64: "[[TC]]/mips64r2/64/sof{{/|\\\\}}crtend.o"
 // CHECK-BE-SF-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/sof/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI 64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -mnan=2008 -no-pie \
@@ -1297,7 +1297,7 @@
 // CHECK-BE-NAN-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/nan2008/usr/lib"
 // CHECK-BE-NAN-64R2-64: "[[TC]]/mips64r2/64/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r2, ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -mfp64 -mnan=2008 -no-pie \
@@ -1324,7 +1324,7 @@
 // CHECK-BE-NAN64-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/nan2008/usr/lib"
 // CHECK-BE-NAN64-64R2-64: "[[TC]]/mips64r2/64/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, default (mips64r2), ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mabi=64 -mfp64 -mnan=2008 -no-pie \
@@ -1351,7 +1351,7 @@
 // CHECK-BE-NAN64-64R2-64-DEF: "-L[[TC]]/../../../../sysroot/mips64r2/64/nan2008/usr/lib"
 // CHECK-BE-NAN64-64R2-64-DEF: "[[TC]]/mips64r2/64/nan2008{{/|\\\\}}crtend.o"
 // CHECK-BE-NAN64-64R2-64-DEF: "[[TC]]/../../../../sysroot/mips64r2/64/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mhard-float -no-pie \
@@ -1378,7 +1378,7 @@
 // CHECK-EL-HF-32: "-L[[TC]]/../../../../sysroot/mips32/el/usr/lib/../lib"
 // CHECK-EL-HF-32: "[[TC]]/mips32/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-32: "[[TC]]/../../../../sysroot/mips32/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mfp64 -mhard-float -no-pie \
@@ -1405,7 +1405,7 @@
 // CHECK-EL-HF64-32: "-L[[TC]]/../../../../sysroot/mips32/el/usr/lib/../lib"
 // CHECK-EL-HF64-32: "[[TC]]/mips32/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF64-32: "[[TC]]/../../../../sysroot/mips32/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -msoft-float -no-pie \
@@ -1432,7 +1432,7 @@
 // CHECK-EL-SF-32: "-L[[TC]]/../../../../sysroot/mips32/el/sof/usr/lib/../lib"
 // CHECK-EL-SF-32: "[[TC]]/mips32/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-32: "[[TC]]/../../../../sysroot/mips32/el/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32 / mips16, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -mhard-float -no-pie \
@@ -1459,7 +1459,7 @@
 // CHECK-EL-HF-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/el/usr/lib/../lib"
 // CHECK-EL-HF-16: "[[TC]]/mips32/mips16/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-16: "[[TC]]/../../../../sysroot/mips32/mips16/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32 / mips16, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -mfp64 -mhard-float -no-pie \
@@ -1486,7 +1486,7 @@
 // CHECK-EL-HF64-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/el/usr/lib/../lib"
 // CHECK-EL-HF64-16: "[[TC]]/mips32/mips16/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF64-16: "[[TC]]/../../../../sysroot/mips32/mips16/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32 / mips16, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -msoft-float -no-pie \
@@ -1513,7 +1513,7 @@
 // CHECK-EL-SF-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/el/sof/usr/lib/../lib"
 // CHECK-EL-SF-16: "[[TC]]/mips32/mips16/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-16: "[[TC]]/../../../../sysroot/mips32/mips16/el/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32 / mips16, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -mnan=2008 -no-pie \
@@ -1540,7 +1540,7 @@
 // CHECK-EL-NAN-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN-16: "[[TC]]/mips32/mips16/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN-16: "[[TC]]/../../../../sysroot/mips32/mips16/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32 / mips16, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -mfp64 -mnan=2008 -no-pie \
@@ -1567,7 +1567,7 @@
 // CHECK-EL-NAN64-16: "-L[[TC]]/../../../../sysroot/mips32/mips16/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN64-16: "[[TC]]/mips32/mips16/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-16: "[[TC]]/../../../../sysroot/mips32/mips16/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mnan=2008 -no-pie \
@@ -1594,7 +1594,7 @@
 // CHECK-EL-NAN-32: "-L[[TC]]/../../../../sysroot/mips32/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN-32: "[[TC]]/mips32/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN-32: "[[TC]]/../../../../sysroot/mips32/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mfp64 -mnan=2008 -no-pie \
@@ -1621,7 +1621,7 @@
 // CHECK-EL-NAN64-32: "-L[[TC]]/../../../../sysroot/mips32/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN64-32: "[[TC]]/mips32/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-32: "[[TC]]/../../../../sysroot/mips32/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mhard-float -no-pie \
@@ -1648,7 +1648,7 @@
 // CHECK-EL-HF-32R2: "-L[[TC]]/../../../../sysroot/el/usr/lib/../lib"
 // CHECK-EL-HF-32R2: "[[TC]]/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-32R2: "[[TC]]/../../../../sysroot/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2, hard float, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mhard-float -muclibc -no-pie \
@@ -1675,7 +1675,7 @@
 // CHECK-EL-UC-HF-32R2: "-L[[TC]]/../../../../sysroot/uclibc/el/usr/lib/../lib"
 // CHECK-EL-UC-HF-32R2: "[[TC]]/uclibc/el{{/|\\\\}}crtend.o"
 // CHECK-EL-UC-HF-32R2: "[[TC]]/../../../../sysroot/uclibc/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mfp64 -mhard-float -no-pie \
@@ -1702,7 +1702,7 @@
 // CHECK-EL-HF64-32R2: "-L[[TC]]/../../../../sysroot/el/usr/lib/../lib"
 // CHECK-EL-HF64-32R2: "[[TC]]/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF64-32R2: "[[TC]]/../../../../sysroot/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -msoft-float -no-pie \
@@ -1729,7 +1729,7 @@
 // CHECK-EL-SF-32R2: "-L[[TC]]/../../../../sysroot/el/sof/usr/lib/../lib"
 // CHECK-EL-SF-32R2: "[[TC]]/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-32R2: "[[TC]]/../../../../sysroot/el/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2, soft float, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -msoft-float -muclibc -no-pie \
@@ -1756,7 +1756,7 @@
 // CHECK-EL-UC-SF-32R2: "-L[[TC]]/../../../../sysroot/uclibc/el/sof/usr/lib/../lib"
 // CHECK-EL-UC-SF-32R2: "[[TC]]/uclibc/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-UC-SF-32R2: "[[TC]]/../../../../sysroot/uclibc/el/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2 / mips16, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -mhard-float -no-pie \
@@ -1783,7 +1783,7 @@
 // CHECK-EL-HF-16R2: "-L[[TC]]/../../../../sysroot/mips16/el/usr/lib/../lib"
 // CHECK-EL-HF-16R2: "[[TC]]/mips16/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-16R2: "[[TC]]/../../../../sysroot/mips16/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2 / mips16, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -mfp64 -mhard-float -no-pie \
@@ -1810,7 +1810,7 @@
 // CHECK-EL-HF64-16R2: "-L[[TC]]/../../../../sysroot/mips16/el/usr/lib/../lib"
 // CHECK-EL-HF64-16R2: "[[TC]]/mips16/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF64-16R2: "[[TC]]/../../../../sysroot/mips16/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2 / mips16, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -msoft-float -no-pie \
@@ -1837,7 +1837,7 @@
 // CHECK-EL-SF-16R2: "-L[[TC]]/../../../../sysroot/mips16/el/sof/usr/lib/../lib"
 // CHECK-EL-SF-16R2: "[[TC]]/mips16/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-16R2: "[[TC]]/../../../../sysroot/mips16/el/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2 / mips16, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -mnan=2008 -no-pie \
@@ -1864,7 +1864,7 @@
 // CHECK-EL-NAN-16R2: "-L[[TC]]/../../../../sysroot/mips16/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN-16R2: "[[TC]]/mips16/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN-16R2: "[[TC]]/../../../../sysroot/mips16/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2 / mips16, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -mfp64 -mnan=2008 -no-pie \
@@ -1891,7 +1891,7 @@
 // CHECK-EL-NAN64-16R2: "-L[[TC]]/../../../../sysroot/mips16/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN64-16R2: "[[TC]]/mips16/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-16R2: "[[TC]]/../../../../sysroot/mips16/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mnan=2008 -no-pie \
@@ -1918,7 +1918,7 @@
 // CHECK-EL-NAN-32R2: "-L[[TC]]/../../../../sysroot/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN-32R2: "[[TC]]/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN-32R2: "[[TC]]/../../../../sysroot/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2, nan2008, uclibc
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mnan=2008 -muclibc -no-pie \
@@ -1945,7 +1945,7 @@
 // CHECK-EL-UC-NAN-32R2: "-L[[TC]]/../../../../sysroot/uclibc/el/nan2008/usr/lib/../lib"
 // CHECK-EL-UC-NAN-32R2: "[[TC]]/uclibc/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-UC-NAN-32R2: "[[TC]]/../../../../sysroot/uclibc/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r2, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mfp64 -mnan=2008 -no-pie \
@@ -1972,7 +1972,7 @@
 // CHECK-EL-NAN64-32R2: "-L[[TC]]/../../../../sysroot/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN64-32R2: "[[TC]]/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-32R2: "[[TC]]/../../../../sysroot/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, default (mips32r2), fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mfp64 -mnan=2008 -no-pie \
@@ -1999,7 +1999,7 @@
 // CHECK-EL-NAN64-32R2-DEF: "-L[[TC]]/../../../../sysroot/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN64-32R2-DEF: "[[TC]]/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-32R2-DEF: "[[TC]]/../../../../sysroot/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, micromips, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -mhard-float -no-pie \
@@ -2026,7 +2026,7 @@
 // CHECK-EL-HF-MM: "-L[[TC]]/../../../../sysroot/micromips/el/usr/lib/../lib"
 // CHECK-EL-HF-MM: "[[TC]]/micromips/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-MM: "[[TC]]/../../../../sysroot/micromips/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, micromips, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -mfp64 -mhard-float -no-pie \
@@ -2053,7 +2053,7 @@
 // CHECK-EL-HF64-MM: "-L[[TC]]/../../../../sysroot/micromips/el/usr/lib/../lib"
 // CHECK-EL-HF64-MM: "[[TC]]/micromips/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF64-MM: "[[TC]]/../../../../sysroot/micromips/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, micromips, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -msoft-float -no-pie \
@@ -2080,7 +2080,7 @@
 // CHECK-EL-SF-MM: "-L[[TC]]/../../../../sysroot/micromips/el/sof/usr/lib/../lib"
 // CHECK-EL-SF-MM: "[[TC]]/micromips/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-MM: "[[TC]]/../../../../sysroot/micromips/el/sof/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, micromips, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -mnan=2008 -no-pie \
@@ -2107,7 +2107,7 @@
 // CHECK-EL-NAN-MM: "-L[[TC]]/../../../../sysroot/micromips/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN-MM: "[[TC]]/micromips/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN-MM: "[[TC]]/../../../../sysroot/micromips/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, micromips, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -mfp64 -mnan=2008 -no-pie \
@@ -2134,7 +2134,7 @@
 // CHECK-EL-NAN64-MM: "-L[[TC]]/../../../../sysroot/micromips/el/nan2008/usr/lib/../lib"
 // CHECK-EL-NAN64-MM: "[[TC]]/micromips/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-MM: "[[TC]]/../../../../sysroot/micromips/el/nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI n32, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -mhard-float -no-pie \
@@ -2161,7 +2161,7 @@
 // CHECK-EL-HF-64-N32: "-L[[TC]]/../../../../sysroot/mips64/el/usr/lib"
 // CHECK-EL-HF-64-N32: "[[TC]]/mips64/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-64-N32: "[[TC]]/../../../../sysroot/mips64/el/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI n32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -mfp64 -mhard-float -no-pie \
@@ -2188,7 +2188,7 @@
 // CHECK-EL-HF64-64-N32: "-L[[TC]]/../../../../sysroot/mips64/el/usr/lib"
 // CHECK-EL-HF64-64-N32: "[[TC]]/mips64/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF64-64-N32: "[[TC]]/../../../../sysroot/mips64/el/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI n32, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -msoft-float -no-pie \
@@ -2215,7 +2215,7 @@
 // CHECK-EL-SF-64-N32: "-L[[TC]]/../../../../sysroot/mips64/el/sof/usr/lib"
 // CHECK-EL-SF-64-N32: "[[TC]]/mips64/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-64-N32: "[[TC]]/../../../../sysroot/mips64/el/sof/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI n32, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -mnan=2008 -no-pie \
@@ -2242,7 +2242,7 @@
 // CHECK-EL-NAN-64-N32: "-L[[TC]]/../../../../sysroot/mips64/el/nan2008/usr/lib"
 // CHECK-EL-NAN-64-N32: "[[TC]]/mips64/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN-64-N32: "[[TC]]/../../../../sysroot/mips64/el/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI n32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -mfp64 -mnan=2008 -no-pie \
@@ -2269,7 +2269,7 @@
 // CHECK-EL-NAN64-64-N32: "-L[[TC]]/../../../../sysroot/mips64/el/nan2008/usr/lib"
 // CHECK-EL-NAN64-64-N32: "[[TC]]/mips64/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-64-N32: "[[TC]]/../../../../sysroot/mips64/el/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -mhard-float -no-pie \
@@ -2296,7 +2296,7 @@
 // CHECK-EL-HF-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/el/usr/lib"
 // CHECK-EL-HF-64-64: "[[TC]]/mips64/64/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-64-64: "[[TC]]/../../../../sysroot/mips64/64/el/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI 64, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -mfp64 -mhard-float -no-pie \
@@ -2323,7 +2323,7 @@
 // CHECK-EL-HF64-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/el/usr/lib"
 // CHECK-EL-HF64-64-64: "[[TC]]/mips64/64/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF64-64-64: "[[TC]]/../../../../sysroot/mips64/64/el/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI 64, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -msoft-float -no-pie \
@@ -2350,7 +2350,7 @@
 // CHECK-EL-SF-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/el/sof/usr/lib"
 // CHECK-EL-SF-64-64: "[[TC]]/mips64/64/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-64-64: "[[TC]]/../../../../sysroot/mips64/64/el/sof/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI 64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -mnan=2008 -no-pie \
@@ -2377,7 +2377,7 @@
 // CHECK-EL-NAN-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/el/nan2008/usr/lib"
 // CHECK-EL-NAN-64-64: "[[TC]]/mips64/64/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN-64-64: "[[TC]]/../../../../sysroot/mips64/64/el/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64, ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -mfp64 -mnan=2008 -no-pie \
@@ -2404,7 +2404,7 @@
 // CHECK-EL-NAN64-64-64: "-L[[TC]]/../../../../sysroot/mips64/64/el/nan2008/usr/lib"
 // CHECK-EL-NAN64-64-64: "[[TC]]/mips64/64/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-64-64: "[[TC]]/../../../../sysroot/mips64/64/el/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI n32, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -mhard-float -no-pie \
@@ -2431,7 +2431,7 @@
 // CHECK-EL-HF-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/el/usr/lib"
 // CHECK-EL-HF-64R2-N32: "[[TC]]/mips64r2/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/el/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI n32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -mfp64 -mhard-float -no-pie \
@@ -2458,7 +2458,7 @@
 // CHECK-EL-HF64-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/el/usr/lib"
 // CHECK-EL-HF64-64R2-N32: "[[TC]]/mips64r2/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF64-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/el/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI n32, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -msoft-float -no-pie \
@@ -2485,7 +2485,7 @@
 // CHECK-EL-SF-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/el/sof/usr/lib"
 // CHECK-EL-SF-64R2-N32: "[[TC]]/mips64r2/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/el/sof/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI n32, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -mnan=2008 -no-pie \
@@ -2512,7 +2512,7 @@
 // CHECK-EL-NAN-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/el/nan2008/usr/lib"
 // CHECK-EL-NAN-64R2-N32: "[[TC]]/mips64r2/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/el/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI n32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -mfp64 -mnan=2008 -no-pie \
@@ -2539,7 +2539,7 @@
 // CHECK-EL-NAN64-64R2-N32: "-L[[TC]]/../../../../sysroot/mips64r2/el/nan2008/usr/lib"
 // CHECK-EL-NAN64-64R2-N32: "[[TC]]/mips64r2/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-64R2-N32: "[[TC]]/../../../../sysroot/mips64r2/el/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -mhard-float -no-pie \
@@ -2566,7 +2566,7 @@
 // CHECK-EL-HF-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/el/usr/lib"
 // CHECK-EL-HF-64R2-64: "[[TC]]/mips64r2/64/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/el/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI 64, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -mfp64 -mhard-float -no-pie \
@@ -2593,7 +2593,7 @@
 // CHECK-EL-HF64-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/el/usr/lib"
 // CHECK-EL-HF64-64R2-64: "[[TC]]/mips64r2/64/el{{/|\\\\}}crtend.o"
 // CHECK-EL-HF64-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/el/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI 64, soft float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -msoft-float -no-pie \
@@ -2620,7 +2620,7 @@
 // CHECK-EL-SF-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/el/sof/usr/lib"
 // CHECK-EL-SF-64R2-64: "[[TC]]/mips64r2/64/el/sof{{/|\\\\}}crtend.o"
 // CHECK-EL-SF-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/el/sof/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI 64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -mnan=2008 -no-pie \
@@ -2647,7 +2647,7 @@
 // CHECK-EL-NAN-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/el/nan2008/usr/lib"
 // CHECK-EL-NAN-64R2-64: "[[TC]]/mips64r2/64/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/el/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r2, ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -mfp64 -mnan=2008 -no-pie \
@@ -2674,7 +2674,7 @@
 // CHECK-EL-NAN64-64R2-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/el/nan2008/usr/lib"
 // CHECK-EL-NAN64-64R2-64: "[[TC]]/mips64r2/64/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-64R2-64: "[[TC]]/../../../../sysroot/mips64r2/64/el/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, default (mips64r2), ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-mti-linux-gnu -mabi=64 -mfp64 -mnan=2008 -no-pie \
@@ -2701,9 +2701,9 @@
 // CHECK-EL-NAN64-64R2-64-DEF: "-L[[TC]]/../../../../sysroot/mips64r2/64/el/nan2008/usr/lib"
 // CHECK-EL-NAN64-64R2-64-DEF: "[[TC]]/mips64r2/64/el/nan2008{{/|\\\\}}crtend.o"
 // CHECK-EL-NAN64-64R2-64-DEF: "[[TC]]/../../../../sysroot/mips64r2/64/el/nan2008/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // Check that mips32r3 and mips32r5 are equal to mips32r2
-
+//
 // = Big-endian, mips32r3, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r3 -mhard-float -no-pie \
@@ -2730,7 +2730,7 @@
 // CHECK-BE-HF-32R3: "-L[[TC]]/../../../../sysroot/usr/lib/../lib"
 // CHECK-BE-HF-32R3: "[[TC]]{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-32R3: "[[TC]]/../../../../sysroot/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips32r5, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-mti-linux-gnu -mips32r5 -mhard-float -no-pie \
@@ -2757,7 +2757,7 @@
 // CHECK-BE-HF-32R5: "-L[[TC]]/../../../../sysroot/usr/lib/../lib"
 // CHECK-BE-HF-32R5: "[[TC]]{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-32R5: "[[TC]]/../../../../sysroot/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r3, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r3 -mabi=64 -mhard-float -no-pie \
@@ -2784,7 +2784,7 @@
 // CHECK-BE-HF-64R3-64: "-L[[TC]]/../../../../sysroot/mips64r2/64/usr/lib"
 // CHECK-BE-HF-64R3-64: "[[TC]]/mips64r2/64{{/|\\\\}}crtend.o"
 // CHECK-BE-HF-64R3-64: "[[TC]]/../../../../sysroot/mips64r2/64/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r5, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r5 -mabi=64 -mhard-float -no-pie \

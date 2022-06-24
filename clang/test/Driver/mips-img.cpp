@@ -1,7 +1,7 @@
 // REQUIRES: mips-registered-target
 
 // Check frontend and linker invocations on the IMG MIPS toolchain.
-
+//
 // = Big-endian, mips32r6
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-img-linux-gnu -mips32r6 -no-pie \
@@ -28,7 +28,7 @@
 // CHECK-BE-32R6: "-L[[TC]]/../../../../sysroot/usr/lib/../lib"
 // CHECK-BE-32R6: "[[TC]]{{/|\\\\}}crtend.o"
 // CHECK-BE-32R6: "[[TC]]/../../../../sysroot/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips32r6
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-img-linux-gnu -mips32r6 -EL -no-pie \
@@ -55,7 +55,7 @@
 // CHECK-LE-32R6: "-L[[TC]]/../../../../sysroot/el/usr/lib/../lib"
 // CHECK-LE-32R6: "[[TC]]/el{{/|\\\\}}crtend.o"
 // CHECK-LE-32R6: "[[TC]]/../../../../sysroot/el/usr/lib/../lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r6, N32
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -mabi=n32 -no-pie \
@@ -82,7 +82,7 @@
 // CHECK-BE-64R6-N32: "-L[[TC]]/../../../../sysroot/mips64r6/usr/lib"
 // CHECK-BE-64R6-N32: "[[TC]]/mips64r6{{/|\\\\}}crtend.o"
 // CHECK-BE-64R6-N32: "[[TC]]/../../../../sysroot/mips64r6/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r6, N32
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -EL -mabi=n32 -no-pie \
@@ -109,7 +109,7 @@
 // CHECK-LE-64R6-N32: "-L[[TC]]/../../../../sysroot/mips64r6/el/usr/lib"
 // CHECK-LE-64R6-N32: "[[TC]]/mips64r6/el{{/|\\\\}}crtend.o"
 // CHECK-LE-64R6-N32: "[[TC]]/../../../../sysroot/mips64r6/el/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Big-endian, mips64r6, N64
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -mabi=64 -no-pie \
@@ -136,7 +136,7 @@
 // CHECK-BE-64R6-N64: "-L[[TC]]/../../../../sysroot/mips64r6/64/usr/lib"
 // CHECK-BE-64R6-N64: "[[TC]]/mips64r6/64{{/|\\\\}}crtend.o"
 // CHECK-BE-64R6-N64: "[[TC]]/../../../../sysroot/mips64r6/64/usr/lib{{/|\\\\}}crtn.o"
-
+//
 // = Little-endian, mips64r6, N64
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -EL -mabi=64 -no-pie \

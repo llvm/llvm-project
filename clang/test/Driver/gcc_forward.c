@@ -6,7 +6,7 @@
 
 // Check that we don't try to forward -Xclang or -mlinker-version to GCC.
 // PR12920 -- Check also we may not forward W_Group options to GCC.
-
+//
 // RUN: %clang -target powerpc-unknown-unknown \
 // RUN:   %s \
 // RUN:   -Wall -Wdocumentation \
@@ -14,12 +14,12 @@
 // RUN:   -pie -march=x86-64 \
 // RUN:   -mlinker-version=10 -### 2> %t
 // RUN: FileCheck < %t %s
-
+//
 // clang -cc1
 // CHECK: clang
 // CHECK: "-Wall" "-Wdocumentation"
 // CHECK: "-o" "{{[^"]+}}.o"
-
+//
 // gcc as ld.
 // CHECK: gcc{{[^"]*}}" "-pie"
 // CHECK-NOT: "-mlinker-version=10"

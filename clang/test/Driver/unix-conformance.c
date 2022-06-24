@@ -6,11 +6,11 @@
 
 // When given multiple .c files to compile, clang compiles them in order until
 // it hits an error, at which point it stops.
-
+//
 // RUN: rm -rf %t-dir
 // RUN: mkdir -p %t-dir
 // RUN: cd %t-dir
-
+//
 // RUN: touch %t-dir/1.c
 // RUN: echo "invalid C code" > %t-dir/2.c
 // RUN: touch %t-dir/3.c
