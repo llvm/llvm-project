@@ -1,9 +1,9 @@
-// RUN: %check_clang_tidy %s cert-dcl16-c %t -- -- -I %S
+// RUN: %check_clang_tidy %s cert-dcl16-c %t -- -- -I %clang_tidy_headers
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t.cpp
-// RUN: clang-tidy %t.cpp -checks='-*,cert-dcl16-c' -fix -- -I %S
-// RUN: clang-tidy %t.cpp -checks='-*,cert-dcl16-c' -warnings-as-errors='-*,cert-dcl16-c' -- -I %S
+// RUN: clang-tidy %t.cpp -checks='-*,cert-dcl16-c' -fix -- -I %clang_tidy_headers
+// RUN: clang-tidy %t.cpp -checks='-*,cert-dcl16-c' -warnings-as-errors='-*,cert-dcl16-c' -- -I %clang_tidy_headers
 
-#include "../readability/uppercase-literal-suffix.h"
+#include "integral_constant.h"
 
 void integer_suffix() {
   static constexpr auto v0 = __LINE__; // synthetic
