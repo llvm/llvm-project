@@ -1783,6 +1783,10 @@ bool hasMAIInsts(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureMAIInsts];
 }
 
+bool hasVOPD(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureVOPD];
+}
+
 int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
                          int32_t ArgNumVGPR) {
   if (has90AInsts && ArgNumAGPR)

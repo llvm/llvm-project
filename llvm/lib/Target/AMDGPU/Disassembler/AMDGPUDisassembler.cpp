@@ -288,6 +288,12 @@ decodeOperand_VS_32_Deferred(MCInst &Inst, unsigned Imm, uint64_t Addr,
       Inst, DAsm->decodeSrcOp(llvm::AMDGPUDisassembler::OPW32, Imm, true));
 }
 
+static DecodeStatus decodeOperandVOPDDstY(MCInst &Inst, unsigned Val,
+                                          uint64_t Addr, const void *Decoder) {
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeVOPDDstYOp(Inst, Val));
+}
+
 static bool IsAGPROperand(const MCInst &Inst, int OpIdx,
                           const MCRegisterInfo *MRI) {
   if (OpIdx < 0)
@@ -448,6 +454,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           convertVOPCDPPInst(MI);
         break;
       }
+      Res = tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address);
+      if (Res)
+        break;
     }
     // Reinitialize Bytes
     Bytes = Bytes_.slice(0, MaxInstBytesNum);
@@ -971,6 +980,8 @@ DecodeStatus AMDGPUDisassembler::convertFMAanyK(MCInst &MI,
   assert(HasLiteral && "Should have decoded a literal");
   const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
   unsigned DescNumOps = Desc.getNumOperands();
+  insertNamedMCOperand(MI, MCOperand::createImm(Literal),
+                       AMDGPU::OpName::immDeferred);
   assert(DescNumOps == MI.getNumOperands());
   for (unsigned I = 0; I < DescNumOps; ++I) {
     auto &Op = MI.getOperand(I);
@@ -1213,6 +1224,9 @@ MCOperand AMDGPUDisassembler::decodeOperand_SReg_512(unsigned Val) const {
 MCOperand
 AMDGPUDisassembler::decodeMandatoryLiteralConstant(unsigned Val) const {
   if (HasLiteral) {
+    assert(
+        AMDGPU::hasVOPD(STI) &&
+        "Should only decode multiple kimm with VOPD, check VSrc operand types");
     if (Literal != Val)
       return errOperand(Val, "More than one unique literal is illegal");
   }
@@ -1503,6 +1517,20 @@ MCOperand AMDGPUDisassembler::decodeDstOp(const OpWidthTy Width, unsigned Val) c
   }
 
   llvm_unreachable("unknown dst register");
+}
+
+// Bit 0 of DstY isn't stored in the instruction, because it's always the
+// opposite of bit 0 of DstX.
+MCOperand AMDGPUDisassembler::decodeVOPDDstYOp(MCInst &Inst,
+                                               unsigned Val) const {
+  int VDstXInd =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::vdstX);
+  assert(VDstXInd != -1);
+  assert(Inst.getOperand(VDstXInd).isReg());
+  unsigned XDstReg = MRI.getEncodingValue(Inst.getOperand(VDstXInd).getReg());
+  Val |= ~XDstReg & 1;
+  auto Width = llvm::AMDGPUDisassembler::OPW32;
+  return createRegOperand(getVgprClassId(Width), Val);
 }
 
 MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
