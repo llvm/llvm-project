@@ -472,7 +472,7 @@ public:
 
   /// Check if type and variable info should be emitted.
   bool hasReducedDebugInfo() const {
-    return getDebugInfo() >= codegenoptions::LimitedDebugInfo;
+    return getDebugInfo() >= codegenoptions::DebugInfoConstructor;
   }
 
   /// Check if maybe unused type info should be emitted.
