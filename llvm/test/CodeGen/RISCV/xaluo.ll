@@ -4094,8 +4094,8 @@ define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, i64* %res) {
 ; RV32-LABEL: uaddo.i64.constant_2048:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    mv a3, a0
-; RV32-NEXT:    addi a0, a0, 1024
-; RV32-NEXT:    addi a4, a0, 1024
+; RV32-NEXT:    addi a0, a0, 2047
+; RV32-NEXT:    addi a4, a0, 1
 ; RV32-NEXT:    sltu a0, a4, a3
 ; RV32-NEXT:    add a5, a1, a0
 ; RV32-NEXT:    bgeu a4, a3, .LBB67_2
@@ -4108,8 +4108,8 @@ define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, i64* %res) {
 ;
 ; RV64-LABEL: uaddo.i64.constant_2048:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a2, a0, 1024
-; RV64-NEXT:    addi a2, a2, 1024
+; RV64-NEXT:    addi a2, a0, 2047
+; RV64-NEXT:    addi a2, a2, 1
 ; RV64-NEXT:    sltu a0, a2, a0
 ; RV64-NEXT:    sd a2, 0(a1)
 ; RV64-NEXT:    ret
@@ -4117,8 +4117,8 @@ define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, i64* %res) {
 ; RV32ZBA-LABEL: uaddo.i64.constant_2048:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    mv a3, a0
-; RV32ZBA-NEXT:    addi a0, a0, 1024
-; RV32ZBA-NEXT:    addi a4, a0, 1024
+; RV32ZBA-NEXT:    addi a0, a0, 2047
+; RV32ZBA-NEXT:    addi a4, a0, 1
 ; RV32ZBA-NEXT:    sltu a0, a4, a3
 ; RV32ZBA-NEXT:    add a5, a1, a0
 ; RV32ZBA-NEXT:    bgeu a4, a3, .LBB67_2
@@ -4131,8 +4131,8 @@ define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, i64* %res) {
 ;
 ; RV64ZBA-LABEL: uaddo.i64.constant_2048:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    addi a2, a0, 1024
-; RV64ZBA-NEXT:    addi a2, a2, 1024
+; RV64ZBA-NEXT:    addi a2, a0, 2047
+; RV64ZBA-NEXT:    addi a2, a2, 1
 ; RV64ZBA-NEXT:    sltu a0, a2, a0
 ; RV64ZBA-NEXT:    sd a2, 0(a1)
 ; RV64ZBA-NEXT:    ret
@@ -4148,8 +4148,8 @@ define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, i64* %res) {
 ; RV32-LABEL: uaddo.i64.constant_2049:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    mv a3, a0
-; RV32-NEXT:    addi a0, a0, 1025
-; RV32-NEXT:    addi a4, a0, 1024
+; RV32-NEXT:    addi a0, a0, 2047
+; RV32-NEXT:    addi a4, a0, 2
 ; RV32-NEXT:    sltu a0, a4, a3
 ; RV32-NEXT:    add a5, a1, a0
 ; RV32-NEXT:    bgeu a4, a3, .LBB68_2
@@ -4162,8 +4162,8 @@ define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, i64* %res) {
 ;
 ; RV64-LABEL: uaddo.i64.constant_2049:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a2, a0, 1025
-; RV64-NEXT:    addi a2, a2, 1024
+; RV64-NEXT:    addi a2, a0, 2047
+; RV64-NEXT:    addi a2, a2, 2
 ; RV64-NEXT:    sltu a0, a2, a0
 ; RV64-NEXT:    sd a2, 0(a1)
 ; RV64-NEXT:    ret
@@ -4171,8 +4171,8 @@ define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, i64* %res) {
 ; RV32ZBA-LABEL: uaddo.i64.constant_2049:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    mv a3, a0
-; RV32ZBA-NEXT:    addi a0, a0, 1025
-; RV32ZBA-NEXT:    addi a4, a0, 1024
+; RV32ZBA-NEXT:    addi a0, a0, 2047
+; RV32ZBA-NEXT:    addi a4, a0, 2
 ; RV32ZBA-NEXT:    sltu a0, a4, a3
 ; RV32ZBA-NEXT:    add a5, a1, a0
 ; RV32ZBA-NEXT:    bgeu a4, a3, .LBB68_2
@@ -4185,8 +4185,8 @@ define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, i64* %res) {
 ;
 ; RV64ZBA-LABEL: uaddo.i64.constant_2049:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    addi a2, a0, 1025
-; RV64ZBA-NEXT:    addi a2, a2, 1024
+; RV64ZBA-NEXT:    addi a2, a0, 2047
+; RV64ZBA-NEXT:    addi a2, a2, 2
 ; RV64ZBA-NEXT:    sltu a0, a2, a0
 ; RV64ZBA-NEXT:    sd a2, 0(a1)
 ; RV64ZBA-NEXT:    ret
