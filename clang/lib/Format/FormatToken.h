@@ -46,6 +46,13 @@ namespace format {
   /* l_brace of if/for/while */                                                \
   TYPE(ControlStatementLBrace)                                                 \
   TYPE(CppCastLParen)                                                          \
+  TYPE(CSharpGenericTypeConstraint)                                            \
+  TYPE(CSharpGenericTypeConstraintColon)                                       \
+  TYPE(CSharpGenericTypeConstraintComma)                                       \
+  TYPE(CSharpNamedArgumentColon)                                               \
+  TYPE(CSharpNullable)                                                         \
+  TYPE(CSharpNullConditionalLSquare)                                           \
+  TYPE(CSharpStringLiteral)                                                    \
   TYPE(CtorInitializerColon)                                                   \
   TYPE(CtorInitializerComma)                                                   \
   TYPE(DesignatedInitializerLSquare)                                           \
@@ -68,6 +75,7 @@ namespace format {
   TYPE(InlineASMColon)                                                         \
   TYPE(InlineASMSymbolicNameLSquare)                                           \
   TYPE(JavaAnnotation)                                                         \
+  TYPE(JsAndAndEqual)                                                          \
   TYPE(JsComputedPropertyName)                                                 \
   TYPE(JsExponentiation)                                                       \
   TYPE(JsExponentiationEqual)                                                  \
@@ -76,7 +84,6 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
-  TYPE(JsAndAndEqual)                                                          \
   TYPE(LambdaArrow)                                                            \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
@@ -101,6 +108,7 @@ namespace format {
   TYPE(OverloadedOperator)                                                     \
   TYPE(OverloadedOperatorLParen)                                               \
   TYPE(PointerOrReference)                                                     \
+  TYPE(ProtoExtensionLSquare)                                                  \
   TYPE(PureVirtualSpecifier)                                                   \
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
@@ -119,7 +127,6 @@ namespace format {
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
-  TYPE(ProtoExtensionLSquare)                                                  \
   TYPE(TrailingAnnotation)                                                     \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
@@ -128,13 +135,6 @@ namespace format {
   TYPE(UnaryOperator)                                                          \
   TYPE(UnionLBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
-  TYPE(CSharpStringLiteral)                                                    \
-  TYPE(CSharpNamedArgumentColon)                                               \
-  TYPE(CSharpNullable)                                                         \
-  TYPE(CSharpNullConditionalLSquare)                                           \
-  TYPE(CSharpGenericTypeConstraint)                                            \
-  TYPE(CSharpGenericTypeConstraintColon)                                       \
-  TYPE(CSharpGenericTypeConstraintComma)                                       \
   TYPE(Unknown)
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a
