@@ -25,6 +25,9 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/Shape/IR/ShapeOpsTypes.h.inc"
+
 namespace mlir {
 class PatternRewriter;
 
@@ -39,32 +42,6 @@ bool isExtentTensorType(Type);
 
 // Given an input shape Value, try to obtain the shape's values.
 LogicalResult getShapeVec(Value input, SmallVectorImpl<int64_t> &shapeValues);
-
-/// The shape descriptor type represents rank and dimension sizes.
-class ShapeType : public Type::TypeBase<ShapeType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The type of a single dimension.
-class SizeType : public Type::TypeBase<SizeType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The ValueShape represents a (potentially unknown) runtime value and shape.
-class ValueShapeType
-    : public Type::TypeBase<ValueShapeType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The Witness represents a runtime constraint, to be used as shape related
-/// preconditions on code execution.
-class WitnessType : public Type::TypeBase<WitnessType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
 
 } // namespace shape
 } // namespace mlir
