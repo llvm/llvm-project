@@ -24,7 +24,7 @@ namespace clangd {
 llvm::Expected<llvm::json::Value> clang::clangd::LSPClient::CallResult::take() {
   std::unique_lock<std::mutex> Lock(Mu);
   if (!clangd::wait(Lock, CV, timeoutSeconds(10),
-                    [this] { return Value.hasValue(); })) {
+                    [this] { return Value.has_value(); })) {
     ADD_FAILURE() << "No result from call after 10 seconds!";
     return llvm::json::Value(nullptr);
   }
