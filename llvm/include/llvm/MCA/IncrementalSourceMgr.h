@@ -30,40 +30,60 @@ class IncrementalSourceMgr : public SourceMgr {
   /// there is a large number of instructions.
   std::deque<UniqueInst> InstStorage;
 
+  /// Instructions that are ready to be used. Each of them is a pointer of an
+  /// \a UniqueInst inside InstStorage.
+  std::deque<Instruction *> Staging;
+
   /// Current instruction index.
   unsigned TotalCounter;
 
   /// End-of-stream flag.
   bool EOS;
 
+  /// Called when an instruction is no longer needed.
+  using InstFreedCallback = llvm::function_ref<void(Instruction *)>;
+  InstFreedCallback InstFreedCB;
+
 public:
   IncrementalSourceMgr() : TotalCounter(0U), EOS(false) {}
 
-  void clear() {
-    InstStorage.clear();
-    TotalCounter = 0U;
-    EOS = false;
-  }
+  void clear();
+
+  /// Set a callback that is invoked when a mca::Instruction is
+  /// no longer needed. This is usually used for recycling the
+  /// instruction.
+  void setOnInstFreedCallback(InstFreedCallback CB) { InstFreedCB = CB; }
 
   ArrayRef<UniqueInst> getInstructions() const override {
     llvm_unreachable("Not applicable");
   }
 
-  bool hasNext() const override { return TotalCounter < InstStorage.size(); }
+  bool hasNext() const override { return !Staging.empty(); }
   bool isEnd() const override { return EOS; }
 
   SourceRef peekNext() const override {
     assert(hasNext());
-    return SourceRef(TotalCounter, *InstStorage[TotalCounter]);
+    return SourceRef(TotalCounter, *Staging.front());
   }
 
   /// Add a new instruction.
-  void addInst(UniqueInst &&Inst) { InstStorage.emplace_back(std::move(Inst)); }
+  void addInst(UniqueInst &&Inst) {
+    InstStorage.emplace_back(std::move(Inst));
+    Staging.push_back(InstStorage.back().get());
+  }
 
-  void updateNext() override { ++TotalCounter; }
+  /// Add a recycled instruction.
+  void addRecycledInst(Instruction *Inst) { Staging.push_back(Inst); }
+
+  void updateNext() override;
 
   /// Mark the end of instruction stream.
   void endOfStream() { EOS = true; }
+
+#ifndef NDEBUG
+  /// Print statistic about instruction recycling stats.
+  void printStatistic(raw_ostream &OS);
+#endif
 };
 
 } // end namespace mca
