@@ -82,7 +82,7 @@ Error MCATestBase::runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
                                  << "instruction: " << InstructionStr << '\n';
                            })) {
         // Default case.
-        return std::move(NewE);
+        return NewE;
       }
     } else {
       LoweredInsts.emplace_back(std::move(Inst.get()));
