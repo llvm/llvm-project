@@ -12,7 +12,7 @@
 #include "UInt.h"
 
 #if !defined(__SIZEOF_INT128__)
-using UInt128 = __llvm_libc::internal::UInt<128>;
+using UInt128 = __llvm_libc::cpp::UInt<128>;
 #else
 using UInt128 = __uint128_t;
 #endif
