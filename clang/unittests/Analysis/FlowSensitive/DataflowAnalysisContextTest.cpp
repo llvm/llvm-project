@@ -213,4 +213,67 @@ TEST_F(DataflowAnalysisContextTest, FlowConditionTautologies) {
   EXPECT_TRUE(Context.flowConditionIsTautology(FC5));
 }
 
+TEST_F(DataflowAnalysisContextTest, EquivBoolVals) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &Y = Context.createAtomicBoolValue();
+  auto &Z = Context.createAtomicBoolValue();
+  auto &True = Context.getBoolLiteralValue(true);
+  auto &False = Context.getBoolLiteralValue(false);
+
+  // X == X
+  EXPECT_TRUE(Context.equivalentBoolValues(X, X));
+  // X != Y
+  EXPECT_FALSE(Context.equivalentBoolValues(X, Y));
+
+  // !X != X
+  EXPECT_FALSE(Context.equivalentBoolValues(Context.getOrCreateNegation(X), X));
+  // !(!X) = X
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      Context.getOrCreateNegation(Context.getOrCreateNegation(X)), X));
+
+  // (X || X) == X
+  EXPECT_TRUE(
+      Context.equivalentBoolValues(Context.getOrCreateDisjunction(X, X), X));
+  // (X || Y) != X
+  EXPECT_FALSE(
+      Context.equivalentBoolValues(Context.getOrCreateDisjunction(X, Y), X));
+  // (X || True) == True
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      Context.getOrCreateDisjunction(X, True), True));
+  // (X || False) == X
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      Context.getOrCreateDisjunction(X, False), X));
+
+  // (X && X) == X
+  EXPECT_TRUE(
+      Context.equivalentBoolValues(Context.getOrCreateConjunction(X, X), X));
+  // (X && Y) != X
+  EXPECT_FALSE(
+      Context.equivalentBoolValues(Context.getOrCreateConjunction(X, Y), X));
+  // (X && True) == X
+  EXPECT_TRUE(
+      Context.equivalentBoolValues(Context.getOrCreateConjunction(X, True), X));
+  // (X && False) == False
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      Context.getOrCreateConjunction(X, False), False));
+
+  // (X || Y) == (Y || X)
+  EXPECT_TRUE(
+      Context.equivalentBoolValues(Context.getOrCreateDisjunction(X, Y),
+                                   Context.getOrCreateDisjunction(Y, X)));
+  // (X && Y) == (Y && X)
+  EXPECT_TRUE(
+      Context.equivalentBoolValues(Context.getOrCreateConjunction(X, Y),
+                                   Context.getOrCreateConjunction(Y, X)));
+
+  // ((X || Y) || Z) == (X || (Y || Z))
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      Context.getOrCreateDisjunction(Context.getOrCreateDisjunction(X, Y), Z),
+      Context.getOrCreateDisjunction(X, Context.getOrCreateDisjunction(Y, Z))));
+  // ((X && Y) && Z) == (X && (Y && Z))
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      Context.getOrCreateConjunction(Context.getOrCreateConjunction(X, Y), Z),
+      Context.getOrCreateConjunction(X, Context.getOrCreateConjunction(Y, Z))));
+}
+
 } // namespace
