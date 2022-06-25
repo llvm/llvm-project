@@ -623,7 +623,7 @@ void ScriptParser::readTarget() {
   // for --format. We recognize only /^elf/ and "binary" in the linker
   // script as well.
   expect("(");
-  StringRef tok = next();
+  StringRef tok = unquote(next());
   expect(")");
 
   if (tok.startswith("elf"))
