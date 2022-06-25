@@ -155,6 +155,62 @@ TEST(LlvmLibcUInt128ClassTest, OrTests) {
   EXPECT_EQ((base | val32), result32);
 }
 
+TEST(LlvmLibcUInt128ClassTest, CompoundAssignments) {
+  LL_UInt128 x({0xffff00000000ffff, 0xffffffff00000000});
+  LL_UInt128 b({0xf0f0f0f00f0f0f0f, 0xff00ff0000ff00ff});
+
+  LL_UInt128 a = x;
+  a |= b;
+  LL_UInt128 or_result({0xfffff0f00f0fffff, 0xffffffff00ff00ff});
+  EXPECT_EQ(a, or_result);
+
+  a = x;
+  a &= b;
+  LL_UInt128 and_result({0xf0f0000000000f0f, 0xff00ff0000000000});
+  EXPECT_EQ(a, and_result);
+
+  a = x;
+  a ^= b;
+  LL_UInt128 xor_result({0x0f0ff0f00f0ff0f0, 0x00ff00ff00ff00ff});
+  EXPECT_EQ(a, xor_result);
+
+  a = LL_UInt128(uint64_t(0x0123456789abcdef));
+  LL_UInt128 shift_left_result(uint64_t(0x123456789abcdef0));
+  a <<= 4;
+  EXPECT_EQ(a, shift_left_result);
+
+  a = LL_UInt128(uint64_t(0x123456789abcdef1));
+  LL_UInt128 shift_right_result(uint64_t(0x0123456789abcdef));
+  a >>= 4;
+  EXPECT_EQ(a, shift_right_result);
+
+  a = LL_UInt128({0xf000000000000001, 0});
+  b = LL_UInt128({0x100000000000000f, 0});
+  LL_UInt128 add_result({0x10, 0x1});
+  a += b;
+  EXPECT_EQ(a, add_result);
+
+  a = LL_UInt128({0xf, 0});
+  b = LL_UInt128({0x1111111111111111, 0x1111111111111111});
+  LL_UInt128 mul_result({0xffffffffffffffff, 0xffffffffffffffff});
+  a *= b;
+  EXPECT_EQ(a, mul_result);
+}
+
+TEST(LlvmLibcUInt128ClassTest, UnaryPredecrement) {
+  LL_UInt128 a = LL_UInt128({0x1111111111111111, 0x1111111111111111});
+  ++a;
+  EXPECT_EQ(a, LL_UInt128({0x1111111111111112, 0x1111111111111111}));
+
+  a = LL_UInt128({0xffffffffffffffff, 0x0});
+  ++a;
+  EXPECT_EQ(a, LL_UInt128({0x0, 0x1}));
+
+  a = LL_UInt128({0xffffffffffffffff, 0xffffffffffffffff});
+  ++a;
+  EXPECT_EQ(a, LL_UInt128({0x0, 0x0}));
+}
+
 TEST(LlvmLibcUInt128ClassTest, EqualsTests) {
   LL_UInt128 a1({0xffffffff00000000, 0xffff00000000ffff});
   LL_UInt128 a2({0xffffffff00000000, 0xffff00000000ffff});
