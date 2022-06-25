@@ -9,7 +9,7 @@ RUN: %t.exc arg1 arg2 arg3
 
 RUN: llvm-bolt %t_exc_split -o %t.exc.bolted --data %t.fdata \
 RUN:   --reorder-blocks=ext-tsp --reorder-functions=hfsort+ \
-RUN:   --split-functions=3 --split-eh=1 \
+RUN:   --split-functions --split-eh=1 \
 RUN:   | FileCheck --check-prefix=EXCEPTIONS %s
 EXCEPTIONS-NOT: invalid (possibly stale) profile
 
