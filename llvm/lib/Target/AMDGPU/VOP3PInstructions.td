@@ -88,6 +88,7 @@ multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
   } // end SubtargetPredicate = isGFX11Plus
 }
 
+let isReMaterializable = 1 in {
 let isCommutable = 1 in {
 defm V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
 defm V_PK_MAD_U16 : VOP3PInst<"v_pk_mad_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
@@ -116,7 +117,7 @@ defm V_PK_SUB_I16 : VOP3PInst<"v_pk_sub_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_LSHLREV_B16 : VOP3PInst<"v_pk_lshlrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshl_rev_16>;
 defm V_PK_ASHRREV_I16 : VOP3PInst<"v_pk_ashrrev_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, cashr_rev_16>;
 defm V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshr_rev_16>;
-
+} // End isReMaterializable = 1
 
 let SubtargetPredicate = HasVOP3PInsts in {
 
@@ -209,6 +210,7 @@ let SubtargetPredicate = HasMadMixInsts in {
 // Size of src arguments (16/32) is controlled by op_sel.
 // For 16-bit src arguments their location (hi/lo) are controlled by op_sel_hi.
 let isCommutable = 1, mayRaiseFPException = 0 in {
+let isReMaterializable = 1 in
 defm V_MAD_MIX_F32 : VOP3_VOP3PInst<"v_mad_mix_f32", VOP3P_Mix_Profile<VOP_F32_F16_F16_F16, VOP3_OPSEL>>;
 
 let FPDPRounding = 1 in {
@@ -228,6 +230,8 @@ defm : MadFmaMixPats<fmad, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
 // Essentially the same as the mad_mix versions
 let SubtargetPredicate = HasFmaMixInsts in {
 let isCommutable = 1 in {
+
+let isReMaterializable = 1 in
 defm V_FMA_MIX_F32 : VOP3_VOP3PInst<"v_fma_mix_f32", VOP3P_Mix_Profile<VOP_F32_F16_F16_F16, VOP3_OPSEL>>;
 
 let FPDPRounding = 1 in {
