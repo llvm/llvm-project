@@ -8,7 +8,7 @@
 // RUN: %clang -fuse-ld= -target x86_64-apple-darwin10 -### %s \
 // RUN:   -ccc-install-dir %t/bin -mlinker-version=133 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_LTOLIB_PATH %s -input-file %t.log
-
+//
 // LINK_LTOLIB_PATH: {{ld(.exe)?"}}
 // LINK_LTOLIB_PATH: "-lto_library"
 

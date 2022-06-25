@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-
+//
 // RUN: %clang -miamcu -rtlib=platform -### %s 2>&1 | FileCheck %s
 // RUN: %clang -miamcu -rtlib=platform -m32 -### %s 2>&1 | FileCheck %s
 // RUN: %clang -miamcu -rtlib=platform --target=x86_64-unknown-linux-gnu -### %s 2>&1 | FileCheck %s

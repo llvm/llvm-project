@@ -12,7 +12,7 @@
 // Check Fuchsia API level macro.
 // RUN: %clang -target x86_64-unknown-fuchsia -ffuchsia-api-level=15 -c %s -o %t
 // RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=CHECK-F15
-
+//
 // RUN: %clang -target x86_64-unknown-fuchsia -ffuchsia-api-level=16 -c %s -o %t
 // RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=CHECK-F16
 

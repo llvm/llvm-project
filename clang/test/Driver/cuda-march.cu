@@ -1,7 +1,7 @@
 // Checks that cuda compilation does the right thing when passed -march.
 // (Specifically, we want to pass it to host compilation, but not to device
 // compilation or ptxas!)
-
+//
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 

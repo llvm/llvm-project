@@ -721,10 +721,16 @@ private:
     static const size_type __endian_factor = 2;
 #endif
 
+    // Attribute 'packed' is used to keep the layout compatible with the
+    // previous definition that did not use bit fields. This is because on
+    // some platforms bit fields have a default size rather than the actual
+    // size used, e.g., it is 4 bytes on AIX. See D128285 for details.
     struct __long
     {
-        size_type __is_long_ : 1;
-        size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
+        struct _LIBCPP_PACKED {
+            size_type __is_long_ : 1;
+            size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
+        };
         size_type __size_;
         pointer   __data_;
     };
@@ -734,8 +740,10 @@ private:
 
     struct __short
     {
-        unsigned char __is_long_ : 1;
-        unsigned char __size_ : 7;
+        struct _LIBCPP_PACKED {
+            unsigned char __is_long_ : 1;
+            unsigned char __size_ : 7;
+        };
         char __padding_[sizeof(value_type) - 1];
         value_type __data_[__min_cap];
     };

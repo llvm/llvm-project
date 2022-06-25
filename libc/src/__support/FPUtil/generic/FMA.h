@@ -207,8 +207,9 @@ template <> inline double fma<double>(double x, double y, double z) {
   // Normalize the result.
   if (prod_mant != 0) {
     uint64_t prod_hi = static_cast<uint64_t>(prod_mant >> 64);
-    int lead_zeros =
-        prod_hi ? clz(prod_hi) : 64 + clz(static_cast<uint64_t>(prod_mant));
+    int lead_zeros = prod_hi
+                         ? unsafe_clz(prod_hi)
+                         : 64 + unsafe_clz(static_cast<uint64_t>(prod_mant));
     // Move the leading 1 to the most significant bit.
     prod_mant <<= lead_zeros;
     // The lower 64 bits are always sticky bits after moving the leading 1 to

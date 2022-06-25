@@ -1,8 +1,8 @@
 // Check that -mcpu works for all supported GPUs.
 
-
+//
 // R600-based processors.
-
+//
 
 // RUN: %clang -### -target r600 -mcpu=r600 %s 2>&1 | FileCheck --check-prefix=R600 %s
 // RUN: %clang -### -target r600 -mcpu=rv630 %s 2>&1 | FileCheck --check-prefix=R600 %s
@@ -48,9 +48,9 @@
 // CAYMAN:  "-target-cpu" "cayman"
 // TURKS:   "-target-cpu" "turks"
 
-
+//
 // AMDGCN-based processors.
-
+//
 
 // RUN: %clang -### -target amdgcn %s 2>&1 | FileCheck --check-prefix=GCNDEFAULT %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx600 %s 2>&1 | FileCheck --check-prefix=GFX600 %s

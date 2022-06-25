@@ -30,9 +30,8 @@ makeCanonicalBoolValuePair(BoolValue &LHS, BoolValue &RHS) {
   return Res;
 }
 
-BoolValue &
-DataflowAnalysisContext::getOrCreateConjunctionValue(BoolValue &LHS,
-                                                     BoolValue &RHS) {
+BoolValue &DataflowAnalysisContext::getOrCreateConjunction(BoolValue &LHS,
+                                                           BoolValue &RHS) {
   if (&LHS == &RHS)
     return LHS;
 
@@ -44,9 +43,8 @@ DataflowAnalysisContext::getOrCreateConjunctionValue(BoolValue &LHS,
   return *Res.first->second;
 }
 
-BoolValue &
-DataflowAnalysisContext::getOrCreateDisjunctionValue(BoolValue &LHS,
-                                                     BoolValue &RHS) {
+BoolValue &DataflowAnalysisContext::getOrCreateDisjunction(BoolValue &LHS,
+                                                           BoolValue &RHS) {
   if (&LHS == &RHS)
     return LHS;
 
@@ -58,27 +56,37 @@ DataflowAnalysisContext::getOrCreateDisjunctionValue(BoolValue &LHS,
   return *Res.first->second;
 }
 
-BoolValue &DataflowAnalysisContext::getOrCreateNegationValue(BoolValue &Val) {
+BoolValue &DataflowAnalysisContext::getOrCreateNegation(BoolValue &Val) {
   auto Res = NegationVals.try_emplace(&Val, nullptr);
   if (Res.second)
     Res.first->second = &takeOwnership(std::make_unique<NegationValue>(Val));
   return *Res.first->second;
 }
 
+BoolValue &DataflowAnalysisContext::getOrCreateImplication(BoolValue &LHS,
+                                                           BoolValue &RHS) {
+  return &LHS == &RHS ? getBoolLiteralValue(true)
+                      : getOrCreateDisjunction(getOrCreateNegation(LHS), RHS);
+}
+
+BoolValue &DataflowAnalysisContext::getOrCreateIff(BoolValue &LHS,
+                                                   BoolValue &RHS) {
+  return &LHS == &RHS
+             ? getBoolLiteralValue(true)
+             : getOrCreateConjunction(getOrCreateImplication(LHS, RHS),
+                                      getOrCreateImplication(RHS, LHS));
+}
+
 AtomicBoolValue &DataflowAnalysisContext::makeFlowConditionToken() {
-  AtomicBoolValue &Token = createAtomicBoolValue();
-  FlowConditionRemainingConjuncts[&Token] = {};
-  FlowConditionFirstConjuncts[&Token] = &Token;
-  return Token;
+  return createAtomicBoolValue();
 }
 
 void DataflowAnalysisContext::addFlowConditionConstraint(
     AtomicBoolValue &Token, BoolValue &Constraint) {
-  FlowConditionRemainingConjuncts[&Token].insert(&getOrCreateDisjunctionValue(
-      Constraint, getOrCreateNegationValue(Token)));
-  FlowConditionFirstConjuncts[&Token] =
-      &getOrCreateDisjunctionValue(*FlowConditionFirstConjuncts[&Token],
-                                   getOrCreateNegationValue(Constraint));
+  auto Res = FlowConditionConstraints.try_emplace(&Token, &Constraint);
+  if (!Res.second) {
+    Res.first->second = &getOrCreateConjunction(*Res.first->second, Constraint);
+  }
 }
 
 AtomicBoolValue &
@@ -95,9 +103,16 @@ DataflowAnalysisContext::joinFlowConditions(AtomicBoolValue &FirstToken,
   auto &Token = makeFlowConditionToken();
   FlowConditionDeps[&Token].insert(&FirstToken);
   FlowConditionDeps[&Token].insert(&SecondToken);
-  addFlowConditionConstraint(
-      Token, getOrCreateDisjunctionValue(FirstToken, SecondToken));
+  addFlowConditionConstraint(Token,
+                             getOrCreateDisjunction(FirstToken, SecondToken));
   return Token;
+}
+
+Solver::Result
+DataflowAnalysisContext::querySolver(llvm::DenseSet<BoolValue *> Constraints) {
+  Constraints.insert(&getBoolLiteralValue(true));
+  Constraints.insert(&getOrCreateNegation(getBoolLiteralValue(false)));
+  return S->solve(std::move(Constraints));
 }
 
 bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
@@ -107,50 +122,50 @@ bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
   // reducing the problem to satisfiability checking. In other words, we attempt
   // to show that assuming `Val` is false makes the constraints induced by the
   // flow condition unsatisfiable.
-  llvm::DenseSet<BoolValue *> Constraints = {
-      &Token,
-      &getBoolLiteralValue(true),
-      &getOrCreateNegationValue(getBoolLiteralValue(false)),
-      &getOrCreateNegationValue(Val),
-  };
+  llvm::DenseSet<BoolValue *> Constraints = {&Token, &getOrCreateNegation(Val)};
   llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
-  return S->solve(std::move(Constraints)) == Solver::Result::Unsatisfiable;
+  return isUnsatisfiable(std::move(Constraints));
 }
 
 bool DataflowAnalysisContext::flowConditionIsTautology(AtomicBoolValue &Token) {
   // Returns true if and only if we cannot prove that the flow condition can
   // ever be false.
-  llvm::DenseSet<BoolValue *> Constraints = {
-      &getBoolLiteralValue(true),
-      &getOrCreateNegationValue(getBoolLiteralValue(false)),
-      &getOrCreateNegationValue(Token),
-  };
+  llvm::DenseSet<BoolValue *> Constraints = {&getOrCreateNegation(Token)};
   llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
-  return S->solve(std::move(Constraints)) == Solver::Result::Unsatisfiable;
+  return isUnsatisfiable(std::move(Constraints));
+}
+
+bool DataflowAnalysisContext::equivalentBoolValues(BoolValue &Val1,
+                                                   BoolValue &Val2) {
+  llvm::DenseSet<BoolValue *> Constraints = {
+      &getOrCreateNegation(getOrCreateIff(Val1, Val2))};
+  return isUnsatisfiable(Constraints);
 }
 
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
     AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
-    llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) const {
+    llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) {
   auto Res = VisitedTokens.insert(&Token);
   if (!Res.second)
     return;
 
-  auto FirstConjunctIT = FlowConditionFirstConjuncts.find(&Token);
-  if (FirstConjunctIT != FlowConditionFirstConjuncts.end())
-    Constraints.insert(FirstConjunctIT->second);
-  auto RemainingConjunctsIT = FlowConditionRemainingConjuncts.find(&Token);
-  if (RemainingConjunctsIT != FlowConditionRemainingConjuncts.end())
-    Constraints.insert(RemainingConjunctsIT->second.begin(),
-                       RemainingConjunctsIT->second.end());
+  auto ConstraintsIT = FlowConditionConstraints.find(&Token);
+  if (ConstraintsIT == FlowConditionConstraints.end()) {
+    Constraints.insert(&Token);
+  } else {
+    // Bind flow condition token via `iff` to its set of constraints:
+    // FC <=> (C1 ^ C2 ^ ...), where Ci are constraints
+    Constraints.insert(&getOrCreateIff(Token, *ConstraintsIT->second));
+  }
 
   auto DepsIT = FlowConditionDeps.find(&Token);
   if (DepsIT != FlowConditionDeps.end()) {
-    for (AtomicBoolValue *DepToken : DepsIT->second)
+    for (AtomicBoolValue *DepToken : DepsIT->second) {
       addTransitiveFlowConditionConstraints(*DepToken, Constraints,
                                             VisitedTokens);
+    }
   }
 }
 

@@ -36,8 +36,8 @@ template <> struct SpecialLongDouble<long double> {
 template <typename T>
 static inline void normalize(int &exponent,
                              typename FPBits<T>::UIntType &mantissa) {
-  const int shift =
-      clz(mantissa) - (8 * sizeof(mantissa) - 1 - MantissaWidth<T>::VALUE);
+  const int shift = unsafe_clz(mantissa) -
+                    (8 * sizeof(mantissa) - 1 - MantissaWidth<T>::VALUE);
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -51,8 +51,9 @@ inline void normalize<long double>(int &exponent, uint64_t &mantissa) {
 template <>
 inline void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
-  const int shift = hi_bits ? (clz(hi_bits) - 15)
-                            : (clz(static_cast<uint64_t>(mantissa)) + 49);
+  const int shift = hi_bits
+                        ? (unsafe_clz(hi_bits) - 15)
+                        : (unsafe_clz(static_cast<uint64_t>(mantissa)) + 49);
   exponent -= shift;
   mantissa <<= shift;
 }

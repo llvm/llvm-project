@@ -431,8 +431,10 @@ let Command = "history" in {
 let Command = "log enable" in {
   def log_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
     Desc<"Set the destination file to log to.">;
+  def log_handler : Option<"log-handler", "h">, Group<1>,
+    EnumArg<"LogHandler", "LogHandlerType()">, Desc<"Specify a log handler which determines where log messages are written.">;
   def log_buffer_size : Option<"buffer", "b">, Group<1>, Arg<"UnsignedInteger">,
-    Desc<"Set the log to be buffered, using the specified buffer size.">;
+    Desc<"Set the log to be buffered, using the specified buffer size, if supported by the log handler.">;
   def log_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Enable verbose logging.">;
   def log_sequence : Option<"sequence", "s">, Group<1>,
