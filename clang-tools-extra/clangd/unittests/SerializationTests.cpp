@@ -297,7 +297,7 @@ TEST(SerializationTest, CmdlTest) {
     ASSERT_TRUE(bool(In)) << In.takeError();
     ASSERT_TRUE(In->Cmd);
 
-    const tooling::CompileCommand &SerializedCmd = In->Cmd.getValue();
+    const tooling::CompileCommand &SerializedCmd = *In->Cmd;
     EXPECT_EQ(SerializedCmd.CommandLine, Cmd.CommandLine);
     EXPECT_EQ(SerializedCmd.Directory, Cmd.Directory);
     EXPECT_NE(SerializedCmd.Filename, Cmd.Filename);

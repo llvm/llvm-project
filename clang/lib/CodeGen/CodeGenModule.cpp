@@ -2839,7 +2839,7 @@ bool CodeGenModule::isProfileInstrExcluded(llvm::Function *Fn,
   auto &SM = Context.getSourceManager();
   if (const auto *MainFile = SM.getFileEntryForID(SM.getMainFileID())) {
     Optional<bool> V = ProfileList.isFileExcluded(MainFile->getName(), Kind);
-    if (V.hasValue())
+    if (V)
       return *V;
   }
   return ProfileList.getDefault();
