@@ -130,7 +130,9 @@ macro(add_msan_tests_for_arch arch kind cflags)
 endmacro()
 
 # We should only build MSan unit tests if we can build instrumented libcxx.
-if(COMPILER_RT_CAN_EXECUTE_TESTS AND COMPILER_RT_USE_LIBCXX)
+if(COMPILER_RT_CAN_EXECUTE_TESTS AND
+   COMPILER_RT_LIBCXX_PATH AND
+   COMPILER_RT_LIBCXXABI_PATH)
   foreach(arch ${MSAN_SUPPORTED_ARCH})
     get_target_flags_for_arch(${arch} TARGET_CFLAGS)
     set(LIBCXX_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/../libcxx_msan_${arch})
