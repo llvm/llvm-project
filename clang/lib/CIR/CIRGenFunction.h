@@ -277,7 +277,7 @@ public:
   /// or glvalue. Needs to be kept in sync with ubsan_handlers.cpp in
   /// compiler-rt.
   enum TypeCheckKind {
-    /// Checking hte operand of a load. Must be suitably sized and aligned.
+    /// Checking the operand of a load. Must be suitably sized and aligned.
     TCK_Load,
     /// Checking the destination of a store. Must be suitably sized and aligned.
     TCK_Store,
@@ -701,8 +701,8 @@ public:
   /// Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
   /// is 'Ty'.
-  void buldStoreThroughLValue(RValue Src, LValue Dst,
-                              const clang::Decl *InitDecl);
+  void buildStoreThroughLValue(RValue Src, LValue Dst,
+                               const clang::Decl *InitDecl);
 
   mlir::LogicalResult buildBranchThroughCleanup(JumpDest &Dest,
                                                 clang::LabelDecl *L,

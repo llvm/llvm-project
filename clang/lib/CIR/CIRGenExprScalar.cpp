@@ -1098,7 +1098,7 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
   if (LHSLV.isBitField())
     assert(0 && "not yet implemented");
   else
-    CGF.buldStoreThroughLValue(RValue::get(Result), LHSLV, nullptr);
+    CGF.buildStoreThroughLValue(RValue::get(Result), LHSLV, nullptr);
 
   assert(!CGF.getLangOpts().OpenMP && "Not implemented");
   return LHSLV;
