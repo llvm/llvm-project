@@ -345,6 +345,9 @@ protected:
   // Helper to verify the analysis is really immutable.
   void setOpt(bool &Opt, bool Val);
 
+  /// Return true if register allocator is specified by -regalloc=override.
+  bool isCustomizedRegAlloc();
+
   /// Methods with trivial inline returns are convenient points in the common
   /// codegen pass pipeline where targets may insert passes. Methods with
   /// out-of-line standard implementations are major CodeGen stages called by
