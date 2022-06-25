@@ -19,7 +19,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_compound)
+// >= 11 because in C++03 nullptr isn't actually nullptr
+#if __has_keyword(__is_compound) && !defined(_LIBCPP_CXX03_LANG)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_compound : _BoolConstant<__is_compound(_Tp)> { };

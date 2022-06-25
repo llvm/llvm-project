@@ -19,7 +19,9 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_pointer)
+// Before AppleClang 12.0.5, __is_pointer didn't work for Objective-C types.
+#if __has_keyword(__is_pointer) &&                                             \
+    !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1205)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_pointer : _BoolConstant<__is_pointer(_Tp)> { };
