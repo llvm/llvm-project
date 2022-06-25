@@ -276,8 +276,8 @@ RValue CIRGenFunction::buildLoadOfLValue(LValue LV, SourceLocation Loc) {
   return RValue::get(buildLoadOfScalar(LV, Loc));
 }
 
-void CIRGenFunction::buldStoreThroughLValue(RValue Src, LValue Dst,
-                                            const Decl *InitDecl) {
+void CIRGenFunction::buildStoreThroughLValue(RValue Src, LValue Dst,
+                                             const Decl *InitDecl) {
   assert(Dst.isSimple() && "only implemented simple");
   // TODO: ObjC lifetime.
   assert(Src.isScalar() && "Can't emit an agg store with this method");
@@ -431,7 +431,7 @@ LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
     LValue LV = buildLValue(E->getLHS());
 
     SourceLocRAIIObject Loc{*this, getLoc(E->getSourceRange())};
-    buldStoreThroughLValue(RV, LV, nullptr /*InitDecl*/);
+    buildStoreThroughLValue(RV, LV, nullptr /*InitDecl*/);
     assert(!getContext().getLangOpts().OpenMP &&
            "last priv cond not implemented");
     return LV;

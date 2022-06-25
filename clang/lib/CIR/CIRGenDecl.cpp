@@ -213,7 +213,7 @@ void CIRGenFunction::buildScalarInit(const Expr *init, const ValueDecl *D,
   // TODO: this is where a lot of ObjC lifetime stuff would be done.
   mlir::Value value = buildScalarExpr(init);
   SourceLocRAIIObject Loc{*this, getLoc(D->getSourceRange())};
-  buldStoreThroughLValue(RValue::get(value), lvalue, D);
+  buildStoreThroughLValue(RValue::get(value), lvalue, D);
   return;
 }
 
