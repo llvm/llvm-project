@@ -32,11 +32,11 @@ public:
                              Optional<unsigned> OpIdx = None)
       : Name(Name), InstrID(InstrID), OpIdx(OpIdx) {}
 
-  bool isInstr() const { return !OpIdx; }
+  bool isInstr() const { return !OpIdx.hasValue(); }
   StringRef getName() const { return Name; }
   unsigned getInstrID() const { return InstrID; }
   unsigned getOpIdx() const {
-    assert(OpIdx && "Is not an operand binding");
+    assert(OpIdx.hasValue() && "Is not an operand binding");
     return *OpIdx;
   }
 };

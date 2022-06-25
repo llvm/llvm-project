@@ -85,13 +85,14 @@ exportToFile(const StringRef FilePath,
       Optional<unsigned> End =
           getPositionInModule((*C.back()).Inst, LLVMInstNum);
 
-      assert(Start &&
+      assert(Start.hasValue() &&
              "Could not find instruction number for first instruction");
-      assert(End && "Could not find instruction number for last instruction");
+      assert(End.hasValue() &&
+             "Could not find instruction number for last instruction");
 
       J.object([&] {
-        J.attribute("start", Start.value());
-        J.attribute("end", End.value());
+        J.attribute("start", Start.getValue());
+        J.attribute("end", End.getValue());
       });
     }
     J.arrayEnd();

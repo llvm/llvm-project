@@ -391,9 +391,11 @@ struct CodeCompletionBuilder {
             ToInclude.takeError());
     }
     // Prefer includes that do not need edits (i.e. already exist).
-    std::stable_partition(
-        Completion.Includes.begin(), Completion.Includes.end(),
-        [](const CodeCompletion::IncludeCandidate &I) { return !I.Insertion; });
+    std::stable_partition(Completion.Includes.begin(),
+                          Completion.Includes.end(),
+                          [](const CodeCompletion::IncludeCandidate &I) {
+                            return !I.Insertion.hasValue();
+                          });
   }
 
   void add(const CompletionCandidate &C, CodeCompletionString *SemaCCS) {

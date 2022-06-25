@@ -5844,10 +5844,10 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   // match the specification in the intrinsic call table. Thus, no
   // argument type check is needed here.
 
-  Check(FPI.getExceptionBehavior().has_value(),
+  Check(FPI.getExceptionBehavior().hasValue(),
         "invalid exception behavior argument", &FPI);
   if (HasRoundingMD) {
-    Check(FPI.getRoundingMode().has_value(), "invalid rounding mode argument",
+    Check(FPI.getRoundingMode().hasValue(), "invalid rounding mode argument",
           &FPI);
   }
 }

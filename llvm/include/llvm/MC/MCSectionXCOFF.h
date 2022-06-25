@@ -111,8 +111,8 @@ public:
   bool isVirtualSection() const override;
   StringRef getSymbolTableName() const { return SymbolTableName; }
   bool isMultiSymbolsAllowed() const { return MultiSymbolsAllowed; }
-  bool isCsect() const { return CsectProp.has_value(); }
-  bool isDwarfSect() const { return DwarfSubtypeFlags.has_value(); }
+  bool isCsect() const { return CsectProp.hasValue(); }
+  bool isDwarfSect() const { return DwarfSubtypeFlags.hasValue(); }
   Optional<XCOFF::DwarfSectionSubtypeFlags> getDwarfSubtypeFlags() const {
     return DwarfSubtypeFlags;
   }

@@ -674,9 +674,9 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
   plan_sp->AppendRow(row_sp);
   for (++It; It != End; ++It) {
     llvm::Optional<StackCFIRecord> record = StackCFIRecord::parse(*It);
-    if (!record)
+    if (!record.hasValue())
       return nullptr;
-    if (record->Size)
+    if (record->Size.hasValue())
       break;
 
     row_sp = std::make_shared<UnwindPlan::Row>(*row_sp);

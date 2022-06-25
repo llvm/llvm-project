@@ -2826,12 +2826,12 @@ bool CodeGenModule::isProfileInstrExcluded(llvm::Function *Fn,
   CodeGenOptions::ProfileInstrKind Kind = getCodeGenOpts().getProfileInstr();
   // First, check the function name.
   Optional<bool> V = ProfileList.isFunctionExcluded(Fn->getName(), Kind);
-  if (V)
+  if (V.hasValue())
     return *V;
   // Next, check the source location.
   if (Loc.isValid()) {
     Optional<bool> V = ProfileList.isLocationExcluded(Loc, Kind);
-    if (V)
+    if (V.hasValue())
       return *V;
   }
   // If location is unknown, this may be a compiler-generated function. Assume

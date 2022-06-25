@@ -107,20 +107,20 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
     auto printEdgeName = [&](InFlightDiagnostic &diag) -> InFlightDiagnostic & {
       diag << "from ";
       if (sourceNo)
-        diag << "Region #" << sourceNo.value();
+        diag << "Region #" << sourceNo.getValue();
       else
         diag << "parent operands";
 
       diag << " to ";
       if (succRegionNo)
-        diag << "Region #" << succRegionNo.value();
+        diag << "Region #" << succRegionNo.getValue();
       else
         diag << "parent results";
       return diag;
     };
 
     Optional<TypeRange> sourceTypes = getInputsTypesForRegion(succRegionNo);
-    if (!sourceTypes.has_value())
+    if (!sourceTypes.hasValue())
       continue;
 
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();

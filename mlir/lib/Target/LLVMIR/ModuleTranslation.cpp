@@ -666,17 +666,17 @@ LogicalResult ModuleTranslation::convertGlobals() {
                              : llvm::GlobalValue::NotThreadLocal,
         addrSpace);
 
-    if (op.getUnnamedAddr().has_value())
+    if (op.getUnnamedAddr().hasValue())
       var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.getUnnamedAddr()));
 
-    if (op.getSection().has_value())
+    if (op.getSection().hasValue())
       var->setSection(*op.getSection());
 
     addRuntimePreemptionSpecifier(op.getDsoLocal(), var);
 
     Optional<uint64_t> alignment = op.getAlignment();
-    if (alignment)
-      var->setAlignment(llvm::MaybeAlign(alignment.value()));
+    if (alignment.hasValue())
+      var->setAlignment(llvm::MaybeAlign(alignment.getValue()));
 
     globalsMapping.try_emplace(op, var);
   }

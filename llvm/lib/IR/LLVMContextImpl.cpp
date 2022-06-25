@@ -250,17 +250,17 @@ void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
 }
 
 bool LLVMContextImpl::hasOpaquePointersValue() {
-  return OpaquePointers.has_value();
+  return OpaquePointers.hasValue();
 }
 
 bool LLVMContextImpl::getOpaquePointers() {
-  if (LLVM_UNLIKELY(!OpaquePointers))
+  if (LLVM_UNLIKELY(!(OpaquePointers.hasValue())))
     OpaquePointers = OpaquePointersCL;
   return *OpaquePointers;
 }
 
 void LLVMContextImpl::setOpaquePointers(bool OP) {
-  assert((!OpaquePointers || *OpaquePointers == OP) &&
+  assert((!OpaquePointers.hasValue() || OpaquePointers.getValue() == OP) &&
          "Cannot change opaque pointers mode once set");
   OpaquePointers = OP;
 }

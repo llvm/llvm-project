@@ -414,8 +414,7 @@ public:
   bool isArgumentConstructedDirectly(unsigned Index) const {
     // This assumes that the object was not yet removed from the state.
     return ExprEngine::getObjectUnderConstruction(
-               getState(), {getOriginExpr(), Index}, getLocationContext())
-        .has_value();
+        getState(), {getOriginExpr(), Index}, getLocationContext()).hasValue();
   }
 
   /// Some calls have parameter numbering mismatched from argument numbering.
@@ -1017,8 +1016,9 @@ public:
   }
 
   SVal getObjectUnderConstruction() const {
-    return *ExprEngine::getObjectUnderConstruction(getState(), getOriginExpr(),
-                                                   getLocationContext());
+    return ExprEngine::getObjectUnderConstruction(getState(), getOriginExpr(),
+                                                  getLocationContext())
+        .getValue();
   }
 
   /// Number of non-placement arguments to the call. It is equal to 2 for

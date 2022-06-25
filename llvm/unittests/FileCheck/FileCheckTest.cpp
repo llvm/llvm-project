@@ -766,8 +766,8 @@ TEST_F(FileCheckTest, NumericVariable) {
   ASSERT_TRUE(Value);
   EXPECT_EQ(925, cantFail(Value->getSignedValue()));
   // getStringValue should return the same memory not just the same characters.
-  EXPECT_EQ(StringValue.begin(), FooVar.getStringValue()->begin());
-  EXPECT_EQ(StringValue.end(), FooVar.getStringValue()->end());
+  EXPECT_EQ(StringValue.begin(), FooVar.getStringValue().getValue().begin());
+  EXPECT_EQ(StringValue.end(), FooVar.getStringValue().getValue().end());
   EvalResult = FooVarUse.eval();
   ASSERT_THAT_EXPECTED(EvalResult, Succeeded());
   EXPECT_EQ(925, cantFail(EvalResult->getSignedValue()));

@@ -367,10 +367,10 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
 
   auto addSym = [&](const Defined *sym) {
     Optional<size_t> symbolPriority = getSymbolPriority(sym);
-    if (!symbolPriority)
+    if (!symbolPriority.hasValue())
       return;
     size_t &priority = sectionPriorities[sym->isec];
-    priority = std::max(priority, *symbolPriority);
+    priority = std::max(priority, symbolPriority.getValue());
   };
 
   // TODO: Make sure this handles weak symbols correctly.

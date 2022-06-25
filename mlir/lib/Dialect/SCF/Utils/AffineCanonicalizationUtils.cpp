@@ -27,8 +27,9 @@ using namespace presburger;
 
 static void unpackOptionalValues(ArrayRef<Optional<Value>> source,
                                  SmallVector<Value> &target) {
-  target = llvm::to_vector<4>(llvm::map_range(
-      source, [](Optional<Value> val) { return val ? *val : Value(); }));
+  target = llvm::to_vector<4>(llvm::map_range(source, [](Optional<Value> val) {
+    return val.hasValue() ? *val : Value();
+  }));
 }
 
 /// Bound an identifier `pos` in a given FlatAffineValueConstraints with

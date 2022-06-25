@@ -35,6 +35,6 @@ TEST(Parser, SanityTest) {
 
   Record *Foo = Records.getDef("Foo");
   Optional<StringRef> Field = Foo->getValueAsOptionalString("strField");
-  EXPECT_TRUE(Field.has_value());
-  EXPECT_EQ(*Field, "value");
+  EXPECT_TRUE(Field.hasValue());
+  EXPECT_EQ(Field.getValue(), "value");
 }

@@ -1857,8 +1857,8 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
                    .attachNote(getEncodedSourceLocation(*defLoc))
                << "previously referenced here";
       }
-      Location loc = entryArg.sourceLoc.has_value()
-                         ? entryArg.sourceLoc.value()
+      Location loc = entryArg.sourceLoc.hasValue()
+                         ? entryArg.sourceLoc.getValue()
                          : getEncodedSourceLocation(argInfo.location);
       BlockArgument arg = block->addArgument(entryArg.type, loc);
 

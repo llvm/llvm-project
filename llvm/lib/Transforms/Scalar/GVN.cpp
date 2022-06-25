@@ -748,14 +748,14 @@ void GVNPass::printPipeline(
 
   OS << "<";
   if (Options.AllowPRE != None)
-    OS << (*Options.AllowPRE ? "" : "no-") << "pre;";
+    OS << (Options.AllowPRE.getValue() ? "" : "no-") << "pre;";
   if (Options.AllowLoadPRE != None)
-    OS << (*Options.AllowLoadPRE ? "" : "no-") << "load-pre;";
+    OS << (Options.AllowLoadPRE.getValue() ? "" : "no-") << "load-pre;";
   if (Options.AllowLoadPRESplitBackedge != None)
-    OS << (*Options.AllowLoadPRESplitBackedge ? "" : "no-")
+    OS << (Options.AllowLoadPRESplitBackedge.getValue() ? "" : "no-")
        << "split-backedge-load-pre;";
   if (Options.AllowMemDep != None)
-    OS << (*Options.AllowMemDep ? "" : "no-") << "memdep";
+    OS << (Options.AllowMemDep.getValue() ? "" : "no-") << "memdep";
   OS << ">";
 }
 

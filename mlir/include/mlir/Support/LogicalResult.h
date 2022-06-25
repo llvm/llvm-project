@@ -90,12 +90,12 @@ public:
   FailureOr(const FailureOr<U> &other)
       : Optional<T>(failed(other) ? Optional<T>() : Optional<T>(*other)) {}
 
-  operator LogicalResult() const { return success(this->has_value()); }
+  operator LogicalResult() const { return success(this->hasValue()); }
 
 private:
   /// Hide the bool conversion as it easily creates confusion.
   using Optional<T>::operator bool;
-  using Optional<T>::has_value;
+  using Optional<T>::hasValue;
 };
 
 /// This class represents success/failure for parsing-like operations that find

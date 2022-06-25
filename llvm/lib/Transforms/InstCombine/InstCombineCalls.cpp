@@ -2677,8 +2677,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   default: {
     // Handle target specific intrinsics
-    if (Optional<Instruction *> V = targetInstCombineIntrinsic(*II))
-      return *V;
+    Optional<Instruction *> V = targetInstCombineIntrinsic(*II);
+    if (V.hasValue())
+      return V.getValue();
     break;
   }
   }

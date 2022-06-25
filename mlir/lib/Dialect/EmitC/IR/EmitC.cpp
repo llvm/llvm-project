@@ -151,7 +151,7 @@ ParseResult IncludeOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr include;
   OptionalParseResult includeParseResult =
       parser.parseOptionalAttribute(include, "include", result.attributes);
-  if (!includeParseResult.has_value())
+  if (!includeParseResult.hasValue())
     return parser.emitError(parser.getNameLoc()) << "expected string attribute";
 
   if (standardInclude && parser.parseOptionalGreater())

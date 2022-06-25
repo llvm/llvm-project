@@ -375,11 +375,11 @@ private:
     for (auto &A : Params.Table.getActions(Head->State, Lookahead)) {
       if (A.kind() != LRTable::Action::Reduce)
         continue;
-      if (RID)
+      if (RID.hasValue())
         return false;
       RID = A.getReduceRule();
     }
-    if (!RID)
+    if (!RID.hasValue())
       return true; // no reductions available, but we've processed the head!
     const auto &Rule = Params.G.lookupRule(*RID);
     const GSS::Node *Base = Head;

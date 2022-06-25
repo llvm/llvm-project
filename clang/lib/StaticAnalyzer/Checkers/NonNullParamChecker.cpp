@@ -136,10 +136,10 @@ void NonNullParamChecker::checkPreCall(const CallEvent &Call,
     if (!DV)
       continue;
 
-    assert(!HasRefTypeParam || isa<Loc>(*DV));
+    assert(!HasRefTypeParam || isa<Loc>(DV.getValue()));
 
     // Process the case when the argument is not a location.
-    if (ExpectedToBeNonNull && !isa<Loc>(*DV)) {
+    if (ExpectedToBeNonNull && !isa<Loc>(DV.getValue())) {
       // If the argument is a union type, we want to handle a potential
       // transparent_union GCC extension.
       if (!ArgE)

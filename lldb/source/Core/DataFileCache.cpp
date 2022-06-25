@@ -203,17 +203,17 @@ bool CacheSignature::Encode(DataEncoder &encoder) const {
   if (!IsValid())
     return false; // Invalid signature, return false!
 
-  if (m_uuid) {
+  if (m_uuid.hasValue()) {
     llvm::ArrayRef<uint8_t> uuid_bytes = m_uuid->GetBytes();
     encoder.AppendU8(eSignatureUUID);
     encoder.AppendU8(uuid_bytes.size());
     encoder.AppendData(uuid_bytes);
   }
-  if (m_mod_time) {
+  if (m_mod_time.hasValue()) {
     encoder.AppendU8(eSignatureModTime);
     encoder.AppendU32(*m_mod_time);
   }
-  if (m_obj_mod_time) {
+  if (m_obj_mod_time.hasValue()) {
     encoder.AppendU8(eSignatureObjectModTime);
     encoder.AppendU32(*m_obj_mod_time);
   }

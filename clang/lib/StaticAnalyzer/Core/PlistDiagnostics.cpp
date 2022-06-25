@@ -407,11 +407,11 @@ void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
 
     // Output the macro name.
     Indent(o, indent) << "<key>name</key>";
-    EmitString(o, *MacroName) << '\n';
+    EmitString(o, MacroName.getValue()) << '\n';
 
     // Output what it expands into.
     Indent(o, indent) << "<key>expansion</key>";
-    EmitString(o, *ExpansionText) << '\n';
+    EmitString(o, ExpansionText.getValue()) << '\n';
 
     // Finish up.
     --indent;

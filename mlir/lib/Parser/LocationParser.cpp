@@ -118,11 +118,11 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
       return emitWrongTokenError(
           "expected integer column number in FileLineColLoc");
     auto column = getToken().getUnsignedIntegerValue();
-    if (!column.has_value())
+    if (!column.hasValue())
       return emitError("expected integer column number in FileLineColLoc");
     consumeToken(Token::integer);
 
-    loc = FileLineColLoc::get(ctx, str, line.value(), column.value());
+    loc = FileLineColLoc::get(ctx, str, line.getValue(), column.getValue());
     return success();
   }
 

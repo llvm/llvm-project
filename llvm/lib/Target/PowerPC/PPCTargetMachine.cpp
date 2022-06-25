@@ -246,10 +246,10 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
-  assert((!TT.isOSAIX() || !RM || *RM == Reloc::PIC_) &&
+  assert((!TT.isOSAIX() || !RM.hasValue() || *RM == Reloc::PIC_) &&
          "Invalid relocation model for AIX.");
 
-  if (RM)
+  if (RM.hasValue())
     return *RM;
 
   // Big Endian PPC and AIX default to PIC.

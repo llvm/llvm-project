@@ -195,12 +195,12 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
          isPresentCheck(2) &&
          "only ISHFTC SIZE arg is expected to be dynamically optional here");
   assert(retTy && "ISFHTC must have a return type");
-  mlir::Type resultType = *retTy;
+  mlir::Type resultType = retTy.getValue();
   llvm::SmallVector<fir::ExtendedValue> args;
   args.push_back(getOperand(0));
   args.push_back(getOperand(1));
   args.push_back(builder
-                     .genIfOp(loc, {resultType}, *isPresentCheck(2),
+                     .genIfOp(loc, {resultType}, isPresentCheck(2).getValue(),
                               /*withElseRegion=*/true)
                      .genThen([&]() {
                        fir::ExtendedValue sizeExv = getOperand(2);

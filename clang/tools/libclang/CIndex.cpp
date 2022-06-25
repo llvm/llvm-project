@@ -536,9 +536,9 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
                                            TLEnd = CXXUnit->top_level_end();
                TL != TLEnd; ++TL) {
             const Optional<bool> V = handleDeclForVisitation(*TL);
-            if (!V)
+            if (!V.hasValue())
               continue;
-            return *V;
+            return V.getValue();
           }
         } else if (VisitDeclContext(
                        CXXUnit->getASTContext().getTranslationUnitDecl()))
@@ -641,9 +641,9 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
         if (OMD->isSynthesizedAccessorStub())
           continue;
     const Optional<bool> V = handleDeclForVisitation(D);
-    if (!V)
+    if (!V.hasValue())
       continue;
-    return *V;
+    return V.getValue();
   }
   return false;
 }
@@ -675,9 +675,9 @@ Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
   }
 
   const Optional<bool> V = shouldVisitCursor(Cursor);
-  if (!V)
+  if (!V.hasValue())
     return None;
-  if (!*V)
+  if (!V.getValue())
     return false;
   if (Visit(Cursor, true))
     return true;
@@ -1074,9 +1074,9 @@ bool CursorVisitor::VisitObjCContainerDecl(ObjCContainerDecl *D) {
        I != E; ++I) {
     CXCursor Cursor = MakeCXCursor(*I, TU, RegionOfInterest);
     const Optional<bool> &V = shouldVisitCursor(Cursor);
-    if (!V)
+    if (!V.hasValue())
       continue;
-    if (!*V)
+    if (!V.getValue())
       return false;
     if (Visit(Cursor, true))
       return true;
@@ -8178,13 +8178,13 @@ static CXVersion convertVersion(VersionTuple In) {
   Out.Major = In.getMajor();
 
   Optional<unsigned> Minor = In.getMinor();
-  if (Minor)
+  if (Minor.hasValue())
     Out.Minor = *Minor;
   else
     return Out;
 
   Optional<unsigned> Subminor = In.getSubminor();
-  if (Subminor)
+  if (Subminor.hasValue())
     Out.Subminor = *Subminor;
 
   return Out;

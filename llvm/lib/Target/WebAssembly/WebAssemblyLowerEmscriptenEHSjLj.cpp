@@ -552,8 +552,8 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
     Optional<unsigned> NEltArg;
     std::tie(SizeArg, NEltArg) = FnAttrs.getAllocSizeArgs();
     SizeArg += 1;
-    if (NEltArg)
-      NEltArg = *NEltArg + 1;
+    if (NEltArg.hasValue())
+      NEltArg = NEltArg.getValue() + 1;
     FnAttrs.addAllocSizeAttr(SizeArg, NEltArg);
   }
   // In case the callee has 'noreturn' attribute, We need to remove it, because

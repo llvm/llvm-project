@@ -336,8 +336,9 @@ static bool isDimOpValidSymbol(OpTy dimOp, Region *region) {
   // The dim op is also okay if its operand memref is a view/subview whose
   // corresponding size is a valid symbol.
   Optional<int64_t> index = dimOp.getConstantIndex();
-  assert(index && "expect only `dim` operations with a constant index");
-  int64_t i = *index;
+  assert(index.hasValue() &&
+         "expect only `dim` operations with a constant index");
+  int64_t i = index.getValue();
   return TypeSwitch<Operation *, bool>(dimOp.source().getDefiningOp())
       .Case<memref::ViewOp, memref::SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
@@ -1712,12 +1713,12 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     }
     // Bail out when the trip count is unknown and the loop returns any value
     // defined outside of the loop or any iterArg out of order.
-    if (!tripCount.has_value() &&
+    if (!tripCount.hasValue() &&
         (hasValDefinedOutsideLoop || iterArgsNotInOrder))
       return failure();
     // Bail out when the loop iterates more than once and it returns any iterArg
     // out of order.
-    if (tripCount.has_value() && *tripCount >= 2 && iterArgsNotInOrder)
+    if (tripCount.hasValue() && tripCount.getValue() >= 2 && iterArgsNotInOrder)
       return failure();
     rewriter.replaceOp(forOp, replacements);
     return success();
@@ -1750,18 +1751,19 @@ OperandRange AffineForOp::getSuccessorEntryOperands(Optional<unsigned> index) {
 void AffineForOp::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
-  assert((!index || *index == 0) && "expected loop region");
+  assert((!index.hasValue() || index.getValue() == 0) &&
+         "expected loop region");
   // The loop may typically branch back to its body or to the parent operation.
   // If the predecessor is the parent op and the trip count is known to be at
   // least one, branch into the body using the iterator arguments. And in cases
   // we know the trip count is zero, it can only branch back to its parent.
   Optional<uint64_t> tripCount = getTrivialConstantTripCount(*this);
-  if (!index && tripCount) {
-    if (tripCount.value() > 0) {
+  if (!index.hasValue() && tripCount.hasValue()) {
+    if (tripCount.getValue() > 0) {
       regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
       return;
     }
-    if (tripCount.value() == 0) {
+    if (tripCount.getValue() == 0) {
       regions.push_back(RegionSuccessor(getResults()));
       return;
     }
@@ -3588,8 +3590,8 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
           arith::symbolizeAtomicRMWKind(attrVal.getValue());
       if (!reduction)
         return parser.emitError(loc, "invalid reduction value: ") << attrVal;
-      reductions.push_back(
-          builder.getI64IntegerAttr(static_cast<int64_t>(reduction.value())));
+      reductions.push_back(builder.getI64IntegerAttr(
+          static_cast<int64_t>(reduction.getValue())));
       // While we keep getting commas, keep parsing.
       return success();
     };

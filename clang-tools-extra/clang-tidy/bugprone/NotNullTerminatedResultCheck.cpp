@@ -817,8 +817,8 @@ void NotNullTerminatedResultCheck::check(
       ++It;
     }
 
-    if (AreSafeFunctionsWanted)
-      UseSafeFunctions = *AreSafeFunctionsWanted;
+    if (AreSafeFunctionsWanted.hasValue())
+      UseSafeFunctions = AreSafeFunctionsWanted.getValue();
   }
 
   StringRef Name = FunctionExpr->getDirectCallee()->getName();

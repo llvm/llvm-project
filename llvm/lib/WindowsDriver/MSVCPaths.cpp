@@ -98,14 +98,14 @@ static bool getWindowsSDKDirViaCommandLine(
     llvm::Optional<llvm::StringRef> WinSdkVersion,
     llvm::Optional<llvm::StringRef> WinSysRoot, std::string &Path, int &Major,
     std::string &Version) {
-  if (WinSdkDir || WinSysRoot) {
+  if (WinSdkDir.hasValue() || WinSysRoot.hasValue()) {
     // Don't validate the input; trust the value supplied by the user.
     // The motivation is to prevent unnecessary file and registry access.
     llvm::VersionTuple SDKVersion;
-    if (WinSdkVersion)
+    if (WinSdkVersion.hasValue())
       SDKVersion.tryParse(*WinSdkVersion);
 
-    if (WinSysRoot) {
+    if (WinSysRoot.hasValue()) {
       llvm::SmallString<128> SDKPath(*WinSysRoot);
       llvm::sys::path::append(SDKPath, "Windows Kits");
       if (!SDKVersion.empty())
@@ -479,12 +479,12 @@ bool findVCToolChainViaCommandLine(vfs::FileSystem &VFS,
                                    std::string &Path, ToolsetLayout &VSLayout) {
   // Don't validate the input; trust the value supplied by the user.
   // The primary motivation is to prevent unnecessary file and registry access.
-  if (VCToolsDir || WinSysRoot) {
-    if (WinSysRoot) {
+  if (VCToolsDir.hasValue() || WinSysRoot.hasValue()) {
+    if (WinSysRoot.hasValue()) {
       SmallString<128> ToolsPath(*WinSysRoot);
       sys::path::append(ToolsPath, "VC", "Tools", "MSVC");
       std::string ToolsVersion;
-      if (VCToolsVersion)
+      if (VCToolsVersion.hasValue())
         ToolsVersion = VCToolsVersion->str();
       else
         ToolsVersion = getHighestNumericTupleInDirectory(VFS, ToolsPath);

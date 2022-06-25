@@ -247,7 +247,7 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   attrs.append("foo", b.getStringAttr("zoo"));
   {
     auto dup = attrs.findDuplicate();
-    ASSERT_TRUE(dup.has_value());
+    ASSERT_TRUE(dup.hasValue());
   }
 
   SmallVector<NamedAttribute> newAttrs = {
@@ -257,7 +257,7 @@ TEST(NamedAttrListTest, TestAppendAssign) {
   attrs.assign(newAttrs);
 
   auto dup = attrs.findDuplicate();
-  ASSERT_FALSE(dup.has_value());
+  ASSERT_FALSE(dup.hasValue());
 
   {
     auto *it = attrs.begin();

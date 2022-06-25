@@ -202,8 +202,8 @@ Error ifs::writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub) {
   yaml::Output YamlOut(OS, nullptr, /*WrapColumn =*/0);
   std::unique_ptr<IFSStubTriple> CopyStub(new IFSStubTriple(Stub));
   if (Stub.Target.Arch) {
-    CopyStub->Target.ArchString =
-        std::string(ELF::convertEMachineToArchName(*Stub.Target.Arch));
+    CopyStub->Target.ArchString = std::string(
+        ELF::convertEMachineToArchName(Stub.Target.Arch.getValue()));
   }
   IFSTarget Target = Stub.Target;
 
@@ -222,33 +222,36 @@ Error ifs::overrideIFSTarget(IFSStub &Stub, Optional<IFSArch> OverrideArch,
                              Optional<std::string> OverrideTriple) {
   std::error_code OverrideEC(1, std::generic_category());
   if (OverrideArch) {
-    if (Stub.Target.Arch && *Stub.Target.Arch != *OverrideArch) {
+    if (Stub.Target.Arch &&
+        Stub.Target.Arch.getValue() != OverrideArch.getValue()) {
       return make_error<StringError>(
           "Supplied Arch conflicts with the text stub", OverrideEC);
     }
-    Stub.Target.Arch = *OverrideArch;
+    Stub.Target.Arch = OverrideArch.getValue();
   }
   if (OverrideEndianness) {
     if (Stub.Target.Endianness &&
-        *Stub.Target.Endianness != *OverrideEndianness) {
+        Stub.Target.Endianness.getValue() != OverrideEndianness.getValue()) {
       return make_error<StringError>(
           "Supplied Endianness conflicts with the text stub", OverrideEC);
     }
-    Stub.Target.Endianness = *OverrideEndianness;
+    Stub.Target.Endianness = OverrideEndianness.getValue();
   }
   if (OverrideBitWidth) {
-    if (Stub.Target.BitWidth && *Stub.Target.BitWidth != *OverrideBitWidth) {
+    if (Stub.Target.BitWidth &&
+        Stub.Target.BitWidth.getValue() != OverrideBitWidth.getValue()) {
       return make_error<StringError>(
           "Supplied BitWidth conflicts with the text stub", OverrideEC);
     }
-    Stub.Target.BitWidth = *OverrideBitWidth;
+    Stub.Target.BitWidth = OverrideBitWidth.getValue();
   }
   if (OverrideTriple) {
-    if (Stub.Target.Triple && *Stub.Target.Triple != *OverrideTriple) {
+    if (Stub.Target.Triple &&
+        Stub.Target.Triple.getValue() != OverrideTriple.getValue()) {
       return make_error<StringError>(
           "Supplied Triple conflicts with the text stub", OverrideEC);
     }
-    Stub.Target.Triple = *OverrideTriple;
+    Stub.Target.Triple = OverrideTriple.getValue();
   }
   return Error::success();
 }

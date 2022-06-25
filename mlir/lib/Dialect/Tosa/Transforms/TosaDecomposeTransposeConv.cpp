@@ -208,8 +208,8 @@ public:
     Value weightPaddingVal = createOpAndInfer<tosa::ConstOp>(
         rewriter, loc, weightPaddingAttr.getType(), weightPaddingAttr);
 
-    if (op.quantization_info().has_value()) {
-      auto quantInfo = op.quantization_info().value();
+    if (op.quantization_info().hasValue()) {
+      auto quantInfo = op.quantization_info().getValue();
       weight = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
           weightPaddingVal, nullptr,
@@ -272,8 +272,8 @@ public:
     Value inputPaddingVal = createOpAndInfer<tosa::ConstOp>(
         rewriter, loc, inputPaddingAttr.getType(), inputPaddingAttr);
 
-    if (op.quantization_info().has_value()) {
-      auto quantInfo = op.quantization_info().value();
+    if (op.quantization_info().hasValue()) {
+      auto quantInfo = op.quantization_info().getValue();
       input = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
           inputPaddingVal, nullptr,

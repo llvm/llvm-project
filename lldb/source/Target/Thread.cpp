@@ -2022,8 +2022,7 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
 
   llvm::Optional<uint64_t> type_size = type.GetByteSize(nullptr);
   assert(type_size);
-  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data =
-      GetSiginfo(*type_size);
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data = GetSiginfo(type_size.getValue());
   if (!data)
     return ValueObjectConstResult::Create(&target, Status(data.takeError()));
 

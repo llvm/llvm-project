@@ -75,11 +75,11 @@ TEST_F(BlockFrequencyInfoTest, Basic) {
   EXPECT_EQ(BB0Freq, BB1Freq + BB2Freq);
   EXPECT_EQ(BB0Freq, BB3Freq);
 
-  EXPECT_EQ(BFI.getBlockProfileCount(&BB0).value(), UINT64_C(100));
-  EXPECT_EQ(BFI.getBlockProfileCount(BB3).value(), UINT64_C(100));
-  EXPECT_EQ(BFI.getBlockProfileCount(BB1).value(),
+  EXPECT_EQ(BFI.getBlockProfileCount(&BB0).getValue(), UINT64_C(100));
+  EXPECT_EQ(BFI.getBlockProfileCount(BB3).getValue(), UINT64_C(100));
+  EXPECT_EQ(BFI.getBlockProfileCount(BB1).getValue(),
             (100 * BB1Freq + BB0Freq / 2) / BB0Freq);
-  EXPECT_EQ(BFI.getBlockProfileCount(BB2).value(),
+  EXPECT_EQ(BFI.getBlockProfileCount(BB2).getValue(),
             (100 * BB2Freq + BB0Freq / 2) / BB0Freq);
 
   // Scale the frequencies of BB0, BB1 and BB2 by a factor of two.

@@ -75,8 +75,8 @@ protected:
     reset(Name, IRType);
 
     const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, *(M.get()));
-    if (OptInfo) {
-      Info = OptInfo.value();
+    if (OptInfo.hasValue()) {
+      Info = OptInfo.getValue();
       return true;
     }
 

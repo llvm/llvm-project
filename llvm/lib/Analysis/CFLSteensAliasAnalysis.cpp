@@ -250,14 +250,14 @@ CFLSteensAAResult::ensureCached(Function *Fn) {
     scan(Fn);
     Iter = Cache.find(Fn);
     assert(Iter != Cache.end());
-    assert(Iter->second);
+    assert(Iter->second.hasValue());
   }
   return Iter->second;
 }
 
 const AliasSummary *CFLSteensAAResult::getAliasSummary(Function &Fn) {
   auto &FunInfo = ensureCached(&Fn);
-  if (FunInfo)
+  if (FunInfo.hasValue())
     return &FunInfo->getAliasSummary();
   else
     return nullptr;
@@ -293,15 +293,15 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
 
   assert(Fn != nullptr);
   auto &MaybeInfo = ensureCached(Fn);
-  assert(MaybeInfo);
+  assert(MaybeInfo.hasValue());
 
   auto &Sets = MaybeInfo->getStratifiedSets();
   auto MaybeA = Sets.find(InstantiatedValue{ValA, 0});
-  if (!MaybeA)
+  if (!MaybeA.hasValue())
     return AliasResult::MayAlias;
 
   auto MaybeB = Sets.find(InstantiatedValue{ValB, 0});
-  if (!MaybeB)
+  if (!MaybeB.hasValue())
     return AliasResult::MayAlias;
 
   auto SetA = *MaybeA;
