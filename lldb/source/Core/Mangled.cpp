@@ -41,11 +41,7 @@
 using namespace lldb_private;
 
 static inline bool cstring_is_mangled(llvm::StringRef s) {
-  return Mangled::GetManglingScheme(s) != Mangled::eManglingSchemeNone
-#ifdef LLDB_ENABLE_SWIFT
-         || SwiftLanguageRuntime::IsSwiftMangledName(s)
-#endif // LLDB_ENABLE_SWIFT
-         ;
+  return Mangled::GetManglingScheme(s) != Mangled::eManglingSchemeNone;
 }
 
 // BEGIN SWIFT
@@ -91,6 +87,11 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   if (name.startswith("___Z"))
     return Mangled::eManglingSchemeItanium;
 
+#ifdef LLDB_ENABLE_SWIFT
+  if (SwiftLanguageRuntime::IsSwiftMangledName(name))
+    return Mangled::eManglingSchemeSwift;
+#endif // LLDB_ENABLE_SWIFT
+  
   return Mangled::eManglingSchemeNone;
 }
 
@@ -278,6 +279,9 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
 
   case eManglingSchemeRustV0:
   case eManglingSchemeD:
+#ifdef LLDB_ENABLE_SWIFT
+  case eManglingSchemeSwift:
+#endif
     // Rich demangling scheme is not supported
     return false;
   }
@@ -318,6 +322,29 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
       case eManglingSchemeD:
         demangled_name = GetDLangDemangledStr(mangled_name);
         break;
+#ifdef LLDB_ENABLE_SWIFT
+      case eManglingSchemeSwift: {
+        Log *log = GetLog(LLDBLog::Demangle);
+        LLDB_LOGF(log, "demangle swift: %s", mangled_name);
+        std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
+            mangled_name, SwiftLanguageRuntime::eTypeName, sc));
+        // Don't cache the demangled name the function isn't available yet.
+        if (!sc || !sc->function) {
+          LLDB_LOGF(log, "demangle swift: %s -> \"%s\" (not cached)",
+                    mangled_name, demangled.c_str());
+          return ConstString(demangled);
+        }
+        if (demangled.empty()) {
+          LLDB_LOGF(log, "demangle swift: %s -> error: failed to demangle",
+                    mangled_name);
+        } else {
+          LLDB_LOGF(log, "demangle swift: %s -> \"%s\"", mangled_name,
+                    demangled.c_str());
+          m_demangled.SetStringWithMangledCounterpart(demangled, m_mangled);
+        }
+        return m_demangled;
+      }
+#endif // LLDB_ENABLE_SWIFT
       case eManglingSchemeNone:
         llvm_unreachable("eManglingSchemeNone was handled already");
       }
@@ -327,31 +354,6 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
         free(demangled_name);
       }
     }
-#ifdef LLDB_ENABLE_SWIFT
-    else if (mangling_scheme == eManglingSchemeNone &&
-               !m_mangled.GetMangledCounterpart(m_demangled) &&
-               SwiftLanguageRuntime::IsSwiftMangledName(m_mangled.GetStringRef())) {
-      Log *log = GetLog(LLDBLog::Demangle);
-      if (log)
-        log->Printf("demangle swift: %s", mangled_name);
-      std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
-          mangled_name, SwiftLanguageRuntime::eTypeName, sc));
-      // Don't cache the demangled name the function isn't available yet.
-      if (!sc || !sc->function)
-        return ConstString(demangled);
-      if (!demangled.empty()) {
-        m_demangled.SetStringWithMangledCounterpart(demangled,
-						    m_mangled);
-        if (log)
-          log->Printf("demangle swift: %s -> \"%s\"", mangled_name,
-                      demangled.c_str());
-      } else {
-        if (log)
-          log->Printf("demangle swift: %s -> error: failed to demangle",
-                      mangled_name);
-      }
-    }
-#endif // LLDB_ENABLE_SWIFT
     if (m_demangled.IsNull()) {
       // Set the demangled string to the empty string to indicate we tried to
       // parse it once and failed.
