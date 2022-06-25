@@ -1163,6 +1163,10 @@ private:
 
     // While not empty, take first element and follow edges.
     while (!Queue.empty()) {
+      // Quit if we still haven't found a solution by now.
+      if (Count > 25000000)
+        return 0;
+
       Penalty = Queue.top().first.first;
       StateNode *Node = Queue.top().second;
       if (!Node->State.NextToken) {
