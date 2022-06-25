@@ -2897,7 +2897,7 @@ TEST(APIntTest, SolveQuadraticEquationWrap) {
           Optional<APInt> S = APIntOps::SolveQuadraticEquationWrap(
                                 APInt(Width, A), APInt(Width, B),
                                 APInt(Width, C), Width);
-          if (S.hasValue())
+          if (S)
             Validate(A, B, C, Width, S->getSExtValue());
         }
       }
@@ -2978,7 +2978,7 @@ TEST(APIntTest, GetMostSignificantDifferentBitExaustive) {
         auto Bit = APIntOps::GetMostSignificantDifferentBit(A, B);
         EXPECT_EQ(Bit, GetHighestDifferentBitBruteforce(A, B));
 
-        if (!Bit.hasValue())
+        if (!Bit)
           EXPECT_EQ(A, B);
         else {
           EXPECT_NE(A, B);

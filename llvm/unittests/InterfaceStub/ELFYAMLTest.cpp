@@ -75,7 +75,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
   std::unique_ptr<IFSStub> Stub = std::move(StubOrErr.get());
   EXPECT_NE(Stub.get(), nullptr);
-  EXPECT_TRUE(Stub->SoName.hasValue());
+  EXPECT_TRUE(Stub->SoName);
   EXPECT_STREQ(Stub->SoName->c_str(), "test.so");
   EXPECT_EQ(Stub->Symbols.size(), 5u);
 
@@ -86,7 +86,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   EXPECT_EQ(SymBar.Type, IFSSymbolType::Object);
   EXPECT_FALSE(SymBar.Undefined);
   EXPECT_FALSE(SymBar.Weak);
-  EXPECT_FALSE(SymBar.Warning.hasValue());
+  EXPECT_FALSE(SymBar.Warning);
 
   IFSSymbol const &SymBaz = *Iterator++;
   EXPECT_STREQ(SymBaz.Name.c_str(), "baz");
@@ -119,7 +119,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   EXPECT_EQ(SymNot.Type, IFSSymbolType::Unknown);
   EXPECT_TRUE(SymNot.Undefined);
   EXPECT_TRUE(SymNot.Weak);
-  EXPECT_TRUE(SymNot.Warning.hasValue());
+  EXPECT_TRUE(SymNot.Warning);
   EXPECT_STREQ(SymNot.Warning->c_str(), "All fields populated!");
 }
 

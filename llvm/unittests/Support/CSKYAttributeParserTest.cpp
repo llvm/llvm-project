@@ -84,7 +84,7 @@ static bool testAttributeInt(unsigned Tag, unsigned Value, unsigned ExpectedTag,
   cantFail(Parser.parse(Bytes, support::little));
 
   Optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
-  return Attr.hasValue() && Attr.getValue() == ExpectedValue;
+  return Attr && *Attr == ExpectedValue;
 }
 
 static bool testAttributeString(unsigned Tag, const char *Value,
@@ -101,7 +101,7 @@ static bool testAttributeString(unsigned Tag, const char *Value,
   cantFail(Parser.parse(Bytes, support::little));
 
   Optional<StringRef> Attr = Parser.getAttributeString(ExpectedTag);
-  return Attr.hasValue() && Attr.getValue() == ExpectedValue;
+  return Attr && *Attr == ExpectedValue;
 }
 
 static void testParseError(unsigned Tag, unsigned Value, const char *msg) {
