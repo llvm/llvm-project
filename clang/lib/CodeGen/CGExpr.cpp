@@ -931,8 +931,8 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
   if (const auto *CE = dyn_cast<CastExpr>(Base)) {
     if (CE->getCastKind() == CK_ArrayToPointerDecay &&
-        !CE->getSubExpr()->isFlexibleArrayMember(Context,
-                                                 StrictFlexArraysLevel)) {
+        !CE->getSubExpr()->IgnoreParens()->isFlexibleArrayMember(
+            Context, std::max(StrictFlexArraysLevel, 1))) {
       IndexedType = CE->getSubExpr()->getType();
       const ArrayType *AT = IndexedType->castAsArrayTypeUnsafe();
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
