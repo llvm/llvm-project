@@ -133,7 +133,10 @@ void ShapeDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Shape/IR/ShapeOps.cpp.inc"
       >();
-  addTypes<ShapeType, SizeType, ValueShapeType, WitnessType>();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/Shape/IR/ShapeOpsTypes.cpp.inc"
+      >();
   addInterfaces<ShapeInlinerInterface>();
   // Allow unknown operations during prototyping and testing. As the dialect is
   // still evolving it makes it simple to start with an unregistered ops and
@@ -154,35 +157,6 @@ Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
   if (arith::ConstantOp::isBuildableWith(value, type))
     return builder.create<arith::ConstantOp>(loc, type, value);
   return nullptr;
-}
-
-/// Parse a type registered to this dialect.
-Type ShapeDialect::parseType(DialectAsmParser &parser) const {
-  StringRef keyword;
-  if (parser.parseKeyword(&keyword))
-    return Type();
-
-  if (keyword == "shape")
-    return ShapeType::get(getContext());
-  if (keyword == "size")
-    return SizeType::get(getContext());
-  if (keyword == "value_shape")
-    return ValueShapeType::get(getContext());
-  if (keyword == "witness")
-    return WitnessType::get(getContext());
-
-  parser.emitError(parser.getNameLoc(), "unknown shape type: ") << keyword;
-  return Type();
-}
-
-/// Print a type registered to this dialect.
-void ShapeDialect::printType(Type type, DialectAsmPrinter &os) const {
-  TypeSwitch<Type>(type)
-      .Case<ShapeType>([&](Type) { os << "shape"; })
-      .Case<SizeType>([&](Type) { os << "size"; })
-      .Case<ValueShapeType>([&](Type) { os << "value_shape"; })
-      .Case<WitnessType>([&](Type) { os << "witness"; })
-      .Default([](Type) { llvm_unreachable("unexpected 'shape' type kind"); });
 }
 
 LogicalResult ShapeDialect::verifyOperationAttribute(Operation *op,
@@ -1890,3 +1864,6 @@ void ReduceOp::print(OpAsmPrinter &p) {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Shape/IR/ShapeOps.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/Shape/IR/ShapeOpsTypes.cpp.inc"
