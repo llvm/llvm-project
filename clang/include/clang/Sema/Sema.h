@@ -2442,6 +2442,10 @@ public:
 
   bool isUsualDeallocationFunction(const CXXMethodDecl *FD);
 
+  // Check whether the size of array element of type \p EltTy is a multiple of
+  // its alignment and return false if it isn't.
+  bool checkArrayElementAlignment(QualType EltTy, SourceLocation Loc);
+
   bool isCompleteType(SourceLocation Loc, QualType T,
                       CompleteTypeKind Kind = CompleteTypeKind::Default) {
     return !RequireCompleteTypeImpl(Loc, T, Kind, nullptr);

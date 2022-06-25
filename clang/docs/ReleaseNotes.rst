@@ -70,6 +70,8 @@ code bases.
   results do not change before/after setting
   ``-Werror=incompatible-function-pointer-types`` to avoid incompatibility with
   Clang 16.
+- Clang now disallows types whose sizes aren't a multiple of their alignments to
+  be used as the element type of arrays.
 
   .. code-block:: c
 
