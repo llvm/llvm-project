@@ -20,7 +20,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_fundamental)
+// Before Clang 10, __is_fundamental didn't work for nullptr_t.
+// In C++03 nullptr_t is library-provided but must still count as "fundamental."
+#if __has_keyword(__is_fundamental) &&                                         \
+    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1000) &&               \
+    !defined(_LIBCPP_CXX03_LANG)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_fundamental : _BoolConstant<__is_fundamental(_Tp)> { };

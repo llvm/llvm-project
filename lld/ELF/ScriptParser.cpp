@@ -351,7 +351,7 @@ void ScriptParser::readEntry() {
   expect("(");
   StringRef tok = next();
   if (config->entry.empty())
-    config->entry = tok;
+    config->entry = unquote(tok);
   expect(")");
 }
 
@@ -623,7 +623,7 @@ void ScriptParser::readTarget() {
   // for --format. We recognize only /^elf/ and "binary" in the linker
   // script as well.
   expect("(");
-  StringRef tok = next();
+  StringRef tok = unquote(next());
   expect(")");
 
   if (tok.startswith("elf"))
@@ -636,14 +636,16 @@ void ScriptParser::readTarget() {
 
 static int precedence(StringRef op) {
   return StringSwitch<int>(op)
-      .Cases("*", "/", "%", 8)
-      .Cases("+", "-", 7)
-      .Cases("<<", ">>", 6)
-      .Cases("<", "<=", ">", ">=", "==", "!=", 5)
-      .Case("&", 4)
-      .Case("|", 3)
-      .Case("&&", 2)
-      .Case("||", 1)
+      .Cases("*", "/", "%", 10)
+      .Cases("+", "-", 9)
+      .Cases("<<", ">>", 8)
+      .Cases("<", "<=", ">", ">=", 7)
+      .Cases("==", "!=", 6)
+      .Case("&", 5)
+      .Case("|", 4)
+      .Case("&&", 3)
+      .Case("||", 2)
+      .Case("?", 1)
       .Default(-1);
 }
 
@@ -1127,11 +1129,11 @@ Expr ScriptParser::combine(StringRef op, Expr l, Expr r) {
 Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
   while (!atEOF() && !errorCount()) {
     // Read an operator and an expression.
-    if (consume("?"))
-      return readTernary(lhs);
     StringRef op1 = peek();
     if (precedence(op1) < minPrec)
       break;
+    if (consume("?"))
+      return readTernary(lhs);
     skip();
     Expr rhs = readPrimary();
 

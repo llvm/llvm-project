@@ -1203,11 +1203,12 @@ public:
     if (CostKind != TTI::TCK_RecipThroughput)
       return Cost;
 
+    const DataLayout &DL = this->getDataLayout();
     if (Src->isVectorTy() &&
         // In practice it's not currently possible to have a change in lane
         // length for extending loads or truncating stores so both types should
         // have the same scalable property.
-        TypeSize::isKnownLT(Src->getPrimitiveSizeInBits(),
+        TypeSize::isKnownLT(DL.getTypeStoreSizeInBits(Src),
                             LT.second.getSizeInBits())) {
       // This is a vector load that legalizes to a larger type than the vector
       // itself. Unless the corresponding extending load or truncating store is

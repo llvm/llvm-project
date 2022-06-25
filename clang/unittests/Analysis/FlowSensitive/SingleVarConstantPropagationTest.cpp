@@ -171,9 +171,7 @@ public:
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-MATCHER_P(HasConstantVal, v, "") {
-  return arg.Data.hasValue() && arg.Data->Value == v;
-}
+MATCHER_P(HasConstantVal, v, "") { return arg.Data && arg.Data->Value == v; }
 
 MATCHER(IsUnknown, "") { return arg == arg.bottom(); }
 MATCHER(Varies, "") { return arg == arg.top(); }
