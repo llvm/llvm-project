@@ -754,7 +754,7 @@ def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 
 
 let SubtargetPredicate = Has16BitInsts in {
-
+let isReMaterializable = 1 in {
 let FPDPRounding = 1 in {
 def V_MADMK_F16 : VOP2_Pseudo <"v_madmk_f16", VOP_MADMK_F16, [], "">;
 defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", VOP_F16_F16_I32, AMDGPUldexp>;
@@ -776,6 +776,7 @@ def V_MADAK_F16 : VOP2_Pseudo <"v_madak_f16", VOP_MADAK_F16, [], "">;
 }
 
 } // End FPDPRounding = 1
+
 defm V_MUL_LO_U16 : VOP2Inst <"v_mul_lo_u16", VOP_I16_I16_I16, mul>;
 defm V_MAX_F16 : VOP2Inst <"v_max_f16", VOP_F16_F16_F16, fmaxnum_like>;
 defm V_MIN_F16 : VOP2Inst <"v_min_f16", VOP_F16_F16_F16, fminnum_like>;
@@ -789,13 +790,14 @@ let SubtargetPredicate = isGFX8GFX9 in {
   defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP_I16_I16_I16_ARITH, sub>;
   defm V_SUBREV_U16 : VOP2Inst <"v_subrev_u16", VOP_I16_I16_I16_ARITH, null_frag, "v_sub_u16">;
 }
+} // End isCommutable = 1
+} // End isReMaterializable = 1
 
+// FIXME: Missing FPDPRounding
 let Constraints = "$vdst = $src2", DisableEncoding="$src2",
-    isConvertibleToThreeAddress = 1 in {
+    isConvertibleToThreeAddress = 1, isCommutable = 1 in {
 defm V_MAC_F16 : VOP2Inst <"v_mac_f16", VOP_MAC_F16>;
 }
-} // End isCommutable = 1
-
 } // End SubtargetPredicate = Has16BitInsts
 
 let SubtargetPredicate = HasDLInsts in {
@@ -911,12 +913,12 @@ def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">, VOPD_Compon
 
 let SubtargetPredicate = isGFX10Plus in {
 
-let FPDPRounding = 1 in {
+let FPDPRounding = 1, isReMaterializable = 1 in {
 def V_FMAMK_F16 : VOP2_Pseudo <"v_fmamk_f16", VOP_MADMK_F16, [], "">;
 
 let isCommutable = 1 in
 def V_FMAAK_F16 : VOP2_Pseudo <"v_fmaak_f16", VOP_MADAK_F16, [], "">;
-} // End FPDPRounding  = 1
+} // End FPDPRounding  = 1, isReMaterializable = 1
 
 let Constraints = "$vdst = $src2",
     DisableEncoding="$src2",
