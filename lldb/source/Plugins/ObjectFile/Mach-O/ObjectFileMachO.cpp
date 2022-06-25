@@ -6516,8 +6516,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             addr_t pagesize = range_info.GetPageSize();
             const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
                 range_info.GetDirtyPageList();
-            if (dirty_pages_only && dirty_page_list.hasValue()) {
-              for (addr_t dirtypage : dirty_page_list.getValue()) {
+            if (dirty_pages_only && dirty_page_list) {
+              for (addr_t dirtypage : *dirty_page_list) {
                 page_object obj;
                 obj.addr = dirtypage;
                 obj.size = pagesize;

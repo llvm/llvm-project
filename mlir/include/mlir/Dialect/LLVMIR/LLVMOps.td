@@ -347,8 +347,8 @@ def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
 // of LLVM ops that accept such an attribute.
 class MemoryOpWithAlignmentBase {
   code setAlignmentCode = [{
-    if ($alignment.hasValue()) {
-      auto align = $alignment.getValue();
+    if ($alignment) {
+      auto align = *$alignment;
       if (align != 0)
         inst->setAlignment(llvm::Align(align));
     }

@@ -2607,9 +2607,9 @@ public:
                                             funcSymbolAttr, operands);
 
     if (caller.mustSaveResult())
-      builder.create<fir::SaveResultOp>(
-          loc, call.getResult(0), fir::getBase(allocatedResult.getValue()),
-          arrayResultShape, resultLengths);
+      builder.create<fir::SaveResultOp>(loc, call.getResult(0),
+                                        fir::getBase(*allocatedResult),
+                                        arrayResultShape, resultLengths);
 
     if (allocatedResult) {
       allocatedResult->match(
@@ -4110,10 +4110,10 @@ private:
                                            mlir::Value{});
       }
     } else if (isBoundsRemap()) {
-      auto lbs = lbounds.getValue();
+      auto lbs = *lbounds;
       if (lbs.size() > 0) {
         // Rebox the value with user-specified shift and shape.
-        auto shapeShiftArgs = flatZip(lbs, ubounds.getValue());
+        auto shapeShiftArgs = flatZip(lbs, *ubounds);
         auto shapeTy = fir::ShapeShiftType::get(eleTy.getContext(), lbs.size());
         mlir::Value shapeShift =
             builder.create<fir::ShapeShiftOp>(loc, shapeTy, shapeShiftArgs);
@@ -4185,8 +4185,8 @@ private:
     auto [iterSpace, insPt] = genIterSpace(resultTy);
     auto exv = f(iterSpace);
     iterSpace.setElement(std::move(exv));
-    auto lambda = ccStoreToDest.hasValue()
-                      ? ccStoreToDest.getValue()
+    auto lambda = ccStoreToDest
+                      ? *ccStoreToDest
                       : defaultStoreToDestination(/*substring=*/nullptr);
     mlir::Value updVal = fir::getBase(lambda(iterSpace));
     finalizeElementCtx();
@@ -4522,8 +4522,8 @@ private:
     }
 
     // Generate the lazy mask allocation, if one was given.
-    if (ccPrelude.hasValue())
-      ccPrelude.getValue()(shape);
+    if (ccPrelude)
+      ccPrelude.value()(shape);
 
     // Now handle the implicit loops.
     mlir::Value inner = explicitSpaceIsActive()
@@ -4582,8 +4582,8 @@ private:
   fir::ArrayLoadOp
   createAndLoadSomeArrayTemp(mlir::Type type,
                              llvm::ArrayRef<mlir::Value> shape) {
-    if (ccLoadDest.hasValue())
-      return ccLoadDest.getValue()(shape);
+    if (ccLoadDest)
+      return ccLoadDest.value()(shape);
     auto seqTy = type.dyn_cast<fir::SequenceType>();
     assert(seqTy && "must be an array");
     mlir::Location loc = getLoc();
@@ -5810,8 +5810,8 @@ private:
       // always loaded at the beginning of the statement and merged at the
       // end.
       destination = arrLoad;
-      auto lambda = ccStoreToDest.hasValue()
-                        ? ccStoreToDest.getValue()
+      auto lambda = ccStoreToDest
+                        ? ccStoreToDest.value()
                         : defaultStoreToDestination(components.substring);
       return [=](IterSpace iters) -> ExtValue { return lambda(iters); };
     }
@@ -6464,8 +6464,8 @@ private:
 
     // Return the continuation.
     if (fir::isa_char(seqTy.getEleTy())) {
-      if (charLen.hasValue()) {
-        auto len = builder.create<fir::LoadOp>(loc, charLen.getValue());
+      if (charLen) {
+        auto len = builder.create<fir::LoadOp>(loc, charLen.value());
         return genarr(fir::CharArrayBoxValue{mem, len, extents});
       }
       return genarr(fir::CharArrayBoxValue{mem, zero, extents});
@@ -7181,14 +7181,14 @@ private:
 
   void setUnordered(bool b) { unordered = b; }
 
-  inline bool isPointerAssignment() const { return lbounds.hasValue(); }
+  inline bool isPointerAssignment() const { return lbounds.has_value(); }
 
   inline bool isBoundsSpec() const {
-    return isPointerAssignment() && !ubounds.hasValue();
+    return isPointerAssignment() && !ubounds.has_value();
   }
 
   inline bool isBoundsRemap() const {
-    return isPointerAssignment() && ubounds.hasValue();
+    return isPointerAssignment() && ubounds.has_value();
   }
 
   void setPointerAssignmentBounds(
@@ -7515,8 +7515,8 @@ void Fortran::lower::createArrayLoads(
   auto genLoad = [&](const auto *x) -> fir::ArrayLoadOp {
     return genArrayLoad(loc, converter, builder, x, symMap, stmtCtx);
   };
-  if (esp.lhsBases[counter].hasValue()) {
-    auto &base = esp.lhsBases[counter].getValue();
+  if (esp.lhsBases[counter]) {
+    auto &base = *esp.lhsBases[counter];
     auto load = std::visit(genLoad, base);
     esp.initialArgs.push_back(load);
     esp.resetInnerArgs();
@@ -7535,13 +7535,13 @@ void Fortran::lower::createArrayMergeStores(
   // Gen the fir.array_merge_store ops for all LHS arrays.
   for (auto i : llvm::enumerate(esp.getOuterLoop().getResults()))
     if (llvm::Optional<fir::ArrayLoadOp> ldOpt = esp.getLhsLoad(i.index())) {
-      fir::ArrayLoadOp load = ldOpt.getValue();
+      fir::ArrayLoadOp load = *ldOpt;
       builder.create<fir::ArrayMergeStoreOp>(loc, load, i.value(),
                                              load.getMemref(), load.getSlice(),
                                              load.getTypeparams());
     }
-  if (esp.loopCleanup.hasValue()) {
-    esp.loopCleanup.getValue()(builder);
+  if (esp.loopCleanup) {
+    esp.loopCleanup.value()(builder);
     esp.loopCleanup = llvm::None;
   }
   esp.initialArgs.clear();

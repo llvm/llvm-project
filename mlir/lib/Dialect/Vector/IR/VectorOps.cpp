@@ -2677,8 +2677,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            ValueRange indices, AffineMap permutationMap,
                            Optional<ArrayRef<bool>> inBounds) {
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.getValue().empty())
-                          ? builder.getBoolArrayAttr(inBounds.getValue())
+  auto inBoundsAttr = (inBounds && !inBounds->empty())
+                          ? builder.getBoolArrayAttr(inBounds.value())
                           : ArrayAttr();
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         inBoundsAttr);
@@ -2692,8 +2692,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   AffineMap permutationMap = getTransferMinorIdentityMap(
       source.getType().cast<ShapedType>(), vectorType);
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.getValue().empty())
-                          ? builder.getBoolArrayAttr(inBounds.getValue())
+  auto inBoundsAttr = (inBounds && !inBounds->empty())
+                          ? builder.getBoolArrayAttr(inBounds.value())
                           : ArrayAttr();
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         padding,
@@ -3216,8 +3216,8 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             AffineMap permutationMap,
                             Optional<ArrayRef<bool>> inBounds) {
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.getValue().empty())
-                          ? builder.getBoolArrayAttr(inBounds.getValue())
+  auto inBoundsAttr = (inBounds && !inBounds->empty())
+                          ? builder.getBoolArrayAttr(inBounds.value())
                           : ArrayAttr();
   build(builder, result, vector, dest, indices, permutationMapAttr,
         /*mask=*/Value(), inBoundsAttr);

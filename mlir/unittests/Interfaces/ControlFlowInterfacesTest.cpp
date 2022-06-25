@@ -79,7 +79,7 @@ struct DoubleLoopRegionsOp
   void getSuccessorRegions(Optional<unsigned> index,
                            ArrayRef<Attribute> operands,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (index.hasValue()) {
+    if (index.has_value()) {
       regions.push_back(RegionSuccessor());
       regions.push_back(RegionSuccessor(&getOperation()->getRegion(*index)));
     }

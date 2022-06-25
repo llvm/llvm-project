@@ -134,12 +134,12 @@ void transform::AlternativesOp::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
   for (Region &alternative :
-       llvm::drop_begin(getAlternatives(), index.hasValue() ? *index + 1 : 0)) {
+       llvm::drop_begin(getAlternatives(), index ? *index + 1 : 0)) {
     regions.emplace_back(&alternative, !getOperands().empty()
                                            ? alternative.getArguments()
                                            : Block::BlockArgListType());
   }
-  if (index.hasValue())
+  if (index)
     regions.emplace_back(getOperation()->getResults());
 }
 

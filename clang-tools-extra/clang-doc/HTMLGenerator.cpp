@@ -653,10 +653,10 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.getValue()));
+      Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
-      Out.emplace_back(writeFileDefinition(
-          I.DefLoc.getValue(), StringRef{CDCtx.RepositoryUrl.getValue()}));
+      Out.emplace_back(
+          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -702,10 +702,10 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.getValue()));
+      Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
-      Out.emplace_back(writeFileDefinition(
-          I.DefLoc.getValue(), StringRef{CDCtx.RepositoryUrl.getValue()}));
+      Out.emplace_back(
+          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -768,10 +768,10 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.getValue()));
+      Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
-      Out.emplace_back(writeFileDefinition(
-          I.DefLoc.getValue(), StringRef{CDCtx.RepositoryUrl.getValue()}));
+      Out.emplace_back(
+          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;

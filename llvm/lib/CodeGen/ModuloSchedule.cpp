@@ -1447,8 +1447,8 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
 Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
                              const TargetRegisterClass *RC) {
   // If the init register is not undef, try and find an existing phi.
-  if (InitReg.hasValue()) {
-    auto I = Phis.find({LoopReg, InitReg.getValue()});
+  if (InitReg) {
+    auto I = Phis.find({LoopReg, *InitReg});
     if (I != Phis.end())
       return I->second;
   } else {
@@ -1469,10 +1469,10 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
       return R;
     // Found a phi taking undef as input, so rewrite it to take InitReg.
     MachineInstr *MI = MRI.getVRegDef(R);
-    MI->getOperand(1).setReg(InitReg.getValue());
-    Phis.insert({{LoopReg, InitReg.getValue()}, R});
+    MI->getOperand(1).setReg(*InitReg);
+    Phis.insert({{LoopReg, *InitReg}, R});
     const TargetRegisterClass *ConstrainRegClass =
-        MRI.constrainRegClass(R, MRI.getRegClass(InitReg.getValue()));
+        MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
     assert(ConstrainRegClass && "Expected a valid constrained register class!");
     (void)ConstrainRegClass;
     UndefPhis.erase(I);
@@ -1483,18 +1483,18 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
   if (!RC)
     RC = MRI.getRegClass(LoopReg);
   Register R = MRI.createVirtualRegister(RC);
-  if (InitReg.hasValue()) {
+  if (InitReg) {
     const TargetRegisterClass *ConstrainRegClass =
         MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
     assert(ConstrainRegClass && "Expected a valid constrained register class!");
     (void)ConstrainRegClass;
   }
   BuildMI(*BB, BB->getFirstNonPHI(), DebugLoc(), TII->get(TargetOpcode::PHI), R)
-      .addReg(InitReg.hasValue() ? *InitReg : undef(RC))
+      .addReg(InitReg ? *InitReg : undef(RC))
       .addMBB(PreheaderBB)
       .addReg(LoopReg)
       .addMBB(BB);
-  if (!InitReg.hasValue())
+  if (!InitReg)
     UndefPhis[LoopReg] = R;
   else
     Phis[{LoopReg, *InitReg}] = R;

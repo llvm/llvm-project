@@ -1873,9 +1873,9 @@ static ExprResult SemaBuiltinLaunder(Sema &S, CallExpr *TheCall) {
       return 2;
     return llvm::Optional<unsigned>{};
   }();
-  if (DiagSelect.hasValue()) {
+  if (DiagSelect) {
     S.Diag(TheCall->getBeginLoc(), diag::err_builtin_launder_invalid_arg)
-        << DiagSelect.getValue() << TheCall->getSourceRange();
+        << *DiagSelect << TheCall->getSourceRange();
     return ExprError();
   }
 

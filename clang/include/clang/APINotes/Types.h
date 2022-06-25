@@ -76,8 +76,8 @@ public:
   }
 
   void setSwiftPrivate(llvm::Optional<bool> Private) {
-    SwiftPrivateSpecified = Private.hasValue();
-    SwiftPrivate = Private.hasValue() ? *Private : 0;
+    SwiftPrivateSpecified = Private.has_value();
+    SwiftPrivate = Private.value_or(0);
   }
 
   friend bool operator==(const CommonEntityInfo &, const CommonEntityInfo &);

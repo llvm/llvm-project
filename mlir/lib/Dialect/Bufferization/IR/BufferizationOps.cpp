@@ -444,11 +444,11 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     llvm::Optional<Operation *> maybeCloneDeallocOp =
         memref::findDealloc(cloneOp.getOutput());
     // Skip if either of them has > 1 deallocate operations.
-    if (!maybeCloneDeallocOp.hasValue())
+    if (!maybeCloneDeallocOp.has_value())
       return failure();
     llvm::Optional<Operation *> maybeSourceDeallocOp =
         memref::findDealloc(source);
-    if (!maybeSourceDeallocOp.hasValue())
+    if (!maybeSourceDeallocOp.has_value())
       return failure();
     Operation *cloneDeallocOp = *maybeCloneDeallocOp;
     Operation *sourceDeallocOp = *maybeSourceDeallocOp;

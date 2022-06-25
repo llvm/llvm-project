@@ -228,8 +228,8 @@ static Error mapNameAndUniqueName(CodeViewRecordIO &IO, StringRef &Name,
 }
 
 Error TypeRecordMapping::visitTypeBegin(CVType &CVR) {
-  assert(!TypeKind.hasValue() && "Already in a type mapping!");
-  assert(!MemberKind.hasValue() && "Already in a member mapping!");
+  assert(!TypeKind && "Already in a type mapping!");
+  assert(!MemberKind && "Already in a member mapping!");
 
   // FieldList and MethodList records can be any length because they can be
   // split with continuation records.  All other record types cannot be
@@ -260,8 +260,8 @@ Error TypeRecordMapping::visitTypeBegin(CVType &CVR, TypeIndex Index) {
 }
 
 Error TypeRecordMapping::visitTypeEnd(CVType &Record) {
-  assert(TypeKind.hasValue() && "Not in a type mapping!");
-  assert(!MemberKind.hasValue() && "Still in a member mapping!");
+  assert(TypeKind && "Not in a type mapping!");
+  assert(!MemberKind && "Still in a member mapping!");
 
   error(IO.endRecord());
 
@@ -270,8 +270,8 @@ Error TypeRecordMapping::visitTypeEnd(CVType &Record) {
 }
 
 Error TypeRecordMapping::visitMemberBegin(CVMemberRecord &Record) {
-  assert(TypeKind.hasValue() && "Not in a type mapping!");
-  assert(!MemberKind.hasValue() && "Already in a member mapping!");
+  assert(TypeKind && "Not in a type mapping!");
+  assert(!MemberKind && "Already in a member mapping!");
 
   // The largest possible subrecord is one in which there is a record prefix,
   // followed by the subrecord, followed by a continuation, and that entire
@@ -296,8 +296,8 @@ Error TypeRecordMapping::visitMemberBegin(CVMemberRecord &Record) {
 }
 
 Error TypeRecordMapping::visitMemberEnd(CVMemberRecord &Record) {
-  assert(TypeKind.hasValue() && "Not in a type mapping!");
-  assert(MemberKind.hasValue() && "Not in a member mapping!");
+  assert(TypeKind && "Not in a type mapping!");
+  assert(MemberKind && "Not in a member mapping!");
 
   if (IO.isReading()) {
     if (auto EC = IO.skipPadding())

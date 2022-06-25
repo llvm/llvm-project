@@ -1297,8 +1297,8 @@ LogicalResult GlobalOp::verify() {
 
   // Verify that the initial value, if present, is either a unit attribute or
   // an elements attribute.
-  if (initial_value().hasValue()) {
-    Attribute initValue = initial_value().getValue();
+  if (initial_value().has_value()) {
+    Attribute initValue = initial_value().value();
     if (!initValue.isa<UnitAttr>() && !initValue.isa<ElementsAttr>())
       return emitOpError("initial value should be a unit or elements "
                          "attribute, but got ")
@@ -1329,8 +1329,8 @@ LogicalResult GlobalOp::verify() {
 
 ElementsAttr GlobalOp::getConstantInitValue() {
   auto initVal = initial_value();
-  if (constant() && initVal.hasValue())
-    return initVal.getValue().cast<ElementsAttr>();
+  if (constant() && initVal.has_value())
+    return initVal->cast<ElementsAttr>();
   return {};
 }
 
@@ -2483,14 +2483,14 @@ static bool isTrivialSubViewOp(SubViewOp subViewOp) {
   // Check offsets are zero.
   if (llvm::any_of(mixedOffsets, [](OpFoldResult ofr) {
         Optional<int64_t> intValue = getConstantIntValue(ofr);
-        return !intValue || intValue.getValue() != 0;
+        return !intValue || *intValue != 0;
       }))
     return false;
 
   // Check strides are one.
   if (llvm::any_of(mixedStrides, [](OpFoldResult ofr) {
         Optional<int64_t> intValue = getConstantIntValue(ofr);
-        return !intValue || intValue.getValue() != 1;
+        return !intValue || *intValue != 1;
       }))
     return false;
 

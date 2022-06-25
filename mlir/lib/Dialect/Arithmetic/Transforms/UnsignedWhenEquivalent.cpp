@@ -23,9 +23,9 @@ using namespace mlir::arith;
 static LogicalResult staticallyNonNegative(IntRangeAnalysis &analysis,
                                            Value v) {
   Optional<ConstantIntRanges> result = analysis.getResult(v);
-  if (!result.hasValue())
+  if (!result.has_value())
     return failure();
-  const ConstantIntRanges &range = result.getValue();
+  const ConstantIntRanges &range = result.value();
   return success(range.smin().isNonNegative());
 }
 
