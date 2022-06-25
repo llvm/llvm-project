@@ -144,6 +144,10 @@ public:
     return load;
   }
 
+  mlir::Value buildLoadOfLValue(LValue LV, SourceLocation Loc) {
+    return CGF.buildLoadOfLValue(LV, Loc).getScalarVal();
+  }
+
   // l-values
   mlir::Value VisitDeclRefExpr(DeclRefExpr *E) {
     // FIXME: we could try to emit this as constant first, see
@@ -465,11 +469,23 @@ public:
         Ops.LHS, Ops.RHS);
   }
 
+  LValue buildCompoundAssignLValue(
+      const CompoundAssignOperator *E,
+      mlir::Value (ScalarExprEmitter::*F)(const BinOpInfo &),
+      mlir::Value &Result);
+  mlir::Value
+  buildCompoundAssign(const CompoundAssignOperator *E,
+                      mlir::Value (ScalarExprEmitter::*F)(const BinOpInfo &));
+
   // Binary operators and binary compound assignment operators.
 #define HANDLEBINOP(OP)                                                        \
   mlir::Value VisitBin##OP(const BinaryOperator *E) {                          \
     return build##OP(buildBinOps(E));                                          \
+  }                                                                            \
+  mlir::Value VisitBin##OP##Assign(const CompoundAssignOperator *E) {          \
+    return buildCompoundAssign(E, &ScalarExprEmitter::build##OP);              \
   }
+
   HANDLEBINOP(Mul)
   HANDLEBINOP(Div)
   HANDLEBINOP(Rem)
@@ -982,4 +998,132 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
   //   llvm_unreachable("NYI");
 
   llvm_unreachable("NYI");
+}
+
+LValue
+CIRGenFunction::buildCompoundAssignmentLValue(const CompoundAssignOperator *E) {
+  ScalarExprEmitter Scalar(*this, builder);
+  mlir::Value Result;
+  switch (E->getOpcode()) {
+#define COMPOUND_OP(Op)                                                        \
+  case BO_##Op##Assign:                                                        \
+    return Scalar.buildCompoundAssignLValue(E, &ScalarExprEmitter::build##Op,  \
+                                            Result)
+    COMPOUND_OP(Mul);
+    COMPOUND_OP(Div);
+    COMPOUND_OP(Rem);
+    COMPOUND_OP(Add);
+    COMPOUND_OP(Sub);
+    COMPOUND_OP(Shl);
+    COMPOUND_OP(Shr);
+    COMPOUND_OP(And);
+    COMPOUND_OP(Xor);
+    COMPOUND_OP(Or);
+#undef COMPOUND_OP
+
+  case BO_PtrMemD:
+  case BO_PtrMemI:
+  case BO_Mul:
+  case BO_Div:
+  case BO_Rem:
+  case BO_Add:
+  case BO_Sub:
+  case BO_Shl:
+  case BO_Shr:
+  case BO_LT:
+  case BO_GT:
+  case BO_LE:
+  case BO_GE:
+  case BO_EQ:
+  case BO_NE:
+  case BO_Cmp:
+  case BO_And:
+  case BO_Xor:
+  case BO_Or:
+  case BO_LAnd:
+  case BO_LOr:
+  case BO_Assign:
+  case BO_Comma:
+    llvm_unreachable("Not valid compound assignment operators");
+  }
+  llvm_unreachable("Unhandled compound assignment operator");
+}
+
+LValue ScalarExprEmitter::buildCompoundAssignLValue(
+    const CompoundAssignOperator *E,
+    mlir::Value (ScalarExprEmitter::*Func)(const BinOpInfo &),
+    mlir::Value &Result) {
+  QualType LHSTy = E->getLHS()->getType();
+  BinOpInfo OpInfo;
+
+  if (E->getComputationResultType()->isAnyComplexType())
+    assert(0 && "not implemented");
+
+  // Emit the RHS first.  __block variables need to have the rhs evaluated
+  // first, plus this should improve codegen a little.
+  OpInfo.RHS = Visit(E->getRHS());
+  OpInfo.Ty = E->getComputationResultType();
+  OpInfo.Opcode = E->getOpcode();
+  OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
+  OpInfo.E = E;
+  OpInfo.Loc = E->getSourceRange();
+
+  // Load/convert the LHS
+  LValue LHSLV = CGF.buildLValue(E->getLHS());
+
+  if (const AtomicType *atomicTy = LHSTy->getAs<AtomicType>()) {
+    assert(0 && "not implemented");
+  }
+
+  OpInfo.LHS = buildLoadOfLValue(LHSLV, E->getExprLoc());
+
+  CIRGenFunction::SourceLocRAIIObject sourceloc{
+      CGF, CGF.getLoc(E->getSourceRange())};
+  SourceLocation Loc = E->getExprLoc();
+  OpInfo.LHS =
+      buildScalarConversion(OpInfo.LHS, LHSTy, E->getComputationLHSType(), Loc);
+
+  // Expand the binary operator.
+  Result = (this->*Func)(OpInfo);
+
+  // Convert the result back to the LHS type,
+  // potentially with Implicit Conversion sanitizer check.
+  Result = buildScalarConversion(Result, E->getComputationResultType(), LHSTy,
+                                 Loc, ScalarConversionOpts(CGF.SanOpts));
+
+  // Store the result value into the LHS lvalue. Bit-fields are handled
+  // specially because the result is altered by the store, i.e., [C99 6.5.16p1]
+  // 'An assignment expression has the value of the left operand after the
+  // assignment...'.
+  if (LHSLV.isBitField())
+    assert(0 && "not yet implemented");
+  else
+    CGF.buldStoreThroughLValue(RValue::get(Result), LHSLV, nullptr);
+
+  assert(!CGF.getLangOpts().OpenMP && "Not implemented");
+  return LHSLV;
+}
+
+mlir::Value ScalarExprEmitter::buildCompoundAssign(
+    const CompoundAssignOperator *E,
+    mlir::Value (ScalarExprEmitter::*Func)(const BinOpInfo &)) {
+
+  bool Ignore = TestAndClearIgnoreResultAssign();
+  mlir::Value RHS;
+  LValue LHS = buildCompoundAssignLValue(E, Func, RHS);
+
+  // If the result is clearly ignored, return now.
+  if (Ignore)
+    return {};
+
+  // The result of an assignment in C is the assigned r-value.
+  if (!CGF.getLangOpts().CPlusPlus)
+    return RHS;
+
+  // If the lvalue is non-volatile, return the computed value of the assignment.
+  if (!LHS.isVolatile())
+    return RHS;
+
+  // Otherwise, reload the value.
+  return buildLoadOfLValue(LHS, E->getExprLoc());
 }

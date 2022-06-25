@@ -38,6 +38,10 @@ class CallOp;
 }
 } // namespace mlir
 
+namespace {
+class ScalarExprEmitter;
+}
+
 namespace cir {
 
 // FIXME: for now we are reusing this from lib/Clang/CodeGenFunction.h, which
@@ -49,6 +53,8 @@ public:
   CIRGenModule &CGM;
 
 private:
+  friend class ::ScalarExprEmitter;
+
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
@@ -493,6 +499,10 @@ public:
   RValue convertTempToRValue(Address addr, clang::QualType type,
                              clang::SourceLocation Loc);
 
+  /// buildLoadOfLValue - Given an expression that represents a value lvalue,
+  /// this method emits the address of the lvalue, then loads the result as an
+  /// rvalue, returning the rvalue.
+  RValue buildLoadOfLValue(LValue LV, SourceLocation Loc);
   mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
                                 clang::SourceLocation Loc,
                                 LValueBaseInfo BaseInfo,
@@ -703,6 +713,7 @@ public:
 
   LValue buildDeclRefLValue(const clang::DeclRefExpr *E);
   LValue buildBinaryOperatorLValue(const clang::BinaryOperator *E);
+  LValue buildCompoundAssignmentLValue(const clang::CompoundAssignOperator *E);
   LValue buildUnaryOpLValue(const clang::UnaryOperator *E);
   LValue buildStringLiteralLValue(const StringLiteral *E);
 
