@@ -20,7 +20,7 @@ SECTIONS {
   greater = 0 > 1 ? 1 : 2;
   greatereq = 1 >= 1 ? 1 : 2;
   eq = 1 == 1 ? 1 : 2;
-  neq = 1 != 1 ? 1 : 2;
+  neq = (1 != 1 <= 1) ? 1 : 2;
   plusassign = 1;
   plusassign += 2;
   unary = -1 + 3;
