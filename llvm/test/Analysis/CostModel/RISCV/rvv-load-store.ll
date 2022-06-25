@@ -58,16 +58,16 @@ define void @load(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %51 = load <vscale x 16 x i64>, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %52 = load <vscale x 32 x i64>, ptr %p, align 256
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %53 = load ptr, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %54 = load <1 x ptr>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %55 = load <2 x ptr>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %54 = load <1 x ptr>, ptr %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %55 = load <2 x ptr>, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %56 = load <4 x ptr>, ptr %p, align 32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %57 = load <8 x ptr>, ptr %p, align 64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %58 = load <16 x ptr>, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %59 = load <32 x ptr>, ptr %p, align 256
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %60 = load <vscale x 1 x ptr>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %61 = load <vscale x 2 x ptr>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %62 = load <vscale x 4 x ptr>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %63 = load <vscale x 8 x ptr>, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %60 = load <vscale x 1 x ptr>, ptr %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %61 = load <vscale x 2 x ptr>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %62 = load <vscale x 4 x ptr>, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %63 = load <vscale x 8 x ptr>, ptr %p, align 64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %64 = load <vscale x 16 x ptr>, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %65 = load <vscale x 32 x ptr>, ptr %p, align 256
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
@@ -201,18 +201,18 @@ define void @store(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <vscale x 16 x i64> undef, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <vscale x 32 x i64> undef, ptr %p, align 256
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store ptr undef, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <1 x ptr> undef, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <2 x ptr> undef, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <4 x ptr> undef, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <8 x ptr> undef, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: store <16 x ptr> undef, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: store <32 x ptr> undef, ptr %p, align 256
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: store <vscale x 1 x ptr> undef, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: store <vscale x 2 x ptr> undef, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: store <vscale x 4 x ptr> undef, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: store <vscale x 8 x ptr> undef, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: store <vscale x 16 x ptr> undef, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: store <vscale x 32 x ptr> undef, ptr %p, align 256
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x ptr> undef, ptr %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x ptr> undef, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <8 x ptr> undef, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <16 x ptr> undef, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <32 x ptr> undef, ptr %p, align 256
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <vscale x 1 x ptr> undef, ptr %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <vscale x 2 x ptr> undef, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <vscale x 4 x ptr> undef, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <vscale x 8 x ptr> undef, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <vscale x 16 x ptr> undef, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <vscale x 32 x ptr> undef, ptr %p, align 256
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   store i8 undef, ptr %p
