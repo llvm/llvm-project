@@ -5247,3 +5247,141 @@ body:             |
     S_NOP 0, implicit %3
     S_ENDPGM 0, implicit %0
 ...
+
+---
+name:            test_remat_v_pk_fma_f32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; GCN-LABEL: name: test_remat_v_pk_fma_f32
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = nofpexcept V_PK_FMA_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = nofpexcept V_PK_FMA_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = nofpexcept V_PK_FMA_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %2:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %3:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %3
+    S_ENDPGM 0, implicit %0
+...
+
+---
+name:            test_no_remat_v_pk_fma_f32
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg:  $sgpr32
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; GCN-LABEL: name: test_no_remat_v_pk_fma_f32
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_PK_FMA_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: SI_SPILL_V64_SAVE killed $vgpr2_vgpr3, %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_PK_FMA_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: SI_SPILL_V64_SAVE killed $vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_PK_FMA_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: SI_SPILL_V64_SAVE killed $vgpr2_vgpr3, %stack.2, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.2, align 4, addrspace 5)
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = SI_SPILL_V64_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = SI_SPILL_V64_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.2, align 4, addrspace 5)
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vreg_64_align2 = V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %2:vreg_64_align2 = V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %3:vreg_64_align2 = V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %3
+    S_ENDPGM 0, implicit %0
+...
+
+---
+name:            test_remat_v_pk_mul_f32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; GCN-LABEL: name: test_remat_v_pk_mul_f32
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = nofpexcept V_PK_MUL_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = nofpexcept V_PK_MUL_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = nofpexcept V_PK_MUL_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %2:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %3:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %3
+    S_ENDPGM 0, implicit %0
+...
+
+---
+name:            test_remat_v_pk_add_f32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; GCN-LABEL: name: test_remat_v_pk_add_f32
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = nofpexcept V_PK_ADD_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = nofpexcept V_PK_ADD_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = nofpexcept V_PK_ADD_F32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %2:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %3:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %3
+    S_ENDPGM 0, implicit %0
+...
+
+---
+name:            test_remat_v_pk_mov_b32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; GCN-LABEL: name: test_remat_v_pk_mov_b32
+    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_PK_MOV_B32 8, $vgpr0_vgpr1, 8, $vgpr0_vgpr1, 11, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_PK_MOV_B32 9, $vgpr0_vgpr1, 9, $vgpr0_vgpr1, 12, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_PK_MOV_B32 10, $vgpr0_vgpr1, 10, $vgpr0_vgpr1, 13, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vreg_64_align2 = V_PK_MOV_B32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $exec
+    %2:vreg_64_align2 = V_PK_MOV_B32 9, %0, 9, %0, 12, 0, 0, 0, 0, implicit $exec
+    %3:vreg_64_align2 = V_PK_MOV_B32 10, %0, 10, %0, 13, 0, 0, 0, 0, implicit $exec
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %3
+    S_ENDPGM 0, implicit %0
+...
