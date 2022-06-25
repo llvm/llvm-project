@@ -396,6 +396,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @add_test_categories(["fork"])
+    @expectedFailureAll()  # qfThreadInfo changes temporarily reverted
     def test_threadinfo(self):
         parent_pid, parent_tid, child_pid, child_tid = (
             self.start_fork_test(["fork", "thread:new", "trap"]))
@@ -528,6 +529,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.reset_test_sequence()
 
     @add_test_categories(["fork"])
+    @expectedFailureAll()  # qfThreadInfo changes temporarily reverted
     def test_register_read_write(self):
         parent_pid, parent_tid, child_pid, child_tid = (
             self.start_fork_test(["fork", "thread:new", "trap"]))
@@ -624,6 +626,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.assertEqual(data, old_val[1])
 
     @add_test_categories(["fork"])
+    @expectedFailureAll()  # qfThreadInfo changes temporarily reverted
     def test_qC(self):
         parent_pid, parent_tid, child_pid, child_tid = (
             self.start_fork_test(["fork", "thread:new", "trap"]))
@@ -658,6 +661,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @add_test_categories(["fork"])
+    @expectedFailureAll()  # qfThreadInfo changes temporarily reverted
     def test_T(self):
         parent_pid, parent_tid, child_pid, child_tid = (
             self.start_fork_test(["fork", "thread:new", "trap"]))
