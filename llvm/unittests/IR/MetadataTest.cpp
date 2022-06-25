@@ -1664,7 +1664,7 @@ TEST_F(DIDerivedTypeTest, get) {
   EXPECT_EQ(2u, N->getSizeInBits());
   EXPECT_EQ(3u, N->getAlignInBits());
   EXPECT_EQ(4u, N->getOffsetInBits());
-  EXPECT_EQ(DWARFAddressSpace, N->getDWARFAddressSpace().getValue());
+  EXPECT_EQ(DWARFAddressSpace, *N->getDWARFAddressSpace());
   EXPECT_EQ(5u, N->getFlags());
   EXPECT_EQ(ExtraData, N->getExtraData());
   EXPECT_EQ(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
@@ -1728,7 +1728,7 @@ TEST_F(DIDerivedTypeTest, getWithLargeValues) {
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
   EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
   EXPECT_EQ(UINT64_MAX - 2, N->getOffsetInBits());
-  EXPECT_EQ(UINT32_MAX - 3, N->getDWARFAddressSpace().getValue());
+  EXPECT_EQ(UINT32_MAX - 3, *N->getDWARFAddressSpace());
 }
 
 typedef MetadataTest DICompositeTypeTest;
