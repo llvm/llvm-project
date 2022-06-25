@@ -5,7 +5,7 @@ RUN: llvm-strip --strip-unneeded %t.o
 RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
 RUN: (llvm-bolt %t.exe --data %t.fdata -o %t --relocs \
-RUN:   --reorder-blocks=cache --split-functions=3 --split-all-cold \
+RUN:   --reorder-blocks=cache --split-functions --split-all-cold \
 RUN:   --use-gnu-stack --dyno-stats --indirect-call-promotion=jump-tables \
 RUN:   --print-icp -v=0 \
 RUN:   --icp-jt-remaining-percent-threshold=10 \

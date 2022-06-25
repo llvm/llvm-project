@@ -18,15 +18,6 @@ namespace bolt {
 
 /// Split function code in multiple parts.
 class SplitFunctions : public BinaryFunctionPass {
-public:
-  /// Settings for splitting function bodies into hot/cold partitions.
-  enum SplittingType : char {
-    ST_NONE = 0, /// Do not split functions.
-    ST_LARGE,    /// In non-relocation mode, only split functions that
-                 /// are too large to fit into the original space.
-    ST_ALL,      /// Split all functions.
-  };
-
 private:
   /// Split function body into fragments.
   void splitFunction(BinaryFunction &Function);

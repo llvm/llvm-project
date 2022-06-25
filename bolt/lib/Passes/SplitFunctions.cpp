@@ -14,6 +14,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <vector>
 
@@ -21,6 +22,25 @@
 
 using namespace llvm;
 using namespace bolt;
+
+namespace {
+class DeprecatedSplitFunctionOptionParser : public cl::parser<bool> {
+public:
+  explicit DeprecatedSplitFunctionOptionParser(cl::Option &O)
+      : cl::parser<bool>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, bool &Value) {
+    if (Arg == "2" || Arg == "3") {
+      Value = true;
+      errs() << formatv("BOLT-WARNING: specifying non-boolean value \"{0}\" "
+                        "for option -{1} is deprecated\n",
+                        Arg, ArgName);
+      return false;
+    }
+    return cl::parser<bool>::parse(O, ArgName, Arg, Value);
+  }
+};
+} // namespace
 
 namespace opts {
 
@@ -42,21 +62,10 @@ static cl::opt<unsigned> SplitAlignThreshold(
 
     cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<SplitFunctions::SplittingType>
-SplitFunctions("split-functions",
-  cl::desc("split functions into hot and cold regions"),
-  cl::init(SplitFunctions::ST_NONE),
-  cl::values(clEnumValN(SplitFunctions::ST_NONE, "0",
-                        "do not split any function"),
-             clEnumValN(SplitFunctions::ST_LARGE, "1",
-                        "in non-relocation mode only split functions too large "
-                        "to fit into original code space"),
-             clEnumValN(SplitFunctions::ST_LARGE, "2",
-                        "same as 1 (backwards compatibility)"),
-             clEnumValN(SplitFunctions::ST_ALL, "3",
-                        "split all functions")),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool, false, DeprecatedSplitFunctionOptionParser>
+    SplitFunctions("split-functions",
+                   cl::desc("split functions into hot and cold regions"),
+                   cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> SplitThreshold(
     "split-threshold",
@@ -65,11 +74,6 @@ static cl::opt<unsigned> SplitThreshold(
              "size is reduced. Note that on some architectures the size can "
              "increase after splitting."),
     cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
-
-void syncOptions(BinaryContext &BC) {
-  if (!BC.HasRelocations && opts::SplitFunctions == SplitFunctions::ST_LARGE)
-    opts::SplitFunctions = SplitFunctions::ST_ALL;
-}
 
 } // namespace opts
 
@@ -85,9 +89,7 @@ bool SplitFunctions::shouldOptimize(const BinaryFunction &BF) const {
 }
 
 void SplitFunctions::runOnFunctions(BinaryContext &BC) {
-  opts::syncOptions(BC);
-
-  if (opts::SplitFunctions == SplitFunctions::ST_NONE)
+  if (!opts::SplitFunctions)
     return;
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
@@ -140,12 +142,6 @@ void SplitFunctions::splitFunction(BinaryFunction &BF) {
                       << " pre-split is <0x"
                       << Twine::utohexstr(OriginalHotSize) << ", 0x"
                       << Twine::utohexstr(ColdSize) << ">\n");
-    if (opts::SplitFunctions == SplitFunctions::ST_LARGE &&
-        !BC.HasRelocations) {
-      // Split only if the function wouldn't fit.
-      if (OriginalHotSize <= BF.getMaxSize())
-        return;
-    }
   }
 
   // Never outline the first basic block.
