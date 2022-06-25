@@ -260,14 +260,6 @@ inline bool operator>(Align Lhs, uint64_t Rhs) {
   return Lhs.value() > Rhs;
 }
 
-/// Comparisons between MaybeAlign and scalars.
-inline bool operator==(MaybeAlign Lhs, uint64_t Rhs) {
-  return Lhs ? (*Lhs).value() == Rhs : Rhs == 0;
-}
-inline bool operator!=(MaybeAlign Lhs, uint64_t Rhs) {
-  return Lhs ? (*Lhs).value() != Rhs : Rhs != 0;
-}
-
 /// Comparisons operators between Align.
 inline bool operator==(Align Lhs, Align Rhs) {
   return Lhs.ShiftValue == Rhs.ShiftValue;
