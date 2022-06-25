@@ -297,7 +297,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
     return b.notifyMatchFailure(op, "unknown reduction neutral");
 
   // TODO: relax this when multi-reduction support is available.
-  if (op.getNumOutputs() != neutralElements.size())
+  if (op.getNumOutputs() != (int)neutralElements.size())
     return b.notifyMatchFailure(op, "expect one reduction per output");
 
   // Rewrite part.
