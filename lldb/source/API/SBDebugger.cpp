@@ -1627,7 +1627,8 @@ bool SBDebugger::EnableLog(const char *channel, const char **categories) {
     std::string error;
     llvm::raw_string_ostream error_stream(error);
     return m_opaque_sp->EnableLog(channel, GetCategoryArray(categories), "",
-                                  log_options, /*buffer_size=*/0, error_stream);
+                                  log_options, /*buffer_size=*/0,
+                                  eLogHandlerStream, error_stream);
   } else
     return false;
 }

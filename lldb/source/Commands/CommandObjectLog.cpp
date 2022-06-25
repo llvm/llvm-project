@@ -11,6 +11,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/Args.h"
@@ -21,6 +22,36 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+static constexpr OptionEnumValueElement g_log_handler_type[] = {
+    {
+        eLogHandlerDefault,
+        "default",
+        "Use the default (stream) log handler",
+    },
+    {
+        eLogHandlerStream,
+        "stream",
+        "Write log messages to the debugger output stream or to a file if one "
+        "is specified. A buffer size (in bytes) can be specified with -b. If "
+        "no buffer size is specified the output is unbuffered.",
+    },
+    {
+        eLogHandlerCircular,
+        "circular",
+        "Write log messages to a fixed size circular buffer. A buffer size "
+        "(number of messages) must be specified with -b.",
+    },
+    {
+        eLogHandlerSystem,
+        "os",
+        "Write log messages to the operating system log.",
+    },
+};
+
+static constexpr OptionEnumValues LogHandlerType() {
+  return OptionEnumValues(g_log_handler_type);
+}
 
 #define LLDB_OPTIONS_log_enable
 #include "CommandOptions.inc"
@@ -90,6 +121,14 @@ public:
         log_file.SetFile(option_arg, FileSpec::Style::native);
         FileSystem::Instance().Resolve(log_file);
         break;
+      case 'h':
+        handler = (LogHandlerKind)OptionArgParser::ToOptionEnum(
+            option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
+        if (!error.Success())
+          error.SetErrorStringWithFormat(
+              "unrecognized value for log handler '%s'",
+              option_arg.str().c_str());
+        break;
       case 'b':
         error =
             buffer_size.SetValueFromString(option_arg, eVarSetOperationAssign);
@@ -128,6 +167,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       log_file.Clear();
       buffer_size.Clear();
+      handler = eLogHandlerStream;
       log_options = 0;
     }
 
@@ -137,6 +177,7 @@ public:
 
     FileSpec log_file;
     OptionValueUInt64 buffer_size;
+    LogHandlerKind handler = eLogHandlerStream;
     uint32_t log_options = 0;
   };
 
@@ -155,6 +196,13 @@ protected:
       return false;
     }
 
+    if (m_options.handler == eLogHandlerCircular &&
+        m_options.buffer_size.GetCurrentValue() == 0) {
+      result.AppendError(
+          "the circular buffer handler requires a non-zero buffer size.\n");
+      return false;
+    }
+
     // Store into a std::string since we're about to shift the channel off.
     const std::string channel = std::string(args[0].ref());
     args.Shift(); // Shift off the channel
@@ -168,7 +216,8 @@ protected:
     llvm::raw_string_ostream error_stream(error);
     bool success = GetDebugger().EnableLog(
         channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
-        m_options.buffer_size.GetCurrentValue(), error_stream);
+        m_options.buffer_size.GetCurrentValue(), m_options.handler,
+        error_stream);
     result.GetErrorStream() << error_stream.str();
 
     if (success)

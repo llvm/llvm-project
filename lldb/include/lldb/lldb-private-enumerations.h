@@ -233,6 +233,14 @@ enum StatisticKind {
   StatisticMax = 4
 };
 
+// Enumeration that can be used to specify a log handler.
+enum LogHandlerKind {
+  eLogHandlerStream,
+  eLogHandlerCallback,
+  eLogHandlerCircular,
+  eLogHandlerSystem,
+  eLogHandlerDefault = eLogHandlerStream,
+};
 
 inline std::string GetStatDescription(lldb_private::StatisticKind K) {
    switch (K) {
