@@ -11,7 +11,7 @@ set(linkopts
   # > On AIX, runtime linking is no longer enabled by default.
   # See https://cmake.org/cmake/help/latest/release/3.16.html
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
-    list(PREPEND linkopts -Wl,-G)
+    set(linkopts -Wl,-G ${linkopts})
   endif()
   set(${link_flags} ${linkopts} PARENT_SCOPE)
 endfunction()
