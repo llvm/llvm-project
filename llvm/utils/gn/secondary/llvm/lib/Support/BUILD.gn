@@ -149,6 +149,8 @@ static_library("Support") {
     "TypeSize.cpp",
     "Unicode.cpp",
     "UnicodeCaseFold.cpp",
+    "UnicodeNameToCodepoint.cpp",
+    "UnicodeNameToCodepointGenerated.cpp",
     "VersionTuple.cpp",
     "WithColor.cpp",
     "X86TargetParser.cpp",
