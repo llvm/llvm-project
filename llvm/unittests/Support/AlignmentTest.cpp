@@ -227,9 +227,6 @@ TEST(AlignmentTest, AlignComparisons) {
     EXPECT_EQ(MA, MA);
     EXPECT_NE(MA, MB);
 
-    EXPECT_EQ(MA, MA ? (*MA).value() : 0);
-    EXPECT_NE(MA, MB ? (*MB).value() : 0);
-
     EXPECT_EQ(std::max(A, B), B);
     EXPECT_EQ(std::min(A, B), A);
   }
@@ -274,14 +271,6 @@ TEST(AlignmentDeathTest, ComparisonsWithZero) {
     EXPECT_DEATH((void)(Align(Value) <= 0), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) > 0), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) < 0), ".* should be defined");
-  }
-}
-
-TEST(AlignmentDeathTest, CompareMaybeAlignToZero) {
-  for (uint64_t Value : getValidAlignmentsForDeathTest()) {
-    // MaybeAlign is allowed to be == or != 0
-    (void)(MaybeAlign(Value) == 0);
-    (void)(MaybeAlign(Value) != 0);
   }
 }
 
