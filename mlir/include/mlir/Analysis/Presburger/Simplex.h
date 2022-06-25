@@ -572,10 +572,28 @@ public:
   /// `constraints`, and no other ids.
   SymbolicLexSimplex(const IntegerPolyhedron &constraints,
                      const IntegerPolyhedron &symbolDomain)
-      : LexSimplexBase(constraints), domainPoly(symbolDomain),
-        domainSimplex(symbolDomain) {
-    assert(domainPoly.getNumIds() == constraints.getNumSymbolIds());
-    assert(domainPoly.getNumDimIds() == constraints.getNumSymbolIds());
+      : SymbolicLexSimplex(constraints,
+                           constraints.getIdKindOffset(IdKind::Symbol),
+                           symbolDomain) {
+    assert(constraints.getNumSymbolIds() == symbolDomain.getNumIds());
+  }
+
+  /// An overload to select some other subrange of ids as symbols for lexmin.
+  /// The symbol ids are the range of ids with absolute index
+  /// [symbolOffset, symbolOffset + symbolDomain.getNumIds())
+  /// symbolDomain should only have dim ids.
+  SymbolicLexSimplex(const IntegerPolyhedron &constraints,
+                     unsigned symbolOffset,
+                     const IntegerPolyhedron &symbolDomain)
+      : LexSimplexBase(/*nVar=*/constraints.getNumIds(), symbolOffset,
+                       symbolDomain.getNumIds()),
+        domainPoly(symbolDomain), domainSimplex(symbolDomain) {
+    // TODO consider supporting this case. It amounts
+    // to just returning the input constraints.
+    assert(domainPoly.getNumIds() > 0 &&
+           "there must be some non-symbols to optimize!");
+    assert(domainPoly.getNumIds() == domainPoly.getNumDimIds());
+    intersectIntegerRelation(constraints);
   }
 
   /// The lexmin will be stored as a function `lexmin` from symbols to
@@ -583,6 +601,9 @@ public:
   ///
   /// For some values of the symbols, the lexmin may be unbounded.
   /// These parts of the symbol domain will be stored in `unboundedDomain`.
+  ///
+  /// The spaces of the sets in the result are compatible with the symbolDomain
+  /// passed in the SymbolicLexSimplex constructor.
   SymbolicLexMin computeSymbolicIntegerLexMin();
 
 private:

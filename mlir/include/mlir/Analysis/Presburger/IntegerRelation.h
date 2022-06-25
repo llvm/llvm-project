@@ -26,6 +26,7 @@ namespace presburger {
 
 class IntegerRelation;
 class IntegerPolyhedron;
+class PresburgerSet;
 
 /// An IntegerRelation represents the set of points from a PresburgerSpace that
 /// satisfy a list of affine constraints. Affine constraints can be inequalities
@@ -92,6 +93,17 @@ public:
 
   /// Returns a reference to the underlying space.
   const PresburgerSpace &getSpace() const { return space; }
+
+  /// Set the space to `oSpace`, which should have the same number of ids as
+  /// the current space.
+  void setSpace(const PresburgerSpace &oSpace);
+
+  /// Set the space to `oSpace`, which should not have any local ids.
+  /// `oSpace` can have fewer ids than the current space; in that case, the
+  /// the extra ids in `this` that are not accounted for by `oSpace` will be
+  /// considered as local ids. `oSpace` should not have more ids than the
+  /// current space; this will result in an assert failure.
+  void setSpaceExceptLocals(const PresburgerSpace &oSpace);
 
   /// Returns a copy of the space without locals.
   PresburgerSpace getSpaceWithoutLocals() const {
@@ -497,6 +509,9 @@ public:
   /// locals that have been added to `this`.
   unsigned mergeLocalIds(IntegerRelation &other);
 
+  /// Check whether all local ids have a division representation.
+  bool hasOnlyDivLocals() const;
+
   /// Changes the partition between dimensions and symbols. Depending on the new
   /// symbol count, either a chunk of dimensional identifiers immediately before
   /// the split become symbols, or some of the symbols immediately after the
@@ -738,6 +753,12 @@ public:
   /// column position (i.e., not relative to the kind of identifier) of the
   /// first added identifier.
   unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
+
+  /// Compute an equivalent representation of the same set, such that all local
+  /// ids have division representations. This representation may involve
+  /// local ids that correspond to divisions, and may also be a union of convex
+  /// disjuncts.
+  PresburgerSet computeReprWithOnlyDivLocals() const;
 
   /// Compute the symbolic integer lexmin of the polyhedron.
   /// This finds, for every assignment to the symbols, the lexicographically
