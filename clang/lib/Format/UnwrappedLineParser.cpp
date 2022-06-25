@@ -3168,6 +3168,11 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
     break;
   }
   default:
+    if (PreviousNonComment->isTypeOrIdentifier()) {
+      // This is a requires clause.
+      parseRequiresClause(RequiresToken);
+      return true;
+    }
     // It's an expression.
     parseRequiresExpression(RequiresToken);
     return false;
