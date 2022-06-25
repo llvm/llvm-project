@@ -331,14 +331,14 @@ TEST(GlobalCompilationDatabaseTest, CompileFlagsDirectory) {
   FS.Files[testPath("x/compile_flags.txt")] = "-DFOO";
   DirectoryBasedGlobalCompilationDatabase CDB(FS);
   auto Commands = CDB.getCompileCommand(testPath("x/y.cpp"));
-  ASSERT_TRUE(Commands.hasValue());
-  EXPECT_THAT(Commands.getValue().CommandLine, Contains("-DFOO"));
+  ASSERT_TRUE(Commands.has_value());
+  EXPECT_THAT(Commands->CommandLine, Contains("-DFOO"));
   // Make sure we pick the right working directory.
-  EXPECT_EQ(testPath("x"), Commands.getValue().Directory);
+  EXPECT_EQ(testPath("x"), Commands->Directory);
 }
 
 MATCHER_P(hasArg, Flag, "") {
-  if (!arg.hasValue()) {
+  if (!arg) {
     *result_listener << "command is null";
     return false;
   }

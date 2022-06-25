@@ -777,12 +777,12 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
     }
 
     SampleProfileMap &Profiles = Reader->getProfiles();
-    if (ProfileIsProbeBased.hasValue() &&
+    if (ProfileIsProbeBased &&
         ProfileIsProbeBased != FunctionSamples::ProfileIsProbeBased)
       exitWithError(
           "cannot merge probe-based profile with non-probe-based profile");
     ProfileIsProbeBased = FunctionSamples::ProfileIsProbeBased;
-    if (ProfileIsCS.hasValue() && ProfileIsCS != FunctionSamples::ProfileIsCS)
+    if (ProfileIsCS && ProfileIsCS != FunctionSamples::ProfileIsCS)
       exitWithError("cannot merge CS profile with non-CS profile");
     ProfileIsCS = FunctionSamples::ProfileIsCS;
     for (SampleProfileMap::iterator I = Profiles.begin(), E = Profiles.end();

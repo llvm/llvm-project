@@ -2936,14 +2936,14 @@ public:
   }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode(SubOperand.hasValue() ? "GIR_ComplexSubOperandRenderer"
-                                                      : "GIR_ComplexRenderer")
+    Table << MatchTable::Opcode(SubOperand ? "GIR_ComplexSubOperandRenderer"
+                                           : "GIR_ComplexRenderer")
           << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
           << MatchTable::Comment("RendererID")
           << MatchTable::IntValue(RendererID);
-    if (SubOperand.hasValue())
+    if (SubOperand)
       Table << MatchTable::Comment("SubOperand")
-            << MatchTable::IntValue(SubOperand.getValue());
+            << MatchTable::IntValue(*SubOperand);
     Table << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
   }
 };
@@ -4946,8 +4946,8 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
       auto Def = DefaultDefOp->getDef();
       if (Def->getName() == "undef_tied_input") {
         unsigned TempRegID = M.allocateTempRegID();
-        M.insertAction<MakeTempRegisterAction>(
-          InsertPt, OpTyOrNone.getValue(), TempRegID);
+        M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone,
+                                               TempRegID);
         InsertPt = M.insertAction<BuildMIAction>(
           InsertPt, M.allocateOutputInsnID(),
           &Target.getInstruction(RK.getDef("IMPLICIT_DEF")));

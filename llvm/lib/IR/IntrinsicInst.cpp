@@ -223,13 +223,13 @@ ConstrainedFPIntrinsic::getExceptionBehavior() const {
 bool ConstrainedFPIntrinsic::isDefaultFPEnvironment() const {
   Optional<fp::ExceptionBehavior> Except = getExceptionBehavior();
   if (Except) {
-    if (Except.getValue() != fp::ebIgnore)
+    if (*Except != fp::ebIgnore)
       return false;
   }
 
   Optional<RoundingMode> Rounding = getRoundingMode();
   if (Rounding) {
-    if (Rounding.getValue() != RoundingMode::NearestTiesToEven)
+    if (*Rounding != RoundingMode::NearestTiesToEven)
       return false;
   }
 
@@ -363,14 +363,14 @@ VPIntrinsic::getVectorLengthParamPos(Intrinsic::ID IntrinsicID) {
 /// scatter.
 MaybeAlign VPIntrinsic::getPointerAlignment() const {
   Optional<unsigned> PtrParamOpt = getMemoryPointerParamPos(getIntrinsicID());
-  assert(PtrParamOpt.hasValue() && "no pointer argument!");
-  return getParamAlign(PtrParamOpt.getValue());
+  assert(PtrParamOpt && "no pointer argument!");
+  return getParamAlign(*PtrParamOpt);
 }
 
 /// \return The pointer operand of this load,store, gather or scatter.
 Value *VPIntrinsic::getMemoryPointerParam() const {
   if (auto PtrParamOpt = getMemoryPointerParamPos(getIntrinsicID()))
-    return getArgOperand(PtrParamOpt.getValue());
+    return getArgOperand(*PtrParamOpt);
   return nullptr;
 }
 
@@ -388,10 +388,9 @@ Optional<unsigned> VPIntrinsic::getMemoryPointerParamPos(Intrinsic::ID VPID) {
 
 /// \return The data (payload) operand of this store or scatter.
 Value *VPIntrinsic::getMemoryDataParam() const {
-  auto DataParamOpt = getMemoryDataParamPos(getIntrinsicID());
-  if (!DataParamOpt.hasValue())
-    return nullptr;
-  return getArgOperand(DataParamOpt.getValue());
+  if (auto DataParamOpt = getMemoryDataParamPos(getIntrinsicID()))
+    return getArgOperand(*DataParamOpt);
+  return nullptr;
 }
 
 Optional<unsigned> VPIntrinsic::getMemoryDataParamPos(Intrinsic::ID VPID) {

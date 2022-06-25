@@ -340,10 +340,10 @@ public:
     return StratifiedSets<T>(std::move(Values), std::move(StratLinks));
   }
 
-  bool has(const T &Elem) const { return get(Elem).hasValue(); }
+  bool has(const T &Elem) const { return get(Elem).has_value(); }
 
   bool add(const T &Main) {
-    if (get(Main).hasValue())
+    if (get(Main))
       return false;
 
     auto NewIndex = getNewUnlinkedIndex();

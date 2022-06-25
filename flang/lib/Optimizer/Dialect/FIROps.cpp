@@ -616,10 +616,10 @@ mlir::FunctionType fir::CallOp::getFunctionType() {
 }
 
 void fir::CallOp::print(mlir::OpAsmPrinter &p) {
-  bool isDirect = getCallee().hasValue();
+  bool isDirect = getCallee().has_value();
   p << ' ';
   if (isDirect)
-    p << getCallee().getValue();
+    p << *getCallee();
   else
     p << getOperand(0);
   p << '(' << (*this)->getOperands().drop_front(isDirect ? 0 : 1) << ')';
@@ -700,9 +700,8 @@ static void printCmpOp(mlir::OpAsmPrinter &p, OPTY op) {
       op->template getAttrOfType<mlir::IntegerAttr>(
             OPTY::getPredicateAttrName())
           .getInt());
-  assert(predSym.hasValue() && "invalid symbol value for predicate");
-  p << '"' << mlir::arith::stringifyCmpFPredicate(predSym.getValue()) << '"'
-    << ", ";
+  assert(predSym && "invalid symbol value for predicate");
+  p << '"' << mlir::arith::stringifyCmpFPredicate(*predSym) << '"' << ", ";
   p.printOperand(op.getLhs());
   p << ", ";
   p.printOperand(op.getRhs());
@@ -777,8 +776,8 @@ void fir::buildCmpCOp(mlir::OpBuilder &builder, mlir::OperationState &result,
 mlir::arith::CmpFPredicate
 fir::CmpcOp::getPredicateByName(llvm::StringRef name) {
   auto pred = mlir::arith::symbolizeCmpFPredicate(name);
-  assert(pred.hasValue() && "invalid predicate name");
-  return pred.getValue();
+  assert(pred && "invalid predicate name");
+  return *pred;
 }
 
 void fir::CmpcOp::print(mlir::OpAsmPrinter &p) { printCmpOp(p, *this); }
@@ -1074,7 +1073,7 @@ mlir::ParseResult fir::DispatchTableOp::parse(mlir::OpAsmParser &parser,
   // Parse the optional table body.
   mlir::Region *body = result.addRegion();
   mlir::OptionalParseResult parseResult = parser.parseOptionalRegion(*body);
-  if (parseResult.hasValue() && failed(*parseResult))
+  if (parseResult.has_value() && failed(*parseResult))
     return mlir::failure();
 
   fir::DispatchTableOp::ensureTerminator(*body, parser.getBuilder(),
@@ -1256,15 +1255,15 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     // Parse the optional initializer body.
     auto parseResult =
         parser.parseOptionalRegion(*result.addRegion(), /*arguments=*/{});
-    if (parseResult.hasValue() && mlir::failed(*parseResult))
+    if (parseResult.has_value() && mlir::failed(*parseResult))
       return mlir::failure();
   }
   return mlir::success();
 }
 
 void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
-  if (getLinkName().hasValue())
-    p << ' ' << getLinkName().getValue();
+  if (getLinkName())
+    p << ' ' << *getLinkName();
   p << ' ';
   p.printAttributeWithoutType(getSymrefAttr());
   if (auto val = getValueOrNull())

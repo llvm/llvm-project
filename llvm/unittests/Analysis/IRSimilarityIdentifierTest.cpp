@@ -2188,9 +2188,9 @@ TEST(IRSimilarityCandidate, CanonicalNumbering) {
   for (std::pair<unsigned, DenseSet<unsigned>> &P : Mapping2) {
     unsigned Source = P.first;
 
-    ASSERT_TRUE(Cand2.getCanonicalNum(Source).hasValue());
+    ASSERT_TRUE(Cand2.getCanonicalNum(Source).has_value());
     unsigned Canon = *Cand2.getCanonicalNum(Source);
-    ASSERT_TRUE(Cand1.fromCanonicalNum(Canon).hasValue());
+    ASSERT_TRUE(Cand1.fromCanonicalNum(Canon).has_value());
     unsigned Dest = *Cand1.fromCanonicalNum(Canon);
 
     DenseSet<unsigned>::iterator It = P.second.find(Dest);

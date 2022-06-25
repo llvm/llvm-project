@@ -2514,13 +2514,13 @@ struct AAICVTrackerFunction : public AAICVTracker {
         if (ValuesMap.count(CurrInst)) {
           Optional<Value *> NewReplVal = ValuesMap.lookup(CurrInst);
           // Unknown value, track new.
-          if (!ReplVal.hasValue()) {
+          if (!ReplVal) {
             ReplVal = NewReplVal;
             break;
           }
 
           // If we found a new value, we can't know the icv value anymore.
-          if (NewReplVal.hasValue())
+          if (NewReplVal)
             if (ReplVal != NewReplVal)
               return nullptr;
 
@@ -2528,11 +2528,11 @@ struct AAICVTrackerFunction : public AAICVTracker {
         }
 
         Optional<Value *> NewReplVal = getValueForCall(A, *CurrInst, ICV);
-        if (!NewReplVal.hasValue())
+        if (!NewReplVal)
           continue;
 
         // Unknown value, track new.
-        if (!ReplVal.hasValue()) {
+        if (!ReplVal) {
           ReplVal = NewReplVal;
           break;
         }
@@ -4422,13 +4422,13 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
 
     std::string Str("simplified value: ");
 
-    if (!SimplifiedValue.hasValue())
+    if (!SimplifiedValue)
       return Str + std::string("none");
 
-    if (!SimplifiedValue.getValue())
+    if (!SimplifiedValue.value())
       return Str + std::string("nullptr");
 
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(SimplifiedValue.getValue()))
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(SimplifiedValue.value()))
       return Str + std::to_string(CI->getSExtValue());
 
     return Str + std::string("unknown");
@@ -4452,8 +4452,8 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
         IRPosition::callsite_returned(CB),
         [&](const IRPosition &IRP, const AbstractAttribute *AA,
             bool &UsedAssumedInformation) -> Optional<Value *> {
-          assert((isValidState() || (SimplifiedValue.hasValue() &&
-                                     SimplifiedValue.getValue() == nullptr)) &&
+          assert((isValidState() ||
+                  (SimplifiedValue && *SimplifiedValue == nullptr)) &&
                  "Unexpected invalid state!");
 
           if (!isAtFixpoint()) {

@@ -340,11 +340,11 @@ scf::TileConsumerAndFuseProducersUsingSCFForOp::returningMatchAndRewrite(
     // 2c. Generate the tiled implementation of the producer of the source
     rewriter.setInsertionPoint(candidateSliceOp);
     FailureOr<Value> fusedProducerValue =
-        tensor::replaceExtractSliceWithTiledProducer(
-            rewriter, candidateSliceOp, fusableProducer.getValue());
+        tensor::replaceExtractSliceWithTiledProducer(rewriter, candidateSliceOp,
+                                                     fusableProducer.value());
     if (failed(fusedProducerValue))
       continue;
-    rewriter.replaceOp(candidateSliceOp, fusedProducerValue.getValue());
+    rewriter.replaceOp(candidateSliceOp, fusedProducerValue.value());
 
     // 2d. The operands of the fused producer might themselved be slices of
     //     values produced by operations that implement the `TilingInterface`.

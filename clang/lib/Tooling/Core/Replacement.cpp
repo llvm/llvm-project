@@ -179,9 +179,9 @@ static std::string getReplacementErrString(replacement_error Err) {
 
 std::string ReplacementError::message() const {
   std::string Message = getReplacementErrString(Err);
-  if (NewReplacement.hasValue())
+  if (NewReplacement)
     Message += "\nNew replacement: " + NewReplacement->toString();
-  if (ExistingReplacement.hasValue())
+  if (ExistingReplacement)
     Message += "\nExisting replacement: " + ExistingReplacement->toString();
   return Message;
 }

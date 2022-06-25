@@ -209,12 +209,11 @@ MacroDirective::DefInfo MacroDirective::getDefinition() {
     }
 
     VisibilityMacroDirective *VisMD = cast<VisibilityMacroDirective>(MD);
-    if (!isPublic.hasValue())
+    if (!isPublic)
       isPublic = VisMD->isPublic();
   }
 
-  return DefInfo(nullptr, UndefLoc,
-                 !isPublic.hasValue() || isPublic.getValue());
+  return DefInfo(nullptr, UndefLoc, !isPublic || *isPublic);
 }
 
 const MacroDirective::DefInfo

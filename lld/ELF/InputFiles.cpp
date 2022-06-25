@@ -744,9 +744,9 @@ static void updateARMVFPArgs(const ARMAttributeParser &attributes,
 static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
   Optional<unsigned> attr =
       attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
-  if (!attr.hasValue())
+  if (!attr)
     return;
-  auto arch = attr.getValue();
+  auto arch = *attr;
   switch (arch) {
   case ARMBuildAttrs::Pre_v4:
   case ARMBuildAttrs::v4:

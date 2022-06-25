@@ -4239,10 +4239,9 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
 
   auto &FieldInitializers = Initializer.FieldInitializers;
   size_t FieldIndex = 0;
-  if (EndToken.hasValue()) {
+  if (EndToken) {
     // Initialize all fields with given initializers.
-    while (getTok().isNot(EndToken.getValue()) &&
-           FieldIndex < Structure.Fields.size()) {
+    while (getTok().isNot(*EndToken) && FieldIndex < Structure.Fields.size()) {
       const FieldInfo &Field = Structure.Fields[FieldIndex++];
       if (parseOptionalToken(AsmToken::Comma)) {
         // Empty initializer; use the default and continue. (Also, allow line
@@ -4272,11 +4271,11 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
     FieldInitializers.push_back(Field.Contents);
   }
 
-  if (EndToken.hasValue()) {
-    if (EndToken.getValue() == AsmToken::Greater)
+  if (EndToken) {
+    if (*EndToken == AsmToken::Greater)
       return parseAngleBracketClose();
 
-    return parseToken(EndToken.getValue());
+    return parseToken(*EndToken);
   }
 
   return false;

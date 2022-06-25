@@ -553,9 +553,9 @@ public:
       Value b = rewriter.create<vector::BroadcastOp>(loc, lhsType, op.getRhs());
       Optional<Value> mult = createContractArithOp(loc, op.getLhs(), b, acc,
                                                    kind, rewriter, isInt);
-      if (!mult.hasValue())
+      if (!mult.has_value())
         return failure();
-      rewriter.replaceOp(op, mult.getValue());
+      rewriter.replaceOp(op, mult.value());
       return success();
     }
 
@@ -571,9 +571,9 @@ public:
         r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
       Optional<Value> m =
           createContractArithOp(loc, a, op.getRhs(), r, kind, rewriter, isInt);
-      if (!m.hasValue())
+      if (!m.has_value())
         return failure();
-      result = rewriter.create<vector::InsertOp>(loc, resType, m.getValue(),
+      result = rewriter.create<vector::InsertOp>(loc, resType, m.value(),
                                                  result, pos);
     }
     rewriter.replaceOp(op, result);
@@ -1824,8 +1824,8 @@ Value ContractionOpLowering::lowerParallel(vector::ContractionOp op,
   }
   assert(iterIndex >= 0 && "parallel index not listed in operand mapping");
   Optional<int64_t> lookup = getResultIndex(iMap[2], iterIndex);
-  assert(lookup.hasValue() && "parallel index not listed in reduction");
-  int64_t resIndex = lookup.getValue();
+  assert(lookup && "parallel index not listed in reduction");
+  int64_t resIndex = lookup.value();
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
       adjustMap(iMap[0], iterIndex, rewriter),
@@ -1864,10 +1864,10 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
   Optional<int64_t> lookupLhs = getResultIndex(iMap[0], iterIndex);
   Optional<int64_t> lookupRhs = getResultIndex(iMap[1], iterIndex);
-  assert(lookupLhs.hasValue() && "missing LHS parallel index");
-  assert(lookupRhs.hasValue() && "missing RHS parallel index");
-  int64_t lhsIndex = lookupLhs.getValue();
-  int64_t rhsIndex = lookupRhs.getValue();
+  assert(lookupLhs && "missing LHS parallel index");
+  assert(lookupRhs && "missing RHS parallel index");
+  int64_t lhsIndex = lookupLhs.value();
+  int64_t rhsIndex = lookupRhs.value();
   int64_t dimSize = lhsType.getDimSize(lhsIndex);
   assert(dimSize == rhsType.getDimSize(rhsIndex) && "corrupt shape");
   // Base case.

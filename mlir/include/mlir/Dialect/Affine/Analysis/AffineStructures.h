@@ -400,13 +400,13 @@ public:
   inline Value getValue(unsigned pos) const {
     assert(pos < getNumDimAndSymbolIds() && "Invalid position");
     assert(hasValue(pos) && "identifier's Value not set");
-    return values[pos].getValue();
+    return values[pos].value();
   }
 
   /// Returns true if the pos^th identifier has an associated Value.
   inline bool hasValue(unsigned pos) const {
     assert(pos < getNumDimAndSymbolIds() && "Invalid position");
-    return values[pos].hasValue();
+    return values[pos].has_value();
   }
 
   /// Returns true if at least one identifier has an associated Value.

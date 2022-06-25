@@ -703,8 +703,8 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   unsigned NumRegs;
   if (IsABIRegCopy) {
     NumRegs = TLI.getVectorTypeBreakdownForCallingConv(
-        *DAG.getContext(), CallConv.getValue(), ValueVT, IntermediateVT,
-        NumIntermediates, RegisterVT);
+        *DAG.getContext(), *CallConv, ValueVT, IntermediateVT, NumIntermediates,
+        RegisterVT);
   } else {
     NumRegs =
         TLI.getVectorTypeBreakdown(*DAG.getContext(), ValueVT, IntermediateVT,
@@ -800,11 +800,11 @@ RegsForValue::RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
   for (EVT ValueVT : ValueVTs) {
     unsigned NumRegs =
         isABIMangled()
-            ? TLI.getNumRegistersForCallingConv(Context, CC.getValue(), ValueVT)
+            ? TLI.getNumRegistersForCallingConv(Context, *CC, ValueVT)
             : TLI.getNumRegisters(Context, ValueVT);
     MVT RegisterVT =
         isABIMangled()
-            ? TLI.getRegisterTypeForCallingConv(Context, CC.getValue(), ValueVT)
+            ? TLI.getRegisterTypeForCallingConv(Context, *CC, ValueVT)
             : TLI.getRegisterType(Context, ValueVT);
     for (unsigned i = 0; i != NumRegs; ++i)
       Regs.push_back(Reg + i);
@@ -831,10 +831,10 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
     // Copy the legal parts from the registers.
     EVT ValueVT = ValueVTs[Value];
     unsigned NumRegs = RegCount[Value];
-    MVT RegisterVT = isABIMangled() ? TLI.getRegisterTypeForCallingConv(
-                                          *DAG.getContext(),
-                                          CallConv.getValue(), RegVTs[Value])
-                                    : RegVTs[Value];
+    MVT RegisterVT = isABIMangled()
+                         ? TLI.getRegisterTypeForCallingConv(
+                               *DAG.getContext(), *CallConv, RegVTs[Value])
+                         : RegVTs[Value];
 
     Parts.resize(NumRegs);
     for (unsigned i = 0; i != NumRegs; ++i) {
@@ -914,10 +914,10 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
   for (unsigned Value = 0, Part = 0, e = ValueVTs.size(); Value != e; ++Value) {
     unsigned NumParts = RegCount[Value];
 
-    MVT RegisterVT = isABIMangled() ? TLI.getRegisterTypeForCallingConv(
-                                          *DAG.getContext(),
-                                          CallConv.getValue(), RegVTs[Value])
-                                    : RegVTs[Value];
+    MVT RegisterVT = isABIMangled()
+                         ? TLI.getRegisterTypeForCallingConv(
+                               *DAG.getContext(), *CallConv, RegVTs[Value])
+                         : RegVTs[Value];
 
     if (ExtendKind == ISD::ANY_EXTEND && TLI.isZExtFree(Val, RegisterVT))
       ExtendKind = ISD::ZERO_EXTEND;
@@ -8867,10 +8867,10 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
             : OpInfo;
     const auto RegError =
         getRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
-    if (RegError.hasValue()) {
+    if (RegError) {
       const MachineFunction &MF = DAG.getMachineFunction();
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-      const char *RegName = TRI.getName(RegError.getValue());
+      const char *RegName = TRI.getName(*RegError);
       emitInlineAsmError(Call, "register '" + Twine(RegName) +
                                    "' allocated for constraint '" +
                                    Twine(OpInfo.ConstraintCode) +

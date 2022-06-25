@@ -219,18 +219,18 @@ void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
 void checkBackendInstrumentation(Instruction &I,
                                  const ArrayRef<uint32_t> RealWeights) {
   auto ExpectedWeightsOpt = extractWeights(&I, I.getContext());
-  if (!ExpectedWeightsOpt.hasValue())
+  if (!ExpectedWeightsOpt)
     return;
-  auto ExpectedWeights = ExpectedWeightsOpt.getValue();
+  auto ExpectedWeights = *ExpectedWeightsOpt;
   verifyMisExpect(I, RealWeights, ExpectedWeights);
 }
 
 void checkFrontendInstrumentation(Instruction &I,
                                   const ArrayRef<uint32_t> ExpectedWeights) {
   auto RealWeightsOpt = extractWeights(&I, I.getContext());
-  if (!RealWeightsOpt.hasValue())
+  if (!RealWeightsOpt)
     return;
-  auto RealWeights = RealWeightsOpt.getValue();
+  auto RealWeights = *RealWeightsOpt;
   verifyMisExpect(I, RealWeights, ExpectedWeights);
 }
 

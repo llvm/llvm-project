@@ -40,7 +40,7 @@ static Type parsePDLType(AsmParser &parser) {
   {
     Type genType;
     auto parseResult = generatedTypeParser(parser, typeTag, genType);
-    if (parseResult.hasValue())
+    if (parseResult.has_value())
       return genType;
   }
 

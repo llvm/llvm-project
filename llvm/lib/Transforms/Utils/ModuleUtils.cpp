@@ -254,8 +254,8 @@ void VFABI::setVectorVariantNames(CallInst *CI,
   for (const std::string &VariantMapping : VariantMappings) {
     LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
     Optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping, *M);
-    assert(VI.hasValue() && "Cannot add an invalid VFABI name.");
-    assert(M->getNamedValue(VI.getValue().VectorName) &&
+    assert(VI && "Cannot add an invalid VFABI name.");
+    assert(M->getNamedValue(VI->VectorName) &&
            "Cannot add variant to attribute: "
            "vector function declaration is missing.");
   }

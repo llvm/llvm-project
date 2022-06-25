@@ -375,8 +375,8 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
     SmallVector<int64_t, 4> lb;
     Optional<int64_t> diff =
         cstWithShapeBounds.getConstantBoundOnDimSize(d, &lb, &lbDivisor);
-    if (diff.hasValue()) {
-      diffConstant = diff.getValue();
+    if (diff) {
+      diffConstant = diff.value();
       assert(diffConstant >= 0 && "Dim size bound can't be negative");
       assert(lbDivisor > 0);
     } else {
@@ -1012,17 +1012,17 @@ bool mlir::buildSliceTripCountMap(
         continue;
       }
       Optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
-      if (maybeConstTripCount.hasValue()) {
-        (*tripCountMap)[op] = maybeConstTripCount.getValue();
+      if (maybeConstTripCount) {
+        (*tripCountMap)[op] = maybeConstTripCount.value();
         continue;
       }
       return false;
     }
     Optional<uint64_t> tripCount = getConstDifference(lbMap, ubMap);
     // Slice bounds are created with a constant ub - lb difference.
-    if (!tripCount.hasValue())
+    if (!tripCount.has_value())
       return false;
-    (*tripCountMap)[op] = tripCount.getValue();
+    (*tripCountMap)[op] = tripCount.value();
   }
   return true;
 }
@@ -1320,9 +1320,9 @@ static Optional<int64_t> getMemoryFootprintBytes(Block &block,
   int64_t totalSizeInBytes = 0;
   for (const auto &region : regions) {
     Optional<int64_t> size = region.second->getRegionSize();
-    if (!size.hasValue())
+    if (!size.has_value())
       return None;
-    totalSizeInBytes += size.getValue();
+    totalSizeInBytes += size.value();
   }
   return totalSizeInBytes;
 }

@@ -870,8 +870,8 @@ bool SelectOptimize::computeLoopCosts(
           ORE->emit(ORmissL);
           return false;
         }
-        IPredCost += Scaled64::get(ILatency.getValue());
-        INonPredCost += Scaled64::get(ILatency.getValue());
+        IPredCost += Scaled64::get(*ILatency);
+        INonPredCost += Scaled64::get(*ILatency);
 
         // For a select that can be converted to branch,
         // compute its cost as a branch (non-predicated cost).

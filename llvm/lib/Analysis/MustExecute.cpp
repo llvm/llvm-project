@@ -491,9 +491,9 @@ template <typename K, typename V, typename FnTy, typename... ArgsTy>
 static V getOrCreateCachedOptional(K Key, DenseMap<K, Optional<V>> &Map,
                                    FnTy &&Fn, ArgsTy&&... args) {
   Optional<V> &OptVal = Map[Key];
-  if (!OptVal.hasValue())
+  if (!OptVal)
     OptVal = Fn(std::forward<ArgsTy>(args)...);
-  return OptVal.getValue();
+  return *OptVal;
 }
 
 const BasicBlock *

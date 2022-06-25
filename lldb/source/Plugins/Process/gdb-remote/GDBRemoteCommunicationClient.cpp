@@ -2722,12 +2722,12 @@ bool GDBRemoteCommunicationClient::SetCurrentThread(uint64_t tid,
     return true;
 
   llvm::Optional<PidTid> ret = SendSetCurrentThreadPacket(tid, pid, 'g');
-  if (ret.hasValue()) {
+  if (ret) {
     if (ret->pid != LLDB_INVALID_PROCESS_ID)
       m_curr_pid = ret->pid;
     m_curr_tid = ret->tid;
   }
-  return ret.hasValue();
+  return ret.has_value();
 }
 
 bool GDBRemoteCommunicationClient::SetCurrentThreadForRun(uint64_t tid,
@@ -2737,12 +2737,12 @@ bool GDBRemoteCommunicationClient::SetCurrentThreadForRun(uint64_t tid,
     return true;
 
   llvm::Optional<PidTid> ret = SendSetCurrentThreadPacket(tid, pid, 'c');
-  if (ret.hasValue()) {
+  if (ret) {
     if (ret->pid != LLDB_INVALID_PROCESS_ID)
       m_curr_pid_run = ret->pid;
     m_curr_tid_run = ret->tid;
   }
-  return ret.hasValue();
+  return ret.has_value();
 }
 
 bool GDBRemoteCommunicationClient::GetStopReply(

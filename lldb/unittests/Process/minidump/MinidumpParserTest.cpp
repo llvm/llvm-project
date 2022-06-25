@@ -183,7 +183,7 @@ Streams:
 )"),
                     llvm::Succeeded());
   llvm::Optional<LinuxProcStatus> proc_status = parser->GetLinuxProcStatus();
-  ASSERT_TRUE(proc_status.hasValue());
+  ASSERT_TRUE(proc_status.has_value());
   lldb::pid_t pid = proc_status->GetPid();
   ASSERT_EQ(16001UL, pid);
 }
@@ -218,8 +218,8 @@ Streams:
 )"),
                     llvm::Succeeded());
   llvm::Optional<lldb::pid_t> pid = parser->GetPid();
-  ASSERT_TRUE(pid.hasValue());
-  ASSERT_EQ(16001UL, pid.getValue());
+  ASSERT_TRUE(pid.has_value());
+  ASSERT_EQ(16001UL, *pid);
 }
 
 TEST_F(MinidumpParserTest, GetFilteredModuleList) {
@@ -260,7 +260,7 @@ TEST_F(MinidumpParserTest, GetExceptionStream) {
 void check_mem_range_exists(MinidumpParser &parser, const uint64_t range_start,
                             const uint64_t range_size) {
   llvm::Optional<minidump::Range> range = parser.FindMemoryRange(range_start);
-  ASSERT_TRUE(range.hasValue()) << "There is no range containing this address";
+  ASSERT_TRUE(range.has_value()) << "There is no range containing this address";
   EXPECT_EQ(range_start, range->start);
   EXPECT_EQ(range_start + range_size, range->start + range->range_ref.size());
 }
@@ -321,14 +321,14 @@ TEST_F(MinidumpParserTest, FindMemoryRangeWithFullMemoryMinidump) {
   SetUpData("fizzbuzz_wow64.dmp");
 
   // There are a lot of ranges in the file, just testing with some of them
-  EXPECT_FALSE(parser->FindMemoryRange(0x00).hasValue());
-  EXPECT_FALSE(parser->FindMemoryRange(0x2a).hasValue());
+  EXPECT_FALSE(parser->FindMemoryRange(0x00).has_value());
+  EXPECT_FALSE(parser->FindMemoryRange(0x2a).has_value());
   check_mem_range_exists(*parser, 0x10000, 65536); // first range
   check_mem_range_exists(*parser, 0x40000, 4096);
-  EXPECT_FALSE(parser->FindMemoryRange(0x40000 + 4096).hasValue());
+  EXPECT_FALSE(parser->FindMemoryRange(0x40000 + 4096).has_value());
   check_mem_range_exists(*parser, 0x77c12000, 8192);
   check_mem_range_exists(*parser, 0x7ffe0000, 4096); // last range
-  EXPECT_FALSE(parser->FindMemoryRange(0x7ffe0000 + 4096).hasValue());
+  EXPECT_FALSE(parser->FindMemoryRange(0x7ffe0000 + 4096).has_value());
 }
 
 constexpr auto yes = MemoryRegionInfo::eYes;
@@ -544,23 +544,23 @@ TEST_F(MinidumpParserTest, GetMiscInfoWindows) {
   const MinidumpMiscInfo *misc_info = parser->GetMiscInfo();
   ASSERT_NE(nullptr, misc_info);
   llvm::Optional<lldb::pid_t> pid = misc_info->GetPid();
-  ASSERT_TRUE(pid.hasValue());
-  ASSERT_EQ(4440UL, pid.getValue());
+  ASSERT_TRUE(pid.has_value());
+  ASSERT_EQ(4440UL, *pid);
 }
 
 TEST_F(MinidumpParserTest, GetPidWindows) {
   SetUpData("fizzbuzz_no_heap.dmp");
   llvm::Optional<lldb::pid_t> pid = parser->GetPid();
-  ASSERT_TRUE(pid.hasValue());
-  ASSERT_EQ(4440UL, pid.getValue());
+  ASSERT_TRUE(pid.has_value());
+  ASSERT_EQ(4440UL, *pid);
 }
 
 // wow64
 TEST_F(MinidumpParserTest, GetPidWow64) {
   SetUpData("fizzbuzz_wow64.dmp");
   llvm::Optional<lldb::pid_t> pid = parser->GetPid();
-  ASSERT_TRUE(pid.hasValue());
-  ASSERT_EQ(7836UL, pid.getValue());
+  ASSERT_TRUE(pid.has_value());
+  ASSERT_EQ(7836UL, *pid);
 }
 
 // Register tests

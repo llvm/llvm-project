@@ -251,7 +251,7 @@ Error TestClient::queryProcess() {
 }
 
 Error TestClient::Continue(StringRef message) {
-  assert(m_process_info.hasValue());
+  assert(m_process_info.has_value());
 
   auto StopReplyOr = SendMessage<StopReply>(
       message, m_process_info->GetEndian(), m_register_infos);

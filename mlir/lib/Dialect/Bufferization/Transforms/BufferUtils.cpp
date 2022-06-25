@@ -158,11 +158,11 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment) {
     auto globalOp = dyn_cast<memref::GlobalOp>(&op);
     if (!globalOp)
       continue;
-    if (!globalOp.initial_value().hasValue())
+    if (!globalOp.initial_value().has_value())
       continue;
     uint64_t opAlignment =
-        globalOp.alignment().hasValue() ? globalOp.alignment().getValue() : 0;
-    Attribute initialValue = globalOp.initial_value().getValue();
+        globalOp.alignment().has_value() ? globalOp.alignment().value() : 0;
+    Attribute initialValue = globalOp.initial_value().value();
     if (opAlignment == alignment && initialValue == constantOp.getValue())
       return globalOp;
   }

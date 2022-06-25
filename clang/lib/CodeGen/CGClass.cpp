@@ -1782,15 +1782,15 @@ namespace {
        if (!StartIndex)
          StartIndex = FieldIndex;
      } else if (StartIndex) {
-       EHStack.pushCleanup<SanitizeDtorFieldRange>(
-           NormalAndEHCleanup, DD, StartIndex.getValue(), FieldIndex);
+       EHStack.pushCleanup<SanitizeDtorFieldRange>(NormalAndEHCleanup, DD,
+                                                   *StartIndex, FieldIndex);
        StartIndex = None;
      }
    }
    void End() {
      if (StartIndex)
        EHStack.pushCleanup<SanitizeDtorFieldRange>(NormalAndEHCleanup, DD,
-                                                   StartIndex.getValue(), -1);
+                                                   *StartIndex, -1);
    }
  };
 } // end anonymous namespace

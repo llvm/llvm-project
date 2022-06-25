@@ -248,11 +248,11 @@ TEST(CastingTest, dyn_cast_value_types) {
 TEST(CastingTest, dyn_cast_if_present) {
   Optional<T1> empty{};
   Optional<T2> F1 = dyn_cast_if_present<T2>(empty);
-  EXPECT_FALSE(F1.hasValue());
+  EXPECT_FALSE(F1.has_value());
 
   T1 t1;
   Optional<T2> F2 = dyn_cast_if_present<T2>(t1);
-  EXPECT_TRUE(F2.hasValue());
+  EXPECT_TRUE(F2.has_value());
 
   T1 *t1Null = nullptr;
 

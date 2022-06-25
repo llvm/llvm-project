@@ -49,8 +49,8 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
   auto width = layout.getTypeSize(elementType);
 
   IntegerAttr alignmentAttr;
-  if (alignment.hasValue())
-    alignmentAttr = b.getI64IntegerAttr(alignment.getValue());
+  if (alignment)
+    alignmentAttr = b.getI64IntegerAttr(alignment.value());
 
   // Static buffer.
   if (auto cst = allocSize.getDefiningOp<arith::ConstantIndexOp>()) {
@@ -233,7 +233,7 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     Value size =
         failed(upperBound)
             ? rangeValue.size
-            : b.create<arith::ConstantIndexOp>(loc, upperBound.getValue());
+            : b.create<arith::ConstantIndexOp>(loc, upperBound.value());
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
     partialSizes.push_back(

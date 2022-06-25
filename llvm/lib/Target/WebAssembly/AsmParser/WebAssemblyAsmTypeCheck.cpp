@@ -86,18 +86,15 @@ bool WebAssemblyAsmTypeCheck::popType(SMLoc ErrorLoc,
                                       Optional<wasm::ValType> EVT) {
   if (Stack.empty()) {
     return typeError(ErrorLoc,
-                      EVT.hasValue()
-                          ? StringRef("empty stack while popping ") +
-                                WebAssembly::typeToString(EVT.getValue())
-                          : StringRef(
-                                    "empty stack while popping value"));
+                     EVT ? StringRef("empty stack while popping ") +
+                               WebAssembly::typeToString(*EVT)
+                         : StringRef("empty stack while popping value"));
   }
   auto PVT = Stack.pop_back_val();
-  if (EVT.hasValue() && EVT.getValue() != PVT) {
-    return typeError(
-        ErrorLoc, StringRef("popped ") + WebAssembly::typeToString(PVT) +
-                                    ", expected " +
-                                    WebAssembly::typeToString(EVT.getValue()));
+  if (EVT && *EVT != PVT) {
+    return typeError(ErrorLoc,
+                     StringRef("popped ") + WebAssembly::typeToString(PVT) +
+                         ", expected " + WebAssembly::typeToString(*EVT));
   }
   return false;
 }
