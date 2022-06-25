@@ -264,6 +264,18 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
     llvm_unreachable("NYI");
 }
 
+/// Given an expression that represents a value lvalue, this
+/// method emits the address of the lvalue, then loads the result as an rvalue,
+/// returning the rvalue.
+RValue CIRGenFunction::buildLoadOfLValue(LValue LV, SourceLocation Loc) {
+  assert(LV.isSimple() && "not implemented");
+  assert(!LV.getType()->isFunctionType());
+  assert(!(LV.getType()->isConstantMatrixType()) && "not implemented");
+
+  // Everything needs a load.
+  return RValue::get(buildLoadOfScalar(LV, Loc));
+}
+
 void CIRGenFunction::buldStoreThroughLValue(RValue Src, LValue Dst,
                                             const Decl *InitDecl) {
   assert(Dst.isSimple() && "only implemented simple");
@@ -992,6 +1004,13 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     return buildArraySubscriptExpr(cast<ArraySubscriptExpr>(E));
   case Expr::BinaryOperatorClass:
     return buildBinaryOperatorLValue(cast<BinaryOperator>(E));
+  case Expr::CompoundAssignOperatorClass: {
+    QualType Ty = E->getType();
+    if (const AtomicType *AT = Ty->getAs<AtomicType>())
+      assert(0 && "not yet implemented");
+    assert(!Ty->isAnyComplexType() && "complex types not implemented");
+    return buildCompoundAssignmentLValue(cast<CompoundAssignOperator>(E));
+  }
   case Expr::DeclRefExprClass:
     return buildDeclRefLValue(cast<DeclRefExpr>(E));
   case Expr::UnaryOperatorClass:
