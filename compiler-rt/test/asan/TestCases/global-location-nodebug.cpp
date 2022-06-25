@@ -8,6 +8,9 @@
 // RUN: not %run %t f 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=FUNC_STATIC-NO-G
 // RUN: not %run %t l 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LITERAL-NO-G
 
+/// Solaris ld -S has different semantics.
+// XFAIL: solaris
+
 // CHECK: AddressSanitizer: global-buffer-overflow
 // CLASS_STATIC-NO-G: 0x{{.*}} is located 4 bytes to the right of global variable 'C::array' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
 // GLOB-NO-G: 0x{{.*}} is located 4 bytes to the right of global variable 'global' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
