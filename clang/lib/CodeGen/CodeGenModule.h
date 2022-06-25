@@ -290,6 +290,12 @@ public:
 
   typedef std::vector<Structor> CtorList;
 
+  /// Nested OpenMP constructs that may use no-loop codegen
+  using NoLoopIntermediateStmts =
+      llvm::SmallVector<const OMPExecutableDirective *, 3>;
+  /// Map top-level construct to the intermediate ones for no-loop codegen
+  using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopIntermediateStmts>;
+
 private:
   ASTContext &Context;
   const LangOptions &LangOpts;
@@ -327,8 +333,7 @@ private:
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
 
-  /// A set of OpenMP directives for which no-loop kernels are generated.
-  llvm::SmallPtrSet<const Stmt *, 1> NoLoopKernels;
+  NoLoopKernelMap NoLoopKernels;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -1504,13 +1509,26 @@ public:
   /// Does the loop condition qualify for a NoLoop kernel?
   bool checkLoopStop(const ForStmt &FStmt);
 
-  /// Are we able to generate a NoLoop kernel for this directive?
-  bool isGeneratingNoLoopKernel(const OMPExecutableDirective &D);
+  /// If we are able to generate a NoLoop kernel for this directive, return
+  /// true, otherwise return false. If successful, a map is created from the
+  /// top-level statement to the intermediate statements. For a combined
+  /// construct, there are no intermediate statements. Used for a combined
+  /// construct
+  bool checkAndSetNoLoopKernel(const OMPExecutableDirective &D);
 
-  /// Utility routines for tracking a NoLoop kernel
-  void setNoLoopKernel(const Stmt *S) { NoLoopKernels.insert(S); }
+  /// Given a top-level target construct for no-loop codegen, get the
+  /// intermediate OpenMP constructs
+  const NoLoopIntermediateStmts &getNoLoopStmts(const Stmt *S) {
+    assert(isNoLoopKernel(S));
+    return NoLoopKernels.find(S)->second;
+  }
+
+  /// Erase no-loop related metadata for the input statement
   void resetNoLoopKernel(const Stmt *S) { NoLoopKernels.erase(S); }
-  bool isNoLoopKernel(const Stmt *S) { return NoLoopKernels.contains(S); }
+  /// Are we generating no-loop kernel for the input statement
+  bool isNoLoopKernel(const Stmt *S) {
+    return NoLoopKernels.find(S) != NoLoopKernels.end();
+  }
 
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
@@ -1722,6 +1740,22 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix);
+
+  /// Top level checker for no-loop on the for statement
+  bool isForStmtNoLoopConforming(const Stmt *);
+
+  /// Used for a target construct
+  bool checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
+
+  /// Are clauses on a combined OpenMP construct compatible with no-loop
+  /// codegen?
+  bool areCombinedClausesNoLoopCompatible(const OMPExecutableDirective &D);
+
+  /// Populate the map used for no-loop codegen
+  void setNoLoopKernel(const Stmt *S,
+                       NoLoopIntermediateStmts IntermediateStmts) {
+    NoLoopKernels[S] = IntermediateStmts;
+  }
 };
 
 }  // end namespace CodeGen

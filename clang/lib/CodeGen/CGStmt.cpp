@@ -51,7 +51,10 @@ void CodeGenFunction::EmitStopPoint(const Stmt *S) {
   }
 }
 
-void CodeGenFunction::EmitNoLoopKernel(const Stmt *S, SourceLocation Loc) {
+void CodeGenFunction::EmitNoLoopKernel(
+    const Stmt *S,
+    const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts,
+    SourceLocation Loc) {
   assert(S && "Null statement?");
 
   if (!HaveInsertPoint())
@@ -173,6 +176,17 @@ void CodeGenFunction::EmitNoLoopKernel(const Stmt *S, SourceLocation Loc) {
     CGFunc->Builder.ClearInsertionPoint();
   };
 
+  // For non-combined constructs, the for loop has to be retrieved from
+  // the intermediate statements
+  if (!IntermediateStmts.empty()) {
+    // For now, we support at most one level of nesting
+    assert(IntermediateStmts.size() == 1);
+    const OMPExecutableDirective *NoLoopDir = IntermediateStmts[0];
+    OMPPrivateScope PrivateScope(*this);
+    EmitOMPPrivateClause(*NoLoopDir, PrivateScope);
+    (void)PrivateScope.Privatize();
+    S = NoLoopDir->getAssociatedStmt();
+  }
   const ForStmt *CapturedForStmt = CGM.getSingleForStmt(S);
   assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
   handleForStmt(*CapturedForStmt, this);

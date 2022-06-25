@@ -6966,6 +6966,8 @@ bool CodeGenModule::checkInitExpr(const ForStmt &FStmt) {
     return false;
   if (!isa<BinaryOperator>(InitStmt))
     return false;
+  if (cast<BinaryOperator>(InitStmt)->getOpcode() != BO_Assign)
+    return false;
   const Expr *InitExprLHS = cast<BinaryOperator>(InitStmt)->getLHS();
   if (!isa<DeclRefExpr>(InitExprLHS))
     return false;
@@ -7000,14 +7002,27 @@ bool CodeGenModule::checkLoopStop(const ForStmt &FStmt) {
   return true;
 }
 
-bool CodeGenModule::isGeneratingNoLoopKernel(const OMPExecutableDirective &D) {
-  if (!getLangOpts().OpenMPTargetIgnoreEnvVars) return false;
-
-  if (D.getDirectiveKind() !=
-          llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for &&
-      D.getDirectiveKind() !=
-          llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for_simd)
+bool CodeGenModule::isForStmtNoLoopConforming(const Stmt *OMPStmt) {
+  NoLoopChecker Checker;
+  Checker.Visit(OMPStmt);
+  if (Checker.isRejectNoLoop())
     return false;
+
+  // Now ensure that code generation will handle this construct
+
+  const ForStmt *FStmt = getSingleForStmt(OMPStmt);
+  if (FStmt == nullptr)
+    return false;
+
+  if (!checkLoopInit(*FStmt) || !checkLoopStep(*FStmt) ||
+      !checkLoopStop(*FStmt))
+    return false;
+
+  return true;
+}
+
+bool CodeGenModule::areCombinedClausesNoLoopCompatible(
+    const OMPExecutableDirective &D) {
   if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
       D.hasClausesOfKind<OMPDependClause>() ||
       D.hasClausesOfKind<OMPDeviceClause>() ||
@@ -7027,25 +7042,106 @@ bool CodeGenModule::isGeneratingNoLoopKernel(const OMPExecutableDirective &D) {
       D.hasClausesOfKind<OMPOrderedClause>() ||
       D.hasClausesOfKind<OMPScheduleClause>())
     return false;
+  return true;
+}
 
-  if (!D.hasAssociatedStmt())
+// If a no-loop kernel is found, then a non-empty map is returned,
+// otherwise the map is empty
+bool CodeGenModule::checkAndSetNoLoopTargetConstruct(
+    const OMPExecutableDirective &D) {
+  if (D.getDirectiveKind() != llvm::omp::Directive::OMPD_target)
     return false;
 
-  NoLoopChecker Checker;
-  Checker.Visit(D.getAssociatedStmt());
-  if (Checker.isRejectNoLoop())
+  auto disableNoLoopTarget = [](const OMPExecutableDirective &D) {
+    if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
+        D.hasClausesOfKind<OMPDependClause>() ||
+        D.hasClausesOfKind<OMPDeviceClause>() ||
+        D.hasClausesOfKind<OMPInReductionClause>() ||
+        D.hasClausesOfKind<OMPThreadLimitClause>())
+      return true;
+    return false;
+  };
+  // First, check legality with the clauses
+  if (disableNoLoopTarget(D))
     return false;
 
-  // Now ensure that code generation will handle this construct
-
-  const ForStmt *FStmt = getSingleForStmt(D.getAssociatedStmt());
-  if (FStmt == nullptr)
+  const Stmt *AssocStmt = D.getAssociatedStmt();
+  const Stmt *NoLoopOutermostStmt = AssocStmt;
+  if (!isa<CapturedStmt>(AssocStmt))
+    return false;
+  while (AssocStmt->getStmtClass() == Stmt::CapturedStmtClass) {
+    AssocStmt = cast<CapturedStmt>(AssocStmt)->getCapturedDecl()->getBody();
+  }
+  if (AssocStmt->getStmtClass() == Stmt::CompoundStmtClass) {
+    const CompoundStmt &CompStmt = cast<CompoundStmt>(*AssocStmt);
+    // We require proper nesting of the constructs
+    if (CompStmt.size() != 1)
+      return false;
+    AssocStmt = CompStmt.body_front();
+  }
+  if (!isa<OMPExecutableDirective>(AssocStmt))
+    return false;
+  const OMPExecutableDirective *AssocDir =
+      cast<OMPExecutableDirective>(AssocStmt);
+  // For now, these are the nested constructs supported
+  if (AssocDir->getDirectiveKind() !=
+          llvm::omp::Directive::OMPD_teams_distribute_parallel_for &&
+      AssocDir->getDirectiveKind() !=
+          llvm::omp::Directive::OMPD_teams_distribute_parallel_for_simd)
     return false;
 
-  if (!checkLoopInit(*FStmt) || !checkLoopStep(*FStmt) ||
-      !checkLoopStop(*FStmt))
+  assert(AssocDir->hasAssociatedStmt());
+  AssocStmt = AssocDir->getAssociatedStmt();
+
+  // Check the clauses of the nested combined construct
+  if (!areCombinedClausesNoLoopCompatible(*AssocDir))
     return false;
+
+  // Make sure codegen can handle it
+  if (!isForStmtNoLoopConforming(AssocStmt))
+    return false;
+
+  assert(NoLoopOutermostStmt != AssocStmt);
+  NoLoopIntermediateStmts IntermediateStmts;
+  IntermediateStmts.push_back(AssocDir);
+  setNoLoopKernel(NoLoopOutermostStmt, IntermediateStmts);
 
   // All checks passed
   return true;
+}
+
+bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
+  if (!getLangOpts().OpenMPTargetIgnoreEnvVars)
+    return false;
+
+  if (D.getDirectiveKind() !=
+          llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for &&
+      D.getDirectiveKind() !=
+          llvm::omp::Directive::
+              OMPD_target_teams_distribute_parallel_for_simd &&
+      D.getDirectiveKind() != llvm::omp::Directive::OMPD_target)
+    return false;
+
+  if (!D.hasAssociatedStmt())
+    return false;
+  const Stmt *AssocStmt = D.getAssociatedStmt();
+
+  // Currently, we handle 2 categories of target constructs. The first is a
+  // target construct with an inner "teams distribute parallel for" construct.
+  // The second is a combined "target teams distribute parallel for" construct.
+  if (D.getDirectiveKind() == llvm::omp::Directive::OMPD_target)
+    return checkAndSetNoLoopTargetConstruct(D);
+  else {
+    // Handle combined construct
+    if (!areCombinedClausesNoLoopCompatible(D))
+      return false;
+    if (!isForStmtNoLoopConforming(AssocStmt))
+      return false;
+
+    NoLoopIntermediateStmts IntermediateStmts;
+    setNoLoopKernel(AssocStmt, IntermediateStmts);
+
+    // All checks passed
+    return true;
+  }
 }

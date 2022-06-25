@@ -3228,7 +3228,9 @@ public:
   ///
   /// This function should be called after ensuring that legality
   /// conditions for a no-loop kernel are met.
-  void EmitNoLoopKernel(const Stmt *S, SourceLocation Loc);
+  void EmitNoLoopKernel(const Stmt *S,
+                        const CodeGenModule::NoLoopIntermediateStmts &,
+                        SourceLocation Loc);
 
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically

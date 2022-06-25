@@ -1273,11 +1273,10 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   const Stmt *DirectiveStmt = D.getAssociatedStmt();
   bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
   if (Mode) {
-    if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN() &&
-        CGM.isGeneratingNoLoopKernel(D)) {
-      assert(DirectiveStmt && "Cannot generate kernel for null statement");
-      CGM.setNoLoopKernel(DirectiveStmt);
-    }
+    // For AMDGPU, check if a no-loop kernel should be generated and if so,
+    // set metadata that can be used by codegen
+    if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN())
+      CGM.checkAndSetNoLoopKernel(D);
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
   } else
@@ -1290,6 +1289,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
                   ? OMP_TGT_EXEC_MODE_SPMD_NO_LOOP
                   : OMP_TGT_EXEC_MODE_SPMD)
            : OMP_TGT_EXEC_MODE_GENERIC);
+  // Reset no-loop kernel metadata if it exists
   if (Mode && DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt))
     CGM.resetNoLoopKernel(DirectiveStmt);
   assert(!CGM.isNoLoopKernel(DirectiveStmt) &&
