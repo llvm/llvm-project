@@ -433,10 +433,10 @@ struct GnuHashSection : Section {
   GnuHashSection() : Section(ChunkKind::GnuHash) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Header", Header.has_value()},
-            {"BloomFilter", BloomFilter.has_value()},
-            {"HashBuckets", HashBuckets.has_value()},
-            {"HashValues", HashValues.has_value()}};
+    return {{"Header", Header.hasValue()},
+            {"BloomFilter", BloomFilter.hasValue()},
+            {"HashBuckets", HashBuckets.hasValue()},
+            {"HashValues", HashValues.hasValue()}};
   };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::GnuHash; }

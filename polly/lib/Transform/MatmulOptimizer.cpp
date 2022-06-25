@@ -570,29 +570,29 @@ static void getTargetCacheParameters(const llvm::TargetTransformInfo *TTI) {
   auto L1DCache = llvm::TargetTransformInfo::CacheLevel::L1D;
   auto L2DCache = llvm::TargetTransformInfo::CacheLevel::L2D;
   if (FirstCacheLevelSize == -1) {
-    if (TTI->getCacheSize(L1DCache).has_value())
-      FirstCacheLevelSize = TTI->getCacheSize(L1DCache).value();
+    if (TTI->getCacheSize(L1DCache).hasValue())
+      FirstCacheLevelSize = TTI->getCacheSize(L1DCache).getValue();
     else
       FirstCacheLevelSize = static_cast<int>(FirstCacheLevelDefaultSize);
   }
   if (SecondCacheLevelSize == -1) {
-    if (TTI->getCacheSize(L2DCache).has_value())
-      SecondCacheLevelSize = TTI->getCacheSize(L2DCache).value();
+    if (TTI->getCacheSize(L2DCache).hasValue())
+      SecondCacheLevelSize = TTI->getCacheSize(L2DCache).getValue();
     else
       SecondCacheLevelSize = static_cast<int>(SecondCacheLevelDefaultSize);
   }
   if (FirstCacheLevelAssociativity == -1) {
-    if (TTI->getCacheAssociativity(L1DCache).has_value())
+    if (TTI->getCacheAssociativity(L1DCache).hasValue())
       FirstCacheLevelAssociativity =
-          TTI->getCacheAssociativity(L1DCache).value();
+          TTI->getCacheAssociativity(L1DCache).getValue();
     else
       FirstCacheLevelAssociativity =
           static_cast<int>(FirstCacheLevelDefaultAssociativity);
   }
   if (SecondCacheLevelAssociativity == -1) {
-    if (TTI->getCacheAssociativity(L2DCache).has_value())
+    if (TTI->getCacheAssociativity(L2DCache).hasValue())
       SecondCacheLevelAssociativity =
-          TTI->getCacheAssociativity(L2DCache).value();
+          TTI->getCacheAssociativity(L2DCache).getValue();
     else
       SecondCacheLevelAssociativity =
           static_cast<int>(SecondCacheLevelDefaultAssociativity);

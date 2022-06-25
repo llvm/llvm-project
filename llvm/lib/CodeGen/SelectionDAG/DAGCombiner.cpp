@@ -24514,8 +24514,9 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
   auto &Size0 = MUC0.NumBytes;
   auto &Size1 = MUC1.NumBytes;
   if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
-      Size0 && Size1 && *Size0 == *Size1 && OrigAlignment0 > *Size0 &&
-      SrcValOffset0 % *Size0 == 0 && SrcValOffset1 % *Size1 == 0) {
+      Size0.hasValue() && Size1.hasValue() && *Size0 == *Size1 &&
+      OrigAlignment0 > *Size0 && SrcValOffset0 % *Size0 == 0 &&
+      SrcValOffset1 % *Size1 == 0) {
     int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0.value();
     int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1.value();
 
@@ -24534,8 +24535,8 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
     UseAA = false;
 #endif
 
-  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() && Size0 &&
-      Size1) {
+  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
+      Size0.hasValue() && Size1.hasValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
     int64_t Overlap0 = *Size0 + SrcValOffset0 - MinOffset;

@@ -1219,8 +1219,8 @@ void ModuleMap::resolveHeaderDirectives(
     Module *Mod, llvm::Optional<const FileEntry *> File) const {
   bool NeedsFramework = false;
   SmallVector<Module::UnresolvedHeaderDirective, 1> NewHeaders;
-  const auto Size = File ? File.value()->getSize() : 0;
-  const auto ModTime = File ? File.value()->getModificationTime() : 0;
+  const auto Size = File ? File.getValue()->getSize() : 0;
+  const auto ModTime = File ? File.getValue()->getModificationTime() : 0;
 
   for (auto &Header : Mod->UnresolvedHeaders) {
     if (File && ((Header.ModTime && Header.ModTime != ModTime) ||

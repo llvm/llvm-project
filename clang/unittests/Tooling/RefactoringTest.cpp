@@ -118,18 +118,18 @@ static bool checkReplacementError(llvm::Error &&Error,
       OS << "Unexpected error code: " << int(RE.get()) << "\n";
     if (ExpectedExisting != RE.getExistingReplacement()) {
       OS << "Expected Existing != Actual Existing.\n";
-      if (ExpectedExisting)
+      if (ExpectedExisting.hasValue())
         OS << "Expected existing replacement: " << ExpectedExisting->toString()
            << "\n";
-      if (RE.getExistingReplacement())
+      if (RE.getExistingReplacement().hasValue())
         OS << "Actual existing replacement: "
            << RE.getExistingReplacement()->toString() << "\n";
     }
     if (ExpectedNew != RE.getNewReplacement()) {
       OS << "Expected New != Actual New.\n";
-      if (ExpectedNew)
+      if (ExpectedNew.hasValue())
         OS << "Expected new replacement: " << ExpectedNew->toString() << "\n";
-      if (RE.getNewReplacement())
+      if (RE.getNewReplacement().hasValue())
         OS << "Actual new replacement: " << RE.getNewReplacement()->toString()
            << "\n";
     }

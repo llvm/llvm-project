@@ -316,9 +316,9 @@ public:
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
     if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
-      if (callOp.getCallee()) {
-        newCall =
-            rewriter->create<A>(loc, *callOp.getCallee(), newResTys, newOpers);
+      if (callOp.getCallee().hasValue()) {
+        newCall = rewriter->create<A>(loc, callOp.getCallee().getValue(),
+                                      newResTys, newOpers);
       } else {
         // Force new type on the input operand.
         newOpers[0].setType(mlir::FunctionType::get(

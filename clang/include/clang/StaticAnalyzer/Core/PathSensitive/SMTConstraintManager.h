@@ -341,10 +341,10 @@ protected:
     addStateConstraints(NewState);
 
     Optional<bool> res = Solver->check();
-    if (!res)
+    if (!res.hasValue())
       Cached[hash] = ConditionTruthVal();
     else
-      Cached[hash] = ConditionTruthVal(*res);
+      Cached[hash] = ConditionTruthVal(res.getValue());
 
     return Cached[hash];
   }

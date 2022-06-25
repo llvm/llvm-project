@@ -105,9 +105,10 @@ struct TransferReadPermutationLowering
 
     // Transpose in_bounds attribute.
     ArrayAttr newInBoundsAttr =
-        op.getInBounds() ? transposeInBoundsAttr(
-                               rewriter, op.getInBounds().value(), permutation)
-                         : ArrayAttr();
+        op.getInBounds()
+            ? transposeInBoundsAttr(rewriter, op.getInBounds().getValue(),
+                                    permutation)
+            : ArrayAttr();
 
     // Generate new transfer_read operation.
     VectorType newReadType =
@@ -175,9 +176,10 @@ struct TransferWritePermutationLowering
 
     // Transpose in_bounds attribute.
     ArrayAttr newInBoundsAttr =
-        op.getInBounds() ? transposeInBoundsAttr(
-                               rewriter, op.getInBounds().value(), permutation)
-                         : ArrayAttr();
+        op.getInBounds()
+            ? transposeInBoundsAttr(rewriter, op.getInBounds().getValue(),
+                                    permutation)
+            : ArrayAttr();
 
     // Generate new transfer_write operation.
     Value newVec = rewriter.create<vector::TransposeOp>(

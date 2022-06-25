@@ -25,9 +25,9 @@ static LogicalResult replaceWithConstant(IntRangeAnalysis &analysis,
   Optional<ConstantIntRanges> maybeInferredRange = analysis.getResult(value);
   if (!maybeInferredRange)
     return failure();
-  const ConstantIntRanges &inferredRange = maybeInferredRange.value();
+  const ConstantIntRanges &inferredRange = maybeInferredRange.getValue();
   Optional<APInt> maybeConstValue = inferredRange.getConstantValue();
-  if (!maybeConstValue.has_value())
+  if (!maybeConstValue.hasValue())
     return failure();
 
   Operation *maybeDefiningOp = value.getDefiningOp();

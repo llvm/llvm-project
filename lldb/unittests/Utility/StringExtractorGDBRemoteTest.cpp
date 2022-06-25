@@ -109,77 +109,77 @@ TEST(StringExtractorGDBRemoteTest, GetPidTid) {
   // pure thread id
 
   ex.Reset("-1");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(100, StringExtractorGDBRemote::AllThreads));
 
   ex.Reset("1234");
-  EXPECT_THAT(ex.GetPidTid(100).value(), ::testing::Pair(100, 0x1234ULL));
+  EXPECT_THAT(ex.GetPidTid(100).getValue(), ::testing::Pair(100, 0x1234ULL));
 
   ex.Reset("123456789ABCDEF0");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(100, 0x123456789ABCDEF0ULL));
 
   // pure process id
 
   ex.Reset("p-1");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(StringExtractorGDBRemote::AllProcesses,
                               StringExtractorGDBRemote::AllThreads));
 
   ex.Reset("p1234");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x1234ULL, StringExtractorGDBRemote::AllThreads));
 
   ex.Reset("p123456789ABCDEF0");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x123456789ABCDEF0ULL,
                               StringExtractorGDBRemote::AllThreads));
 
   ex.Reset("pFFFFFFFFFFFFFFFF");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(StringExtractorGDBRemote::AllProcesses,
                               StringExtractorGDBRemote::AllThreads));
 
   // combined thread id + process id
 
   ex.Reset("p-1.-1");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(StringExtractorGDBRemote::AllProcesses,
                               StringExtractorGDBRemote::AllThreads));
 
   ex.Reset("p1234.-1");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x1234ULL, StringExtractorGDBRemote::AllThreads));
 
   ex.Reset("p1234.123456789ABCDEF0");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x1234ULL, 0x123456789ABCDEF0ULL));
 
   ex.Reset("p123456789ABCDEF0.-1");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x123456789ABCDEF0ULL,
                               StringExtractorGDBRemote::AllThreads));
 
   ex.Reset("p123456789ABCDEF0.1234");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x123456789ABCDEF0ULL, 0x1234ULL));
 
   ex.Reset("p123456789ABCDEF0.123456789ABCDEF0");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x123456789ABCDEF0ULL, 0x123456789ABCDEF0ULL));
 
   ex.Reset("p123456789ABCDEF0.123456789ABCDEF0");
-  EXPECT_THAT(ex.GetPidTid(100).value(),
+  EXPECT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x123456789ABCDEF0ULL, 0x123456789ABCDEF0ULL));
 }
 
 TEST(StringExtractorGDBRemoteTest, GetPidTidMultipleValues) {
   StringExtractorGDBRemote ex("1234;p12;p1234.-1");
-  ASSERT_THAT(ex.GetPidTid(100).value(), ::testing::Pair(100, 0x1234ULL));
+  ASSERT_THAT(ex.GetPidTid(100).getValue(), ::testing::Pair(100, 0x1234ULL));
   ASSERT_EQ(ex.GetChar(), ';');
-  ASSERT_THAT(ex.GetPidTid(100).value(),
+  ASSERT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x12ULL, StringExtractorGDBRemote::AllThreads));
   ASSERT_EQ(ex.GetChar(), ';');
-  ASSERT_THAT(ex.GetPidTid(100).value(),
+  ASSERT_THAT(ex.GetPidTid(100).getValue(),
               ::testing::Pair(0x1234ULL, StringExtractorGDBRemote::AllThreads));
 }

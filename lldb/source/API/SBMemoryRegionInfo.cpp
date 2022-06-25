@@ -135,8 +135,8 @@ uint32_t SBMemoryRegionInfo::GetNumDirtyPages() {
   uint32_t num_dirty_pages = 0;
   const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
       m_opaque_up->GetDirtyPageList();
-  if (dirty_page_list)
-    num_dirty_pages = dirty_page_list->size();
+  if (dirty_page_list.hasValue())
+    num_dirty_pages = dirty_page_list.getValue().size();
 
   return num_dirty_pages;
 }
@@ -147,8 +147,8 @@ addr_t SBMemoryRegionInfo::GetDirtyPageAddressAtIndex(uint32_t idx) {
   addr_t dirty_page_addr = LLDB_INVALID_ADDRESS;
   const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
       m_opaque_up->GetDirtyPageList();
-  if (dirty_page_list && idx < dirty_page_list->size())
-    dirty_page_addr = dirty_page_list.value()[idx];
+  if (dirty_page_list.hasValue() && idx < dirty_page_list.getValue().size())
+    dirty_page_addr = dirty_page_list.getValue()[idx];
 
   return dirty_page_addr;
 }

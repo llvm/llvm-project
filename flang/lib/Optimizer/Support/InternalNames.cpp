@@ -51,8 +51,8 @@ convertToStringRef(llvm::ArrayRef<std::string> from) {
 inline llvm::Optional<llvm::StringRef>
 convertToStringRef(const llvm::Optional<std::string> &from) {
   llvm::Optional<llvm::StringRef> to;
-  if (from)
-    to = *from;
+  if (from.hasValue())
+    to = from.getValue();
   return to;
 }
 

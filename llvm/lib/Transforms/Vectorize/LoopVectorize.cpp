@@ -4877,8 +4877,8 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
   if (!MaxVScale && TheFunction->hasFnAttribute(Attribute::VScaleRange))
     MaxVScale =
         TheFunction->getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
-  MaxScalableVF =
-      ElementCount::getScalable(MaxVScale ? (MaxSafeElements / *MaxVScale) : 0);
+  MaxScalableVF = ElementCount::getScalable(
+      MaxVScale ? (MaxSafeElements / MaxVScale.getValue()) : 0);
   if (!MaxScalableVF)
     reportVectorizationInfo(
         "Max legal vector width too small, scalable vectorization "
@@ -5273,9 +5273,9 @@ bool LoopVectorizationCostModel::isMoreProfitable(
   unsigned EstimatedWidthB = B.Width.getKnownMinValue();
   if (Optional<unsigned> VScale = getVScaleForTuning()) {
     if (A.Width.isScalable())
-      EstimatedWidthA *= *VScale;
+      EstimatedWidthA *= VScale.getValue();
     if (B.Width.isScalable())
-      EstimatedWidthB *= *VScale;
+      EstimatedWidthB *= VScale.getValue();
   }
 
   // Assume vscale may be larger than 1 (or the value being tuned for),
@@ -7612,8 +7612,8 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   VPBasicBlock *HeaderVPBB =
       BestVPlan.getVectorLoopRegion()->getEntryBasicBlock();
   Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
-  if (VectorizedLoopID)
-    L->setLoopID(*VectorizedLoopID);
+  if (VectorizedLoopID.hasValue())
+    L->setLoopID(VectorizedLoopID.getValue());
   else {
     // Keep all loop hints from the original loop on the vector loop (we'll
     // replace the vectorizer-specific hints below).
@@ -10622,8 +10622,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   Optional<MDNode *> RemainderLoopID =
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupEpilogue});
-  if (RemainderLoopID) {
-    L->setLoopID(*RemainderLoopID);
+  if (RemainderLoopID.hasValue()) {
+    L->setLoopID(RemainderLoopID.getValue());
   } else {
     if (DisableRuntimeUnroll)
       AddRuntimeUnrollDisableMetaData(L);

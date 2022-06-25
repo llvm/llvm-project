@@ -66,8 +66,8 @@ static void checkSample(bool hasSample, const IntegerPolyhedron &poly,
     maybeLexMin = poly.findIntegerLexMin();
 
     if (!hasSample) {
-      EXPECT_FALSE(maybeSample.has_value());
-      if (maybeSample.has_value()) {
+      EXPECT_FALSE(maybeSample.hasValue());
+      if (maybeSample.hasValue()) {
         llvm::errs() << "findIntegerSample gave sample: ";
         dump(*maybeSample);
       }
@@ -78,7 +78,7 @@ static void checkSample(bool hasSample, const IntegerPolyhedron &poly,
         dump(*maybeLexMin);
       }
     } else {
-      ASSERT_TRUE(maybeSample.has_value());
+      ASSERT_TRUE(maybeSample.hasValue());
       EXPECT_TRUE(poly.containsPoint(*maybeSample));
 
       ASSERT_FALSE(maybeLexMin.isEmpty());

@@ -424,31 +424,31 @@ TEST(DWARFDebugFrame, RegisterLocations) {
   // Verify RegisterLocations::getRegisterLocation() works as expected.
   Optional<dwarf::UnwindLocation> OptionalLoc;
   OptionalLoc = Locs.getRegisterLocation(0);
-  EXPECT_FALSE(OptionalLoc.has_value());
+  EXPECT_FALSE(OptionalLoc.hasValue());
 
   OptionalLoc = Locs.getRegisterLocation(12);
-  EXPECT_TRUE(OptionalLoc.has_value());
+  EXPECT_TRUE(OptionalLoc.hasValue());
   EXPECT_EQ(*OptionalLoc, Reg12Loc);
 
   OptionalLoc = Locs.getRegisterLocation(13);
-  EXPECT_TRUE(OptionalLoc.has_value());
+  EXPECT_TRUE(OptionalLoc.hasValue());
   EXPECT_EQ(*OptionalLoc, Reg13Loc);
 
   OptionalLoc = Locs.getRegisterLocation(14);
-  EXPECT_TRUE(OptionalLoc.has_value());
+  EXPECT_TRUE(OptionalLoc.hasValue());
   EXPECT_EQ(*OptionalLoc, Reg14Loc);
 
   // Verify registers are correctly removed when multiple exist in the list.
   Locs.removeRegisterLocation(13);
-  EXPECT_FALSE(Locs.getRegisterLocation(13).has_value());
+  EXPECT_FALSE(Locs.getRegisterLocation(13).hasValue());
   EXPECT_TRUE(Locs.hasLocations());
   expectDumpResult(Locs, "reg12=[CFA+4], reg14=same");
   Locs.removeRegisterLocation(14);
-  EXPECT_FALSE(Locs.getRegisterLocation(14).has_value());
+  EXPECT_FALSE(Locs.getRegisterLocation(14).hasValue());
   EXPECT_TRUE(Locs.hasLocations());
   expectDumpResult(Locs, "reg12=[CFA+4]");
   Locs.removeRegisterLocation(12);
-  EXPECT_FALSE(Locs.getRegisterLocation(12).has_value());
+  EXPECT_FALSE(Locs.getRegisterLocation(12).hasValue());
   EXPECT_FALSE(Locs.hasLocations());
   expectDumpResult(Locs, "");
 }

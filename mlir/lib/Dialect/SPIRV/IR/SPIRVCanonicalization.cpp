@@ -216,11 +216,11 @@ OpFoldResult spirv::LogicalAndOp::fold(ArrayRef<Attribute> operands) {
 
   if (Optional<bool> rhs = getScalarOrSplatBoolAttr(operands.back())) {
     // x && true = x
-    if (rhs.value())
+    if (rhs.getValue())
       return operand1();
 
     // x && false = false
-    if (!rhs.value())
+    if (!rhs.getValue())
       return operands.back();
   }
 
@@ -247,12 +247,12 @@ OpFoldResult spirv::LogicalOrOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 2 && "spv.LogicalOr should take two operands");
 
   if (auto rhs = getScalarOrSplatBoolAttr(operands.back())) {
-    if (rhs.value())
+    if (rhs.getValue())
       // x || true = true
       return operands.back();
 
     // x || false = x
-    if (!rhs.value())
+    if (!rhs.getValue())
       return operand1();
   }
 

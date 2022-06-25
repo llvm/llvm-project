@@ -1427,9 +1427,9 @@ bool LoopConstrainer::run() {
   // constructor.
   ClonedLoop PreLoop, PostLoop;
   bool NeedsPreLoop =
-      Increasing ? SR.LowLimit.has_value() : SR.HighLimit.has_value();
+      Increasing ? SR.LowLimit.hasValue() : SR.HighLimit.hasValue();
   bool NeedsPostLoop =
-      Increasing ? SR.HighLimit.has_value() : SR.LowLimit.has_value();
+      Increasing ? SR.HighLimit.hasValue() : SR.LowLimit.hasValue();
 
   Value *ExitPreLoopAt = nullptr;
   Value *ExitMainLoopAt = nullptr;
@@ -1708,9 +1708,9 @@ IntersectSignedRange(ScalarEvolution &SE,
                      const InductiveRangeCheck::Range &R2) {
   if (R2.isEmpty(SE, /* IsSigned */ true))
     return None;
-  if (!R1)
+  if (!R1.hasValue())
     return R2;
-  auto &R1Value = *R1;
+  auto &R1Value = R1.getValue();
   // We never return empty ranges from this function, and R1 is supposed to be
   // a result of intersection. Thus, R1 is never empty.
   assert(!R1Value.isEmpty(SE, /* IsSigned */ true) &&
@@ -1737,9 +1737,9 @@ IntersectUnsignedRange(ScalarEvolution &SE,
                        const InductiveRangeCheck::Range &R2) {
   if (R2.isEmpty(SE, /* IsSigned */ false))
     return None;
-  if (!R1)
+  if (!R1.hasValue())
     return R2;
-  auto &R1Value = *R1;
+  auto &R1Value = R1.getValue();
   // We never return empty ranges from this function, and R1 is supposed to be
   // a result of intersection. Thus, R1 is never empty.
   assert(!R1Value.isEmpty(SE, /* IsSigned */ false) &&
@@ -1948,21 +1948,24 @@ bool InductiveRangeCheckElimination::run(
   for (InductiveRangeCheck &IRC : RangeChecks) {
     auto Result = IRC.computeSafeIterationSpace(SE, IndVar,
                                                 LS.IsSignedPredicate);
-    if (Result) {
-      auto MaybeSafeIterRange = IntersectRange(SE, SafeIterRange, *Result);
-      if (MaybeSafeIterRange) {
-        assert(!MaybeSafeIterRange->isEmpty(SE, LS.IsSignedPredicate) &&
-               "We should never return empty ranges!");
+    if (Result.hasValue()) {
+      auto MaybeSafeIterRange =
+          IntersectRange(SE, SafeIterRange, Result.getValue());
+      if (MaybeSafeIterRange.hasValue()) {
+        assert(
+            !MaybeSafeIterRange.getValue().isEmpty(SE, LS.IsSignedPredicate) &&
+            "We should never return empty ranges!");
         RangeChecksToEliminate.push_back(IRC);
-        SafeIterRange = *MaybeSafeIterRange;
+        SafeIterRange = MaybeSafeIterRange.getValue();
       }
     }
   }
 
-  if (!SafeIterRange)
+  if (!SafeIterRange.hasValue())
     return false;
 
-  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT, *SafeIterRange);
+  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT,
+                     SafeIterRange.getValue());
   bool Changed = LC.run();
 
   if (Changed) {

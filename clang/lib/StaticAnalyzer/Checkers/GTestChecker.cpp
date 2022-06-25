@@ -272,12 +272,12 @@ ProgramStateRef GTestChecker::assumeValuesEqual(SVal Val1, SVal Val2,
                                                 CheckerContext &C) {
   auto DVal1 = Val1.getAs<DefinedOrUnknownSVal>();
   auto DVal2 = Val2.getAs<DefinedOrUnknownSVal>();
-  if (!DVal1 || !DVal2)
+  if (!DVal1.hasValue() || !DVal2.hasValue())
     return State;
 
   auto ValuesEqual =
       C.getSValBuilder().evalEQ(State, *DVal1, *DVal2).getAs<DefinedSVal>();
-  if (!ValuesEqual)
+  if (!ValuesEqual.hasValue())
     return State;
 
   State = C.getConstraintManager().assume(State, *ValuesEqual, true);

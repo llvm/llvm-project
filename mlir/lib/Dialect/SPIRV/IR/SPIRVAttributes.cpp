@@ -387,7 +387,7 @@ static Attribute parseInterfaceVarABIAttr(DialectAsmParser &parser) {
     uint32_t descriptorSet = 0;
     auto descriptorSetParseResult = parser.parseOptionalInteger(descriptorSet);
 
-    if (!descriptorSetParseResult.has_value() ||
+    if (!descriptorSetParseResult.hasValue() ||
         failed(*descriptorSetParseResult)) {
       parser.emitError(loc, "missing descriptor set");
       return {};
@@ -404,7 +404,7 @@ static Attribute parseInterfaceVarABIAttr(DialectAsmParser &parser) {
     uint32_t binding = 0;
     auto bindingParseResult = parser.parseOptionalInteger(binding);
 
-    if (!bindingParseResult.has_value() || failed(*bindingParseResult)) {
+    if (!bindingParseResult.hasValue() || failed(*bindingParseResult)) {
       parser.emitError(loc, "missing binding");
       return {};
     }
@@ -583,8 +583,8 @@ Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
   Attribute attr;
   OptionalParseResult result =
       generatedAttributeParser(parser, attrKind, type, attr);
-  if (result.has_value()) {
-    if (failed(result.value()))
+  if (result.hasValue()) {
+    if (failed(result.getValue()))
       return {};
     return attr;
   }

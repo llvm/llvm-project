@@ -171,11 +171,11 @@ struct AffineIfCondition {
       fromCmpIOp(condDef);
   }
 
-  bool hasIntegerSet() const { return integerSet.has_value(); }
+  bool hasIntegerSet() const { return integerSet.hasValue(); }
 
   mlir::IntegerSet getIntegerSet() const {
     assert(hasIntegerSet() && "integer set is missing");
-    return *integerSet;
+    return integerSet.getValue();
   }
 
   mlir::ValueRange getAffineArgs() const { return affineArgs; }
@@ -188,8 +188,8 @@ private:
 
   MaybeAffineExpr affineBinaryOp(mlir::AffineExprKind kind, MaybeAffineExpr lhs,
                                  MaybeAffineExpr rhs) {
-    if (lhs && rhs)
-      return mlir::getAffineBinaryOpExpr(kind, *lhs, *rhs);
+    if (lhs.hasValue() && rhs.hasValue())
+      return mlir::getAffineBinaryOpExpr(kind, lhs.getValue(), rhs.getValue());
     return {};
   }
 
@@ -233,14 +233,15 @@ private:
   void fromCmpIOp(mlir::arith::CmpIOp cmpOp) {
     auto lhsAffine = toAffineExpr(cmpOp.getLhs());
     auto rhsAffine = toAffineExpr(cmpOp.getRhs());
-    if (!lhsAffine || !rhsAffine)
+    if (!lhsAffine.hasValue() || !rhsAffine.hasValue())
       return;
-    auto constraintPair =
-        constraint(cmpOp.getPredicate(), *rhsAffine - *lhsAffine);
+    auto constraintPair = constraint(
+        cmpOp.getPredicate(), rhsAffine.getValue() - lhsAffine.getValue());
     if (!constraintPair)
       return;
-    integerSet = mlir::IntegerSet::get(
-        dimCount, symCount, {constraintPair->first}, {constraintPair->second});
+    integerSet = mlir::IntegerSet::get(dimCount, symCount,
+                                       {constraintPair.getValue().first},
+                                       {constraintPair.getValue().second});
     return;
   }
 
@@ -483,8 +484,8 @@ private:
   std::pair<mlir::AffineForOp, mlir::Value>
   createAffineFor(fir::DoLoopOp op, mlir::PatternRewriter &rewriter) const {
     if (auto constantStep = constantIntegerLike(op.getStep()))
-      if (*constantStep > 0)
-        return positiveConstantStep(op, *constantStep, rewriter);
+      if (constantStep.getValue() > 0)
+        return positiveConstantStep(op, constantStep.getValue(), rewriter);
     return genericBounds(op, rewriter);
   }
 

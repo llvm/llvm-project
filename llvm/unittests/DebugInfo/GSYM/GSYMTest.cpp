@@ -1349,8 +1349,8 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
   auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  EXPECT_FALSE(ExpFI->OptLineTable.has_value());
-  EXPECT_FALSE(ExpFI->Inline.has_value());
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
 }
 
 TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
@@ -1426,8 +1426,8 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
   auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  EXPECT_FALSE(ExpFI->OptLineTable.has_value());
-  EXPECT_FALSE(ExpFI->Inline.has_value());
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
 }
 
 TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
@@ -1533,8 +1533,8 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
   auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  EXPECT_FALSE(ExpFI->OptLineTable.has_value());
-  EXPECT_FALSE(ExpFI->Inline.has_value());
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
   StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "Foo::dump");
 }
@@ -1638,8 +1638,8 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  EXPECT_FALSE(ExpFI->OptLineTable.has_value());
-  EXPECT_FALSE(ExpFI->Inline.has_value());
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
   StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 }
@@ -1667,8 +1667,8 @@ TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRanges) {
   auto ExpFI = GR->getFunctionInfo(0x1500);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1500, 0x2000));
-  EXPECT_FALSE(ExpFI->OptLineTable.has_value());
-  EXPECT_FALSE(ExpFI->Inline.has_value());
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
   StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "symbol");
 }
@@ -1836,8 +1836,8 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
   auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
-  EXPECT_TRUE(ExpFI->Inline.has_value());
+  EXPECT_TRUE(ExpFI->OptLineTable.hasValue());
+  EXPECT_TRUE(ExpFI->Inline.hasValue());
   StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 
@@ -2122,14 +2122,14 @@ TEST(GSYMTest, TestDWARFNoLines) {
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x3000, 0x4000));
   // Make sure we have no line table.
-  EXPECT_FALSE(ExpFI->OptLineTable.has_value());
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
   MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "no_lines_no_decl");
 
   ExpFI = GR->getFunctionInfo(0x4000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x4000, 0x5000));
-  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_TRUE(ExpFI->OptLineTable.hasValue());
   MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "no_lines_with_decl");
   // Make sure we have one line table entry that uses the DW_AT_decl_file/line

@@ -2636,9 +2636,9 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
     auto loc = global.getLoc();
     mlir::Attribute initAttr;
     if (global.getInitVal())
-      initAttr = *global.getInitVal();
+      initAttr = global.getInitVal().getValue();
     auto linkage = convertLinkage(global.getLinkName());
-    auto isConst = global.getConstant().has_value();
+    auto isConst = global.getConstant().hasValue();
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
         loc, tyAttr, isConst, linkage, global.getSymName(), initAttr);
     auto &gr = g.getInitializerRegion();
@@ -2692,8 +2692,8 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
   // enumeration.
   mlir::LLVM::Linkage
   convertLinkage(llvm::Optional<llvm::StringRef> optLinkage) const {
-    if (optLinkage) {
-      auto name = *optLinkage;
+    if (optLinkage.hasValue()) {
+      auto name = optLinkage.getValue();
       if (name == "internal")
         return mlir::LLVM::Linkage::Internal;
       if (name == "linkonce")
@@ -2749,9 +2749,9 @@ static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
                         llvm::Optional<mlir::ValueRange> destOps,
                         mlir::ConversionPatternRewriter &rewriter,
                         mlir::Block *newBlock) {
-  if (destOps)
-    rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, dest, *destOps, newBlock,
-                                          mlir::ValueRange());
+  if (destOps.hasValue())
+    rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, dest, destOps.getValue(),
+                                          newBlock, mlir::ValueRange());
   else
     rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, dest, newBlock);
 }
@@ -2759,8 +2759,9 @@ static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
 template <typename A, typename B>
 static void genBrOp(A caseOp, mlir::Block *dest, llvm::Optional<B> destOps,
                     mlir::ConversionPatternRewriter &rewriter) {
-  if (destOps)
-    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, *destOps, dest);
+  if (destOps.hasValue())
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, destOps.getValue(),
+                                                  dest);
   else
     rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, llvm::None, dest);
 }
@@ -2883,14 +2884,15 @@ static void selectMatchAndRewrite(fir::LLVMTypeConverter &lowering, OP select,
     const mlir::Attribute &attr = cases[t];
     if (auto intAttr = attr.template dyn_cast<mlir::IntegerAttr>()) {
       destinations.push_back(dest);
-      destinationsOperands.push_back(destOps ? *destOps : mlir::ValueRange{});
+      destinationsOperands.push_back(destOps.hasValue() ? *destOps
+                                                        : mlir::ValueRange{});
       caseValues.push_back(intAttr.getInt());
       continue;
     }
     assert(attr.template dyn_cast_or_null<mlir::UnitAttr>());
     assert((t + 1 == conds) && "unit must be last");
     defaultDestination = dest;
-    defaultOperands = destOps ? *destOps : mlir::ValueRange{};
+    defaultOperands = destOps.hasValue() ? *destOps : mlir::ValueRange{};
   }
 
   // LLVM::SwitchOp takes a i32 type for the selector.

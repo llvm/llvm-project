@@ -561,12 +561,12 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
     else
       Color = None;
 
-    if (Color)
+    if (Color.hasValue())
       Snippets[I + 1] = Highlight(Snippets[I + 1], CurSeg->Col,
                                   CurSeg->Col + Snippets[I + 1].size());
   }
 
-  if (Color && Segments.empty())
+  if (Color.hasValue() && Segments.empty())
     Snippets.back() = Highlight(Snippets.back(), 1, 1 + Snippets.back().size());
 
   if (getOptions().Debug) {

@@ -1325,11 +1325,11 @@ already_lexed:
 
         // The last ')' has been reached; return the value if one found or
         // a diagnostic and a dummy value.
-        if (Result) {
-          OS << *Result;
+        if (Result.hasValue()) {
+          OS << Result.getValue();
           // For strict conformance to __has_cpp_attribute rules, use 'L'
           // suffix for dated literals.
-          if (*Result > 1)
+          if (Result.getValue() > 1)
             OS << 'L';
         } else {
           OS << 0;

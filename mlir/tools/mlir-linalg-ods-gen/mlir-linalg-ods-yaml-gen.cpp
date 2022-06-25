@@ -730,16 +730,16 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
       }
       // Add the index attributes to the op definition and builders.
       if (arg.kind == LinalgOperandDefKind::IndexAttr) {
-        assert(arg.indexAttrMap.has_value());
-        assert(arg.defaultIndices.has_value());
+        assert(arg.indexAttrMap.hasValue());
+        assert(arg.defaultIndices.hasValue());
         size_t size = arg.indexAttrMap->affineMap().getNumResults();
-        assert(arg.defaultIndices->size() == size);
+        assert(arg.defaultIndices.getValue().size() == size);
         static const char typeFmt[] = "RankedI64ElementsAttr<[{0}]>";
         static const char defFmt[] = "DefaultValuedAttr<{0}, \"{ {1} }\">:${2}";
         std::string defaultVals;
         llvm::raw_string_ostream ss(defaultVals);
         llvm::interleave(
-            arg.defaultIndices.value(), ss,
+            arg.defaultIndices.getValue(), ss,
             [&](int64_t val) { ss << "static_cast<int64_t>(" << val << ")"; },
             ", ");
         attrDefs.push_back(llvm::formatv(defFmt, llvm::formatv(typeFmt, size),
@@ -1088,11 +1088,11 @@ if ({1}Iter != attrs.end()) {{
           if (expression.scalarFn->attrName) {
             if (llvm::none_of(args, [&](LinalgOperandDef &arg) {
                   return isFunctionAttribute(arg.kind) &&
-                         arg.name == expression.scalarFn->attrName.value();
+                         arg.name == expression.scalarFn->attrName.getValue();
                 })) {
               emitError(genContext.getLoc())
                   << "missing function attribute "
-                  << expression.scalarFn->attrName.value();
+                  << expression.scalarFn->attrName.getValue();
             }
             funcType = llvm::formatv("{0}Val", *expression.scalarFn->attrName);
           }
@@ -1101,17 +1101,17 @@ if ({1}Iter != attrs.end()) {{
           // Add the optional type parameter to the operands.
           SmallVector<std::string> operandCppValues;
           if (expression.scalarFn->kind == ScalarFnKind::Type) {
-            assert(expression.scalarFn->typeVar.has_value());
+            assert(expression.scalarFn->typeVar.hasValue());
             Optional<std::string> typeCppValue =
-                findTypeValue(expression.scalarFn->typeVar.value(), args);
+                findTypeValue(expression.scalarFn->typeVar.getValue(), args);
             if (!typeCppValue) {
               emitError(genContext.getLoc())
-                  << "type variable " << expression.scalarFn->typeVar.value()
+                  << "type variable " << expression.scalarFn->typeVar.getValue()
                   << ", used in a type conversion, must map to a predefined or "
                   << "an argument type but it does not";
               return None;
             }
-            operandCppValues.push_back(typeCppValue.value());
+            operandCppValues.push_back(typeCppValue.getValue());
           }
 
           // Collect the scalar operands.

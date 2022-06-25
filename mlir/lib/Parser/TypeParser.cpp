@@ -310,9 +310,9 @@ Type Parser::parseNonFunctionType() {
   // integer-type
   case Token::inttype: {
     auto width = getToken().getIntTypeBitwidth();
-    if (!width.has_value())
+    if (!width.hasValue())
       return (emitError("invalid integer width"), nullptr);
-    if (width.value() > IntegerType::kMaxWidth) {
+    if (width.getValue() > IntegerType::kMaxWidth) {
       emitError(getToken().getLoc(), "integer bitwidth is limited to ")
           << IntegerType::kMaxWidth << " bits";
       return nullptr;

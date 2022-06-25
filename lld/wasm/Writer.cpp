@@ -446,10 +446,10 @@ void Writer::populateTargetFeatures() {
   }
 
   // Only infer used features if user did not specify features
-  bool inferFeatures = !config->features.has_value();
+  bool inferFeatures = !config->features.hasValue();
 
   if (!inferFeatures) {
-    auto &explicitFeatures = config->features.value();
+    auto &explicitFeatures = config->features.getValue();
     allowed.insert(explicitFeatures.begin(), explicitFeatures.end());
     if (!config->checkFeatures)
       goto done;

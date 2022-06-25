@@ -893,8 +893,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   // Construct unary operations if subexpression can be built.
   if (def->getNumOperands() == 1) {
     auto x = buildTensorExp(op, def->getOperand(0));
-    if (x) {
-      unsigned e = x.value();
+    if (x.hasValue()) {
+      unsigned e = x.getValue();
       if (isa<math::AbsOp>(def))
         return addExp(kAbsF, e);
       if (isa<complex::AbsOp>(def))
@@ -966,9 +966,9 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   if (def->getNumOperands() == 2) {
     auto x = buildTensorExp(op, def->getOperand(0));
     auto y = buildTensorExp(op, def->getOperand(1));
-    if (x.has_value() && y.has_value()) {
-      unsigned e0 = x.value();
-      unsigned e1 = y.value();
+    if (x.hasValue() && y.hasValue()) {
+      unsigned e0 = x.getValue();
+      unsigned e1 = y.getValue();
       if (isa<arith::MulFOp>(def))
         return addExp(kMulF, e0, e1);
       if (isa<complex::MulOp>(def))

@@ -1775,9 +1775,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   // Update the entry count of the function.
   if (BFI) {
     auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
-    if (Count)
+    if (Count.hasValue())
       newFunction->setEntryCount(
-          ProfileCount(*Count, Function::PCT_Real)); // FIXME
+          ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
     BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
   }
 

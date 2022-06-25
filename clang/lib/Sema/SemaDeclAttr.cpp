@@ -2673,19 +2673,19 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         if (IOSToWatchOSMapping) {
           if (auto MappedVersion = IOSToWatchOSMapping->map(
                   Version, MinimumWatchOSVersion, None)) {
-            return *MappedVersion;
+            return MappedVersion.getValue();
           }
         }
 
         auto Major = Version.getMajor();
         auto NewMajor = Major >= 9 ? Major - 7 : 0;
         if (NewMajor >= 2) {
-          if (Version.getMinor()) {
-            if (Version.getSubminor())
-              return VersionTuple(NewMajor, *Version.getMinor(),
-                                  *Version.getSubminor());
+          if (Version.getMinor().hasValue()) {
+            if (Version.getSubminor().hasValue())
+              return VersionTuple(NewMajor, Version.getMinor().getValue(),
+                                  Version.getSubminor().getValue());
             else
-              return VersionTuple(NewMajor, *Version.getMinor());
+              return VersionTuple(NewMajor, Version.getMinor().getValue());
           }
           return VersionTuple(NewMajor);
         }

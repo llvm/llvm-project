@@ -2236,7 +2236,7 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult result = parser.parseOptionalRegion(*body, entryArgs);
-  return failure(result.has_value() && failed(*result));
+  return failure(result.hasValue() && failed(*result));
 }
 
 void spirv::FuncOp::print(OpAsmPrinter &printer) {

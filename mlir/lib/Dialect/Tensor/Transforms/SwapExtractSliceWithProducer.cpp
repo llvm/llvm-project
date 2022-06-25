@@ -39,5 +39,5 @@ FailureOr<Value> tensor::replaceExtractSliceWithTiledProducer(
   if (failed(tiledResult))
     return failure();
 
-  return tiledResult.value();
+  return tiledResult.getValue();
 }

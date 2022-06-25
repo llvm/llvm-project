@@ -414,15 +414,15 @@ Type TestDialect::parseTestType(AsmParser &parser,
   {
     Type genType;
     auto parseResult = generatedTypeParser(parser, typeTag, genType);
-    if (parseResult.has_value())
+    if (parseResult.hasValue())
       return genType;
   }
 
   {
     Type dynType;
     auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
-    if (parseResult.has_value()) {
-      if (succeeded(parseResult.value()))
+    if (parseResult.hasValue()) {
+      if (succeeded(parseResult.getValue()))
         return dynType;
       return Type();
     }

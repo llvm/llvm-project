@@ -114,9 +114,9 @@ static FuncOpAnalysisState getFuncOpAnalysisState(const AnalysisState &state,
   Optional<const FuncAnalysisState *> maybeState =
       state.getDialectState<FuncAnalysisState>(
           func::FuncDialect::getDialectNamespace());
-  if (!maybeState.has_value())
+  if (!maybeState.hasValue())
     return FuncOpAnalysisState::NotAnalyzed;
-  const auto &analyzedFuncOps = maybeState.value()->analyzedFuncOps;
+  const auto &analyzedFuncOps = maybeState.getValue()->analyzedFuncOps;
   auto it = analyzedFuncOps.find(funcOp);
   if (it == analyzedFuncOps.end())
     return FuncOpAnalysisState::NotAnalyzed;

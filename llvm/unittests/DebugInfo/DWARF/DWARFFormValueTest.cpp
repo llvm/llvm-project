@@ -79,17 +79,17 @@ TEST(DWARFFormValue, SignedConstantForms) {
   auto Sign2 = createDataXFormValue<uint16_t>(DW_FORM_data2, -12345);
   auto Sign4 = createDataXFormValue<uint32_t>(DW_FORM_data4, -123456789);
   auto Sign8 = createDataXFormValue<uint64_t>(DW_FORM_data8, -1);
-  EXPECT_EQ(Sign1.getAsSignedConstant().value(), -123);
-  EXPECT_EQ(Sign2.getAsSignedConstant().value(), -12345);
-  EXPECT_EQ(Sign4.getAsSignedConstant().value(), -123456789);
-  EXPECT_EQ(Sign8.getAsSignedConstant().value(), -1);
+  EXPECT_EQ(Sign1.getAsSignedConstant().getValue(), -123);
+  EXPECT_EQ(Sign2.getAsSignedConstant().getValue(), -12345);
+  EXPECT_EQ(Sign4.getAsSignedConstant().getValue(), -123456789);
+  EXPECT_EQ(Sign8.getAsSignedConstant().getValue(), -1);
 
   // Check that we can handle big positive values, but that we return
   // an error just over the limit.
   auto UMax = createULEBFormValue(LLONG_MAX);
   auto TooBig = createULEBFormValue(uint64_t(LLONG_MAX) + 1);
-  EXPECT_EQ(UMax.getAsSignedConstant().value(), LLONG_MAX);
-  EXPECT_EQ(TooBig.getAsSignedConstant().has_value(), false);
+  EXPECT_EQ(UMax.getAsSignedConstant().getValue(), LLONG_MAX);
+  EXPECT_EQ(TooBig.getAsSignedConstant().hasValue(), false);
 
   // Sanity check some other forms.
   auto Data1 = createDataXFormValue<uint8_t>(DW_FORM_data1, 120);
@@ -100,14 +100,14 @@ TEST(DWARFFormValue, SignedConstantForms) {
   auto LEBMax = createSLEBFormValue(LLONG_MAX);
   auto LEB1 = createSLEBFormValue(-42);
   auto LEB2 = createSLEBFormValue(42);
-  EXPECT_EQ(Data1.getAsSignedConstant().value(), 120);
-  EXPECT_EQ(Data2.getAsSignedConstant().value(), 32000);
-  EXPECT_EQ(Data4.getAsSignedConstant().value(), 2000000000);
-  EXPECT_EQ(Data8.getAsSignedConstant().value(), 0x1234567812345678LL);
-  EXPECT_EQ(LEBMin.getAsSignedConstant().value(), LLONG_MIN);
-  EXPECT_EQ(LEBMax.getAsSignedConstant().value(), LLONG_MAX);
-  EXPECT_EQ(LEB1.getAsSignedConstant().value(), -42);
-  EXPECT_EQ(LEB2.getAsSignedConstant().value(), 42);
+  EXPECT_EQ(Data1.getAsSignedConstant().getValue(), 120);
+  EXPECT_EQ(Data2.getAsSignedConstant().getValue(), 32000);
+  EXPECT_EQ(Data4.getAsSignedConstant().getValue(), 2000000000);
+  EXPECT_EQ(Data8.getAsSignedConstant().getValue(), 0x1234567812345678LL);
+  EXPECT_EQ(LEBMin.getAsSignedConstant().getValue(), LLONG_MIN);
+  EXPECT_EQ(LEBMax.getAsSignedConstant().getValue(), LLONG_MAX);
+  EXPECT_EQ(LEB1.getAsSignedConstant().getValue(), -42);
+  EXPECT_EQ(LEB2.getAsSignedConstant().getValue(), 42);
 
   // Data16 is a little tricky.
   char Cksum[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};

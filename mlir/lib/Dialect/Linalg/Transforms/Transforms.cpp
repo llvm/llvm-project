@@ -102,8 +102,9 @@ LogicalResult mlir::linalg::LinalgTransformationFilter::checkAndNotify(
 void mlir::linalg::LinalgTransformationFilter::
     replaceLinalgTransformationFilter(PatternRewriter &rewriter,
                                       Operation *op) const {
-  if (replacement)
-    op->setAttr(LinalgTransforms::kLinalgTransformMarker, replacement.value());
+  if (replacement.hasValue())
+    op->setAttr(LinalgTransforms::kLinalgTransformMarker,
+                replacement.getValue());
   else
     op->removeAttr(
         rewriter.getStringAttr(LinalgTransforms::kLinalgTransformMarker));
@@ -440,10 +441,10 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
     if (failed(unfusedTiledOp))
       return failure();
     rewriter.replaceOp(tiledAndFusedOps->op,
-                       getTiledOpResult(unfusedTiledOp.value()));
+                       getTiledOpResult(unfusedTiledOp.getValue()));
     tiledAndFusedOps->op = unfusedTiledOp->op;
   }
-  op->replaceAllUsesWith(getTiledAndFusedOpResult(tiledAndFusedOps.value()));
+  op->replaceAllUsesWith(getTiledAndFusedOpResult(tiledAndFusedOps.getValue()));
 
   filter.replaceLinalgTransformationFilter(rewriter,
                                            tiledAndFusedOps->op.getOperation());

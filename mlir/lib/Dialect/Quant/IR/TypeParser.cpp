@@ -30,7 +30,7 @@ static IntegerType parseStorageType(DialectAsmParser &parser, bool &isSigned) {
   StringRef identifier;
   unsigned storageTypeWidth = 0;
   OptionalParseResult result = parser.parseOptionalType(type);
-  if (result.has_value()) {
+  if (result.hasValue()) {
     if (!succeeded(*result))
       return nullptr;
     isSigned = !type.isUnsigned();

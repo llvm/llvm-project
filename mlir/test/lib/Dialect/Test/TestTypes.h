@@ -77,7 +77,7 @@ struct FieldParser<Optional<int>> {
     Optional<int> value;
     value.emplace();
     OptionalParseResult result = parser.parseOptionalInteger(*value);
-    if (result.has_value()) {
+    if (result.hasValue()) {
       if (succeeded(*result))
         return value;
       return failure();

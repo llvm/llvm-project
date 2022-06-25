@@ -292,9 +292,9 @@ class DefaultValuedAPFloat<string value>
   let parser = [{ [&]() -> mlir::FailureOr<llvm::Optional<llvm::APFloat>> {
     mlir::FloatAttr attr;
     auto result = $_parser.parseOptionalAttribute(attr);
-    if (result.has_value() && mlir::succeeded(*result))
+    if (result.hasValue() && mlir::succeeded(*result))
       return {attr.getValue()};
-    if (!result.has_value())
+    if (!result.hasValue())
       return llvm::Optional<llvm::APFloat>();
     return mlir::failure();
   }() }];

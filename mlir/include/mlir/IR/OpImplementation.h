@@ -555,7 +555,7 @@ public:
   ParseResult parseInteger(IntT &result) {
     auto loc = getCurrentLocation();
     OptionalParseResult parseResult = parseOptionalInteger(result);
-    if (!parseResult.has_value())
+    if (!parseResult.hasValue())
       return emitError(loc, "expected integer value");
     return *parseResult;
   }
@@ -570,7 +570,7 @@ public:
     // Parse the unsigned variant.
     APInt uintResult;
     OptionalParseResult parseResult = parseOptionalInteger(uintResult);
-    if (!parseResult.has_value() || failed(*parseResult))
+    if (!parseResult.hasValue() || failed(*parseResult))
       return parseResult;
 
     // Try to convert to the provided integer type.  sextOrTrunc is correct even
@@ -817,7 +817,7 @@ public:
                                              StringRef attrName,
                                              NamedAttrList &attrs) {
     OptionalParseResult parseResult = parseOptionalAttribute(result, type);
-    if (parseResult.has_value() && succeeded(*parseResult))
+    if (parseResult.hasValue() && succeeded(*parseResult))
       attrs.append(attrName, result);
     return parseResult;
   }
@@ -1299,9 +1299,9 @@ public:
   ParseResult parseAssignmentList(SmallVectorImpl<Argument> &lhs,
                                   SmallVectorImpl<UnresolvedOperand> &rhs) {
     OptionalParseResult result = parseOptionalAssignmentList(lhs, rhs);
-    if (!result.has_value())
+    if (!result.hasValue())
       return emitError(getCurrentLocation(), "expected '('");
-    return result.value();
+    return result.getValue();
   }
 
   virtual OptionalParseResult

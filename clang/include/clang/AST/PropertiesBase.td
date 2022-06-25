@@ -520,15 +520,15 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     if (hasBase) {
       if (isTypeInfo) {
         base = APValue::LValueBase::getTypeInfo(
-            TypeInfoLValue(typeInfo->getTypePtr()), *type);
+            TypeInfoLValue(typeInfo.getValue().getTypePtr()), type.getValue());
         elemTy = base.getTypeInfoType();
       } else if (isExpr) {
-        base = APValue::LValueBase(cast<Expr>(*stmt),
-                                   *callIndex, *version);
+        base = APValue::LValueBase(cast<Expr>(stmt.getValue()),
+                                   callIndex.getValue(), version.getValue());
         elemTy = base.get<const Expr *>()->getType();
       } else {
-        base = APValue::LValueBase(cast<ValueDecl>(*decl),
-                                   *callIndex, *version);
+        base = APValue::LValueBase(cast<ValueDecl>(decl.getValue()),
+                                   callIndex.getValue(), version.getValue());
         elemTy = base.get<const ValueDecl *>()->getType();
       }
     }

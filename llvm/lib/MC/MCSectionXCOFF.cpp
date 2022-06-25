@@ -110,8 +110,8 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 
   // XCOFF debug sections.
   if (getKind().isMetadata() && isDwarfSect()) {
-    OS << "\n\t.dwsect " << format("0x%" PRIx32, *getDwarfSubtypeFlags())
-       << '\n';
+    OS << "\n\t.dwsect "
+       << format("0x%" PRIx32, getDwarfSubtypeFlags().getValue()) << '\n';
     OS << MAI.getPrivateLabelPrefix() << getName() << ':' << '\n';
     return;
   }

@@ -536,9 +536,9 @@ int main(int argc, char **argv, char * const *envp) {
   builder.setMCPU(codegen::getCPUStr());
   builder.setMAttrs(codegen::getFeatureList());
   if (auto RM = codegen::getExplicitRelocModel())
-    builder.setRelocationModel(RM.value());
+    builder.setRelocationModel(RM.getValue());
   if (auto CM = codegen::getExplicitCodeModel())
-    builder.setCodeModel(CM.value());
+    builder.setCodeModel(CM.getValue());
   builder.setErrorStr(&ErrorMsg);
   builder.setEngineKind(ForceInterpreter
                         ? EngineKind::Interpreter

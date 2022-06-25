@@ -218,8 +218,8 @@ static bool importContext(Scop &S, const json::Object &JScop) {
     return false;
   }
 
-  isl::set NewContext =
-      isl::set{S.getIslCtx().get(), JScop.getString("context")->str()};
+  isl::set NewContext = isl::set{S.getIslCtx().get(),
+                                 JScop.getString("context").getValue().str()};
 
   // Check whether the context was parsed successfully.
   if (NewContext.is_null()) {
@@ -290,10 +290,10 @@ static bool importSchedule(Scop &S, const json::Object &JScop,
     }
     Optional<StringRef> Schedule =
         statements[Index].getAsObject()->getString("schedule");
-    assert(Schedule &&
+    assert(Schedule.hasValue() &&
            "Schedules that contain extension nodes require special handling.");
-    isl_map *Map =
-        isl_map_read_from_str(S.getIslCtx().get(), Schedule->str().c_str());
+    isl_map *Map = isl_map_read_from_str(S.getIslCtx().get(),
+                                         Schedule.getValue().str().c_str());
 
     // Check whether the schedule was parsed successfully
     if (!Map) {
@@ -575,14 +575,14 @@ static bool areArraysEqual(ScopArrayInfo *SAI, const json::Object &Array) {
   for (unsigned i = 1; i < Array.getArray("sizes")->size(); i++) {
     SAI->getDimensionSize(i)->print(RawStringOstream);
     const json::Array &SizesArray = *Array.getArray("sizes");
-    if (RawStringOstream.str() != SizesArray[i].getAsString().value())
+    if (RawStringOstream.str() != SizesArray[i].getAsString().getValue())
       return false;
     Buffer.clear();
   }
 
   // Check if key 'type' differs from the current one or is not valid.
   SAI->getElementType()->print(RawStringOstream);
-  if (RawStringOstream.str() != Array.getString("type").value()) {
+  if (RawStringOstream.str() != Array.getString("type").getValue()) {
     errs() << "Array has not a valid type.\n";
     return false;
   }
@@ -652,8 +652,9 @@ static bool importArrays(Scop &S, const json::Object &JScop) {
 
   for (; ArrayIdx < Arrays.size(); ArrayIdx++) {
     const json::Object &Array = *Arrays[ArrayIdx].getAsObject();
-    auto *ElementType = parseTextType(Array.get("type")->getAsString()->str(),
-                                      S.getSE()->getContext());
+    auto *ElementType =
+        parseTextType(Array.get("type")->getAsString().getValue().str(),
+                      S.getSE()->getContext());
     if (!ElementType) {
       errs() << "Error while parsing element type for new array.\n";
       return false;
@@ -673,10 +674,10 @@ static bool importArrays(Scop &S, const json::Object &JScop) {
     }
 
     auto NewSAI = S.createScopArrayInfo(
-        ElementType, Array.getString("name")->str(), DimSizes);
+        ElementType, Array.getString("name").getValue().str(), DimSizes);
 
     if (Array.get("allocation")) {
-      NewSAI->setIsOnHeap(Array.getString("allocation").value() == "heap");
+      NewSAI->setIsOnHeap(Array.getString("allocation").getValue() == "heap");
     }
   }
 

@@ -147,8 +147,8 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
       cast<tosa::NegateOp>(op).quantization_info()) {
     auto quantizationInfo = cast<tosa::NegateOp>(op).quantization_info();
     int32_t inputBitWidth = elementTy.getIntOrFloatBitWidth();
-    int64_t inZp = quantizationInfo->getInputZp();
-    int64_t outZp = quantizationInfo->getOutputZp();
+    int64_t inZp = quantizationInfo.getValue().getInputZp();
+    int64_t outZp = quantizationInfo.getValue().getOutputZp();
 
     // Compute the maximum value that can occur in the intermediate buffer.
     int64_t zpAdd = inZp + outZp;
@@ -1153,9 +1153,9 @@ public:
 
     auto dynamicDimsOr =
         checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
-    if (!dynamicDimsOr.has_value())
+    if (!dynamicDimsOr.hasValue())
       return failure();
-    SmallVector<Value> dynamicDims = dynamicDimsOr.value();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
     // The shift and multiplier values.
     SmallVector<int32_t> multiplierValues;
@@ -1345,9 +1345,9 @@ public:
 
     auto dynamicDimsOr =
         checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
-    if (!dynamicDimsOr.has_value())
+    if (!dynamicDimsOr.hasValue())
       return failure();
-    SmallVector<Value> dynamicDims = dynamicDimsOr.value();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
     if (op.mode() != "NEAREST_NEIGHBOR" && op.mode() != "BILINEAR")
       return failure();
@@ -2040,9 +2040,9 @@ public:
 
     auto dynamicDimsOr =
         checkHasDynamicBatchDims(rewriter, op, {input, indices, op.output()});
-    if (!dynamicDimsOr.has_value())
+    if (!dynamicDimsOr.hasValue())
       return failure();
-    SmallVector<Value> dynamicDims = dynamicDimsOr.value();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
     auto resultElementTy = resultTy.getElementType();
 

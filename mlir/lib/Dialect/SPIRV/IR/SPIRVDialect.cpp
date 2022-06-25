@@ -496,8 +496,8 @@ template <typename ParseType, typename... Args> struct ParseCommaSeparatedList {
     auto remainingValues = ParseCommaSeparatedList<Args...>{}(dialect, parser);
     if (!remainingValues)
       return llvm::None;
-    return std::tuple_cat(std::tuple<ParseType>(parseVal.value()),
-                          remainingValues.value());
+    return std::tuple_cat(std::tuple<ParseType>(parseVal.getValue()),
+                          remainingValues.getValue());
   }
 };
 
@@ -571,7 +571,7 @@ static ParseResult parseStructMemberDecorations(
   SMLoc offsetLoc = parser.getCurrentLocation();
   StructType::OffsetInfo offset = 0;
   OptionalParseResult offsetParseResult = parser.parseOptionalInteger(offset);
-  if (offsetParseResult.has_value()) {
+  if (offsetParseResult.hasValue()) {
     if (failed(*offsetParseResult))
       return failure();
 
@@ -588,7 +588,7 @@ static ParseResult parseStructMemberDecorations(
     return success();
 
   // If there was an offset, make sure to parse the comma.
-  if (offsetParseResult.has_value() && parser.parseComma())
+  if (offsetParseResult.hasValue() && parser.parseComma())
     return failure();
 
   // Check for spirv::Decorations.
@@ -607,11 +607,11 @@ static ParseResult parseStructMemberDecorations(
 
       memberDecorationInfo.emplace_back(
           static_cast<uint32_t>(memberTypes.size() - 1), 1,
-          memberDecoration.value(), memberDecorationValue.value());
+          memberDecoration.getValue(), memberDecorationValue.getValue());
     } else {
       memberDecorationInfo.emplace_back(
           static_cast<uint32_t>(memberTypes.size() - 1), 0,
-          memberDecoration.value(), 0);
+          memberDecoration.getValue(), 0);
     }
     return success();
   };

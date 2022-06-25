@@ -90,9 +90,9 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
     }
   }
 
-  if (MaskPosOpt)
+  if (MaskPosOpt.hasValue())
     IntrinParams[*MaskPosOpt] = &requestMask();
-  if (VLenPosOpt)
+  if (VLenPosOpt.hasValue())
     IntrinParams[*VLenPosOpt] = &requestEVL();
 
   auto *VPDecl = VPIntrinsic::getDeclarationForParams(&getModule(), VPID,
