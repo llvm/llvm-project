@@ -17,6 +17,7 @@ static_library("MCA") {
     "HardwareUnits/ResourceManager.cpp",
     "HardwareUnits/RetireControlUnit.cpp",
     "HardwareUnits/Scheduler.cpp",
+    "IncrementalSourceMgr.cpp",
     "InstrBuilder.cpp",
     "Instruction.cpp",
     "Pipeline.cpp",
