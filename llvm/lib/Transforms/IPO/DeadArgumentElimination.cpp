@@ -660,7 +660,7 @@ void DeadArgumentEliminationPass::markValue(const RetOrArg &RA, Liveness L,
       }
       // Note any uses of this value, so this value can be
       // marked live whenever one of the uses becomes live.
-      Uses.insert(std::make_pair(MaybeLiveUse, RA));
+      Uses.emplace(MaybeLiveUse, RA);
     }
     break;
   }
