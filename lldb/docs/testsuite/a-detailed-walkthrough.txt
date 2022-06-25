@@ -110,19 +110,9 @@ executable by lldb:
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-This is where the attribute assignment:
-
-class SettingsCommandTestCase(TestBase):
-
-    mydir = "settings"
-
-which happens right after the SettingsCommandTestCase class declaration comes
-into place. It specifies the relative directory to the top level 'test' so that
-the test harness can change its working directory in order to find the
-executable as well as the source code files. The runCmd() method is defined in
-the TestBase base class (within test/lldbtest.py) and its purpose is to pass the
-specified command to the lldb command interpreter. It's like you're typing the
-command within an interactive lldb session.
+The runCmd() method is defined in the TestBase base class and its purpose is to
+pass the specified command to the lldb command interpreter. It's like you're
+typing the command within an interactive lldb session.
 
 The CURRENT_EXECUTABLE_SET is an assert message defined in the lldbtest module
 so that it can be reused from other test modules.
