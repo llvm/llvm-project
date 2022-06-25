@@ -180,7 +180,7 @@ Once you have `perf.fdata` ready, you can use it for optimizations with
 BOLT. Assuming your environment is setup to include the right path, execute
 `llvm-bolt`:
 ```
-$ llvm-bolt <executable> -o <executable>.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions=2 -split-all-cold -split-eh -dyno-stats
+$ llvm-bolt <executable> -o <executable>.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 ```
 
 If you do need an updated debug info, then add `-update-debug-sections` option

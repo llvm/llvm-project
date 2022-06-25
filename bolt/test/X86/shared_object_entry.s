@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: ld.lld %t.o -o %t.so --shared --entry=func1.cold.1 --emit-relocs
 # RUN: llvm-bolt -relocs %t.so -o %t -reorder-functions=hfsort+ \
-# RUN:    -split-functions=3 -reorder-blocks=ext-tsp -split-all-cold \
+# RUN:    -split-functions -reorder-blocks=ext-tsp -split-all-cold \
 # RUN:    -dyno-stats -icf=1 -use-gnu-stack
 
 # Check that an entry point is a cold symbol
