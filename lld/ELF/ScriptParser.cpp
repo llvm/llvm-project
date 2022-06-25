@@ -636,14 +636,15 @@ void ScriptParser::readTarget() {
 
 static int precedence(StringRef op) {
   return StringSwitch<int>(op)
-      .Cases("*", "/", "%", 8)
-      .Cases("+", "-", 7)
-      .Cases("<<", ">>", 6)
-      .Cases("<", "<=", ">", ">=", "==", "!=", 5)
-      .Case("&", 4)
-      .Case("|", 3)
-      .Case("&&", 2)
-      .Case("||", 1)
+      .Cases("*", "/", "%", 10)
+      .Cases("+", "-", 9)
+      .Cases("<<", ">>", 8)
+      .Cases("<", "<=", ">", ">=", 7)
+      .Cases("==", "!=", 6)
+      .Case("&", 5)
+      .Case("|", 4)
+      .Case("&&", 3)
+      .Case("||", 2)
       .Default(-1);
 }
 
