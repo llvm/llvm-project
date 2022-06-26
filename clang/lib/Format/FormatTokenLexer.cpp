@@ -840,6 +840,56 @@ FormatToken *FormatTokenLexer::getStashedToken() {
   return FormatTok;
 }
 
+/// Truncate the current token to the new length and make the lexer continue
+/// from the end of the truncated token. Used for other languages that have
+/// different token boundaries, like JavaScript in which a comment ends at a
+/// line break regardless of whether the line break follows a backslash. Also
+/// used to set the lexer to the end of whitespace if the lexer regards
+/// whitespace and an unrecognized symbol as one token.
+void FormatTokenLexer::truncateToken(size_t NewLen) {
+  assert(NewLen <= FormatTok->TokenText.size());
+  resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(
+      Lex->getBufferLocation() - FormatTok->TokenText.size() + NewLen)));
+  FormatTok->TokenText = FormatTok->TokenText.substr(0, NewLen);
+  FormatTok->ColumnWidth = encoding::columnWidthWithTabs(
+      FormatTok->TokenText, FormatTok->OriginalColumn, Style.TabWidth,
+      Encoding);
+  FormatTok->Tok.setLength(NewLen);
+}
+
+/// Count the length of leading whitespace in a token.
+static size_t countLeadingWhitespace(StringRef Text) {
+  // Basically counting the length matched by this regex.
+  // "^([\n\r\f\v \t]|(\\\\|\\?\\?/)[\n\r])+"
+  // Directly using the regex turned out to be slow. With the regex
+  // version formatting all files in this directory took about 1.25
+  // seconds. This version took about 0.5 seconds.
+  const char *Cur = Text.begin();
+  while (Cur < Text.end()) {
+    if (isspace(Cur[0])) {
+      ++Cur;
+    } else if (Cur[0] == '\\' && (Cur[1] == '\n' || Cur[1] == '\r')) {
+      // A '\' followed by a newline always escapes the newline, regardless
+      // of whether there is another '\' before it.
+      // The source has a null byte at the end. So the end of the entire input
+      // isn't reached yet. Also the lexer doesn't break apart an escaped
+      // newline.
+      assert(Text.end() - Cur >= 2);
+      Cur += 2;
+    } else if (Cur[0] == '?' && Cur[1] == '?' && Cur[2] == '/' &&
+               (Cur[3] == '\n' || Cur[3] == '\r')) {
+      // Newlines can also be escaped by a '?' '?' '/' trigraph. By the way, the
+      // characters are quoted individually in this comment because if we write
+      // them together some compilers warn that we have a trigraph in the code.
+      assert(Text.end() - Cur >= 4);
+      Cur += 4;
+    } else {
+      break;
+    }
+  }
+  return Cur - Text.begin();
+}
+
 FormatToken *FormatTokenLexer::getNextToken() {
   if (StateStack.top() == LexerState::TOKEN_STASHED) {
     StateStack.pop();
@@ -854,34 +904,33 @@ FormatToken *FormatTokenLexer::getNextToken() {
   IsFirstToken = false;
 
   // Consume and record whitespace until we find a significant token.
+  // Some tok::unknown tokens are not just whitespace, e.g. whitespace
+  // followed by a symbol such as backtick. Those symbols may be
+  // significant in other languages.
   unsigned WhitespaceLength = TrailingWhitespace;
-  while (FormatTok->is(tok::unknown)) {
+  while (FormatTok->isNot(tok::eof)) {
+    auto LeadingWhitespace = countLeadingWhitespace(FormatTok->TokenText);
+    if (LeadingWhitespace == 0)
+      break;
+    if (LeadingWhitespace < FormatTok->TokenText.size())
+      truncateToken(LeadingWhitespace);
     StringRef Text = FormatTok->TokenText;
-    auto EscapesNewline = [&](int pos) {
-      // A '\r' here is just part of '\r\n'. Skip it.
-      if (pos >= 0 && Text[pos] == '\r')
-        --pos;
-      // See whether there is an odd number of '\' before this.
-      // FIXME: This is wrong. A '\' followed by a newline is always removed,
-      // regardless of whether there is another '\' before it.
-      // FIXME: Newlines can also be escaped by a '?' '?' '/' trigraph.
-      unsigned count = 0;
-      for (; pos >= 0; --pos, ++count)
-        if (Text[pos] != '\\')
-          break;
-      return count & 1;
-    };
-    // FIXME: This miscounts tok:unknown tokens that are not just
-    // whitespace, e.g. a '`' character.
+    bool InEscape = false;
     for (int i = 0, e = Text.size(); i != e; ++i) {
       switch (Text[i]) {
+      case '\r':
+        // If this is a CRLF sequence, break here and the LF will be handled on
+        // the next loop iteration. Otherwise, this is a single Mac CR, treat it
+        // the same as a single LF.
+        if (i + 1 < e && Text[i + 1] == '\n')
+          break;
+        LLVM_FALLTHROUGH;
       case '\n':
         ++FormatTok->NewlinesBefore;
-        FormatTok->HasUnescapedNewline = !EscapesNewline(i - 1);
-        FormatTok->LastNewlineOffset = WhitespaceLength + i + 1;
-        Column = 0;
-        break;
-      case '\r':
+        if (!InEscape)
+          FormatTok->HasUnescapedNewline = true;
+        else
+          InEscape = false;
         FormatTok->LastNewlineOffset = WhitespaceLength + i + 1;
         Column = 0;
         break;
@@ -897,23 +946,31 @@ FormatToken *FormatTokenLexer::getNextToken() {
             Style.TabWidth - (Style.TabWidth ? Column % Style.TabWidth : 0);
         break;
       case '\\':
-        if (i + 1 == e || (Text[i + 1] != '\r' && Text[i + 1] != '\n'))
-          FormatTok->setType(TT_ImplicitStringLiteral);
+      case '?':
+      case '/':
+        // The text was entirely whitespace when this loop was entered. Thus
+        // this has to be an escape sequence.
+        assert(Text.substr(i, 2) == "\\\r" || Text.substr(i, 2) == "\\\n" ||
+               Text.substr(i, 4) == "\?\?/\r" ||
+               Text.substr(i, 4) == "\?\?/\n" ||
+               (i >= 1 && (Text.substr(i - 1, 4) == "\?\?/\r" ||
+                           Text.substr(i - 1, 4) == "\?\?/\n")) ||
+               (i >= 2 && (Text.substr(i - 2, 4) == "\?\?/\r" ||
+                           Text.substr(i - 2, 4) == "\?\?/\n")));
+        InEscape = true;
         break;
       default:
-        FormatTok->setType(TT_ImplicitStringLiteral);
+        // This shouldn't happen.
+        assert(false);
         break;
       }
-      if (FormatTok->getType() == TT_ImplicitStringLiteral)
-        break;
     }
-
-    if (FormatTok->is(TT_ImplicitStringLiteral))
-      break;
-    WhitespaceLength += FormatTok->Tok.getLength();
-
+    WhitespaceLength += Text.size();
     readRawToken(*FormatTok);
   }
+
+  if (FormatTok->is(tok::unknown))
+    FormatTok->setType(TT_ImplicitStringLiteral);
 
   // JavaScript and Java do not allow to escape the end of the line with a
   // backslash. Backslashes are syntax errors in plain source, but can occur in
@@ -928,40 +985,11 @@ FormatToken *FormatTokenLexer::getNextToken() {
     while (BackslashPos != StringRef::npos) {
       if (BackslashPos + 1 < FormatTok->TokenText.size() &&
           FormatTok->TokenText[BackslashPos + 1] == '\n') {
-        const char *Offset = Lex->getBufferLocation();
-        Offset -= FormatTok->TokenText.size();
-        Offset += BackslashPos + 1;
-        resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset)));
-        FormatTok->TokenText = FormatTok->TokenText.substr(0, BackslashPos + 1);
-        FormatTok->ColumnWidth = encoding::columnWidthWithTabs(
-            FormatTok->TokenText, FormatTok->OriginalColumn, Style.TabWidth,
-            Encoding);
+        truncateToken(BackslashPos + 1);
         break;
       }
       BackslashPos = FormatTok->TokenText.find('\\', BackslashPos + 1);
     }
-  }
-
-  // In case the token starts with escaped newlines, we want to
-  // take them into account as whitespace - this pattern is quite frequent
-  // in macro definitions.
-  // FIXME: Add a more explicit test.
-  while (FormatTok->TokenText.size() > 1 && FormatTok->TokenText[0] == '\\') {
-    unsigned SkippedWhitespace = 0;
-    if (FormatTok->TokenText.size() > 2 &&
-        (FormatTok->TokenText[1] == '\r' && FormatTok->TokenText[2] == '\n')) {
-      SkippedWhitespace = 3;
-    } else if (FormatTok->TokenText[1] == '\n') {
-      SkippedWhitespace = 2;
-    } else {
-      break;
-    }
-
-    ++FormatTok->NewlinesBefore;
-    WhitespaceLength += SkippedWhitespace;
-    FormatTok->LastNewlineOffset = SkippedWhitespace;
-    Column = 0;
-    FormatTok->TokenText = FormatTok->TokenText.substr(SkippedWhitespace);
   }
 
   FormatTok->WhitespaceRange = SourceRange(
