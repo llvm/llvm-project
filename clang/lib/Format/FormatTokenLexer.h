@@ -92,6 +92,8 @@ private:
 
   bool tryMergeConflictMarkers();
 
+  void truncateToken(size_t NewLen);
+
   FormatToken *getStashedToken();
 
   FormatToken *getNextToken();
