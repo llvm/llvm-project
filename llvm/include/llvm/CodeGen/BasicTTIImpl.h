@@ -1203,6 +1203,7 @@ public:
     if (CostKind != TTI::TCK_RecipThroughput)
       return Cost;
 
+    const DataLayout &DL = this->getDataLayout();
     if (Src->isVectorTy() &&
         // In practice it's not currently possible to have a change in lane
         // length for extending loads or truncating stores so both types should
