@@ -186,10 +186,10 @@ compareNode(uint32_t Offset, StringRef Name, bool Strict,
       N.IsRoot || startsWith(Name, N.Name, Strict, Consummed,
                              PreviousCharInName, PreviousCharInNeedle);
   if (!DoesStartWith)
-    return {N, false, 0};
+    return std::make_tuple(N, false, 0);
 
   if (Name.size() - Consummed == 0 && N.Value != 0xFFFFFFFF)
-    return {N, true, N.Value};
+    return std::make_tuple(N, true, N.Value);
 
   if (N.hasChildren()) {
     uint32_t ChildOffset = N.ChildrenOffset;
@@ -203,14 +203,14 @@ compareNode(uint32_t Offset, StringRef Name, bool Strict,
       if (Matches) {
         std::reverse_copy(C.Name.begin(), C.Name.end(),
                           std::back_inserter(Buffer));
-        return {N, true, Value};
+        return std::make_tuple(N, true, Value);
       }
       ChildOffset += C.Size;
       if (!C.HasSibling)
         break;
     }
   }
-  return {N, false, 0};
+  return std::make_tuple(N, false, 0);
 }
 
 static std::tuple<Node, bool, uint32_t>
