@@ -1909,9 +1909,18 @@ void UnwrappedLineParser::parseStructuralElement(
       if (Style.isJavaScript())
         break;
 
-      TokenCount = Line->Tokens.size();
-      if (TokenCount == 1 ||
-          (TokenCount == 2 && Line->Tokens.front().Tok->is(tok::comment))) {
+      auto OneTokenSoFar = [&]() {
+        const UnwrappedLineNode *Tok = &Line->Tokens.front(),
+                                *End = Tok + Line->Tokens.size();
+        while (Tok != End && Tok->Tok->is(tok::comment))
+          ++Tok;
+        // In Verilog, macro invocations start with a backtick which the code
+        // treats as a hash.  Skip it.
+        if (Style.isVerilog() && Tok != End && Tok->Tok->is(tok::hash))
+          ++Tok;
+        return End - Tok == 1;
+      };
+      if (OneTokenSoFar()) {
         if (FormatTok->is(tok::colon) && !Line->MustBeDeclaration) {
           Line->Tokens.begin()->Tok->MustBreakBefore = true;
           parseLabel(!Style.IndentGotoLabels);
@@ -4283,6 +4292,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
     PreviousWasComment = FormatTok->is(tok::comment);
 
     while (!Line->InPPDirective && FormatTok->is(tok::hash) &&
+           (!Style.isVerilog() ||
+            Keywords.isVerilogPPDirective(*Tokens->peekNextToken())) &&
            FirstNonCommentOnLine) {
       distributeComments(Comments, FormatTok);
       Comments.clear();

@@ -992,6 +992,25 @@ FormatToken *FormatTokenLexer::getNextToken() {
     }
   }
 
+  if (Style.isVerilog()) {
+    // Verilog uses the backtick instead of the hash for preprocessor stuff.
+    // And it uses the hash for delays and parameter lists. In order to continue
+    // using `tok::hash` in other places, the backtick gets marked as the hash
+    // here.  And in order to tell the backtick and hash apart for
+    // Verilog-specific stuff, the hash becomes an identifier.
+    if (FormatTok->isOneOf(tok::hash, tok::hashhash)) {
+      FormatTok->Tok.setKind(tok::raw_identifier);
+    } else if (FormatTok->is(tok::raw_identifier)) {
+      if (FormatTok->TokenText == "`") {
+        FormatTok->Tok.setIdentifierInfo(nullptr);
+        FormatTok->Tok.setKind(tok::hash);
+      } else if (FormatTok->TokenText == "``") {
+        FormatTok->Tok.setIdentifierInfo(nullptr);
+        FormatTok->Tok.setKind(tok::hashhash);
+      }
+    }
+  }
+
   FormatTok->WhitespaceRange = SourceRange(
       WhitespaceStart, WhitespaceStart.getLocWithOffset(WhitespaceLength));
 
@@ -1079,8 +1098,51 @@ FormatToken *FormatTokenLexer::getNextToken() {
   return FormatTok;
 }
 
+bool FormatTokenLexer::readRawTokenVerilogSpecific(Token &Tok) {
+  // In Verilog the quote is not a character literal.
+  //
+  // Make the backtick and double backtick identifiers to match against them
+  // more easily.
+  //
+  // In Verilog an escaped identifier starts with backslash and ends with
+  // whitespace. Unless that whitespace is an escaped newline. A backslash can
+  // also begin an escaped newline outside of an escaped identifier. We check
+  // for that outside of the Regex since we can't use negative lookhead
+  // assertions. Simply changing the '*' to '+' breaks stuff as the escaped
+  // identifier may have a length of 0 according to Section A.9.3.
+  // FIXME: If there is an escaped newline in the middle of an escaped
+  // identifier, allow for pasting the two lines together, But escaped
+  // identifiers usually occur only in generated code anyway.
+  static const llvm::Regex VerilogToken(R"re(^('|``?|\\(\\)re"
+                                        "(\r?\n|\r)|[^[:space:]])*)");
+
+  SmallVector<StringRef, 4> Matches;
+  const char *Start = Lex->getBufferLocation();
+  if (!VerilogToken.match(StringRef(Start, Lex->getBuffer().end() - Start),
+                          &Matches)) {
+    return false;
+  }
+  // There is a null byte at the end of the buffer, so we don't have to check
+  // Start[1] is within the buffer.
+  if (Start[0] == '\\' && (Start[1] == '\r' || Start[1] == '\n'))
+    return false;
+  size_t Len = Matches[0].size();
+
+  Tok.setLength(Len);
+  Tok.setLocation(Lex->getSourceLocation(Start, Len));
+  // The kind has to be an identifier so we can match it against those defined
+  // in Keywords.
+  Tok.setKind(tok::raw_identifier);
+  Tok.setRawIdentifierData(Start);
+  Lex->seek(Lex->getCurrentBufferOffset() + Len, /*IsAtStartofline=*/false);
+  return true;
+}
+
 void FormatTokenLexer::readRawToken(FormatToken &Tok) {
-  Lex->LexFromRawLexer(Tok.Tok);
+  // For Verilog, first see if there is a special token, and fall back to the
+  // normal lexer if there isn't one.
+  if (!Style.isVerilog() || !readRawTokenVerilogSpecific(Tok.Tok))
+    Lex->LexFromRawLexer(Tok.Tok);
   Tok.TokenText = StringRef(SourceMgr.getCharacterData(Tok.Tok.getLocation()),
                             Tok.Tok.getLength());
   // For formatting, treat unterminated string literals like normal string
