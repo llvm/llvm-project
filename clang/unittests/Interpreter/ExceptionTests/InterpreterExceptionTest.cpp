@@ -48,6 +48,7 @@ createInterpreter(const Args &ExtraArgs = {},
 TEST(InterpreterTest, CatchException) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
+  llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   {
     auto J = llvm::orc::LLJITBuilder().create();
@@ -131,8 +132,6 @@ extern "C" int throw_exception() {
   EXPECT_ANY_THROW(ThrowException());
   std::string CapturedStdOut = testing::internal::GetCapturedStdout();
   EXPECT_EQ(CapturedStdOut, "Caught: 'To be caught in JIT'\n");
-
-  llvm::llvm_shutdown();
 }
 
 } // end anonymous namespace
