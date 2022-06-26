@@ -61,7 +61,7 @@ constexpr bool all_the_algorithms()
 {
     T a[10] = {};
     T b[10] = {};
-    //T half[5] = {};
+    T half[5] = {};
     T *first = a;
     T *mid = a+5;
     T *last = a+10;
@@ -134,8 +134,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::max(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::max_element(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::max_element(a, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::merge(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::merge(half, half, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::merge(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::merge(half, half, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::min(T(), T(), Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::min({ T(), T() }, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::min(a, Less(), Proj(&copies)); assert(copies == 0);

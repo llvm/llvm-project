@@ -131,6 +131,7 @@ END-SCRIPT
 #include <__algorithm/ranges_lower_bound.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_lower_bound.h'}}
 #include <__algorithm/ranges_max.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max.h'}}
 #include <__algorithm/ranges_max_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max_element.h'}}
+#include <__algorithm/ranges_merge.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_merge.h'}}
 #include <__algorithm/ranges_min.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_min.h'}}
 #include <__algorithm/ranges_min_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_min_element.h'}}
 #include <__algorithm/ranges_minmax.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_minmax.h'}}
