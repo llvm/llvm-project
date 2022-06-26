@@ -763,7 +763,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
   EXPECT_EQ(Call->getDebugLoc(), Clone->getDebugLoc());
   EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
-  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+  EXPECT_TRUE(Clone->getOperandBundle("after"));
 }
 
 TEST(InstructionsTest, AlterInvokeBundles) {
@@ -795,7 +795,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
   EXPECT_EQ(Invoke->getDebugLoc(), Clone->getDebugLoc());
   EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
-  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+  EXPECT_TRUE(Clone->getOperandBundle("after"));
 }
 
 TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {

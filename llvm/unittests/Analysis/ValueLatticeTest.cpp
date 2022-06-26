@@ -65,7 +65,7 @@ TEST_F(ValueLatticeTest, MergeIn) {
   auto LV1 = ValueLatticeElement::get(C1);
   EXPECT_FALSE(LV1.mergeIn(ValueLatticeElement::get(C1)));
   EXPECT_TRUE(LV1.isConstantRange());
-  EXPECT_EQ(LV1.asConstantInteger().getValue().getLimitedValue(), 1U);
+  EXPECT_EQ(LV1.asConstantInteger()->getLimitedValue(), 1U);
 
   // Merge LV1 with different integer constant.
   EXPECT_TRUE(

@@ -1667,7 +1667,7 @@ TEST_F(DIDerivedTypeTest, get) {
   EXPECT_EQ(2u, N->getSizeInBits());
   EXPECT_EQ(3u, N->getAlignInBits());
   EXPECT_EQ(4u, N->getOffsetInBits());
-  EXPECT_EQ(DWARFAddressSpace, N->getDWARFAddressSpace().getValue());
+  EXPECT_EQ(DWARFAddressSpace, *N->getDWARFAddressSpace());
   EXPECT_EQ(None, N->getPtrAuthData());
   EXPECT_EQ(PtrAuthData, N1->getPtrAuthData());
   EXPECT_EQ(5u, N->getFlags());

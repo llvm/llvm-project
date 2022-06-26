@@ -52,9 +52,7 @@ std::vector<uint64_t> getValidAlignments() {
 
 TEST(AlignmentTest, AlignDefaultCTor) { EXPECT_EQ(Align().value(), 1ULL); }
 
-TEST(AlignmentTest, MaybeAlignDefaultCTor) {
-  EXPECT_FALSE(MaybeAlign().hasValue());
-}
+TEST(AlignmentTest, MaybeAlignDefaultCTor) { EXPECT_FALSE(MaybeAlign()); }
 
 TEST(AlignmentTest, ValidCTors) {
   for (uint64_t Value : getValidAlignments()) {
@@ -134,7 +132,7 @@ TEST(AlignmentTest, Encode_Decode) {
   for (uint64_t Value : getValidAlignments()) {
     {
       Align Actual(Value);
-      Align Expected = decodeMaybeAlign(encode(Actual)).getValue();
+      Align Expected = *decodeMaybeAlign(encode(Actual));
       EXPECT_EQ(Expected, Actual);
     }
     {
@@ -251,7 +249,7 @@ std::vector<uint64_t> getValidAlignmentsForDeathTest() {
 std::vector<uint64_t> getNonPowerOfTwo() { return {3, 10, 15}; }
 
 TEST(AlignmentDeathTest, CantConvertUnsetMaybe) {
-  EXPECT_DEATH((MaybeAlign(0).getValue()), ".*");
+  EXPECT_DEATH((*MaybeAlign(0)), ".*");
 }
 
 TEST(AlignmentDeathTest, InvalidCTors) {
