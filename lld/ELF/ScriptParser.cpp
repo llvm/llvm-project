@@ -1043,8 +1043,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
     // Support = followed by an expression without whitespace.
     SaveAndRestore<bool> saved(inExpr, true);
     cmd = readSymbolAssignment(tok);
-  } else if ((op.size() == 2 && op[1] == '=' &&
-              is_contained("*/+-&|", op[0])) ||
+  } else if ((op.size() == 2 && op[1] == '=' && strchr("*/+-&|", op[0])) ||
              op == "<<=" || op == ">>=") {
     cmd = readSymbolAssignment(tok);
   } else if (tok == "PROVIDE") {
