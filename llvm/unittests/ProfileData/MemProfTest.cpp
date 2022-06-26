@@ -104,7 +104,7 @@ MATCHER_P4(FrameContains, FunctionName, LineOffset, Column, Inline, "") {
     *result_listener << "Hash mismatch";
     return false;
   }
-  if (F.SymbolName.hasValue() && F.SymbolName.getValue() != FunctionName) {
+  if (F.SymbolName && F.SymbolName.getValue() != FunctionName) {
     *result_listener << "SymbolName mismatch\nWant: " << FunctionName
                      << "\nGot: " << F.SymbolName.getValue();
     return false;

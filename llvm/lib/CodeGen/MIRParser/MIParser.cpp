@@ -741,7 +741,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
-  if (SectionID.hasValue()) {
+  if (SectionID) {
     MBB->setSectionID(SectionID.getValue());
     MF.setBBSectionsType(BasicBlockSection::List);
   }

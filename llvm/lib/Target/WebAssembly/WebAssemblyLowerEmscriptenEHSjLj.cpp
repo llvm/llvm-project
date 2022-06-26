@@ -552,7 +552,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
     Optional<unsigned> NEltArg;
     std::tie(SizeArg, NEltArg) = FnAttrs.getAllocSizeArgs();
     SizeArg += 1;
-    if (NEltArg.hasValue())
+    if (NEltArg)
       NEltArg = NEltArg.getValue() + 1;
     FnAttrs.addAllocSizeAttr(SizeArg, NEltArg);
   }

@@ -100,25 +100,24 @@ BinarySizeContextTracker::getFuncSizeForContext(const SampleContext &Context) {
     PrevNode = CurrNode;
     CurrNode =
         CurrNode->getChildContext(ChildFrame.Location, ChildFrame.FuncName);
-    if (CurrNode && CurrNode->getFunctionSize().hasValue())
+    if (CurrNode && CurrNode->getFunctionSize())
       Size = CurrNode->getFunctionSize().getValue();
   }
 
   // If we traversed all nodes along the path of the context and haven't
   // found a size yet, pivot to look for size from sibling nodes, i.e size
   // of inlinee under different context.
-  if (!Size.hasValue()) {
+  if (!Size) {
     if (!CurrNode)
       CurrNode = PrevNode;
-    while (!Size.hasValue() && CurrNode &&
-           !CurrNode->getAllChildContext().empty()) {
+    while (!Size && CurrNode && !CurrNode->getAllChildContext().empty()) {
       CurrNode = &CurrNode->getAllChildContext().begin()->second;
-      if (CurrNode->getFunctionSize().hasValue())
+      if (CurrNode->getFunctionSize())
         Size = CurrNode->getFunctionSize().getValue();
     }
   }
 
-  assert(Size.hasValue() && "We should at least find one context size.");
+  assert(Size && "We should at least find one context size.");
   return Size.getValue();
 }
 

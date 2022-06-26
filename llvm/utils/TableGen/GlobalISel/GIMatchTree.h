@@ -36,7 +36,7 @@ public:
   StringRef getName() const { return Name; }
   unsigned getInstrID() const { return InstrID; }
   unsigned getOpIdx() const {
-    assert(OpIdx.hasValue() && "Is not an operand binding");
+    assert(OpIdx && "Is not an operand binding");
     return *OpIdx;
   }
 };

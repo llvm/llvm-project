@@ -501,10 +501,10 @@ Optional<StringRef> llvm::getAllocationFamily(const Value *I,
   if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
     return None;
   const auto AllocData = getAllocationDataForFunction(Callee, AnyAlloc, TLI);
-  if (AllocData.hasValue())
+  if (AllocData)
     return mangledNameForMallocFamily(AllocData.getValue().Family);
   const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
-  if (FreeData.hasValue())
+  if (FreeData)
     return mangledNameForMallocFamily(FreeData.getValue().Family);
   return None;
 }
@@ -512,7 +512,7 @@ Optional<StringRef> llvm::getAllocationFamily(const Value *I,
 /// isLibFreeFunction - Returns true if the function is a builtin free()
 bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   Optional<FreeFnsTy> FnData = getFreeFunctionDataForFunction(F, TLIFn);
-  if (!FnData.hasValue())
+  if (!FnData)
     return false;
 
   // Check free prototype.
