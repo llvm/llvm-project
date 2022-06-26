@@ -372,7 +372,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   Optional<MDNode *> NewInnerEpilogueLoopID = makeFollowupLoopID(
       OrigOuterLoopID, {LLVMLoopUnrollAndJamFollowupAll,
                         LLVMLoopUnrollAndJamFollowupRemainderInner});
-  if (NewInnerEpilogueLoopID.hasValue())
+  if (NewInnerEpilogueLoopID)
     SubLoop->setLoopID(NewInnerEpilogueLoopID.getValue());
 
   // Find trip count and trip multiple
@@ -402,14 +402,14 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     Optional<MDNode *> NewOuterEpilogueLoopID = makeFollowupLoopID(
         OrigOuterLoopID, {LLVMLoopUnrollAndJamFollowupAll,
                           LLVMLoopUnrollAndJamFollowupRemainderOuter});
-    if (NewOuterEpilogueLoopID.hasValue())
+    if (NewOuterEpilogueLoopID)
       EpilogueOuterLoop->setLoopID(NewOuterEpilogueLoopID.getValue());
   }
 
   Optional<MDNode *> NewInnerLoopID =
       makeFollowupLoopID(OrigOuterLoopID, {LLVMLoopUnrollAndJamFollowupAll,
                                            LLVMLoopUnrollAndJamFollowupInner});
-  if (NewInnerLoopID.hasValue())
+  if (NewInnerLoopID)
     SubLoop->setLoopID(NewInnerLoopID.getValue());
   else
     SubLoop->setLoopID(OrigSubLoopID);
@@ -418,7 +418,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     Optional<MDNode *> NewOuterLoopID = makeFollowupLoopID(
         OrigOuterLoopID,
         {LLVMLoopUnrollAndJamFollowupAll, LLVMLoopUnrollAndJamFollowupOuter});
-    if (NewOuterLoopID.hasValue()) {
+    if (NewOuterLoopID) {
       L->setLoopID(NewOuterLoopID.getValue());
 
       // Do not setLoopAlreadyUnrolled if a followup was given.

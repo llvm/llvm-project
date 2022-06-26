@@ -343,7 +343,7 @@ public:
   bool has(const T &Elem) const { return get(Elem).hasValue(); }
 
   bool add(const T &Main) {
-    if (get(Main).hasValue())
+    if (get(Main))
       return false;
 
     auto NewIndex = getNewUnlinkedIndex();
