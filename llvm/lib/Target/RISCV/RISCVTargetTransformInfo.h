@@ -57,6 +57,7 @@ public:
   bool shouldExpandReduction(const IntrinsicInst *II) const;
   bool supportsScalableVectors() const { return ST->hasVInstructions(); }
   Optional<unsigned> getMaxVScale() const;
+  Optional<unsigned> getVScaleForTuning() const;
 
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
 
