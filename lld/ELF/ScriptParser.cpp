@@ -1038,11 +1038,14 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 
   size_t oldPos = pos;
   SymbolAssignment *cmd = nullptr;
-  if (peek().startswith("=")) {
+  const StringRef op = peek();
+  if (op.startswith("=")) {
     // Support = followed by an expression without whitespace.
     SaveAndRestore<bool> saved(inExpr, true);
     cmd = readSymbolAssignment(tok);
-  } else if (peek() == "+=") {
+  } else if ((op.size() == 2 && op[1] == '=' &&
+              is_contained("*/+-&|", op[0])) ||
+             op == "<<=" || op == ">>=") {
     cmd = readSymbolAssignment(tok);
   } else if (tok == "PROVIDE") {
     SaveAndRestore<bool> saved(inExpr, true);
@@ -1067,11 +1070,38 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   name = unquote(name);
   StringRef op = next();
-  assert(op == "=" || op == "+=");
+  assert(op == "=" || op == "*=" || op == "/=" || op == "+=" || op == "-=" ||
+         op == "&=" || op == "|=" || op == "<<=" || op == ">>=");
+  // Note: GNU ld does not support %= or ^=.
   Expr e = readExpr();
-  if (op == "+=") {
+  if (op != "=") {
     std::string loc = getCurrentLocation();
-    e = [=] { return add(script->getSymbolValue(name, loc), e()); };
+    e = [=, c = op[0]]() -> ExprValue {
+      ExprValue lhs = script->getSymbolValue(name, loc);
+      switch (c) {
+      case '*':
+        return lhs.getValue() * e().getValue();
+      case '/':
+        if (uint64_t rv = e().getValue())
+          return lhs.getValue() / rv;
+        error(loc + ": division by zero");
+        return 0;
+      case '+':
+        return add(lhs, e());
+      case '-':
+        return sub(lhs, e());
+      case '<':
+        return lhs.getValue() << e().getValue();
+      case '>':
+        return lhs.getValue() >> e().getValue();
+      case '&':
+        return lhs.getValue() & e().getValue();
+      case '|':
+        return lhs.getValue() | e().getValue();
+      default:
+        llvm_unreachable("");
+      }
+    };
   }
   return make<SymbolAssignment>(name, e, getCurrentLocation());
 }

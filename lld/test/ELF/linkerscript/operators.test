@@ -27,8 +27,22 @@ SECTIONS {
   ternary1 = 0 ? 1 : 2 & 6;
   ternary2 = 1 ? 2?3:4 : 5?6 :7;
 
+  mulassign =2;
+  mulassign *= 2;
+  divassign = 8;
+  divassign /= 2;
   plusassign =1;
   plusassign += 2;
+  minusassign = 3;
+  minusassign -= 1;
+  lshiftassign = 1;
+  lshiftassign <<= 2;
+  rshiftassign = 5;
+  rshiftassign >>= 1;
+  andassign = 6;
+  andassign &= 4;
+  orassign = 4;
+  orassign |= 1;
   braces = 1 + (2 + 3) * 4;
   precedence1 = 1|0xff&1/1<<1+1*2;
   precedence2 = (1 | (0xff & (1 << (1 + (1 * 2)))));
@@ -73,7 +87,14 @@ SECTIONS {
 # CHECK-NEXT: 0000000000000001 A logicalor2
 # CHECK-NEXT: 0000000000000002 A ternary1
 # CHECK-NEXT: 0000000000000003 A ternary2
+# CHECK-NEXT: 0000000000000004 A mulassign
+# CHECK-NEXT: 0000000000000004 A divassign
 # CHECK-NEXT: 0000000000000003 A plusassign
+# CHECK-NEXT: 0000000000000002 A minusassign
+# CHECK-NEXT: 0000000000000004 A lshiftassign
+# CHECK-NEXT: 0000000000000002 A rshiftassign
+# CHECK-NEXT: 0000000000000004 A andassign
+# CHECK-NEXT: 0000000000000005 A orassign
 # CHECK-NEXT: 0000000000000015 A braces
 # CHECK-NEXT: 0000000000000009 A precedence1
 # CHECK-NEXT: 0000000000000009 A precedence2
@@ -135,3 +156,7 @@ SECTIONS {
 # RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=TERNERR %s
 # TERNERR: : expected, but got ;
+
+## Div by zero error.
+# RUN: echo 'a = 1; a /= 0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=DIVZERO %s

@@ -134,10 +134,14 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
       continue;
     }
 
-    // ">foo" is parsed to ">" and "foo", but ">>" is parsed to ">>".
-    // "|", "||", "&" and "&&" are different operators.
-    if (s.startswith("<<") || s.startswith("<=") || s.startswith(">>") ||
-        s.startswith(">=") || s.startswith("||") || s.startswith("&&")) {
+    // Some operators form separate tokens.
+    if (s.startswith("<<=") || s.startswith(">>=")) {
+      vec.push_back(s.substr(0, 3));
+      s = s.substr(3);
+      continue;
+    }
+    if (s.size() > 1 && ((s[1] == '=' && strchr("*/+-<>&|", s[0])) ||
+                         (s[0] == s[1] && strchr("<>&|", s[0])))) {
       vec.push_back(s.substr(0, 2));
       s = s.substr(2);
       continue;
