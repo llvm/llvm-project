@@ -55,7 +55,7 @@ public:
   /// returned.
   AliasResult merge(AliasResult other) const;
 
-  /// Returns if this result is a partial alias.
+  /// Returns if this result indicates no possibility of aliasing.
   bool isNo() const { return kind == NoAlias; }
 
   /// Returns if this result is a may alias.
