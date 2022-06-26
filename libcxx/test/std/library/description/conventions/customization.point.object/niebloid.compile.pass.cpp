@@ -98,7 +98,7 @@ static_assert(test(std::ranges::lower_bound, a, 42));
 //static_assert(test(std::ranges::make_heap, a));
 static_assert(test(std::ranges::max, a));
 static_assert(test(std::ranges::max_element, a));
-//static_assert(test(std::ranges::merge, a, a, a));
+static_assert(test(std::ranges::merge, a, a, a));
 static_assert(test(std::ranges::min, a));
 static_assert(test(std::ranges::min_element, a));
 static_assert(test(std::ranges::minmax, a));
