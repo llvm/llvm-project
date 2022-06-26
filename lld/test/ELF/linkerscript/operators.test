@@ -5,7 +5,7 @@
 
 SECTIONS {
   _start = .;
-  unary =!0 + !0;
+  unary =!0 + !0;  # Test space can be omitted between = and !
   negate =-1 - 1;
   not =~0xffff + 4;
   not_negate = -~5 + 1;
@@ -28,9 +28,9 @@ SECTIONS {
   ternary2 = 1 ? 2?3:4 : 5?6 :7;
 
   mulassign =2;
-  mulassign *= 2;
+  mulassign *=2;  # Test space can be omitted after *=
   divassign = 8;
-  divassign /= 2;
+  divassign /=2;
   plusassign =1;
   plusassign += 2;
   minusassign = 3;
@@ -160,3 +160,11 @@ SECTIONS {
 ## Div by zero error.
 # RUN: echo 'a = 1; a /= 0;' > %t.script
 # RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=DIVZERO %s
+
+## GNU ld does not support %= or ^=.
+# RUN: echo 'a = 1; a %= 0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN %s
+# RUN: echo 'a = 1; a ^= 0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN %s
+
+# UNKNOWN: error: {{.*}}:1: unknown directive: a
