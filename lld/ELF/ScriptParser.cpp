@@ -645,6 +645,7 @@ static int precedence(StringRef op) {
       .Case("|", 4)
       .Case("&&", 3)
       .Case("||", 2)
+      .Case("?", 1)
       .Default(-1);
 }
 
@@ -1128,11 +1129,11 @@ Expr ScriptParser::combine(StringRef op, Expr l, Expr r) {
 Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
   while (!atEOF() && !errorCount()) {
     // Read an operator and an expression.
-    if (consume("?"))
-      return readTernary(lhs);
     StringRef op1 = peek();
     if (precedence(op1) < minPrec)
       break;
+    if (consume("?"))
+      return readTernary(lhs);
     skip();
     Expr rhs = readPrimary();
 
