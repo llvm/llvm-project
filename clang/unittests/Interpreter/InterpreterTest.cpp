@@ -128,6 +128,51 @@ TEST(InterpreterTest, DeclsAndStatements) {
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
 }
 
+TEST(InterpreterTest, UndoCommand) {
+  Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
+
+  // Create the diagnostic engine with unowned consumer.
+  std::string DiagnosticOutput;
+  llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
+  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
+      DiagnosticsOS, new DiagnosticOptions());
+
+  auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
+
+  // Fail to undo.
+  auto Err1 = Interp->Undo();
+  EXPECT_EQ("Operation failed. Too many undos",
+            llvm::toString(std::move(Err1)));
+  auto Err2 = Interp->Parse("int foo = 42;");
+  EXPECT_TRUE(!!Err2);
+  auto Err3 = Interp->Undo(2);
+  EXPECT_EQ("Operation failed. Too many undos",
+            llvm::toString(std::move(Err3)));
+
+  // Succeed to undo.
+  auto Err4 = Interp->Parse("int x = 42;");
+  EXPECT_TRUE(!!Err4);
+  auto Err5 = Interp->Undo();
+  EXPECT_FALSE(Err5);
+  auto Err6 = Interp->Parse("int x = 24;");
+  EXPECT_TRUE(!!Err6);
+  auto Err7 = Interp->Parse("#define X 42");
+  EXPECT_TRUE(!!Err7);
+  auto Err8 = Interp->Undo();
+  EXPECT_FALSE(Err8);
+  auto Err9 = Interp->Parse("#define X 24");
+  EXPECT_TRUE(!!Err9);
+
+  // Undo input contains errors.
+  auto Err10 = Interp->Parse("int y = ;");
+  EXPECT_FALSE(!!Err10);
+  EXPECT_EQ("Parsing failed.", llvm::toString(Err10.takeError()));
+  auto Err11 = Interp->Parse("int y = 42;");
+  EXPECT_TRUE(!!Err11);
+  auto Err12 = Interp->Undo();
+  EXPECT_FALSE(Err12);
+}
+
 static std::string MangleName(NamedDecl *ND) {
   ASTContext &C = ND->getASTContext();
   std::unique_ptr<MangleContext> MangleC(C.createMangleContext());

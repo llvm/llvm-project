@@ -15,4 +15,4 @@ void TestFunc() { ++TestVar; }
 // CHECK-NEXT:     UnaryOperator{{.*}} 'int' lvalue prefix '++'
 // CHECK-NEXT:       DeclRefExpr{{.*}} 'int' lvalue Var [[var_ptr]] 'TestVar' 'int'
 
-quit
+%quit
