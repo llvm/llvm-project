@@ -195,11 +195,11 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
 struct SCFForLoopCanonicalization
     : public SCFForLoopCanonicalizationBase<SCFForLoopCanonicalization> {
   void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
-    MLIRContext *ctx = funcOp.getContext();
+    auto *parentOp = getOperation();
+    MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns))))
+    if (failed(applyPatternsAndFoldGreedily(parentOp, std::move(patterns))))
       signalPassFailure();
   }
 };
