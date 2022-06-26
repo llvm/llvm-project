@@ -296,8 +296,8 @@ public:
     RootFile.DirIndex = 0;
     RootFile.Checksum = Checksum;
     RootFile.Source = Source;
-    trackMD5Usage(Checksum.hasValue());
-    HasSource = Source.hasValue();
+    trackMD5Usage(Checksum.has_value());
+    HasSource = Source.has_value();
   }
 
   void resetFileTable() {

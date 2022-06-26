@@ -86,7 +86,7 @@ public:
   bool omitFromLinkingSection() const { return OmitFromLinkingSection; }
   void setOmitFromLinkingSection() { OmitFromLinkingSection = true; }
 
-  bool hasImportModule() const { return ImportModule.hasValue(); }
+  bool hasImportModule() const { return ImportModule.has_value(); }
   StringRef getImportModule() const {
     if (ImportModule)
       return ImportModule.getValue();
@@ -98,7 +98,7 @@ public:
   }
   void setImportModule(StringRef Name) { ImportModule = Name; }
 
-  bool hasImportName() const { return ImportName.hasValue(); }
+  bool hasImportName() const { return ImportName.has_value(); }
   StringRef getImportName() const {
     if (ImportName)
       return ImportName.getValue();
@@ -106,7 +106,7 @@ public:
   }
   void setImportName(StringRef Name) { ImportName = Name; }
 
-  bool hasExportName() const { return ExportName.hasValue(); }
+  bool hasExportName() const { return ExportName.has_value(); }
   StringRef getExportName() const { return ExportName.getValue(); }
   void setExportName(StringRef Name) { ExportName = Name; }
 
@@ -134,7 +134,7 @@ public:
   }
   void setGlobalType(wasm::WasmGlobalType GT) { GlobalType = GT; }
 
-  bool hasTableType() const { return TableType.hasValue(); }
+  bool hasTableType() const { return TableType.has_value(); }
   const wasm::WasmTableType &getTableType() const {
     assert(hasTableType());
     return TableType.getValue();
