@@ -12,6 +12,7 @@
 
 #include "IncrementalExecutor.h"
 
+#include "clang/Interpreter/PartialTranslationUnit.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -52,8 +53,30 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
 
 IncrementalExecutor::~IncrementalExecutor() {}
 
-llvm::Error IncrementalExecutor::addModule(std::unique_ptr<llvm::Module> M) {
-  return Jit->addIRModule(llvm::orc::ThreadSafeModule(std::move(M), TSCtx));
+// Clean up the JIT instance.
+llvm::Error IncrementalExecutor::cleanUp() {
+  // This calls the global dtors of registered modules.
+  return Jit->deinitialize(Jit->getMainJITDylib());
+}
+
+llvm::Error IncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
+  llvm::orc::ResourceTrackerSP RT =
+      Jit->getMainJITDylib().createResourceTracker();
+  ResourceTrackers[&PTU] = RT;
+
+  return Jit->addIRModule(RT, {std::move(PTU.TheModule), TSCtx});
+}
+
+llvm::Error IncrementalExecutor::removeModule(PartialTranslationUnit &PTU) {
+
+  llvm::orc::ResourceTrackerSP RT = std::move(ResourceTrackers[&PTU]);
+  if (!RT)
+    return llvm::Error::success();
+
+  ResourceTrackers.erase(&PTU);
+  if (llvm::Error Err = RT->remove())
+    return Err;
+  return llvm::Error::success();
 }
 
 llvm::Error IncrementalExecutor::runCtors() const {

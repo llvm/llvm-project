@@ -483,7 +483,7 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
 static bool isTsanAtomic(const Instruction *I) {
   // TODO: Ask TTI whether synchronization scope is between threads.
   auto SSID = getAtomicSyncScopeID(I);
-  if (!SSID.hasValue())
+  if (!SSID)
     return false;
   if (isa<LoadInst>(I) || isa<StoreInst>(I))
     return SSID.getValue() != SyncScope::SingleThread;
