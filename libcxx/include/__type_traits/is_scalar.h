@@ -22,8 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// In C++03 nullptr_t is library-provided but must still count as "scalar."
-#if __has_keyword(__is_scalar) && !defined(_LIBCPP_CXX03_LANG)
+#if __has_keyword(__is_scalar)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_scalar : _BoolConstant<__is_scalar(_Tp)> { };
