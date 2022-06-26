@@ -1171,7 +1171,7 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
   Optional<ValueAndVReg> Arg =
       getIConstantVRegValWithLookThrough(I.getOperand(2).getReg(), *MRI);
 
-  if (Arg.hasValue()) {
+  if (Arg) {
     const int64_t Value = Arg.getValue().Value.getSExtValue();
     if (Value == 0) {
       unsigned Opcode = Is64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
@@ -4201,7 +4201,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
              MIB.addReg(Info->getScratchRSrcReg());
            },
            [=](MachineInstrBuilder &MIB) { // vaddr
-             if (FI.hasValue())
+             if (FI)
                MIB.addFrameIndex(FI.getValue());
              else
                MIB.addReg(VAddr);

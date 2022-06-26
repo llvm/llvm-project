@@ -88,7 +88,7 @@ public:
 
   bool hasImportModule() const { return ImportModule.hasValue(); }
   StringRef getImportModule() const {
-    if (ImportModule.hasValue())
+    if (ImportModule)
       return ImportModule.getValue();
     // Use a default module name of "env" for now, for compatibility with
     // existing tools.
@@ -100,7 +100,7 @@ public:
 
   bool hasImportName() const { return ImportName.hasValue(); }
   StringRef getImportName() const {
-    if (ImportName.hasValue())
+    if (ImportName)
       return ImportName.getValue();
     return getName();
   }
@@ -129,7 +129,7 @@ public:
   void setSignature(wasm::WasmSignature *Sig) { Signature = Sig; }
 
   const wasm::WasmGlobalType &getGlobalType() const {
-    assert(GlobalType.hasValue());
+    assert(GlobalType);
     return GlobalType.getValue();
   }
   void setGlobalType(wasm::WasmGlobalType GT) { GlobalType = GT; }

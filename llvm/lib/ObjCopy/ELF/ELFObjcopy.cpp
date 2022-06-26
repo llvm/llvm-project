@@ -639,7 +639,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
         Sec.Name = std::string(SR.NewName);
-        if (SR.NewFlags.hasValue())
+        if (SR.NewFlags)
           setSectionFlagsAndType(Sec, SR.NewFlags.getValue());
         RenamedSections.insert(&Sec);
       } else if (RelocSec && !(Sec.Flags & SHF_ALLOC))

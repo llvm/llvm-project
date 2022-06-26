@@ -751,7 +751,7 @@ template <class AliasAnalysisType> class ClobberWalker {
     bool operator==(const generic_def_path_iterator &O) const {
       if (N.hasValue() != O.N.hasValue())
         return false;
-      return !N.hasValue() || *N == *O.N;
+      return !N || *N == *O.N;
     }
 
   private:

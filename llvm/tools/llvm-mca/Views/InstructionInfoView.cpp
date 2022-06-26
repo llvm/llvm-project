@@ -70,7 +70,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     else if (IIVDEntry.Latency < 100)
       TempStream << ' ';
 
-    if (IIVDEntry.RThroughput.hasValue()) {
+    if (IIVDEntry.RThroughput) {
       double RT = IIVDEntry.RThroughput.getValue();
       TempStream << format("%.2f", RT) << ' ';
       if (RT < 10.0)

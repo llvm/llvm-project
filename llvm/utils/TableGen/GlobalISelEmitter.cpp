@@ -2936,12 +2936,12 @@ public:
   }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode(SubOperand.hasValue() ? "GIR_ComplexSubOperandRenderer"
-                                                      : "GIR_ComplexRenderer")
+    Table << MatchTable::Opcode(SubOperand ? "GIR_ComplexSubOperandRenderer"
+                                           : "GIR_ComplexRenderer")
           << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
           << MatchTable::Comment("RendererID")
           << MatchTable::IntValue(RendererID);
-    if (SubOperand.hasValue())
+    if (SubOperand)
       Table << MatchTable::Comment("SubOperand")
             << MatchTable::IntValue(SubOperand.getValue());
     Table << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;

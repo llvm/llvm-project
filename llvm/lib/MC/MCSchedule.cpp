@@ -98,7 +98,7 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
     double Temp = NumUnits * 1.0 / I->Cycles;
     Throughput = Throughput ? std::min(Throughput.getValue(), Temp) : Temp;
   }
-  if (Throughput.hasValue())
+  if (Throughput)
     return 1.0 / Throughput.getValue();
 
   // If no throughput value was calculated, assume that we can execute at the
@@ -142,7 +142,7 @@ MCSchedModel::getReciprocalThroughput(unsigned SchedClass,
     double Temp = countPopulation(I->getUnits()) * 1.0 / I->getCycles();
     Throughput = Throughput ? std::min(Throughput.getValue(), Temp) : Temp;
   }
-  if (Throughput.hasValue())
+  if (Throughput)
     return 1.0 / Throughput.getValue();
 
   // If there are no execution resources specified for this class, then assume

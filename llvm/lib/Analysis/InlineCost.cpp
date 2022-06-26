@@ -703,7 +703,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       BlockFrequencyInfo *BFI = &(GetBFI(F));
       assert(BFI && "BFI must be available");
       auto ProfileCount = BFI->getBlockProfileCount(BB);
-      assert(ProfileCount.hasValue());
+      assert(ProfileCount);
       if (ProfileCount.getValue() == 0)
         ColdSize += Cost - CostAtBBStart;
     }
@@ -828,14 +828,14 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       }
 
       auto ProfileCount = CalleeBFI->getBlockProfileCount(&BB);
-      assert(ProfileCount.hasValue());
+      assert(ProfileCount);
       CurrentSavings *= ProfileCount.getValue();
       CycleSavings += CurrentSavings;
     }
 
     // Compute the cycle savings per call.
     auto EntryProfileCount = F.getEntryCount();
-    assert(EntryProfileCount.hasValue() && EntryProfileCount->getCount());
+    assert(EntryProfileCount && EntryProfileCount->getCount());
     auto EntryCount = EntryProfileCount->getCount();
     CycleSavings += EntryCount / 2;
     CycleSavings = CycleSavings.udiv(EntryCount);

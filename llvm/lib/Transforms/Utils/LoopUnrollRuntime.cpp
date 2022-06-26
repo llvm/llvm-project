@@ -397,7 +397,7 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
 
   Optional<MDNode *> NewLoopID = makeFollowupLoopID(
       LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
-  if (NewLoopID.hasValue()) {
+  if (NewLoopID) {
     NewLoop->setLoopID(NewLoopID.getValue());
 
     // Do not setLoopAlreadyUnrolled if loop attributes have been defined
