@@ -53,12 +53,6 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
 
 IncrementalExecutor::~IncrementalExecutor() {}
 
-// Clean up the JIT instance.
-llvm::Error IncrementalExecutor::cleanUp() {
-  // This calls the global dtors of registered modules.
-  return Jit->deinitialize(Jit->getMainJITDylib());
-}
-
 llvm::Error IncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::orc::ResourceTrackerSP RT =
       Jit->getMainJITDylib().createResourceTracker();
