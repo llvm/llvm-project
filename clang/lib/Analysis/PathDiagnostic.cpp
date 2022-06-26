@@ -319,7 +319,7 @@ static Optional<bool> comparePath(const PathPieces &X, const PathPieces &Y) {
 
   for ( ; X_I != X_end && Y_I != Y_end; ++X_I, ++Y_I) {
     Optional<bool> b = comparePiece(**X_I, **Y_I);
-    if (b.hasValue())
+    if (b)
       return b.getValue();
   }
 
@@ -396,7 +396,7 @@ static bool compare(const PathDiagnostic &X, const PathDiagnostic &Y) {
       return (*XI) < (*YI);
   }
   Optional<bool> b = comparePath(X.path, Y.path);
-  assert(b.hasValue());
+  assert(b);
   return b.getValue();
 }
 

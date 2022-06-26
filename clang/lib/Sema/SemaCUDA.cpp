@@ -444,7 +444,7 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
   // If no target was inferred, mark this member as __host__ __device__;
   // it's the least restrictive option that can be invoked from any target.
   bool NeedsH = true, NeedsD = true;
-  if (InferredTarget.hasValue()) {
+  if (InferredTarget) {
     if (InferredTarget.getValue() == CFT_Device)
       NeedsH = false;
     else if (InferredTarget.getValue() == CFT_Host)
