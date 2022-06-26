@@ -272,6 +272,7 @@ DerivedFromTemplateNonVirtualBaseStruct2Typedef InstantiationWithPublicNonVirtua
 } // namespace Bugzilla_51912
 
 namespace macro_tests {
+#define MY_VIRTUAL virtual
 #define CONCAT(x, y) x##y
 
 // CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar1' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
@@ -317,8 +318,17 @@ class FooBar5 {
 protected:
   XMACRO(CONCAT(vir, tual), ~CONCAT(Foo, Bar5());) // no-crash, no-fixit
 };
+
+// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar6' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
+class FooBar6 {
+protected:
+  MY_VIRTUAL ~FooBar6(); // FIXME: We should have a fixit for this.
+};
+
 #undef XMACRO
 #undef CONCAT
+#undef MY_VIRTUAL
 } // namespace macro_tests
 
 namespace FinalClassCannotBeBaseClass {
