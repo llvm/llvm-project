@@ -212,9 +212,8 @@ static int isVariantApplicableInContextHelper(
         return Ctx.matchesISATrait(RawString);
       });
 
-    Optional<bool> Result = HandleTrait(Property, IsActiveTrait);
-    if (Result.hasValue())
-      return Result.getValue();
+    if (Optional<bool> Result = HandleTrait(Property, IsActiveTrait))
+      return *Result;
   }
 
   if (!DeviceSetOnly) {
@@ -233,9 +232,8 @@ static int isVariantApplicableInContextHelper(
       if (ConstructMatches)
         ConstructMatches->push_back(ConstructIdx - 1);
 
-      Optional<bool> Result = HandleTrait(Property, FoundInOrder);
-      if (Result.hasValue())
-        return Result.getValue();
+      if (Optional<bool> Result = HandleTrait(Property, FoundInOrder))
+        return *Result;
 
       if (!FoundInOrder) {
         LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Construct property "

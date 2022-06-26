@@ -211,7 +211,7 @@ Attribute Parser::parseAttribute(Type type) {
     // better error message.
     Type type;
     OptionalParseResult result = parseOptionalType(type);
-    if (!result.hasValue())
+    if (!result.has_value())
       return emitWrongTokenError("expected attribute value"), Attribute();
     return failed(*result) ? Attribute() : TypeAttr::get(type);
   }
@@ -245,7 +245,7 @@ OptionalParseResult Parser::parseOptionalAttribute(Attribute &attribute,
     // Parse an optional type attribute.
     Type type;
     OptionalParseResult result = parseOptionalType(type);
-    if (result.hasValue() && succeeded(*result))
+    if (result.has_value() && succeeded(*result))
       attribute = TypeAttr::get(type);
     return result;
   }
@@ -666,8 +666,8 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
 DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc,
                                                      ShapedType type,
                                                      Type eltTy) {
-  if (hexStorage.hasValue()) {
-    auto stringValue = hexStorage.getValue().getStringValue();
+  if (hexStorage) {
+    auto stringValue = hexStorage->getStringValue();
     return DenseStringElementsAttr::get(type, {stringValue});
   }
 

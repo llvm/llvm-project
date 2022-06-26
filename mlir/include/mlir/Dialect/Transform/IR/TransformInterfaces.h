@@ -75,11 +75,11 @@ public:
   }
 
   /// Returns `true` if this is a silencable failure.
-  bool isSilenceableFailure() const { return diagnostic.hasValue(); }
+  bool isSilenceableFailure() const { return diagnostic.has_value(); }
 
   /// Returns `true` if this is a success.
   bool succeeded() const {
-    return !diagnostic.hasValue() && ::mlir::succeeded(result);
+    return !diagnostic.has_value() && ::mlir::succeeded(result);
   }
 
   /// Returns the diagnostic message without emitting it. Expects this object

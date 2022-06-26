@@ -327,20 +327,20 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
         FileEntry.Source = Value;
         break;
       case DW_LNCT_directory_index:
-        FileEntry.DirIdx = Value.getAsUnsignedConstant().getValue();
+        FileEntry.DirIdx = *Value.getAsUnsignedConstant();
         break;
       case DW_LNCT_timestamp:
-        FileEntry.ModTime = Value.getAsUnsignedConstant().getValue();
+        FileEntry.ModTime = *Value.getAsUnsignedConstant();
         break;
       case DW_LNCT_size:
-        FileEntry.Length = Value.getAsUnsignedConstant().getValue();
+        FileEntry.Length = *Value.getAsUnsignedConstant();
         break;
       case DW_LNCT_MD5:
-        if (!Value.getAsBlock() || Value.getAsBlock().getValue().size() != 16)
+        if (!Value.getAsBlock() || Value.getAsBlock()->size() != 16)
           return createStringError(
               errc::invalid_argument,
               "failed to parse file entry because the MD5 hash is invalid");
-        std::uninitialized_copy_n(Value.getAsBlock().getValue().begin(), 16,
+        std::uninitialized_copy_n(Value.getAsBlock()->begin(), 16,
                                   FileEntry.Checksum.begin());
         break;
       default:

@@ -2598,10 +2598,10 @@ Init *Record::getValueInit(StringRef FieldName) const {
 
 StringRef Record::getValueAsString(StringRef FieldName) const {
   llvm::Optional<StringRef> S = getValueAsOptionalString(FieldName);
-  if (!S.hasValue())
+  if (!S)
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
-  return S.getValue();
+  return *S;
 }
 
 llvm::Optional<StringRef>

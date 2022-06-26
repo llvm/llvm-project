@@ -183,9 +183,9 @@ CmpInst::Predicate IRInstructionData::getPredicate() const {
   assert(isa<CmpInst>(Inst) &&
          "Can only get a predicate from a compare instruction");
 
-  if (RevisedPredicate.hasValue())
-    return RevisedPredicate.getValue();
-  
+  if (RevisedPredicate)
+    return *RevisedPredicate;
+
   return cast<CmpInst>(Inst)->getPredicate();
 }
 

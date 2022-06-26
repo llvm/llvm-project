@@ -196,10 +196,10 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
     for (auto &IncomingValue : Phi->incoming_values()) {
       Optional<int> SpillSlot =
           findPreviousSpillSlot(IncomingValue, Builder, LookUpDepth - 1);
-      if (!SpillSlot.hasValue())
+      if (!SpillSlot)
         return None;
 
-      if (MergedResult.hasValue() && *MergedResult != *SpillSlot)
+      if (MergedResult && *MergedResult != *SpillSlot)
         return None;
 
       MergedResult = SpillSlot;
@@ -530,16 +530,14 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     GCStrategy &S = GFI->getStrategy();
     for (const Value *V : SI.Bases) {
       auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
-      if (Opt.hasValue()) {
-        assert(Opt.getValue() &&
-               "non gc managed base pointer found in statepoint");
+      if (Opt) {
+        assert(*Opt && "non gc managed base pointer found in statepoint");
       }
     }
     for (const Value *V : SI.Ptrs) {
       auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
-      if (Opt.hasValue()) {
-        assert(Opt.getValue() &&
-               "non gc managed derived pointer found in statepoint");
+      if (Opt) {
+        assert(*Opt && "non gc managed derived pointer found in statepoint");
       }
     }
     assert(SI.Bases.size() == SI.Ptrs.size() && "Pointer without base!");

@@ -1191,14 +1191,13 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
     EXPECT_EQ(MemDef->isOptimized(), true)
         << "Store " << I << " was not optimized";
     if (I == 1 || I == 3 || I == 4)
-      EXPECT_EQ(MemDef->getOptimizedAccessType().getValue(),
-                AliasResult::MayAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType().value(), AliasResult::MayAlias)
           << "Store " << I << " doesn't have the correct alias information";
     else if (I == 0 || I == 2)
       EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
           << "Store " << I << " doesn't have the correct alias information";
     else
-      EXPECT_EQ(MemDef->getOptimizedAccessType().getValue(),
+      EXPECT_EQ(MemDef->getOptimizedAccessType().value(),
                 AliasResult::MustAlias)
           << "Store " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get

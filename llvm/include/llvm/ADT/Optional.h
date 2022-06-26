@@ -92,32 +92,40 @@ public:
   }
 
   constexpr bool has_value() const noexcept { return hasVal; }
+#if 0
   constexpr bool hasValue() const noexcept { return hasVal; }
+#endif
 
   T &value() &noexcept {
     assert(hasVal);
     return val;
   }
+#if 0
   T &getValue() &noexcept {
     assert(hasVal);
     return val;
   }
+#endif
   constexpr T const &value() const &noexcept {
     assert(hasVal);
     return val;
   }
+#if 0
   constexpr T const &getValue() const &noexcept {
     assert(hasVal);
     return val;
   }
+#endif
   T &&value() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
+#if 0
   T &&getValue() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
+#endif
 
   template <class... Args> void emplace(Args &&...args) {
     reset();
@@ -203,32 +211,40 @@ public:
   }
 
   constexpr bool has_value() const noexcept { return hasVal; }
+#if 0
   constexpr bool hasValue() const noexcept { return hasVal; }
+#endif
 
   T &value() &noexcept {
     assert(hasVal);
     return val;
   }
+#if 0
   T &getValue() &noexcept {
     assert(hasVal);
     return val;
   }
+#endif
   constexpr T const &value() const &noexcept {
     assert(hasVal);
     return val;
   }
+#if 0
   constexpr T const &getValue() const &noexcept {
     assert(hasVal);
     return val;
   }
+#endif
   T &&value() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
+#if 0
   T &&getValue() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
+#endif
 
   template <class... Args> void emplace(Args &&...args) {
     reset();
@@ -303,13 +319,19 @@ public:
   constexpr const T *getPointer() const { return &Storage.value(); }
   T *getPointer() { return &Storage.value(); }
   constexpr const T &value() const & { return Storage.value(); }
+#if 0
   constexpr const T &getValue() const & { return Storage.value(); }
+#endif
   T &value() & { return Storage.value(); }
+#if 0
   T &getValue() & { return Storage.value(); }
+#endif
 
   constexpr explicit operator bool() const { return has_value(); }
   constexpr bool has_value() const { return Storage.has_value(); }
+#if 0
   constexpr bool hasValue() const { return Storage.has_value(); }
+#endif
   constexpr const T *operator->() const { return getPointer(); }
   T *operator->() { return getPointer(); }
   constexpr const T &operator*() const & { return value(); }
@@ -331,7 +353,9 @@ public:
   }
 
   T &&value() && { return std::move(Storage.value()); }
+#if 0
   T &&getValue() && { return std::move(Storage.value()); }
+#endif
   T &&operator*() && { return std::move(Storage.value()); }
 
   template <typename U> T value_or(U &&alt) && {

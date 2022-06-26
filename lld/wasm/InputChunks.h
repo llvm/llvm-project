@@ -249,9 +249,9 @@ class InputFunction : public InputChunk {
 public:
   InputFunction(const WasmSignature &s, const WasmFunction *func, ObjFile *f)
       : InputChunk(f, InputChunk::Function, func->SymbolName), signature(s),
-        function(func), exportName(func && func->ExportName.hasValue()
-                                       ? (*func->ExportName).str()
-                                       : llvm::Optional<std::string>()) {
+        function(func),
+        exportName(func && func->ExportName ? (*func->ExportName).str()
+                                            : llvm::Optional<std::string>()) {
     inputSectionOffset = function->CodeSectionOffset;
     rawData =
         file->codeSection->Content.slice(inputSectionOffset, function->Size);
@@ -268,17 +268,17 @@ public:
   }
 
   llvm::Optional<StringRef> getExportName() const {
-    return exportName.hasValue() ? llvm::Optional<StringRef>(*exportName)
-                                 : llvm::Optional<StringRef>();
+    return exportName ? llvm::Optional<StringRef>(*exportName)
+                      : llvm::Optional<StringRef>();
   }
   void setExportName(std::string exportName) { this->exportName = exportName; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
   uint32_t getFunctionCodeOffset() const { return function->CodeOffset; }
-  uint32_t getFunctionIndex() const { return functionIndex.getValue(); }
-  bool hasFunctionIndex() const { return functionIndex.hasValue(); }
+  uint32_t getFunctionIndex() const { return *functionIndex; }
+  bool hasFunctionIndex() const { return functionIndex.has_value(); }
   void setFunctionIndex(uint32_t index);
-  uint32_t getTableIndex() const { return tableIndex.getValue(); }
-  bool hasTableIndex() const { return tableIndex.hasValue(); }
+  uint32_t getTableIndex() const { return *tableIndex; }
+  bool hasTableIndex() const { return tableIndex.has_value(); }
   void setTableIndex(uint32_t index);
   void writeCompressed(uint8_t *buf) const;
 

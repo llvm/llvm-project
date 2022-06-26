@@ -77,8 +77,8 @@ AnalyzerOptions::getExplorationStrategy() const {
           .Case("bfs_block_dfs_contents",
                 ExplorationStrategyKind::BFSBlockDFSContents)
           .Default(None);
-  assert(K.hasValue() && "User mode is invalid.");
-  return K.getValue();
+  assert(K && "User mode is invalid.");
+  return *K;
 }
 
 CTUPhase1InliningKind AnalyzerOptions::getCTUPhase1Inlining() const {
@@ -88,8 +88,8 @@ CTUPhase1InliningKind AnalyzerOptions::getCTUPhase1Inlining() const {
                .Case("small", CTUPhase1InliningKind::Small)
                .Case("all", CTUPhase1InliningKind::All)
                .Default(None);
-  assert(K.hasValue() && "CTU inlining mode is invalid.");
-  return K.getValue();
+  assert(K && "CTU inlining mode is invalid.");
+  return *K;
 }
 
 IPAKind AnalyzerOptions::getIPAMode() const {
@@ -100,9 +100,9 @@ IPAKind AnalyzerOptions::getIPAMode() const {
           .Case("dynamic", IPAK_DynamicDispatch)
           .Case("dynamic-bifurcate", IPAK_DynamicDispatchBifurcate)
           .Default(None);
-  assert(K.hasValue() && "IPA Mode is invalid.");
+  assert(K && "IPA Mode is invalid.");
 
-  return K.getValue();
+  return *K;
 }
 
 bool

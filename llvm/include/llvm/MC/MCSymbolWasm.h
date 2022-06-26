@@ -86,10 +86,10 @@ public:
   bool omitFromLinkingSection() const { return OmitFromLinkingSection; }
   void setOmitFromLinkingSection() { OmitFromLinkingSection = true; }
 
-  bool hasImportModule() const { return ImportModule.hasValue(); }
+  bool hasImportModule() const { return ImportModule.has_value(); }
   StringRef getImportModule() const {
-    if (ImportModule.hasValue())
-      return ImportModule.getValue();
+    if (ImportModule)
+      return *ImportModule;
     // Use a default module name of "env" for now, for compatibility with
     // existing tools.
     // TODO(sbc): Find a way to specify a default value in the object format
@@ -98,16 +98,16 @@ public:
   }
   void setImportModule(StringRef Name) { ImportModule = Name; }
 
-  bool hasImportName() const { return ImportName.hasValue(); }
+  bool hasImportName() const { return ImportName.has_value(); }
   StringRef getImportName() const {
-    if (ImportName.hasValue())
-      return ImportName.getValue();
+    if (ImportName)
+      return *ImportName;
     return getName();
   }
   void setImportName(StringRef Name) { ImportName = Name; }
 
-  bool hasExportName() const { return ExportName.hasValue(); }
-  StringRef getExportName() const { return ExportName.getValue(); }
+  bool hasExportName() const { return ExportName.has_value(); }
+  StringRef getExportName() const { return *ExportName; }
   void setExportName(StringRef Name) { ExportName = Name; }
 
   bool isFunctionTable() const {
@@ -129,15 +129,15 @@ public:
   void setSignature(wasm::WasmSignature *Sig) { Signature = Sig; }
 
   const wasm::WasmGlobalType &getGlobalType() const {
-    assert(GlobalType.hasValue());
-    return GlobalType.getValue();
+    assert(GlobalType.has_value());
+    return *GlobalType;
   }
   void setGlobalType(wasm::WasmGlobalType GT) { GlobalType = GT; }
 
-  bool hasTableType() const { return TableType.hasValue(); }
+  bool hasTableType() const { return TableType.has_value(); }
   const wasm::WasmTableType &getTableType() const {
     assert(hasTableType());
-    return TableType.getValue();
+    return *TableType;
   }
   void setTableType(wasm::WasmTableType TT) { TableType = TT; }
   void setTableType(wasm::ValType VT) {

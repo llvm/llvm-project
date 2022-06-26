@@ -131,8 +131,8 @@ public:
     bool IsAOneAddressSpace = isOneAddressSpace(A);
     bool IsBOneAddressSpace = isOneAddressSpace(B);
 
-    return AIO.getValue() >= BIO.getValue() &&
-        (IsAOneAddressSpace == IsBOneAddressSpace || !IsAOneAddressSpace);
+    return *AIO >= *BIO &&
+           (IsAOneAddressSpace == IsBOneAddressSpace || !IsAOneAddressSpace);
   }
 };
 

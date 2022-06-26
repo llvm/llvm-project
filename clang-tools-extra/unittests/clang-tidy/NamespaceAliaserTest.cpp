@@ -34,8 +34,8 @@ public:
     assert(Call != nullptr && "Did not find node \"foo\"");
     auto Hint = Aliaser->createAlias(*Result.Context, *Call, "::foo::bar",
                                      {"b", "some_alias"});
-    if (Hint.hasValue())
-      diag(Call->getBeginLoc(), "Fix for testing") << Hint.getValue();
+    if (Hint)
+      diag(Call->getBeginLoc(), "Fix for testing") << *Hint;
 
     diag(Call->getBeginLoc(), "insert call") << FixItHint::CreateInsertion(
         Call->getBeginLoc(),

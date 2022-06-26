@@ -53,25 +53,17 @@ public:
   }
 
   /// Return true if the constraint is perfectly constrained to 'true'.
-  bool isConstrainedTrue() const {
-    return Val.hasValue() && Val.getValue();
-  }
+  bool isConstrainedTrue() const { return Val && *Val; }
 
   /// Return true if the constraint is perfectly constrained to 'false'.
-  bool isConstrainedFalse() const {
-    return Val.hasValue() && !Val.getValue();
-  }
+  bool isConstrainedFalse() const { return Val && !*Val; }
 
   /// Return true if the constrained is perfectly constrained.
-  bool isConstrained() const {
-    return Val.hasValue();
-  }
+  bool isConstrained() const { return Val.has_value(); }
 
   /// Return true if the constrained is underconstrained and we do not know
   /// if the constraint is true of value.
-  bool isUnderconstrained() const {
-    return !Val.hasValue();
-  }
+  bool isUnderconstrained() const { return !Val.has_value(); }
 };
 
 class ConstraintManager {

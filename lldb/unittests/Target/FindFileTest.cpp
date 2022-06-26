@@ -56,7 +56,7 @@ static void TestFileFindings(const PathMappingList &map,
     llvm::Optional<FileSpec> remapped;
 
     EXPECT_TRUE(bool(remapped = map.FindFile(match.original)));
-    EXPECT_TRUE(FileSpec(remapped.getValue()).GetPath() ==
+    EXPECT_TRUE(FileSpec(*remapped).GetPath() ==
                 ConstString(match.remapped).GetStringRef());
   }
 }
