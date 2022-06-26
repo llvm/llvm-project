@@ -43,6 +43,7 @@ public:
 
   llvm::Error addModule(std::unique_ptr<llvm::Module> M);
   llvm::Error runCtors() const;
+  llvm::Error cleanUp();
   llvm::Expected<llvm::JITTargetAddress>
   getSymbolAddress(llvm::StringRef Name, SymbolNameKind NameKind) const;
   llvm::orc::LLJIT *getExecutionEngine() const { return Jit.get(); }
