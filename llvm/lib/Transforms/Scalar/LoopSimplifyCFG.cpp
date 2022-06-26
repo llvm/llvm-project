@@ -371,7 +371,7 @@ private:
         DeadInstructions.emplace_back(LandingPad);
 
       for (Instruction *I : DeadInstructions) {
-        I->replaceAllUsesWith(UndefValue::get(I->getType()));
+        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
         I->eraseFromParent();
       }
 
