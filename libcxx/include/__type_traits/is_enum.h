@@ -19,6 +19,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if __has_feature(is_enum) || defined(_LIBCPP_COMPILER_GCC)
+
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_enum
     : public integral_constant<bool, __is_enum(_Tp)> {};
 
@@ -26,6 +28,27 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_enum
 template <class _Tp>
 inline constexpr bool is_enum_v = __is_enum(_Tp);
 #endif
+
+#else
+
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_enum
+    : public integral_constant<bool, !is_void<_Tp>::value             &&
+                                     !is_integral<_Tp>::value         &&
+                                     !is_floating_point<_Tp>::value   &&
+                                     !is_array<_Tp>::value            &&
+                                     !is_pointer<_Tp>::value          &&
+                                     !is_reference<_Tp>::value        &&
+                                     !is_member_pointer<_Tp>::value   &&
+                                     !is_union<_Tp>::value            &&
+                                     !is_class<_Tp>::value            &&
+                                     !is_function<_Tp>::value         > {};
+
+#if _LIBCPP_STD_VER > 14
+template <class _Tp>
+inline constexpr bool is_enum_v = is_enum<_Tp>::value;
+#endif
+
+#endif // __has_feature(is_enum) || defined(_LIBCPP_COMPILER_GCC)
 
 _LIBCPP_END_NAMESPACE_STD
 
