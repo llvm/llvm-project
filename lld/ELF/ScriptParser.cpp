@@ -1017,7 +1017,14 @@ std::array<uint8_t, 4> ScriptParser::readFill() {
 
 SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
   expect("(");
-  SymbolAssignment *cmd = readSymbolAssignment(next());
+  StringRef name = next(), eq = peek();
+  if (eq != "=") {
+    setError("= expected, but got " + next());
+    while (!atEOF() && next() != ")")
+      ;
+    return nullptr;
+  }
+  SymbolAssignment *cmd = readSymbolAssignment(name);
   cmd->provide = provide;
   cmd->hidden = hidden;
   expect(")");

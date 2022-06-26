@@ -73,6 +73,11 @@
 # SIMPLE2: 0000000000000100 g       *ABS*  0000000000000000 bar
 # SIMPLE2: 0000000000000100 g       *ABS*  0000000000000000 baz
 
+# RUN: echo 'PROVIDE(somesym + 1);' > %t.script
+# RUN: not ld.lld -T %t.script %t -o /dev/null 2>&1 | FileCheck %s --check-prefix=PROVIDE-ERR
+
+# PROVIDE-ERR: {{.*}}:1: = expected, but got +
+
 .global _start
 _start:
  nop
