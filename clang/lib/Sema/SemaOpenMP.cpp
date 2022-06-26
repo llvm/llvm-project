@@ -828,7 +828,7 @@ public:
   /// Returns optional parameter for the ordered region.
   std::pair<const Expr *, OMPOrderedClause *> getOrderedRegionParam() const {
     if (const SharingMapTy *Top = getTopOfStackOrNull())
-      if (Top->OrderedRegion.hasValue())
+      if (Top->OrderedRegion)
         return Top->OrderedRegion.getValue();
     return std::make_pair(nullptr, nullptr);
   }
@@ -843,7 +843,7 @@ public:
   std::pair<const Expr *, OMPOrderedClause *>
   getParentOrderedRegionParam() const {
     if (const SharingMapTy *Parent = getSecondOnStackOrNull())
-      if (Parent->OrderedRegion.hasValue())
+      if (Parent->OrderedRegion)
         return Parent->OrderedRegion.getValue();
     return std::make_pair(nullptr, nullptr);
   }
@@ -7761,7 +7761,7 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
     bool IsConstZero = Result && !Result->getBoolValue();
 
     // != with increment is treated as <; != with decrement is treated as >
-    if (!TestIsLessOp.hasValue())
+    if (!TestIsLessOp)
       TestIsLessOp = IsConstPos || (IsUnsigned && !Subtract);
     if (UB &&
         (IsConstZero || (TestIsLessOp.getValue()
@@ -22180,7 +22180,7 @@ void Sema::ActOnOpenMPDeclareTargetName(NamedDecl *ND, SourceLocation Loc,
   auto *VD = cast<ValueDecl>(ND);
   llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr =
       OMPDeclareTargetDeclAttr::getActiveAttr(VD);
-  if (ActiveAttr.hasValue() && ActiveAttr.getValue()->getDevType() != DTCI.DT &&
+  if (ActiveAttr && ActiveAttr.getValue()->getDevType() != DTCI.DT &&
       ActiveAttr.getValue()->getLevel() == Level) {
     Diag(Loc, diag::err_omp_device_type_mismatch)
         << OMPDeclareTargetDeclAttr::ConvertDevTypeTyToStr(DTCI.DT)
@@ -22188,18 +22188,18 @@ void Sema::ActOnOpenMPDeclareTargetName(NamedDecl *ND, SourceLocation Loc,
                ActiveAttr.getValue()->getDevType());
     return;
   }
-  if (ActiveAttr.hasValue() && ActiveAttr.getValue()->getMapType() != MT &&
+  if (ActiveAttr && ActiveAttr.getValue()->getMapType() != MT &&
       ActiveAttr.getValue()->getLevel() == Level) {
     Diag(Loc, diag::err_omp_declare_target_to_and_link) << ND;
     return;
   }
 
-  if (ActiveAttr.hasValue() && ActiveAttr.getValue()->getLevel() == Level)
+  if (ActiveAttr && ActiveAttr.getValue()->getLevel() == Level)
     return;
 
   Expr *IndirectE = nullptr;
   bool IsIndirect = false;
-  if (DTCI.Indirect.hasValue()) {
+  if (DTCI.Indirect) {
     IndirectE = DTCI.Indirect.getValue();
     if (!IndirectE)
       IsIndirect = true;
@@ -22294,12 +22294,12 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
         llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr =
             OMPDeclareTargetDeclAttr::getActiveAttr(VD);
         unsigned Level = DeclareTargetNesting.size();
-        if (ActiveAttr.hasValue() && ActiveAttr.getValue()->getLevel() >= Level)
+        if (ActiveAttr && ActiveAttr.getValue()->getLevel() >= Level)
           return;
         DeclareTargetContextInfo &DTCI = DeclareTargetNesting.back();
         Expr *IndirectE = nullptr;
         bool IsIndirect = false;
-        if (DTCI.Indirect.hasValue()) {
+        if (DTCI.Indirect) {
           IndirectE = DTCI.Indirect.getValue();
           if (!IndirectE)
             IsIndirect = true;

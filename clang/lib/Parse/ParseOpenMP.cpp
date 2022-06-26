@@ -1873,7 +1873,7 @@ void Parser::ParseOMPDeclareTargetClauses(
       if (IsDeviceTypeClause) {
         Optional<SimpleClauseData> DevTypeData =
             parseOpenMPSimpleClause(*this, OMPC_device_type);
-        if (DevTypeData.hasValue()) {
+        if (DevTypeData) {
           if (DeviceTypeLoc.isValid()) {
             // We already saw another device_type clause, diagnose it.
             Diag(DevTypeData.getValue().Loc,

@@ -15444,7 +15444,7 @@ void Sema::AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(
   //   (3.1) If the allocation function takes an argument of type
   //         std​::​align_­val_­t, the storage will have the alignment
   //         specified by the value of this argument.
-  if (AlignmentParam.hasValue() && !FD->hasAttr<AllocAlignAttr>()) {
+  if (AlignmentParam && !FD->hasAttr<AllocAlignAttr>()) {
     FD->addAttr(AllocAlignAttr::CreateImplicit(
         Context, ParamIdx(AlignmentParam.getValue(), FD), FD->getLocation()));
   }
@@ -19102,12 +19102,12 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(FunctionDecl *FD,
     //  #pragma omp declare target to(*) device_type(*).
     // Therefore DevTy having no value does not imply host. The emission status
     // will be checked again at the end of compilation unit with Final = true.
-    if (DevTy.hasValue())
+    if (DevTy)
       if (*DevTy == OMPDeclareTargetDeclAttr::DT_Host)
         return FunctionEmissionStatus::OMPDiscarded;
     // If we have an explicit value for the device type, or we are in a target
     // declare context, we need to emit all extern and used symbols.
-    if (isInOpenMPDeclareTargetContext() || DevTy.hasValue())
+    if (isInOpenMPDeclareTargetContext() || DevTy)
       if (IsEmittedForExternalSymbol())
         return FunctionEmissionStatus::Emitted;
     // Device mode only emits what it must, if it wasn't tagged yet and needed,

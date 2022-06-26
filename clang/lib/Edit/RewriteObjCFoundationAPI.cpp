@@ -725,11 +725,11 @@ static bool getLiteralInfo(SourceRange literalRange,
       break;
   }
 
-  if (!UpperU.hasValue() && !UpperL.hasValue())
+  if (!UpperU && !UpperL)
     UpperU = UpperL = true;
-  else if (UpperU.hasValue() && !UpperL.hasValue())
+  else if (UpperU && !UpperL)
     UpperL = UpperU;
-  else if (UpperL.hasValue() && !UpperU.hasValue())
+  else if (UpperL && !UpperU)
     UpperU = UpperL;
 
   Info.U = *UpperU ? "U" : "u";

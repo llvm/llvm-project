@@ -766,7 +766,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       continue;
 
     // Generate only one error node to use for all bug reports.
-    if (!errorNode.hasValue())
+    if (!errorNode)
       errorNode = C.generateNonFatalErrorNode();
 
     if (!errorNode.getValue())

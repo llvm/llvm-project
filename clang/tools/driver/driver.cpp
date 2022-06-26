@@ -406,7 +406,7 @@ int clang_main(int Argc, char **Argv) {
   if (ClangCLMode) {
     // Arguments in "CL" are prepended.
     llvm::Optional<std::string> OptCL = llvm::sys::Process::GetEnv("CL");
-    if (OptCL.hasValue()) {
+    if (OptCL) {
       SmallVector<const char *, 8> PrependedOpts;
       getCLEnvVarOptions(OptCL.getValue(), Saver, PrependedOpts);
 
@@ -415,7 +415,7 @@ int clang_main(int Argc, char **Argv) {
     }
     // Arguments in "_CL_" are appended.
     llvm::Optional<std::string> Opt_CL_ = llvm::sys::Process::GetEnv("_CL_");
-    if (Opt_CL_.hasValue()) {
+    if (Opt_CL_) {
       SmallVector<const char *, 8> AppendedOpts;
       getCLEnvVarOptions(Opt_CL_.getValue(), Saver, AppendedOpts);
 
