@@ -101,7 +101,7 @@ public:
       llvm::SmallVector<mlir::Value> newOperands = {arg};
       newOperands.append(callOp.getOperands().begin(),
                          callOp.getOperands().end());
-      rewriter.create<fir::CallOp>(loc, callOp.getCallee().value(),
+      rewriter.create<fir::CallOp>(loc, callOp.getCallee().getValue(),
                                    newResultTypes, newOperands);
     } else {
       // Indirect calls.

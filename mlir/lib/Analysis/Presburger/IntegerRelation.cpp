@@ -2015,14 +2015,14 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
   int64_t lbFloorDivisor, otherLbFloorDivisor;
   for (unsigned d = 0, e = getNumDimIds(); d < e; ++d) {
     auto extent = getConstantBoundOnDimSize(d, &lb, &lbFloorDivisor, &ub);
-    if (!extent.has_value())
+    if (!extent.hasValue())
       // TODO: symbolic extents when necessary.
       // TODO: handle union if a dimension is unbounded.
       return failure();
 
     auto otherExtent = otherCst.getConstantBoundOnDimSize(
         d, &otherLb, &otherLbFloorDivisor, &otherUb);
-    if (!otherExtent.has_value() || lbFloorDivisor != otherLbFloorDivisor)
+    if (!otherExtent.hasValue() || lbFloorDivisor != otherLbFloorDivisor)
       // TODO: symbolic extents when necessary.
       return failure();
 
@@ -2043,10 +2043,10 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       // Uncomparable - check for constant lower/upper bounds.
       auto constLb = getConstantBound(BoundType::LB, d);
       auto constOtherLb = otherCst.getConstantBound(BoundType::LB, d);
-      if (!constLb.has_value() || !constOtherLb.has_value())
+      if (!constLb.hasValue() || !constOtherLb.hasValue())
         return failure();
       std::fill(minLb.begin(), minLb.end(), 0);
-      minLb.back() = std::min(*constLb, constOtherLb.value());
+      minLb.back() = std::min(constLb.getValue(), constOtherLb.getValue());
     }
 
     // Do the same for ub's but max of upper bounds. Identify max.
@@ -2059,10 +2059,10 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       // Uncomparable - check for constant lower/upper bounds.
       auto constUb = getConstantBound(BoundType::UB, d);
       auto constOtherUb = otherCst.getConstantBound(BoundType::UB, d);
-      if (!constUb.has_value() || !constOtherUb.has_value())
+      if (!constUb.hasValue() || !constOtherUb.hasValue())
         return failure();
       std::fill(maxUb.begin(), maxUb.end(), 0);
-      maxUb.back() = std::max(*constUb, constOtherUb.value());
+      maxUb.back() = std::max(constUb.getValue(), constOtherUb.getValue());
     }
 
     std::fill(newLb.begin(), newLb.end(), 0);

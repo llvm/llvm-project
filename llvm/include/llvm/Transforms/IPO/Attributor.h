@@ -4884,10 +4884,12 @@ struct AAPointerInfo : public AbstractAttribute {
     Instruction *getRemoteInst() const { return RemoteI; }
 
     /// Return true if the value written is not known yet.
-    bool isWrittenValueYetUndetermined() const { return !Content; }
+    bool isWrittenValueYetUndetermined() const { return !Content.hasValue(); }
 
     /// Return true if the value written cannot be determined at all.
-    bool isWrittenValueUnknown() const { return Content && !*Content; }
+    bool isWrittenValueUnknown() const {
+      return Content.hasValue() && !*Content;
+    }
 
     /// Return the type associated with the access, if known.
     Type *getType() const { return Ty; }

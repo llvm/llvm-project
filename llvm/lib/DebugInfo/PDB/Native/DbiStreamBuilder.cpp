@@ -427,14 +427,14 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
 
   for (auto &Stream : DbgStreams) {
     uint16_t StreamNumber = kInvalidStreamIndex;
-    if (Stream)
+    if (Stream.hasValue())
       StreamNumber = Stream->StreamNumber;
     if (auto EC = Writer.writeInteger(StreamNumber))
       return EC;
   }
 
   for (auto &Stream : DbgStreams) {
-    if (!Stream)
+    if (!Stream.hasValue())
       continue;
     assert(Stream->StreamNumber != kInvalidStreamIndex);
 

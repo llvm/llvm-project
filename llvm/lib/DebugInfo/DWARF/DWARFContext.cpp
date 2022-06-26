@@ -1205,12 +1205,13 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
     if (auto DeclFileAttr = Die.find(DW_AT_decl_file)) {
       if (const auto *LT = CU->getContext().getLineTableForUnit(CU))
         LT->getFileNameByIndex(
-            *DeclFileAttr->getAsUnsignedConstant(), CU->getCompilationDir(),
+            DeclFileAttr->getAsUnsignedConstant().getValue(),
+            CU->getCompilationDir(),
             DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
             Local.DeclFile);
     }
     if (auto DeclLineAttr = Die.find(DW_AT_decl_line))
-      Local.DeclLine = *DeclLineAttr->getAsUnsignedConstant();
+      Local.DeclLine = DeclLineAttr->getAsUnsignedConstant().getValue();
 
     Result.push_back(Local);
     return;

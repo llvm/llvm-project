@@ -324,11 +324,11 @@ AffineExpr AffineParser::parseSymbolSSAIdExpr() {
 ///   affine-expr ::= integer-literal
 AffineExpr AffineParser::parseIntegerExpr() {
   auto val = getToken().getUInt64IntegerValue();
-  if (!val.has_value() || (int64_t)val.value() < 0)
+  if (!val.hasValue() || (int64_t)val.getValue() < 0)
     return emitError("constant too large for index"), nullptr;
 
   consumeToken(Token::integer);
-  return builder.getAffineConstantExpr((int64_t)val.value());
+  return builder.getAffineConstantExpr((int64_t)val.getValue());
 }
 
 /// Parses an expression that can be a valid operand of an affine expression.

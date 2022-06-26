@@ -114,11 +114,11 @@ bool RVVType::verifyType() const {
     return false;
   if (isScalar())
     return true;
-  if (!Scale)
+  if (!Scale.hasValue())
     return false;
   if (isFloat() && ElementBitwidth == 8)
     return false;
-  unsigned V = *Scale;
+  unsigned V = Scale.getValue();
   switch (ElementBitwidth) {
   case 1:
   case 8:
@@ -799,10 +799,10 @@ RVVType::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
   RVVTypes Types;
   for (const PrototypeDescriptor &Proto : Prototype) {
     auto T = computeType(BT, Log2LMUL, Proto);
-    if (!T)
+    if (!T.hasValue())
       return llvm::None;
     // Record legal type index
-    Types.push_back(*T);
+    Types.push_back(T.getValue());
   }
   return Types;
 }

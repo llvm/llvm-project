@@ -600,9 +600,9 @@ private:
         {LLVMLoopDistributeFollowupAll,
          Part->hasDepCycle() ? LLVMLoopDistributeFollowupSequential
                              : LLVMLoopDistributeFollowupCoincident});
-    if (PartitionID) {
+    if (PartitionID.hasValue()) {
       Loop *NewLoop = Part->getDistributedLoop();
-      NewLoop->setLoopID(*PartitionID);
+      NewLoop->setLoopID(PartitionID.getValue());
     }
   }
 };
@@ -821,10 +821,12 @@ public:
       // The unversioned loop will not be changed, so we inherit all attributes
       // from the original loop, but remove the loop distribution metadata to
       // avoid to distribute it again.
-      MDNode *UnversionedLoopID = *makeFollowupLoopID(
-          OrigLoopID,
-          {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
-          "llvm.loop.distribute.", true);
+      MDNode *UnversionedLoopID =
+          makeFollowupLoopID(OrigLoopID,
+                             {LLVMLoopDistributeFollowupAll,
+                              LLVMLoopDistributeFollowupFallback},
+                             "llvm.loop.distribute.", true)
+              .getValue();
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 

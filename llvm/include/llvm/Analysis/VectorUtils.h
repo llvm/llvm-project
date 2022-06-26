@@ -236,10 +236,10 @@ class VFDatabase {
       // ensuring that the variant described in the attribute has a
       // corresponding definition or declaration of the vector
       // function in the Module M.
-      if (Shape && (Shape->ScalarName == ScalarName)) {
-        assert(CI.getModule()->getFunction(Shape->VectorName) &&
+      if (Shape.hasValue() && (Shape.getValue().ScalarName == ScalarName)) {
+        assert(CI.getModule()->getFunction(Shape.getValue().VectorName) &&
                "Vector function is missing.");
-        Mappings.push_back(*Shape);
+        Mappings.push_back(Shape.getValue());
       }
     }
   }

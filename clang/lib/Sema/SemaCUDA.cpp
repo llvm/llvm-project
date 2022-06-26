@@ -381,12 +381,13 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       InferredTarget = BaseMethodTarget;
     } else {
       bool ResolutionError = resolveCalleeCUDATargetConflict(
-          *InferredTarget, BaseMethodTarget, InferredTarget.getPointer());
+          InferredTarget.getValue(), BaseMethodTarget,
+          InferredTarget.getPointer());
       if (ResolutionError) {
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << *InferredTarget << BaseMethodTarget;
+              << (unsigned)CSM << InferredTarget.getValue() << BaseMethodTarget;
         }
         MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(Context));
         return true;
@@ -424,12 +425,14 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       InferredTarget = FieldMethodTarget;
     } else {
       bool ResolutionError = resolveCalleeCUDATargetConflict(
-          *InferredTarget, FieldMethodTarget, InferredTarget.getPointer());
+          InferredTarget.getValue(), FieldMethodTarget,
+          InferredTarget.getPointer());
       if (ResolutionError) {
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << *InferredTarget << FieldMethodTarget;
+              << (unsigned)CSM << InferredTarget.getValue()
+              << FieldMethodTarget;
         }
         MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(Context));
         return true;
@@ -441,10 +444,10 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
   // If no target was inferred, mark this member as __host__ __device__;
   // it's the least restrictive option that can be invoked from any target.
   bool NeedsH = true, NeedsD = true;
-  if (InferredTarget) {
-    if (*InferredTarget == CFT_Device)
+  if (InferredTarget.hasValue()) {
+    if (InferredTarget.getValue() == CFT_Device)
       NeedsH = false;
-    else if (*InferredTarget == CFT_Host)
+    else if (InferredTarget.getValue() == CFT_Host)
       NeedsD = false;
   }
 

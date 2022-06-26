@@ -1382,14 +1382,14 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
         // the ADRP's register and this ADD's register are the same,
         // then this is a pc-relative address calculation.
         if (*type_ptr == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
-            m_adrp_insn && m_adrp_address == pc - 4 &&
-            (*m_adrp_insn & 0x1f) == ((value >> 5) & 0x1f)) {
+            m_adrp_insn.hasValue() && m_adrp_address == pc - 4 &&
+            (m_adrp_insn.getValue() & 0x1f) == ((value >> 5) & 0x1f)) {
           uint32_t addxri_inst;
           uint64_t adrp_imm, addxri_imm;
           // Get immlo and immhi bits, OR them together to get the ADRP imm
           // value.
-          adrp_imm =
-              ((*m_adrp_insn & 0x00ffffe0) >> 3) | ((*m_adrp_insn >> 29) & 0x3);
+          adrp_imm = ((m_adrp_insn.getValue() & 0x00ffffe0) >> 3) |
+                     ((m_adrp_insn.getValue() >> 29) & 0x3);
           // if high bit of immhi after right-shifting set, sign extend
           if (adrp_imm & (1ULL << 20))
             adrp_imm |= ~((1ULL << 21) - 1);

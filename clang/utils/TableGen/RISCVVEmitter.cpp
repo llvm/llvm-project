@@ -217,22 +217,22 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   for (int Log2LMUL : Log2LMULs) {
     auto T = RVVType::computeType(BasicType::Int8, Log2LMUL,
                                   PrototypeDescriptor::Mask);
-    if (T)
-      printType(*T);
+    if (T.hasValue())
+      printType(T.getValue());
   }
   // Print RVV int/float types.
   for (char I : StringRef("csil")) {
     BasicType BT = ParseBasicType(I);
     for (int Log2LMUL : Log2LMULs) {
       auto T = RVVType::computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
-      if (T) {
-        printType(*T);
+      if (T.hasValue()) {
+        printType(T.getValue());
         auto UT = RVVType::computeType(
             BT, Log2LMUL,
             PrototypeDescriptor(BaseTypeModifier::Vector,
                                 VectorTypeModifier::NoModifier,
                                 TypeModifier::UnsignedInteger));
-        printType(*UT);
+        printType(UT.getValue());
       }
     }
   }
@@ -240,8 +240,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   for (int Log2LMUL : Log2LMULs) {
     auto T = RVVType::computeType(BasicType::Float16, Log2LMUL,
                                   PrototypeDescriptor::Vector);
-    if (T)
-      printType(*T);
+    if (T.hasValue())
+      printType(T.getValue());
   }
   OS << "#endif\n";
 
@@ -249,8 +249,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   for (int Log2LMUL : Log2LMULs) {
     auto T = RVVType::computeType(BasicType::Float32, Log2LMUL,
                                   PrototypeDescriptor::Vector);
-    if (T)
-      printType(*T);
+    if (T.hasValue())
+      printType(T.getValue());
   }
   OS << "#endif\n";
 
@@ -258,8 +258,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   for (int Log2LMUL : Log2LMULs) {
     auto T = RVVType::computeType(BasicType::Float64, Log2LMUL,
                                   PrototypeDescriptor::Vector);
-    if (T)
-      printType(*T);
+    if (T.hasValue())
+      printType(T.getValue());
   }
   OS << "#endif\n\n";
 

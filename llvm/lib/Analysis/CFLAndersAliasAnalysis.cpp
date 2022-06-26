@@ -831,14 +831,14 @@ CFLAndersAAResult::ensureCached(const Function &Fn) {
     scan(Fn);
     Iter = Cache.find(&Fn);
     assert(Iter != Cache.end());
-    assert(Iter->second);
+    assert(Iter->second.hasValue());
   }
   return Iter->second;
 }
 
 const AliasSummary *CFLAndersAAResult::getAliasSummary(const Function &Fn) {
   auto &FunInfo = ensureCached(Fn);
-  if (FunInfo)
+  if (FunInfo.hasValue())
     return &FunInfo->getAliasSummary();
   else
     return nullptr;

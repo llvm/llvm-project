@@ -544,8 +544,8 @@ public:
   /// flag may have been previously set, at which point it will not
   /// be reset unless one specifies to do so.
   void setPrunable(bool isPrunable, bool override = false) {
-    if (IsPrunable && !override)
-      return;
+    if (IsPrunable.hasValue() && !override)
+     return;
     IsPrunable = isPrunable;
   }
 

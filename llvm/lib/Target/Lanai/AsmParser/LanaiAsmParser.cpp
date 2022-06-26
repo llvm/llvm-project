@@ -704,15 +704,15 @@ LanaiAsmParser::parseRegister(bool RestoreOnFailure) {
   if (Lexer.getKind() == AsmToken::Identifier) {
     RegNum = MatchRegisterName(Lexer.getTok().getIdentifier());
     if (RegNum == 0) {
-      if (PercentTok && RestoreOnFailure)
-        Lexer.UnLex(*PercentTok);
+      if (PercentTok.hasValue() && RestoreOnFailure)
+        Lexer.UnLex(PercentTok.getValue());
       return nullptr;
     }
     Parser.Lex(); // Eat identifier token
     return LanaiOperand::createReg(RegNum, Start, End);
   }
-  if (PercentTok && RestoreOnFailure)
-    Lexer.UnLex(*PercentTok);
+  if (PercentTok.hasValue() && RestoreOnFailure)
+    Lexer.UnLex(PercentTok.getValue());
   return nullptr;
 }
 

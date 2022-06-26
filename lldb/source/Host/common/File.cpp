@@ -833,19 +833,22 @@ SerialPort::Create(int fd, OpenOptions options, Options serial_options,
   if (llvm::Error error = term.SetRaw())
     return std::move(error);
   if (serial_options.BaudRate) {
-    if (llvm::Error error = term.SetBaudRate(*serial_options.BaudRate))
+    if (llvm::Error error =
+            term.SetBaudRate(serial_options.BaudRate.getValue()))
       return std::move(error);
   }
   if (serial_options.Parity) {
-    if (llvm::Error error = term.SetParity(*serial_options.Parity))
+    if (llvm::Error error = term.SetParity(serial_options.Parity.getValue()))
       return std::move(error);
   }
   if (serial_options.ParityCheck) {
-    if (llvm::Error error = term.SetParityCheck(*serial_options.ParityCheck))
+    if (llvm::Error error =
+            term.SetParityCheck(serial_options.ParityCheck.getValue()))
       return std::move(error);
   }
   if (serial_options.StopBits) {
-    if (llvm::Error error = term.SetStopBits(*serial_options.StopBits))
+    if (llvm::Error error =
+            term.SetStopBits(serial_options.StopBits.getValue()))
       return std::move(error);
   }
 

@@ -797,9 +797,9 @@ VariantMatcher Registry::constructBoundMatcher(MatcherCtor Ctor,
   if (Out.isNull()) return Out;
 
   llvm::Optional<DynTypedMatcher> Result = Out.getSingleMatcher();
-  if (Result) {
+  if (Result.hasValue()) {
     llvm::Optional<DynTypedMatcher> Bound = Result->tryBind(BindID);
-    if (Bound) {
+    if (Bound.hasValue()) {
       return VariantMatcher::SingleMatcher(*Bound);
     }
   }

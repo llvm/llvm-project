@@ -52,12 +52,12 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &state) {
     StringAttr message;
     OptionalParseResult result = parser.parseOptionalAttribute(message);
-    if (!result.has_value())
+    if (!result.hasValue())
       return success();
 
-    if (result.value().succeeded())
+    if (result.getValue().succeeded())
       state.addAttribute("message", message);
-    return result.value();
+    return result.getValue();
   }
 
   void print(OpAsmPrinter &printer) {

@@ -297,11 +297,11 @@ AA::combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
                                          const Optional<Value *> &B, Type *Ty) {
   if (A == B)
     return A;
-  if (!B)
+  if (!B.hasValue())
     return A;
   if (*B == nullptr)
     return nullptr;
-  if (!A)
+  if (!A.hasValue())
     return Ty ? getWithType(**B, *Ty) : nullptr;
   if (*A == nullptr)
     return nullptr;
@@ -718,8 +718,8 @@ Argument *IRPosition::getAssociatedArgument() const {
   }
 
   // If we found a unique callback candidate argument, return it.
-  if (CBCandidateArg && *CBCandidateArg)
-    return *CBCandidateArg;
+  if (CBCandidateArg.hasValue() && CBCandidateArg.getValue())
+    return CBCandidateArg.getValue();
 
   // If no callbacks were found, or none used the underlying call site operand
   // exclusively, use the direct callee argument if available.
@@ -1048,11 +1048,11 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
     recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
     return llvm::None;
   }
-  if (isa_and_nonnull<UndefValue>(*SimplifiedV)) {
+  if (isa_and_nonnull<UndefValue>(SimplifiedV.getValue())) {
     recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
     return UndefValue::get(IRP.getAssociatedType());
   }
-  Constant *CI = dyn_cast_or_null<Constant>(*SimplifiedV);
+  Constant *CI = dyn_cast_or_null<Constant>(SimplifiedV.getValue());
   if (CI)
     CI = dyn_cast_or_null<Constant>(
         AA::getWithType(*CI, *IRP.getAssociatedType()));
@@ -2695,10 +2695,10 @@ void InformationCache::initializeInformationCache(const Function &CF,
     while (!Worklist.empty()) {
       const Instruction *I = Worklist.pop_back_val();
       Optional<short> &NumUses = AssumeUsesMap[I];
-      if (!NumUses)
+      if (!NumUses.hasValue())
         NumUses = I->getNumUses();
-      NumUses = *NumUses - /* this assume */ 1;
-      if (*NumUses != 0)
+      NumUses = NumUses.getValue() - /* this assume */ 1;
+      if (NumUses.getValue() != 0)
         continue;
       AssumeOnlyValues.insert(I);
       for (const Value *Op : I->operands())

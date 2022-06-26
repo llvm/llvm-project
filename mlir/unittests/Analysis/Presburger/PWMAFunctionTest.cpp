@@ -138,7 +138,7 @@ TEST(PWMAFunction, valueAt) {
   EXPECT_THAT(*nonNegPWMAF.valueAt({2, 3}), ElementsAre(11, 23));
   EXPECT_THAT(*nonNegPWMAF.valueAt({-2, 3}), ElementsAre(11, 23));
   EXPECT_THAT(*nonNegPWMAF.valueAt({2, -3}), ElementsAre(-1, -1));
-  EXPECT_FALSE(nonNegPWMAF.valueAt({-2, -3}).has_value());
+  EXPECT_FALSE(nonNegPWMAF.valueAt({-2, -3}).hasValue());
 
   PWMAFunction divPWMAF = parsePWMAF(
       /*numInputs=*/2, /*numOutputs=*/2,
@@ -149,11 +149,11 @@ TEST(PWMAFunction, valueAt) {
       });
   EXPECT_THAT(*divPWMAF.valueAt({4, 3}), ElementsAre(11, 23));
   EXPECT_THAT(*divPWMAF.valueAt({4, -3}), ElementsAre(-1, -1));
-  EXPECT_FALSE(divPWMAF.valueAt({3, 3}).has_value());
-  EXPECT_FALSE(divPWMAF.valueAt({3, -3}).has_value());
+  EXPECT_FALSE(divPWMAF.valueAt({3, 3}).hasValue());
+  EXPECT_FALSE(divPWMAF.valueAt({3, -3}).hasValue());
 
   EXPECT_THAT(*divPWMAF.valueAt({-2, 3}), ElementsAre(11, 23));
-  EXPECT_FALSE(divPWMAF.valueAt({-2, -3}).has_value());
+  EXPECT_FALSE(divPWMAF.valueAt({-2, -3}).hasValue());
 }
 
 TEST(PWMAFunction, removeIdRangeRegressionTest) {

@@ -862,12 +862,12 @@ void Fortran::lower::ExplicitIterSpace::conditionalCleanup() {
 
 llvm::Optional<size_t>
 Fortran::lower::ExplicitIterSpace::findArgPosition(fir::ArrayLoadOp load) {
-  if (lhsBases[counter]) {
-    auto ld = loadBindings.find(*lhsBases[counter]);
+  if (lhsBases[counter].hasValue()) {
+    auto ld = loadBindings.find(lhsBases[counter].getValue());
     llvm::Optional<size_t> optPos;
     if (ld != loadBindings.end() && ld->second == load)
       optPos = static_cast<size_t>(0u);
-    assert(optPos && "load does not correspond to lhs");
+    assert(optPos.hasValue() && "load does not correspond to lhs");
     return optPos;
   }
   return llvm::None;
@@ -919,8 +919,8 @@ Fortran::lower::operator<<(llvm::raw_ostream &s,
   s << "LHS bases:\n";
   for (const llvm::Optional<Fortran::lower::ExplicitIterSpace::ArrayBases> &u :
        e.lhsBases)
-    if (u)
-      dump(*u);
+    if (u.hasValue())
+      dump(u.getValue());
   s << "RHS bases:\n";
   for (const llvm::SmallVector<Fortran::lower::ExplicitIterSpace::ArrayBases>
            &bases : e.rhsBases) {

@@ -28,7 +28,7 @@ public:
 
     std::string uri(connection_file_descriptor.GetURI());
     EXPECT_EQ((URI{"connect", ip, socket->GetRemotePortNumber(), "/"}),
-              *URI::Parse(uri));
+              URI::Parse(uri).getValue());
   }
 };
 

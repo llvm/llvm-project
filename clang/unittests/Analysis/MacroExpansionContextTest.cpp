@@ -121,14 +121,14 @@ TEST_F(MacroExpansionContextTest, IgnoresPragmas) {
   EXPECT_EQ("\n=============== ExpansionRanges ===============\n",
             dumpExpansionRanges(*Ctx));
 
-  EXPECT_FALSE(Ctx->getExpandedText(at(2, 1)).has_value());
-  EXPECT_FALSE(Ctx->getOriginalText(at(2, 1)).has_value());
+  EXPECT_FALSE(Ctx->getExpandedText(at(2, 1)).hasValue());
+  EXPECT_FALSE(Ctx->getOriginalText(at(2, 1)).hasValue());
 
-  EXPECT_FALSE(Ctx->getExpandedText(at(2, 3)).has_value());
-  EXPECT_FALSE(Ctx->getOriginalText(at(2, 3)).has_value());
+  EXPECT_FALSE(Ctx->getExpandedText(at(2, 3)).hasValue());
+  EXPECT_FALSE(Ctx->getOriginalText(at(2, 3)).hasValue());
 
-  EXPECT_FALSE(Ctx->getExpandedText(at(3, 3)).has_value());
-  EXPECT_FALSE(Ctx->getOriginalText(at(3, 3)).has_value());
+  EXPECT_FALSE(Ctx->getExpandedText(at(3, 3)).hasValue());
+  EXPECT_FALSE(Ctx->getOriginalText(at(3, 3)).hasValue());
 }
 
 TEST_F(MacroExpansionContextTest, NoneForNonExpansionLocations) {
@@ -142,33 +142,33 @@ EMPTY zz
   //      zz
 
   // That's the beginning of the definition of EMPTY.
-  EXPECT_FALSE(Ctx->getExpandedText(at(2, 11)).has_value());
-  EXPECT_FALSE(Ctx->getOriginalText(at(2, 11)).has_value());
+  EXPECT_FALSE(Ctx->getExpandedText(at(2, 11)).hasValue());
+  EXPECT_FALSE(Ctx->getOriginalText(at(2, 11)).hasValue());
 
   // The space before the first expansion of EMPTY.
-  EXPECT_FALSE(Ctx->getExpandedText(at(3, 9)).has_value());
-  EXPECT_FALSE(Ctx->getOriginalText(at(3, 9)).has_value());
+  EXPECT_FALSE(Ctx->getExpandedText(at(3, 9)).hasValue());
+  EXPECT_FALSE(Ctx->getOriginalText(at(3, 9)).hasValue());
 
   // The beginning of the first expansion of EMPTY.
-  EXPECT_TRUE(Ctx->getExpandedText(at(3, 10)).has_value());
-  EXPECT_TRUE(Ctx->getOriginalText(at(3, 10)).has_value());
+  EXPECT_TRUE(Ctx->getExpandedText(at(3, 10)).hasValue());
+  EXPECT_TRUE(Ctx->getOriginalText(at(3, 10)).hasValue());
 
   // Pointing inside of the token EMPTY, but not at the beginning.
   // FIXME: We only deal with begin locations.
-  EXPECT_FALSE(Ctx->getExpandedText(at(3, 11)).has_value());
-  EXPECT_FALSE(Ctx->getOriginalText(at(3, 11)).has_value());
+  EXPECT_FALSE(Ctx->getExpandedText(at(3, 11)).hasValue());
+  EXPECT_FALSE(Ctx->getOriginalText(at(3, 11)).hasValue());
 
   // Same here.
-  EXPECT_FALSE(Ctx->getExpandedText(at(3, 12)).has_value());
-  EXPECT_FALSE(Ctx->getOriginalText(at(3, 12)).has_value());
+  EXPECT_FALSE(Ctx->getExpandedText(at(3, 12)).hasValue());
+  EXPECT_FALSE(Ctx->getOriginalText(at(3, 12)).hasValue());
 
   // The beginning of the last expansion of EMPTY.
-  EXPECT_TRUE(Ctx->getExpandedText(at(4, 1)).has_value());
-  EXPECT_TRUE(Ctx->getOriginalText(at(4, 1)).has_value());
+  EXPECT_TRUE(Ctx->getExpandedText(at(4, 1)).hasValue());
+  EXPECT_TRUE(Ctx->getOriginalText(at(4, 1)).hasValue());
 
   // Same as for the 3:11 case.
-  EXPECT_FALSE(Ctx->getExpandedText(at(4, 2)).has_value());
-  EXPECT_FALSE(Ctx->getOriginalText(at(4, 2)).has_value());
+  EXPECT_FALSE(Ctx->getExpandedText(at(4, 2)).hasValue());
+  EXPECT_FALSE(Ctx->getOriginalText(at(4, 2)).hasValue());
 }
 
 TEST_F(MacroExpansionContextTest, EmptyExpansions) {
@@ -181,14 +181,14 @@ EMPTY zz
   //  A b cd ef gh
   //      zz
 
-  EXPECT_EQ("", *Ctx->getExpandedText(at(3, 10)));
-  EXPECT_EQ("EMPTY", *Ctx->getOriginalText(at(3, 10)));
+  EXPECT_EQ("", Ctx->getExpandedText(at(3, 10)).getValue());
+  EXPECT_EQ("EMPTY", Ctx->getOriginalText(at(3, 10)).getValue());
 
-  EXPECT_EQ("", *Ctx->getExpandedText(at(3, 19)));
-  EXPECT_EQ("EMPTY", *Ctx->getOriginalText(at(3, 19)));
+  EXPECT_EQ("", Ctx->getExpandedText(at(3, 19)).getValue());
+  EXPECT_EQ("EMPTY", Ctx->getOriginalText(at(3, 19)).getValue());
 
-  EXPECT_EQ("", *Ctx->getExpandedText(at(4, 1)));
-  EXPECT_EQ("EMPTY", *Ctx->getOriginalText(at(4, 1)));
+  EXPECT_EQ("", Ctx->getExpandedText(at(4, 1)).getValue());
+  EXPECT_EQ("EMPTY", Ctx->getOriginalText(at(4, 1)).getValue());
 }
 
 TEST_F(MacroExpansionContextTest, TransitiveExpansions) {
@@ -200,10 +200,10 @@ TEST_F(MacroExpansionContextTest, TransitiveExpansions) {
   // After preprocessing:
   //  A b cd ) 1 ef gh
 
-  EXPECT_EQ("WOOF", *Ctx->getOriginalText(at(4, 10)));
+  EXPECT_EQ("WOOF", Ctx->getOriginalText(at(4, 10)).getValue());
 
-  EXPECT_EQ("", *Ctx->getExpandedText(at(4, 18)));
-  EXPECT_EQ("EMPTY", *Ctx->getOriginalText(at(4, 18)));
+  EXPECT_EQ("", Ctx->getExpandedText(at(4, 18)).getValue());
+  EXPECT_EQ("EMPTY", Ctx->getOriginalText(at(4, 18)).getValue());
 }
 
 TEST_F(MacroExpansionContextTest, MacroFunctions) {
@@ -219,17 +219,17 @@ TEST_F(MacroExpansionContextTest, MacroFunctions) {
   //  WOOF( ) ) ) 1
   //  bar barr( ) ) ) 1( ) ) ) 1),,),')
 
-  EXPECT_EQ("$$ ef ()))1", *Ctx->getExpandedText(at(4, 10)));
-  EXPECT_EQ("WOOF($$ ef)", *Ctx->getOriginalText(at(4, 10)));
+  EXPECT_EQ("$$ ef ()))1", Ctx->getExpandedText(at(4, 10)).getValue());
+  EXPECT_EQ("WOOF($$ ef)", Ctx->getOriginalText(at(4, 10)).getValue());
 
-  EXPECT_EQ("", Ctx->getExpandedText(at(4, 22)).value());
-  EXPECT_EQ("EMPTY", Ctx->getOriginalText(at(4, 22)).value());
+  EXPECT_EQ("", Ctx->getExpandedText(at(4, 22)).getValue());
+  EXPECT_EQ("EMPTY", Ctx->getOriginalText(at(4, 22)).getValue());
 
-  EXPECT_EQ("WOOF ()))1", Ctx->getExpandedText(at(5, 3)).value());
-  EXPECT_EQ("WOOF(WOOF)", Ctx->getOriginalText(at(5, 3)).value());
+  EXPECT_EQ("WOOF ()))1", Ctx->getExpandedText(at(5, 3)).getValue());
+  EXPECT_EQ("WOOF(WOOF)", Ctx->getOriginalText(at(5, 3)).getValue());
 
-  EXPECT_EQ("bar barr ()))1()))1", Ctx->getExpandedText(at(6, 3)).value());
-  EXPECT_EQ("WOOF(WOOF(bar barr))", Ctx->getOriginalText(at(6, 3)).value());
+  EXPECT_EQ("bar barr ()))1()))1", Ctx->getExpandedText(at(6, 3)).getValue());
+  EXPECT_EQ("WOOF(WOOF(bar barr))", Ctx->getOriginalText(at(6, 3)).getValue());
 }
 
 TEST_F(MacroExpansionContextTest, VariadicMacros) {
@@ -251,23 +251,24 @@ TEST_F(MacroExpansionContextTest, VariadicMacros) {
   //  fprintf (stderr, "success!\n" );
 
   EXPECT_EQ(R"(fprintf (stderr ,"success!\n",))",
-            Ctx->getExpandedText(at(3, 3)).value());
+            Ctx->getExpandedText(at(3, 3)).getValue());
   EXPECT_EQ(R"(eprintf("success!\n", ))",
-            Ctx->getOriginalText(at(3, 3)).value());
+            Ctx->getOriginalText(at(3, 3)).getValue());
 
   EXPECT_EQ(R"(fprintf (stderr ,"success!\n",))",
-            Ctx->getExpandedText(at(4, 3)).value());
-  EXPECT_EQ(R"(eprintf("success!\n"))", Ctx->getOriginalText(at(4, 3)).value());
+            Ctx->getExpandedText(at(4, 3)).getValue());
+  EXPECT_EQ(R"(eprintf("success!\n"))",
+            Ctx->getOriginalText(at(4, 3)).getValue());
 
   EXPECT_EQ(R"(fprintf (stderr ,"success!\n"))",
-            Ctx->getExpandedText(at(8, 3)).value());
+            Ctx->getExpandedText(at(8, 3)).getValue());
   EXPECT_EQ(R"(eprintf2("success!\n", ))",
-            Ctx->getOriginalText(at(8, 3)).value());
+            Ctx->getOriginalText(at(8, 3)).getValue());
 
   EXPECT_EQ(R"(fprintf (stderr ,"success!\n"))",
-            Ctx->getExpandedText(at(9, 3)).value());
+            Ctx->getExpandedText(at(9, 3)).getValue());
   EXPECT_EQ(R"(eprintf2("success!\n"))",
-            Ctx->getOriginalText(at(9, 3)).value());
+            Ctx->getOriginalText(at(9, 3)).getValue());
 }
 
 TEST_F(MacroExpansionContextTest, ConcatenationMacros) {
@@ -285,12 +286,12 @@ TEST_F(MacroExpansionContextTest, ConcatenationMacros) {
   //  };
 
   EXPECT_EQ(R"({"quit",quit_command })",
-            Ctx->getExpandedText(at(4, 5)).value());
-  EXPECT_EQ("COMMAND(quit)", Ctx->getOriginalText(at(4, 5)).value());
+            Ctx->getExpandedText(at(4, 5)).getValue());
+  EXPECT_EQ("COMMAND(quit)", Ctx->getOriginalText(at(4, 5)).getValue());
 
   EXPECT_EQ(R"({"help",help_command })",
-            Ctx->getExpandedText(at(5, 5)).value());
-  EXPECT_EQ("COMMAND(help)", Ctx->getOriginalText(at(5, 5)).value());
+            Ctx->getExpandedText(at(5, 5)).getValue());
+  EXPECT_EQ("COMMAND(help)", Ctx->getOriginalText(at(5, 5)).getValue());
 }
 
 TEST_F(MacroExpansionContextTest, StringizingMacros) {
@@ -315,14 +316,14 @@ TEST_F(MacroExpansionContextTest, StringizingMacros) {
 
   EXPECT_EQ(
       R"(do {if (x ==0)fprintf (stderr ,"Warning: ""x == 0""\n");}while (0))",
-      Ctx->getExpandedText(at(6, 3)).value());
-  EXPECT_EQ("WARN_IF (x == 0)", Ctx->getOriginalText(at(6, 3)).value());
+      Ctx->getExpandedText(at(6, 3)).getValue());
+  EXPECT_EQ("WARN_IF (x == 0)", Ctx->getOriginalText(at(6, 3)).getValue());
 
-  EXPECT_EQ(R"("foo")", Ctx->getExpandedText(at(11, 3)).value());
-  EXPECT_EQ("str (foo)", Ctx->getOriginalText(at(11, 3)).value());
+  EXPECT_EQ(R"("foo")", Ctx->getExpandedText(at(11, 3)).getValue());
+  EXPECT_EQ("str (foo)", Ctx->getOriginalText(at(11, 3)).getValue());
 
-  EXPECT_EQ(R"("4")", Ctx->getExpandedText(at(12, 3)).value());
-  EXPECT_EQ("xstr (foo)", Ctx->getOriginalText(at(12, 3)).value());
+  EXPECT_EQ(R"("4")", Ctx->getExpandedText(at(12, 3)).getValue());
+  EXPECT_EQ("xstr (foo)", Ctx->getOriginalText(at(12, 3)).getValue());
 }
 
 TEST_F(MacroExpansionContextTest, StringizingVariadicMacros) {
@@ -351,18 +352,18 @@ TEST_F(MacroExpansionContextTest, StringizingVariadicMacros) {
 
   EXPECT_EQ("zz !apple !x *apple !x !**y (apple )zz !apple !x *apple !x !**y "
             "(appleapple ))))",
-            Ctx->getExpandedText(at(11, 3)).value());
-  EXPECT_EQ("q(g)", Ctx->getOriginalText(at(11, 3)).value());
+            Ctx->getExpandedText(at(11, 3)).getValue());
+  EXPECT_EQ("q(g)", Ctx->getOriginalText(at(11, 3)).getValue());
 
   EXPECT_EQ(R"res("apple"(apple )"apple"(appleapple )))))res",
-            Ctx->getExpandedText(at(12, 3)).value());
-  EXPECT_EQ("q(xstr)", Ctx->getOriginalText(at(12, 3)).value());
+            Ctx->getExpandedText(at(12, 3)).getValue());
+  EXPECT_EQ("q(xstr)", Ctx->getOriginalText(at(12, 3)).getValue());
 
-  EXPECT_EQ("zz !*)!x )!**y ", Ctx->getExpandedText(at(13, 3)).value());
-  EXPECT_EQ("g(RParen2x)", Ctx->getOriginalText(at(13, 3)).value());
+  EXPECT_EQ("zz !*)!x )!**y ", Ctx->getExpandedText(at(13, 3)).getValue());
+  EXPECT_EQ("g(RParen2x)", Ctx->getOriginalText(at(13, 3)).getValue());
 
-  EXPECT_EQ("!))*))", Ctx->getExpandedText(at(14, 3)).value());
-  EXPECT_EQ("f( RParen2x )", Ctx->getOriginalText(at(14, 3)).value());
+  EXPECT_EQ("!))*))", Ctx->getExpandedText(at(14, 3)).getValue());
+  EXPECT_EQ("f( RParen2x )", Ctx->getOriginalText(at(14, 3)).getValue());
 }
 
 TEST_F(MacroExpansionContextTest, RedefUndef) {
@@ -380,15 +381,15 @@ TEST_F(MacroExpansionContextTest, RedefUndef) {
   //  Hi(Hi)
 
   // FIXME: Extra space follows every identifier.
-  EXPECT_EQ("Welcome Adam ", Ctx->getExpandedText(at(3, 3)).value());
-  EXPECT_EQ("Hi(Adam)", Ctx->getOriginalText(at(3, 3)).value());
+  EXPECT_EQ("Welcome Adam ", Ctx->getExpandedText(at(3, 3)).getValue());
+  EXPECT_EQ("Hi(Adam)", Ctx->getOriginalText(at(3, 3)).getValue());
 
-  EXPECT_EQ("Willkommen ", Ctx->getExpandedText(at(5, 3)).value());
-  EXPECT_EQ("Hi", Ctx->getOriginalText(at(5, 3)).value());
+  EXPECT_EQ("Willkommen ", Ctx->getExpandedText(at(5, 3)).getValue());
+  EXPECT_EQ("Hi", Ctx->getOriginalText(at(5, 3)).getValue());
 
   // There was no macro expansion at 7:3, we should expect None.
-  EXPECT_FALSE(Ctx->getExpandedText(at(7, 3)).has_value());
-  EXPECT_FALSE(Ctx->getOriginalText(at(7, 3)).has_value());
+  EXPECT_FALSE(Ctx->getExpandedText(at(7, 3)).hasValue());
+  EXPECT_FALSE(Ctx->getOriginalText(at(7, 3)).hasValue());
 }
 
 TEST_F(MacroExpansionContextTest, UnbalacedParenthesis) {
@@ -410,11 +411,12 @@ TEST_F(MacroExpansionContextTest, UnbalacedParenthesis) {
   //  fun();
   //  int x = ((1, fun(), 1, fun(), 1 ));
 
-  EXPECT_EQ("fun ()", Ctx->getExpandedText(at(8, 3)).value());
-  EXPECT_EQ("applyInt )", Ctx->getOriginalText(at(8, 3)).value());
+  EXPECT_EQ("fun ()", Ctx->getExpandedText(at(8, 3)).getValue());
+  EXPECT_EQ("applyInt )", Ctx->getOriginalText(at(8, 3)).getValue());
 
-  EXPECT_EQ("((1,fun (),1,fun (),1", Ctx->getExpandedText(at(13, 12)).value());
-  EXPECT_EQ("f(f(1))", Ctx->getOriginalText(at(13, 12)).value());
+  EXPECT_EQ("((1,fun (),1,fun (),1",
+            Ctx->getExpandedText(at(13, 12)).getValue());
+  EXPECT_EQ("f(f(1))", Ctx->getOriginalText(at(13, 12)).getValue());
 }
 
 } // namespace

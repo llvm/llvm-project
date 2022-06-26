@@ -114,8 +114,8 @@ bool PreprocessingRecord::isEntityInFileID(iterator PPEI, FileID FID) {
     // deserializing it.
     Optional<bool> IsInFile =
         ExternalSource->isPreprocessedEntityInFileID(LoadedIndex, FID);
-    if (IsInFile)
-      return *IsInFile;
+    if (IsInFile.hasValue())
+      return IsInFile.getValue();
 
     // The external source did not provide a definite answer, go and deserialize
     // the entity to check it.

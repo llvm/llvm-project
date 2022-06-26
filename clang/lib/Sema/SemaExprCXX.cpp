@@ -2274,10 +2274,10 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     // How many bytes do we want to allocate here?
     llvm::Optional<llvm::APInt> AllocationSize;
-    if (!ArraySize && !AllocType->isDependentType()) {
+    if (!ArraySize.hasValue() && !AllocType->isDependentType()) {
       // For non-array operator new, we only want to allocate one element.
       AllocationSize = SingleEltSize;
-    } else if (KnownArraySize && !AllocType->isDependentType()) {
+    } else if (KnownArraySize.hasValue() && !AllocType->isDependentType()) {
       // For array operator new, only deal with static array size case.
       bool Overflow;
       AllocationSize = llvm::APInt(SizeTyWidth, *KnownArraySize)

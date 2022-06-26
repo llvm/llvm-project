@@ -637,8 +637,10 @@ template <typename T, typename Enable = void> struct ValueIsPresent {
 // Optional provides its own way to check if something is present.
 template <typename T> struct ValueIsPresent<Optional<T>> {
   using UnwrappedType = T;
-  static inline bool isPresent(const Optional<T> &t) { return t.has_value(); }
-  static inline decltype(auto) unwrapValue(Optional<T> &t) { return *t; }
+  static inline bool isPresent(const Optional<T> &t) { return t.hasValue(); }
+  static inline decltype(auto) unwrapValue(Optional<T> &t) {
+    return t.getValue();
+  }
 };
 
 // If something is "nullable" then we just compare it to nullptr to see if it

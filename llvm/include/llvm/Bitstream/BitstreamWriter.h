@@ -386,12 +386,12 @@ private:
       const BitCodeAbbrevOp &Op = Abbv->getOperandInfo(i++);
 
       if (Op.isLiteral())
-        EmitAbbreviatedLiteral(Op, *Code);
+        EmitAbbreviatedLiteral(Op, Code.getValue());
       else {
         assert(Op.getEncoding() != BitCodeAbbrevOp::Array &&
                Op.getEncoding() != BitCodeAbbrevOp::Blob &&
                "Expected literal or scalar");
-        EmitAbbreviatedField(Op, *Code);
+        EmitAbbreviatedField(Op, Code.getValue());
       }
     }
 

@@ -243,7 +243,7 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   // async()?
   async = parseOptionalOperandAndType(parser, ParallelOp::getAsyncKeyword(),
                                       result);
-  if (async.has_value() && failed(*async))
+  if (async.hasValue() && failed(*async))
     return failure();
 
   // wait()?
@@ -254,19 +254,19 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   // num_gangs(value)?
   numGangs = parseOptionalOperandAndType(
       parser, ParallelOp::getNumGangsKeyword(), result);
-  if (numGangs.has_value() && failed(*numGangs))
+  if (numGangs.hasValue() && failed(*numGangs))
     return failure();
 
   // num_workers(value)?
   numWorkers = parseOptionalOperandAndType(
       parser, ParallelOp::getNumWorkersKeyword(), result);
-  if (numWorkers.has_value() && failed(*numWorkers))
+  if (numWorkers.hasValue() && failed(*numWorkers))
     return failure();
 
   // vector_length(value)?
   vectorLength = parseOptionalOperandAndType(
       parser, ParallelOp::getVectorLengthKeyword(), result);
-  if (vectorLength.has_value() && failed(*vectorLength))
+  if (vectorLength.hasValue() && failed(*vectorLength))
     return failure();
 
   // if()?
@@ -362,11 +362,11 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
       builder.getI32VectorAttr(
-          {static_cast<int32_t>(async.has_value() ? 1 : 0),
+          {static_cast<int32_t>(async.hasValue() ? 1 : 0),
            static_cast<int32_t>(waitOperands.size()),
-           static_cast<int32_t>(numGangs.has_value() ? 1 : 0),
-           static_cast<int32_t>(numWorkers.has_value() ? 1 : 0),
-           static_cast<int32_t>(vectorLength.has_value() ? 1 : 0),
+           static_cast<int32_t>(numGangs.hasValue() ? 1 : 0),
+           static_cast<int32_t>(numWorkers.hasValue() ? 1 : 0),
+           static_cast<int32_t>(vectorLength.hasValue() ? 1 : 0),
            static_cast<int32_t>(hasIfCond ? 1 : 0),
            static_cast<int32_t>(hasSelfCond ? 1 : 0),
            static_cast<int32_t>(reductionOperands.size()),
@@ -531,13 +531,13 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
   if (succeeded(parser.parseOptionalLParen())) {
     gangNum = parserOptionalOperandAndTypeWithPrefix(
         parser, result, LoopOp::getGangNumKeyword());
-    if (gangNum.has_value() && failed(*gangNum))
+    if (gangNum.hasValue() && failed(*gangNum))
       return failure();
     // FIXME: Comma should require subsequent operands.
     (void)parser.parseOptionalComma();
     gangStatic = parserOptionalOperandAndTypeWithPrefix(
         parser, result, LoopOp::getGangStaticKeyword());
-    if (gangStatic.has_value() && failed(*gangStatic))
+    if (gangStatic.hasValue() && failed(*gangStatic))
       return failure();
     // FIXME: Why allow optional last commas?
     (void)parser.parseOptionalComma();
@@ -551,7 +551,7 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // optional worker operand
   worker = parseOptionalOperandAndType(parser, result);
-  if (worker.has_value() && failed(*worker))
+  if (worker.hasValue() && failed(*worker))
     return failure();
 
   // vector?
@@ -560,7 +560,7 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // optional vector operand
   vector = parseOptionalOperandAndType(parser, result);
-  if (vector.has_value() && failed(*vector))
+  if (vector.hasValue() && failed(*vector))
     return failure();
 
   // tile()?
@@ -591,10 +591,10 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
 
   result.addAttribute(LoopOp::getOperandSegmentSizeAttr(),
                       builder.getI32VectorAttr(
-                          {static_cast<int32_t>(gangNum.has_value() ? 1 : 0),
-                           static_cast<int32_t>(gangStatic.has_value() ? 1 : 0),
-                           static_cast<int32_t>(worker.has_value() ? 1 : 0),
-                           static_cast<int32_t>(vector.has_value() ? 1 : 0),
+                          {static_cast<int32_t>(gangNum.hasValue() ? 1 : 0),
+                           static_cast<int32_t>(gangStatic.hasValue() ? 1 : 0),
+                           static_cast<int32_t>(worker.hasValue() ? 1 : 0),
+                           static_cast<int32_t>(vector.hasValue() ? 1 : 0),
                            static_cast<int32_t>(tileOperands.size()),
                            static_cast<int32_t>(privateOperands.size()),
                            static_cast<int32_t>(reductionOperands.size())}));

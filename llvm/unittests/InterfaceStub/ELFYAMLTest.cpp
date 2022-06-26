@@ -47,9 +47,9 @@ TEST(ElfYamlTextAPI, YAMLReadableTBE) {
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
   std::unique_ptr<IFSStub> Stub = std::move(StubOrErr.get());
   EXPECT_NE(Stub.get(), nullptr);
-  EXPECT_FALSE(Stub->SoName.has_value());
-  EXPECT_TRUE(Stub->Target.Arch.has_value());
-  EXPECT_EQ(Stub->Target.Arch.value(), (uint16_t)llvm::ELF::EM_X86_64);
+  EXPECT_FALSE(Stub->SoName.hasValue());
+  EXPECT_TRUE(Stub->Target.Arch.hasValue());
+  EXPECT_EQ(Stub->Target.Arch.getValue(), (uint16_t)llvm::ELF::EM_X86_64);
   EXPECT_EQ(Stub->NeededLibs.size(), 3u);
   EXPECT_STREQ(Stub->NeededLibs[0].c_str(), "libc.so");
   EXPECT_STREQ(Stub->NeededLibs[1].c_str(), "libfoo.so");
@@ -94,24 +94,24 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   EXPECT_EQ(SymBaz.Type, IFSSymbolType::TLS);
   EXPECT_FALSE(SymBaz.Undefined);
   EXPECT_FALSE(SymBaz.Weak);
-  EXPECT_FALSE(SymBaz.Warning.has_value());
+  EXPECT_FALSE(SymBaz.Warning.hasValue());
 
   IFSSymbol const &SymFoo = *Iterator++;
   EXPECT_STREQ(SymFoo.Name.c_str(), "foo");
-  EXPECT_FALSE(SymFoo.Size.has_value());
+  EXPECT_FALSE(SymFoo.Size.hasValue());
   EXPECT_EQ(SymFoo.Type, IFSSymbolType::Func);
   EXPECT_FALSE(SymFoo.Undefined);
   EXPECT_FALSE(SymFoo.Weak);
-  EXPECT_TRUE(SymFoo.Warning.has_value());
+  EXPECT_TRUE(SymFoo.Warning.hasValue());
   EXPECT_STREQ(SymFoo.Warning->c_str(), "Deprecated!");
 
   IFSSymbol const &SymNor = *Iterator++;
   EXPECT_STREQ(SymNor.Name.c_str(), "nor");
-  EXPECT_FALSE(SymNor.Size.has_value());
+  EXPECT_FALSE(SymNor.Size.hasValue());
   EXPECT_EQ(SymNor.Type, IFSSymbolType::NoType);
   EXPECT_TRUE(SymNor.Undefined);
   EXPECT_FALSE(SymNor.Weak);
-  EXPECT_FALSE(SymNor.Warning.has_value());
+  EXPECT_FALSE(SymNor.Warning.hasValue());
 
   IFSSymbol const &SymNot = *Iterator++;
   EXPECT_STREQ(SymNot.Name.c_str(), "not");

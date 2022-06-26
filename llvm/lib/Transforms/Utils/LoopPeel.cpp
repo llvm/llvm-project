@@ -719,9 +719,9 @@ TargetTransformInfo::PeelingPreferences llvm::gatherPeelingPreferences(
   }
 
   // User specifed values provided by argument.
-  if (UserAllowPeeling)
+  if (UserAllowPeeling.hasValue())
     PP.AllowPeeling = *UserAllowPeeling;
-  if (UserAllowProfileBasedPeeling)
+  if (UserAllowProfileBasedPeeling.hasValue())
     PP.PeelProfiledIterations = *UserAllowProfileBasedPeeling;
 
   return PP;

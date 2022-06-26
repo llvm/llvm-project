@@ -234,8 +234,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   }
   NonLoc oflags = V.castAs<NonLoc>();
   NonLoc ocreateFlag = C.getSValBuilder()
-                           .makeIntVal(*Val_O_CREAT, oflagsEx->getType())
-                           .castAs<NonLoc>();
+      .makeIntVal(Val_O_CREAT.getValue(), oflagsEx->getType()).castAs<NonLoc>();
   SVal maskedFlagsUC = C.getSValBuilder().evalBinOpNN(state, BO_And,
                                                       oflags, ocreateFlag,
                                                       oflagsEx->getType());

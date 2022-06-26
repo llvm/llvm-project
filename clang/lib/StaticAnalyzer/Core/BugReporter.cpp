@@ -2363,15 +2363,15 @@ PathSensitiveBugReport::getInterestingnessKind(const MemRegion *R) const {
 }
 
 bool PathSensitiveBugReport::isInteresting(SVal V) const {
-  return getInterestingnessKind(V).has_value();
+  return getInterestingnessKind(V).hasValue();
 }
 
 bool PathSensitiveBugReport::isInteresting(SymbolRef sym) const {
-  return getInterestingnessKind(sym).has_value();
+  return getInterestingnessKind(sym).hasValue();
 }
 
 bool PathSensitiveBugReport::isInteresting(const MemRegion *R) const {
-  return getInterestingnessKind(R).has_value();
+  return getInterestingnessKind(R).hasValue();
 }
 
 bool PathSensitiveBugReport::isInteresting(const LocationContext *LC)  const {

@@ -73,11 +73,11 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
   std::string identifier;
   SMLoc idLoc = parser.getCurrentLocation();
   OptionalParseResult parsedType = parser.parseOptionalType(type);
-  if (parsedType.has_value() && failed(parsedType.value()))
+  if (parsedType.hasValue() && failed(parsedType.getValue()))
     return {};
-  if (!parsedType.has_value()) {
+  if (!parsedType.hasValue()) {
     OptionalParseResult parsedString = parser.parseOptionalString(&identifier);
-    if (!parsedString.has_value() || failed(parsedString.value())) {
+    if (!parsedString.hasValue() || failed(parsedString.getValue())) {
       parser.emitError(idLoc) << "expected a type or a quoted string";
       return {};
     }

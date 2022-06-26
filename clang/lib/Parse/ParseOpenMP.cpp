@@ -1873,13 +1873,14 @@ void Parser::ParseOMPDeclareTargetClauses(
       if (IsDeviceTypeClause) {
         Optional<SimpleClauseData> DevTypeData =
             parseOpenMPSimpleClause(*this, OMPC_device_type);
-        if (DevTypeData) {
+        if (DevTypeData.hasValue()) {
           if (DeviceTypeLoc.isValid()) {
             // We already saw another device_type clause, diagnose it.
-            Diag(DevTypeData->Loc, diag::warn_omp_more_one_device_type_clause);
+            Diag(DevTypeData.getValue().Loc,
+                 diag::warn_omp_more_one_device_type_clause);
             break;
           }
-          switch (static_cast<OpenMPDeviceType>(DevTypeData->Type)) {
+          switch (static_cast<OpenMPDeviceType>(DevTypeData.getValue().Type)) {
           case OMPC_DEVICE_TYPE_any:
             DTCI.DT = OMPDeclareTargetDeclAttr::DT_Any;
             break;
@@ -2312,9 +2313,9 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     Sema::DeclareTargetContextInfo DTCI(DKind, DTLoc);
     if (HasClauses)
       ParseOMPDeclareTargetClauses(DTCI);
-    bool HasImplicitMappings = DKind == OMPD_begin_declare_target ||
-                               !HasClauses ||
-                               (DTCI.ExplicitlyMapped.empty() && DTCI.Indirect);
+    bool HasImplicitMappings =
+        DKind == OMPD_begin_declare_target || !HasClauses ||
+        (DTCI.ExplicitlyMapped.empty() && DTCI.Indirect.hasValue());
 
     // Skip the last annot_pragma_openmp_end.
     ConsumeAnyToken();
@@ -3619,18 +3620,20 @@ OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
   if (!Val || ParseOnly)
     return nullptr;
   if (getLangOpts().OpenMP < 51 && Kind == OMPC_default &&
-      (static_cast<DefaultKind>(Val->Type) == OMP_DEFAULT_private ||
-       static_cast<DefaultKind>(Val->Type) == OMP_DEFAULT_firstprivate)) {
-    Diag(Val->LOpen, diag::err_omp_invalid_dsa)
-        << getOpenMPClauseName(static_cast<DefaultKind>(Val->Type) ==
+      (static_cast<DefaultKind>(Val.getValue().Type) == OMP_DEFAULT_private ||
+       static_cast<DefaultKind>(Val.getValue().Type) ==
+           OMP_DEFAULT_firstprivate)) {
+    Diag(Val.getValue().LOpen, diag::err_omp_invalid_dsa)
+        << getOpenMPClauseName(static_cast<DefaultKind>(Val.getValue().Type) ==
                                        OMP_DEFAULT_private
                                    ? OMPC_private
                                    : OMPC_firstprivate)
         << getOpenMPClauseName(OMPC_default) << "5.1";
     return nullptr;
   }
-  return Actions.ActOnOpenMPSimpleClause(Kind, Val->Type, Val->TypeLoc,
-                                         Val->LOpen, Val->Loc, Val->RLoc);
+  return Actions.ActOnOpenMPSimpleClause(
+      Kind, Val.getValue().Type, Val.getValue().TypeLoc, Val.getValue().LOpen,
+      Val.getValue().Loc, Val.getValue().RLoc);
 }
 
 /// Parsing of OpenMP clauses like 'ordered'.

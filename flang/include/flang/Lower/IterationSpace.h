@@ -446,9 +446,7 @@ public:
   /// `load` must be a LHS array_load. Returns `llvm::None` on error.
   llvm::Optional<size_t> findArgPosition(fir::ArrayLoadOp load);
 
-  bool isLHS(fir::ArrayLoadOp load) {
-    return findArgPosition(load).has_value();
-  }
+  bool isLHS(fir::ArrayLoadOp load) { return findArgPosition(load).hasValue(); }
 
   /// `load` must be a LHS array_load. Determine the threaded inner argument
   /// corresponding to this load.
@@ -467,15 +465,15 @@ public:
 
   llvm::Optional<fir::ArrayLoadOp> getLhsLoad(size_t i) {
     assert(i < lhsBases.size());
-    if (lhsBases[counter])
-      return findBinding(*lhsBases[counter]);
+    if (lhsBases[counter].hasValue())
+      return findBinding(lhsBases[counter].getValue());
     return llvm::None;
   }
 
   /// Return the outermost loop in this FORALL nest.
   fir::DoLoopOp getOuterLoop() {
-    assert(outerLoop);
-    return *outerLoop;
+    assert(outerLoop.hasValue());
+    return outerLoop.getValue();
   }
 
   /// Return the statement context for the entire, outermost FORALL construct.

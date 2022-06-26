@@ -663,9 +663,9 @@ void ClangdLSPServer::onDocumentDidOpen(
 void ClangdLSPServer::onDocumentDidChange(
     const DidChangeTextDocumentParams &Params) {
   auto WantDiags = WantDiagnostics::Auto;
-  if (Params.wantDiagnostics)
-    WantDiags =
-        *Params.wantDiagnostics ? WantDiagnostics::Yes : WantDiagnostics::No;
+  if (Params.wantDiagnostics.hasValue())
+    WantDiags = Params.wantDiagnostics.getValue() ? WantDiagnostics::Yes
+                                                  : WantDiagnostics::No;
 
   PathRef File = Params.textDocument.uri.file();
   auto Code = Server->getDraft(File);
