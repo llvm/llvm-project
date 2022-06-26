@@ -6,6 +6,10 @@
 # RUN: ld.lld %t.script %t.o -o %t
 # RUN: llvm-readelf -hs %t | FileCheck %s
 
+# RUN: echo 'ENTRY("_label")' > %t.script
+# RUN: ld.lld %t.script %t.o -o %t
+# RUN: llvm-readelf -hs %t | FileCheck %s
+
 # CHECK: Entry point address: 0x[[#%x,ENTRY:]]
 # CHECK: [[#]]: {{0*}}[[#ENTRY]]   0 NOTYPE  GLOBAL DEFAULT [[#]] _label
 
