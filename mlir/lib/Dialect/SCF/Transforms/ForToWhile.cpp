@@ -100,11 +100,11 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
 
 struct ForToWhileLoop : public SCFForToWhileLoopBase<ForToWhileLoop> {
   void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
-    MLIRContext *ctx = funcOp.getContext();
+    auto *parentOp = getOperation();
+    MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopLoweringPattern>(ctx);
-    (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
   }
 };
 } // namespace
