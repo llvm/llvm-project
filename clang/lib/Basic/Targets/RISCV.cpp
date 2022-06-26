@@ -251,7 +251,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
                     .Case("riscv64", Is64Bit)
                     .Case("64bit", Is64Bit)
                     .Default(None);
-  if (Result.hasValue())
+  if (Result)
     return Result.getValue();
 
   if (ISAInfo->isSupportedExtensionFeature(Feature))

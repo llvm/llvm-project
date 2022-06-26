@@ -1238,7 +1238,7 @@ void MallocChecker::checkKernelMalloc(const CallEvent &Call,
   ProgramStateRef State = C.getState();
   llvm::Optional<ProgramStateRef> MaybeState =
       performKernelMalloc(Call, C, State);
-  if (MaybeState.hasValue())
+  if (MaybeState)
     State = MaybeState.getValue();
   else
     State = MallocMemAux(C, Call, Call.getArgExpr(0), UndefinedVal(), State,
@@ -3571,13 +3571,13 @@ void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,
       const RefState *RefS = State->get<RegionState>(I.getKey());
       AllocationFamily Family = RefS->getAllocationFamily();
       Optional<MallocChecker::CheckKind> CheckKind = getCheckIfTracked(Family);
-      if (!CheckKind.hasValue())
-         CheckKind = getCheckIfTracked(Family, true);
+      if (!CheckKind)
+        CheckKind = getCheckIfTracked(Family, true);
 
       I.getKey()->dumpToStream(Out);
       Out << " : ";
       I.getData().dump(Out);
-      if (CheckKind.hasValue())
+      if (CheckKind)
         Out << " (" << CheckNames[*CheckKind].getName() << ")";
       Out << NL;
     }
