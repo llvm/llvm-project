@@ -13,6 +13,10 @@
 
 #include "test_macros.h"
 
+#if TEST_STD_VER > 17
+#include <compare>
+#endif 
+
 struct TrivialSortable {
     int value;
     TEST_CONSTEXPR TrivialSortable() : value(0) {}
@@ -74,5 +78,30 @@ static_assert(std::is_trivially_copyable<TrivialSortable>::value, "");
 static_assert(std::is_trivially_copyable<TrivialSortableWithComp>::value, "");
 static_assert(!std::is_trivially_copyable<NonTrivialSortable>::value, "");
 static_assert(!std::is_trivially_copyable<NonTrivialSortableWithComp>::value, "");
+
+#if TEST_STD_VER > 17
+struct TracedCopy {
+  int copied = 0;
+  int data   = 0;
+
+  constexpr TracedCopy() = default;
+  constexpr TracedCopy(int i) : data(i) {}
+  constexpr TracedCopy(const TracedCopy& other) : copied(other.copied + 1), data(other.data) {}
+
+  constexpr TracedCopy(TracedCopy&& other)            = delete;
+  constexpr TracedCopy& operator=(TracedCopy&& other) = delete;
+
+  constexpr TracedCopy& operator=(const TracedCopy& other) {
+    copied = other.copied + 1;
+    data   = other.data;
+    return *this;
+  }
+
+  constexpr bool copiedOnce() const { return copied == 1; }
+
+  constexpr bool operator==(const TracedCopy& o) const { return data == o.data; }
+  constexpr auto operator<=>(const TracedCopy& o) const { return data <=> o.data; }
+};
+#endif // TEST_STD_VER > 17
 
 #endif // SORTABLE_HELPERS_H

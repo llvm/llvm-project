@@ -37,7 +37,7 @@ static_assert(std::is_same_v<in_out_result<int, long>, move_backward_result<int,
 // static_assert(std::is_same_v<in_out_result<int, long>, replace_copy_if_result<int, long>>);
 // static_assert(std::is_same_v<in_out_result<int, long>, reverse_copy_result<int, long>>);
 // static_assert(std::is_same_v<in_out_result<int, long>, rotate_copy_result<int, long>>);
-// static_assert(std::is_same_v<in_out_result<int, long>, set_difference_result<int, long>>);
+static_assert(std::is_same_v<in_out_result<int, long>, set_difference_result<int, long>>);
 static_assert(std::is_same_v<in_out_result<int, long>, unary_transform_result<int, long>>);
 static_assert(std::is_same_v<in_out_result<int, long>, uninitialized_copy_result<int, long>>);
 static_assert(std::is_same_v<in_out_result<int, long>, uninitialized_copy_n_result<int, long>>);

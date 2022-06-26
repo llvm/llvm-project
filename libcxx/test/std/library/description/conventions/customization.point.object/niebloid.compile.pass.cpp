@@ -132,7 +132,7 @@ static_assert(test(std::ranges::reverse, a));
 //static_assert(test(std::ranges::sample, a, a, 5));
 //static_assert(test(std::ranges::search, a, a));
 //static_assert(test(std::ranges::search_n, a, 10, 42));
-//static_assert(test(std::ranges::set_difference, a, a, a));
+static_assert(test(std::ranges::set_difference, a, a, a));
 //static_assert(test(std::ranges::set_intersection, a, a, a));
 //static_assert(test(std::ranges::set_symmetric_difference, a, a, a));
 //static_assert(test(std::ranges::set_union, a, a, a));
