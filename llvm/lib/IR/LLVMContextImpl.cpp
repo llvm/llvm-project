@@ -250,7 +250,7 @@ void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
 }
 
 bool LLVMContextImpl::hasOpaquePointersValue() {
-  return OpaquePointers.hasValue();
+  return OpaquePointers.has_value();
 }
 
 bool LLVMContextImpl::getOpaquePointers() {
