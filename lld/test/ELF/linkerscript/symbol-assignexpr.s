@@ -8,9 +8,9 @@
 # RUN:         symbol4 = symbol + -4; \
 # RUN:         symbol5 = symbol - ~0xfffb; \
 # RUN:         symbol6 = symbol - ~(0xfff0 + 0xb); \
-# RUN:         symbol7 = symbol - ~ 0xfffb + 4; \
-# RUN:         symbol8 = ~ 0xffff + 4; \
-# RUN:         symbol9 = - 4; \
+# RUN:         symbol7 =symbol - ~ 0xfffb + 4; \
+# RUN:         symbol8 =~ 0xffff + 4; \
+# RUN:         symbol9 =- 4; \
 # RUN:         symbol10 = 0xfedcba9876543210; \
 # RUN:         symbol11 = ((0x28000 + 0x1fff) & ~(0x1000 + -1)); \
 # RUN:         symbol12 = 0x1234; \
