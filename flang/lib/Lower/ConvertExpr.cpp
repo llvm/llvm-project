@@ -3950,8 +3950,9 @@ public:
       mlir::Value oldInnerArg = modifyOp.getSequence();
       std::size_t offset = explicitSpace->argPosition(oldInnerArg);
       explicitSpace->setInnerArg(offset, fir::getBase(lexv));
-      fir::ExtendedValue exv = arrayModifyToExv(
-          builder, loc, *explicitSpace->getLhsLoad(0), modifyOp.getResult(0));
+      fir::ExtendedValue exv =
+          arrayModifyToExv(builder, loc, explicitSpace->getLhsLoad(0).value(),
+                           modifyOp.getResult(0));
       genScalarUserDefinedAssignmentCall(builder, loc, userAssignment, exv,
                                          elementalExv);
     } else {
@@ -4101,7 +4102,7 @@ private:
                                       mlir::Value origVal) {
     mlir::Value val = builder.createConvert(loc, eleTy, origVal);
     if (isBoundsSpec()) {
-      auto lbs = *lbounds;
+      auto lbs = lbounds.value();
       if (lbs.size() > 0) {
         // Rebox the value with user-specified shift.
         auto shiftTy = fir::ShiftType::get(eleTy.getContext(), lbs.size());
@@ -6368,7 +6369,7 @@ private:
         charLen = builder.createTemporary(loc, builder.getI64Type());
         mlir::Value castLen =
             builder.createConvert(loc, builder.getI64Type(), fir::getLen(exv));
-        builder.create<fir::StoreOp>(loc, castLen, *charLen);
+        builder.create<fir::StoreOp>(loc, castLen, charLen.value());
       }
     }
     stmtCtx.finalize(/*popScope=*/true);
@@ -6382,7 +6383,7 @@ private:
 
     // Convert to extended value.
     if (fir::isa_char(seqTy.getEleTy())) {
-      auto len = builder.create<fir::LoadOp>(loc, *charLen);
+      auto len = builder.create<fir::LoadOp>(loc, charLen.value());
       return {fir::CharArrayBoxValue{mem, len, extents}, /*needCopy=*/false};
     }
     return {fir::ArrayBoxValue{mem, extents}, /*needCopy=*/false};
@@ -6450,7 +6451,7 @@ private:
         charLen = builder.createTemporary(loc, builder.getI64Type());
         mlir::Value castLen =
             builder.createConvert(loc, builder.getI64Type(), fir::getLen(exv));
-        builder.create<fir::StoreOp>(loc, castLen, *charLen);
+        builder.create<fir::StoreOp>(loc, castLen, charLen.value());
       }
     }
     mem = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
