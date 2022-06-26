@@ -126,6 +126,9 @@ private:
   // Targets that may appear inside a C# attribute.
   static const llvm::StringSet<> CSharpAttributeTargets;
 
+  /// Handle Verilog-specific tokens.
+  bool readRawTokenVerilogSpecific(Token &Tok);
+
   void readRawToken(FormatToken &Tok);
 
   void resetLexer(unsigned Offset);

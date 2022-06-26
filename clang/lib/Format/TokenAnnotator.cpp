@@ -1343,6 +1343,10 @@ private:
     // sequence.
     if (!CurrentToken->Tok.getIdentifierInfo())
       return Type;
+    // In Verilog macro expansions start with a backtick just like preprocessor
+    // directives. Thus we stop if the word is not a preprocessor directive.
+    if (Style.isVerilog() && !Keywords.isVerilogPPDirective(*CurrentToken))
+      return LT_Invalid;
     switch (CurrentToken->Tok.getIdentifierInfo()->getPPKeywordID()) {
     case tok::pp_include:
     case tok::pp_include_next:
@@ -1385,8 +1389,14 @@ public:
     if (!CurrentToken)
       return LT_Invalid;
     NonTemplateLess.clear();
-    if (CurrentToken->is(tok::hash))
-      return parsePreprocessorDirective();
+    if (CurrentToken->is(tok::hash)) {
+      // We were not yet allowed to use C++17 optional when this was being
+      // written. So we used LT_Invalid to mark that the line is not a
+      // preprocessor directive.
+      auto Type = parsePreprocessorDirective();
+      if (Type != LT_Invalid)
+        return Type;
+    }
 
     // Directly allow to 'import <string-literal>' to support protocol buffer
     // definitions (github.com/google/protobuf) or missing "#" (either way we
@@ -3663,8 +3673,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Left.Finalized)
     return Right.hasWhitespaceBefore();
 
-  if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
-    return true; // Never ever merge two identifiers.
+  // Never ever merge two words.
+  if (Keywords.isWordLike(Right) && Keywords.isWordLike(Left))
+    return true;
 
   // Leave a space between * and /* to avoid C4138 `comment end` found outside
   // of comment.
@@ -3929,6 +3940,21 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          Left.isOneOf(Keywords.kw_final, Keywords.kw_abstract,
                       Keywords.kw_native)) &&
         Right.is(TT_TemplateOpener)) {
+      return true;
+    }
+  } else if (Style.isVerilog()) {
+    // Don't add space within a delay like `#0`.
+    if (!Left.is(TT_BinaryOperator) &&
+        Left.isOneOf(Keywords.kw_verilogHash, Keywords.kw_verilogHashHash)) {
+      return false;
+    }
+    // Add space after a delay.
+    if (!Right.is(tok::semi) &&
+        (Left.endsSequence(tok::numeric_constant, Keywords.kw_verilogHash) ||
+         Left.endsSequence(tok::numeric_constant,
+                           Keywords.kw_verilogHashHash) ||
+         (Left.is(tok::r_paren) && Left.MatchingParen &&
+          Left.MatchingParen->endsSequence(tok::l_paren, tok::at)))) {
       return true;
     }
   }
