@@ -25,7 +25,7 @@ SECTIONS {
   logicalor = (0 || 0) + (0||1)*2 + (1|| 0)*4 + (1 ||1) *8;
   logicalor2 = 0 && 0 || 1 && 1;
   ternary1 = 0 ? 1 : 2 & 6;
-  ternary2 = 1 ? 2 ? 3 : 4 : 5 ? 6 : 7;
+  ternary2 = 1 ? 2?3:4 : 5?6 :7;
 
   plusassign =1;
   plusassign += 2;
