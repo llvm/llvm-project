@@ -12,6 +12,7 @@
 
 #include <__chrono/duration.h>
 #include <__config>
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,25 +46,9 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const day& __lhs, const day& __rhs) noexcept
 { return static_cast<unsigned>(__lhs) == static_cast<unsigned>(__rhs); }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const day& __lhs, const day& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator< (const day& __lhs, const day& __rhs) noexcept
-{ return static_cast<unsigned>(__lhs) <  static_cast<unsigned>(__rhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator> (const day& __lhs, const day& __rhs) noexcept
-{ return __rhs < __lhs; }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator<=(const day& __lhs, const day& __rhs) noexcept
-{ return !(__rhs < __lhs);}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator>=(const day& __lhs, const day& __rhs) noexcept
-{ return !(__lhs < __rhs); }
+_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const day& __lhs, const day& __rhs) noexcept {
+  return static_cast<unsigned>(__lhs) <=> static_cast<unsigned>(__rhs);
+}
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 day operator+ (const day& __lhs, const days& __rhs) noexcept
