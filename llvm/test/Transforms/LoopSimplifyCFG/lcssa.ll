@@ -57,7 +57,7 @@ define void @test_01() {
 ; CHECK:       for.cond.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[INC41_LCSSA3:%.*]] = phi i16 [ undef, [[FOR_COND_LOOPEXIT:%.*]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INC41_LCSSA3:%.*]] = phi i16 [ poison, [[FOR_COND_LOOPEXIT:%.*]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    switch i32 0, label [[FOR_COND_SPLIT:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[FOR_COND_LOOPEXIT]]
 ; CHECK-NEXT:    ]
