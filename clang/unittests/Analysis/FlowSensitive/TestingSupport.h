@@ -131,7 +131,7 @@ llvm::Error checkDataflow(
   std::vector<std::pair<std::string, StateT>> Results;
   for (const CFGBlock *Block : CFCtx->getCFG()) {
     // Skip blocks that were not evaluated.
-    if (!BlockStates[Block->getBlockID()].hasValue())
+    if (!BlockStates[Block->getBlockID()])
       continue;
 
     transferBlock(

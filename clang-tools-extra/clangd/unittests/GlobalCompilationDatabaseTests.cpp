@@ -145,7 +145,7 @@ TEST_F(OverlayCDBTest, Adjustments) {
                    return Ret;
                  });
   // Command from underlying gets adjusted.
-  auto Cmd = CDB.getCompileCommand(testPath("foo.cc")).getValue();
+  auto Cmd = *CDB.getCompileCommand(testPath("foo.cc"));
   EXPECT_THAT(Cmd.CommandLine, ElementsAre("clang", "-DA=1", testPath("foo.cc"),
                                            "-DAdjust_foo.cc"));
 
@@ -154,7 +154,7 @@ TEST_F(OverlayCDBTest, Adjustments) {
   BarCommand.Filename = testPath("bar.cc");
   BarCommand.CommandLine = {"clang++", "-DB=1", testPath("bar.cc")};
   CDB.setCompileCommand(testPath("bar.cc"), BarCommand);
-  Cmd = CDB.getCompileCommand(testPath("bar.cc")).getValue();
+  Cmd = *CDB.getCompileCommand(testPath("bar.cc"));
   EXPECT_THAT(
       Cmd.CommandLine,
       ElementsAre("clang++", "-DB=1", testPath("bar.cc"), "-DAdjust_bar.cc"));
@@ -253,7 +253,7 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
 
     // Does not use the root CDB, so no broadcast.
     auto Cmd = DB.getCompileCommand(testPath("build/../a.cc"));
-    ASSERT_TRUE(Cmd.hasValue());
+    ASSERT_TRUE(Cmd);
     EXPECT_THAT(Cmd->CommandLine, Contains("-DFOO")) << "a.cc uses foo/ CDB";
     ASSERT_TRUE(DB.blockUntilIdle(timeoutSeconds(10)));
     EXPECT_THAT(DiscoveredFiles, IsEmpty()) << "Root CDB not discovered yet";

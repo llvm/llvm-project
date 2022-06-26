@@ -612,7 +612,7 @@ TEST_F(LexerTest, FindNextToken) {
       SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
   while (true) {
     auto T = Lexer::findNextToken(Loc, SourceMgr, LangOpts);
-    ASSERT_TRUE(T.hasValue());
+    ASSERT_TRUE(T);
     if (T->is(tok::eof))
       break;
     GeneratedByNextToken.push_back(getSourceText(*T, *T));
