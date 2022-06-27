@@ -39,7 +39,34 @@ __attribute__((target("dot7-insts"), const)) static uint amdgcn_udot8(uint a, ui
 { if (s) return __builtin_amdgcn_udot8(a, b, c, true);
   else   return __builtin_amdgcn_udot8(a, b, c, false); }
 
+
+__attribute__((target("dot8-insts"), const)) static uint amdgcn_sudot4(bool as, uint a, bool bs, uint b, uint c, bool s)
+{
+  if (!as && !bs && !s) return __builtin_amdgcn_sudot4(false, a, false, b, c, false);
+  if (!as && !bs &&  s) return __builtin_amdgcn_sudot4(false, a, false, b, c, true );
+  if (!as &&  bs && !s) return __builtin_amdgcn_sudot4(false, a, true , b, c, false);
+  if (!as &&  bs &&  s) return __builtin_amdgcn_sudot4(false, a, true , b, c, true );
+  if ( as && !bs && !s) return __builtin_amdgcn_sudot4(true , a, false, b, c, false);
+  if ( as && !bs &&  s) return __builtin_amdgcn_sudot4(true , a, false, b, c, true );
+  if ( as &&  bs && !s) return __builtin_amdgcn_sudot4(true , a, true , b, c, false);
+                        return __builtin_amdgcn_sudot4(true , a, true , b, c, true );
+}
+
+__attribute__((target("dot8-insts"), const)) static uint amdgcn_sudot8(bool as, uint a, bool bs, uint b, uint c, bool s)
+{
+  if (!as && !bs && !s) return __builtin_amdgcn_sudot8(false, a, false, b, c, false);
+  if (!as && !bs &&  s) return __builtin_amdgcn_sudot8(false, a, false, b, c, true );
+  if (!as &&  bs && !s) return __builtin_amdgcn_sudot8(false, a, true , b, c, false);
+  if (!as &&  bs &&  s) return __builtin_amdgcn_sudot8(false, a, true , b, c, true );
+  if ( as && !bs && !s) return __builtin_amdgcn_sudot8(true , a, false, b, c, false);
+  if ( as && !bs &&  s) return __builtin_amdgcn_sudot8(true , a, false, b, c, true );
+  if ( as &&  bs && !s) return __builtin_amdgcn_sudot8(true , a, true , b, c, false);
+                        return __builtin_amdgcn_sudot8(true , a, true , b, c, true );
+}
+
 #define SWDOT __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100
+#define SWIDOT2 __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100 || __oclc_ISA_version == 11000
+#define SUDOT __oclc_ISA_version >= 11000
 
 #define AS_INT(X) __builtin_astype(X, int)
 #define AS_UINT(X) __builtin_astype(X, uint)
@@ -64,7 +91,7 @@ __ockl_fdot2(half2 a, half2 b, float c, bool s)
 ATTR int
 __ockl_sdot2(short2 a, short2 b, int c, bool s)
 {
-    if (SWDOT) {
+    if (SWIDOT2) {
         int p0 = (int)a.s0 * (int)b.s0;
         int p1 = (int)a.s1 * (int)b.s1;
         long r = (long)c + (long)p0 + (long)p1;
@@ -82,7 +109,7 @@ __ockl_sdot2(short2 a, short2 b, int c, bool s)
 ATTR uint
 __ockl_udot2(ushort2 a, ushort2 b, uint c, bool s)
 {
-    if (SWDOT) {
+    if (SWIDOT2) {
         uint p0 = (uint)a.s0 * (uint)b.s0;
         uint p1 = (uint)a.s1 * (uint)b.s1;
         ulong r = (ulong)c + (ulong)p0 + (ulong)p1;
@@ -104,7 +131,8 @@ __ockl_sdot4(char4 a, char4 b, int c, bool s)
             (int)a.s3 * (int)b.s3;
         return s ? __ockl_add_sat_i32(t, c) : (t + c);
     } else {
-        return amdgcn_sdot4(AS_INT(a), AS_INT(b), c, s);
+        if (SUDOT) return amdgcn_sudot4(true, AS_INT(a), true, AS_INT(b), c, s);
+        else       return amdgcn_sdot4(AS_INT(a), AS_INT(b), c, s);
     }
 }
 
@@ -139,7 +167,8 @@ __ockl_sdot8(int a, int b, int c, bool s)
             ( a        >> 28) * ( b        >> 28);
         return s ? __ockl_add_sat_i32(t, c) : (t + c);
     } else {
-        return amdgcn_sdot8(a, b, c, s);
+        if (SUDOT) return amdgcn_sudot8(true, a, true, b, c, s);
+        else       return amdgcn_sdot8(a, b, c, s);
     }
 }
 

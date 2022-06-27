@@ -17,7 +17,8 @@ typedef struct _SchedulerParam {
     };
     uint    dedicatedQueue; //!< Scheduler uses a dedicated queue
     uint    scratchOffset;  //!< Scratch buffer offset
-    uint    reserved[2];    //!< Processed mask groups by one thread
+    uint    ringGran64Dw ;  //!< WAVESIZE unit is 64 dwords instead of 256
+    uint    reserved[1];    //!< Processed mask groups by one thread
 } SchedulerParam;
 
 static inline int
@@ -74,7 +75,8 @@ extern void RunCmdTemplateDispatch(
             uint    scratchSize,
             uint    scratchOffset,
             uint    numMaxWaves,
-            uint    useATC);
+            uint    useATC,
+            uint    ringGran64Dw);
 
 void
 __amd_scheduler_pal(
@@ -140,7 +142,7 @@ __amd_scheduler_pal(
                         if (launch > 0) {
                             // Launch child kernel ....
                             RunCmdTemplateDispatch(hwDisp, &disp->aql, param->scratch, param->hsa_queue,
-                                param->scratchSize, param->scratchOffset, param->numMaxWaves, param->useATC);
+                                param->scratchSize, param->scratchOffset, param->numMaxWaves, param->useATC, param->ringGran64Dw);
                         } else if (event != 0) {
                             event->state = -1;
                         }
