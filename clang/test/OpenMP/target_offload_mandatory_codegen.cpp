@@ -48,9 +48,11 @@ void host_dev(int device) {
 // MANDATORY-NEXT:    store i8** null, i8*** [[TMP6]], align 8
 // MANDATORY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 7
 // MANDATORY-NEXT:    store i8** null, i8*** [[TMP7]], align 8
-// MANDATORY-NEXT:    [[TMP8:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4hostv_l12.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
-// MANDATORY-NEXT:    [[TMP9:%.*]] = icmp ne i32 [[TMP8]], 0
-// MANDATORY-NEXT:    br i1 [[TMP9]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 8
+// MANDATORY-NEXT:    store i64 0, i64* [[TMP8]], align 8
+// MANDATORY-NEXT:    [[TMP9:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4hostv_l12.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
+// MANDATORY-NEXT:    [[TMP10:%.*]] = icmp ne i32 [[TMP9]], 0
+// MANDATORY-NEXT:    br i1 [[TMP10]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // MANDATORY:       omp_offload.failed:
 // MANDATORY-NEXT:    unreachable
 // MANDATORY:       omp_offload.cont:
@@ -84,9 +86,11 @@ void host_dev(int device) {
 // MANDATORY-NEXT:    store i8** null, i8*** [[TMP7]], align 8
 // MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 7
 // MANDATORY-NEXT:    store i8** null, i8*** [[TMP8]], align 8
-// MANDATORY-NEXT:    [[TMP9:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7host_ifb_l17.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
-// MANDATORY-NEXT:    [[TMP10:%.*]] = icmp ne i32 [[TMP9]], 0
-// MANDATORY-NEXT:    br i1 [[TMP10]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// MANDATORY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 8
+// MANDATORY-NEXT:    store i64 0, i64* [[TMP9]], align 8
+// MANDATORY-NEXT:    [[TMP10:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7host_ifb_l17.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
+// MANDATORY-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0
+// MANDATORY-NEXT:    br i1 [[TMP11]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // MANDATORY:       omp_offload.failed:
 // MANDATORY-NEXT:    unreachable
 // MANDATORY:       omp_offload.cont:
@@ -124,9 +128,11 @@ void host_dev(int device) {
 // MANDATORY-NEXT:    store i8** null, i8*** [[TMP9]], align 8
 // MANDATORY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 7
 // MANDATORY-NEXT:    store i8** null, i8*** [[TMP10]], align 8
-// MANDATORY-NEXT:    [[TMP11:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 [[TMP2]], i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8host_devi_l22.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
-// MANDATORY-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
-// MANDATORY-NEXT:    br i1 [[TMP12]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// MANDATORY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 8
+// MANDATORY-NEXT:    store i64 0, i64* [[TMP11]], align 8
+// MANDATORY-NEXT:    [[TMP12:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 [[TMP2]], i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8host_devi_l22.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
+// MANDATORY-NEXT:    [[TMP13:%.*]] = icmp ne i32 [[TMP12]], 0
+// MANDATORY-NEXT:    br i1 [[TMP13]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // MANDATORY:       omp_offload.failed:
 // MANDATORY-NEXT:    unreachable
 // MANDATORY:       omp_offload.cont:
