@@ -2247,6 +2247,9 @@ static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
 
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset) {
+  if (isGFX12Plus(ST))
+    return isUInt<23>(EncodedOffset);
+
   return hasSMEMByteOffset(ST) ? isUInt<20>(EncodedOffset)
                                : isUInt<8>(EncodedOffset);
 }
@@ -2254,6 +2257,9 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
                                     int64_t EncodedOffset,
                                     bool IsBuffer) {
+  if (isGFX12Plus(ST))
+    return isInt<24>(EncodedOffset);
+
   return !IsBuffer &&
          hasSMRDSignedImmOffset(ST) &&
          isInt<21>(EncodedOffset);

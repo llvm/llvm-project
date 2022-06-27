@@ -1478,6 +1478,10 @@ public:
     return AMDGPU::isGFX11Plus(getSTI());
   }
 
+  bool isGFX12Plus() const {
+    return AMDGPU::isGFX12Plus(getSTI());
+  }
+
   bool isGFX10_BEncoding() const {
     return AMDGPU::isGFX10_BEncoding(getSTI());
   }
@@ -4172,6 +4176,7 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
     return true;
 
   Error(getSMEMOffsetLoc(Operands),
+        isGFX12Plus()        ? "expected a 24-bit signed offset" :
         (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset" :
                                "expected a 21-bit signed offset");
 

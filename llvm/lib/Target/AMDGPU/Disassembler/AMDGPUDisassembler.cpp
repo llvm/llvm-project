@@ -93,7 +93,9 @@ static DecodeStatus decodeSMEMOffset(MCInst &Inst, unsigned Imm, uint64_t Addr,
                                      const MCDisassembler *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
   int64_t Offset;
-  if (DAsm->isVI()) {         // VI supports 20-bit unsigned offsets.
+  if (DAsm->isGFX12Plus()) {  // GFX12 supports 24-bit signed offsets.
+    Offset = SignExtend64<24>(Imm);
+  } else if (DAsm->isVI()) {  // VI supports 20-bit unsigned offsets.
     Offset = Imm & 0xFFFFF;
   } else {                    // GFX9+ supports 21-bit signed offsets.
     Offset = SignExtend64<21>(Imm);
@@ -598,6 +600,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
+    if (Res) break;
+
+    Res = tryDecodeInst(DecoderTableGFX1264, MI, QW, Address);
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableGFX1164, MI, QW, Address);
@@ -1786,6 +1791,9 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
   return AMDGPU::isGFX11Plus(STI);
 }
 
+bool AMDGPUDisassembler::isGFX12Plus() const {
+  return AMDGPU::isGFX12Plus(STI);
+}
 
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
