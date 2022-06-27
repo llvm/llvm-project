@@ -54,7 +54,6 @@ struct CastOpInterface
     // The result buffer still has the old (pre-cast) type.
     Value resultBuffer = getBuffer(rewriter, castOp.getSource(), options);
     auto sourceMemRefType = resultBuffer.getType().cast<BaseMemRefType>();
-    Attribute memorySpace = sourceMemRefType.getMemorySpace();
     TensorType resultTensorType =
         castOp.getResult().getType().cast<TensorType>();
     MemRefLayoutAttrInterface layout;
@@ -65,7 +64,8 @@ struct CastOpInterface
 
     // Compute the new memref type.
     Type resultMemRefType =
-        getMemRefType(resultTensorType, options, layout, memorySpace);
+        getMemRefType(resultTensorType, options, layout,
+                      sourceMemRefType.getMemorySpaceAsInt());
 
     // Replace the op with a memref.cast.
     assert(memref::CastOp::areCastCompatible(resultBuffer.getType(),
