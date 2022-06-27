@@ -220,8 +220,12 @@ BoolValue &DataflowAnalysisContext::substituteBoolValue(
     llvm::DenseMap<BoolValue *, BoolValue *> &SubstitutionsCache) {
   auto IT = SubstitutionsCache.find(&Val);
   if (IT != SubstitutionsCache.end()) {
+    // Return memoized result of substituting this boolean value.
     return *IT->second;
   }
+
+  // Handle substitution on the boolean value (and its subvalues), saving the
+  // result into `SubstitutionsCache`.
   BoolValue *Result;
   switch (Val.getKind()) {
   case Value::Kind::AtomicBool: {
@@ -262,6 +266,10 @@ BoolValue &DataflowAnalysisContext::substituteBoolValue(
 BoolValue &DataflowAnalysisContext::buildAndSubstituteFlowCondition(
     AtomicBoolValue &Token,
     llvm::DenseMap<AtomicBoolValue *, BoolValue *> Substitutions) {
+  assert(
+      Substitutions.find(&getBoolLiteralValue(true)) == Substitutions.end() &&
+      Substitutions.find(&getBoolLiteralValue(false)) == Substitutions.end() &&
+      "Do not substitute true/false boolean literals");
   llvm::DenseMap<BoolValue *, BoolValue *> SubstitutionsCache(
       Substitutions.begin(), Substitutions.end());
   return buildAndSubstituteFlowConditionWithCache(Token, SubstitutionsCache);

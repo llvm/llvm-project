@@ -61,6 +61,15 @@ def LLVM_Dialect : Dialect {
     static StringRef getEmitCWrapperAttrName() {
       return "llvm.emit_c_interface";
     }
+
+    /// Returns `true` if the given type is compatible with the LLVM dialect.
+    static bool isCompatibleType(Type);
+
+  private:
+    /// A cache storing compatible LLVM types that have been verified. This
+    /// can save us lots of verification time if there are many occurrences
+    /// of some deeply-nested aggregate types in the program.
+    ThreadLocalCache<DenseSet<Type>> compatibleTypes;
   }];
 
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
@@ -161,6 +170,16 @@ def LLVM_AnyNonAggregate : Type<And<[LLVM_Type.predicate,
 // Type constraint accepting any LLVM vector type.
 def LLVM_AnyVector : Type<CPred<"::mlir::LLVM::isCompatibleVectorType($_self)">,
                          "LLVM dialect-compatible vector type">;
+
+// Type constraint accepting any LLVM fixed-length vector type.
+def LLVM_AnyFixedVector : Type<CPred<
+                                "!::mlir::LLVM::isScalableVectorType($_self)">,
+                                "LLVM dialect-compatible fixed-length vector type">;
+
+// Type constraint accepting any LLVM scalable vector type.
+def LLVM_AnyScalableVector : Type<CPred<
+                                "::mlir::LLVM::isScalableVectorType($_self)">,
+                                "LLVM dialect-compatible scalable vector type">;
 
 // Type constraint accepting an LLVM vector type with an additional constraint
 // on the vector element type.

@@ -47,8 +47,9 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     another op.
 
     The optional `memory_space` attribute specifies the memory space when
-    bufferizing this op. If `memory_space` is not specified, the default memory
-    space is used during bufferization.
+    bufferizing this op. The memory space is inferred from `copy` if specified.
+    If neigher `copy` nor `memory_space` is specified, the default memory space
+    is used during bufferization.
 
     Both dense and sparse tensor types are supported. The result of a
     `bufferization.alloc_tensor` is a tensor value that can be used like any
@@ -80,6 +81,12 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     bool isMemoryWrite(OpResult opResult, const AnalysisState &state);
 
     bool bufferizesToAllocation(OpResult opResult) { return true; }
+
+    FailureOr<unsigned> getMemorySpace(OpResult opResult) {
+      if (getMemorySpace().hasValue())
+        return static_cast<unsigned>(*getMemorySpace());
+      return failure();
+    }
 
     bool bufferizesToMemoryRead(OpOperand &opOperand,
                                 const AnalysisState &state);

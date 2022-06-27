@@ -313,10 +313,7 @@ void DebugAddrWriter::AddressForDWOCU::dump() {
   std::vector<IndexAddressPair> SortedMap(indexToAddressBegin(),
                                           indexToAdddessEnd());
   // Sorting address in increasing order of indices.
-  llvm::sort(SortedMap,
-             [](const IndexAddressPair &A, const IndexAddressPair &B) {
-               return A.first < B.first;
-             });
+  llvm::sort(SortedMap, llvm::less_first());
   for (auto &Pair : SortedMap)
     dbgs() << Twine::utohexstr(Pair.second) << "\t" << Pair.first << "\n";
 }
@@ -375,10 +372,7 @@ AddressSectionBuffer DebugAddrWriter::finalize() {
     std::vector<IndexAddressPair> SortedMap(AM->second.indexToAddressBegin(),
                                             AM->second.indexToAdddessEnd());
     // Sorting address in increasing order of indices.
-    llvm::sort(SortedMap,
-               [](const IndexAddressPair &A, const IndexAddressPair &B) {
-                 return A.first < B.first;
-               });
+    llvm::sort(SortedMap, llvm::less_first());
 
     uint8_t AddrSize = CU->getAddressByteSize();
     uint32_t Counter = 0;
@@ -449,10 +443,7 @@ AddressSectionBuffer DebugAddrWriterDwarf5::finalize() {
         AMIter->second.indexToAddressBegin(),
         AMIter->second.indexToAdddessEnd());
     // Sorting address in increasing order of indices.
-    llvm::sort(SortedMap,
-               [](const IndexAddressPair &A, const IndexAddressPair &B) {
-                 return A.first < B.first;
-               });
+    llvm::sort(SortedMap, llvm::less_first());
     // Writing out Header
     const uint32_t Length = SortedMap.size() * AddrSize + 4;
     support::endian::write(AddressStream, Length, Endian);

@@ -192,6 +192,25 @@
 // CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0 mod 5, (d1 mod 35) mod 4)>
 #map59 = affine_map<(d0, d1) -> ((d0 mod 35) mod 5, (d1 mod 35) mod 4)>
 
+// Check if parser can parse affine_map with identifiers that collide with
+// integer types.
+// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0, d1)>
+#map60 = affine_map<(i0, i1) -> (i0, i1)>
+
+// Check if parser can parse affine_map with identifiers that collide with
+// reserved keywords.
+// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1)[s0, s1] -> (-d0 + s0, -d1 + s1)>
+#map61 = affine_map<(d0, d1)[step, loc] -> (step - d0, loc - d1)>
+
+// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1)[s0, s1] -> (-d0 + s0 floordiv 2, -d1 + s1 mod 3)>
+#map62 = affine_map<(d0, d1)[mod, floordiv] -> (mod floordiv 2 - d0, floordiv mod 3 - d1)>
+
+// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1)[s0, s1] -> (-d0 + s1 floordiv 2, -d1 + s0 mod 3)>
+#map63 = affine_map<(d0, d1)[mod, floordiv] -> (floordiv floordiv 2 - d0, mod mod 3 - d1)>
+
+// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1)[s0] -> (d0 + d1 + s0)>
+#map64 = affine_map<(i0, i1)[mod] -> (i0 + i1 + mod)>
+
 // Single identity maps are removed.
 // CHECK: @f0(memref<2x4xi8, 1>)
 func.func private @f0(memref<2x4xi8, #map0, 1>)
@@ -379,3 +398,18 @@ func.func private @f56(memref<1x1xi8, #map56>)
 
 // CHECK: "f59"() {map = #map{{[0-9]+}}} : () -> ()
 "f59"() {map = #map59} : () -> ()
+
+// CHECK: "f60"() {map = #map{{[0-9]+}}} : () -> ()
+"f60"() {map = #map60} : () -> ()
+
+// CHECK: "f61"() {map = #map{{[0-9]+}}} : () -> ()
+"f61"() {map = #map61} : () -> ()
+
+// CHECK: "f62"() {map = #map{{[0-9]+}}} : () -> ()
+"f62"() {map = #map62} : () -> ()
+
+// CHECK: "f63"() {map = #map{{[0-9]+}}} : () -> ()
+"f63"() {map = #map63} : () -> ()
+
+// CHECK: "f64"() {map = #map{{[0-9]+}}} : () -> ()
+"f64"() {map = #map64} : () -> ()

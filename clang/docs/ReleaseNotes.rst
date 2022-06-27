@@ -72,6 +72,11 @@ Major New Features
   array bounds lead to flexible array members. The option yields more accurate
   ``__builtin_object_size`` and ``__builtin_dynamic_object_size`` results in
   most cases but may be overly conservative for some legacy code.
+- Experimental support for HLSL has been added. The implementation is
+  incomplete and highly experimental. For more information about the ongoing
+  work to support HLSL see the `documentation
+  <https://clang.llvm.org/docs/HLSLSupport.html>`_, or the `GitHub project
+  <https://github.com/orgs/llvm/projects/4>`_.
 
 Bug Fixes
 ---------
@@ -513,6 +518,9 @@ X86 Support in Clang
 
 - Support ``-mharden-sls=[none|all|return|indirect-jmp]`` for straight-line
   speculation hardening.
+- Support for the ``_Float16`` type has been added for all targets with SSE2.
+  When AVX512-FP16 is not available, arithmetic on ``_Float16`` is emulated
+  using ``float``.
 
 DWARF Support in Clang
 ----------------------

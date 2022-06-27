@@ -154,15 +154,17 @@ struct CollapseShapeOpInterface
     if (!canBeCollapsed) {
       // TODO: Create alloc_tensor ops during TensorCopyInsertion.
       AnalysisState analysisState(options);
-      Value tensorAlloc = allocateTensorForShapedValue(
+      FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
           rewriter, op->getLoc(), collapseShapeOp.getSrc(),
-          analysisState.isTensorYielded(collapseShapeOp.getResult()));
+          analysisState.isTensorYielded(collapseShapeOp.getResult()), options);
+      if (failed(tensorAlloc))
+        return failure();
       auto memrefType =
           MemRefType::get(collapseShapeOp.getSrcType().getShape(),
                           collapseShapeOp.getSrcType().getElementType(),
                           AffineMap(), bufferType.getMemorySpaceAsInt());
       buffer = rewriter.create<bufferization::ToMemrefOp>(
-          op->getLoc(), memrefType, tensorAlloc);
+          op->getLoc(), memrefType, *tensorAlloc);
     }
 
     // Result type is inferred by the builder.
@@ -377,20 +379,26 @@ struct FromElementsOpInterface
                           const BufferizationOptions &options) const {
     auto fromElementsOp = cast<tensor::FromElementsOp>(op);
 
+    // TODO: Implement memory space for this op.
+    if (options.defaultMemorySpace != static_cast<unsigned>(0))
+      return op->emitError("memory space not implemented yet");
+
     // Allocate a buffer for the result.
     Location loc = op->getLoc();
     auto tensorType = fromElementsOp.getType().cast<RankedTensorType>();
     auto shape = tensorType.getShape();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
     AnalysisState analysisState(options);
-    Value tensorAlloc = allocateTensorForShapedValue(
+    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
         rewriter, loc, fromElementsOp.getResult(),
-        analysisState.isTensorYielded(fromElementsOp.getResult()),
+        analysisState.isTensorYielded(fromElementsOp.getResult()), options,
         /*copy=*/false);
+    if (failed(tensorAlloc))
+      return failure();
     auto memrefType =
         MemRefType::get(tensorType.getShape(), tensorType.getElementType());
     Value buffer = rewriter.create<bufferization::ToMemrefOp>(
-        op->getLoc(), memrefType, tensorAlloc);
+        op->getLoc(), memrefType, *tensorAlloc);
 
     // Case: tensor<0xelem_type>.
     if (fromElementsOp.getElements().empty()) {
@@ -431,19 +439,26 @@ struct GenerateOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto generateOp = cast<tensor::GenerateOp>(op);
+
+    // TODO: Implement memory space for this op.
+    if (options.defaultMemorySpace != static_cast<unsigned>(0))
+      return op->emitError("memory space not implemented yet");
+
     auto tensorType = generateOp.getType().cast<RankedTensorType>();
     // Allocate memory.
     Location loc = op->getLoc();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
     AnalysisState analysisState(options);
-    Value tensorAlloc = allocateTensorForShapedValue(
+    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
         rewriter, loc, generateOp.getResult(),
-        analysisState.isTensorYielded(generateOp.getResult()),
+        analysisState.isTensorYielded(generateOp.getResult()), options,
         /*copy=*/false);
+    if (failed(tensorAlloc))
+      return failure();
     auto memrefType =
         MemRefType::get(tensorType.getShape(), tensorType.getElementType());
     Value buffer = rewriter.create<bufferization::ToMemrefOp>(
-        op->getLoc(), memrefType, tensorAlloc);
+        op->getLoc(), memrefType, *tensorAlloc);
 
     // Collect loop bounds.
     int64_t rank = memrefType.getRank();
@@ -786,7 +801,9 @@ struct ReshapeOpInterface
     if (failed(srcBuffer) || failed(shapeBuffer))
       return failure();
     auto resultTensorType = reshapeOp.getResult().getType().cast<TensorType>();
-    auto resultMemRefType = getMemRefType(resultTensorType, options);
+    auto resultMemRefType = getMemRefType(
+        resultTensorType, options, /*layout=*/{},
+        srcBuffer->getType().cast<BaseMemRefType>().getMemorySpaceAsInt());
     replaceOpWithNewBufferizedOp<memref::ReshapeOp>(
         rewriter, op, resultMemRefType, *srcBuffer, *shapeBuffer);
     return success();

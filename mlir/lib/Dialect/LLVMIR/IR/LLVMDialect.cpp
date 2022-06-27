@@ -2132,7 +2132,6 @@ LogicalResult ShuffleVectorOp::verify() {
 // Add the entry block to the function.
 Block *LLVMFuncOp::addEntryBlock() {
   assert(empty() && "function already has an entry block");
-  assert(!isVarArg() && "unimplemented: non-external variadic functions");
 
   auto *entry = new Block;
   push_back(entry);
@@ -2330,9 +2329,6 @@ LogicalResult LLVMFuncOp::verify() {
                            << "' linkage";
     return success();
   }
-
-  if (isVarArg())
-    return emitOpError("only external functions can be variadic");
 
   return success();
 }

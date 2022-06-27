@@ -65,6 +65,11 @@ static cl::opt<unsigned> ICPMispredictThreshold(
              "indirect call"),
     cl::init(0), cl::cat(BoltOptCategory));
 
+static cl::alias ICPMispredictThresholdAlias(
+    "icp-mp-threshold",
+    cl::desc("alias for --indirect-call-promotion-mispredict-threshold"),
+    cl::aliasopt(ICPMispredictThreshold));
+
 static cl::opt<bool> ICPUseMispredicts(
     "indirect-call-promotion-use-mispredicts",
     cl::desc("use misprediction frequency for determining whether or not ICP "
@@ -73,11 +78,21 @@ static cl::opt<bool> ICPUseMispredicts(
              "by this heuristic"),
     cl::cat(BoltOptCategory));
 
+static cl::alias ICPUseMispredictsAlias(
+    "icp-use-mp",
+    cl::desc("alias for --indirect-call-promotion-use-mispredicts"),
+    cl::aliasopt(ICPUseMispredicts));
+
 static cl::opt<unsigned>
     ICPTopN("indirect-call-promotion-topn",
             cl::desc("limit number of targets to consider when doing indirect "
                      "call promotion. 0 = no limit"),
             cl::init(3), cl::cat(BoltOptCategory));
+
+static cl::alias
+    ICPTopNAlias("icp-topn",
+                 cl::desc("alias for --indirect-call-promotion-topn"),
+                 cl::aliasopt(ICPTopN));
 
 static cl::opt<unsigned> ICPCallsTopN(
     "indirect-call-promotion-calls-topn",
@@ -85,11 +100,21 @@ static cl::opt<unsigned> ICPCallsTopN(
              "call promotion on calls. 0 = no limit"),
     cl::init(0), cl::cat(BoltOptCategory));
 
+static cl::alias ICPCallsTopNAlias(
+    "icp-calls-topn",
+    cl::desc("alias for --indirect-call-promotion-calls-topn"),
+    cl::aliasopt(ICPCallsTopN));
+
 static cl::opt<unsigned> ICPJumpTablesTopN(
     "indirect-call-promotion-jump-tables-topn",
     cl::desc("limit number of targets to consider when doing indirect "
              "call promotion on jump tables. 0 = no limit"),
     cl::init(0), cl::cat(BoltOptCategory));
+
+static cl::alias ICPJumpTablesTopNAlias(
+    "icp-jt-topn",
+    cl::desc("alias for --indirect-call-promotion-jump-tables-topn"),
+    cl::aliasopt(ICPJumpTablesTopN));
 
 static cl::opt<bool> EliminateLoads(
     "icp-eliminate-loads",
@@ -119,6 +144,11 @@ static cl::opt<bool> ICPJumpTablesByTarget(
     cl::desc(
         "for jump tables, optimize indirect jmp targets instead of indices"),
     cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::alias
+    ICPJumpTablesByTargetAlias("icp-jt-targets",
+                               cl::desc("alias for --icp-jump-tables-targets"),
+                               cl::aliasopt(ICPJumpTablesByTarget));
 
 static cl::opt<bool> ICPPeelForInline(
     "icp-inline", cl::desc("only promote call targets eligible for inlining"),
@@ -947,10 +977,8 @@ size_t IndirectCallPromotion::canPromoteCallsite(
 
   const size_t TrialN = TopN ? std::min(TopN, Targets.size()) : Targets.size();
 
-  if (opts::ICPTopCallsites > 0) {
-    if (!BC.MIB->hasAnnotation(Inst, "DoICP"))
-      return 0;
-  }
+  if (opts::ICPTopCallsites && !BC.MIB->hasAnnotation(Inst, "DoICP"))
+    return 0;
 
   // Pick the top N targets.
   uint64_t TotalMispredictsTopN = 0;
@@ -1034,11 +1062,11 @@ size_t IndirectCallPromotion::canPromoteCallsite(
 
   // Filter by inline-ability of target functions, stop at first target that
   // can't be inlined.
-  if (opts::ICPPeelForInline) {
+  if (!IsJumpTable && opts::ICPPeelForInline) {
     for (size_t I = 0; I < N; ++I) {
       const MCSymbol *TargetSym = Targets[I].To.Sym;
       const BinaryFunction *TargetBF = BC.getFunctionForSymbol(TargetSym);
-      if (!BinaryFunctionPass::shouldOptimize(*TargetBF) ||
+      if (!TargetBF || !BinaryFunctionPass::shouldOptimize(*TargetBF) ||
           getInliningInfo(*TargetBF).Type == InliningType::INL_NONE) {
         N = I;
         break;
