@@ -443,6 +443,16 @@ public:
     return (OK == OK_Ordinary || OK == OK_BitField);
   }
 
+  /// True when this expression refers to a flexible array member in a
+  /// struct. \c StrictFlexArraysLevel controls which array bounds are
+  /// acceptable for such arrays:
+  ///
+  /// - 0 => any array bound,
+  /// - 1 => [0], [1], [ ]
+  /// - 2 => [0], [ ]
+  /// - 3 => [ ]
+  bool isFlexibleArrayMember(ASTContext &Ctx, int StrictFlexArraysLevel) const;
+
   /// setValueKind - Set the value kind produced by this expression.
   void setValueKind(ExprValueKind Cat) { ExprBits.ValueKind = Cat; }
 

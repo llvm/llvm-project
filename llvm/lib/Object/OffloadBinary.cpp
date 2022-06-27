@@ -28,12 +28,18 @@ OffloadBinary::create(MemoryBufferRef Buf) {
 
   const char *Start = Buf.getBufferStart();
   const Header *TheHeader = reinterpret_cast<const Header *>(Start);
+  if (TheHeader->Version != OffloadBinary::Version)
+    return errorCodeToError(object_error::parse_failed);
+
+  if (TheHeader->Size > Buf.getBufferSize() ||
+      TheHeader->EntryOffset > TheHeader->Size - sizeof(Entry) ||
+      TheHeader->EntrySize > TheHeader->Size - sizeof(Header))
+    return errorCodeToError(object_error::unexpected_eof);
+
   const Entry *TheEntry =
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntryOffset]);
 
-  // Make sure the offsets are inside the file.
-  if (TheHeader->EntryOffset > Buf.getBufferSize() ||
-      TheEntry->ImageOffset > Buf.getBufferSize() ||
+  if (TheEntry->ImageOffset > Buf.getBufferSize() ||
       TheEntry->StringOffset > Buf.getBufferSize())
     return errorCodeToError(object_error::unexpected_eof);
 

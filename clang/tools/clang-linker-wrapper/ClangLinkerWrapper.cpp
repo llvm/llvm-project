@@ -68,10 +68,6 @@ static cl::opt<std::string> LinkerUserPath("linker-path", cl::Required,
                                            cl::desc("Path of linker binary"),
                                            cl::cat(ClangLinkerWrapperCategory));
 
-static cl::opt<std::string>
-    TargetFeatures("target-feature", cl::desc("Target features for triple"),
-                   cl::cat(ClangLinkerWrapperCategory));
-
 static cl::opt<std::string> OptLevel("opt-level",
                                      cl::desc("Optimization level for LTO"),
                                      cl::init("O2"),
@@ -324,10 +320,6 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
     if (!BinaryOrErr)
       return BinaryOrErr.takeError();
     OffloadBinary &Binary = **BinaryOrErr;
-
-    if (Binary.getVersion() != 1)
-      return createStringError(inconvertibleErrorCode(),
-                               "Incompatible device image version");
 
     // Create a new owned binary with a copy of the original memory.
     std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
@@ -726,16 +718,24 @@ void diagnosticHandler(const DiagnosticInfo &DI) {
   }
 }
 
-// Get the target features passed in from the driver as <triple>=<features>.
-std::vector<std::string> getTargetFeatures(const Triple &TheTriple) {
-  std::vector<std::string> Features;
-  auto TargetAndFeatures = StringRef(TargetFeatures).split('=');
-  if (TargetAndFeatures.first != TheTriple.getTriple())
-    return Features;
+// Get the list of target features from the input file and unify them such that
+// if there are multiple +xxx or -xxx features we only keep the last one.
+std::vector<std::string> getTargetFeatures(ArrayRef<OffloadFile> InputFiles) {
+  SmallVector<StringRef> Features;
+  for (const OffloadFile &File : InputFiles) {
+    for (auto Arg : llvm::split(File.getBinary()->getString("feature"), ","))
+      Features.emplace_back(Arg);
+  }
 
-  for (auto Feature : llvm::split(TargetAndFeatures.second, ','))
-    Features.push_back(Feature.str());
-  return Features;
+  // Only add a feature if it hasn't been seen before starting from the end.
+  std::vector<std::string> UnifiedFeatures;
+  DenseSet<StringRef> UsedFeatures;
+  for (StringRef Feature : llvm::reverse(Features)) {
+    if (UsedFeatures.insert(Feature.drop_front()).second)
+      UnifiedFeatures.push_back(Feature.str());
+  }
+
+  return UnifiedFeatures;
 }
 
 CodeGenOpt::Level getCGOptLevel(unsigned OptLevel) {
@@ -755,6 +755,7 @@ CodeGenOpt::Level getCGOptLevel(unsigned OptLevel) {
 template <typename ModuleHook = function_ref<bool(size_t, const Module &)>>
 std::unique_ptr<lto::LTO> createLTO(
     const Triple &TheTriple, StringRef Arch, bool WholeProgram,
+    const std::vector<std::string> &Features,
     ModuleHook Hook = [](size_t, const Module &) { return true; }) {
   lto::Config Conf;
   lto::ThinBackend Backend;
@@ -765,7 +766,7 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.CPU = Arch.str();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
 
-  Conf.MAttrs = getTargetFeatures(TheTriple);
+  Conf.MAttrs = Features;
   Conf.CGOptLevel = getCGOptLevel(OptLevel[1] - '0');
   Conf.OptLevel = OptLevel[1] - '0';
   if (Conf.OptLevel > 0)
@@ -902,10 +903,12 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   };
 
   // We assume visibility of the whole program if every input file was bitcode.
+  auto Features = getTargetFeatures(BitcodeInputFiles);
   bool WholeProgram = InputFiles.empty();
   auto LTOBackend =
-      (EmbedBitcode) ? createLTO(TheTriple, Arch, WholeProgram, OutputBitcode)
-                     : createLTO(TheTriple, Arch, WholeProgram);
+      (EmbedBitcode)
+          ? createLTO(TheTriple, Arch, WholeProgram, Features, OutputBitcode)
+          : createLTO(TheTriple, Arch, WholeProgram, Features);
 
   // We need to resolve the symbols so the LTO backend knows which symbols need
   // to be kept or can be internalized. This is a simplified symbol resolution

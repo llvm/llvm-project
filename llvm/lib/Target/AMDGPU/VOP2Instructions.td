@@ -151,15 +151,12 @@ multiclass VOP2Inst_e32<string opName,
                Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
   } // End renamedInGFX9 = GFX9Renamed
 }
-multiclass VOP2Inst_e32_VOPD<string opName,
-                        VOPProfile P,
-                        bits<5> VOPDOp,
-                        string VOPDName,
-                        SDPatternOperator node = null_frag,
-                        string revOp = opName,
-                        bit GFX9Renamed = 0> {
-    defm NAME : VOP2Inst_e32<opName, P, node, revOp, GFX9Renamed>,
-                VOPD_Component<VOPDOp, VOPDName>;
+multiclass
+    VOP2Inst_e32_VOPD<string opName, VOPProfile P, bits<5> VOPDOp,
+                      string VOPDName, SDPatternOperator node = null_frag,
+                      string revOp = opName, bit GFX9Renamed = 0> {
+  defm NAME : VOP2Inst_e32<opName, P, node, revOp, GFX9Renamed>,
+              VOPD_Component<VOPDOp, VOPDName>;
 }
 multiclass VOP2Inst_e64<string opName,
                         VOPProfile P,
@@ -266,16 +263,19 @@ multiclass VOP2bInstAliases<VOP2_Pseudo ps, VOP2_Real inst, string OpName> {
   }
 }
 
-multiclass VOP2eInst <string opName,
-                      VOPProfile P,
-                      SDPatternOperator node = null_frag,
-                      string revOp = opName,
-                      bit useSGPRInput = !eq(P.NumSrcArgs, 3)> {
+multiclass
+    VOP2eInst_Base<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
+                   SDPatternOperator node, string revOp, bit useSGPRInput> {
 
   let SchedRW = [Write32Bit] in {
     let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]) in {
-      def _e32 : VOP2_Pseudo <opName, P>,
-                 Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
+      if !eq(VOPDOp, -1) then
+        def _e32 : VOP2_Pseudo <opName, P>,
+                   Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
+      else
+        def _e32 : VOP2_Pseudo <opName, P>,
+                   Commutable_REV<revOp#"_e32", !eq(revOp, opName)>,
+                   VOPD_Component<VOPDOp, VOPDName>;
 
       foreach _ = BoolToList<P.HasExtSDWA>.ret in
         def _sdwa : VOP2_SDWA_Pseudo <opName, P> {
@@ -298,41 +298,16 @@ multiclass VOP2eInst <string opName,
   }
 }
 
-multiclass VOP2eInst_VOPD <string opName,
-                      VOPProfile P,
-                      bits<5> VOPDOp,
-                      string VOPDName,
-                      SDPatternOperator node = null_frag,
-                      string revOp = opName,
-                      bit useSGPRInput = !eq(P.NumSrcArgs, 3)
-                      > {
+multiclass
+    VOP2eInst<string opName, VOPProfile P, SDPatternOperator node = null_frag,
+              string revOp = opName, bit useSGPRInput = !eq(P.NumSrcArgs, 3)>
+    : VOP2eInst_Base<opName, P, -1, "", node, revOp, useSGPRInput>;
 
-  let SchedRW = [Write32Bit] in {
-    let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]) in {
-      def _e32 : VOP2_Pseudo <opName, P>,
-                 Commutable_REV<revOp#"_e32", !eq(revOp, opName)>,
-                 VOPD_Component<VOPDOp, VOPDName>;
-
-      foreach _ = BoolToList<P.HasExtSDWA>.ret in
-        def _sdwa : VOP2_SDWA_Pseudo <opName, P> {
-          let AsmMatchConverter = "cvtSdwaVOP2e";
-        }
-
-      foreach _ = BoolToList<P.HasExtDPP>.ret in
-        def _dpp  : VOP2_DPP_Pseudo <opName, P>;
-    }
-
-    def _e64 : VOP3InstBase <opName, P, node, 1>,
-               Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
-      let isReMaterializable = 1;
-    }
-
-    let SubtargetPredicate = isGFX11Plus in {
-      foreach _ = BoolToList<P.HasExtVOP3DPP>.ret in
-        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-    } // End SubtargetPredicate = isGFX11Plus
-  }
-}
+multiclass
+    VOP2eInst_VOPD<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
+                   SDPatternOperator node = null_frag, string revOp = opName,
+                   bit useSGPRInput = !eq(P.NumSrcArgs, 3)>
+    : VOP2eInst_Base<opName, P, VOPDOp, VOPDName, node, revOp, useSGPRInput>;
 
 class VOP2eInstAlias <VOP2_Pseudo ps, Instruction inst, string opnd = ""> :
   InstAlias <ps.OpName#" "#ps.Pfl.Asm32#", "#opnd,

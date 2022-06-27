@@ -14,15 +14,19 @@ if(TARGET lldb-commandinterpreter-fuzzer)
     liblldb
     )
 
-  # This will create a directory specifically for the fuzzer's artifacts, go to that
-  # directory and run the fuzzer from there. When the fuzzer exits the input
-  # artifact that caused it to exit will be written to a directory within the
-  # build directory
+  # A directory in the build directory is created to hold the fuzzer's
+  # artifacts as a pre-build command for the command interpreter's executable
+  # target. When the fuzzer exits the input artifact that caused it to exit
+  # will be written to this directory.
+
+  add_custom_command(TARGET lldb-commandinterpreter-fuzzer PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/fuzzer-artifacts/commandinterpreter-artifacts
+    )
+
   add_custom_target(fuzz-lldb-commandinterpreter
     COMMENT "Running the LLDB command interpreter fuzzer..."
-    COMMAND mkdir -p ${CMAKE_BINARY_DIR}/fuzzer-artifacts/commandinterpreter-artifacts &&
-    cd ${CMAKE_BINARY_DIR}/fuzzer-artifacts/commandinterpreter-artifacts
-    && $<TARGET_FILE:lldb-commandinterpreter-fuzzer> -dict=${CMAKE_CURRENT_SOURCE_DIR}/inputdictionary.txt  -only_ascii=1 -artifact_prefix=commandinterpreter-
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/fuzzer-artifacts/commandinterpreter-artifacts
+    COMMAND  $<TARGET_FILE:lldb-commandinterpreter-fuzzer> -dict=${CMAKE_CURRENT_SOURCE_DIR}/inputdictionary.txt  -only_ascii=1 -artifact_prefix=commandinterpreter-
     USES_TERMINAL
     )
 endif()

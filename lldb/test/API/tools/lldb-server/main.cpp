@@ -1,4 +1,5 @@
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -323,8 +324,7 @@ int main(int argc, char **argv) {
       func_p();
 #if !defined(_WIN32) && !defined(TARGET_OS_WATCH) && !defined(TARGET_OS_TV)
     } else if (arg == "fork") {
-      if (fork() == 0)
-        _exit(0);
+      assert (fork() != -1);
     } else if (arg == "vfork") {
       if (vfork() == 0)
         _exit(0);

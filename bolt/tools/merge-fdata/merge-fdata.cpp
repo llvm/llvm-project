@@ -398,14 +398,14 @@ int main(int argc, char **argv) {
     BinaryProfile MergedProfile;
     MergedProfile.Header = MergedHeader;
     MergedProfile.Functions.resize(MergedBFs.size());
-    std::transform(
-        MergedBFs.begin(), MergedBFs.end(), MergedProfile.Functions.begin(),
+    llvm::transform(
+        MergedBFs, MergedProfile.Functions.begin(),
         [](StringMapEntry<BinaryFunctionProfile> &V) { return V.second; });
 
     // For consistency, sort functions by their IDs.
-    std::sort(MergedProfile.Functions.begin(), MergedProfile.Functions.end(),
-              [](const BinaryFunctionProfile &A,
-                 const BinaryFunctionProfile &B) { return A.Id < B.Id; });
+    llvm::sort(MergedProfile.Functions,
+               [](const BinaryFunctionProfile &A,
+                  const BinaryFunctionProfile &B) { return A.Id < B.Id; });
 
     YamlOut << MergedProfile;
   }
@@ -435,9 +435,8 @@ int main(int argc, char **argv) {
     CountFuncType CountFunc = (opts::PrintFunctionList == opts::ST_EXEC_COUNT)
                                   ? ExecCountFunc
                                   : BranchCountFunc;
-    std::transform(MergedBFs.begin(), MergedBFs.end(), FunctionList.begin(),
-                   CountFunc);
-    std::stable_sort(FunctionList.rbegin(), FunctionList.rend());
+    llvm::transform(MergedBFs, FunctionList.begin(), CountFunc);
+    llvm::stable_sort(reverse(FunctionList));
     errs() << "Functions sorted by "
            << (opts::PrintFunctionList == opts::ST_EXEC_COUNT ? "execution"
                                                               : "total branch")

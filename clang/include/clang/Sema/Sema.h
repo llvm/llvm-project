@@ -758,6 +758,13 @@ public:
   /// optimizations are currently "on", this is set to an invalid location.
   SourceLocation OptimizeOffPragmaLocation;
 
+  /// The "on" or "off" argument passed by \#pragma optimize, that denotes
+  /// whether the optimizations in the list passed to the pragma should be
+  /// turned off or on. This boolean is true by default because command line
+  /// options are honored when `#pragma optimize("", on)`.
+  /// (i.e. `ModifyFnAttributeMSPragmaOptimze()` does nothing)
+  bool MSPragmaOptimizeIsOn = true;
+
   /// Set of no-builtin functions listed by \#pragma function.
   llvm::SmallSetVector<StringRef, 4> MSFunctionNoBuiltins;
 
@@ -10363,6 +10370,9 @@ public:
   /// Called on well formed \#pragma clang optimize.
   void ActOnPragmaOptimize(bool On, SourceLocation PragmaLoc);
 
+  /// #pragma optimize("[optimization-list]", on | off).
+  void ActOnPragmaMSOptimize(SourceLocation Loc, bool IsOn);
+
   /// Call on well formed \#pragma function.
   void
   ActOnPragmaMSFunction(SourceLocation Loc,
@@ -10388,6 +10398,11 @@ public:
   /// are no conflicts; Loc represents the location causing the 'optnone'
   /// attribute to be added (usually because of a pragma).
   void AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD, SourceLocation Loc);
+
+  /// Only called on function definitions; if there is a MSVC #pragma optimize
+  /// in scope, consider changing the function's attributes based on the
+  /// optimization list passed to the pragma.
+  void ModifyFnAttributesMSPragmaOptimize(FunctionDecl *FD);
 
   /// Only called on function definitions; if there is a pragma in scope
   /// with the effect of a range-based no_builtin, consider marking the function

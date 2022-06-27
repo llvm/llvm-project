@@ -1543,6 +1543,12 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
     return objc_class_sp;
 
   objc_class_sp = GetClassDescriptorFromISA(isa);
+  if (!objc_class_sp) {
+    if (ABISP abi_sp = process->GetABI())
+      isa = abi_sp->FixCodeAddress(isa);
+    objc_class_sp = GetClassDescriptorFromISA(isa);
+  }
+
   if (isa && !objc_class_sp) {
     Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
     LLDB_LOGF(log,

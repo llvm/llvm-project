@@ -10197,6 +10197,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     AddRangeBasedOptnone(NewFD);
     AddImplicitMSFunctionNoBuiltinAttr(NewFD);
     AddSectionMSAllocText(NewFD);
+    ModifyFnAttributesMSPragmaOptimize(NewFD);
   }
 
   // If this is the first declaration of an extern C variable, update

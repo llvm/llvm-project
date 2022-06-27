@@ -33,7 +33,6 @@ namespace llvm {
 class raw_ostream;
 }
 // Logging Options
-#define LLDB_LOG_OPTION_THREADSAFE (1u << 0)
 #define LLDB_LOG_OPTION_VERBOSE (1u << 1)
 #define LLDB_LOG_OPTION_PREPEND_SEQUENCE (1u << 3)
 #define LLDB_LOG_OPTION_PREPEND_TIMESTAMP (1u << 4)
@@ -50,19 +49,18 @@ class LogHandler {
 public:
   virtual ~LogHandler() = default;
   virtual void Emit(llvm::StringRef message) = 0;
-  void EmitThreadSafe(llvm::StringRef message);
-
-private:
-  std::mutex m_mutex;
 };
 
 class StreamLogHandler : public LogHandler {
 public:
-  StreamLogHandler(int fd, bool should_close, bool unbuffered = true);
+  StreamLogHandler(int fd, bool should_close, size_t buffer_size = 0);
+  ~StreamLogHandler() override;
 
   void Emit(llvm::StringRef message) override;
+  void Flush();
 
 private:
+  std::mutex m_mutex;
   llvm::raw_fd_ostream m_stream;
 };
 
@@ -89,6 +87,7 @@ private:
   size_t GetNumMessages() const;
   size_t GetFirstMessageIndex() const;
 
+  mutable std::mutex m_mutex;
   std::unique_ptr<std::string[]> m_messages;
   const size_t m_size = 0;
   size_t m_next_index = 0;

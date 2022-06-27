@@ -54,8 +54,8 @@ class VOPD_MADKe<bits<4> opX, bits<5> opY> : Enc96 {
 // VOPD classes
 //===----------------------------------------------------------------------===//
 
-class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX,
-           VOP_Pseudo VDY, VOPD_Component XasVC, VOPD_Component YasVC>
+class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
+                VOPD_Component XasVC, VOPD_Component YasVC>
     : VOPAnyCommon<outs, ins, asm, []>,
       VOP<NAME>,
       SIMCInstr<NAME, SIEncodingFamily.GFX11> {
@@ -82,38 +82,36 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX,
 }
 
 class VOPD<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
-                VOPD_Component XasVC, VOPD_Component YasVC>
+           VOPD_Component XasVC, VOPD_Component YasVC>
     : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC>,
-      VOPDe<XasVC.VOPDOp{3 - 0}, YasVC.VOPDOp> {
-  let Inst{16-9} = !if(!eq(VDX.Mnemonic,"v_mov_b32"),0x0,vsrc1X);
-  let Inst{48-41} = !if(!eq(VDY.Mnemonic,"v_mov_b32"),0x0,vsrc1Y);
+      VOPDe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp> {
+  let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
+  let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
 }
 
 class VOPD_MADK<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
                 VOPD_Component XasVC, VOPD_Component YasVC>
     : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC>,
-      VOPD_MADKe<XasVC.VOPDOp{3 - 0}, YasVC.VOPDOp> {
-  let Inst{16-9} = !if(!eq(VDX.Mnemonic,"v_mov_b32"),0x0,vsrc1X);
-  let Inst{48-41} = !if(!eq(VDY.Mnemonic,"v_mov_b32"),0x0,vsrc1Y);
+      VOPD_MADKe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp> {
+  let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
+  let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
   let Size = 12;
 }
 
-// V_DUAL_DOT2ACC_F32_BF16  is a legal instruction, but V_DOT2ACC_F32_BF16 is not.
-// Since we generate the DUAL form by converting from the normal form we will
-// never generate it.
+// V_DUAL_DOT2ACC_F32_BF16 is a legal instruction, but V_DOT2ACC_F32_BF16 is
+// not. Since we generate the DUAL form by converting from the normal form we
+// will never generate it.
 defvar VOPDYPseudos = [
   "V_FMAC_F32_e32", "V_FMAAK_F32", "V_FMAMK_F32", "V_MUL_F32_e32",
   "V_ADD_F32_e32", "V_SUB_F32_e32", "V_SUBREV_F32_e32", "V_MUL_LEGACY_F32_e32",
   "V_MOV_B32_e32", "V_CNDMASK_B32_e32", "V_MAX_F32_e32", "V_MIN_F32_e32",
   "V_DOT2C_F32_F16_e32", "V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_AND_B32_e32"
 ];
+defvar VOPDXPseudos = VOPDYPseudos[0...VOPDX_Max_Index];
 
 def VOPDDstYOperand : RegisterOperand<VGPR_32, "printRegularOperand"> {
   let DecoderMethod = "decodeOperandVOPDDstY";
 }
-
-// First 13 insts from vopdy are also vopdx, DOT2ACC_F32_BF16 is omitted
-defvar VOPDXPseudos = VOPDYPseudos[0...12];
 
 foreach x = VOPDXPseudos in {
   foreach y = VOPDYPseudos in {
@@ -121,15 +119,16 @@ foreach x = VOPDXPseudos in {
     defvar yInst = !cast<VOP_Pseudo>(y);
     defvar XasVC = !cast<VOPD_Component>(x);
     defvar YasVC = !cast<VOPD_Component>(y);
-    defvar isMADK = !or(!eq(x,"V_FMAAK_F32"),!eq(x,"V_FMAMK_F32"),!eq(y,"V_FMAAK_F32"),!eq(y,"V_FMAMK_F32"));
+    defvar isMADK = !or(!eq(x, "V_FMAAK_F32"), !eq(x, "V_FMAMK_F32"),
+                        !eq(y, "V_FMAAK_F32"), !eq(y, "V_FMAMK_F32"));
     // If X or Y is MADK (have a mandatory immediate), all src operands which
     // may contain an optional literal must use the VSrc_*_Deferred operand
     // type. Optional literal operands in MADK VOPD components always use this
     // operand form. If Both X and Y are MADK, the mandatory literal of X
     // additionally must use an alternate operand format which defers to the
     // 'real' Y literal
-    defvar isOpXMADK = !or(!eq(x,"V_FMAAK_F32"),!eq(x,"V_FMAMK_F32"));
-    defvar isOpYMADK = !or(!eq(y,"V_FMAAK_F32"),!eq(y,"V_FMAMK_F32"));
+    defvar isOpXMADK = !or(!eq(x, "V_FMAAK_F32"), !eq(x, "V_FMAMK_F32"));
+    defvar isOpYMADK = !or(!eq(y, "V_FMAAK_F32"), !eq(y, "V_FMAMK_F32"));
     defvar OpName = "V_DUAL_" # !substr(x,2) # "_X_" # !substr(y,2);
     defvar outs = (outs VGPRSrc_32:$vdstX, VOPDDstYOperand:$vdstY);
     if !or(isOpXMADK, isOpYMADK) then {

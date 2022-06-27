@@ -110,6 +110,11 @@ Improvements to clang-tidy
   from suppressing diagnostics associated with macro arguments. This fixes
   `Issue 55134 <https://github.com/llvm/llvm-project/issues/55134>`_.
 
+- Added an option -verify-config which will check the config file to ensure each
+  `Checks` and `CheckOptions` entries are recognised.
+
+- .clang-tidy files can now use the more natural dictionary syntax for specifying `CheckOptions`.
+
 New checks
 ^^^^^^^^^^
 

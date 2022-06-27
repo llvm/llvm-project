@@ -270,8 +270,7 @@ TEST_F(LogChannelTest, List) {
 TEST_F(LogChannelEnabledTest, log_options) {
   std::string Err;
   EXPECT_EQ("Hello World\n", logAndTakeOutput("Hello World"));
-  EXPECT_TRUE(EnableChannel(getLogHandler(), LLDB_LOG_OPTION_THREADSAFE, "chan",
-                            {}, Err));
+  EXPECT_TRUE(EnableChannel(getLogHandler(), 0, "chan", {}, Err));
   EXPECT_EQ("Hello World\n", logAndTakeOutput("Hello World"));
 
   {

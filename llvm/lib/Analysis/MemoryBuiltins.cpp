@@ -420,10 +420,12 @@ llvm::getAllocSize(const CallBase *CB,
   return Size;
 }
 
-Constant *llvm::getInitialValueOfAllocation(const CallBase *Alloc,
+Constant *llvm::getInitialValueOfAllocation(const Value *V,
                                             const TargetLibraryInfo *TLI,
                                             Type *Ty) {
-  assert(isAllocationFn(Alloc, TLI));
+  auto *Alloc = dyn_cast<CallBase>(V);
+  if (!Alloc)
+    return nullptr;
 
   // malloc and aligned_alloc are uninitialized (undef)
   if (isMallocLikeFn(Alloc, TLI) || isAlignedAllocLikeFn(Alloc, TLI))

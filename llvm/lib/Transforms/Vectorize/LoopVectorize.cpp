@@ -6790,8 +6790,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           Cost = getGatherScatterCost(&I, VF);
           setWideningDecision(&I, VF, CM_GatherScatter, Cost);
         } else {
-          assert((isa<LoadInst>(&I) || !VF.isScalable()) &&
-                 "Cannot yet scalarize uniform stores");
           Cost = getUniformMemOpCost(&I, VF);
           setWideningDecision(&I, VF, CM_Scalarize, Cost);
         }
@@ -7149,8 +7147,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       InstWidening Decision = getWideningDecision(I, Width);
       assert(Decision != CM_Unknown &&
              "CM decision should be taken at this point");
-      if (Decision == CM_Scalarize)
+      if (Decision == CM_Scalarize) {
+        if (VF.isScalable() && isa<StoreInst>(I))
+          // We can't scalarize a scalable vector store (even a uniform one
+          // currently), return an invalid cost so as to prevent vectorization.
+          return InstructionCost::getInvalid();
         Width = ElementCount::getFixed(1);
+      }
     }
     VectorTy = ToVectorTy(getLoadStoreType(I), Width);
     return getMemoryInstructionCost(I, VF);
@@ -8997,16 +9000,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       }
   }
 
-  // From this point onwards, VPlan-to-VPlan transformations may change the plan
-  // in ways that accessing values using original IR values is incorrect.
-  Plan->disableValue2VPValue();
-
-  VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
-  VPlanTransforms::sinkScalarOperands(*Plan);
-  VPlanTransforms::mergeReplicateRegions(*Plan);
-  VPlanTransforms::removeDeadRecipes(*Plan);
-  VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
-
   std::string PlanName;
   raw_string_ostream RSO(PlanName);
   ElementCount VF = Range.Start;
@@ -9019,6 +9012,16 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   RSO << "},UF>=1";
   RSO.flush();
   Plan->setName(PlanName);
+
+  // From this point onwards, VPlan-to-VPlan transformations may change the plan
+  // in ways that accessing values using original IR values is incorrect.
+  Plan->disableValue2VPValue();
+
+  VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
+  VPlanTransforms::sinkScalarOperands(*Plan);
+  VPlanTransforms::mergeReplicateRegions(*Plan);
+  VPlanTransforms::removeDeadRecipes(*Plan);
+  VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
 
   // Fold Exit block into its predecessor if possible.
   // TODO: Fold block earlier once all VPlan transforms properly maintain a

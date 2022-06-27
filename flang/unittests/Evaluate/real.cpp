@@ -393,6 +393,22 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
     }
 
     {
+      ValueWithRealFlags<REAL> root{x.SQRT(rounding)};
+#ifndef __clang__ // broken and also slow
+      fpenv.ClearFlags();
+#endif
+      FLT fcheck{std::sqrt(fj)};
+      auto actualFlags{FlagsToBits(fpenv.CurrentFlags())};
+      u.f = fcheck;
+      UINT rcheck{NormalizeNaN(u.ui)};
+      UINT check = root.value.RawBits().ToUInt64();
+      MATCH(rcheck, check)
+      ("%d SQRT(0x%jx)", pass, static_cast<std::intmax_t>(rj));
+      MATCH(actualFlags, FlagsToBits(root.flags))
+      ("%d SQRT(0x%jx)", pass, static_cast<std::intmax_t>(rj));
+    }
+
+    {
       MATCH(IsNaN(rj), x.IsNotANumber())
       ("%d IsNaN(0x%jx)", pass, static_cast<std::intmax_t>(rj));
       MATCH(IsInfinite(rj), x.IsInfinite())

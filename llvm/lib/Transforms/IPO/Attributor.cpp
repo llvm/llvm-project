@@ -222,8 +222,8 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
                                     const TargetLibraryInfo *TLI) {
   if (isa<AllocaInst>(Obj))
     return UndefValue::get(&Ty);
-  if (isAllocationFn(&Obj, TLI))
-    return getInitialValueOfAllocation(&cast<CallBase>(Obj), TLI, &Ty);
+  if (Constant *Init = getInitialValueOfAllocation(&Obj, TLI, &Ty))
+    return Init;
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
   if (!GV)
     return nullptr;
