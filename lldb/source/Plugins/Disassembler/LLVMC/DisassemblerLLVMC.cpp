@@ -1382,7 +1382,7 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
         // the ADRP's register and this ADD's register are the same,
         // then this is a pc-relative address calculation.
         if (*type_ptr == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
-            m_adrp_insn.hasValue() && m_adrp_address == pc - 4 &&
+            m_adrp_insn && m_adrp_address == pc - 4 &&
             (m_adrp_insn.getValue() & 0x1f) == ((value >> 5) & 0x1f)) {
           uint32_t addxri_inst;
           uint64_t adrp_imm, addxri_imm;
