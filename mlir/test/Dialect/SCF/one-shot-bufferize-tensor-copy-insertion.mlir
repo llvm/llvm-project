@@ -130,6 +130,7 @@ func.func @scf_foreach_thread_out_of_place(%in: tensor<100xf32>,
         scf.foreach_thread.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
-  }
+  // CHECK: } {thread_dim_mapping = [5]}
+  } {thread_dim_mapping = [5]}
   return
 }
