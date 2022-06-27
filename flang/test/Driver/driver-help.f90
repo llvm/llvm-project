@@ -96,6 +96,7 @@
 ! HELP-FC1-NEXT: -fdebug-measure-parse-tree
 ! HELP-FC1-NEXT:                         Measure the parse tree
 ! HELP-FC1-NEXT: -fdebug-module-writer   Enable debug messages while writing module files
+! HELP-FC1-NEXT: -fdebug-pass-manager    Prints debug information for the new pass manage
 ! HELP-FC1-NEXT: -fdebug-pre-fir-tree    Dump the pre-FIR tree
 ! HELP-FC1-NEXT: -fdebug-unparse-no-sema Unparse and stop (skips the semantic checks)
 ! HELP-FC1-NEXT: -fdebug-unparse-with-symbols
@@ -120,6 +121,7 @@
 ! HELP-FC1-NEXT: -fno-analyzed-objects-for-unparse
 ! HELP-FC1-NEXT:                        Do not use the analyzed objects when unparsing
 ! HELP-FC1-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
+! HELP-FC1-NEXT: -fno-debug-pass-manager Disables debug printing for the new pass manager
 ! HELP-FC1-NEXT: -fno-reformat          Dump the cooked character stream in -E mode
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
