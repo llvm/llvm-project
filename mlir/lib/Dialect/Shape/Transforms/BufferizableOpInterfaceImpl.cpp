@@ -154,7 +154,7 @@ struct AssumingYieldOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     // Op is bufferized as part of AssumingOp.
-    return failure();
+    return success();
   }
 };
 

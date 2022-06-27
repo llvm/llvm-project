@@ -198,8 +198,8 @@ inline bool operator<(const FunctionInfo &LHS, const FunctionInfo &RHS) {
     return LHS.Range < RHS.Range;
 
   // Then sort by inline
-  if (LHS.Inline.hasValue() != RHS.Inline.hasValue())
-    return RHS.Inline.hasValue();
+  if (LHS.Inline.has_value() != RHS.Inline.has_value())
+    return RHS.Inline.has_value();
 
   return LHS.OptLineTable < RHS.OptLineTable;
 }

@@ -22,6 +22,39 @@
 namespace clang {
 namespace dataflow {
 
+StorageLocation &
+DataflowAnalysisContext::getStableStorageLocation(QualType Type) {
+  assert(!Type.isNull());
+  if (Type->isStructureOrClassType() || Type->isUnionType()) {
+    // FIXME: Explore options to avoid eager initialization of fields as some of
+    // them might not be needed for a particular analysis.
+    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
+    for (const FieldDecl *Field : getObjectFields(Type))
+      FieldLocs.insert({Field, &getStableStorageLocation(Field->getType())});
+    return takeOwnership(
+        std::make_unique<AggregateStorageLocation>(Type, std::move(FieldLocs)));
+  }
+  return takeOwnership(std::make_unique<ScalarStorageLocation>(Type));
+}
+
+StorageLocation &
+DataflowAnalysisContext::getStableStorageLocation(const VarDecl &D) {
+  if (auto *Loc = getStorageLocation(D))
+    return *Loc;
+  auto &Loc = getStableStorageLocation(D.getType());
+  setStorageLocation(D, Loc);
+  return Loc;
+}
+
+StorageLocation &
+DataflowAnalysisContext::getStableStorageLocation(const Expr &E) {
+  if (auto *Loc = getStorageLocation(E))
+    return *Loc;
+  auto &Loc = getStableStorageLocation(E.getType());
+  setStorageLocation(E, Loc);
+  return Loc;
+}
+
 static std::pair<BoolValue *, BoolValue *>
 makeCanonicalBoolValuePair(BoolValue &LHS, BoolValue &RHS) {
   auto Res = std::make_pair(&LHS, &RHS);
@@ -169,6 +202,76 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
   }
 }
 
+BoolValue &DataflowAnalysisContext::substituteBoolValue(
+    BoolValue &Val,
+    llvm::DenseMap<BoolValue *, BoolValue *> &SubstitutionsCache) {
+  auto IT = SubstitutionsCache.find(&Val);
+  if (IT != SubstitutionsCache.end()) {
+    return *IT->second;
+  }
+  BoolValue *Result;
+  switch (Val.getKind()) {
+  case Value::Kind::AtomicBool: {
+    Result = &Val;
+    break;
+  }
+  case Value::Kind::Negation: {
+    auto &Negation = *cast<NegationValue>(&Val);
+    auto &Sub = substituteBoolValue(Negation.getSubVal(), SubstitutionsCache);
+    Result = &getOrCreateNegation(Sub);
+    break;
+  }
+  case Value::Kind::Disjunction: {
+    auto &Disjunct = *cast<DisjunctionValue>(&Val);
+    auto &LeftSub =
+        substituteBoolValue(Disjunct.getLeftSubValue(), SubstitutionsCache);
+    auto &RightSub =
+        substituteBoolValue(Disjunct.getRightSubValue(), SubstitutionsCache);
+    Result = &getOrCreateDisjunction(LeftSub, RightSub);
+    break;
+  }
+  case Value::Kind::Conjunction: {
+    auto &Conjunct = *cast<ConjunctionValue>(&Val);
+    auto &LeftSub =
+        substituteBoolValue(Conjunct.getLeftSubValue(), SubstitutionsCache);
+    auto &RightSub =
+        substituteBoolValue(Conjunct.getRightSubValue(), SubstitutionsCache);
+    Result = &getOrCreateConjunction(LeftSub, RightSub);
+    break;
+  }
+  default:
+    llvm_unreachable("Unhandled Value Kind");
+  }
+  SubstitutionsCache[&Val] = Result;
+  return *Result;
+}
+
+BoolValue &DataflowAnalysisContext::buildAndSubstituteFlowCondition(
+    AtomicBoolValue &Token,
+    llvm::DenseMap<AtomicBoolValue *, BoolValue *> Substitutions) {
+  llvm::DenseMap<BoolValue *, BoolValue *> SubstitutionsCache(
+      Substitutions.begin(), Substitutions.end());
+  return buildAndSubstituteFlowConditionWithCache(Token, SubstitutionsCache);
+}
+
+BoolValue &DataflowAnalysisContext::buildAndSubstituteFlowConditionWithCache(
+    AtomicBoolValue &Token,
+    llvm::DenseMap<BoolValue *, BoolValue *> &SubstitutionsCache) {
+  auto ConstraintsIT = FlowConditionConstraints.find(&Token);
+  if (ConstraintsIT == FlowConditionConstraints.end()) {
+    return getBoolLiteralValue(true);
+  }
+  auto DepsIT = FlowConditionDeps.find(&Token);
+  if (DepsIT != FlowConditionDeps.end()) {
+    for (AtomicBoolValue *DepToken : DepsIT->second) {
+      auto &NewDep = buildAndSubstituteFlowConditionWithCache(
+          *DepToken, SubstitutionsCache);
+      SubstitutionsCache[DepToken] = &NewDep;
+    }
+  }
+  return substituteBoolValue(*ConstraintsIT->second, SubstitutionsCache);
+}
+
 } // namespace dataflow
 } // namespace clang
 
@@ -189,4 +292,28 @@ const Stmt &clang::dataflow::ignoreCFGOmittedNodes(const Stmt &S) {
   if (auto *E = dyn_cast<Expr>(&S))
     return ignoreCFGOmittedNodes(*E);
   return S;
+}
+
+// FIXME: Does not precisely handle non-virtual diamond inheritance. A single
+// field decl will be modeled for all instances of the inherited field.
+static void
+getFieldsFromClassHierarchy(QualType Type,
+                            llvm::DenseSet<const FieldDecl *> &Fields) {
+  if (Type->isIncompleteType() || Type->isDependentType() ||
+      !Type->isRecordType())
+    return;
+
+  for (const FieldDecl *Field : Type->getAsRecordDecl()->fields())
+    Fields.insert(Field);
+  if (auto *CXXRecord = Type->getAsCXXRecordDecl())
+    for (const CXXBaseSpecifier &Base : CXXRecord->bases())
+      getFieldsFromClassHierarchy(Base.getType(), Fields);
+}
+
+/// Gets the set of all fields in the type.
+llvm::DenseSet<const FieldDecl *>
+clang::dataflow::getObjectFields(QualType Type) {
+  llvm::DenseSet<const FieldDecl *> Fields;
+  getFieldsFromClassHierarchy(Type, Fields);
+  return Fields;
 }

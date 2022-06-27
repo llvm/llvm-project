@@ -244,7 +244,7 @@ scf::TileUsingSCFForOp::returningMatchAndRewrite(
   SmallVector<scf::ForOp> newLoops = replaceLoopNestWithNewYields(
       rewriter, tilingResult.loops, op.getDestinationOperands(rewriter),
       yieldValueFn);
-  for (auto loop : llvm::enumerate(tilingResult.loops)) {
+  for (const auto &loop : llvm::enumerate(tilingResult.loops)) {
     rewriter.eraseOp(loop.value());
     tilingResult.loops[loop.index()] = newLoops[loop.index()];
   }

@@ -192,7 +192,7 @@ CGSCC_PASS_WITH_PARAMS("coro-split",
                          return CoroSplitPass(OptimizeFrame);
                        },
                        parseCoroSplitPassOptions,
-                       "optimizing")
+                       "reuse-storage")
 #undef CGSCC_PASS_WITH_PARAMS
 
 #ifndef FUNCTION_ANALYSIS

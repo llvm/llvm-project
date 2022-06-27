@@ -89,6 +89,31 @@ define amdgpu_ps float @mad_i32_vvi(i32 %a, i32 %b) {
   ret float %cast
 }
 
+define amdgpu_ps float @mad_i32_vvi_neg(i32 %a, i32 %b) {
+; GFX9-LABEL: mad_i32_vvi_neg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0xffed2979
+; GFX9-NEXT:    v_mov_b32_e32 v3, -1
+; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v0, v1, v[2:3]
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: mad_i32_vvi_neg:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, 0xffffffffffed2979
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: mad_i32_vvi_neg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_mov_b32_e32 v2, v1
+; GFX11-NEXT:    v_mov_b32_e32 v3, v0
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v3, v2, 0xffffffffffed2979
+; GFX11-NEXT:    ; return to shader part epilog
+  %mul = mul i32 %a, %b
+  %add = add i32 %mul, -1234567
+  %cast = bitcast i32 %add to float
+  ret float %cast
+}
+
 define amdgpu_ps float @mad_i32_vcv(i32 %a, i32 %c) {
 ; GFX9-LABEL: mad_i32_vcv:
 ; GFX9:       ; %bb.0:
