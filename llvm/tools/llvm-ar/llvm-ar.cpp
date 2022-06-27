@@ -1066,6 +1066,8 @@ static void runMRIScript() {
         fail("no output archive has been opened");
       object::Archive &Lib = readLibrary(Rest);
       {
+        if (Thin && !Lib.isThin())
+          fail("cannot add a regular archive's contents to a thin archive");
         Error Err = Error::success();
         for (auto &Member : Lib.children(Err))
           addChildMember(NewMembers, Member, /*FlattenArchive=*/Thin);
