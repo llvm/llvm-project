@@ -104,18 +104,20 @@
 // AARCH64-NEXT: #define __FLT_MIN_EXP__ (-125)
 // AARCH64-NEXT: #define __FLT_MIN__ 1.17549435e-38F
 // AARCH64-NEXT: #define __FLT_RADIX__ 2
+// AARCH64-NEXT: #define __FP_FAST_FMA 1
+// AARCH64-NEXT: #define __FP_FAST_FMAF 1
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 // AARCH64_CXX-NEXT: #define __GLIBCXX_BITSIZE_INT_N_0 128
 // AARCH64_CXX-NEXT: #define __GLIBCXX_TYPE_INT_N_0 __int128
-// AARCH64-NEXT: #define __INT16_C_SUFFIX__ 
+// AARCH64-NEXT: #define __INT16_C_SUFFIX__
 // AARCH64-NEXT: #define __INT16_FMTd__ "hd"
 // AARCH64-NEXT: #define __INT16_FMTi__ "hi"
 // AARCH64-NEXT: #define __INT16_MAX__ 32767
 // AARCH64-NEXT: #define __INT16_TYPE__ short
-// AARCH64-NEXT: #define __INT32_C_SUFFIX__ 
+// AARCH64-NEXT: #define __INT32_C_SUFFIX__
 // AARCH64-NEXT: #define __INT32_FMTd__ "d"
 // AARCH64-NEXT: #define __INT32_FMTi__ "i"
 // AARCH64-NEXT: #define __INT32_MAX__ 2147483647
@@ -125,7 +127,7 @@
 // AARCH64-NEXT: #define __INT64_FMTi__ "li"
 // AARCH64-NEXT: #define __INT64_MAX__ 9223372036854775807L
 // AARCH64-NEXT: #define __INT64_TYPE__ long int
-// AARCH64-NEXT: #define __INT8_C_SUFFIX__ 
+// AARCH64-NEXT: #define __INT8_C_SUFFIX__
 // AARCH64-NEXT: #define __INT8_FMTd__ "hhd"
 // AARCH64-NEXT: #define __INT8_FMTi__ "hhi"
 // AARCH64-NEXT: #define __INT8_MAX__ 127
@@ -253,7 +255,7 @@
 // AARCH64-NEXT: #define __STDC_UTF_32__ 1
 // AARCH64_C: #define __STDC_VERSION__ 201710L
 // AARCH64-NEXT: #define __STDC__ 1
-// AARCH64-NEXT: #define __UINT16_C_SUFFIX__ 
+// AARCH64-NEXT: #define __UINT16_C_SUFFIX__
 // AARCH64-NEXT: #define __UINT16_FMTX__ "hX"
 // AARCH64-NEXT: #define __UINT16_FMTo__ "ho"
 // AARCH64-NEXT: #define __UINT16_FMTu__ "hu"
@@ -274,7 +276,7 @@
 // AARCH64-NEXT: #define __UINT64_FMTx__ "lx"
 // AARCH64-NEXT: #define __UINT64_MAX__ 18446744073709551615UL
 // AARCH64-NEXT: #define __UINT64_TYPE__ long unsigned int
-// AARCH64-NEXT: #define __UINT8_C_SUFFIX__ 
+// AARCH64-NEXT: #define __UINT8_C_SUFFIX__
 // AARCH64-NEXT: #define __UINT8_FMTX__ "hhX"
 // AARCH64-NEXT: #define __UINT8_FMTo__ "hho"
 // AARCH64-NEXT: #define __UINT8_FMTu__ "hhu"
@@ -344,7 +346,7 @@
 // AARCH64-NEXT: #define __UINT_LEAST8_FMTx__ "hhx"
 // AARCH64-NEXT: #define __UINT_LEAST8_MAX__ 255
 // AARCH64-NEXT: #define __UINT_LEAST8_TYPE__ unsigned char
-// AARCH64-NEXT: #define __USER_LABEL_PREFIX__ 
+// AARCH64-NEXT: #define __USER_LABEL_PREFIX__
 // AARCH64-NEXT: #define __VERSION__ "{{.*}}"
 // AARCH64-NEXT: #define __WCHAR_MAX__ 4294967295U
 // AARCH64-NEXT: #define __WCHAR_TYPE__ unsigned int
