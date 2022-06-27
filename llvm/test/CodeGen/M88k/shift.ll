@@ -108,3 +108,33 @@ define i32 @f11(i32 %a) {
   %res = ashr i32 %shl, 16
   ret i32 %res
 }
+
+; Check rotate right with constant.
+define i32 @f12(i32 %a) {
+; CHECK-LABEL: f12:
+; CHECK: jmp.n %r1
+; CHECK: rot %r2, %r2, <3>
+  %res = call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 3)
+  ret i32 %res
+}
+
+; Check rotate right with register operand.
+define i32 @f13(i32 %a, i32 %b) {
+; CHECK-LABEL: f13:
+; CHECK: jmp.n %r1
+; CHECK: rot %r2, %r2, %r3
+  %res = call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+; Check rotate left with constant.
+define i32 @f14(i32 %a) {
+; CHECK-LABEL: f14:
+; CHECK: jmp.n %r1
+; CHECK: rot %r2, %r2, <3>
+  %res = call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 29)
+  ret i32 %res
+}
+
+declare i32 @llvm.fshr.i32(i32, i32, i32)
+declare i32 @llvm.fshl.i32(i32, i32, i32)

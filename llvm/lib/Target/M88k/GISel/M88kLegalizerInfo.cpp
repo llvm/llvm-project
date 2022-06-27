@@ -74,13 +74,13 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .clampScalar(0, S32, S32);
   getActionDefinitionsBuilder({G_SBFX, G_UBFX})
       .legalFor({{S32, S32}})
-      .clampScalar(2, S32, S32)
-      .clampScalar(1, S32, S32)
       .clampScalar(0, S32, S32);
   getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR})
       .legalFor({{S32, S32}})
       .clampScalar(0, S32, S32)
       .clampScalar(1, S32, S32);
+  getActionDefinitionsBuilder(G_ROTR).legalFor({{S32}, {S32}});
+  getActionDefinitionsBuilder({G_ROTL, G_FSHL, G_FSHR}).lower();
 
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({S1}, {S32, P0})

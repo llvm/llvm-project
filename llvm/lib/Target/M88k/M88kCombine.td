@@ -36,7 +36,7 @@ def m88k_combines : GICombineGroup<[trivial_combines, combines_for_extload,
     unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
+    truncstore_merge, div_rem_to_divrem, funnel_shift_to_rotate, //funnel_shift_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, bitfield_extract_from_and_ashr]>;
@@ -50,7 +50,10 @@ def M88kPreLegalizerCombinerHelper: GICombinerHelper<
 
 // Post-legalization combines which are primarily optimizations.
 def M88kPostLegalizerCombinerHelper: GICombinerHelper<
-  "M88kGenPostLegalizerCombinerHelper", []> {
+  "M88kGenPostLegalizerCombinerHelper", [
+  form_bitfield_extract, // Some rules require legalizer
+  rotate_out_of_range // Required for left rotates, which produce a negative constant
+  ]> {
   let DisableRuleOption = "m88kpostlegalizercombiner-disable-rule";
 //  let StateClass = "M88kPostLegalizerCombinerHelperState";
 //  let AdditionalArguments = [];
