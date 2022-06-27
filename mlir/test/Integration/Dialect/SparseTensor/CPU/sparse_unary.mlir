@@ -89,7 +89,7 @@ module {
                 %ret = arith.mulf %x0, %idxf : f64
                 sparse_tensor.yield %ret : f64
             }
-            absent={} 
+            absent={}
           linalg.yield %1 : f64
     } -> tensor<?xf64, #SparseVector>
     return %0 : tensor<?xf64, #SparseVector>
@@ -155,7 +155,6 @@ module {
     } -> tensor<?x?xf64, #DCSR>
     return %0 : tensor<?x?xf64, #DCSR>
   }
-  
 
   // Dumps a sparse vector of type f64.
   func.func @dump_vec_f64(%arg0: tensor<?xf64, #SparseVector>) {
@@ -231,7 +230,6 @@ module {
        : (tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector>
     %2 = call @vector_magnify(%sv1)
        : (tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector>
-    
 
     // Call sparse matrix kernels.
     %3 = call @matrix_clip(%sm1)
@@ -261,7 +259,7 @@ module {
     call @dump_vec_f64(%2) : (tensor<?xf64, #SparseVector>) -> ()
     call @dump_mat(%3) : (tensor<?x?xf64, #DCSR>) -> ()
     call @dump_mat(%4) : (tensor<?x?xf64, #DCSR>) -> ()
-    
+
     // Release the resources.
     sparse_tensor.release %sv1 : tensor<?xf64, #SparseVector>
     sparse_tensor.release %sm1 : tensor<?x?xf64, #DCSR>
