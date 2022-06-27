@@ -337,7 +337,24 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           return success();
         }]
-      >
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return the bufferized type of the given tensor block argument. The
+          block argument is guaranteed to belong to a block of this op.
+        }],
+        /*retType=*/"BaseMemRefType",
+        /*methodName=*/"getBufferType",
+        /*args=*/(ins "BlockArgument":$bbArg,
+                      "const BufferizationOptions &":$options),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          assert(bbArg.getOwner()->getParentOp() == $_op &&
+                 "bbArg must belong to this op");
+          auto tensorType = bbArg.getType().cast<TensorType>();
+          return bufferization::getMemRefType(tensorType, options);
+        }]
+      >,
   ];
 
   let extraClassDeclaration = [{
