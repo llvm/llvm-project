@@ -5287,7 +5287,7 @@ multiple metadata attachments with the same identifier.
 
 A transformation is required to drop any metadata attachment that it does not
 know or know it can't preserve. Currently there is an exception for metadata
-attachment to globals for ``!type`` and ``!absolute_symbol`` which can't be
+attachment to globals for ``!func_sanitize``, ``!type`` and ``!absolute_symbol`` which can't be
 unconditionally dropped unless the global is itself deleted.
 
 Metadata attached to a module using named metadata may not be dropped, with
@@ -7174,6 +7174,26 @@ Example:
 
     %a.addr = alloca float*, align 8, !annotation !0
     !0 = !{!"auto-init"}
+
+'``func_sanitize``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``func_sanitize`` metadata is used to attach two values for the function
+sanitizer instrumentation. The first value is the ubsan function signature.
+The second value is the address of the proxy variable which stores the address
+of the RTTI descriptor. If :ref:`prologue <prologuedata>` and '``func_sanitize``'
+are used at the same time, :ref:`prologue <prologuedata>` is emitted before
+'``func_sanitize``' in the output.
+
+Example:
+
+.. code-block:: text
+
+    @__llvm_rtti_proxy = private unnamed_addr constant i8* bitcast ({ i8*, i8* }* @_ZTIFvvE to i8*)
+    define void @_Z3funv() !func_sanitize !0 {
+      return void
+    }
+    !0 = !{i32 846595819, i8** @__llvm_rtti_proxy}
 
 Module Flags Metadata
 =====================
