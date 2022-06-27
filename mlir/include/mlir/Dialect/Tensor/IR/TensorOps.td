@@ -27,7 +27,7 @@ class Tensor_OpWithOffsetSizesAndStrides<string mnemonic,
     : Tensor_Op<mnemonic, traits> {
   code extraBaseClassDeclaration = [{
     /// Returns the dynamic sizes for this subview operation if specified.
-    ::mlir::Operation::operand_range getDynamicSizes() { return sizes(); }
+    ::mlir::Operation::operand_range getDynamicSizes() { return getSizes(); }
 
     /// Return the list of Range (i.e. offset, size, stride). Each
     /// Range entry contains either the dynamic value or a ConstantIndexOp
@@ -266,7 +266,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     /// Returns the type of the base tensor operand.
     RankedTensorType getSourceType() {
-      return source().getType().cast<RankedTensorType>();
+      return getSource().getType().cast<RankedTensorType>();
     }
 
     /// The result of an extract_slice is always a tensor.
@@ -559,7 +559,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     /// Returns the type of the base tensor operand.
     RankedTensorType getSourceType() {
-      return source().getType().cast<RankedTensorType>();
+      return getSource().getType().cast<RankedTensorType>();
     }
 
     /// The result of a insert_slice is always a tensor.
@@ -685,7 +685,7 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     SmallVector<ReassociationExprs, 4> getReassociationExprs();
     SmallVector<ReassociationIndices, 4> getReassociationIndices() {
       SmallVector<ReassociationIndices, 4> reassociationIndices;
-      for (auto attr : reassociation())
+      for (auto attr : getReassociation())
         reassociationIndices.push_back(llvm::to_vector<2>(
             llvm::map_range(attr.cast<ArrayAttr>(), [&](Attribute indexAttr) {
               return indexAttr.cast<IntegerAttr>().getInt();
@@ -693,10 +693,10 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
       return reassociationIndices;
     };
     RankedTensorType getSrcType() {
-      return src().getType().cast<RankedTensorType>();
+      return getSrc().getType().cast<RankedTensorType>();
     }
     RankedTensorType getResultType() {
-      return result().getType().cast<RankedTensorType>();
+      return getResult().getType().cast<RankedTensorType>();
     }
   }];
 
@@ -930,7 +930,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
     }
 
     RankedTensorType getSourceType() {
-      return source().getType().cast<RankedTensorType>();
+      return getSource().getType().cast<RankedTensorType>();
     }
     RankedTensorType getResultType() {
       return getResult().getType().cast<RankedTensorType>();
@@ -965,10 +965,10 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
       return res;
     }
     SmallVector<OpFoldResult> getMixedLowPad() {
-      return getMixedPadImpl(static_low(), low());
+      return getMixedPadImpl(getStaticLow(), getLow());
     }
     SmallVector<OpFoldResult> getMixedHighPad() {
-      return getMixedPadImpl(static_high(), high());
+      return getMixedPadImpl(getStaticHigh(), getHigh());
     }
     // Return true if low padding is guaranteed to be 0.
     bool hasZeroLowPad() {
