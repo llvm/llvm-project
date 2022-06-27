@@ -1,6 +1,6 @@
 ; Tests that variables of different type in a Corotuine whose lifetime range is not overlapping each other
 ; re-use the same slot in Coroutine frame.
-; RUN: opt < %s -passes='cgscc(coro-split<optimizing>),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split<reuse-storage>),simplifycfg,early-cse' -S | FileCheck %s
 %"struct.task::promise_type" = type { i8 }
 %struct.awaitable = type { i8 }
 %struct.big_structure = type { [500 x i8] }

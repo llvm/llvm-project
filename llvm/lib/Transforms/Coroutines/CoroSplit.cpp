@@ -683,7 +683,7 @@ void CoroCloner::salvageDebugInfo() {
       if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
         Worklist.push_back(DVI);
   for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(DbgPtrAllocaCache, DVI, Shape.Optimizing);
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DVI, Shape.OptimizeFrame);
 
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
@@ -1351,8 +1351,8 @@ static bool shouldBeMustTail(const CallInst &CI, const Function &F) {
 }
 
 // Add musttail to any resume instructions that is immediately followed by a
-// suspend (i.e. ret) to implement symmetric transfer. We wouldn't do this in
-// O0 since symmetric transfer is not part of standard now.
+// suspend (i.e. ret). We do this even in -O0 to support guaranteed tail call
+// for symmetrical coroutine control transfer (C++ Coroutines TS extension).
 // This transformation is done only in the resume part of the coroutine that has
 // identical signature and calling convention as the coro.resume call.
 static void addMustTailToCoroResumes(Function &F) {
@@ -1580,10 +1580,7 @@ static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,
   postSplitCleanup(*DestroyClone);
   postSplitCleanup(*CleanupClone);
 
-  // Prepare to do symmetric transfer. We only do this if optimization is
-  // enabled since the symmetric transfer is not part of the C++ standard now.
-  if (Shape.Optimizing)
-    addMustTailToCoroResumes(*ResumeClone);
+  addMustTailToCoroResumes(*ResumeClone);
 
   // Store addresses resume/destroy/cleanup functions in the coroutine frame.
   updateCoroFrame(Shape, ResumeClone, DestroyClone, CleanupClone);
@@ -1888,14 +1885,14 @@ namespace {
 
 static coro::Shape splitCoroutine(Function &F,
                                   SmallVectorImpl<Function *> &Clones,
-                                  bool Optimizing) {
+                                  bool OptimizeFrame) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
   // The suspend-crossing algorithm in buildCoroutineFrame get tripped
   // up by uses in unreachable blocks, so remove them as a first pass.
   removeUnreachableBlocks(F);
 
-  coro::Shape Shape(F, Optimizing);
+  coro::Shape Shape(F, OptimizeFrame);
   if (!Shape.CoroBegin)
     return Shape;
 
@@ -1944,7 +1941,7 @@ static coro::Shape splitCoroutine(Function &F,
     }
   }
   for (auto *DDI : Worklist)
-    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.Optimizing);
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.OptimizeFrame);
 
   return Shape;
 }
@@ -2087,7 +2084,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     F.setSplittedCoroutine();
 
     SmallVector<Function *, 4> Clones;
-    const coro::Shape Shape = splitCoroutine(F, Clones, Optimizing);
+    const coro::Shape Shape = splitCoroutine(F, Clones, OptimizeFrame);
     updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
 
     if (!Shape.CoroSuspends.empty()) {
