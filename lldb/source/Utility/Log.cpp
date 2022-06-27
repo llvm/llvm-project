@@ -13,6 +13,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
 
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
@@ -33,6 +34,11 @@
 #endif
 
 using namespace lldb_private;
+
+char LogHandler::ID;
+char StreamLogHandler::ID;
+char CallbackLogHandler::ID;
+char RotatingLogHandler::ID;
 
 llvm::ManagedStatic<Log::ChannelMap> Log::g_channel_map;
 
@@ -104,6 +110,16 @@ void Log::Disable(uint32_t flags) {
     m_handler.reset();
     m_channel.log_ptr.store(nullptr, std::memory_order_relaxed);
   }
+}
+
+bool Log::Dump(llvm::raw_ostream &output_stream) {
+  llvm::sys::ScopedReader lock(m_mutex);
+  if (RotatingLogHandler *handler =
+          llvm::dyn_cast_or_null<RotatingLogHandler>(m_handler.get())) {
+    handler->Dump(output_stream);
+    return true;
+  }
+  return false;
 }
 
 const Flags Log::GetOptions() const {
@@ -219,6 +235,22 @@ bool Log::DisableLogChannel(llvm::StringRef channel,
                        ? UINT32_MAX
                        : GetFlags(error_stream, *iter, categories);
   iter->second.Disable(flags);
+  return true;
+}
+
+bool Log::DumpLogChannel(llvm::StringRef channel,
+                         llvm::raw_ostream &output_stream,
+                         llvm::raw_ostream &error_stream) {
+  auto iter = g_channel_map->find(channel);
+  if (iter == g_channel_map->end()) {
+    error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
+    return false;
+  }
+  if (!iter->second.Dump(output_stream)) {
+    error_stream << llvm::formatv(
+        "log channel '{0}' does not support dumping.\n", channel);
+    return false;
+  }
   return true;
 }
 
