@@ -187,6 +187,8 @@ struct OneShotBufferizePass
       opt.createDeallocs = createDeallocs;
       opt.functionBoundaryTypeConversion =
           parseLayoutMapOption(functionBoundaryTypeConversion);
+      if (mustInferMemorySpace)
+        opt.defaultMemorySpace = None;
       opt.printConflicts = printConflicts;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
