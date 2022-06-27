@@ -1718,6 +1718,10 @@ class piecewise_linear_distribution
 #include <__random/weibull_distribution.h>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <algorithm>
+#endif
+
 // standard-mandated includes
 #include <initializer_list>
 

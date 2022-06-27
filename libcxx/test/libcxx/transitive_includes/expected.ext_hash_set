@@ -3,6 +3,7 @@ array
 atomic
 bit
 cctype
+chrono
 climits
 cmath
 compare
@@ -20,6 +21,7 @@ ext/hash_set
 functional
 initializer_list
 iosfwd
+iterator
 limits
 memory
 new
@@ -32,5 +34,7 @@ tuple
 type_traits
 typeinfo
 unordered_map
+utility
+variant
 vector
 version

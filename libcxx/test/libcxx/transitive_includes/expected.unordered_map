@@ -1,4 +1,7 @@
+algorithm
 atomic
+bit
+chrono
 climits
 cmath
 compare
@@ -11,6 +14,7 @@ ctime
 exception
 initializer_list
 iosfwd
+iterator
 limits
 memory
 new
@@ -21,4 +25,6 @@ tuple
 type_traits
 typeinfo
 unordered_map
+utility
+variant
 version

@@ -1,5 +1,8 @@
+algorithm
 array
 atomic
+bit
+chrono
 climits
 cmath
 compare
@@ -14,6 +17,7 @@ experimental/functional
 functional
 initializer_list
 iosfwd
+iterator
 limits
 memory
 new
@@ -24,5 +28,7 @@ tuple
 type_traits
 typeinfo
 unordered_map
+utility
+variant
 vector
 version

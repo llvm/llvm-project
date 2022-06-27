@@ -324,6 +324,11 @@ generic-with_llvm_unwinder)
     generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
     check-runtimes
 ;;
+generic-no-transitive-includes)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-transitive-includes.cmake"
+    check-runtimes
+;;
 generic-no-threads)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-threads.cmake"

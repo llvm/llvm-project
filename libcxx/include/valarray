@@ -360,6 +360,11 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <new>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <algorithm>
+#  include <functional>
+#endif
+
 // standard-mandated includes
 #include <initializer_list>
 
