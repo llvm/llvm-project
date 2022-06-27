@@ -6,9 +6,13 @@
 #define LLVM_ATOMICCONDITION_H
 
 #include <math.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include <string>
-#include <vector>
+#include <unistd.h>
+#include <string.h>
+#include <stdint.h>
+#include <sys/stat.h>
+
 
 enum Operation {
   Add,
@@ -30,599 +34,570 @@ enum Operation {
   TruncToFloat
 };
 
-using namespace std;
 
 // Atomic Condition storage
-template<typename FloatType>
-class ACItem {
-  string XName;
-  FloatType X;
-  string YName;
-  FloatType Y;
-  Operation OP;
-  int WRTOperand;
-  FloatType AC;
-public:
-  ACItem() {}
-  ACItem(string XName, FloatType X,
-         string YName, FloatType Y,
-         Operation OP, int WRTOperand) : XName(XName), X(X), YName(YName), Y(Y), OP(OP), WRTOperand(WRTOperand) {}
-  ACItem(string XName, FloatType X,
-         string YName, FloatType Y,
-         Operation OP, int WRTOperand,
-         FloatType AC) : XName(XName), X(X), YName(YName), Y(Y), OP(OP), WRTOperand(WRTOperand), AC(AC) {}
-  bool operator==(const ACItem &RHS) const {
-    return XName == RHS.XName && X == RHS.X && YName == RHS.YName &&
-           Y == RHS.Y && OP == RHS.OP && WRTOperand == RHS.WRTOperand &&
-           AC == RHS.AC;
-  }
-  bool operator!=(const ACItem &RHS) const { return !(RHS == *this); }
+typedef struct FloatACItem {
+  int NodeId;
+  const char *XName;
+  float X;
+  const char *YName;
+  float Y;
+  enum Operation OP;
+  float ACWRTX;
+  float ACWRTY;
+} FloatACItem;
 
-  void setAC(FloatType ACValue) {AC = ACValue;}
-  bool isUnary() { return false; }
-  bool isBinary() { return OP==14 || OP==16 || OP== 18 || OP == 21; }
-  const string &getXName() const { return XName; }
-  const string &getYName() const { return YName; }
-  FloatType getX() const { return X; }
-  FloatType getY() const { return Y; }
-  int getOp() const { return OP; }
-  int getWrtOperand() const { return WRTOperand; }
-  FloatType getAc() const { return AC; }
-};
+typedef struct DoubleACItem {
+  int NodeId;
+  const char *XName;
+  double X;
+  const char *YName;
+  double Y;
+  enum Operation OP;
+  double ACWRTX;
+  double ACWRTY;
+} DoubleACItem;
 
-class ACTable {
-public:
-  uint64_t NumItems;
-  vector<ACItem<float>> FP32ACItems;
-  vector<ACItem<double>> FP64ACItems;
+typedef struct ACTable {
+  uint64_t Size;
+  uint64_t FP32ListSize;
+  uint64_t FP64ListSize;
 
-  ACTable() {};
-  ACTable(uint64_t NumItems): NumItems(NumItems) {
-//    ACItems = new ACItem[NumItems];
-//    for(uint64_t i=0; i<NumItems; i++)
-//      ACItems[i] = NULL;
-  }
+  FloatACItem *FP32ACItems;
+  DoubleACItem *FP64ACItems;
 
-//  ~ACTable() {
-//    delete[] ACItems;
-//  }
-};
+} ACTable;
 
 ACTable *StorageTable;
 
-void fACCreate(uint64_t NumItems) {
-  StorageTable = new ACTable(NumItems);
+void fACCreate() {
+  ACTable *AtomicConditionsTable = NULL;
+  int64_t Size = 1000;
+
+  // Allocating the table itself
+  if(( AtomicConditionsTable = (ACTable*)malloc(sizeof(ACTable))) == NULL) {
+    printf("#fAC: Storage table out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  // Allocate pointers to the FP32 head nodes
+  if( (AtomicConditionsTable->FP32ACItems =
+           (struct FloatACItem *)malloc((size_t)((int64_t)sizeof(FloatACItem) * Size))) == NULL) {
+    printf("#fAC: FP32: table out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  // Allocate pointers to the FP64 head nodes
+  if( (AtomicConditionsTable->FP64ACItems =
+           (struct DoubleACItem *)malloc((size_t)((int64_t)sizeof(DoubleACItem) * Size))) == NULL) {
+    printf("#fAC: FP64: table out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  for(int I = 0; I<Size; I++) {
+    AtomicConditionsTable->FP32ACItems[I].NodeId = -1;
+    AtomicConditionsTable->FP64ACItems[I].NodeId = -1;
+  }
+  AtomicConditionsTable->Size = Size;
+  AtomicConditionsTable->FP32ListSize = 0;
+  AtomicConditionsTable->FP64ListSize = 0;
+  StorageTable = AtomicConditionsTable;
+}
+
+
+FloatACItem *fCreateFloatACItem(FloatACItem *NewValue) {
+  FloatACItem *NewItem = NULL;
+
+  if((NewItem = (FloatACItem *)malloc(sizeof(FloatACItem))) == NULL) {
+    printf("#fAC: AC table out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  NewItem->NodeId = NewValue->NodeId;
+  NewItem->XName = NewValue->XName;
+  NewItem->X = NewValue->X;
+  NewItem->YName = NewValue->YName;
+  NewItem->Y = NewValue->Y;
+  NewItem->OP = NewValue->OP;
+  NewItem->ACWRTX = NewValue->ACWRTX;
+  NewItem->ACWRTY = NewValue->ACWRTY;
+
+  return NewItem;
+}
+
+DoubleACItem *fCreateDoubleACItem(DoubleACItem *NewValue) {
+  DoubleACItem *NewItem = NULL;
+
+  if((NewItem = (DoubleACItem *)malloc(sizeof(DoubleACItem))) == NULL) {
+    printf("#fAC: AC table out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  NewItem->NodeId = NewValue->NodeId;
+  NewItem->XName = NewValue->XName;
+  NewItem->X = NewValue->X;
+  NewItem->YName = NewValue->YName;
+  NewItem->Y = NewValue->Y;
+  NewItem->OP = NewValue->OP;
+  NewItem->ACWRTX = NewValue->ACWRTX;
+  NewItem->ACWRTY = NewValue->ACWRTY;
+
+  return NewItem;
+}
+
+int fFloatACItemsEqual(FloatACItem *X, FloatACItem *Y)
+{
+  if (X->NodeId == Y->NodeId)
+    return 1;
+  return 0;
+}
+
+int fDoubleACItemsEqual(DoubleACItem *X, DoubleACItem *Y)
+{
+  if (X->NodeId == Y->NodeId)
+    return 1;
+  return 0;
+}
+
+
+
+/*----------------------------------------------------------------------------*/
+/* Insert a key-value pair into a hash table                                  */
+/*----------------------------------------------------------------------------*/
+
+void fACSetFloatItem(ACTable *AtomicConditionsTable, FloatACItem *NewValue)
+{
+  if (AtomicConditionsTable == NULL)
+    return;
+
+  FloatACItem *FoundItem    = NULL;
+  FoundItem = &AtomicConditionsTable->FP32ACItems[NewValue->NodeId];
+
+  // There's already a pair
+  if(FoundItem != NULL && fFloatACItemsEqual(NewValue, FoundItem)) {
+    // Increment values
+    FoundItem->XName = NewValue->XName;
+    FoundItem->X = NewValue->X;
+    FoundItem->YName = NewValue->YName;
+    FoundItem->Y = NewValue->Y;
+    FoundItem->OP = NewValue->OP;
+    FoundItem->ACWRTX = NewValue->ACWRTX;
+    FoundItem->ACWRTY = NewValue->ACWRTY;
+  } else  { // Nope, could't find it
+    FloatACItem *NewItem = NULL;
+    NewItem = fCreateFloatACItem(NewValue);
+    (AtomicConditionsTable->FP32ListSize)++;
+
+    AtomicConditionsTable->FP32ACItems[NewItem->NodeId] = *NewItem;
+  }
+}
+
+void fACSetDoubleItem(ACTable *AtomicConditionsTable, DoubleACItem *NewValue)
+{
+  if (AtomicConditionsTable == NULL)
+    return;
+
+  DoubleACItem *FoundItem    = NULL;
+
+  FoundItem = &AtomicConditionsTable->FP64ACItems[NewValue->NodeId];
+
+  // There's already a pair
+  if(FoundItem != NULL && fDoubleACItemsEqual(NewValue, FoundItem)) {
+    // Increment values
+    FoundItem->XName = NewValue->XName;
+    FoundItem->X = NewValue->X;
+    FoundItem->YName = NewValue->YName;
+    FoundItem->Y = NewValue->Y;
+    FoundItem->OP = NewValue->OP;
+    FoundItem->ACWRTX = NewValue->ACWRTX;
+    FoundItem->ACWRTY = NewValue->ACWRTY;
+  } else  { // Nope, could't find it
+    DoubleACItem *NewItem = NULL;
+    NewItem = fCreateDoubleACItem(NewValue);
+    (AtomicConditionsTable->FP64ListSize)++;
+
+    AtomicConditionsTable->FP64ACItems[NewItem->NodeId] = *NewItem;
+  }
 }
 
 // ---------------------------------------------------------------------------
-// --------------- fp32 Atomic Condition Calculating Functions ---------------
+// ---------------------------- Driver Functions ----------------------------
 // ---------------------------------------------------------------------------
-
-// ---------------------------- Binary Operations ----------------------------
-
-void fACfp32BinaryAdd(const char *XName, float X, const char *YName, float Y, int WRTOperand) {
-  float AC;
-  if(WRTOperand == 1) {
-    AC = abs(X / (X+Y));
-  } else if(WRTOperand == 2) {
-    AC = abs(Y / (X+Y));
-  } else {
-    printf("There is no operand %d.\n", WRTOperand);
-    return ;
-  }
-  printf("AC of x+y | x=%f, y=%f WRT %c is %f.\n",
-         X, Y, (WRTOperand==1?'x':'y'), AC);
-  
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, YName, Y, Operation::Add, WRTOperand, AC));
-
-  return ;
-}
-
-void fACfp32BinarySub(const char *XName, float X, const char *YName, float Y, int WRTOperand) {
-  float AC;
-  if(WRTOperand == 1) {
-    AC = abs(X / (X-Y));
-  } else if(WRTOperand == 2) {
-    AC = abs(Y / (Y-X));
-  } else {
-    printf("There is no operand %d.\n", WRTOperand);
-    return ;
-  }
-  printf("AC of x-y | x=%f, y=%f WRT %c is %f.\n",
-         X, Y, (WRTOperand==1?'x':'y'), AC);
-  
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, YName, Y, Operation::Sub, WRTOperand, AC));
-
-  return ;
-}
-
-void fACfp32BinaryMul(const char *XName, float X, const char *YName, float Y, int WRTOperand) {
-  float AC=1.0;
-  printf("AC of x*y | x=%f, y=%f WRT %c is %f.\n",
-         X, Y, (WRTOperand==1?'x':'y'), AC);
-  if (WRTOperand != 1 && WRTOperand != 2)
-    return ;
-  
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, YName, Y, Operation::Mul, WRTOperand, AC));
-
-  return ;
-}
-
-void fACfp32BinaryDiv(const char *XName, float X, const char *YName, float Y, int WRTOperand) {
-  float AC=1.0;
-  printf("AC of x/y | x=%f, y=%f WRT %c is %f.\n",
-         X, Y, (WRTOperand==1?'x':'y'), AC);
-  if (WRTOperand != 1 && WRTOperand != 2)
-    return ;
-  
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, YName, Y, Operation::Div, WRTOperand, AC));
-
-  return ;
-}
-
-// ---------------------------- Unary Operations ----------------------------
-
-void fACfp32UnarySin(const char *XName, float X) {
-  float AC = abs(X * (cos(X)/sin(X)));
-
-  printf("AC of sin(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Sin, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnaryCos(const char *XName, float X) {
-  float AC = abs(X * tan(X));
-
-  printf("AC of cos(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Cos, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnaryTan(const char *XName, float X) {
-  float AC = abs(X / (sin(X)*cos(X)));
-
-  printf("AC of tan(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Tan, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnaryArcSin(const char *XName, float X) {
-  float AC = abs(X / (sqrt(1-pow(X,2)) * asin(X)));
-
-  printf("AC of asin(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::ArcSin, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnaryArcCos(const char *XName, float X) {
-  float AC = abs(-X / (sqrt(1-pow(X,2)) * acos(X)));
-
-  printf("AC of acos(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::ArcCos, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnaryArcTan(const char *XName, float X) {
-  float AC = abs(X / (pow(X,2)+1 * atan(X)));
-
-  printf("AC of atan(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::ArcTan, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnarySinh(const char *XName, float X) {
-  float AC = abs(X * (cosh(X)/sinh(X)));
-
-  printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Sinh, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnaryCosh(const char *XName, float X) {
-  float AC = abs(X * tanh(X));
-
-  printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Cosh, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnaryTanh(const char *XName, float X) {
-  float AC = abs(X / (sinh(X)*cosh(X)));
-
-  printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Tanh, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnaryExp(const char *XName, float X) {
-  float AC = abs(X );
-
-  printf("AC of exp(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Exp, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnaryLog(const char *XName, float X) {
-  float AC = abs(1/log(X));
-
-  printf("AC of log(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Log, 1, AC));
-
-  return ;
-}
-
-void fACfp32UnarySqrt(const char *XName, float X) {
-  float AC = 0.5;
-
-  printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Sqrt, 1, AC));
-
-  return ;
-}
-
-
-// ---------------------------------------------------------------------------
-// --------------- fp64 Atomic Condition Calculating Functions ---------------
-// ---------------------------------------------------------------------------
-
-// ---------------------------- Binary Operations ----------------------------
-
-void fACfp64BinaryAdd(const char *XName, double X, const char *YName, double Y, int WRTOperand) {
-  double AC;
-  if(WRTOperand == 1) {
-    AC = abs(X / (X+Y));
-  } else if(WRTOperand == 2) {
-    AC = abs(Y / (X+Y));
-  } else {
-    printf("There is no operand %d.\n", WRTOperand);
-    return ;
-  }
-  printf("AC of x+y | x=%lf, y=%lf WRT %c is %lf.\n",
-         X, Y, (WRTOperand==1?'x':'y'), AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, YName, Y, Operation::Add, WRTOperand, AC));
-
-  return ;
-}
-
-void fACfp64BinarySub(const char *XName, double X, const char *YName, double Y, int WRTOperand) {
-  double AC;
-  if(WRTOperand == 1) {
-    AC = abs(X / (X-Y));
-  } else if(WRTOperand == 2) {
-    AC = abs(Y / (Y-X));
-  } else {
-    printf("There is no operand %d.\n", WRTOperand);
-    return ;
-  }
-  printf("AC of x-y | x=%lf, y=%lf WRT %c is %lf.\n",
-         X, Y, (WRTOperand==1?'x':'y'), AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, YName, Y, Operation::Sub, WRTOperand, AC));
-
-  return ;
-}
-
-void fACfp64BinaryMul(const char *XName, double X, const char *YName, double Y, int WRTOperand) {
-  double AC=1.0;
-  printf("AC of x*y | x=%lf, y=%lf WRT %c is %lf.\n",
-         X, Y, (WRTOperand==1?'x':'y'), AC);
-  if (WRTOperand != 1 && WRTOperand != 2)
-    return ;
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, YName, Y, Operation::Mul, WRTOperand, AC));
-
-  return ;
-}
-
-void fACfp64BinaryDiv(const char *XName, double X, const char *YName, double Y, int WRTOperand) {
-  double AC=1.0;
-  printf("AC of x/y | x=%lf, y=%lf WRT %c is %lf.\n",
-         X, Y, (WRTOperand==1?'x':'y'), AC);
-  if (WRTOperand != 1 && WRTOperand != 2)
-    return ;
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, YName, Y, Operation::Div, WRTOperand, AC));
-
-  return ;
-}
-
-// ---------------------------- Unary Operations ----------------------------
-
-void fACfp64UnarySin(const char *XName, double X) {
-  double AC = abs(X * (cos(X)/sin(X)));
-
-  printf("AC of sin(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Sin, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnaryCos(const char *XName, double X) {
-  double AC = abs(X * tan(X));
-
-  printf("AC of cos(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Cos, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnaryTan(const char *XName, double X) {
-  double AC = abs(X / (sin(X)*cos(X)));
-
-  printf("AC of tan(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Tan, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnaryArcSin(const char *XName, double X) {
-  double AC = abs(X / (sqrt(1-pow(X,2)) * asin(X)));
-
-  printf("AC of asin(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::ArcSin, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnaryArcCos(const char *XName, double X) {
-  double AC = abs(-X / (sqrt(1-pow(X,2)) * acos(X)));
-
-  printf("AC of acos(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::ArcCos, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnaryArcTan(const char *XName, double X) {
-  double AC = abs(X / (pow(X,2)+1 * atan(X)));
-
-  printf("AC of atan(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::ArcTan, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnarySinh(const char *XName, double X) {
-  double AC = abs(X * (cosh(X)/sinh(X)));
-
-  printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Sinh, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnaryCosh(const char *XName, double X) {
-  double AC = abs(X * tanh(X));
-
-  printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Cosh, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnaryTanh(const char *XName, double X) {
-  double AC = abs(X / (sinh(X)*cosh(X)));
-
-  printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Tanh, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnaryExp(const char *XName, double X) {
-  double AC = abs(X );
-
-  printf("AC of exp(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Exp, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnaryLog(const char *XName, double X) {
-  double AC = abs(1/log(X));
-
-  printf("AC of log(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Log, 1, AC));
-
-  return ;
-}
-
-void fACfp64UnarySqrt(const char *XName, double X) {
-  double AC = 0.5;
-
-  printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
-
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Sqrt, 1, AC));
-
-  return ;
-}
-
-void fACfp64TruncToFloat(const char *XName, double X) {
-  float AC = 1.0;
-  
-  printf("AC of trunc(x, fp32) | x=%f is %f.\n", X, AC);
-  
-  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::TruncToFloat, 1, AC));
-
-  return ;
-}
 
 // Driver function selecting atomic condition function for unary float operation
-void fACfp32UnaryDriver(const char *XName, float X, Operation OP) {
+void fACfp32UnaryDriver(int NodeId, const char *XName, float X, enum Operation OP) {
+  FloatACItem Item;
+  float AC;
+
+  Item.NodeId = NodeId;
+  Item.XName = XName;
+  Item.X = X;
+  Item.YName = "";
+  Item.Y = 1;
+  Item.OP = OP;
+
   switch (OP) {
   case 4:
-    fACfp32UnarySin(XName, X);
+    AC = fabs(X * (cos(X)/sin(X)));
+    printf("AC of sin(x) | x=%f is %f.\n", X, AC);
     break;
   case 5:
-    fACfp32UnaryCos(XName, X);
+    AC = fabs(X * tan(X));
+    printf("AC of cos(x) | x=%f is %f.\n", X, AC);
     break;
   case 6:
-    fACfp32UnaryTan(XName, X);
+    AC = fabs(X / (sin(X)*cos(X)));
+    printf("AC of tan(x) | x=%f is %f.\n", X, AC);
     break;
   case 7:
-    fACfp32UnaryArcSin(XName, X);
+    AC = fabs(X / (sqrt(1-pow(X,2)) * asin(X)));
+    printf("AC of asin(x) | x=%f is %f.\n", X, AC);
     break;
   case 8:
-    fACfp32UnaryArcCos(XName, X);
+    AC = fabs(-X / (sqrt(1-pow(X,2)) * acos(X)));
+    printf("AC of acos(x) | x=%f is %f.\n", X, AC);
     break;
   case 9:
-    fACfp32UnaryArcTan(XName, X);
+    AC = fabs(X / (pow(X,2)+1 * atan(X)));
+    printf("AC of atan(x) | x=%f is %f.\n", X, AC);
     break;
   case 10:
-    fACfp32UnarySinh(XName, X);
+    AC = fabs(X * (cosh(X)/sinh(X)));
+    printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
     break;
   case 11:
-    fACfp32UnaryCosh(XName, X);
+    AC = fabs(X * tanh(X));
+    printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
     break;
   case 12:
-    fACfp32UnaryTanh(XName, X);
+    AC = fabs(X / (sinh(X)*cosh(X)));
+    printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
     break;
   case 13:
-    fACfp32UnaryExp(XName, X);
+    AC = fabsf(X );
+    printf("AC of exp(x) | x=%f is %f.\n", X, AC);
     break;
   case 14:
-    fACfp32UnaryLog(XName, X);
+    AC = fabs(1/log(X));
+    printf("AC of log(x) | x=%f is %f.\n", X, AC);
     break;
   case 15:
-    fACfp32UnarySqrt(XName, X);
+    AC = 0.5;
+    printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
     break;
   default:
     printf("No such operation\n");
     break;
   }
+
+  Item.ACWRTX = AC;
+  fACSetFloatItem(StorageTable, &Item);
 
   return ;
 }
 
 // Driver function selecting atomic condition function for binary float operation
-void fACfp32BinaryDriver(const char *XName, float X, const char *YName, float Y, Operation OP, int WRTOperand) {
+void fACfp32BinaryDriver(int NodeId, const char *XName, float X, const char *YName, float Y, enum Operation OP) {
+  FloatACItem Item;
+  float ACWRTX;
+  float ACWRTY;
+
+  Item.NodeId = NodeId;
+  Item.XName = XName;
+  Item.X = X;
+  Item.YName = YName;
+  Item.Y = Y;
+  Item.OP = OP;
+
   switch (OP) {
   case 0:
-    fACfp32BinaryAdd(XName, X, YName, Y, WRTOperand);
+    ACWRTX = fabsf(X / (X+Y));
+    ACWRTY = fabsf(Y / (X+Y));
+    printf("AC of x+y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
+    printf("AC of x+y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
     break;
   case 1:
-    fACfp32BinarySub(XName, X, YName, Y, WRTOperand);
+    ACWRTX = fabsf(X / (X-Y));
+    ACWRTY = fabsf(Y / (Y-X));
+    printf("AC of x-y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
+    printf("AC of x-y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
     break;
   case 2:
-    fACfp32BinaryMul(XName, X, YName, Y, WRTOperand);
+    ACWRTX=ACWRTY=1.0;
+    printf("AC of x*y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
+    printf("AC of x*y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
     break;
   case 3:
-    fACfp32BinaryDiv(XName, X, YName, Y, WRTOperand);
+    ACWRTX=ACWRTY=1.0;
+    printf("AC of x/y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
+    printf("AC of x/y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
     break;
   default:
     printf("No such operation\n");
     break;
   }
+
+  Item.ACWRTX = ACWRTX;
+  Item.ACWRTY = ACWRTY;
+  fACSetFloatItem(StorageTable, &Item);
 
   return ;
 }
 
 // Driver function selecting atomic condition function for unary double operation
-void fACfp64UnaryDriver(const char *XName, double X, Operation OP) {
+void fACfp64UnaryDriver(int NodeId, const char *XName, double X, enum Operation OP) {
+  DoubleACItem Item;
+  double AC;
+
+  Item.NodeId = NodeId;
+  Item.XName = XName;
+  Item.X = X;
+  Item.YName = "";
+  Item.Y = 1;
+  Item.OP = OP;
+
   switch (OP) {
   case 4:
-    fACfp64UnarySin(XName, X);
+    AC = fabs(X * (cos(X)/sin(X)));
+    printf("AC of sin(x) | x=%f is %f.\n", X, AC);
     break;
   case 5:
-    fACfp64UnaryCos(XName, X);
+    AC = fabs(X * tan(X));
+    printf("AC of cos(x) | x=%f is %f.\n", X, AC);
     break;
   case 6:
-    fACfp64UnaryTan(XName, X);
+    AC = fabs(X / (sin(X)*cos(X)));
+    printf("AC of tan(x) | x=%f is %f.\n", X, AC);
     break;
   case 7:
-    fACfp64UnaryArcSin(XName, X);
+    AC = fabs(X / (sqrt(1-pow(X,2)) * asin(X)));
+    printf("AC of asin(x) | x=%f is %f.\n", X, AC);
     break;
   case 8:
-    fACfp64UnaryArcCos(XName, X);
+    AC = fabs(-X / (sqrt(1-pow(X,2)) * acos(X)));
+    printf("AC of acos(x) | x=%f is %f.\n", X, AC);
     break;
   case 9:
-    fACfp64UnaryArcTan(XName, X);
+    AC = fabs(X / (pow(X,2)+1 * atan(X)));
+    printf("AC of atan(x) | x=%f is %f.\n", X, AC);
     break;
   case 10:
-    fACfp64UnarySinh(XName, X);
+    AC = fabs(X * (cosh(X)/sinh(X)));
+    printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
     break;
   case 11:
-    fACfp64UnaryCosh(XName, X);
+    AC = fabs(X * tanh(X));
+    printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
     break;
   case 12:
-    fACfp64UnaryTanh(XName, X);
+    AC = fabs(X / (sinh(X)*cosh(X)));
+    printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
     break;
   case 13:
-    fACfp64UnaryExp(XName, X);
+    AC = fabs(X);
+    printf("AC of exp(x) | x=%f is %f.\n", X, AC);
     break;
   case 14:
-    fACfp64UnaryLog(XName, X);
+    AC = fabs(1/log(X));
+    printf("AC of log(x) | x=%f is %f.\n", X, AC);
     break;
   case 15:
-    fACfp64UnarySqrt(XName, X);
+    AC = 0.5;
+    printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
     break;
   case 16:
-    fACfp64TruncToFloat(XName, X);
+    AC = 1.0;
+    printf("AC of trunc(x, fp32) | x=%f is %f.\n", X, AC);
     break;
   default:
     printf("No such operation\n");
     break;
   }
+
+  Item.ACWRTX = AC;
+  fACSetDoubleItem(StorageTable, &Item);
 
   return ;
 }
 
 // Driver function selecting atomic condition function for binary double operation
-void fACfp64BinaryDriver(const char *XName, double X, const char *YName, double Y, Operation OP, int WRTOperand) {
+void fACfp64BinaryDriver(int NodeId, const char *XName, double X, const char *YName, double Y, enum Operation OP) {
+  DoubleACItem Item;
+  double ACWRTX;
+  double ACWRTY;
+
+  Item.NodeId = NodeId;
+  Item.XName = XName;
+  Item.X = X;
+  Item.YName = YName;
+  Item.Y = Y;
+  Item.OP = OP;
+
   switch (OP) {
   case 0:
-    fACfp64BinaryAdd(XName, X, YName, Y, WRTOperand);
+    ACWRTX = fabs(X / (X+Y));
+    ACWRTY = fabs(Y / (X+Y));
+    printf("AC of x+y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
+    printf("AC of x+y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
     break;
   case 1:
-    fACfp64BinarySub(XName, X, YName, Y, WRTOperand);
+    ACWRTX = fabs(X / (X-Y));
+    ACWRTY = fabs(Y / (Y-X));
+    printf("AC of x-y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
+    printf("AC of x-y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
     break;
   case 2:
-    fACfp64BinaryMul(XName, X, YName, Y, WRTOperand);
+    ACWRTX=ACWRTY=1.0;
+    printf("AC of x*y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
+    printf("AC of x*y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
     break;
   case 3:
-    fACfp64BinaryDiv(XName, X, YName, Y, WRTOperand);
+    ACWRTX=ACWRTY=1.0;
+    printf("AC of x/y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
+    printf("AC of x/y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
     break;
   default:
     printf("No such operation\n");
     break;
   }
 
+  Item.ACWRTX = ACWRTX;
+  Item.ACWRTY = ACWRTY;
+  fACSetDoubleItem(StorageTable, &Item);
+
   return ;
 }
+
+void fACGenerateExecutionID(char* ExecutionId) {
+  //size_t len=256;
+  // According to Linux manual:
+  // Each element of the hostname must be from 1 to 63 characters long
+  // and the entire hostname, including the dots, can be at most 253
+  // characters long.
+  ExecutionId[0] = '\0';
+  if(gethostname(ExecutionId, 256) != 0)
+    strcpy(ExecutionId, "node-unknown");
+
+  // Maximum size for PID: we assume 2,000,000,000
+  int PID = (int)getpid();
+  char PIDStr[11];
+  PIDStr[0] = '\0';
+  sprintf(PIDStr, "%d", PID);
+  strcat(ExecutionId, "_");
+  strcat(ExecutionId, PIDStr);
+}
+
+void fACStoreResult() {
+  // Create a directory
+  struct stat ST;
+  char DirectoryName[] = ".fAC_logs";
+  if (stat(DirectoryName, &ST) == -1) {
+    // TODO: Check the file mode and whether this one is the right one to use.
+    mkdir(DirectoryName, 0775);
+  }
+
+  char ExecutionId[5000];
+  char FileName[5000];
+  FileName[0] = '\0';
+  strcpy(FileName, ".fAC_logs/fAC_");
+
+  fACGenerateExecutionID(ExecutionId);
+  strcat(ExecutionId, ".json");
+
+  strcat(FileName, ExecutionId);
+
+  // TODO: Build analysis functions with arguments and print the arguments
+  // Get program name and input
+//  int str_size = 0;
+//  for (int i=0; i < _FPC_PROG_INPUTS; ++i)
+//    str_size += strlen(_FPC_PROG_ARGS[i]) + 1;
+//  char *prog_input = (char *)malloc((sizeof(char) * str_size) + 1);
+//  prog_input[0] = '\0';
+//  for (int i=0; i < _FPC_PROG_INPUTS; ++i) {
+//    strcat(prog_input, _FPC_PROG_ARGS[i]);
+//    strcat(prog_input, " ");
+//  }
+
+  // Table Output
+  FILE *FP = fopen(FileName, "w");
+  fprintf(FP, "{\n");
+
+  long unsigned int RecordsStored = 0;
+
+  fprintf(FP, "\t\"FP32\": [");
+  int I = 0;
+  while ((uint64_t)I < StorageTable->Size) {
+    if (StorageTable->FP32ACItems[I].NodeId != -1) {
+      if (fprintf(FP,
+                  "\t\t{\n"
+                  "\t\t\t\"NodeId\":%d,\n"
+                  "\t\t\t\"XName\": \"%s\",\n"
+                  "\t\t\t\"X\": %f,\n"
+                  "\t\t\t\"YName\": \"%s\",\n"
+                  "\t\t\t\"Y\": %f,\n"
+                  "\t\t\t\"Operation\": %d,\n"
+                  "\t\t\t\"ACWRTX\": %f,\n"
+                  "\t\t\t\"ACWRTY\": %f\n",
+                  StorageTable->FP32ACItems[I].NodeId,
+                  StorageTable->FP32ACItems[I].XName,
+                  StorageTable->FP32ACItems[I].X,
+                  StorageTable->FP32ACItems[I].YName,
+                  StorageTable->FP32ACItems[I].Y,
+                  StorageTable->FP32ACItems[I].OP,
+                  StorageTable->FP32ACItems[I].ACWRTX,
+                  StorageTable->FP32ACItems[I].ACWRTY) > 0)
+        RecordsStored++;
+
+      if (RecordsStored != StorageTable->FP32ListSize)
+        fprintf(FP, "\t\t},\n");
+      else
+        fprintf(FP, "\t\t}\n");
+    }
+    I++;
+  }
+  fprintf(FP, "\t],\n");
+
+  RecordsStored = 0;
+
+  fprintf(FP, "\t\"FP64\": [");
+  I = 0;
+  while ((uint64_t)I < StorageTable->Size) {
+    if (StorageTable->FP64ACItems[I].NodeId != -1) {
+      if (fprintf(FP,
+                  "\t\t{\n"
+                  "\t\t\t\"NodeId\":%d,\n"
+                  "\t\t\t\"XName\": \"%s\",\n"
+                  "\t\t\t\"X\": %f,\n"
+                  "\t\t\t\"YName\": \"%s\",\n"
+                  "\t\t\t\"Y\": %f,\n"
+                  "\t\t\t\"Operation\": %d,\n"
+                  "\t\t\t\"ACWRTX\": %f,\n"
+                  "\t\t\t\"ACWRTY\": %f\n",
+                  StorageTable->FP64ACItems[I].NodeId,
+                  StorageTable->FP64ACItems[I].XName,
+                  StorageTable->FP64ACItems[I].X,
+                  StorageTable->FP64ACItems[I].YName,
+                  StorageTable->FP64ACItems[I].Y,
+                  StorageTable->FP64ACItems[I].OP,
+                  StorageTable->FP64ACItems[I].ACWRTX,
+                  StorageTable->FP64ACItems[I].ACWRTY) > 0)
+        RecordsStored++;
+
+      if (RecordsStored != StorageTable->FP64ListSize)
+        fprintf(FP, "\t\t},\n");
+      else
+        fprintf(FP, "\t\t}\n");
+    }
+    I++;
+  }
+  fprintf(FP, "\t]\n");
+
+  fprintf(FP, "}\n");
+
+  fclose(FP);
+
+}
+
 
 #endif // LLVM_ATOMICCONDITION_H
 

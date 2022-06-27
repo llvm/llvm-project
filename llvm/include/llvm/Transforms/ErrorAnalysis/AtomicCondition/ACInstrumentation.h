@@ -6,6 +6,7 @@
 #define LLVM_ACINSTRUMENTATION_H
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Transforms/ErrorAnalysis/ComputationGraph.h"
 
 using namespace llvm;
@@ -18,24 +19,34 @@ private:
   Function *FunctionToInstrument;
 
   Function *ACInitFunction;
+  Function *CGInitFunction;
 
   Function *ACfp32UnaryFunction;
   Function *ACfp64UnaryFunction;
   Function *ACfp32BinaryFunction;
   Function *ACfp64BinaryFunction;
 
-//  Function *ACStoreFunction;
+  Function *CGCreateNode;
+
+  Function *ACStoreFunction;
+  Function *CGStoreFunction;
 //  Function *ACAnalysisFunction;
 
 public:
   static int VarCounter;
   static int NodeCounter;
+  ValueMap<Value*, int> InstructionNodeMapping;
 
   ACInstrumentation(Function *F);
 
-  bool instrumentUnaryCall(Instruction* BaseInstruction,
+  bool instrumentCallsForMemoryLoadOperation(Instruction* BaseInstruction,
+                                             int NodeId,
+                                             long int *NumInstrumentedInstructions);
+  bool instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
+                           int NodeId,
                            long int *NumInstrumentedInstructions);
-  bool instrumentBinaryCall(Instruction* BaseInstruction,
+  bool instrumentCallsForBinaryOperation(Instruction* BaseInstruction,
+                            int NodeId,
                             long int *NumInstrumentedInstructions);
 
   bool instrumentBasicBlock(BasicBlock *BB,
@@ -45,6 +56,7 @@ public:
   //// Helper Functions
   /// Instruction based functions
   // Categorized by operations
+  static bool isMemoryLoadOperation(const Instruction *Inst);
   static bool isUnaryOperation(const Instruction *Inst);
   static bool isBinaryOperation(const Instruction *Inst);
 

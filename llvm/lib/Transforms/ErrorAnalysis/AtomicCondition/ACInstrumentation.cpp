@@ -4,7 +4,7 @@
 
 #include <string>
 #include "llvm/Transforms/ErrorAnalysis/AtomicCondition/ACInstrumentation.h"
-#include "llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h"
+#include "llvm/Transforms/ErrorAnalysis/AtomicCondition/ComputationGraph.h"
 
 
 using namespace llvm;
@@ -32,15 +32,17 @@ void confFunction(Function *FunctionToSave, Function **StorageLocation,
 
 ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToInstrument(InstrumentFunction),
                                                                      ACInitFunction(nullptr),
+                                                                     CGInitFunction(nullptr),
                                                                      ACfp32UnaryFunction(nullptr),
                                                                      ACfp64UnaryFunction(nullptr),
                                                                      ACfp32BinaryFunction(nullptr),
-                                                                     ACfp64BinaryFunction(nullptr)
-//                                                                     ACStoreFunction(nullptr),
+                                                                     ACfp64BinaryFunction(nullptr),
+                                                                     CGCreateNode(nullptr),
+                                                                     ACStoreFunction(nullptr),
+                                                                     CGStoreFunction(nullptr)
 //                                                                     ACAnalysisFunction(nullptr)
 {
   // Find and configure instrumentation functions
-//  CG = ComputationGraph();
   Module *M = FunctionToInstrument->getParent();
 
   // Configuring all runtime functions and saving pointers.
@@ -68,10 +70,22 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
       confFunction(CurrentFunction, &ACfp64BinaryFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
-//    else if (CurrentFunction->getName().str().find("fACStoreResult") != std::string::npos) {
-//      confFunction(CurrentFunction, &ACStoreFunction,
-//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-//    }
+    else if (CurrentFunction->getName().str().find("fCGInitialize") != std::string::npos) {
+      confFunction(CurrentFunction, &CGInitFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
+    else if (CurrentFunction->getName().str().find("fCGcreateNode") != std::string::npos) {
+      confFunction(CurrentFunction, &CGCreateNode,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
+    else if (CurrentFunction->getName().str().find("fACStoreResult") != std::string::npos) {
+      confFunction(CurrentFunction, &ACStoreFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
+    else if (CurrentFunction->getName().str().find("fCGStoreResult") != std::string::npos) {
+      confFunction(CurrentFunction, &CGStoreFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
 //    else if (CurrentFunction->getName().str().find("fACAnalysis") != std::string::npos) {
 //      confFunction(CurrentFunction, &ACAnalysisFunction,
 //                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
@@ -81,11 +95,35 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
   }
 }
 
+bool ACInstrumentation::instrumentCallsForMemoryLoadOperation(
+    Instruction *BaseInstruction, int NodeId,
+    long *NumInstrumentedInstructions) {
+  BasicBlock::iterator NextInst(BaseInstruction);
+  NextInst++;
+  IRBuilder<> InstructionBuilder( &(*NextInst) );
+  std::vector<Value *> Args;
 
-bool ACInstrumentation::instrumentUnaryCall(Instruction* BaseInstruction,
+  CallInst *NewCallInstruction = nullptr;
+
+  Args.push_back(InstructionBuilder.getInt32(NodeId));
+  Args.push_back(InstructionBuilder.getInt32(-1));
+  Args.push_back(InstructionBuilder.getInt32(-1));
+  Args.push_back(InstructionBuilder.getInt32(NodeKind::Register));
+  ArrayRef<Value *> ArgsRef(Args);
+
+  NewCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, ArgsRef);
+
+  assert(NewCallInstruction && "Invalid call instruction!");
+  return true;
+}
+
+bool ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
+                                            int NodeId,
                                             long *NumInstrumentedInstructions) {
   Operation OpType;
   string FunctionName;
+
+
   switch (BaseInstruction->getOpcode()) {
   case 45:
     assert(static_cast<FPTruncInst*>(BaseInstruction)->getDestTy()->isFloatTy());
@@ -126,18 +164,17 @@ bool ACInstrumentation::instrumentUnaryCall(Instruction* BaseInstruction,
     return false;
   }
 
-  // Creating a node for the instruction in the computation graph
-//  CG.NodeMap.insert(pair<int, CGNode> (CG.NodeNumber, UnaryInstructionCGNode(CG.NodeNumber, )));
-//  CG.NodeNumber++;
-
   BasicBlock::iterator NextInst(BaseInstruction);
   NextInst++;
   IRBuilder<> InstructionBuilder( &(*NextInst) );
 
-  std::vector<Value *> Args;
+  //----------------------------------------------------------------------------
+  //------------------ Instrumenting AC Calculating Function ------------------
+  //----------------------------------------------------------------------------
 
-  Args.push_back(InstructionBuilder.getInt32(NodeCounter));
-  NodeCounter++;
+  std::vector<Value *> ACArgs;
+
+  ACArgs.push_back(InstructionBuilder.getInt32(NodeId));
 
   string XString = BaseInstruction->getOperand(0)->getName().str();
   if(XString == "")
@@ -152,32 +189,49 @@ bool ACInstrumentation::instrumentUnaryCall(Instruction* BaseInstruction,
                                 GlobalValue::InternalLinkage,
                                 XValue);
 
-  Args.push_back(X);
-  Args.push_back(BaseInstruction->getOperand(0));
+  ACArgs.push_back(X);
+  ACArgs.push_back(BaseInstruction->getOperand(0));
 
-  Args.push_back(InstructionBuilder.getInt32(OpType));
+  ACArgs.push_back(InstructionBuilder.getInt32(OpType));
 
-  ArrayRef<Value *> ArgsRef(Args);
+  ArrayRef<Value *> ACArgsRef(ACArgs);
 
-  CallInst *NewCallInstruction = nullptr;
+  CallInst *ACCallInstruction = nullptr;
 
   // Branch based on data type of operation
   if(isSingleFPOperation(BaseInstruction)) {
-    NewCallInstruction =
-        InstructionBuilder.CreateCall(ACfp32UnaryFunction, ArgsRef);
+    ACCallInstruction =
+        InstructionBuilder.CreateCall(ACfp32UnaryFunction, ACArgsRef);
     *NumInstrumentedInstructions+=1;
   }
   else if(isDoubleFPOperation(BaseInstruction)) {
-    NewCallInstruction =
-        InstructionBuilder.CreateCall(ACfp64UnaryFunction, ArgsRef);
+    ACCallInstruction =
+        InstructionBuilder.CreateCall(ACfp64UnaryFunction, ACArgsRef);
     *NumInstrumentedInstructions+=1;
   }
-  assert(NewCallInstruction && "Invalid call instruction!");
+
+  //----------------------------------------------------------------------------
+  //----------------- Instrumenting CG Node creating function -----------------
+  //----------------------------------------------------------------------------
+  std::vector<Value *> CGArgs;
+
+  CallInst *CGCallInstruction = nullptr;
+
+  CGArgs.push_back(InstructionBuilder.getInt32(NodeId));
+  CGArgs.push_back(InstructionBuilder.getInt32(InstructionNodeMapping[BaseInstruction->getOperand(0)]));
+  CGArgs.push_back(InstructionBuilder.getInt32(-1));
+  CGArgs.push_back(InstructionBuilder.getInt32(NodeKind::UnaryInstruction));
+  ArrayRef<Value *> CGArgsRef(CGArgs);
+
+  CGCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, CGArgsRef);
+
+  assert(ACCallInstruction && CGCallInstruction && "Invalid call instruction!");
   return true;
 }
 
 
-bool ACInstrumentation::instrumentBinaryCall(Instruction* BaseInstruction,
+bool ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstruction,
+                                             int NodeId,
                                              long *NumInstrumentedInstructions) {
   Operation OpType;
   switch (BaseInstruction->getOpcode()) {
@@ -202,10 +256,13 @@ bool ACInstrumentation::instrumentBinaryCall(Instruction* BaseInstruction,
   NextInst++;
   IRBuilder<> InstructionBuilder( &(*NextInst) );
 
+  //----------------------------------------------------------------------------
+  //------------------ Instrumenting AC Calculating Function ------------------
+  //----------------------------------------------------------------------------
+
   std::vector<Value *> Args;
 
-  Args.push_back(InstructionBuilder.getInt32(NodeCounter));
-  NodeCounter++;
+  Args.push_back(InstructionBuilder.getInt32(NodeId));
 
   string XString = BaseInstruction->getOperand(0)->getName().str();
   if(XString == "")
@@ -255,7 +312,22 @@ bool ACInstrumentation::instrumentBinaryCall(Instruction* BaseInstruction,
     *NumInstrumentedInstructions+=1;
   }
 
-  assert(NewCallInstruction && "Invalid call instruction!");
+  //----------------------------------------------------------------------------
+  //----------------- Instrumenting CG Node creating function -----------------
+  //----------------------------------------------------------------------------
+  std::vector<Value *> CGArgs;
+
+  CallInst *CGCallInstruction = nullptr;
+
+  CGArgs.push_back(InstructionBuilder.getInt32(NodeId));
+  CGArgs.push_back(InstructionBuilder.getInt32(InstructionNodeMapping[BaseInstruction->getOperand(0)]));
+  CGArgs.push_back(InstructionBuilder.getInt32(InstructionNodeMapping[BaseInstruction->getOperand(1)]));
+  CGArgs.push_back(InstructionBuilder.getInt32(NodeKind::BinaryInstruction));
+  ArrayRef<Value *> CGArgsRef(CGArgs);
+
+  CGCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, CGArgsRef);
+
+  assert(NewCallInstruction && CGCallInstruction && "Invalid call instruction!");
   return true;
 }
 
@@ -271,29 +343,57 @@ bool ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
   //  assert((ACfp64UnaryFunction!=nullptr) && "Function not initialized!");
   assert((ACfp64BinaryFunction!=nullptr) && "Function not initialized!");
 
-  bool Instrumented = false;
+  bool BasicBlockInstrumented = false;
   for (BasicBlock::iterator I = BB->begin();
        I != BB->end(); ++I) {
     Instruction* CurrentInstruction = &*I;
-    // Branch based on kind of operation
-    if(isUnaryOperation(CurrentInstruction)) {
-      Instrumented = instrumentUnaryCall(CurrentInstruction, &*NumInstrumentedInstructions) || Instrumented;
+
+    // Branch based on kind of Instruction
+    if(isMemoryLoadOperation(CurrentInstruction)) {
+      bool InstructionInstrumented = instrumentCallsForMemoryLoadOperation(CurrentInstruction,
+                                                                      NodeCounter,
+                                                                      &*NumInstrumentedInstructions);
+      if(InstructionInstrumented) {
+        InstructionNodeMapping.insert(pair<Value*, int>(CurrentInstruction,
+                                                               NodeCounter));
+        NodeCounter++;
+      }
+      BasicBlockInstrumented = InstructionInstrumented || BasicBlockInstrumented;
+    }
+    else if(isUnaryOperation(CurrentInstruction)) {
+      bool InstructionInstrumented = instrumentCallsForUnaryOperation(CurrentInstruction,
+                                                         NodeCounter,
+                                                         &*NumInstrumentedInstructions);
+      if(InstructionInstrumented) {
+        InstructionNodeMapping.insert(pair<Value*, int>(CurrentInstruction,
+                                                               NodeCounter));
+        NodeCounter++;
+      }
+      BasicBlockInstrumented = InstructionInstrumented || BasicBlockInstrumented;
     }
     else if(isBinaryOperation(CurrentInstruction)) {
-      Instrumented = instrumentBinaryCall(CurrentInstruction, &*NumInstrumentedInstructions) || Instrumented;
+      bool InstructionInstrumented = instrumentCallsForBinaryOperation(CurrentInstruction,
+                                                   NodeCounter,
+                                                   &*NumInstrumentedInstructions);
+      if(InstructionInstrumented) {
+        InstructionNodeMapping.insert(pair<Value*, int>(CurrentInstruction,
+                                                               NodeCounter));
+        NodeCounter++;
+      }
+      BasicBlockInstrumented = InstructionInstrumented || BasicBlockInstrumented;
     }
   }
 
-  return Instrumented;
+  return BasicBlockInstrumented;
 }
 
 bool ACInstrumentation::instrumentMainFunction(Function *F) {
   BasicBlock *BB = &(*(F->begin()));
   Instruction *Inst = BB->getFirstNonPHIOrDbg();
   IRBuilder<> InstructionBuilder(Inst);
-  std::vector<Value *> InitCallArgs, StoreCallArgs, AnalysisCallArgs;
+  std::vector<Value *> ACInitCallArgs, CGInitCallArgs, ACStoreCallArgs, CGStoreCallArgs, AnalysisCallArgs;
 
-  CallInst *InitCallInstruction, *StoreCallInstruction, *AnalysisCallInstruction;
+  CallInst *ACInitCallInstruction, *CGInitCallInstruction, *StoreACTableCallInstruction, *StoreCGTableCallInstruction, *AnalysisCallInstruction;
 
   // Instrumenting Initialization call instruction
 //  Args.push_back(InstructionBuilder.getInt64(1000));
@@ -310,41 +410,39 @@ bool ACInstrumentation::instrumentMainFunction(Function *F) {
 //    CallInstruction = InstructionBuilder.CreateCall(fpc_init_args, args_ref);
 //  } else
 //  {
-  InitCallInstruction = InstructionBuilder.CreateCall(ACInitFunction, InitCallArgs);
+  ACInitCallInstruction = InstructionBuilder.CreateCall(ACInitFunction, ACInitCallArgs);
+  CGInitCallInstruction = InstructionBuilder.CreateCall(CGInitFunction, CGInitCallArgs);
 //  }
 
   // Instrument call to print table
-//  for (Function::iterator BBIter=F->begin(); BBIter != F->end(); ++BBIter) {
-//    for (BasicBlock::iterator InstIter=BBIter->begin(); InstIter != BBIter->end(); ++InstIter) {
-//      Instruction *CurrentInstruction = &(*InstIter);
-//      if (isa<ReturnInst>(CurrentInstruction) || isa<ResumeInst>(CurrentInstruction)) {
-//        ArrayRef<Value *> StoreCallArgsRef(StoreCallArgs);
-//        InstructionBuilder.SetInsertPoint(CurrentInstruction);
-//        StoreCallInstruction = InstructionBuilder.CreateCall(ACStoreFunction, StoreCallArgsRef);
-//
-//        std::string str;
-//        llvm::raw_string_ostream(str) << *CurrentInstruction;
-//        Constant *GraphFileName = ConstantDataArray::getString(InstIter->getModule()->getContext(),
-//                                                               str,
-//                                                               true);
-//        Value *GraphFileIdentifier = new GlobalVariable(*InstIter->getModule(),
-//                                      GraphFileName->getType(),
-//                                      true,
-//                                      GlobalValue::InternalLinkage,
-//                                      GraphFileName);
+  for (Function::iterator BBIter=F->begin(); BBIter != F->end(); ++BBIter) {
+    for (BasicBlock::iterator InstIter=BBIter->begin(); InstIter != BBIter->end(); ++InstIter) {
+      Instruction *CurrentInstruction = &(*InstIter);
+      if (isa<ReturnInst>(CurrentInstruction) || isa<ResumeInst>(CurrentInstruction)) {
+        ArrayRef<Value *> ACStoreCallArgsRef(ACStoreCallArgs);
+        ArrayRef<Value *> CGStoreCallArgsRef(CGStoreCallArgs);
+        InstructionBuilder.SetInsertPoint(CurrentInstruction);
+        StoreACTableCallInstruction = InstructionBuilder.CreateCall(ACStoreFunction, ACStoreCallArgsRef);
+        StoreCGTableCallInstruction = InstructionBuilder.CreateCall(CGStoreFunction, CGStoreCallArgsRef);
+
 //        AnalysisCallArgs.push_back(GraphFileIdentifier);
 //        ArrayRef<Value *> AnalysisCallArgsRef(AnalysisCallArgs);
 //        AnalysisCallInstruction = InstructionBuilder.CreateCall(ACAnalysisFunction, AnalysisCallArgsRef);
-//      }
-//    }
-//  }
+      }
+    }
+  }
 
-//  assert(InitCallInstruction && StoreCallInstruction && AnalysisCallInstruction && "Invalid call instruction!");
+  assert(ACInitCallInstruction && CGInitCallInstruction &&
+         StoreACTableCallInstruction && StoreCGTableCallInstruction &&
+         "Invalid call instruction!");
   return true;
 }
 
-// TODO: Figure out which unary instructions you would want the atomic condition
-//  for and return true for those below.
+bool ACInstrumentation::isMemoryLoadOperation(const Instruction *Inst) {
+  return Inst->getOpcode() == Instruction::Alloca ||
+         Inst->getOpcode() == Instruction::Load;
+}
+
 bool ACInstrumentation::isUnaryOperation(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::FPTrunc ||
          Inst->getOpcode() == Instruction::Call;
@@ -401,5 +499,6 @@ bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
 
 bool ACInstrumentation::isUnwantedFunction(const Function *Func) {
   return Func->getName().str().find("fAC") != std::string::npos ||
+         Func->getName().str().find("fCG") != std::string::npos ||
          Func->getName().str().find("ACItem") != std::string::npos;
 }
