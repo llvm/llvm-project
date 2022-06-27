@@ -57,7 +57,7 @@ public:
         tuple(allocator_arg_t, const Alloc& a, tuple&&);                                  // constexpr in C++20
     template<class Alloc, class... UTypes>
         constexpr explicit(see-below)
-          tuple(allocator_arg_t, const Alloc& a, tuple<UTypes...>&);                      // C++23    
+          tuple(allocator_arg_t, const Alloc& a, tuple<UTypes...>&);                      // C++23
     template <class Alloc, class... U>
         explicit(see-below) tuple(allocator_arg_t, const Alloc& a, const tuple<U...>&);   // constexpr in C++20
     template <class Alloc, class... U>
@@ -248,7 +248,7 @@ void swap(__tuple_leaf<_Ip, _Hp, _Ep>& __x, __tuple_leaf<_Ip, _Hp, _Ep>& __y)
 
 template <size_t _Ip, class _Hp, bool _Ep>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-void swap(const __tuple_leaf<_Ip, _Hp, _Ep>& __x, const __tuple_leaf<_Ip, _Hp, _Ep>& __y) 
+void swap(const __tuple_leaf<_Ip, _Hp, _Ep>& __x, const __tuple_leaf<_Ip, _Hp, _Ep>& __y)
      _NOEXCEPT_(__is_nothrow_swappable<const _Hp>::value) {
   swap(__x.get(), __y.get());
 }
@@ -765,12 +765,12 @@ public:
     { }
 
     // tuple(const tuple<U...>&) constructors (including allocator_arg_t variants)
-    
+
     template <class _OtherTuple, class _DecayedOtherTuple = __uncvref_t<_OtherTuple>, class = void>
     struct _EnableCtorFromUTypesTuple : false_type {};
 
     template <class _OtherTuple, class... _Up>
-    struct _EnableCtorFromUTypesTuple<_OtherTuple, tuple<_Up...>, 
+    struct _EnableCtorFromUTypesTuple<_OtherTuple, tuple<_Up...>,
               // the length of the packs needs to checked first otherwise the 2 packs cannot be expanded simultaneously below
                __enable_if_t<sizeof...(_Up) == sizeof...(_Tp)>> : _And<
         // the two conditions below are not in spec. The purpose is to disable the UTypes Ctor when copy/move Ctor can work.
@@ -1165,13 +1165,13 @@ public:
     }
 #endif // _LIBCPP_STD_VER > 20
 
-    template <template<class...> class Pred, bool _Const, 
+    template <template<class...> class Pred, bool _Const,
               class _Pair, class _DecayedPair = __uncvref_t<_Pair>, class _Tuple = tuple>
     struct _AssignPredicateFromPair : false_type {};
 
-    template <template<class...> class Pred, bool _Const, 
+    template <template<class...> class Pred, bool _Const,
               class _Pair, class _Up1, class _Up2, class _Tp1, class _Tp2>
-    struct _AssignPredicateFromPair<Pred, _Const, _Pair, pair<_Up1, _Up2>, tuple<_Tp1, _Tp2> > : 
+    struct _AssignPredicateFromPair<Pred, _Const, _Pair, pair<_Up1, _Up2>, tuple<_Tp1, _Tp2> > :
         _And<Pred<__maybe_const<_Const, _Tp1>&, __copy_cvref_t<_Pair, _Up1> >,
              Pred<__maybe_const<_Const, _Tp2>&, __copy_cvref_t<_Pair, _Up2> >
             > {};
