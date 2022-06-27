@@ -192,7 +192,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
     auto start_bp = BreakpointID::ParseCanonicalReference(range_from);
     auto end_bp = BreakpointID::ParseCanonicalReference(range_to);
 
-    if (!start_bp.hasValue() ||
+    if (!start_bp ||
         !target->GetBreakpointByID(start_bp->GetBreakpointID())) {
       new_args.Clear();
       result.AppendErrorWithFormat("'%s' is not a valid breakpoint ID.\n",
@@ -200,7 +200,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
       return;
     }
 
-    if (!end_bp.hasValue() ||
+    if (!end_bp ||
         !target->GetBreakpointByID(end_bp->GetBreakpointID())) {
       new_args.Clear();
       result.AppendErrorWithFormat("'%s' is not a valid breakpoint ID.\n",
