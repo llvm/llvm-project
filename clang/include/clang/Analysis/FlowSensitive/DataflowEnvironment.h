@@ -203,6 +203,10 @@ public:
   /// in the environment.
   StorageLocation *getThisPointeeStorageLocation() const;
 
+  /// Returns a pointer value that represents a null pointer. Calls with
+  /// `PointeeType` that are canonically equivalent will return the same result.
+  PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
+
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
   /// return null. If `Type` is a pointer or reference type, creates all the
   /// necessary storage locations and values for indirections until it finds a

@@ -17,6 +17,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -151,6 +152,10 @@ public:
   StorageLocation *getThisPointeeStorageLocation() const {
     return ThisPointeeLoc;
   }
+
+  /// Returns a pointer value that represents a null pointer. Calls with
+  /// `PointeeType` that are canonically equivalent will return the same result.
+  PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`.
@@ -299,6 +304,14 @@ private:
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
 
   StorageLocation *ThisPointeeLoc = nullptr;
+
+  // Null pointer values, keyed by the canonical pointee type.
+  //
+  // FIXME: The pointer values are indexed by the pointee types which are
+  // required to initialize the `PointeeLoc` field in `PointerValue`. Consider
+  // creating a type-independent `NullPointerValue` without a `PointeeLoc`
+  // field.
+  llvm::DenseMap<QualType, PointerValue *> NullPointerVals;
 
   AtomicBoolValue &TrueVal;
   AtomicBoolValue &FalseVal;

@@ -55,6 +55,19 @@ DataflowAnalysisContext::getStableStorageLocation(const Expr &E) {
   return Loc;
 }
 
+PointerValue &
+DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
+  assert(!PointeeType.isNull());
+  auto CanonicalPointeeType = PointeeType.getCanonicalType();
+  auto Res = NullPointerVals.try_emplace(CanonicalPointeeType, nullptr);
+  if (Res.second) {
+    auto &PointeeLoc = getStableStorageLocation(CanonicalPointeeType);
+    Res.first->second =
+        &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
+  }
+  return *Res.first->second;
+}
+
 static std::pair<BoolValue *, BoolValue *>
 makeCanonicalBoolValuePair(BoolValue &LHS, BoolValue &RHS) {
   auto Res = std::make_pair(&LHS, &RHS);

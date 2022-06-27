@@ -251,6 +251,16 @@ public:
       Env.setStorageLocation(*S, *SubExprLoc);
       break;
     }
+    case CK_NullToPointer:
+    case CK_NullToMemberPointer: {
+      auto &Loc = Env.createStorageLocation(S->getType());
+      Env.setStorageLocation(*S, Loc);
+
+      auto &NullPointerVal =
+          Env.getOrCreateNullPointerValue(S->getType()->getPointeeType());
+      Env.setValue(Loc, NullPointerVal);
+      break;
+    }
     default:
       break;
     }
