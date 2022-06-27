@@ -43,7 +43,7 @@ using namespace lld::elf;
 bool InputFile::isInGroup;
 uint32_t InputFile::nextGroupId;
 
-SmallVector<std::unique_ptr<MemoryBuffer>> elf::memoryBuffers;
+SmallVector<std::unique_ptr<MemoryBuffer>, 6> elf::memoryBuffers;
 SmallVector<BinaryFile *, 0> elf::binaryFiles;
 SmallVector<BitcodeFile *, 0> elf::bitcodeFiles;
 SmallVector<BitcodeFile *, 0> elf::lazyBitcodeFiles;
