@@ -5,13 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx10_vdst_a49b76:
+.. _amdgpu_synid_gfx10_opt_847aed:
 
-vdst
-====
+opt
+===
 
-Instruction output: data read from a memory buffer.
-
-*Size:* 3 dwords by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`
+This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
