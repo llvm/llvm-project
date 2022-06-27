@@ -46,9 +46,9 @@ constexpr const ::llvm::StringLiteral
 /// Create an AllocTensorOp for the given shaped value. If `copy` is set, the
 /// shaped value is copied. Otherwise, a tensor with undefined contents is
 /// allocated.
-Value bufferization::allocateTensorForShapedValue(OpBuilder &b, Location loc,
-                                                  Value shapedValue,
-                                                  bool escape, bool copy) {
+FailureOr<Value> bufferization::allocateTensorForShapedValue(
+    OpBuilder &b, Location loc, Value shapedValue, bool escape,
+    const BufferizationOptions &options, bool copy) {
   Value tensor;
   if (shapedValue.getType().isa<RankedTensorType>()) {
     tensor = shapedValue;
@@ -88,7 +88,7 @@ Value bufferization::allocateTensorForShapedValue(OpBuilder &b, Location loc,
                                                copy ? tensor : Value());
   allocTensorOp->setAttr(BufferizationDialect::kEscapeAttrName,
                          b.getBoolArrayAttr({escape}));
-  return allocTensorOp;
+  return allocTensorOp.getResult();
 }
 
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
@@ -147,26 +147,30 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
   // Insert copies of OpOperands.
   rewriter.setInsertionPoint(op);
   for (OpOperand *opOperand : outOfPlaceOpOperands) {
-    Value copy = allocateTensorForShapedValue(
+    FailureOr<Value> copy = allocateTensorForShapedValue(
         rewriter, op->getLoc(), opOperand->get(),
-        escapingOpOperandCopies.contains(opOperand),
+        escapingOpOperandCopies.contains(opOperand), state.getOptions(),
         copiedOpOperands.contains(opOperand));
-    rewriter.updateRootInPlace(op, [&]() { opOperand->set(copy); });
+    if (failed(copy))
+      return failure();
+    rewriter.updateRootInPlace(op, [&]() { opOperand->set(*copy); });
   }
 
   // Insert copies of OpResults.
   rewriter.setInsertionPointAfter(op);
   for (OpResult opResult : outOfPlaceOpResults) {
-    Value copy =
-        allocateTensorForShapedValue(rewriter, op->getLoc(), opResult,
-                                     escapingOpResultCopies.contains(opResult),
-                                     copiedOpResults.count(opResult));
+    FailureOr<Value> copy = allocateTensorForShapedValue(
+        rewriter, op->getLoc(), opResult,
+        escapingOpResultCopies.contains(opResult), state.getOptions(),
+        copiedOpResults.count(opResult));
+    if (failed(copy))
+      return failure();
     SmallVector<OpOperand *> uses = llvm::to_vector(llvm::map_range(
         opResult.getUses(), [](OpOperand &use) { return &use; }));
     for (OpOperand *use : uses) {
       // Do not update the alloc_tensor op that we just created.
-      if (use->getOwner() != copy.getDefiningOp())
-        rewriter.updateRootInPlace(use->getOwner(), [&]() { use->set(copy); });
+      if (use->getOwner() != copy->getDefiningOp())
+        rewriter.updateRootInPlace(use->getOwner(), [&]() { use->set(*copy); });
     }
   }
 

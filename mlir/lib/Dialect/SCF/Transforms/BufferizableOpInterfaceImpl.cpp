@@ -458,9 +458,12 @@ struct ForOpInterface
         yieldValues.push_back(value);
         continue;
       }
-      Value alloc = allocateTensorForShapedValue(rewriter, yieldOp.getLoc(),
-                                                 value, /*escape=*/true);
-      yieldValues.push_back(alloc);
+      FailureOr<Value> alloc =
+          allocateTensorForShapedValue(rewriter, yieldOp.getLoc(), value,
+                                       /*escape=*/true, state.getOptions());
+      if (failed(alloc))
+        return failure();
+      yieldValues.push_back(*alloc);
     }
 
     rewriter.updateRootInPlace(
@@ -669,9 +672,12 @@ struct WhileOpInterface
         beforeYieldValues.push_back(value);
         continue;
       }
-      Value alloc = allocateTensorForShapedValue(rewriter, conditionOp.getLoc(),
-                                                 value, /*escape=*/true);
-      beforeYieldValues.push_back(alloc);
+      FailureOr<Value> alloc =
+          allocateTensorForShapedValue(rewriter, conditionOp.getLoc(), value,
+                                       /*escape=*/true, state.getOptions());
+      if (failed(alloc))
+        return failure();
+      beforeYieldValues.push_back(*alloc);
     }
     rewriter.updateRootInPlace(conditionOp, [&]() {
       conditionOp.getArgsMutable().assign(beforeYieldValues);
@@ -687,9 +693,12 @@ struct WhileOpInterface
         afterYieldValues.push_back(value);
         continue;
       }
-      Value alloc = allocateTensorForShapedValue(rewriter, yieldOp.getLoc(),
-                                                 value, /*escape=*/true);
-      afterYieldValues.push_back(alloc);
+      FailureOr<Value> alloc =
+          allocateTensorForShapedValue(rewriter, yieldOp.getLoc(), value,
+                                       /*escape=*/true, state.getOptions());
+      if (failed(alloc))
+        return failure();
+      afterYieldValues.push_back(*alloc);
     }
     rewriter.updateRootInPlace(yieldOp, [&]() {
       yieldOp.getResultsMutable().assign(afterYieldValues);
@@ -972,13 +981,15 @@ struct ForeachThreadOpInterface
 
       // Insert tensor allocation.
       bool isYielded = state.isTensorYielded(opResult);
-      Value alloc = allocateTensorForShapedValue(rewriter, op->getLoc(),
-                                                 destOperands.front()->get(),
-                                                 /*escape=*/isYielded);
+      FailureOr<Value> alloc = allocateTensorForShapedValue(
+          rewriter, op->getLoc(), destOperands.front()->get(),
+          /*escape=*/isYielded, state.getOptions());
+      if (failed(alloc))
+        return failure();
 
       // Update terminator operand.
       rewriter.updateRootInPlace(destOperands.front()->getOwner(),
-                                 [&]() { destOperands.front()->set(alloc); });
+                                 [&]() { destOperands.front()->set(*alloc); });
     }
 
     return success();
