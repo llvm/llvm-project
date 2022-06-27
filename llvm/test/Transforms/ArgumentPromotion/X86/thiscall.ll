@@ -4,8 +4,8 @@
 ; we don't do that anymore. It also verifies that the combination of
 ; globalopt and argpromotion is able to optimize the call safely.
 ;
-; RUN: opt -S -argpromotion %s | FileCheck %s --check-prefix=ARGPROMOTION
-; RUN: opt -S -globalopt -argpromotion %s | FileCheck %s --check-prefix=GLOBALOPT_ARGPROMOTION
+; RUN: opt -S -passes=argpromotion %s | FileCheck %s --check-prefix=ARGPROMOTION
+; RUN: opt -S -passes=globalopt,argpromotion %s | FileCheck %s --check-prefix=GLOBALOPT_ARGPROMOTION
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-pc-windows-msvc19.11.0"

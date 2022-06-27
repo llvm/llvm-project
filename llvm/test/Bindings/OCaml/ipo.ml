@@ -47,7 +47,6 @@ let test_transforms () =
   end;
 
   ignore (PassManager.create ()
-           ++ add_argument_promotion
            ++ add_constant_merge
            ++ add_dead_arg_elimination
            ++ add_function_attrs

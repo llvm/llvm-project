@@ -25,7 +25,6 @@ func boolToUnsigned(b bool) C.unsigned {
 	return 0
 }
 
-func (pm PassManager) AddArgumentPromotionPass()     { C.LLVMAddArgumentPromotionPass(pm.C) }
 func (pm PassManager) AddConstantMergePass()         { C.LLVMAddConstantMergePass(pm.C) }
 func (pm PassManager) AddDeadArgEliminationPass()    { C.LLVMAddDeadArgEliminationPass(pm.C) }
 func (pm PassManager) AddFunctionAttrsPass()         { C.LLVMAddFunctionAttrsPass(pm.C) }

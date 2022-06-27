@@ -152,13 +152,6 @@ ModulePass *createDeadArgEliminationPass();
 ModulePass *createDeadArgHackingPass();
 
 //===----------------------------------------------------------------------===//
-/// createArgumentPromotionPass - This pass promotes "by reference" arguments to
-/// be passed by value if the number of elements passed is smaller or
-/// equal to maxElements (maxElements == 0 means always promote).
-///
-Pass *createArgumentPromotionPass(unsigned maxElements = 3);
-
-//===----------------------------------------------------------------------===//
 /// createOpenMPOptLegacyPass - OpenMP specific optimizations.
 Pass *createOpenMPOptCGSCCLegacyPass();
 
