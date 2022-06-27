@@ -456,6 +456,11 @@ let Command = "log enable" in {
     Desc<"Prepend the names of files and function that generate the logs.">;
 }
 
+let Command = "log dump" in {
+  def log_dump_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Desc<"Set the destination file to dump to.">;
+}
+
 let Command = "reproducer dump" in {
   def reproducer_provider : Option<"provider", "p">, Group<1>,
     EnumArg<"None", "ReproducerProviderType()">,
