@@ -392,17 +392,17 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_vkill_both_nonstop(self):
         self.vkill_test(kill_parent=True, kill_child=True, nonstop=True)
 
-    def resume_one_test(self, run_order, use_vCont=False):
+    def resume_one_test(self, run_order, use_vCont=False, nonstop=False):
         parent_pid, parent_tid, child_pid, child_tid = (
-            self.start_fork_test(["fork", "trap"]))
+            self.start_fork_test(["fork", "trap"], nonstop=nonstop))
 
         parent_expect = [
-            "[$]T05thread:p{}.{};.*".format(parent_pid, parent_tid),
-            "[$]W00;process:{}#.*".format(parent_pid),
+            "T05thread:p{}.{};.*".format(parent_pid, parent_tid),
+            "W00;process:{}#.*".format(parent_pid),
         ]
         child_expect = [
-            "[$]T05thread:p{}.{};.*".format(child_pid, child_tid),
-            "[$]W00;process:{}#.*".format(child_pid),
+            "T05thread:p{}.{};.*".format(child_pid, child_tid),
+            "W00;process:{}#.*".format(child_pid),
         ]
 
         for x in run_order:
@@ -427,9 +427,17 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
                     "send packet: $OK#00",
                     "read packet: $c#00",
                 ], True)
-            self.test_sequence.add_log_lines([
-                {"direction": "send", "regex": expect},
-            ], True)
+            if nonstop:
+                self.test_sequence.add_log_lines([
+                    "send packet: $OK#00",
+                    {"direction": "send", "regex": "%Stop:" + expect},
+                    "read packet: $vStopped#00",
+                    "send packet: $OK#00",
+                ], True)
+            else:
+                self.test_sequence.add_log_lines([
+                    {"direction": "send", "regex": "[$]" + expect},
+                ], True)
             # if at least one process remained, check both PIDs
             if parent_expect or child_expect:
                 self.test_sequence.add_log_lines([
@@ -479,6 +487,14 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
     @expectedFailureAll(archs=["aarch64"],
                         bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
+    def test_c_interspersed_nonstop(self):
+        self.resume_one_test(run_order=["parent", "child", "parent", "child"],
+                             nonstop=True)
+
+    @expectedFailureAll(archs=["arm"])  # TODO
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
+    @add_test_categories(["fork"])
     def test_vCont_parent(self):
         self.resume_one_test(run_order=["parent", "parent"], use_vCont=True)
 
@@ -512,6 +528,14 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_vCont_interspersed(self):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"],
                              use_vCont=True)
+
+    @expectedFailureAll(archs=["arm"])  # TODO
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
+    @add_test_categories(["fork"])
+    def test_vCont_interspersed_nonstop(self):
+        self.resume_one_test(run_order=["parent", "child", "parent", "child"],
+                             use_vCont=True, nonstop=True)
 
     @add_test_categories(["fork"])
     def test_vCont_two_processes(self):

@@ -3860,9 +3860,9 @@ GDBRemoteCommunicationServerLLGS::Handle_vStopped(
   m_stop_notification_queue.pop_front();
   if (!m_stop_notification_queue.empty())
     return SendPacketNoLock(m_stop_notification_queue.front());
-  // If this was the last notification and the process exited, terminate
-  // the server.
-  if (m_inferior_prev_state == eStateExited) {
+  // If this was the last notification and all the processes exited,
+  // terminate the server.
+  if (m_debugged_processes.empty()) {
     m_exit_now = true;
     m_mainloop.RequestTermination();
   }
