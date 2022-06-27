@@ -55,8 +55,7 @@ FailureOr<Value> castOrReallocMemRefValue(OpBuilder &b, Value value,
 /// Try to fold to_memref(to_tensor(x)). If x's type and the result type of the
 /// to_memref op are different, a memref.cast is needed.
 LogicalResult foldToMemrefToTensorPair(RewriterBase &rewriter,
-                                       ToMemrefOp toMemref,
-                                       bool allowSameType = true);
+                                       ToMemrefOp toMemref);
 
 } // namespace bufferization
 } // namespace mlir

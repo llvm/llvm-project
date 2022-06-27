@@ -84,8 +84,9 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
 
 /// Try to fold to_memref(to_tensor(x)). If x's type and the result type of the
 /// to_memref op are different, a memref.cast is needed.
-LogicalResult mlir::bufferization::foldToMemrefToTensorPair(
-    RewriterBase &rewriter, ToMemrefOp toMemref, bool allowSameType) {
+LogicalResult
+mlir::bufferization::foldToMemrefToTensorPair(RewriterBase &rewriter,
+                                              ToMemrefOp toMemref) {
   auto memrefToTensor = toMemref.getTensor().getDefiningOp<ToTensorOp>();
   if (!memrefToTensor)
     return failure();
@@ -95,9 +96,6 @@ LogicalResult mlir::bufferization::foldToMemrefToTensorPair(
 
   // Directly rewrite if the type did not change.
   if (srcType == destType) {
-    // Function can be configured to only handle cases where a cast is needed.
-    if (!allowSameType)
-      return failure();
     rewriter.replaceOp(toMemref, memrefToTensor.getMemref());
     return success();
   }
@@ -541,6 +539,19 @@ OpFoldResult ToTensorOp::fold(ArrayRef<Attribute>) {
 }
 
 namespace {
+/// Canonicalize bufferization.to_tensor + bufferization.to_memref.
+struct ToTensorToMemrefFolding : public OpRewritePattern<ToTensorOp> {
+  using OpRewritePattern<ToTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ToTensorOp toTensorOp,
+                                PatternRewriter &rewriter) const final {
+    auto toMemrefOp = toTensorOp.getMemref().getDefiningOp<ToMemrefOp>();
+    if (!toMemrefOp)
+      return failure();
+    rewriter.replaceOp(toTensorOp, toMemrefOp.getTensor());
+    return success();
+  }
+};
 
 struct DimOfToTensorFolder : public OpRewritePattern<tensor::DimOp> {
   using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
@@ -556,12 +567,11 @@ struct DimOfToTensorFolder : public OpRewritePattern<tensor::DimOp> {
     return success();
   }
 };
-
 } // namespace
 
 void ToTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.add<DimOfToTensorFolder>(context);
+  results.add<DimOfToTensorFolder, ToTensorToMemrefFolding>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -601,17 +611,14 @@ struct ToMemrefOfCast : public OpRewritePattern<ToMemrefOp> {
   }
 };
 
-/// Canonicalize bufferization.to_tensor + bufferization.to_memref to
-/// memref.cast when type mismatches prevent `ToMemrefOp::fold` to kick in.
-struct TensorLoadToMemref : public OpRewritePattern<ToMemrefOp> {
+/// Canonicalize bufferization.to_tensor + bufferization.to_memref. Insert a
+/// cast if necessary.
+struct ToMemrefToTensorFolding : public OpRewritePattern<ToMemrefOp> {
   using OpRewritePattern<ToMemrefOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ToMemrefOp toMemref,
                                 PatternRewriter &rewriter) const final {
-    // Only handle cases where a cast is needed. The other case is handled by
-    // the folder.
-    return foldToMemrefToTensorPair(rewriter, toMemref,
-                                    /*allowSameType=*/false);
+    return foldToMemrefToTensorPair(rewriter, toMemref);
   }
 };
 
@@ -651,8 +658,8 @@ struct DimOfCastOp : public OpRewritePattern<memref::DimOp> {
 
 void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.add<DimOfCastOp, LoadOfToMemref, ToMemrefOfCast, TensorLoadToMemref>(
-      context);
+  results.add<DimOfCastOp, LoadOfToMemref, ToMemrefOfCast,
+              ToMemrefToTensorFolding>(context);
 }
 
 LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
