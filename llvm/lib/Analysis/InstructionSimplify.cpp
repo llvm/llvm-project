@@ -6021,14 +6021,14 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
 
     break;
   }
-  case Intrinsic::experimental_vector_extract: {
+  case Intrinsic::vector_extract: {
     Type *ReturnType = F->getReturnType();
 
     // (extract_vector (insert_vector _, X, 0), 0) -> X
     unsigned IdxN = cast<ConstantInt>(Op1)->getZExtValue();
     Value *X = nullptr;
-    if (match(Op0, m_Intrinsic<Intrinsic::experimental_vector_insert>(
-                       m_Value(), m_Value(X), m_Zero())) &&
+    if (match(Op0, m_Intrinsic<Intrinsic::vector_insert>(m_Value(), m_Value(X),
+                                                         m_Zero())) &&
         IdxN == 0 && X->getType() == ReturnType)
       return X;
 
@@ -6169,7 +6169,7 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
 
     return nullptr;
   }
-  case Intrinsic::experimental_vector_insert: {
+  case Intrinsic::vector_insert: {
     Value *Vec = Call->getArgOperand(0);
     Value *SubVec = Call->getArgOperand(1);
     Value *Idx = Call->getArgOperand(2);
@@ -6179,8 +6179,8 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
     // where: Y is X, or Y is undef
     unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
     Value *X = nullptr;
-    if (match(SubVec, m_Intrinsic<Intrinsic::experimental_vector_extract>(
-                          m_Value(X), m_Zero())) &&
+    if (match(SubVec,
+              m_Intrinsic<Intrinsic::vector_extract>(m_Value(X), m_Zero())) &&
         (Q.isUndefValue(Vec) || Vec == X) && IdxN == 0 &&
         X->getType() == ReturnType)
       return X;

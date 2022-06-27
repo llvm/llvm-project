@@ -12,7 +12,7 @@ constexpr int foo() { return 1; }
 
 // CHECK-RV64-LABEL: @_Z21test_vget_v_i8m2_i8m1u14__rvv_int8m2_t
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vector.extract.nxv8i8.nxv16i8(<vscale x 16 x i8> [[SRC:%.*]], i64 8)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.vector.extract.nxv8i8.nxv16i8(<vscale x 16 x i8> [[SRC:%.*]], i64 8)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
 //
 vint8m1_t test_vget_v_i8m2_i8m1(vint8m2_t src) {
@@ -21,7 +21,7 @@ vint8m1_t test_vget_v_i8m2_i8m1(vint8m2_t src) {
 
 // CHECK-RV64-LABEL: @_Z21test_vset_v_i8m1_i8m2u14__rvv_int8m2_tu14__rvv_int8m1_t
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.nxv8i8(<vscale x 16 x i8> [[DEST:%.*]], <vscale x 8 x i8> [[VAL:%.*]], i64 8)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv8i8(<vscale x 16 x i8> [[DEST:%.*]], <vscale x 8 x i8> [[VAL:%.*]], i64 8)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 vint8m2_t test_vset_v_i8m1_i8m2(vint8m2_t dest, vint8m1_t val) {

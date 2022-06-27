@@ -482,8 +482,8 @@ define <vscale x 16 x double> @vpload_nxv16f64(<vscale x 16 x double>* %ptr, <vs
 
 declare <vscale x 17 x double> @llvm.vp.load.nxv17f64.p0nxv17f64(<vscale x 17 x double>*, <vscale x 17 x i1>, i32)
 
-declare <vscale x 1 x double> @llvm.experimental.vector.extract.nxv1f64(<vscale x 17 x double> %vec, i64 %idx)
-declare <vscale x 16 x double> @llvm.experimental.vector.extract.nxv16f64(<vscale x 17 x double> %vec, i64 %idx)
+declare <vscale x 1 x double> @llvm.vector.extract.nxv1f64(<vscale x 17 x double> %vec, i64 %idx)
+declare <vscale x 16 x double> @llvm.vector.extract.nxv16f64(<vscale x 17 x double> %vec, i64 %idx)
 
 ; Note: We can't return <vscale x 17 x double> as that introduces a vector
 ; store can't yet be legalized through widening. In order to test purely the
@@ -542,8 +542,8 @@ define <vscale x 16 x double> @vpload_nxv17f64(<vscale x 17 x double>* %ptr, <vs
 ; CHECK-NEXT:    vs1r.v v24, (a1)
 ; CHECK-NEXT:    ret
   %load = call <vscale x 17 x double> @llvm.vp.load.nxv17f64.p0nxv17f64(<vscale x 17 x double>* %ptr, <vscale x 17 x i1> %m, i32 %evl)
-  %lo = call <vscale x 16 x double> @llvm.experimental.vector.extract.nxv16f64(<vscale x 17 x double> %load, i64 0)
-  %hi = call <vscale x 1 x double> @llvm.experimental.vector.extract.nxv1f64(<vscale x 17 x double> %load, i64 16)
+  %lo = call <vscale x 16 x double> @llvm.vector.extract.nxv16f64(<vscale x 17 x double> %load, i64 0)
+  %hi = call <vscale x 1 x double> @llvm.vector.extract.nxv1f64(<vscale x 17 x double> %load, i64 16)
   store <vscale x 1 x double> %hi, <vscale x 1 x double>* %out
   ret <vscale x 16 x double> %lo
 }

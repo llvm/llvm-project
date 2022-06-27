@@ -2196,7 +2196,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   // C/C++ Operand: VecTy, IR Operand: VecTy, Index
   let Name = "vlmul_trunc_v", OverloadedName = "vlmul_trunc", MaskedPolicy = NonePolicy,
       ManualCodegen = [{ {
-        ID = Intrinsic::experimental_vector_extract;
+        ID = Intrinsic::vector_extract;
         IntrinsicTypes = {ResultType, Ops[0]->getType()};
         Ops.push_back(ConstantInt::get(Int64Ty, 0));
         return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
@@ -2214,7 +2214,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   // C/C++ Operand: SubVecTy, IR Operand: VecTy, SubVecTy, Index
   let Name = "vlmul_ext_v", OverloadedName = "vlmul_ext", MaskedPolicy = NonePolicy,
       ManualCodegen = [{
-        ID = Intrinsic::experimental_vector_insert;
+        ID = Intrinsic::vector_insert;
         IntrinsicTypes = {ResultType, Ops[0]->getType()};
         Ops.push_back(llvm::UndefValue::get(ResultType));
         std::swap(Ops[0], Ops[1]);
@@ -2233,7 +2233,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vget_v", MaskedPolicy = NonePolicy,
       ManualCodegen = [{
       {
-        ID = Intrinsic::experimental_vector_extract;
+        ID = Intrinsic::vector_extract;
         auto *VecTy = cast<ScalableVectorType>(ResultType);
         auto *OpVecTy = cast<ScalableVectorType>(Ops[0]->getType());
         // Mask to only valid indices.
@@ -2256,7 +2256,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vset_v", Log2LMUL = [0, 1, 2], MaskedPolicy = NonePolicy,
       ManualCodegen = [{
       {
-        ID = Intrinsic::experimental_vector_insert;
+        ID = Intrinsic::vector_insert;
         IntrinsicTypes = {ResultType, Ops[2]->getType()};
         auto *ResVecTy = cast<ScalableVectorType>(ResultType);
         auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());

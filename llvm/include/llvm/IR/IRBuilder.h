@@ -914,18 +914,18 @@ public:
                            Name);
   }
 
-  /// Create a call to the experimental.vector.extract intrinsic.
+  /// Create a call to the vector.extract intrinsic.
   CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, Value *Idx,
                                 const Twine &Name = "") {
-    return CreateIntrinsic(Intrinsic::experimental_vector_extract,
+    return CreateIntrinsic(Intrinsic::vector_extract,
                            {DstType, SrcVec->getType()}, {SrcVec, Idx}, nullptr,
                            Name);
   }
 
-  /// Create a call to the experimental.vector.insert intrinsic.
+  /// Create a call to the vector.insert intrinsic.
   CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
                                Value *Idx, const Twine &Name = "") {
-    return CreateIntrinsic(Intrinsic::experimental_vector_insert,
+    return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
                            nullptr, Name);
   }
