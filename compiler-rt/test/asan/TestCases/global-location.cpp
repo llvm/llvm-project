@@ -7,8 +7,8 @@
 // COFF doesn't support debuginfo for globals. For the non-debuginfo tests, see global-location-nodebug.cpp.
 // XFAIL: windows-msvc
 
-// atos currently doesn't show source line numbers for global variables.
-// XFAIL: darwin
+// atos doesn't show source line numbers for global variables.
+// UNSUPPORTED: darwin
 
 // CHECK: AddressSanitizer: global-buffer-overflow
 
