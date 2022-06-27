@@ -15716,6 +15716,53 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
     << TRange << Op->getSourceRange();
 }
 
+/// Check whether this array fits the idiom of a size-one tail padded
+/// array member of a struct.
+///
+/// We avoid emitting out-of-bounds access warnings for such arrays as they are
+/// commonly used to emulate flexible arrays in C89 code.
+static bool IsTailPaddedMemberArray(Sema &S, const llvm::APInt &Size,
+                                    const NamedDecl *ND) {
+  if (Size != 1 || !ND) return false;
+
+  const FieldDecl *FD = dyn_cast<FieldDecl>(ND);
+  if (!FD) return false;
+
+  // Don't consider sizes resulting from macro expansions or template argument
+  // substitution to form C89 tail-padded arrays.
+
+  TypeSourceInfo *TInfo = FD->getTypeSourceInfo();
+  while (TInfo) {
+    TypeLoc TL = TInfo->getTypeLoc();
+    // Look through typedefs.
+    if (TypedefTypeLoc TTL = TL.getAs<TypedefTypeLoc>()) {
+      const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
+      TInfo = TDL->getTypeSourceInfo();
+      continue;
+    }
+    if (ConstantArrayTypeLoc CTL = TL.getAs<ConstantArrayTypeLoc>()) {
+      const Expr *SizeExpr = dyn_cast<IntegerLiteral>(CTL.getSizeExpr());
+      if (!SizeExpr || SizeExpr->getExprLoc().isMacroID())
+        return false;
+    }
+    break;
+  }
+
+  const RecordDecl *RD = dyn_cast<RecordDecl>(FD->getDeclContext());
+  if (!RD) return false;
+  if (RD->isUnion()) return false;
+  if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
+    if (!CRD->isStandardLayout()) return false;
+  }
+
+  // See if this is the last field decl in the record.
+  const Decl *D = FD;
+  while ((D = D->getNextDeclInContext()))
+    if (isa<FieldDecl>(D))
+      return false;
+  return true;
+}
+
 void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                             const ArraySubscriptExpr *ASE,
                             bool AllowOnePastEnd, bool IndexNegated) {
@@ -15868,9 +15915,10 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     if (AllowOnePastEnd ? index.ule(size) : index.ult(size))
       return;
 
-    // Also don't warn for flexible array members.
-    if (BaseExpr->isFlexibleArrayMember(Context,
-                                        getLangOpts().StrictFlexArrays))
+    // Also don't warn for arrays of size 1 which are members of some
+    // structure. These are often used to approximate flexible arrays in C89
+    // code.
+    if (IsTailPaddedMemberArray(*this, size, ND))
       return;
 
     // Suppress the warning if the subscript expression (as identified by the

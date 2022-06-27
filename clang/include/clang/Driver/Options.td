@@ -1140,12 +1140,6 @@ def fallow_unsupported : Flag<["-"], "fallow-unsupported">, Group<f_Group>;
 def fapple_kext : Flag<["-"], "fapple-kext">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Use Apple's kernel extensions ABI">,
   MarshallingInfoFlag<LangOpts<"AppleKext">>;
-def fstrict_flex_arrays_EQ : Joined<["-"], "fstrict-flex-arrays=">,Group<f_Group>,
-  MetaVarName<"<n>">, Values<"0,1,2,3">,
-  LangOpts<"StrictFlexArrays">,
-  Flags<[CC1Option]>,
-  HelpText<"Enable optimizations based on the strict definition of flexible arrays">,
-  MarshallingInfoInt<LangOpts<"StrictFlexArrays">>;
 defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   LangOpts<"ApplePragmaPack">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable Apple gcc-compatible #pragma pack handling">,
