@@ -61,41 +61,16 @@ struct AssumingOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto assumingOp = cast<shape::AssumingOp>(op);
-
-    // Compute new result types.
-    SmallVector<Type> newResultTypes;
-    for (Type type : assumingOp->getResultTypes()) {
-      if (auto tensorType = type.dyn_cast<TensorType>()) {
-        // TODO: Infer the result type instead of computing it.
-        newResultTypes.push_back(getMemRefType(tensorType, options));
-      } else {
-        newResultTypes.push_back(type);
-      }
-    }
+    assert(assumingOp.getDoRegion().getBlocks().size() == 1 &&
+           "only 1 block supported");
+    auto yieldOp = cast<shape::AssumingYieldOp>(
+        assumingOp.getDoRegion().front().getTerminator());
 
     // Create new op and move over region.
+    TypeRange newResultTypes(yieldOp.operands());
     auto newOp = rewriter.create<shape::AssumingOp>(
         op->getLoc(), newResultTypes, assumingOp.getWitness());
     newOp.getDoRegion().takeBody(assumingOp.getRegion());
-
-    // Update terminator.
-    assert(newOp.getDoRegion().getBlocks().size() == 1 &&
-           "only 1 block supported");
-    Block *newBlock = &newOp.getDoRegion().front();
-    auto yieldOp = cast<shape::AssumingYieldOp>(newBlock->getTerminator());
-    rewriter.setInsertionPoint(yieldOp);
-    SmallVector<Value> newYieldValues;
-    for (const auto &it : llvm::enumerate(yieldOp.operands())) {
-      Value val = it.value();
-      if (val.getType().isa<TensorType>()) {
-        newYieldValues.push_back(rewriter.create<bufferization::ToMemrefOp>(
-            yieldOp.getLoc(), newResultTypes[it.index()], val));
-      } else {
-        newYieldValues.push_back(val);
-      }
-    }
-    rewriter.replaceOpWithNewOp<shape::AssumingYieldOp>(yieldOp,
-                                                        newYieldValues);
 
     // Update all uses of the old op.
     rewriter.setInsertionPointAfter(newOp);
@@ -153,7 +128,14 @@ struct AssumingYieldOpInterface
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
-    // Op is bufferized as part of AssumingOp.
+    auto yieldOp = cast<shape::AssumingYieldOp>(op);
+    SmallVector<Value> newResults;
+    for (Value value : yieldOp.operands())
+      newResults.push_back(value.getType().isa<TensorType>()
+                               ? getBuffer(rewriter, value, options)
+                               : value);
+    replaceOpWithNewBufferizedOp<shape::AssumingYieldOp>(rewriter, op,
+                                                         newResults);
     return success();
   }
 };
