@@ -11,17 +11,21 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; GFX7-LABEL: name: bswap_i32_vv
-    ; GFX7: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX7: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 8, implicit $exec
-    ; GFX7: [[V_ALIGNBIT_B32_e64_1:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 24, implicit $exec
-    ; GFX7: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16711935
-    ; GFX7: [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 [[S_MOV_B32_]], [[V_ALIGNBIT_B32_e64_1]], [[V_ALIGNBIT_B32_e64_]], implicit $exec
-    ; GFX7: S_ENDPGM 0, implicit [[V_BFI_B32_e64_]]
+    ; GFX7: liveins: $vgpr0
+    ; GFX7-NEXT: {{  $}}
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX7-NEXT: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 8, implicit $exec
+    ; GFX7-NEXT: [[V_ALIGNBIT_B32_e64_1:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 24, implicit $exec
+    ; GFX7-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16711935
+    ; GFX7-NEXT: [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 [[S_MOV_B32_]], [[V_ALIGNBIT_B32_e64_1]], [[V_ALIGNBIT_B32_e64_]], implicit $exec
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[V_BFI_B32_e64_]]
     ; GFX8-LABEL: name: bswap_i32_vv
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 66051
-    ; GFX8: [[V_PERM_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERM_B32_e64 0, [[COPY]], [[S_MOV_B32_]], implicit $exec
-    ; GFX8: S_ENDPGM 0, implicit [[V_PERM_B32_e64_]]
+    ; GFX8: liveins: $vgpr0
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX8-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 66051
+    ; GFX8-NEXT: [[V_PERM_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERM_B32_e64 0, [[COPY]], [[S_MOV_B32_]], implicit $exec
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_PERM_B32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_BSWAP %0
     S_ENDPGM 0, implicit %1

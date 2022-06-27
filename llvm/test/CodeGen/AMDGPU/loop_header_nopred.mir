@@ -9,31 +9,39 @@ name:            loop_header_nopred
 body:             |
   ; GCN-LABEL: name: loop_header_nopred
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.2(0x80000000)
-  ; GCN:   S_BRANCH %bb.2
-  ; GCN: bb.1 (align 64):
-  ; GCN:   successors: %bb.7(0x04000000), %bb.2(0x7c000000)
-  ; GCN:   S_CBRANCH_VCCNZ %bb.7, implicit $vcc_lo
-  ; GCN: bb.2:
-  ; GCN:   successors: %bb.5(0x40000000), %bb.1(0x40000000)
-  ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
-  ; GCN: bb.5:
-  ; GCN:   successors: %bb.1(0x04000000), %bb.5(0x7c000000)
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_CBRANCH_EXECZ %bb.5, implicit $exec
-  ; GCN:   S_BRANCH %bb.1
-  ; GCN: bb.7:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1 (align 64):
+  ; GCN-NEXT:   successors: %bb.7(0x04000000), %bb.2(0x7c000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit $vcc_lo
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   successors: %bb.5(0x40000000), %bb.1(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.5:
+  ; GCN-NEXT:   successors: %bb.1(0x04000000), %bb.5(0x7c000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_NOP 0
+  ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.5, implicit $exec
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.7:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
 

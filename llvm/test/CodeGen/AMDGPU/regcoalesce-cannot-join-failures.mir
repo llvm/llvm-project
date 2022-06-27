@@ -7,14 +7,18 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: couldnt_join_subrange_implicit_def_pred_block
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   undef %0.sub0:sreg_64_xexec = IMPLICIT_DEF
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %0.sub1:sreg_64_xexec = COPY %0.sub0
-  ; CHECK:   S_BRANCH %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   S_ENDPGM 0, implicit %0
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef %0.sub0:sreg_64_xexec = IMPLICIT_DEF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %0.sub1:sreg_64_xexec = COPY %0.sub0
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit %0
   bb.0:
     successors: %bb.1
 
@@ -39,8 +43,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: couldnt_join_subrange_no_implicit_def_inst
     ; CHECK: undef %0.sub0:sreg_64 = S_MOV_B32 0
-    ; CHECK: %0.sub1:sreg_64 = COPY %0.sub0
-    ; CHECK: S_ENDPGM 0, implicit %0.sub1
+    ; CHECK-NEXT: %0.sub1:sreg_64 = COPY %0.sub0
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %0.sub1
     undef %0.sub0:sreg_64 = S_MOV_B32 0
     %1:sreg_64 = COPY %0:sreg_64
     %0.sub1:sreg_64 = COPY %0.sub0:sreg_64
@@ -53,13 +57,15 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: couldnt_join_subrange0
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   undef %0.sub1:sreg_64 = S_MOV_B32 -1
-  ; CHECK: bb.1:
-  ; CHECK:   %0.sub0:sreg_64 = S_MOV_B32 0
-  ; CHECK:   [[COPY:%[0-9]+]]:sreg_64 = COPY %0
-  ; CHECK:   dead %0.sub1:sreg_64 = COPY %0.sub0
-  ; CHECK:   S_ENDPGM 0, implicit [[COPY]].sub1
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef %0.sub1:sreg_64 = S_MOV_B32 -1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   %0.sub0:sreg_64 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY %0
+  ; CHECK-NEXT:   dead %0.sub1:sreg_64 = COPY %0.sub0
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]].sub1
   bb.0:
     successors: %bb.1
     undef %0.sub1:sreg_64 = S_MOV_B32 -1
@@ -79,10 +85,10 @@ body:             |
 
     ; CHECK-LABEL: name: lanes_not_tracked_subreg_join_couldnt_join_subrange
     ; CHECK: undef %0.sub0:sreg_64_xexec = S_MOV_B32 0
-    ; CHECK: %0.sub1:sreg_64_xexec = S_MOV_B32 0
-    ; CHECK: S_NOP 0, implicit %0.sub1
-    ; CHECK: S_NOP 0, implicit %0
-    ; CHECK: S_ENDPGM 0
+    ; CHECK-NEXT: %0.sub1:sreg_64_xexec = S_MOV_B32 0
+    ; CHECK-NEXT: S_NOP 0, implicit %0.sub1
+    ; CHECK-NEXT: S_NOP 0, implicit %0
+    ; CHECK-NEXT: S_ENDPGM 0
     undef %0.sub0:sreg_64_xexec = S_MOV_B32 0
     %1:sreg_64 = COPY %0
     %0.sub1:sreg_64_xexec = S_MOV_B32 0
@@ -97,12 +103,14 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: couldnt_join_subrange1
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   undef %0.sub0:sreg_64_xexec = S_MOV_B32 0
-  ; CHECK:   %0.sub1:sreg_64_xexec = COPY %0.sub0
-  ; CHECK: bb.1:
-  ; CHECK:   S_NOP 0, implicit %0.sub1
-  ; CHECK:   S_ENDPGM 0, implicit %0
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef %0.sub0:sreg_64_xexec = S_MOV_B32 0
+  ; CHECK-NEXT:   %0.sub1:sreg_64_xexec = COPY %0.sub0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   S_NOP 0, implicit %0.sub1
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit %0
   bb.0:
     successors: %bb.1
 

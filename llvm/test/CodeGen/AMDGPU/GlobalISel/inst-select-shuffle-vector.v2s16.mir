@@ -15,12 +15,14 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_u_u
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GFX9: $vgpr0 = COPY [[DEF]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GFX9-NEXT: $vgpr0 = COPY [[DEF]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_u_u
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GFX11: $vgpr0 = COPY [[DEF]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GFX11-NEXT: $vgpr0 = COPY [[DEF]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, undef)
@@ -40,12 +42,14 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_0_u
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: $vgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: $vgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_0_u
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11: $vgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: $vgpr0 = COPY [[COPY]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, undef)
@@ -65,14 +69,16 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_u_0
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX9: $vgpr0 = COPY [[V_LSHLREV_B32_e64_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_LSHLREV_B32_e64_]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_u_0
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_LSHLREV_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_LSHLREV_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, 0)
@@ -92,14 +98,16 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_1_u
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX9: $vgpr0 = COPY [[V_LSHRREV_B32_e64_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_LSHRREV_B32_e64_]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_1_u
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_LSHRREV_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_LSHRREV_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(1, undef)
@@ -119,12 +127,14 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_u_1
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: $vgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: $vgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_u_1
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11: $vgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: $vgpr0 = COPY [[COPY]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, 1)
@@ -145,12 +155,14 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_2_u
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: $vgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: $vgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_2_u
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11: $vgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX11-NEXT: $vgpr0 = COPY [[COPY]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(2, undef)
@@ -170,14 +182,16 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_u_2
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX9: $vgpr0 = COPY [[V_LSHLREV_B32_e64_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_LSHLREV_B32_e64_]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_u_2
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_LSHLREV_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX11-NEXT: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_LSHLREV_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, 2)
@@ -197,14 +211,16 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_3_u
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX9: $vgpr0 = COPY [[V_LSHRREV_B32_e64_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_LSHRREV_B32_e64_]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_3_u
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_LSHRREV_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX11-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_LSHRREV_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(3, undef)
@@ -224,12 +240,14 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_u_3
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: $vgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: $vgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_u_3
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11: $vgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX11-NEXT: $vgpr0 = COPY [[COPY]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, 3)
@@ -249,15 +267,17 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_0_0
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY]], 0, 5, 2, 4, implicit $exec, implicit [[COPY]](tied-def 0)
-    ; GFX9: $vgpr0 = COPY [[V_MOV_B32_sdwa]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY]], 0, 5, 2, 4, implicit $exec, implicit [[COPY]](tied-def 0)
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_MOV_B32_sdwa]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_0_0
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 65535, [[COPY]], implicit $exec
-    ; GFX11: [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_AND_B32_e32_]], 16, [[V_AND_B32_e32_]], implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_LSHL_OR_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 65535, [[COPY]], implicit $exec
+    ; GFX11-NEXT: [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_AND_B32_e32_]], 16, [[V_AND_B32_e32_]], implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_LSHL_OR_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 0)
@@ -277,12 +297,14 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_0_1
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: $vgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: $vgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_0_1
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11: $vgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: $vgpr0 = COPY [[COPY]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 1)
@@ -302,14 +324,16 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_1_0
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 16, implicit $exec
-    ; GFX9: $vgpr0 = COPY [[V_ALIGNBIT_B32_e64_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 16, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_ALIGNBIT_B32_e64_]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_1_0
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 16, implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_ALIGNBIT_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 16, implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_ALIGNBIT_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(1, 0)
@@ -329,15 +353,17 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_1_1
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY]], 0, 4, 2, 5, implicit $exec, implicit [[COPY]](tied-def 0)
-    ; GFX9: $vgpr0 = COPY [[V_MOV_B32_sdwa]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-NEXT: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY]], 0, 4, 2, 5, implicit $exec, implicit [[COPY]](tied-def 0)
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_MOV_B32_sdwa]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_1_1
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX11: [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_LSHRREV_B32_e64_]], 16, [[V_LSHRREV_B32_e64_]], implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_LSHL_OR_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX11-NEXT: [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_LSHRREV_B32_e64_]], 16, [[V_LSHRREV_B32_e64_]], implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_LSHL_OR_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(1, 1)
@@ -357,15 +383,17 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_2_2
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY]], 0, 5, 2, 4, implicit $exec, implicit [[COPY]](tied-def 0)
-    ; GFX9: $vgpr0 = COPY [[V_MOV_B32_sdwa]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY]], 0, 5, 2, 4, implicit $exec, implicit [[COPY]](tied-def 0)
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_MOV_B32_sdwa]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_2_2
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 65535, [[COPY]], implicit $exec
-    ; GFX11: [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_AND_B32_e32_]], 16, [[V_AND_B32_e32_]], implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_LSHL_OR_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX11-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 65535, [[COPY]], implicit $exec
+    ; GFX11-NEXT: [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_AND_B32_e32_]], 16, [[V_AND_B32_e32_]], implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_LSHL_OR_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(2, 2)
@@ -385,12 +413,14 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_2_3
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: $vgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: $vgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_2_3
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11: $vgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX11-NEXT: $vgpr0 = COPY [[COPY]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(2, 3)
@@ -410,14 +440,16 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_3_2
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 16, implicit $exec
-    ; GFX9: $vgpr0 = COPY [[V_ALIGNBIT_B32_e64_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 16, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_ALIGNBIT_B32_e64_]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_3_2
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 16, implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_ALIGNBIT_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX11-NEXT: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY]], 16, implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_ALIGNBIT_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(3, 2)
@@ -437,15 +469,17 @@ body: |
 
     ; GFX9-LABEL: name: v_shufflevector_v2s16_v2s16_3_3
     ; GFX9: liveins: $vgpr0, $vgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY]], 0, 4, 2, 5, implicit $exec, implicit [[COPY]](tied-def 0)
-    ; GFX9: $vgpr0 = COPY [[V_MOV_B32_sdwa]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX9-NEXT: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY]], 0, 4, 2, 5, implicit $exec, implicit [[COPY]](tied-def 0)
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_MOV_B32_sdwa]]
     ; GFX11-LABEL: name: v_shufflevector_v2s16_v2s16_3_3
     ; GFX11: liveins: $vgpr0, $vgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
-    ; GFX11: [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_LSHRREV_B32_e64_]], 16, [[V_LSHRREV_B32_e64_]], implicit $exec
-    ; GFX11: $vgpr0 = COPY [[V_LSHL_OR_B32_e64_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GFX11-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[COPY]], implicit $exec
+    ; GFX11-NEXT: [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[V_LSHRREV_B32_e64_]], 16, [[V_LSHRREV_B32_e64_]], implicit $exec
+    ; GFX11-NEXT: $vgpr0 = COPY [[V_LSHL_OR_B32_e64_]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(3, 3)
@@ -465,12 +499,14 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_u_u
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9: $sgpr0 = COPY [[DEF]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GFX9-NEXT: $sgpr0 = COPY [[DEF]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_u_u
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX11: $sgpr0 = COPY [[DEF]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GFX11-NEXT: $sgpr0 = COPY [[DEF]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, undef)
@@ -490,12 +526,14 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_0_u
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: $sgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: $sgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_0_u
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11: $sgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: $sgpr0 = COPY [[COPY]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, undef)
@@ -515,14 +553,16 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_u_0
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX9: $sgpr0 = COPY [[S_LSHL_B32_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_LSHL_B32_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_u_0
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX11: $sgpr0 = COPY [[S_LSHL_B32_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_LSHL_B32_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, 0)
@@ -542,14 +582,16 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_1_u
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX9: $sgpr0 = COPY [[S_LSHR_B32_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_LSHR_B32_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_1_u
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX11: $sgpr0 = COPY [[S_LSHR_B32_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_LSHR_B32_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(1, undef)
@@ -569,12 +611,14 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_u_1
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: $sgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: $sgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_u_1
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11: $sgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: $sgpr0 = COPY [[COPY]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, 1)
@@ -595,12 +639,14 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_2_u
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: $sgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: $sgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_2_u
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX11: $sgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX11-NEXT: $sgpr0 = COPY [[COPY]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(2, undef)
@@ -620,14 +666,16 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_u_2
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX9: $sgpr0 = COPY [[S_LSHL_B32_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_LSHL_B32_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_u_2
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX11: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX11: $sgpr0 = COPY [[S_LSHL_B32_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX11-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_LSHL_B32_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, 2)
@@ -647,14 +695,16 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_3_u
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX9: $sgpr0 = COPY [[S_LSHR_B32_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_LSHR_B32_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_3_u
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX11: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX11: $sgpr0 = COPY [[S_LSHR_B32_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX11-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_LSHR_B32_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(3, undef)
@@ -674,12 +724,14 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_u_3
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: $sgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: $sgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_u_3
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX11: $sgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX11-NEXT: $sgpr0 = COPY [[COPY]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(undef, 3)
@@ -699,14 +751,16 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_0_0
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY]]
-    ; GFX9: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY]]
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_0_0
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY]]
-    ; GFX11: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY]]
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 0)
@@ -726,12 +780,14 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_0_1
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: $sgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: $sgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_0_1
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11: $sgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: $sgpr0 = COPY [[COPY]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 1)
@@ -751,15 +807,17 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_1_0
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[COPY]]
-    ; GFX9: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[COPY]]
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_1_0
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11: [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY]], [[COPY]]
-    ; GFX11: $sgpr0 = COPY [[S_PACK_HL_B32_B16_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY]], [[COPY]]
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_PACK_HL_B32_B16_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(1, 0)
@@ -779,14 +837,16 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_1_1
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY]]
-    ; GFX9: $sgpr0 = COPY [[S_PACK_HH_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY]]
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_PACK_HH_B32_B16_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_1_1
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX11: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY]]
-    ; GFX11: $sgpr0 = COPY [[S_PACK_HH_B32_B16_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY]]
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_PACK_HH_B32_B16_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(1, 1)
@@ -806,14 +866,16 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_2_2
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY]]
-    ; GFX9: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY]]
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_2_2
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX11: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY]]
-    ; GFX11: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX11-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY]]
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(2, 2)
@@ -833,12 +895,14 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_2_3
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: $sgpr0 = COPY [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: $sgpr0 = COPY [[COPY]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_2_3
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX11: $sgpr0 = COPY [[COPY]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX11-NEXT: $sgpr0 = COPY [[COPY]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(2, 3)
@@ -858,15 +922,17 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_3_2
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[COPY]]
-    ; GFX9: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[COPY]]
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_PACK_LL_B32_B16_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_3_2
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX11: [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY]], [[COPY]]
-    ; GFX11: $sgpr0 = COPY [[S_PACK_HL_B32_B16_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX11-NEXT: [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY]], [[COPY]]
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_PACK_HL_B32_B16_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(3, 2)
@@ -886,14 +952,16 @@ body: |
 
     ; GFX9-LABEL: name: s_shufflevector_v2s16_v2s16_3_3
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY]]
-    ; GFX9: $sgpr0 = COPY [[S_PACK_HH_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY]]
+    ; GFX9-NEXT: $sgpr0 = COPY [[S_PACK_HH_B32_B16_]]
     ; GFX11-LABEL: name: s_shufflevector_v2s16_v2s16_3_3
     ; GFX11: liveins: $sgpr0, $sgpr1
-    ; GFX11: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX11: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY]]
-    ; GFX11: $sgpr0 = COPY [[S_PACK_HH_B32_B16_]]
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX11-NEXT: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY]]
+    ; GFX11-NEXT: $sgpr0 = COPY [[S_PACK_HH_B32_B16_]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(3, 3)

@@ -25,9 +25,10 @@ body:             |
 
     ; CHECK-LABEL: name: commute_instruction_subreg_target_flag
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]].sub1, 64, 0, implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]].sub1, 64, 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_]]
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = V_ADD_U32_e64 %0.sub1, 64, 0, implicit $exec
     %2:vgpr_32 = V_ADD_U32_e64 64, %0.sub1, 0, implicit $exec
@@ -47,9 +48,10 @@ body:             |
 
     ; CHECK-LABEL: name: commute_target_flag_frame_index
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, [[COPY]].sub0, 0, implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, [[COPY]].sub0, 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_]]
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = V_ADD_U32_e64 %0.sub0, %stack.0, 0, implicit $exec
     %2:vgpr_32 = V_ADD_U32_e64 %stack.0, %0.sub0, 0, implicit $exec
@@ -67,9 +69,10 @@ body:             |
 
     ; CHECK-LABEL: name: commute_target_flag_global
     ; CHECK: liveins: $sgpr0_sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]].sub0, target-flags(amdgpu-rel32-lo) @func, implicit-def dead $scc
-    ; CHECK: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_ADD_U32_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]].sub0, target-flags(amdgpu-rel32-lo) @func, implicit-def dead $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_ADD_U32_]]
     %0:sreg_64 = COPY $sgpr0_sgpr1
     %1:sreg_32 = S_ADD_U32 %0.sub0, target-flags(amdgpu-rel32-lo) @func, implicit-def dead $scc
     %2:sreg_32 = S_ADD_U32 target-flags(amdgpu-rel32-lo) @func, %0.sub0, implicit-def dead $scc
@@ -86,9 +89,10 @@ body:             |
 
     ; CHECK-LABEL: name: commute_target_flag_global_offset
     ; CHECK: liveins: $sgpr0_sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]].sub0, target-flags(amdgpu-rel32-lo) @gv + 4, implicit-def dead $scc
-    ; CHECK: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_ADD_U32_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]].sub0, target-flags(amdgpu-rel32-lo) @gv + 4, implicit-def dead $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_ADD_U32_]]
     %0:sreg_64 = COPY $sgpr0_sgpr1
     %1:sreg_32 = S_ADD_U32 %0.sub0, target-flags(amdgpu-rel32-lo) @gv + 4, implicit-def dead $scc
     %2:sreg_32 = S_ADD_U32 target-flags(amdgpu-rel32-lo) @gv + 4, %0.sub0, implicit-def dead $scc
@@ -105,10 +109,11 @@ body:             |
 
     ; CHECK-LABEL: name: commute_target_flag_global_offset_mismatch
     ; CHECK: liveins: $sgpr0_sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]].sub0, target-flags(amdgpu-rel32-lo) @gv + 4, implicit-def dead $scc
-    ; CHECK: [[S_ADD_U32_1:%[0-9]+]]:sreg_32 = S_ADD_U32 target-flags(amdgpu-rel32-lo) @gv + 8, [[COPY]].sub0, implicit-def dead $scc
-    ; CHECK: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_ADD_U32_1]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]].sub0, target-flags(amdgpu-rel32-lo) @gv + 4, implicit-def dead $scc
+    ; CHECK-NEXT: [[S_ADD_U32_1:%[0-9]+]]:sreg_32 = S_ADD_U32 target-flags(amdgpu-rel32-lo) @gv + 8, [[COPY]].sub0, implicit-def dead $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_ADD_U32_1]]
     %0:sreg_64 = COPY $sgpr0_sgpr1
     %1:sreg_32 = S_ADD_U32 %0.sub0, target-flags(amdgpu-rel32-lo) @gv + 4, implicit-def dead $scc
     %2:sreg_32 = S_ADD_U32 target-flags(amdgpu-rel32-lo) @gv + 8, %0.sub0, implicit-def dead $scc

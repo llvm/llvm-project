@@ -10,9 +10,11 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: sextload_constant_i8_to_i32_uniform
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p4) :: (load (s8), addrspace 4)
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p4) :: (load (s8), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 4, align 1)
 ...
@@ -26,9 +28,11 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; CHECK-LABEL: name: sextload_global_i8_to_i32_uniform
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p4) :: (load (s8), addrspace 1)
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p4) :: (load (s8), addrspace 1)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 1, align 1)
 ...
@@ -42,9 +46,11 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; CHECK-LABEL: name: sextload_constant_i16_to_i32_uniform
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p4) :: (load (s16), addrspace 4)
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p4) :: (load (s16), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s16), addrspace 4, align 2)
 ...
@@ -58,9 +64,11 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; CHECK-LABEL: name: sextload_global_i16_to_i32_uniform
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p4) :: (load (s16), addrspace 1)
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p4) :: (load (s16), addrspace 1)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s16), addrspace 1, align 2)
 ...
@@ -73,9 +81,11 @@ body: |
   bb.0:
     liveins: $sgpr0
     ; CHECK-LABEL: name: sextload_local_i8_to_i32_uniform
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p3) :: (load (s8), addrspace 3)
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p3) :: (load (s8), addrspace 3)
     %0:_(p3) = COPY $sgpr0
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 3, align 1)
 ...
@@ -89,9 +99,11 @@ body: |
     liveins: $sgpr0
 
     ; CHECK-LABEL: name: sextload_local_i16_to_i32_uniform
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p3) :: (load (s16), addrspace 3)
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p3) :: (load (s16), addrspace 3)
     %0:_(p3) = COPY $sgpr0
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s16), addrspace 3, align 2)
 ...

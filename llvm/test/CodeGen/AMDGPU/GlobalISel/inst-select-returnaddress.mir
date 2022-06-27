@@ -14,8 +14,9 @@ body: |
     liveins: $sgpr30_sgpr31
     ; CHECK-LABEL: name: return_address_already_live_in_copy
     ; CHECK: liveins: $sgpr30_sgpr31
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
-    ; CHECK: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY]]
     %0:sgpr(p0) = COPY $sgpr30_sgpr31
     %1:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
     S_ENDPGM 0, implicit %0, implicit %1
@@ -32,9 +33,10 @@ body: |
     liveins: $sgpr30_sgpr31
     ; CHECK-LABEL: name: return_address_already_block_live_in_copy_not_mf_life_in
     ; CHECK: liveins: $sgpr30_sgpr31
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
-    ; CHECK: S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY]]
     %0:sgpr(p0) = COPY $sgpr30_sgpr31
     %1:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
     S_ENDPGM 0, implicit %0, implicit %1
@@ -51,8 +53,9 @@ body: |
 
     ; CHECK-LABEL: name: return_address_no_live_in
     ; CHECK: liveins: $sgpr30_sgpr31
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
-    ; CHECK: S_ENDPGM 0, implicit [[COPY]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
     S_ENDPGM 0, implicit %0
 ...
@@ -66,12 +69,14 @@ tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: return_address_no_live_in_non_entry_block
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $sgpr30_sgpr31
-  ; CHECK:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   S_BRANCH %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   S_ENDPGM 0, implicit [[COPY]]
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr30_sgpr31
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]]
   bb.0:
     G_BR %bb.1
 
@@ -89,12 +94,14 @@ tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: return_address_multi_use
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $sgpr30_sgpr31
-  ; CHECK:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   S_BRANCH %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   S_ENDPGM 0, implicit [[COPY]], implicit [[COPY]]
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr30_sgpr31
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]], implicit [[COPY]]
   bb.0:
     %0:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
     G_BR %bb.1
@@ -116,7 +123,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: return_address_kernel_is_null
     ; CHECK: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-    ; CHECK: S_ENDPGM 0, implicit [[S_MOV_B64_]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]]
     %0:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
     S_ENDPGM 0, implicit %0
 ...

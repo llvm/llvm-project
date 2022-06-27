@@ -12,8 +12,9 @@ body: |
     liveins: $sgpr0
     ; CHECK-LABEL: name: lds_direct_load_s
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.lds.direct.load), [[COPY]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.lds.direct.load), [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.lds.direct.load), %0
 ...
@@ -28,9 +29,10 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: lds_direct_load_v
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
-    ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
-    ; CHECK: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.lds.direct.load), [[V_READFIRSTLANE_B32_]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.lds.direct.load), [[V_READFIRSTLANE_B32_]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.lds.direct.load), %0
 ...

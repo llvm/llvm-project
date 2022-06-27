@@ -16,11 +16,12 @@ body: |
 
     ; GCN-LABEL: name: fmad_ftz_s32_vvvv
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GCN: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2
@@ -40,11 +41,12 @@ body: |
 
     ; GCN-LABEL: name: fmad_ftz_s32_vsvv
     ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GCN: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:vgpr(s32) = COPY $vgpr1
@@ -64,11 +66,12 @@ body: |
 
     ; GCN-LABEL: name: fmad_ftz_s32_vvsv
     ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GCN: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
     %2:vgpr(s32) = COPY $vgpr1
@@ -88,12 +91,13 @@ body: |
 
     ; GCN-LABEL: name: fmad_ftz_s32_vvvs
     ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
-    ; GCN: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
+    ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:sgpr(s32) = COPY $sgpr0
@@ -115,10 +119,11 @@ body: |
 
     ; GCN-LABEL: name: fmad_ftz_s32_vssv
     ; GCN: liveins: $sgpr0, $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %0, %1
@@ -137,11 +142,12 @@ body: |
 
     ; GCN-LABEL: name: fmad_ftz_s32_vsvs
     ; GCN: liveins: $sgpr0, $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
-    ; GCN: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %1, %0
@@ -160,11 +166,12 @@ body: |
 
     ; GCN-LABEL: name: fmad_ftz_s32_vvss
     ; GCN: liveins: $sgpr0, $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
-    ; GCN: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %1, %0, %0
@@ -183,10 +190,11 @@ body: |
 
     ; GCN-LABEL: name: fmad_ftz_s32_vsss
     ; GCN: liveins: $sgpr0, $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
-    ; GCN: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %0, %0
     S_ENDPGM 0, implicit %1
@@ -223,11 +231,12 @@ body: |
 
     ; GCN-LABEL: name: fmad_ftz_s32_vvv_fneg_v
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GCN: [[V_MAD_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAD_F32_e64 0, [[COPY]], 0, [[COPY1]], 1, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_MAD_F32_e64_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; GCN-NEXT: [[V_MAD_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAD_F32_e64 0, [[COPY]], 0, [[COPY1]], 1, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAD_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2

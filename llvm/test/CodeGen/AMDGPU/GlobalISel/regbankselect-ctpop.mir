@@ -10,9 +10,11 @@ body: |
   bb.0:
     liveins: $sgpr0
     ; CHECK-LABEL: name: ctpop_s32_s
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[CTPOP:%[0-9]+]]:sgpr(s32) = G_CTPOP [[COPY]](s32)
-    ; CHECK: S_ENDPGM 0, implicit [[CTPOP]](s32)
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:sgpr(s32) = G_CTPOP [[COPY]](s32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[CTPOP]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_CTPOP %0
     S_ENDPGM 0, implicit %1
@@ -26,9 +28,11 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: ctpop_s32_v
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[CTPOP:%[0-9]+]]:vgpr(s32) = G_CTPOP [[COPY]](s32)
-    ; CHECK: S_ENDPGM 0, implicit [[CTPOP]](s32)
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:vgpr(s32) = G_CTPOP [[COPY]](s32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[CTPOP]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CTPOP %0
     S_ENDPGM 0, implicit %1
@@ -43,9 +47,11 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; CHECK-LABEL: name: ctpop_s64_s
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK: [[CTPOP:%[0-9]+]]:sgpr(s32) = G_CTPOP [[COPY]](s64)
-    ; CHECK: S_ENDPGM 0, implicit [[CTPOP]](s32)
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:sgpr(s32) = G_CTPOP [[COPY]](s64)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[CTPOP]](s32)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_CTPOP %0
     S_ENDPGM 0, implicit %1
@@ -60,12 +66,14 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: ctpop_s64_v
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK: [[CTPOP:%[0-9]+]]:vgpr(s32) = G_CTPOP [[UV]](s32)
-    ; CHECK: [[CTPOP1:%[0-9]+]]:vgpr(s32) = G_CTPOP [[UV1]](s32)
-    ; CHECK: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[CTPOP1]], [[CTPOP]]
-    ; CHECK: S_ENDPGM 0, implicit [[ADD]](s32)
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:vgpr(s32) = G_CTPOP [[UV]](s32)
+    ; CHECK-NEXT: [[CTPOP1:%[0-9]+]]:vgpr(s32) = G_CTPOP [[UV1]](s32)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[CTPOP1]], [[CTPOP]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[ADD]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CTPOP %0
     S_ENDPGM 0, implicit %1
