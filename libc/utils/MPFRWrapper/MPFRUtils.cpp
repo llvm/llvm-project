@@ -247,6 +247,12 @@ public:
     return result;
   }
 
+  MPFRNumber fmod(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_fmod(result.value, value, b.value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber frexp(int &exp) {
     MPFRNumber result(*this);
     mpfr_exp_t resultExp;
@@ -561,6 +567,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
   MPFRNumber inputX(x, precision, rounding);
   MPFRNumber inputY(y, precision, rounding);
   switch (op) {
+  case Operation::Fmod:
+    return inputX.fmod(inputY);
   case Operation::Hypot:
     return inputX.hypot(inputY);
   default:

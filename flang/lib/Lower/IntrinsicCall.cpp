@@ -1283,7 +1283,7 @@ static mlir::func::FuncOp getRuntimeFunction(mlir::Location loc,
                                              llvm::StringRef name,
                                              mlir::FunctionType funcType) {
   const RuntimeFunction *bestNearMatch = nullptr;
-  FunctionDistance bestMatchDistance{};
+  FunctionDistance bestMatchDistance;
   mlir::func::FuncOp match;
   using RtMap = Fortran::common::StaticMultimapView<RuntimeFunction>;
   static constexpr RtMap pgmathF(pgmathFast);
@@ -1404,7 +1404,11 @@ mlir::Value toValue(const fir::ExtendedValue &val, fir::FirOpBuilder &builder,
                     mlir::Location loc) {
   if (const fir::CharBoxValue *charBox = val.getCharBox()) {
     mlir::Value buffer = charBox->getBuffer();
-    if (buffer.getType().isa<fir::BoxCharType>())
+    auto buffTy = buffer.getType();
+    if (buffTy.isa<mlir::FunctionType>())
+      fir::emitFatalError(
+          loc, "A character's buffer type cannot be a function type.");
+    if (buffTy.isa<fir::BoxCharType>())
       return buffer;
     return fir::factory::CharacterExprHelper{builder, loc}.createEmboxChar(
         buffer, charBox->getLen());
@@ -2557,7 +2561,9 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
 mlir::Value IntrinsicLibrary::genIand(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  return builder.create<mlir::arith::AndIOp>(loc, args[0], args[1]);
+  auto arg0 = builder.createConvert(loc, resultType, args[0]);
+  auto arg1 = builder.createConvert(loc, resultType, args[1]);
+  return builder.create<mlir::arith::AndIOp>(loc, arg0, arg1);
 }
 
 // IBCLR
@@ -2947,13 +2953,20 @@ fir::ExtendedValue
 IntrinsicLibrary::genMerge(mlir::Type,
                            llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  mlir::Value arg0 = fir::getBase(args[0]);
-  mlir::Value arg1 = fir::getBase(args[1]);
-  mlir::Value arg2 = fir::getBase(args[2]);
-  mlir::Type type0 = fir::unwrapRefType(arg0.getType());
+  mlir::Value tsource = fir::getBase(args[0]);
+  mlir::Value fsource = fir::getBase(args[1]);
+  mlir::Value rawMask = fir::getBase(args[2]);
+  mlir::Type type0 = fir::unwrapRefType(tsource.getType());
   bool isCharRslt = fir::isa_char(type0); // result is same as first argument
-  mlir::Value mask = builder.createConvert(loc, builder.getI1Type(), arg2);
-  auto rslt = builder.create<mlir::arith::SelectOp>(loc, mask, arg0, arg1);
+  mlir::Value mask = builder.createConvert(loc, builder.getI1Type(), rawMask);
+  // FSOURCE has the same type as TSOURCE, but they may not have the same MLIR
+  // types (one can have dynamic length while the other has constant lengths,
+  // or one may be a fir.logical<> while the other is an i1). Insert a cast to
+  // fulfill mlir::SelectOp constraint that the MLIR types must be the same.
+  mlir::Value fsourceCast =
+      builder.createConvert(loc, tsource.getType(), fsource);
+  auto rslt =
+      builder.create<mlir::arith::SelectOp>(loc, mask, tsource, fsourceCast);
   if (isCharRslt) {
     // Need a CharBoxValue for character results
     const fir::CharBoxValue *charBox = args[0].getCharBox();
@@ -3456,6 +3469,56 @@ static mlir::Value computeLBOUND(fir::FirOpBuilder &builder, mlir::Location loc,
   return builder.create<mlir::arith::SelectOp>(loc, dimIsEmpty, one, lb);
 }
 
+/// Create a fir.box to be passed to the LBOUND runtime.
+/// This ensure that local lower bounds of assumed shape are propagated and that
+/// a fir.box with equivalent LBOUNDs but an explicit shape is created for
+/// assumed size arrays to avoid undefined behaviors in codegen or the runtime.
+static mlir::Value createBoxForLBOUND(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      const fir::ExtendedValue &array) {
+  if (!array.isAssumedSize())
+    return array.match(
+        [&](const fir::BoxValue &boxValue) -> mlir::Value {
+          // This entity is mapped to a fir.box that may not contain the local
+          // lower bound information if it is a dummy. Rebox it with the local
+          // shape information.
+          mlir::Value localShape = builder.createShape(loc, array);
+          mlir::Value oldBox = boxValue.getAddr();
+          return builder.create<fir::ReboxOp>(loc, oldBox.getType(), oldBox,
+                                              localShape,
+                                              /*slice=*/mlir::Value{});
+        },
+        [&](const auto &) -> mlir::Value {
+          // This a pointer/allocatable, or an entity not yet tracked with a
+          // fir.box. For pointer/allocatable, createBox will forward the
+          // descriptor that contains the correct lower bound information. For
+          // other entities, a new fir.box will be made with the local lower
+          // bounds.
+          return builder.createBox(loc, array);
+        });
+  // Assumed sized are not meant to be emboxed. This could cause the undefined
+  // extent cannot safely be understood by the runtime/codegen that will
+  // consider that the dimension is empty and that the related LBOUND value must
+  // be one. Pretend that the related extent is one to get the correct LBOUND
+  // value.
+  llvm::SmallVector<mlir::Value> shape =
+      fir::factory::getExtents(loc, builder, array);
+  assert(!shape.empty() && "assumed size must have at least one dimension");
+  shape.back() = builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+  auto safeToEmbox = array.match(
+      [&](const fir::CharArrayBoxValue &x) -> fir::ExtendedValue {
+        return fir::CharArrayBoxValue{x.getAddr(), x.getLen(), shape,
+                                      x.getLBounds()};
+      },
+      [&](const fir::ArrayBoxValue &x) -> fir::ExtendedValue {
+        return fir::ArrayBoxValue{x.getAddr(), shape, x.getLBounds()};
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "not an assumed size array");
+      });
+  return builder.createBox(loc, safeToEmbox);
+}
+
 // LBOUND
 fir::ExtendedValue
 IntrinsicLibrary::genLbound(mlir::Type resultType,
@@ -3506,25 +3569,7 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
     return builder.createConvert(loc, resultType, lb);
   }
 
-  mlir::Value box = array.match(
-      [&](const fir::BoxValue &boxValue) -> mlir::Value {
-        // This entity is mapped to a fir.box that may not contain the local
-        // lower bound information if it is a dummy. Rebox it with the local
-        // shape information.
-        mlir::Value localShape = builder.createShape(loc, array);
-        mlir::Value oldBox = boxValue.getAddr();
-        return builder.create<fir::ReboxOp>(
-            loc, oldBox.getType(), oldBox, localShape, /*slice=*/mlir::Value{});
-      },
-      [&](const auto &) -> mlir::Value {
-        // This a pointer/allocatable, or an entity not yet tracked with a
-        // fir.box. For pointer/allocatable, createBox will forward the
-        // descriptor that contains the correct lower bound information. For
-        // other entities, a new fir.box will be made with the local lower
-        // bounds.
-        return builder.createBox(loc, array);
-      });
-
+  fir::ExtendedValue box = createBoxForLBOUND(loc, builder, array);
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genLboundDim(builder, loc, fir::getBase(box), dim));

@@ -152,29 +152,6 @@ static void initGlobalVars(const Stmt &S, Environment &Env) {
   }
 }
 
-// FIXME: Does not precisely handle non-virtual diamond inheritance. A single
-// field decl will be modeled for all instances of the inherited field.
-static void
-getFieldsFromClassHierarchy(QualType Type,
-                            llvm::DenseSet<const FieldDecl *> &Fields) {
-  if (Type->isIncompleteType() || Type->isDependentType() ||
-      !Type->isRecordType())
-    return;
-
-  for (const FieldDecl *Field : Type->getAsRecordDecl()->fields())
-    Fields.insert(Field);
-  if (auto *CXXRecord = Type->getAsCXXRecordDecl())
-    for (const CXXBaseSpecifier &Base : CXXRecord->bases())
-      getFieldsFromClassHierarchy(Base.getType(), Fields);
-}
-
-/// Gets the set of all fields in the type.
-static llvm::DenseSet<const FieldDecl *> getObjectFields(QualType Type) {
-  llvm::DenseSet<const FieldDecl *> Fields;
-  getFieldsFromClassHierarchy(Type, Fields);
-  return Fields;
-}
-
 Environment::Environment(DataflowAnalysisContext &DACtx)
     : DACtx(&DACtx), FlowConditionToken(&DACtx.makeFlowConditionToken()) {}
 
@@ -310,39 +287,21 @@ LatticeJoinEffect Environment::join(const Environment &Other,
 }
 
 StorageLocation &Environment::createStorageLocation(QualType Type) {
-  assert(!Type.isNull());
-  if (Type->isStructureOrClassType() || Type->isUnionType()) {
-    // FIXME: Explore options to avoid eager initialization of fields as some of
-    // them might not be needed for a particular analysis.
-    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
-    for (const FieldDecl *Field : getObjectFields(Type))
-      FieldLocs.insert({Field, &createStorageLocation(Field->getType())});
-    return takeOwnership(
-        std::make_unique<AggregateStorageLocation>(Type, std::move(FieldLocs)));
-  }
-  return takeOwnership(std::make_unique<ScalarStorageLocation>(Type));
+  return DACtx->getStableStorageLocation(Type);
 }
 
 StorageLocation &Environment::createStorageLocation(const VarDecl &D) {
   // Evaluated declarations are always assigned the same storage locations to
   // ensure that the environment stabilizes across loop iterations. Storage
   // locations for evaluated declarations are stored in the analysis context.
-  if (auto *Loc = DACtx->getStorageLocation(D))
-    return *Loc;
-  auto &Loc = createStorageLocation(D.getType());
-  DACtx->setStorageLocation(D, Loc);
-  return Loc;
+  return DACtx->getStableStorageLocation(D);
 }
 
 StorageLocation &Environment::createStorageLocation(const Expr &E) {
   // Evaluated expressions are always assigned the same storage locations to
   // ensure that the environment stabilizes across loop iterations. Storage
   // locations for evaluated expressions are stored in the analysis context.
-  if (auto *Loc = DACtx->getStorageLocation(E))
-    return *Loc;
-  auto &Loc = createStorageLocation(E.getType());
-  DACtx->setStorageLocation(E, Loc);
-  return Loc;
+  return DACtx->getStableStorageLocation(E);
 }
 
 void Environment::setStorageLocation(const ValueDecl &D, StorageLocation &Loc) {

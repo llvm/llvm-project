@@ -53,14 +53,10 @@ public:
   }
 
   /// Return true if the constraint is perfectly constrained to 'true'.
-  bool isConstrainedTrue() const {
-    return Val.hasValue() && Val.getValue();
-  }
+  bool isConstrainedTrue() const { return Val && Val.getValue(); }
 
   /// Return true if the constraint is perfectly constrained to 'false'.
-  bool isConstrainedFalse() const {
-    return Val.hasValue() && !Val.getValue();
-  }
+  bool isConstrainedFalse() const { return Val && !Val.getValue(); }
 
   /// Return true if the constrained is perfectly constrained.
   bool isConstrained() const {

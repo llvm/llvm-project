@@ -470,3 +470,43 @@ add_diff_binary(
   COMPILE_OPTIONS
     -fno-builtin
 )
+
+add_diff_binary(
+  fmodf_diff
+  SRCS
+    fmodf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.fmodf
+)
+
+add_diff_binary(
+  fmodf_perf
+  SRCS
+    fmodf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.fmodf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  fmod_diff
+  SRCS
+    fmod_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.fmod
+)
+
+add_diff_binary(
+  fmod_perf
+  SRCS
+    fmod_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.fmod
+  COMPILE_OPTIONS
+    -fno-builtin
+)

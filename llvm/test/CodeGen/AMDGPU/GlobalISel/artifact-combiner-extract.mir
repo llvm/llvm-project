@@ -366,7 +366,9 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: extract_v2s16_build_vector_v2s64_v2s16_v2s16_offset0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY [[COPY]](<2 x s16>)
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
@@ -383,7 +385,9 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: extract_v2s16_build_vector_v2s64_v2s16_v2s16_offset32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY [[COPY]](<2 x s16>)
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY1]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
@@ -401,7 +405,9 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: extract_s16_build_vector_v2s64_v2s16_v2s16_offset32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST]](s32)
     %0:_(<2 x s16>) = COPY $vgpr0
@@ -419,7 +425,9 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: extract_s16_build_vector_v2s64_v2s16_v2s16_offset48
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
@@ -440,7 +448,9 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: extract_s8_build_vector_v2s64_v2s16_v2s16_offset48
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s8) = G_EXTRACT [[COPY]](<2 x s16>), 16
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[EXTRACT]](s8)
     ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)

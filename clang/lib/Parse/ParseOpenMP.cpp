@@ -178,6 +178,7 @@ static OpenMPDirectiveKindExWrapper parseOpenMPDirectiveKind(Parser &P) {
       {OMPD_target_teams_distribute_parallel_for, OMPD_simd,
        OMPD_target_teams_distribute_parallel_for_simd},
       {OMPD_master, OMPD_taskloop, OMPD_master_taskloop},
+      {OMPD_masked, OMPD_taskloop, OMPD_masked_taskloop},
       {OMPD_master_taskloop, OMPD_simd, OMPD_master_taskloop_simd},
       {OMPD_parallel, OMPD_master, OMPD_parallel_master},
       {OMPD_parallel, OMPD_masked, OMPD_parallel_masked},
@@ -1872,7 +1873,7 @@ void Parser::ParseOMPDeclareTargetClauses(
       if (IsDeviceTypeClause) {
         Optional<SimpleClauseData> DevTypeData =
             parseOpenMPSimpleClause(*this, OMPC_device_type);
-        if (DevTypeData.hasValue()) {
+        if (DevTypeData) {
           if (DeviceTypeLoc.isValid()) {
             // We already saw another device_type clause, diagnose it.
             Diag(DevTypeData.getValue().Loc,
@@ -2312,9 +2313,9 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     Sema::DeclareTargetContextInfo DTCI(DKind, DTLoc);
     if (HasClauses)
       ParseOMPDeclareTargetClauses(DTCI);
-    bool HasImplicitMappings =
-        DKind == OMPD_begin_declare_target || !HasClauses ||
-        (DTCI.ExplicitlyMapped.empty() && DTCI.Indirect.hasValue());
+    bool HasImplicitMappings = DKind == OMPD_begin_declare_target ||
+                               !HasClauses ||
+                               (DTCI.ExplicitlyMapped.empty() && DTCI.Indirect);
 
     // Skip the last annot_pragma_openmp_end.
     ConsumeAnyToken();
@@ -2385,6 +2386,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_master_taskloop_simd:
   case OMPD_parallel_master_taskloop:
   case OMPD_parallel_master_taskloop_simd:
+  case OMPD_masked_taskloop:
   case OMPD_distribute:
   case OMPD_target_update:
   case OMPD_distribute_parallel_for:
@@ -2782,6 +2784,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
   case OMPD_master_taskloop:
+  case OMPD_masked_taskloop:
   case OMPD_master_taskloop_simd:
   case OMPD_parallel_master_taskloop:
   case OMPD_parallel_master_taskloop_simd:

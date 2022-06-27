@@ -230,6 +230,11 @@ struct BufferizationOptions {
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
 
+  /// The default memory space that should be used when it cannot be inferred
+  /// from the context. If no default memory space is specified, bufferization
+  /// fails when the memory space cannot be inferred at any point.
+  Optional<unsigned> defaultMemorySpace = 0;
+
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced
   /// with buffer copies.
@@ -513,18 +518,17 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
 BaseMemRefType getMemRefType(TensorType tensorType,
                              const BufferizationOptions &options,
                              MemRefLayoutAttrInterface layout = {},
-                             Attribute memorySpace = {});
+                             unsigned memorySpace = 0);
 
 /// Return a MemRef type with fully dynamic layout. If the given tensor type
 /// is unranked, return an unranked MemRef type.
 BaseMemRefType getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
-                                                   Attribute memorySpace = {});
+                                                   unsigned memorySpace = 0);
 
 /// Return a MemRef type with a static identity layout (i.e., no layout map). If
 /// the given tensor type is unranked, return an unranked MemRef type.
-BaseMemRefType
-getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
-                                      Attribute memorySpace = {});
+BaseMemRefType getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
+                                                     unsigned memorySpace = 0);
 
 } // namespace bufferization
 } // namespace mlir

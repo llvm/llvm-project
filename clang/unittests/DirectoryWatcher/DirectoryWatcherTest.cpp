@@ -194,7 +194,7 @@ struct VerifyingConsumer {
       if (result())
         return *result();
 
-      ResultIsReady.wait(L, [this]() { return result().hasValue(); });
+      ResultIsReady.wait(L, [this]() { return result().has_value(); });
     }
     return false; // Just to make compiler happy.
   }
@@ -259,11 +259,11 @@ void checkEventualResultWithTimeout(VerifyingConsumer &TestConsumer) {
       << "The expected result state wasn't reached before the time-out.";
   std::unique_lock<std::mutex> L(TestConsumer.Mtx);
   EXPECT_TRUE(TestConsumer.result().hasValue());
-  if (TestConsumer.result().hasValue()) {
+  if (TestConsumer.result()) {
     EXPECT_TRUE(*TestConsumer.result());
   }
-  if ((TestConsumer.result().hasValue() && !TestConsumer.result().getValue()) ||
-      !TestConsumer.result().hasValue())
+  if ((TestConsumer.result() && !TestConsumer.result().getValue()) ||
+      !TestConsumer.result())
     TestConsumer.printUnmetExpectations(llvm::outs());
 }
 } // namespace

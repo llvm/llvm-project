@@ -346,8 +346,9 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
     Location loc = writeOp.getLoc();
     VectorType vecType = writeOp.getVectorType();
 
-    // Only vector<1x> is supported at the moment.
-    if (vecType.getShape().size() != 1 || vecType.getShape()[0] != 1)
+    // Only sink out vector of 1 element for now to not serialize large vector
+    // store. This can later be controlled by user.
+    if (vecType.getNumElements() != 1)
       return failure();
 
     // Do not process warp ops that contain only TransferWriteOps.
@@ -716,7 +717,8 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
     rewriter.setInsertionPoint(innerWarp.getBody(), innerWarp.getBody()->end());
     rewriter.create<vector::YieldOp>(innerWarp.getLoc(), yieldOperands);
     rewriter.setInsertionPointAfter(innerWarp);
-    rewriter.create<scf::YieldOp>(forOp.getLoc(), innerWarp.getResults());
+    if (!innerWarp.getResults().empty())
+      rewriter.create<scf::YieldOp>(forOp.getLoc(), innerWarp.getResults());
     rewriter.eraseOp(forOp);
     // Replace the warpOp result coming from the original ForOp.
     for (const auto &res : llvm::enumerate(resultIdx)) {

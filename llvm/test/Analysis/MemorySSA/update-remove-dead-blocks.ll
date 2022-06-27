@@ -32,7 +32,7 @@ define i32* @test() {
 ; CHECK:       for.cond2.2.for.body3_crit_edge:
 ; CHECK-NEXT:    br label [[FOR_BODY3]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    [[STOREMERGE_LCSSA:%.*]] = phi i64 [ undef, [[FOR_COND2_2_FOR_BODY3_CRIT_EDGE]] ], [ undef, [[FOR_BODY3SPLIT]] ]
+; CHECK-NEXT:    [[STOREMERGE_LCSSA:%.*]] = phi i64 [ poison, [[FOR_COND2_2_FOR_BODY3_CRIT_EDGE]] ], [ poison, [[FOR_BODY3SPLIT]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1 x i32], [1 x i32]* @c, i64 0, i64 [[STOREMERGE_LCSSA]]
 ; CHECK-NEXT:    ret i32* [[ARRAYIDX]]
 ;

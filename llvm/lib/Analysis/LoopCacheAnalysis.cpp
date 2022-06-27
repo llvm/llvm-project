@@ -645,8 +645,8 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
         Optional<bool> HasSpacialReuse =
             R->hasSpacialReuse(Representative, CLS, AA);
 
-        if ((HasTemporalReuse.hasValue() && *HasTemporalReuse) ||
-            (HasSpacialReuse.hasValue() && *HasSpacialReuse)) {
+        if ((HasTemporalReuse && *HasTemporalReuse) ||
+            (HasSpacialReuse && *HasSpacialReuse)) {
           RefGroup.push_back(std::move(R));
           Added = true;
           break;

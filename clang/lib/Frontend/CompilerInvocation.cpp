@@ -1360,6 +1360,9 @@ void CompilerInvocation::GenerateCodeGenArgs(
   case codegenoptions::DebugDirectivesOnly:
     DebugInfoVal = "line-directives-only";
     break;
+  case codegenoptions::DebugInfoConstructor:
+    DebugInfoVal = "constructor";
+    break;
   case codegenoptions::LimitedDebugInfo:
     DebugInfoVal = "limited";
     break;
@@ -1634,6 +1637,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         llvm::StringSwitch<unsigned>(A->getValue())
             .Case("line-tables-only", codegenoptions::DebugLineTablesOnly)
             .Case("line-directives-only", codegenoptions::DebugDirectivesOnly)
+            .Case("constructor", codegenoptions::DebugInfoConstructor)
             .Case("limited", codegenoptions::LimitedDebugInfo)
             .Case("standalone", codegenoptions::FullDebugInfo)
             .Case("unused-types", codegenoptions::UnusedTypeInfo)
@@ -1643,6 +1647,18 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                                                 << A->getValue();
     else
       Opts.setDebugInfo(static_cast<codegenoptions::DebugInfoKind>(Val));
+  }
+
+  // If -fuse-ctor-homing is set and limited debug info is already on, then use
+  // constructor homing, and vice versa for -fno-use-ctor-homing.
+  if (const Arg *A =
+          Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
+    if (A->getOption().matches(OPT_fuse_ctor_homing) &&
+        Opts.getDebugInfo() == codegenoptions::LimitedDebugInfo)
+      Opts.setDebugInfo(codegenoptions::DebugInfoConstructor);
+    if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
+        Opts.getDebugInfo() == codegenoptions::DebugInfoConstructor)
+      Opts.setDebugInfo(codegenoptions::LimitedDebugInfo);
   }
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
@@ -1935,7 +1951,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           << "-fdiagnostics-hotness-threshold=";
     } else {
       Opts.DiagnosticsHotnessThreshold = *ResultOrErr;
-      if ((!Opts.DiagnosticsHotnessThreshold.hasValue() ||
+      if ((!Opts.DiagnosticsHotnessThreshold ||
            Opts.DiagnosticsHotnessThreshold.getValue() > 0) &&
           !UsingProfile)
         Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
@@ -1952,7 +1968,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           << "-fdiagnostics-misexpect-tolerance=";
     } else {
       Opts.DiagnosticsMisExpectTolerance = *ResultOrErr;
-      if ((!Opts.DiagnosticsMisExpectTolerance.hasValue() ||
+      if ((!Opts.DiagnosticsMisExpectTolerance ||
            Opts.DiagnosticsMisExpectTolerance.getValue() > 0) &&
           !UsingProfile)
         Diags.Report(diag::warn_drv_diagnostics_misexpect_requires_pgo)
@@ -2562,10 +2578,10 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
   for (const auto &ModuleFile : Opts.ModuleFiles)
     GenerateArg(Args, OPT_fmodule_file, ModuleFile, SA);
 
-  if (Opts.AuxTargetCPU.hasValue())
+  if (Opts.AuxTargetCPU)
     GenerateArg(Args, OPT_aux_target_cpu, *Opts.AuxTargetCPU, SA);
 
-  if (Opts.AuxTargetFeatures.hasValue())
+  if (Opts.AuxTargetFeatures)
     for (const auto &Feature : *Opts.AuxTargetFeatures)
       GenerateArg(Args, OPT_aux_target_feature, Feature, SA);
 

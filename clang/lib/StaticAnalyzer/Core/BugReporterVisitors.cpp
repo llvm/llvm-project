@@ -2949,7 +2949,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
 
   PathDiagnosticLocation Loc(Cond, SM, LCtx);
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Message);
-  if (shouldPrune.hasValue())
+  if (shouldPrune)
     event->setPrunable(shouldPrune.getValue());
   return event;
 }
@@ -3279,7 +3279,7 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
 
   // And check for satisfiability
   Optional<bool> IsSAT = RefutationSolver->check();
-  if (!IsSAT.hasValue())
+  if (!IsSAT)
     return;
 
   if (!IsSAT.getValue())

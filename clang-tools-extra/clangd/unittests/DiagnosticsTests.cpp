@@ -892,8 +892,7 @@ void bar(int *Y);
   ASSERT_TRUE(X->getOriginalType()->getNullability(X->getASTContext()) ==
               NullabilityKind::NonNull);
   const auto *Y = cast<FunctionDecl>(findDecl(AST, "bar")).getParamDecl(0);
-  ASSERT_FALSE(
-      Y->getOriginalType()->getNullability(X->getASTContext()).hasValue());
+  ASSERT_FALSE(Y->getOriginalType()->getNullability(X->getASTContext()));
 }
 
 TEST(DiagnosticsTest, InsideMacros) {

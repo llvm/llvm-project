@@ -174,7 +174,5 @@ int main(void) {
 // CHECK:   ret void
 // CHECK: }
 
-// CHECK: [[GF_TYPE:!.*]] = !DIBasicType(name: "__ibm128", size: 128, encoding: DW_ATE_float)
-// CHECK: = distinct !DIGlobalVariable(name: "gf",
-// CHECK-SAME: type: [[GF_TYPE]],
-// CHECK-SAME: isDefinition: true)
+// CHECK: !6 = distinct !DIGlobalVariable(name: "gf", scope: !2, file: !7, line: {{[0-9]+}}, type: !8, isLocal: false, isDefinition: true)
+// CHECK: !8 = !DIBasicType(name: "__ibm128", size: 128, encoding: DW_ATE_float)

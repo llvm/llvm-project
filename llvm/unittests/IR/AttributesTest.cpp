@@ -90,14 +90,14 @@ TEST(Attributes, RemoveAlign) {
   B_stackalign.addAttribute(StackAlignAttr);
 
   AttributeSet AS = AttributeSet::get(C, B_align_readonly);
-  EXPECT_TRUE(AS.getAlignment() == 8);
+  EXPECT_TRUE(AS.getAlignment() == MaybeAlign(8));
   EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
   AS = AS.removeAttribute(C, Attribute::Alignment);
   EXPECT_FALSE(AS.hasAttribute(Attribute::Alignment));
   EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
   AS = AttributeSet::get(C, B_align_readonly);
   AS = AS.removeAttributes(C, B_align);
-  EXPECT_TRUE(AS.getAlignment() == 0);
+  EXPECT_TRUE(AS.getAlignment() == None);
   EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
 
   AttributeList AL;
@@ -106,18 +106,18 @@ TEST(Attributes, RemoveAlign) {
   EXPECT_TRUE(AL.hasRetAttrs());
   EXPECT_TRUE(AL.hasRetAttr(Attribute::StackAlignment));
   EXPECT_TRUE(AL.hasRetAttr(Attribute::OptimizeNone));
-  EXPECT_TRUE(AL.getRetStackAlignment() == 32);
+  EXPECT_TRUE(AL.getRetStackAlignment() == MaybeAlign(32));
   EXPECT_TRUE(AL.hasParamAttrs(0));
   EXPECT_TRUE(AL.hasParamAttr(0, Attribute::Alignment));
   EXPECT_TRUE(AL.hasParamAttr(0, Attribute::ReadOnly));
-  EXPECT_TRUE(AL.getParamAlignment(0) == 8);
+  EXPECT_TRUE(AL.getParamAlignment(0) == MaybeAlign(8));
 
   AL = AL.removeParamAttribute(C, 0, Attribute::Alignment);
   EXPECT_FALSE(AL.hasParamAttr(0, Attribute::Alignment));
   EXPECT_TRUE(AL.hasParamAttr(0, Attribute::ReadOnly));
   EXPECT_TRUE(AL.hasRetAttr(Attribute::StackAlignment));
   EXPECT_TRUE(AL.hasRetAttr(Attribute::OptimizeNone));
-  EXPECT_TRUE(AL.getRetStackAlignment() == 32);
+  EXPECT_TRUE(AL.getRetStackAlignment() == MaybeAlign(32));
 
   AL = AL.removeRetAttribute(C, Attribute::StackAlignment);
   EXPECT_FALSE(AL.hasParamAttr(0, Attribute::Alignment));
@@ -134,7 +134,7 @@ TEST(Attributes, RemoveAlign) {
   EXPECT_TRUE(AL2.hasParamAttr(0, Attribute::ReadOnly));
   EXPECT_TRUE(AL2.hasRetAttr(Attribute::StackAlignment));
   EXPECT_TRUE(AL2.hasRetAttr(Attribute::OptimizeNone));
-  EXPECT_TRUE(AL2.getRetStackAlignment() == 32);
+  EXPECT_TRUE(AL2.getRetStackAlignment() == MaybeAlign(32));
 
   AL2 = AL2.removeRetAttributes(C, B_stackalign);
   EXPECT_FALSE(AL2.hasParamAttr(0, Attribute::Alignment));

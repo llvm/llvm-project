@@ -132,17 +132,15 @@ bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
 }
 
 Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
-  // There is no assumption of the maximum vector length in V specification.
-  // We use the value specified by users as the maximum vector length.
-  // This function will use the assumed maximum vector length to get the
-  // maximum vscale for LoopVectorizer.
-  // If users do not specify the maximum vector length, we have no way to
-  // know whether the LoopVectorizer is safe to do or not.
-  // We only consider to use single vector register (LMUL = 1) to vectorize.
-  unsigned MaxVectorSizeInBits = ST->getMaxRVVVectorSizeInBits();
-  if (ST->hasVInstructions() && MaxVectorSizeInBits != 0)
-    return MaxVectorSizeInBits / RISCV::RVVBitsPerBlock;
+  if (ST->hasVInstructions())
+    return ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
   return BaseT::getMaxVScale();
+}
+
+Optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
+  if (ST->hasVInstructions())
+    return ST->getRealMinVLen() / RISCV::RVVBitsPerBlock;
+  return BaseT::getVScaleForTuning();
 }
 
 TypeSize
@@ -154,7 +152,7 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     return TypeSize::getFixed(ST->getXLen());
   case TargetTransformInfo::RGK_FixedWidthVector:
     return TypeSize::getFixed(
-        ST->hasVInstructions() ? LMUL * ST->getMinRVVVectorSizeInBits() : 0);
+        ST->useRVVForFixedLengthVectors() ? LMUL * ST->getRealMinVLen() : 0);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(
         ST->hasVInstructions() ? LMUL * RISCV::RVVBitsPerBlock : 0);
@@ -466,7 +464,7 @@ unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
       return divideCeil(Size.getKnownMinValue(), RISCV::RVVBitsPerBlock);
 
     if (ST->useRVVForFixedLengthVectors())
-      return divideCeil(Size, ST->getMinRVVVectorSizeInBits());
+      return divideCeil(Size, ST->getRealMinVLen());
   }
 
   return BaseT::getRegUsageForType(Ty);

@@ -371,7 +371,7 @@ private:
         DeadInstructions.emplace_back(LandingPad);
 
       for (Instruction *I : DeadInstructions) {
-        I->replaceAllUsesWith(UndefValue::get(I->getType()));
+        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
         I->eraseFromParent();
       }
 
@@ -735,9 +735,9 @@ public:
     if (MSSAA && VerifyMemorySSA)
       MSSAU->getMemorySSA()->verifyMemorySSA();
     bool DeleteCurrentLoop = false;
-    bool Changed = simplifyLoopCFG(
-        *L, DT, LI, SE, MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
-        DeleteCurrentLoop);
+    bool Changed =
+        simplifyLoopCFG(*L, DT, LI, SE, MSSAU ? MSSAU.getPointer() : nullptr,
+                        DeleteCurrentLoop);
     if (DeleteCurrentLoop)
       LPM.markLoopAsDeleted(*L);
     return Changed;

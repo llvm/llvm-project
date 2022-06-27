@@ -32,6 +32,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cassert>
 #include <limits>
@@ -351,7 +352,7 @@ void ScriptParser::readEntry() {
   expect("(");
   StringRef tok = next();
   if (config->entry.empty())
-    config->entry = tok;
+    config->entry = unquote(tok);
   expect(")");
 }
 
@@ -623,7 +624,7 @@ void ScriptParser::readTarget() {
   // for --format. We recognize only /^elf/ and "binary" in the linker
   // script as well.
   expect("(");
-  StringRef tok = next();
+  StringRef tok = unquote(next());
   expect(")");
 
   if (tok.startswith("elf"))
@@ -636,14 +637,16 @@ void ScriptParser::readTarget() {
 
 static int precedence(StringRef op) {
   return StringSwitch<int>(op)
-      .Cases("*", "/", "%", 8)
-      .Cases("+", "-", 7)
-      .Cases("<<", ">>", 6)
-      .Cases("<", "<=", ">", ">=", "==", "!=", 5)
-      .Case("&", 4)
-      .Case("|", 3)
-      .Case("&&", 2)
-      .Case("||", 1)
+      .Cases("*", "/", "%", 10)
+      .Cases("+", "-", 9)
+      .Cases("<<", ">>", 8)
+      .Cases("<", "<=", ">", ">=", 7)
+      .Cases("==", "!=", 6)
+      .Case("&", 5)
+      .Case("|", 4)
+      .Case("&&", 3)
+      .Case("||", 2)
+      .Case("?", 1)
       .Default(-1);
 }
 
@@ -1014,7 +1017,14 @@ std::array<uint8_t, 4> ScriptParser::readFill() {
 
 SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
   expect("(");
-  SymbolAssignment *cmd = readSymbolAssignment(next());
+  StringRef name = next(), eq = peek();
+  if (eq != "=") {
+    setError("= expected, but got " + next());
+    while (!atEOF() && next() != ")")
+      ;
+    return nullptr;
+  }
+  SymbolAssignment *cmd = readSymbolAssignment(name);
   cmd->provide = provide;
   cmd->hidden = hidden;
   expect(")");
@@ -1028,14 +1038,24 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 
   size_t oldPos = pos;
   SymbolAssignment *cmd = nullptr;
-  if (peek() == "=" || peek() == "+=")
+  const StringRef op = peek();
+  if (op.startswith("=")) {
+    // Support = followed by an expression without whitespace.
+    SaveAndRestore<bool> saved(inExpr, true);
     cmd = readSymbolAssignment(tok);
-  else if (tok == "PROVIDE")
+  } else if ((op.size() == 2 && op[1] == '=' && strchr("*/+-&|", op[0])) ||
+             op == "<<=" || op == ">>=") {
+    cmd = readSymbolAssignment(tok);
+  } else if (tok == "PROVIDE") {
+    SaveAndRestore<bool> saved(inExpr, true);
     cmd = readProvideHidden(true, false);
-  else if (tok == "HIDDEN")
+  } else if (tok == "HIDDEN") {
+    SaveAndRestore<bool> saved(inExpr, true);
     cmd = readProvideHidden(false, true);
-  else if (tok == "PROVIDE_HIDDEN")
+  } else if (tok == "PROVIDE_HIDDEN") {
+    SaveAndRestore<bool> saved(inExpr, true);
     cmd = readProvideHidden(true, true);
+  }
 
   if (cmd) {
     cmd->commandString =
@@ -1049,11 +1069,38 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   name = unquote(name);
   StringRef op = next();
-  assert(op == "=" || op == "+=");
+  assert(op == "=" || op == "*=" || op == "/=" || op == "+=" || op == "-=" ||
+         op == "&=" || op == "|=" || op == "<<=" || op == ">>=");
+  // Note: GNU ld does not support %= or ^=.
   Expr e = readExpr();
-  if (op == "+=") {
+  if (op != "=") {
     std::string loc = getCurrentLocation();
-    e = [=] { return add(script->getSymbolValue(name, loc), e()); };
+    e = [=, c = op[0]]() -> ExprValue {
+      ExprValue lhs = script->getSymbolValue(name, loc);
+      switch (c) {
+      case '*':
+        return lhs.getValue() * e().getValue();
+      case '/':
+        if (uint64_t rv = e().getValue())
+          return lhs.getValue() / rv;
+        error(loc + ": division by zero");
+        return 0;
+      case '+':
+        return add(lhs, e());
+      case '-':
+        return sub(lhs, e());
+      case '<':
+        return lhs.getValue() << e().getValue();
+      case '>':
+        return lhs.getValue() >> e().getValue();
+      case '&':
+        return lhs.getValue() & e().getValue();
+      case '|':
+        return lhs.getValue() | e().getValue();
+      default:
+        llvm_unreachable("");
+      }
+    };
   }
   return make<SymbolAssignment>(name, e, getCurrentLocation());
 }
@@ -1127,11 +1174,11 @@ Expr ScriptParser::combine(StringRef op, Expr l, Expr r) {
 Expr ScriptParser::readExpr1(Expr lhs, int minPrec) {
   while (!atEOF() && !errorCount()) {
     // Read an operator and an expression.
-    if (consume("?"))
-      return readTernary(lhs);
     StringRef op1 = peek();
     if (precedence(op1) < minPrec)
       break;
+    if (consume("?"))
+      return readTernary(lhs);
     skip();
     Expr rhs = readPrimary();
 

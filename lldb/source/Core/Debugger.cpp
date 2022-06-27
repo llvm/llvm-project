@@ -1406,11 +1406,27 @@ void Debugger::ReportError(std::string message,
                        debugger_id, once);
 }
 
+static std::shared_ptr<LogHandler>
+CreateLogHandler(LogHandlerKind log_handler_kind, int fd, bool should_close,
+                 size_t buffer_size) {
+  switch (log_handler_kind) {
+  case eLogHandlerStream:
+    return std::make_shared<StreamLogHandler>(fd, should_close, buffer_size);
+  case eLogHandlerCircular:
+    return std::make_shared<RotatingLogHandler>(buffer_size);
+  case eLogHandlerSystem:
+    return std::make_shared<SystemLogHandler>();
+  case eLogHandlerCallback:
+    return {};
+  }
+  return {};
+}
+
 bool Debugger::EnableLog(llvm::StringRef channel,
                          llvm::ArrayRef<const char *> categories,
                          llvm::StringRef log_file, uint32_t log_options,
-                         size_t buffer_size, llvm::raw_ostream &error_stream) {
-  const bool should_close = true;
+                         size_t buffer_size, LogHandlerKind log_handler_kind,
+                         llvm::raw_ostream &error_stream) {
 
   std::shared_ptr<LogHandler> log_handler_sp;
   if (m_callback_handler_sp) {
@@ -1419,8 +1435,9 @@ bool Debugger::EnableLog(llvm::StringRef channel,
     log_options |=
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
   } else if (log_file.empty()) {
-    log_handler_sp = std::make_shared<StreamLogHandler>(
-        GetOutputFile().GetDescriptor(), !should_close, buffer_size);
+    log_handler_sp =
+        CreateLogHandler(log_handler_kind, GetOutputFile().GetDescriptor(),
+                         /*should_close=*/false, buffer_size);
   } else {
     auto pos = m_stream_handlers.find(log_file);
     if (pos != m_stream_handlers.end())
@@ -1440,8 +1457,9 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         return false;
       }
 
-      log_handler_sp = std::make_shared<StreamLogHandler>(
-          (*file)->GetDescriptor(), should_close, buffer_size);
+      log_handler_sp =
+          CreateLogHandler(log_handler_kind, (*file)->GetDescriptor(),
+                           /*should_close=*/true, buffer_size);
       m_stream_handlers[log_file] = log_handler_sp;
     }
   }

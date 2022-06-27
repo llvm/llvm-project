@@ -9,39 +9,39 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: extract512
     ; CHECK: [[DEF:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub0
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub1
-    ; CHECK: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub2
-    ; CHECK: [[COPY3:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub3
-    ; CHECK: [[COPY4:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub4
-    ; CHECK: [[COPY5:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub5
-    ; CHECK: [[COPY6:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub6
-    ; CHECK: [[COPY7:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub7
-    ; CHECK: [[COPY8:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub8
-    ; CHECK: [[COPY9:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub9
-    ; CHECK: [[COPY10:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub10
-    ; CHECK: [[COPY11:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub11
-    ; CHECK: [[COPY12:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub12
-    ; CHECK: [[COPY13:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub13
-    ; CHECK: [[COPY14:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub14
-    ; CHECK: [[COPY15:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub15
-    ; CHECK: $sgpr0 = COPY [[COPY]]
-    ; CHECK: $sgpr1 = COPY [[COPY1]]
-    ; CHECK: $sgpr2 = COPY [[COPY2]]
-    ; CHECK: $sgpr3 = COPY [[COPY3]]
-    ; CHECK: $sgpr4 = COPY [[COPY4]]
-    ; CHECK: $sgpr5 = COPY [[COPY5]]
-    ; CHECK: $sgpr6 = COPY [[COPY6]]
-    ; CHECK: $sgpr7 = COPY [[COPY7]]
-    ; CHECK: $sgpr8 = COPY [[COPY8]]
-    ; CHECK: $sgpr9 = COPY [[COPY9]]
-    ; CHECK: $sgpr10 = COPY [[COPY10]]
-    ; CHECK: $sgpr11 = COPY [[COPY11]]
-    ; CHECK: $sgpr12 = COPY [[COPY12]]
-    ; CHECK: $sgpr13 = COPY [[COPY13]]
-    ; CHECK: $sgpr14 = COPY [[COPY14]]
-    ; CHECK: $sgpr15 = COPY [[COPY15]]
-    ; CHECK: SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub9
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub10
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub11
+    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub12
+    ; CHECK-NEXT: [[COPY13:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub13
+    ; CHECK-NEXT: [[COPY14:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub14
+    ; CHECK-NEXT: [[COPY15:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub15
+    ; CHECK-NEXT: $sgpr0 = COPY [[COPY]]
+    ; CHECK-NEXT: $sgpr1 = COPY [[COPY1]]
+    ; CHECK-NEXT: $sgpr2 = COPY [[COPY2]]
+    ; CHECK-NEXT: $sgpr3 = COPY [[COPY3]]
+    ; CHECK-NEXT: $sgpr4 = COPY [[COPY4]]
+    ; CHECK-NEXT: $sgpr5 = COPY [[COPY5]]
+    ; CHECK-NEXT: $sgpr6 = COPY [[COPY6]]
+    ; CHECK-NEXT: $sgpr7 = COPY [[COPY7]]
+    ; CHECK-NEXT: $sgpr8 = COPY [[COPY8]]
+    ; CHECK-NEXT: $sgpr9 = COPY [[COPY9]]
+    ; CHECK-NEXT: $sgpr10 = COPY [[COPY10]]
+    ; CHECK-NEXT: $sgpr11 = COPY [[COPY11]]
+    ; CHECK-NEXT: $sgpr12 = COPY [[COPY12]]
+    ; CHECK-NEXT: $sgpr13 = COPY [[COPY13]]
+    ; CHECK-NEXT: $sgpr14 = COPY [[COPY14]]
+    ; CHECK-NEXT: $sgpr15 = COPY [[COPY15]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15
     %0:sgpr(s512) = G_IMPLICIT_DEF
     %1:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 0
     %2:sgpr(s32) = G_EXTRACT %0:sgpr(s512), 32
@@ -87,39 +87,39 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: extract_s_s32_s1024
     ; CHECK: [[DEF:%[0-9]+]]:sgpr_1024 = IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub0
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub1
-    ; CHECK: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub2
-    ; CHECK: [[COPY3:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub3
-    ; CHECK: [[COPY4:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub4
-    ; CHECK: [[COPY5:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub5
-    ; CHECK: [[COPY6:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub6
-    ; CHECK: [[COPY7:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub7
-    ; CHECK: [[COPY8:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub8
-    ; CHECK: [[COPY9:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub9
-    ; CHECK: [[COPY10:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub10
-    ; CHECK: [[COPY11:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub11
-    ; CHECK: [[COPY12:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub12
-    ; CHECK: [[COPY13:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub13
-    ; CHECK: [[COPY14:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub14
-    ; CHECK: [[COPY15:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub15
-    ; CHECK: [[COPY16:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub16
-    ; CHECK: [[COPY17:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub17
-    ; CHECK: [[COPY18:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub18
-    ; CHECK: [[COPY19:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub19
-    ; CHECK: [[COPY20:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub20
-    ; CHECK: [[COPY21:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub21
-    ; CHECK: [[COPY22:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub22
-    ; CHECK: [[COPY23:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub23
-    ; CHECK: [[COPY24:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub24
-    ; CHECK: [[COPY25:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub25
-    ; CHECK: [[COPY26:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub26
-    ; CHECK: [[COPY27:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub27
-    ; CHECK: [[COPY28:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub28
-    ; CHECK: [[COPY29:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub29
-    ; CHECK: [[COPY30:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub30
-    ; CHECK: [[COPY31:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub31
-    ; CHECK: S_ENDPGM 0, implicit [[DEF]], implicit [[COPY]], implicit [[COPY1]], implicit [[COPY2]], implicit [[COPY3]], implicit [[COPY4]], implicit [[COPY5]], implicit [[COPY6]], implicit [[COPY7]], implicit [[COPY8]], implicit [[COPY9]], implicit [[COPY10]], implicit [[COPY11]], implicit [[COPY12]], implicit [[COPY13]], implicit [[COPY14]], implicit [[COPY15]], implicit [[COPY16]], implicit [[COPY17]], implicit [[COPY18]], implicit [[COPY19]], implicit [[COPY20]], implicit [[COPY21]], implicit [[COPY22]], implicit [[COPY23]], implicit [[COPY24]], implicit [[COPY25]], implicit [[COPY26]], implicit [[COPY27]], implicit [[COPY28]], implicit [[COPY29]], implicit [[COPY30]], implicit [[COPY31]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub4
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub5
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub6
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub7
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub8
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub9
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub10
+    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub11
+    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub12
+    ; CHECK-NEXT: [[COPY13:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub13
+    ; CHECK-NEXT: [[COPY14:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub14
+    ; CHECK-NEXT: [[COPY15:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub15
+    ; CHECK-NEXT: [[COPY16:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub16
+    ; CHECK-NEXT: [[COPY17:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub17
+    ; CHECK-NEXT: [[COPY18:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub18
+    ; CHECK-NEXT: [[COPY19:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub19
+    ; CHECK-NEXT: [[COPY20:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub20
+    ; CHECK-NEXT: [[COPY21:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub21
+    ; CHECK-NEXT: [[COPY22:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub22
+    ; CHECK-NEXT: [[COPY23:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub23
+    ; CHECK-NEXT: [[COPY24:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub24
+    ; CHECK-NEXT: [[COPY25:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub25
+    ; CHECK-NEXT: [[COPY26:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub26
+    ; CHECK-NEXT: [[COPY27:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub27
+    ; CHECK-NEXT: [[COPY28:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub28
+    ; CHECK-NEXT: [[COPY29:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub29
+    ; CHECK-NEXT: [[COPY30:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub30
+    ; CHECK-NEXT: [[COPY31:%[0-9]+]]:sreg_32 = COPY [[DEF]].sub31
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[DEF]], implicit [[COPY]], implicit [[COPY1]], implicit [[COPY2]], implicit [[COPY3]], implicit [[COPY4]], implicit [[COPY5]], implicit [[COPY6]], implicit [[COPY7]], implicit [[COPY8]], implicit [[COPY9]], implicit [[COPY10]], implicit [[COPY11]], implicit [[COPY12]], implicit [[COPY13]], implicit [[COPY14]], implicit [[COPY15]], implicit [[COPY16]], implicit [[COPY17]], implicit [[COPY18]], implicit [[COPY19]], implicit [[COPY20]], implicit [[COPY21]], implicit [[COPY22]], implicit [[COPY23]], implicit [[COPY24]], implicit [[COPY25]], implicit [[COPY26]], implicit [[COPY27]], implicit [[COPY28]], implicit [[COPY29]], implicit [[COPY30]], implicit [[COPY31]]
     %0:sgpr(s1024) = G_IMPLICIT_DEF
     %1:sgpr(s32) = G_EXTRACT %0:sgpr, 0
     %2:sgpr(s32) = G_EXTRACT %0:sgpr, 32
@@ -168,9 +168,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: extract_sgpr_s64_from_s128
     ; CHECK: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub0_sub1
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub2_sub3
-    ; CHECK: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY1]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub0_sub1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub2_sub3
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY1]]
     %0:sgpr(s128) = G_IMPLICIT_DEF
     %1:sgpr(s64) = G_EXTRACT %0, 0
     %2:sgpr(s64) = G_EXTRACT %0, 64
@@ -187,11 +187,13 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; CHECK-LABEL: name: extract_sgpr_s96_from_s128
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_128_with_sub1_sub2_sub3 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr_128_with_sub0_sub1_sub2 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:sgpr_96 = COPY [[COPY1]].sub0_sub1_sub2
-    ; CHECK: [[COPY3:%[0-9]+]]:sgpr_96 = COPY [[COPY]].sub1_sub2_sub3
-    ; CHECK: S_ENDPGM 0, implicit [[COPY2]], implicit [[COPY3]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_128_with_sub1_sub2_sub3 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_128_with_sub0_sub1_sub2 = COPY [[COPY]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr_96 = COPY [[COPY1]].sub0_sub1_sub2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr_96 = COPY [[COPY]].sub1_sub2_sub3
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]], implicit [[COPY3]]
     %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:sgpr(s96) = G_EXTRACT %0, 0
     %2:sgpr(s96) = G_EXTRACT %0, 32

@@ -40,7 +40,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; SI-LABEL: name: widen_load_range0_tbaa
-    ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
@@ -59,7 +61,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; SI-LABEL: name: widen_load_range1_tbaa
-    ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
     ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
@@ -73,7 +77,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; SI-LABEL: name: widen_load_tbaa0
-    ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
@@ -92,7 +98,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; SI-LABEL: name: widen_load_tbaa1
-    ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
     ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1

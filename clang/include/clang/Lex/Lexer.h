@@ -769,6 +769,11 @@ private:
   void codeCompleteIncludedFile(const char *PathStart,
                                 const char *CompletionPoint, bool IsAngled);
 
+  llvm::Optional<uint32_t>
+  tryReadNumericUCN(const char *&StartPtr, const char *SlashLoc, Token *Result);
+  llvm::Optional<uint32_t> tryReadNamedUCN(const char *&StartPtr,
+                                           Token *Result);
+
   /// Read a universal character name.
   ///
   /// \param StartPtr The position in the source buffer after the initial '\'.

@@ -83,10 +83,11 @@ bool XCOFFSymbolInfo::operator<(const XCOFFSymbolInfo &SymInfo) const {
     return SymInfo.IsLabel;
 
   // Symbols with a StorageMappingClass have higher priority than those without.
-  if (StorageMappingClass.hasValue() != SymInfo.StorageMappingClass.hasValue())
-    return SymInfo.StorageMappingClass.hasValue();
+  if (StorageMappingClass.has_value() !=
+      SymInfo.StorageMappingClass.has_value())
+    return SymInfo.StorageMappingClass.has_value();
 
-  if (StorageMappingClass.hasValue()) {
+  if (StorageMappingClass) {
     return getSMCPriority(StorageMappingClass.getValue()) <
            getSMCPriority(SymInfo.StorageMappingClass.getValue());
   }

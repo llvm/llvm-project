@@ -2012,7 +2012,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qfThreadInfo(
     AddProcessThreads(response, *pid_ptr.second, had_any);
 
   if (!had_any)
-    response.PutChar('l');
+    return SendOKResponse();
   return SendPacketNoLock(response.GetString());
 }
 

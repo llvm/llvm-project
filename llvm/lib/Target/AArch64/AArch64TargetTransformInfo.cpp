@@ -652,8 +652,7 @@ static Optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
     return None;
 
   auto *VecIns = dyn_cast<IntrinsicInst>(DupQLane->getArgOperand(0));
-  if (!VecIns ||
-      VecIns->getIntrinsicID() != Intrinsic::experimental_vector_insert)
+  if (!VecIns || VecIns->getIntrinsicID() != Intrinsic::vector_insert)
     return None;
 
   // Where the vector insert is a fixed constant vector insert into undef at

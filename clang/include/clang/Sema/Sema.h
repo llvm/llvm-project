@@ -1766,9 +1766,9 @@ public:
     template <typename T>
     friend const SemaDiagnosticBuilder &
     operator<<(const SemaDiagnosticBuilder &Diag, const T &Value) {
-      if (Diag.ImmediateDiag.hasValue())
+      if (Diag.ImmediateDiag)
         *Diag.ImmediateDiag << Value;
-      else if (Diag.PartialDiagId.hasValue())
+      else if (Diag.PartialDiagId)
         Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second
             << Value;
       return Diag;
@@ -1780,26 +1780,26 @@ public:
     template <typename T, typename = typename std::enable_if<
                               !std::is_lvalue_reference<T>::value>::type>
     const SemaDiagnosticBuilder &operator<<(T &&V) const {
-      if (ImmediateDiag.hasValue())
+      if (ImmediateDiag)
         *ImmediateDiag << std::move(V);
-      else if (PartialDiagId.hasValue())
+      else if (PartialDiagId)
         S.DeviceDeferredDiags[Fn][*PartialDiagId].second << std::move(V);
       return *this;
     }
 
     friend const SemaDiagnosticBuilder &
     operator<<(const SemaDiagnosticBuilder &Diag, const PartialDiagnostic &PD) {
-      if (Diag.ImmediateDiag.hasValue())
+      if (Diag.ImmediateDiag)
         PD.Emit(*Diag.ImmediateDiag);
-      else if (Diag.PartialDiagId.hasValue())
+      else if (Diag.PartialDiagId)
         Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second = PD;
       return Diag;
     }
 
     void AddFixItHint(const FixItHint &Hint) const {
-      if (ImmediateDiag.hasValue())
+      if (ImmediateDiag)
         ImmediateDiag->AddFixItHint(Hint);
-      else if (PartialDiagId.hasValue())
+      else if (PartialDiagId)
         S.DeviceDeferredDiags[Fn][*PartialDiagId].second.AddFixItHint(Hint);
     }
 
@@ -11107,6 +11107,11 @@ public:
   /// Called on well-formed '\#pragma omp parallel master taskloop simd' after
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPParallelMasterTaskLoopSimdDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp masked taskloop' after parsing of the
+  /// associated statement.
+  StmtResult ActOnOpenMPMaskedTaskLoopDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
   /// Called on well-formed '\#pragma omp distribute' after parsing

@@ -9,8 +9,10 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Matchers.h"
 
@@ -161,12 +163,25 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
     return success();
   }
 
-  // Create buffer allocation.
+  // Get "copy" buffer.
   Value copyBuffer;
   if (getCopy())
     copyBuffer = getBuffer(rewriter, getCopy(), options);
+
+  // Compute memory space of this allocation.
+  unsigned memorySpace;
+  if (getMemorySpace().hasValue()) {
+    memorySpace = *getMemorySpace();
+  } else if (options.defaultMemorySpace.hasValue()) {
+    memorySpace = *options.defaultMemorySpace;
+  } else {
+    return op->emitError("could not infer memory space");
+  }
+
+  // Create memory allocation.
   auto allocType =
-      MemRefType::get(getType().getShape(), getType().getElementType());
+      MemRefType::get(getType().getShape(), getType().getElementType(),
+                      AffineMap(), memorySpace);
   SmallVector<Value> dynamicDims = getDynamicSizes();
   if (getCopy()) {
     assert(dynamicDims.empty() && "expected either `copy` or `dynamicDims`");
@@ -250,12 +265,29 @@ LogicalResult AllocTensorOp::verify() {
            << getType().getNumDynamicDims() << " dynamic sizes";
   if (getCopy() && getCopy().getType() != getType())
     return emitError("expected that `copy` and return type match");
+
+  // For sparse tensor allocation, we require that none of its
+  // uses escapes the function boundary directly.
+  if (sparse_tensor::getSparseTensorEncoding(getType())) {
+    for (auto &use : getOperation()->getUses())
+      if (isa<func::ReturnOp, func::CallOp, func::CallIndirectOp>(
+              use.getOwner()))
+        return emitError("sparse tensor allocation should not escape function");
+  }
+
   return success();
 }
 
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes) {
-  build(builder, result, type, dynamicSizes, /*copy=*/Value());
+  build(builder, result, type, dynamicSizes, /*copy=*/Value(),
+        /*memory_space=*/BoolAttr());
+}
+
+void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
+                          RankedTensorType type, ValueRange dynamicSizes,
+                          Value copy) {
+  build(builder, result, type, dynamicSizes, copy, /*memory_space=*/BoolAttr());
 }
 
 namespace {

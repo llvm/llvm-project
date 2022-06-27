@@ -128,7 +128,7 @@ def warn_utf8_symbol_zero_width : Warning<
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
 
 def ext_delimited_escape_sequence : Extension<
-  "delimited escape sequences are a Clang extension">,
+  "%select{delimited|named}0 escape sequences are a Clang extension">,
   InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
 def err_delimited_escape_empty : Error<
   "delimited escape sequence cannot be empty">;
@@ -138,6 +138,13 @@ def err_delimited_escape_invalid : Error<
   "invalid digit '%0' in escape sequence">;
 def err_hex_escape_no_digits : Error<
   "\\%0 used with no following hex digits">;
+def err_invalid_ucn_name : Error<
+  "'%0' is not a valid Unicode character name">;
+def note_invalid_ucn_name_loose_matching : Note<
+  "characters names in Unicode escape sequences are sensitive to case and whitespaces">;
+def note_invalid_ucn_name_candidate : Note<
+  "did you mean %0 ('%2' U+%1)?">;
+
 def warn_ucn_escape_no_digits : Warning<
   "\\%0 used with no following hex digits; "
   "treating as '\\' followed by identifier">, InGroup<Unicode>;
@@ -145,10 +152,10 @@ def err_ucn_escape_incomplete : Error<
   "incomplete universal character name">;
 def warn_delimited_ucn_incomplete : Warning<
   "incomplete delimited universal character name; "
-  "treating as '\\' 'u' '{' identifier">, InGroup<Unicode>;
+  "treating as '\\' '%0' '{' identifier">, InGroup<Unicode>;
 def warn_delimited_ucn_empty : Warning<
   "empty delimited universal character name; "
-  "treating as '\\' 'u' '{' '}'">, InGroup<Unicode>;
+  "treating as '\\' '%0' '{' '}'">, InGroup<Unicode>;
 def warn_ucn_escape_incomplete : Warning<
   "incomplete universal character name; "
   "treating as '\\' followed by identifier">, InGroup<Unicode>;

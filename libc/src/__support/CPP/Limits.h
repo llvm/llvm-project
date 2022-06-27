@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_LIMITS_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_LIMITS_H
 
+#include "UInt.h"
+
 #include <limits.h>
 
 namespace __llvm_libc {
@@ -72,18 +74,26 @@ public:
   static constexpr unsigned char max() { return UCHAR_MAX; }
   static constexpr unsigned char min() { return 0; }
 };
+// This specialization enables two things:
+// 1. On platforms where UInt128 resolves to UInt<128>, this specialization
+//    provides limits of UInt128.
+// 2. On platforms where UInt128 resolves to __uint128_t, this specialization
+//    allows us to unittest UInt<128>.
+template <> class NumericLimits<UInt<128>> {
+public:
+  static constexpr UInt<128> max() { return ~UInt<128>(0); }
+  static constexpr UInt<128> min() { return 0; }
+};
 #ifdef __SIZEOF_INT128__
+// On platform where UInt128 resolves to __uint128_t, this specialization
+// provides the limits of UInt128.
 template <> class NumericLimits<__uint128_t> {
 public:
   static constexpr __uint128_t max() { return ~__uint128_t(0); }
   static constexpr __uint128_t min() { return 0; }
 };
-template <> class NumericLimits<__int128_t> {
-public:
-  static constexpr __int128_t max() { return ~__uint128_t(0) >> 1; }
-  static constexpr __int128_t min() { return __int128_t(1) << 127; }
-};
 #endif
+
 } // namespace cpp
 } // namespace __llvm_libc
 

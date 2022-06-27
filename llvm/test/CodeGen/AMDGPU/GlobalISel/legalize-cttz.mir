@@ -8,7 +8,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: cttz_s32_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[AMDGPU_FFBL_B32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBL_B32 [[COPY]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBL_B32_]], [[C]]
@@ -25,7 +27,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: cttz_s32_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[AMDGPU_FFBL_B32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBL_B32 [[COPY]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
     ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBL_B32_]], [[C]]
@@ -42,7 +46,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: cttz_s64_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[AMDGPU_FFBL_B32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBL_B32 [[COPY]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
     ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBL_B32_]], [[C]]
@@ -60,7 +66,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: cttz_s16_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[AMDGPU_FFBL_B32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBL_B32 [[COPY]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBL_B32_]], [[C]]
@@ -80,7 +88,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: cttz_s16_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[C]]
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR]](s32)
@@ -102,7 +112,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: cttz_v2s32_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[AMDGPU_FFBL_B32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBL_B32 [[UV]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
@@ -123,7 +135,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-LABEL: name: cttz_v2s32_v2s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; CHECK-NEXT: [[AMDGPU_FFBL_B32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBL_B32 [[UV]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
@@ -144,7 +158,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: cttz_v2s16_v2s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
@@ -175,7 +191,9 @@ body: |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: cttz_s7_s7
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[C]]
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR]](s32)
@@ -198,7 +216,9 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: cttz_s33_s33
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934592
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[C]]
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR]](s64)

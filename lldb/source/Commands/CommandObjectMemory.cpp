@@ -1737,7 +1737,7 @@ protected:
 
     const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
-    if (dirty_page_list.hasValue()) {
+    if (dirty_page_list) {
       const size_t page_count = dirty_page_list.getValue().size();
       result.AppendMessageWithFormat(
           "Modified memory (dirty) page list provided, %zu entries.\n",

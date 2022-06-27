@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/UInt128.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
@@ -78,12 +79,12 @@ namespace internal {
 
 // Extract the sticky bits and shift the `mantissa` to the right by
 // `shift_length`.
-static inline bool shift_mantissa(int shift_length, __uint128_t &mant) {
+static inline bool shift_mantissa(int shift_length, UInt128 &mant) {
   if (shift_length >= 128) {
     mant = 0;
     return true; // prod_mant is non-zero.
   }
-  __uint128_t mask = (__uint128_t(1) << shift_length) - 1;
+  UInt128 mask = (UInt128(1) << shift_length) - 1;
   bool sticky_bits = (mant & mask) != 0;
   mant >>= shift_length;
   return sticky_bits;
@@ -131,9 +132,9 @@ template <> inline double fma<double>(double x, double y, double z) {
     return x * y + z;
 
   // Extract mantissa and append hidden leading bits.
-  __uint128_t x_mant = x_bits.get_mantissa() | FPBits::MIN_NORMAL;
-  __uint128_t y_mant = y_bits.get_mantissa() | FPBits::MIN_NORMAL;
-  __uint128_t z_mant = z_bits.get_mantissa() | FPBits::MIN_NORMAL;
+  UInt128 x_mant = x_bits.get_mantissa() | FPBits::MIN_NORMAL;
+  UInt128 y_mant = y_bits.get_mantissa() | FPBits::MIN_NORMAL;
+  UInt128 z_mant = z_bits.get_mantissa() | FPBits::MIN_NORMAL;
 
   // If the exponent of the product x*y > the exponent of z, then no extra
   // precision beside the entire product x*y is needed.  On the other hand, when
@@ -154,7 +155,7 @@ template <> inline double fma<double>(double x, double y, double z) {
   // the original mantissa as high part when constructing 128-bit z_mant. So the
   // mantissa of prod will be left-shifted by 64 - 54 = 10 initially.
 
-  __uint128_t prod_mant = x_mant * y_mant << 10;
+  UInt128 prod_mant = x_mant * y_mant << 10;
   int prod_lsb_exp =
       x_exp + y_exp -
       (FPBits::EXPONENT_BIAS + 2 * MantissaWidth<double>::VALUE + 10);
@@ -206,8 +207,9 @@ template <> inline double fma<double>(double x, double y, double z) {
   // Normalize the result.
   if (prod_mant != 0) {
     uint64_t prod_hi = static_cast<uint64_t>(prod_mant >> 64);
-    int lead_zeros =
-        prod_hi ? clz(prod_hi) : 64 + clz(static_cast<uint64_t>(prod_mant));
+    int lead_zeros = prod_hi
+                         ? unsafe_clz(prod_hi)
+                         : 64 + unsafe_clz(static_cast<uint64_t>(prod_mant));
     // Move the leading 1 to the most significant bit.
     prod_mant <<= lead_zeros;
     // The lower 64 bits are always sticky bits after moving the leading 1 to
