@@ -1,6 +1,8 @@
 ;; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o %t -filetype=obj
 ;; RUN: llvm-dwarfdump --show-children %t | FileCheck --check-prefix=DWARF %s
 
+;; REQUIRES: rdar91770227
+
 source_filename = "move_function_dbginfo_async.ll"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx11.0.0"
