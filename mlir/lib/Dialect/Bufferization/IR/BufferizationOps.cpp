@@ -281,13 +281,14 @@ LogicalResult AllocTensorOp::verify() {
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes) {
   build(builder, result, type, dynamicSizes, /*copy=*/Value(),
-        /*memory_space=*/BoolAttr());
+        /*memory_space=*/IntegerAttr());
 }
 
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes,
                           Value copy) {
-  build(builder, result, type, dynamicSizes, copy, /*memory_space=*/BoolAttr());
+  build(builder, result, type, dynamicSizes, copy,
+        /*memory_space=*/IntegerAttr());
 }
 
 namespace {
