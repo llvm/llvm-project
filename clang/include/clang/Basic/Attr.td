@@ -2381,7 +2381,7 @@ def SwiftImportAsNonGeneric : InheritableAttr {
   // from API notes.
   let Spellings = [];
   let SemaHandler = 0;
-  let Documentation = [Undocumented];
+  let Documentation = [InternalOnly];
 }
 
 def SwiftImportPropertyAsAccessors : InheritableAttr { 
@@ -2389,7 +2389,7 @@ def SwiftImportPropertyAsAccessors : InheritableAttr {
   // from API notes.
   let Spellings = [];
   let SemaHandler = 0;
-  let Documentation = [Undocumented];
+  let Documentation = [InternalOnly];
 }
 
 def SwiftVersioned : Attr {
@@ -2399,7 +2399,7 @@ def SwiftVersioned : Attr {
   let Args = [VersionArgument<"Version">, AttrArgument<"AttrToAdd">,
               BoolArgument<"IsReplacedByActive">];
   let SemaHandler = 0;
-  let Documentation = [Undocumented];
+  let Documentation = [InternalOnly];
 }
 
 def SwiftVersionedRemoval : Attr {
@@ -2409,7 +2409,7 @@ def SwiftVersionedRemoval : Attr {
   let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">,
               BoolArgument<"IsReplacedByActive">];
   let SemaHandler = 0;
-  let Documentation = [Undocumented];
+  let Documentation = [InternalOnly];
   let AdditionalMembers = [{
     attr::Kind getAttrKindToRemove() const {
       return static_cast<attr::Kind>(getRawKind());
