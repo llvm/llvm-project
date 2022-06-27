@@ -680,6 +680,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/access.h>
 #include <__iterator/advance.h>
 #include <__iterator/back_insert_iterator.h>
+#include <__iterator/bounded_iter.h>
 #include <__iterator/common_iterator.h>
 #include <__iterator/concepts.h>
 #include <__iterator/counted_iterator.h>

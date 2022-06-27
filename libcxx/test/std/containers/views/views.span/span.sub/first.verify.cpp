@@ -12,30 +12,18 @@
 // template<size_t Count>
 //  constexpr span<element_type, Count> first() const;
 //
-// constexpr span<element_type, dynamic_extent> first(size_type count) const;
-//
 //  Requires: Count <= size().
 
 #include <span>
-
 #include <cstddef>
 
-#include "test_macros.h"
-
-constexpr int carr[] = {1, 2, 3, 4};
-
-int main(int, char**) {
-  std::span<const int, 4> sp(carr);
+void f() {
+  int array[] = {1, 2, 3, 4};
+  std::span<const int, 4> sp(array);
 
   //  Count too large
-  {
-    [[maybe_unused]] auto s1 = sp.first<5>(); // expected-error-re@span:* {{static_assert failed{{( due to requirement '.*')?}} "Count out of range in span::first()"}}
-  }
+  [[maybe_unused]] auto s1 = sp.first<5>(); // expected-error@span:* {{span<T, N>::first<Count>(): Count out of range}}
 
   //  Count numeric_limits
-  {
-    [[maybe_unused]] auto s1 = sp.first<std::size_t(-1)>(); // expected-error-re@span:* {{static_assert failed{{( due to requirement '.*')?}} "Count out of range in span::first()"}}
-  }
-
-  return 0;
+  [[maybe_unused]] auto s2 = sp.first<std::size_t(-1)>(); // expected-error@span:* {{span<T, N>::first<Count>(): Count out of range}}
 }
