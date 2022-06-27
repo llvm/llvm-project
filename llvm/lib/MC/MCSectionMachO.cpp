@@ -26,7 +26,7 @@ static constexpr struct {
   StringLiteral AssemblerName, EnumName;
 } SectionTypeDescriptors[MachO::LAST_KNOWN_SECTION_TYPE + 1] = {
     {StringLiteral("regular"), StringLiteral("S_REGULAR")}, // 0x00
-    {StringLiteral(""), StringLiteral("S_ZEROFILL")},       // 0x01
+    {StringLiteral("zerofill"), StringLiteral("S_ZEROFILL")}, // 0x01
     {StringLiteral("cstring_literals"),
      StringLiteral("S_CSTRING_LITERALS")}, // 0x02
     {StringLiteral("4byte_literals"),
