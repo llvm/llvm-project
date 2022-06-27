@@ -132,34 +132,17 @@ struct ParseParams {
 const ForestNode &glrParse(const TokenStream &Code, const ParseParams &Params,
                            SymbolID StartSymbol);
 
-// An active stack head can have multiple available actions (reduce/reduce
-// actions, reduce/shift actions).
-// A step is any one action applied to any one stack head.
-struct ParseStep {
-  // A specific stack head.
-  const GSS::Node *Head = nullptr;
-  // An action associated with the head.
-  LRTable::Action Action = LRTable::Action::sentinel();
-};
-// A callback is invoked whenever a new GSS head is created during the GLR
-// parsing process (glrShift, or glrReduce).
-using NewHeadCallback = std::function<void(const GSS::Node *)>;
-// Apply all PendingShift actions on a given GSS state, newly-created heads are
-// passed to the callback.
-//
-// When this function returns, PendingShift is empty.
+// Shift a token onto all OldHeads, placing the results into NewHeads.
 //
 // Exposed for testing only.
-void glrShift(std::vector<ParseStep> &PendingShift, const ForestNode &NextTok,
-              const ParseParams &Params, NewHeadCallback NewHeadCB);
-// Applies PendingReduce actions, until no more reduce actions are available.
-//
-// When this function returns, PendingReduce is empty. Calls to NewHeadCB may
-// add elements to PendingReduce
+void glrShift(llvm::ArrayRef<const GSS::Node *> OldHeads,
+              const ForestNode &NextTok, const ParseParams &Params,
+              std::vector<const GSS::Node *> &NewHeads);
+// Applies available reductions on Heads, appending resulting heads to the list.
 //
 // Exposed for testing only.
-void glrReduce(std::vector<ParseStep> &PendingReduce, const ParseParams &Params,
-               NewHeadCallback NewHeadCB);
+void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
+               const ParseParams &Params);
 
 } // namespace pseudo
 } // namespace clang

@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
 ; no-rtn
 
