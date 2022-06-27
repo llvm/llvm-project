@@ -1415,7 +1415,7 @@ ParseResult PrefetchOp::parse(OpAsmParser &parser, OperationState &result) {
     return parser.emitError(parser.getNameLoc(),
                             "rw specifier has to be 'read' or 'write'");
   result.addAttribute(
-      PrefetchOp::getIsWriteAttrName(),
+      PrefetchOp::getIsWriteAttrStrName(),
       parser.getBuilder().getBoolAttr(readOrWrite.equals("write")));
 
   if (!cacheType.equals("data") && !cacheType.equals("instr"))
@@ -1423,7 +1423,7 @@ ParseResult PrefetchOp::parse(OpAsmParser &parser, OperationState &result) {
                             "cache type has to be 'data' or 'instr'");
 
   result.addAttribute(
-      PrefetchOp::getIsDataCacheAttrName(),
+      PrefetchOp::getIsDataCacheAttrStrName(),
       parser.getBuilder().getBoolAttr(cacheType.equals("data")));
 
   return success();
@@ -1932,7 +1932,7 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
   auto srcType = src.getType().cast<MemRefType>();
   MemRefType resultType = computeCollapsedType(srcType, reassociation);
   build(b, result, resultType, src, attrs);
-  result.addAttribute(getReassociationAttrName(),
+  result.addAttribute(::mlir::getReassociationAttrName(),
                       getReassociationIndicesAttribute(b, reassociation));
 }
 
@@ -2663,13 +2663,13 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
   MemRefType resultType = inferTransposeResultType(memRefType, permutationMap);
 
   build(b, result, resultType, in, attrs);
-  result.addAttribute(TransposeOp::getPermutationAttrName(), permutation);
+  result.addAttribute(TransposeOp::getPermutationAttrStrName(), permutation);
 }
 
 // transpose $in $permutation attr-dict : type($in) `to` type(results)
 void TransposeOp::print(OpAsmPrinter &p) {
   p << " " << in() << " " << permutation();
-  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
+  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrStrName()});
   p << " : " << in().getType() << " to " << getType();
 }
 
@@ -2685,7 +2685,7 @@ ParseResult TransposeOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.addTypeToList(dstType, result.types))
     return failure();
 
-  result.addAttribute(TransposeOp::getPermutationAttrName(),
+  result.addAttribute(TransposeOp::getPermutationAttrStrName(),
                       AffineMapAttr::get(permutation));
   return success();
 }
