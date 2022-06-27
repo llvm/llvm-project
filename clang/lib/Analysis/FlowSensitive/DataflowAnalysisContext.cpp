@@ -22,6 +22,39 @@
 namespace clang {
 namespace dataflow {
 
+StorageLocation &
+DataflowAnalysisContext::getStableStorageLocation(QualType Type) {
+  assert(!Type.isNull());
+  if (Type->isStructureOrClassType() || Type->isUnionType()) {
+    // FIXME: Explore options to avoid eager initialization of fields as some of
+    // them might not be needed for a particular analysis.
+    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
+    for (const FieldDecl *Field : getObjectFields(Type))
+      FieldLocs.insert({Field, &getStableStorageLocation(Field->getType())});
+    return takeOwnership(
+        std::make_unique<AggregateStorageLocation>(Type, std::move(FieldLocs)));
+  }
+  return takeOwnership(std::make_unique<ScalarStorageLocation>(Type));
+}
+
+StorageLocation &
+DataflowAnalysisContext::getStableStorageLocation(const VarDecl &D) {
+  if (auto *Loc = getStorageLocation(D))
+    return *Loc;
+  auto &Loc = getStableStorageLocation(D.getType());
+  setStorageLocation(D, Loc);
+  return Loc;
+}
+
+StorageLocation &
+DataflowAnalysisContext::getStableStorageLocation(const Expr &E) {
+  if (auto *Loc = getStorageLocation(E))
+    return *Loc;
+  auto &Loc = getStableStorageLocation(E.getType());
+  setStorageLocation(E, Loc);
+  return Loc;
+}
+
 static std::pair<BoolValue *, BoolValue *>
 makeCanonicalBoolValuePair(BoolValue &LHS, BoolValue &RHS) {
   auto Res = std::make_pair(&LHS, &RHS);
@@ -189,4 +222,28 @@ const Stmt &clang::dataflow::ignoreCFGOmittedNodes(const Stmt &S) {
   if (auto *E = dyn_cast<Expr>(&S))
     return ignoreCFGOmittedNodes(*E);
   return S;
+}
+
+// FIXME: Does not precisely handle non-virtual diamond inheritance. A single
+// field decl will be modeled for all instances of the inherited field.
+static void
+getFieldsFromClassHierarchy(QualType Type,
+                            llvm::DenseSet<const FieldDecl *> &Fields) {
+  if (Type->isIncompleteType() || Type->isDependentType() ||
+      !Type->isRecordType())
+    return;
+
+  for (const FieldDecl *Field : Type->getAsRecordDecl()->fields())
+    Fields.insert(Field);
+  if (auto *CXXRecord = Type->getAsCXXRecordDecl())
+    for (const CXXBaseSpecifier &Base : CXXRecord->bases())
+      getFieldsFromClassHierarchy(Base.getType(), Fields);
+}
+
+/// Gets the set of all fields in the type.
+llvm::DenseSet<const FieldDecl *>
+clang::dataflow::getObjectFields(QualType Type) {
+  llvm::DenseSet<const FieldDecl *> Fields;
+  getFieldsFromClassHierarchy(Type, Fields);
+  return Fields;
 }

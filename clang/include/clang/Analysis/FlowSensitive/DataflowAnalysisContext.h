@@ -44,6 +44,9 @@ namespace dataflow {
 const Expr &ignoreCFGOmittedNodes(const Expr &E);
 const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
 
+/// Returns the set of all fields in the type.
+llvm::DenseSet<const FieldDecl *> getObjectFields(QualType Type);
+
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
@@ -84,6 +87,19 @@ public:
     Vals.push_back(std::move(Val));
     return *cast<T>(Vals.back().get());
   }
+
+  /// Returns a stable storage location appropriate for `Type`.
+  ///
+  /// Requirements:
+  ///
+  ///  `Type` must not be null.
+  StorageLocation &getStableStorageLocation(QualType Type);
+
+  /// Returns a stable storage location for `D`.
+  StorageLocation &getStableStorageLocation(const VarDecl &D);
+
+  /// Returns a stable storage location for `E`.
+  StorageLocation &getStableStorageLocation(const Expr &E);
 
   /// Assigns `Loc` as the storage location of `D`.
   ///
