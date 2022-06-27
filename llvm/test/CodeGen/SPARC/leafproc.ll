@@ -78,3 +78,25 @@ entry:
   %4 = load i32, i32* %3, align 4
   ret i32 %4
 }
+
+; Here we have a leaf function where it contains inline assembly, which means
+; that register renumbering might interfere with the register constraints.
+; As a result the function is not marked as being a leaf one.
+
+; CHECK-LABEL: leaf_proc_give_up
+; CHECK: save %sp, -96, %sp
+; CHECK: ld [%fp+92], %o5
+; CHECK: mov %i0, %g1
+; CHECK: mov %i1, %o0
+; CHECK: mov %i2, %o1
+; CHECK: mov %i3, %o2
+; CHECK: mov %i4, %o3
+; CHECK: mov %i5, %o4
+; CHECK: ret
+; CHECK-NEXT: restore %g0, %o0, %o0
+
+define i32 @leaf_proc_give_up(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6) {
+Entry:
+  %g = call i32 asm sideeffect "", "={o0},{g1},{o0},{o1},{o2},{o3},{o4},{o5}"(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6)
+  ret i32 %g
+}
