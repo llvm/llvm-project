@@ -706,7 +706,7 @@ public:
     if (!isValid())
       OS << "Uninitialized";
     if (isUnknown())
-      OS << "unknown";;
+      OS << "unknown";
     if (hasAVLReg())
       OS << "AVLReg=" << (unsigned)AVLReg;
     if (hasAVLImm())
