@@ -29,7 +29,9 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; SI-LABEL: name: split_smrd_load_range
-    ; SI: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; SI: liveins: $sgpr0_sgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; SI-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (load (<2 x s32>), addrspace 4)
     ; SI-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; SI-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
@@ -51,7 +53,9 @@ body: |
     liveins: $sgpr0_sgpr1
 
     ; SI-LABEL: name: split_smrd_load_tbaa
-    ; SI: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; SI: liveins: $sgpr0_sgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; SI-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (load (<2 x s32>), !tbaa !2, addrspace 4)
     ; SI-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; SI-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)

@@ -10,11 +10,13 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
     ; CHECK-LABEL: name: icmp_ss
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), [[COPY2]](s32), [[COPY3]](s32), 32
+    ; CHECK: liveins: $sgpr0, $sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), [[COPY2]](s32), [[COPY3]](s32), 32
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), %0, %1, 32
@@ -28,10 +30,12 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr0
     ; CHECK-LABEL: name: icmp_sv
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), [[COPY2]](s32), [[COPY1]](s32), 32
+    ; CHECK: liveins: $sgpr0, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), [[COPY2]](s32), [[COPY1]](s32), 32
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), %0, %1, 32
@@ -45,10 +49,12 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr0
     ; CHECK-LABEL: name: icmp_vs
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), [[COPY]](s32), [[COPY2]](s32), 32
+    ; CHECK: liveins: $sgpr0, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), [[COPY]](s32), [[COPY2]](s32), 32
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $sgpr0
     %2:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), %0, %1, 32
@@ -62,9 +68,11 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: icmp_vv
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; CHECK: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), [[COPY]](s32), [[COPY1]](s32), 32
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), [[COPY]](s32), [[COPY1]](s32), 32
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.icmp), %0, %1, 32

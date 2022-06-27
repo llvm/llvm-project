@@ -10,16 +10,20 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.2(0x80000000)
-  ; GCN:   undef %1.sub0:vreg_128 = IMPLICIT_DEF
-  ; GCN:   %1.sub1:vreg_128 = IMPLICIT_DEF
-  ; GCN:   S_BRANCH %bb.2
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.2(0x80000000)
-  ; GCN:   [[DEF:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
-  ; GCN: bb.2:
-  ; GCN:   [[DEF]].sub2:vreg_128 = COPY undef %3:sreg_32
-  ; GCN:   S_ENDPGM 0, implicit [[DEF]]
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   undef %1.sub0:vreg_128 = IMPLICIT_DEF
+  ; GCN-NEXT:   %1.sub1:vreg_128 = IMPLICIT_DEF
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   [[DEF]].sub2:vreg_128 = COPY undef %3:sreg_32
+  ; GCN-NEXT:   S_ENDPGM 0, implicit [[DEF]]
   bb.0:
     undef %0.sub0:vreg_128 = IMPLICIT_DEF
     %0.sub1:vreg_128 = IMPLICIT_DEF

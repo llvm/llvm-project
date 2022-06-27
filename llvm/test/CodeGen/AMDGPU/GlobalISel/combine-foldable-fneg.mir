@@ -9,7 +9,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fminnum
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
@@ -29,7 +31,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fmaxnum
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
@@ -49,7 +53,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fminnum_ieee
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
@@ -69,7 +75,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fmaxnum_ieee
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
@@ -89,7 +97,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_amdgpu_fmin_legacy
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
@@ -109,7 +119,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_amdgpu_fmax_legacy
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
@@ -129,7 +141,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fadd
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(s32) = nsz G_FSUB [[FNEG]], [[COPY1]]
@@ -148,7 +162,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fsub
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(s32) = nsz G_FSUB [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FSUB]](s32)
@@ -166,7 +182,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_fma
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
@@ -188,7 +206,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_fmad
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
@@ -210,7 +230,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fmul
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[FNEG]]
@@ -229,7 +251,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_fpext
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s16) = G_FNEG [[TRUNC]]
     ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[FNEG]](s16)
@@ -248,7 +272,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_intrinsic_trunc
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FNEG]]
     ; CHECK-NEXT: $vgpr0 = COPY [[INTRINSIC_TRUNC]](s32)
@@ -265,7 +291,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_frint
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[FNEG]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FRINT]](s32)
@@ -282,7 +310,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_fnearbyint
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FNEARBYINT:%[0-9]+]]:_(s32) = G_FNEARBYINT [[FNEG]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FNEARBYINT]](s32)
@@ -299,7 +329,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_intrinsic_round
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[INTRINSIC_ROUND:%[0-9]+]]:_(s32) = G_INTRINSIC_ROUND [[FNEG]]
     ; CHECK-NEXT: $vgpr0 = COPY [[INTRINSIC_ROUND]](s32)
@@ -316,7 +348,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_intrinsic_roundeven
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[INTRINSIC_ROUNDEVEN:%[0-9]+]]:_(s32) = G_INTRINSIC_ROUNDEVEN [[FNEG]]
     ; CHECK-NEXT: $vgpr0 = COPY [[INTRINSIC_ROUNDEVEN]](s32)
@@ -333,7 +367,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_fsin
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FSIN:%[0-9]+]]:_(s32) = G_FSIN [[FNEG]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FSIN]](s32)
@@ -350,7 +386,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_fcanonicalize
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[FNEG]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FCANONICALIZE]](s32)
@@ -367,7 +405,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_amdgcn_rcp_iflag
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[AMDGPU_RCP_IFLAG:%[0-9]+]]:_(s32) = G_AMDGPU_RCP_IFLAG [[FNEG]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_RCP_IFLAG]](s32)
@@ -383,7 +423,9 @@ body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: test_fptrunc
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FNEG]](s64)
     ; CHECK-NEXT: $vgpr0 = COPY [[FPTRUNC]](s32)
@@ -400,7 +442,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_amdgcn_rcp
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FNEG]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[INT]](s32)
@@ -417,7 +461,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_amdgcn_rcp_legacy
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp.legacy), [[FNEG]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[INT]](s32)
@@ -434,7 +480,9 @@ body:             |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_amdgcn_sin
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), [[FNEG]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[INT]](s32)
@@ -451,7 +499,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fmul_legacy
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
     ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[COPY]](s32), [[FNEG]](s32)
@@ -470,7 +520,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_fmed3
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
@@ -493,7 +545,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_amdgcn_fma_legacy
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
@@ -517,7 +571,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fadd_sz
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[FADD]]
@@ -536,7 +592,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_fsub_sz
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[FSUB]]
@@ -555,7 +613,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_fma_sz
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
@@ -576,7 +636,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_fmad_sz
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FMAD:%[0-9]+]]:_(s32) = G_FMAD [[COPY]], [[COPY1]], [[COPY2]]
@@ -597,7 +659,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_amdgcn_fma_legacy_sz
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fma.legacy), [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
@@ -619,7 +683,9 @@ body:             |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: test_fminnum_zero
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
     ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(s32) = G_FMINNUM [[COPY]], [[C]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[FMINNUM]]
@@ -639,7 +705,9 @@ body:             |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: test_fminnum_inv2pi_half
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3118
     ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(s16) = G_FMINNUM [[TRUNC]], [[C]]
@@ -661,7 +729,9 @@ body:             |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: test_fminnum_inv2pi_float
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FC45F3060000000
     ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(s32) = G_FMINNUM [[COPY]], [[C]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[FMINNUM]]
@@ -679,7 +749,9 @@ body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: test_fminnum_inv2pi_double
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FC45F306DC9C882
     ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(s64) = G_FMINNUM [[COPY]], [[C]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[FMINNUM]]
@@ -700,7 +772,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_use_both
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -729,7 +803,9 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_use_both2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[FMUL]]
@@ -751,7 +827,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
     ; CHECK-LABEL: name: multiple_uses_of_fneg
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -786,7 +864,9 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: fneg_src_has_multiple_uses
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
