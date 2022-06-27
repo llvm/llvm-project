@@ -1,3 +1,6 @@
+// Workaround for "LINK : fatal error LNK1318: Unexpected PDB error"
+// RUN: rm -f %t.pdb
+
 // RUN: %clang_cl_asan %s -o %t.exe
 // RUN: %run %t.exe 2>&1 | FileCheck %s
 // RUN: %clang_cl %s -o %t.exe
