@@ -1,3 +1,5 @@
+UNSUPPORTED: system-windows
+
 RUN: echo -e "\033[1mbold\033[0mreset" > %t.input
 RUN: echo -e "\033[1mboldnoreset" >> %t.input
 RUN: echo -e "resetafternewline" >> %t.input
