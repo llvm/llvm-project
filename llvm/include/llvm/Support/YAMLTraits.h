@@ -1671,7 +1671,7 @@ void IO::processKeyWithDefault(const char *Key, Optional<T> &Val,
   assert(!DefaultValue && "Optional<T> shouldn't have a value!");
   void *SaveInfo;
   bool UseDefault = true;
-  const bool sameAsDefault = outputting() && !Val.hasValue();
+  const bool sameAsDefault = outputting() && !Val;
   if (!outputting() && !Val)
     Val = T();
   if (Val &&
