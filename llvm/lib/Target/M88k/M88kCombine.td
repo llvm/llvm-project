@@ -48,6 +48,14 @@ def M88kPreLegalizerCombinerHelper: GICombinerHelper<
   let AdditionalArguments = [];
 }
 
+// Post-legalization combines which are primarily optimizations.
+def M88kPostLegalizerCombinerHelper: GICombinerHelper<
+  "M88kGenPostLegalizerCombinerHelper", []> {
+  let DisableRuleOption = "m88kpostlegalizercombiner-disable-rule";
+//  let StateClass = "M88kPostLegalizerCombinerHelperState";
+//  let AdditionalArguments = [];
+}
+
 // Lower
 //   G_SHL $dst, (G_AND $src, (2**width - 1)), offset
 // to
@@ -67,11 +75,4 @@ def M88kPostLegalizerLoweringHelper
     : GICombinerHelper<"M88kGenPostLegalizerLoweringHelper",
                        [shiftand_to_mak]> {
   let DisableRuleOption = "m88kpostlegalizerlowering-disable-rule";
-}
-
-// Post-legalization combines which are primarily optimizations.
-def M88kPostLegalizerCombinerHelper
-    : GICombinerHelper<"M88kGenPostLegalizerCombinerHelper",
-                       []> {
-  let DisableRuleOption = "m88kpostlegalizercombiner-disable-rule";
 }

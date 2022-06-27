@@ -41,6 +41,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM88kTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeM88kPreLegalizerCombinerPass(PR);
+  initializeM88kPostLegalizerCombinerPass(PR);
   initializeM88kPostLegalizerLoweringPass(PR);
   initializeM88kDelaySlotFillerPass(PR);
 }
@@ -191,6 +192,8 @@ bool M88kPassConfig::addLegalizeMachineIR() {
 }
 
 void M88kPassConfig::addPreRegBankSelect() {
+  bool IsOptNone = getOptLevel() == CodeGenOpt::None;
+  addPass(createM88kPostLegalizerCombiner(IsOptNone));
   addPass(createM88kPostLegalizerLowering());
 }
 

@@ -30,6 +30,7 @@ add_llvm_target(M88kCodeGen
   GISel/M88kInstructionSelector.cpp
   GISel/M88kLegalizerInfo.cpp
   GISel/M88kPreLegalizerCombiner.cpp
+  GISel/M88kPostLegalizerCombiner.cpp
   GISel/M88kPostLegalizerLowering.cpp
   GISel/M88kRegisterBankInfo.cpp
   M88kAsmPrinter.cpp
