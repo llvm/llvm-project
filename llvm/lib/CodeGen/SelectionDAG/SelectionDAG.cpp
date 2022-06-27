@@ -300,6 +300,10 @@ bool ISD::allOperandsUndef(const SDNode *N) {
   return all_of(N->op_values(), [](SDValue Op) { return Op.isUndef(); });
 }
 
+bool ISD::isFreezeUndef(const SDNode *N) {
+  return N->getOpcode() == ISD::FREEZE && N->getOperand(0).isUndef();
+}
+
 bool ISD::matchUnaryPredicate(SDValue Op,
                               std::function<bool(ConstantSDNode *)> Match,
                               bool AllowUndefs) {
