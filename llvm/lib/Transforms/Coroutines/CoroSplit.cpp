@@ -926,6 +926,12 @@ void CoroCloner::create() {
   NewF->setVisibility(savedVisibility);
   NewF->setUnnamedAddr(savedUnnamedAddr);
   NewF->setDLLStorageClass(savedDLLStorageClass);
+  // The function sanitizer metadata needs to match the signature of the
+  // function it is being attached to. However this does not hold for split
+  // functions here. Thus remove the metadata for split functions.
+  if (Shape.ABI == coro::ABI::Switch &&
+      NewF->hasMetadata(LLVMContext::MD_func_sanitize))
+    NewF->eraseMetadata(LLVMContext::MD_func_sanitize);
 
   // Replace the attributes of the new function:
   auto OrigAttrs = NewF->getAttributes();
