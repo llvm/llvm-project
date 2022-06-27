@@ -130,10 +130,16 @@ struct AssumingYieldOpInterface
                           const BufferizationOptions &options) const {
     auto yieldOp = cast<shape::AssumingYieldOp>(op);
     SmallVector<Value> newResults;
-    for (Value value : yieldOp.operands())
-      newResults.push_back(value.getType().isa<TensorType>()
-                               ? getBuffer(rewriter, value, options)
-                               : value);
+    for (Value value : yieldOp.operands()) {
+      if (value.getType().isa<TensorType>()) {
+        FailureOr<Value> buffer = getBuffer(rewriter, value, options);
+        if (failed(buffer))
+          return failure();
+        newResults.push_back(*buffer);
+      } else {
+        newResults.push_back(value);
+      }
+    }
     replaceOpWithNewBufferizedOp<shape::AssumingYieldOp>(rewriter, op,
                                                          newResults);
     return success();
