@@ -2040,7 +2040,7 @@ TemplateInstantiator::TransformNestedRequirement(
       bool CheckSucceeded =
           SemaRef.CheckConstraintExpression(TransConstraint.get());
       (void)CheckSucceeded;
-      assert(CheckSucceeded || Trap.hasErrorOccurred() &&
+      assert((CheckSucceeded || Trap.hasErrorOccurred()) &&
                                    "CheckConstraintExpression failed, but "
                                    "did not produce a SFINAE error");
     }
@@ -2051,7 +2051,7 @@ TemplateInstantiator::TransformNestedRequirement(
       bool CheckFailed = SemaRef.CheckConstraintSatisfaction(
           TransConstraint.get(), Satisfaction);
       (void)CheckFailed;
-      assert(!CheckFailed || Trap.hasErrorOccurred() &&
+      assert((!CheckFailed || Trap.hasErrorOccurred()) &&
                                  "CheckConstraintSatisfaction failed, "
                                  "but did not produce a SFINAE error");
     }
