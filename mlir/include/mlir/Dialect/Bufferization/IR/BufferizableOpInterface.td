@@ -355,6 +355,25 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           return bufferization::getMemRefType(tensorType, options);
         }]
       >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return the memory space of the given tensor OpResult if specified on
+          this op. If not specified, return `failure`.
+
+          This method will never be called with OpResults that do not bufferize
+          to a memory allocation.
+        }],
+        /*retType=*/"FailureOr<unsigned>",
+        /*methodName=*/"getMemorySpace",
+        /*args=*/(ins "OpResult":$opResult),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          assert(cast<BufferizableOpInterface>($_op.getOperation())
+                     .bufferizesToAllocation(opResult)
+                 && "expected allocation");
+          return failure();
+        }]
+      >,
   ];
 
   let extraClassDeclaration = [{

@@ -105,6 +105,8 @@ struct TensorCopyInsertionPass
       options.allowReturnAllocs = allowReturnAllocs;
       options.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
       options.createDeallocs = createDeallocs;
+      if (mustInferMemorySpace)
+        options.defaultMemorySpace = None;
       if (failed(insertTensorCopies(getOperation(), options)))
         signalPassFailure();
     }

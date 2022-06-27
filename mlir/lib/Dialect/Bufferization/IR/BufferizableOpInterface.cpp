@@ -43,6 +43,13 @@ using namespace bufferization;
 constexpr const ::llvm::StringLiteral
     bufferization::BufferizableOpInterface::kInplaceableAttrName;
 
+/// Return the owner of the given value.
+static Operation *getOwnerOfValue(Value value) {
+  if (auto opResult = value.dyn_cast<OpResult>())
+    return opResult.getDefiningOp();
+  return value.cast<BlockArgument>().getOwner()->getParentOp();
+}
+
 /// Create an AllocTensorOp for the given shaped value. If `copy` is set, the
 /// shaped value is copied. Otherwise, a tensor with undefined contents is
 /// allocated.
@@ -84,10 +91,21 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
       populateDynamicDimSizes(b, loc, tensor, dynamicSizes);
   }
 
+  // Create AllocTensorOp.
   auto allocTensorOp = b.create<AllocTensorOp>(loc, tensorType, dynamicSizes,
                                                copy ? tensor : Value());
   allocTensorOp->setAttr(BufferizationDialect::kEscapeAttrName,
                          b.getBoolArrayAttr({escape}));
+
+  // Add 'memory_space' attribute. Not needed if 'copy' operand is specified.
+  if (copy)
+    return allocTensorOp.getResult();
+  FailureOr<BaseMemRefType> copyBufferType = getBufferType(tensor, options);
+  if (failed(copyBufferType))
+    return failure();
+  allocTensorOp.setMemorySpaceAttr(
+      b.getIntegerAttr(b.getIntegerType(64, /*isSigned=*/false),
+                       copyBufferType->getMemorySpaceAsInt()));
   return allocTensorOp.getResult();
 }
 
@@ -512,16 +530,43 @@ FailureOr<BaseMemRefType>
 bufferization::getBufferType(Value value, const BufferizationOptions &options) {
   auto tensorType = value.getType().dyn_cast<TensorType>();
   assert(tensorType && "unexpected non-tensor type");
+  Operation *op = getOwnerOfValue(value);
 
+  // ToTensorOp: Take buffer type directly from the op.
   if (auto toTensorOp = value.getDefiningOp<bufferization::ToTensorOp>())
     return toTensorOp.getMemref().getType().cast<BaseMemRefType>();
 
+  // If value is a bbArg of a bufferizable op: query op interface.
   if (auto bbArg = value.dyn_cast<BlockArgument>())
     if (auto bufferizableOp =
             options.dynCastBufferizableOp(bbArg.getOwner()->getParentOp()))
       return bufferizableOp.getBufferType(bbArg, options);
 
-  return getMemRefType(tensorType, options);
+  // Check value is a new buffer allocation with a memory space attribute. In
+  // that case we can at least infer the memory space.
+  Optional<unsigned> memorySpace = None;
+  if (auto opResult = value.dyn_cast<OpResult>()) {
+    if (auto bufferizableOp =
+            options.dynCastBufferizableOp(opResult.getDefiningOp())) {
+      if (bufferizableOp.bufferizesToAllocation(opResult)) {
+        FailureOr<unsigned> queriedMemorySpace =
+            bufferizableOp.getMemorySpace(opResult);
+        if (!failed(queriedMemorySpace))
+          memorySpace = *queriedMemorySpace;
+      }
+    }
+  }
+
+  // If we still do not know the memory space, use the default memory space (if
+  // any).
+  if (!memorySpace.hasValue())
+    memorySpace = options.defaultMemorySpace;
+
+  // If we still do not know the memory space, report a failure.
+  if (!memorySpace.hasValue())
+    return op->emitError("could not infer memory space");
+
+  return getMemRefType(tensorType, options, /*layout=*/{}, *memorySpace);
 }
 
 void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
