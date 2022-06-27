@@ -234,9 +234,8 @@ assignSections(MachineFunction &MF,
       // If we already have one cluster containing eh_pads, this must be updated
       // to ExceptionSectionID. Otherwise, we set it equal to the current
       // section ID.
-      EHPadsSectionID = EHPadsSectionID.hasValue()
-                            ? MBBSectionID::ExceptionSectionID
-                            : MBB.getSectionID();
+      EHPadsSectionID = EHPadsSectionID ? MBBSectionID::ExceptionSectionID
+                                        : MBB.getSectionID();
     }
   }
 
