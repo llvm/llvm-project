@@ -357,8 +357,6 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
          ArrayRef<PassBuilder::PipelineElement>) {
         AddressSanitizerOptions Opts;
         if (Name == "asan-pipeline") {
-          MPM.addPass(
-              RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
           MPM.addPass(ModuleAddressSanitizerPass(Opts));
           return true;
         }
