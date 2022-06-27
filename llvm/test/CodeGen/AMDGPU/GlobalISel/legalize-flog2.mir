@@ -8,9 +8,11 @@ body: |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_flog2_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[COPY]]
-    ; CHECK: $vgpr0 = COPY [[FLOG2_]](s32)
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[COPY]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[FLOG2_]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_FLOG2 %0
     $vgpr0 = COPY %1
@@ -23,12 +25,14 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_flog2_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[UV]]
-    ; CHECK: [[FLOG2_1:%[0-9]+]]:_(s32) = G_FLOG2 [[UV1]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FLOG2_]](s32), [[FLOG2_1]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[UV]]
+    ; CHECK-NEXT: [[FLOG2_1:%[0-9]+]]:_(s32) = G_FLOG2 [[UV1]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FLOG2_]](s32), [[FLOG2_1]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = G_FLOG2 %0
     $vgpr0_vgpr1 = COPY %1
@@ -41,13 +45,15 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2
 
     ; CHECK-LABEL: name: test_flog2_v3s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
-    ; CHECK: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[UV]]
-    ; CHECK: [[FLOG2_1:%[0-9]+]]:_(s32) = G_FLOG2 [[UV1]]
-    ; CHECK: [[FLOG2_2:%[0-9]+]]:_(s32) = G_FLOG2 [[UV2]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[FLOG2_]](s32), [[FLOG2_1]](s32), [[FLOG2_2]](s32)
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
+    ; CHECK-NEXT: [[FLOG2_:%[0-9]+]]:_(s32) = G_FLOG2 [[UV]]
+    ; CHECK-NEXT: [[FLOG2_1:%[0-9]+]]:_(s32) = G_FLOG2 [[UV1]]
+    ; CHECK-NEXT: [[FLOG2_2:%[0-9]+]]:_(s32) = G_FLOG2 [[UV2]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[FLOG2_]](s32), [[FLOG2_1]](s32), [[FLOG2_2]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
     %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(<3 x  s32>) = G_FLOG2 %0
     $vgpr0_vgpr1_vgpr2 = COPY %1

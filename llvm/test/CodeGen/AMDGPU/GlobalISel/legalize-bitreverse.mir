@@ -8,7 +8,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: bitreverse_s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[COPY]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITREVERSE]], [[C]](s32)
@@ -27,7 +29,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: bitreverse_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[COPY]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITREVERSE]], [[C]](s32)
@@ -46,7 +50,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: bitreverse_s24
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[COPY]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITREVERSE]], [[C]](s32)
@@ -65,7 +71,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: bitreverse_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[COPY]]
     ; CHECK-NEXT: $vgpr0 = COPY [[BITREVERSE]](s32)
     %0:_(s32) = COPY $vgpr0
@@ -80,7 +88,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: bitreverse_v2s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
@@ -107,7 +117,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: bitreverse_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[UV]]
     ; CHECK-NEXT: [[BITREVERSE1:%[0-9]+]]:_(s32) = G_BITREVERSE [[UV1]]
@@ -125,7 +137,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: bitreverse_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s64) = G_BITREVERSE [[COPY]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITREVERSE]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
@@ -140,7 +154,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-LABEL: name: bitreverse_v2s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s64) = G_BITREVERSE [[UV]]
     ; CHECK-NEXT: [[BITREVERSE1:%[0-9]+]]:_(s64) = G_BITREVERSE [[UV1]]

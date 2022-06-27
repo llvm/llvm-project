@@ -13,10 +13,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_s_s32
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY1]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY1]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -35,10 +36,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_lh
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_PACK_LH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LH_B32_B16 [[COPY]], [[COPY1]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LH_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_PACK_LH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LH_B32_B16 [[COPY]], [[COPY1]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LH_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
@@ -60,12 +62,13 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_lh_swapped
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[COPY]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[COPY]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
@@ -86,10 +89,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_hh
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY1]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_HH_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY1]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_HH_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
@@ -112,10 +116,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_s_0_s32
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 0
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -134,10 +139,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_s_0_s32_s_s32
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 0
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %1, %0
@@ -156,8 +162,9 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_s_undef_s32
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: S_ENDPGM 0, implicit [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_IMPLICIT_DEF
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -176,10 +183,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_s_undef_s32_s_s32
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[COPY]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[COPY]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_IMPLICIT_DEF
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %1, %0
@@ -198,10 +206,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_s_undef_s_s32
     ; GFX9: liveins: $sgpr1
-    ; GFX9: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[COPY]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[COPY]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = G_IMPLICIT_DEF
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -220,8 +229,9 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_undef
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: S_ENDPGM 0, implicit [[COPY]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_IMPLICIT_DEF
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -240,10 +250,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_s_zero_s_s32
     ; GFX9: liveins: $sgpr1
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = G_CONSTANT i32 0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -262,10 +273,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_zero
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 0
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -284,9 +296,10 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_lshr16_zero
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
-    ; GFX9: S_ENDPGM 0, implicit [[S_LSHR_B32_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_LSHR_B32_]]
     %0:sgpr(s32) = G_CONSTANT i32 0
     %1:sgpr(s32) = COPY $sgpr0
     %2:sgpr(s32) = G_CONSTANT i32 16
@@ -308,12 +321,13 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_lh_multi_use
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_LSHR_B32_]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]], implicit [[S_LSHR_B32_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_LSHR_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]], implicit [[S_LSHR_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
@@ -334,12 +348,13 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_hh_multi_use_lhs
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9: [[S_PACK_LH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LH_B32_B16 [[S_LSHR_B32_]], [[COPY1]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LH_B32_B16_]], implicit [[S_LSHR_B32_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LH_B32_B16 [[S_LSHR_B32_]], [[COPY1]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LH_B32_B16_]], implicit [[S_LSHR_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
@@ -361,13 +376,14 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_hh_multi_use_rhs
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[S_LSHR_B32_1]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]], implicit [[S_LSHR_B32_1]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[S_LSHR_B32_1]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]], implicit [[S_LSHR_B32_1]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 16
@@ -389,12 +405,13 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_lh_wrong_shift_amt
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 15
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_LSHR_B32_]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 15
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_LSHR_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 15
@@ -415,13 +432,14 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_hh_wrong_shift_amt
     ; GFX9: liveins: $sgpr0, $sgpr1
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 15
-    ; GFX9: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[S_LSHR_B32_1]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 15
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[S_LSHR_B32_1]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CONSTANT i32 15
@@ -442,7 +460,7 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_constant_constant
     ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 29884539
-    ; GFX9: S_ENDPGM 0, implicit [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:sgpr(s32) = G_CONSTANT i32 123
     %1:sgpr(s32) = G_CONSTANT i32 456
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -460,7 +478,7 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_constant_impdef
     ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
-    ; GFX9: S_ENDPGM 0, implicit [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:sgpr(s32) = G_CONSTANT i32 123
     %1:sgpr(s32) = G_IMPLICIT_DEF
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -478,9 +496,9 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_impdef_constant
     ; GFX9: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[S_MOV_B32_]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = G_IMPLICIT_DEF
     %1:sgpr(s32) = G_CONSTANT i32 123
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -498,7 +516,7 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_impdef_impdef
     ; GFX9: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9: S_ENDPGM 0, implicit [[DEF]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[DEF]]
     %0:sgpr(s32) = G_IMPLICIT_DEF
     %1:sgpr(s32) = G_IMPLICIT_DEF
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -516,7 +534,7 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_zext_constant_zext_constant
     ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 29884539
-    ; GFX9: S_ENDPGM 0, implicit [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:sgpr(s16) = G_CONSTANT i16 123
     %1:sgpr(s16) = G_CONSTANT i16 456
     %2:sgpr(s32) = G_ZEXT %0
@@ -536,11 +554,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_zext_impdef_zext_constant
     ; GFX9: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
-    ; GFX9: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[DEF]], 1048576, implicit-def $scc
-    ; GFX9: [[S_BFE_U32_1:%[0-9]+]]:sreg_32 = S_BFE_U32 [[S_MOV_B32_]], 1048576, implicit-def $scc
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_BFE_U32_]], [[S_BFE_U32_1]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
+    ; GFX9-NEXT: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[DEF]], 1048576, implicit-def $scc
+    ; GFX9-NEXT: [[S_BFE_U32_1:%[0-9]+]]:sreg_32 = S_BFE_U32 [[S_MOV_B32_]], 1048576, implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_BFE_U32_]], [[S_BFE_U32_1]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s16) = G_IMPLICIT_DEF
     %1:sgpr(s16) = G_CONSTANT i16 123
     %2:sgpr(s32) = G_ZEXT %0
@@ -560,7 +578,7 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_sext_constant_sext_constant
     ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4294836208
-    ; GFX9: S_ENDPGM 0, implicit [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:sgpr(s16) = G_CONSTANT i16 -16
     %1:sgpr(s16) = G_CONSTANT i16 -3
     %2:sgpr(s32) = G_SEXT %0
@@ -580,7 +598,7 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_anyext_constant_anyext_constant
     ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 29884539
-    ; GFX9: S_ENDPGM 0, implicit [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:sgpr(s16) = G_CONSTANT i16 123
     %1:sgpr(s16) = G_CONSTANT i16 456
     %2:sgpr(s32) = G_ANYEXT %0
@@ -600,9 +618,9 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_anyext_impdef_anyext_constant
     ; GFX9: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[S_MOV_B32_]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s16) = G_IMPLICIT_DEF
     %1:sgpr(s16) = G_CONSTANT i16 123
     %2:sgpr(s32) = G_ANYEXT %0
@@ -623,10 +641,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_var_constant
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 456
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 456
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 456
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -645,10 +664,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_constant_var
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 456
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 456
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = G_CONSTANT i32 456
     %1:sgpr(s32) = COPY $sgpr0
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -667,10 +687,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_var_0
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 0
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -689,10 +710,11 @@ body: |
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_0_var
     ; GFX9: liveins: $sgpr0
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = G_CONSTANT i32 0
     %1:sgpr(s32) = COPY $sgpr0
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1

@@ -16,10 +16,10 @@ body: |
 
     ; HSAPAL-LABEL: name: groupstaticsize_v
     ; HSAPAL: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
-    ; HSAPAL: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
+    ; HSAPAL-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
     ; MESA-LABEL: name: groupstaticsize_v
     ; MESA: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @llvm.amdgcn.groupstaticsize, implicit $exec
-    ; MESA: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
+    ; MESA-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
     %0:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     S_ENDPGM 0, implicit %0
 ...
@@ -37,10 +37,10 @@ body: |
 
     ; HSAPAL-LABEL: name: groupstaticsize_s
     ; HSAPAL: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1024
-    ; HSAPAL: S_ENDPGM 0, implicit [[S_MOV_B32_]]
+    ; HSAPAL-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     ; MESA-LABEL: name: groupstaticsize_s
     ; MESA: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @llvm.amdgcn.groupstaticsize
-    ; MESA: S_ENDPGM 0, implicit [[S_MOV_B32_]]
+    ; MESA-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     S_ENDPGM 0, implicit %0
 ...
