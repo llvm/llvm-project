@@ -11812,7 +11812,7 @@ bool ScalarEvolution::isImpliedViaMerge(ICmpInst::Predicate Pred,
       const SCEV *L = getSCEV(LPhi->getIncomingValueForBlock(IncBB));
       // Make sure L does not refer to a value from a potentially previous
       // iteration of a loop.
-      if (!properlyDominates(L, IncBB))
+      if (!properlyDominates(L, LBB))
         return false;
       if (!ProvedEasily(L, RHS))
         return false;
