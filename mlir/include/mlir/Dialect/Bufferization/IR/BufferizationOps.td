@@ -46,6 +46,10 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     conflicts that would have been introduced by the in-place bufferization of
     another op.
 
+    The optional `memory_space` attribute specifies the memory space when
+    bufferizing this op. If `memory_space` is not specified, the default memory
+    space is used during bufferization.
+
     Both dense and sparse tensor types are supported. The result of a
     `bufferization.alloc_tensor` is a tensor value that can be used like any
     other tensor value. In practice, it is often used as the "out" operand of
@@ -64,7 +68,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   }];
 
   let arguments = (ins Variadic<Index>:$dynamic_sizes,
-                       Optional<AnyTensor>:$copy);
+                       Optional<AnyTensor>:$copy,
+                       OptionalAttr<UI64Attr>:$memory_space);
 
   let results = (outs AnyTensor:$result);
 
@@ -119,8 +124,12 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   }];
 
   let builders = [
-    // Build an op without `copy` operand.
+    // Build an op without `copy` or `memory_space`.
     OpBuilder<(ins "RankedTensorType":$type, "ValueRange":$dynamicSizes)>,
+
+    // Build an op without `memory_space`.
+    OpBuilder<(ins "RankedTensorType":$type, "ValueRange":$dynamicSizes,
+                   "Value":$copy)>,
   ];
 
   let hasCanonicalizer = 1;
