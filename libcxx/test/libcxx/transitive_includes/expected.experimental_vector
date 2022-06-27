@@ -1,4 +1,7 @@
+algorithm
 atomic
+bit
+chrono
 climits
 cmath
 compare
@@ -14,6 +17,7 @@ experimental/utility
 experimental/vector
 initializer_list
 iosfwd
+iterator
 limits
 memory
 new
@@ -23,5 +27,6 @@ tuple
 type_traits
 typeinfo
 utility
+variant
 vector
 version

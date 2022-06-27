@@ -98,6 +98,11 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <type_traits>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <chrono>
+#  include <functional>
+#endif
+
 // standard-mandated includes
 #include <compare>
 
