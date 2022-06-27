@@ -480,8 +480,8 @@ static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
 #endif
 }
 
-Value bufferization::getBuffer(RewriterBase &rewriter, Value value,
-                               const BufferizationOptions &options) {
+FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
+                                          const BufferizationOptions &options) {
 #ifndef NDEBUG
   auto tensorType = value.getType().dyn_cast<TensorType>();
   assert(tensorType && "unexpected non-tensor type");
@@ -494,14 +494,17 @@ Value bufferization::getBuffer(RewriterBase &rewriter, Value value,
   // Insert to_memref op.
   OpBuilder::InsertionGuard g(rewriter);
   setInsertionPointAfter(rewriter, value);
-  Type memrefType = getBufferType(value, options);
-  ensureToMemrefOpIsValid(value, memrefType);
-  return rewriter.create<bufferization::ToMemrefOp>(value.getLoc(), memrefType,
-                                                    value);
+  FailureOr<BaseMemRefType> memrefType = getBufferType(value, options);
+  if (failed(memrefType))
+    return failure();
+  ensureToMemrefOpIsValid(value, *memrefType);
+  return rewriter
+      .create<bufferization::ToMemrefOp>(value.getLoc(), *memrefType, value)
+      .getResult();
 }
 
 /// Return the buffer type for a given Value (tensor) after bufferization.
-BaseMemRefType
+FailureOr<BaseMemRefType>
 bufferization::getBufferType(Value value, const BufferizationOptions &options) {
   auto tensorType = value.getType().dyn_cast<TensorType>();
   assert(tensorType && "unexpected non-tensor type");

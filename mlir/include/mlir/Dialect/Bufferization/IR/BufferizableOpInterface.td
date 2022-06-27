@@ -343,7 +343,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           Return the bufferized type of the given tensor block argument. The
           block argument is guaranteed to belong to a block of this op.
         }],
-        /*retType=*/"BaseMemRefType",
+        /*retType=*/"FailureOr<BaseMemRefType>",
         /*methodName=*/"getBufferType",
         /*args=*/(ins "BlockArgument":$bbArg,
                       "const BufferizationOptions &":$options),
