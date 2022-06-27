@@ -75,40 +75,16 @@ struct ExecuteRegionOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
-
-    // Compute new result types.
-    SmallVector<Type> newResultTypes;
-    for (Type type : executeRegionOp->getResultTypes()) {
-      if (auto tensorType = type.dyn_cast<TensorType>()) {
-        // TODO: Infer the result type instead of computing it.
-        newResultTypes.push_back(getMemRefType(tensorType, options));
-      } else {
-        newResultTypes.push_back(type);
-      }
-    }
+    assert(executeRegionOp.getRegion().getBlocks().size() == 1 &&
+           "only 1 block supported");
+    auto yieldOp =
+        cast<scf::YieldOp>(executeRegionOp.getRegion().front().getTerminator());
+    TypeRange newResultTypes(yieldOp.getResults());
 
     // Create new op and move over region.
     auto newOp =
         rewriter.create<scf::ExecuteRegionOp>(op->getLoc(), newResultTypes);
     newOp.getRegion().takeBody(executeRegionOp.getRegion());
-
-    // Update terminator.
-    assert(newOp.getRegion().getBlocks().size() == 1 &&
-           "only 1 block supported");
-    Block *newBlock = &newOp.getRegion().front();
-    auto yieldOp = cast<scf::YieldOp>(newBlock->getTerminator());
-    rewriter.setInsertionPoint(yieldOp);
-    SmallVector<Value> newYieldValues;
-    for (const auto &it : llvm::enumerate(yieldOp.getResults())) {
-      Value val = it.value();
-      if (val.getType().isa<TensorType>()) {
-        newYieldValues.push_back(rewriter.create<bufferization::ToMemrefOp>(
-            yieldOp.getLoc(), newResultTypes[it.index()], val));
-      } else {
-        newYieldValues.push_back(val);
-      }
-    }
-    rewriter.replaceOpWithNewOp<scf::YieldOp>(yieldOp, newYieldValues);
 
     // Update all uses of the old op.
     rewriter.setInsertionPointAfter(newOp);
@@ -184,63 +160,61 @@ struct IfOpInterface
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
+    OpBuilder::InsertionGuard g(rewriter);
     auto ifOp = cast<scf::IfOp>(op);
+    auto thenYieldOp = cast<scf::YieldOp>(ifOp.thenBlock()->getTerminator());
+    auto elseYieldOp = cast<scf::YieldOp>(ifOp.elseBlock()->getTerminator());
 
-    // Compute new types of the bufferized scf.if op.
-    SmallVector<Type> newTypes;
-    for (Type returnType : ifOp->getResultTypes()) {
-      if (auto tensorType = returnType.dyn_cast<TensorType>()) {
-        // TODO: Infer the result type instead of computing it.
-        newTypes.push_back(getMemRefType(tensorType, options));
-      } else {
-        newTypes.push_back(returnType);
+    // Reconcile type mismatches between then/else branches by inserting memref
+    // casts.
+    SmallVector<Value> thenResults, elseResults;
+    bool insertedCast = false;
+    for (unsigned i = 0; i < thenYieldOp.getResults().size(); ++i) {
+      Value thenValue = thenYieldOp.getResults()[i];
+      Value elseValue = elseYieldOp.getResults()[i];
+      if (thenValue.getType() == elseValue.getType()) {
+        thenResults.push_back(thenValue);
+        elseResults.push_back(elseValue);
+        continue;
       }
+
+      // Type mismatch between then/else yield value. Cast both to a memref type
+      // with a fully dynamic layout map.
+      auto thenMemrefType = thenValue.getType().cast<BaseMemRefType>();
+      auto elseMemrefType = elseValue.getType().cast<BaseMemRefType>();
+      if (thenMemrefType.getMemorySpaceAsInt() !=
+          elseMemrefType.getMemorySpaceAsInt())
+        return op->emitError("inconsistent memory space on then/else branches");
+      rewriter.setInsertionPoint(thenYieldOp);
+      BaseMemRefType memrefType = getMemRefTypeWithFullyDynamicLayout(
+          ifOp.getResultTypes()[i].cast<TensorType>(),
+          thenMemrefType.getMemorySpaceAsInt());
+      thenResults.push_back(rewriter.create<memref::CastOp>(
+          thenYieldOp.getLoc(), memrefType, thenValue));
+      rewriter.setInsertionPoint(elseYieldOp);
+      elseResults.push_back(rewriter.create<memref::CastOp>(
+          elseYieldOp.getLoc(), memrefType, elseValue));
+      insertedCast = true;
+    }
+
+    if (insertedCast) {
+      rewriter.setInsertionPoint(thenYieldOp);
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(thenYieldOp, thenResults);
+      rewriter.setInsertionPoint(elseYieldOp);
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(elseYieldOp, elseResults);
     }
 
     // Create new op.
+    rewriter.setInsertionPoint(ifOp);
+    ValueRange resultsValueRange(thenResults);
+    TypeRange newTypes(resultsValueRange);
     auto newIfOp =
         rewriter.create<scf::IfOp>(ifOp.getLoc(), newTypes, ifOp.getCondition(),
                                    /*withElseRegion=*/true);
 
-    // Remove terminators.
-    if (!newIfOp.thenBlock()->empty()) {
-      rewriter.eraseOp(newIfOp.thenBlock()->getTerminator());
-      rewriter.eraseOp(newIfOp.elseBlock()->getTerminator());
-    }
-
     // Move over then/else blocks.
     rewriter.mergeBlocks(ifOp.thenBlock(), newIfOp.thenBlock());
     rewriter.mergeBlocks(ifOp.elseBlock(), newIfOp.elseBlock());
-
-    // Update scf.yield of new then-block.
-    auto thenYieldOp = cast<scf::YieldOp>(newIfOp.thenBlock()->getTerminator());
-    rewriter.setInsertionPoint(thenYieldOp);
-    SmallVector<Value> thenYieldValues;
-    for (OpOperand &operand : thenYieldOp->getOpOperands()) {
-      if (operand.get().getType().isa<TensorType>()) {
-        ensureToMemrefOpIsValid(operand.get(),
-                                newTypes[operand.getOperandNumber()]);
-        Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
-            operand.get().getLoc(), newTypes[operand.getOperandNumber()],
-            operand.get());
-        operand.set(toMemrefOp);
-      }
-    }
-
-    // Update scf.yield of new else-block.
-    auto elseYieldOp = cast<scf::YieldOp>(newIfOp.elseBlock()->getTerminator());
-    rewriter.setInsertionPoint(elseYieldOp);
-    SmallVector<Value> elseYieldValues;
-    for (OpOperand &operand : elseYieldOp->getOpOperands()) {
-      if (operand.get().getType().isa<TensorType>()) {
-        ensureToMemrefOpIsValid(operand.get(),
-                                newTypes[operand.getOperandNumber()]);
-        Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
-            operand.get().getLoc(), newTypes[operand.getOperandNumber()],
-            operand.get());
-        operand.set(toMemrefOp);
-      }
-    }
 
     // Replace op results.
     replaceOpWithBufferizedValues(rewriter, op, newIfOp->getResults());
@@ -869,6 +843,24 @@ struct YieldOpInterface
     if (!isa<scf::ExecuteRegionOp, scf::IfOp, scf::ForOp, scf::WhileOp>(
             yieldOp->getParentOp()))
       return yieldOp->emitError("unsupported scf::YieldOp parent");
+
+    // TODO: Bufferize scf.yield inside scf.while/scf.for here.
+    // (Currently bufferized together with scf.while/scf.for.)
+    if (isa<scf::ForOp, scf::WhileOp>(yieldOp->getParentOp()))
+      return success();
+
+    SmallVector<Value> newResults;
+    for (const auto &it : llvm::enumerate(yieldOp.getResults())) {
+      Value value = it.value();
+      if (value.getType().isa<TensorType>()) {
+        Value buffer = getBuffer(rewriter, value, options);
+        newResults.push_back(buffer);
+      } else {
+        newResults.push_back(value);
+      }
+    }
+
+    replaceOpWithNewBufferizedOp<scf::YieldOp>(rewriter, op, newResults);
     return success();
   }
 };
