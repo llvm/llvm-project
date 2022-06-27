@@ -19,5 +19,5 @@
 // CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "red"
 
 // CHECK-ANONYMOUS-ENUM: Dumping (anonymous):
-// CHECK-ANONYMOUS-ENUM-NEXT: EnumDecl {{.+}} imported in CxxInteropKit <undeserialized declarations> 'NSSomeEnumOptions':'unsigned long'
+// CHECK-ANONYMOUS-ENUM-NEXT: EnumDecl {{.+}} imported in CXXInteropKit <undeserialized declarations> 'NSSomeEnumOptions':'unsigned long'
 // CHECK-ANONYMOUS-ENUM-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "SomeEnum.Options"
