@@ -1040,6 +1040,52 @@ dlc
 
 See a description :ref:`here<amdgpu_synid_dlc>`. GFX10 only.
 
+.. _amdgpu_synid_smem_offset20u:
+
+offset20u
+~~~~~~~~~
+
+Specifies an unsigned 20-bit offset, in bytes. The default value is 0.
+
+    ==================== ====================================================================
+    Syntax               Description
+    ==================== ====================================================================
+    offset:{0..0xFFFFF}  Specifies an offset as a positive
+                         :ref:`integer number <amdgpu_synid_integer_number>`
+                         or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+    ==================== ====================================================================
+
+Examples:
+
+.. parsed-literal::
+
+  offset:1
+  offset:0xfffff
+  offset:x-y
+
+.. _amdgpu_synid_smem_offset21s:
+
+offset21s
+~~~~~~~~~
+
+Specifies a signed 21-bit offset, in bytes. The default value is 0.
+
+    ============================= ====================================================================
+    Syntax                        Description
+    ============================= ====================================================================
+    offset:{-0x100000..0xFFFFF}   Specifies an offset as an
+                                  :ref:`integer number <amdgpu_synid_integer_number>`
+                                  or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+    ============================= ====================================================================
+
+Examples:
+
+.. parsed-literal::
+
+  offset:-1
+  offset:0xfffff
+  offset:-x
+
 VINTRP Modifiers
 ----------------
 
