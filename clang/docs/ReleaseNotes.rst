@@ -73,6 +73,7 @@ Major New Features
   work to support HLSL see the `documentation
   <https://clang.llvm.org/docs/HLSLSupport.html>`_, or the `GitHub project
   <https://github.com/orgs/llvm/projects/4>`_.
+
 Bug Fixes
 ---------
 - ``CXXNewExpr::getArraySize()`` previously returned a ``llvm::Optional``
