@@ -75,7 +75,7 @@ struct SplitPadding final : public OpRewritePattern<tensor::PadOp> {
     // Build the scf.if op itself. For the "then" branch, we can elide the
     // padding. For the "else" branch, we retain the clone op.
     auto thenBuilder = [&padOp](OpBuilder &builder, Location loc) {
-      builder.create<scf::YieldOp>(loc, padOp.source());
+      builder.create<scf::YieldOp>(loc, padOp.getSource());
     };
     auto elseBuilder = [&padOp](OpBuilder &builder, Location loc) {
       Operation *newOp = builder.clone(*padOp);

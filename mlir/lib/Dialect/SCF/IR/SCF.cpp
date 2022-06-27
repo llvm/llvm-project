@@ -889,12 +889,12 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
 
       // Must be a tensor.cast op pair with matching types.
       if (outgoingCastOp.getResult().getType() !=
-          incomingCast.source().getType())
+          incomingCast.getSource().getType())
         continue;
 
       // Create a new ForOp with that iter operand replaced.
       auto newForOp = replaceTensorCastForOpIterArg(rewriter, iterOpOperand,
-                                                    incomingCast.source());
+                                                    incomingCast.getSource());
 
       // Insert outgoing cast and use it to replace the corresponding result.
       rewriter.setInsertionPointAfter(newForOp);
@@ -902,7 +902,8 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
       unsigned returnIdx =
           iterOpOperand.getOperandNumber() - op.getNumControlOperands();
       replacements[returnIdx] = rewriter.create<tensor::CastOp>(
-          op.getLoc(), incomingCast.dest().getType(), replacements[returnIdx]);
+          op.getLoc(), incomingCast.getDest().getType(),
+          replacements[returnIdx]);
       rewriter.replaceOp(op, replacements);
       return success();
     }
