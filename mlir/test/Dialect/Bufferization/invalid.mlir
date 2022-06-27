@@ -79,3 +79,11 @@ func.func @sparse_alloc_call() {
   return
 }
 
+// -----
+
+func.func @alloc_tensor_invalid_memory_space_attr(%sz: index) {
+  // expected-error @+1{{'bufferization.alloc_tensor' op attribute 'memory_space' failed to satisfy constraint: 64-bit unsigned integer attribute}}
+  %0 = bufferization.alloc_tensor(%sz) {memory_space = "foo"} : tensor<?xf32>
+  return
+}
+

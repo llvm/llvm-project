@@ -163,12 +163,25 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
     return success();
   }
 
-  // Create buffer allocation.
+  // Get "copy" buffer.
   Value copyBuffer;
   if (getCopy())
     copyBuffer = getBuffer(rewriter, getCopy(), options);
+
+  // Compute memory space of this allocation.
+  unsigned memorySpace;
+  if (getMemorySpace().hasValue()) {
+    memorySpace = *getMemorySpace();
+  } else if (options.defaultMemorySpace.hasValue()) {
+    memorySpace = *options.defaultMemorySpace;
+  } else {
+    return op->emitError("could not infer memory space");
+  }
+
+  // Create memory allocation.
   auto allocType =
-      MemRefType::get(getType().getShape(), getType().getElementType());
+      MemRefType::get(getType().getShape(), getType().getElementType(),
+                      AffineMap(), memorySpace);
   SmallVector<Value> dynamicDims = getDynamicSizes();
   if (getCopy()) {
     assert(dynamicDims.empty() && "expected either `copy` or `dynamicDims`");
@@ -267,7 +280,14 @@ LogicalResult AllocTensorOp::verify() {
 
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes) {
-  build(builder, result, type, dynamicSizes, /*copy=*/Value());
+  build(builder, result, type, dynamicSizes, /*copy=*/Value(),
+        /*memory_space=*/BoolAttr());
+}
+
+void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
+                          RankedTensorType type, ValueRange dynamicSizes,
+                          Value copy) {
+  build(builder, result, type, dynamicSizes, copy, /*memory_space=*/BoolAttr());
 }
 
 namespace {

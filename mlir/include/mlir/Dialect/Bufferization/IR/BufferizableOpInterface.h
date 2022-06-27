@@ -230,6 +230,11 @@ struct BufferizationOptions {
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
 
+  /// The default memory space that should be used when it cannot be inferred
+  /// from the context. If no default memory space is specified, bufferization
+  /// fails when the memory space cannot be inferred at any point.
+  Optional<unsigned> defaultMemorySpace = 0;
+
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced
   /// with buffer copies.
