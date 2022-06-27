@@ -281,14 +281,17 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
 
 /// Helper function for loop bufferization. Return the bufferized values of the
 /// given OpOperands. If an operand is not a tensor, return the original value.
-static SmallVector<Value> getBuffers(RewriterBase &rewriter,
-                                     MutableArrayRef<OpOperand> operands,
-                                     const BufferizationOptions &options) {
+static FailureOr<SmallVector<Value>>
+getBuffers(RewriterBase &rewriter, MutableArrayRef<OpOperand> operands,
+           const BufferizationOptions &options) {
   SmallVector<Value> result;
   for (OpOperand &opOperand : operands) {
     if (opOperand.get().getType().isa<TensorType>()) {
-      Value resultBuffer = getBuffer(rewriter, opOperand.get(), options);
-      result.push_back(resultBuffer);
+      FailureOr<Value> resultBuffer =
+          getBuffer(rewriter, opOperand.get(), options);
+      if (failed(resultBuffer))
+        return failure();
+      result.push_back(*resultBuffer);
     } else {
       result.push_back(opOperand.get());
     }
@@ -298,36 +301,46 @@ static SmallVector<Value> getBuffers(RewriterBase &rewriter,
 
 /// Helper function for loop bufferization. Compute the buffer that should be
 /// yielded from a loop block (loop body or loop condition).
-static Value getYieldedBuffer(RewriterBase &rewriter, Value tensor,
-                              BaseMemRefType type,
-                              const BufferizationOptions &options) {
+static FailureOr<Value> getYieldedBuffer(RewriterBase &rewriter, Value tensor,
+                                         BaseMemRefType type,
+                                         const BufferizationOptions &options) {
   assert(tensor.getType().isa<TensorType>() && "expected tensor");
   ensureToMemrefOpIsValid(tensor, type);
-  Value yieldedVal = getBuffer(rewriter, tensor, options);
-  return castBuffer(rewriter, yieldedVal, type);
+  FailureOr<Value> yieldedVal = getBuffer(rewriter, tensor, options);
+  if (failed(yieldedVal))
+    return failure();
+  return castBuffer(rewriter, *yieldedVal, type);
 }
 
 /// Helper function for loop bufferization. Given a range of values, apply
 /// `func` to those marked in `tensorIndices`. Otherwise, store the unmodified
 /// value in the result vector.
-static SmallVector<Value>
+static FailureOr<SmallVector<Value>>
 convertTensorValues(ValueRange values, const DenseSet<int64_t> &tensorIndices,
-                    llvm::function_ref<Value(Value, int64_t)> func) {
+                    llvm::function_ref<FailureOr<Value>(Value, int64_t)> func) {
   SmallVector<Value> result;
   for (const auto &it : llvm::enumerate(values)) {
     size_t idx = it.index();
     Value val = it.value();
-    result.push_back(tensorIndices.contains(idx) ? func(val, idx) : val);
+    if (tensorIndices.contains(idx)) {
+      FailureOr<Value> maybeVal = func(val, idx);
+      if (failed(maybeVal))
+        return failure();
+      result.push_back(*maybeVal);
+    } else {
+      result.push_back(val);
+    }
   }
   return result;
 }
 
 /// Helper function for loop bufferization. Given a list of pre-bufferization
 /// yielded values, compute the list of bufferized yielded values.
-SmallVector<Value> getYieldedValues(RewriterBase &rewriter, ValueRange values,
-                                    TypeRange bufferizedTypes,
-                                    const DenseSet<int64_t> &tensorIndices,
-                                    const BufferizationOptions &options) {
+FailureOr<SmallVector<Value>>
+getYieldedValues(RewriterBase &rewriter, ValueRange values,
+                 TypeRange bufferizedTypes,
+                 const DenseSet<int64_t> &tensorIndices,
+                 const BufferizationOptions &options) {
   return convertTensorValues(
       values, tensorIndices, [&](Value val, int64_t index) {
         return getYieldedBuffer(rewriter, val,
@@ -342,10 +355,19 @@ SmallVector<Value> getYieldedValues(RewriterBase &rewriter, ValueRange values,
 SmallVector<Value>
 getBbArgReplacements(RewriterBase &rewriter, Block::BlockArgListType bbArgs,
                      const DenseSet<int64_t> &tensorIndices) {
-  return convertTensorValues(
-      bbArgs, tensorIndices, [&](Value val, int64_t index) {
-        return rewriter.create<bufferization::ToTensorOp>(val.getLoc(), val);
-      });
+  SmallVector<Value> result;
+  for (const auto &it : llvm::enumerate(bbArgs)) {
+    size_t idx = it.index();
+    Value val = it.value();
+    if (tensorIndices.contains(idx)) {
+      result.push_back(
+          rewriter.create<bufferization::ToTensorOp>(val.getLoc(), val)
+              .getResult());
+    } else {
+      result.push_back(val);
+    }
+  }
+  return result;
 }
 
 /// Bufferization of scf.for. Replace with a new scf.for that operates on
@@ -445,8 +467,9 @@ struct ForOpInterface
     return success();
   }
 
-  BaseMemRefType getBufferType(Operation *op, BlockArgument bbArg,
-                               const BufferizationOptions &options) const {
+  FailureOr<BaseMemRefType>
+  getBufferType(Operation *op, BlockArgument bbArg,
+                const BufferizationOptions &options) const {
     auto forOp = cast<scf::ForOp>(op);
     return bufferization::getBufferType(
         forOp.getOpOperandForRegionIterArg(bbArg).get(), options);
@@ -462,8 +485,11 @@ struct ForOpInterface
     DenseSet<int64_t> indices = getTensorIndices(forOp.getInitArgs());
 
     // The new memref init_args of the loop.
-    SmallVector<Value> initArgs =
+    FailureOr<SmallVector<Value>> maybeInitArgs =
         getBuffers(rewriter, forOp.getIterOpOperands(), options);
+    if (failed(maybeInitArgs))
+      return failure();
+    SmallVector<Value> initArgs = *maybeInitArgs;
 
     // Construct a new scf.for op with memref instead of tensor values.
     auto newForOp = rewriter.create<scf::ForOp>(
@@ -689,13 +715,17 @@ struct WhileOpInterface
         getTensorIndices(whileOp.getAfterArguments());
 
     // The new memref init_args of the loop.
-    SmallVector<Value> initArgs =
+    FailureOr<SmallVector<Value>> maybeInitArgs =
         getBuffers(rewriter, whileOp->getOpOperands(), options);
+    if (failed(maybeInitArgs))
+      return failure();
+    SmallVector<Value> initArgs = *maybeInitArgs;
 
     // The result types of a WhileOp are the same as the "after" bbArg types.
     SmallVector<Type> argsTypesAfter = llvm::to_vector(
         llvm::map_range(whileOp.getAfterArguments(), [&](BlockArgument bbArg) {
-          return bufferization::getBufferType(bbArg, options).cast<Type>();
+          // TODO: error handling
+          return bufferization::getBufferType(bbArg, options)->cast<Type>();
         }));
 
     // Construct a new scf.while op with memref instead of tensor values.
@@ -727,10 +757,12 @@ struct WhileOpInterface
     // Only equivalent buffers or new buffer allocations may be yielded to the
     // "after" region.
     // TODO: This could be relaxed for better bufferization results.
-    SmallVector<Value> newConditionArgs =
+    FailureOr<SmallVector<Value>> newConditionArgs =
         getYieldedValues(rewriter, newConditionOp.getArgs(), argsTypesAfter,
                          indicesAfter, options);
-    newConditionOp.getArgsMutable().assign(newConditionArgs);
+    if (failed(newConditionArgs))
+      return failure();
+    newConditionOp.getArgsMutable().assign(*newConditionArgs);
 
     // Set up new iter_args and move the loop body block to the new op.
     // The old block uses tensors, so wrap the (memref) bbArgs of the new block
@@ -746,10 +778,12 @@ struct WhileOpInterface
     // Only equivalent buffers or new buffer allocations may be yielded to the
     // "before" region.
     // TODO: This could be relaxed for better bufferization results.
-    SmallVector<Value> newYieldValues =
+    FailureOr<SmallVector<Value>> newYieldValues =
         getYieldedValues(rewriter, newYieldOp.getResults(), argsTypesBefore,
                          indicesBefore, options);
-    newYieldOp.getResultsMutable().assign(newYieldValues);
+    if (failed(newYieldValues))
+      return failure();
+    newYieldOp.getResultsMutable().assign(*newYieldValues);
 
     // Replace loop results.
     replaceOpWithBufferizedValues(rewriter, op, newWhileOp->getResults());
@@ -849,13 +883,18 @@ struct YieldOpInterface
     for (const auto &it : llvm::enumerate(yieldOp.getResults())) {
       Value value = it.value();
       if (value.getType().isa<TensorType>()) {
-        Value buffer = getBuffer(rewriter, value, options);
+        FailureOr<Value> maybeBuffer = getBuffer(rewriter, value, options);
+        if (failed(maybeBuffer))
+          return failure();
+        Value buffer = *maybeBuffer;
         if (auto forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp())) {
-          BaseMemRefType resultType =
+          FailureOr<BaseMemRefType> resultType =
               cast<BufferizableOpInterface>(forOp.getOperation())
                   .getBufferType(forOp.getRegionIterArgs()[it.index()],
                                  options);
-          buffer = castBuffer(rewriter, buffer, resultType);
+          if (failed(resultType))
+            return failure();
+          buffer = castBuffer(rewriter, buffer, *resultType);
         }
         newResults.push_back(buffer);
       } else {
@@ -1078,16 +1117,22 @@ struct ParallelInsertSliceOpInterface
     // If the op bufferizes out-of-place, allocate the copy before the
     // ForeachThreadOp.
     rewriter.setInsertionPoint(foreachThreadOp);
-    Value destBuffer = getBuffer(rewriter, insertOp.getDest(), options);
+    FailureOr<Value> destBuffer =
+        getBuffer(rewriter, insertOp.getDest(), options);
+    if (failed(destBuffer))
+      return failure();
 
     // Bufferize the ParallelInsertSliceOp outside of the PerformConcurrentlyOp.
     rewriter.setInsertionPoint(performConcurrentlyOp);
-    Value srcBuffer = getBuffer(rewriter, insertOp.getSource(), options);
+    FailureOr<Value> srcBuffer =
+        getBuffer(rewriter, insertOp.getSource(), options);
+    if (failed(srcBuffer))
+      return failure();
     Value subview = rewriter.create<memref::SubViewOp>(
-        insertOp.getLoc(), destBuffer, insertOp.getMixedOffsets(),
+        insertOp.getLoc(), *destBuffer, insertOp.getMixedOffsets(),
         insertOp.getMixedSizes(), insertOp.getMixedStrides());
     // This memcpy will fold away if everything bufferizes in-place.
-    if (failed(options.createMemCpy(rewriter, insertOp.getLoc(), srcBuffer,
+    if (failed(options.createMemCpy(rewriter, insertOp.getLoc(), *srcBuffer,
                                     subview)))
       return failure();
     rewriter.eraseOp(op);
@@ -1095,7 +1140,7 @@ struct ParallelInsertSliceOpInterface
     // Replace all uses of ForeachThreadOp (just the corresponding result).
     rewriter.setInsertionPointAfter(foreachThreadOp);
     Value toTensorOp =
-        rewriter.create<ToTensorOp>(foreachThreadOp.getLoc(), destBuffer);
+        rewriter.create<ToTensorOp>(foreachThreadOp.getLoc(), *destBuffer);
     unsigned resultNum = 0;
     for (Operation &nextOp : performConcurrentlyOp.yieldingOps()) {
       if (&nextOp == op)

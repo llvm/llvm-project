@@ -479,14 +479,15 @@ Value allocateTensorForShapedValue(OpBuilder &b, Location loc,
 /// Lookup the buffer for the given value. If the value was not bufferized
 /// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
 /// from which the memref operand is returned.
-Value getBuffer(RewriterBase &rewriter, Value value,
-                const BufferizationOptions &options);
+FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
+                           const BufferizationOptions &options);
 
 /// Return the buffer type for a given Value (tensor) after bufferization.
 ///
 /// Note: Op implementations should preferrably call `getBuffer()->getType()`.
 /// This function should only be used if `getBuffer` cannot be used.
-BaseMemRefType getBufferType(Value value, const BufferizationOptions &options);
+FailureOr<BaseMemRefType> getBufferType(Value value,
+                                        const BufferizationOptions &options);
 
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
 /// must be replaced with memref values.
