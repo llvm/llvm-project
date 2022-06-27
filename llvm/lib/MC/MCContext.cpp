@@ -767,8 +767,8 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
     Optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,
     const char *BeginSymName,
     Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags) {
-  bool IsDwarfSec = DwarfSectionSubtypeFlags.hasValue();
-  assert((IsDwarfSec != CsectProp.hasValue()) && "Invalid XCOFF section!");
+  bool IsDwarfSec = DwarfSectionSubtypeFlags.has_value();
+  assert((IsDwarfSec != CsectProp.has_value()) && "Invalid XCOFF section!");
 
   // Do the lookup. If we have a hit, return it.
   auto IterBool = XCOFFUniquingMap.insert(std::make_pair(

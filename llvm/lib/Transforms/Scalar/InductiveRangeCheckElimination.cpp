@@ -1427,9 +1427,9 @@ bool LoopConstrainer::run() {
   // constructor.
   ClonedLoop PreLoop, PostLoop;
   bool NeedsPreLoop =
-      Increasing ? SR.LowLimit.hasValue() : SR.HighLimit.hasValue();
+      Increasing ? SR.LowLimit.has_value() : SR.HighLimit.has_value();
   bool NeedsPostLoop =
-      Increasing ? SR.HighLimit.hasValue() : SR.LowLimit.hasValue();
+      Increasing ? SR.HighLimit.has_value() : SR.LowLimit.has_value();
 
   Value *ExitPreLoopAt = nullptr;
   Value *ExitMainLoopAt = nullptr;

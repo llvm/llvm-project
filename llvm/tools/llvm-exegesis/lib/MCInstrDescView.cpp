@@ -47,9 +47,9 @@ bool Operand::isUse() const { return !IsDef; }
 
 bool Operand::isReg() const { return Tracker; }
 
-bool Operand::isTied() const { return TiedToIndex.hasValue(); }
+bool Operand::isTied() const { return TiedToIndex.has_value(); }
 
-bool Operand::isVariable() const { return VariableIndex.hasValue(); }
+bool Operand::isVariable() const { return VariableIndex.has_value(); }
 
 bool Operand::isMemory() const {
   return isExplicit() &&
