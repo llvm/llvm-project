@@ -6,16 +6,16 @@ LLI = /home/tanmay/Documents/Tools/llvm-project/build/bin/lli
 build_pass:
 	$(CXX) --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h \
 		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/ComputationGraph.h \
-	$(OP) -S -emit-llvm operations.c \
-    	  -o operations.ll
-	$(OPT) -passes=error-analysis -S operations.ll \
-								  -o operations_ac.ll
+	$(OP) -S -emit-llvm forLoop.c \
+    	  -o forLoop.ll
+	$(OPT) -passes=error-analysis -S forLoop.ll \
+								  -o forLoop_ac.ll
 
 run_pass:
-	$(LLI) operations_ac.ll
+	$(LLI) forLoop_ac.ll
 
 build_original:
-	gcc operations.c -lm
+	gcc forLoop.c
 
 clean:
-	rm -rf operations.ll operations_ac.ll .fAC_logs a.out
+	rm -rf forLoop.ll forLoop_ac.ll .fAC_logs a.out

@@ -39,8 +39,9 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
                                                                      ACfp64BinaryFunction(nullptr),
                                                                      CGCreateNode(nullptr),
                                                                      ACStoreFunction(nullptr),
-                                                                     CGStoreFunction(nullptr)
-//                                                                     ACAnalysisFunction(nullptr)
+                                                                     CGStoreFunction(nullptr),
+                                                                     ACAnalysisFunction(nullptr),
+                                                                     CGDotGraphFunction(nullptr)
 {
   // Find and configure instrumentation functions
   Module *M = FunctionToInstrument->getParent();
@@ -86,12 +87,14 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
       confFunction(CurrentFunction, &CGStoreFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
-//    else if (CurrentFunction->getName().str().find("fACAnalysis") != std::string::npos) {
-//      confFunction(CurrentFunction, &ACAnalysisFunction,
-//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-//    }
-
-    // Setting linkage of runtime functions
+    else if (CurrentFunction->getName().str().find("fAFAnalysis") != std::string::npos) {
+      confFunction(CurrentFunction, &ACAnalysisFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
+    else if (CurrentFunction->getName().str().find("fCGDotGraph") != std::string::npos) {
+      confFunction(CurrentFunction, &CGDotGraphFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
   }
 }
 
@@ -391,9 +394,14 @@ bool ACInstrumentation::instrumentMainFunction(Function *F) {
   BasicBlock *BB = &(*(F->begin()));
   Instruction *Inst = BB->getFirstNonPHIOrDbg();
   IRBuilder<> InstructionBuilder(Inst);
-  std::vector<Value *> ACInitCallArgs, CGInitCallArgs, ACStoreCallArgs, CGStoreCallArgs, AnalysisCallArgs;
+  std::vector<Value *> ACInitCallArgs, CGInitCallArgs, AnalysisCallArgs;
+  std::vector<Value *> ACStoreCallArgs, CGStoreCallArgs;
+  std::vector<Value *> DotGraphCallArgs;
 
-  CallInst *ACInitCallInstruction, *CGInitCallInstruction, *StoreACTableCallInstruction, *StoreCGTableCallInstruction, *AnalysisCallInstruction;
+  CallInst *ACInitCallInstruction, *CGInitCallInstruction, *AnalysisCallInstruction;
+  CallInst *StoreACTableCallInstruction, *StoreCGTableCallInstruction;
+  CallInst *DotGraphCallInstruction;
+
 
   // Instrumenting Initialization call instruction
 //  Args.push_back(InstructionBuilder.getInt64(1000));
@@ -425,16 +433,18 @@ bool ACInstrumentation::instrumentMainFunction(Function *F) {
         StoreACTableCallInstruction = InstructionBuilder.CreateCall(ACStoreFunction, ACStoreCallArgsRef);
         StoreCGTableCallInstruction = InstructionBuilder.CreateCall(CGStoreFunction, CGStoreCallArgsRef);
 
-//        AnalysisCallArgs.push_back(GraphFileIdentifier);
-//        ArrayRef<Value *> AnalysisCallArgsRef(AnalysisCallArgs);
-//        AnalysisCallInstruction = InstructionBuilder.CreateCall(ACAnalysisFunction, AnalysisCallArgsRef);
+        ArrayRef<Value *> DotGraphCallArgsRef(DotGraphCallArgs);
+        AnalysisCallInstruction = InstructionBuilder.CreateCall(CGDotGraphFunction, DotGraphCallArgsRef);
+
+        ArrayRef<Value *> AnalysisCallArgsRef(AnalysisCallArgs);
+        AnalysisCallInstruction = InstructionBuilder.CreateCall(ACAnalysisFunction, AnalysisCallArgsRef);
       }
     }
   }
 
-  assert(ACInitCallInstruction && CGInitCallInstruction &&
-         StoreACTableCallInstruction && StoreCGTableCallInstruction &&
-         "Invalid call instruction!");
+  assert(ACInitCallInstruction && CGInitCallInstruction && AnalysisCallInstruction && "Invalid call instruction!");
+  assert(StoreACTableCallInstruction && StoreCGTableCallInstruction && "Invalid call instruction!");
+  assert(DotGraphCallInstruction && "Invalid call instruction!");
   return true;
 }
 
@@ -500,5 +510,6 @@ bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
 bool ACInstrumentation::isUnwantedFunction(const Function *Func) {
   return Func->getName().str().find("fAC") != std::string::npos ||
          Func->getName().str().find("fCG") != std::string::npos ||
+         Func->getName().str().find("fAF") != std::string::npos ||
          Func->getName().str().find("ACItem") != std::string::npos;
 }

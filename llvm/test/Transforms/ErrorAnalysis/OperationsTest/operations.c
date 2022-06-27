@@ -17,24 +17,24 @@ int main() {
     // %.2lf displays number up to 2 decimal point
     // FP32
     // Unary Operations
-    printf("Sin = %2f\n", sinf(a));
-    printf("Cos = %2f\n", cosf(a));
-    printf("Tan = %2f\n", tanf(a));
-    printf("ArcSin = %2f\n", asinf(a));
-    printf("ArcCos = %2f\n", acosf(a));
-    printf("ArcTan = %2f\n", atanf(a));
-    printf("Sinh = %2f\n", sinhf(a));
-    printf("Cosh = %2f\n", coshf(a));
-    printf("Tanh = %2f\n", tanhf(a));
-    printf("Exp = %2f\n", expf(a));
-    printf("Log = %2f\n", logf(a));
-    printf("Sqrt = %2f\n", sqrtf(a));
+    printf("Sin = %.2f\n", sinf(a));
+    printf("Cos = %.2f\n", cosf(a));
+    printf("Tan = %.2f\n", tanf(a));
+    printf("ArcSin = %.2f\n", asinf(a));
+    printf("ArcCos = %.2f\n", acosf(a));
+    printf("ArcTan = %.2f\n", atanf(a));
+    printf("Sinh = %.2f\n", sinhf(a));
+    printf("Cosh = %.2f\n", coshf(a));
+    printf("Tanh = %.2f\n", tanhf(a));
+    printf("Exp = %.2f\n", expf(a));
+    printf("Log = %.2f\n", logf(a));
+    printf("Sqrt = %.2f\n", sqrtf(a));
 
     // Binary Operations
     printf("Sum = %.2f\n", a+b);
-    printf("Difference = %2f\n", a-b);
+    printf("Difference = %.2f\n", a-b);
     printf("Product = %.2f\n", a*b);
-    printf("Quotient = %2f\n", a/b);
+    printf("Quotient = %.2f\n", a/b);
 
     // FP64
     // Unary Operations

@@ -19,6 +19,8 @@ typedef struct CGNode {
   enum NodeKind Kind;
   struct CGNode *LeftNode;
   struct CGNode *RightNode;
+  int Height;
+  int RootNode;
   struct CGNode *Next;
 } CGNode;
 
@@ -72,6 +74,8 @@ void fCGcreateNode(int NodeId, int LeftOpNodeId, int RightOpNodeId, enum NodeKin
   Node->Kind = NK;
   Node->LeftNode = NULL;
   Node->RightNode = NULL;
+  Node->Height = 0;
+  Node->RootNode = 1;
   Node->Next = NULL;
 
   // Linking Left and Right operand nodes to Node if any
@@ -85,6 +89,9 @@ void fCGcreateNode(int NodeId, int LeftOpNodeId, int RightOpNodeId, enum NodeKin
       CurrNode = CurrNode->Next;
     }
     Node->LeftNode = CurrNode;
+    Node->Height = Node->LeftNode->Height+1;
+    Node->LeftNode->RootNode = 0;
+    Node->RootNode = 1;
 
     break;
   case 3:
@@ -101,6 +108,13 @@ void fCGcreateNode(int NodeId, int LeftOpNodeId, int RightOpNodeId, enum NodeKin
       CurrNode = CurrNode->Next;
     }
     Node->RightNode = CurrNode;
+    if(Node->LeftNode->Height > Node->RightNode->Height)
+      Node->Height = Node->LeftNode->Height+1;
+    else
+      Node->Height = Node->RightNode->Height+1;
+    Node->LeftNode->RootNode = 0;
+    Node->RightNode->RootNode = 0;
+    Node->RootNode = 1;
 
     break;
   default:
@@ -159,22 +173,23 @@ void fCGStoreResult() {
   FILE *FP = fopen(FileName, "w");
   fprintf(FP, "{\n");
 
-  long unsigned int RecordsStored = 0;
-
   fprintf(FP, "\t\"Nodes\": [");
   CGNode *CurrentNode = CG->NodesLinkedListHead;
   while (CurrentNode!=NULL) {
-    if (fprintf(FP,
-                "\t\t{\n"
-                "\t\t\t\"NodeId\":%d,\n"
-                "\t\t\t\"NodeKind\": %d,\n"
-                "\t\t\t\"LeftNode\": %d,\n"
-                "\t\t\t\"RightNode\": %d\n",
-                CurrentNode->NodeId,
-                CurrentNode->Kind,
-                (CurrentNode->LeftNode!=NULL?CurrentNode->LeftNode->NodeId:-1),
-                (CurrentNode->RightNode!=NULL?CurrentNode->RightNode->NodeId:-1)) > 0)
-      RecordsStored++;
+    fprintf(FP,
+            "\t\t{\n"
+            "\t\t\t\"NodeId\":%d,\n"
+            "\t\t\t\"NodeKind\": %d,\n"
+            "\t\t\t\"Height\": %d, \n"
+            "\t\t\t\"RootNode\": %d, \n"
+            "\t\t\t\"LeftNode\": %d,\n"
+            "\t\t\t\"RightNode\": %d\n",
+            CurrentNode->NodeId,
+            CurrentNode->Kind,
+            CurrentNode->Height,
+            CurrentNode->RootNode,
+            (CurrentNode->LeftNode!=NULL?CurrentNode->LeftNode->NodeId:-1),
+            (CurrentNode->RightNode!=NULL?CurrentNode->RightNode->NodeId:-1));
 
     if (CurrentNode->Next!=NULL)
       fprintf(FP, "\t\t},\n");
@@ -190,7 +205,69 @@ void fCGStoreResult() {
 
 }
 
-void fCGAnalysis(const char *Instruction) {
+void fCGDotGraph() {
+  // Create a directory
+  struct stat ST;
+  char DirectoryName[] = ".fAC_logs";
+  if (stat(DirectoryName, &ST) == -1) {
+    // TODO: Check the file mode and whether this one is the right one to use.
+    mkdir(DirectoryName, 0775);
+  }
+
+  char ExecutionId[5000];
+  char FileName[5000];
+  FileName[0] = '\0';
+  strcpy(FileName, ".fAC_logs/fCGDot_");
+
+  fACGenerateExecutionID(ExecutionId);
+  strcat(ExecutionId, ".gv");
+
+  strcat(FileName, ExecutionId);
+
+  // TODO: Build analysis functions with arguments and print the arguments
+  // Get program name and input
+  //  int str_size = 0;
+  //  for (int i=0; i < _FPC_PROG_INPUTS; ++i)
+  //    str_size += strlen(_FPC_PROG_ARGS[i]) + 1;
+  //  char *prog_input = (char *)malloc((sizeof(char) * str_size) + 1);
+  //  prog_input[0] = '\0';
+  //  for (int i=0; i < _FPC_PROG_INPUTS; ++i) {
+  //    strcat(prog_input, _FPC_PROG_ARGS[i]);
+  //    strcat(prog_input, " ");
+  //  }
+
+  // Table Output
+  FILE *FP = fopen(FileName, "w");
+  fprintf(FP, "digraph ");
+  fprintf(FP, "G ");
+  fprintf(FP, "{\n");
+
+  CGNode *CurrentNode = CG->NodesLinkedListHead;
+  while (CurrentNode!=NULL) {
+    switch (CurrentNode->Kind) {
+    case 0:
+    case 1:
+      fprintf(FP, "\t%d;\n", CurrentNode->NodeId);
+      break;
+    case 2:
+      fprintf(FP, "\t%d -> %d;\n", CurrentNode->NodeId, CurrentNode->LeftNode->NodeId);
+      break;
+    case 3:
+      fprintf(FP, "\t%d -> %d;\n", CurrentNode->NodeId, CurrentNode->LeftNode->NodeId);
+      fprintf(FP, "\t%d -> %d;\n", CurrentNode->NodeId, CurrentNode->RightNode->NodeId);
+      break;
+    default:
+      break;
+    }
+    CurrentNode = CurrentNode->Next;
+  }
+
+  fprintf(FP, "}\n");
+
+  fclose(FP);
+}
+
+void fAFAnalysis() {
   return ;
 }
 

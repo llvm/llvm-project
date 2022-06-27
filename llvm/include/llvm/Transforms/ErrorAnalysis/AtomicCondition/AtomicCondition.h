@@ -239,51 +239,51 @@ void fACfp32UnaryDriver(int NodeId, const char *XName, float X, enum Operation O
   switch (OP) {
   case 4:
     AC = fabs(X * (cos(X)/sin(X)));
-    printf("AC of sin(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of sin(x) | x=%f is %f.\n", X, AC);
     break;
   case 5:
     AC = fabs(X * tan(X));
-    printf("AC of cos(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of cos(x) | x=%f is %f.\n", X, AC);
     break;
   case 6:
     AC = fabs(X / (sin(X)*cos(X)));
-    printf("AC of tan(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of tan(x) | x=%f is %f.\n", X, AC);
     break;
   case 7:
     AC = fabs(X / (sqrt(1-pow(X,2)) * asin(X)));
-    printf("AC of asin(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of asin(x) | x=%f is %f.\n", X, AC);
     break;
   case 8:
     AC = fabs(-X / (sqrt(1-pow(X,2)) * acos(X)));
-    printf("AC of acos(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of acos(x) | x=%f is %f.\n", X, AC);
     break;
   case 9:
     AC = fabs(X / (pow(X,2)+1 * atan(X)));
-    printf("AC of atan(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of atan(x) | x=%f is %f.\n", X, AC);
     break;
   case 10:
     AC = fabs(X * (cosh(X)/sinh(X)));
-    printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
     break;
   case 11:
     AC = fabs(X * tanh(X));
-    printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
     break;
   case 12:
     AC = fabs(X / (sinh(X)*cosh(X)));
-    printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
     break;
   case 13:
     AC = fabsf(X );
-    printf("AC of exp(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of exp(x) | x=%f is %f.\n", X, AC);
     break;
   case 14:
     AC = fabs(1/log(X));
-    printf("AC of log(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of log(x) | x=%f is %f.\n", X, AC);
     break;
   case 15:
     AC = 0.5;
-    printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
     break;
   default:
     printf("No such operation\n");
@@ -313,24 +313,24 @@ void fACfp32BinaryDriver(int NodeId, const char *XName, float X, const char *YNa
   case 0:
     ACWRTX = fabsf(X / (X+Y));
     ACWRTY = fabsf(Y / (X+Y));
-    printf("AC of x+y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
-    printf("AC of x+y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
+//    printf("AC of x+y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
+//    printf("AC of x+y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
     break;
   case 1:
     ACWRTX = fabsf(X / (X-Y));
     ACWRTY = fabsf(Y / (Y-X));
-    printf("AC of x-y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
-    printf("AC of x-y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
+//    printf("AC of x-y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
+//    printf("AC of x-y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
     break;
   case 2:
     ACWRTX=ACWRTY=1.0;
-    printf("AC of x*y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
-    printf("AC of x*y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
+//    printf("AC of x*y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
+//    printf("AC of x*y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
     break;
   case 3:
     ACWRTX=ACWRTY=1.0;
-    printf("AC of x/y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
-    printf("AC of x/y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
+//    printf("AC of x/y | x=%f, y=%f WRT x is %f.\n", X, Y, ACWRTX);
+//    printf("AC of x/y | x=%f, y=%f WRT y is %f.\n", X, Y, ACWRTY);
     break;
   default:
     printf("No such operation\n");
@@ -359,55 +359,55 @@ void fACfp64UnaryDriver(int NodeId, const char *XName, double X, enum Operation 
   switch (OP) {
   case 4:
     AC = fabs(X * (cos(X)/sin(X)));
-    printf("AC of sin(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of sin(x) | x=%f is %f.\n", X, AC);
     break;
   case 5:
     AC = fabs(X * tan(X));
-    printf("AC of cos(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of cos(x) | x=%f is %f.\n", X, AC);
     break;
   case 6:
     AC = fabs(X / (sin(X)*cos(X)));
-    printf("AC of tan(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of tan(x) | x=%f is %f.\n", X, AC);
     break;
   case 7:
     AC = fabs(X / (sqrt(1-pow(X,2)) * asin(X)));
-    printf("AC of asin(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of asin(x) | x=%f is %f.\n", X, AC);
     break;
   case 8:
     AC = fabs(-X / (sqrt(1-pow(X,2)) * acos(X)));
-    printf("AC of acos(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of acos(x) | x=%f is %f.\n", X, AC);
     break;
   case 9:
     AC = fabs(X / (pow(X,2)+1 * atan(X)));
-    printf("AC of atan(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of atan(x) | x=%f is %f.\n", X, AC);
     break;
   case 10:
     AC = fabs(X * (cosh(X)/sinh(X)));
-    printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
     break;
   case 11:
     AC = fabs(X * tanh(X));
-    printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
     break;
   case 12:
     AC = fabs(X / (sinh(X)*cosh(X)));
-    printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
     break;
   case 13:
     AC = fabs(X);
-    printf("AC of exp(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of exp(x) | x=%f is %f.\n", X, AC);
     break;
   case 14:
     AC = fabs(1/log(X));
-    printf("AC of log(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of log(x) | x=%f is %f.\n", X, AC);
     break;
   case 15:
     AC = 0.5;
-    printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
+//    printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
     break;
   case 16:
     AC = 1.0;
-    printf("AC of trunc(x, fp32) | x=%f is %f.\n", X, AC);
+//    printf("AC of trunc(x, fp32) | x=%f is %f.\n", X, AC);
     break;
   default:
     printf("No such operation\n");
@@ -437,24 +437,24 @@ void fACfp64BinaryDriver(int NodeId, const char *XName, double X, const char *YN
   case 0:
     ACWRTX = fabs(X / (X+Y));
     ACWRTY = fabs(Y / (X+Y));
-    printf("AC of x+y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
-    printf("AC of x+y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
+//    printf("AC of x+y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
+//    printf("AC of x+y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
     break;
   case 1:
     ACWRTX = fabs(X / (X-Y));
     ACWRTY = fabs(Y / (Y-X));
-    printf("AC of x-y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
-    printf("AC of x-y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
+//    printf("AC of x-y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
+//    printf("AC of x-y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
     break;
   case 2:
     ACWRTX=ACWRTY=1.0;
-    printf("AC of x*y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
-    printf("AC of x*y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
+//    printf("AC of x*y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
+//    printf("AC of x*y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
     break;
   case 3:
     ACWRTX=ACWRTY=1.0;
-    printf("AC of x/y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
-    printf("AC of x/y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
+//    printf("AC of x/y | x=%f, y=%f WRT x is %lf.\n", X, Y, ACWRTX);
+//    printf("AC of x/y | x=%f, y=%f WRT y is %lf.\n", X, Y, ACWRTY);
     break;
   default:
     printf("No such operation\n");

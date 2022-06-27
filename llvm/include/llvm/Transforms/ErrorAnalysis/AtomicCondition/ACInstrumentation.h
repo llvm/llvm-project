@@ -30,7 +30,10 @@ private:
 
   Function *ACStoreFunction;
   Function *CGStoreFunction;
-//  Function *ACAnalysisFunction;
+  Function *ACAnalysisFunction;
+
+  // Additional Utilities
+  Function *CGDotGraphFunction;
 
 public:
   static int VarCounter;
