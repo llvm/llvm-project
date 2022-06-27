@@ -124,11 +124,10 @@ func.func @execute_region_with_conflict(
     scf.yield %f1, %t2, %f1 : f32, tensor<?xf32>, f32
   }
 
-  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
   // CHECK: %[[load:.*]] = memref.load %[[m1]]
   %3 = tensor.extract %t1[%idx] : tensor<?xf32>
 
-  // CHECK: return %{{.*}}, %[[casted]], %[[load]] : f32, memref<?xf32, #{{.*}}>, f32
+  // CHECK: return %{{.*}}, %[[alloc]], %[[load]] : f32, memref<?xf32>, f32
   return %0, %1, %3 : f32, tensor<?xf32>, f32
 }
 
