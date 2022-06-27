@@ -389,9 +389,9 @@ define void @unreachable_phi() {
 ; CHECK-LABEL: 'unreachable_phi'
 ; CHECK-NEXT:  Classifying expressions for: @unreachable_phi
 ; CHECK-NEXT:    %p_58.addr.1 = phi i32 [ undef, %unreachable1 ], [ %sub2629, %unreachable2 ]
-; CHECK-NEXT:    --> undef U: full-set S: full-set
+; CHECK-NEXT:    --> poison U: full-set S: full-set
 ; CHECK-NEXT:    %sub2629 = sub i32 %p_58.addr.1, 1
-; CHECK-NEXT:    --> undef U: full-set S: full-set
+; CHECK-NEXT:    --> poison U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @unreachable_phi
 ;
 entry:
@@ -415,7 +415,7 @@ define void @unreachable_binop() {
 ; CHECK-NEXT:    %p_58.addr.1 = phi i32 [ undef, %header ], [ %sub2629, %unreachable ]
 ; CHECK-NEXT:    --> %p_58.addr.1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Variant }
 ; CHECK-NEXT:    %sub2629 = sub i32 %p_58.addr.1, 1
-; CHECK-NEXT:    --> undef U: full-set S: full-set
+; CHECK-NEXT:    --> poison U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @unreachable_binop
 ; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable max backedge-taken count.
