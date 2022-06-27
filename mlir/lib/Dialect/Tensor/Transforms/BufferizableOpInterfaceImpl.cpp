@@ -154,15 +154,17 @@ struct CollapseShapeOpInterface
     if (!canBeCollapsed) {
       // TODO: Create alloc_tensor ops during TensorCopyInsertion.
       AnalysisState analysisState(options);
-      Value tensorAlloc = allocateTensorForShapedValue(
+      FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
           rewriter, op->getLoc(), collapseShapeOp.getSrc(),
-          analysisState.isTensorYielded(collapseShapeOp.getResult()));
+          analysisState.isTensorYielded(collapseShapeOp.getResult()), options);
+      if (failed(tensorAlloc))
+        return failure();
       auto memrefType =
           MemRefType::get(collapseShapeOp.getSrcType().getShape(),
                           collapseShapeOp.getSrcType().getElementType(),
                           AffineMap(), bufferType.getMemorySpaceAsInt());
       buffer = rewriter.create<bufferization::ToMemrefOp>(
-          op->getLoc(), memrefType, tensorAlloc);
+          op->getLoc(), memrefType, *tensorAlloc);
     }
 
     // Result type is inferred by the builder.
@@ -383,14 +385,16 @@ struct FromElementsOpInterface
     auto shape = tensorType.getShape();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
     AnalysisState analysisState(options);
-    Value tensorAlloc = allocateTensorForShapedValue(
+    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
         rewriter, loc, fromElementsOp.getResult(),
-        analysisState.isTensorYielded(fromElementsOp.getResult()),
+        analysisState.isTensorYielded(fromElementsOp.getResult()), options,
         /*copy=*/false);
+    if (failed(tensorAlloc))
+      return failure();
     auto memrefType =
         MemRefType::get(tensorType.getShape(), tensorType.getElementType());
     Value buffer = rewriter.create<bufferization::ToMemrefOp>(
-        op->getLoc(), memrefType, tensorAlloc);
+        op->getLoc(), memrefType, *tensorAlloc);
 
     // Case: tensor<0xelem_type>.
     if (fromElementsOp.getElements().empty()) {
@@ -436,14 +440,16 @@ struct GenerateOpInterface
     Location loc = op->getLoc();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
     AnalysisState analysisState(options);
-    Value tensorAlloc = allocateTensorForShapedValue(
+    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
         rewriter, loc, generateOp.getResult(),
-        analysisState.isTensorYielded(generateOp.getResult()),
+        analysisState.isTensorYielded(generateOp.getResult()), options,
         /*copy=*/false);
+    if (failed(tensorAlloc))
+      return failure();
     auto memrefType =
         MemRefType::get(tensorType.getShape(), tensorType.getElementType());
     Value buffer = rewriter.create<bufferization::ToMemrefOp>(
-        op->getLoc(), memrefType, tensorAlloc);
+        op->getLoc(), memrefType, *tensorAlloc);
 
     // Collect loop bounds.
     int64_t rank = memrefType.getRank();
