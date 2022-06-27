@@ -763,7 +763,7 @@ entry:
 define i1 @fcmp_double_pz_in_pz_out() #6 {
 ; CHECK-LABEL: @fcmp_double_pz_in_pz_out(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp une double 0x0008000000000000, 0x0
@@ -773,7 +773,7 @@ entry:
 define i1 @fcmp_float_pz_in_pz_out() #6 {
 ; CHECK-LABEL: @fcmp_float_pz_in_pz_out(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp une float 0x3800000000000000, 0x0
@@ -783,7 +783,7 @@ entry:
 define i1 @fcmp_double_ps_in_ps_out() #7 {
 ; CHECK-LABEL: @fcmp_double_ps_in_ps_out(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp une double 0x0008000000000000, 0x0
@@ -793,7 +793,7 @@ entry:
 define i1 @fcmp_float_ps_in_ps_out() #7 {
 ; CHECK-LABEL: @fcmp_float_ps_in_ps_out(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp une float 0x3800000000000000, 0x0
@@ -823,7 +823,7 @@ entry:
 define i1 @fcmp_double_ieee_out_pz_in() #3 {
 ; CHECK-LABEL: @fcmp_double_ieee_out_pz_in(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp une double 0x0008000000000000, 0x0
@@ -833,7 +833,7 @@ entry:
 define i1 @fcmp_double_ieee_out_ps_in() #4 {
 ; CHECK-LABEL: @fcmp_double_ieee_out_ps_in(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp une double 0x0008000000000000, 0x0
@@ -853,7 +853,7 @@ entry:
 define i1 @fcmp_double_two_denormal_ins() #6 {
 ; CHECK-LABEL: @fcmp_double_two_denormal_ins(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp une double 0x0008100000000000, 0x0008000000000000
@@ -903,7 +903,7 @@ entry:
 define i1 @fcmp_double_ps_in_ps_out_oeq() #6 {
 ; CHECK-LABEL: @fcmp_double_ps_in_ps_out_oeq(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = fcmp oeq double 0x0008100000000000, 0x0008000000000000
@@ -923,7 +923,7 @@ entry:
 define i1 @fcmp_double_ps_in_ps_out_one() #6 {
 ; CHECK-LABEL: @fcmp_double_ps_in_ps_out_one(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp one double 0x0008100000000000, 0x0008000000000000
@@ -983,7 +983,7 @@ entry:
 define i1 @fcmp_double_pz_in_pz_out_ugt() #7 {
 ; CHECK-LABEL: @fcmp_double_pz_in_pz_out_ugt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = fcmp ugt double 0x0008000000000000, 0x0
@@ -1043,7 +1043,7 @@ entry:
 define i1 @fcmp_double_pz_in_pz_out_ule() #7 {
 ; CHECK-LABEL: @fcmp_double_pz_in_pz_out_ule(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = fcmp ule double 0x0008000000000000, 0x0
