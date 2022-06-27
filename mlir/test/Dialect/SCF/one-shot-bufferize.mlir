@@ -632,3 +632,80 @@ func.func @matmul(%arg0: tensor<8x8xf32>, %arg1: tensor<8x8xf32>, %arg2: tensor<
   }
   return %0 : tensor<8x8xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @scf_if_memory_space
+func.func @scf_if_memory_space(%c: i1, %f: f32) -> (f32, f32)
+{
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
+  %0 = bufferization.alloc_tensor() {memory_space = 1 : ui64} : tensor<5xf32>
+  // CHECK: scf.if %{{.*}} -> (memref<5xf32, 1>) {
+  %1 = scf.if %c -> tensor<5xf32> {
+    // CHECK: %[[cloned:.*]] = bufferization.clone %[[alloc]]
+    // CHECK: scf.yield %[[cloned]]
+    scf.yield %0 : tensor<5xf32>
+  } else {
+    // CHECK: %[[alloc2:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
+    // CHECK: memref.store %{{.*}}, %[[alloc2]]
+    // CHECK: %[[cloned2:.*]] = bufferization.clone %[[alloc2]]
+    // CHECK: memref.dealloc %[[alloc2]]
+    // CHECK: scf.yield %[[cloned2]]
+    %2 = tensor.insert %f into %0[%c0] : tensor<5xf32>
+    scf.yield %2 : tensor<5xf32>
+  }
+  %r0 = tensor.extract %0[%c0] : tensor<5xf32>
+  %r1 = tensor.extract %1[%c0] : tensor<5xf32>
+  return %r0, %r1 : f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_execute_region_memory_space
+// CHECK: memref.alloc() {{.*}} : memref<5xf32, 1>
+// CHECK: memref.store
+// CHECK: memref.load
+// CHECK: memref.dealloc
+func.func @scf_execute_region_memory_space(%f: f32) -> f32 {
+  %c0 = arith.constant 0 : index
+  %0 = scf.execute_region -> tensor<5xf32> {
+    %1 = bufferization.alloc_tensor() {memory_space = 1 : ui64} : tensor<5xf32>
+    %2 = tensor.insert %f into %1[%c0] : tensor<5xf32>
+    scf.yield %2 : tensor<5xf32>
+  }
+  %r = tensor.extract %0[%c0] : tensor<5xf32>
+  return %r : f32
+}
+
+// -----
+
+// Additional allocs are inserted in the loop body. We just check that all
+// allocs have the correct memory space.
+
+// CHECK-LABEL: func @scf_for_swapping_yields_memory_space
+func.func @scf_for_swapping_yields_memory_space(
+    %sz: index, %C : tensor<4xf32>, %lb : index, %ub : index, %step : index)
+  -> (f32, f32)
+{
+  // CHECK: memref.alloc(%{{.*}}) {{.*}} : memref<?xf32, 1>
+  // CHECK: memref.alloc(%{{.*}}) {{.*}} : memref<?xf32, 1>
+  %A = bufferization.alloc_tensor(%sz) {memory_space = 1 : ui64} : tensor<?xf32>
+  %B = bufferization.alloc_tensor(%sz) {memory_space = 1 : ui64} : tensor<?xf32>
+
+  // CHECK: scf.for {{.*}} {
+  %r0:2 = scf.for %i = %lb to %ub step %step iter_args(%tA = %A, %tB = %B)
+      -> (tensor<?xf32>, tensor<?xf32>)
+  {
+    // CHECK: memref.alloc(%{{.*}}) {{.*}} : memref<?xf32, 1>
+    // CHECK: memref.alloc(%{{.*}}) {{.*}} : memref<?xf32, 1>
+    %ttA = tensor.insert_slice %C into %tA[0][4][1] : tensor<4xf32> into tensor<?xf32>
+    %ttB = tensor.insert_slice %C into %tB[0][4][1] : tensor<4xf32> into tensor<?xf32>
+    // Yield tensors in different order.
+    scf.yield %ttB, %ttA : tensor<?xf32>, tensor<?xf32>
+  }
+  // CHECK: }
+  %f0 = tensor.extract %r0#0[%step] : tensor<?xf32>
+  %f1 = tensor.extract %r0#1[%step] : tensor<?xf32>
+  return %f0, %f1: f32, f32
+}

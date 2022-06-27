@@ -347,6 +347,10 @@ def TensorCopyInsertion : Pass<"tensor-copy-insertion"> {
            "Bufferize function boundaries (experimental).">,
     Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
            "Specify if new allocations should be deallocated.">,
+    Option<"mustInferMemorySpace", "must-infer-memory-space", "bool",
+           /*default=*/"false",
+           "The memory space of an memref types must always be inferred. If "
+           "unset, a default memory space of 0 is used otherwise.">,
   ];
   let constructor = "mlir::bufferization::createTensorCopyInsertionPass()";
 }
