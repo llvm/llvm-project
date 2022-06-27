@@ -276,4 +276,172 @@ TEST_F(DataflowAnalysisContextTest, EquivBoolVals) {
       Context.getOrCreateConjunction(X, Context.getOrCreateConjunction(Y, Z))));
 }
 
+TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsAtomicFC) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &True = Context.getBoolLiteralValue(true);
+  auto &False = Context.getBoolLiteralValue(false);
+
+  // FC = X
+  auto &FC = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC, X);
+
+  // If X is true in FC, FC = X must be true
+  auto &FCWithXTrue =
+      Context.buildAndSubstituteFlowCondition(FC, {{&X, &True}});
+  EXPECT_TRUE(Context.equivalentBoolValues(FCWithXTrue, True));
+
+  // If X is false in FC, FC = X must be false
+  auto &FC1WithXFalse =
+      Context.buildAndSubstituteFlowCondition(FC, {{&X, &False}});
+  EXPECT_TRUE(Context.equivalentBoolValues(FC1WithXFalse, False));
+}
+
+TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsNegatedFC) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &True = Context.getBoolLiteralValue(true);
+  auto &False = Context.getBoolLiteralValue(false);
+
+  // FC = !X
+  auto &FC = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC, Context.getOrCreateNegation(X));
+
+  // If X is true in FC, FC = !X must be false
+  auto &FCWithXTrue =
+      Context.buildAndSubstituteFlowCondition(FC, {{&X, &True}});
+  EXPECT_TRUE(Context.equivalentBoolValues(FCWithXTrue, False));
+
+  // If X is false in FC, FC = !X must be true
+  auto &FC1WithXFalse =
+      Context.buildAndSubstituteFlowCondition(FC, {{&X, &False}});
+  EXPECT_TRUE(Context.equivalentBoolValues(FC1WithXFalse, True));
+}
+
+TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsDisjunctiveFC) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &Y = Context.createAtomicBoolValue();
+  auto &True = Context.getBoolLiteralValue(true);
+  auto &False = Context.getBoolLiteralValue(false);
+
+  // FC = X || Y
+  auto &FC = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC, Context.getOrCreateDisjunction(X, Y));
+
+  // If X is true in FC, FC = X || Y must be true
+  auto &FCWithXTrue =
+      Context.buildAndSubstituteFlowCondition(FC, {{&X, &True}});
+  EXPECT_TRUE(Context.equivalentBoolValues(FCWithXTrue, True));
+
+  // If X is false in FC, FC = X || Y is equivalent to evaluating Y
+  auto &FC1WithXFalse =
+      Context.buildAndSubstituteFlowCondition(FC, {{&X, &False}});
+  EXPECT_TRUE(Context.equivalentBoolValues(FC1WithXFalse, Y));
+}
+
+TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsConjunctiveFC) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &Y = Context.createAtomicBoolValue();
+  auto &True = Context.getBoolLiteralValue(true);
+  auto &False = Context.getBoolLiteralValue(false);
+
+  // FC = X && Y
+  auto &FC = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC, Context.getOrCreateConjunction(X, Y));
+
+  // If X is true in FC, FC = X && Y is equivalent to evaluating Y
+  auto &FCWithXTrue =
+      Context.buildAndSubstituteFlowCondition(FC, {{&X, &True}});
+  EXPECT_TRUE(Context.equivalentBoolValues(FCWithXTrue, Y));
+
+  // If X is false in FC, FC = X && Y must be false
+  auto &FCWithXFalse =
+      Context.buildAndSubstituteFlowCondition(FC, {{&X, &False}});
+  EXPECT_TRUE(Context.equivalentBoolValues(FCWithXFalse, False));
+}
+
+TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsForkedFC) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &Y = Context.createAtomicBoolValue();
+  auto &Z = Context.createAtomicBoolValue();
+  auto &True = Context.getBoolLiteralValue(true);
+  auto &False = Context.getBoolLiteralValue(false);
+
+  // FC = X && Y
+  auto &FC = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC, Context.getOrCreateConjunction(X, Y));
+  // ForkedFC = FC && Z = X && Y && Z
+  auto &ForkedFC = Context.forkFlowCondition(FC);
+  Context.addFlowConditionConstraint(ForkedFC, Z);
+
+  // If any of X,Y,Z is true in ForkedFC, ForkedFC = X && Y && Z is equivalent
+  // to evaluating the conjunction of the remaining values
+  auto &ForkedFCWithZTrue =
+      Context.buildAndSubstituteFlowCondition(ForkedFC, {{&Z, &True}});
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      ForkedFCWithZTrue, Context.getOrCreateConjunction(X, Y)));
+  auto &ForkedFCWithYAndZTrue = Context.buildAndSubstituteFlowCondition(
+      ForkedFC, {{&Y, &True}, {&Z, &True}});
+  EXPECT_TRUE(Context.equivalentBoolValues(ForkedFCWithYAndZTrue, X));
+
+  // If any of X,Y,Z is false in ForkedFC, ForkedFC = X && Y && Z must be false
+  auto &ForkedFCWithXFalse =
+      Context.buildAndSubstituteFlowCondition(ForkedFC, {{&X, &False}});
+  auto &ForkedFCWithYFalse =
+      Context.buildAndSubstituteFlowCondition(ForkedFC, {{&Y, &False}});
+  auto &ForkedFCWithZFalse =
+      Context.buildAndSubstituteFlowCondition(ForkedFC, {{&Z, &False}});
+  EXPECT_TRUE(Context.equivalentBoolValues(ForkedFCWithXFalse, False));
+  EXPECT_TRUE(Context.equivalentBoolValues(ForkedFCWithYFalse, False));
+  EXPECT_TRUE(Context.equivalentBoolValues(ForkedFCWithZFalse, False));
+}
+
+TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsJoinedFC) {
+  auto &X = Context.createAtomicBoolValue();
+  auto &Y = Context.createAtomicBoolValue();
+  auto &Z = Context.createAtomicBoolValue();
+  auto &True = Context.getBoolLiteralValue(true);
+  auto &False = Context.getBoolLiteralValue(false);
+
+  // FC1 = X
+  auto &FC1 = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC1, X);
+  // FC2 = Y
+  auto &FC2 = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC2, Y);
+  // JoinedFC = (FC1 || FC2) && Z = (X || Y) && Z
+  auto &JoinedFC = Context.joinFlowConditions(FC1, FC2);
+  Context.addFlowConditionConstraint(JoinedFC, Z);
+
+  // If any of X, Y is true in JoinedFC, JoinedFC = (X || Y) && Z is equivalent
+  // to evaluating the remaining Z
+  auto &JoinedFCWithXTrue =
+      Context.buildAndSubstituteFlowCondition(JoinedFC, {{&X, &True}});
+  auto &JoinedFCWithYTrue =
+      Context.buildAndSubstituteFlowCondition(JoinedFC, {{&Y, &True}});
+  EXPECT_TRUE(Context.equivalentBoolValues(JoinedFCWithXTrue, Z));
+  EXPECT_TRUE(Context.equivalentBoolValues(JoinedFCWithYTrue, Z));
+
+  // If Z is true in JoinedFC, JoinedFC = (X || Y) && Z is equivalent to
+  // evaluating the remaining disjunction (X || Y)
+  auto &JoinedFCWithZTrue =
+      Context.buildAndSubstituteFlowCondition(JoinedFC, {{&Z, &True}});
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      JoinedFCWithZTrue, Context.getOrCreateDisjunction(X, Y)));
+
+  // If any of X, Y is false in JoinedFC, JoinedFC = (X || Y) && Z is equivalent
+  // to evaluating the conjunction of the other value and Z
+  auto &JoinedFCWithXFalse =
+      Context.buildAndSubstituteFlowCondition(JoinedFC, {{&X, &False}});
+  auto &JoinedFCWithYFalse =
+      Context.buildAndSubstituteFlowCondition(JoinedFC, {{&Y, &False}});
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      JoinedFCWithXFalse, Context.getOrCreateConjunction(Y, Z)));
+  EXPECT_TRUE(Context.equivalentBoolValues(
+      JoinedFCWithYFalse, Context.getOrCreateConjunction(X, Z)));
+
+  // If Z is false in JoinedFC, JoinedFC = (X || Y) && Z must be false
+  auto &JoinedFCWithZFalse =
+      Context.buildAndSubstituteFlowCondition(JoinedFC, {{&Z, &False}});
+  EXPECT_TRUE(Context.equivalentBoolValues(JoinedFCWithZFalse, False));
+}
+
 } // namespace
