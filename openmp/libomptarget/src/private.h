@@ -42,7 +42,8 @@ extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *ArgNames,
                   void **ArgMappers, int32_t TeamNum, int32_t ThreadLimit,
-                  int IsTeamConstruct, AsyncInfoTy &AsyncInfo);
+                  uint64_t Tripcount, int IsTeamConstruct,
+                  AsyncInfoTy &AsyncInfo);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 extern bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc);
