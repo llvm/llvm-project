@@ -249,9 +249,9 @@ class InputFunction : public InputChunk {
 public:
   InputFunction(const WasmSignature &s, const WasmFunction *func, ObjFile *f)
       : InputChunk(f, InputChunk::Function, func->SymbolName), signature(s),
-        function(func), exportName(func && func->ExportName.hasValue()
-                                       ? (*func->ExportName).str()
-                                       : llvm::Optional<std::string>()) {
+        function(func),
+        exportName(func && func->ExportName ? (*func->ExportName).str()
+                                            : llvm::Optional<std::string>()) {
     inputSectionOffset = function->CodeSectionOffset;
     rawData =
         file->codeSection->Content.slice(inputSectionOffset, function->Size);
@@ -268,8 +268,8 @@ public:
   }
 
   llvm::Optional<StringRef> getExportName() const {
-    return exportName.hasValue() ? llvm::Optional<StringRef>(*exportName)
-                                 : llvm::Optional<StringRef>();
+    return exportName ? llvm::Optional<StringRef>(*exportName)
+                      : llvm::Optional<StringRef>();
   }
   void setExportName(std::string exportName) { this->exportName = exportName; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
