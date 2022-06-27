@@ -12,6 +12,7 @@ static_library("Symbolize") {
     "DIFetcher.cpp",
     "DIPrinter.cpp",
     "Markup.cpp",
+    "MarkupFilter.cpp",
     "SymbolizableObjectFile.cpp",
     "Symbolize.cpp",
   ]
