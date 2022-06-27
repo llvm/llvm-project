@@ -9,12 +9,14 @@ define void @test(ptr %arr) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_INC:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PREV:%.*]] = phi i32 [ [[V:%.*]], [[LOOP_LATCH]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr [[ARR:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[V]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       if:
-; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[PREV]], 0
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_INC]] = add nuw nsw i64 [[IV]], 1
