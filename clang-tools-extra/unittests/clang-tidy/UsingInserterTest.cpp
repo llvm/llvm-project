@@ -37,7 +37,7 @@ public:
     auto Hint =
         Inserter->createUsingDeclaration(*Result.Context, *Call, "::foo::func");
 
-    if (Hint.hasValue())
+    if (Hint)
       diag(Call->getBeginLoc(), "Fix for testing") << Hint.getValue();
 
     diag(Call->getBeginLoc(), "insert call")

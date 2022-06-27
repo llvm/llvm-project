@@ -338,7 +338,7 @@ TEST(GlobalCompilationDatabaseTest, CompileFlagsDirectory) {
 }
 
 MATCHER_P(hasArg, Flag, "") {
-  if (!arg.hasValue()) {
+  if (!arg) {
     *result_listener << "command is null";
     return false;
   }
