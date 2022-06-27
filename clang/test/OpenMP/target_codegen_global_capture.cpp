@@ -330,9 +330,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    store i8** null, i8*** [[TMP74]], align 8
 // CHECK1-NEXT:    [[TMP75:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 7
 // CHECK1-NEXT:    store i8** null, i8*** [[TMP75]], align 8
-// CHECK1-NEXT:    [[TMP76:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
-// CHECK1-NEXT:    [[TMP77:%.*]] = icmp ne i32 [[TMP76]], 0
-// CHECK1-NEXT:    br i1 [[TMP77]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK1-NEXT:    [[TMP76:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK1-NEXT:    store i64 0, i64* [[TMP76]], align 8
+// CHECK1-NEXT:    [[TMP77:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
+// CHECK1-NEXT:    [[TMP78:%.*]] = icmp ne i32 [[TMP77]], 0
+// CHECK1-NEXT:    br i1 [[TMP78]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
 // CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49(i64 [[TMP1]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]]) #[[ATTR2:[0-9]+]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
@@ -342,28 +344,28 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49(i64 [[TMP1]], i64 [[TMP3]], i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]]) #[[ATTR2]]
 // CHECK1-NEXT:    br label [[OMP_IF_END]]
 // CHECK1:       omp_if.end:
-// CHECK1-NEXT:    [[TMP78:%.*]] = load i16, i16* [[A_ADDR]], align 2
-// CHECK1-NEXT:    [[CONV14:%.*]] = sext i16 [[TMP78]] to i32
-// CHECK1-NEXT:    [[TMP79:%.*]] = load i16, i16* [[B_ADDR]], align 2
-// CHECK1-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP79]] to i32
+// CHECK1-NEXT:    [[TMP79:%.*]] = load i16, i16* [[A_ADDR]], align 2
+// CHECK1-NEXT:    [[CONV14:%.*]] = sext i16 [[TMP79]] to i32
+// CHECK1-NEXT:    [[TMP80:%.*]] = load i16, i16* [[B_ADDR]], align 2
+// CHECK1-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP80]] to i32
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV14]], [[CONV15]]
-// CHECK1-NEXT:    [[TMP80:%.*]] = load i16, i16* [[C_ADDR]], align 2
-// CHECK1-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP80]] to i32
+// CHECK1-NEXT:    [[TMP81:%.*]] = load i16, i16* [[C_ADDR]], align 2
+// CHECK1-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP81]] to i32
 // CHECK1-NEXT:    [[ADD17:%.*]] = add nsw i32 [[ADD]], [[CONV16]]
-// CHECK1-NEXT:    [[TMP81:%.*]] = load i16, i16* [[D_ADDR]], align 2
-// CHECK1-NEXT:    [[CONV18:%.*]] = sext i16 [[TMP81]] to i32
+// CHECK1-NEXT:    [[TMP82:%.*]] = load i16, i16* [[D_ADDR]], align 2
+// CHECK1-NEXT:    [[CONV18:%.*]] = sext i16 [[TMP82]] to i32
 // CHECK1-NEXT:    [[ADD19:%.*]] = add nsw i32 [[ADD17]], [[CONV18]]
-// CHECK1-NEXT:    [[TMP82:%.*]] = load float, float* @_ZZ3foossssE2Sa, align 4
-// CHECK1-NEXT:    [[CONV20:%.*]] = fptosi float [[TMP82]] to i32
+// CHECK1-NEXT:    [[TMP83:%.*]] = load float, float* @_ZZ3foossssE2Sa, align 4
+// CHECK1-NEXT:    [[CONV20:%.*]] = fptosi float [[TMP83]] to i32
 // CHECK1-NEXT:    [[ADD21:%.*]] = add nsw i32 [[ADD19]], [[CONV20]]
-// CHECK1-NEXT:    [[TMP83:%.*]] = load float, float* @_ZZ3foossssE2Sb, align 4
-// CHECK1-NEXT:    [[CONV22:%.*]] = fptosi float [[TMP83]] to i32
+// CHECK1-NEXT:    [[TMP84:%.*]] = load float, float* @_ZZ3foossssE2Sb, align 4
+// CHECK1-NEXT:    [[CONV22:%.*]] = fptosi float [[TMP84]] to i32
 // CHECK1-NEXT:    [[ADD23:%.*]] = add nsw i32 [[ADD21]], [[CONV22]]
-// CHECK1-NEXT:    [[TMP84:%.*]] = load float, float* @_ZZ3foossssE2Sc, align 4
-// CHECK1-NEXT:    [[CONV24:%.*]] = fptosi float [[TMP84]] to i32
+// CHECK1-NEXT:    [[TMP85:%.*]] = load float, float* @_ZZ3foossssE2Sc, align 4
+// CHECK1-NEXT:    [[CONV24:%.*]] = fptosi float [[TMP85]] to i32
 // CHECK1-NEXT:    [[ADD25:%.*]] = add nsw i32 [[ADD23]], [[CONV24]]
-// CHECK1-NEXT:    [[TMP85:%.*]] = load float, float* @_ZZ3foossssE2Sd, align 4
-// CHECK1-NEXT:    [[CONV26:%.*]] = fptosi float [[TMP85]] to i32
+// CHECK1-NEXT:    [[TMP86:%.*]] = load float, float* @_ZZ3foossssE2Sd, align 4
+// CHECK1-NEXT:    [[CONV26:%.*]] = fptosi float [[TMP86]] to i32
 // CHECK1-NEXT:    [[ADD27:%.*]] = add nsw i32 [[ADD25]], [[CONV26]]
 // CHECK1-NEXT:    ret i32 [[ADD27]]
 //
@@ -683,9 +685,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    store i8** null, i8*** [[TMP78]], align 8
 // CHECK1-NEXT:    [[TMP79:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 7
 // CHECK1-NEXT:    store i8** null, i8*** [[TMP79]], align 8
-// CHECK1-NEXT:    [[TMP80:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3barssss_l94.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
-// CHECK1-NEXT:    [[TMP81:%.*]] = icmp ne i32 [[TMP80]], 0
-// CHECK1-NEXT:    br i1 [[TMP81]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK1-NEXT:    [[TMP80:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK1-NEXT:    store i64 0, i64* [[TMP80]], align 8
+// CHECK1-NEXT:    [[TMP81:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3barssss_l94.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
+// CHECK1-NEXT:    [[TMP82:%.*]] = icmp ne i32 [[TMP81]], 0
+// CHECK1-NEXT:    br i1 [[TMP82]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
 // CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3barssss_l94(i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]], i64 [[TMP19]], i64 [[TMP21]]) #[[ATTR2]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
@@ -1032,9 +1036,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK1-NEXT:    store i8** null, i8*** [[TMP78]], align 8
 // CHECK1-NEXT:    [[TMP79:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 7
 // CHECK1-NEXT:    store i8** null, i8*** [[TMP79]], align 8
-// CHECK1-NEXT:    [[TMP80:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4tbarIsEiT_S0_S0_S0__l145.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
-// CHECK1-NEXT:    [[TMP81:%.*]] = icmp ne i32 [[TMP80]], 0
-// CHECK1-NEXT:    br i1 [[TMP81]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK1-NEXT:    [[TMP80:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK1-NEXT:    store i64 0, i64* [[TMP80]], align 8
+// CHECK1-NEXT:    [[TMP81:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4tbarIsEiT_S0_S0_S0__l145.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
+// CHECK1-NEXT:    [[TMP82:%.*]] = icmp ne i32 [[TMP81]], 0
+// CHECK1-NEXT:    br i1 [[TMP82]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
 // CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4tbarIsEiT_S0_S0_S0__l145(i64 [[TMP5]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]], i64 [[TMP19]], i64 [[TMP21]]) #[[ATTR2]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
@@ -1308,9 +1314,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    store i8** null, i8*** [[TMP68]], align 4
 // CHECK3-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 7
 // CHECK3-NEXT:    store i8** null, i8*** [[TMP69]], align 4
-// CHECK3-NEXT:    [[TMP70:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
-// CHECK3-NEXT:    [[TMP71:%.*]] = icmp ne i32 [[TMP70]], 0
-// CHECK3-NEXT:    br i1 [[TMP71]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK3-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK3-NEXT:    store i64 0, i64* [[TMP70]], align 8
+// CHECK3-NEXT:    [[TMP71:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
+// CHECK3-NEXT:    [[TMP72:%.*]] = icmp ne i32 [[TMP71]], 0
+// CHECK3-NEXT:    br i1 [[TMP72]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
 // CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49(i32 [[TMP1]], double* @Gb, i32 [[TMP3]], double* @Gc, i32 [[TMP5]], i32 [[TMP7]], i32 [[TMP9]], double* @Gd, i32 [[TMP11]]) #[[ATTR2:[0-9]+]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT]]
@@ -1320,28 +1328,28 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foossss_l49(i32 [[TMP1]], double* @Gb, i32 [[TMP3]], double* @Gc, i32 [[TMP5]], i32 [[TMP7]], i32 [[TMP9]], double* @Gd, i32 [[TMP11]]) #[[ATTR2]]
 // CHECK3-NEXT:    br label [[OMP_IF_END]]
 // CHECK3:       omp_if.end:
-// CHECK3-NEXT:    [[TMP72:%.*]] = load i16, i16* [[A_ADDR]], align 2
-// CHECK3-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP72]] to i32
-// CHECK3-NEXT:    [[TMP73:%.*]] = load i16, i16* [[B_ADDR]], align 2
-// CHECK3-NEXT:    [[CONV12:%.*]] = sext i16 [[TMP73]] to i32
+// CHECK3-NEXT:    [[TMP73:%.*]] = load i16, i16* [[A_ADDR]], align 2
+// CHECK3-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP73]] to i32
+// CHECK3-NEXT:    [[TMP74:%.*]] = load i16, i16* [[B_ADDR]], align 2
+// CHECK3-NEXT:    [[CONV12:%.*]] = sext i16 [[TMP74]] to i32
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV11]], [[CONV12]]
-// CHECK3-NEXT:    [[TMP74:%.*]] = load i16, i16* [[C_ADDR]], align 2
-// CHECK3-NEXT:    [[CONV13:%.*]] = sext i16 [[TMP74]] to i32
+// CHECK3-NEXT:    [[TMP75:%.*]] = load i16, i16* [[C_ADDR]], align 2
+// CHECK3-NEXT:    [[CONV13:%.*]] = sext i16 [[TMP75]] to i32
 // CHECK3-NEXT:    [[ADD14:%.*]] = add nsw i32 [[ADD]], [[CONV13]]
-// CHECK3-NEXT:    [[TMP75:%.*]] = load i16, i16* [[D_ADDR]], align 2
-// CHECK3-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP75]] to i32
+// CHECK3-NEXT:    [[TMP76:%.*]] = load i16, i16* [[D_ADDR]], align 2
+// CHECK3-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP76]] to i32
 // CHECK3-NEXT:    [[ADD16:%.*]] = add nsw i32 [[ADD14]], [[CONV15]]
-// CHECK3-NEXT:    [[TMP76:%.*]] = load float, float* @_ZZ3foossssE2Sa, align 4
-// CHECK3-NEXT:    [[CONV17:%.*]] = fptosi float [[TMP76]] to i32
+// CHECK3-NEXT:    [[TMP77:%.*]] = load float, float* @_ZZ3foossssE2Sa, align 4
+// CHECK3-NEXT:    [[CONV17:%.*]] = fptosi float [[TMP77]] to i32
 // CHECK3-NEXT:    [[ADD18:%.*]] = add nsw i32 [[ADD16]], [[CONV17]]
-// CHECK3-NEXT:    [[TMP77:%.*]] = load float, float* @_ZZ3foossssE2Sb, align 4
-// CHECK3-NEXT:    [[CONV19:%.*]] = fptosi float [[TMP77]] to i32
+// CHECK3-NEXT:    [[TMP78:%.*]] = load float, float* @_ZZ3foossssE2Sb, align 4
+// CHECK3-NEXT:    [[CONV19:%.*]] = fptosi float [[TMP78]] to i32
 // CHECK3-NEXT:    [[ADD20:%.*]] = add nsw i32 [[ADD18]], [[CONV19]]
-// CHECK3-NEXT:    [[TMP78:%.*]] = load float, float* @_ZZ3foossssE2Sc, align 4
-// CHECK3-NEXT:    [[CONV21:%.*]] = fptosi float [[TMP78]] to i32
+// CHECK3-NEXT:    [[TMP79:%.*]] = load float, float* @_ZZ3foossssE2Sc, align 4
+// CHECK3-NEXT:    [[CONV21:%.*]] = fptosi float [[TMP79]] to i32
 // CHECK3-NEXT:    [[ADD22:%.*]] = add nsw i32 [[ADD20]], [[CONV21]]
-// CHECK3-NEXT:    [[TMP79:%.*]] = load float, float* @_ZZ3foossssE2Sd, align 4
-// CHECK3-NEXT:    [[CONV23:%.*]] = fptosi float [[TMP79]] to i32
+// CHECK3-NEXT:    [[TMP80:%.*]] = load float, float* @_ZZ3foossssE2Sd, align 4
+// CHECK3-NEXT:    [[CONV23:%.*]] = fptosi float [[TMP80]] to i32
 // CHECK3-NEXT:    [[ADD24:%.*]] = add nsw i32 [[ADD22]], [[CONV23]]
 // CHECK3-NEXT:    ret i32 [[ADD24]]
 //
@@ -1655,9 +1663,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    store i8** null, i8*** [[TMP72]], align 4
 // CHECK3-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 7
 // CHECK3-NEXT:    store i8** null, i8*** [[TMP73]], align 4
-// CHECK3-NEXT:    [[TMP74:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3barssss_l94.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
-// CHECK3-NEXT:    [[TMP75:%.*]] = icmp ne i32 [[TMP74]], 0
-// CHECK3-NEXT:    br i1 [[TMP75]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK3-NEXT:    [[TMP74:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK3-NEXT:    store i64 0, i64* [[TMP74]], align 8
+// CHECK3-NEXT:    [[TMP75:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3barssss_l94.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
+// CHECK3-NEXT:    [[TMP76:%.*]] = icmp ne i32 [[TMP75]], 0
+// CHECK3-NEXT:    br i1 [[TMP76]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
 // CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3barssss_l94(i32 [[TMP5]], double* @Gb, i32 [[TMP7]], double* @Gc, i32 [[TMP9]], i32 [[TMP11]], i32 [[TMP13]], double* @Gd, i32 [[TMP15]]) #[[ATTR2]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT]]
@@ -1998,9 +2008,11 @@ int tbar2(short a, short b, short c, short d){
 // CHECK3-NEXT:    store i8** null, i8*** [[TMP72]], align 4
 // CHECK3-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 7
 // CHECK3-NEXT:    store i8** null, i8*** [[TMP73]], align 4
-// CHECK3-NEXT:    [[TMP74:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4tbarIsEiT_S0_S0_S0__l145.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
-// CHECK3-NEXT:    [[TMP75:%.*]] = icmp ne i32 [[TMP74]], 0
-// CHECK3-NEXT:    br i1 [[TMP75]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// CHECK3-NEXT:    [[TMP74:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]], i32 0, i32 8
+// CHECK3-NEXT:    store i64 0, i64* [[TMP74]], align 8
+// CHECK3-NEXT:    [[TMP75:%.*]] = call i32 @__tgt_target_kernel(%struct.ident_t* @[[GLOB1]], i64 -1, i32 -1, i32 0, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4tbarIsEiT_S0_S0_S0__l145.region_id, %struct.__tgt_kernel_arguments* [[KERNEL_ARGS]])
+// CHECK3-NEXT:    [[TMP76:%.*]] = icmp ne i32 [[TMP75]], 0
+// CHECK3-NEXT:    br i1 [[TMP76]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
 // CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4tbarIsEiT_S0_S0_S0__l145(i32 [[TMP5]], double* @Gb, i32 [[TMP7]], double* @Gc, i32 [[TMP9]], i32 [[TMP11]], i32 [[TMP13]], double* @Gd, i32 [[TMP15]]) #[[ATTR2]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT]]
