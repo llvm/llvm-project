@@ -90,9 +90,11 @@ void CompileUnit::fixupForwardReferences() {
     PatchLocation Attr;
     DeclContext *Ctxt;
     std::tie(RefDie, RefUnit, Ctxt, Attr) = Ref;
-    if (Ctxt && Ctxt->getCanonicalDIEOffset())
+    if (Ctxt && Ctxt->hasCanonicalDIE()) {
+      assert(Ctxt->getCanonicalDIEOffset() &&
+             "Canonical die offset is not set");
       Attr.set(Ctxt->getCanonicalDIEOffset());
-    else
+    } else
       Attr.set(RefDie->getOffset() + RefUnit->getStartOffset());
   }
 }
