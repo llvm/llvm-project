@@ -1062,6 +1062,8 @@ static void runMRIScript() {
 
     switch (Command) {
     case MRICommand::AddLib: {
+      if (!Create)
+        fail("no output archive has been opened");
       object::Archive &Lib = readLibrary(Rest);
       {
         Error Err = Error::success();
@@ -1072,6 +1074,8 @@ static void runMRIScript() {
       break;
     }
     case MRICommand::AddMod:
+      if (!Create)
+        fail("no output archive has been opened");
       addMember(NewMembers, Rest);
       break;
     case MRICommand::CreateThin:
@@ -1084,6 +1088,8 @@ static void runMRIScript() {
       if (Saved)
         fail("file already saved");
       ArchiveName = std::string(Rest);
+      if (ArchiveName.empty())
+        fail("missing archive name");
       break;
     case MRICommand::Delete: {
       llvm::erase_if(NewMembers, [=](NewArchiveMember &M) {
