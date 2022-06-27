@@ -663,7 +663,7 @@ void ClangdLSPServer::onDocumentDidOpen(
 void ClangdLSPServer::onDocumentDidChange(
     const DidChangeTextDocumentParams &Params) {
   auto WantDiags = WantDiagnostics::Auto;
-  if (Params.wantDiagnostics.hasValue())
+  if (Params.wantDiagnostics)
     WantDiags = Params.wantDiagnostics.getValue() ? WantDiagnostics::Yes
                                                   : WantDiagnostics::No;
 
