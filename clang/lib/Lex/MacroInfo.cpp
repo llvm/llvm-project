@@ -213,8 +213,7 @@ MacroDirective::DefInfo MacroDirective::getDefinition() {
       isPublic = VisMD->isPublic();
   }
 
-  return DefInfo(nullptr, UndefLoc,
-                 !isPublic.hasValue() || isPublic.getValue());
+  return DefInfo(nullptr, UndefLoc, !isPublic || isPublic.getValue());
 }
 
 const MacroDirective::DefInfo
