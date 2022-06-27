@@ -1128,11 +1128,12 @@ bool FormatTokenLexer::readRawTokenVerilogSpecific(Token &Tok) {
     return false;
   size_t Len = Matches[0].size();
 
+  // The kind has to be an identifier so we can match it against those defined
+  // in Keywords. The kind has to be set before the length because the setLength
+  // function checks that the kind is not an annotation.
+  Tok.setKind(tok::raw_identifier);
   Tok.setLength(Len);
   Tok.setLocation(Lex->getSourceLocation(Start, Len));
-  // The kind has to be an identifier so we can match it against those defined
-  // in Keywords.
-  Tok.setKind(tok::raw_identifier);
   Tok.setRawIdentifierData(Start);
   Lex->seek(Lex->getCurrentBufferOffset() + Len, /*IsAtStartofline=*/false);
   return true;
