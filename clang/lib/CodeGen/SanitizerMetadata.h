@@ -46,8 +46,6 @@ public:
                     bool IsDynInit = false);
   void disableSanitizerForGlobal(llvm::GlobalVariable *GV);
   void disableSanitizerForInstruction(llvm::Instruction *I);
-
-  llvm::MDNode *getLocationMetadata(SourceLocation Loc);
 };
 } // end namespace CodeGen
 } // end namespace clang
