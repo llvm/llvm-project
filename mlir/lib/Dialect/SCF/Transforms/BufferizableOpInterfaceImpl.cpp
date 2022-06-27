@@ -725,7 +725,7 @@ struct WhileOpInterface
     // The result types of a WhileOp are the same as the "after" bbArg types.
     SmallVector<Type> argsTypesAfter = llvm::to_vector(
         llvm::map_range(whileOp.getAfterArguments(), [&](BlockArgument bbArg) {
-          return getBufferType(bbArg, options).cast<Type>();
+          return bufferization::getBufferType(bbArg, options).cast<Type>();
         }));
 
     // Construct a new scf.while op with memref instead of tensor values.
@@ -1107,7 +1107,7 @@ struct ParallelInsertSliceOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &b,
                           const BufferizationOptions &options) const {
     // Will be bufferized as part of ForeachThreadOp.
-    return failure();
+    return success();
   }
 
   // TODO: This is copied from TensorInterfaceImpl.cpp. Find a way to share
