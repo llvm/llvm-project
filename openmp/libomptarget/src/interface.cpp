@@ -278,8 +278,8 @@ EXTERN int __tgt_target_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                                int64_t *ArgSizes, int64_t *ArgTypes,
                                map_var_info_t *ArgNames, void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
-  __tgt_kernel_arguments KernelArgs{1,        ArgNum,   ArgsBase, Args,
-                                    ArgSizes, ArgTypes, ArgNames, ArgMappers};
+  __tgt_kernel_arguments KernelArgs{
+      1, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames, ArgMappers, -1};
   return __tgt_target_kernel(Loc, DeviceId, -1, 0, HostPtr, &KernelArgs);
 }
 
@@ -326,8 +326,8 @@ EXTERN int __tgt_target_teams_mapper(ident_t *Loc, int64_t DeviceId,
                                      void **ArgMappers, int32_t TeamNum,
                                      int32_t ThreadLimit) {
   TIMESCOPE_WITH_IDENT(Loc);
-  __tgt_kernel_arguments KernelArgs{1,        ArgNum,   ArgsBase, Args,
-                                    ArgSizes, ArgTypes, ArgNames, ArgMappers};
+  __tgt_kernel_arguments KernelArgs{
+      1, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames, ArgMappers, -1};
   return __tgt_target_kernel(Loc, DeviceId, TeamNum, ThreadLimit, HostPtr,
                              &KernelArgs);
 }
@@ -381,7 +381,8 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   AsyncInfoTy AsyncInfo(Device);
   int Rc = target(Loc, Device, HostPtr, Args->NumArgs, Args->ArgBasePtrs,
                   Args->ArgPtrs, Args->ArgSizes, Args->ArgTypes, Args->ArgNames,
-                  Args->ArgMappers, NumTeams, ThreadLimit, IsTeams, AsyncInfo);
+                  Args->ArgMappers, NumTeams, ThreadLimit, Args->Tripcount,
+                  IsTeams, AsyncInfo);
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
