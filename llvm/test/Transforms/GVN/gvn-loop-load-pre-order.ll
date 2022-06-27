@@ -30,9 +30,7 @@ define void @main(i1 %cond) {
 ; CHECK-SCCP:       while.cond.loopexit.loopexit:
 ; CHECK-SCCP-NEXT:    ret void
 ; CHECK-SCCP:       while.body3:
-; CHECK-SCCP-NEXT:    br i1 true, label [[IF_END:%.*]], label [[IF_THEN:%.*]]
-; CHECK-SCCP:       if.then:
-; CHECK-SCCP-NEXT:    br label [[IF_END]]
+; CHECK-SCCP-NEXT:    br label [[IF_END:%.*]]
 ; CHECK-SCCP:       if.end:
 ; CHECK-SCCP-NEXT:    br i1 [[COND:%.*]], label [[WHILE_COND_LOOPEXIT_LOOPEXIT:%.*]], label [[WHILE_BODY3]]
 ;

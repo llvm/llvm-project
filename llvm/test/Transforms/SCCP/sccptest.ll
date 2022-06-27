@@ -35,20 +35,17 @@ define i32 @test2(i32 %i0, i32 %j0) {
 ; CHECK-NEXT:  BB1:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       BB2:
-; CHECK-NEXT:    [[K2:%.*]] = phi i32 [ [[K4:%.*]], [[BB7:%.*]] ], [ 0, [[BB1:%.*]] ]
+; CHECK-NEXT:    [[K2:%.*]] = phi i32 [ [[K3:%.*]], [[BB7:%.*]] ], [ 0, [[BB1:%.*]] ]
 ; CHECK-NEXT:    [[KCOND:%.*]] = icmp slt i32 [[K2]], 100
 ; CHECK-NEXT:    br i1 [[KCOND]], label [[BB3:%.*]], label [[BB4:%.*]]
 ; CHECK:       BB3:
-; CHECK-NEXT:    br i1 true, label [[BB5:%.*]], label [[BB6:%.*]]
+; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       BB4:
 ; CHECK-NEXT:    ret i32 1
 ; CHECK:       BB5:
-; CHECK-NEXT:    [[K3:%.*]] = add i32 [[K2]], 1
-; CHECK-NEXT:    br label [[BB7]]
-; CHECK:       BB6:
+; CHECK-NEXT:    [[K3]] = add i32 [[K2]], 1
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       BB7:
-; CHECK-NEXT:    [[K4]] = phi i32 [ [[K3]], [[BB5]] ], [ undef, [[BB6]] ]
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 BB1:

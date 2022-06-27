@@ -6,9 +6,7 @@
 
 define i32 @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    br i1 undef, label [[T:%.*]], label [[T]]
-; CHECK:       T:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    unreachable
 ;
   br i1 undef, label %T, label %T
 T:

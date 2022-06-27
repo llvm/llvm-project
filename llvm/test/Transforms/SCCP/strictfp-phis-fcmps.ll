@@ -223,8 +223,6 @@ define i1 @float.4_unreachable.defaultenv(float %f, i1 %cmp) #0 {
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    br label [[END]]
-; CHECK:       dead:
-; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float 1.000000e+00, float 1.000000e+00, metadata !"une", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -250,8 +248,6 @@ define i1 @float.4_unreachable.maytrap(float %f, i1 %cmp) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       dead:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float 1.000000e+00, float 1.000000e+00, metadata !"une", metadata !"fpexcept.maytrap") #[[ATTR0]]
@@ -279,8 +275,6 @@ define i1 @float.4_unreachable.strict(float %f, i1 %cmp) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       dead:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float 1.000000e+00, float 1.000000e+00, metadata !"une", metadata !"fpexcept.strict") #[[ATTR0]]
