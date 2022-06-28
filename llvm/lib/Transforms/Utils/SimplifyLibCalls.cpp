@@ -945,6 +945,12 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   if (!getConstantStringInfo(SrcStr, Str, 0, /*TrimAtNul=*/false))
     return nullptr;
 
+  if (Str.size() == 0)
+    // If the array is empty fold memrchr(A, C, N) to null for any value
+    // of C and N on the basis that the only valid value of N is zero
+    // (otherwise the call is undefined).
+    return NullPtr;
+
   uint64_t EndOff = UINT64_MAX;
   if (LenC) {
     EndOff = LenC->getZExtValue();
@@ -1045,6 +1051,12 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
         B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos), "memchr.ptr");
     return B.CreateSelect(Cmp, NullPtr, SrcPlus);
   }
+
+  if (Str.size() == 0)
+    // If the array is empty fold memchr(A, C, N) to null for any value
+    // of C and N on the basis that the only valid value of N is zero
+    // (otherwise the call is undefined).
+    return NullPtr;
 
   if (LenC)
     Str = substr(Str, LenC->getZExtValue());
