@@ -671,7 +671,7 @@ DenseElementsAttr::ComplexIntElementIterator::operator*() const {
 
 /// Custom storage to ensure proper memory alignment for the allocation of
 /// DenseArray of any element type.
-struct ::mlir::detail::DenseArrayBaseAttrStorage : public AttributeStorage {
+struct mlir::detail::DenseArrayBaseAttrStorage : public AttributeStorage {
   using KeyTy = std::tuple<ShapedType, DenseArrayBaseAttr::EltType,
                            ::llvm::ArrayRef<char>>;
   DenseArrayBaseAttrStorage(ShapedType type,
