@@ -251,25 +251,13 @@ multiclass sme_mem_ld_ss_patterns<Instruction Inst, SDPatternOperator Load,
                                   Operand tile_ty, Operand offset_ty,
                                   ComplexPattern addr,
                                   ComplexPattern tileslice> {
-  // base
-  def : Pat<(Load PPR3bAny:$pg, GPR64sp:$base, tile_ty:$tile,
-                  MatrixIndexGPR32Op12_15:$idx),
-            (Inst tile_ty:$tile, $idx, 0, $pg, $base, XZR)>;
-  // reg + reg
-  let AddedComplexity = 1 in {
-    def : Pat<(Load PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
-                    tile_ty:$tile, MatrixIndexGPR32Op12_15:$idx),
-              (Inst tile_ty:$tile, $idx, 0, $pg, $base, $offset)>;
-  }
-
   // base, tileslice
-  let AddedComplexity = 1 in {
-    def : Pat<(Load PPR3bAny:$pg, GPR64sp:$base, tile_ty:$tile,
-                    (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
-              (Inst tile_ty:$tile, $idx, $imm, $pg, $base, XZR)>;
-  }
+  def : Pat<(Load PPR3bAny:$pg, GPR64sp:$base, tile_ty:$tile,
+                  (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
+            (Inst tile_ty:$tile, $idx, $imm, $pg, $base, XZR)>;
+
   // reg + reg, tileslice
-  let AddedComplexity = 2 in {
+  let AddedComplexity = 1 in {
     def : Pat<(Load PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
                     tile_ty:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$idx,
                                               offset_ty:$imm))),
@@ -410,24 +398,13 @@ multiclass sme_mem_st_ss_patterns<Instruction Inst, SDPatternOperator Store,
                                   ComplexPattern imm2tile,
                                   ComplexPattern addr,
                                   ComplexPattern tileslice> {
-  // base
-  def : Pat<(Store PPR3bAny:$pg, GPR64sp:$base, (imm2tile untyped:$tile),
-                   MatrixIndexGPR32Op12_15:$idx),
-            (Inst $tile, $idx, 0, $pg, $base, XZR)>;
-  // reg + reg
-  let AddedComplexity = 1 in {
-    def : Pat<(Store PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
-                     (imm2tile untyped:$tile), MatrixIndexGPR32Op12_15:$idx),
-              (Inst $tile, $idx, 0, $pg, $base, $offset)>;
-  }
   // base, tileslice
-  let AddedComplexity = 1 in {
-    def : Pat<(Store PPR3bAny:$pg, GPR64sp:$base, (imm2tile untyped:$tile),
-                     (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
-              (Inst $tile, $idx, $imm, $pg, $base, XZR)>;
-  }
+  def : Pat<(Store PPR3bAny:$pg, GPR64sp:$base, (imm2tile untyped:$tile),
+                   (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
+            (Inst $tile, $idx, $imm, $pg, $base, XZR)>;
+
   // reg + reg, tileslice
-  let AddedComplexity = 2 in {
+  let AddedComplexity = 1 in {
     def : Pat<(Store PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
                      (imm2tile untyped:$tile),
                      (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
