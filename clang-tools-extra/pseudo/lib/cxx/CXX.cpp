@@ -19,7 +19,7 @@ static const char *CXXBNF =
 
 const Grammar &getGrammar() {
   static std::vector<std::string> Diags;
-  static Grammar *G = Grammar::parseBNF(CXXBNF, Diags).release();
+  static Grammar *G = new Grammar(Grammar::parseBNF(CXXBNF, Diags));
   assert(Diags.empty());
   return *G;
 }

@@ -24,16 +24,16 @@ using Action = LRTable::Action;
 
 TEST(LRTable, Builder) {
   std::vector<std::string> GrammarDiags;
-  auto G = Grammar::parseBNF(R"bnf(
+  Grammar G = Grammar::parseBNF(R"bnf(
     _ := expr            # rule 0
     expr := term         # rule 1
     expr := expr + term  # rule 2
     term := IDENTIFIER   # rule 3
   )bnf",
-                             GrammarDiags);
+                                GrammarDiags);
   EXPECT_THAT(GrammarDiags, testing::IsEmpty());
 
-  SymbolID Term = *G->findNonterminal("term");
+  SymbolID Term = *G.findNonterminal("term");
   SymbolID Eof = tokenSymbol(tok::eof);
   SymbolID Identifier = tokenSymbol(tok::identifier);
   SymbolID Plus = tokenSymbol(tok::plus);
@@ -53,7 +53,7 @@ TEST(LRTable, Builder) {
       {/*State=*/1, /*Rule=*/2},
       {/*State=*/2, /*Rule=*/1},
   };
-  LRTable T = LRTable::buildForTests(*G, Entries, ReduceEntries);
+  LRTable T = LRTable::buildForTests(G, Entries, ReduceEntries);
   EXPECT_EQ(T.getShiftState(0, Eof), llvm::None);
   EXPECT_THAT(T.getShiftState(0, Identifier), ValueIs(0));
   EXPECT_THAT(T.getReduceRules(0), ElementsAre(0));

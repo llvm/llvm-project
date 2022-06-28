@@ -28,7 +28,7 @@ public:
   GrammarBuilder(std::vector<std::string> &Diagnostics)
       : Diagnostics(Diagnostics) {}
 
-  std::unique_ptr<Grammar> build(llvm::StringRef BNF) {
+  Grammar build(llvm::StringRef BNF) {
     auto Specs = eliminateOptional(parse(BNF));
 
     assert(llvm::all_of(Specs,
@@ -122,8 +122,8 @@ public:
         ++End;
       T->Nonterminals[SID].RuleRange = {Start, End};
     }
-    auto G = std::make_unique<Grammar>(std::move(T));
-    diagnoseGrammar(*G);
+    Grammar G(std::move(T));
+    diagnoseGrammar(G);
     return G;
   }
 
@@ -341,8 +341,8 @@ private:
 };
 } // namespace
 
-std::unique_ptr<Grammar>
-Grammar::parseBNF(llvm::StringRef BNF, std::vector<std::string> &Diagnostics) {
+Grammar Grammar::parseBNF(llvm::StringRef BNF,
+                          std::vector<std::string> &Diagnostics) {
   Diagnostics.clear();
   return GrammarBuilder(Diagnostics).build(BNF);
 }

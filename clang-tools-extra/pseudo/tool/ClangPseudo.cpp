@@ -105,12 +105,12 @@ int main(int argc, char *argv[]) {
     llvm::outs() << llvm::formatv("grammar file {0} is parsed successfully\n",
                                   Grammar);
     if (PrintGrammar)
-      llvm::outs() << G->dump();
+      llvm::outs() << G.dump();
     if (PrintGraph)
-      llvm::outs() << clang::pseudo::LRGraph::buildLR0(*G).dumpForTests(*G);
-    auto LRTable = clang::pseudo::LRTable::buildSLR(*G);
+      llvm::outs() << clang::pseudo::LRGraph::buildLR0(G).dumpForTests(G);
+    auto LRTable = clang::pseudo::LRTable::buildSLR(G);
     if (PrintTable)
-      llvm::outs() << LRTable.dumpForTests(*G);
+      llvm::outs() << LRTable.dumpForTests(G);
     if (PrintStatistics)
       llvm::outs() << LRTable.dumpStatistics();
 
@@ -118,17 +118,17 @@ int main(int argc, char *argv[]) {
       clang::pseudo::ForestArena Arena;
       clang::pseudo::GSS GSS;
       llvm::Optional<clang::pseudo::SymbolID> StartSymID =
-          G->findNonterminal(StartSymbol);
+          G.findNonterminal(StartSymbol);
       if (!StartSymID) {
         llvm::errs() << llvm::formatv(
             "The start symbol {0} doesn't exit in the grammar!\n", Grammar);
         return 2;
       }
       auto &Root = glrParse(*ParseableStream,
-                            clang::pseudo::ParseParams{*G, LRTable, Arena, GSS},
+                            clang::pseudo::ParseParams{G, LRTable, Arena, GSS},
                             *StartSymID);
       if (PrintForest)
-        llvm::outs() << Root.dumpRecursive(*G, /*Abbreviated=*/true);
+        llvm::outs() << Root.dumpRecursive(G, /*Abbreviated=*/true);
 
       if (PrintStatistics) {
         llvm::outs() << "Forest bytes: " << Arena.bytes()

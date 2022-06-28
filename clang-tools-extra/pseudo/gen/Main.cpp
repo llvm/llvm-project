@@ -79,9 +79,9 @@ int main(int argc, char *argv[]) {
 
   switch (Emit) {
   case EmitSymbolList:
-    for (clang::pseudo::SymbolID ID = 0; ID < G->table().Nonterminals.size();
+    for (clang::pseudo::SymbolID ID = 0; ID < G.table().Nonterminals.size();
          ++ID) {
-      std::string Name = G->symbolName(ID).str();
+      std::string Name = G.symbolName(ID).str();
       // translation-unit -> translation_unit
       std::replace(Name.begin(), Name.end(), '-', '_');
       Out.os() << llvm::formatv("NONTERMINAL({0}, {1})\n", Name, ID);
