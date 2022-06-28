@@ -23,12 +23,10 @@
 #     grouping. Source groupings form a DAG.
 #   SOURCES: List of specific source files relative to ROOT_DIR to include.
 #   SOURCES_GLOB: List of glob patterns relative to ROOT_DIR to include.
-#   DEST_PREFIX: Destination prefix to prepend to files in the python
-#     package directory namespace.
 function(declare_mlir_python_sources name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_DIR;ADD_TO_PARENT;DEST_PREFIX"
+    "ROOT_DIR;ADD_TO_PARENT"
     "SOURCES;SOURCES_GLOB"
     ${ARGN})
 
@@ -52,31 +50,39 @@ function(declare_mlir_python_sources name)
   # We create a custom target to carry properties and dependencies for
   # generated sources.
   add_library(${name} INTERFACE)
-  set(_file_depends "${ARG_SOURCES}")
-  list(TRANSFORM _file_depends PREPEND "${ARG_ROOT_DIR}/")
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    # Note that ROOT_DIR and FILE_DEPENDS are not exported because they are
-    # only relevant to in-tree uses.
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_DEST_PREFIX;mlir_python_ROOT_DIR;mlir_python_SOURCES;mlir_python_DEPENDS"
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_DEPENDS"
     mlir_python_SOURCES_TYPE pure
-    mlir_python_ROOT_DIR "${ARG_ROOT_DIR}"
-    mlir_python_DEST_PREFIX "${ARG_DEST_PREFIX}"
-    mlir_python_SOURCES "${ARG_SOURCES}"
-    mlir_python_FILE_DEPENDS "${_file_depends}"
     mlir_python_DEPENDS ""
   )
-  # Note that an "include" directory has no meaning to such faux targets,
-  # but it is a CMake supported way to specify a directory search list in a
-  # way that works both in-tree and out. It has some super powers which are
-  # not possible to emulate with custom properties (because of the prohibition
-  # on using generator expressions in exported custom properties and the
-  # special dispensation for $<INSTALL_PREFIX>).
+
+  # Use the interface include directories and sources on the target to carry the
+  # properties we would like to export. These support generator expressions and
+  # allow us to properly specify paths in both the local build and install scenarios.
+  # The one caveat here is that because we don't directly build against the interface
+  # library, we need to specify the INCLUDE_DIRECTORIES and SOURCES properties as well
+  # via private properties because the evaluation would happen at configuration time
+  # instead of build time.
+  # Eventually this could be done using a FILE_SET simplifying the logic below.
+  # FILE_SET is available in cmake 3.23+, so it is not an option at the moment.
   target_include_directories(${name} INTERFACE
     "$<BUILD_INTERFACE:${ARG_ROOT_DIR}>"
     "$<INSTALL_INTERFACE:${_install_destination}>"
   )
+  set_property(TARGET ${name} PROPERTY INCLUDE_DIRECTORIES ${ARG_ROOT_DIR})
+
+  if(ARG_SOURCES)
+    list(TRANSFORM ARG_SOURCES PREPEND "${ARG_ROOT_DIR}/" OUTPUT_VARIABLE _build_sources)
+    list(TRANSFORM ARG_SOURCES PREPEND "${_install_destination}/" OUTPUT_VARIABLE _install_sources)
+    target_sources(${name}
+      INTERFACE
+        "$<INSTALL_INTERFACE:${_install_sources}>"
+        "$<BUILD_INTERFACE:${_build_sources}>"
+      PRIVATE ${_build_sources}
+    )
+  endif()
 
   # Add to parent.
   if(ARG_ADD_TO_PARENT)
@@ -124,28 +130,23 @@ function(declare_mlir_python_extension name)
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    # Note that ROOT_DIR and FILE_DEPENDS are not exported because they are
-    # only relevant to in-tree uses.
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_ROOT_DIR;mlir_python_EXTENSION_MODULE_NAME;mlir_python_CPP_SOURCES;mlir_python_PRIVATE_LINK_LIBS;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS"
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS"
     mlir_python_SOURCES_TYPE extension
-    mlir_python_ROOT_DIR "${ARG_ROOT_DIR}"
     mlir_python_EXTENSION_MODULE_NAME "${ARG_MODULE_NAME}"
-    mlir_python_CPP_SOURCES "${ARG_SOURCES}"
-    mlir_python_PRIVATE_LINK_LIBS "${ARG_PRIVATE_LINK_LIBS}"
     mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
-    mlir_python_FILE_DEPENDS ""
     mlir_python_DEPENDS ""
   )
-  # Note that an "include" directory has no meaning to such faux targets,
-  # but it is a CMake supported way to specify an install-prefix relative
-  # directory. It has some super powers which are not possible to emulate
-  # with custom properties (because of the prohibition on using generator
-  # expressions in exported custom properties and the special dispensation
-  # for $<INSTALL_PREFIX> and $<INSTALL_INTERFACE>). On imported targets,
-  # this is used as a single value, not as a list, so it must only have one
-  # item in it.
-  target_include_directories(${name} INTERFACE
-    "$<INSTALL_INTERFACE:${_install_destination}>"
+
+  # Set the interface source and link_libs properties of the target
+  # These properties support generator expressions and are automatically exported
+  list(TRANSFORM ARG_SOURCES PREPEND "${ARG_ROOT_DIR}/" OUTPUT_VARIABLE _build_sources)
+  list(TRANSFORM ARG_SOURCES PREPEND "${_install_destination}/" OUTPUT_VARIABLE _install_sources)
+  target_sources(${name} INTERFACE
+    "$<BUILD_INTERFACE:${_build_sources}>"
+    "$<INSTALL_INTERFACE:${_install_sources}>"
+  )
+  target_link_libraries(${name} INTERFACE
+    ${ARG_PRIVATE_LINK_LIBS}
   )
 
   # Add to parent.
@@ -157,7 +158,7 @@ function(declare_mlir_python_extension name)
   set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
   if(NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     _mlir_python_install_sources(
-      ${name} "${ARG_ROOT_DIR}" "src/python/${name}"
+      ${name} "${ARG_ROOT_DIR}" "${_install_destination}"
       ${ARG_SOURCES}
     )
   endif()
@@ -167,12 +168,12 @@ function(_mlir_python_install_sources name source_root_dir destination)
   foreach(source_relative_path ${ARGN})
     # Transform "a/b/c.py" -> "${install_prefix}/a/b" for installation.
     get_filename_component(
-      dest_relative_path "${source_relative_path}" DIRECTORY
+      dest_relative_dir "${source_relative_path}" DIRECTORY
       BASE_DIR "${source_root_dir}"
     )
     install(
       FILES "${source_root_dir}/${source_relative_path}"
-      DESTINATION "${destination}/${dest_relative_path}"
+      DESTINATION "${destination}/${dest_relative_dir}"
       COMPONENT "${name}"
     )
   endforeach()
@@ -208,67 +209,30 @@ function(add_mlir_python_modules name)
   function(_process_target modules_target sources_target)
     get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
 
-    get_target_property(_python_root_dir ${sources_target} mlir_python_ROOT_DIR)
-    if(NOT _python_root_dir)
-      message(FATAL_ERROR "Target ${sources_target} lacks mlir_python_ROOT_DIR property")
-    endif()
-
     if(_source_type STREQUAL "pure")
       # Pure python sources to link into the tree.
-      get_target_property(_python_sources ${sources_target} mlir_python_SOURCES)
-      get_target_property(_specified_dest_prefix ${sources_target} mlir_python_DEST_PREFIX)
-      foreach(_source_relative_path ${_python_sources})
-        set(_dest_relative_path "${_source_relative_path}")
-        if(_specified_dest_prefix)
-          set(_dest_relative_path "${_specified_dest_prefix}/${_dest_relative_path}")
-        endif()
-        set(_src_path "${_python_root_dir}/${_source_relative_path}")
-        set(_dest_path "${ARG_ROOT_PREFIX}/${_dest_relative_path}")
-
-        get_filename_component(_dest_dir "${_dest_path}" DIRECTORY)
-        get_filename_component(_install_path "${ARG_INSTALL_PREFIX}/${_dest_relative_path}" DIRECTORY)
-
-        file(MAKE_DIRECTORY "${_dest_dir}")
-
-        # On Windows create_symlink requires special permissions. Use copy_if_different instead.
-        if(CMAKE_HOST_WIN32)
-          set(_link_or_copy copy_if_different)
-        else()
-          set(_link_or_copy create_symlink)
-        endif()
-
-        add_custom_command(
-          TARGET ${modules_target} PRE_BUILD
-          COMMENT "Copying python source ${_src_path} -> ${_dest_path}"
-          DEPENDS "${_src_path}"
-          BYPRODUCTS "${_dest_path}"
-          COMMAND "${CMAKE_COMMAND}" -E ${_link_or_copy}
-              "${_src_path}" "${_dest_path}"
-        )
-        install(
-          FILES "${_src_path}"
-          DESTINATION "${_install_path}"
-          COMPONENT ${modules_target}
-        )
-      endforeach()
+      set(_pure_sources_target "${sources_target}.sources")
+      add_mlir_python_sources_target(${_pure_sources_target}
+        INSTALL_COMPONENT ${modules_target}
+        INSTALL_DIR ${ARG_INSTALL_PREFIX}
+        OUTPUT_DIRECTORY ${ARG_ROOT_PREFIX}
+        SOURCES_TARGETS ${sources_target}
+      )
+      add_dependencies(${modules_target} ${_pure_sources_target})
     elseif(_source_type STREQUAL "extension")
       # Native CPP extension.
       get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
-      get_target_property(_cpp_sources ${sources_target} mlir_python_CPP_SOURCES)
-      get_target_property(_private_link_libs ${sources_target} mlir_python_PRIVATE_LINK_LIBS)
       # Transform relative source to based on root dir.
-      list(TRANSFORM _cpp_sources PREPEND "${_python_root_dir}/")
-      set(_extension_target "${name}.extension.${_module_name}.dso")
+      set(_extension_target "${modules_target}.extension.${_module_name}.dso")
       add_mlir_python_extension(${_extension_target} "${_module_name}"
         INSTALL_COMPONENT ${modules_target}
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
-        SOURCES ${_cpp_sources}
         LINK_LIBS PRIVATE
-          ${_private_link_libs}
+          ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
       )
-      add_dependencies(${name} ${_extension_target})
+      add_dependencies(${modules_target} ${_extension_target})
       mlir_python_setup_extension_rpath(${_extension_target})
     else()
       message(SEND_ERROR "Unrecognized source type '${_source_type}' for python source target ${sources_target}")
@@ -276,18 +240,9 @@ function(add_mlir_python_modules name)
     endif()
   endfunction()
 
-  _flatten_mlir_python_targets(_flat_targets ${ARG_DECLARED_SOURCES})
-  # Collect dependencies.
-  set(_depends)
-  foreach(sources_target ${_flat_targets})
-    get_target_property(_local_depends ${sources_target} mlir_python_FILE_DEPENDS)
-    if(_local_depends)
-      list(APPEND _depends ${_local_depends})
-    endif()
-  endforeach()
-
   # Build the modules target.
-  add_custom_target(${name} ALL DEPENDS ${_depends})
+  add_custom_target(${name} ALL)
+  _flatten_mlir_python_targets(_flat_targets ${ARG_DECLARED_SOURCES})
   foreach(sources_target ${_flat_targets})
     _process_target(${name} ${sources_target})
   endforeach()
@@ -333,21 +288,20 @@ function(declare_mlir_dialect_python_bindings)
 
   # Tablegen
   if(ARG_TD_FILE)
-    set(tblgen_target "${ARG_ADD_TO}.${ARG_DIALECT_NAME}.tablegen")
+    set(tblgen_target "${_dialect_target}.tablegen")
     set(td_file "${ARG_ROOT_DIR}/${ARG_TD_FILE}")
     get_filename_component(relative_td_directory "${ARG_TD_FILE}" DIRECTORY)
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${relative_td_directory}")
     set(dialect_filename "${relative_td_directory}/_${ARG_DIALECT_NAME}_ops_gen.py")
     set(LLVM_TARGET_DEFINITIONS ${td_file})
-    mlir_tablegen("${dialect_filename}" -gen-python-op-bindings
-                  -bind-dialect=${ARG_DIALECT_NAME})
+    mlir_tablegen("${dialect_filename}"
+      -gen-python-op-bindings -bind-dialect=${ARG_DIALECT_NAME}
+      DEPENDS ${ARG_DEPENDS}
+    )
     add_public_tablegen_target(${tblgen_target})
-    if(ARG_DEPENDS)
-      add_dependencies(${tblgen_target} ${ARG_DEPENDS})
-    endif()
 
     # Generated.
-    declare_mlir_python_sources("${ARG_ADD_TO_PARENT}.${ARG_DIALECT_NAME}.ops_gen"
+    declare_mlir_python_sources("${_dialect_target}.ops_gen"
       ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
       ADD_TO_PARENT "${_dialect_target}"
       SOURCES "${dialect_filename}"
@@ -471,6 +425,8 @@ endfunction()
 #     library. Typically, this will be the common _mlir_libs directory where
 #     all extensions are emitted.
 #   RELATIVE_INSTALL_ROOT: See mlir_python_setup_extension_rpath().
+#   DECLARED_HEADERS: Source groups from which to discover headers that belong
+#     to the library and should be installed with it.
 #   DECLARED_SOURCES: Source groups from which to discover dependent
 #     EMBED_CAPI_LINK_LIBS.
 #   EMBED_LIBS: Additional libraries to embed (must be built with OBJECTS and
@@ -479,7 +435,7 @@ function(add_mlir_python_common_capi_library name)
   cmake_parse_arguments(ARG
     ""
     "INSTALL_COMPONENT;INSTALL_DESTINATION;OUTPUT_DIRECTORY;RELATIVE_INSTALL_ROOT"
-    "DECLARED_SOURCES;EMBED_LIBS"
+    "DECLARED_HEADERS;DECLARED_SOURCES;EMBED_LIBS"
     ${ARGN})
   # Collect all explicit and transitive embed libs.
   set(_embed_libs ${ARG_EMBED_LIBS})
@@ -499,6 +455,17 @@ function(add_mlir_python_common_capi_library name)
     EMBED_LIBS ${_embed_libs}
   )
 
+  # Process any headers associated with the library
+  _flatten_mlir_python_targets(_flat_header_targets ${ARG_DECLARED_HEADERS})
+  set(_header_sources_target "${name}.sources")
+  add_mlir_python_sources_target(${_header_sources_target}
+    INSTALL_COMPONENT ${ARG_INSTALL_COMPONENT}
+    INSTALL_DIR "${ARG_INSTALL_DESTINATION}/include"
+    OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}/include"
+    SOURCES_TARGETS ${_flat_header_targets}
+  )
+  add_dependencies(${name} ${_header_sources_target})
+
   if(MSVC)
     set_property(TARGET ${name} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()
@@ -517,7 +484,6 @@ function(add_mlir_python_common_capi_library name)
     LIBRARY DESTINATION "${ARG_INSTALL_DESTINATION}"
     RUNTIME DESTINATION "${ARG_INSTALL_DESTINATION}"
   )
-
 endfunction()
 
 function(_flatten_mlir_python_targets output_var)
@@ -537,6 +503,82 @@ function(_flatten_mlir_python_targets output_var)
   set(${output_var} "${_flattened}" PARENT_SCOPE)
 endfunction()
 
+# Function: add_mlir_python_sources_target
+# Adds a target corresponding to an interface target that carries source
+# information. This target is responsible for "building" the sources by
+# placing them in the correct locations in the build and install trees.
+# Arguments:
+#   INSTALL_COMPONENT: Name of the install component. Typically same as the
+#     target name passed to add_mlir_python_modules().
+#   INSTALL_DESTINATION: Prefix into the install tree in which to install the
+#     library.
+#   OUTPUT_DIRECTORY: Full path in the build tree in which to create the
+#     library. Typically, this will be the common _mlir_libs directory where
+#     all extensions are emitted.
+#   SOURCES_TARGETS: List of interface libraries that carry source information.
+function(add_mlir_python_sources_target name)
+  cmake_parse_arguments(ARG
+  ""
+  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY"
+  "SOURCES_TARGETS"
+  ${ARGN})
+
+  if(ARG_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "Unhandled arguments to add_mlir_python_sources_target(${name}, ... : ${ARG_UNPARSED_ARGUMENTS}")
+  endif()
+
+  add_custom_target(${name})
+
+  # On Windows create_symlink requires special permissions. Use copy_if_different instead.
+  if(CMAKE_HOST_WIN32)
+    set(_link_or_copy copy_if_different)
+  else()
+    set(_link_or_copy create_symlink)
+  endif()
+
+  foreach(_sources_target ${ARG_SOURCES_TARGETS})
+    add_dependencies(${name} ${_sources_target})
+
+    get_target_property(_src_paths ${_sources_target} SOURCES)
+    if(NOT _src_paths)
+      get_target_property(_src_paths ${_sources_target} INTERFACE_SOURCES)
+      if(NOT _src_paths)
+        break()
+      endif()
+    endif()
+
+    get_target_property(_root_dir ${_sources_target} INCLUDE_DIRECTORIES)
+    if(NOT _root_dir)
+      get_target_property(_root_dir ${_sources_target} INTERFACE_INCLUDE_DIRECTORIES)
+    endif()
+
+    foreach(_src_path ${_src_paths})
+      file(RELATIVE_PATH _source_relative_path "${_root_dir}" "${_src_path}")
+      set(_dest_path "${ARG_OUTPUT_DIRECTORY}/${_source_relative_path}")
+
+      get_filename_component(_dest_dir "${_dest_path}" DIRECTORY)
+      file(MAKE_DIRECTORY "${_dest_dir}")
+
+      add_custom_command(
+        TARGET ${name} PRE_BUILD
+        COMMENT "Copying python source ${_src_path} -> ${_dest_path}"
+        DEPENDS "${_src_path}"
+        BYPRODUCTS "${_dest_path}"
+        COMMAND "${CMAKE_COMMAND}" -E ${_link_or_copy}
+            "${_src_path}" "${_dest_path}"
+      )
+    endforeach()
+
+    if(ARG_INSTALL_DIR)
+      install(
+        FILES ${_src_paths}
+        DESTINATION "${ARG_INSTALL_DIR}"
+        COMPONENT ${ARG_INSTALL_COMPONENT}
+      )
+    endif()
+  endforeach()
+endfunction()
+
 ################################################################################
 # Build python extension
 ################################################################################
@@ -547,10 +589,7 @@ function(add_mlir_python_extension libname extname)
   "SOURCES;LINK_LIBS"
   ${ARGN})
   if(ARG_UNPARSED_ARGUMENTS)
-    message(FATAL_ERROR " Unhandled arguments to add_mlir_python_extension(${libname}, ... : ${ARG_UNPARSED_ARGUMENTS}")
-  endif()
-  if("${ARG_SOURCES}" STREQUAL "")
-    message(FATAL_ERROR " Missing SOURCES argument to add_mlir_python_extension(${libname}, ...")
+    message(FATAL_ERROR "Unhandled arguments to add_mlir_python_extension(${libname}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
 
   # The actual extension library produces a shared-object or DLL and has
