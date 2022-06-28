@@ -370,7 +370,7 @@ mlir::affineParallelize(AffineForOp forOp,
       llvm::makeArrayRef(upperBoundMap), upperBoundOperands,
       llvm::makeArrayRef(forOp.getStep()));
   // Steal the body of the old affine for op.
-  newPloop.region().takeBody(forOp.region());
+  newPloop.getRegion().takeBody(forOp.getRegion());
   Operation *yieldOp = &newPloop.getBody()->back();
 
   // Handle the initial values of reductions because the parallel loop always
@@ -487,7 +487,7 @@ void mlir::normalizeAffineParallel(AffineParallelOp op) {
   if (op.hasMinMaxBounds())
     return;
 
-  AffineMap lbMap = op.lowerBoundsMap();
+  AffineMap lbMap = op.getLowerBoundsMap();
   SmallVector<int64_t, 8> steps = op.getSteps();
   // No need to do any work if the parallel op is already normalized.
   bool isAlreadyNormalized =

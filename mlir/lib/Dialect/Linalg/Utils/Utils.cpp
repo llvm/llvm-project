@@ -369,7 +369,7 @@ tensor::ExtractSliceOp makeComposedExtractSliceOp(
     foldedOffsets[en.index()] =
         makeComposedAffineApply(b, loc, dim1 + dim2, offsetValues).getResult();
   }
-  return b.create<tensor::ExtractSliceOp>(loc, producerOp.source(),
+  return b.create<tensor::ExtractSliceOp>(loc, producerOp.getSource(),
                                           foldedOffsets, sizes, strides);
 }
 
@@ -381,7 +381,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Search the `source` use-def chain for padded LinalgOps.
-  Value current = sliceOp.source();
+  Value current = sliceOp.getSource();
   while (current) {
     auto linalgOp = current.getDefiningOp<LinalgOp>();
     if (!linalgOp)
@@ -397,7 +397,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the padded result type does not match.
-  if (sliceOp.source().getType() != type)
+  if (sliceOp.getSource().getType() != type)
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the LinalgOps are not high padded.
@@ -408,7 +408,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
 
   // Exit if `padOpSliceOp`, which defines the slice used by
   // `padOp`, is rank-reducing.
-  auto padOpSliceOp = padOp.source().getDefiningOp<tensor::ExtractSliceOp>();
+  auto padOpSliceOp = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
   if (!padOpSliceOp ||
       sliceOp.getMixedSizes().size() != padOpSliceOp.getMixedSizes().size())
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
@@ -430,7 +430,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Return the padded result if the padding values and sizes match.
-  return sliceOp.source();
+  return sliceOp.getSource();
 }
 
 GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,

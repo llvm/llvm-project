@@ -37,10 +37,10 @@ void QuantizationDialect::initialize() {
 OpFoldResult StorageCastOp::fold(ArrayRef<Attribute> operands) {
   // Matches x -> [scast -> scast] -> y, replacing the second scast with the
   // value of x if the casts invert each other.
-  auto srcScastOp = arg().getDefiningOp<StorageCastOp>();
-  if (!srcScastOp || srcScastOp.arg().getType() != getType())
+  auto srcScastOp = getArg().getDefiningOp<StorageCastOp>();
+  if (!srcScastOp || srcScastOp.getArg().getType() != getType())
     return OpFoldResult();
-  return srcScastOp.arg();
+  return srcScastOp.getArg();
 }
 
 /// The quantization specification should match the expressed type.
@@ -67,13 +67,13 @@ static bool isValidQuantizationSpec(Attribute quantSpec, Type expressed) {
 
 LogicalResult QuantizeRegionOp::verify() {
   // There are specifications for both inputs and outputs.
-  if (getNumOperands() != input_specs().size() ||
-      getNumResults() != output_specs().size())
+  if (getNumOperands() != getInputSpecs().size() ||
+      getNumResults() != getOutputSpecs().size())
     return emitOpError(
         "has unmatched operands/results number and spec attributes number");
 
   // Verify that quantization specifications are valid.
-  for (auto input : llvm::zip(getOperandTypes(), input_specs())) {
+  for (auto input : llvm::zip(getOperandTypes(), getInputSpecs())) {
     Type inputType = std::get<0>(input);
     Attribute inputSpec = std::get<1>(input);
     if (!isValidQuantizationSpec(inputSpec, inputType)) {
@@ -82,7 +82,7 @@ LogicalResult QuantizeRegionOp::verify() {
     }
   }
 
-  for (auto result : llvm::zip(getResultTypes(), output_specs())) {
+  for (auto result : llvm::zip(getResultTypes(), getOutputSpecs())) {
     Type outputType = std::get<0>(result);
     Attribute outputSpec = std::get<1>(result);
     if (!isValidQuantizationSpec(outputSpec, outputType)) {
@@ -94,13 +94,13 @@ LogicalResult QuantizeRegionOp::verify() {
 }
 
 LogicalResult StatisticsOp::verify() {
-  auto tensorArg = arg().getType().dyn_cast<TensorType>();
+  auto tensorArg = getArg().getType().dyn_cast<TensorType>();
   if (!tensorArg)
     return emitOpError("arg needs to be tensor type.");
 
   // Verify layerStats attribute.
   {
-    auto layerStatsType = layerStats().getType();
+    auto layerStatsType = getLayerStats().getType();
     if (!layerStatsType.getElementType().isa<FloatType>()) {
       return emitOpError("layerStats must have a floating point element type");
     }
@@ -109,16 +109,16 @@ LogicalResult StatisticsOp::verify() {
     }
   }
   // Verify axisStats (optional) attribute.
-  if (axisStats()) {
-    if (!axis())
+  if (getAxisStats()) {
+    if (!getAxis())
       return emitOpError("axis must be specified for axisStats");
 
     auto shape = tensorArg.getShape();
     auto argSliceSize =
-        std::accumulate(std::next(shape.begin(), *axis()), shape.end(), 1,
+        std::accumulate(std::next(shape.begin(), *getAxis()), shape.end(), 1,
                         std::multiplies<int64_t>());
 
-    auto axisStatsType = axisStats()->getType();
+    auto axisStatsType = getAxisStats()->getType();
     if (!axisStatsType.getElementType().isa<FloatType>()) {
       return emitOpError("axisStats must have a floating point element type");
     }

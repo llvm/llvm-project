@@ -209,8 +209,8 @@ static LogicalResult isMatchingWidth(Value result, unsigned width) {
 }
 
 LogicalResult ConvertOp::verify() {
-  if (auto tp1 = source().getType().dyn_cast<RankedTensorType>()) {
-    if (auto tp2 = dest().getType().dyn_cast<RankedTensorType>()) {
+  if (auto tp1 = getSource().getType().dyn_cast<RankedTensorType>()) {
+    if (auto tp2 = getDest().getType().dyn_cast<RankedTensorType>()) {
       if (tp1.getRank() != tp2.getRank())
         return emitError("unexpected conversion mismatch in rank");
       auto shape1 = tp1.getShape();
@@ -228,32 +228,32 @@ LogicalResult ConvertOp::verify() {
 }
 
 OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
-  if (getType() == source().getType())
-    return source();
+  if (getType() == getSource().getType())
+    return getSource();
   return {};
 }
 
 LogicalResult ToPointersOp::verify() {
-  auto e = getSparseTensorEncoding(tensor().getType());
-  if (failed(isInBounds(dim(), tensor())))
+  auto e = getSparseTensorEncoding(getTensor().getType());
+  if (failed(isInBounds(getDim(), getTensor())))
     return emitError("requested pointers dimension out of bounds");
-  if (failed(isMatchingWidth(result(), e.getPointerBitWidth())))
+  if (failed(isMatchingWidth(getResult(), e.getPointerBitWidth())))
     return emitError("unexpected type for pointers");
   return success();
 }
 
 LogicalResult ToIndicesOp::verify() {
-  auto e = getSparseTensorEncoding(tensor().getType());
-  if (failed(isInBounds(dim(), tensor())))
+  auto e = getSparseTensorEncoding(getTensor().getType());
+  if (failed(isInBounds(getDim(), getTensor())))
     return emitError("requested indices dimension out of bounds");
-  if (failed(isMatchingWidth(result(), e.getIndexBitWidth())))
+  if (failed(isMatchingWidth(getResult(), e.getIndexBitWidth())))
     return emitError("unexpected type for indices");
   return success();
 }
 
 LogicalResult ToValuesOp::verify() {
-  RankedTensorType ttp = tensor().getType().cast<RankedTensorType>();
-  MemRefType mtp = result().getType().cast<MemRefType>();
+  RankedTensorType ttp = getTensor().getType().cast<RankedTensorType>();
+  MemRefType mtp = getResult().getType().cast<MemRefType>();
   if (ttp.getElementType() != mtp.getElementType())
     return emitError("unexpected mismatch in element types");
   return success();
@@ -292,12 +292,12 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
 
 LogicalResult BinaryOp::verify() {
   NamedAttrList attrs = (*this)->getAttrs();
-  Type leftType = x().getType();
-  Type rightType = y().getType();
-  Type outputType = output().getType();
-  Region &overlap = overlapRegion();
-  Region &left = leftRegion();
-  Region &right = rightRegion();
+  Type leftType = getX().getType();
+  Type rightType = getY().getType();
+  Type outputType = getOutput().getType();
+  Region &overlap = getOverlapRegion();
+  Region &left = getLeftRegion();
+  Region &right = getRightRegion();
 
   // Check correct number of block arguments and return type for each
   // non-empty region.
@@ -313,7 +313,7 @@ LogicalResult BinaryOp::verify() {
         verifyNumBlockArgs(this, left, "left", TypeRange{leftType}, outputType);
     if (failed(regionResult))
       return regionResult;
-  } else if (left_identity()) {
+  } else if (getLeftIdentity()) {
     if (leftType != outputType)
       return emitError("left=identity requires first argument to have the same "
                        "type as the output");
@@ -323,7 +323,7 @@ LogicalResult BinaryOp::verify() {
                                       TypeRange{rightType}, outputType);
     if (failed(regionResult))
       return regionResult;
-  } else if (right_identity()) {
+  } else if (getRightIdentity()) {
     if (rightType != outputType)
       return emitError("right=identity requires second argument to have the "
                        "same type as the output");
@@ -333,20 +333,20 @@ LogicalResult BinaryOp::verify() {
 }
 
 LogicalResult UnaryOp::verify() {
-  Type inputType = x().getType();
-  Type outputType = output().getType();
+  Type inputType = getX().getType();
+  Type outputType = getOutput().getType();
   LogicalResult regionResult = success();
 
   // Check correct number of block arguments and return type for each
   // non-empty region.
-  Region &present = presentRegion();
+  Region &present = getPresentRegion();
   if (!present.empty()) {
     regionResult = verifyNumBlockArgs(this, present, "present",
                                       TypeRange{inputType}, outputType);
     if (failed(regionResult))
       return regionResult;
   }
-  Region &absent = absentRegion();
+  Region &absent = getAbsentRegion();
   if (!absent.empty()) {
     regionResult =
         verifyNumBlockArgs(this, absent, "absent", TypeRange{}, outputType);

@@ -50,7 +50,7 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
 
     // This pattern could work for any Linalg op. For now restrict it to generic
     // ops.
-    Value source = padOp.source();
+    Value source = padOp.getSource();
     auto linalgOp = source.getDefiningOp<linalg::GenericOp>();
     if (!linalgOp) {
       return rewriter.notifyMatchFailure(
