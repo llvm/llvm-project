@@ -295,6 +295,39 @@ define void @str_with_off_16mulvl(ptr %ptr) {
   ret void;
 }
 
+; Ensure that the tile offset is sunk, given that this is likely to be an 'add'
+; that's decomposed into a base + offset in ISel.
+define void @test_sink_tile0_offset_operand(<vscale x 16 x i1> %pg, ptr %src, i32 %base, i32 %N) {
+; CHECK-LABEL: test_sink_tile0_offset_operand:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w12, w1
+; CHECK-NEXT:  .LBB14_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    st1w {za0h.s[w12, 0]}, p0, [x0]
+; CHECK-NEXT:    subs w2, w2, #1
+; CHECK-NEXT:    st1w {za0h.s[w12, 1]}, p0, [x0]
+; CHECK-NEXT:    st1w {za0h.s[w12, 2]}, p0, [x0]
+; CHECK-NEXT:    b.ne .LBB14_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+entry:
+  %add0 = add i32 %base, 1
+  %add1 = add i32 %base, 2
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 16 x i1> %pg, ptr %src, i64 0, i32 %base)
+  tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 16 x i1> %pg, ptr %src, i64 0, i32 %add0)
+  tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 16 x i1> %pg, ptr %src, i64 0, i32 %add1)
+  %inc = add nuw nsw i32 %i, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 declare void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1>, ptr, i64, i32)
 declare void @llvm.aarch64.sme.st1h.horiz(<vscale x 16 x i1>, ptr, i64, i32)
 declare void @llvm.aarch64.sme.st1w.horiz(<vscale x 16 x i1>, ptr, i64, i32)
