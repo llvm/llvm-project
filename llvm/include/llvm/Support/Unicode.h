@@ -34,12 +34,18 @@ enum ColumnWidthErrors {
 /// terminal, so we define the semantic that should be suitable for generic case
 /// of a terminal capable to output Unicode characters.
 ///
-/// Printable codepoints are those in the categories L, M, N, P, S and Zs
+/// All characters from the Unicode code point range are considered printable
+/// except for:
+///   * C0 and C1 control character ranges;
+///   * default ignorable code points as per 5.21 of
+///     http://www.unicode.org/versions/Unicode6.2.0/UnicodeStandard-6.2.pdf
+///     except for U+00AD SOFT HYPHEN, as it's actually displayed on most
+///     terminals;
+///   * format characters (category = Cf);
+///   * surrogates (category = Cs);
+///   * unassigned characters (category = Cn).
 /// \return true if the character is considered printable.
 bool isPrintable(int UCS);
-
-// Formatting codepoints are codepoints in the Cf category.
-bool isFormatting(int UCS);
 
 /// Gets the number of positions the UTF8-encoded \p Text is likely to occupy
 /// when output on a terminal ("character width"). This depends on the
