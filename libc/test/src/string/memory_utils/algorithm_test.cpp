@@ -1,5 +1,5 @@
-
 #define LLVM_LIBC_USE_BUILTIN_MEMCPY_INLINE 0
+#define LLVM_LIBC_USE_BUILTIN_MEMSET_INLINE 0
 
 #include "utils/UnitTest/Test.h"
 #include <src/__support/CPP/Array.h>
@@ -168,6 +168,7 @@ LdU<8> b[8]
 StU<8> a[8]
 )"));
 }
+
 ///////////////////////////////////////////////////////////////////////////////
 // Move
 
