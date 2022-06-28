@@ -136,6 +136,17 @@ static SmallVector<int64_t, 8> getIneqCoeffsFromIdx(const IntegerRelation &rel,
   return getNegatedCoeffs(eqCoeffs);
 }
 
+PresburgerRelation PresburgerRelation::computeReprWithOnlyDivLocals() const {
+  if (hasOnlyDivLocals())
+    return *this;
+
+  // The result is just the union of the reprs of the disjuncts.
+  PresburgerRelation result(getSpace());
+  for (const IntegerRelation &disjunct : disjuncts)
+    result.unionInPlace(disjunct.computeReprWithOnlyDivLocals());
+  return result;
+}
+
 /// Return the set difference b \ s.
 ///
 /// In the following, U denotes union, /\ denotes intersection, \ denotes set
@@ -173,6 +184,9 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
   assert(b.getSpace().isCompatible(s.getSpace()) && "Spaces should match");
   if (b.isEmptyByGCDTest())
     return PresburgerRelation::getEmpty(b.getSpaceWithoutLocals());
+
+  if (!s.hasOnlyDivLocals())
+    return getSetDifference(b, s.computeReprWithOnlyDivLocals());
 
   // Remove duplicate divs up front here to avoid existing
   // divs disappearing in the call to mergeLocalVars below.

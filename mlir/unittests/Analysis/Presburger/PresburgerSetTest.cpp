@@ -431,6 +431,10 @@ void expectEqual(const PresburgerSet &s, const PresburgerSet &t) {
   EXPECT_TRUE(s.isEqual(t));
 }
 
+void expectEqual(const IntegerPolyhedron &s, const IntegerPolyhedron &t) {
+  EXPECT_TRUE(s.isEqual(t));
+}
+
 void expectEmpty(const PresburgerSet &s) { EXPECT_TRUE(s.isIntegerEmpty()); }
 
 TEST(SetTest, divisions) {
@@ -503,6 +507,45 @@ TEST(SetTest, divisionsDefByEq) {
   PresburgerSet evensDefByIneq{
       parsePoly("(x) : (x - 2 * (x floordiv 2) == 0)")};
   expectEqual(evens, PresburgerSet(evensDefByIneq));
+}
+
+TEST(SetTest, divisionNonDivLocals) {
+  // This is a tetrahedron with vertices at
+  // (1/3, 0, 0), (2/3, 0, 0), (2/3, 0, 1000), and (1000, 1000, 1000).
+  //
+  // The only integer point in this is at (1000, 1000, 1000).
+  // We project this to the xy plane.
+  IntegerPolyhedron tetrahedron =
+      parsePolyAndMakeLocals("(x, y, z) : (y >= 0, z - y >= 0, 3000*x - 2998*y "
+                             "- 1000 - z >= 0, -1500*x + 1499*y + 1000 >= 0)",
+                             /*numLocals=*/1);
+
+  // This is a triangle with vertices at (1/3, 0), (2/3, 0) and (1000, 1000).
+  // The only integer point in this is at (1000, 1000).
+  //
+  // It also happens to be the projection of the above onto the xy plane.
+  IntegerPolyhedron triangle = parsePoly("(x,y) : (y >= 0, "
+                                         "3000 * x - 2999 * y - 1000 >= 0, "
+                                         "-3000 * x + 2998 * y + 2000 >= 0)");
+  EXPECT_TRUE(triangle.containsPoint({1000, 1000}));
+  EXPECT_FALSE(triangle.containsPoint({1001, 1001}));
+  expectEqual(triangle, tetrahedron);
+
+  convertSuffixDimsToLocals(triangle, 1);
+  IntegerPolyhedron line = parsePoly("(x) : (x - 1000 == 0)");
+  expectEqual(line, triangle);
+
+  // Triangle with vertices (0, 0), (5, 0), (15, 5).
+  // Projected on x, it becomes [0, 13] U {15} as it becomes too narrow towards
+  // the apex and so does not have have any integer point at x = 14.
+  // At x = 15, the apex is an integer point.
+  PresburgerSet triangle2{parsePolyAndMakeLocals("(x,y) : (y >= 0, "
+                                                 "x - 3*y >= 0, "
+                                                 "2*y - x + 5 >= 0)",
+                                                 /*numLocals=*/1)};
+  PresburgerSet zeroToThirteen{parsePoly("(x) : (13 - x >= 0, x >= 0)")};
+  PresburgerSet fifteen{parsePoly("(x) : (x - 15 == 0)")};
+  expectEqual(triangle2.subtract(zeroToThirteen), fifteen);
 }
 
 TEST(SetTest, subtractDuplicateDivsRegression) {
@@ -797,7 +840,7 @@ void testComputeReprAtPoints(IntegerPolyhedron poly,
                              unsigned numToProject) {
   poly.convertVarKind(VarKind::SetDim, poly.getNumDimVars() - numToProject,
                       poly.getNumDimVars(), VarKind::Local);
-  PresburgerSet repr = poly.computeReprWithOnlyDivLocals();
+  PresburgerRelation repr = poly.computeReprWithOnlyDivLocals();
   EXPECT_TRUE(repr.hasOnlyDivLocals());
   EXPECT_TRUE(repr.getSpace().isCompatible(poly.getSpace()));
   for (const SmallVector<int64_t, 4> &point : points) {
@@ -810,7 +853,7 @@ void testComputeRepr(IntegerPolyhedron poly, const PresburgerSet &expected,
                      unsigned numToProject) {
   poly.convertVarKind(VarKind::SetDim, poly.getNumDimVars() - numToProject,
                       poly.getNumDimVars(), VarKind::Local);
-  PresburgerSet repr = poly.computeReprWithOnlyDivLocals();
+  PresburgerRelation repr = poly.computeReprWithOnlyDivLocals();
   EXPECT_TRUE(repr.hasOnlyDivLocals());
   EXPECT_TRUE(repr.getSpace().isCompatible(poly.getSpace()));
   EXPECT_TRUE(repr.isEqual(expected));
