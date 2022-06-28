@@ -1326,21 +1326,12 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<int64_t> dividend,
 
   appendVar(VarKind::Local);
 
-  // Add two constraints for this new variable 'q'.
-  SmallVector<int64_t, 8> bound(dividend.size() + 1);
-
-  // dividend - q * divisor >= 0
-  std::copy(dividend.begin(), dividend.begin() + dividend.size() - 1,
-            bound.begin());
-  bound.back() = dividend.back();
-  bound[getNumVars() - 1] = -divisor;
-  addInequality(bound);
-
-  // -dividend +qdivisor * q + divisor - 1 >= 0
-  std::transform(bound.begin(), bound.end(), bound.begin(),
-                 std::negate<int64_t>());
-  bound[bound.size() - 1] += divisor - 1;
-  addInequality(bound);
+  SmallVector<int64_t, 8> dividendCopy(dividend.begin(), dividend.end());
+  dividendCopy.insert(dividendCopy.end() - 1, 0);
+  addInequality(
+      getDivLowerBound(dividendCopy, divisor, dividendCopy.size() - 2));
+  addInequality(
+      getDivUpperBound(dividendCopy, divisor, dividendCopy.size() - 2));
 }
 
 /// Finds an equality that equates the specified variable to a constant.

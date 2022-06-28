@@ -101,6 +101,25 @@ struct MaybeLocalRepr {
   } repr;
 };
 
+/// If `q` is defined to be equal to `expr floordiv d`, this equivalent to
+/// saying that `q` is an integer and `q` is subject to the inequalities
+/// `0 <= expr - d*q <= c - 1` (quotient remainder theorem).
+///
+/// Rearranging, we get the bounds on `q`: d*q <= expr <= d*q + d - 1.
+///
+/// `getDivUpperBound` returns `d*q <= expr`, and
+/// `getDivLowerBound` returns `expr <= d*q + d - 1`.
+///
+/// The parameter `dividend` corresponds to `expr` above, `divisor` to `d`, and
+/// `localVarIdx` to the position of `q` in the coefficient list.
+///
+/// The coefficient of `q` in `dividend` must be zero, as it is not allowed for
+/// local variable to be a floor division of an expression involving itself.
+SmallVector<int64_t, 8> getDivUpperBound(ArrayRef<int64_t> dividend,
+                                         int64_t divisor, unsigned localVarIdx);
+SmallVector<int64_t, 8> getDivLowerBound(ArrayRef<int64_t> dividend,
+                                         int64_t divisor, unsigned localVarIdx);
+
 /// Check if the pos^th variable can be expressed as a floordiv of an affine
 /// function of other variables (where the divisor is a positive constant).
 /// `foundRepr` contains a boolean for each variable indicating if the

@@ -459,11 +459,50 @@ TEST(SetTest, divisions) {
   PresburgerSet setA{parsePoly("(x) : (-x >= 0)")};
   PresburgerSet setB{parsePoly("(x) : (x floordiv 2 - 4 >= 0)")};
   EXPECT_TRUE(setA.subtract(setB).isEqual(setA));
+}
 
-  IntegerPolyhedron evensDefByEquality(PresburgerSpace::getSetSpace(
-      /*numDims=*/1, /*numSymbols=*/0, /*numLocals=*/1));
-  evensDefByEquality.addEquality({1, -2, 0});
-  expectEqual(evens, PresburgerSet(evensDefByEquality));
+void convertSuffixDimsToLocals(IntegerPolyhedron &poly, unsigned numLocals) {
+  poly.convertVarKind(VarKind::SetDim, poly.getNumDimVars() - numLocals,
+                      poly.getNumDimVars(), VarKind::Local);
+}
+
+inline IntegerPolyhedron parsePolyAndMakeLocals(StringRef str,
+                                                unsigned numLocals) {
+  IntegerPolyhedron poly = parsePoly(str);
+  convertSuffixDimsToLocals(poly, numLocals);
+  return poly;
+}
+
+TEST(SetTest, divisionsDefByEq) {
+  // evens = {x : exists q, x = 2q}.
+  PresburgerSet evens{
+      parsePolyAndMakeLocals("(x, y) : (x - 2 * y == 0)", /*numLocals=*/1)};
+
+  //  odds = {x : exists q, x = 2q + 1}.
+  PresburgerSet odds{
+      parsePolyAndMakeLocals("(x, y) : (x - 2 * y - 1 == 0)", /*numLocals=*/1)};
+
+  // multiples3 = {x : exists q, x = 3q}.
+  PresburgerSet multiples3{
+      parsePolyAndMakeLocals("(x, y) : (x - 3 * y == 0)", /*numLocals=*/1)};
+
+  // multiples6 = {x : exists q, x = 6q}.
+  PresburgerSet multiples6{
+      parsePolyAndMakeLocals("(x, y) : (x - 6 * y == 0)", /*numLocals=*/1)};
+
+  // evens /\ odds = empty.
+  expectEmpty(PresburgerSet(evens).intersect(PresburgerSet(odds)));
+  // evens U odds = universe.
+  expectEqual(evens.unionSet(odds),
+              PresburgerSet::getUniverse(PresburgerSpace::getSetSpace((1))));
+  expectEqual(evens.complement(), odds);
+  expectEqual(odds.complement(), evens);
+  // even multiples of 3 = multiples of 6.
+  expectEqual(multiples3.intersect(evens), multiples6);
+
+  PresburgerSet evensDefByIneq{
+      parsePoly("(x) : (x - 2 * (x floordiv 2) == 0)")};
+  expectEqual(evens, PresburgerSet(evensDefByIneq));
 }
 
 TEST(SetTest, subtractDuplicateDivsRegression) {
