@@ -1,6 +1,7 @@
 set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
+  CAS
   CodeGen
   Core
   IPO
@@ -24,9 +25,12 @@ endif()
 
 add_clang_tool(clang
   driver.cpp
+  CacheLauncherMode.cpp
   cc1_main.cpp
   cc1as_main.cpp
   cc1gen_reproducer_main.cpp
+  cc1depscanProtocol.cpp
+  cc1depscan_main.cpp
 
   DEPENDS
   intrinsics_gen
@@ -35,9 +39,11 @@ add_clang_tool(clang
 
 clang_target_link_libraries(clang
   PRIVATE
-  clangBasic
   clangAPINotes
+  clangBasic
+  clangCAS
   clangCodeGen
+  clangDependencyScanning
   clangDriver
   clangFrontend
   clangFrontendTool
@@ -58,7 +64,7 @@ endif()
 add_dependencies(clang clang-resource-headers)
 
 if(NOT CLANG_LINKS_TO_CREATE)
-  set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp)
+  set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp clang-cache)
 endif()
 
 foreach(link ${CLANG_LINKS_TO_CREATE})

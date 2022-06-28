@@ -158,6 +158,7 @@ class DefaultRemark { Severity DefaultSeverity = SEV_Remark; }
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"
 include "DiagnosticAnalysisKinds.td"
+include "DiagnosticCASKinds.td"
 include "DiagnosticCommentKinds.td"
 include "DiagnosticCommonKinds.td"
 include "DiagnosticCrossTUKinds.td"

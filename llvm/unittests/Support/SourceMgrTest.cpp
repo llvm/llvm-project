@@ -8,6 +8,7 @@
 
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
@@ -496,3 +497,50 @@ TEST_F(SourceMgrTest, FixitForTab) {
             Output);
 }
 
+TEST_F(SourceMgrTest, AddIncludedFile) {
+  auto FS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+
+  StringRef Content = "first-line\ninclude-nested\n";
+  StringRef Dir = "//path/to/dir";
+  StringRef Filename = "file";
+  std::string Path = (Dir + "/" + Filename).str();
+  ASSERT_TRUE(FS->addFileNoOwn(Path, 0, MemoryBufferRef(Content, Path)));
+  ASSERT_FALSE(FS->setCurrentWorkingDirectory(Dir));
+
+  StringRef IncludesContent =
+      "content of search-path-file\nwith\nthree lines\n";
+  StringRef Includes = "//path/to/includes";
+  StringRef IncludesFilename = "search-path-file";
+  std::string IncludesPath = (Includes + "/" + IncludesFilename).str();
+  ASSERT_TRUE(FS->addFileNoOwn(IncludesPath, 0,
+                               MemoryBufferRef(IncludesContent, IncludesPath)));
+
+  // Set up SM.
+  SM.setFileSystem(FS);
+  SM.setIncludeDirs({Includes.str()});
+
+  setMainBuffer("include-top\n", "file.in");
+  SMLoc Include1 = getLoc(0);
+  ASSERT_TRUE(Include1.isValid());
+  std::string Included;
+  ASSERT_EQ(2u, SM.AddIncludeFile(Filename.str(), Include1, Included));
+  ASSERT_EQ(Filename, Included);
+
+  SMLoc Include2 = SM.FindLocForLineAndColumn(2u, 2, 1);
+  ASSERT_TRUE(Include2.isValid());
+  ASSERT_EQ(3u, SM.AddIncludeFile(IncludesFilename.str(), Include2, Included));
+  ASSERT_EQ(IncludesPath, Included);
+
+  SMLoc Deepest = SM.FindLocForLineAndColumn(3u, 3, 1);
+  ASSERT_TRUE(Deepest.isValid());
+  SmallString<128> Output;
+  {
+    raw_svector_ostream OS(Output);
+    SM.PrintIncludeStack(Deepest, OS);
+  }
+
+  EXPECT_EQ("Included from file.in:1:\n"
+            "Included from //path/to/dir/file:2:\n"
+            "Included from //path/to/includes/search-path-file:3:\n",
+            Output);
+}

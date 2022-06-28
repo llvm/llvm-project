@@ -885,6 +885,14 @@ void mapped_file_region::dontNeedImpl() {
 #endif
 }
 
+std::error_code mapped_file_region::sync() const {
+  assert(Mapping && "Mapping failed but used anyway!");
+  assert(Mode == readwrite && "sync only valid for readwrite regions!");
+  if (::msync(Mapping, Size, MS_SYNC))
+    return std::error_code(errno, std::generic_category());
+  return std::error_code();
+}
+
 int mapped_file_region::alignment() {
   return Process::getPageSizeEstimate();
 }

@@ -63,7 +63,8 @@ config.substitutions.append(('%PATH%', config.environment['PATH']))
 tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 
 tools = [
-    'apinotes-test', 'c-index-test', 'clang-diff', 'clang-format', 'clang-repl',
+    'apinotes-test', 'c-index-test', 'cache-build-session', 'clang-cache',
+    'clang-diff', 'clang-format', 'clang-repl',
     'clang-tblgen', 'clang-scan-deps', 'opt', 'llvm-ifs', 'yaml2obj', 'clang-linker-wrapper',
     ToolSubst('%clang_extdef_map', command=FindTool(
         'clang-extdef-mapping'), unresolved='ignore'),
@@ -159,6 +160,10 @@ if platform.system() not in ['Windows']:
 if platform.system() not in ['Darwin', 'Fuchsia']:
     config.available_features.add('libgcc')
 
+# Feature for the build directory path is not too long for certain tests.
+if len(config.clang_obj_root) < 50:
+    config.available_features.add('short-build-dir-path')
+
 # Case-insensitive file system
 
 
@@ -251,6 +256,9 @@ if config.enable_shared:
 if config.clang_vendor_uti:
     config.available_features.add('clang-vendor=' + config.clang_vendor_uti)
 
+if config.have_ondisk_cas:
+    config.available_features.add('ondisk_cas')
+
 def exclude_unsupported_files_for_aix(dirname):
     for filename in os.listdir(dirname):
         source_path = os.path.join( dirname, filename)
@@ -271,3 +279,5 @@ if 'aix' in config.target_triple:
                       '/ASTMerge/anonymous-fields', '/ASTMerge/injected-class-name-decl'):
         exclude_unsupported_files_for_aix(config.test_source_root + directory)
 
+if os.path.exists(os.path.join(config.clang_src_dir, 'TeSt')):
+    config.available_features.add('case_insensitive_src_dir')

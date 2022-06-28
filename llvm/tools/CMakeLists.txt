@@ -24,6 +24,7 @@ endif()
 # Add LTO, llvm-ar, llvm-config, and llvm-profdata before clang, ExternalProject
 # requires targets specified in DEPENDS to exist before the call to
 # ExternalProject_Add.
+add_llvm_tool_subdirectory(cache-build-session)
 add_llvm_tool_subdirectory(lto)
 add_llvm_tool_subdirectory(gold)
 add_llvm_tool_subdirectory(llvm-ar)

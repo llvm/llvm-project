@@ -13,6 +13,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_THREADS
+  LLVM_ENABLE_ONDISK_CAS
   LLVM_WITH_Z3
   )
 
@@ -57,7 +58,9 @@ endif ()
 list(APPEND CLANG_TEST_DEPS
   apinotes-test
   c-index-test
+  cache-build-session
   clang
+  clang-cas-test
   clang-resource-headers
   clang-format
   clang-tblgen
@@ -109,6 +112,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-ar
     llvm-as
     llvm-bcanalyzer
+    llvm-cas
     llvm-cat
     llvm-cxxfilt
     llvm-dis

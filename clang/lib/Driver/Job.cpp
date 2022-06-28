@@ -204,6 +204,15 @@ rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
 
 void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
                     CrashReportInfo *CrashInfo) const {
+  // Print the environment to display, if relevant.
+  if (!EnvironmentDisplay.empty()) {
+    OS << " env";
+    for (const char *NameValue : EnvironmentDisplay) {
+      OS << ' ';
+      llvm::sys::printArg(OS, NameValue, /*Quote=*/true);
+    }
+  }
+
   // Always quote the exe.
   OS << ' ';
   llvm::sys::printArg(OS, Executable, /*Quote=*/true);
@@ -322,6 +331,11 @@ void Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
   Environment.reserve(NewEnvironment.size() + 1);
   Environment.assign(NewEnvironment.begin(), NewEnvironment.end());
   Environment.push_back(nullptr);
+}
+
+void Command::setEnvironmentDisplay(llvm::ArrayRef<const char *> Display) {
+  EnvironmentDisplay.reserve(Display.size());
+  EnvironmentDisplay.assign(Display.begin(), Display.end());
 }
 
 void Command::PrintFileNames() const {

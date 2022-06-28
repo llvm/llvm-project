@@ -625,6 +625,13 @@ option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 
+if(UNIX)
+  set(LLVM_ENABLE_ONDISK_CAS_default ON)
+else()
+  set(LLVM_ENABLE_ONDISK_CAS_default OFF)
+endif()
+option(LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ${LLVM_ENABLE_ONDISK_CAS_default})
+
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
 set(LLVM_INSTALL_OCAMLDOC_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/ocaml-html"
@@ -1252,11 +1259,11 @@ if (LLVM_INCLUDE_BENCHMARKS)
   set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Don't install benchmark" FORCE)
   set(BENCHMARK_DOWNLOAD_DEPENDENCIES OFF CACHE BOOL "Don't download dependencies" FORCE)
   set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable Google Test in benchmark" FORCE)
-  set(BENCHMARK_ENABLE_WERROR ${LLVM_ENABLE_WERROR} CACHE BOOL 
+  set(BENCHMARK_ENABLE_WERROR ${LLVM_ENABLE_WERROR} CACHE BOOL
     "Handle -Werror for Google Benchmark based on LLVM_ENABLE_WERROR" FORCE)
   # Since LLVM requires C++11 it is safe to assume that std::regex is available.
   set(HAVE_STD_REGEX ON CACHE BOOL "OK" FORCE)
-  add_subdirectory(${LLVM_THIRD_PARTY_DIR}/benchmark 
+  add_subdirectory(${LLVM_THIRD_PARTY_DIR}/benchmark
     ${CMAKE_CURRENT_BINARY_DIR}/third-party/benchmark)
   add_subdirectory(benchmarks)
 endif()

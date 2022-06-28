@@ -185,6 +185,7 @@ add_llvm_component_library(LLVMSupport
   Optional.cpp
   Parallel.cpp
   PluginLoader.cpp
+  PrefixMapper.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
   Regex.cpp
@@ -222,12 +223,18 @@ add_llvm_component_library(LLVMSupport
   UnicodeCaseFold.cpp
   VersionTuple.cpp
   VirtualFileSystem.cpp
+  VirtualOutputBackend.cpp
+  VirtualOutputBackends.cpp
+  VirtualOutputConfig.cpp
+  VirtualOutputError.cpp
+  VirtualOutputFile.cpp
   WithColor.cpp
   X86TargetParser.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
   raw_os_ostream.cpp
   raw_ostream.cpp
+  raw_ostream_proxy.cpp
   regcomp.c
   regerror.c
   regexec.c

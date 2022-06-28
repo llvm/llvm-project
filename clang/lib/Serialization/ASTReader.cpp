@@ -2398,6 +2398,10 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       Change MTimeChange = {Change::ModTime, StoredTime,
                             File->getModificationTime()};
 
+      // FIXME: Ignore ModificationTime == 0 because that is from CAS.
+      if (File->getModificationTime() == 0)
+        return Change{Change::None};
+
       // In case the modification time changes but not the content,
       // accept the cached file as legit.
       if (ValidateASTInputFilesContent &&

@@ -9,6 +9,8 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
+#include "clang/CAS/CASOptions.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningCASFilesystem.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 
 namespace clang {
@@ -19,15 +21,13 @@ namespace dependencies {
 /// dependencies.
 enum class ScanningMode {
   /// This mode is used to compute the dependencies by running the preprocessor
-  /// over
-  /// the unmodified source files.
+  /// over the source files.
   CanonicalPreprocessing,
 
   /// This mode is used to compute the dependencies by running the preprocessor
-  /// over
-  /// the source files that have been minimized to contents that might affect
-  /// the dependencies.
-  MinimizedSourcePreprocessing
+  /// with special kind of lexing after scanning header and source files to get
+  /// the minimum necessary preprocessor directives for evaluating includes.
+  DependencyDirectivesScan,
 };
 
 /// The format that is output by the dependency scanner.
@@ -40,43 +40,58 @@ enum class ScanningOutputFormat {
   /// This outputs the full module dependency graph suitable for use for
   /// explicitly building modules.
   Full,
+
+  /// This emits the CAS ID of the scanned files.
+  Tree,
+
+  /// This emits the full dependency graph but with CAS tree embedded as file
+  /// dependency.
+  FullTree,
 };
 
 /// The dependency scanning service contains the shared state that is used by
 /// the invidual dependency scanning workers.
 class DependencyScanningService {
 public:
-  DependencyScanningService(ScanningMode Mode, ScanningOutputFormat Format,
-                            bool ReuseFileManager = true,
-                            bool SkipExcludedPPRanges = true,
-                            bool OptimizeArgs = false);
+  DependencyScanningService(
+      ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
+      IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
+      bool ReuseFileManager = true, bool OptimizeArgs = false);
+
+  ~DependencyScanningService();
 
   ScanningMode getMode() const { return Mode; }
 
   ScanningOutputFormat getFormat() const { return Format; }
 
-  bool canReuseFileManager() const { return ReuseFileManager; }
+  const CASOptions &getCASOpts() const { return CASOpts; }
 
-  bool canSkipExcludedPPRanges() const { return SkipExcludedPPRanges; }
+  bool canReuseFileManager() const { return ReuseFileManager; }
 
   bool canOptimizeArgs() const { return OptimizeArgs; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
-    return SharedCache;
+    assert(!SharedFS && "Expected not to have a CASFS");
+    assert(SharedCache && "Expected a shared cache");
+    return *SharedCache;
   }
+
+  llvm::cas::CachingOnDiskFileSystem &getSharedFS() { return *SharedFS; }
+
+  bool useCASScanning() const { return (bool)SharedFS; }
 
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
+  CASOptions CASOpts;
   const bool ReuseFileManager;
-  /// Set to true to use the preprocessor optimization that skips excluded PP
-  /// ranges by bumping the buffer pointer in the lexer instead of lexing the
-  /// tokens in the range until reaching the corresponding directive.
-  const bool SkipExcludedPPRanges;
   /// Whether to optimize the modules' command-line arguments.
   const bool OptimizeArgs;
+  /// Shared CachingOnDiskFileSystem. Set to nullptr to not use CAS dependency
+  /// scanning.
+  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS;
   /// The global file system cache.
-  DependencyScanningFilesystemSharedCache SharedCache;
+  Optional<DependencyScanningFilesystemSharedCache> SharedCache;
 };
 
 } // end namespace dependencies
