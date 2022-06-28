@@ -73,7 +73,7 @@ constexpr bool test() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   test();
 
 // gcc cannot have mutable member in constant expression
