@@ -1401,17 +1401,6 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
   sys::path::append(FilePath, Style, IncludeDir, FileName);
   Result = std::string(FilePath.str());
 
-  std::string FullPath = Result;
-  std::string Prefix = CompDir.str();
-  if (Prefix.back() != '/') {
-    Prefix.push_back('/');
-  }
-
-  if (FullPath.length() > Prefix.length() &&
-      FullPath.substr(0, Prefix.length()) == Prefix) {
-    Result = FullPath.substr(Prefix.length());
-  }
-
   return true;
 }
 

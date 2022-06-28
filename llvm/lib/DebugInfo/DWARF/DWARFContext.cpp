@@ -699,6 +699,10 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
+StringRef DWARFContext::getCompilationDirectory(uint64_t address) {
+  return StringRef(getCompileUnitForAddress(address)->getCompilationDir());
+}
+
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
                                                 bool IsDWO) {
   parseDWOUnits(LazyParse);

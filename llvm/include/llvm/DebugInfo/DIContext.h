@@ -245,6 +245,10 @@ public:
     return true;
   }
 
+  virtual StringRef getCompilationDirectory(uint64_t address) {
+    return StringRef("");
+  }
+
   virtual DILineInfo getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
