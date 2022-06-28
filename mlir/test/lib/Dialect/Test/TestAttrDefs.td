@@ -175,11 +175,19 @@ def TestAttrWithFormat : Test_Attr<"TestAttrWithFormat"> {
     TestParamOne:$one,
     TestParamTwo:$two,
     "::mlir::IntegerAttr":$three,
-    TestParamFour:$four
+    TestParamFour:$four,
+    // Array of another attribute.
+    ArrayRefParameter<
+      "AttrWithTypeBuilderAttr", // The parameter C++ type.
+      "An example of an array of another Attribute" // Parameter description.
+      >: $arrayOfAttrWithTypeBuilderAttr
   );
 
   let mnemonic = "attr_with_format";
-  let assemblyFormat = "`<` $one `:` struct($two, $four) `:` $three `>`";
+  let assemblyFormat = [{
+    `<` $one `:` struct($two, $four) `:` $three `,`
+    `[` `` $arrayOfAttrWithTypeBuilderAttr `]` `>`
+  }];
   let genVerifyDecl = 1;
 }
 
