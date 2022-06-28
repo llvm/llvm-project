@@ -165,13 +165,20 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
 
   // Get "copy" buffer.
   Value copyBuffer;
-  if (getCopy())
-    copyBuffer = getBuffer(rewriter, getCopy(), options);
+  if (getCopy()) {
+    FailureOr<Value> maybeCopyBuffer = getBuffer(rewriter, getCopy(), options);
+    if (failed(maybeCopyBuffer))
+      return failure();
+    copyBuffer = *maybeCopyBuffer;
+  }
 
   // Compute memory space of this allocation.
   unsigned memorySpace;
   if (getMemorySpace().hasValue()) {
     memorySpace = *getMemorySpace();
+  } else if (getCopy()) {
+    memorySpace =
+        copyBuffer.getType().cast<BaseMemRefType>().getMemorySpaceAsInt();
   } else if (options.defaultMemorySpace.hasValue()) {
     memorySpace = *options.defaultMemorySpace;
   } else {
@@ -281,13 +288,14 @@ LogicalResult AllocTensorOp::verify() {
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes) {
   build(builder, result, type, dynamicSizes, /*copy=*/Value(),
-        /*memory_space=*/BoolAttr());
+        /*memory_space=*/IntegerAttr());
 }
 
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes,
                           Value copy) {
-  build(builder, result, type, dynamicSizes, copy, /*memory_space=*/BoolAttr());
+  build(builder, result, type, dynamicSizes, copy,
+        /*memory_space=*/IntegerAttr());
 }
 
 namespace {

@@ -39,6 +39,10 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build()
         self.vCont_supports_mode("S")
 
+    def test_vCont_supports_t(self):
+        self.build()
+        self.vCont_supports_mode("t")
+
     @skipIfWindows # No pty support to test O* & I* notification packets.
     @skipIf(triple='^mips')
     def test_single_step_only_steps_one_instruction_with_Hc_vCont_s(self):
