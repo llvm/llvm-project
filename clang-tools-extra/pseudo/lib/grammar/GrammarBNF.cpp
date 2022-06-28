@@ -106,17 +106,6 @@ public:
 
     assert(T->Rules.size() < (1 << RuleBits) &&
            "Too many rules to fit in RuleID bits!");
-    // Wherever RHS contains { foo }, mark foo for brace-recovery.
-    // FIXME: this should be grammar annotations instead.
-    for (auto &Rule : T->Rules) {
-      for (unsigned I = 2; I < Rule.Size; ++I)
-        if (Rule.Sequence[I] == tokenSymbol(tok::r_brace) &&
-            Rule.Sequence[I - 2] == tokenSymbol(tok::l_brace) &&
-            !isToken(Rule.Sequence[I - 1])) {
-          Rule.Recovery = RecoveryStrategy::Braces;
-          Rule.RecoveryIndex = I - 1;
-        }
-    }
     const auto &SymbolOrder = getTopologicalOrder(T.get());
     llvm::stable_sort(
         T->Rules, [&SymbolOrder](const Rule &Left, const Rule &Right) {

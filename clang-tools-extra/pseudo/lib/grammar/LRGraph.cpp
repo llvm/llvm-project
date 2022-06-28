@@ -120,20 +120,6 @@ nextAvailableKernelItems(const State &S, const Grammar &G) {
   return Results;
 }
 
-std::vector<std::pair<RecoveryStrategy, SymbolID>>
-availableRecovery(const State &S, const Grammar &G) {
-  std::vector<std::pair<RecoveryStrategy, SymbolID>> Result;
-  for (const Item &I : S.Items) {
-    const auto &Rule = G.lookupRule(I.rule());
-    if (I.dot() != Rule.RecoveryIndex)
-      continue;
-    Result.push_back({Rule.Recovery, Rule.seq()[Rule.RecoveryIndex]});
-  }
-  llvm::sort(Result);
-  Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
-  return Result;
-}
-
 } // namespace
 
 std::string Item::dump(const Grammar &G) const {
@@ -144,10 +130,9 @@ std::string Item::dump(const Grammar &G) const {
       Results.push_back(G.symbolName(SID));
     return Results;
   };
-  return llvm::formatv("{0} := {1} • {2}{3}", G.symbolName(Rule.Target),
+  return llvm::formatv("{0} := {1} • {2}", G.symbolName(Rule.Target),
                        llvm::join(ToNames(Rule.seq().take_front(DotPos)), " "),
-                       llvm::join(ToNames(Rule.seq().drop_front(DotPos)), " "),
-                       Rule.RecoveryIndex == DotPos ? " [recovery]" : "")
+                       llvm::join(ToNames(Rule.seq().drop_front(DotPos)), " "))
       .str();
 }
 
@@ -196,11 +181,6 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
       Edges.push_back({Src, Dst, Label});
     }
 
-    void insertRecovery(StateID Src, RecoveryStrategy Strategy,
-                        SymbolID Result) {
-      Recoveries.push_back({Src, Strategy, Result});
-    }
-
     // Returns a state with the given id.
     const State &find(StateID ID) const {
       assert(ID < States.size());
@@ -214,10 +194,9 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
     LRGraph build() && {
       States.shrink_to_fit();
       Edges.shrink_to_fit();
-      Recoveries.shrink_to_fit();
       llvm::sort(StartStates);
       StartStates.shrink_to_fit();
-      return LRGraph(std::move(States), std::move(Edges), std::move(Recoveries),
+      return LRGraph(std::move(States), std::move(Edges),
                      std::move(StartStates));
     }
 
@@ -226,7 +205,6 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
     llvm::DenseMap<ItemSet, /*index of States*/ size_t> StatesIndex;
     std::vector<State> States;
     std::vector<Edge> Edges;
-    std::vector<Recovery> Recoveries;
     const Grammar &G;
     std::vector<std::pair<SymbolID, StateID>> StartStates;
   } Builder(G);
@@ -247,16 +225,15 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
   }
 
   while (!PendingStates.empty()) {
-    auto StateID = PendingStates.back();
+    auto CurrentStateID = PendingStates.back();
     PendingStates.pop_back();
-    for (auto Next : nextAvailableKernelItems(Builder.find(StateID), G)) {
+    for (auto Next :
+         nextAvailableKernelItems(Builder.find(CurrentStateID), G)) {
       auto Insert = Builder.insert(Next.second);
       if (Insert.second) // new state, insert to the pending queue.
         PendingStates.push_back(Insert.first);
-      Builder.insertEdge(StateID, Insert.first, Next.first);
+      Builder.insertEdge(CurrentStateID, Insert.first, Next.first);
     }
-    for (auto Recovery : availableRecovery(Builder.find(StateID), G))
-      Builder.insertRecovery(StateID, Recovery.first, Recovery.second);
   }
   return std::move(Builder).build();
 }
