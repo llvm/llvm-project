@@ -810,8 +810,13 @@ void Sema::ActOnPragmaMSAllocText(
       return;
     }
 
-    DeclContext *DC = ND->getDeclContext();
-    if (getLangOpts().CPlusPlus && !DC->isExternCContext()) {
+    auto *FD = dyn_cast<FunctionDecl>(ND->getCanonicalDecl());
+    if (!FD) {
+      Diag(Loc, diag::err_pragma_alloc_text_not_function);
+      return;
+    }
+
+    if (getLangOpts().CPlusPlus && !FD->isInExternCContext()) {
       Diag(Loc, diag::err_pragma_alloc_text_c_linkage);
       return;
     }
