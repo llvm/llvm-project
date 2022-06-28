@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-pseudo/GLR.h"
-#include "clang-pseudo/Bracket.h"
 #include "clang-pseudo/Token.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "clang/Basic/LangOptions.h"
@@ -33,13 +32,11 @@ namespace {
 using Action = LRTable::Action;
 using testing::AllOf;
 using testing::ElementsAre;
-using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
 MATCHER_P(state, StateID, "") { return arg->State == StateID; }
 MATCHER_P(parsedSymbol, FNode, "") { return arg->Payload == FNode; }
 MATCHER_P(parsedSymbolID, SID, "") { return arg->Payload->symbol() == SID; }
-MATCHER_P(start, Start, "") { return arg->Payload->startTokenIndex() == Start; }
 
 testing::Matcher<const GSS::Node *>
 parents(llvm::ArrayRef<const GSS::Node *> Parents) {
@@ -241,9 +238,9 @@ TEST_F(GLRTest, ReduceJoiningWithMultipleBases) {
       /*State=*/1, /*ForestNode=*/CVQualifierNode, /*Parents=*/{GSSNode0});
   const auto *GSSNode2 = GSStack.addNode(
       /*State=*/2, /*ForestNode=*/CVQualifierNode, /*Parents=*/{GSSNode0});
-  const auto *GSSNode3 = GSStack.addNode(
-      /*State=*/3, /*ForestNode=*/ClassNameNode,
-      /*Parents=*/{GSSNode1});
+  const auto *GSSNode3 =
+      GSStack.addNode(/*State=*/3, /*ForestNode=*/ClassNameNode,
+                      /*Parents=*/{GSSNode1});
   const auto *GSSNode4 =
       GSStack.addNode(/*State=*/4, /*ForestNode=*/EnumNameNode,
                       /*Parents=*/{GSSNode2});
@@ -366,124 +363,6 @@ TEST_F(GLRTest, ReduceLookahead) {
   EXPECT_THAT(Heads, ElementsAre(GSSNode1));
 }
 
-TEST_F(GLRTest, Recover) {
-  // Recovery while parsing "word" inside braces.
-  //  Before:
-  //    0--1({)--2(?)
-  //  After recovering a `word` at state 1:
-  //    0--3(word)  // 3 is goto(1, word)
-  buildGrammar({"word"}, {});
-  LRTable Table = LRTable::buildForTests(
-      G, {{/*State=*/1, id("word"), Action::goTo(3)}}, /*Reduce=*/{},
-      /*Recovery=*/{{/*State=*/1, RecoveryStrategy::Braces, id("word")}});
-
-  auto *LBrace = &Arena.createTerminal(tok::l_brace, 0);
-  auto *Question1 = &Arena.createTerminal(tok::question, 1);
-  const auto *Root = GSStack.addNode(0, nullptr, {});
-  const auto *OpenedBraces = GSStack.addNode(1, LBrace, {Root});
-  const auto *AfterQuestion1 = GSStack.addNode(2, Question1, {OpenedBraces});
-
-  // Need a token stream with paired braces so the strategy works.
-  clang::LangOptions LOptions;
-  TokenStream Tokens = cook(lex("{ ? ? ? }", LOptions), LOptions);
-  pairBrackets(Tokens);
-  std::vector<const GSS::Node *> NewHeads;
-
-  unsigned TokenIndex = 2;
-  glrRecover({AfterQuestion1}, TokenIndex, Tokens, {G, Table, Arena, GSStack},
-             NewHeads);
-  EXPECT_EQ(TokenIndex, 4u) << "should skip ahead to matching brace";
-  EXPECT_THAT(NewHeads, ElementsAre(
-                            AllOf(state(3), parsedSymbolID(id("word")),
-                                  parents({OpenedBraces}), start(1u))));
-  EXPECT_EQ(NewHeads.front()->Payload->kind(), ForestNode::Opaque);
-
-  // Test recovery failure: omit closing brace so strategy fails
-  TokenStream NoRBrace = cook(lex("{ ? ? ? ?", LOptions), LOptions);
-  pairBrackets(NoRBrace);
-  NewHeads.clear();
-  TokenIndex = 2;
-  glrRecover({AfterQuestion1}, TokenIndex, NoRBrace,
-             {G, Table, Arena, GSStack}, NewHeads);
-  EXPECT_EQ(TokenIndex, 3u) << "should advance by 1 by default";
-  EXPECT_THAT(NewHeads, IsEmpty());
-}
-
-TEST_F(GLRTest, RecoverRightmost) {
-  // In a nested block structure, we recover at the innermost possible block.
-  //  Before:
-  //    0--1({)--1({)--1({)
-  //  After recovering a `block` at inside the second braces:
-  //    0--1({)--2(body)  // 2 is goto(1, body)
-  buildGrammar({"body"}, {});
-  LRTable Table = LRTable::buildForTests(
-      G, {{/*State=*/1, id("body"), Action::goTo(2)}}, /*Reduce=*/{},
-      /*Recovery=*/{{/*State=*/1, RecoveryStrategy::Braces, id("body")}});
-
-  clang::LangOptions LOptions;
-  // Innermost brace is unmatched, to test fallback to next brace.
-  TokenStream Tokens = cook(lex("{ { { ? ? } }", LOptions), LOptions);
-  Tokens.tokens()[0].Pair = 5;
-  Tokens.tokens()[1].Pair = 4;
-  Tokens.tokens()[4].Pair = 1;
-  Tokens.tokens()[5].Pair = 0;
-
-  auto *Brace1 = &Arena.createTerminal(tok::l_brace, 0);
-  auto *Brace2 = &Arena.createTerminal(tok::l_brace, 1);
-  auto *Brace3 = &Arena.createTerminal(tok::l_brace, 2);
-  const auto *Root = GSStack.addNode(0, nullptr, {});
-  const auto *In1 = GSStack.addNode(1, Brace1, {Root});
-  const auto *In2 = GSStack.addNode(1, Brace2, {In1});
-  const auto *In3 = GSStack.addNode(1, Brace3, {In2});
-
-  unsigned TokenIndex = 3;
-  std::vector<const GSS::Node *> NewHeads;
-  glrRecover({In3}, TokenIndex, Tokens, {G, Table, Arena, GSStack}, NewHeads);
-  EXPECT_EQ(TokenIndex, 5u);
-  EXPECT_THAT(NewHeads, ElementsAre(AllOf(state(2), parsedSymbolID(id("body")),
-                                          parents({In2}), start(2u))));
-}
-
-TEST_F(GLRTest, RecoverAlternatives) {
-  // Recovery inside braces with multiple equally good options
-  //  Before:
-  //    0--1({)
-  //  After recovering either `word` or `number` inside the braces:
-  //    0--1({)--2(word)   // 2 is goto(1, word)
-  //          └--3(number) // 3 is goto(1, number)
-  buildGrammar({"number", "word"}, {});
-  LRTable Table = LRTable::buildForTests(
-      G,
-      {
-          {/*State=*/1, id("number"), Action::goTo(2)},
-          {/*State=*/1, id("word"), Action::goTo(3)},
-      },
-      /*Reduce=*/{},
-      /*Recovery=*/
-      {
-          {/*State=*/1, RecoveryStrategy::Braces, id("number")},
-          {/*State=*/1, RecoveryStrategy::Braces, id("word")},
-      });
-  auto *LBrace = &Arena.createTerminal(tok::l_brace, 0);
-  const auto *Root = GSStack.addNode(0, nullptr, {});
-  const auto *OpenedBraces = GSStack.addNode(1, LBrace, {Root});
-
-  clang::LangOptions LOptions;
-  TokenStream Tokens = cook(lex("{ ? }", LOptions), LOptions);
-  pairBrackets(Tokens);
-  std::vector<const GSS::Node *> NewHeads;
-  unsigned TokenIndex = 1;
-
-  glrRecover({OpenedBraces}, TokenIndex, Tokens, {G, Table, Arena, GSStack},
-             NewHeads);
-  EXPECT_EQ(TokenIndex, 2u);
-  EXPECT_THAT(NewHeads,
-              UnorderedElementsAre(AllOf(state(2), parsedSymbolID(id("number")),
-                                         parents({OpenedBraces}), start(1u)),
-                                   AllOf(state(3), parsedSymbolID(id("word")),
-                                         parents({OpenedBraces}), start(1u))));
-}
-
 TEST_F(GLRTest, PerfectForestNodeSharing) {
   // Run the GLR on a simple grammar and test that we build exactly one forest
   // node per (SymbolID, token range).
@@ -550,40 +429,6 @@ TEST_F(GLRTest, GLRReduceOrder) {
                                      "[  0, end) └─test := foo\n"
                                      "[  0, end)   └─foo := IDENTIFIER\n"
                                      "[  0, end)     └─IDENTIFIER := tok[0]\n");
-}
-
-TEST_F(GLRTest, RecoveryEndToEnd) {
-  // Simple example of brace-based recovery showing:
-  //  - recovered region includes tokens both ahead of and behind the cursor
-  //  - multiple possible recovery rules
-  //  - recovery from outer scopes is rejected
-  build(R"bnf(
-    _ := block
-
-    block := { block }
-    block := { numbers }
-    numbers := NUMERIC_CONSTANT NUMERIC_CONSTANT
-  )bnf");
-  auto LRTable = LRTable::buildSLR(G);
-  clang::LangOptions LOptions;
-  TokenStream Tokens = cook(lex("{ { 42 ? } }", LOptions), LOptions);
-  pairBrackets(Tokens);
-
-  const ForestNode &Parsed =
-      glrParse(Tokens, {G, LRTable, Arena, GSStack}, id("block"));
-  EXPECT_EQ(Parsed.dumpRecursive(G),
-            "[  0, end) block := { block [recover=1] }\n"
-            "[  0,   1) ├─{ := tok[0]\n"
-            "[  1,   5) ├─block := <ambiguous>\n"
-            "[  1,   5) │ ├─block := { block [recover=1] }\n"
-            "[  1,   2) │ │ ├─{ := tok[1]\n"
-            "[  2,   4) │ │ ├─block := <opaque>\n"
-            "[  4,   5) │ │ └─} := tok[4]\n"
-            "[  1,   5) │ └─block := { numbers [recover=1] }\n"
-            "[  1,   2) │   ├─{ := tok[1]\n"
-            "[  2,   4) │   ├─numbers := <opaque>\n"
-            "[  4,   5) │   └─} := tok[4]\n"
-            "[  5, end) └─} := tok[5]\n");
 }
 
 TEST_F(GLRTest, NoExplicitAccept) {

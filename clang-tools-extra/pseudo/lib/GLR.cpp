@@ -24,156 +24,6 @@
 
 namespace clang {
 namespace pseudo {
-namespace {
-
-llvm::Optional<unsigned>
-findRecoveryEndpoint(RecoveryStrategy Strategy,
-                     const GSS::Node *RecoveryNode,
-                     const TokenStream &Tokens) {
-  assert(Strategy == RecoveryStrategy::Braces);
-  const ForestNode *LBrace = RecoveryNode->Payload;
-  assert(LBrace->kind() == ForestNode::Terminal &&
-         LBrace->symbol() == tokenSymbol(tok::l_brace));
-  if (const Token *RBrace = Tokens.tokens()[LBrace->startTokenIndex()].pair())
-    return Tokens.index(*RBrace);
-  return llvm::None;
-}
-
-} // namespace
-
-void glrRecover(llvm::ArrayRef<const GSS::Node *> OldHeads,
-                unsigned &TokenIndex, const TokenStream &Tokens,
-                const ParseParams &Params,
-                std::vector<const GSS::Node *> &NewHeads) {
-  LLVM_DEBUG(llvm::dbgs() << "Recovery at token " << TokenIndex << "...\n");
-  // Describes a possibility to recover by forcibly interpreting a range of
-  // tokens around the cursor as a nonterminal that we expected to see.
-  struct PlaceholderRecovery {
-    // The token prior to the nonterminal which is being recovered.
-    // This starts of the region we're skipping, so higher Position is better.
-    Token::Index Position;
-    // The nonterminal which will be created in order to recover.
-    SymbolID Symbol;
-    // The heuristic used to choose the bounds of the nonterminal to recover.
-    RecoveryStrategy Strategy;
-
-    // The GSS head where we are expecting the recovered nonterminal.
-    const GSS::Node *RecoveryNode;
-    // Payload of nodes on the way back from the OldHead to the recovery node.
-    // These represent the partial parse that is being discarded.
-    // They should become the children of the opaque recovery node.
-    //
-    // There may be multiple paths leading to the same recovery node, we choose
-    // one arbitrarily.
-    std::vector<const ForestNode *> Path;
-  };
-  std::vector<PlaceholderRecovery> Options;
-
-  // Find recovery options by walking up the stack.
-  //
-  // This is similar to exception handling: we walk up the "frames" of nested
-  // rules being parsed until we find one that has a "handler" which allows us
-  // to determine the node bounds without parsing it.
-  //
-  // Unfortunately there's a significant difference: the stack contains both
-  // "upward" nodes (ancestor parses) and "leftward" ones.
-  //  e.g. when parsing `int(2 + ?)`, the stack contains:
-  //    expr := expr + . expr     - which we're currently parsing
-  //    expr := type ( . expr )   - (up) we should recover this outer expr
-  //    expr := . type ( expr )   - (up+left) we should not recover this type!
-  //
-  // It's not obvious how to avoid collecting the latter as a recovery option.
-  // I think the distinction is ill-defined after merging items into states.
-  // For now, we have to take this into account when defining recovery rules.
-  // FIXME: find a more satisfying way to avoid such false recovery.
-  std::vector<const ForestNode *> Path;
-  llvm::DenseSet<const GSS::Node *> Seen;
-  auto DFS = [&](const GSS::Node *N, Token::Index NextTok, auto &DFS) {
-    if (!Seen.insert(N).second)
-      return;
-    for (auto Strategy : Params.Table.getRecovery(N->State)) {
-      Options.push_back(PlaceholderRecovery{
-          NextTok,
-          Strategy.Result,
-          Strategy.Strategy,
-          N,
-          Path,
-      });
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Option: recover " << Params.G.symbolName(Strategy.Result)
-                 << " at token " << NextTok << "\n");
-    }
-    Path.push_back(N->Payload);
-    for (const GSS::Node *Parent : N->parents())
-      DFS(Parent, N->Payload->startTokenIndex(), DFS);
-    Path.pop_back();
-  };
-  for (auto *N : llvm::reverse(OldHeads))
-    DFS(N, TokenIndex, DFS);
-
-  // Now we select the option(s) we will use to recover.
-  //
-  // We prefer options starting further right, as these discard less code
-  // (e.g. we prefer to recover inner scopes rather than outer ones).
-  // The options also need to agree on an endpoint, so the parser has a
-  // consistent position afterwards.
-  //
-  // So conceptually we're sorting by the tuple (start, end), though we avoid
-  // computing `end` for options that can't be winners.
-
-  // Consider options starting further right first.
-  // Don't drop the others yet though, we may still use them if preferred fails.
-  llvm::stable_sort(Options, [&](const auto &L, const auto &R) {
-    return L.Position > R.Position;
-  });
-
-  assert(NewHeads.empty()); // We may repeatedly populate and clear it.
-  llvm::Optional<Token::Range> RecoveryRange;
-  for (const PlaceholderRecovery &Option : Options) {
-    // If this starts further right than options we've already found, then
-    // we'll never find anything better. Skip computing End for the rest.
-    if (RecoveryRange && Option.Position < RecoveryRange->Begin)
-      break;
-
-    auto End =
-        findRecoveryEndpoint(Option.Strategy, Option.RecoveryNode, Tokens);
-    // Only consider recovery that advances the parse.
-    if (!End || *End <= TokenIndex)
-      continue;
-    if (RecoveryRange) {
-      // If this is worse than our previous options, ignore it.
-      if (RecoveryRange->End < *End)
-        continue;
-      // If this is an improvement over our previous options, then drop them.
-      if (RecoveryRange->End > *End)
-        NewHeads.clear();
-    }
-    // Create recovery nodes and heads for them in the GSS. These may be
-    // discarded if a better recovery is later found, but this path isn't hot.
-    RecoveryRange = {Option.Position, *End};
-    const ForestNode &Placeholder =
-        Params.Forest.createOpaque(Option.Symbol, Option.Position);
-    const GSS::Node *NewHead = Params.GSStack.addNode(
-        Params.Table.getGoToState(Option.RecoveryNode->State, Option.Symbol),
-        &Placeholder, {Option.RecoveryNode});
-    NewHeads.push_back(NewHead);
-  }
-
-  // Advance the cursor, whether recovery succeeded or not.
-  if (RecoveryRange) {
-    LLVM_DEBUG({
-      llvm::dbgs() << "Recovered range=" << *RecoveryRange << ":";
-      for (const auto *Head : NewHeads)
-        llvm::dbgs() << " " << Params.G.symbolName(Head->Payload->symbol());
-      llvm::dbgs() << "\n";
-    });
-    TokenIndex = RecoveryRange->End;
-  } else {
-    LLVM_DEBUG(llvm::dbgs() << "Recovery failed after trying " << Options.size()
-                            << " strategies\n");
-    ++TokenIndex;
-  }
-}
 
 using StateID = LRTable::StateID;
 
@@ -181,9 +31,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GSS::Node &N) {
   std::vector<std::string> ParentStates;
   for (const auto *Parent : N.parents())
     ParentStates.push_back(llvm::formatv("{0}", Parent->State));
-  OS << llvm::formatv("state {0}, parsed symbol {1}, parents {3}", N.State,
-                      N.Payload ? N.Payload->symbol() : 0,
-                      llvm::join(ParentStates, ", "));
+  OS << llvm::formatv("state {0}, parsed symbol {1}, parents {2}", N.State,
+                      N.Payload->symbol(), llvm::join(ParentStates, ", "));
   return OS;
 }
 
@@ -578,27 +427,15 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
     GSS.gc(std::move(Roots));
   };
   // Each iteration fully processes a single token.
-  for (unsigned I = 0; I < Terminals.size();) {
+  for (unsigned I = 0; I < Terminals.size(); ++I) {
     LLVM_DEBUG(llvm::dbgs() << llvm::formatv(
                    "Next token {0} (id={1})\n",
                    G.symbolName(Terminals[I].symbol()), Terminals[I].symbol()));
     // Consume the token.
     glrShift(Heads, Terminals[I], Params, NextHeads);
-
-    // If we weren't able to consume the token, try to skip over some tokens
-    // so we can keep parsing.
-    if (NextHeads.empty()) {
-      glrRecover(Heads, I, Tokens, Params, NextHeads);
-      if (NextHeads.empty())
-        // FIXME: Ensure the `_ := start-symbol` rules have a fallback
-        // error-recovery strategy attached. Then this condition can't happen.
-        return Params.Forest.createOpaque(StartSymbol, /*Token::Index=*/0);
-    } else
-      ++I;
-
     // Form nonterminals containing the token we just consumed.
-    SymbolID Lookahead =
-        I == Terminals.size() ? tokenSymbol(tok::eof) : Terminals[I].symbol();
+    SymbolID Lookahead = I + 1 == Terminals.size() ? tokenSymbol(tok::eof)
+                                                   : Terminals[I + 1].symbol();
     Reduce(NextHeads, Lookahead);
     // Prepare for the next token.
     std::swap(Heads, NextHeads);
@@ -607,35 +444,22 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
   }
   LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Reached eof\n"));
 
-  // The parse was successful if we're in state `_ := start-symbol .`
   StateID AcceptState = Params.Table.getGoToState(StartState, StartSymbol);
-  auto SearchForAccept = [&](llvm::ArrayRef<const GSS::Node *> Heads) {
-    const ForestNode *Result = nullptr;
-    for (const auto *Head : Heads) {
-      if (Head->State == AcceptState) {
-        assert(Head->Payload->symbol() == StartSymbol);
-        assert(Result == nullptr && "multiple results!");
-        Result = Head->Payload;
-      }
+  const ForestNode *Result = nullptr;
+  for (const auto *Head : Heads) {
+    if (Head->State == AcceptState) {
+      assert(Head->Payload->symbol() == StartSymbol);
+      assert(Result == nullptr && "multiple results!");
+      Result = Head->Payload;
     }
-    return Result;
-  };
-  if (auto *Result = SearchForAccept(Heads))
+  }
+  if (Result)
     return *Result;
-  // Failed to parse the input, attempt to run recovery.
-  // FIXME: this awkwardly repeats the recovery in the loop, when shift fails.
-  // More elegant is to include EOF in the token stream, and make the
-  // augmented rule: `_ := translation-unit EOF`. In this way recovery at EOF
-  // would not be a special case: it show up as a failure to shift the EOF
-  // token.
-  unsigned I = Terminals.size();
-  glrRecover(Heads, I, Tokens, Params, NextHeads);
-  Reduce(NextHeads, tokenSymbol(tok::eof));
-  if (auto *Result = SearchForAccept(NextHeads))
-    return *Result;
-
   // We failed to parse the input, returning an opaque forest node for recovery.
-  // FIXME: as above, we can add fallback error handling so this is impossible.
+  //
+  // FIXME: We will need to invoke our generic error-recovery handlers when we
+  // reach EOF without reaching accept state, and involving the eof
+  // token in the above main for-loopmay be the best way to reuse the code).
   return Params.Forest.createOpaque(StartSymbol, /*Token::Index=*/0);
 }
 
@@ -646,10 +470,9 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
 }
 
 const GSS::Node *GSS::addNode(LRTable::StateID State, const ForestNode *Symbol,
-
                               llvm::ArrayRef<const Node *> Parents) {
   Node *Result = new (allocate(Parents.size()))
-      Node({State, GCParity, static_cast<uint16_t>(Parents.size())});
+      Node({State, GCParity, static_cast<unsigned>(Parents.size())});
   Alive.push_back(Result);
   ++NodesCreated;
   Result->Payload = Symbol;

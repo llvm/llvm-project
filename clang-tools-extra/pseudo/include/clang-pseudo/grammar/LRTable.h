@@ -121,14 +121,6 @@ public:
     uint16_t Value : ValueBits;
   };
 
-  struct Recovery {
-    RecoveryStrategy Strategy;
-    SymbolID Result;
-  };
-
-  // Returns all available actions for the given state on a terminal.
-  // Expected to be called by LR parsers.
-  llvm::ArrayRef<Action> getActions(StateID State, SymbolID Terminal) const;
   // Returns the state after we reduce a nonterminal.
   // Expected to be called by LR parsers.
   // REQUIRES: Nonterminal is valid here.
@@ -157,12 +149,6 @@ public:
     assert(isNonterminal(Nonterminal));
     return FollowSets.test(tok::NUM_TOKENS * Nonterminal +
                            symbolToToken(Terminal));
-  }
-
-  // Looks up available recovery actions if we stopped parsing in this state.
-  llvm::ArrayRef<Recovery> getRecovery(StateID State) const {
-    return llvm::makeArrayRef(Recoveries.data() + RecoveryOffset[State],
-                              Recoveries.data() + RecoveryOffset[State + 1]);
   }
 
   // Returns the state from which the LR parser should start to parse the input
@@ -202,15 +188,9 @@ public:
     StateID State;
     RuleID Rule;
   };
-  struct RecoveryEntry {
-    StateID State;
-    RecoveryStrategy Strategy;
-    SymbolID Result;
-  };
-  // Build a specified table for testing purposes.
-  static LRTable buildForTests(const Grammar &, llvm::ArrayRef<Entry>,
-                               llvm::ArrayRef<ReduceEntry>,
-                               llvm::ArrayRef<RecoveryEntry> = {});
+  // Build a specifid table for testing purposes.
+  static LRTable buildForTests(const Grammar &G, llvm::ArrayRef<Entry>,
+                               llvm::ArrayRef<ReduceEntry>);
 
 private:
   // Looks up actions stored in the generic table.
@@ -242,11 +222,6 @@ private:
   // This is flattened by encoding the (SymbolID Nonterminal, tok::Kind Token)
   // as an index: Nonterminal * NUM_TOKENS + Token.
   llvm::BitVector FollowSets;
-
-  // Recovery stores all recovery actions from all states.
-  // A given state has [RecoveryOffset[S], RecoveryOffset[S+1]).
-  std::vector<uint32_t> RecoveryOffset;
-  std::vector<Recovery> Recoveries;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LRTable::Action &);
 
