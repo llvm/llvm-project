@@ -112,6 +112,7 @@ private:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GSS::Node &);
 
 // Parameters for the GLR parsing.
+// FIXME: refine it with the ParseLang struct.
 struct ParseParams {
   // The grammar of the language we're going to parse.
   const Grammar &G;
