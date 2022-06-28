@@ -22,5 +22,5 @@
 # CHECK-NEXT: shard JSON output does not exist: [[JSON]]
 # CHECK-NEXT: ***
 # CHECK: Failed Tests (1):
-# CHECK-NEXT:   googletest-crash :: [[PATH]][[FILE]]/0/6
+# CHECK-NEXT:   googletest-crash :: [[PATH]][[FILE]]/0/{{[1-6]}}
 # CHECK: Failed{{ *}}: 1
