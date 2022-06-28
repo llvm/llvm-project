@@ -1,0 +1,136 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1100 %s -start-after postrapseudos -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: test_V_WMMA_F32_16X16X16_F16_threeaddr_w32:
+# GCN: 	v_wmma_f32_16x16x16_f16 v[34:41], v[0:7], v[8:15], v[16:23]
+---
+name: test_V_WMMA_F32_16X16X16_F16_threeaddr_w32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41 = V_WMMA_F32_16X16X16_F16_threeaddr_w32 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, implicit $exec
+---
+
+# GCN-LABEL: test_V_WMMA_F32_16X16X16_BF16_threeaddr_w32:
+# GCN: v_wmma_f32_16x16x16_bf16 v[34:41], v[0:7], v[8:15], v[16:23]
+---
+name: test_V_WMMA_F32_16X16X16_BF16_threeaddr_w32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41 = V_WMMA_F32_16X16X16_BF16_threeaddr_w32 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, implicit $exec
+---
+
+# GCN-LABEL: test_V_WMMA_F16_16X16X16_F16_threeaddr_w32:
+# GCN: v_wmma_f16_16x16x16_f16 v[34:41], v[0:7], v[8:15], v[16:23]
+---
+name: test_V_WMMA_F16_16X16X16_F16_threeaddr_w32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41 = V_WMMA_F16_16X16X16_F16_threeaddr_w32 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+---
+
+# GCN-LABEL: test_V_WMMA_BF16_16X16X16_BF16_threeaddr_w32:
+# GCN: v_wmma_bf16_16x16x16_bf16 v[34:41], v[0:7], v[8:15], v[16:23]
+---
+name: test_V_WMMA_BF16_16X16X16_BF16_threeaddr_w32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41 = V_WMMA_BF16_16X16X16_BF16_threeaddr_w32 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+---
+
+# GCN-LABEL: test_V_WMMA_I32_16X16X16_IU8_threeaddr_w32:
+# GCN: v_wmma_i32_16x16x16_iu8 v[26:33], v[0:3], v[4:7], v[8:15]
+---
+name: test_V_WMMA_I32_16X16X16_IU8_threeaddr_w32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_WMMA_I32_16X16X16_IU8_threeaddr_w32 8, killed $vgpr0_vgpr1_vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $exec
+---
+
+
+# GCN-LABEL: test_V_WMMA_I32_16X16X16_IU4_threeaddr_w32:
+# GCN: v_wmma_i32_16x16x16_iu4 v[26:33], v[0:1], v[2:3], v[8:15]
+---
+name: test_V_WMMA_I32_16X16X16_IU4_threeaddr_w32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_WMMA_I32_16X16X16_IU4_threeaddr_w32 8, killed $vgpr0_vgpr1, 8, $vgpr2_vgpr3, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $exec
+
+
+# GCN-LABEL: test_V_WMMA_F32_16X16X16_F16_threeaddr_w64:
+# GCN: v_wmma_f32_16x16x16_f16 v[34:37], v[0:7], v[8:15], v[16:19]
+---
+name: test_V_WMMA_F32_16X16X16_F16_threeaddr_w64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr34_vgpr35_vgpr36_vgpr37 = V_WMMA_F32_16X16X16_F16_threeaddr_w64 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, implicit $exec
+---
+
+# GCN-LABEL: test_V_WMMA_F32_16X16X16_BF16_threeaddr_w64:
+# GCN: v_wmma_f32_16x16x16_bf16 v[34:37], v[0:7], v[8:15], v[16:19]
+---
+name: test_V_WMMA_F32_16X16X16_BF16_threeaddr_w64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr34_vgpr35_vgpr36_vgpr37 = V_WMMA_F32_16X16X16_BF16_threeaddr_w64 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, implicit $exec
+---
+
+# GCN-LABEL: test_V_WMMA_F16_16X16X16_F16_threeaddr_w64:
+# GCN: v_wmma_f16_16x16x16_f16 v[34:37], v[0:7], v[8:15], v[16:19]
+---
+name: test_V_WMMA_F16_16X16X16_F16_threeaddr_w64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr34_vgpr35_vgpr36_vgpr37 = V_WMMA_F16_16X16X16_F16_threeaddr_w64 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+---
+
+# GCN-LABEL: test_V_WMMA_BF16_16X16X16_BF16_threeaddr_w64:
+# GCN: v_wmma_bf16_16x16x16_bf16 v[34:37], v[0:7], v[8:15], v[16:19]
+---
+name: test_V_WMMA_BF16_16X16X16_BF16_threeaddr_w64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr34_vgpr35_vgpr36_vgpr37 = V_WMMA_BF16_16X16X16_BF16_threeaddr_w64 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+---
+
+# GCN-LABEL: test_V_WMMA_I32_16X16X16_IU8_threeaddr_w64:
+# GCN: v_wmma_i32_16x16x16_iu8 v[26:29], v[0:3], v[4:7], v[8:11]
+---
+name: test_V_WMMA_I32_16X16X16_IU8_threeaddr_w64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr26_vgpr27_vgpr28_vgpr29 = V_WMMA_I32_16X16X16_IU8_threeaddr_w64 8, killed $vgpr0_vgpr1_vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, implicit $exec
+---
+
+
+# GCN-LABEL: test_V_WMMA_I32_16X16X16_IU4_threeaddr_w64:
+# GCN: v_wmma_i32_16x16x16_iu4 v[26:29], v[0:1], v[2:3], v[8:11]
+---
+name: test_V_WMMA_I32_16X16X16_IU4_threeaddr_w64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
+    early-clobber renamable $vgpr26_vgpr27_vgpr28_vgpr29 = V_WMMA_I32_16X16X16_IU4_threeaddr_w64 8, killed $vgpr0_vgpr1, 8, $vgpr2_vgpr3, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, implicit $exec
+
+

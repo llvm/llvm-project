@@ -3734,6 +3734,20 @@ AMDGPUInstructionSelector::selectDotIUVOP3PMods(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectWMMAOpSelVOP3PMods(
+    MachineOperand &Root) const {
+  assert((Root.isImm() && (Root.getImm() == -1 || Root.getImm() == 0)) &&
+         "expected i1 value");
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (Root.getImm() != 0)
+    Mods |= SISrcMods::OP_SEL_0;
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3Mods_nnan(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;

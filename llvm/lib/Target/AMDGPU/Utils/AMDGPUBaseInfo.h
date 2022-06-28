@@ -368,6 +368,11 @@ struct MIMGG16MappingInfo {
 LLVM_READONLY
 const MIMGLZMappingInfo *getMIMGLZMappingInfo(unsigned L);
 
+struct WMMAOpcodeMappingInfo {
+  unsigned Opcode2Addr;
+  unsigned Opcode3Addr;
+};
+
 LLVM_READONLY
 const MIMGMIPMappingInfo *getMIMGMIPMappingInfo(unsigned MIP);
 
@@ -476,6 +481,12 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
 
 LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
+
+LLVM_READONLY
+unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
+
+LLVM_READONLY
+unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const MCSubtargetInfo *STI);
