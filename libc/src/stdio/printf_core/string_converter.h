@@ -47,7 +47,7 @@ int inline convert_string(Writer *writer, const FormatSection &to_conv) {
     RET_IF_RESULT_NEGATIVE(writer->write(
         reinterpret_cast<const char *>(to_conv.conv_val_ptr), string_len));
   }
-  return 0;
+  return WRITE_OK;
 }
 
 } // namespace printf_core

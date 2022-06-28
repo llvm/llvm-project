@@ -102,7 +102,7 @@ int inline convert_oct(Writer *writer, const FormatSection &to_conv) {
     if (num_digits > 0)
       RET_IF_RESULT_NEGATIVE(writer->write(buffer + buff_cur, num_digits));
   }
-  return 0;
+  return WRITE_OK;
 }
 
 } // namespace printf_core

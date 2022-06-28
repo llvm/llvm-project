@@ -89,7 +89,7 @@ int inline convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
                         FormatFlags::LEFT_JUSTIFIED))
       RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', padding));
 
-    return 0;
+    return WRITE_OK;
   }
 
   // Handle the exponent for numbers with a 0 exponent
@@ -264,7 +264,7 @@ int inline convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
     RET_IF_RESULT_NEGATIVE(
         writer->write(exp_buffer + exp_cur, EXP_LEN - exp_cur));
   }
-  return 0;
+  return WRITE_OK;
 }
 
 } // namespace printf_core
