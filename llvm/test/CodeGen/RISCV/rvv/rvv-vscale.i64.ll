@@ -106,4 +106,45 @@ define i64 @vscale_select(i32 %x, i32 %y) {
   ret i64 %d
 }
 
+define i64 @vscale_high_bits_zero() nounwind {
+; RV64-LABEL: vscale_high_bits_zero:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    srli a0, a0, 3
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: vscale_high_bits_zero:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 3
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = and i64 %0, 2047
+  ret i64 %1
+}
+
+define i64 @vscale_masked() nounwind {
+; RV64-LABEL: vscale_masked:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    srli a0, a0, 3
+; RV64-NEXT:    andi a0, a0, 510
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: vscale_masked:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 3
+; RV32-NEXT:    andi a0, a0, 510
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = and i64 %0, 511
+  ret i64 %1
+}
+
+
 declare i64 @llvm.vscale.i64()
