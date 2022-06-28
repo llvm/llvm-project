@@ -35,7 +35,7 @@ PresburgerSet PWMAFunction::getDomain() const {
 
 Optional<SmallVector<int64_t, 8>>
 MultiAffineFunction::valueAt(ArrayRef<int64_t> point) const {
-  assert(point.size() == domainSet.getNumDimAndSymbolIds() &&
+  assert(point.size() == domainSet.getNumDimAndSymbolVars() &&
          "Point has incorrect dimensionality!");
 
   Optional<SmallVector<int64_t, 8>> maybeLocalValues =
@@ -47,7 +47,7 @@ MultiAffineFunction::valueAt(ArrayRef<int64_t> point) const {
   SmallVector<int64_t, 8> pointHomogenous{llvm::to_vector(point)};
   // The given point didn't include the values of locals which the output is a
   // function of; we have computed one possible set of values and use them
-  // here. The function is not allowed to have local ids that take more than
+  // here. The function is not allowed to have local vars that take more than
   // one possible value.
   pointHomogenous.append(*maybeLocalValues);
   // The matrix `output` has an affine expression in the ith row, corresponding
@@ -88,19 +88,19 @@ bool MultiAffineFunction::isEqual(const MultiAffineFunction &other) const {
          isEqualWhereDomainsOverlap(other);
 }
 
-unsigned MultiAffineFunction::insertId(IdKind kind, unsigned pos,
-                                       unsigned num) {
-  assert(kind != IdKind::Domain && "Domain has to be zero in a set");
-  unsigned absolutePos = domainSet.getIdKindOffset(kind) + pos;
+unsigned MultiAffineFunction::insertVar(VarKind kind, unsigned pos,
+                                        unsigned num) {
+  assert(kind != VarKind::Domain && "Domain has to be zero in a set");
+  unsigned absolutePos = domainSet.getVarKindOffset(kind) + pos;
   output.insertColumns(absolutePos, num);
-  return domainSet.insertId(kind, pos, num);
+  return domainSet.insertVar(kind, pos, num);
 }
 
-void MultiAffineFunction::removeIdRange(IdKind kind, unsigned idStart,
-                                        unsigned idLimit) {
-  output.removeColumns(idStart + domainSet.getIdKindOffset(kind),
-                       idLimit - idStart);
-  domainSet.removeIdRange(kind, idStart, idLimit);
+void MultiAffineFunction::removeVarRange(VarKind kind, unsigned varStart,
+                                         unsigned varLimit) {
+  output.removeColumns(varStart + domainSet.getVarKindOffset(kind),
+                       varLimit - varStart);
+  domainSet.removeVarRange(kind, varStart, varLimit);
 }
 
 void MultiAffineFunction::truncateOutput(unsigned count) {
@@ -115,21 +115,21 @@ void PWMAFunction::truncateOutput(unsigned count) {
   numOutputs = count;
 }
 
-void MultiAffineFunction::mergeLocalIds(MultiAffineFunction &other) {
-  // Merge output local ids of both functions without using division
-  // information i.e. append local ids of `other` to `this` and insert
-  // local ids of `this` to `other` at the start of it's local ids.
-  output.insertColumns(domainSet.getIdKindEnd(IdKind::Local),
-                       other.domainSet.getNumLocalIds());
-  other.output.insertColumns(other.domainSet.getIdKindOffset(IdKind::Local),
-                             domainSet.getNumLocalIds());
+void MultiAffineFunction::mergeLocalVars(MultiAffineFunction &other) {
+  // Merge output local vars of both functions without using division
+  // information i.e. append local vars of `other` to `this` and insert
+  // local vars of `this` to `other` at the start of it's local vars.
+  output.insertColumns(domainSet.getVarKindEnd(VarKind::Local),
+                       other.domainSet.getNumLocalVars());
+  other.output.insertColumns(other.domainSet.getVarKindOffset(VarKind::Local),
+                             domainSet.getNumLocalVars());
 
   auto merge = [this, &other](unsigned i, unsigned j) -> bool {
     // Merge local at position j into local at position i in function domain.
-    domainSet.eliminateRedundantLocalId(i, j);
-    other.domainSet.eliminateRedundantLocalId(i, j);
+    domainSet.eliminateRedundantLocalVar(i, j);
+    other.domainSet.eliminateRedundantLocalVar(i, j);
 
-    unsigned localOffset = domainSet.getIdKindOffset(IdKind::Local);
+    unsigned localOffset = domainSet.getVarKindOffset(VarKind::Local);
 
     // Merge local at position j into local at position i in output domain.
     output.addToColumn(localOffset + j, localOffset + i, 1);
@@ -140,7 +140,7 @@ void MultiAffineFunction::mergeLocalIds(MultiAffineFunction &other) {
     return true;
   };
 
-  presburger::mergeLocalIds(domainSet, other.domainSet, merge);
+  presburger::mergeLocalVars(domainSet, other.domainSet, merge);
 }
 
 bool MultiAffineFunction::isEqualWhereDomainsOverlap(
@@ -150,9 +150,9 @@ bool MultiAffineFunction::isEqualWhereDomainsOverlap(
 
   // `commonFunc` has the same output as `this`.
   MultiAffineFunction commonFunc = *this;
-  // After this merge, `commonFunc` and `other` have the same local ids; they
+  // After this merge, `commonFunc` and `other` have the same local vars; they
   // are merged.
-  commonFunc.mergeLocalIds(other);
+  commonFunc.mergeLocalVars(other);
   // After this, the domain of `commonFunc` will be the intersection of the
   // domains of `this` and `other`.
   commonFunc.domainSet.append(other.domainSet);
@@ -161,7 +161,7 @@ bool MultiAffineFunction::isEqualWhereDomainsOverlap(
   // where the outputs of `this` and `other` match.
   //
   // We want to add constraints equating the outputs of `this` and `other`.
-  // However, `this` may have difference local ids from `other`, whereas we
+  // However, `this` may have difference local vars from `other`, whereas we
   // need both to have the same locals. Accordingly, we use `commonFunc.output`
   // in place of `this->output`, since `commonFunc` has the same output but also
   // has its locals merged.

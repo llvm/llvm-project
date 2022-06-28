@@ -240,18 +240,18 @@ void getUpperBoundForIndex(Value value, AffineMap &boundMap,
 
   // Helper to find or create an identifier for the given value.
   auto findOrCreateId = [&](Value value) {
-    if (!constraints.containsId(value)) {
-      constraints.appendDimId(value);
+    if (!constraints.containsVar(value)) {
+      constraints.appendDimVar(value);
       return true;
     }
     unsigned pos;
-    constraints.findId(value, &pos);
-    return pos < constraints.getNumDimIds();
+    constraints.findVar(value, &pos);
+    return pos < constraints.getNumDimVars();
   };
   // Helper to get the position for the given value.
   auto getPosition = [&](Value value) {
     unsigned pos;
-    bool exists = constraints.findId(value, &pos);
+    bool exists = constraints.findVar(value, &pos);
     (void)exists;
     assert(exists && "expect to find the identifier");
     return pos;

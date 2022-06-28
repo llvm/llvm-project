@@ -8,7 +8,7 @@
 //
 // A class to represent a relation over integer tuples. A relation is
 // represented as a constraint system over a space of tuples of integer valued
-// variables supporting symbolic identifiers and existential quantification.
+// variables supporting symbolic variables and existential quantification.
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,7 +36,7 @@ class PresburgerSet;
 /// Equality  : c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n == 0
 ///
 /// where c_0, c_1, ..., c_n are integers and n is the total number of
-/// identifiers in the space.
+/// variables in the space.
 ///
 /// Such a relation corresponds to the set of integer points lying in a convex
 /// polyhedron. For example, consider the relation:
@@ -45,8 +45,8 @@ class PresburgerSet;
 ///         (x, y) : (1 <= x <= 7, x = 2y)
 /// This relation contains the pairs (2, 1), (4, 2), and (6, 3).
 ///
-/// Since IntegerRelation makes a distinction between dimensions, IdKind::Range
-/// and IdKind::Domain should be used to refer to dimension identifiers.
+/// Since IntegerRelation makes a distinction between dimensions, VarKind::Range
+/// and VarKind::Domain should be used to refer to dimension variables.
 class IntegerRelation {
 public:
   /// All derived classes of IntegerRelation.
@@ -58,22 +58,22 @@ public:
   };
 
   /// Constructs a relation reserving memory for the specified number
-  /// of constraints and identifiers.
+  /// of constraints and variables.
   IntegerRelation(unsigned numReservedInequalities,
                   unsigned numReservedEqualities, unsigned numReservedCols,
                   const PresburgerSpace &space)
-      : space(space), equalities(0, space.getNumIds() + 1,
+      : space(space), equalities(0, space.getNumVars() + 1,
                                  numReservedEqualities, numReservedCols),
-        inequalities(0, space.getNumIds() + 1, numReservedInequalities,
+        inequalities(0, space.getNumVars() + 1, numReservedInequalities,
                      numReservedCols) {
-    assert(numReservedCols >= space.getNumIds() + 1);
+    assert(numReservedCols >= space.getNumVars() + 1);
   }
 
   /// Constructs a relation with the specified number of dimensions and symbols.
   explicit IntegerRelation(const PresburgerSpace &space)
       : IntegerRelation(/*numReservedInequalities=*/0,
                         /*numReservedEqualities=*/0,
-                        /*numReservedCols=*/space.getNumIds() + 1, space) {}
+                        /*numReservedCols=*/space.getNumVars() + 1, space) {}
 
   virtual ~IntegerRelation() = default;
 
@@ -107,9 +107,9 @@ public:
 
   /// Returns a copy of the space without locals.
   PresburgerSpace getSpaceWithoutLocals() const {
-    return PresburgerSpace::getRelationSpace(space.getNumDomainIds(),
-                                             space.getNumRangeIds(),
-                                             space.getNumSymbolIds());
+    return PresburgerSpace::getRelationSpace(space.getNumDomainVars(),
+                                             space.getNumRangeVars(),
+                                             space.getNumSymbolVars());
   }
 
   /// Appends constraints from `other` into `this`. This is equivalent to an
@@ -144,19 +144,19 @@ public:
     return getNumInequalities() + getNumEqualities();
   }
 
-  unsigned getNumDomainIds() const { return space.getNumDomainIds(); }
-  unsigned getNumRangeIds() const { return space.getNumRangeIds(); }
-  unsigned getNumSymbolIds() const { return space.getNumSymbolIds(); }
-  unsigned getNumLocalIds() const { return space.getNumLocalIds(); }
+  unsigned getNumDomainVars() const { return space.getNumDomainVars(); }
+  unsigned getNumRangeVars() const { return space.getNumRangeVars(); }
+  unsigned getNumSymbolVars() const { return space.getNumSymbolVars(); }
+  unsigned getNumLocalVars() const { return space.getNumLocalVars(); }
 
-  unsigned getNumDimIds() const { return space.getNumDimIds(); }
-  unsigned getNumDimAndSymbolIds() const {
-    return space.getNumDimAndSymbolIds();
+  unsigned getNumDimVars() const { return space.getNumDimVars(); }
+  unsigned getNumDimAndSymbolVars() const {
+    return space.getNumDimAndSymbolVars();
   }
-  unsigned getNumIds() const { return space.getNumIds(); }
+  unsigned getNumVars() const { return space.getNumVars(); }
 
   /// Returns the number of columns in the constraint system.
-  inline unsigned getNumCols() const { return space.getNumIds() + 1; }
+  inline unsigned getNumCols() const { return space.getNumVars() + 1; }
 
   inline unsigned getNumEqualities() const { return equalities.getNumRows(); }
 
@@ -180,34 +180,38 @@ public:
     return inequalities.getRow(idx);
   }
 
-  /// Get the number of ids of the specified kind.
-  unsigned getNumIdKind(IdKind kind) const { return space.getNumIdKind(kind); };
-
-  /// Return the index at which the specified kind of id starts.
-  unsigned getIdKindOffset(IdKind kind) const {
-    return space.getIdKindOffset(kind);
+  /// Get the number of vars of the specified kind.
+  unsigned getNumVarKind(VarKind kind) const {
+    return space.getNumVarKind(kind);
   };
 
-  /// Return the index at Which the specified kind of id ends.
-  unsigned getIdKindEnd(IdKind kind) const { return space.getIdKindEnd(kind); };
+  /// Return the index at which the specified kind of vars starts.
+  unsigned getVarKindOffset(VarKind kind) const {
+    return space.getVarKindOffset(kind);
+  };
+
+  /// Return the index at Which the specified kind of vars ends.
+  unsigned getVarKindEnd(VarKind kind) const {
+    return space.getVarKindEnd(kind);
+  };
 
   /// Get the number of elements of the specified kind in the range
-  /// [idStart, idLimit).
-  unsigned getIdKindOverlap(IdKind kind, unsigned idStart,
-                            unsigned idLimit) const {
-    return space.getIdKindOverlap(kind, idStart, idLimit);
+  /// [varStart, varLimit).
+  unsigned getVarKindOverlap(VarKind kind, unsigned varStart,
+                             unsigned varLimit) const {
+    return space.getVarKindOverlap(kind, varStart, varLimit);
   };
 
-  /// Return the IdKind of the id at the specified position.
-  IdKind getIdKindAt(unsigned pos) const { return space.getIdKindAt(pos); };
+  /// Return the VarKind of the var at the specified position.
+  VarKind getVarKindAt(unsigned pos) const { return space.getVarKindAt(pos); };
 
-  /// The struct CountsSnapshot stores the count of each IdKind, and also of
+  /// The struct CountsSnapshot stores the count of each VarKind, and also of
   /// each constraint type. getCounts() returns a CountsSnapshot object
   /// describing the current state of the IntegerRelation. truncate() truncates
-  /// all ids of each IdKind and all constraints of both kinds beyond the counts
-  /// in the specified CountsSnapshot object. This can be used to achieve
+  /// all vars of each VarKind and all constraints of both kinds beyond the
+  /// counts in the specified CountsSnapshot object. This can be used to achieve
   /// rudimentary rollback support. As long as none of the existing constraints
-  /// or ids are disturbed, and only additional ids or constraints are added,
+  /// or vars are disturbed, and only additional vars or constraints are added,
   /// this addition can be rolled back using truncate.
   struct CountsSnapshot {
   public:
@@ -225,37 +229,38 @@ public:
   CountsSnapshot getCounts() const;
   void truncate(const CountsSnapshot &counts);
 
-  /// Insert `num` identifiers of the specified kind at position `pos`.
-  /// Positions are relative to the kind of identifier. The coefficient columns
-  /// corresponding to the added identifiers are initialized to zero. Return the
-  /// absolute column position (i.e., not relative to the kind of identifier)
-  /// of the first added identifier.
-  virtual unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1);
+  /// Insert `num` variables of the specified kind at position `pos`.
+  /// Positions are relative to the kind of variable. The coefficient columns
+  /// corresponding to the added variables are initialized to zero. Return the
+  /// absolute column position (i.e., not relative to the kind of variable)
+  /// of the first added variable.
+  virtual unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1);
 
-  /// Append `num` identifiers of the specified kind after the last identifier.
+  /// Append `num` variables of the specified kind after the last variable.
   /// of that kind. Return the position of the first appended column relative to
-  /// the kind of identifier. The coefficient columns corresponding to the added
-  /// identifiers are initialized to zero.
-  unsigned appendId(IdKind kind, unsigned num = 1);
+  /// the kind of variable. The coefficient columns corresponding to the added
+  /// variables are initialized to zero.
+  unsigned appendVar(VarKind kind, unsigned num = 1);
 
   /// Adds an inequality (>= 0) from the coefficients specified in `inEq`.
   void addInequality(ArrayRef<int64_t> inEq);
   /// Adds an equality from the coefficients specified in `eq`.
   void addEquality(ArrayRef<int64_t> eq);
 
-  /// Eliminate the `posB^th` local identifier, replacing every instance of it
-  /// with the `posA^th` local identifier. This should be used when the two
+  /// Eliminate the `posB^th` local variable, replacing every instance of it
+  /// with the `posA^th` local variable. This should be used when the two
   /// local variables are known to always take the same values.
-  virtual void eliminateRedundantLocalId(unsigned posA, unsigned posB);
+  virtual void eliminateRedundantLocalVar(unsigned posA, unsigned posB);
 
-  /// Removes identifiers of the specified kind with the specified pos (or
+  /// Removes variables of the specified kind with the specified pos (or
   /// within the specified range) from the system. The specified location is
-  /// relative to the first identifier of the specified kind.
-  void removeId(IdKind kind, unsigned pos);
-  virtual void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
+  /// relative to the first variable of the specified kind.
+  void removeVar(VarKind kind, unsigned pos);
+  virtual void removeVarRange(VarKind kind, unsigned varStart,
+                              unsigned varLimit);
 
-  /// Removes the specified identifier from the system.
-  void removeId(unsigned pos);
+  /// Removes the specified variable from the system.
+  void removeVar(unsigned pos);
 
   void removeEquality(unsigned pos);
   void removeInequality(unsigned pos);
@@ -277,22 +282,22 @@ public:
   /// range.
   MaybeOptimum<SmallVector<int64_t, 8>> findIntegerLexMin() const;
 
-  /// Swap the posA^th identifier with the posB^th identifier.
-  virtual void swapId(unsigned posA, unsigned posB);
+  /// Swap the posA^th variable with the posB^th variable.
+  virtual void swapVar(unsigned posA, unsigned posB);
 
   /// Removes all equalities and inequalities.
   void clearConstraints();
 
-  /// Sets the `values.size()` identifiers starting at `po`s to the specified
+  /// Sets the `values.size()` variables starting at `po`s to the specified
   /// values and removes them.
   void setAndEliminate(unsigned pos, ArrayRef<int64_t> values);
 
   /// Replaces the contents of this IntegerRelation with `other`.
   virtual void clearAndCopyFrom(const IntegerRelation &other);
 
-  /// Gather positions of all lower and upper bounds of the identifier at `pos`,
+  /// Gather positions of all lower and upper bounds of the variable at `pos`,
   /// and optionally any equalities on it. In addition, the bounds are to be
-  /// independent of identifiers in position range [`offset`, `offset` + `num`).
+  /// independent of variables in position range [`offset`, `offset` + `num`).
   void
   getLowerAndUpperBoundIndices(unsigned pos,
                                SmallVectorImpl<unsigned> *lbIndices,
@@ -301,7 +306,7 @@ public:
                                unsigned offset = 0, unsigned num = 0) const;
 
   /// Checks for emptiness by performing variable elimination on all
-  /// identifiers, running the GCD test on each equality constraint, and
+  /// variables, running the GCD test on each equality constraint, and
   /// checking for invalid constraints. Returns true if the GCD test fails for
   /// any equality, or if any invalid constraints are discovered on any row.
   /// Returns false otherwise.
@@ -333,19 +338,19 @@ public:
   Optional<SmallVector<int64_t, 8>> findIntegerSample() const;
 
   /// Compute an overapproximation of the number of integer points in the
-  /// relation. Symbol ids are currently not supported. If the computed
+  /// relation. Symbol vars currently not supported. If the computed
   /// overapproximation is infinite, an empty optional is returned.
   Optional<uint64_t> computeVolume() const;
 
   /// Returns true if the given point satisfies the constraints, or false
-  /// otherwise. Takes the values of all ids including locals.
+  /// otherwise. Takes the values of all vars including locals.
   bool containsPoint(ArrayRef<int64_t> point) const;
-  /// Given the values of non-local ids, return a satisfying assignment to the
+  /// Given the values of non-local vars, return a satisfying assignment to the
   /// local if one exists, or an empty optional otherwise.
   Optional<SmallVector<int64_t, 8>>
   containsPointNoLocal(ArrayRef<int64_t> point) const;
 
-  /// Find equality and pairs of inequality contraints identified by their
+  /// Find equality and pairs of inequality constraints identified by their
   /// position indices, using which an explicit representation for each local
   /// variable can be computed. The indices of the constraints are stored in
   /// `MaybeLocalRepr` struct. If no such pair can be found, the kind attribute
@@ -353,7 +358,7 @@ public:
   ///
   /// The dividends of the explicit representations are stored in `dividends`
   /// and the denominators in `denominators`. If no explicit representation
-  /// could be found for the `i^th` local identifier, `denominators[i]` is set
+  /// could be found for the `i^th` local variable, `denominators[i]` is set
   /// to 0.
   void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
                      SmallVector<unsigned, 4> &denominators,
@@ -365,20 +370,20 @@ public:
   /// The type of bound: equal, lower bound or upper bound.
   enum BoundType { EQ, LB, UB };
 
-  /// Adds a constant bound for the specified identifier.
+  /// Adds a constant bound for the specified variable.
   void addBound(BoundType type, unsigned pos, int64_t value);
 
   /// Adds a constant bound for the specified expression.
   void addBound(BoundType type, ArrayRef<int64_t> expr, int64_t value);
 
-  /// Adds a new local identifier as the floordiv of an affine function of other
-  /// identifiers, the coefficients of which are provided in `dividend` and with
+  /// Adds a new local variable as the floordiv of an affine function of other
+  /// variables, the coefficients of which are provided in `dividend` and with
   /// respect to a positive constant `divisor`. Two constraints are added to the
   /// system to capture equivalence with the floordiv:
   /// q = dividend floordiv c    <=>   c*q <= dividend <= c*q + c - 1.
   void addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor);
 
-  /// Projects out (aka eliminates) `num` identifiers starting at position
+  /// Projects out (aka eliminates) `num` variables starting at position
   /// `pos`. The resulting constraint system is the shadow along the dimensions
   /// that still exist. This method may not always be integer exact.
   // TODO: deal with integer exactness when necessary - can return a value to
@@ -386,22 +391,22 @@ public:
   void projectOut(unsigned pos, unsigned num);
   inline void projectOut(unsigned pos) { return projectOut(pos, 1); }
 
-  /// Tries to fold the specified identifier to a constant using a trivial
+  /// Tries to fold the specified variable to a constant using a trivial
   /// equality detection; if successful, the constant is substituted for the
-  /// identifier everywhere in the constraint system and then removed from the
+  /// variable everywhere in the constraint system and then removed from the
   /// system.
-  LogicalResult constantFoldId(unsigned pos);
+  LogicalResult constantFoldVar(unsigned pos);
 
-  /// This method calls `constantFoldId` for the specified range of identifiers,
-  /// `num` identifiers starting at position `pos`.
-  void constantFoldIdRange(unsigned pos, unsigned num);
+  /// This method calls `constantFoldVar` for the specified range of variables,
+  /// `num` variables starting at position `pos`.
+  void constantFoldVarRange(unsigned pos, unsigned num);
 
   /// Updates the constraints to be the smallest bounding (enclosing) box that
   /// contains the points of `this` set and that of `other`, with the symbols
   /// being treated specially. For each of the dimensions, the min of the lower
   /// bounds (symbolic) and the max of the upper bounds (symbolic) is computed
   /// to determine such a bounding box. `other` is expected to have the same
-  /// dimensional identifiers as this constraint system (in the same order).
+  /// dimensional variables as this constraint system (in the same order).
   ///
   /// E.g.:
   /// 1) this   = {0 <= d0 <= 127},
@@ -416,20 +421,20 @@ public:
   LogicalResult unionBoundingBox(const IntegerRelation &other);
 
   /// Returns the smallest known constant bound for the extent of the specified
-  /// identifier (pos^th), i.e., the smallest known constant that is greater
+  /// variable (pos^th), i.e., the smallest known constant that is greater
   /// than or equal to 'exclusive upper bound' - 'lower bound' of the
-  /// identifier. This constant bound is guaranteed to be non-negative. Returns
+  /// variable. This constant bound is guaranteed to be non-negative. Returns
   /// None if it's not a constant. This method employs trivial (low complexity /
-  /// cost) checks and detection. Symbolic identifiers are treated specially,
+  /// cost) checks and detection. Symbolic variables are treated specially,
   /// i.e., it looks for constant differences between affine expressions
-  /// involving only the symbolic identifiers. `lb` and `ub` (along with the
+  /// involving only the symbolic variables. `lb` and `ub` (along with the
   /// `boundFloorDivisor`) are set to represent the lower and upper bound
   /// associated with the constant difference: `lb`, `ub` have the coefficients,
   /// and `boundFloorDivisor`, their divisor. `minLbPos` and `minUbPos` if
   /// non-null are set to the position of the constant lower bound and upper
   /// bound respectively (to the same if they are from an equality). Ex: if the
   /// lower bound is [(s0 + s2 - 1) floordiv 32] for a system with three
-  /// symbolic identifiers, *lb = [1, 0, 1], lbDivisor = 32. See comments at
+  /// symbolic variables, *lb = [1, 0, 1], lbDivisor = 32. See comments at
   /// function definition for examples.
   Optional<int64_t> getConstantBoundOnDimSize(
       unsigned pos, SmallVectorImpl<int64_t> *lb = nullptr,
@@ -437,16 +442,16 @@ public:
       SmallVectorImpl<int64_t> *ub = nullptr, unsigned *minLbPos = nullptr,
       unsigned *minUbPos = nullptr) const;
 
-  /// Returns the constant bound for the pos^th identifier if there is one;
+  /// Returns the constant bound for the pos^th variable if there is one;
   /// None otherwise.
   Optional<int64_t> getConstantBound(BoundType type, unsigned pos) const;
 
   /// Removes constraints that are independent of (i.e., do not have a
-  /// coefficient) identifiers in the range [pos, pos + num).
+  /// coefficient) variables in the range [pos, pos + num).
   void removeIndependentConstraints(unsigned pos, unsigned num);
 
   /// Returns true if the set can be trivially detected as being
-  /// hyper-rectangular on the specified contiguous set of identifiers.
+  /// hyper-rectangular on the specified contiguous set of variables.
   bool isHyperRectangular(unsigned pos, unsigned num) const;
 
   /// Removes duplicate constraints, trivially true constraints, and constraints
@@ -470,33 +475,33 @@ public:
 
   void removeDuplicateDivs();
 
-  /// Converts identifiers of kind srcKind in the range [idStart, idLimit) to
+  /// Converts variables of kind srcKind in the range [varStart, varLimit) to
   /// variables of kind dstKind. If `pos` is given, the variables are placed at
   /// position `pos` of dstKind, otherwise they are placed after all the other
   /// variables of kind dstKind. The internal ordering among the moved variables
   /// is preserved.
-  void convertIdKind(IdKind srcKind, unsigned idStart, unsigned idLimit,
-                     IdKind dstKind, unsigned pos);
-  void convertIdKind(IdKind srcKind, unsigned idStart, unsigned idLimit,
-                     IdKind dstKind) {
-    convertIdKind(srcKind, idStart, idLimit, dstKind, getNumIdKind(dstKind));
+  void covertVarKind(VarKind srcKind, unsigned varStart, unsigned varLimit,
+                     VarKind dstKind, unsigned pos);
+  void convertVarKind(VarKind srcKind, unsigned varStart, unsigned varLimit,
+                      VarKind dstKind) {
+    covertVarKind(srcKind, varStart, varLimit, dstKind, getNumVarKind(dstKind));
   }
-  void convertToLocal(IdKind kind, unsigned idStart, unsigned idLimit) {
-    convertIdKind(kind, idStart, idLimit, IdKind::Local);
+  void convertToLocal(VarKind kind, unsigned varStart, unsigned varLimit) {
+    convertVarKind(kind, varStart, varLimit, VarKind::Local);
   }
 
-  /// Adds additional local ids to the sets such that they both have the union
-  /// of the local ids in each set, without changing the set of points that
+  /// Adds additional local vars to the sets such that they both have the union
+  /// of the local vars in each set, without changing the set of points that
   /// lie in `this` and `other`.
   ///
-  /// While taking union, if a local id in `other` has a division representation
-  /// which is a duplicate of division representation, of another local id, it
-  /// is not added to the final union of local ids and is instead merged. The
-  /// new ordering of local ids is:
+  /// While taking union, if a local var in `other` has a division
+  /// representation which is a duplicate of division representation, of another
+  /// local var, it is not added to the final union of local vars and is instead
+  /// merged. The new ordering of local vars is:
   ///
-  /// [Local ids of `this`] [Non-merged local ids of `other`]
+  /// [Local vars of `this`] [Non-merged local vars of `other`]
   ///
-  /// The relative ordering of local ids is same as before.
+  /// The relative ordering of local vars is same as before.
   ///
   /// After merging, if the `i^th` local variable in one set has a known
   /// division representation, then the `i^th` local variable in the other set
@@ -505,19 +510,19 @@ public:
   ///
   /// The spaces of both relations should be compatible.
   ///
-  /// Returns the number of non-merged local ids of `other`, i.e. the number of
+  /// Returns the number of non-merged local vars of `other`, i.e. the number of
   /// locals that have been added to `this`.
-  unsigned mergeLocalIds(IntegerRelation &other);
+  unsigned mergeLocalVars(IntegerRelation &other);
 
   /// Check whether all local ids have a division representation.
   bool hasOnlyDivLocals() const;
 
   /// Changes the partition between dimensions and symbols. Depending on the new
-  /// symbol count, either a chunk of dimensional identifiers immediately before
+  /// symbol count, either a chunk of dimensional variables immediately before
   /// the split become symbols, or some of the symbols immediately after the
   /// split become dimensions.
   void setDimSymbolSeparation(unsigned newSymbolCount) {
-    space.setDimSymbolSeparation(newSymbolCount);
+    space.setVarSymbolSeperation(newSymbolCount);
   }
 
   /// Return a set corresponding to all points in the domain of the relation.
@@ -585,11 +590,11 @@ protected:
   template <bool isLower>
   Optional<int64_t> computeConstantLowerOrUpperBound(unsigned pos);
 
-  /// Eliminates a single identifier at `position` from equality and inequality
-  /// constraints. Returns `success` if the identifier was eliminated, and
+  /// Eliminates a single variable at `position` from equality and inequality
+  /// constraints. Returns `success` if the variable was eliminated, and
   /// `failure` otherwise.
-  inline LogicalResult gaussianEliminateId(unsigned position) {
-    return success(gaussianEliminateIds(position, position + 1) == 1);
+  inline LogicalResult gaussianEliminateVar(unsigned position) {
+    return success(gaussianEliminateVars(position, position + 1) == 1);
   }
 
   /// Removes local variables using equalities. Each equality is checked if it
@@ -600,14 +605,14 @@ protected:
   /// variable is also removed.
   void removeRedundantLocalVars();
 
-  /// Eliminates identifiers from equality and inequality constraints
+  /// Eliminates variables from equality and inequality constraints
   /// in column range [posStart, posLimit).
   /// Returns the number of variables eliminated.
-  unsigned gaussianEliminateIds(unsigned posStart, unsigned posLimit);
+  unsigned gaussianEliminateVars(unsigned posStart, unsigned posLimit);
 
-  /// Eliminates the identifier at the specified position using Fourier-Motzkin
+  /// Eliminates the variable at the specified position using Fourier-Motzkin
   /// variable elimination, but uses Gaussian elimination if there is an
-  /// equality involving that identifier. If the result of the elimination is
+  /// equality involving that variable. If the result of the elimination is
   /// integer exact, `*isResultIntegerExact` is set to true. If `darkShadow` is
   /// set to true, a potential under approximation (subset) of the rational
   /// shadow / exact integer shadow is computed.
@@ -636,7 +641,7 @@ protected:
   /// equalities.
   bool isColZero(unsigned pos) const;
 
-  /// Returns false if the fields corresponding to various identifier counts, or
+  /// Returns false if the fields corresponding to various variable counts, or
   /// equality/inequality buffer sizes aren't consistent; true otherwise. This
   /// is meant to be used within an assert internally.
   virtual bool hasConsistentState() const;
@@ -645,28 +650,28 @@ protected:
   /// IntegerRelation.
   virtual void printSpace(raw_ostream &os) const;
 
-  /// Removes identifiers in the column range [idStart, idLimit), and copies any
+  /// Removes variables in the column range [varStart, varLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes
   /// arrays as needed.
-  void removeIdRange(unsigned idStart, unsigned idLimit);
+  void removeVarRange(unsigned varStart, unsigned varLimit);
 
-  /// Truncate the ids of the specified kind to the specified number by dropping
-  /// some ids at the end. `num` must be less than the current number.
-  void truncateIdKind(IdKind kind, unsigned num);
+  /// Truncate the vars of the specified kind to the specified number by
+  /// dropping some vars at the end. `num` must be less than the current number.
+  void truncateVarKind(VarKind kind, unsigned num);
 
-  /// Truncate the ids to the number in the space of the specified
+  /// Truncate the vars to the number in the space of the specified
   /// CountsSnapshot.
-  void truncateIdKind(IdKind kind, const CountsSnapshot &counts);
+  void truncateVarKind(VarKind kind, const CountsSnapshot &counts);
 
   /// A parameter that controls detection of an unrealistic number of
   /// constraints. If the number of constraints is this many times the number of
   /// variables, we consider such a system out of line with the intended use
   /// case of IntegerRelation.
   // The rationale for 32 is that in the typical simplest of cases, an
-  // identifier is expected to have one lower bound and one upper bound
-  // constraint. With a level of tiling or a connection to another identifier
+  // variable is expected to have one lower bound and one upper bound
+  // constraint. With a level of tiling or a connection to another variable
   // through a div or mod, an extra pair of bounds gets added. As a limit, we
-  // don't expect an identifier to have more than 32 lower/upper/equality
+  // don't expect a variable to have more than 32 lower/upper/equality
   // constraints. This is conservatively set low and can be raised if needed.
   constexpr static unsigned kExplosionFactor = 32;
 
@@ -689,25 +694,26 @@ struct SymbolicLexMin;
 /// Equality  : c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n == 0
 ///
 /// where c_0, c_1, ..., c_n are integers and n is the total number of
-/// identifiers in the space.
+/// variables in the space.
 ///
 /// An IntegerPolyhedron is similar to an IntegerRelation but it does not make a
-/// distinction between Domain and Range identifiers. Internally,
-/// IntegerPolyhedron is implemented as a IntegerRelation with zero domain ids.
+/// distinction between Domain and Range variables. Internally,
+/// IntegerPolyhedron is implemented as a IntegerRelation with zero domain vars.
 ///
 /// Since IntegerPolyhedron does not make a distinction between kinds of
-/// dimensions, IdKind::SetDim should be used to refer to dimension identifiers.
+/// dimensions, VarKind::SetDim should be used to refer to dimension
+/// variables.
 class IntegerPolyhedron : public IntegerRelation {
 public:
   /// Constructs a set reserving memory for the specified number
-  /// of constraints and identifiers.
+  /// of constraints and variables.
   IntegerPolyhedron(unsigned numReservedInequalities,
                     unsigned numReservedEqualities, unsigned numReservedCols,
                     const PresburgerSpace &space)
       : IntegerRelation(numReservedInequalities, numReservedEqualities,
                         numReservedCols, space) {
-    assert(space.getNumDomainIds() == 0 &&
-           "Number of domain id's should be zero in Set kind space.");
+    assert(space.getNumDomainVars() == 0 &&
+           "Number of domain vars should be zero in Set kind space.");
   }
 
   /// Constructs a relation with the specified number of dimensions and
@@ -715,21 +721,21 @@ public:
   explicit IntegerPolyhedron(const PresburgerSpace &space)
       : IntegerPolyhedron(/*numReservedInequalities=*/0,
                           /*numReservedEqualities=*/0,
-                          /*numReservedCols=*/space.getNumIds() + 1, space) {}
+                          /*numReservedCols=*/space.getNumVars() + 1, space) {}
 
   /// Construct a set from an IntegerRelation. The relation should have
-  /// no domain ids.
+  /// no domain vars.
   explicit IntegerPolyhedron(const IntegerRelation &rel)
       : IntegerRelation(rel) {
-    assert(space.getNumDomainIds() == 0 &&
-           "Number of domain id's should be zero in Set kind space.");
+    assert(space.getNumDomainVars() == 0 &&
+           "Number of domain vars should be zero in Set kind space.");
   }
 
   /// Construct a set from an IntegerRelation, but instead of creating a copy,
-  /// use move constructor. The relation should have no domain ids.
+  /// use move constructor. The relation should have no domain vars.
   explicit IntegerPolyhedron(IntegerRelation &&rel) : IntegerRelation(rel) {
-    assert(space.getNumDomainIds() == 0 &&
-           "Number of domain id's should be zero in Set kind space.");
+    assert(space.getNumDomainVars() == 0 &&
+           "Number of domain vars should be zero in Set kind space.");
   }
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
@@ -748,11 +754,11 @@ public:
   // Clones this object.
   std::unique_ptr<IntegerPolyhedron> clone() const;
 
-  /// Insert `num` identifiers of the specified kind at position `pos`.
-  /// Positions are relative to the kind of identifier. Return the absolute
-  /// column position (i.e., not relative to the kind of identifier) of the
-  /// first added identifier.
-  unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
+  /// Insert `num` variables of the specified kind at position `pos`.
+  /// Positions are relative to the kind of variable. Return the absolute
+  /// column position (i.e., not relative to the kind of variable) of the
+  /// first added variable.
+  unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1) override;
 
   /// Compute an equivalent representation of the same set, such that all local
   /// ids have division representations. This representation may involve

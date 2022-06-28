@@ -8,7 +8,7 @@
 //
 // A class to represent an relation over integer tuples. A relation is
 // represented as a constraint system over a space of tuples of integer valued
-// varaiables supporting symbolic identifiers and existential quantification.
+// variables supporting symbolic variables and existential quantification.
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,16 +39,16 @@ std::unique_ptr<IntegerPolyhedron> IntegerPolyhedron::clone() const {
 }
 
 void IntegerRelation::setSpace(const PresburgerSpace &oSpace) {
-  assert(space.getNumIds() == oSpace.getNumIds() && "invalid space!");
+  assert(space.getNumVars() == oSpace.getNumVars() && "invalid space!");
   space = oSpace;
 }
 
 void IntegerRelation::setSpaceExceptLocals(const PresburgerSpace &oSpace) {
-  assert(oSpace.getNumLocalIds() == 0 && "no locals should be present!");
-  assert(oSpace.getNumIds() <= getNumIds() && "invalid space!");
-  unsigned newNumLocals = getNumIds() - oSpace.getNumIds();
+  assert(oSpace.getNumLocalVars() == 0 && "no locals should be present!");
+  assert(oSpace.getNumVars() <= getNumVars() && "invalid space!");
+  unsigned newNumLocals = getNumVars() - oSpace.getNumVars();
   space = oSpace;
-  space.insertId(IdKind::Local, 0, newNumLocals);
+  space.insertVar(VarKind::Local, 0, newNumLocals);
 }
 
 void IntegerRelation::append(const IntegerRelation &other) {
@@ -68,7 +68,7 @@ void IntegerRelation::append(const IntegerRelation &other) {
 
 IntegerRelation IntegerRelation::intersect(IntegerRelation other) const {
   IntegerRelation result = *this;
-  result.mergeLocalIds(other);
+  result.mergeLocalVars(other);
   result.append(other);
   return result;
 }
@@ -85,7 +85,7 @@ bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
 
 MaybeOptimum<SmallVector<Fraction, 8>>
 IntegerRelation::findRationalLexMin() const {
-  assert(getNumSymbolIds() == 0 && "Symbols are not supported!");
+  assert(getNumSymbolVars() == 0 && "Symbols are not supported!");
   MaybeOptimum<SmallVector<Fraction, 8>> maybeLexMin =
       LexSimplex(*this).findRationalLexMin();
 
@@ -94,18 +94,18 @@ IntegerRelation::findRationalLexMin() const {
 
   // The Simplex returns the lexmin over all the variables including locals. But
   // locals are not actually part of the space and should not be returned in the
-  // result. Since the locals are placed last in the list of identifiers, they
+  // result. Since the locals are placed last in the list of variables, they
   // will be minimized last in the lexmin. So simply truncating out the locals
   // from the end of the answer gives the desired lexmin over the dimensions.
-  assert(maybeLexMin->size() == getNumIds() &&
+  assert(maybeLexMin->size() == getNumVars() &&
          "Incorrect number of vars in lexMin!");
-  maybeLexMin->resize(getNumDimAndSymbolIds());
+  maybeLexMin->resize(getNumDimAndSymbolVars());
   return maybeLexMin;
 }
 
 MaybeOptimum<SmallVector<int64_t, 8>>
 IntegerRelation::findIntegerLexMin() const {
-  assert(getNumSymbolIds() == 0 && "Symbols are not supported!");
+  assert(getNumSymbolVars() == 0 && "Symbols are not supported!");
   MaybeOptimum<SmallVector<int64_t, 8>> maybeLexMin =
       LexSimplex(*this).findIntegerLexMin();
 
@@ -114,12 +114,12 @@ IntegerRelation::findIntegerLexMin() const {
 
   // The Simplex returns the lexmin over all the variables including locals. But
   // locals are not actually part of the space and should not be returned in the
-  // result. Since the locals are placed last in the list of identifiers, they
+  // result. Since the locals are placed last in the list of variables, they
   // will be minimized last in the lexmin. So simply truncating out the locals
   // from the end of the answer gives the desired lexmin over the dimensions.
-  assert(maybeLexMin->size() == getNumIds() &&
+  assert(maybeLexMin->size() == getNumVars() &&
          "Incorrect number of vars in lexMin!");
-  maybeLexMin->resize(getNumDimAndSymbolIds());
+  maybeLexMin->resize(getNumDimAndSymbolVars());
   return maybeLexMin;
 }
 
@@ -127,8 +127,8 @@ static bool rangeIsZero(ArrayRef<int64_t> range) {
   return llvm::all_of(range, [](int64_t x) { return x == 0; });
 }
 
-void removeConstraintsInvolvingIdRange(IntegerRelation &poly, unsigned begin,
-                                       unsigned count) {
+static void removeConstraintsInvolvingVarRange(IntegerRelation &poly,
+                                               unsigned begin, unsigned count) {
   // We loop until i > 0 and index into i - 1 to avoid sign issues.
   //
   // We iterate backwards so that whether we remove constraint i - 1 or not, the
@@ -145,29 +145,29 @@ IntegerRelation::CountsSnapshot IntegerRelation::getCounts() const {
   return {getSpace(), getNumInequalities(), getNumEqualities()};
 }
 
-void IntegerRelation::truncateIdKind(IdKind kind, unsigned num) {
-  unsigned curNum = getNumIdKind(kind);
-  assert(num <= curNum && "Can't truncate to more ids!");
-  removeIdRange(kind, num, curNum);
+void IntegerRelation::truncateVarKind(VarKind kind, unsigned num) {
+  unsigned curNum = getNumVarKind(kind);
+  assert(num <= curNum && "Can't truncate to more vars!");
+  removeVarRange(kind, num, curNum);
 }
 
-void IntegerRelation::truncateIdKind(IdKind kind,
-                                     const CountsSnapshot &counts) {
-  truncateIdKind(kind, counts.getSpace().getNumIdKind(kind));
+void IntegerRelation::truncateVarKind(VarKind kind,
+                                      const CountsSnapshot &counts) {
+  truncateVarKind(kind, counts.getSpace().getNumVarKind(kind));
 }
 
 void IntegerRelation::truncate(const CountsSnapshot &counts) {
-  truncateIdKind(IdKind::Domain, counts);
-  truncateIdKind(IdKind::Range, counts);
-  truncateIdKind(IdKind::Symbol, counts);
-  truncateIdKind(IdKind::Local, counts);
+  truncateVarKind(VarKind::Domain, counts);
+  truncateVarKind(VarKind::Range, counts);
+  truncateVarKind(VarKind::Symbol, counts);
+  truncateVarKind(VarKind::Local, counts);
   removeInequalityRange(counts.getNumIneqs(), getNumInequalities());
   removeEqualityRange(counts.getNumEqs(), getNumEqualities());
 }
 
 PresburgerSet IntegerPolyhedron::computeReprWithOnlyDivLocals() const {
   // If there are no locals, we're done.
-  if (getNumLocalIds() == 0)
+  if (getNumLocalVars() == 0)
     return PresburgerSet(*this);
 
   // Move all the non-div locals to the end, as the current API to
@@ -181,13 +181,13 @@ PresburgerSet IntegerPolyhedron::computeReprWithOnlyDivLocals() const {
   // Iterate through all the locals. The last `numNonDivLocals` are the locals
   // that have been scanned already and do not have division representations.
   unsigned numNonDivLocals = 0;
-  unsigned offset = copy.getIdKindOffset(IdKind::Local);
-  for (unsigned i = 0, e = copy.getNumLocalIds(); i < e - numNonDivLocals;) {
+  unsigned offset = copy.getVarKindOffset(VarKind::Local);
+  for (unsigned i = 0, e = copy.getNumLocalVars(); i < e - numNonDivLocals;) {
     if (!reprs[i]) {
       // Whenever we come across a local that does not have a division
       // representation, we swap it to the `numNonDivLocals`-th last position
       // and increment `numNonDivLocal`s. `reprs` also needs to be swapped.
-      copy.swapId(offset + i, offset + e - numNonDivLocals - 1);
+      copy.swapVar(offset + i, offset + e - numNonDivLocals - 1);
       std::swap(reprs[i], reprs[e - numNonDivLocals - 1]);
       ++numNonDivLocals;
       continue;
@@ -213,7 +213,7 @@ PresburgerSet IntegerPolyhedron::computeReprWithOnlyDivLocals() const {
   SymbolicLexMin lexminResult =
       SymbolicLexSimplex(copy, /*symbolOffset*/ 0,
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
-                             /*numDims=*/copy.getNumIds() - numNonDivLocals)))
+                             /*numDims=*/copy.getNumVars() - numNonDivLocals)))
           .computeSymbolicIntegerLexMin();
   PresburgerSet result =
       lexminResult.lexmin.getDomain().unionSet(lexminResult.unboundedDomain);
@@ -221,7 +221,7 @@ PresburgerSet IntegerPolyhedron::computeReprWithOnlyDivLocals() const {
   // The result set might lie in the wrong space -- all its ids are dims.
   // Set it to the desired space and return.
   PresburgerSpace space = getSpace();
-  space.removeIdRange(IdKind::Local, 0, getNumLocalIds());
+  space.removeVarRange(VarKind::Local, 0, getNumLocalVars());
   result.setSpace(space);
   return result;
 }
@@ -231,28 +231,28 @@ SymbolicLexMin IntegerPolyhedron::findSymbolicIntegerLexMin() const {
   // the actual symbols of this set.
   SymbolicLexMin result =
       SymbolicLexSimplex(*this, IntegerPolyhedron(PresburgerSpace::getSetSpace(
-                                    /*numDims=*/getNumSymbolIds())))
+                                    /*numDims=*/getNumSymbolVars())))
           .computeSymbolicIntegerLexMin();
 
   // We want to return only the lexmin over the dims, so strip the locals from
   // the computed lexmin.
   result.lexmin.truncateOutput(result.lexmin.getNumOutputs() -
-                               getNumLocalIds());
+                               getNumLocalVars());
   return result;
 }
 
-unsigned IntegerRelation::insertId(IdKind kind, unsigned pos, unsigned num) {
-  assert(pos <= getNumIdKind(kind));
+unsigned IntegerRelation::insertVar(VarKind kind, unsigned pos, unsigned num) {
+  assert(pos <= getNumVarKind(kind));
 
-  unsigned insertPos = space.insertId(kind, pos, num);
+  unsigned insertPos = space.insertVar(kind, pos, num);
   inequalities.insertColumns(insertPos, num);
   equalities.insertColumns(insertPos, num);
   return insertPos;
 }
 
-unsigned IntegerRelation::appendId(IdKind kind, unsigned num) {
-  unsigned pos = getNumIdKind(kind);
-  return insertId(kind, pos, num);
+unsigned IntegerRelation::appendVar(VarKind kind, unsigned num) {
+  unsigned pos = getNumVarKind(kind);
+  return insertVar(kind, pos, num);
 }
 
 void IntegerRelation::addEquality(ArrayRef<int64_t> eq) {
@@ -269,44 +269,44 @@ void IntegerRelation::addInequality(ArrayRef<int64_t> inEq) {
     inequalities(row, i) = inEq[i];
 }
 
-void IntegerRelation::removeId(IdKind kind, unsigned pos) {
-  removeIdRange(kind, pos, pos + 1);
+void IntegerRelation::removeVar(VarKind kind, unsigned pos) {
+  removeVarRange(kind, pos, pos + 1);
 }
 
-void IntegerRelation::removeId(unsigned pos) { removeIdRange(pos, pos + 1); }
+void IntegerRelation::removeVar(unsigned pos) { removeVarRange(pos, pos + 1); }
 
-void IntegerRelation::removeIdRange(IdKind kind, unsigned idStart,
-                                    unsigned idLimit) {
-  assert(idLimit <= getNumIdKind(kind));
+void IntegerRelation::removeVarRange(VarKind kind, unsigned varStart,
+                                     unsigned varLimit) {
+  assert(varLimit <= getNumVarKind(kind));
 
-  if (idStart >= idLimit)
+  if (varStart >= varLimit)
     return;
 
-  // Remove eliminated identifiers from the constraints.
-  unsigned offset = getIdKindOffset(kind);
-  equalities.removeColumns(offset + idStart, idLimit - idStart);
-  inequalities.removeColumns(offset + idStart, idLimit - idStart);
+  // Remove eliminated variables from the constraints.
+  unsigned offset = getVarKindOffset(kind);
+  equalities.removeColumns(offset + varStart, varLimit - varStart);
+  inequalities.removeColumns(offset + varStart, varLimit - varStart);
 
-  // Remove eliminated identifiers from the space.
-  space.removeIdRange(kind, idStart, idLimit);
+  // Remove eliminated variables from the space.
+  space.removeVarRange(kind, varStart, varLimit);
 }
 
-void IntegerRelation::removeIdRange(unsigned idStart, unsigned idLimit) {
-  assert(idLimit <= getNumIds());
+void IntegerRelation::removeVarRange(unsigned varStart, unsigned varLimit) {
+  assert(varLimit <= getNumVars());
 
-  if (idStart >= idLimit)
+  if (varStart >= varLimit)
     return;
 
-  // Helper function to remove ids of the specified kind in the given range
+  // Helper function to remove vars of the specified kind in the given range
   // [start, limit), The range is absolute (i.e. it is not relative to the kind
-  // of identifier). Also updates `limit` to reflect the deleted identifiers.
-  auto removeIdKindInRange = [this](IdKind kind, unsigned &start,
-                                    unsigned &limit) {
+  // of variable). Also updates `limit` to reflect the deleted variables.
+  auto removeVarKindInRange = [this](VarKind kind, unsigned &start,
+                                     unsigned &limit) {
     if (start >= limit)
       return;
 
-    unsigned offset = getIdKindOffset(kind);
-    unsigned num = getNumIdKind(kind);
+    unsigned offset = getVarKindOffset(kind);
+    unsigned num = getNumVarKind(kind);
 
     // Get `start`, `limit` relative to the specified kind.
     unsigned relativeStart =
@@ -314,19 +314,19 @@ void IntegerRelation::removeIdRange(unsigned idStart, unsigned idLimit) {
     unsigned relativeLimit =
         limit <= offset ? 0 : std::min(num, limit - offset);
 
-    // Remove ids of the specified kind in the relative range.
-    removeIdRange(kind, relativeStart, relativeLimit);
+    // Remove vars of the specified kind in the relative range.
+    removeVarRange(kind, relativeStart, relativeLimit);
 
-    // Update `limit` to reflect deleted identifiers.
-    // `start` does not need to be updated because any identifiers that are
+    // Update `limit` to reflect deleted variables.
+    // `start` does not need to be updated because any variables that are
     // deleted are after position `start`.
     limit -= relativeLimit - relativeStart;
   };
 
-  removeIdKindInRange(IdKind::Domain, idStart, idLimit);
-  removeIdKindInRange(IdKind::Range, idStart, idLimit);
-  removeIdKindInRange(IdKind::Symbol, idStart, idLimit);
-  removeIdKindInRange(IdKind::Local, idStart, idLimit);
+  removeVarKindInRange(VarKind::Domain, varStart, varLimit);
+  removeVarKindInRange(VarKind::Range, varStart, varLimit);
+  removeVarKindInRange(VarKind::Symbol, varStart, varLimit);
+  removeVarKindInRange(VarKind::Local, varStart, varLimit);
 }
 
 void IntegerRelation::removeEquality(unsigned pos) {
@@ -349,9 +349,9 @@ void IntegerRelation::removeInequalityRange(unsigned start, unsigned end) {
   inequalities.removeRows(start, end - start);
 }
 
-void IntegerRelation::swapId(unsigned posA, unsigned posB) {
-  assert(posA < getNumIds() && "invalid position A");
-  assert(posB < getNumIds() && "invalid position B");
+void IntegerRelation::swapVar(unsigned posA, unsigned posB) {
+  assert(posA < getNumVars() && "invalid position A");
+  assert(posB < getNumVars() && "invalid position B");
 
   if (posA == posB)
     return;
@@ -365,17 +365,17 @@ void IntegerRelation::clearConstraints() {
   inequalities.resizeVertically(0);
 }
 
-/// Gather all lower and upper bounds of the identifier at `pos`, and
+/// Gather all lower and upper bounds of the variable at `pos`, and
 /// optionally any equalities on it. In addition, the bounds are to be
-/// independent of identifiers in position range [`offset`, `offset` + `num`).
+/// independent of variables in position range [`offset`, `offset` + `num`).
 void IntegerRelation::getLowerAndUpperBoundIndices(
     unsigned pos, SmallVectorImpl<unsigned> *lbIndices,
     SmallVectorImpl<unsigned> *ubIndices, SmallVectorImpl<unsigned> *eqIndices,
     unsigned offset, unsigned num) const {
-  assert(pos < getNumIds() && "invalid position");
+  assert(pos < getNumVars() && "invalid position");
   assert(offset + num < getNumCols() && "invalid range");
 
-  // Checks for a constraint that has a non-zero coeff for the identifiers in
+  // Checks for a constraint that has a non-zero coeff for the variables in
   // the position range [offset, offset + num) while ignoring `pos`.
   auto containsConstraintDependentOnRange = [&](unsigned r, bool isEq) {
     unsigned c, f;
@@ -406,7 +406,7 @@ void IntegerRelation::getLowerAndUpperBoundIndices(
   }
 
   // An equality is both a lower and upper bound. Record any equalities
-  // involving the pos^th identifier.
+  // involving the pos^th variable.
   if (!eqIndices)
     return;
 
@@ -430,17 +430,17 @@ bool IntegerRelation::hasConsistentState() const {
 void IntegerRelation::setAndEliminate(unsigned pos, ArrayRef<int64_t> values) {
   if (values.empty())
     return;
-  assert(pos + values.size() <= getNumIds() &&
+  assert(pos + values.size() <= getNumVars() &&
          "invalid position or too many values");
   // Setting x_j = p in sum_i a_i x_i + c is equivalent to adding p*a_j to the
-  // constant term and removing the id x_j. We do this for all the ids
+  // constant term and removing the var x_j. We do this for all the vars
   // pos, pos + 1, ... pos + values.size() - 1.
   unsigned constantColPos = getNumCols() - 1;
   for (unsigned i = 0, numVals = values.size(); i < numVals; ++i)
     inequalities.addToColumn(i + pos, constantColPos, values[i]);
   for (unsigned i = 0, numVals = values.size(); i < numVals; ++i)
     equalities.addToColumn(i + pos, constantColPos, values[i]);
-  removeIdRange(pos, pos + values.size());
+  removeVarRange(pos, pos + values.size());
 }
 
 void IntegerRelation::clearAndCopyFrom(const IntegerRelation &other) {
@@ -502,7 +502,7 @@ bool IntegerRelation::hasInvalidConstraint() const {
   return check(/*isEq=*/false);
 }
 
-/// Eliminate identifier from constraint at `rowIdx` based on coefficient at
+/// Eliminate variable from constraint at `rowIdx` based on coefficient at
 /// pivotRow, pivotCol. Columns in range [elimColStart, pivotCol) will not be
 /// updated as they have already been eliminated.
 static void eliminateFromConstraint(IntegerRelation *constraints,
@@ -537,14 +537,14 @@ static void eliminateFromConstraint(IntegerRelation *constraints,
   }
 }
 
-/// Returns the position of the identifier that has the minimum <number of lower
+/// Returns the position of the variable that has the minimum <number of lower
 /// bounds> times <number of upper bounds> from the specified range of
-/// identifiers [start, end). It is often best to eliminate in the increasing
+/// variables [start, end). It is often best to eliminate in the increasing
 /// order of these counts when doing Fourier-Motzkin elimination since FM adds
 /// that many new constraints.
-static unsigned getBestIdToEliminate(const IntegerRelation &cst, unsigned start,
-                                     unsigned end) {
-  assert(start < cst.getNumIds() && end < cst.getNumIds() + 1);
+static unsigned getBestVarToEliminate(const IntegerRelation &cst,
+                                      unsigned start, unsigned end) {
+  assert(start < cst.getNumVars() && end < cst.getNumVars() + 1);
 
   auto getProductOfNumLowerUpperBounds = [&](unsigned pos) {
     unsigned numLb = 0;
@@ -571,7 +571,7 @@ static unsigned getBestIdToEliminate(const IntegerRelation &cst, unsigned start,
   return minLoc;
 }
 
-// Checks for emptiness of the set by eliminating identifiers successively and
+// Checks for emptiness of the set by eliminating variables successively and
 // using the GCD test (on all equality constraints) and checking for trivially
 // invalid constraints. Returns 'true' if the constraint system is found to be
 // empty; false otherwise.
@@ -586,10 +586,10 @@ bool IntegerRelation::isEmpty() const {
   if (tmpCst.isEmptyByGCDTest() || tmpCst.hasInvalidConstraint())
     return true;
 
-  // Eliminate as many identifiers as possible using Gaussian elimination.
+  // Eliminate as many variables as possible using Gaussian elimination.
   unsigned currentPos = 0;
-  while (currentPos < tmpCst.getNumIds()) {
-    tmpCst.gaussianEliminateIds(currentPos, tmpCst.getNumIds());
+  while (currentPos < tmpCst.getNumVars()) {
+    tmpCst.gaussianEliminateVars(currentPos, tmpCst.getNumVars());
     ++currentPos;
     // We check emptiness through trivial checks after eliminating each ID to
     // detect emptiness early. Since the checks isEmptyByGCDTest() and
@@ -600,15 +600,15 @@ bool IntegerRelation::isEmpty() const {
   }
 
   // Eliminate the remaining using FM.
-  for (unsigned i = 0, e = tmpCst.getNumIds(); i < e; i++) {
+  for (unsigned i = 0, e = tmpCst.getNumVars(); i < e; i++) {
     tmpCst.fourierMotzkinEliminate(
-        getBestIdToEliminate(tmpCst, 0, tmpCst.getNumIds()));
+        getBestVarToEliminate(tmpCst, 0, tmpCst.getNumVars()));
     // Check for a constraint explosion. This rarely happens in practice, but
     // this check exists as a safeguard against improperly constructed
     // constraint systems or artificially created arbitrarily complex systems
     // that aren't the intended use case for IntegerRelation. This is
     // needed since FM has a worst case exponential complexity in theory.
-    if (tmpCst.getNumConstraints() >= kExplosionFactor * getNumIds()) {
+    if (tmpCst.getNumConstraints() >= kExplosionFactor * getNumVars()) {
       LLVM_DEBUG(llvm::dbgs() << "FM constraint explosion detected\n");
       return false;
     }
@@ -780,10 +780,10 @@ Optional<SmallVector<int64_t, 8>> IntegerRelation::findIntegerSample() const {
   // obtain a bounded set.
   IntegerRelation boundedSet(transformedSet);
   unsigned numBoundedDims = result.first;
-  unsigned numUnboundedDims = getNumIds() - numBoundedDims;
-  removeConstraintsInvolvingIdRange(boundedSet, numBoundedDims,
-                                    numUnboundedDims);
-  boundedSet.removeIdRange(numBoundedDims, boundedSet.getNumIds());
+  unsigned numUnboundedDims = getNumVars() - numBoundedDims;
+  removeConstraintsInvolvingVarRange(boundedSet, numBoundedDims,
+                                     numUnboundedDims);
+  boundedSet.removeVarRange(numBoundedDims, boundedSet.getNumVars());
 
   // 3) Try to obtain a sample from the bounded set.
   Optional<SmallVector<int64_t, 8>> boundedSample =
@@ -824,10 +824,10 @@ Optional<SmallVector<int64_t, 8>> IntegerRelation::findIntegerSample() const {
   // negative a_i, so we accomodate this by shifting the inequality by this
   // amount for the shrunken cone.
   for (unsigned i = 0, e = cone.getNumInequalities(); i < e; ++i) {
-    for (unsigned j = 0; j < cone.getNumIds(); ++j) {
+    for (unsigned j = 0; j < cone.getNumVars(); ++j) {
       int64_t coeff = cone.atIneq(i, j);
       if (coeff < 0)
-        cone.atIneq(i, cone.getNumIds()) += coeff;
+        cone.atIneq(i, cone.getNumVars()) += coeff;
     }
   }
 
@@ -878,7 +878,7 @@ bool IntegerRelation::containsPoint(ArrayRef<int64_t> point) const {
 }
 
 /// Just substitute the values given and check if an integer sample exists for
-/// the local ids.
+/// the local vars.
 ///
 /// TODO: this could be made more efficient by handling divisions separately.
 /// Instead of finding an integer sample over all the locals, we can first
@@ -887,9 +887,9 @@ bool IntegerRelation::containsPoint(ArrayRef<int64_t> point) const {
 /// Handling this correctly requires ordering the divs, though.
 Optional<SmallVector<int64_t, 8>>
 IntegerRelation::containsPointNoLocal(ArrayRef<int64_t> point) const {
-  assert(point.size() == getNumIds() - getNumLocalIds() &&
-         "Point should contain all ids except locals!");
-  assert(getIdKindOffset(IdKind::Local) == getNumIds() - getNumLocalIds() &&
+  assert(point.size() == getNumVars() - getNumLocalVars() &&
+         "Point should contain all vars except locals!");
+  assert(getVarKindOffset(VarKind::Local) == getNumVars() - getNumLocalVars() &&
          "This function depends on locals being stored last!");
   IntegerRelation copy = *this;
   copy.setAndEliminate(0, point);
@@ -897,15 +897,15 @@ IntegerRelation::containsPointNoLocal(ArrayRef<int64_t> point) const {
 }
 
 void IntegerRelation::getLocalReprs(std::vector<MaybeLocalRepr> &repr) const {
-  std::vector<SmallVector<int64_t, 8>> dividends(getNumLocalIds());
-  SmallVector<unsigned, 4> denominators(getNumLocalIds());
+  std::vector<SmallVector<int64_t, 8>> dividends(getNumLocalVars());
+  SmallVector<unsigned, 4> denominators(getNumLocalVars());
   getLocalReprs(dividends, denominators, repr);
 }
 
 void IntegerRelation::getLocalReprs(
     std::vector<SmallVector<int64_t, 8>> &dividends,
     SmallVector<unsigned, 4> &denominators) const {
-  std::vector<MaybeLocalRepr> repr(getNumLocalIds());
+  std::vector<MaybeLocalRepr> repr(getNumLocalVars());
   getLocalReprs(dividends, denominators, repr);
 }
 
@@ -914,21 +914,21 @@ void IntegerRelation::getLocalReprs(
     SmallVector<unsigned, 4> &denominators,
     std::vector<MaybeLocalRepr> &repr) const {
 
-  repr.resize(getNumLocalIds());
-  dividends.resize(getNumLocalIds());
-  denominators.resize(getNumLocalIds());
+  repr.resize(getNumLocalVars());
+  dividends.resize(getNumLocalVars());
+  denominators.resize(getNumLocalVars());
 
-  SmallVector<bool, 8> foundRepr(getNumIds(), false);
-  for (unsigned i = 0, e = getNumDimAndSymbolIds(); i < e; ++i)
+  SmallVector<bool, 8> foundRepr(getNumVars(), false);
+  for (unsigned i = 0, e = getNumDimAndSymbolVars(); i < e; ++i)
     foundRepr[i] = true;
 
-  unsigned divOffset = getNumDimAndSymbolIds();
+  unsigned divOffset = getNumDimAndSymbolVars();
   bool changed;
   do {
     // Each time changed is true, at end of this iteration, one or more local
     // vars have been detected as floor divs.
     changed = false;
-    for (unsigned i = 0, e = getNumLocalIds(); i < e; ++i) {
+    for (unsigned i = 0, e = getNumLocalVars(); i < e; ++i) {
       if (!foundRepr[i + divOffset]) {
         MaybeLocalRepr res = computeSingleVarRepr(
             *this, foundRepr, divOffset + i, dividends[i], denominators[i]);
@@ -941,7 +941,7 @@ void IntegerRelation::getLocalReprs(
     }
   } while (changed);
 
-  // Set 0 denominator for identifiers for which no division representation
+  // Set 0 denominator for variables for which no division representation
   // could be found.
   for (unsigned i = 0, e = repr.size(); i < e; ++i)
     if (!repr[i])
@@ -966,12 +966,12 @@ void IntegerRelation::gcdTightenInequalities() {
   }
 }
 
-// Eliminates all identifier variables in column range [posStart, posLimit).
+// Eliminates all variable variables in column range [posStart, posLimit).
 // Returns the number of variables eliminated.
-unsigned IntegerRelation::gaussianEliminateIds(unsigned posStart,
-                                               unsigned posLimit) {
-  // Return if identifier positions to eliminate are out of range.
-  assert(posLimit <= getNumIds());
+unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
+                                                unsigned posLimit) {
+  // Return if variable positions to eliminate are out of range.
+  assert(posLimit <= getNumVars());
   assert(hasConsistentState());
 
   if (posStart >= posLimit)
@@ -993,14 +993,14 @@ unsigned IntegerRelation::gaussianEliminateIds(unsigned posStart,
       break;
     }
 
-    // Eliminate identifier at 'pivotCol' from each equality row.
+    // Eliminate variable at 'pivotCol' from each equality row.
     for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
       eliminateFromConstraint(this, i, pivotRow, pivotCol, posStart,
                               /*isEq=*/true);
       equalities.normalizeRow(i);
     }
 
-    // Eliminate identifier at 'pivotCol' from each inequality row.
+    // Eliminate variable at 'pivotCol' from each inequality row.
     for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
       eliminateFromConstraint(this, i, pivotRow, pivotCol, posStart,
                               /*isEq=*/false);
@@ -1012,7 +1012,7 @@ unsigned IntegerRelation::gaussianEliminateIds(unsigned posStart,
   // Update position limit based on number eliminated.
   posLimit = pivotCol;
   // Remove eliminated columns from all constraints.
-  removeIdRange(posStart, posLimit);
+  removeVarRange(posStart, posLimit);
   return posLimit - posStart;
 }
 
@@ -1082,7 +1082,7 @@ void IntegerRelation::removeRedundantConstraints() {
 }
 
 Optional<uint64_t> IntegerRelation::computeVolume() const {
-  assert(getNumSymbolIds() == 0 && "Symbols are not yet supported!");
+  assert(getNumSymbolVars() == 0 && "Symbols are not yet supported!");
 
   Simplex simplex(*this);
   // If the polytope is rationally empty, there are certainly no integer
@@ -1090,11 +1090,11 @@ Optional<uint64_t> IntegerRelation::computeVolume() const {
   if (simplex.isEmpty())
     return 0;
 
-  // Just find the maximum and minimum integer value of each non-local id
-  // separately, thus finding the number of integer values each such id can
+  // Just find the maximum and minimum integer value of each non-local var
+  // separately, thus finding the number of integer values each such var can
   // take. Multiplying these together gives a valid overapproximation of the
   // number of integer points in the relation. The result this gives is
-  // equivalent to projecting (rationally) the relation onto its non-local ids
+  // equivalent to projecting (rationally) the relation onto its non-local vars
   // and returning the number of integer points in a minimal axis-parallel
   // hyperrectangular overapproximation of that.
   //
@@ -1105,9 +1105,9 @@ Optional<uint64_t> IntegerRelation::computeVolume() const {
   // If there is no such empty dimension, if any dimension is unbounded we
   // just return the result as unbounded.
   uint64_t count = 1;
-  SmallVector<int64_t, 8> dim(getNumIds() + 1);
-  bool hasUnboundedId = false;
-  for (unsigned i = 0, e = getNumDimAndSymbolIds(); i < e; ++i) {
+  SmallVector<int64_t, 8> dim(getNumVars() + 1);
+  bool hasUnboundedVar = false;
+  for (unsigned i = 0, e = getNumDimAndSymbolVars(); i < e; ++i) {
     dim[i] = 1;
     MaybeOptimum<int64_t> min, max;
     std::tie(min, max) = simplex.computeIntegerBounds(dim);
@@ -1119,7 +1119,7 @@ Optional<uint64_t> IntegerRelation::computeVolume() const {
     // One of the dimensions is unbounded. Note this fact. We will return
     // unbounded if none of the other dimensions makes the volume zero.
     if (min.isUnbounded() || max.isUnbounded()) {
-      hasUnboundedId = true;
+      hasUnboundedVar = true;
       continue;
     }
 
@@ -1133,21 +1133,21 @@ Optional<uint64_t> IntegerRelation::computeVolume() const {
 
   if (count == 0)
     return 0;
-  if (hasUnboundedId)
+  if (hasUnboundedVar)
     return {};
   return count;
 }
 
-void IntegerRelation::eliminateRedundantLocalId(unsigned posA, unsigned posB) {
-  assert(posA < getNumLocalIds() && "Invalid local id position");
-  assert(posB < getNumLocalIds() && "Invalid local id position");
+void IntegerRelation::eliminateRedundantLocalVar(unsigned posA, unsigned posB) {
+  assert(posA < getNumLocalVars() && "Invalid local var position");
+  assert(posB < getNumLocalVars() && "Invalid local var position");
 
-  unsigned localOffset = getIdKindOffset(IdKind::Local);
+  unsigned localOffset = getVarKindOffset(VarKind::Local);
   posA += localOffset;
   posB += localOffset;
   inequalities.addToColumn(posB, posA, 1);
   equalities.addToColumn(posB, posA, 1);
-  removeId(posB);
+  removeVar(posB);
 }
 
 /// Adds additional local ids to the sets such that they both have the union
@@ -1163,14 +1163,14 @@ void IntegerRelation::eliminateRedundantLocalId(unsigned posA, unsigned posB) {
 /// It is possible that division representation for some local id cannot be
 /// obtained, and thus these local ids are not considered for detecting
 /// duplicates.
-unsigned IntegerRelation::mergeLocalIds(IntegerRelation &other) {
+unsigned IntegerRelation::mergeLocalVars(IntegerRelation &other) {
   IntegerRelation &relA = *this;
   IntegerRelation &relB = other;
 
-  unsigned oldALocals = relA.getNumLocalIds();
+  unsigned oldALocals = relA.getNumLocalVars();
 
   // Merge function that merges the local variables in both sets by treating
-  // them as the same identifier.
+  // them as the same variable.
   auto merge = [&relA, &relB, oldALocals](unsigned i, unsigned j) -> bool {
     // We only merge from local at pos j to local at pos i, where j > i.
     if (i >= j)
@@ -1182,16 +1182,16 @@ unsigned IntegerRelation::mergeLocalIds(IntegerRelation &other) {
       return false;
 
     // Merge local at pos j into local at position i.
-    relA.eliminateRedundantLocalId(i, j);
-    relB.eliminateRedundantLocalId(i, j);
+    relA.eliminateRedundantLocalVar(i, j);
+    relB.eliminateRedundantLocalVar(i, j);
     return true;
   };
 
-  presburger::mergeLocalIds(*this, other, merge);
+  presburger::mergeLocalVars(*this, other, merge);
 
   // Since we do not remove duplicate divisions in relA, this is guranteed to be
   // non-negative.
-  return relA.getNumLocalIds() - oldALocals;
+  return relA.getNumLocalVars() - oldALocals;
 }
 
 bool IntegerRelation::hasOnlyDivLocals() const {
@@ -1207,11 +1207,11 @@ void IntegerRelation::removeDuplicateDivs() {
 
   getLocalReprs(divs, denoms);
   auto merge = [this](unsigned i, unsigned j) -> bool {
-    eliminateRedundantLocalId(i, j);
+    eliminateRedundantLocalVar(i, j);
     return true;
   };
-  presburger::removeDuplicateDivs(divs, denoms, getIdKindOffset(IdKind::Local),
-                                  merge);
+  presburger::removeDuplicateDivs(divs, denoms,
+                                  getVarKindOffset(VarKind::Local), merge);
 }
 
 /// Removes local variables using equalities. Each equality is checked if it
@@ -1230,7 +1230,7 @@ void IntegerRelation::removeRedundantLocalVars() {
     unsigned i, e, j, f;
     for (i = 0, e = getNumEqualities(); i < e; ++i) {
       // Find a local variable to eliminate using ith equality.
-      for (j = getNumDimAndSymbolIds(), f = getNumIds(); j < f; ++j)
+      for (j = getNumDimAndSymbolVars(), f = getNumVars(); j < f; ++j)
         if (std::abs(atEq(i, j)) == 1)
           break;
 
@@ -1257,22 +1257,22 @@ void IntegerRelation::removeRedundantLocalVars() {
       eliminateFromConstraint(this, k, i, j, j, /*isEq=*/false);
 
     // Remove the ith equality and the found local variable.
-    removeId(j);
+    removeVar(j);
     removeEquality(i);
   }
 }
 
-void IntegerRelation::convertIdKind(IdKind srcKind, unsigned idStart,
-                                    unsigned idLimit, IdKind dstKind,
+void IntegerRelation::covertVarKind(VarKind srcKind, unsigned idStart,
+                                    unsigned idLimit, VarKind dstKind,
                                     unsigned pos) {
-  assert(idLimit <= getNumIdKind(srcKind) && "Invalid id range");
+  assert(idLimit <= getNumVarKind(srcKind) && "Invalid id range");
 
   if (idStart >= idLimit)
     return;
 
   // Append new local variables corresponding to the dimensions to be converted.
   unsigned convertCount = idLimit - idStart;
-  unsigned newIdsBegin = insertId(dstKind, pos, convertCount);
+  unsigned newVarsBegin = insertVar(dstKind, pos, convertCount);
 
   // Swap the new local variables with dimensions.
   //
@@ -1281,12 +1281,12 @@ void IntegerRelation::convertIdKind(IdKind srcKind, unsigned idStart,
   // `dstKind`. In particular, this moves the columns in the constraint
   // matrices, and zeros out the initially occupied columns (because the newly
   // created ids we're swapping with were zero-initialized).
-  unsigned offset = getIdKindOffset(srcKind);
+  unsigned offset = getVarKindOffset(srcKind);
   for (unsigned i = 0; i < convertCount; ++i)
-    swapId(offset + idStart + i, newIdsBegin + i);
+    swapVar(offset + idStart + i, newVarsBegin + i);
 
   // Complete the move by deleting the initially occupied columns.
-  removeIdRange(srcKind, idStart, idLimit);
+  removeVarRange(srcKind, idStart, idLimit);
 }
 
 void IntegerRelation::addBound(BoundType type, unsigned pos, int64_t value) {
@@ -1314,8 +1314,8 @@ void IntegerRelation::addBound(BoundType type, ArrayRef<int64_t> expr,
       type == BoundType::LB ? -value : value;
 }
 
-/// Adds a new local identifier as the floordiv of an affine function of other
-/// identifiers, the coefficients of which are provided in 'dividend' and with
+/// Adds a new local variable as the floordiv of an affine function of other
+/// variables, the coefficients of which are provided in 'dividend' and with
 /// respect to a positive constant 'divisor'. Two constraints are added to the
 /// system to capture equivalence with the floordiv.
 ///      q = expr floordiv c    <=>   c*q <= expr <= c*q + c - 1.
@@ -1324,16 +1324,16 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<int64_t> dividend,
   assert(dividend.size() == getNumCols() && "incorrect dividend size");
   assert(divisor > 0 && "positive divisor expected");
 
-  appendId(IdKind::Local);
+  appendVar(VarKind::Local);
 
-  // Add two constraints for this new identifier 'q'.
+  // Add two constraints for this new variable 'q'.
   SmallVector<int64_t, 8> bound(dividend.size() + 1);
 
   // dividend - q * divisor >= 0
   std::copy(dividend.begin(), dividend.begin() + dividend.size() - 1,
             bound.begin());
   bound.back() = dividend.back();
-  bound[getNumIds() - 1] = -divisor;
+  bound[getNumVars() - 1] = -divisor;
   addInequality(bound);
 
   // -dividend +qdivisor * q + divisor - 1 >= 0
@@ -1343,38 +1343,38 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<int64_t> dividend,
   addInequality(bound);
 }
 
-/// Finds an equality that equates the specified identifier to a constant.
+/// Finds an equality that equates the specified variable to a constant.
 /// Returns the position of the equality row. If 'symbolic' is set to true,
 /// symbols are also treated like a constant, i.e., an affine function of the
 /// symbols is also treated like a constant. Returns -1 if such an equality
 /// could not be found.
 static int findEqualityToConstant(const IntegerRelation &cst, unsigned pos,
                                   bool symbolic = false) {
-  assert(pos < cst.getNumIds() && "invalid position");
+  assert(pos < cst.getNumVars() && "invalid position");
   for (unsigned r = 0, e = cst.getNumEqualities(); r < e; r++) {
     int64_t v = cst.atEq(r, pos);
     if (v * v != 1)
       continue;
     unsigned c;
-    unsigned f = symbolic ? cst.getNumDimIds() : cst.getNumIds();
+    unsigned f = symbolic ? cst.getNumDimVars() : cst.getNumVars();
     // This checks for zeros in all positions other than 'pos' in [0, f)
     for (c = 0; c < f; c++) {
       if (c == pos)
         continue;
       if (cst.atEq(r, c) != 0) {
-        // Dependent on another identifier.
+        // Dependent on another variable.
         break;
       }
     }
     if (c == f)
-      // Equality is free of other identifiers.
+      // Equality is free of other variables.
       return r;
   }
   return -1;
 }
 
-LogicalResult IntegerRelation::constantFoldId(unsigned pos) {
-  assert(pos < getNumIds() && "invalid position");
+LogicalResult IntegerRelation::constantFoldVar(unsigned pos) {
+  assert(pos < getNumVars() && "invalid position");
   int rowIdx;
   if ((rowIdx = findEqualityToConstant(*this, pos)) == -1)
     return failure();
@@ -1386,21 +1386,21 @@ LogicalResult IntegerRelation::constantFoldId(unsigned pos) {
   return success();
 }
 
-void IntegerRelation::constantFoldIdRange(unsigned pos, unsigned num) {
+void IntegerRelation::constantFoldVarRange(unsigned pos, unsigned num) {
   for (unsigned s = pos, t = pos, e = pos + num; s < e; s++) {
-    if (failed(constantFoldId(t)))
+    if (failed(constantFoldVar(t)))
       t++;
   }
 }
 
 /// Returns a non-negative constant bound on the extent (upper bound - lower
-/// bound) of the specified identifier if it is found to be a constant; returns
-/// None if it's not a constant. This methods treats symbolic identifiers
+/// bound) of the specified variable if it is found to be a constant; returns
+/// None if it's not a constant. This methods treats symbolic variables
 /// specially, i.e., it looks for constant differences between affine
-/// expressions involving only the symbolic identifiers. See comments at
+/// expressions involving only the symbolic variables. See comments at
 /// function definition for example. 'lb', if provided, is set to the lower
 /// bound associated with the constant difference. Note that 'lb' is purely
-/// symbolic and thus will contain the coefficients of the symbolic identifiers
+/// symbolic and thus will contain the coefficients of the symbolic variables
 /// and the constant coefficient.
 //  Egs: 0 <= i <= 15, return 16.
 //       s0 + 2 <= i <= s0 + 17, returns 16. (s0 has to be a symbol)
@@ -1411,32 +1411,32 @@ Optional<int64_t> IntegerRelation::getConstantBoundOnDimSize(
     unsigned pos, SmallVectorImpl<int64_t> *lb, int64_t *boundFloorDivisor,
     SmallVectorImpl<int64_t> *ub, unsigned *minLbPos,
     unsigned *minUbPos) const {
-  assert(pos < getNumDimIds() && "Invalid identifier position");
+  assert(pos < getNumDimVars() && "Invalid variable position");
 
-  // Find an equality for 'pos'^th identifier that equates it to some function
-  // of the symbolic identifiers (+ constant).
+  // Find an equality for 'pos'^th variable that equates it to some function
+  // of the symbolic variables (+ constant).
   int eqPos = findEqualityToConstant(*this, pos, /*symbolic=*/true);
   if (eqPos != -1) {
     auto eq = getEquality(eqPos);
     // If the equality involves a local var, punt for now.
     // TODO: this can be handled in the future by using the explicit
     // representation of the local vars.
-    if (!std::all_of(eq.begin() + getNumDimAndSymbolIds(), eq.end() - 1,
+    if (!std::all_of(eq.begin() + getNumDimAndSymbolVars(), eq.end() - 1,
                      [](int64_t coeff) { return coeff == 0; }))
       return None;
 
-    // This identifier can only take a single value.
+    // This variable can only take a single value.
     if (lb) {
       // Set lb to that symbolic value.
-      lb->resize(getNumSymbolIds() + 1);
+      lb->resize(getNumSymbolVars() + 1);
       if (ub)
-        ub->resize(getNumSymbolIds() + 1);
-      for (unsigned c = 0, f = getNumSymbolIds() + 1; c < f; c++) {
+        ub->resize(getNumSymbolVars() + 1);
+      for (unsigned c = 0, f = getNumSymbolVars() + 1; c < f; c++) {
         int64_t v = atEq(eqPos, pos);
         // atEq(eqRow, pos) is either -1 or 1.
         assert(v * v == 1);
-        (*lb)[c] = v < 0 ? atEq(eqPos, getNumDimIds() + c) / -v
-                         : -atEq(eqPos, getNumDimIds() + c) / v;
+        (*lb)[c] = v < 0 ? atEq(eqPos, getNumDimVars() + c) / -v
+                         : -atEq(eqPos, getNumDimVars() + c) / v;
         // Since this is an equality, ub = lb.
         if (ub)
           (*ub)[c] = (*lb)[c];
@@ -1452,7 +1452,7 @@ Optional<int64_t> IntegerRelation::getConstantBoundOnDimSize(
     return 1;
   }
 
-  // Check if the identifier appears at all in any of the inequalities.
+  // Check if the variable appears at all in any of the inequalities.
   unsigned r, e;
   for (r = 0, e = getNumInequalities(); r < e; r++) {
     if (atIneq(r, pos) != 0)
@@ -1466,12 +1466,12 @@ Optional<int64_t> IntegerRelation::getConstantBoundOnDimSize(
   SmallVector<unsigned, 4> lbIndices, ubIndices;
 
   // Gather all symbolic lower bounds and upper bounds of the variable, i.e.,
-  // the bounds can only involve symbolic (and local) identifiers. Since the
+  // the bounds can only involve symbolic (and local) variables. Since the
   // canonical form c_1*x_1 + c_2*x_2 + ... + c_0 >= 0, a constraint is a lower
   // bound for x_i if c_i >= 1, and an upper bound if c_i <= -1.
   getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices,
                                /*eqIndices=*/nullptr, /*offset=*/0,
-                               /*num=*/getNumDimIds());
+                               /*num=*/getNumDimVars());
 
   Optional<int64_t> minDiff = None;
   unsigned minLbPosition = 0, minUbPosition = 0;
@@ -1504,27 +1504,27 @@ Optional<int64_t> IntegerRelation::getConstantBoundOnDimSize(
   }
   if (lb && minDiff) {
     // Set lb to the symbolic lower bound.
-    lb->resize(getNumSymbolIds() + 1);
+    lb->resize(getNumSymbolVars() + 1);
     if (ub)
-      ub->resize(getNumSymbolIds() + 1);
+      ub->resize(getNumSymbolVars() + 1);
     // The lower bound is the ceildiv of the lb constraint over the coefficient
     // of the variable at 'pos'. We express the ceildiv equivalently as a floor
     // for uniformity. For eg., if the lower bound constraint was: 32*d0 - N +
     // 31 >= 0, the lower bound for d0 is ceil(N - 31, 32), i.e., floor(N, 32).
     *boundFloorDivisor = atIneq(minLbPosition, pos);
     assert(*boundFloorDivisor == -atIneq(minUbPosition, pos));
-    for (unsigned c = 0, e = getNumSymbolIds() + 1; c < e; c++) {
-      (*lb)[c] = -atIneq(minLbPosition, getNumDimIds() + c);
+    for (unsigned c = 0, e = getNumSymbolVars() + 1; c < e; c++) {
+      (*lb)[c] = -atIneq(minLbPosition, getNumDimVars() + c);
     }
     if (ub) {
-      for (unsigned c = 0, e = getNumSymbolIds() + 1; c < e; c++)
-        (*ub)[c] = atIneq(minUbPosition, getNumDimIds() + c);
+      for (unsigned c = 0, e = getNumSymbolVars() + 1; c < e; c++)
+        (*ub)[c] = atIneq(minUbPosition, getNumDimVars() + c);
     }
     // The lower bound leads to a ceildiv while the upper bound is a floordiv
     // whenever the coefficient at pos != 1. ceildiv (val / d) = floordiv (val +
     // d - 1 / d); hence, the addition of 'atIneq(minLbPosition, pos) - 1' to
     // the constant term for the lower bound.
-    (*lb)[getNumSymbolIds()] += atIneq(minLbPosition, pos) - 1;
+    (*lb)[getNumSymbolVars()] += atIneq(minLbPosition, pos) - 1;
   }
   if (minLbPos)
     *minLbPos = minLbPosition;
@@ -1536,17 +1536,17 @@ Optional<int64_t> IntegerRelation::getConstantBoundOnDimSize(
 template <bool isLower>
 Optional<int64_t>
 IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
-  assert(pos < getNumIds() && "invalid position");
+  assert(pos < getNumVars() && "invalid position");
   // Project to 'pos'.
   projectOut(0, pos);
-  projectOut(1, getNumIds() - 1);
-  // Check if there's an equality equating the '0'^th identifier to a constant.
+  projectOut(1, getNumVars() - 1);
+  // Check if there's an equality equating the '0'^th variable to a constant.
   int eqRowIdx = findEqualityToConstant(*this, 0, /*symbolic=*/false);
   if (eqRowIdx != -1)
     // atEq(rowIdx, 0) is either -1 or 1.
     return -atEq(eqRowIdx, getNumCols() - 1) / atEq(eqRowIdx, 0);
 
-  // Check if the identifier appears at all in any of the inequalities.
+  // Check if the variable appears at all in any of the inequalities.
   unsigned r, e;
   for (r = 0, e = getNumInequalities(); r < e; r++) {
     if (atIneq(r, 0) != 0)
@@ -1709,7 +1709,7 @@ void IntegerRelation::removeTrivialRedundancy() {
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "fm"
 
-/// Eliminates identifier at the specified position using Fourier-Motzkin
+/// Eliminates variable at the specified position using Fourier-Motzkin
 /// variable elimination. This technique is exact for rational spaces but
 /// conservative (in "rare" cases) for integer spaces. The operation corresponds
 /// to a projection operation yielding the (convex) set of integer points
@@ -1756,14 +1756,14 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
                                               bool *isResultIntegerExact) {
   LLVM_DEBUG(llvm::dbgs() << "FM input (eliminate pos " << pos << "):\n");
   LLVM_DEBUG(dump());
-  assert(pos < getNumIds() && "invalid position");
+  assert(pos < getNumVars() && "invalid position");
   assert(hasConsistentState());
 
-  // Check if this identifier can be eliminated through a substitution.
+  // Check if this variable can be eliminated through a substitution.
   for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
     if (atEq(r, pos) != 0) {
       // Use Gaussian elimination here (since we have an equality).
-      LogicalResult ret = gaussianEliminateId(pos);
+      LogicalResult ret = gaussianEliminateVar(pos);
       (void)ret;
       assert(succeeded(ret) && "Gaussian elimination guaranteed to succeed");
       LLVM_DEBUG(llvm::dbgs() << "FM output (through Gaussian elimination):\n");
@@ -1775,11 +1775,11 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   // A fast linear time tightening.
   gcdTightenInequalities();
 
-  // Check if the identifier appears at all in any of the inequalities.
+  // Check if the variable appears at all in any of the inequalities.
   if (isColZero(pos)) {
     // If it doesn't appear, just remove the column and return.
     // TODO: refactor removeColumns to use it from here.
-    removeId(pos);
+    removeVar(pos);
     LLVM_DEBUG(llvm::dbgs() << "FM output:\n");
     LLVM_DEBUG(dump());
     return;
@@ -1798,7 +1798,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   // bound for x_i if c_i >= 1, and an upper bound if c_i <= -1.
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     if (atIneq(r, pos) == 0) {
-      // Id does not appear in bound.
+      // Var does not appear in bound.
       nbIndices.push_back(r);
     } else if (atIneq(r, pos) >= 1) {
       // Lower bound.
@@ -1810,11 +1810,11 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   }
 
   PresburgerSpace newSpace = getSpace();
-  IdKind idKindRemove = newSpace.getIdKindAt(pos);
-  unsigned relativePos = pos - newSpace.getIdKindOffset(idKindRemove);
-  newSpace.removeIdRange(idKindRemove, relativePos, relativePos + 1);
+  VarKind idKindRemove = newSpace.getVarKindAt(pos);
+  unsigned relativePos = pos - newSpace.getVarKindOffset(idKindRemove);
+  newSpace.removeVarRange(idKindRemove, relativePos, relativePos + 1);
 
-  /// Create the new system which has one identifier less.
+  /// Create the new system which has one variable less.
   IntegerRelation newRel(lbIndices.size() * ubIndices.size() + nbIndices.size(),
                          getNumEqualities(), getNumCols() - 1, newSpace);
 
@@ -1914,14 +1914,14 @@ void IntegerRelation::projectOut(unsigned pos, unsigned num) {
   assert((getNumCols() < 2 || pos <= getNumCols() - 2) && "invalid position");
   assert(pos + num < getNumCols() && "invalid range");
 
-  // Eliminate as many identifiers as possible using Gaussian elimination.
+  // Eliminate as many variables as possible using Gaussian elimination.
   unsigned currentPos = pos;
   unsigned numToEliminate = num;
   unsigned numGaussianEliminated = 0;
 
-  while (currentPos < getNumIds()) {
+  while (currentPos < getNumVars()) {
     unsigned curNumEliminated =
-        gaussianEliminateIds(currentPos, currentPos + numToEliminate);
+        gaussianEliminateVars(currentPos, currentPos + numToEliminate);
     ++currentPos;
     numToEliminate -= curNumEliminated + 1;
     numGaussianEliminated += curNumEliminated;
@@ -1931,7 +1931,7 @@ void IntegerRelation::projectOut(unsigned pos, unsigned num) {
   for (unsigned i = 0; i < num - numGaussianEliminated; i++) {
     unsigned numToEliminate = num - numGaussianEliminated - i;
     fourierMotzkinEliminate(
-        getBestIdToEliminate(*this, pos, pos + numToEliminate));
+        getBestVarToEliminate(*this, pos, pos + numToEliminate));
   }
 
   // Fast/trivial simplifications.
@@ -1950,7 +1950,7 @@ enum BoundCmpResult { Greater, Less, Equal, Unknown };
 static BoundCmpResult compareBounds(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
   assert(a.size() == b.size());
 
-  // For the bounds to be comparable, their corresponding identifier
+  // For the bounds to be comparable, their corresponding variable
   // coefficients should be equal; the constant terms are then compared to
   // determine less/greater/equal.
 
@@ -1992,7 +1992,7 @@ static void getCommonConstraints(const IntegerRelation &a,
 LogicalResult
 IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
   assert(space.isEqual(otherCst.getSpace()) && "Spaces should match.");
-  assert(getNumLocalIds() == 0 && "local ids not supported yet here");
+  assert(getNumLocalVars() == 0 && "local ids not supported yet here");
 
   // Get the constraints common to both systems; these will be added as is to
   // the union.
@@ -2001,19 +2001,19 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
 
   std::vector<SmallVector<int64_t, 8>> boundingLbs;
   std::vector<SmallVector<int64_t, 8>> boundingUbs;
-  boundingLbs.reserve(2 * getNumDimIds());
-  boundingUbs.reserve(2 * getNumDimIds());
+  boundingLbs.reserve(2 * getNumDimVars());
+  boundingUbs.reserve(2 * getNumDimVars());
 
   // To hold lower and upper bounds for each dimension.
   SmallVector<int64_t, 4> lb, otherLb, ub, otherUb;
   // To compute min of lower bounds and max of upper bounds for each dimension.
-  SmallVector<int64_t, 4> minLb(getNumSymbolIds() + 1);
-  SmallVector<int64_t, 4> maxUb(getNumSymbolIds() + 1);
+  SmallVector<int64_t, 4> minLb(getNumSymbolVars() + 1);
+  SmallVector<int64_t, 4> maxUb(getNumSymbolVars() + 1);
   // To compute final new lower and upper bounds for the union.
   SmallVector<int64_t, 8> newLb(getNumCols()), newUb(getNumCols());
 
   int64_t lbFloorDivisor, otherLbFloorDivisor;
-  for (unsigned d = 0, e = getNumDimIds(); d < e; ++d) {
+  for (unsigned d = 0, e = getNumDimVars(); d < e; ++d) {
     auto extent = getConstantBoundOnDimSize(d, &lb, &lbFloorDivisor, &ub);
     if (!extent.hasValue())
       // TODO: symbolic extents when necessary.
@@ -2073,10 +2073,10 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
     newLb[d] = lbFloorDivisor;
     newUb[d] = -lbFloorDivisor;
     // Copy over the symbolic part + constant term.
-    std::copy(minLb.begin(), minLb.end(), newLb.begin() + getNumDimIds());
-    std::transform(newLb.begin() + getNumDimIds(), newLb.end(),
-                   newLb.begin() + getNumDimIds(), std::negate<int64_t>());
-    std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimIds());
+    std::copy(minLb.begin(), minLb.end(), newLb.begin() + getNumDimVars());
+    std::transform(newLb.begin() + getNumDimVars(), newLb.end(),
+                   newLb.begin() + getNumDimVars(), std::negate<int64_t>());
+    std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimVars());
 
     boundingLbs.push_back(newLb);
     boundingUbs.push_back(newUb);
@@ -2084,7 +2084,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
 
   // Clear all constraints and add the lower/upper bounds for the bounding box.
   clearConstraints();
-  for (unsigned d = 0, e = getNumDimIds(); d < e; ++d) {
+  for (unsigned d = 0, e = getNumDimVars(); d < e; ++d) {
     addInequality(boundingLbs[d]);
     addInequality(boundingUbs[d]);
   }
@@ -2107,13 +2107,13 @@ bool IntegerRelation::isColZero(unsigned pos) const {
 }
 
 /// Find positions of inequalities and equalities that do not have a coefficient
-/// for [pos, pos + num) identifiers.
+/// for [pos, pos + num) variables.
 static void getIndependentConstraints(const IntegerRelation &cst, unsigned pos,
                                       unsigned num,
                                       SmallVectorImpl<unsigned> &nbIneqIndices,
                                       SmallVectorImpl<unsigned> &nbEqIndices) {
-  assert(pos < cst.getNumIds() && "invalid start position");
-  assert(pos + num <= cst.getNumIds() && "invalid limit");
+  assert(pos < cst.getNumVars() && "invalid start position");
+  assert(pos + num <= cst.getNumVars() && "invalid limit");
 
   for (unsigned r = 0, e = cst.getNumInequalities(); r < e; r++) {
     // The bounds are to be independent of [offset, offset + num) columns.
@@ -2139,9 +2139,9 @@ static void getIndependentConstraints(const IntegerRelation &cst, unsigned pos,
 }
 
 void IntegerRelation::removeIndependentConstraints(unsigned pos, unsigned num) {
-  assert(pos + num <= getNumIds() && "invalid range");
+  assert(pos + num <= getNumVars() && "invalid range");
 
-  // Remove constraints that are independent of these identifiers.
+  // Remove constraints that are independent of these variables.
   SmallVector<unsigned, 4> nbIneqIndices, nbEqIndices;
   getIndependentConstraints(*this, /*pos=*/0, num, nbIneqIndices, nbEqIndices);
 
@@ -2158,12 +2158,12 @@ IntegerPolyhedron IntegerRelation::getDomainSet() const {
   IntegerRelation copyRel = *this;
 
   // Convert Range variables to Local variables.
-  copyRel.convertIdKind(IdKind::Range, 0, getNumIdKind(IdKind::Range),
-                        IdKind::Local);
+  copyRel.convertVarKind(VarKind::Range, 0, getNumVarKind(VarKind::Range),
+                         VarKind::Local);
 
   // Convert Domain variables to SetDim(Range) variables.
-  copyRel.convertIdKind(IdKind::Domain, 0, getNumIdKind(IdKind::Domain),
-                        IdKind::SetDim);
+  copyRel.convertVarKind(VarKind::Domain, 0, getNumVarKind(VarKind::Domain),
+                         VarKind::SetDim);
 
   return IntegerPolyhedron(std::move(copyRel));
 }
@@ -2172,8 +2172,8 @@ IntegerPolyhedron IntegerRelation::getRangeSet() const {
   IntegerRelation copyRel = *this;
 
   // Convert Domain variables to Local variables.
-  copyRel.convertIdKind(IdKind::Domain, 0, getNumIdKind(IdKind::Domain),
-                        IdKind::Local);
+  copyRel.convertVarKind(VarKind::Domain, 0, getNumVarKind(VarKind::Domain),
+                         VarKind::Local);
 
   // We do not need to do anything to Range variables since they are already in
   // SetDim position.
@@ -2190,10 +2190,10 @@ void IntegerRelation::intersectDomain(const IntegerPolyhedron &poly) {
   rel.inverse();
 
   // Append dummy range variables to make the spaces compatible.
-  rel.appendId(IdKind::Range, getNumRangeIds());
+  rel.appendVar(VarKind::Range, getNumRangeVars());
 
   // Intersect in place.
-  mergeLocalIds(rel);
+  mergeLocalVars(rel);
   append(rel);
 }
 
@@ -2204,16 +2204,17 @@ void IntegerRelation::intersectRange(const IntegerPolyhedron &poly) {
   IntegerRelation rel = poly;
 
   // Append dummy domain variables to make the spaces compatible.
-  rel.appendId(IdKind::Domain, getNumDomainIds());
+  rel.appendVar(VarKind::Domain, getNumDomainVars());
 
-  mergeLocalIds(rel);
+  mergeLocalVars(rel);
   append(rel);
 }
 
 void IntegerRelation::inverse() {
-  unsigned numRangeIds = getNumIdKind(IdKind::Range);
-  convertIdKind(IdKind::Domain, 0, getIdKindEnd(IdKind::Domain), IdKind::Range);
-  convertIdKind(IdKind::Range, 0, numRangeIds, IdKind::Domain);
+  unsigned numRangeVars = getNumVarKind(VarKind::Range);
+  convertVarKind(VarKind::Domain, 0, getVarKindEnd(VarKind::Domain),
+                 VarKind::Range);
+  convertVarKind(VarKind::Range, 0, numRangeVars, VarKind::Domain);
 }
 
 void IntegerRelation::compose(const IntegerRelation &rel) {
@@ -2227,19 +2228,19 @@ void IntegerRelation::compose(const IntegerRelation &rel) {
   // R1 with R2. After this, we get R1: A -> C, by projecting out B.
   // TODO: Using nested spaces here would help, since we could directly
   // intersect the range with another relation.
-  unsigned numBIds = getNumRangeIds();
+  unsigned numBVars = getNumRangeVars();
 
   // Convert R1 from A -> B to A -> (B X C).
-  appendId(IdKind::Range, copyRel.getNumRangeIds());
+  appendVar(VarKind::Range, copyRel.getNumRangeVars());
 
   // Convert R2 to B X C.
-  copyRel.convertIdKind(IdKind::Domain, 0, numBIds, IdKind::Range, 0);
+  copyRel.covertVarKind(VarKind::Domain, 0, numBVars, VarKind::Range, 0);
 
   // Intersect R2 to range of R1.
   intersectRange(IntegerPolyhedron(copyRel));
 
   // Project out B in R1.
-  convertIdKind(IdKind::Range, 0, numBIds, IdKind::Local);
+  convertVarKind(VarKind::Range, 0, numBVars, VarKind::Local);
 }
 
 void IntegerRelation::applyDomain(const IntegerRelation &rel) {
@@ -2275,8 +2276,9 @@ void IntegerRelation::print(raw_ostream &os) const {
 
 void IntegerRelation::dump() const { print(llvm::errs()); }
 
-unsigned IntegerPolyhedron::insertId(IdKind kind, unsigned pos, unsigned num) {
-  assert((kind != IdKind::Domain || num == 0) &&
+unsigned IntegerPolyhedron::insertVar(VarKind kind, unsigned pos,
+                                      unsigned num) {
+  assert((kind != VarKind::Domain || num == 0) &&
          "Domain has to be zero in a set");
-  return IntegerRelation::insertId(kind, pos, num);
+  return IntegerRelation::insertVar(kind, pos, num);
 }

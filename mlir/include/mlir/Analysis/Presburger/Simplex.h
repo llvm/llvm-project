@@ -425,9 +425,9 @@ protected:
   LexSimplexBase(unsigned nVar, unsigned symbolOffset, unsigned nSymbol)
       : SimplexBase(nVar, /*mustUseBigM=*/true, symbolOffset, nSymbol) {}
   explicit LexSimplexBase(const IntegerRelation &constraints)
-      : LexSimplexBase(constraints.getNumIds(),
-                       constraints.getIdKindOffset(IdKind::Symbol),
-                       constraints.getNumSymbolIds()) {
+      : LexSimplexBase(constraints.getNumVars(),
+                       constraints.getVarKindOffset(VarKind::Symbol),
+                       constraints.getNumSymbolVars()) {
     intersectIntegerRelation(constraints);
   }
 
@@ -474,7 +474,7 @@ public:
       : LexSimplexBase(nVar, /*symbolOffset=*/0, /*nSymbol=*/0) {}
   explicit LexSimplex(const IntegerRelation &constraints)
       : LexSimplexBase(constraints) {
-    assert(constraints.getNumSymbolIds() == 0 &&
+    assert(constraints.getNumSymbolVars() == 0 &&
            "LexSimplex does not support symbols!");
   }
 
@@ -568,31 +568,31 @@ class SymbolicLexSimplex : public LexSimplexBase {
 public:
   /// `constraints` is the set for which the symbolic lexmin will be computed.
   /// `symbolDomain` is the set of values of the symbols for which the lexmin
-  /// will be computed. `symbolDomain` should have a dim id for every symbol in
-  /// `constraints`, and no other ids.
+  /// will be computed. `symbolDomain` should have a dim var for every symbol in
+  /// `constraints`, and no other vars.
   SymbolicLexSimplex(const IntegerPolyhedron &constraints,
                      const IntegerPolyhedron &symbolDomain)
       : SymbolicLexSimplex(constraints,
-                           constraints.getIdKindOffset(IdKind::Symbol),
+                           constraints.getVarKindOffset(VarKind::Symbol),
                            symbolDomain) {
-    assert(constraints.getNumSymbolIds() == symbolDomain.getNumIds());
+    assert(constraints.getNumSymbolVars() == symbolDomain.getNumVars());
   }
 
   /// An overload to select some other subrange of ids as symbols for lexmin.
   /// The symbol ids are the range of ids with absolute index
-  /// [symbolOffset, symbolOffset + symbolDomain.getNumIds())
+  /// [symbolOffset, symbolOffset + symbolDomain.getNumVars())
   /// symbolDomain should only have dim ids.
   SymbolicLexSimplex(const IntegerPolyhedron &constraints,
                      unsigned symbolOffset,
                      const IntegerPolyhedron &symbolDomain)
-      : LexSimplexBase(/*nVar=*/constraints.getNumIds(), symbolOffset,
-                       symbolDomain.getNumIds()),
+      : LexSimplexBase(/*nVar=*/constraints.getNumVars(), symbolOffset,
+                       symbolDomain.getNumVars()),
         domainPoly(symbolDomain), domainSimplex(symbolDomain) {
     // TODO consider supporting this case. It amounts
     // to just returning the input constraints.
-    assert(domainPoly.getNumIds() > 0 &&
+    assert(domainPoly.getNumVars() > 0 &&
            "there must be some non-symbols to optimize!");
-    assert(domainPoly.getNumIds() == domainPoly.getNumDimIds());
+    assert(domainPoly.getNumVars() == domainPoly.getNumDimVars());
     intersectIntegerRelation(constraints);
   }
 
@@ -683,7 +683,7 @@ public:
       : SimplexBase(nVar, /*mustUseBigM=*/false, /*symbolOffset=*/0,
                     /*nSymbol=*/0) {}
   explicit Simplex(const IntegerRelation &constraints)
-      : Simplex(constraints.getNumIds()) {
+      : Simplex(constraints.getNumVars()) {
     intersectIntegerRelation(constraints);
   }
   ~Simplex() override = default;

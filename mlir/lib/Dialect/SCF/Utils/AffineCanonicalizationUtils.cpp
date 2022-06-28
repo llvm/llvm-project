@@ -43,13 +43,13 @@ static LogicalResult alignAndAddBound(FlatAffineValueConstraints &constraints,
                                       unsigned pos, AffineMap map,
                                       ValueRange operands) {
   SmallVector<Value> dims, syms, newSyms;
-  unpackOptionalValues(constraints.getMaybeValues(IdKind::SetDim), dims);
-  unpackOptionalValues(constraints.getMaybeValues(IdKind::Symbol), syms);
+  unpackOptionalValues(constraints.getMaybeValues(VarKind::SetDim), dims);
+  unpackOptionalValues(constraints.getMaybeValues(VarKind::Symbol), syms);
 
   AffineMap alignedMap =
       alignAffineMapWithValues(map, operands, dims, syms, &newSyms);
   for (unsigned i = syms.size(); i < newSyms.size(); ++i)
-    constraints.appendSymbolId(newSyms[i]);
+    constraints.appendSymbolVar(newSyms[i]);
   return constraints.addBound(type, pos, alignedMap);
 }
 
@@ -108,9 +108,9 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op, AffineMap map,
   unsigned numResults = map.getNumResults();
 
   // Add a few extra dimensions.
-  unsigned dimOp = constraints.appendDimId();      // `op`
-  unsigned dimOpBound = constraints.appendDimId(); // `op` lower/upper bound
-  unsigned resultDimStart = constraints.appendDimId(/*num=*/numResults);
+  unsigned dimOp = constraints.appendDimVar();      // `op`
+  unsigned dimOpBound = constraints.appendDimVar(); // `op` lower/upper bound
+  unsigned resultDimStart = constraints.appendDimVar(/*num=*/numResults);
 
   // Add an inequality for each result expr_i of map:
   // isMin: op <= expr_i, !isMin: op >= expr_i
@@ -185,7 +185,7 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op, AffineMap map,
   unpackOptionalValues(constraints.getMaybeValues(), newOperands);
   // If dims/symbols have known constant values, use those in order to simplify
   // the affine map further.
-  for (int64_t i = 0, e = constraints.getNumIds(); i < e; ++i) {
+  for (int64_t i = 0, e = constraints.getNumVars(); i < e; ++i) {
     // Skip unused operands and operands that are already constants.
     if (!newOperands[i] || getConstantIntValue(newOperands[i]))
       continue;
@@ -209,13 +209,13 @@ addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
   if (!stepInt)
     return failure();
 
-  unsigned dimIv = constraints.appendDimId(iv);
+  unsigned dimIv = constraints.appendDimVar(iv);
   auto lbv = lb.dyn_cast<Value>();
   unsigned dimLb =
-      lbv ? constraints.appendDimId(lbv) : constraints.appendDimId(/*num=*/1);
+      lbv ? constraints.appendDimVar(lbv) : constraints.appendDimVar(/*num=*/1);
   auto ubv = ub.dyn_cast<Value>();
   unsigned dimUb =
-      ubv ? constraints.appendDimId(ubv) : constraints.appendDimId(/*num=*/1);
+      ubv ? constraints.appendDimVar(ubv) : constraints.appendDimVar(/*num=*/1);
 
   // If loop lower/upper bounds are constant: Add EQ constraint.
   Optional<int64_t> lbInt = getConstantIntValue(lb);
@@ -249,8 +249,8 @@ addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
     ivUb = exprLb + 1 + (*stepInt * ((exprUb - exprLb - 1).floorDiv(*stepInt)));
   }
   auto map = AffineMap::get(
-      /*dimCount=*/constraints.getNumDimIds(),
-      /*symbolCount=*/constraints.getNumSymbolIds(), /*result=*/ivUb);
+      /*dimCount=*/constraints.getNumDimVars(),
+      /*symbolCount=*/constraints.getNumSymbolVars(), /*result=*/ivUb);
 
   return constraints.addBound(IntegerPolyhedron::UB, dimIv, map);
 }
@@ -323,7 +323,7 @@ LogicalResult scf::rewritePeeledMinMaxOp(RewriterBase &rewriter, Operation *op,
                                          bool isMin, Value iv, Value ub,
                                          Value step, bool insideLoop) {
   FlatAffineValueConstraints constraints;
-  constraints.appendDimId({iv, ub, step});
+  constraints.appendDimVar({iv, ub, step});
   if (auto constUb = getConstantIntValue(ub))
     constraints.addBound(IntegerPolyhedron::EQ, 1, *constUb);
   if (auto constStep = getConstantIntValue(step))

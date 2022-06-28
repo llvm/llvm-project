@@ -22,7 +22,7 @@ PresburgerRelation::PresburgerRelation(const IntegerRelation &disjunct)
 }
 
 void PresburgerRelation::setSpace(const PresburgerSpace &oSpace) {
-  assert(space.getNumLocalIds() == 0 && "no locals should be present");
+  assert(space.getNumLocalVars() == 0 && "no locals should be present");
   space = oSpace;
   for (IntegerRelation &disjunct : disjuncts)
     disjunct.setSpaceExceptLocals(space);
@@ -175,7 +175,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
     return PresburgerRelation::getEmpty(b.getSpaceWithoutLocals());
 
   // Remove duplicate divs up front here to avoid existing
-  // divs disappearing in the call to mergeLocalIds below.
+  // divs disappearing in the call to mergeLocalVars below.
   b.removeDuplicateDivs();
 
   PresburgerRelation result =
@@ -217,7 +217,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       // No frame for this level yet, so we have just recursed into this level.
       IntegerRelation sI = s.getDisjunct(level - 1);
       // Remove the duplicate divs up front to avoid them possibly disappearing
-      // in the call to mergeLocalIds below.
+      // in the call to mergeLocalVars below.
       sI.removeDuplicateDivs();
 
       // Below, we append some additional constraints and ids to b. We want to
@@ -230,14 +230,14 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
 
       // Find out which inequalities of sI correspond to division inequalities
       // for the local variables of sI.
-      std::vector<MaybeLocalRepr> repr(sI.getNumLocalIds());
+      std::vector<MaybeLocalRepr> repr(sI.getNumLocalVars());
       sI.getLocalReprs(repr);
 
       // Add sI's locals to b, after b's locals. Only those locals of sI which
       // do not already exist in b will be added. (i.e., duplicate divisions
       // will not be added.) Also add b's locals to sI, in such a way that both
       // have the same locals in the same order in the end.
-      b.mergeLocalIds(sI);
+      b.mergeLocalVars(sI);
 
       // Mark which inequalities of sI are division inequalities and add all
       // such inequalities to b.
@@ -274,7 +274,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
 
       unsigned offset = simplex.getNumConstraints();
       unsigned numLocalsAdded =
-          b.getNumLocalIds() - initBCounts.getSpace().getNumLocalIds();
+          b.getNumLocalVars() - initBCounts.getSpace().getNumLocalVars();
       simplex.appendVariable(numLocalsAdded);
 
       unsigned snapshotBeforeIntersect = simplex.getSnapshot();
@@ -436,7 +436,7 @@ bool PresburgerRelation::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
 }
 
 Optional<uint64_t> PresburgerRelation::computeVolume() const {
-  assert(getNumSymbolIds() == 0 && "Symbols are not yet supported!");
+  assert(getNumSymbolVars() == 0 && "Symbols are not yet supported!");
   // The sum of the volumes of the disjuncts is a valid overapproximation of the
   // volume of their union, even if they overlap.
   uint64_t result = 0;
@@ -715,7 +715,7 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   /// Handling of local ids is not yet implemented, so these cases are
   /// skipped.
   /// TODO: implement local id support.
-  if (a.getNumLocalIds() != 0 || b.getNumLocalIds() != 0)
+  if (a.getNumLocalVars() != 0 || b.getNumLocalVars() != 0)
     return failure();
   Simplex &simpA = simplices[i];
   Simplex &simpB = simplices[j];
