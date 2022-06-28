@@ -175,8 +175,7 @@ Error RawCoverageFilenamesReader::readUncompressed(CovMapVersion Version,
         else
           P.assign(CWD);
         llvm::sys::path::append(P, Filename);
-        sys::path::remove_dots(P, /*remove_dot_dot=*/true);
-        Filenames.push_back(static_cast<std::string>(P.str()));
+        Filenames.push_back(static_cast<std::string>(P));
       }
     }
   }
