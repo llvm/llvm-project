@@ -80,18 +80,19 @@ Sections:
     Type:   SHT_LLVM_BB_ADDR_MAP
     Link:   .text
     Entries:
-      - Address: 0x4000
+      - Version: 1
+        Address: 0x4000
         BBEntries:
           - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x1
-          - AddressOffset: 0x1
+          - AddressOffset: 0x0
             Size:          0x6
             Metadata:      0x0
-          - AddressOffset: 0x8
-            Size:          0x3
+          - AddressOffset: 0x1
+            Size:          0x4
             Metadata:      0x0
-          - AddressOffset: 0xc
+          - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
 Symbols:
@@ -130,33 +131,35 @@ Sections:
     Type:   SHT_LLVM_BB_ADDR_MAP
     Link:   .text.foo
     Entries:
-      - Address: 0x4000
+      - Version: 1
+        Address: 0x4000
         BBEntries:
           - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x1
-          - AddressOffset: 0x1
+          - AddressOffset: 0x0
             Size:          0x6
             Metadata:      0x0
-          - AddressOffset: 0x8
-            Size:          0x3
+          - AddressOffset: 0x1
+            Size:          0x4
             Metadata:      0x0
-          - AddressOffset: 0xc
+          - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
   - Name:   bb_addr_map.bar
     Type:   SHT_LLVM_BB_ADDR_MAP
     Link:   .text.bar
     Entries:
-      - Address: 0x5000
+      - Version: 1
+        Address: 0x5000
         BBEntries:
           - AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x1
-          - AddressOffset: 0x5
+          - AddressOffset: 0x4
             Size:          0x2
             Metadata:      0x0
-          - AddressOffset: 0x7
+          - AddressOffset: 0x0
             Size:          0x6
             Metadata:      0x0
 
