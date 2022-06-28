@@ -93,6 +93,9 @@
 .attribute arch, "rv32izicboz"
 # CHECK: attribute      5, "rv32i2p0_zicboz1p0"
 
+.attribute arch, "rv32izicbop"
+# CHECK: attribute      5, "rv32i2p0_zicbop1p0"
+
 ## Experimental extensions require version string to be explicitly specified
 
 .attribute arch, "rv32izba1p0"

@@ -38,6 +38,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbkb,+zbkc,+zbkx,+zksed,+zksh %s -o - | FileCheck --check-prefix=RV32COMBINEINTOZKS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zicbom %s -o - | FileCheck --check-prefix=RV32ZICBOM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zicboz %s -o - | FileCheck --check-prefix=RV32ZICBOZ %s
+; RUN: llc -mtriple=riscv32 -mattr=+zicbop %s -o - | FileCheck --check-prefix=RV32ZICBOP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m %s -o - | FileCheck --check-prefix=RV64M %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a %s -o - | FileCheck --check-prefix=RV64A %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f %s -o - | FileCheck --check-prefix=RV64F %s
@@ -76,6 +77,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbkb,+zbkc,+zbkx,+zksed,+zksh %s -o - | FileCheck --check-prefix=RV64COMBINEINTOZKS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicbom %s -o - | FileCheck --check-prefix=RV64ZICBOM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicboz %s -o - | FileCheck --check-prefix=RV64ZICBOZ %s
+; RUN: llc -mtriple=riscv64 -mattr=+zicbop %s -o - | FileCheck --check-prefix=RV64ZICBOP %s
 
 ; RV32M: .attribute 5, "rv32i2p0_m2p0"
 ; RV32A: .attribute 5, "rv32i2p0_a2p0"
@@ -115,6 +117,7 @@
 ; RV32COMBINEINTOZKS: .attribute 5, "rv32i2p0_zbkb1p0_zbkc1p0_zbkx1p0_zks1p0_zksed1p0_zksh1p0"
 ; RV32ZICBOM: .attribute 5, "rv32i2p0_zicbom1p0"
 ; RV32ZICBOZ: .attribute 5, "rv32i2p0_zicboz1p0"
+; RV32ZICBOP: .attribute 5, "rv32i2p0_zicbop1p0"
 
 ; RV64M: .attribute 5, "rv64i2p0_m2p0"
 ; RV64A: .attribute 5, "rv64i2p0_a2p0"
@@ -154,6 +157,7 @@
 ; RV64COMBINEINTOZKS: .attribute 5, "rv64i2p0_zbkb1p0_zbkc1p0_zbkx1p0_zks1p0_zksed1p0_zksh1p0"
 ; RV64ZICBOM: .attribute 5, "rv64i2p0_zicbom1p0"
 ; RV64ZICBOZ: .attribute 5, "rv64i2p0_zicboz1p0"
+; RV64ZICBOP: .attribute 5, "rv64i2p0_zicbop1p0"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1
