@@ -2766,7 +2766,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
 
     RecordDecl *AnonRecord = nullptr;
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
-        getCurScope(), AS, DS, TemplateParams, false, AnonRecord);
+        getCurScope(), AS, DS, DeclAttrs, TemplateParams, false, AnonRecord);
     DS.complete(TheDecl);
     if (AnonRecord) {
       Decl* decls[] = {AnonRecord, TheDecl};
