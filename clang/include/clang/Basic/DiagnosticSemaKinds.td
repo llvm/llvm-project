@@ -1527,9 +1527,9 @@ def err_static_assert_expression_is_not_constant : Error<
   "static_assert expression is not an integral constant expression">;
 def err_constexpr_if_condition_expression_is_not_constant : Error<
   "constexpr if condition is not a constant expression">;
-def err_static_assert_failed : Error<"static_assert failed%select{: %1|}0">;
+def err_static_assert_failed : Error<"static_assert failed%select{ %1|}0">;
 def err_static_assert_requirement_failed : Error<
-  "static_assert failed due to requirement '%0'%select{: %2 |}1">;
+  "static_assert failed due to requirement '%0'%select{ %2|}1">;
 
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,

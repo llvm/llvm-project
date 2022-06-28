@@ -5,7 +5,7 @@
 // marker character for diagnostic printing.  Ensure diagnostics involving
 // this character does not cause problems with the diagnostic printer.
 #error Hi  Bye
-// expected-error@-1 {{Hi <U+007F> Bye}}
+//expected-error@-1 {{Hi  Bye}}
 
-// CHECK: error: Hi <U+007F> Bye
+// CHECK: error: Hi  Bye
 // CHECK: #error Hi <U+007F> Bye

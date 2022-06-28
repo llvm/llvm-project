@@ -164,7 +164,7 @@ static_assert(Large<small>);
 // expected-error@-1 {{static_assert failed}}
 // expected-note@-2 {{because 'small' does not satisfy 'Large'}}
 static_assert(Large<small>, "small isn't large");
-// expected-error@-1 {{static_assert failed: small isn't large}}
+// expected-error@-1 {{static_assert failed "small isn't large"}}
 // expected-note@-2 {{because 'small' does not satisfy 'Large'}}
 
 // Make sure access-checking can fail a concept specialization

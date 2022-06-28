@@ -16587,13 +16587,8 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
     if (!Failed && !Cond) {
       SmallString<256> MsgBuffer;
       llvm::raw_svector_ostream Msg(MsgBuffer);
-      if (AssertMessage) {
-        const auto *MsgStr = cast<StringLiteral>(AssertMessage);
-        if (MsgStr->isAscii())
-          Msg << MsgStr->getString();
-        else
-          MsgStr->printPretty(Msg, nullptr, getPrintingPolicy());
-      }
+      if (AssertMessage)
+        AssertMessage->printPretty(Msg, nullptr, getPrintingPolicy());
 
       Expr *InnerCond = nullptr;
       std::string InnerCondDescription;

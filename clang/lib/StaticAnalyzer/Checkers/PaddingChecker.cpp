@@ -332,10 +332,10 @@ public:
     }
 
     Os << " (" << BaselinePad.getQuantity() << " padding bytes, where "
-       << OptimalPad.getQuantity() << " is optimal). "
-       << "Optimal fields order: ";
+       << OptimalPad.getQuantity() << " is optimal). \n"
+       << "Optimal fields order: \n";
     for (const auto *FD : OptimalFieldsOrder)
-      Os << FD->getName() << ", ";
+      Os << FD->getName() << ", \n";
     Os << "consider reordering the fields or adding explicit padding "
           "members.";
 

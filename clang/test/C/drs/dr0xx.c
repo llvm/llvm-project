@@ -203,7 +203,7 @@ _Static_assert(THIS$AND$THAT(1, 1) == 2, "fail"); /* expected-warning 2 {{'$' in
  * Note: the rule changed in C99 to be different than the resolution to DR029,
  * so it's not clear there's value in implementing this DR.
  */
-_Static_assert(__builtin_types_compatible_p(struct S { int a; }, union U { int a; }), "fail"); /* expected-error {{static_assert failed due to requirement '__builtin_types_compatible_p(struct S, union U)': fail}} */
+_Static_assert(__builtin_types_compatible_p(struct S { int a; }, union U { int a; }), "fail"); /* expected-error {{static_assert failed due to requirement '__builtin_types_compatible_p(struct S, union U)' "fail"}} */
 
 /* WG14 DR031: yes
  * Can constant expressions overflow?
