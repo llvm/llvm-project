@@ -460,10 +460,10 @@ initializer-clause := braced-init-list
 # This is standard C, and accepted by clang and others as an extension.
 braced-init-list := { initializer-list ,_opt }
 braced-init-list := { }
-initializer-list := initializer-list-item ..._opt
-initializer-list := initializer-list , initializer-list-item ..._opt
-initializer-list-item := initializer-clause
-initializer-list-item := designator brace-or-equal-initializer
+initializer-list := initializer-list-item
+initializer-list := initializer-list , initializer-list-item
+initializer-list-item := initializer-clause ..._opt
+initializer-list-item := designator brace-or-equal-initializer ..._opt
 designator := . IDENTIFIER
 #! Array designators are legal in C, and a common extension in C++.
 designator := [ expression ]
