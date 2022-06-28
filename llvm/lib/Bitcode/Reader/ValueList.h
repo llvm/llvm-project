@@ -14,6 +14,7 @@
 #define LLVM_LIB_BITCODE_READER_VALUELIST_H
 
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <utility>
 #include <vector>
@@ -22,7 +23,6 @@ namespace llvm {
 
 class Constant;
 class Error;
-template <typename T> class Expected;
 class Type;
 class Value;
 
