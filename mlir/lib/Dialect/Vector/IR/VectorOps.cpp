@@ -3167,7 +3167,7 @@ public:
     }
     SmallVector<bool> inBounds(xferOp.getTransferRank(), true);
     rewriter.replaceOpWithNewOp<TransferReadOp>(
-        xferOp, xferOp.getVectorType(), extractOp.source(), newIndices,
+        xferOp, xferOp.getVectorType(), extractOp.getSource(), newIndices,
         xferOp.getPadding(), ArrayRef<bool>{inBounds});
 
     return success();
@@ -3520,7 +3520,7 @@ public:
     if (!insertOp.hasUnitStride())
       return failure();
 
-    auto xferOp = insertOp.source().getDefiningOp<TransferWriteOp>();
+    auto xferOp = insertOp.getSource().getDefiningOp<TransferWriteOp>();
     if (!xferOp)
       return failure();
     // TODO: support 0-d corner case.
@@ -3575,7 +3575,7 @@ public:
         rewriter, insertOp.getLoc(), insertOp.getMixedOffsets());
     SmallVector<bool> inBounds(xferOp.getTransferRank(), true);
     rewriter.replaceOpWithNewOp<TransferWriteOp>(insertOp, xferOp.getVector(),
-                                                 insertOp.dest(), indices,
+                                                 insertOp.getDest(), indices,
                                                  ArrayRef<bool>{inBounds});
     return success();
   }
@@ -3613,10 +3613,11 @@ public:
                                 PatternRewriter &rewriter) const override {
     if (!insertOp.hasUnitStride())
       return failure();
-    auto extractOp = insertOp.source().getDefiningOp<tensor::ExtractSliceOp>();
+    auto extractOp =
+        insertOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
     if (!extractOp || !extractOp.hasUnitStride() || !extractOp->hasOneUse())
       return failure();
-    auto transferOp = extractOp.source().getDefiningOp<TransferWriteOp>();
+    auto transferOp = extractOp.getSource().getDefiningOp<TransferWriteOp>();
     if (!transferOp || !transferOp->hasOneUse())
       return failure();
 
@@ -3668,7 +3669,7 @@ public:
     for (const auto &en : enumerate(newResultShape))
       newInBounds.push_back(en.value() == vectorShape[en.index()]);
     auto newExtractOp = rewriter.create<tensor::ExtractSliceOp>(
-        extractOp.getLoc(), insertOp.getSourceType(), insertOp.dest(),
+        extractOp.getLoc(), insertOp.getSourceType(), insertOp.getDest(),
         insertOp.getMixedOffsets(), insertOp.getMixedSizes(),
         insertOp.getMixedStrides());
     auto newTransferWriteOp = rewriter.create<TransferWriteOp>(
@@ -3676,7 +3677,7 @@ public:
         transferOp.getIndices(), transferOp.getPermutationMapAttr(),
         rewriter.getBoolArrayAttr(newInBounds));
     rewriter.updateRootInPlace(insertOp, [&]() {
-      insertOp.sourceMutable().assign(newTransferWriteOp.getResult());
+      insertOp.getSourceMutable().assign(newTransferWriteOp.getResult());
     });
     return success();
   }

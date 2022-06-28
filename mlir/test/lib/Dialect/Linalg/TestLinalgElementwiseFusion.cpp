@@ -128,7 +128,7 @@ struct TestLinalgElementwiseFusion
           [](const OpResult &producer, OpOperand &consumer) {
             if (auto collapseOp =
                     producer.getDefiningOp<tensor::CollapseShapeOp>()) {
-              if (!collapseOp.src().getDefiningOp<linalg::LinalgOp>()) {
+              if (!collapseOp.getSrc().getDefiningOp<linalg::LinalgOp>()) {
                 return false;
               }
             }

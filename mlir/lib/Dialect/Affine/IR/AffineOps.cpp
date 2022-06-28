@@ -301,7 +301,7 @@ bool mlir::isValidDim(Value value, Region *region) {
   if (auto dimOp = dyn_cast<memref::DimOp>(op))
     return isTopLevelValue(dimOp.source());
   if (auto dimOp = dyn_cast<tensor::DimOp>(op))
-    return isTopLevelValue(dimOp.source());
+    return isTopLevelValue(dimOp.getSource());
   return false;
 }
 
@@ -325,12 +325,12 @@ static bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp, unsigned index,
 template <typename OpTy>
 static bool isDimOpValidSymbol(OpTy dimOp, Region *region) {
   // The dim op is okay if its source is defined at the top level.
-  if (isTopLevelValue(dimOp.source()))
+  if (isTopLevelValue(dimOp.getSource()))
     return true;
 
   // Conservatively handle remaining BlockArguments as non-valid symbols.
   // E.g. scf.for iterArgs.
-  if (dimOp.source().template isa<BlockArgument>())
+  if (dimOp.getSource().template isa<BlockArgument>())
     return false;
 
   // The dim op is also okay if its operand memref is a view/subview whose
@@ -339,7 +339,7 @@ static bool isDimOpValidSymbol(OpTy dimOp, Region *region) {
   assert(index.hasValue() &&
          "expect only `dim` operations with a constant index");
   int64_t i = index.getValue();
-  return TypeSwitch<Operation *, bool>(dimOp.source().getDefiningOp())
+  return TypeSwitch<Operation *, bool>(dimOp.getSource().getDefiningOp())
       .Case<memref::ViewOp, memref::SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
       .Default([](Operation *) { return false; });
@@ -512,7 +512,7 @@ ParseResult AffineApplyOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void AffineApplyOp::print(OpAsmPrinter &p) {
-  p << " " << mapAttr();
+  p << " " << getMapAttr();
   printDimAndSymbolList(operand_begin(), operand_end(),
                         getAffineMap().getNumDims(), p);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"map"});
@@ -520,7 +520,7 @@ void AffineApplyOp::print(OpAsmPrinter &p) {
 
 LogicalResult AffineApplyOp::verify() {
   // Check input and output dimensions match.
-  AffineMap affineMap = map();
+  AffineMap affineMap = getMap();
 
   // Verify that operand count matches affine map dimension and symbol count.
   if (getNumOperands() != affineMap.getNumDims() + affineMap.getNumSymbols())
@@ -930,8 +930,9 @@ void SimplifyAffineOp<AffinePrefetchOp>::replaceAffineOp(
     PatternRewriter &rewriter, AffinePrefetchOp prefetch, AffineMap map,
     ArrayRef<Value> mapOperands) const {
   rewriter.replaceOpWithNewOp<AffinePrefetchOp>(
-      prefetch, prefetch.memref(), map, mapOperands, prefetch.localityHint(),
-      prefetch.isWrite(), prefetch.isDataCache());
+      prefetch, prefetch.getMemref(), map, mapOperands,
+      prefetch.getLocalityHint(), prefetch.getIsWrite(),
+      prefetch.getIsDataCache());
 }
 template <>
 void SimplifyAffineOp<AffineStoreOp>::replaceAffineOp(
@@ -1578,7 +1579,8 @@ void AffineForOp::print(OpAsmPrinter &p) {
   }
 
   p << ' ';
-  p.printRegion(region(), /*printEntryBlockArgs=*/false, printBlockTerminators);
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
+                printBlockTerminators);
   p.printOptionalAttrDict((*this)->getAttrs(),
                           /*elidedAttrs=*/{getLowerBoundAttrStrName(),
                                            getUpperBoundAttrStrName(),
@@ -1914,7 +1916,7 @@ bool AffineForOp::matchingBoundOperandList() {
   return true;
 }
 
-Region &AffineForOp::getLoopBody() { return region(); }
+Region &AffineForOp::getLoopBody() { return getRegion(); }
 
 Optional<Value> AffineForOp::getSingleInductionVar() {
   return getInductionVar();
@@ -2103,7 +2105,7 @@ struct SimplifyDeadElse : public OpRewritePattern<AffineIfOp> {
 
   LogicalResult matchAndRewrite(AffineIfOp ifOp,
                                 PatternRewriter &rewriter) const override {
-    if (ifOp.elseRegion().empty() ||
+    if (ifOp.getElseRegion().empty() ||
         !llvm::hasSingleElement(*ifOp.getElseBlock()) || ifOp.getNumResults())
       return failure();
 
@@ -2250,11 +2252,11 @@ void AffineIfOp::print(OpAsmPrinter &p) {
                         conditionAttr.getValue().getNumDims(), p);
   p.printOptionalArrowTypeList(getResultTypes());
   p << ' ';
-  p.printRegion(thenRegion(), /*printEntryBlockArgs=*/false,
+  p.printRegion(getThenRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/getNumResults());
 
   // Print the 'else' regions if it has any blocks.
-  auto &elseRegion = this->elseRegion();
+  auto &elseRegion = this->getElseRegion();
   if (!elseRegion.empty()) {
     p << " else ";
     p.printRegion(elseRegion,
@@ -2454,7 +2456,7 @@ OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
     return getResult();
 
   // Fold load from a global constant memref.
-  auto getGlobalOp = memref().getDefiningOp<memref::GetGlobalOp>();
+  auto getGlobalOp = getMemref().getDefiningOp<memref::GetGlobalOp>();
   if (!getGlobalOp)
     return {};
   // Get to the memref.global defining the symbol.
@@ -2577,7 +2579,8 @@ LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
 
 template <typename T> static LogicalResult verifyAffineMinMaxOp(T op) {
   // Verify that operand count matches affine map dimension and symbol count.
-  if (op.getNumOperands() != op.map().getNumDims() + op.map().getNumSymbols())
+  if (op.getNumOperands() !=
+      op.getMap().getNumDims() + op.getMap().getNumSymbols())
     return op.emitOpError(
         "operand count and affine map dimension and symbol count must match");
   return success();
@@ -2586,7 +2589,7 @@ template <typename T> static LogicalResult verifyAffineMinMaxOp(T op) {
 template <typename T> static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
   p << ' ' << op->getAttr(T::getMapAttrStrName());
   auto operands = op.getOperands();
-  unsigned numDims = op.map().getNumDims();
+  unsigned numDims = op.getMap().getNumDims();
   p << '(' << operands.take_front(numDims) << ')';
 
   if (operands.size() != numDims)
@@ -2627,12 +2630,12 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
   // TODO: Fold more cases:
   // min(some_affine, some_affine + constant, ...), etc.
   SmallVector<int64_t, 2> results;
-  auto foldedMap = op.map().partialConstantFold(operands, &results);
+  auto foldedMap = op.getMap().partialConstantFold(operands, &results);
 
   // If some of the map results are not constant, try changing the map in-place.
   if (results.empty()) {
     // If the map is the same, report that folding did not happen.
-    if (foldedMap == op.map())
+    if (foldedMap == op.getMap())
       return {};
     op->setAttr("map", AffineMapAttr::get(foldedMap));
     return op.getResult();
@@ -2850,9 +2853,9 @@ struct CanonicalizeSingleResultAffineMinMaxOp : public OpRewritePattern<T> {
 
   LogicalResult matchAndRewrite(T affineOp,
                                 PatternRewriter &rewriter) const override {
-    if (affineOp.map().getNumResults() != 1)
+    if (affineOp.getMap().getNumResults() != 1)
       return failure();
-    rewriter.replaceOpWithNewOp<AffineApplyOp>(affineOp, affineOp.map(),
+    rewriter.replaceOpWithNewOp<AffineApplyOp>(affineOp, affineOp.getMap(),
                                                affineOp.getOperands());
     return success();
   }
@@ -2971,14 +2974,14 @@ ParseResult AffinePrefetchOp::parse(OpAsmParser &parser,
 }
 
 void AffinePrefetchOp::print(OpAsmPrinter &p) {
-  p << " " << memref() << '[';
+  p << " " << getMemref() << '[';
   AffineMapAttr mapAttr =
       (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName());
   if (mapAttr)
     p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
-  p << ']' << ", " << (isWrite() ? "write" : "read") << ", "
-    << "locality<" << localityHint() << ">, "
-    << (isDataCache() ? "data" : "instr");
+  p << ']' << ", " << (getIsWrite() ? "write" : "read") << ", "
+    << "locality<" << getLocalityHint() << ">, "
+    << (getIsDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
       (*this)->getAttrs(),
       /*elidedAttrs=*/{getMapAttrStrName(), getLocalityHintAttrStrName(),
@@ -3118,40 +3121,40 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
     ensureTerminator(*bodyRegion, builder, result.location);
 }
 
-Region &AffineParallelOp::getLoopBody() { return region(); }
+Region &AffineParallelOp::getLoopBody() { return getRegion(); }
 
-unsigned AffineParallelOp::getNumDims() { return steps().size(); }
+unsigned AffineParallelOp::getNumDims() { return getSteps().size(); }
 
 AffineParallelOp::operand_range AffineParallelOp::getLowerBoundsOperands() {
-  return getOperands().take_front(lowerBoundsMap().getNumInputs());
+  return getOperands().take_front(getLowerBoundsMap().getNumInputs());
 }
 
 AffineParallelOp::operand_range AffineParallelOp::getUpperBoundsOperands() {
-  return getOperands().drop_front(lowerBoundsMap().getNumInputs());
+  return getOperands().drop_front(getLowerBoundsMap().getNumInputs());
 }
 
 AffineMap AffineParallelOp::getLowerBoundMap(unsigned pos) {
-  auto values = lowerBoundsGroups().getValues<int32_t>();
+  auto values = getLowerBoundsGroups().getValues<int32_t>();
   unsigned start = 0;
   for (unsigned i = 0; i < pos; ++i)
     start += values[i];
-  return lowerBoundsMap().getSliceMap(start, values[pos]);
+  return getLowerBoundsMap().getSliceMap(start, values[pos]);
 }
 
 AffineMap AffineParallelOp::getUpperBoundMap(unsigned pos) {
-  auto values = upperBoundsGroups().getValues<int32_t>();
+  auto values = getUpperBoundsGroups().getValues<int32_t>();
   unsigned start = 0;
   for (unsigned i = 0; i < pos; ++i)
     start += values[i];
-  return upperBoundsMap().getSliceMap(start, values[pos]);
+  return getUpperBoundsMap().getSliceMap(start, values[pos]);
 }
 
 AffineValueMap AffineParallelOp::getLowerBoundsValueMap() {
-  return AffineValueMap(lowerBoundsMap(), getLowerBoundsOperands());
+  return AffineValueMap(getLowerBoundsMap(), getLowerBoundsOperands());
 }
 
 AffineValueMap AffineParallelOp::getUpperBoundsValueMap() {
-  return AffineValueMap(upperBoundsMap(), getUpperBoundsOperands());
+  return AffineValueMap(getUpperBoundsMap(), getUpperBoundsOperands());
 }
 
 Optional<SmallVector<int64_t, 8>> AffineParallelOp::getConstantRanges() {
@@ -3174,7 +3177,7 @@ Optional<SmallVector<int64_t, 8>> AffineParallelOp::getConstantRanges() {
   return out;
 }
 
-Block *AffineParallelOp::getBody() { return &region().front(); }
+Block *AffineParallelOp::getBody() { return &getRegion().front(); }
 
 OpBuilder AffineParallelOp::getBodyBuilder() {
   return OpBuilder(getBody(), std::prev(getBody()->end()));
@@ -3190,7 +3193,7 @@ void AffineParallelOp::setLowerBounds(ValueRange lbOperands, AffineMap map) {
   newOperands.append(ubOperands.begin(), ubOperands.end());
   (*this)->setOperands(newOperands);
 
-  lowerBoundsMapAttr(AffineMapAttr::get(map));
+  setLowerBoundsMapAttr(AffineMapAttr::get(map));
 }
 
 void AffineParallelOp::setUpperBounds(ValueRange ubOperands, AffineMap map) {
@@ -3201,62 +3204,62 @@ void AffineParallelOp::setUpperBounds(ValueRange ubOperands, AffineMap map) {
   newOperands.append(ubOperands.begin(), ubOperands.end());
   (*this)->setOperands(newOperands);
 
-  upperBoundsMapAttr(AffineMapAttr::get(map));
+  setUpperBoundsMapAttr(AffineMapAttr::get(map));
 }
 
 void AffineParallelOp::setLowerBoundsMap(AffineMap map) {
-  AffineMap lbMap = lowerBoundsMap();
+  AffineMap lbMap = getLowerBoundsMap();
   assert(lbMap.getNumDims() == map.getNumDims() &&
          lbMap.getNumSymbols() == map.getNumSymbols());
   (void)lbMap;
-  lowerBoundsMapAttr(AffineMapAttr::get(map));
+  setLowerBoundsMapAttr(AffineMapAttr::get(map));
 }
 
 void AffineParallelOp::setUpperBoundsMap(AffineMap map) {
-  AffineMap ubMap = upperBoundsMap();
+  AffineMap ubMap = getUpperBoundsMap();
   assert(ubMap.getNumDims() == map.getNumDims() &&
          ubMap.getNumSymbols() == map.getNumSymbols());
   (void)ubMap;
-  upperBoundsMapAttr(AffineMapAttr::get(map));
+  setUpperBoundsMapAttr(AffineMapAttr::get(map));
 }
 
 void AffineParallelOp::setSteps(ArrayRef<int64_t> newSteps) {
-  stepsAttr(getBodyBuilder().getI64ArrayAttr(newSteps));
+  setStepsAttr(getBodyBuilder().getI64ArrayAttr(newSteps));
 }
 
 LogicalResult AffineParallelOp::verify() {
   auto numDims = getNumDims();
-  if (lowerBoundsGroups().getNumElements() != numDims ||
-      upperBoundsGroups().getNumElements() != numDims ||
-      steps().size() != numDims || getBody()->getNumArguments() != numDims) {
+  if (getLowerBoundsGroups().getNumElements() != numDims ||
+      getUpperBoundsGroups().getNumElements() != numDims ||
+      getSteps().size() != numDims || getBody()->getNumArguments() != numDims) {
     return emitOpError() << "the number of region arguments ("
                          << getBody()->getNumArguments()
                          << ") and the number of map groups for lower ("
-                         << lowerBoundsGroups().getNumElements()
+                         << getLowerBoundsGroups().getNumElements()
                          << ") and upper bound ("
-                         << upperBoundsGroups().getNumElements()
-                         << "), and the number of steps (" << steps().size()
+                         << getUpperBoundsGroups().getNumElements()
+                         << "), and the number of steps (" << getSteps().size()
                          << ") must all match";
   }
 
   unsigned expectedNumLBResults = 0;
-  for (APInt v : lowerBoundsGroups())
+  for (APInt v : getLowerBoundsGroups())
     expectedNumLBResults += v.getZExtValue();
-  if (expectedNumLBResults != lowerBoundsMap().getNumResults())
+  if (expectedNumLBResults != getLowerBoundsMap().getNumResults())
     return emitOpError() << "expected lower bounds map to have "
                          << expectedNumLBResults << " results";
   unsigned expectedNumUBResults = 0;
-  for (APInt v : upperBoundsGroups())
+  for (APInt v : getUpperBoundsGroups())
     expectedNumUBResults += v.getZExtValue();
-  if (expectedNumUBResults != upperBoundsMap().getNumResults())
+  if (expectedNumUBResults != getUpperBoundsMap().getNumResults())
     return emitOpError() << "expected upper bounds map to have "
                          << expectedNumUBResults << " results";
 
-  if (reductions().size() != getNumResults())
+  if (getReductions().size() != getNumResults())
     return emitOpError("a reduction must be specified for each output");
 
   // Verify reduction  ops are all valid
-  for (Attribute attr : reductions()) {
+  for (Attribute attr : getReductions()) {
     auto intAttr = attr.dyn_cast<IntegerAttr>();
     if (!intAttr || !arith::symbolizeAtomicRMWKind(intAttr.getInt()))
       return emitOpError("invalid reduction attribute");
@@ -3265,11 +3268,11 @@ LogicalResult AffineParallelOp::verify() {
   // Verify that the bound operands are valid dimension/symbols.
   /// Lower bounds.
   if (failed(verifyDimAndSymbolIdentifiers(*this, getLowerBoundsOperands(),
-                                           lowerBoundsMap().getNumDims())))
+                                           getLowerBoundsMap().getNumDims())))
     return failure();
   /// Upper bounds.
   if (failed(verifyDimAndSymbolIdentifiers(*this, getUpperBoundsOperands(),
-                                           upperBoundsMap().getNumDims())))
+                                           getUpperBoundsMap().getNumDims())))
     return failure();
   return success();
 }
@@ -3342,10 +3345,10 @@ static void printMinMaxBound(OpAsmPrinter &p, AffineMapAttr mapAttr,
 
 void AffineParallelOp::print(OpAsmPrinter &p) {
   p << " (" << getBody()->getArguments() << ") = (";
-  printMinMaxBound(p, lowerBoundsMapAttr(), lowerBoundsGroupsAttr(),
+  printMinMaxBound(p, getLowerBoundsMapAttr(), getLowerBoundsGroupsAttr(),
                    getLowerBoundsOperands(), "max");
   p << ") to (";
-  printMinMaxBound(p, upperBoundsMapAttr(), upperBoundsGroupsAttr(),
+  printMinMaxBound(p, getUpperBoundsMapAttr(), getUpperBoundsGroupsAttr(),
                    getUpperBoundsOperands(), "min");
   p << ')';
   SmallVector<int64_t, 8> steps = getSteps();
@@ -3357,7 +3360,7 @@ void AffineParallelOp::print(OpAsmPrinter &p) {
   }
   if (getNumResults()) {
     p << " reduce (";
-    llvm::interleaveComma(reductions(), p, [&](auto &attr) {
+    llvm::interleaveComma(getReductions(), p, [&](auto &attr) {
       arith::AtomicRMWKind sym = *arith::symbolizeAtomicRMWKind(
           attr.template cast<IntegerAttr>().getInt());
       p << "\"" << arith::stringifyAtomicRMWKind(sym) << "\"";
@@ -3366,7 +3369,7 @@ void AffineParallelOp::print(OpAsmPrinter &p) {
   }
 
   p << ' ';
-  p.printRegion(region(), /*printEntryBlockArgs=*/false,
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/getNumResults());
   p.printOptionalAttrDict(
       (*this)->getAttrs(),

@@ -109,7 +109,7 @@ private:
 /// Return true if all uses of `padOp` are an input tensor of some
 /// LinalgOp.
 static bool isOnlyUsedAsInputOfLinalgOp(tensor::PadOp padOp) {
-  for (OpOperand &use : padOp.result().getUses()) {
+  for (OpOperand &use : padOp.getResult().getUses()) {
     auto linalgUser = dyn_cast<linalg::LinalgOp>(use.getOwner());
     if (!linalgUser || !linalgUser.isInputTensor(&use)) {
       LLVM_DEBUG(DBGS() << "Found a use of " << *(padOp)
@@ -198,12 +198,12 @@ HoistingAnalysis::HoistingAnalysis(tensor::PadOp padOp, int numLoops) {
   //       %slice = tensor.extract_slice %source [%i, %j]
   //       %padded_slice = tensor.pad %slice
   // ```
-  auto sliceOp = padOp.source().getDefiningOp<tensor::ExtractSliceOp>();
+  auto sliceOp = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
   if (!sliceOp) {
     LLVM_DEBUG(DBGS() << "Cannot find the extract slice op -> skip\n");
     return;
   }
-  if (!outermostEnclosingForOp.isDefinedOutsideOfLoop(sliceOp.source())) {
+  if (!outermostEnclosingForOp.isDefinedOutsideOfLoop(sliceOp.getSource())) {
     LLVM_DEBUG(DBGS() << "Source not defined outside of loops -> skip\n");
     return;
   }
@@ -453,7 +453,7 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
     // Specifically sit out in the extract_slice(packedTensor) case: this is the
     // piece we seek to replace.
     if (auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(op))
-      if (bvm.lookupOrDefault(sliceOp.source()) == packedTensor)
+      if (bvm.lookupOrDefault(sliceOp.getSource()) == packedTensor)
         continue;
     // Clone all operations except it is a loop.
     auto forOp = dyn_cast<scf::ForOp>(op);
@@ -499,7 +499,7 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
                                     b.getIndexAttr(1));
 
   // Stack step 2. create GenericOp if `transposeVector` is non-empty.
-  Value paddedTensor = bvm.lookup(opToHoist.result());
+  Value paddedTensor = bvm.lookup(opToHoist.getResult());
   if (!transposeVector.empty()) {
     Value outputTensor = b.create<tensor::ExtractSliceOp>(
         loc, *transposedTensorType, packedTensor, offsets, sizes, strides);
@@ -553,6 +553,6 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
 
   // Make the newly cloned `opToHoist` available to the caller.
   hoistedOp =
-      cast<tensor::PadOp>(bvm.lookup(opToHoist.result()).getDefiningOp());
+      cast<tensor::PadOp>(bvm.lookup(opToHoist.getResult()).getDefiningOp());
   return newResult;
 }
