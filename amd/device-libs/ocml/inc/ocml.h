@@ -732,6 +732,17 @@ extern __attribute__((const)) double2 OCML_MANGLE_F64(csqrt)(double2);
 extern __attribute__((const)) float2 OCML_MANGLE_F32(cdiv)(float2, float2);
 extern __attribute__((const)) double2 OCML_MANGLE_F64(cdiv)(double2, double2);
 
+extern __attribute__((const)) half OCML_MANGLE_F32(cvtrtn_f16)(float a);
+extern __attribute__((const)) half OCML_MANGLE_F32(cvtrtp_f16)(float a);
+extern __attribute__((const)) half OCML_MANGLE_F32(cvtrtz_f16)(float a);
+extern __attribute__((const)) half OCML_MANGLE_F64(cvtrte_f16)(double a);
+extern __attribute__((const)) half OCML_MANGLE_F64(cvtrtn_f16)(double a);
+extern __attribute__((const)) half OCML_MANGLE_F64(cvtrtp_f16)(double a);
+extern __attribute__((const)) half OCML_MANGLE_F64(cvtrtz_f16)(double a);
+extern __attribute__((const)) float OCML_MANGLE_F64(cvtrtn_f32)(double a);
+extern __attribute__((const)) float OCML_MANGLE_F64(cvtrtp_f32)(double a);
+extern __attribute__((const)) float OCML_MANGLE_F64(cvtrtz_f32)(double a);
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 
 #endif // OCML_H

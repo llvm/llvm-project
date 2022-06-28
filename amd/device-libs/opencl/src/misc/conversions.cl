@@ -5,15 +5,9 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#include "ocml.h"
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-
-extern __attribute__((const)) uint __cvt_f16_rtn_f32(float);
-extern __attribute__((const)) uint __cvt_f16_rtp_f32(float);
-extern __attribute__((const)) uint __cvt_f16_rtz_f32(float);
-
-extern __attribute__((const)) uint __cvt_f16_rtn_f64(double);
-extern __attribute__((const)) uint __cvt_f16_rtp_f64(double);
-extern __attribute__((const)) uint __cvt_f16_rtz_f64(double);
 
 #define ATTR __attribute__((overloadable, const))
 #define IATTR __attribute__((const))
@@ -1724,61 +1718,19 @@ convert_float_rtp(ulong u)
 ATTR float
 convert_float_rtn(double a)
 {
-    ulong u = as_ulong(a);
-    ulong um = u & 0xfffffffffffffUL;
-    int e = (int)((u >> 52) & 0x7ff) - 1023 + 127;
-    int ds = max(0, min(31, 1 - e));
-    ulong t = (um | (e > -896 ? 0x0010000000000000UL : 0UL)) << (35 - ds);
-    uint s = (uint)(u >> 32) & 0x80000000;
-    uint m = (uint)(u >> 29) & 0x7fffff;
-    uint i = 0x7f800000 | m | (um ? 0x00400000 : 0U);
-    uint n = ((uint)(e << 23)) | m;
-    uint d = (0x800000 | m) >> ds;
-    uint v = e < 1 ? d : n;
-    v += (s >> 31) & (t > 0UL);
-    uint j = 0x7f7fffff + (s >> 31);
-    v = e > 254 ? j : v;
-    v = e == 1151 ? i : v;
-    return as_float(s | v);
+    return __ocml_cvtrtn_f32_f64(a);
 }
 
 ATTR float
 convert_float_rtp(double a)
 {
-    ulong u = as_ulong(a);
-    ulong um = u & 0xfffffffffffffUL;
-    int e = (int)((u >> 52) & 0x7ff) - 1023 + 127;
-    int ds = max(0, min(31, 1 - e));
-    ulong t = (um | (e > -896 ? 0x0010000000000000UL : 0UL)) << (35 - ds);
-    uint s = (uint)(u >> 32) & 0x80000000;
-    uint m = (uint)(u >> 29) & 0x7fffff;
-    uint i = 0x7f800000 | m | (um ? 0x00400000 : 0U);
-    uint n = ((uint)(e << 23)) | m;
-    uint d = (0x800000 | m) >> ds;
-    uint v = e < 1 ? d : n;
-    v += ~(s >> 31) & (t > 0UL);
-    uint j = 0x7f800000 - (s >> 31);
-    v = e > 254 ? j : v;
-    v = e == 1151 ? i : v;
-    return as_float(s | v);
+    return __ocml_cvtrtp_f32_f64(a);
 }
 
 ATTR float
 convert_float_rtz(double a)
 {
-    ulong u = as_ulong(a);
-    ulong um = u & 0xfffffffffffffUL;
-    int e = (int)((u >> 52) & 0x7ff) - 1023 + 127;
-    uint s = (uint)(u >> 32) & 0x80000000;
-    uint m = (uint)(u >> 29) & 0x7fffff;
-    uint i = 0x7f800000 | m | (um ? 0x00400000 : 0U);
-    uint n = ((uint)(e << 23)) | m;
-    uint d = (0x800000 | m) >> (1 - e);
-    uint v = e > 254 ? 0x7f7fffff : n;
-    v = e == 1151 ? i : v;
-    v = e < 1 ? d : v;
-    v = e < -23 ? 0 : v;
-    return as_float(s | v);
+    return __ocml_cvtrtz_f32_f64(a);
 }
 
 ATTR double
@@ -1849,25 +1801,25 @@ convert_double_rtp(ulong u)
 ATTR half
 convert_half_rtn(short s)
 {
-    return as_half((ushort)__cvt_f16_rtz_f32((float)s));
+    return __ocml_cvtrtz_f16_f32((float)s);
 }
 
 ATTR half
 convert_half_rtp(short s)
 {
-    return as_half((ushort)__cvt_f16_rtp_f32((float)s));
+    return __ocml_cvtrtp_f16_f32((float)s);
 }
 
 ATTR half
 convert_half_rtz(short s)
 {
-    return as_half((ushort)__cvt_f16_rtz_f32((float)s));
+    return __ocml_cvtrtz_f16_f32((float)s);
 }
 
 IATTR static half
 cvt1f2_zu2(ushort u)
 {
-    return as_half((ushort)__cvt_f16_rtz_f32((float)u));
+    return __ocml_cvtrtz_f16_f32((float)u);
 }
 AATTR("cvt1f2_zu2") half convert_half_rtn(ushort);
 AATTR("cvt1f2_zu2") half convert_half_rtz(ushort);
@@ -1875,35 +1827,35 @@ AATTR("cvt1f2_zu2") half convert_half_rtz(ushort);
 ATTR half
 convert_half_rtp(ushort u)
 {
-    return as_half((ushort)__cvt_f16_rtp_f32((float)u));
+    return __ocml_cvtrtp_f16_f32((float)u);
 }
 
 ATTR half
 convert_half_rtn(int i)
 {
     i = clamp(i, SHRT_MIN, SHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtn_f32((float)i));
+    return __ocml_cvtrtn_f16_f32((float)i);
 }
 
 ATTR half
 convert_half_rtp(int i)
 {
     i = clamp(i, SHRT_MIN, SHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtp_f32((float)i));
+    return __ocml_cvtrtp_f16_f32((float)i);
 }
 
 ATTR half
 convert_half_rtz(int i)
 {
     i = clamp(i, SHRT_MIN, SHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtz_f32((float)i));
+    return __ocml_cvtrtz_f16_f32((float)i);
 }
 
 IATTR static half
 cvt1f2_zu4(uint u)
 {
     u = min(u, (uint)USHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtz_f32((float)u));
+    return __ocml_cvtrtz_f16_f32((float)u);
 }
 AATTR("cvt1f2_zu4") half convert_half_rtn(uint);
 AATTR("cvt1f2_zu4") half convert_half_rtz(uint);
@@ -1912,35 +1864,35 @@ ATTR half
 convert_half_rtp(uint u)
 {
     u = min(u, (uint)USHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtp_f32((float)u));
+    return __ocml_cvtrtp_f16_f32((float)u);
 }
 
 ATTR half
 convert_half_rtn(long l)
 {
     int i = (int)clamp(l, (long)SHRT_MIN, (long)SHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtn_f32((float)i));
+    return __ocml_cvtrtn_f16_f32((float)i);
 }
 
 ATTR half
 convert_half_rtp(long l)
 {
     int i = (int)clamp(l, (long)SHRT_MIN, (long)SHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtp_f32((float)i));
+    return __ocml_cvtrtp_f16_f32((float)i);
 }
 
 ATTR half
 convert_half_rtz(long l)
 {
     int i = (int)clamp(l, (long)SHRT_MIN, (long)SHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtz_f32((float)i));
+    return __ocml_cvtrtz_f16_f32((float)i);
 }
 
 IATTR static half
 cvt1f2_zu8(ulong ul)
 {
     uint u = (uint)min(ul, (ulong)USHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtz_f32((float)u));
+    return __ocml_cvtrtz_f16_f32((float)u);
 }
 AATTR("cvt1f2_zu8") half convert_half_rtn(ulong);
 AATTR("cvt1f2_zu8") half convert_half_rtz(ulong);
@@ -1949,41 +1901,41 @@ ATTR half
 convert_half_rtp(ulong ul)
 {
     uint u = (uint)min(ul, (ulong)USHRT_MAX);
-    return as_half((ushort)__cvt_f16_rtp_f32((float)u));
+    return __ocml_cvtrtp_f16_f32((float)u);
 }
 
 ATTR half
 convert_half_rtp(float a)
 {
-    return as_half((ushort)__cvt_f16_rtp_f32(a));
+    return __ocml_cvtrtp_f16_f32(a);
 }
 
 ATTR half
 convert_half_rtn(float a)
 {
-    return as_half((ushort)__cvt_f16_rtn_f32(a));
+    return __ocml_cvtrtn_f16_f32(a);
 }
 
 ATTR half
 convert_half_rtz(float a)
 {
-    return as_half((ushort)__cvt_f16_rtz_f32(a));
+    return __ocml_cvtrtz_f16_f32(a);
 }
 
 ATTR half
 convert_half_rtp(double a)
 {
-    return as_half((ushort)__cvt_f16_rtp_f64(a));
+    return __ocml_cvtrtp_f16_f64(a);
 }
 
 ATTR half
 convert_half_rtn(double a)
 {
-    return as_half((ushort)__cvt_f16_rtn_f64(a));
+    return __ocml_cvtrtn_f16_f64(a);
 }
 
 ATTR half
 convert_half_rtz(double a)
 {
-    return as_half((ushort)__cvt_f16_rtz_f64(a));
+    return __ocml_cvtrtz_f16_f64(a);
 }
