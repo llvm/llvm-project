@@ -49,7 +49,7 @@ Like this:
   // fuzz_target.cc
   extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     DoSomethingInterestingWithMyAPI(Data, Size);
-    return 0;  // Non-zero return values are reserved for future use.
+    return 0;  // Values other than 0 and -1 are reserved for future use.
   }
 
 Note that this fuzz target does not depend on libFuzzer in any way
@@ -646,6 +646,28 @@ arguments and a callback. This callback is invoked just like
                     int (*UserCb)(const uint8_t *Data, size_t Size));
 
 
+Rejecting unwanted inputs
+-------------------------
+
+It may be desirable to reject some inputs, i.e. to not add them to the corpus.
+
+For example, when fuzzing an API consisting of parsing and other logic,
+one may want to allow only those inputs into the corpus that parse successfully.
+
+If the fuzz target returns -1 on a given input,
+libFuzzer will not add that input top the corpus, regardless of what coverage
+it triggers.
+
+
+.. code-block:: c++
+
+  extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+    if (auto *Obj = ParseMe(Data, Size)) {
+      Obj->DoSomethingInteresting();
+      return 0;  // Accept. The input may be added to the corpus.
+    }
+    return -1;  // Reject; The input will not be added to the corpus.
+  }
 
 Leaks
 -----
