@@ -12,6 +12,7 @@ class TestDarwinSignalHandlers(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfOutOfTreeDebugserver
     @skipUnlessDarwin
     def test_ignored_thread(self):
         """It isn't possible to convert an EXC_BAD_ACCESS to a signal when
