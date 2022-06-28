@@ -646,10 +646,10 @@ func.func @fold_broadcast_shapecast(%arg0: vector<4xf32>) -> vector<4xf32> {
 
 // -----
 
-// CHECK-LABEL: func @dont_fold_broadcast_shapecast_scalar
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast_scalar
 //       CHECK:   vector.broadcast
-//       CHECK:   vector.shape_cast
-func.func @dont_fold_broadcast_shapecast_scalar(%arg0: f32) -> vector<1xf32> {
+//   CHECK-NOT:   vector.shape_cast
+func.func @canonicalize_broadcast_shapecast_scalar(%arg0: f32) -> vector<1xf32> {
     %0 = vector.broadcast %arg0 : f32 to vector<1x1x1xf32>
     %1 = vector.shape_cast %0 : vector<1x1x1xf32> to vector<1xf32>
     return %1 : vector<1xf32>
@@ -664,6 +664,17 @@ func.func @dont_fold_broadcast_shapecast_diff_shape(%arg0: vector<4xf32>) -> vec
     %0 = vector.broadcast %arg0 : vector<4xf32> to vector<1x2x4xf32>
     %1 = vector.shape_cast %0 : vector<1x2x4xf32> to vector<8xf32>
     return %1 : vector<8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast
+//       CHECK:   vector.broadcast
+//   CHECK-NOT:   vector.shape_cast
+func.func @canonicalize_broadcast_shapecast(%arg0: vector<3xf32>) -> vector<8x3xf32> {
+    %0 = vector.broadcast %arg0 : vector<3xf32> to vector<2x4x3xf32>
+    %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
+    return %1 : vector<8x3xf32>
 }
 
 // -----
