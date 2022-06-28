@@ -294,10 +294,15 @@ public:
 
 private:
   void generateLineNumBasedProfile();
-  // Lookup or create FunctionSamples for the context
-  FunctionSamples &
-  getFunctionProfileForContext(const SampleContextFrameVector &Context,
-                               bool WasLeafInlined = false);
+
+  FunctionSamples *getOrCreateFunctionSamples(ContextTrieNode *ContextNode,
+                                              bool WasLeafInlined = false);
+
+  // Lookup or create ContextTrieNode for the context, FunctionSamples is
+  // created inside this function.
+  ContextTrieNode *getOrCreateContextNode(const SampleContextFrames Context,
+                                          bool WasLeafInlined = false);
+
   // For profiled only functions, on-demand compute their inline context
   // function byte size which is used by the pre-inliner.
   void computeSizeForProfiledFunctions();
@@ -307,10 +312,13 @@ private:
 
   void populateBodySamplesForFunction(FunctionSamples &FunctionProfile,
                                       const RangeSample &RangeCounters);
-  void populateBoundarySamplesForFunction(SampleContextFrames ContextId,
-                                          FunctionSamples *CallerProfile,
+
+  void populateBoundarySamplesForFunction(ContextTrieNode *CallerNode,
                                           const BranchSample &BranchCounters);
-  void populateInferredFunctionSamples();
+
+  void populateInferredFunctionSamples(ContextTrieNode &Node);
+
+  void updateFunctionSamples();
 
   void generateProbeBasedProfile();
 
@@ -320,13 +328,32 @@ private:
   // Fill in boundary samples for a call probe
   void populateBoundarySamplesWithProbes(const BranchSample &BranchCounter,
                                          SampleContextFrames ContextStack);
+
+  ContextTrieNode *
+  getContextNodeForLeafProbe(SampleContextFrames ContextStack,
+                             const MCDecodedPseudoProbe *LeafProbe);
+
   // Helper function to get FunctionSamples for the leaf probe
   FunctionSamples &
   getFunctionProfileForLeafProbe(SampleContextFrames ContextStack,
                                  const MCDecodedPseudoProbe *LeafProbe);
 
+  void convertToProfileMap(ContextTrieNode &Node,
+                           SampleContextFrameVector &Context);
+
+  void convertToProfileMap();
+
+  ContextTrieNode &getRootContext() { return ContextTracker.getRootContext(); };
+
+  // The container for holding the FunctionSamples used by context trie.
+  std::list<FunctionSamples> FSamplesList;
+
   // Underlying context table serves for sample profile writer.
   std::unordered_set<SampleContextFrameVector, SampleContextFrameHash> Contexts;
+
+  SampleContextTracker ContextTracker;
+
+  bool IsProfileValidOnTrie = true;
 
 public:
   // Deduplicate adjacent repeated context sequences up to a given sequence
