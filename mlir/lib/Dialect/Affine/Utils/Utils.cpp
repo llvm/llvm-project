@@ -1778,7 +1778,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
     return memrefType;
   // TODO: Handle semi-affine maps.
   // Project out the old data dimensions.
-  fac.projectOut(newRank, fac.getNumIds() - newRank - fac.getNumLocalIds());
+  fac.projectOut(newRank, fac.getNumVars() - newRank - fac.getNumLocalVars());
   SmallVector<int64_t, 4> newShape(newRank);
   for (unsigned d = 0; d < newRank; ++d) {
     // Check if each dimension of normalized memrefType is dynamic.

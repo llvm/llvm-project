@@ -18,7 +18,7 @@ using namespace presburger;
 static IntegerRelation parseRelationFromSet(StringRef set, unsigned numDomain) {
   IntegerRelation rel = parsePoly(set);
 
-  rel.convertIdKind(IdKind::SetDim, 0, numDomain, IdKind::Domain);
+  rel.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain);
 
   return rel;
 }

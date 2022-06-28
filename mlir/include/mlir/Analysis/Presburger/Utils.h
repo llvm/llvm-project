@@ -85,10 +85,11 @@ public:
 /// `ReprKind` enum is used to set the constraint type in `MaybeLocalRepr`.
 enum class ReprKind { Inequality, Equality, None };
 
-/// `MaybeLocalRepr` contains the indices of the contraints that can be
+/// `MaybeLocalRepr` contains the indices of the constraints that can be
 /// expressed as a floordiv of an affine function. If it's an `equality`
-/// contraint `equalityIdx` is set, in case of `inequality` the `lowerBoundIdx`
-/// and `upperBoundIdx` is set. By default the kind attribute is set to None.
+/// constraint, `equalityIdx` is set, in case of `inequality` the
+/// `lowerBoundIdx` and `upperBoundIdx` is set. By default the kind attribute is
+/// set to None.
 struct MaybeLocalRepr {
   ReprKind kind = ReprKind::None;
   explicit operator bool() const { return kind != ReprKind::None; }
@@ -100,10 +101,10 @@ struct MaybeLocalRepr {
   } repr;
 };
 
-/// Check if the pos^th identifier can be expressed as a floordiv of an affine
-/// function of other identifiers (where the divisor is a positive constant).
-/// `foundRepr` contains a boolean for each identifier indicating if the
-/// explicit representation for that identifier has already been computed.
+/// Check if the pos^th variable can be expressed as a floordiv of an affine
+/// function of other variables (where the divisor is a positive constant).
+/// `foundRepr` contains a boolean for each variable indicating if the
+/// explicit representation for that variable has already been computed.
 /// Returns the `MaybeLocalRepr` struct which contains the indices of the
 /// constraints that can be expressed as a floordiv of an affine function. If
 /// the representation could be computed, `dividend` and `denominator` are set.
@@ -116,7 +117,7 @@ MaybeLocalRepr computeSingleVarRepr(const IntegerRelation &cst,
 
 /// Given dividends of divisions `divs` and denominators `denoms`, detects and
 /// removes duplicate divisions. `localOffset` is the offset in dividend of a
-/// division from where local identifiers start.
+/// division from where local variables start.
 ///
 /// On every possible duplicate division found, `merge(i, j)`, where `i`, `j`
 /// are current index of the duplicate divisions, is called and division at
@@ -124,26 +125,26 @@ MaybeLocalRepr computeSingleVarRepr(const IntegerRelation &cst,
 /// `true`, the divisions are merged i.e. `j^th` division gets eliminated and
 /// it's each instance is replaced by `i^th` division. If it returns `false`,
 /// the divisions are not merged. `merge` can also do side effects, For example
-/// it can merge the local identifiers in IntegerRelation.
+/// it can merge the local variables in IntegerRelation.
 void removeDuplicateDivs(
     std::vector<SmallVector<int64_t, 8>> &divs,
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 
-/// Given two relations, A and B, add additional local ids to the sets such
-/// that both have the union of the local ids in each set, without changing
+/// Given two relations, A and B, add additional local vars to the sets such
+/// that both have the union of the local vars in each set, without changing
 /// the set of points that lie in A and B.
 ///
-/// While taking union, if a local id in any set has a division representation
-/// which is a duplicate of division representation, of another local id in any
-/// set, it is not added to the final union of local ids and is instead merged.
+/// While taking union, if a local var in any set has a division representation
+/// which is a duplicate of division representation, of another local var in any
+/// set, it is not added to the final union of local vars and is instead merged.
 ///
 /// On every possible merge, `merge(i, j)` is called. `i`, `j` are position
-/// of local identifiers in both sets which are being merged. If `merge(i, j)`
+/// of local variables in both sets which are being merged. If `merge(i, j)`
 /// returns true, the divisions are merged, otherwise the divisions are not
 /// merged.
-void mergeLocalIds(IntegerRelation &relA, IntegerRelation &relB,
-                   llvm::function_ref<bool(unsigned i, unsigned j)> merge);
+void mergeLocalVars(IntegerRelation &relA, IntegerRelation &relB,
+                    llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 
 /// Compute the gcd of the range.
 int64_t gcdRange(ArrayRef<int64_t> range);
