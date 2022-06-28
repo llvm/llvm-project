@@ -69,8 +69,8 @@ CC=$CLANG_DIR/clang
 CXX=$CLANG_DIR/clang++
 TBLGEN=$CLANG_DIR/llvm-tblgen
 OPT=$CLANG_DIR/opt
-export AR=$CLANG_DIR/llvm-ar
-export LINK=$CLANG_DIR/llvm-link
+AR=$CLANG_DIR/llvm-ar
+LINK=$CLANG_DIR/llvm-link
 TARGET_TRIPLE=$($CC -print-target-triple)
 
 for F in $CC $CXX $TBLGEN $LINK $OPT $AR; do
@@ -165,23 +165,23 @@ SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_set_inline_frames
 LIBCXX_ARCHIVE_DIR=$(dirname $(find $LIBCXX_BUILD -name libc++.a | head -n1))
 
 # Merge all the object files together and copy the resulting library back.
-$SCRIPT_DIR/ar_to_bc.sh $LIBCXX_ARCHIVE_DIR/libc++.a \
-                        $LIBCXX_ARCHIVE_DIR/libc++abi.a \
-                        $LLVM_BUILD/lib/libLLVMSymbolize.a \
-                        $LLVM_BUILD/lib/libLLVMObject.a \
-                        $LLVM_BUILD/lib/libLLVMBinaryFormat.a \
-                        $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
-                        $LLVM_BUILD/lib/libLLVMSupport.a \
-                        $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
-                        $LLVM_BUILD/lib/libLLVMDebugInfoMSF.a \
-                        $LLVM_BUILD/lib/libLLVMDebugInfoCodeView.a \
-                        $LLVM_BUILD/lib/libLLVMDebuginfod.a \
-                        $LLVM_BUILD/lib/libLLVMDemangle.a \
-                        $LLVM_BUILD/lib/libLLVMMC.a \
-                        $LLVM_BUILD/lib/libLLVMTextAPI.a \
-                        $ZLIB_BUILD/libz.a \
-                        symbolizer.a \
-                        all.bc
+$LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
+      $LIBCXX_ARCHIVE_DIR/libc++abi.a \
+      $LLVM_BUILD/lib/libLLVMSymbolize.a \
+      $LLVM_BUILD/lib/libLLVMObject.a \
+      $LLVM_BUILD/lib/libLLVMBinaryFormat.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
+      $LLVM_BUILD/lib/libLLVMSupport.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoMSF.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoCodeView.a \
+      $LLVM_BUILD/lib/libLLVMDebuginfod.a \
+      $LLVM_BUILD/lib/libLLVMDemangle.a \
+      $LLVM_BUILD/lib/libLLVMMC.a \
+      $LLVM_BUILD/lib/libLLVMTextAPI.a \
+      $ZLIB_BUILD/libz.a \
+      symbolizer.a \
+      -ignore-non-bitcode -o all.bc
 
 echo "Optimizing..."
 $OPT -internalize -internalize-public-api-list=${SYMBOLIZER_API_LIST} all.bc -o opt.bc
