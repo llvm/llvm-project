@@ -98,8 +98,8 @@ Error IntelPTCollector::TraceStart(const TraceIntelPTStartRequest &request) {
       }
     } else {
       std::vector<lldb::tid_t> process_threads;
-      for (size_t i = 0; m_process.GetThreadAtIndex(i); i++)
-        process_threads.push_back(m_process.GetThreadAtIndex(i)->GetID());
+      for (NativeThreadProtocol &thread : m_process.Threads())
+        process_threads.push_back(thread.GetID());
 
       // per-thread process tracing
       if (Expected<IntelPTProcessTraceUP> trace =
