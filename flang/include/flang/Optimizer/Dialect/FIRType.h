@@ -171,6 +171,14 @@ inline unsigned getRankOfShapeType(mlir::Type t) {
   return 0;
 }
 
+/// Get the memory reference type of the data pointer from the box type,
+inline mlir::Type boxMemRefType(fir::BoxType t) {
+  auto eleTy = t.getEleTy();
+  if (!eleTy.isa<fir::PointerType, fir::HeapType>())
+    eleTy = fir::ReferenceType::get(t);
+  return eleTy;
+}
+
 /// If `t` is a SequenceType return its element type, otherwise return `t`.
 inline mlir::Type unwrapSequenceType(mlir::Type t) {
   if (auto seqTy = t.dyn_cast<fir::SequenceType>())
