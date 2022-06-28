@@ -3255,6 +3255,20 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     return MIB;
   }
 
+  if (SIInstrInfo::isWMMA(MI)) {
+    unsigned NewOpc = AMDGPU::mapWMMA2AddrTo3AddrOpcode(MI.getOpcode());
+    MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
+                                  .setMIFlags(MI.getFlags());
+    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+      MIB->addOperand(MI.getOperand(I));
+
+    updateLiveVariables(LV, MI, *MIB);
+    if (LIS)
+      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+
+    return MIB;
+  }
+
   // Handle MAC/FMAC.
   bool IsF16 = Opc == AMDGPU::V_MAC_F16_e32 || Opc == AMDGPU::V_MAC_F16_e64 ||
                Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64;
