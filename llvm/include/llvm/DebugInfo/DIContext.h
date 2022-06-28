@@ -245,7 +245,7 @@ public:
     return true;
   }
 
-  virtual StringRef getCompilationDirectory(uint64_t address) {
+  virtual StringRef getCompilationDirectory() {
     return StringRef("");
   }
 

@@ -287,7 +287,7 @@ DILineInfo SymbolizableObjectFile::symbolizeCode(object::SectionedAddress Module
   }
 
   std::string FullPath = LineInfo.FileName;
-  std::string Prefix = DebugInfoContext->getCompilationDirectory(ModuleOffset.Address).str();
+  std::string Prefix = DebugInfoContext->getCompilationDirectory().str();
   if (Prefix.back() != '/') {
     Prefix.push_back('/');
   }
@@ -327,7 +327,7 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
     }
 
     std::string FullPath = LI->FileName;
-    std::string Prefix = DebugInfoContext->getCompilationDirectory(ModuleOffset.Address).str();
+    std::string Prefix = DebugInfoContext->getCompilationDirectory().str();
     if (Prefix.back() != '/') {
       Prefix.push_back('/');
     }

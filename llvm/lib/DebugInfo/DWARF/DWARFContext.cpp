@@ -699,8 +699,8 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
-StringRef DWARFContext::getCompilationDirectory(uint64_t address) {
-  return StringRef(getCompileUnitForAddress(address)->getCompilationDir());
+StringRef DWARFContext::getCompilationDirectory() {
+  return StringRef(getCompileUnitForOffset(0)->getCompilationDir());
 }
 
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
