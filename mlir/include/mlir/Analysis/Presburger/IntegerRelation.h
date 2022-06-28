@@ -27,6 +27,7 @@ namespace presburger {
 class IntegerRelation;
 class IntegerPolyhedron;
 class PresburgerSet;
+class PresburgerRelation;
 
 /// An IntegerRelation represents the set of points from a PresburgerSpace that
 /// satisfy a list of affine constraints. Affine constraints can be inequalities
@@ -575,6 +576,12 @@ public:
   /// this for uniformity with `applyDomain`.
   void applyRange(const IntegerRelation &rel);
 
+  /// Compute an equivalent representation of the same set, such that all local
+  /// vars in all disjuncts have division representations. This representation
+  /// may involve local vars that correspond to divisions, and may also be a
+  /// union of convex disjuncts.
+  PresburgerRelation computeReprWithOnlyDivLocals() const;
+
   void print(raw_ostream &os) const;
   void dump() const;
 
@@ -759,12 +766,6 @@ public:
   /// column position (i.e., not relative to the kind of variable) of the
   /// first added variable.
   unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1) override;
-
-  /// Compute an equivalent representation of the same set, such that all local
-  /// ids have division representations. This representation may involve
-  /// local ids that correspond to divisions, and may also be a union of convex
-  /// disjuncts.
-  PresburgerSet computeReprWithOnlyDivLocals() const;
 
   /// Compute the symbolic integer lexmin of the polyhedron.
   /// This finds, for every assignment to the symbols, the lexicographically
