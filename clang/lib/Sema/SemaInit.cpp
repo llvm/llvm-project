@@ -87,7 +87,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     if (ElemTy->isChar8Type())
       return SIF_None;
     LLVM_FALLTHROUGH;
-  case StringLiteral::Ascii:
+  case StringLiteral::Ordinary:
     // char array can be initialized with a narrow string.
     // Only allow char x[] = "foo";  not char x[] = L"foo";
     if (ElemTy->isCharType())
