@@ -10,11 +10,13 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; GCN-LABEL: name: test_ubfx_s32
-    ; GCN: %copy:_(s32) = COPY $vgpr0
-    ; GCN: %offset:_(s32) = COPY $vgpr1
-    ; GCN: %width:_(s32) = COPY $vgpr2
-    ; GCN: %ubfx:_(s32) = G_UBFX %copy, %offset(s32), %width
-    ; GCN: $vgpr0 = COPY %ubfx(s32)
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %copy:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: %offset:_(s32) = COPY $vgpr1
+    ; GCN-NEXT: %width:_(s32) = COPY $vgpr2
+    ; GCN-NEXT: %ubfx:_(s32) = G_UBFX %copy, %offset(s32), %width
+    ; GCN-NEXT: $vgpr0 = COPY %ubfx(s32)
     %copy:_(s32) = COPY $vgpr0
     %offset:_(s32) = COPY $vgpr1
     %width:_(s32) = COPY $vgpr2
@@ -29,11 +31,13 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
 
     ; GCN-LABEL: name: test_ubfx_s64
-    ; GCN: %copy:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN: %offset:_(s32) = COPY $vgpr2
-    ; GCN: %width:_(s32) = COPY $vgpr3
-    ; GCN: %ubfx:_(s64) = G_UBFX %copy, %offset(s32), %width
-    ; GCN: $vgpr0_vgpr1 = COPY %ubfx(s64)
+    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %copy:_(s64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %offset:_(s32) = COPY $vgpr2
+    ; GCN-NEXT: %width:_(s32) = COPY $vgpr3
+    ; GCN-NEXT: %ubfx:_(s64) = G_UBFX %copy, %offset(s32), %width
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %ubfx(s64)
     %copy:_(s64) = COPY $vgpr0_vgpr1
     %offset:_(s32) = COPY $vgpr2
     %width:_(s32) = COPY $vgpr3
@@ -48,15 +52,17 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; GCN-LABEL: name: test_ubfx_s8
-    ; GCN: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; GCN: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; GCN: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; GCN: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
-    ; GCN: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[AND]](s32), [[AND1]]
-    ; GCN: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UBFX]], [[C]]
-    ; GCN: $vgpr0 = COPY [[AND2]](s32)
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; GCN-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GCN-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
+    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[AND]](s32), [[AND1]]
+    ; GCN-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UBFX]], [[C]]
+    ; GCN-NEXT: $vgpr0 = COPY [[AND2]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -75,15 +81,17 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; GCN-LABEL: name: test_ubfx_s16
-    ; GCN: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; GCN: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GCN: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; GCN: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
-    ; GCN: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[AND]](s32), [[AND1]]
-    ; GCN: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UBFX]], [[C]]
-    ; GCN: $vgpr0 = COPY [[AND2]](s32)
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; GCN-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GCN-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
+    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[AND]](s32), [[AND1]]
+    ; GCN-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UBFX]], [[C]]
+    ; GCN-NEXT: $vgpr0 = COPY [[AND2]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2

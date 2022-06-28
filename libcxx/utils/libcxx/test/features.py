@@ -260,9 +260,11 @@ DEFAULT_FEATURES += [
 # The build host could differ from the target platform for cross-compilation.
 DEFAULT_FEATURES += [
   Feature(name='buildhost={}'.format(sys.platform.lower().strip())),
-  # sys.platform can be represented by "sub-system" on Windows host, such as 'win32', 'cygwin', 'mingw' & etc.
-  # Here is a consolidated feature for the build host plaform name on Windows.
-  Feature(name='buildhost=windows', when=lambda cfg: platform.system().lower().startswith('windows'))
+  # sys.platform can often be represented by a "sub-system", such as 'win32', 'cygwin', 'mingw', freebsd13 & etc.
+  # We define a consolidated feature on a few platforms.
+  Feature(name='buildhost=windows', when=lambda cfg: platform.system().lower().startswith('windows')),
+  Feature(name='buildhost=freebsd', when=lambda cfg: platform.system().lower().startswith('freebsd')),
+  Feature(name='buildhost=aix', when=lambda cfg: platform.system().lower().startswith('aix'))
 ]
 
 # Detect whether GDB is on the system, has Python scripting and supports

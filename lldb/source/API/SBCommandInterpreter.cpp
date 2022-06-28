@@ -47,6 +47,10 @@ public:
         auto_repeat_command == nullptr
             ? llvm::None
             : llvm::Optional<std::string>(auto_repeat_command);
+    // We don't know whether any given command coming from this interface takes
+    // arguments or not so here we're just disabling the basic args check.
+    CommandArgumentData none_arg{eArgTypeNone, eArgRepeatStar};
+    m_arguments.push_back({none_arg});
   }
 
   bool IsRemovable() const override { return true; }

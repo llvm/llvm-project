@@ -7,58 +7,72 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: kernel_i1_copy_phi_with_phi_incoming_value
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
-  ; GCN:   liveins: $vgpr0, $sgpr4_sgpr5
-  ; GCN:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
-  ; GCN:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
-  ; GCN:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORD_IMM]]
-  ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]](s32)
-  ; GCN:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY1]](s32), [[S_LOAD_DWORD_IMM]], implicit $exec
-  ; GCN:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; GCN:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_LT_I32_e64_]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GCN:   S_BRANCH %bb.1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.6(0x80000000)
-  ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; GCN:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY3]], killed [[S_MOV_B32_]], 0, implicit $exec
-  ; GCN:   [[V_CMP_GE_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GE_I32_e64 [[V_ADD_U32_e64_]], [[COPY2]], implicit $exec
-  ; GCN:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; GCN:   [[COPY4:%[0-9]+]]:sreg_64 = COPY [[V_CMP_GE_I32_e64_]]
-  ; GCN:   S_BRANCH %bb.6
-  ; GCN: bb.2:
-  ; GCN:   successors: %bb.5(0x80000000)
-  ; GCN:   [[PHI:%[0-9]+]]:sreg_64 = PHI %15, %bb.6
-  ; GCN:   SI_END_CF [[PHI]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GCN:   [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-  ; GCN:   [[COPY5:%[0-9]+]]:sreg_64 = COPY $exec
-  ; GCN:   S_BRANCH %bb.5
-  ; GCN: bb.3:
-  ; GCN:   successors: %bb.4(0x40000000), %bb.7(0x40000000)
-  ; GCN:   ATOMIC_FENCE 5, 2
-  ; GCN:   S_BARRIER
-  ; GCN:   ATOMIC_FENCE 4, 2
-  ; GCN:   [[COPY6:%[0-9]+]]:sreg_64 = COPY %18
-  ; GCN:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF [[COPY6]], %bb.7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GCN:   S_BRANCH %bb.4
-  ; GCN: bb.4:
-  ; GCN:   successors: %bb.7(0x80000000)
-  ; GCN:   S_BRANCH %bb.7
-  ; GCN: bb.5:
-  ; GCN:   successors: %bb.3(0x80000000)
-  ; GCN:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, [[COPY5]], %bb.2
-  ; GCN:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GCN:   S_BRANCH %bb.3
-  ; GCN: bb.6:
-  ; GCN:   successors: %bb.2(0x40000000), %bb.6(0x40000000)
-  ; GCN:   [[PHI2:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_1]], %bb.1, %15, %bb.6
-  ; GCN:   [[COPY7:%[0-9]+]]:sreg_64 = COPY [[COPY4]]
-  ; GCN:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[COPY7]], [[PHI2]], implicit-def dead $scc
-  ; GCN:   SI_LOOP [[SI_IF_BREAK]], %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GCN:   S_BRANCH %bb.2
-  ; GCN: bb.7:
-  ; GCN:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORD_IMM]]
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY1]](s32), [[S_LOAD_DWORD_IMM]], implicit $exec
+  ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_LT_I32_e64_]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.6(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GCN-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY3]], killed [[S_MOV_B32_]], 0, implicit $exec
+  ; GCN-NEXT:   [[V_CMP_GE_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GE_I32_e64 [[V_ADD_U32_e64_]], [[COPY2]], implicit $exec
+  ; GCN-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY [[V_CMP_GE_I32_e64_]]
+  ; GCN-NEXT:   S_BRANCH %bb.6
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   successors: %bb.5(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI %15, %bb.6
+  ; GCN-NEXT:   SI_END_CF [[PHI]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_64 = COPY $exec
+  ; GCN-NEXT:   S_BRANCH %bb.5
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.3:
+  ; GCN-NEXT:   successors: %bb.4(0x40000000), %bb.7(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   ATOMIC_FENCE 5, 2
+  ; GCN-NEXT:   S_BARRIER
+  ; GCN-NEXT:   ATOMIC_FENCE 4, 2
+  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sreg_64 = COPY %18
+  ; GCN-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF [[COPY6]], %bb.7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   S_BRANCH %bb.4
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.4:
+  ; GCN-NEXT:   successors: %bb.7(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_BRANCH %bb.7
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.5:
+  ; GCN-NEXT:   successors: %bb.3(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, [[COPY5]], %bb.2
+  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   S_BRANCH %bb.3
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.6:
+  ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.6(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI2:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_1]], %bb.1, %15, %bb.6
+  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sreg_64 = COPY [[COPY4]]
+  ; GCN-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[COPY7]], [[PHI2]], implicit-def dead $scc
+  ; GCN-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.7:
+  ; GCN-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.5
     liveins: $vgpr0, $sgpr4_sgpr5

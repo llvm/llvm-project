@@ -66,6 +66,9 @@ versions of these toolchains.
 Changes to the LLVM IR
 ----------------------
 
+* Renamed ``llvm.experimental.vector.extract`` intrinsic to ``llvm.vector.extract``.
+* Renamed ``llvm.experimental.vector.insert`` intrinsic to ``llvm.vector.insert``.
+
 Changes to building LLVM
 ------------------------
 
@@ -109,6 +112,16 @@ Changes to the AVR Backend
 --------------------------
 
 * ...
+
+Changes to the DirectX Backend
+------------------------------
+
+* DirectX has been added as an experimental target. Specify
+  ``-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=DirectX`` in your CMake configuration
+  to enable it. The target is not packaged in pre-built binaries.
+* The DirectX backend supports the ``dxil`` architecture which is based on LLVM
+  3.6 IR encoded as bitcode and is the format used for DirectX GPU Shader
+  programs.
 
 Changes to the Hexagon Backend
 ------------------------------
@@ -178,6 +191,10 @@ During this release ...
 
 Changes to the LLVM tools
 ---------------------------------
+
+* (Experimental) :manpage:`llvm-symbolizer(1)` now has ``--filter-markup`` to
+  filter :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` into human-readable
+  form.
 
 Changes to LLDB
 ---------------------------------

@@ -332,6 +332,10 @@ StorageLocation *Environment::getThisPointeeStorageLocation() const {
   return DACtx->getThisPointeeStorageLocation();
 }
 
+PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {
+  return DACtx->getOrCreateNullPointerValue(PointeeType);
+}
+
 void Environment::setValue(const StorageLocation &Loc, Value &Val) {
   LocToVal[&Loc] = &Val;
 

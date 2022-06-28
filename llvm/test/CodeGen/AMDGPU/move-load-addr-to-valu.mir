@@ -7,24 +7,28 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_load_saddr_to_valu
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
-  ; GCN:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[PHI]], 0, 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
-  ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
-  ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
-  ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
-  ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[PHI]], 0, 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0_vgpr1
       %0:sreg_64 = COPY $vgpr0_vgpr1
@@ -47,28 +51,32 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_load_saddr_to_valu_non_zero_vaddr
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
-  ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-  ; GCN:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub0, implicit $exec
-  ; GCN:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub1, implicit $exec
-  ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GCN:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
-  ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
-  ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
-  ; GCN:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
-  ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
+  ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub0, implicit $exec
+  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub1, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0_vgpr1
       %0:sreg_64 = COPY $vgpr0_vgpr1
@@ -92,27 +100,31 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_load_saddr_to_valu_undef_vaddr
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
-  ; GCN:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub0, implicit $exec
-  ; GCN:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub1, implicit $exec
-  ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GCN:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], undef %4:vgpr_32, 0, 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
-  ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
-  ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
-  ; GCN:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
-  ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
+  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub0, implicit $exec
+  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub1, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], undef %4:vgpr_32, 0, 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0_vgpr1
       %0:sreg_64 = COPY $vgpr0_vgpr1
@@ -134,25 +146,29 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_store_saddr_to_valu
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
-  ; GCN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN:   GLOBAL_STORE_DWORD [[PHI]], [[DEF]], 0, 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
-  ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
-  ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
-  ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
-  ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   GLOBAL_STORE_DWORD [[PHI]], [[DEF]], 0, 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0_vgpr1
       %0:sreg_64 = COPY $vgpr0_vgpr1
@@ -176,27 +192,31 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_addtid_load_saddr_to_valu
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %6, %bb.1
-  ; GCN:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub0, implicit $exec
-  ; GCN:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub1, implicit $exec
-  ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GCN:   [[GLOBAL_LOAD_DWORD_ADDTID_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_ADDTID_SADDR [[REG_SEQUENCE]], 0, 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
-  ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
-  ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
-  ; GCN:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
-  ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %6, %bb.1
+  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub0, implicit $exec
+  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub1, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORD_ADDTID_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_ADDTID_SADDR [[REG_SEQUENCE]], 0, 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0_vgpr1
       %0:sreg_64 = COPY $vgpr0_vgpr1
@@ -218,28 +238,32 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_store_addtid_saddr_to_valu
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %6, %bb.1
-  ; GCN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub0, implicit $exec
-  ; GCN:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub1, implicit $exec
-  ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GCN:   GLOBAL_STORE_DWORD_ADDTID_SADDR [[DEF]], [[REG_SEQUENCE]], 0, 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
-  ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
-  ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
-  ; GCN:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
-  ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %6, %bb.1
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub0, implicit $exec
+  ; GCN-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]].sub1, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GCN-NEXT:   GLOBAL_STORE_DWORD_ADDTID_SADDR [[DEF]], [[REG_SEQUENCE]], 0, 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE1]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0_vgpr1
       %0:sreg_64 = COPY $vgpr0_vgpr1
@@ -262,25 +286,29 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_atomic_noret_saddr_to_valu
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %6, %bb.1
-  ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN:   GLOBAL_ATOMIC_ADD [[PHI]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
-  ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
-  ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
-  ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
-  ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %6, %bb.1
+  ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN-NEXT:   GLOBAL_ATOMIC_ADD [[PHI]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0_vgpr1
       %0:sreg_64 = COPY $vgpr0_vgpr1
@@ -303,25 +331,29 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_atomic_rtn_saddr_to_valu
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
-  ; GCN:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN:   [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[PHI]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
-  ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
-  ; GCN:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
-  ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
-  ; GCN:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
-  ; GCN:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI [[COPY]], %bb.0, %7, %bb.1
+  ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN-NEXT:   [[GLOBAL_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN [[PHI]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub0
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[PHI]].sub1
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], 0, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[REG_SEQUENCE]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U64_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0_vgpr1
       %0:sreg_64 = COPY $vgpr0_vgpr1
@@ -344,20 +376,24 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: scratch_load_saddr_to_valu
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0
-  ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, %6, %bb.1
-  ; GCN:   [[SCRATCH_LOAD_DWORD:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD [[PHI]], 0, 0, implicit $exec, implicit $flat_scr
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[PHI]], 1, implicit $exec
-  ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_AND_B32_e64_]], 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, %6, %bb.1
+  ; GCN-NEXT:   [[SCRATCH_LOAD_DWORD:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD [[PHI]], 0, 0, implicit $exec, implicit $flat_scr
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[PHI]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_AND_B32_e64_]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0
       %0:sgpr_32 = COPY $vgpr0
@@ -379,21 +415,25 @@ tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: scratch_store_saddr_to_valu
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   liveins: $vgpr0
-  ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, %6, %bb.1
-  ; GCN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN:   SCRATCH_STORE_DWORD [[DEF]], [[PHI]], 0, 0, implicit $exec, implicit $flat_scr
-  ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[PHI]], 1, implicit $exec
-  ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_AND_B32_e64_]], 0, implicit $exec
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]], implicit $exec
-  ; GCN:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def $scc
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.2:
-  ; GCN:   S_ENDPGM 0
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, %6, %bb.1
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   SCRATCH_STORE_DWORD [[DEF]], [[PHI]], 0, 0, implicit $exec, implicit $flat_scr
+  ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[PHI]], 1, implicit $exec
+  ; GCN-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_AND_B32_e64_]], 0, implicit $exec
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]], implicit $exec
+  ; GCN-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0
       %0:sgpr_32 = COPY $vgpr0

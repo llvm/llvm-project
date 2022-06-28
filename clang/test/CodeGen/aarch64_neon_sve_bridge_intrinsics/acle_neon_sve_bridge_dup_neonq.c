@@ -16,13 +16,13 @@
 
 // CHECK-LABEL: @test_svdup_neonq_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svdup_neonq_s811__Int8x16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 //
@@ -32,13 +32,13 @@ svint8_t test_svdup_neonq_s8(int8x16_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_neonq_s1611__Int16x8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
@@ -48,13 +48,13 @@ svint16_t test_svdup_neonq_s16(int16x8_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_neonq_s3211__Int32x4_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
@@ -64,13 +64,13 @@ svint32_t test_svdup_neonq_s32(int32x4_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_neonq_s6411__Int64x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
@@ -80,13 +80,13 @@ svint64_t test_svdup_neonq_s64(int64x2_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svdup_neonq_u812__Uint8x16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 //
@@ -96,13 +96,13 @@ svuint8_t test_svdup_neonq_u8(uint8x16_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_neonq_u1612__Uint16x8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
@@ -112,13 +112,13 @@ svuint16_t test_svdup_neonq_u16(uint16x8_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_neonq_u3212__Uint32x4_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
@@ -128,13 +128,13 @@ svuint32_t test_svdup_neonq_u32(uint32x4_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_neonq_u6412__Uint64x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
@@ -144,13 +144,13 @@ svuint64_t test_svdup_neonq_u64(uint64x2_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_neonq_f1613__Float16x8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
@@ -158,18 +158,18 @@ svfloat16_t test_svdup_neonq_f16(float16x8_t n) {
   return SVE_ACLE_FUNC(svdup_neonq, _f16, , )(n);
 }
 
-// CHECK-NEXT  %0 = call <vscale x 4 x float> @llvm.experimental.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %n, i64 0)
+// CHECK-NEXT  %0 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %n, i64 0)
 // CHECK-NEXT  %1 = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %0, i64 0)
 // CHECK-NEXT  ret <vscale x 4 x float> %1
 // CHECK-LABEL: @test_svdup_neonq_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.experimental.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_neonq_f3213__Float32x4_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.experimental.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
@@ -179,13 +179,13 @@ svfloat32_t test_svdup_neonq_f32(float32x4_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svdup_neonq_f6413__Float64x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
@@ -195,13 +195,13 @@ svfloat64_t test_svdup_neonq_f64(float64x2_t n) {
 
 // CHECK-LABEL: @test_svdup_neonq_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.experimental.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> [[N:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[TMP0]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z21test_svdup_neonq_bf1614__Bfloat16x8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.experimental.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[TMP0]], i64 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //

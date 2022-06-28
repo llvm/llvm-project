@@ -203,6 +203,10 @@ public:
   /// in the environment.
   StorageLocation *getThisPointeeStorageLocation() const;
 
+  /// Returns a pointer value that represents a null pointer. Calls with
+  /// `PointeeType` that are canonically equivalent will return the same result.
+  PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
+
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
   /// return null. If `Type` is a pointer or reference type, creates all the
   /// necessary storage locations and values for indirections until it finds a
@@ -303,6 +307,16 @@ public:
 
   /// Returns the token that identifies the flow condition of the environment.
   AtomicBoolValue &getFlowConditionToken() const { return *FlowConditionToken; }
+
+  /// Builds and returns the logical formula defining the flow condition
+  /// identified by `Token`. If a value in the formula is present as a key in
+  /// `Substitutions`, it will be substituted with the value it maps to.
+  BoolValue &buildAndSubstituteFlowCondition(
+      AtomicBoolValue &Token,
+      llvm::DenseMap<AtomicBoolValue *, BoolValue *> Substitutions) {
+    return DACtx->buildAndSubstituteFlowCondition(Token,
+                                                  std::move(Substitutions));
+  }
 
   /// Adds `Val` to the set of clauses that constitute the flow condition.
   void addToFlowCondition(BoolValue &Val);

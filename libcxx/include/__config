@@ -93,8 +93,6 @@
 #    define _LIBCPP_ABI_OPTIMIZED_FUNCTION
 // All the regex constants must be distinct and nonzero.
 #    define _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
-// Use raw pointers, not wrapped ones, for std::span's iterator type.
-#    define _LIBCPP_ABI_SPAN_POINTER_ITERATORS
 // Re-worked external template instantiations for std::string with a focus on
 // performance and fast-path inlining.
 #    define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION

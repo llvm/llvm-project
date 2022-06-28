@@ -365,7 +365,7 @@ int main(int argc, char **argv) {
         })) {
       continue;
     }
-    printf("%06x: %s\n", Codepoint, Name.c_str());
+    printf("%06x: %s\n", static_cast<unsigned int>(Codepoint), Name.c_str());
     T.insert(Name, Codepoint);
     LongestName =
         std::max(LongestName, std::size_t(llvm::count_if(Name, [](char c) {
@@ -413,7 +413,7 @@ int main(int argc, char **argv) {
   fprintf(Out, "const char* UnicodeNameToCodepointDict = \"%s\";\n",
           Dict.c_str());
 
-  fprintf(Out, "uint8_t UnicodeNameToCodepointIndex_[%lu] = {\n",
+  fprintf(Out, "uint8_t UnicodeNameToCodepointIndex_[%zu] = {\n",
           Tree.size() + 1);
 
   for (auto Byte : Tree) {
@@ -423,10 +423,10 @@ int main(int argc, char **argv) {
   fprintf(Out, "0};");
   fprintf(Out, "const uint8_t* UnicodeNameToCodepointIndex = "
                "UnicodeNameToCodepointIndex_; \n");
-  fprintf(Out, "const std::size_t UnicodeNameToCodepointIndexSize = %lu;\n",
+  fprintf(Out, "const std::size_t UnicodeNameToCodepointIndexSize = %zu;\n",
           Tree.size() + 1);
   fprintf(Out,
-          "const std::size_t UnicodeNameToCodepointLargestNameSize = %lu;\n",
+          "const std::size_t UnicodeNameToCodepointLargestNameSize = %zu;\n",
           LongestName);
   fprintf(Out, "\n}}}\n");
   fclose(Out);

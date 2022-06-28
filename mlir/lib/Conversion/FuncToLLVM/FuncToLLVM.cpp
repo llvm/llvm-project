@@ -373,6 +373,10 @@ struct FuncOpConversion : public FuncOpConversionBase {
 
     if (funcOp->getAttrOfType<UnitAttr>(
             LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
+      if (newFuncOp.isVarArg())
+        return funcOp->emitError("C interface for variadic functions is not "
+                                 "supported yet.");
+
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, funcOp.getLoc(), *getTypeConverter(),
                              funcOp, newFuncOp);

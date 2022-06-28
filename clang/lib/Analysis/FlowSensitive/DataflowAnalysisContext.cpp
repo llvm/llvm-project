@@ -55,6 +55,19 @@ DataflowAnalysisContext::getStableStorageLocation(const Expr &E) {
   return Loc;
 }
 
+PointerValue &
+DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
+  assert(!PointeeType.isNull());
+  auto CanonicalPointeeType = PointeeType.getCanonicalType();
+  auto Res = NullPointerVals.try_emplace(CanonicalPointeeType, nullptr);
+  if (Res.second) {
+    auto &PointeeLoc = getStableStorageLocation(CanonicalPointeeType);
+    Res.first->second =
+        &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
+  }
+  return *Res.first->second;
+}
+
 static std::pair<BoolValue *, BoolValue *>
 makeCanonicalBoolValuePair(BoolValue &LHS, BoolValue &RHS) {
   auto Res = std::make_pair(&LHS, &RHS);
@@ -207,8 +220,12 @@ BoolValue &DataflowAnalysisContext::substituteBoolValue(
     llvm::DenseMap<BoolValue *, BoolValue *> &SubstitutionsCache) {
   auto IT = SubstitutionsCache.find(&Val);
   if (IT != SubstitutionsCache.end()) {
+    // Return memoized result of substituting this boolean value.
     return *IT->second;
   }
+
+  // Handle substitution on the boolean value (and its subvalues), saving the
+  // result into `SubstitutionsCache`.
   BoolValue *Result;
   switch (Val.getKind()) {
   case Value::Kind::AtomicBool: {
@@ -249,6 +266,10 @@ BoolValue &DataflowAnalysisContext::substituteBoolValue(
 BoolValue &DataflowAnalysisContext::buildAndSubstituteFlowCondition(
     AtomicBoolValue &Token,
     llvm::DenseMap<AtomicBoolValue *, BoolValue *> Substitutions) {
+  assert(
+      Substitutions.find(&getBoolLiteralValue(true)) == Substitutions.end() &&
+      Substitutions.find(&getBoolLiteralValue(false)) == Substitutions.end() &&
+      "Do not substitute true/false boolean literals");
   llvm::DenseMap<BoolValue *, BoolValue *> SubstitutionsCache(
       Substitutions.begin(), Substitutions.end());
   return buildAndSubstituteFlowConditionWithCache(Token, SubstitutionsCache);

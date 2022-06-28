@@ -9,9 +9,11 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
     ; CHECK-LABEL: name: mul_s32_ss
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[MUL:%[0-9]+]]:sgpr(s32) = G_MUL [[COPY]], [[COPY1]]
+    ; CHECK: liveins: $sgpr0, $sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:sgpr(s32) = G_MUL [[COPY]], [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_MUL %0, %1
@@ -25,10 +27,12 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr0
     ; CHECK-LABEL: name: mul_s32_sv
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[COPY2]], [[COPY1]]
+    ; CHECK: liveins: $sgpr0, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[COPY2]], [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_MUL %0, %1
@@ -42,10 +46,12 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr0
     ; CHECK-LABEL: name: mul_s32_vs
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK: [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[COPY]], [[COPY2]]
+    ; CHECK: liveins: $sgpr0, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[COPY]], [[COPY2]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $sgpr0
     %2:_(s32) = G_MUL %0, %1
@@ -59,9 +65,11 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: mul_s32_vv
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; CHECK: [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[COPY]], [[COPY1]]
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[COPY]], [[COPY1]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = G_MUL %0, %1

@@ -1155,12 +1155,6 @@ def fallow_unsupported : Flag<["-"], "fallow-unsupported">, Group<f_Group>;
 def fapple_kext : Flag<["-"], "fapple-kext">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Use Apple's kernel extensions ABI">,
   MarshallingInfoFlag<LangOpts<"AppleKext">>;
-def fstrict_flex_arrays_EQ : Joined<["-"], "fstrict-flex-arrays=">,Group<f_Group>,
-  MetaVarName<"<n>">, Values<"0,1,2,3">,
-  LangOpts<"StrictFlexArrays">,
-  Flags<[CC1Option]>,
-  HelpText<"Enable optimizations based on the strict definition of flexible arrays">,
-  MarshallingInfoInt<LangOpts<"StrictFlexArrays">>;
 defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   LangOpts<"ApplePragmaPack">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable Apple gcc-compatible #pragma pack handling">,
@@ -3524,7 +3518,9 @@ defm aapcs_bitfield_width : BoolOption<"f", "aapcs-bitfield-width",
   BothFlags<[NoXarchOption, CC1Option], " the AAPCS standard requirement stating that"
             " volatile bit-field width is dictated by the field container type. (ARM only).">>,
   Group<m_arm_Features_Group>;
-
+def mframe_chain : Joined<["-"], "mframe-chain=">,
+  Group<m_arm_Features_Group>, Values<"none,aapcs,aapcs+leaf">,
+  HelpText<"Select the frame chain model used to emit frame records (Arm only).">;
 def mgeneral_regs_only : Flag<["-"], "mgeneral-regs-only">, Group<m_Group>,
   HelpText<"Generate code which only uses the general purpose registers (AArch64/x86 only)">;
 def mfix_cmse_cve_2021_35465 : Flag<["-"], "mfix-cmse-cve-2021-35465">,

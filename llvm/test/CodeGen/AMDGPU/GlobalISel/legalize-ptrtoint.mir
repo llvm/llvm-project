@@ -8,7 +8,9 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_ptrtoint_p0_to_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p0)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[PTRTOINT]](s64)
     %0:_(p0) = COPY $vgpr0_vgpr1
@@ -23,7 +25,9 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_ptrtoint_p1_to_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p1)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[PTRTOINT]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
@@ -38,7 +42,9 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_ptrtoint_p4_to_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p4)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[PTRTOINT]](s64)
     %0:_(p4) = COPY $vgpr0_vgpr1
@@ -53,7 +59,9 @@ body: |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_ptrtoint_p3_to_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
     ; CHECK-NEXT: $vgpr0 = COPY [[PTRTOINT]](s32)
     %0:_(p3) = COPY $vgpr0
@@ -68,7 +76,9 @@ body: |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_ptrtoint_p5_to_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p5)
     ; CHECK-NEXT: $vgpr0 = COPY [[PTRTOINT]](s32)
     %0:_(p5) = COPY $vgpr0
@@ -83,7 +93,9 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_ptrtoint_p999_to_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(p999) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p999) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p999)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[PTRTOINT]](s64)
     %0:_(p999) = COPY $vgpr0_vgpr1
@@ -98,7 +110,9 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_ptrtoint_p0_to_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p0)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[PTRTOINT]](s64)
     ; CHECK-NEXT: $vgpr0 = COPY [[TRUNC]](s32)
@@ -114,7 +128,9 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_ptrtoint_p0_to_s128
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p0)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[PTRTOINT]](s64), [[C]](s64)
@@ -131,7 +147,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_ptrtoint_v2p0_to_v2s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY]](<2 x p0>)
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[UV]](p0)
     ; CHECK-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s64) = G_PTRTOINT [[UV1]](p0)
@@ -149,7 +167,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_ptrtoint_v2s32_to_v2p0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY]](<2 x p0>)
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[UV]](p0)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[PTRTOINT]](s64)
@@ -169,7 +189,9 @@ body: |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_ptrtoint_p3_to_s29
-    ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s29) = G_TRUNC [[PTRTOINT]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s29)
@@ -185,7 +207,9 @@ body: |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_ptrtoint_p3_to_s33
-    ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s33) = G_ZEXT [[PTRTOINT]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[ZEXT]](s33)

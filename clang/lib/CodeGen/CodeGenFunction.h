@@ -2361,10 +2361,6 @@ public:
   /// XRay typed event handling calls.
   bool AlwaysEmitXRayTypedEvents() const;
 
-  /// Encode an address into a form suitable for use in a function prologue.
-  llvm::Constant *EncodeAddrForUseInPrologue(llvm::Function *F,
-                                             llvm::Constant *Addr);
-
   /// Decode an address used in a function prologue, encoded by \c
   /// EncodeAddrForUseInPrologue.
   llvm::Value *DecodeAddrUsedInPrologue(llvm::Value *F,
@@ -3517,7 +3513,11 @@ public:
   void EmitOMPTargetTaskBasedDirective(const OMPExecutableDirective &S,
                                        const RegionCodeGenTy &BodyGen,
                                        OMPTargetDataInfo &InputInfo);
-
+  void processInReduction(const OMPExecutableDirective &S,
+                          OMPTaskDataTy &Data,
+                          CodeGenFunction &CGF,
+                          const CapturedStmt *CS,
+                          OMPPrivateScope &Scope);
   void EmitOMPMetaDirective(const OMPMetaDirective &S);
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
