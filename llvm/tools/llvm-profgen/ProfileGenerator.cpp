@@ -710,35 +710,38 @@ void ProfileGeneratorBase::calculateAndShowDensity(
   showDensitySuggestion(Density);
 }
 
-FunctionSamples &CSProfileGenerator::getFunctionProfileForContext(
-    const SampleContextFrameVector &Context, bool WasLeafInlined) {
-  auto I = ProfileMap.find(SampleContext(Context));
-  if (I == ProfileMap.end()) {
-    // Save the new context for future references.
-    SampleContextFrames NewContext = *Contexts.insert(Context).first;
-    SampleContext FContext(NewContext, RawContext);
-    auto Ret = ProfileMap.emplace(FContext, FunctionSamples());
-    if (WasLeafInlined)
-      FContext.setAttribute(ContextWasInlined);
-    FunctionSamples &FProfile = Ret.first->second;
-    FProfile.setContext(FContext);
-    return Ret.first->second;
-  } else {
-    // Update ContextWasInlined attribute for existing contexts.
-    // The current function can be called in two ways:
-    //  - when processing a probe of the current frame
-    //  - when processing the entry probe of an inlinee's frame, which
-    //    is then used to update the callsite count of the current frame.
-    // The two can happen in any order, hence here we are making sure
-    // `ContextWasInlined` is always set as expected.
-    // TODO: Note that the former does not always happen if no probes of the
-    // current frame has samples, and if the latter happens, we could lose the
-    // attribute. This should be fixed.
-    if (WasLeafInlined)
-      I->second.getContext().setAttribute(ContextWasInlined);
+FunctionSamples *
+CSProfileGenerator::getOrCreateFunctionSamples(ContextTrieNode *ContextNode,
+                                               bool WasLeafInlined) {
+  FunctionSamples *FProfile = ContextNode->getFunctionSamples();
+  if (!FProfile) {
+    FSamplesList.emplace_back();
+    FProfile = &FSamplesList.back();
+    FProfile->setName(ContextNode->getFuncName());
+    ContextNode->setFunctionSamples(FProfile);
   }
+  // Update ContextWasInlined attribute for existing contexts.
+  // The current function can be called in two ways:
+  //  - when processing a probe of the current frame
+  //  - when processing the entry probe of an inlinee's frame, which
+  //    is then used to update the callsite count of the current frame.
+  // The two can happen in any order, hence here we are making sure
+  // `ContextWasInlined` is always set as expected.
+  // TODO: Note that the former does not always happen if no probes of the
+  // current frame has samples, and if the latter happens, we could lose the
+  // attribute. This should be fixed.
+  if (WasLeafInlined)
+    FProfile->getContext().setAttribute(ContextWasInlined);
+  return FProfile;
+}
 
-  return I->second;
+ContextTrieNode *
+CSProfileGenerator::getOrCreateContextNode(const SampleContextFrames Context,
+                                           bool WasLeafInlined) {
+  ContextTrieNode *ContextNode =
+      ContextTracker.getOrCreateContextPath(Context, true);
+  getOrCreateFunctionSamples(ContextNode, WasLeafInlined);
+  return ContextNode;
 }
 
 void CSProfileGenerator::generateProfile() {
@@ -772,29 +775,49 @@ void CSProfileGenerator::computeSizeForProfiledFunctions() {
   Binary->flushSymbolizer();
 }
 
+void CSProfileGenerator::updateFunctionSamples() {
+  std::queue<ContextTrieNode *> NodeQueue;
+  NodeQueue.push(&getRootContext());
+
+  while (!NodeQueue.empty()) {
+    ContextTrieNode *Node = NodeQueue.front();
+    NodeQueue.pop();
+
+    FunctionSamples *FSamples = Node->getFunctionSamples();
+    if (FSamples) {
+      if (UpdateTotalSamples)
+        FSamples->updateTotalSamples();
+      FSamples->updateCallsiteSamples();
+    }
+
+    for (auto &It : Node->getAllChildContext())
+      NodeQueue.push(&It.second);
+  }
+}
+
 void CSProfileGenerator::generateLineNumBasedProfile() {
   for (const auto &CI : *SampleCounters) {
     const auto *CtxKey = cast<StringBasedCtxKey>(CI.first.getPtr());
 
-    FunctionSamples *FunctionProfile = nullptr;
+    ContextTrieNode *ContextNode = &getRootContext();
     // Sample context will be empty if the jump is an external-to-internal call
     // pattern, the head samples should be added for the internal function.
     if (!CtxKey->Context.empty()) {
       // Get or create function profile for the range
-      FunctionProfile = &getFunctionProfileForContext(CtxKey->Context,
-                                                      CtxKey->WasLeafInlined);
+      ContextNode =
+          getOrCreateContextNode(CtxKey->Context, CtxKey->WasLeafInlined);
       // Fill in function body samples
-      populateBodySamplesForFunction(*FunctionProfile, CI.second.RangeCounter);
+      populateBodySamplesForFunction(*ContextNode->getFunctionSamples(),
+                                     CI.second.RangeCounter);
     }
     // Fill in boundary sample counts as well as call site samples for calls
-    populateBoundarySamplesForFunction(CtxKey->Context, FunctionProfile,
-                                       CI.second.BranchCounter);
+    populateBoundarySamplesForFunction(ContextNode, CI.second.BranchCounter);
   }
   // Fill in call site value sample for inlined calls and also use context to
   // infer missing samples. Since we don't have call count for inlined
   // functions, we estimate it from inlinee's profile using the entry of the
   // body sample.
-  populateInferredFunctionSamples();
+  populateInferredFunctionSamples(getRootContext());
 
   updateFunctionSamples();
 }
@@ -834,8 +857,7 @@ void CSProfileGenerator::populateBodySamplesForFunction(
 }
 
 void CSProfileGenerator::populateBoundarySamplesForFunction(
-    SampleContextFrames ContextId, FunctionSamples *CallerProfile,
-    const BranchSample &BranchCounters) {
+    ContextTrieNode *Node, const BranchSample &BranchCounters) {
 
   for (const auto &Entry : BranchCounters) {
     uint64_t SourceOffset = Entry.first.first;
@@ -847,88 +869,105 @@ void CSProfileGenerator::populateBoundarySamplesForFunction(
     if (CalleeName.size() == 0)
       continue;
 
-    SampleContextFrameVector CalleeCtx;
-    if (CallerProfile) {
-      assert(!ContextId.empty() &&
-             "CallerProfile is null only if ContextId is empty");
+    ContextTrieNode *CallerNode = Node;
+    LineLocation CalleeCallSite(0, 0);
+    if (CallerNode != &getRootContext()) {
       // Record called target sample and its count
       auto LeafLoc = Binary->getInlineLeafFrameLoc(SourceOffset);
       if (LeafLoc) {
-        CallerProfile->addCalledTargetSamples(
+        CallerNode->getFunctionSamples()->addCalledTargetSamples(
             LeafLoc->Location.LineOffset,
             getBaseDiscriminator(LeafLoc->Location.Discriminator), CalleeName,
             Count);
-
         // Record head sample for called target(callee)
-        CalleeCtx.append(ContextId.begin(), ContextId.end());
-        assert(CalleeCtx.back().FuncName == LeafLoc->FuncName &&
-               "Leaf function name doesn't match");
-        CalleeCtx.back() = *LeafLoc;
+        CalleeCallSite = LeafLoc->Location;
       }
     }
-    CalleeCtx.emplace_back(CalleeName, LineLocation(0, 0));
-    FunctionSamples &CalleeProfile = getFunctionProfileForContext(CalleeCtx);
-    CalleeProfile.addHeadSamples(Count);
+
+    ContextTrieNode *CalleeNode =
+        CallerNode->getOrCreateChildContext(CalleeCallSite, CalleeName);
+    FunctionSamples *CalleeProfile = getOrCreateFunctionSamples(CalleeNode);
+    CalleeProfile->addHeadSamples(Count);
   }
 }
 
-static SampleContextFrame
-getCallerContext(SampleContextFrames CalleeContext,
-                 SampleContextFrameVector &CallerContext) {
-  assert(CalleeContext.size() > 1 && "Unexpected empty context");
-  CalleeContext = CalleeContext.drop_back();
-  CallerContext.assign(CalleeContext.begin(), CalleeContext.end());
-  SampleContextFrame CallerFrame = CallerContext.back();
-  CallerContext.back().Location = LineLocation(0, 0);
-  return CallerFrame;
+void CSProfileGenerator::populateInferredFunctionSamples(
+    ContextTrieNode &Node) {
+  // There is no call jmp sample between the inliner and inlinee, we need to use
+  // the inlinee's context to infer inliner's context, i.e. parent(inliner)'s
+  // sample depends on child(inlinee)'s sample, so traverse the tree in
+  // post-order.
+  for (auto &It : Node.getAllChildContext())
+    populateInferredFunctionSamples(It.second);
+
+  FunctionSamples *CalleeProfile = Node.getFunctionSamples();
+  if (!CalleeProfile)
+    return;
+  // If we already have head sample counts, we must have value profile
+  // for call sites added already. Skip to avoid double counting.
+  if (CalleeProfile->getHeadSamples())
+    return;
+  ContextTrieNode *CallerNode = Node.getParentContext();
+  // If we don't have context, nothing to do for caller's call site.
+  // This could happen for entry point function.
+  if (CallerNode == &getRootContext())
+    return;
+
+  LineLocation CallerLeafFrameLoc = Node.getCallSiteLoc();
+  FunctionSamples &CallerProfile = *getOrCreateFunctionSamples(CallerNode);
+  // Since we don't have call count for inlined functions, we
+  // estimate it from inlinee's profile using entry body sample.
+  uint64_t EstimatedCallCount = CalleeProfile->getEntrySamples();
+  // If we don't have samples with location, use 1 to indicate live.
+  if (!EstimatedCallCount && !CalleeProfile->getBodySamples().size())
+    EstimatedCallCount = 1;
+  CallerProfile.addCalledTargetSamples(CallerLeafFrameLoc.LineOffset,
+                                       CallerLeafFrameLoc.Discriminator,
+                                       Node.getFuncName(), EstimatedCallCount);
+  CallerProfile.addBodySamples(CallerLeafFrameLoc.LineOffset,
+                               CallerLeafFrameLoc.Discriminator,
+                               EstimatedCallCount);
+  CallerProfile.addTotalSamples(EstimatedCallCount);
 }
 
-void CSProfileGenerator::populateInferredFunctionSamples() {
-  for (const auto &Item : ProfileMap) {
-    const auto &CalleeContext = Item.first;
-    const FunctionSamples &CalleeProfile = Item.second;
-
-    // If we already have head sample counts, we must have value profile
-    // for call sites added already. Skip to avoid double counting.
-    if (CalleeProfile.getHeadSamples())
-      continue;
-    // If we don't have context, nothing to do for caller's call site.
-    // This could happen for entry point function.
-    if (CalleeContext.isBaseContext())
-      continue;
-
-    // Infer Caller's frame loc and context ID through string splitting
-    SampleContextFrameVector CallerContextId;
-    SampleContextFrame &&CallerLeafFrameLoc =
-        getCallerContext(CalleeContext.getContextFrames(), CallerContextId);
-    SampleContextFrames CallerContext(CallerContextId);
-
-    // It's possible that we haven't seen any sample directly in the caller,
-    // in which case CallerProfile will not exist. But we can't modify
-    // ProfileMap while iterating it.
-    // TODO: created function profile for those callers too
-    if (ProfileMap.find(CallerContext) == ProfileMap.end())
-      continue;
-    FunctionSamples &CallerProfile = ProfileMap[CallerContext];
-
-    // Since we don't have call count for inlined functions, we
-    // estimate it from inlinee's profile using entry body sample.
-    uint64_t EstimatedCallCount = CalleeProfile.getEntrySamples();
-    // If we don't have samples with location, use 1 to indicate live.
-    if (!EstimatedCallCount && !CalleeProfile.getBodySamples().size())
-      EstimatedCallCount = 1;
-    CallerProfile.addCalledTargetSamples(
-        CallerLeafFrameLoc.Location.LineOffset,
-        CallerLeafFrameLoc.Location.Discriminator,
-        CalleeProfile.getContext().getName(), EstimatedCallCount);
-    CallerProfile.addBodySamples(CallerLeafFrameLoc.Location.LineOffset,
-                                 CallerLeafFrameLoc.Location.Discriminator,
-                                 EstimatedCallCount);
-    CallerProfile.addTotalSamples(EstimatedCallCount);
+void CSProfileGenerator::convertToProfileMap(
+    ContextTrieNode &Node, SampleContextFrameVector &Context) {
+  FunctionSamples *FProfile = Node.getFunctionSamples();
+  if (FProfile) {
+    Context.emplace_back(Node.getFuncName(), LineLocation(0, 0));
+    // Save the new context for future references.
+    SampleContextFrames NewContext = *Contexts.insert(Context).first;
+    auto Ret = ProfileMap.emplace(NewContext, std::move(*FProfile));
+    FunctionSamples &NewProfile = Ret.first->second;
+    NewProfile.getContext().setContext(NewContext);
+    Context.pop_back();
   }
+
+  for (auto &It : Node.getAllChildContext()) {
+    ContextTrieNode &ChildNode = It.second;
+    Context.emplace_back(Node.getFuncName(), ChildNode.getCallSiteLoc());
+    convertToProfileMap(ChildNode, Context);
+    Context.pop_back();
+  }
+}
+
+void CSProfileGenerator::convertToProfileMap() {
+  assert(ProfileMap.empty() &&
+         "ProfileMap should be empty before converting from the trie");
+  assert(IsProfileValidOnTrie &&
+         "Do not convert the trie twice, it's already destroyed");
+
+  SampleContextFrameVector Context;
+  for (auto &It : getRootContext().getAllChildContext())
+    convertToProfileMap(It.second, Context);
+
+  IsProfileValidOnTrie = false;
 }
 
 void CSProfileGenerator::postProcessProfiles() {
+  if (SampleCounters)
+    convertToProfileMap();
+
   // Compute hot/cold threshold based on profile. This will be used for cold
   // context profile merging/trimming.
   computeSummaryAndThreshold();
@@ -1069,8 +1108,10 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
     // doesn't belong to current context, filter them out.
     if (!Probe->isBlock() || Count == 0)
       continue;
-    FunctionSamples &FunctionProfile =
-        getFunctionProfileForLeafProbe(ContextStack, Probe);
+
+    ContextTrieNode *ContextNode =
+        getContextNodeForLeafProbe(ContextStack, Probe);
+    FunctionSamples &FunctionProfile = *ContextNode->getFunctionSamples();
     // Record the current frame and FunctionProfile whenever samples are
     // collected for non-danglie probes. This is for reporting all of the
     // zero count probes of the frame later.
@@ -1081,25 +1122,21 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
       FunctionProfile.addHeadSamples(Count);
       // Look up for the caller's function profile
       const auto *InlinerDesc = Binary->getInlinerDescForProbe(Probe);
-      SampleContextFrames CalleeContextId =
-          FunctionProfile.getContext().getContextFrames();
-      if (InlinerDesc != nullptr && CalleeContextId.size() > 1) {
+      ContextTrieNode *CallerNode = ContextNode->getParentContext();
+      if (InlinerDesc != nullptr && CallerNode != &getRootContext()) {
         // Since the context id will be compressed, we have to use callee's
         // context id to infer caller's context id to ensure they share the
         // same context prefix.
-        SampleContextFrameVector CallerContextId;
-        SampleContextFrame &&CallerLeafFrameLoc =
-            getCallerContext(CalleeContextId, CallerContextId);
-        uint64_t CallerIndex = CallerLeafFrameLoc.Location.LineOffset;
+        uint64_t CallerIndex = ContextNode->getCallSiteLoc().LineOffset;
         assert(CallerIndex &&
                "Inferred caller's location index shouldn't be zero!");
         FunctionSamples &CallerProfile =
-            getFunctionProfileForContext(CallerContextId);
+            *getOrCreateFunctionSamples(CallerNode);
         CallerProfile.setFunctionHash(InlinerDesc->FuncHash);
         CallerProfile.addBodySamples(CallerIndex, 0, Count);
         CallerProfile.addTotalSamples(Count);
-        CallerProfile.addCalledTargetSamples(
-            CallerIndex, 0, FunctionProfile.getContext().getName(), Count);
+        CallerProfile.addCalledTargetSamples(CallerIndex, 0,
+                                             ContextNode->getFuncName(), Count);
       }
     }
   }
@@ -1139,7 +1176,7 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
   }
 }
 
-FunctionSamples &CSProfileGenerator::getFunctionProfileForLeafProbe(
+ContextTrieNode *CSProfileGenerator::getContextNodeForLeafProbe(
     SampleContextFrames ContextStack, const MCDecodedPseudoProbe *LeafProbe) {
 
   // Explicitly copy the context for appending the leaf context
@@ -1159,10 +1196,16 @@ FunctionSamples &CSProfileGenerator::getFunctionProfileForLeafProbe(
 
   const auto *FuncDesc = Binary->getFuncDescForGUID(LeafProbe->getGuid());
   bool WasLeafInlined = LeafProbe->getInlineTreeNode()->hasInlineSite();
-  FunctionSamples &FunctionProile =
-      getFunctionProfileForContext(NewContextStack, WasLeafInlined);
-  FunctionProile.setFunctionHash(FuncDesc->FuncHash);
-  return FunctionProile;
+  ContextTrieNode *ContextNode =
+      getOrCreateContextNode(NewContextStack, WasLeafInlined);
+  ContextNode->getFunctionSamples()->setFunctionHash(FuncDesc->FuncHash);
+  return ContextNode;
+}
+
+FunctionSamples &CSProfileGenerator::getFunctionProfileForLeafProbe(
+    SampleContextFrames ContextStack, const MCDecodedPseudoProbe *LeafProbe) {
+  return *getContextNodeForLeafProbe(ContextStack, LeafProbe)
+              ->getFunctionSamples();
 }
 
 } // end namespace sampleprof

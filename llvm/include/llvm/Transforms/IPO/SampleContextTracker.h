@@ -105,6 +105,7 @@ public:
   // deterministically.
   using ContextSamplesTy = std::set<FunctionSamples *, ProfileComparer>;
 
+  SampleContextTracker() = default;
   SampleContextTracker(SampleProfileMap &Profiles,
                        const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap);
   // Query context profile for a specific callee with given name at a given
@@ -122,6 +123,8 @@ public:
   // Get all context profile for given function.
   ContextSamplesTy &getAllContextSamplesFor(const Function &Func);
   ContextSamplesTy &getAllContextSamplesFor(StringRef Name);
+  ContextTrieNode *getOrCreateContextPath(const SampleContext &Context,
+                                          bool AllowCreate);
   // Query base profile for a given function. A base profile is a merged view
   // of all context profiles for contexts that are not inlined.
   FunctionSamples *getBaseSamplesFor(const Function &Func,
@@ -146,8 +149,6 @@ private:
   ContextTrieNode *getContextFor(const DILocation *DIL);
   ContextTrieNode *getCalleeContextFor(const DILocation *DIL,
                                        StringRef CalleeName);
-  ContextTrieNode *getOrCreateContextPath(const SampleContext &Context,
-                                          bool AllowCreate);
   ContextTrieNode *getTopLevelContextNode(StringRef FName);
   ContextTrieNode &addTopLevelContextNode(StringRef FName);
   ContextTrieNode &promoteMergeContextSamplesTree(ContextTrieNode &NodeToPromo);
