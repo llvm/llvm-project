@@ -24,7 +24,7 @@ namespace {
 
 class Fuzzer {
   clang::LangOptions LangOpts = clang::pseudo::genericLangOpts();
-  std::unique_ptr<Grammar> G;
+  Grammar G;
   LRTable T;
   bool Print;
 
@@ -44,7 +44,7 @@ public:
         llvm::errs() << Diag << "\n";
       std::exit(1);
     }
-    T = LRTable::buildSLR(*G);
+    T = LRTable::buildSLR(G);
   }
 
   void operator()(llvm::StringRef Code) {
@@ -59,10 +59,10 @@ public:
     clang::pseudo::ForestArena Arena;
     clang::pseudo::GSS GSS;
     auto &Root =
-        glrParse(ParseableStream, clang::pseudo::ParseParams{*G, T, Arena, GSS},
-                 *G->findNonterminal("translation-unit"));
+        glrParse(ParseableStream, clang::pseudo::ParseParams{G, T, Arena, GSS},
+                 *G.findNonterminal("translation-unit"));
     if (Print)
-      llvm::outs() << Root.dumpRecursive(*G);
+      llvm::outs() << Root.dumpRecursive(G);
   }
 };
 
