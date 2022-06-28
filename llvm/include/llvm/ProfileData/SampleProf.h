@@ -553,16 +553,6 @@ public:
     }
   }
 
-  // Promote context by removing top frames with the length of
-  // `ContextFramesToRemove`. Note that with array representation of context,
-  // the promotion is effectively a slice operation with first
-  // `ContextFramesToRemove` elements removed from left.
-  void promoteOnPath(uint32_t ContextFramesToRemove) {
-    assert(ContextFramesToRemove <= FullContext.size() &&
-           "Cannot remove more than the whole context");
-    FullContext = FullContext.drop_front(ContextFramesToRemove);
-  }
-
   // Decode context string for a frame to get function name and location.
   // `ContextStr` is in the form of `FuncName:StartLine.Discriminator`.
   static void decodeContextString(StringRef ContextStr, StringRef &FName,
