@@ -172,9 +172,9 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
   expr.resize(cst.getNumCols(), 0);
   for (unsigned i = 0, e = cst.getNumIds(); i < e; ++i)
     if (i != pos)
-      expr[i] = signDiv * cst.atEq(eqInd, i);
+      expr[i] = -signDiv * cst.atEq(eqInd, i);
 
-  expr.back() = signDiv * cst.atEq(eqInd, cst.getNumCols() - 1);
+  expr.back() = -signDiv * cst.atEq(eqInd, cst.getNumCols() - 1);
   normalizeDivisionByGCD(expr, divisor);
 
   return success();

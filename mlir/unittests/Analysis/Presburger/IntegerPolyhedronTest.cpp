@@ -725,7 +725,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEquality) {
     // Convert `q` to a local variable.
     poly.convertToLocal(IdKind::SetDim, 2, 3);
 
-    std::vector<SmallVector<int64_t, 8>> divisions = {{-1, -1, 0, 0}};
+    std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 0}};
     SmallVector<unsigned, 8> denoms = {4};
 
     checkDivisionRepresentation(poly, divisions, denoms);
@@ -735,7 +735,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEquality) {
     // Convert `q` to a local variable.
     poly.convertToLocal(IdKind::SetDim, 2, 3);
 
-    std::vector<SmallVector<int64_t, 8>> divisions = {{-1, -1, 0, 0}};
+    std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 0}};
     SmallVector<unsigned, 8> denoms = {4};
 
     checkDivisionRepresentation(poly, divisions, denoms);
@@ -745,7 +745,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEquality) {
     // Convert `q` to a local variable.
     poly.convertToLocal(IdKind::SetDim, 2, 3);
 
-    std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, -2}};
+    std::vector<SmallVector<int64_t, 8>> divisions = {{-1, -1, 0, 2}};
     SmallVector<unsigned, 8> denoms = {3};
 
     checkDivisionRepresentation(poly, divisions, denoms);
@@ -761,7 +761,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEqualityAndInequality) {
     poly.convertToLocal(IdKind::SetDim, 2, 4);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 0, 1},
-                                                      {-1, -1, 0, 0, 0}};
+                                                      {1, 1, 0, 0, 0}};
     SmallVector<unsigned, 8> denoms = {4, 3};
 
     checkDivisionRepresentation(poly, divisions, denoms);
