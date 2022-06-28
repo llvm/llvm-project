@@ -482,6 +482,16 @@ template <> struct hash<long double>;
 template<class T> struct hash<T*>;
 template <> struct hash<nullptr_t>;  // C++17
 
+namespace ranges {
+  // [range.cmp], concept-constrained comparisons
+  struct equal_to;
+  struct not_equal_to;
+  struct greater;
+  struct less;
+  struct greater_equal;
+  struct less_equal;
+}
+
 }  // std
 
 POLICY:  For non-variadic implementations, the number of arguments is limited
