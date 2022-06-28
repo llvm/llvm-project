@@ -3101,6 +3101,24 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 8); // M0
       return;
+    case Intrinsic::prefetch: {
+      if (!Subtarget.hasPrefetch()) {
+        MI.eraseFromParent();
+        return;
+      }
+      unsigned PtrBank =
+          getRegBankID(MI.getOperand(1).getReg(), MRI, AMDGPU::SGPRRegBankID);
+      if (PtrBank == AMDGPU::VGPRRegBankID) {
+        MI.eraseFromParent();
+        return;
+      }
+      // FIXME: There is currently no support for prefetch in global isel.
+      // There is no node equivalence and what's worse there is no MMO produced
+      // for a prefetch on global isel path.
+      // Prefetch does not affect execution so erase it for now.
+      MI.eraseFromParent();
+      return;
+    }
     default: {
       if (const AMDGPU::RsrcIntrinsic *RSrcIntrin =
               AMDGPU::lookupRsrcIntrinsic(IntrID)) {
@@ -4830,6 +4848,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           getVGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI); // %data1
       break;
     }
+    case Intrinsic::prefetch:
+      OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      break;
 
     default:
       return getInvalidInstructionMapping();
