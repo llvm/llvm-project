@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -verify -Warray-bounds-pointer-arithmetic %s
+// RUN: %clang_cc1 -verify=expected -Warray-bounds-pointer-arithmetic %s
+// RUN: %clang_cc1 -verify=expected -Warray-bounds-pointer-arithmetic %s -fstrict-flex-arrays=0
+// RUN: %clang_cc1 -verify=expected,strict -Warray-bounds-pointer-arithmetic %s -fstrict-flex-arrays=2
 
 // Test case from PR10615
 struct ext2_super_block{
@@ -14,7 +16,9 @@ void* broken (struct ext2_super_block *es,int a)
 }
 
 // Test case reduced from PR11594
-struct S { int n; };
+struct S {
+  int n;
+};
 void pr11594(struct S *s) {
   int a[10];
   int *p = a - s->n;
@@ -26,26 +30,28 @@ void pr11594(struct S *s) {
 struct RDar11387038 {};
 typedef struct RDar11387038 RDar11387038Array[1];
 struct RDar11387038_Table {
-  RDar11387038Array z;
+  RDar11387038Array z; // strict-note {{array 'z' declared here}}
 };
-typedef struct RDar11387038_Table * TPtr;
+typedef struct RDar11387038_Table *TPtr;
 typedef TPtr *TabHandle;
-struct RDar11387038_B { TabHandle x; };
+struct RDar11387038_B {
+  TabHandle x;
+};
 typedef struct RDar11387038_B RDar11387038_B;
 
 void radar11387038(void) {
   RDar11387038_B *pRDar11387038_B;
-  struct RDar11387038* y = &(*pRDar11387038_B->x)->z[4];
+  struct RDar11387038 *y = &(*pRDar11387038_B->x)->z[4]; // strict-warning {{array index 4 is past the end of the array (which contains 1 element)}}
 }
 
-void pr51682 (void) {
-  int arr [1];
+void pr51682(void) {
+  int arr[1];
   switch (0) {
-    case 0:
-      break;
-    case 1:
-      asm goto (""::"r"(arr[42] >> 1)::failed); // no-warning
-      break;
+  case 0:
+    break;
+  case 1:
+    asm goto("" ::"r"(arr[42] >> 1)::failed);
+    break;
   }
 failed:;
 }

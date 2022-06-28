@@ -15830,11 +15830,26 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
 /// We avoid emitting out-of-bounds access warnings for such arrays as they are
 /// commonly used to emulate flexible arrays in C89 code.
 static bool IsTailPaddedMemberArray(Sema &S, const llvm::APInt &Size,
-                                    const NamedDecl *ND) {
-  if (Size != 1 || !ND) return false;
+                                    const NamedDecl *ND,
+                                    unsigned StrictFlexArraysLevel) {
+  if (!ND)
+    return false;
+
+  if (StrictFlexArraysLevel >= 2 && Size != 0)
+    return false;
+
+  if (StrictFlexArraysLevel == 1 && Size.ule(1))
+    return false;
+
+  // FIXME: While the default -fstrict-flex-arrays=0 permits Size>1 trailing
+  // arrays to be treated as flexible-array-members, we still emit diagnostics
+  // as if they are not. Pending further discussion...
+  if (StrictFlexArraysLevel == 0 && Size != 1)
+    return false;
 
   const FieldDecl *FD = dyn_cast<FieldDecl>(ND);
-  if (!FD) return false;
+  if (!FD)
+    return false;
 
   // Don't consider sizes resulting from macro expansions or template argument
   // substitution to form C89 tail-padded arrays.
@@ -15857,10 +15872,13 @@ static bool IsTailPaddedMemberArray(Sema &S, const llvm::APInt &Size,
   }
 
   const RecordDecl *RD = dyn_cast<RecordDecl>(FD->getDeclContext());
-  if (!RD) return false;
-  if (RD->isUnion()) return false;
+  if (!RD)
+    return false;
+  if (RD->isUnion())
+    return false;
   if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
-    if (!CRD->isStandardLayout()) return false;
+    if (!CRD->isStandardLayout())
+      return false;
   }
 
   // See if this is the last field decl in the record.
@@ -15988,9 +16006,14 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     // example). In this case we have no information about whether the array
     // access exceeds the array bounds. However we can still diagnose an array
     // access which precedes the array bounds.
+    //
+    // FIXME: this check should be redundant with the IsUnboundedArray check
+    // above.
     if (BaseType->isIncompleteType())
       return;
 
+    // FIXME: this check should belong to the IsTailPaddedMemberArray call
+    // below.
     llvm::APInt size = ArrayTy->getSize();
     if (!size.isStrictlyPositive())
       return;
@@ -16023,10 +16046,9 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     if (AllowOnePastEnd ? index.ule(size) : index.ult(size))
       return;
 
-    // Also don't warn for arrays of size 1 which are members of some
-    // structure. These are often used to approximate flexible arrays in C89
-    // code.
-    if (IsTailPaddedMemberArray(*this, size, ND))
+    // Also don't warn for Flexible Array Member emulation.
+    const unsigned StrictFlexArraysLevel = getLangOpts().StrictFlexArrays;
+    if (IsTailPaddedMemberArray(*this, size, ND, StrictFlexArraysLevel))
       return;
 
     // Suppress the warning if the subscript expression (as identified by the
