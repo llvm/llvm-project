@@ -513,45 +513,6 @@ func.func @simple_scalar_example() {
   return
 }
 
-
-// -----
-
-//===----------------------------------------------------------------------===//
-// Test DenseArrayAttr
-//===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: func @dense_array_attr
-func.func @dense_array_attr() attributes{ 
-// CHECK-SAME: f32attr = [:f32 1.024000e+03, 4.530000e+02, -6.435000e+03],
-               f32attr = [:f32 1024., 453., -6435.],
-// CHECK-SAME: f64attr = [:f64 -1.420000e+02],
-               f64attr = [:f64 -142.],
-// CHECK-SAME: i16attr = [:i16 3, 5, -4, 10],
-               i16attr = [:i16 3, 5, -4, 10],
-// CHECK-SAME: i32attr = [:i32 1024, 453, -6435],
-               i32attr = [:i32 1024, 453, -6435],
-// CHECK-SAME: i64attr = [:i64 -142],
-               i64attr = [:i64 -142],
-// CHECK-SAME: i8attr = [:i8 1, -2, 3]
-               i8attr = [:i8 1, -2, 3]
- } {
-// CHECK:  test.dense_array_attr
-  test.dense_array_attr
-// CHECK-SAME: i8attr = [1, -2, 3]
-               i8attr = [1, -2, 3]
-// CHECK-SAME: i16attr = [3, 5, -4, 10]
-               i16attr = [3, 5, -4, 10]
-// CHECK-SAME: i32attr = [1024, 453, -6435]
-               i32attr = [1024, 453, -6435]
-// CHECK-SAME: i64attr = [-142]
-               i64attr = [-142]
-// CHECK-SAME: f32attr = [1.024000e+03, 4.530000e+02, -6.435000e+03]
-               f32attr = [1024., 453., -6435.]
-// CHECK-SAME: f64attr = [-1.420000e+02]
-               f64attr = [-142.]
-  return
-}
-
 // -----
 
 //===----------------------------------------------------------------------===//

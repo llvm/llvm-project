@@ -1258,19 +1258,6 @@ class IntElementsAttrBase<Pred condition, string summary> :
   let convertFromStorage = "$_self";
 }
 
-class DenseArrayAttrBase<string denseAttrName, string cppType, string summaryName> :
-    ElementsAttrBase<CPred<"$_self.isa<::mlir::" # denseAttrName # ">()">,
-                     summaryName # " dense array attribute"> {
-  let storageType = "::mlir::" # denseAttrName;
-  let returnType = "::llvm::ArrayRef<" # cppType # ">";
-}
-def DenseI8ArrayAttr : DenseArrayAttrBase<"DenseI8ArrayAttr", "int8_t", "i8">;
-def DenseI16ArrayAttr : DenseArrayAttrBase<"DenseI16ArrayAttr", "int16_t", "i16">;
-def DenseI32ArrayAttr : DenseArrayAttrBase<"DenseI32ArrayAttr", "int32_t", "i32">;
-def DenseI64ArrayAttr : DenseArrayAttrBase<"DenseI64ArrayAttr", "int64_t", "i64">;
-def DenseF32ArrayAttr : DenseArrayAttrBase<"DenseF32ArrayAttr", "float", "f32">;
-def DenseF64ArrayAttr : DenseArrayAttrBase<"DenseF64ArrayAttr", "double", "f64">;
-
 def IndexElementsAttr
     : IntElementsAttrBase<CPred<[{$_self.cast<::mlir::DenseIntElementsAttr>()
                                       .getType()

@@ -11,12 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Parser.h"
-
-#include "AsmParserImpl.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Parser/AsmParserState.h"
 #include "llvm/ADT/StringExtras.h"
@@ -33,7 +30,6 @@ using namespace mlir::detail;
 ///                    | float-literal (`:` float-type)?
 ///                    | string-literal (`:` type)?
 ///                    | type
-///                    | `[` `:` (integer-type | float-type) tensor-literal `]`
 ///                    | `[` (attribute-value (`,` attribute-value)*)? `]`
 ///                    | `{` (attribute-entry (`,` attribute-entry)*)? `}`
 ///                    | symbol-ref-id (`::` symbol-ref-id)*
@@ -71,16 +67,13 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse an array attribute.
   case Token::l_square: {
-    consumeToken(Token::l_square);
-    if (consumeIf(Token::colon))
-      return parseDenseArrayAttr();
     SmallVector<Attribute, 4> elements;
     auto parseElt = [&]() -> ParseResult {
       elements.push_back(parseAttribute());
       return elements.back() ? success() : failure();
     };
 
-    if (parseCommaSeparatedListUntil(Token::r_square, parseElt))
+    if (parseCommaSeparatedList(Delimiter::Square, parseElt))
       return nullptr;
     return builder.getArrayAttr(elements);
   }
@@ -818,66 +811,6 @@ ParseResult TensorLiteralParser::parseList(SmallVectorImpl<int64_t> &dims) {
 //===----------------------------------------------------------------------===//
 // ElementsAttr Parser
 //===----------------------------------------------------------------------===//
-
-namespace {
-/// This class provides an implementation of AsmParser, allowing to call back
-/// into the libMLIRIR-provided APIs for invoking attribute parsing code defined
-/// in libMLIRIR.
-class CustomAsmParser : public AsmParserImpl<AsmParser> {
-public:
-  CustomAsmParser(Parser &parser)
-      : AsmParserImpl<AsmParser>(parser.getToken().getLoc(), parser) {}
-};
-} // namespace
-
-/// Parse a dense array attribute.
-Attribute Parser::parseDenseArrayAttr() {
-  auto typeLoc = getToken().getLoc();
-  auto type = parseType();
-  if (!type)
-    return {};
-  CustomAsmParser parser(*this);
-  Attribute result;
-  if (auto intType = type.dyn_cast<IntegerType>()) {
-    switch (type.getIntOrFloatBitWidth()) {
-    case 8:
-      result = DenseI8ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    case 16:
-      result = DenseI16ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    case 32:
-      result = DenseI32ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    case 64:
-      result = DenseI64ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    default:
-      emitError(typeLoc, "expected i8, i16, i32, or i64 but got: ") << type;
-      return {};
-    }
-  } else if (auto floatType = type.dyn_cast<FloatType>()) {
-    switch (type.getIntOrFloatBitWidth()) {
-    case 32:
-      result = DenseF32ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    case 64:
-      result = DenseF64ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    default:
-      emitError(typeLoc, "expected f32 or f64 but got: ") << type;
-      return {};
-    }
-  } else {
-    emitError(typeLoc, "expected integer or float type, got: ") << type;
-    return {};
-  }
-  if (!consumeIf(Token::r_square)) {
-    emitError("expected ']' to close an array attribute");
-    return {};
-  }
-  return result;
-}
 
 /// Parse a dense elements attribute.
 Attribute Parser::parseDenseElementsAttr(Type attrType) {
