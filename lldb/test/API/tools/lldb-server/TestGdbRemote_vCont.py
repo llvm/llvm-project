@@ -39,6 +39,7 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build()
         self.vCont_supports_mode("S")
 
+    @add_test_categories(["llgs"])
     def test_vCont_supports_t(self):
         self.build()
         self.vCont_supports_mode("t")
