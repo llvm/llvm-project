@@ -3708,6 +3708,16 @@ bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
                     node->getKind() == Node::Kind::BoundGenericTypeAlias);
   };
 
+#ifndef NDEBUG
+  {
+    // Sometimes SwiftASTContext returns the resolved AnyObject type.
+    Demangler dem;
+    NodePointer node = GetDemangledType(dem, AsMangledName(type));
+    if (IsAnyObjectTypeAlias(node))
+      return impl();
+  }
+#endif
+
   VALIDATE_AND_RETURN(impl, IsTypedefType, type, g_no_exe_ctx,
                       (ReconstructType(type)), (ReconstructType(type)));
 }
