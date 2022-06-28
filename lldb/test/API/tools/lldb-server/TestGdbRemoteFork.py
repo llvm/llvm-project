@@ -317,44 +317,64 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
                 ], True)
         self.expect_gdbremote_sequence()
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_c_parent(self):
         self.resume_one_test(run_order=["parent", "parent"])
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_c_child(self):
         self.resume_one_test(run_order=["child", "child"])
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_c_parent_then_child(self):
         self.resume_one_test(run_order=["parent", "parent", "child", "child"])
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_c_child_then_parent(self):
         self.resume_one_test(run_order=["child", "child", "parent", "parent"])
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_c_interspersed(self):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"])
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_vCont_parent(self):
         self.resume_one_test(run_order=["parent", "parent"], use_vCont=True)
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_vCont_child(self):
         self.resume_one_test(run_order=["child", "child"], use_vCont=True)
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_vCont_parent_then_child(self):
         self.resume_one_test(run_order=["parent", "parent", "child", "child"],
                              use_vCont=True)
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_vCont_child_then_parent(self):
         self.resume_one_test(run_order=["child", "child", "parent", "parent"],
                              use_vCont=True)
 
+    @expectedFailureAll(archs=["aarch64"],
+                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_vCont_interspersed(self):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"],
