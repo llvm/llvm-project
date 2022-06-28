@@ -82,6 +82,23 @@ public:
     return simplifyInsertValueInst(Agg, Val, IdxList, SQ);
   }
 
+  Value *FoldExtractElement(Value *Vec, Value *Idx) const override {
+    return simplifyExtractElementInst(Vec, Idx, SQ);
+  }
+
+  Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                           Value *Idx) const override {
+    return simplifyInsertElementInst(Vec, NewElt, Idx, SQ);
+  }
+
+  Value *FoldShuffleVector(Value *V1, Value *V2,
+                           ArrayRef<int> Mask) const override {
+    Type *RetTy = VectorType::get(
+        cast<VectorType>(V1->getType())->getElementType(), Mask.size(),
+        isa<ScalableVectorType>(V1->getType()));
+    return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -228,24 +245,6 @@ public:
   Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                     Constant *RHS) const override {
     return ConstFolder.CreateFCmp(P, LHS, RHS);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  Value *CreateExtractElement(Constant *Vec, Constant *Idx) const override {
-    return ConstFolder.CreateExtractElement(Vec, Idx);
-  }
-
-  Value *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                             Constant *Idx) const override {
-    return ConstFolder.CreateInsertElement(Vec, NewElt, Idx);
-  }
-
-  Value *CreateShuffleVector(Constant *V1, Constant *V2,
-                             ArrayRef<int> Mask) const override {
-    return ConstFolder.CreateShuffleVector(V1, V2, Mask);
   }
 };
 

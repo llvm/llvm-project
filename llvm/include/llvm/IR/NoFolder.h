@@ -75,6 +75,20 @@ public:
     return nullptr;
   }
 
+  Value *FoldExtractElement(Value *Vec, Value *Idx) const override {
+    return nullptr;
+  }
+
+  Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                           Value *Idx) const override {
+    return nullptr;
+  }
+
+  Value *FoldShuffleVector(Value *V1, Value *V2,
+                           ArrayRef<int> Mask) const override {
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -254,25 +268,6 @@ public:
   Instruction *CreateFCmp(CmpInst::Predicate P,
                           Constant *LHS, Constant *RHS) const override {
     return new FCmpInst(P, LHS, RHS);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  Instruction *CreateExtractElement(Constant *Vec,
-                                    Constant *Idx) const override {
-    return ExtractElementInst::Create(Vec, Idx);
-  }
-
-  Instruction *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                                   Constant *Idx) const override {
-    return InsertElementInst::Create(Vec, NewElt, Idx);
-  }
-
-  Instruction *CreateShuffleVector(Constant *V1, Constant *V2,
-                                   ArrayRef<int> Mask) const override {
-    return new ShuffleVectorInst(V1, V2, Mask);
   }
 };
 
