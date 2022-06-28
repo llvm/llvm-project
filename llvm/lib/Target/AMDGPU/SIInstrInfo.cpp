@@ -4439,7 +4439,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   if (isSMRD(MI)) {
-    if (MI.mayStore()) {
+    if (MI.mayStore() &&
+        ST.getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS) {
       // The register offset form of scalar stores may only use m0 as the
       // soffset register.
       const MachineOperand *Soff = getNamedOperand(MI, AMDGPU::OpName::soffset);
