@@ -415,6 +415,8 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
   // the context profile in the base (context-less) profile.
   FunctionSamples *FromSamples = NodeToPromo.getFunctionSamples();
   assert(FromSamples && "Shouldn't promote a context without profile");
+  (void)FromSamples;  // Unused in release build.
+
   LLVM_DEBUG(dbgs() << "  Found context tree root to promote: "
                     << getContextString(&NodeToPromo) << "\n");
 
