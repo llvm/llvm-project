@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Matchers.h"
 
 using namespace mlir;
 using namespace mlir::complex;
@@ -100,6 +101,26 @@ OpFoldResult ReOp::fold(ArrayRef<Attribute> operands) {
     return arrayAttr[0];
   if (auto createOp = getOperand().getDefiningOp<CreateOp>())
     return createOp.getOperand(0);
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// AddOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 2 && "binary op takes 2 operands");
+
+  // complex.add(complex.sub(a, b), b) -> a
+  if (auto sub = getLhs().getDefiningOp<SubOp>())
+    if (getRhs() == sub.getRhs())
+      return sub.getLhs();
+
+  // complex.add(b, complex.sub(a, b)) -> a
+  if (auto sub = getRhs().getDefiningOp<SubOp>())
+    if (getLhs() == sub.getRhs())
+      return sub.getLhs();
+
   return {};
 }
 
