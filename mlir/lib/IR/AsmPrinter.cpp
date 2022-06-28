@@ -1878,34 +1878,9 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
       }
       os << '>';
     }
-  } else if (auto denseArrayAttr = attr.dyn_cast<DenseArrayBaseAttr>()) {
-    typeElision = AttrTypeElision::Must;
-    switch (denseArrayAttr.getElementType()) {
-    case DenseArrayBaseAttr::EltType::I8:
-      os << "[:i8 ";
-      break;
-    case DenseArrayBaseAttr::EltType::I16:
-      os << "[:i16 ";
-      break;
-    case DenseArrayBaseAttr::EltType::I32:
-      os << "[:i32 ";
-      break;
-    case DenseArrayBaseAttr::EltType::I64:
-      os << "[:i64 ";
-      break;
-    case DenseArrayBaseAttr::EltType::F32:
-      os << "[:f32 ";
-      break;
-    case DenseArrayBaseAttr::EltType::F64:
-      os << "[:f64 ";
-      break;
-    }
-    denseArrayAttr.printWithoutBraces(os);
-    os << "]";
+
   } else if (auto locAttr = attr.dyn_cast<LocationAttr>()) {
     printLocation(locAttr);
-  } else {
-    llvm::report_fatal_error("Unknown builtin attribute");
   }
   // Don't print the type if we must elide it, or if it is a None type.
   if (typeElision != AttrTypeElision::Must && !attrType.isa<NoneType>()) {

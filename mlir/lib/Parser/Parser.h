@@ -264,9 +264,6 @@ public:
   Attribute parseDenseElementsAttr(Type attrType);
   ShapedType parseElementsLiteralType(Type type);
 
-  /// Parse a DenseArrayAttr.
-  Attribute parseDenseArrayAttr();
-
   /// Parse a sparse elements attribute.
   Attribute parseSparseElementsAttr(Type attrType);
 
