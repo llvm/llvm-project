@@ -72,6 +72,9 @@ TOK_PUNCTUATION(r_square, "]")
 TOK_PUNCTUATION(star, "*")
 TOK_PUNCTUATION(vertical_bar, "|")
 
+TOK_PUNCTUATION(file_metadata_begin, "{-#")
+TOK_PUNCTUATION(file_metadata_end, "#-}")
+
 // Keywords.  These turn "foo" into Token::kw_foo enums.
 
 // NOTE: Please key these alphabetized to make it easier to find something in

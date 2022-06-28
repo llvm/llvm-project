@@ -14,6 +14,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
@@ -44,6 +45,55 @@ void test::registerTestDialect(DialectRegistry &registry) {
 }
 
 //===----------------------------------------------------------------------===//
+// External Elements Data
+//===----------------------------------------------------------------------===//
+
+ArrayRef<uint64_t> TestExternalElementsData::getData() const {
+  ArrayRef<char> data = AsmResourceBlob::getData();
+  return ArrayRef<uint64_t>((const uint64_t *)data.data(),
+                            data.size() / sizeof(uint64_t));
+}
+
+TestExternalElementsData
+TestExternalElementsData::allocate(size_t numElements) {
+  return TestExternalElementsData(
+      llvm::ArrayRef<uint64_t>(new uint64_t[numElements], numElements),
+      [](const uint64_t *data, size_t) { delete[] data; },
+      /*dataIsMutable=*/true);
+}
+
+const TestExternalElementsData *
+TestExternalElementsDataManager::getData(StringRef name) const {
+  auto it = dataMap.find(name);
+  return it != dataMap.end() ? &*it->second : nullptr;
+}
+
+std::pair<TestExternalElementsDataManager::DataMap::iterator, bool>
+TestExternalElementsDataManager::insert(StringRef name) {
+  auto it = dataMap.try_emplace(name, nullptr);
+  if (it.second)
+    return it;
+
+  llvm::SmallString<32> nameStorage(name);
+  nameStorage.push_back('_');
+  size_t nameCounter = 1;
+  do {
+    nameStorage += std::to_string(nameCounter++);
+    auto it = dataMap.try_emplace(nameStorage, nullptr);
+    if (it.second)
+      return it;
+    nameStorage.resize(name.size() + 1);
+  } while (true);
+}
+
+void TestExternalElementsDataManager::setData(StringRef name,
+                                              TestExternalElementsData &&data) {
+  auto it = dataMap.find(name);
+  assert(it != dataMap.end() && "data not registered");
+  it->second = std::make_unique<TestExternalElementsData>(std::move(data));
+}
+
+//===----------------------------------------------------------------------===//
 // TestDialect Interfaces
 //===----------------------------------------------------------------------===//
 
@@ -62,6 +112,10 @@ static_assert(OpTrait::hasSingleBlockImplicitTerminator<
 // Test support for interacting with the AsmPrinter.
 struct TestOpAsmInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
+
+  //===------------------------------------------------------------------===//
+  // Aliases
+  //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
     StringAttr strAttr = attr.dyn_cast<StringAttr>();
@@ -107,6 +161,52 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
       }
     }
     return AliasResult::NoAlias;
+  }
+
+  //===------------------------------------------------------------------===//
+  // Resources
+  //===------------------------------------------------------------------===//
+
+  std::string
+  getResourceKey(const AsmDialectResourceHandle &handle) const override {
+    return cast<TestExternalElementsDataHandle>(handle).getKey().str();
+  }
+
+  FailureOr<AsmDialectResourceHandle>
+  declareResource(StringRef key) const final {
+    TestDialect *dialect = cast<TestDialect>(getDialect());
+    TestExternalElementsDataManager &mgr = dialect->getExternalDataManager();
+
+    // Resolve the reference by inserting a new entry into the manager.
+    auto it = mgr.insert(key).first;
+    return TestExternalElementsDataHandle(&*it, dialect);
+  }
+
+  LogicalResult parseResource(AsmParsedResourceEntry &entry) const final {
+    TestDialect *dialect = cast<TestDialect>(getDialect());
+    TestExternalElementsDataManager &mgr = dialect->getExternalDataManager();
+
+    // The resource entries are external constant data.
+    auto blobAllocFn = [](unsigned size, unsigned align) {
+      assert(align == alignof(uint64_t) && "unexpected data alignment");
+      return TestExternalElementsData::allocate(size / sizeof(uint64_t));
+    };
+    FailureOr<AsmResourceBlob> blob = entry.parseAsBlob(blobAllocFn);
+    if (failed(blob))
+      return failure();
+
+    mgr.setData(entry.getKey(), std::move(*blob));
+    return success();
+  }
+
+  void
+  buildResources(Operation *op,
+                 const SetVector<AsmDialectResourceHandle> &referencedResources,
+                 AsmResourceBuilder &provider) const final {
+    for (const AsmDialectResourceHandle &handle : referencedResources) {
+      const auto &testHandle = cast<TestExternalElementsDataHandle>(handle);
+      provider.buildBlob(testHandle.getKey(), testHandle.getData()->getData());
+    }
   }
 };
 

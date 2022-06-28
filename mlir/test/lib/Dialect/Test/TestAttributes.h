@@ -25,6 +25,10 @@
 #include "TestAttrInterfaces.h.inc"
 #include "TestOpEnums.h.inc"
 
+namespace test {
+struct TestExternalElementsDataHandle;
+} // namespace test
+
 #define GET_ATTRDEF_CLASSES
 #include "TestAttrDefs.h.inc"
 

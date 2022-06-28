@@ -207,7 +207,8 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context,
       inputStr, /*BufferName=*/"<mlir_parser_buffer>",
       /*RequiresNullTerminator=*/false);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  ParserState state(sourceMgr, context, symbolState, /*asmState=*/nullptr);
+  ParserConfig config(context);
+  ParserState state(sourceMgr, config, symbolState, /*asmState=*/nullptr);
   Parser parser(state);
 
   Token startTok = parser.getToken();
@@ -237,6 +238,7 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context,
 ///   attribute-alias    ::= `#` alias-name
 ///
 Attribute Parser::parseExtendedAttr(Type type) {
+  MLIRContext *ctx = getContext();
   Attribute attr = parseExtendedSymbol<Attribute>(
       *this, Token::hash_identifier, state.symbols.attributeAliasDefinitions,
       [&](StringRef dialectName, StringRef symbolData,
@@ -250,7 +252,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
         if (Dialect *dialect =
                 builder.getContext()->getOrLoadDialect(dialectName)) {
           return parseSymbol<Attribute>(
-              symbolData, state.context, state.symbols, [&](Parser &parser) {
+              symbolData, ctx, state.symbols, [&](Parser &parser) {
                 CustomDialectAsmParser customParser(symbolData, parser);
                 return dialect->parseAttribute(customParser, attrType);
               });
@@ -258,9 +260,8 @@ Attribute Parser::parseExtendedAttr(Type type) {
 
         // Otherwise, form a new opaque attribute.
         return OpaqueAttr::getChecked(
-            [&] { return emitError(loc); },
-            StringAttr::get(state.context, dialectName), symbolData,
-            attrType ? attrType : NoneType::get(state.context));
+            [&] { return emitError(loc); }, StringAttr::get(ctx, dialectName),
+            symbolData, attrType ? attrType : NoneType::get(ctx));
       });
 
   // Ensure that the attribute has the same type as requested.
@@ -280,25 +281,23 @@ Attribute Parser::parseExtendedAttr(Type type) {
 ///   type-alias    ::= `!` alias-name
 ///
 Type Parser::parseExtendedType() {
+  MLIRContext *ctx = getContext();
   return parseExtendedSymbol<Type>(
       *this, Token::exclamation_identifier, state.symbols.typeAliasDefinitions,
-      [&](StringRef dialectName, StringRef symbolData,
-          SMLoc loc) -> Type {
+      [&](StringRef dialectName, StringRef symbolData, SMLoc loc) -> Type {
         // If we found a registered dialect, then ask it to parse the type.
-        auto *dialect = state.context->getOrLoadDialect(dialectName);
-
-        if (dialect) {
+        if (auto *dialect = ctx->getOrLoadDialect(dialectName)) {
           return parseSymbol<Type>(
-              symbolData, state.context, state.symbols, [&](Parser &parser) {
+              symbolData, ctx, state.symbols, [&](Parser &parser) {
                 CustomDialectAsmParser customParser(symbolData, parser);
                 return dialect->parseType(customParser);
               });
         }
 
         // Otherwise, form a new opaque type.
-        return OpaqueType::getChecked(
-            [&] { return emitError(loc); },
-            StringAttr::get(state.context, dialectName), symbolData);
+        return OpaqueType::getChecked([&] { return emitError(loc); },
+                                      StringAttr::get(ctx, dialectName),
+                                      symbolData);
       });
 }
 
