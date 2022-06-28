@@ -76,17 +76,17 @@ nested-name-specifier := nested-name-specifier IDENTIFIER ::
 nested-name-specifier := nested-name-specifier TEMPLATE_opt simple-template-id ::
 lambda-expression := lambda-introducer lambda-declarator_opt compound-statement
 lambda-expression := lambda-introducer < template-parameter-list > requires-clause_opt lambda-declarator_opt compound-statement
-lambda-introducer := [ lambda-capture_opt ]
+#! We allow a capture-default to appear anywhere in a capture-list.
+# This simplifies the grammar and error recovery.
+lambda-introducer := [ capture-list_opt ]
 lambda-declarator := ( parameter-declaration-clause_opt ) decl-specifier-seq_opt noexcept-specifier_opt trailing-return-type_opt requires-clause_opt
-lambda-capture := capture-default
-lambda-capture := capture-list
-lambda-capture := capture-default , capture-list
-capture-default := &
-capture-default := =
 capture-list := capture
 capture-list := capture-list , capture
+capture := capture-default
 capture := simple-capture
 capture := init-capture
+capture-default := &
+capture-default := =
 simple-capture := IDENTIFIER ..._opt
 simple-capture := & IDENTIFIER ..._opt
 simple-capture := THIS
