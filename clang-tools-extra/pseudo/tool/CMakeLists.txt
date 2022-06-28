@@ -13,5 +13,6 @@ target_link_libraries(clang-pseudo
   PRIVATE
   clangPseudo
   clangPseudoGrammar
+  clangPseudoCLI
   )
 
