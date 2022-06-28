@@ -348,23 +348,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 LiveRange::iterator LiveRange::find(SlotIndex Pos) {
-  // This algorithm is basically std::upper_bound.
-  // Unfortunately, std::upper_bound cannot be used with mixed types until we
-  // adopt C++0x. Many libraries can do it, but not all.
-  if (empty() || Pos >= endIndex())
-    return end();
-  iterator I = begin();
-  size_t Len = size();
-  do {
-    size_t Mid = Len >> 1;
-    if (Pos < I[Mid].end) {
-      Len = Mid;
-    } else {
-      I += Mid + 1;
-      Len -= Mid + 1;
-    }
-  } while (Len);
-  return I;
+  return llvm::partition_point(*this,
+                               [&](const Segment &X) { return X.end <= Pos; });
 }
 
 VNInfo *LiveRange::createDeadDef(SlotIndex Def, VNInfo::Allocator &VNIAlloc) {
