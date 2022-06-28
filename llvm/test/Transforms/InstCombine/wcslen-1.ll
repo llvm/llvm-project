@@ -67,8 +67,8 @@ define i1 @test_simplify5() {
 
 define i1 @test_simplify6(i32* %str_p) {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[STRLENFIRST:%.*]] = load i32, i32* [[STR_P:%.*]], align 4
-; CHECK-NEXT:    [[EQ_NULL:%.*]] = icmp eq i32 [[STRLENFIRST]], 0
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i32, i32* [[STR_P:%.*]], align 4
+; CHECK-NEXT:    [[EQ_NULL:%.*]] = icmp eq i32 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[EQ_NULL]]
 ;
   %str_l = call i64 @wcslen(i32* %str_p)
@@ -90,8 +90,8 @@ define i1 @test_simplify7() {
 
 define i1 @test_simplify8(i32* %str_p) {
 ; CHECK-LABEL: @test_simplify8(
-; CHECK-NEXT:    [[STRLENFIRST:%.*]] = load i32, i32* [[STR_P:%.*]], align 4
-; CHECK-NEXT:    [[NE_NULL:%.*]] = icmp ne i32 [[STRLENFIRST]], 0
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i32, i32* [[STR_P:%.*]], align 4
+; CHECK-NEXT:    [[NE_NULL:%.*]] = icmp ne i32 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[NE_NULL]]
 ;
   %str_l = call i64 @wcslen(i32* %str_p)
@@ -210,10 +210,13 @@ define i64 @test_no_simplify3_no_null_opt(i32 %x) #0 {
 
 @str16 = constant [1 x i16] [i16 0]
 
-define i64 @test_no_simplify4() {
-; CHECK-LABEL: @test_no_simplify4(
-; CHECK-NEXT:    [[L:%.*]] = call i64 @wcslen(i32* bitcast ([1 x i16]* @str16 to i32*))
-; CHECK-NEXT:    ret i64 [[L]]
+; Fold the invalid call to zero.  This is safer than letting the undefined
+; library call take place even though it prevents sanitizers from detecting
+; it.
+
+define i64 @test_simplify12() {
+; CHECK-LABEL: @test_simplify12(
+; CHECK-NEXT:    ret i64 0
 ;
   %l = call i64 @wcslen(i32* bitcast ([1 x i16]* @str16 to i32*))
   ret i64 %l
