@@ -15,6 +15,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/TraceGDBRemotePackets.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -47,6 +48,16 @@ struct SVR4LibraryInfo {
 class NativeProcessProtocol {
 public:
   virtual ~NativeProcessProtocol() = default;
+
+  typedef std::vector<std::unique_ptr<NativeThreadProtocol>> thread_collection;
+  template <typename I>
+  static NativeThreadProtocol &thread_list_adapter(I &iter) {
+    assert(*iter);
+    return **iter;
+  }
+  typedef LockingAdaptedIterable<thread_collection, NativeThreadProtocol &,
+                                 thread_list_adapter, std::recursive_mutex>
+      ThreadIterable;
 
   virtual Status Resume(const ResumeActionList &resume_actions) = 0;
 
@@ -208,6 +219,10 @@ public:
 
   NativeThreadProtocol *GetCurrentThread() {
     return GetThreadByID(m_current_thread_id);
+  }
+
+  ThreadIterable Threads() const {
+    return ThreadIterable(m_threads, m_threads_mutex);
   }
 
   // Access to inferior stdio
