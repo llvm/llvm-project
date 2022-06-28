@@ -112,7 +112,7 @@ public:
     if constexpr (LLVM_LIBC_USE_BUILTIN_MEMSET_INLINE &&
                   DstAddrT::TEMPORALITY == Temporality::TEMPORAL) {
       // delegate optimized set to compiler.
-      __builtin_memset_inline(dst.ptr(), value, Size);
+      __builtin_memset_inline(dst.ptr(), static_cast<int>(value), Size);
       return;
     }
     nativeStore(Backend::template splat<type>(value), dst);
