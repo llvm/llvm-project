@@ -14,6 +14,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "arith-to-spirv-pattern"
@@ -665,23 +666,44 @@ LogicalResult TypeCastingOpPattern<Op, SPIRVOp>::matchAndRewrite(
 LogicalResult CmpIOpBooleanPattern::matchAndRewrite(
     arith::CmpIOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  Type operandType = op.getLhs().getType();
-  if (!isBoolScalarOrVector(operandType))
+  Type srcType = op.getLhs().getType();
+  if (!isBoolScalarOrVector(srcType))
+    return failure();
+  Type dstType = getTypeConverter()->convertType(srcType);
+  if (!dstType)
     return failure();
 
   switch (op.getPredicate()) {
-#define DISPATCH(cmpPredicate, spirvOp)                                        \
-  case cmpPredicate: {                                                         \
-    rewriter.replaceOpWithNewOp<spirvOp>(op, adaptor.getLhs(),                 \
-                                         adaptor.getRhs());                    \
-    return success();                                                          \
+  case arith::CmpIPredicate::eq: {
+    rewriter.replaceOpWithNewOp<spirv::LogicalEqualOp>(op, adaptor.getLhs(),
+                                                       adaptor.getRhs());
+    return success();
   }
+  case arith::CmpIPredicate::ne: {
+    rewriter.replaceOpWithNewOp<spirv::LogicalNotEqualOp>(op, adaptor.getLhs(),
+                                                          adaptor.getRhs());
+    return success();
+  }
+  case arith::CmpIPredicate::uge:
+  case arith::CmpIPredicate::ugt:
+  case arith::CmpIPredicate::ule:
+  case arith::CmpIPredicate::ult: {
+    // There are no direct corresponding instructions in SPIR-V for such cases.
+    // Extend them to 32-bit and do comparision then.
+    Type type = rewriter.getI32Type();
+    if (auto vectorType = dstType.dyn_cast<VectorType>())
+      type = VectorType::get(vectorType.getShape(), type);
+    auto extLhs =
+        rewriter.create<arith::ExtUIOp>(op.getLoc(), type, adaptor.getLhs());
+    auto extRhs =
+        rewriter.create<arith::ExtUIOp>(op.getLoc(), type, adaptor.getRhs());
 
-    DISPATCH(arith::CmpIPredicate::eq, spirv::LogicalEqualOp);
-    DISPATCH(arith::CmpIPredicate::ne, spirv::LogicalNotEqualOp);
-
-#undef DISPATCH
-  default:;
+    rewriter.replaceOpWithNewOp<arith::CmpIOp>(op, op.getPredicate(), extLhs,
+                                               extRhs);
+    return success();
+  }
+  default:
+    break;
   }
   return failure();
 }
