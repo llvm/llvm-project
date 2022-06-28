@@ -3122,10 +3122,12 @@ mlir::LogicalResult fir::StoreOp::verify() {
 // StringLitOp
 //===----------------------------------------------------------------------===//
 
-bool fir::StringLitOp::isWideValue() {
-  auto eleTy = getType().cast<fir::SequenceType>().getEleTy();
-  return eleTy.cast<fir::CharacterType>().getFKind() != 1;
+inline fir::CharacterType::KindTy stringLitOpGetKind(fir::StringLitOp op) {
+  auto eleTy = op.getType().cast<fir::SequenceType>().getEleTy();
+  return eleTy.cast<fir::CharacterType>().getFKind();
 }
+
+bool fir::StringLitOp::isWideValue() { return stringLitOpGetKind(*this) != 1; }
 
 static mlir::NamedAttribute
 mkNamedIntegerAttr(mlir::OpBuilder &builder, llvm::StringRef name, int64_t v) {
@@ -3205,6 +3207,9 @@ mlir::ParseResult fir::StringLitOp::parse(mlir::OpAsmParser &parser,
   if (auto v = val.dyn_cast<mlir::StringAttr>())
     result.attributes.push_back(
         builder.getNamedAttr(fir::StringLitOp::value(), v));
+  else if (auto v = val.dyn_cast<mlir::DenseElementsAttr>())
+    result.attributes.push_back(
+        builder.getNamedAttr(fir::StringLitOp::xlist(), v));
   else if (auto v = val.dyn_cast<mlir::ArrayAttr>())
     result.attributes.push_back(
         builder.getNamedAttr(fir::StringLitOp::xlist(), v));
@@ -3238,10 +3243,15 @@ mlir::LogicalResult fir::StringLitOp::verify() {
   if (getSize().cast<mlir::IntegerAttr>().getValue().isNegative())
     return emitOpError("size must be non-negative");
   if (auto xl = getOperation()->getAttr(fir::StringLitOp::xlist())) {
-    auto xList = xl.cast<mlir::ArrayAttr>();
-    for (auto a : xList)
-      if (!a.isa<mlir::IntegerAttr>())
-        return emitOpError("values in list must be integers");
+    if (auto xList = xl.dyn_cast<mlir::ArrayAttr>()) {
+      for (auto a : xList)
+        if (!a.isa<mlir::IntegerAttr>())
+          return emitOpError("values in initializer must be integers");
+    } else if (xl.isa<mlir::DenseElementsAttr>()) {
+      // do nothing
+    } else {
+      return emitOpError("has unexpected attribute");
+    }
   }
   return mlir::success();
 }
