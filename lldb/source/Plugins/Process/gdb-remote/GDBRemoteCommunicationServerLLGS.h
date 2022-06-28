@@ -155,6 +155,9 @@ protected:
 
   PacketResult Handle_QListThreadsInStopReply(StringExtractorGDBRemote &packet);
 
+  PacketResult ResumeProcess(NativeProcessProtocol &process,
+                             const ResumeActionList &actions);
+
   PacketResult Handle_C(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_c(StringExtractorGDBRemote &packet);
