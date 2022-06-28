@@ -265,13 +265,13 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
 
   if (!success) {
-    auto Diag = D.Diag(diag::err_drv_clang_unsupported);
+    auto Diag = D.Diag(diag::err_drv_unsupported_option_argument);
     // If "-Wa,-march=" is used, 'WaMArch' will contain the argument's value,
     // while 'A' is uninitialized. Only dereference 'A' in the other case.
     if (!WaMArch.empty())
-      Diag << "-march=" + WaMArch.str();
+      Diag << "march=" << WaMArch;
     else
-      Diag << A->getAsString(Args);
+      Diag << A->getOption().getName() << A->getValue();
   }
 
   if (Args.getLastArg(options::OPT_mgeneral_regs_only)) {
