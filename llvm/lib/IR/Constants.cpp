@@ -547,8 +547,6 @@ void llvm::deleteConstant(Constant *C) {
       delete static_cast<InsertElementConstantExpr *>(C);
     else if (isa<ShuffleVectorConstantExpr>(C))
       delete static_cast<ShuffleVectorConstantExpr *>(C);
-    else if (isa<InsertValueConstantExpr>(C))
-      delete static_cast<InsertValueConstantExpr *>(C);
     else if (isa<GetElementPtrConstantExpr>(C))
       delete static_cast<GetElementPtrConstantExpr *>(C);
     else if (isa<CompareConstantExpr>(C))
@@ -1488,14 +1486,6 @@ bool ConstantExpr::isCompare() const {
   return getOpcode() == Instruction::ICmp || getOpcode() == Instruction::FCmp;
 }
 
-bool ConstantExpr::hasIndices() const {
-  return getOpcode() == Instruction::InsertValue;
-}
-
-ArrayRef<unsigned> ConstantExpr::getIndices() const {
-  return cast<InsertValueConstantExpr>(this)->Indices;
-}
-
 unsigned ConstantExpr::getPredicate() const {
   return cast<CompareConstantExpr>(this)->predicate;
 }
@@ -1539,9 +1529,6 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
                                           OnlyIfReducedTy);
   case Instruction::ExtractElement:
     return ConstantExpr::getExtractElement(Ops[0], Ops[1], OnlyIfReducedTy);
-  case Instruction::InsertValue:
-    return ConstantExpr::getInsertValue(Ops[0], Ops[1], getIndices(),
-                                        OnlyIfReducedTy);
   case Instruction::FNeg:
     return ConstantExpr::getFNeg(Ops[0]);
   case Instruction::ShuffleVector:
@@ -2517,7 +2504,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   if (InRangeIndex && *InRangeIndex < 63)
     SubClassOptionalData |= (*InRangeIndex + 1) << 1;
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                SubClassOptionalData, None, None, Ty);
+                                SubClassOptionalData, None, Ty);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
@@ -2638,34 +2625,10 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
 
   // Look up the constant in the table first to ensure uniqueness
   Constant *ArgVec[] = {V1, V2};
-  ConstantExprKeyType Key(Instruction::ShuffleVector, ArgVec, 0, 0, None, Mask);
+  ConstantExprKeyType Key(Instruction::ShuffleVector, ArgVec, 0, 0, Mask);
 
   LLVMContextImpl *pImpl = ShufTy->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ShufTy, Key);
-}
-
-Constant *ConstantExpr::getInsertValue(Constant *Agg, Constant *Val,
-                                       ArrayRef<unsigned> Idxs,
-                                       Type *OnlyIfReducedTy) {
-  assert(Agg->getType()->isFirstClassType() &&
-         "Non-first-class type for constant insertvalue expression");
-
-  assert(ExtractValueInst::getIndexedType(Agg->getType(),
-                                          Idxs) == Val->getType() &&
-         "insertvalue indices invalid!");
-  Type *ReqTy = Val->getType();
-
-  if (Constant *FC = ConstantFoldInsertValueInstruction(Agg, Val, Idxs))
-    return FC;
-
-  if (OnlyIfReducedTy == ReqTy)
-    return nullptr;
-
-  Constant *ArgVec[] = { Agg, Val };
-  const ConstantExprKeyType Key(Instruction::InsertValue, ArgVec, 0, 0, Idxs);
-
-  LLVMContextImpl *pImpl = Agg->getContext().pImpl;
-  return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
 }
 
 Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
@@ -3517,9 +3480,6 @@ Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
     return InsertElementInst::Create(Ops[0], Ops[1], Ops[2], "", InsertBefore);
   case Instruction::ExtractElement:
     return ExtractElementInst::Create(Ops[0], Ops[1], "", InsertBefore);
-  case Instruction::InsertValue:
-    return InsertValueInst::Create(Ops[0], Ops[1], getIndices(), "",
-                                   InsertBefore);
   case Instruction::ShuffleVector:
     return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask(), "",
                                  InsertBefore);

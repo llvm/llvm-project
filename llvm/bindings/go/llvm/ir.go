@@ -993,16 +993,6 @@ func ConstShuffleVector(veca, vecb, mask Value) (rv Value) {
 	return
 }
 
-func ConstInsertValue(agg, val Value, indices []uint32) (rv Value) {
-	n := len(indices)
-	if n == 0 {
-		panic("one or more indices are required")
-	}
-	ptr := (*C.unsigned)(&indices[0])
-	rv.C = C.LLVMConstInsertValue(agg.C, val.C, ptr, C.unsigned(n))
-	return
-}
-
 func BlockAddress(f Value, bb BasicBlock) (v Value) {
 	v.C = C.LLVMBlockAddress(f.C, bb.C)
 	return

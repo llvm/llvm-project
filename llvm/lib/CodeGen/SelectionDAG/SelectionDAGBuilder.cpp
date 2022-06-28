@@ -3747,13 +3747,8 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   setValue(&I, DAG.getBuildVector(VT, DL, Ops));
 }
 
-void SelectionDAGBuilder::visitInsertValue(const User &I) {
-  ArrayRef<unsigned> Indices;
-  if (const InsertValueInst *IV = dyn_cast<InsertValueInst>(&I))
-    Indices = IV->getIndices();
-  else
-    Indices = cast<ConstantExpr>(&I)->getIndices();
-
+void SelectionDAGBuilder::visitInsertValue(const InsertValueInst &I) {
+  ArrayRef<unsigned> Indices = I.getIndices();
   const Value *Op0 = I.getOperand(0);
   const Value *Op1 = I.getOperand(1);
   Type *AggTy = I.getType();

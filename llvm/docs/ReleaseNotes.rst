@@ -71,6 +71,7 @@ Changes to the LLVM IR
 * The constant expression variants of the following instructions have been
   removed:
   * ``extractvalue``
+  * ``insertvalue``
 
 Changes to building LLVM
 ------------------------
@@ -179,6 +180,7 @@ Changes to the C API
   an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
   constant fold the operands if possible and create an instruction otherwise:
   * ``LLVMConstExtractValue``
+  * ``LLVMConstInsertValue``
 
 Changes to the Go bindings
 --------------------------

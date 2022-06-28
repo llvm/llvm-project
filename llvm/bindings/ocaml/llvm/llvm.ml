@@ -704,8 +704,6 @@ external const_insertelement : llvalue -> llvalue -> llvalue -> llvalue
                              = "LLVMConstInsertElement"
 external const_shufflevector : llvalue -> llvalue -> llvalue -> llvalue
                              = "LLVMConstShuffleVector"
-external const_insertvalue : llvalue -> llvalue -> int array -> llvalue
-                           = "llvm_const_insertvalue"
 external const_inline_asm : lltype -> string -> string -> bool -> bool ->
                             llvalue
                           = "llvm_const_inline_asm"
