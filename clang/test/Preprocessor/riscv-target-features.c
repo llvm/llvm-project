@@ -42,6 +42,8 @@
 // CHECK-NOT: __riscv_zkr
 // CHECK-NOT: __riscv_zkt
 // CHECK-NOT: __riscv_zk
+// CHECK-NOT: __riscv_zicbom
+// CHECK-NOT: __riscv_zicboz
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-M-EXT %s
@@ -433,3 +435,15 @@
 // RUN: -march=rv64i_zbkb_zbkc_zbkx_zksed_zksh -x c -E -dM %s -o - \
 // RUN: | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZKS %s
 // CHECK-COMBINE-INTO-ZKS: __riscv_zks 1
+
+// RUN: %clang -target riscv32 -march=rv32izicbom -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICBOM-EXT %s
+// RUN: %clang -target riscv64 -march=rv64izicbom -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICBOM-EXT %s
+// CHECK-ZICBOM-EXT: __riscv_zicbom 1000000{{$}}
+
+// RUN: %clang -target riscv32 -march=rv32izicboz -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICBOZ-EXT %s
+// RUN: %clang -target riscv64 -march=rv64izicboz -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICBOZ-EXT %s
+// CHECK-ZICBOZ-EXT: __riscv_zicboz 1000000{{$}}
