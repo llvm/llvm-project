@@ -4866,6 +4866,10 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
       return false;
   }
 
+  if (isCombineInstrSettingFlag(CombineOpc) &&
+      MI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+    return false;
+
   return true;
 }
 
@@ -5366,6 +5370,42 @@ bool AArch64InstrInfo::isThroughputPattern(
   } // end switch (Pattern)
   return false;
 }
+
+/// Find other MI combine patterns.
+static bool getMiscPatterns(MachineInstr &Root,
+                            SmallVectorImpl<MachineCombinerPattern> &Patterns)
+{
+  // A - (B + C)  ==>   (A - B) - C  or  (A - C) - B
+  unsigned Opc = Root.getOpcode();
+  MachineBasicBlock &MBB = *Root.getParent();
+
+  switch (Opc) {
+  case AArch64::SUBWrr:
+  case AArch64::SUBSWrr:
+  case AArch64::SUBXrr:
+  case AArch64::SUBSXrr:
+    // Found candidate root.
+    break;
+  default:
+    return false;
+  }
+
+  if (isCombineInstrSettingFlag(Opc) &&
+      Root.findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+    return false;
+
+  if (canCombine(MBB, Root.getOperand(2), AArch64::ADDWrr) ||
+      canCombine(MBB, Root.getOperand(2), AArch64::ADDSWrr) ||
+      canCombine(MBB, Root.getOperand(2), AArch64::ADDXrr) ||
+      canCombine(MBB, Root.getOperand(2), AArch64::ADDSXrr)) {
+    Patterns.push_back(MachineCombinerPattern::SUBADD_OP1);
+    Patterns.push_back(MachineCombinerPattern::SUBADD_OP2);
+    return true;
+  }
+
+  return false;
+}
+
 /// Return true when there is potentially a faster code sequence for an
 /// instruction chain ending in \p Root. All potential patterns are listed in
 /// the \p Pattern vector. Pattern should be sorted in priority order since the
@@ -5381,6 +5421,10 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
   if (getFMULPatterns(Root, Patterns))
     return true;
   if (getFMAPatterns(Root, Patterns))
+    return true;
+
+  // Other patterns
+  if (getMiscPatterns(Root, Patterns))
     return true;
 
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
@@ -5633,6 +5677,53 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
   return MUL;
 }
 
+/// Do the following transformation
+/// A - (B + C)  ==>   (A - B) - C
+/// A - (B + C)  ==>   (A - C) - B
+static void
+genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
+                 const TargetInstrInfo *TII, MachineInstr &Root,
+                 SmallVectorImpl<MachineInstr *> &InsInstrs,
+                 SmallVectorImpl<MachineInstr *> &DelInstrs,
+                 unsigned IdxOpd1,
+                 DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) {
+  assert(IdxOpd1 == 1 || IdxOpd1 == 2);
+  unsigned IdxOtherOpd = IdxOpd1 == 1 ? 2 : 1;
+  MachineInstr *AddMI = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
+
+  Register ResultReg = Root.getOperand(0).getReg();
+  Register RegA = Root.getOperand(1).getReg();
+  bool RegAIsKill = Root.getOperand(1).isKill();
+  Register RegB = AddMI->getOperand(IdxOpd1).getReg();
+  bool RegBIsKill = AddMI->getOperand(IdxOpd1).isKill();
+  Register RegC = AddMI->getOperand(IdxOtherOpd).getReg();
+  bool RegCIsKill = AddMI->getOperand(IdxOtherOpd).isKill();
+  Register NewVR = MRI.createVirtualRegister(MRI.getRegClass(RegA));
+
+  unsigned Opcode = Root.getOpcode();
+  if (Opcode == AArch64::SUBSWrr)
+    Opcode = AArch64::SUBWrr;
+  else if (Opcode == AArch64::SUBSXrr)
+    Opcode = AArch64::SUBXrr;
+  else
+    assert((Opcode == AArch64::SUBWrr || Opcode == AArch64::SUBXrr) &&
+           "Unexpected instruction opcode.");
+
+  MachineInstrBuilder MIB1 =
+      BuildMI(MF, Root.getDebugLoc(), TII->get(Opcode), NewVR)
+          .addReg(RegA, getKillRegState(RegAIsKill))
+          .addReg(RegB, getKillRegState(RegBIsKill));
+  MachineInstrBuilder MIB2 =
+      BuildMI(MF, Root.getDebugLoc(), TII->get(Opcode), ResultReg)
+          .addReg(NewVR, getKillRegState(true))
+          .addReg(RegC, getKillRegState(RegCIsKill));
+
+  InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
+  InsInstrs.push_back(MIB1);
+  InsInstrs.push_back(MIB2);
+  DelInstrs.push_back(AddMI);
+}
+
 /// When getMachineCombinerPatterns() finds potential patterns,
 /// this function generates the instructions that could replace the
 /// original code sequence
@@ -5655,6 +5746,18 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
                                                 DelInstrs, InstrIdxForVirtReg);
     return;
+  case MachineCombinerPattern::SUBADD_OP1:
+    // A - (B + C)
+    // ==> (A - B) - C
+    genSubAdd2SubSub(MF, MRI, TII, Root, InsInstrs, DelInstrs, 1,
+                     InstrIdxForVirtReg);
+    break;
+  case MachineCombinerPattern::SUBADD_OP2:
+    // A - (B + C)
+    // ==> (A - C) - B
+    genSubAdd2SubSub(MF, MRI, TII, Root, InsInstrs, DelInstrs, 2,
+                     InstrIdxForVirtReg);
+    break;
   case MachineCombinerPattern::MULADDW_OP1:
   case MachineCombinerPattern::MULADDX_OP1:
     // MUL I=A,B,0
