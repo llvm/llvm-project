@@ -770,6 +770,10 @@ public:
     return getGeneration() < SEA_ISLANDS;
   }
 
+  bool hasPrefetch() const { return GFX12Insts; }
+
+  bool hasVectorPrefetch() const { return false; }
+
   // Scratch is allocated in 256 dword per wave blocks for the entire
   // wavefront. When viewed from the perspective of an arbitrary workitem, this
   // is 4-byte aligned.

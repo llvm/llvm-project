@@ -2783,6 +2783,18 @@ def : GCNPat <
                         (as_i1timm $bound_ctrl))
 >;
 
+class SMPrefetchGetPcPat<string type, int cache_type> : GCNPat <
+    (prefetch (i64 imm:$offset), imm, imm, (i32 cache_type)),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) (S_ADD_U64_PSEUDO (S_GETPC_B64), $offset),
+                                                   (i32 20), (i32 SGPR_NULL), (i8 0))
+    // Offset 20 should roughly adjust getpc sequence length.
+  > {
+  let AddedComplexity = 9;
+}
+
+def : SMPrefetchGetPcPat<"INST", 0>;
+def : SMPrefetchGetPcPat<"DATA", 1>;
+
 //===----------------------------------------------------------------------===//
 // Fract Patterns
 //===----------------------------------------------------------------------===//

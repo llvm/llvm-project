@@ -2280,6 +2280,9 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
 
 Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
                                        int64_t ByteOffset, bool IsBuffer) {
+  if (isGFX12Plus(ST)) // 24 bit signed offsets
+    return isInt<24>(ByteOffset) ? Optional<int64_t>(ByteOffset) : None;
+
   // The signed version is always a byte offset.
   if (!IsBuffer && hasSMRDSignedImmOffset(ST)) {
     assert(hasSMEMByteOffset(ST));

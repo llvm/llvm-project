@@ -703,6 +703,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
+  if (Subtarget->hasPrefetch())
+    setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
                       MVT::v2i16, MVT::v2f16},
@@ -3407,6 +3410,23 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   return AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(Op, DAG);
 }
 
+SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
+  if (!Subtarget->hasVectorPrefetch() && Op->isDivergent())
+    return SDValue();
+
+  switch (cast<MemSDNode>(Op)->getAddressSpace()) {
+  case AMDGPUAS::FLAT_ADDRESS:
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    break;
+  default:
+    return SDValue();
+  }
+
+  return Op;
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -4737,6 +4757,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerXMUL_LOHI(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::PREFETCH:
+    return lowerPREFETCH(Op, DAG);
   }
   return SDValue();
 }

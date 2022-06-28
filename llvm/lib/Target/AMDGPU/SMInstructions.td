@@ -907,6 +907,14 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformL
   }];
 }
 
+def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                             (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                             [{ return !N->getOperand(1)->isDivergent();}]> {
+  let GISelPredicateCode = [{
+    return isInstrUniform(MI);
+  }];
+}
+
 def SMRDImm         : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
 def SMRDImm32       : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
 def SMRDSgpr        : ComplexPattern<iPTR, 2, "SelectSMRDSgpr">;
@@ -1020,6 +1028,32 @@ def : GCNPat <
   let AddedComplexity = 1;
 }
 } // let OtherPredicates = [HasShaderCyclesRegister]
+
+def SIMM24bitPtr : ImmLeaf <iPTR,
+  [{return isInt<24>(Imm);}]
+>;
+
+multiclass SMPrefetchPat<string type, int cache_type> {
+  def : GCNPat <
+    (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), imm, imm, (i32 cache_type)),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, $offset, (i32 SGPR_NULL), (i8 0))
+  >;
+
+  def : GCNPat <
+    (smrd_prefetch (i64 SReg_64:$sbase), imm, imm, (i32 cache_type)),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, 0, (i32 SGPR_NULL), (i8 0))
+  >;
+
+  def : GCNPat <
+    (prefetch SIMM24bitPtr:$offset, imm, imm, (i32 cache_type)),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type#"_PC_REL") (as_i32timm $offset), (i32 SGPR_NULL), (i8 0))
+  > {
+    let AddedComplexity = 10;
+  }
+}
+
+defm : SMPrefetchPat<"INST", 0>;
+defm : SMPrefetchPat<"DATA", 1>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
