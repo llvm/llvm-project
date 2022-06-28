@@ -7,6 +7,19 @@ subroutine i
   print *, ctemp(1:10)
 end subroutine i
 
+! CHECK-LABEL: func @_QPs
+subroutine s
+  integer, parameter :: LONGreal = 8
+  real (kind = LONGreal), dimension(-1:11) :: x = (/0,0,0,0,0,0,0,0,0,0,0,0,0/)
+  real (kind = LONGreal), dimension(0:12) :: g = (/0,0,0,0,0,0,0,0,0,0,0,0,0/)
+  real (kind = LONGreal) :: gs(13)
+  x(1) = 4.0
+  g(1) = 5.0
+  gs = g(0:12:1) + x(11:(-1):(-1))
+  print *, gs
+  !print *, dot_product(g(0:12:1), x(11:(-1):(-1)))
+end subroutine s
+
 ! CHECK-LABEL: func @_QPs2
 subroutine s2
   real :: x(10)

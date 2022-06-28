@@ -119,7 +119,7 @@ subroutine pass_pointer_array(i)
 ! CHECK:           %[[VAL_40:.*]] = fir.do_loop {{.*}} {
 ! CHECK:           }
 ! CHECK:           fir.array_merge_store %{{.*}}, %[[VAL_40]] to %[[VAL_6]] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:           fir.freemem %[[VAL_9]]
+! CHECK:           fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:         }
 end subroutine
 
@@ -155,7 +155,7 @@ subroutine pass_pointer_array_char(c)
 ! CHECK:           %[[VAL_62:.*]] = fir.do_loop {{.*}} {
 ! CHECK:           }
 ! CHECK:           fir.array_merge_store %{{.*}}, %[[VAL_62]] to %[[VAL_6]] : !fir.array<?x!fir.char<1,?>>, !fir.array<?x!fir.char<1,?>>, !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
-! CHECK:           fir.freemem %[[VAL_9]]
+! CHECK:           fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:         }
 ! CHECK:         return
 ! CHECK:       }
@@ -189,7 +189,7 @@ subroutine forward_pointer_array()
 ! CHECK:         fir.if %[[VAL_6]] {
 ! CHECK:           fir.do_loop {{.*}} {
 ! CHECK:           }
-! CHECK:           fir.freemem %[[VAL_7]]
+! CHECK:           fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:         }
 end subroutine
 
@@ -229,7 +229,7 @@ subroutine pass_opt_assumed_shape(x)
 ! CHECK:           %[[VAL_36:.*]] = fir.do_loop {{.*}} { 
 ! CHECK:           }
 ! CHECK:           fir.array_merge_store %{{.*}}, %[[VAL_36]] to %[[VAL_6]] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.array<?xf32>>
-! CHECK:           fir.freemem %[[VAL_27]]
+! CHECK:           fir.freemem %[[VAL_27]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:         }
 end subroutine
 
@@ -261,7 +261,7 @@ subroutine pass_opt_assumed_shape_char(c)
 ! CHECK:         fir.if %[[VAL_1]] {
 ! CHECK:           %[[VAL_59:.*]] = fir.do_loop {{.*}} {
 ! CHECK:           fir.array_merge_store %{{.*}}, %[[VAL_59]] to %[[VAL_7]] : !fir.array<?x!fir.char<1,?>>, !fir.array<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
-! CHECK:           fir.freemem %[[VAL_49]]
+! CHECK:           fir.freemem %[[VAL_49]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:         }
 end subroutine
 
@@ -392,7 +392,7 @@ subroutine pass_opt_assumed_shape_to_intentin(x)
 ! CHECK:         fir.call @_QPtakes_opt_explicit_shape_intentin(%[[VAL_24]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[VAL_1]] {
 ! CHECK-NOT:       fir.do_loop
-! CHECK:           fir.freemem %[[VAL_7]]
+! CHECK:           fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:         }
 end subroutine
 
@@ -420,7 +420,7 @@ subroutine pass_opt_assumed_shape_to_intentout(x)
 ! CHECK:         fir.if %[[VAL_1]] {
 ! CHECK:           fir.do_loop {{.*}} {
 ! CHECK:           }
-! CHECK:           fir.freemem %[[VAL_7]]
+! CHECK:           fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:         }
 end subroutine
 end module

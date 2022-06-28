@@ -48,7 +48,7 @@
   ! CHECK:           fir.result %[[VAL_43:.*]] : !fir.array<10xf32>
   ! CHECK:         }
   ! CHECK:         fir.array_merge_store %[[VAL_25]], %[[VAL_44:.*]] to %[[VAL_2]] : !fir.array<10xf32>, !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>
-  ! CHECK:         fir.freemem %[[VAL_9]]
+  ! CHECK:         fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<10x!fir.logical<4>>>
   ! CHECK:         %[[VAL_46:.*]] = arith.constant 10 : index
   ! CHECK:         %[[VAL_47:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
   ! CHECK:         %[[VAL_48:.*]] = fir.array_load %[[VAL_0]](%[[VAL_47]]) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.array<10xf32>
@@ -217,8 +217,8 @@
   ! CHECK:           fir.result %[[VAL_192:.*]] : !fir.array<10xf32>
   ! CHECK:         }
   ! CHECK:         fir.array_merge_store %[[VAL_166]], %[[VAL_193:.*]] to %[[VAL_0]] : !fir.array<10xf32>, !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>
-  ! CHECK:         fir.freemem %[[VAL_92]]
-  ! CHECK:         fir.freemem %[[VAL_50]]
+  ! CHECK:         fir.freemem %[[VAL_92]] : !fir.heap<!fir.array<10x!fir.logical<4>>>
+  ! CHECK:         fir.freemem %[[VAL_50]] : !fir.heap<!fir.array<10x!fir.logical<4>>>
   ! CHECK:         return
   ! CHECK:       }
 

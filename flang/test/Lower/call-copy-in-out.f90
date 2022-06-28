@@ -36,7 +36,7 @@ subroutine test_assumed_shape_to_array(x)
 ! CHECK:  }
 ! CHECK:  fir.array_merge_store %[[x_load]], %[[copyout:.*]] to %[[x]] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.array<?xf32>>
 
-! CHECK: fir.freemem %[[temp]]
+! CHECK: fir.freemem %[[temp]] : !fir.heap<!fir.array<?xf32>>
 
   call bar(x)
 end subroutine
@@ -62,7 +62,7 @@ subroutine eval_expr_only_once(x)
 ! CHECK-NOT: fir.call @_QPonly_once()
 ! CHECK:  fir.array_merge_store %{{.*}}, %{{.*}} to %[[x_section]]
 ! CHECK-NOT: fir.call @_QPonly_once()
-! CHECK: fir.freemem %[[temp]]
+! CHECK: fir.freemem %[[temp]] : !fir.heap<!fir.array<?xf32>>
 end subroutine
 
 ! Test no copy-in/copy-out is generated for contiguous assumed shapes.
@@ -90,7 +90,7 @@ subroutine test_parenthesis(x)
 ! CHECK:  fir.call @_QPbar(%[[cast]]) : (!fir.ref<!fir.array<?xf32>>) -> ()
   call bar((x))
 ! CHECK-NOT:  fir.array_merge_store
-! CHECK: fir.freemem %[[temp]]
+! CHECK: fir.freemem %[[temp]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK: return
 end subroutine
 
@@ -111,7 +111,7 @@ subroutine test_intent_out(x)
 ! CHECK:  fir.call @_QPbar_intent_out(%[[cast]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
   call bar_intent_out(x)
 ! CHECK:  fir.array_merge_store %{{.*}}, %{{.*}} to %[[x]]
-! CHECK: fir.freemem %[[temp]]
+! CHECK: fir.freemem %[[temp]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK: return
 end subroutine
 
@@ -132,7 +132,7 @@ subroutine test_intent_in(x)
 ! CHECK:  fir.call @_QPbar_intent_in(%[[cast]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
   call bar_intent_in(x)
 ! CHECK-NOT:  fir.array_merge_store
-! CHECK: fir.freemem %[[temp]]
+! CHECK: fir.freemem %[[temp]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK: return
 end subroutine
 
@@ -153,7 +153,7 @@ subroutine test_intent_inout(x)
 ! CHECK:  fir.call @_QPbar_intent_inout(%[[cast]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
   call bar_intent_inout(x)
 ! CHECK:  fir.array_merge_store %{{.*}}, %{{.*}} to %[[x]]
-! CHECK: fir.freemem %[[temp]]
+! CHECK: fir.freemem %[[temp]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK: return
 end subroutine
 
@@ -212,7 +212,7 @@ subroutine test_char(x)
   ! CHECK: fir.result %[[VAL_47]] : !fir.array<?x!fir.char<1,10>>
   ! CHECK: }
   ! CHECK: fir.array_merge_store %[[VAL_27]], %[[VAL_48:.*]] to %[[VAL_0]] : !fir.array<?x!fir.char<1,10>>, !fir.array<?x!fir.char<1,10>>, !fir.box<!fir.array<?x!fir.char<1,10>>>
-  ! CHECK: fir.freemem %[[VAL_4]]
+  ! CHECK: fir.freemem %[[VAL_4]] : !fir.heap<!fir.array<?x!fir.char<1,10>>>
 
   character(10) :: x(:)
   call bar_char(x)

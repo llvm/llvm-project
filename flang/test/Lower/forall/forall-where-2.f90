@@ -44,7 +44,7 @@ end subroutine
 ! CHECK:        %[[tempAddr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
                 ! local temps that were generated during the evaluation are cleaned-up after the value were stored
                 ! into the ragged array temp.
-! CHECK:        fir.freemem %[[tempAddr]]
+! CHECK:        fir.freemem %[[tempAddr]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:      }
 ! CHECK:    }
             ! Where assignment

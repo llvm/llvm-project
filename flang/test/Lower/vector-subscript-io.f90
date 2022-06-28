@@ -89,7 +89,7 @@ subroutine only_once(x)
 ! CHECK:   %[[VAL_58:.*]] = arith.cmpi ne, %[[VAL_57]], %[[VAL_28]] : i64
 ! CHECK:   cf.cond_br %[[VAL_58]], ^bb4, ^bb5
 ! CHECK: ^bb4:
-! CHECK:   fir.freemem %[[VAL_56]]
+! CHECK:   fir.freemem %[[VAL_56]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:   cf.br ^bb5
 ! CHECK: ^bb5:
 ! CHECK:   %[[VAL_59:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_34]]) : (!fir.ref<i8>) -> i32

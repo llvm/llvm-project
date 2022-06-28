@@ -26,6 +26,9 @@ function kagf(findex)
 end
 
 ! CHECK-LABEL: func @_QQmain
+  do i = -2, 2
+    print*, kagi(i)
+  enddo
 
   print*, kagf(-2.0)
   print*, kagf(-1.0)
