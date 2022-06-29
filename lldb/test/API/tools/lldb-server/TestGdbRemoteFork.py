@@ -153,54 +153,44 @@ class TestGdbRemoteFork(GdbRemoteForkTestBase):
     def test_vkill_both(self):
         self.vkill_test(kill_parent=True, kill_child=True)
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_c_parent(self):
         self.resume_one_test(run_order=["parent", "parent"])
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_c_child(self):
         self.resume_one_test(run_order=["child", "child"])
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_c_parent_then_child(self):
         self.resume_one_test(run_order=["parent", "parent", "child", "child"])
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_c_child_then_parent(self):
         self.resume_one_test(run_order=["child", "child", "parent", "parent"])
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_c_interspersed(self):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"])
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_vCont_parent(self):
         self.resume_one_test(run_order=["parent", "parent"], use_vCont=True)
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_vCont_child(self):
         self.resume_one_test(run_order=["child", "child"], use_vCont=True)
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_vCont_parent_then_child(self):
         self.resume_one_test(run_order=["parent", "parent", "child", "child"],
                              use_vCont=True)
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_vCont_child_then_parent(self):
         self.resume_one_test(run_order=["child", "child", "parent", "parent"],
                              use_vCont=True)
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_vCont_interspersed(self):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"],
@@ -241,7 +231,6 @@ class TestGdbRemoteFork(GdbRemoteForkTestBase):
         ], True)
         self.expect_gdbremote_sequence()
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_threadinfo(self):
         parent_pid, parent_tid, child_pid, child_tid = (
@@ -287,7 +276,6 @@ class TestGdbRemoteFork(GdbRemoteForkTestBase):
                  ], True)
         self.expect_gdbremote_sequence()
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_memory_read_write(self):
         self.build()
@@ -375,7 +363,6 @@ class TestGdbRemoteFork(GdbRemoteForkTestBase):
             self.assertEqual(data, name + "\0")
             self.reset_test_sequence()
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_register_read_write(self):
         parent_pid, parent_tid, child_pid, child_tid = (
@@ -472,7 +459,6 @@ class TestGdbRemoteFork(GdbRemoteForkTestBase):
             self.assertIsNotNone(data)
             self.assertEqual(data, old_val[1])
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_qC(self):
         parent_pid, parent_tid, child_pid, child_tid = (
@@ -507,7 +493,6 @@ class TestGdbRemoteFork(GdbRemoteForkTestBase):
                  ], True)
         self.expect_gdbremote_sequence()
 
-    @expectedFailureAll(archs=["arm"])  # TODO
     @add_test_categories(["fork"])
     def test_T(self):
         parent_pid, parent_tid, child_pid, child_tid = (
