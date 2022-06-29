@@ -270,9 +270,11 @@ class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
 class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase>
   : SM_Pseudo<opName, (outs), !con(!if(hasSBase, (ins baseClass:$sbase), (ins)),
                                    (ins smem_offset:$offset, SReg_32:$soffset, i8imm:$sdata)),
-              !if(hasSBase, " $sbase", " ") # ", $offset, $soffset, $sdata"> {
-  let mayLoad = 0;
-  let mayStore = 0;
+              !if(hasSBase, " $sbase,", "") # " $offset, $soffset, $sdata"> {
+  // Mark prefetches as both load and store to prevent reordering with loads
+  // and stores. This is also needed for pattern to match prefetch intrinsic.
+  let mayLoad = 1;
+  let mayStore = 1;
   let has_glc = 0;
   let LGKM_CNT = 0;
   let has_sbase = hasSBase;
@@ -1313,7 +1315,7 @@ class SMEM_Real_gfx12<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{19}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, 0);
   let Inst{24-20} = ?; // TODO-GFX12: Add new bits {24-20}: TH, Scope, NV
   let Inst{25}    = !if(ps.has_glc, cpol{CPolBit.GLC}, 0);
-  let Inst{55-32} = !if(ps.has_offset, offset{23-0}, !if(ps.has_soffset, 0, ?));
+  let Inst{55-32} = offset{23-0};
 }
 
 class SMEM_Real_Prefetch_gfx12 <bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx12<op, ps> {
