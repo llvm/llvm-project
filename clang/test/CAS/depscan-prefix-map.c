@@ -1,3 +1,5 @@
+// REQUIRES: clang-cc1daemon
+//
 // Check with prefix mapping:
 //
 // RUN: rm -rf %t.d

@@ -1,6 +1,6 @@
 // Test running -fdepscan.
 //
-// REQUIRES: system-darwin
+// REQUIRES: system-darwin, clang-cc1daemon
 
 // RUN: rm -rf %t-*.d %t.cas
 // RUN: %clang -target x86_64-apple-macos11 -I %S/Inputs -fdepscan=daemon \

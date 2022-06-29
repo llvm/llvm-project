@@ -160,10 +160,6 @@ if platform.system() not in ['Windows']:
 if platform.system() not in ['Darwin', 'Fuchsia']:
     config.available_features.add('libgcc')
 
-# Feature for the build directory path is not too long for certain tests.
-if len(config.clang_obj_root) < 50:
-    config.available_features.add('short-build-dir-path')
-
 # Case-insensitive file system
 
 
