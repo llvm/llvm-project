@@ -63,6 +63,38 @@ public:
     return nullptr;
   }
 
+  Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getUDiv(LC, RC, IsExact);
+    return nullptr;
+  }
+
+  Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getSDiv(LC, RC, IsExact);
+    return nullptr;
+  }
+
+  Value *FoldURem(Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getURem(LC, RC);
+    return nullptr;
+  }
+
+  Value *FoldSRem(Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getSRem(LC, RC);
+    return nullptr;
+  }
+
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
@@ -164,26 +196,8 @@ public:
     return ConstantExpr::getFMul(LHS, RHS);
   }
 
-  Constant *CreateUDiv(Constant *LHS, Constant *RHS,
-                               bool isExact = false) const override {
-    return ConstantExpr::getUDiv(LHS, RHS, isExact);
-  }
-
-  Constant *CreateSDiv(Constant *LHS, Constant *RHS,
-                               bool isExact = false) const override {
-    return ConstantExpr::getSDiv(LHS, RHS, isExact);
-  }
-
   Constant *CreateFDiv(Constant *LHS, Constant *RHS) const override {
     return ConstantExpr::getFDiv(LHS, RHS);
-  }
-
-  Constant *CreateURem(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getURem(LHS, RHS);
-  }
-
-  Constant *CreateSRem(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getSRem(LHS, RHS);
   }
 
   Constant *CreateFRem(Constant *LHS, Constant *RHS) const override {

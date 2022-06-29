@@ -52,6 +52,18 @@ public:
 
   Value *FoldOr(Value *LHS, Value *RHS) const override { return nullptr; }
 
+  Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    return nullptr;
+  }
+
+  Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    return nullptr;
+  }
+
+  Value *FoldURem(Value *LHS, Value *RHS) const override { return nullptr; }
+
+  Value *FoldSRem(Value *LHS, Value *RHS) const override { return nullptr; }
+
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return nullptr;
   }
@@ -123,30 +135,8 @@ public:
     return BinaryOperator::CreateFMul(LHS, RHS);
   }
 
-  Instruction *CreateUDiv(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateUDiv(LHS, RHS);
-    return BinaryOperator::CreateExactUDiv(LHS, RHS);
-  }
-
-  Instruction *CreateSDiv(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateSDiv(LHS, RHS);
-    return BinaryOperator::CreateExactSDiv(LHS, RHS);
-  }
-
   Instruction *CreateFDiv(Constant *LHS, Constant *RHS) const override {
     return BinaryOperator::CreateFDiv(LHS, RHS);
-  }
-
-  Instruction *CreateURem(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateURem(LHS, RHS);
-  }
-
-  Instruction *CreateSRem(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateSRem(LHS, RHS);
   }
 
   Instruction *CreateFRem(Constant *LHS, Constant *RHS) const override {
