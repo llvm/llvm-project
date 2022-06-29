@@ -6320,8 +6320,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   Args.AddLastArg(CmdArgs, options::OPT_funroll_loops,
                   options::OPT_fno_unroll_loops);
 
-  Args.AddLastArg(CmdArgs, options::OPT_fstrict_flex_arrays_EQ);
-
   Args.AddLastArg(CmdArgs, options::OPT_pthread);
 
   if (Args.hasFlag(options::OPT_mspeculative_load_hardening,
