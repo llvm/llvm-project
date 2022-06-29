@@ -1217,17 +1217,17 @@ static GlobalVariable *createPrivateGlobalForSourceLoc(Module &M,
 /// Check if \p G has been created by a trusted compiler pass.
 static bool GlobalWasGeneratedByCompiler(GlobalVariable *G) {
   // Do not instrument @llvm.global_ctors, @llvm.used, etc.
-  if (G->getName().startswith("llvm."))
+  if (G->getName().startswith("llvm.") ||
+      // Do not instrument gcov counter arrays.
+      G->getName().startswith("__llvm_gcov_ctr") ||
+      // Do not instrument rtti proxy symbols for function sanitizer.
+      G->getName().startswith("__llvm_rtti_proxy"))
     return true;
 
   // Do not instrument asan globals.
   if (G->getName().startswith(kAsanGenPrefix) ||
       G->getName().startswith(kSanCovGenPrefix) ||
       G->getName().startswith(kODRGenPrefix))
-    return true;
-
-  // Do not instrument gcov counter arrays.
-  if (G->getName() == "__llvm_gcov_ctr")
     return true;
 
   return false;
