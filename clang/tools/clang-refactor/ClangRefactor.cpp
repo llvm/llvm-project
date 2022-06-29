@@ -39,11 +39,11 @@ static cl::OptionCategory CommonRefactorOptions("Refactoring options");
 
 static cl::opt<bool> Verbose("v", cl::desc("Use verbose output"),
                              cl::cat(cl::getGeneralCategory()),
-                             cl::sub(*cl::AllSubCommands));
+                             cl::sub(cl::SubCommand::getAll()));
 
 static cl::opt<bool> Inplace("i", cl::desc("Inplace edit <file>s"),
                              cl::cat(cl::getGeneralCategory()),
-                             cl::sub(*cl::AllSubCommands));
+                             cl::sub(cl::SubCommand::getAll()));
 
 } // end namespace opts
 
