@@ -105,12 +105,16 @@ public:
   ///     This value defines whether to have an intel pt trace buffer per thread
   ///     or per cpu core.
   ///
+  /// \param[in] disable_cgroup_filtering
+  ///     Disable the cgroup filtering that is automatically applied when doing
+  ///     per cpu tracing.
+  ///
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
   llvm::Error Start(uint64_t ipt_trace_size, uint64_t total_buffer_size_limit,
                     bool enable_tsc, llvm::Optional<uint64_t> psb_period,
-                    bool m_per_cpu_tracing);
+                    bool m_per_cpu_tracing, bool disable_cgroup_filtering);
 
   /// \copydoc Trace::Start
   llvm::Error Start(StructuredData::ObjectSP configuration =
