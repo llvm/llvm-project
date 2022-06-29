@@ -20,7 +20,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
-#include "clang/Analysis/FlowSensitive/SourceLocationsLattice.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
@@ -35,7 +35,7 @@ namespace dataflow {
 namespace {
 
 using namespace ::clang::ast_matchers;
-using LatticeTransferState = TransferState<SourceLocationsLattice>;
+using LatticeTransferState = TransferState<NoopLattice>;
 
 DeclarationMatcher optionalClass() {
   return classTemplateSpecializationDecl(
@@ -312,18 +312,7 @@ void transferUnwrapCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
       if (auto *Loc = maybeInitializeOptionalValueMember(
               UnwrapExpr->getType(), *OptionalVal, State.Env))
         State.Env.setStorageLocation(*UnwrapExpr, *Loc);
-
-    auto *Prop = OptionalVal->getProperty("has_value");
-    if (auto *HasValueVal = cast_or_null<BoolValue>(Prop)) {
-      if (State.Env.flowConditionImplies(*HasValueVal))
-        return;
-    }
   }
-
-  // Record that this unwrap is *not* provably safe.
-  // FIXME: include either the name of the optional (if applicable) or a source
-  // range of the access for easier interpretation of the result.
-  State.Lattice.getSourceLocations().insert(ObjectExpr->getBeginLoc());
 }
 
 void transferMakeOptionalCall(const CallExpr *E,
@@ -716,12 +705,10 @@ UncheckedOptionalAccessModel::optionalClassDecl() {
 
 UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(
     ASTContext &Ctx, UncheckedOptionalAccessModelOptions Options)
-    : DataflowAnalysis<UncheckedOptionalAccessModel, SourceLocationsLattice>(
-          Ctx),
+    : DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice>(Ctx),
       TransferMatchSwitch(buildTransferMatchSwitch(Options)) {}
 
-void UncheckedOptionalAccessModel::transfer(const Stmt *S,
-                                            SourceLocationsLattice &L,
+void UncheckedOptionalAccessModel::transfer(const Stmt *S, NoopLattice &L,
                                             Environment &Env) {
   LatticeTransferState State(L, Env);
   TransferMatchSwitch(*S, getASTContext(), State);
