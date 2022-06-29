@@ -74,6 +74,8 @@ public:
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
+
+  bool supportsTailCalls() const;
 };
 
 } // end namespace llvm

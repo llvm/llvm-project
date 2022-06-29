@@ -776,6 +776,9 @@ public:
   /// the scalarization cost of a load/store.
   bool supportsEfficientVectorElementLoadStore() const;
 
+  /// If the target supports tail calls.
+  bool supportsTailCalls() const;
+
   /// Don't restrict interleaved unrolling to small loops.
   bool enableAggressiveInterleaving(bool LoopHasReductions) const;
 
@@ -1621,6 +1624,7 @@ public:
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                    ArrayRef<Type *> Tys) = 0;
   virtual bool supportsEfficientVectorElementLoadStore() = 0;
+  virtual bool supportsTailCalls() = 0;
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const = 0;
@@ -2082,6 +2086,8 @@ public:
   bool supportsEfficientVectorElementLoadStore() override {
     return Impl.supportsEfficientVectorElementLoadStore();
   }
+
+  bool supportsTailCalls() override { return Impl.supportsTailCalls(); }
 
   bool enableAggressiveInterleaving(bool LoopHasReductions) override {
     return Impl.enableAggressiveInterleaving(LoopHasReductions);
