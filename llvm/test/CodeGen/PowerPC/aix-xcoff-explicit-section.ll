@@ -25,7 +25,7 @@ entry:
 ; CHECK-NEXT:         .globl  .ext_fun
 ; CHECK-NEXT:         .align  4
 ; CHECK-NEXT:         .csect ext_fun[DS]
-; CHECK:              .csect .ext_fun_sec[PR],2
+; CHECK:              .csect .ext_fun_sec[PR],5
 ; CHECK-NEXT: .ext_fun:
 ; CHECK:              .csect .ext_const_sec[RO],2
 ; CHECK-NEXT:         .globl  ext_const
@@ -90,7 +90,7 @@ entry:
 ; CHECKSYM-NEXT:        SectionLen: 28
 ; CHECKSYM-NEXT:        ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:        TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:        SymbolAlignmentLog2: 4
+; CHECKSYM-NEXT:        SymbolAlignmentLog2: 5
 ; CHECKSYM-NEXT:        SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:        StorageMappingClass: XMC_PR (0x0)
 ; CHECKSYM-NEXT:        StabInfoIndex: 0x0
