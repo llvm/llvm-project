@@ -89,4 +89,9 @@ let Command = "process trace start intel pt" in {
          "converted to the approximate number of raw trace bytes between PSB "
          "packets as: 2 ^ (value + 11), e.g. value 3 means 16KiB between PSB "
          "packets. Defaults to 0 if supported.">;
+  def process_trace_start_intel_pt_disable_cgroup_filtering:
+    Option<"disable-cgroup-filtering", "d">,
+    Desc<"Disable the automatic cgroup filtering that is applied if --per-cpu "
+         "is provided. Cgroup filtering allows collecting intel pt data "
+         "exclusively of processes of the same cgroup as the target.">;
 }

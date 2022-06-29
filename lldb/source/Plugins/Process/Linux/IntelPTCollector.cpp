@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <fcntl.h>
 #include <fstream>
 #include <linux/perf_event.h>
 #include <sstream>
@@ -65,6 +66,39 @@ Error IntelPTCollector::TraceStop(const TraceStopRequest &request) {
   }
 }
 
+/// \return
+///   some file descriptor in /sys/fs/ associated with the cgroup of the given
+///   pid, or \a llvm::None if the pid is not part of a cgroup.
+static Optional<int> GetCGroupFileDescriptor(lldb::pid_t pid) {
+  static Optional<int> fd;
+  if (fd)
+    return fd;
+
+  std::ifstream ifile;
+  ifile.open(formatv("/proc/{0}/cgroup", pid));
+  if (!ifile)
+    return None;
+
+  std::string line;
+  while (std::getline(ifile, line)) {
+    if (line.find("0:") != 0)
+      continue;
+
+    std::string slice = line.substr(line.find_first_of("/"));
+    if (slice.empty())
+      return None;
+    std::string cgroup_file = formatv("/sys/fs/cgroup/{0}", slice);
+    // This cgroup should for the duration of the target, so we don't need to
+    // invoke close ourselves.
+    int maybe_fd = open(cgroup_file.c_str(), O_RDONLY);
+    if (maybe_fd != -1) {
+      fd = maybe_fd;
+      return fd;
+    }
+  }
+  return None;
+}
+
 Error IntelPTCollector::TraceStart(const TraceIntelPTStartRequest &request) {
   if (request.IsProcessTracing()) {
     if (m_process_trace_up) {
@@ -83,14 +117,19 @@ Error IntelPTCollector::TraceStart(const TraceIntelPTStartRequest &request) {
       if (!tsc_conversion)
         return tsc_conversion.takeError();
 
-      // We force the enabledment of TSCs, which is needed for correlating the
+      // We force the enablement of TSCs, which is needed for correlating the
       // cpu traces.
       TraceIntelPTStartRequest effective_request = request;
       effective_request.enable_tsc = true;
 
+      // We try to use cgroup filtering whenever possible
+      Optional<int> cgroup_fd;
+      if (!request.disable_cgroup_filtering.getValueOr(false))
+        cgroup_fd = GetCGroupFileDescriptor(m_process.GetID());
+
       if (Expected<IntelPTProcessTraceUP> trace =
               IntelPTMultiCoreTrace::StartOnAllCores(effective_request,
-                                                     m_process)) {
+                                                     m_process, cgroup_fd)) {
         m_process_trace_up = std::move(*trace);
         return Error::success();
       } else {

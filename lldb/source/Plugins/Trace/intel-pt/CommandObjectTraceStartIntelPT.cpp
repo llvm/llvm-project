@@ -122,6 +122,10 @@ Status CommandObjectProcessTraceStartIntelPT::CommandOptions::SetOptionValue(
     m_per_cpu_tracing = true;
     break;
   }
+  case 'd': {
+    m_disable_cgroup_filtering = true;
+    break;
+  }
   case 'p': {
     int64_t psb_period;
     if (option_arg.empty() || option_arg.getAsInteger(0, psb_period) ||
@@ -145,6 +149,7 @@ void CommandObjectProcessTraceStartIntelPT::CommandOptions::
   m_enable_tsc = kDefaultEnableTscValue;
   m_psb_period = kDefaultPsbPeriod;
   m_per_cpu_tracing = kDefaultPerCpuTracing;
+  m_disable_cgroup_filtering = kDefaultDisableCgroupFiltering;
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -154,10 +159,10 @@ CommandObjectProcessTraceStartIntelPT::CommandOptions::GetDefinitions() {
 
 bool CommandObjectProcessTraceStartIntelPT::DoExecute(
     Args &command, CommandReturnObject &result) {
-  if (Error err = m_trace.Start(m_options.m_ipt_trace_size,
-                                m_options.m_process_buffer_size_limit,
-                                m_options.m_enable_tsc, m_options.m_psb_period,
-                                m_options.m_per_cpu_tracing))
+  if (Error err = m_trace.Start(
+          m_options.m_ipt_trace_size, m_options.m_process_buffer_size_limit,
+          m_options.m_enable_tsc, m_options.m_psb_period,
+          m_options.m_per_cpu_tracing, m_options.m_disable_cgroup_filtering))
     result.SetError(Status(std::move(err)));
   else
     result.SetStatus(eReturnStatusSuccessFinishResult);

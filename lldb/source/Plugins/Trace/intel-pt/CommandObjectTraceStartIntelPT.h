@@ -79,6 +79,7 @@ public:
     bool m_enable_tsc;
     llvm::Optional<uint64_t> m_psb_period;
     bool m_per_cpu_tracing;
+    bool m_disable_cgroup_filtering;
   };
 
   CommandObjectProcessTraceStartIntelPT(TraceIntelPT &trace,

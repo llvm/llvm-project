@@ -226,6 +226,12 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
     s.Format(
         "    Number of continuous executions for this thread: {0}\n",
         storage.multicpu_decoder->GetNumContinuousExecutionsForThread(tid));
+    s.Format("    Total number of PSB blocks found: {0}\n",
+             storage.multicpu_decoder->GetTotalPSBBlocksCount());
+    s.Format("    Number of PSB blocks for this thread {0}\n",
+             storage.multicpu_decoder->GePSBBlocksCountForThread(tid));
+    s.Format("    Total number of unattributed PSB blocks found: {0}\n",
+             storage.multicpu_decoder->GetUnattributedPSBBlocksCount());
   }
 
   // Errors
@@ -408,17 +414,22 @@ const char *TraceIntelPT::GetStartConfigurationHelp() {
     [process tracing only]
 
   - int processBufferSizeLimit (defaults to {4} MiB):
+    [process tracing only]
+
+  - boolean disableCgroupFiltering (default to {5}):
     [process tracing only])",
                             kDefaultIptTraceSize, kDefaultEnableTscValue,
                             kDefaultPsbPeriod, kDefaultPerCpuTracing,
-                            kDefaultProcessBufferSizeLimit / 1024 / 1024));
+                            kDefaultProcessBufferSizeLimit / 1024 / 1024,
+                            kDefaultDisableCgroupFiltering));
   }
   return message->c_str();
 }
 
 Error TraceIntelPT::Start(uint64_t ipt_trace_size,
                           uint64_t total_buffer_size_limit, bool enable_tsc,
-                          Optional<uint64_t> psb_period, bool per_cpu_tracing) {
+                          Optional<uint64_t> psb_period, bool per_cpu_tracing,
+                          bool disable_cgroup_filtering) {
   TraceIntelPTStartRequest request;
   request.ipt_trace_size = ipt_trace_size;
   request.process_buffer_size_limit = total_buffer_size_limit;
@@ -426,6 +437,7 @@ Error TraceIntelPT::Start(uint64_t ipt_trace_size,
   request.psb_period = psb_period;
   request.type = GetPluginName().str();
   request.per_cpu_tracing = per_cpu_tracing;
+  request.disable_cgroup_filtering = disable_cgroup_filtering;
   return Trace::Start(toJSON(request));
 }
 
@@ -435,6 +447,7 @@ Error TraceIntelPT::Start(StructuredData::ObjectSP configuration) {
   bool enable_tsc = kDefaultEnableTscValue;
   Optional<uint64_t> psb_period = kDefaultPsbPeriod;
   bool per_cpu_tracing = kDefaultPerCpuTracing;
+  bool disable_cgroup_filtering = kDefaultDisableCgroupFiltering;
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
@@ -444,6 +457,8 @@ Error TraceIntelPT::Start(StructuredData::ObjectSP configuration) {
       dict->GetValueForKeyAsBoolean("enableTsc", enable_tsc);
       dict->GetValueForKeyAsInteger("psbPeriod", psb_period);
       dict->GetValueForKeyAsBoolean("perCpuTracing", per_cpu_tracing);
+      dict->GetValueForKeyAsBoolean("disableCgroupFiltering",
+                                    disable_cgroup_filtering);
     } else {
       return createStringError(inconvertibleErrorCode(),
                                "configuration object is not a dictionary");
@@ -451,7 +466,7 @@ Error TraceIntelPT::Start(StructuredData::ObjectSP configuration) {
   }
 
   return Start(ipt_trace_size, process_buffer_size_limit, enable_tsc,
-               psb_period, per_cpu_tracing);
+               psb_period, per_cpu_tracing, disable_cgroup_filtering);
 }
 
 llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
