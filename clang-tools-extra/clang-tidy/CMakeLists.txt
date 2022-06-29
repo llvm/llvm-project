@@ -112,6 +112,7 @@ set(ALL_CLANG_TIDY_CHECKS ${ALL_CLANG_TIDY_CHECKS} PARENT_SCOPE)
 add_subdirectory(plugin)
 add_subdirectory(tool)
 add_subdirectory(utils)
+add_subdirectory(cir-tidy)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY .
