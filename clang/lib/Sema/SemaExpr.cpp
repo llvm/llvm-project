@@ -17943,7 +17943,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   if (NeedDefinition &&
       (Func->getTemplateSpecializationKind() != TSK_Undeclared ||
        Func->getMemberSpecializationInfo()))
-    checkSpecializationReachability(Loc, Func);
+    checkSpecializationVisibility(Loc, Func);
 
   if (getLangOpts().CUDA)
     CheckCUDACall(Loc, Func);

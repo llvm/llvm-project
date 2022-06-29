@@ -8642,8 +8642,17 @@ bool Sema::hasStructuralCompatLayout(Decl *D, Decl *Suggested) {
   return Ctx.IsEquivalent(D, Suggested);
 }
 
-bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
-                                   AcceptableKind Kind, bool OnlyNeedComplete) {
+/// Determine whether there is any declaration of \p D that was ever a
+///        definition (perhaps before module merging) and is currently visible.
+/// \param D The definition of the entity.
+/// \param Suggested Filled in with the declaration that should be made visible
+///        in order to provide a definition of this entity.
+/// \param OnlyNeedComplete If \c true, we only need the type to be complete,
+///        not defined. This only matters for enums with a fixed underlying
+///        type, since in all other cases, a type is complete if and only if it
+///        is defined.
+bool Sema::hasVisibleDefinition(NamedDecl *D, NamedDecl **Suggested,
+                                bool OnlyNeedComplete) {
   // Easy case: if we don't have modules, all declarations are visible.
   if (!getLangOpts().Modules && !getLangOpts().ModulesLocalVisibility)
     return true;
@@ -8687,14 +8696,13 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
       VD = Pattern;
     D = VD->getDefinition();
   }
-
   assert(D && "missing definition for pattern of instantiated definition");
 
   *Suggested = D;
 
-  auto DefinitionIsAcceptable = [&] {
+  auto DefinitionIsVisible = [&] {
     // The (primary) definition might be in a visible module.
-    if (isAcceptable(D, Kind))
+    if (isVisible(D))
       return true;
 
     // A visible module might have a merged definition instead.
@@ -8712,49 +8720,17 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
     return false;
   };
 
-  if (DefinitionIsAcceptable())
+  if (DefinitionIsVisible())
     return true;
 
   // The external source may have additional definitions of this entity that are
   // visible, so complete the redeclaration chain now and ask again.
   if (auto *Source = Context.getExternalSource()) {
     Source->CompleteRedeclChain(D);
-    return DefinitionIsAcceptable();
+    return DefinitionIsVisible();
   }
 
   return false;
-}
-
-/// Determine whether there is any declaration of \p D that was ever a
-///        definition (perhaps before module merging) and is currently visible.
-/// \param D The definition of the entity.
-/// \param Suggested Filled in with the declaration that should be made visible
-///        in order to provide a definition of this entity.
-/// \param OnlyNeedComplete If \c true, we only need the type to be complete,
-///        not defined. This only matters for enums with a fixed underlying
-///        type, since in all other cases, a type is complete if and only if it
-///        is defined.
-bool Sema::hasVisibleDefinition(NamedDecl *D, NamedDecl **Suggested,
-                                bool OnlyNeedComplete) {
-  return hasAcceptableDefinition(D, Suggested, Sema::AcceptableKind::Visible,
-                                 OnlyNeedComplete);
-}
-
-/// Determine whether there is any declaration of \p D that was ever a
-///        definition (perhaps before module merging) and is currently
-///        reachable.
-/// \param D The definition of the entity.
-/// \param Suggested Filled in with the declaration that should be made
-/// reachable
-///        in order to provide a definition of this entity.
-/// \param OnlyNeedComplete If \c true, we only need the type to be complete,
-///        not defined. This only matters for enums with a fixed underlying
-///        type, since in all other cases, a type is complete if and only if it
-///        is defined.
-bool Sema::hasReachableDefinition(NamedDecl *D, NamedDecl **Suggested,
-                                  bool OnlyNeedComplete) {
-  return hasAcceptableDefinition(D, Suggested, Sema::AcceptableKind::Reachable,
-                                 OnlyNeedComplete);
 }
 
 /// Locks in the inheritance model for the given class and all of its bases.
@@ -8826,19 +8802,20 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   // Check that any necessary explicit specializations are visible. For an
   // enum, we just need the declaration, so don't check this.
   if (Def && !isa<EnumDecl>(Def))
-    checkSpecializationReachability(Loc, Def);
+    checkSpecializationVisibility(Loc, Def);
 
   // If we have a complete type, we're done.
   if (!Incomplete) {
-    NamedDecl *Suggested = nullptr;
+    // If we know about the definition but it is not visible, complain.
+    NamedDecl *SuggestedDef = nullptr;
     if (Def &&
-        !hasReachableDefinition(Def, &Suggested, /*OnlyNeedComplete=*/true)) {
+        !hasVisibleDefinition(Def, &SuggestedDef, /*OnlyNeedComplete*/true)) {
       // If the user is going to see an error here, recover by making the
       // definition visible.
       bool TreatAsComplete = Diagnoser && !isSFINAEContext();
-      if (Diagnoser && Suggested)
-        diagnoseMissingImport(Loc, Suggested, MissingImportKind::Definition,
-                              /*Recover*/ TreatAsComplete);
+      if (Diagnoser && SuggestedDef)
+        diagnoseMissingImport(Loc, SuggestedDef, MissingImportKind::Definition,
+                              /*Recover*/TreatAsComplete);
       return !TreatAsComplete;
     } else if (Def && !TemplateInstCallbacks.empty()) {
       CodeSynthesisContext TempInst;
