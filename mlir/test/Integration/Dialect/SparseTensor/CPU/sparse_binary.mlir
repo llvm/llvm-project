@@ -212,7 +212,7 @@ module {
       } -> tensor<4x4xf64, #DCSR>
     return %0 : tensor<4x4xf64, #DCSR>
   }
-  
+
   // Performs triangular add/sub operation (using semi-ring binary op).
   func.func @triangular(%A: tensor<4x4xf64, #DCSR>,
                         %B: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
@@ -253,7 +253,7 @@ module {
     // Defines out-block constant bounds.
     %thres_out_up = arith.constant 2.0 : f64
     %thres_out_lo = arith.constant -2.0 : f64
-    
+
     %0 = linalg.generic #trait_mat_op
       ins(%A, %B: tensor<4x4xf64, #DCSR>,
                   tensor<4x4xf64, #DCSR>)
@@ -288,7 +288,7 @@ module {
                 %tmp = arith.select %cmp, %thres_out_up, %ny : f64
                 %cmp1 = arith.cmpf "ole", %tmp, %thres_out_lo : f64
                 %ret = arith.select %cmp1, %thres_out_lo, %tmp : f64
-                sparse_tensor.yield %ret : f64          
+                sparse_tensor.yield %ret : f64
             }
           linalg.yield %result : f64
       } -> tensor<4x4xf64, #DCSR>
@@ -339,7 +339,7 @@ module {
       } -> tensor<4x4xf64, #DCSR>
     return %0 : tensor<4x4xf64, #DCSR>
   }
-  
+
   //
   // Utility functions to dump the value of a tensor.
   //
@@ -395,11 +395,11 @@ module {
     %m = bufferization.to_memref %c : memref<4x4xf64>
     %v = vector.transfer_read %m[%c0, %c0], %du: memref<4x4xf64>, vector<4x4xf64>
     vector.print %v : vector<4x4xf64>
-    
+
     %1 = sparse_tensor.values %A : tensor<4x4xf64, #DCSR> to memref<?xf64>
     %2 = vector.transfer_read %1[%c0], %du: memref<?xf64>, vector<16xf64>
     vector.print %2 : vector<16xf64>
-    
+
     // Release the resources.
     memref.dealloc %m : memref<4x4xf64>
     return
@@ -413,16 +413,16 @@ module {
     %m = bufferization.to_memref %c : memref<4x4xi8>
     %v = vector.transfer_read %m[%c0, %c0], %du: memref<4x4xi8>, vector<4x4xi8>
     vector.print %v : vector<4x4xi8>
-    
+
     %1 = sparse_tensor.values %A : tensor<4x4xi8, #DCSR> to memref<?xi8>
     %2 = vector.transfer_read %1[%c0], %du: memref<?xi8>, vector<16xi8>
     vector.print %2 : vector<16xi8>
-    
+
     // Release the resources.
     memref.dealloc %m : memref<4x4xi8>
     return
   }
-  
+
   // Driver method to call and verify kernels.
   func.func @entry() {
     %c0 = arith.constant 0 : index
@@ -489,7 +489,7 @@ module {
     %6 = call @add_tensor_1(%sm3, %sm4)
       : (tensor<4x4xf64, #DCSR>, tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>
     %7 = call @add_tensor_2(%sm3, %sm4)
-      : (tensor<4x4xf64, #DCSR>, tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>    
+      : (tensor<4x4xf64, #DCSR>, tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>
     %8 = call @triangular(%sm3, %sm4)
       : (tensor<4x4xf64, #DCSR>, tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>
     %9 = call @sub_with_thres(%sm3, %sm4)
@@ -541,7 +541,7 @@ module {
     call @dump_mat_4x4(%9) : (tensor<4x4xf64, #DCSR>) -> ()
     call @dump_mat_4x4_i8(%10) : (tensor<4x4xi8, #DCSR>) -> ()
     call @dump_mat_4x4(%11) : (tensor<4x4xf64, #DCSR>) -> ()
-    
+
     // Release the resources.
     sparse_tensor.release %sv1 : tensor<?xf64, #SparseVector>
     sparse_tensor.release %sv2 : tensor<?xf64, #SparseVector>
