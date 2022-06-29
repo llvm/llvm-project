@@ -451,7 +451,8 @@ void printType(Type type, AsmPrinter &printer);
 // Utility functions.
 //===----------------------------------------------------------------------===//
 
-/// Returns `true` if the given type is compatible with the LLVM dialect.
+/// Returns `true` if the given type is compatible with the LLVM dialect. This
+/// is an alias to `LLVMDialect::isCompatibleType`.
 bool isCompatibleType(Type type);
 
 /// Returns `true` if the given outer type is compatible with the LLVM dialect
