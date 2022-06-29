@@ -215,7 +215,7 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
                              /*numDims=*/copy.getNumVars() - numNonDivLocals)))
           .computeSymbolicIntegerLexMin();
-  PresburgerSet result =
+  PresburgerRelation result =
       lexminResult.lexmin.getDomain().unionSet(lexminResult.unboundedDomain);
 
   // The result set might lie in the wrong space -- all its ids are dims.
