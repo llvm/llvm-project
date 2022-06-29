@@ -22,10 +22,7 @@
 // RUN:   -x c %s -### 2>&1 |                                   \
 // RUN:   FileCheck %s --check-prefix=CHECK-CMD
 
-// CHECK-CMD: clang
-// CHECK-CMD: (in-process)
-// CHECK-CMD: clang
-// CHECK-CMD-SAME: "-cc1depscan" "-fdepscan=daemon" "-o"
+// CHECK-CMD: "-cc1depscan" "-fdepscan=daemon" "-o"
 // CHECK-CMD: "-cc1" "@
 
 // RUN: %clang -target x86_64-apple-macos11 -fdepscan=daemon -c \
