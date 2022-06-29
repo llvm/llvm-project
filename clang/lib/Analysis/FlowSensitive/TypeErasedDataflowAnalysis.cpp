@@ -97,8 +97,8 @@ public:
 
   void VisitForStmt(const ForStmt *S) {
     auto *Cond = S->getCond();
-    assert(Cond != nullptr);
-    extendFlowCondition(*Cond);
+    if (Cond != nullptr)
+      extendFlowCondition(*Cond);
   }
 
   void VisitBinaryOperator(const BinaryOperator *S) {
