@@ -1118,6 +1118,7 @@ struct ParallelInsertSliceOpInterface
 
   LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
                                  const AnalysisState &state) const {
+    // RaW conflicts are resolved as part of ForeachThreadOp.
     return success();
   }
 
@@ -1129,9 +1130,7 @@ struct ParallelInsertSliceOpInterface
     auto foreachThreadOp =
         cast<ForeachThreadOp>(performConcurrentlyOp->getParentOp());
 
-    // If the op bufferizes out-of-place, allocate the copy before the
-    // ForeachThreadOp.
-    rewriter.setInsertionPoint(foreachThreadOp);
+    // Get destination buffer.
     FailureOr<Value> destBuffer =
         getBuffer(rewriter, insertOp.getDest(), options);
     if (failed(destBuffer))
@@ -1156,6 +1155,8 @@ struct ParallelInsertSliceOpInterface
     rewriter.setInsertionPointAfter(foreachThreadOp);
     Value toTensorOp =
         rewriter.create<ToTensorOp>(foreachThreadOp.getLoc(), *destBuffer);
+    // PerformConcurrentlyOp can have multiple ParallelInserSliceOps. Find the
+    // index of `op` within yielding ops.
     unsigned resultNum = 0;
     for (Operation &nextOp : performConcurrentlyOp.yieldingOps()) {
       if (&nextOp == op)
