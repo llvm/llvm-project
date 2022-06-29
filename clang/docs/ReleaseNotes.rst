@@ -565,6 +565,9 @@ AST Matchers
 
 - Added ``forEachTemplateArgument`` matcher which creates a match every
   time a ``templateArgument`` matches the matcher supplied to it.
+  
+- Added ``objcStringLiteral`` matcher which matches ObjectiveC String
+  literal expressions.
 
 clang-format
 ------------
