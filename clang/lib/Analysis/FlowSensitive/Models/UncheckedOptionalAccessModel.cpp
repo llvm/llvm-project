@@ -22,11 +22,13 @@
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/SourceLocationsLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace dataflow {
@@ -551,6 +553,17 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
   return llvm::None;
 }
 
+StatementMatcher
+valueCall(llvm::Optional<StatementMatcher> &IgnorableOptional) {
+  return isOptionalMemberCallWithName("value", IgnorableOptional);
+}
+
+StatementMatcher
+valueOperatorCall(llvm::Optional<StatementMatcher> &IgnorableOptional) {
+  return expr(anyOf(isOptionalOperatorCallWithName("*", IgnorableOptional),
+                    isOptionalOperatorCallWithName("->", IgnorableOptional)));
+}
+
 auto buildTransferMatchSwitch(
     const UncheckedOptionalAccessModelOptions &Options) {
   // FIXME: Evaluate the efficiency of matchers. If using matchers results in a
@@ -592,20 +605,18 @@ auto buildTransferMatchSwitch(
 
       // optional::value
       .CaseOf<CXXMemberCallExpr>(
-          isOptionalMemberCallWithName("value", IgnorableOptional),
+          valueCall(IgnorableOptional),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             transferUnwrapCall(E, E->getImplicitObjectArgument(), State);
           })
 
       // optional::operator*, optional::operator->
-      .CaseOf<CallExpr>(
-          expr(anyOf(isOptionalOperatorCallWithName("*", IgnorableOptional),
-                     isOptionalOperatorCallWithName("->", IgnorableOptional))),
-          [](const CallExpr *E, const MatchFinder::MatchResult &,
-             LatticeTransferState &State) {
-            transferUnwrapCall(E, E->getArg(0), State);
-          })
+      .CaseOf<CallExpr>(valueOperatorCall(IgnorableOptional),
+                        [](const CallExpr *E, const MatchFinder::MatchResult &,
+                           LatticeTransferState &State) {
+                          transferUnwrapCall(E, E->getArg(0), State);
+                        })
 
       // optional::has_value
       .CaseOf<CXXMemberCallExpr>(isOptionalMemberCallWithName("has_value"),
@@ -653,6 +664,49 @@ auto buildTransferMatchSwitch(
       .Build();
 }
 
+std::vector<SourceLocation> diagnoseUnwrapCall(const Expr *UnwrapExpr,
+                                               const Expr *ObjectExpr,
+                                               const Environment &Env) {
+  if (auto *OptionalVal =
+          Env.getValue(*ObjectExpr, SkipPast::ReferenceThenPointer)) {
+    auto *Prop = OptionalVal->getProperty("has_value");
+    if (auto *HasValueVal = cast_or_null<BoolValue>(Prop)) {
+      if (Env.flowConditionImplies(*HasValueVal))
+        return {};
+    }
+  }
+
+  // Record that this unwrap is *not* provably safe.
+  // FIXME: include either the name of the optional (if applicable) or a source
+  // range of the access for easier interpretation of the result.
+  return {ObjectExpr->getBeginLoc()};
+}
+
+auto buildDiagnoseMatchSwitch(
+    const UncheckedOptionalAccessModelOptions &Options) {
+  // FIXME: Evaluate the efficiency of matchers. If using matchers results in a
+  // lot of duplicated work (e.g. string comparisons), consider providing APIs
+  // that avoid it through memoization.
+  auto IgnorableOptional = ignorableOptional(Options);
+  return MatchSwitchBuilder<const Environment, std::vector<SourceLocation>>()
+      // optional::value
+      .CaseOf<CXXMemberCallExpr>(
+          valueCall(IgnorableOptional),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+             const Environment &Env) {
+            return diagnoseUnwrapCall(E, E->getImplicitObjectArgument(), Env);
+          })
+
+      // optional::operator*, optional::operator->
+      .CaseOf<CallExpr>(
+          valueOperatorCall(IgnorableOptional),
+          [](const CallExpr *E, const MatchFinder::MatchResult &,
+             const Environment &Env) {
+            return diagnoseUnwrapCall(E, E->getArg(0), Env);
+          })
+      .Build();
+}
+
 } // namespace
 
 ast_matchers::DeclarationMatcher
@@ -697,6 +751,15 @@ bool UncheckedOptionalAccessModel::merge(QualType Type, const Value &Val1,
     MergedEnv.addToFlowCondition(MergedEnv.makeNot(HasValueVal));
   setHasValue(MergedVal, HasValueVal);
   return true;
+}
+
+UncheckedOptionalAccessDiagnoser::UncheckedOptionalAccessDiagnoser(
+    UncheckedOptionalAccessModelOptions Options)
+    : DiagnoseMatchSwitch(buildDiagnoseMatchSwitch(Options)) {}
+
+std::vector<SourceLocation> UncheckedOptionalAccessDiagnoser::diagnose(
+    ASTContext &Context, const Stmt *Stmt, const Environment &Env) {
+  return DiagnoseMatchSwitch(*Stmt, Context, Env);
 }
 
 } // namespace dataflow
