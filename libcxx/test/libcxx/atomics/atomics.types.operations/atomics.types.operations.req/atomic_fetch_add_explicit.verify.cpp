@@ -49,12 +49,12 @@ void pointer_to_incomplete_type() {
 void function_pointer() {
   {
     volatile std::atomic<void (*)(int)> fun;
-    // expected-error@atomic:* {{static_assert failed due to requirement '!is_function<void (int)>::value' "Pointer to function isn't allowed"}}
+    // expected-error-re@atomic:* {{static_assert failed due to requirement '!is_function<void (int)>::value'{{.*}}Pointer to function isn't allowed}}
     std::atomic_fetch_add_explicit(&fun, 0, std::memory_order_relaxed);
   }
   {
     std::atomic<void (*)(int)> fun;
-    // expected-error@atomic:* {{static_assert failed due to requirement '!is_function<void (int)>::value' "Pointer to function isn't allowed"}}
+    // expected-error-re@atomic:* {{static_assert failed due to requirement '!is_function<void (int)>::value'{{.*}}Pointer to function isn't allowed}}
     std::atomic_fetch_add_explicit(&fun, 0, std::memory_order_relaxed);
   }
 }

@@ -27,14 +27,14 @@ void f() {
   std::span<const int, 4> sp(array);
 
   //  Offset too large templatized
-  [[maybe_unused]] auto s1 = sp.subspan<5>(); // expected-error@span:* {{span<T, N>::subspan<Offset, Count>(): Offset out of range"}}
+  [[maybe_unused]] auto s1 = sp.subspan<5>(); // expected-error@span:* {{span<T, N>::subspan<Offset, Count>(): Offset out of range}}
 
   //  Count too large templatized
-  [[maybe_unused]] auto s2 = sp.subspan<0, 5>(); // expected-error@span:* {{span<T, N>::subspan<Offset, Count>(): Offset + Count out of range"}}
+  [[maybe_unused]] auto s2 = sp.subspan<0, 5>(); // expected-error@span:* {{span<T, N>::subspan<Offset, Count>(): Offset + Count out of range}}
 
   //  Offset + Count too large templatized
-  [[maybe_unused]] auto s3 = sp.subspan<2, 3>(); // expected-error@span:* {{span<T, N>::subspan<Offset, Count>(): Offset + Count out of range"}}
+  [[maybe_unused]] auto s3 = sp.subspan<2, 3>(); // expected-error@span:* {{span<T, N>::subspan<Offset, Count>(): Offset + Count out of range}}
 
   //  Offset + Count overflow templatized
-  [[maybe_unused]] auto s4 = sp.subspan<3, std::size_t(-2)>(); // expected-error@span:* {{span<T, N>::subspan<Offset, Count>(): Offset + Count out of range"}}, expected-error-re@span:* {{array is too large{{(.* elements)}}}}
+  [[maybe_unused]] auto s4 = sp.subspan<3, std::size_t(-2)>(); // expected-error@span:* {{span<T, N>::subspan<Offset, Count>(): Offset + Count out of range}}, expected-error-re@span:* {{array is too large{{(.* elements)}}}}
 }

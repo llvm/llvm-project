@@ -29,7 +29,7 @@ public:
 };
 
 int main(int, char**) {
-  // expected-error@* 2 {{"The specified type does not meet the requirements of Cpp17MoveInsertable"}}
+  // expected-error@* 2 {{The specified type does not meet the requirements of Cpp17MoveInsertable}}
 
   // Other diagnostics that might be seen as Clang tries to continue compiling:
   // expected-error@* 0-2 {{call to deleted constructor}}
