@@ -274,6 +274,11 @@ Other
  This option allows for MRI scripts to be read through the standard input
  stream. No other options are compatible with this option.
 
+.. option:: --output=<dir>
+
+ Specify a directory where archive members should be extracted to. By default the
+ current working directory is used.
+
 .. option:: --rsp-quoting=<type>
  This option selects the quoting style ``<type>`` for response files, either
  ``posix`` or ``windows``. The default when on Windows is ``windows``, otherwise the
