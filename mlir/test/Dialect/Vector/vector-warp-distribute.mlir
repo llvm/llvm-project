@@ -491,3 +491,23 @@ func.func @vector_reduction(%laneid: index) -> (f32) {
   }
   return %r : f32
 }
+
+// -----
+
+func.func @vector_reduction(%laneid: index, %m0: memref<4x2x32xf32>, %m1: memref<f32>) {
+  %c0 = arith.constant 0: index
+  %f0 = arith.constant 0.0: f32
+  //     CHECK-D: %[[R:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<f32>) {
+  //     CHECK-D: vector.warp_execute_on_lane_0(%{{.*}})[32] {
+  //     CHECK-D:   vector.transfer_write %[[R]], %{{.*}}[] : vector<f32>, memref<f32>
+  vector.warp_execute_on_lane_0(%laneid)[32] {
+    %0 = vector.transfer_read %m0[%c0, %c0, %c0], %f0 {in_bounds = [true]} : memref<4x2x32xf32>, vector<32xf32>
+    %1 = vector.transfer_read %m1[], %f0 : memref<f32>, vector<f32>
+    %2 = vector.extractelement %1[] : vector<f32>
+    %3 = vector.reduction <add>, %0 : vector<32xf32> into f32
+    %4 = arith.addf %3, %2 : f32
+    %5 = vector.broadcast %4 : f32 to vector<f32>
+    vector.transfer_write %5, %m1[] : vector<f32>, memref<f32>
+  }
+  return 
+}
