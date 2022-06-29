@@ -54,8 +54,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
         return int(procinfo['pid'], 16)
 
     @skipIfWindows
+    @skipIfDarwin
     @expectedFailureNetBSD
-    @expectedFailureDarwin # No signals delivered
     @expectedFailureAll(oslist=["freebsd"],
                         bugnumber="github.com/llvm/llvm-project/issues/56086")
     @skipIfAsan # Times out under asan
@@ -84,10 +84,10 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
             threads[:1])
 
     @skipIfWindows
+    @skipIfDarwin
     @expectedFailureNetBSD
     @expectedFailureAll(oslist=["freebsd"],
                         bugnumber="github.com/llvm/llvm-project/issues/56086")
-    @expectedFailureDarwin # Only one signal delivered
     @skipIfAsan # Times out under asan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_all_threads(self):
