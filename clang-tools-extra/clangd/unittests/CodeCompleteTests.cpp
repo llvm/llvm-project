@@ -3131,6 +3131,26 @@ TEST(CompletionTest, ObjectiveCMethodDeclaration) {
   EXPECT_THAT(C, ElementsAre(signature("(char)c secondArgument:(id)object")));
 }
 
+TEST(CompletionTest, ObjectiveCMethodDeclarationFilterOnEntireSelector) {
+  auto Results = completions(R"objc(
+      @interface Foo
+      - (int)valueForCharacter:(char)c secondArgument:(id)object;
+      @end
+      @implementation Foo
+      secondArg^
+      @end
+    )objc",
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
+
+  auto C = Results.Completions;
+  EXPECT_THAT(C, ElementsAre(named("valueForCharacter:")));
+  EXPECT_THAT(C, ElementsAre(filterText("valueForCharacter:secondArgument:")));
+  EXPECT_THAT(C, ElementsAre(kind(CompletionItemKind::Method)));
+  EXPECT_THAT(C, ElementsAre(qualifier("- (int)")));
+  EXPECT_THAT(C, ElementsAre(signature("(char)c secondArgument:(id)object")));
+}
+
 TEST(CompletionTest, ObjectiveCMethodDeclarationPrefixTyped) {
   auto Results = completions(R"objc(
       @interface Foo
