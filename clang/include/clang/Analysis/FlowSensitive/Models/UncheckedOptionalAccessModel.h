@@ -20,6 +20,8 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/SourceLocationsLattice.h"
+#include "clang/Basic/SourceLocation.h"
+#include <vector>
 
 namespace clang {
 namespace dataflow {
@@ -69,6 +71,19 @@ public:
 
 private:
   MatchSwitch<TransferState<SourceLocationsLattice>> TransferMatchSwitch;
+};
+
+class UncheckedOptionalAccessDiagnoser {
+public:
+  UncheckedOptionalAccessDiagnoser(
+      UncheckedOptionalAccessModelOptions Options = {});
+
+  std::vector<SourceLocation> diagnose(ASTContext &Context, const Stmt *Stmt,
+                                       const Environment &Env);
+
+private:
+  MatchSwitch<const Environment, std::vector<SourceLocation>>
+      DiagnoseMatchSwitch;
 };
 
 } // namespace dataflow
