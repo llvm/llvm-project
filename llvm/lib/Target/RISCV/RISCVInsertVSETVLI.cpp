@@ -82,38 +82,6 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
-static bool isSplatMoveInstr(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-  case RISCV::PseudoVMV_V_X_M1:
-  case RISCV::PseudoVMV_V_X_M2:
-  case RISCV::PseudoVMV_V_X_M4:
-  case RISCV::PseudoVMV_V_X_M8:
-  case RISCV::PseudoVMV_V_X_MF2:
-  case RISCV::PseudoVMV_V_X_MF4:
-  case RISCV::PseudoVMV_V_X_MF8:
-  case RISCV::PseudoVMV_V_I_M1:
-  case RISCV::PseudoVMV_V_I_M2:
-  case RISCV::PseudoVMV_V_I_M4:
-  case RISCV::PseudoVMV_V_I_M8:
-  case RISCV::PseudoVMV_V_I_MF2:
-  case RISCV::PseudoVMV_V_I_MF4:
-  case RISCV::PseudoVMV_V_I_MF8:
-    return true;
-  }
-}
-
-static bool isSplatOfZeroOrMinusOne(const MachineInstr &MI) {
-  if (!isSplatMoveInstr(MI))
-    return false;
-
-  const MachineOperand &SrcMO = MI.getOperand(1);
-  if (SrcMO.isImm())
-    return SrcMO.getImm() == 0 || SrcMO.getImm() == -1;
-  return SrcMO.isReg() && SrcMO.getReg() == RISCV::X0;
-}
-
 /// Get the EEW for a load or store instruction.  Return None if MI is not
 /// a load or store which ignores SEW.
 static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
@@ -419,14 +387,6 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
   if (RISCVII::hasSEWOp(TSFlags) && MI.getNumExplicitDefs() == 0) {
     Res.TailPolicy = false;
     Res.MaskPolicy = false;
-  }
-
-  // A splat of 0/-1 is always a splat of 0/-1, regardless of etype.
-  // TODO: We're currently demanding VL + SEWLMULRatio which is sufficient
-  // but not neccessary.  What we really need is VLInBytes.
-  if (isSplatOfZeroOrMinusOne(MI)) {
-    Res.SEW = false;
-    Res.LMUL = false;
   }
 
   // If this is a mask reg operation, it only cares about VLMAX.
