@@ -96,9 +96,13 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     };
     unsigned val = None;
     unsigned histLimit = 1;
+    bool isOptionsParsed = false;
 
-    void parseOptions(ArrayRef<std::string> remarks, ArrayRef<std::string> hist,
+    void parseOptions(ArrayRef<StringRef> remarks, ArrayRef<StringRef> hist,
                       unsigned hist_limit) {
+      if (isOptionsParsed)
+        return;
+
       for (auto &remark : remarks) {
         val |= StringSwitch<unsigned>(remark)
                    .Case("pset-invalid", RemarkPsetInvalid)
@@ -114,10 +118,20 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
                    .Default(None);
       }
       histLimit = hist_limit;
+      isOptionsParsed = true;
     }
 
     void parseOptions(LifetimeCheckPass &pass) {
-      parseOptions(pass.remarksList, pass.historyList, pass.historyLimit);
+      SmallVector<llvm::StringRef, 4> remarks;
+      SmallVector<llvm::StringRef, 4> hists;
+
+      for (auto &r : pass.remarksList)
+        remarks.push_back(r);
+
+      for (auto &h : pass.historyList)
+        hists.push_back(h);
+
+      parseOptions(remarks, hists, pass.historyLimit);
     }
 
     bool emitRemarkAll() { return val & RemarkAll; }
@@ -1452,6 +1466,16 @@ std::unique_ptr<Pass> mlir::createLifetimeCheckPass() {
 std::unique_ptr<Pass> mlir::createLifetimeCheckPass(clang::ASTContext *astCtx) {
   auto lifetime = std::make_unique<LifetimeCheckPass>();
   lifetime->setASTContext(astCtx);
+  return std::move(lifetime);
+}
+
+std::unique_ptr<Pass> mlir::createLifetimeCheckPass(ArrayRef<StringRef> remark,
+                                                    ArrayRef<StringRef> hist,
+                                                    unsigned hist_limit,
+                                                    clang::ASTContext *astCtx) {
+  auto lifetime = std::make_unique<LifetimeCheckPass>();
+  lifetime->setASTContext(astCtx);
+  lifetime->opts.parseOptions(remark, hist, hist_limit);
   return std::move(lifetime);
 }
 
