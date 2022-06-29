@@ -31,6 +31,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -1571,7 +1572,8 @@ static void simplifySuspendPoints(coro::Shape &Shape) {
 }
 
 static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,
-                                 SmallVectorImpl<Function *> &Clones) {
+                                 SmallVectorImpl<Function *> &Clones,
+                                 TargetTransformInfo &TTI) {
   assert(Shape.ABI == coro::ABI::Switch);
 
   createResumeEntryBlock(F, Shape);
@@ -1586,7 +1588,13 @@ static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,
   postSplitCleanup(*DestroyClone);
   postSplitCleanup(*CleanupClone);
 
-  addMustTailToCoroResumes(*ResumeClone);
+  // Adding musttail call to support symmetric transfer.
+  // Skip targets which don't support tail call.
+  //
+  // FIXME: Could we support symmetric transfer effectively without musttail
+  // call?
+  if (TTI.supportsTailCalls())
+    addMustTailToCoroResumes(*ResumeClone);
 
   // Store addresses resume/destroy/cleanup functions in the coroutine frame.
   updateCoroFrame(Shape, ResumeClone, DestroyClone, CleanupClone);
@@ -1891,6 +1899,7 @@ namespace {
 
 static coro::Shape splitCoroutine(Function &F,
                                   SmallVectorImpl<Function *> &Clones,
+                                  TargetTransformInfo &TTI,
                                   bool OptimizeFrame) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
@@ -1913,7 +1922,7 @@ static coro::Shape splitCoroutine(Function &F,
   } else {
     switch (Shape.ABI) {
     case coro::ABI::Switch:
-      splitSwitchCoroutine(F, Shape, Clones);
+      splitSwitchCoroutine(F, Shape, Clones, TTI);
       break;
     case coro::ABI::Async:
       splitAsyncCoroutine(F, Shape, Clones);
@@ -2090,7 +2099,8 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     F.setSplittedCoroutine();
 
     SmallVector<Function *, 4> Clones;
-    const coro::Shape Shape = splitCoroutine(F, Clones, OptimizeFrame);
+    const coro::Shape Shape = splitCoroutine(
+        F, Clones, FAM.getResult<TargetIRAnalysis>(F), OptimizeFrame);
     updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
 
     if (!Shape.CoroSuspends.empty()) {
