@@ -122,7 +122,7 @@ entry:
 ; CHECKSYM-NEXT:       SectionLen: 136
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:       SymbolAlignmentLog2: 4
+; CHECKSYM-NEXT:       SymbolAlignmentLog2: 5
 ; CHECKSYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
