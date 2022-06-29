@@ -46,6 +46,11 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   auto *DXILValMD = M.getOrInsertNamedMetadata(DXILValKey);
   DXILValMD->addOperand(Val);
 }
+void addDisableOptimizations(llvm::Module &M) {
+  StringRef Key = "dx.disable_optimizations";
+  M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
+}
+
 } // namespace
 
 void CGHLSLRuntime::finishCodeGen() {
@@ -56,6 +61,8 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 
   generateGlobalCtorDtorCalls();
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+    addDisableOptimizations(M);
 }
 
 void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {

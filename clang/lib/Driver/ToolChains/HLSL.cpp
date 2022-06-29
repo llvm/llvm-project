@@ -164,6 +164,18 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT__SLASH_O) {
+      StringRef OStr = A->getValue();
+      if (OStr == "d") {
+        DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_O0));
+        A->claim();
+        continue;
+      } else {
+        DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O), OStr);
+        A->claim();
+        continue;
+      }
+    }
     if (A->getOption().getID() == options::OPT_emit_pristine_llvm) {
       // Translate fcgl into -S -emit-llvm and -disable-llvm-passes.
       DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_S));
@@ -191,6 +203,9 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     DAL->AddSeparateArg(nullptr,
                         Opts.getOption(options::OPT_dxil_validator_version),
                         DefaultValidatorVer);
+  }
+  if (!DAL->hasArg(options::OPT_O_Group)) {
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O), "3");
   }
   // FIXME: add validation for enable_16bit_types should be after HLSL 2018 and
   // shader model 6.2.
