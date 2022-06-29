@@ -481,11 +481,12 @@ public:
   /// position `pos` of dstKind, otherwise they are placed after all the other
   /// variables of kind dstKind. The internal ordering among the moved variables
   /// is preserved.
-  void covertVarKind(VarKind srcKind, unsigned varStart, unsigned varLimit,
-                     VarKind dstKind, unsigned pos);
+  void convertVarKind(VarKind srcKind, unsigned varStart, unsigned varLimit,
+                      VarKind dstKind, unsigned pos);
   void convertVarKind(VarKind srcKind, unsigned varStart, unsigned varLimit,
                       VarKind dstKind) {
-    covertVarKind(srcKind, varStart, varLimit, dstKind, getNumVarKind(dstKind));
+    convertVarKind(srcKind, varStart, varLimit, dstKind,
+                   getNumVarKind(dstKind));
   }
   void convertToLocal(VarKind kind, unsigned varStart, unsigned varLimit) {
     convertVarKind(kind, varStart, varLimit, VarKind::Local);
