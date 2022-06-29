@@ -1861,11 +1861,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
     return selectDSBvhStackIntrinsic(I);
-  default: {
-    return selectImpl(I, *CoverageInfo);
   }
-  }
-
   return selectImpl(I, *CoverageInfo);
 }
 

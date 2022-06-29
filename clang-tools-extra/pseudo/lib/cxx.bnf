@@ -158,7 +158,10 @@ postfix-expression := REINTERPRET_CAST < type-id > ( expression )
 postfix-expression := CONST_CAST < type-id > ( expression )
 postfix-expression := TYPEID ( expression )
 postfix-expression := TYPEID ( type-id )
-expression-list := initializer-list
+#! Standard defines expression-list in terms of initializer-list, but our
+#  initializer-list allows designators.
+expression-list := initializer-clause ..._opt
+expression-list := expression-list , initializer-clause ..._opt
 # expr.unary
 unary-expression := postfix-expression
 unary-expression := unary-operator cast-expression
@@ -453,15 +456,17 @@ brace-or-equal-initializer := = initializer-clause
 brace-or-equal-initializer := braced-init-list
 initializer-clause := assignment-expression
 initializer-clause := braced-init-list
+#! Allow mixed designated/non-designated init-list.
+# This is standard C, and accepted by clang and others as an extension.
 braced-init-list := { initializer-list ,_opt }
-braced-init-list := { designated-initializer-list ,_opt }
 braced-init-list := { }
-initializer-list := initializer-clause ..._opt
-initializer-list := initializer-list , initializer-clause ..._opt
-designated-initializer-list := designated-initializer-clause
-designated-initializer-list := designated-initializer-list , designated-initializer-clause
-designated-initializer-clause := designator brace-or-equal-initializer
+initializer-list := initializer-list-item ..._opt
+initializer-list := initializer-list , initializer-list-item ..._opt
+initializer-list-item := initializer-clause
+initializer-list-item := designator brace-or-equal-initializer
 designator := . IDENTIFIER
+#! Array designators are legal in C, and a common extension in C++.
+designator := [ expression ]
 expr-or-braced-init-list := expression
 expr-or-braced-init-list := braced-init-list
 # dcl.fct
