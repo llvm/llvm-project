@@ -40,6 +40,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -717,7 +718,7 @@ static bool hasProfileData(const Function &F, const FunctionOutliningInfo &OI) {
     if (!BR || BR->isUnconditional())
       continue;
     uint64_t T, F;
-    if (BR->extractProfMetadata(T, F))
+    if (extractBranchWeights(*BR, T, F))
       return true;
   }
   return false;
