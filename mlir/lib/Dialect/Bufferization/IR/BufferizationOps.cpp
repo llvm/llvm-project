@@ -346,7 +346,7 @@ struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
   LogicalResult matchAndRewrite(tensor::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
     Optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
-    auto allocTensorOp = dimOp.source().getDefiningOp<AllocTensorOp>();
+    auto allocTensorOp = dimOp.getSource().getDefiningOp<AllocTensorOp>();
     if (!allocTensorOp || !maybeConstantIndex)
       return failure();
     if (!allocTensorOp.getType().isDynamicDim(*maybeConstantIndex))
@@ -558,12 +558,12 @@ struct DimOfToTensorFolder : public OpRewritePattern<tensor::DimOp> {
 
   LogicalResult matchAndRewrite(tensor::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto memrefToTensorOp = dimOp.source().getDefiningOp<ToTensorOp>();
+    auto memrefToTensorOp = dimOp.getSource().getDefiningOp<ToTensorOp>();
     if (!memrefToTensorOp)
       return failure();
 
     rewriter.replaceOpWithNewOp<memref::DimOp>(
-        dimOp, memrefToTensorOp.getMemref(), dimOp.index());
+        dimOp, memrefToTensorOp.getMemref(), dimOp.getIndex());
     return success();
   }
 };

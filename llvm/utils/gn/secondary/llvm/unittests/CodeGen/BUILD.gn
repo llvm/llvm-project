@@ -24,6 +24,7 @@ unittest("CodeGenTests") {
     "AsmPrinterDwarfTest.cpp",
     "DIEHashTest.cpp",
     "DIETest.cpp",
+    "DwarfStringPoolEntryRefTest.cpp",
     "InstrRefLDVTest.cpp",
     "LexicalScopesTest.cpp",
     "LowLevelTypeTest.cpp",

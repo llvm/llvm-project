@@ -52,6 +52,18 @@ public:
 
   Value *FoldOr(Value *LHS, Value *RHS) const override { return nullptr; }
 
+  Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    return nullptr;
+  }
+
+  Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    return nullptr;
+  }
+
+  Value *FoldURem(Value *LHS, Value *RHS) const override { return nullptr; }
+
+  Value *FoldSRem(Value *LHS, Value *RHS) const override { return nullptr; }
+
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return nullptr;
   }
@@ -72,6 +84,20 @@ public:
 
   Value *FoldInsertValue(Value *Agg, Value *Val,
                          ArrayRef<unsigned> IdxList) const override {
+    return nullptr;
+  }
+
+  Value *FoldExtractElement(Value *Vec, Value *Idx) const override {
+    return nullptr;
+  }
+
+  Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                           Value *Idx) const override {
+    return nullptr;
+  }
+
+  Value *FoldShuffleVector(Value *V1, Value *V2,
+                           ArrayRef<int> Mask) const override {
     return nullptr;
   }
 
@@ -109,30 +135,8 @@ public:
     return BinaryOperator::CreateFMul(LHS, RHS);
   }
 
-  Instruction *CreateUDiv(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateUDiv(LHS, RHS);
-    return BinaryOperator::CreateExactUDiv(LHS, RHS);
-  }
-
-  Instruction *CreateSDiv(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateSDiv(LHS, RHS);
-    return BinaryOperator::CreateExactSDiv(LHS, RHS);
-  }
-
   Instruction *CreateFDiv(Constant *LHS, Constant *RHS) const override {
     return BinaryOperator::CreateFDiv(LHS, RHS);
-  }
-
-  Instruction *CreateURem(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateURem(LHS, RHS);
-  }
-
-  Instruction *CreateSRem(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateSRem(LHS, RHS);
   }
 
   Instruction *CreateFRem(Constant *LHS, Constant *RHS) const override {
@@ -254,25 +258,6 @@ public:
   Instruction *CreateFCmp(CmpInst::Predicate P,
                           Constant *LHS, Constant *RHS) const override {
     return new FCmpInst(P, LHS, RHS);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  Instruction *CreateExtractElement(Constant *Vec,
-                                    Constant *Idx) const override {
-    return ExtractElementInst::Create(Vec, Idx);
-  }
-
-  Instruction *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                                   Constant *Idx) const override {
-    return InsertElementInst::Create(Vec, NewElt, Idx);
-  }
-
-  Instruction *CreateShuffleVector(Constant *V1, Constant *V2,
-                                   ArrayRef<int> Mask) const override {
-    return new ShuffleVectorInst(V1, V2, Mask);
   }
 };
 

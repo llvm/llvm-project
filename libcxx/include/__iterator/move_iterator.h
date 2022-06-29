@@ -93,6 +93,9 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     move_iterator& operator++() { ++__current_; return *this; }
 
+    _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+    pointer operator->() const { return __current_; }
+
 #if _LIBCPP_STD_VER > 17
     _LIBCPP_HIDE_FROM_ABI constexpr
     move_iterator() requires is_constructible_v<_Iter> : __current_() {}
@@ -155,8 +158,6 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     reference operator*() const { return static_cast<reference>(*__current_); }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
-    pointer operator->() const { return __current_; }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     reference operator[](difference_type __n) const { return static_cast<reference>(__current_[__n]); }
 

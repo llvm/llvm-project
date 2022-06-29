@@ -14,5 +14,7 @@ limits
 new
 tuple
 type_traits
+typeinfo
+utility
 variant
 version

@@ -6,7 +6,10 @@
 ; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-zero --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK,ZERO %s < %t
 
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-nan --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck --check-prefixes=CHECK,NAN %s < %t
+
+; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK,ZERO %s < %t
 
 ; CHECK-INTERESTINGNESS: = fadd float %
@@ -52,6 +55,20 @@
 ; ZERO: %fadd9 = fadd <2 x float> zeroinitializer, zeroinitializer
 ; ZERO: %fadd10 = fadd <2 x float> zeroinitializer, zeroinitializer
 ; ZERO: %fadd11 = fadd <2 x float> zeroinitializer, zeroinitializer
+
+
+; NAN: %fadd0 = fadd float %arg0, 0x7FF8000000000000
+; NAN: %fadd1 = fadd float 0x7FF8000000000000, 0x7FF8000000000000
+; NAN: %fadd2 = fadd float 0x7FF8000000000000, 0.000000e+00
+; NAN: %fadd3 = fadd float 0x7FF8000000000000, 1.000000e+00
+; NAN: %fadd4 = fadd float 0x7FF8000000000000, 0x7FF8000000000000
+; NAN: %fadd5 = fadd float 0x7FF8000000000000, 0x7FF8000000000000
+; NAN: %fadd6 = fadd <2 x float> %arg2, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; NAN: %fadd7 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; NAN: %fadd8 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, zeroinitializer
+; NAN: %fadd9 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 1.000000e+00, float 1.000000e+00>
+; NAN: %fadd10 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; NAN: %fadd11 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
 
 define void @foo(float %arg0, float %arg1, <2 x float> %arg2, <2 x float> %arg3) {
 bb0:

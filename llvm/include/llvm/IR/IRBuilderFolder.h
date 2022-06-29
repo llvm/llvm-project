@@ -38,6 +38,14 @@ public:
 
   virtual Value *FoldOr(Value *LHS, Value *RHS) const = 0;
 
+  virtual Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const = 0;
+
+  virtual Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const = 0;
+
+  virtual Value *FoldURem(Value *LHS, Value *RHS) const = 0;
+
+  virtual Value *FoldSRem(Value *LHS, Value *RHS) const = 0;
+
   virtual Value *FoldICmp(CmpInst::Predicate P, Value *LHS,
                           Value *RHS) const = 0;
 
@@ -52,6 +60,14 @@ public:
   virtual Value *FoldInsertValue(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> IdxList) const = 0;
 
+  virtual Value *FoldExtractElement(Value *Vec, Value *Idx) const = 0;
+
+  virtual Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                                   Value *Idx) const = 0;
+
+  virtual Value *FoldShuffleVector(Value *V1, Value *V2,
+                                   ArrayRef<int> Mask) const = 0;
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -63,13 +79,7 @@ public:
   virtual Value *CreateMul(Constant *LHS, Constant *RHS,
                            bool HasNUW = false, bool HasNSW = false) const = 0;
   virtual Value *CreateFMul(Constant *LHS, Constant *RHS) const = 0;
-  virtual Value *CreateUDiv(Constant *LHS, Constant *RHS,
-                            bool isExact = false) const = 0;
-  virtual Value *CreateSDiv(Constant *LHS, Constant *RHS,
-                            bool isExact = false) const = 0;
   virtual Value *CreateFDiv(Constant *LHS, Constant *RHS) const = 0;
-  virtual Value *CreateURem(Constant *LHS, Constant *RHS) const = 0;
-  virtual Value *CreateSRem(Constant *LHS, Constant *RHS) const = 0;
   virtual Value *CreateFRem(Constant *LHS, Constant *RHS) const = 0;
   virtual Value *CreateShl(Constant *LHS, Constant *RHS,
                            bool HasNUW = false, bool HasNSW = false) const = 0;
@@ -116,16 +126,6 @@ public:
 
   virtual Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                             Constant *RHS) const = 0;
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  virtual Value *CreateExtractElement(Constant *Vec, Constant *Idx) const = 0;
-  virtual Value *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                                     Constant *Idx) const = 0;
-  virtual Value *CreateShuffleVector(Constant *V1, Constant *V2,
-                                     ArrayRef<int> Mask) const = 0;
 };
 
 } // end namespace llvm

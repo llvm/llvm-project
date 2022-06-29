@@ -555,6 +555,16 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #  include <cwchar>
 #endif
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <algorithm>
+#  include <functional>
+#  include <iterator>
+#  include <new>
+#  include <typeinfo>
+#  include <utility>
+#  include <vector>
+#endif
+
 // standard-mandated includes
 
 // [iterator.range]

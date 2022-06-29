@@ -154,7 +154,8 @@ TraceHTR::TraceHTR(Thread &thread, TraceCursor &cursor)
       // TODO: Make distinction between errors by storing the error messages.
       // Currently, all errors are treated the same.
       m_instruction_layer_up->AppendInstruction(0);
-      more_data_in_trace = cursor.Next();
+      cursor.Next();
+      more_data_in_trace = cursor.HasValue();
     } else {
       lldb::addr_t current_instruction_load_address = cursor.GetLoadAddress();
       lldb::TraceInstructionControlFlowType current_instruction_type =
@@ -162,7 +163,8 @@ TraceHTR::TraceHTR(Thread &thread, TraceCursor &cursor)
 
       m_instruction_layer_up->AppendInstruction(
           current_instruction_load_address);
-      more_data_in_trace = cursor.Next();
+      cursor.Next();
+      more_data_in_trace = cursor.HasValue();
       if (current_instruction_type &
           lldb::eTraceInstructionControlFlowTypeCall) {
         if (more_data_in_trace && !cursor.IsError()) {

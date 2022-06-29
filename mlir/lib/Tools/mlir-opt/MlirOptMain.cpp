@@ -145,6 +145,7 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
   // We use an explicit threadpool to avoid creating and joining/destroying
   // threads for each of the split.
   ThreadPool *threadPool = nullptr;
+
   // Create a temporary context for the sake of checking if
   // --mlir-disable-threading was passed on the command line.
   // We use the thread-pool this context is creating, and avoid
@@ -153,23 +154,15 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
   if (threadPoolCtx.isMultithreadingEnabled())
     threadPool = &threadPoolCtx.getThreadPool();
 
-  if (splitInputFile)
-    return splitAndProcessBuffer(
-        std::move(buffer),
-        [&](std::unique_ptr<MemoryBuffer> chunkBuffer, raw_ostream &os) {
-          LogicalResult result = processBuffer(
-              os, std::move(chunkBuffer), verifyDiagnostics, verifyPasses,
-              allowUnregisteredDialects, preloadDialectsInContext,
-              passManagerSetupFn, registry, threadPool);
-          os << "// -----\n";
-          return result;
-        },
-        outputStream);
-
-  return processBuffer(outputStream, std::move(buffer), verifyDiagnostics,
-                       verifyPasses, allowUnregisteredDialects,
-                       preloadDialectsInContext, passManagerSetupFn, registry,
-                       threadPool);
+  auto chunkFn = [&](std::unique_ptr<MemoryBuffer> chunkBuffer,
+                     raw_ostream &os) {
+    return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
+                         verifyPasses, allowUnregisteredDialects,
+                         preloadDialectsInContext, passManagerSetupFn, registry,
+                         threadPool);
+  };
+  return splitAndProcessBuffer(std::move(buffer), chunkFn, outputStream,
+                               splitInputFile, /*insertMarkerInOutput=*/true);
 }
 
 LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,

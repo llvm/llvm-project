@@ -798,10 +798,10 @@ mlir::ParseResult fir::ConstcOp::parse(mlir::OpAsmParser &parser,
   fir::RealAttr imagp;
   mlir::Type type;
   if (parser.parseLParen() ||
-      parser.parseAttribute(realp, fir::ConstcOp::realAttrName(),
+      parser.parseAttribute(realp, fir::ConstcOp::getRealAttrName(),
                             result.attributes) ||
       parser.parseComma() ||
-      parser.parseAttribute(imagp, fir::ConstcOp::imagAttrName(),
+      parser.parseAttribute(imagp, fir::ConstcOp::getImagAttrName(),
                             result.attributes) ||
       parser.parseRParen() || parser.parseColonType(type) ||
       parser.addTypesToList(type, result.types))
@@ -811,8 +811,8 @@ mlir::ParseResult fir::ConstcOp::parse(mlir::OpAsmParser &parser,
 
 void fir::ConstcOp::print(mlir::OpAsmPrinter &p) {
   p << '(';
-  p << getOperation()->getAttr(fir::ConstcOp::realAttrName()) << ", ";
-  p << getOperation()->getAttr(fir::ConstcOp::imagAttrName()) << ") : ";
+  p << getOperation()->getAttr(fir::ConstcOp::getRealAttrName()) << ", ";
+  p << getOperation()->getAttr(fir::ConstcOp::getImagAttrName()) << ") : ";
   p.printType(getType());
 }
 
@@ -1218,12 +1218,12 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     if (fir::GlobalOp::verifyValidLinkage(linkage))
       return mlir::failure();
     mlir::StringAttr linkAttr = builder.getStringAttr(linkage);
-    result.addAttribute(fir::GlobalOp::linkageAttrName(), linkAttr);
+    result.addAttribute(fir::GlobalOp::getLinkageAttrNameStr(), linkAttr);
   }
 
   // Parse the name as a symbol reference attribute.
   mlir::SymbolRefAttr nameAttr;
-  if (parser.parseAttribute(nameAttr, fir::GlobalOp::symbolAttrNameStr(),
+  if (parser.parseAttribute(nameAttr, fir::GlobalOp::getSymbolAttrNameStr(),
                             result.attributes))
     return mlir::failure();
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
@@ -1294,7 +1294,7 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
-  result.addAttribute(symbolAttrNameStr(),
+  result.addAttribute(getSymbolAttrNameStr(),
                       mlir::SymbolRefAttr::get(builder.getContext(), name));
   if (isConstant)
     result.addAttribute(getConstantAttrName(result.name),
@@ -1302,7 +1302,7 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   if (initialVal)
     result.addAttribute(getInitValAttrName(result.name), initialVal);
   if (linkage)
-    result.addAttribute(linkageAttrName(), linkage);
+    result.addAttribute(getLinkageAttrNameStr(), linkage);
   result.attributes.append(attrs.begin(), attrs.end());
 }
 
@@ -1359,24 +1359,25 @@ mlir::ParseResult fir::GlobalLenOp::parse(mlir::OpAsmParser &parser,
   llvm::StringRef fieldName;
   if (failed(parser.parseOptionalKeyword(&fieldName))) {
     mlir::StringAttr fieldAttr;
-    if (parser.parseAttribute(fieldAttr, fir::GlobalLenOp::lenParamAttrName(),
+    if (parser.parseAttribute(fieldAttr,
+                              fir::GlobalLenOp::getLenParamAttrName(),
                               result.attributes))
       return mlir::failure();
   } else {
-    result.addAttribute(fir::GlobalLenOp::lenParamAttrName(),
+    result.addAttribute(fir::GlobalLenOp::getLenParamAttrName(),
                         parser.getBuilder().getStringAttr(fieldName));
   }
   mlir::IntegerAttr constant;
   if (parser.parseComma() ||
-      parser.parseAttribute(constant, fir::GlobalLenOp::intAttrName(),
+      parser.parseAttribute(constant, fir::GlobalLenOp::getIntAttrName(),
                             result.attributes))
     return mlir::failure();
   return mlir::success();
 }
 
 void fir::GlobalLenOp::print(mlir::OpAsmPrinter &p) {
-  p << ' ' << getOperation()->getAttr(fir::GlobalLenOp::lenParamAttrName())
-    << ", " << getOperation()->getAttr(fir::GlobalLenOp::intAttrName());
+  p << ' ' << getOperation()->getAttr(fir::GlobalLenOp::getLenParamAttrName())
+    << ", " << getOperation()->getAttr(fir::GlobalLenOp::getIntAttrName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3122,10 +3123,12 @@ mlir::LogicalResult fir::StoreOp::verify() {
 // StringLitOp
 //===----------------------------------------------------------------------===//
 
-bool fir::StringLitOp::isWideValue() {
-  auto eleTy = getType().cast<fir::SequenceType>().getEleTy();
-  return eleTy.cast<fir::CharacterType>().getFKind() != 1;
+inline fir::CharacterType::KindTy stringLitOpGetKind(fir::StringLitOp op) {
+  auto eleTy = op.getType().cast<fir::SequenceType>().getEleTy();
+  return eleTy.cast<fir::CharacterType>().getFKind();
 }
+
+bool fir::StringLitOp::isWideValue() { return stringLitOpGetKind(*this) != 1; }
 
 static mlir::NamedAttribute
 mkNamedIntegerAttr(mlir::OpBuilder &builder, llvm::StringRef name, int64_t v) {
@@ -3205,6 +3208,9 @@ mlir::ParseResult fir::StringLitOp::parse(mlir::OpAsmParser &parser,
   if (auto v = val.dyn_cast<mlir::StringAttr>())
     result.attributes.push_back(
         builder.getNamedAttr(fir::StringLitOp::value(), v));
+  else if (auto v = val.dyn_cast<mlir::DenseElementsAttr>())
+    result.attributes.push_back(
+        builder.getNamedAttr(fir::StringLitOp::xlist(), v));
   else if (auto v = val.dyn_cast<mlir::ArrayAttr>())
     result.attributes.push_back(
         builder.getNamedAttr(fir::StringLitOp::xlist(), v));
@@ -3238,10 +3244,15 @@ mlir::LogicalResult fir::StringLitOp::verify() {
   if (getSize().cast<mlir::IntegerAttr>().getValue().isNegative())
     return emitOpError("size must be non-negative");
   if (auto xl = getOperation()->getAttr(fir::StringLitOp::xlist())) {
-    auto xList = xl.cast<mlir::ArrayAttr>();
-    for (auto a : xList)
-      if (!a.isa<mlir::IntegerAttr>())
-        return emitOpError("values in list must be integers");
+    if (auto xList = xl.dyn_cast<mlir::ArrayAttr>()) {
+      for (auto a : xList)
+        if (!a.isa<mlir::IntegerAttr>())
+          return emitOpError("values in initializer must be integers");
+    } else if (xl.isa<mlir::DenseElementsAttr>()) {
+      // do nothing
+    } else {
+      return emitOpError("has unexpected attribute");
+    }
   }
   return mlir::success();
 }

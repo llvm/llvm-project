@@ -378,7 +378,7 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
   if (clauses && !outerCombined)
     privatizeVars(converter, *clauses);
 
-  if (std::is_same_v<Op, omp::ParallelOp>) {
+  if constexpr (std::is_same_v<Op, omp::ParallelOp>) {
     threadPrivatizeVars(converter, eval);
     if (clauses)
       genCopyinClause(converter, *clauses);
@@ -611,6 +611,21 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                std::get_if<Fortran::parser::OmpClause::Copyin>(&clause.u)) {
       // Privatisation and copyin clauses are handled elsewhere.
       continue;
+    } else if (std::get_if<Fortran::parser::OmpClause::Shared>(&clause.u)) {
+      // Shared is the default behavior in the IR, so no handling is required.
+      continue;
+    } else if (const auto &defaultClause =
+                   std::get_if<Fortran::parser::OmpClause::Default>(
+                       &clause.u)) {
+      if ((defaultClause->v.v ==
+           Fortran::parser::OmpDefaultClause::Type::Shared) ||
+          (defaultClause->v.v ==
+           Fortran::parser::OmpDefaultClause::Type::None)) {
+        // Default clause with shared or none do not require any handling since
+        // Shared is the default behavior in the IR and None is only required
+        // for semantic checks.
+        continue;
+      }
     } else if (std::get_if<Fortran::parser::OmpClause::Threads>(&clause.u)) {
       // Nothing needs to be done for threads clause.
       continue;
@@ -746,8 +761,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, linearVars,
       linearStepVars, reductionVars;
   mlir::Value scheduleChunkClauseOperand;
-  mlir::Attribute scheduleClauseOperand, collapseClauseOperand,
-      noWaitClauseOperand, orderedClauseOperand, orderClauseOperand;
+  mlir::Attribute scheduleClauseOperand, noWaitClauseOperand,
+      orderedClauseOperand, orderClauseOperand;
   const auto &loopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t);
 
@@ -848,7 +863,6 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       scheduleClauseOperand.dyn_cast_or_null<omp::ClauseScheduleKindAttr>(),
       scheduleChunkClauseOperand, /*schedule_modifiers=*/nullptr,
       /*simd_modifier=*/nullptr,
-      collapseClauseOperand.dyn_cast_or_null<IntegerAttr>(),
       noWaitClauseOperand.dyn_cast_or_null<UnitAttr>(),
       orderedClauseOperand.dyn_cast_or_null<IntegerAttr>(),
       orderClauseOperand.dyn_cast_or_null<omp::ClauseOrderKindAttr>(),
@@ -867,13 +881,6 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       } else {
         wsLoopOp.ordered_valAttr(firOpBuilder.getI64IntegerAttr(0));
       }
-    } else if (const auto &collapseClause =
-                   std::get_if<Fortran::parser::OmpClause::Collapse>(
-                       &clause.u)) {
-      const auto *expr = Fortran::semantics::GetExpr(collapseClause->v);
-      const std::optional<std::int64_t> collapseValue =
-          Fortran::evaluate::ToInt64(*expr);
-      wsLoopOp.collapse_valAttr(firOpBuilder.getI64IntegerAttr(*collapseValue));
     } else if (const auto &scheduleClause =
                    std::get_if<Fortran::parser::OmpClause::Schedule>(
                        &clause.u)) {

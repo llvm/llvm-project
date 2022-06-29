@@ -1,4 +1,8 @@
+algorithm
+array
 atomic
+bit
+chrono
 climits
 cmath
 compare
@@ -12,8 +16,10 @@ exception
 experimental/memory_resource
 experimental/unordered_map
 experimental/utility
+functional
 initializer_list
 iosfwd
+iterator
 limits
 memory
 new
@@ -25,4 +31,6 @@ type_traits
 typeinfo
 unordered_map
 utility
+variant
+vector
 version

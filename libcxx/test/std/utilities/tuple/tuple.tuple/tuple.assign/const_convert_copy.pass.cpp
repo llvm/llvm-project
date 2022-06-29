@@ -32,7 +32,7 @@ static_assert(!std::is_assignable_v<const std::tuple<int&, int&>&, const std::tu
 static_assert(!std::is_assignable_v<const std::tuple<int&>&, const std::tuple<long&, long&>&>);
 
 // (is_assignable_v<const Types&, const UTypes&> && ...) is true
-static_assert(std::is_assignable_v<const std::tuple<AssignableFrom<ConstCopyAssign>>&, 
+static_assert(std::is_assignable_v<const std::tuple<AssignableFrom<ConstCopyAssign>>&,
                                    const std::tuple<ConstCopyAssign>&>);
 
 static_assert(std::is_assignable_v<const std::tuple<AssignableFrom<ConstCopyAssign>, ConstCopyAssign>&,
@@ -74,7 +74,7 @@ constexpr bool test() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   test();
 
 // gcc cannot have mutable member in constant expression

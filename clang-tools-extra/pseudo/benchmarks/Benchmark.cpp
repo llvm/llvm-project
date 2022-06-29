@@ -67,7 +67,7 @@ void setupGrammarAndSource() {
   GrammarText = new std::string(ReadFile(GrammarFile));
   SourceText = new std::string(ReadFile(Source));
   std::vector<std::string> Diags;
-  G = Grammar::parseBNF(*GrammarText, Diags).release();
+  G = new Grammar(Grammar::parseBNF(*GrammarText, Diags));
 }
 
 static void parseBNF(benchmark::State &State) {

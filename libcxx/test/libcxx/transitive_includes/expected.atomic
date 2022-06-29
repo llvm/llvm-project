@@ -1,5 +1,8 @@
 atomic
+chrono
 climits
+cmath
+compare
 cstddef
 cstdint
 cstring

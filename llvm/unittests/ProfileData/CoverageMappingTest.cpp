@@ -943,7 +943,7 @@ TEST(CoverageMappingTest, filename_roundtrip) {
     for (unsigned I = 1; I < Paths.size(); ++I) {
       SmallString<256> P(Paths[0]);
       llvm::sys::path::append(P, Paths[I]);
-      ASSERT_TRUE(ReadFilenames[I] == P);
+      ASSERT_EQ(ReadFilenames[I], P);
     }
   }
 }
@@ -969,7 +969,7 @@ TEST(CoverageMappingTest, filename_compilation_dir) {
     for (unsigned I = 1; I < Paths.size(); ++I) {
       SmallString<256> P(CompilationDir);
       llvm::sys::path::append(P, Paths[I]);
-      ASSERT_TRUE(ReadFilenames[I] == P);
+      ASSERT_EQ(ReadFilenames[I], P);
     }
   }
 }

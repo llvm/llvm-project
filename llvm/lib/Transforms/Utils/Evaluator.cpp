@@ -361,8 +361,10 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       LLVM_DEBUG(dbgs() << "Found a Select! Simplifying: " << *InstResult
                         << "\n");
     } else if (auto *EVI = dyn_cast<ExtractValueInst>(CurInst)) {
-      InstResult = ConstantExpr::getExtractValue(
+      InstResult = ConstantFoldExtractValueInstruction(
           getVal(EVI->getAggregateOperand()), EVI->getIndices());
+      if (!InstResult)
+        return false;
       LLVM_DEBUG(dbgs() << "Found an ExtractValueInst! Simplifying: "
                         << *InstResult << "\n");
     } else if (auto *IVI = dyn_cast<InsertValueInst>(CurInst)) {

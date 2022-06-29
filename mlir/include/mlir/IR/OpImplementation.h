@@ -70,6 +70,20 @@ public:
     attrOrType.print(*this);
   }
 
+  /// Print the provided array of attributes or types in the context of an
+  /// operation custom printer/parser: this will invoke directly the print
+  /// method on the attribute class and skip the `#dialect.mnemonic` prefix in
+  /// most cases.
+  template <typename AttrOrType,
+            std::enable_if_t<detect_has_print_method<AttrOrType>::value>
+                *sfinae = nullptr>
+  void printStrippedAttrOrType(ArrayRef<AttrOrType> attrOrTypes) {
+    llvm::interleaveComma(attrOrTypes, getStream(),
+                          [this](AttrOrType attrOrType) {
+                            printStrippedAttrOrType(attrOrType);
+                          });
+  }
+
   /// SFINAE for printing the provided attribute in the context of an operation
   /// custom printer in the case where the attribute does not define a print
   /// method.

@@ -1343,19 +1343,27 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
 
   OutStreamer->pushSection();
   OutStreamer->switchSection(BBAddrMapSection);
+  OutStreamer->AddComment("version");
+  OutStreamer->emitInt8(OutStreamer->getContext().getBBAddrMapVersion());
+  OutStreamer->AddComment("feature");
+  OutStreamer->emitInt8(0);
+  OutStreamer->AddComment("function address");
   OutStreamer->emitSymbolValue(FunctionSymbol, getPointerSize());
-  // Emit the total number of basic blocks in this function.
+  OutStreamer->AddComment("number of basic blocks");
   OutStreamer->emitULEB128IntValue(MF.size());
+  const MCSymbol *PrevMBBEndSymbol = FunctionSymbol;
   // Emit BB Information for each basic block in the funciton.
   for (const MachineBasicBlock &MBB : MF) {
     const MCSymbol *MBBSymbol =
         MBB.isEntryBlock() ? FunctionSymbol : MBB.getSymbol();
-    // Emit the basic block offset.
-    emitLabelDifferenceAsULEB128(MBBSymbol, FunctionSymbol);
+    // Emit the basic block offset relative to the end of the previous block.
+    // This is zero unless the block is padded due to alignment.
+    emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
     // Emit the basic block size. When BBs have alignments, their size cannot
     // always be computed from their offsets.
     emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
+    PrevMBBEndSymbol = MBB.getEndSymbol();
   }
   OutStreamer->popSection();
 }
@@ -2742,6 +2750,9 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     llvm_unreachable("Unknown constant value to lower!");
   }
 
+  // The constant expression opcodes are limited to those that are necessary
+  // to represent relocations on supported targets. Expressions involving only
+  // constant addresses are constant folded instead.
   switch (CE->getOpcode()) {
   case Instruction::AddrSpaceCast: {
     const Constant *Op = CE->getOperand(0);
@@ -2859,34 +2870,17 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
         return RelocExpr;
       }
     }
-  }
-  // else fallthrough
-  LLVM_FALLTHROUGH;
 
-  // The MC library also has a right-shift operator, but it isn't consistently
-  // signed or unsigned between different targets.
-  case Instruction::Add:
-  case Instruction::Mul:
-  case Instruction::SDiv:
-  case Instruction::SRem:
-  case Instruction::Shl:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor: {
     const MCExpr *LHS = lowerConstant(CE->getOperand(0));
     const MCExpr *RHS = lowerConstant(CE->getOperand(1));
-    switch (CE->getOpcode()) {
-    default: llvm_unreachable("Unknown binary operator constant cast expr");
-    case Instruction::Add: return MCBinaryExpr::createAdd(LHS, RHS, Ctx);
-    case Instruction::Sub: return MCBinaryExpr::createSub(LHS, RHS, Ctx);
-    case Instruction::Mul: return MCBinaryExpr::createMul(LHS, RHS, Ctx);
-    case Instruction::SDiv: return MCBinaryExpr::createDiv(LHS, RHS, Ctx);
-    case Instruction::SRem: return MCBinaryExpr::createMod(LHS, RHS, Ctx);
-    case Instruction::Shl: return MCBinaryExpr::createShl(LHS, RHS, Ctx);
-    case Instruction::And: return MCBinaryExpr::createAnd(LHS, RHS, Ctx);
-    case Instruction::Or:  return MCBinaryExpr::createOr (LHS, RHS, Ctx);
-    case Instruction::Xor: return MCBinaryExpr::createXor(LHS, RHS, Ctx);
-    }
+    return MCBinaryExpr::createSub(LHS, RHS, Ctx);
+    break;
+  }
+
+  case Instruction::Add: {
+    const MCExpr *LHS = lowerConstant(CE->getOperand(0));
+    const MCExpr *RHS = lowerConstant(CE->getOperand(1));
+    return MCBinaryExpr::createAdd(LHS, RHS, Ctx);
   }
   }
 }

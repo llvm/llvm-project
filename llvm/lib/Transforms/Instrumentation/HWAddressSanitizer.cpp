@@ -311,6 +311,9 @@ public:
   void instrumentGlobal(GlobalVariable *GV, uint8_t Tag);
   void instrumentGlobals();
 
+  Value *getPC(IRBuilder<> &IRB);
+  Value *getSP(IRBuilder<> &IRB);
+
   void instrumentPersonalityFunctions();
 
 private:
@@ -380,6 +383,7 @@ private:
 
   Value *ShadowBase = nullptr;
   Value *StackBaseTag = nullptr;
+  Value *CachedSP = nullptr;
   GlobalValue *ThreadPtrGlobal = nullptr;
 };
 
@@ -1021,19 +1025,10 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
     return getNextTagWithCall(IRB);
   if (StackBaseTag)
     return StackBaseTag;
-  // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
-  // first).
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  auto GetStackPointerFn = Intrinsic::getDeclaration(
-      M, Intrinsic::frameaddress,
-      IRB.getInt8PtrTy(M->getDataLayout().getAllocaAddrSpace()));
-  Value *StackPointer = IRB.CreateCall(
-      GetStackPointerFn, {Constant::getNullValue(IRB.getInt32Ty())});
-
   // Extract some entropy from the stack pointer for the tags.
   // Take bits 20..28 (ASLR entropy) and xor with bits 0..8 (these differ
   // between functions).
-  Value *StackPointerLong = IRB.CreatePointerCast(StackPointer, IntptrTy);
+  Value *StackPointerLong = getSP(IRB);
   Value *StackTag =
       applyTagMask(IRB, IRB.CreateXor(StackPointerLong,
                                       IRB.CreateLShr(StackPointerLong, 20)));
@@ -1113,6 +1108,30 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
   return nullptr;
 }
 
+Value *HWAddressSanitizer::getPC(IRBuilder<> &IRB) {
+  if (TargetTriple.getArch() == Triple::aarch64)
+    return readRegister(IRB, "pc");
+  else
+    return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(), IntptrTy);
+}
+
+Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
+  if (!CachedSP) {
+    // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
+    // first).
+    Function *F = IRB.GetInsertBlock()->getParent();
+    Module *M = F->getParent();
+    auto GetStackPointerFn = Intrinsic::getDeclaration(
+        M, Intrinsic::frameaddress,
+        IRB.getInt8PtrTy(M->getDataLayout().getAllocaAddrSpace()));
+    CachedSP = IRB.CreatePtrToInt(
+        IRB.CreateCall(GetStackPointerFn,
+                       {Constant::getNullValue(IRB.getInt32Ty())}),
+        IntptrTy);
+  }
+  return CachedSP;
+}
+
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   if (!Mapping.InTls)
     ShadowBase = getShadowNonTls(IRB);
@@ -1131,23 +1150,12 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
       TargetTriple.isAArch64() ? ThreadLong : untagPointer(IRB, ThreadLong);
 
   if (WithFrameRecord) {
-    Function *F = IRB.GetInsertBlock()->getParent();
     StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
 
     // Prepare ring buffer data.
-    Value *PC;
-    if (TargetTriple.getArch() == Triple::aarch64)
-      PC = readRegister(IRB, "pc");
-    else
-      PC = IRB.CreatePtrToInt(F, IntptrTy);
-    Module *M = F->getParent();
-    auto GetStackPointerFn = Intrinsic::getDeclaration(
-        M, Intrinsic::frameaddress,
-        IRB.getInt8PtrTy(M->getDataLayout().getAllocaAddrSpace()));
-    Value *SP = IRB.CreatePtrToInt(
-        IRB.CreateCall(GetStackPointerFn,
-                       {Constant::getNullValue(IRB.getInt32Ty())}),
-        IntptrTy);
+    Value *PC = getPC(IRB);
+    Value *SP = getSP(IRB);
+
     // Mix SP and PC.
     // Assumptions:
     // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
@@ -1436,6 +1444,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F,
 
   ShadowBase = nullptr;
   StackBaseTag = nullptr;
+  CachedSP = nullptr;
 
   return true;
 }

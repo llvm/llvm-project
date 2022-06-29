@@ -1232,7 +1232,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     MetadataList.assignValue(
-        LocalAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty, TyID)),
+        LocalAsMetadata::get(ValueList.getValueFwdRef(
+            Record[1], Ty, TyID, /*ConstExprInsertBB*/ nullptr)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1252,8 +1253,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Ty->isMetadataTy())
         Elts.push_back(getMD(Record[i + 1]));
       else if (!Ty->isVoidTy()) {
-        auto *MD = ValueAsMetadata::get(
-            ValueList.getValueFwdRef(Record[i + 1], Ty, TyID));
+        auto *MD = ValueAsMetadata::get(ValueList.getValueFwdRef(
+            Record[i + 1], Ty, TyID, /*ConstExprInsertBB*/ nullptr));
         assert(isa<ConstantAsMetadata>(MD) &&
                "Expected non-function-local metadata");
         Elts.push_back(MD);
@@ -1274,7 +1275,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     MetadataList.assignValue(
-        ValueAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty, TyID)),
+        ValueAsMetadata::get(ValueList.getValueFwdRef(
+            Record[1], Ty, TyID, /*ConstExprInsertBB*/ nullptr)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -2082,9 +2084,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Type *Ty = getTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
-        Constant *V = ValueList.getConstantFwdRef(Elems[1], Ty, Elems[0]);
+        Value *V = ValueList[Elems[1]];
         if (!V || !isa<ConstantData>(V))
           return error("Invalid record");
+        if (Ty != V->getType())
+          report_fatal_error("Invalid record");
         Builder.append<DIOp::Constant>(cast<ConstantData>(V));
         Elems = Elems.slice(2);
         break;

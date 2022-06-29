@@ -242,6 +242,7 @@ extern "C" {
 #endif
 
 int omp_get_num_devices(void);
+int omp_get_device_num(void);
 int omp_get_initial_device(void);
 void *omp_target_alloc(size_t size, int device_num);
 void omp_target_free(void *device_ptr, int device_num);

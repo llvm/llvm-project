@@ -3631,4 +3631,128 @@ TEST_F(MDTupleAllocationTest, Tracking) {
   EXPECT_EQ(NewOps2.get(), static_cast<Metadata *>(Value2));
 }
 
+TEST_F(MDTupleAllocationTest, Resize) {
+  MDTuple *A = getTuple();
+  Metadata *Value1 = getConstantAsMetadata();
+  Metadata *Value2 = getConstantAsMetadata();
+  Metadata *Value3 = getConstantAsMetadata();
+
+  EXPECT_EQ(A->getNumOperands(), 0u);
+
+  // Add a couple of elements to it, which resizes the node.
+  A->push_back(Value1);
+  EXPECT_EQ(A->getNumOperands(), 1u);
+  EXPECT_EQ(A->getOperand(0), Value1);
+
+  A->push_back(Value2);
+  EXPECT_EQ(A->getNumOperands(), 2u);
+  EXPECT_EQ(A->getOperand(0), Value1);
+  EXPECT_EQ(A->getOperand(1), Value2);
+
+  // Append another element, which should resize the node
+  // to a "large" node, though not detectable by the user.
+  A->push_back(Value3);
+  EXPECT_EQ(A->getNumOperands(), 3u);
+  EXPECT_EQ(A->getOperand(0), Value1);
+  EXPECT_EQ(A->getOperand(1), Value2);
+  EXPECT_EQ(A->getOperand(2), Value3);
+
+  // Remove the last element
+  A->pop_back();
+  EXPECT_EQ(A->getNumOperands(), 2u);
+  EXPECT_EQ(A->getOperand(1), Value2);
+
+  // Allocate a node with 4 operands.
+  Metadata *Value4 = getConstantAsMetadata();
+  Metadata *Value5 = getConstantAsMetadata();
+
+  Metadata *Ops[] = {Value1, Value2, Value3, Value4};
+  MDTuple *B = MDTuple::getDistinct(Context, Ops);
+
+  EXPECT_EQ(B->getNumOperands(), 4u);
+  B->pop_back();
+  EXPECT_EQ(B->getNumOperands(), 3u);
+  B->push_back(Value5);
+  EXPECT_EQ(B->getNumOperands(), 4u);
+  EXPECT_EQ(B->getOperand(0), Value1);
+  EXPECT_EQ(B->getOperand(1), Value2);
+  EXPECT_EQ(B->getOperand(2), Value3);
+  EXPECT_EQ(B->getOperand(3), Value5);
+
+  // Check that we can resize temporary nodes as well.
+  auto Temp1 = MDTuple::getTemporary(Context, None);
+  EXPECT_EQ(Temp1->getNumOperands(), 0u);
+
+  Temp1->push_back(Value1);
+  EXPECT_EQ(Temp1->getNumOperands(), 1u);
+  EXPECT_EQ(Temp1->getOperand(0), Value1);
+
+  for (int i = 0; i < 11; i++)
+    Temp1->push_back(Value2);
+  EXPECT_EQ(Temp1->getNumOperands(), 12u);
+  EXPECT_EQ(Temp1->getOperand(2), Value2);
+  EXPECT_EQ(Temp1->getOperand(11), Value2);
+
+  // Allocate a node that starts off as a large one.
+  Metadata *OpsLarge[] = {Value1, Value2, Value3, Value4,
+                          Value1, Value2, Value3, Value4,
+                          Value1, Value2, Value3, Value4,
+                          Value1, Value2, Value3, Value4,
+                          Value1, Value2, Value3, Value4};
+  MDTuple *C = MDTuple::getDistinct(Context, OpsLarge);
+  EXPECT_EQ(C->getNumOperands(), 20u);
+  EXPECT_EQ(C->getOperand(7), Value4);
+  EXPECT_EQ(C->getOperand(13), Value2);
+
+  C->push_back(Value1);
+  C->push_back(Value2);
+  EXPECT_EQ(C->getNumOperands(), 22u);
+  EXPECT_EQ(C->getOperand(21), Value2);
+  C->pop_back();
+  EXPECT_EQ(C->getNumOperands(), 21u);
+  EXPECT_EQ(C->getOperand(20), Value1);
+}
+
+TEST_F(MDTupleAllocationTest, Tracking2) {
+  // Resize a tuple and check that we can still RAUW one of its operands.
+  auto *Value1 = getConstantAsMetadata();
+  MDTuple *A = getTuple();
+  A->push_back(Value1);
+  A->push_back(Value1);
+  A->push_back(Value1); // Causes a resize to large.
+  EXPECT_EQ(A->getOperand(0), Value1);
+  EXPECT_EQ(A->getOperand(1), Value1);
+  EXPECT_EQ(A->getOperand(2), Value1);
+
+  auto *Value2 = getConstantAsMetadata();
+  Value *V1 = Value1->getValue();
+  Value *V2 = Value2->getValue();
+  ValueAsMetadata::handleRAUW(V1, V2);
+
+  EXPECT_EQ(A->getOperand(0), Value2);
+  EXPECT_EQ(A->getOperand(1), Value2);
+  EXPECT_EQ(A->getOperand(2), Value2);
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)
+typedef MetadataTest MDTupleAllocationDeathTest;
+TEST_F(MDTupleAllocationDeathTest, ResizeRejected) {
+  MDTuple *A = MDTuple::get(Context, None);
+  auto *Value1 = getConstantAsMetadata();
+  EXPECT_DEATH(A->push_back(Value1),
+               "Resizing is not supported for uniqued nodes");
+
+  // Check that a node, which has been allocated as a temporary,
+  // cannot be resized after it has been uniqued.
+  auto *Value2 = getConstantAsMetadata();
+  auto B = MDTuple::getTemporary(Context, {Value2});
+  B->push_back(Value2);
+  MDTuple *BUniqued = MDNode::replaceWithUniqued(std::move(B));
+  EXPECT_EQ(BUniqued->getNumOperands(), 2u);
+  EXPECT_EQ(BUniqued->getOperand(1), Value2);
+  EXPECT_DEATH(BUniqued->push_back(Value2),
+               "Resizing is not supported for uniqued nodes");
+}
+#endif
+
 } // end namespace

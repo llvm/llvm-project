@@ -107,9 +107,9 @@ void IntelPTMultiCoreTrace::ProcessWillResume() {
 TraceIntelPTGetStateResponse IntelPTMultiCoreTrace::GetState() {
   TraceIntelPTGetStateResponse state;
 
-  for (size_t i = 0; m_process.GetThreadAtIndex(i); i++)
+  for (NativeThreadProtocol &thread : m_process.Threads())
     state.traced_threads.push_back(
-        TraceThreadState{m_process.GetThreadAtIndex(i)->GetID(), {}});
+        TraceThreadState{thread.GetID(), {}});
 
   state.cpus.emplace();
   ForEachCore([&](lldb::cpu_id_t cpu_id,

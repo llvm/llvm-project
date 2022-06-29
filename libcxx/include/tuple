@@ -219,6 +219,14 @@ template <class... Types>
 #include <type_traits>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <exception>
+#  include <iosfwd>
+#  include <new>
+#  include <typeinfo>
+#  include <utility>
+#endif
+
 // standard-mandated includes
 #include <compare>
 

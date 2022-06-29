@@ -401,8 +401,8 @@ func.func @vec1cmpi(%arg0 : vector<1xi32>, %arg1 : vector<1xi32>) {
   return
 }
 
-// CHECK-LABEL: @boolcmpi
-func.func @boolcmpi(%arg0 : i1, %arg1 : i1) {
+// CHECK-LABEL: @boolcmpi_equality
+func.func @boolcmpi_equality(%arg0 : i1, %arg1 : i1) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : i1
   // CHECK: spv.LogicalNotEqual
@@ -410,8 +410,19 @@ func.func @boolcmpi(%arg0 : i1, %arg1 : i1) {
   return
 }
 
-// CHECK-LABEL: @vec1boolcmpi
-func.func @vec1boolcmpi(%arg0 : vector<1xi1>, %arg1 : vector<1xi1>) {
+// CHECK-LABEL: @boolcmpi_unsigned
+func.func @boolcmpi_unsigned(%arg0 : i1, %arg1 : i1) {
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.UGreaterThanEqual
+  %0 = arith.cmpi uge, %arg0, %arg1 : i1
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.ULessThan
+  %1 = arith.cmpi ult, %arg0, %arg1 : i1
+  return
+}
+
+// CHECK-LABEL: @vec1boolcmpi_equality
+func.func @vec1boolcmpi_equality(%arg0 : vector<1xi1>, %arg1 : vector<1xi1>) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : vector<1xi1>
   // CHECK: spv.LogicalNotEqual
@@ -419,14 +430,37 @@ func.func @vec1boolcmpi(%arg0 : vector<1xi1>, %arg1 : vector<1xi1>) {
   return
 }
 
-// CHECK-LABEL: @vecboolcmpi
-func.func @vecboolcmpi(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+// CHECK-LABEL: @vec1boolcmpi_unsigned
+func.func @vec1boolcmpi_unsigned(%arg0 : vector<1xi1>, %arg1 : vector<1xi1>) {
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.UGreaterThanEqual
+  %0 = arith.cmpi uge, %arg0, %arg1 : vector<1xi1>
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.ULessThan
+  %1 = arith.cmpi ult, %arg0, %arg1 : vector<1xi1>
+  return
+}
+
+// CHECK-LABEL: @vecboolcmpi_equality
+func.func @vecboolcmpi_equality(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : vector<4xi1>
   // CHECK: spv.LogicalNotEqual
   %1 = arith.cmpi ne, %arg0, %arg1 : vector<4xi1>
   return
 }
+
+// CHECK-LABEL: @vecboolcmpi_unsigned
+func.func @vecboolcmpi_unsigned(%arg0 : vector<3xi1>, %arg1 : vector<3xi1>) {
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.UGreaterThanEqual
+  %0 = arith.cmpi uge, %arg0, %arg1 : vector<3xi1>
+  // CHECK-COUNT-2: spv.Select
+  // CHECK: spv.ULessThan
+  %1 = arith.cmpi ult, %arg0, %arg1 : vector<3xi1>
+  return
+}
+
 
 } // end module
 

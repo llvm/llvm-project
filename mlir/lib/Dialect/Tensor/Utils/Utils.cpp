@@ -27,7 +27,7 @@ PadOp mlir::tensor::createPadScalarOp(Type type, Value source, Value pad,
   int rank = padTensorOp.getResultType().getRank();
   SmallVector<Type> blockArgTypes(rank, builder.getIndexType());
   SmallVector<Location> blockArgLocs(rank, loc);
-  auto &region = padTensorOp.region();
+  auto &region = padTensorOp.getRegion();
   // `builder.createBlock` changes the insertion point within the block. Create
   // a guard to reset the insertion point of the builder after it is destroyed.
   OpBuilder::InsertionGuard guard(builder);

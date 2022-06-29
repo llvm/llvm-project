@@ -346,15 +346,39 @@ public:
 
   /// Determine whether the given declaration is visible to the
   /// program.
-  static bool isVisible(Sema &SemaRef, NamedDecl *D) {
-    // If this declaration is not hidden, it's visible.
-    if (D->isUnconditionallyVisible())
-      return true;
+  static bool isVisible(Sema &SemaRef, NamedDecl *D);
 
-    // During template instantiation, we can refer to hidden declarations, if
-    // they were visible in any module along the path of instantiation.
-    return isVisibleSlow(SemaRef, D);
+  static bool isReachable(Sema &SemaRef, NamedDecl *D);
+
+  static bool isAcceptable(Sema &SemaRef, NamedDecl *D,
+                           Sema::AcceptableKind Kind) {
+    return Kind == Sema::AcceptableKind::Visible ? isVisible(SemaRef, D)
+                                                 : isReachable(SemaRef, D);
   }
+
+  /// Determine whether this lookup is permitted to see the declaration.
+  /// Note that a reachable but not visible declaration inhabiting a namespace
+  /// is not allowed to be seen during name lookup.
+  ///
+  /// For example:
+  /// ```
+  /// // m.cppm
+  /// export module m;
+  /// struct reachable { int v; }
+  /// export auto func() { return reachable{43}; }
+  /// // Use.cpp
+  /// import m;
+  /// auto Use() {
+  ///   // Not valid. We couldn't see reachable here.
+  ///   // So isAvailableForLookup would return false when we look
+  ///   up 'reachable' here.
+  ///   // return reachable(43).v;
+  ///   // Valid. The field name 'v' is allowed during name lookup.
+  ///   // So isAvailableForLookup would return true when we look up 'v' here.
+  ///   return func().v;
+  /// }
+  /// ```
+  static bool isAvailableForLookup(Sema &SemaRef, NamedDecl *ND);
 
   /// Retrieve the accepted (re)declaration of the given declaration,
   /// if there is one.
@@ -362,14 +386,16 @@ public:
     if (!D->isInIdentifierNamespace(IDNS))
       return nullptr;
 
-    if (isVisible(getSema(), D) || isHiddenDeclarationVisible(D))
+    if (isAvailableForLookup(getSema(), D) || isHiddenDeclarationVisible(D))
       return D;
 
     return getAcceptableDeclSlow(D);
   }
 
 private:
-  static bool isVisibleSlow(Sema &SemaRef, NamedDecl *D);
+  static bool isAcceptableSlow(Sema &SemaRef, NamedDecl *D,
+                               Sema::AcceptableKind Kind);
+  static bool isReachableSlow(Sema &SemaRef, NamedDecl *D);
   NamedDecl *getAcceptableDeclSlow(NamedDecl *D) const;
 
 public:

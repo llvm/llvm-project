@@ -12,6 +12,7 @@ class TestDarwinSignalHandlers(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfOutOfTreeDebugserver
     @skipUnlessDarwin
     def test_ignored_thread(self):
         """It isn't possible to convert an EXC_BAD_ACCESS to a signal when
@@ -56,8 +57,8 @@ class TestDarwinSignalHandlers(TestBase):
         self.assertEqual(len(threads), 1, "Stopped at return breakpoint")
 
         # Make sure we really changed the value:
-        
+
         process.Continue()
-        self.assertEqual(process.state, lldb.eStateExited, "Process exited")
+        self.assertState(process.state, lldb.eStateExited, "Process exited")
         self.assertEqual(process.exit_state, 20, "Got the right exit status")
-                         
+

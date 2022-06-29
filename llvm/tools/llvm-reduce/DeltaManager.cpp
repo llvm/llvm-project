@@ -66,6 +66,7 @@ static cl::opt<std::string>
   DELTA_PASS("simplify-instructions", simplifyInstructionsDeltaPass)           \
   DELTA_PASS("operands-zero", reduceOperandsZeroDeltaPass)                     \
   DELTA_PASS("operands-one", reduceOperandsOneDeltaPass)                       \
+  DELTA_PASS("operands-nan", reduceOperandsNaNDeltaPass)                       \
   DELTA_PASS("operands-to-args", reduceOperandsToArgsDeltaPass)                \
   DELTA_PASS("operands-skip", reduceOperandsSkipDeltaPass)                     \
   DELTA_PASS("operand-bundles", reduceOperandBundesDeltaPass)                  \

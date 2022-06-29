@@ -2219,7 +2219,10 @@ public:
             nullptr,
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
-                eCommandProcessMustBePaused | eCommandProcessMustBeTraced) {}
+                eCommandProcessMustBePaused | eCommandProcessMustBeTraced) {
+    CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatOptional};
+    m_arguments.push_back({thread_arg});
+  }
 
   ~CommandObjectTraceDumpInstructions() override = default;
 
@@ -2285,15 +2288,16 @@ protected:
                        lldb::eFilePermissionsFileDefault);
     }
 
+    if (m_options.m_continue && !m_last_id) {
+      // We need to stop processing data when we already ran out of instructions
+      // in a previous command. We can fake this by setting the cursor past the
+      // end of the trace.
+      cursor_up->Seek(1, TraceCursor::SeekType::End);
+    }
+
     TraceInstructionDumper dumper(
         std::move(cursor_up), out_file ? *out_file : result.GetOutputStream(),
         m_options.m_dumper_options);
-
-    if (m_options.m_continue && !m_last_id) {
-      // We need to tell the dumper to stop processing data when
-      // we already ran out of instructions in a previous command
-      dumper.SetNoMoreData();
-    }
 
     m_last_id = dumper.DumpInstructions(m_options.m_count);
     return true;

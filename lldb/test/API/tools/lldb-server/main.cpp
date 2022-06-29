@@ -353,6 +353,10 @@ int main(int argc, char **argv) {
       printf("%s\n", value ? value : "__unset__");
     } else if (consume_front(arg, "trap")) {
       trap();
+#if !defined(_WIN32)
+    } else if (arg == "stop") {
+      raise(SIGSTOP);
+#endif
     } else {
       // Treat the argument as text for stdout.
       printf("%s\n", argv[i]);

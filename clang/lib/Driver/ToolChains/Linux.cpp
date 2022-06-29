@@ -933,8 +933,11 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
 }
 
 bool Linux::isPIEDefault(const llvm::opt::ArgList &Args) const {
-  return CLANG_DEFAULT_PIE_ON_LINUX || getTriple().isAndroid() ||
-         getTriple().isMusl() || getSanitizerArgs(Args).requiresPIE();
+  // TODO: Remove the special treatment for Flang once its frontend driver can
+  // generate position independent code.
+  return !getDriver().IsFlangMode() &&
+         (CLANG_DEFAULT_PIE_ON_LINUX || getTriple().isAndroid() ||
+          getTriple().isMusl() || getSanitizerArgs(Args).requiresPIE());
 }
 
 bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {

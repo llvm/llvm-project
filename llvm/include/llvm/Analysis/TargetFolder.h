@@ -74,6 +74,38 @@ public:
     return nullptr;
   }
 
+  Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return Fold(ConstantExpr::getUDiv(LC, RC, IsExact));
+    return nullptr;
+  }
+
+  Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return Fold(ConstantExpr::getSDiv(LC, RC, IsExact));
+    return nullptr;
+  }
+
+  Value *FoldURem(Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return Fold(ConstantExpr::getURem(LC, RC));
+    return nullptr;
+  }
+
+  Value *FoldSRem(Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return Fold(ConstantExpr::getSRem(LC, RC));
+    return nullptr;
+  }
+
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
@@ -109,7 +141,7 @@ public:
   Value *FoldExtractValue(Value *Agg,
                           ArrayRef<unsigned> IdxList) const override {
     if (auto *CAgg = dyn_cast<Constant>(Agg))
-      return Fold(ConstantExpr::getExtractValue(CAgg, IdxList));
+      return ConstantFoldExtractValueInstruction(CAgg, IdxList);
     return nullptr;
   };
 
@@ -119,6 +151,33 @@ public:
     auto *CVal = dyn_cast<Constant>(Val);
     if (CAgg && CVal)
       return Fold(ConstantExpr::getInsertValue(CAgg, CVal, IdxList));
+    return nullptr;
+  }
+
+  Value *FoldExtractElement(Value *Vec, Value *Idx) const override {
+    auto *CVec = dyn_cast<Constant>(Vec);
+    auto *CIdx = dyn_cast<Constant>(Idx);
+    if (CVec && CIdx)
+      return Fold(ConstantExpr::getExtractElement(CVec, CIdx));
+    return nullptr;
+  }
+
+  Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                           Value *Idx) const override {
+    auto *CVec = dyn_cast<Constant>(Vec);
+    auto *CNewElt = dyn_cast<Constant>(NewElt);
+    auto *CIdx = dyn_cast<Constant>(Idx);
+    if (CVec && CNewElt && CIdx)
+      return Fold(ConstantExpr::getInsertElement(CVec, CNewElt, CIdx));
+    return nullptr;
+  }
+
+  Value *FoldShuffleVector(Value *V1, Value *V2,
+                           ArrayRef<int> Mask) const override {
+    auto *C1 = dyn_cast<Constant>(V1);
+    auto *C2 = dyn_cast<Constant>(V2);
+    if (C1 && C2)
+      return Fold(ConstantExpr::getShuffleVector(C1, C2, Mask));
     return nullptr;
   }
 
@@ -143,22 +202,8 @@ public:
   Constant *CreateFMul(Constant *LHS, Constant *RHS) const override {
     return Fold(ConstantExpr::getFMul(LHS, RHS));
   }
-  Constant *CreateUDiv(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return Fold(ConstantExpr::getUDiv(LHS, RHS, isExact));
-  }
-  Constant *CreateSDiv(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return Fold(ConstantExpr::getSDiv(LHS, RHS, isExact));
-  }
   Constant *CreateFDiv(Constant *LHS, Constant *RHS) const override {
     return Fold(ConstantExpr::getFDiv(LHS, RHS));
-  }
-  Constant *CreateURem(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getURem(LHS, RHS));
-  }
-  Constant *CreateSRem(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getSRem(LHS, RHS));
   }
   Constant *CreateFRem(Constant *LHS, Constant *RHS) const override {
     return Fold(ConstantExpr::getFRem(LHS, RHS));
@@ -268,24 +313,6 @@ public:
   Constant *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                        Constant *RHS) const override {
     return Fold(ConstantExpr::getCompare(P, LHS, RHS));
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateExtractElement(Constant *Vec, Constant *Idx) const override {
-    return Fold(ConstantExpr::getExtractElement(Vec, Idx));
-  }
-
-  Constant *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                                Constant *Idx) const override {
-    return Fold(ConstantExpr::getInsertElement(Vec, NewElt, Idx));
-  }
-
-  Constant *CreateShuffleVector(Constant *V1, Constant *V2,
-                                ArrayRef<int> Mask) const override {
-    return Fold(ConstantExpr::getShuffleVector(V1, V2, Mask));
   }
 };
 

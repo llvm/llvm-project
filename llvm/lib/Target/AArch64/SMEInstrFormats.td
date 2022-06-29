@@ -28,6 +28,14 @@ def am_sme_indexed_b4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0,15>",
 // SME Outer Products
 //===----------------------------------------------------------------------===//
 
+class sme_outer_product_pseudo<ZPRRegOp zpr_ty>
+    : Pseudo<(outs), (ins i64imm:$tile, PPR3bAny:$pn, PPR3bAny:$pm,
+                          zpr_ty:$zn, zpr_ty:$zm), []>,
+      Sched<[]> {
+  // Translated to the actual instructions in AArch64ISelLowering.cpp
+  let usesCustomInserter = 1;
+}
+
 class sme_fp_outer_product_inst<bit S, bit sz, MatrixTileOperand za_ty,
                                 ZPRRegOp zpr_ty, string mnemonic>
     : I<(outs za_ty:$ZAda),
@@ -52,17 +60,31 @@ class sme_fp_outer_product_inst<bit S, bit sz, MatrixTileOperand za_ty,
   let Constraints = "$ZAda = $_ZAda";
 }
 
-class sme_outer_product_fp32<bit S, string mnemonic>
-    : sme_fp_outer_product_inst<S, 0b0, TileOp32, ZPR32, mnemonic> {
-  bits<2> ZAda;
-  let Inst{1-0} = ZAda;
-  let Inst{2}   = 0b0;
+multiclass sme_outer_product_fp32<bit S, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_fp_outer_product_inst<S, 0b0, TileOp32, ZPR32, mnemonic> {
+    bits<2> ZAda;
+    let Inst{1-0} = ZAda;
+    let Inst{2}   = 0b0;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR32>;
+
+  def : Pat<(op imm0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
+                (nxv4f32 ZPR32:$zn), (nxv4f32 ZPR32:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
-class sme_outer_product_fp64<bit S, string mnemonic>
-    : sme_fp_outer_product_inst<S, 0b1, TileOp64, ZPR64, mnemonic> {
-  bits<3> ZAda;
-  let Inst{2-0} = ZAda;
+multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_fp_outer_product_inst<S, 0b1, TileOp64, ZPR64, mnemonic> {
+    bits<3> ZAda;
+    let Inst{2-0} = ZAda;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR64>;
+
+  def : Pat<(op imm0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
+                (nxv2f64 ZPR64:$zn), (nxv2f64 ZPR64:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_7:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 class sme_int_outer_product_inst<bit u0, bit u1, bit S, bit sz,
@@ -92,19 +114,35 @@ class sme_int_outer_product_inst<bit u0, bit u1, bit S, bit sz,
   let Constraints = "$ZAda = $_ZAda";
 }
 
-class sme_int_outer_product_i32<bits<3> opc, string mnemonic>
-    : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b0, TileOp32, ZPR8,
-                                 mnemonic> {
-  bits<2> ZAda;
-  let Inst{1-0} = ZAda;
-  let Inst{2}   = 0b0;
+multiclass sme_int_outer_product_i32<bits<3> opc, string mnemonic,
+                                     SDPatternOperator op> {
+  def NAME : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b0, TileOp32,
+                                        ZPR8, mnemonic> {
+    bits<2> ZAda;
+    let Inst{1-0} = ZAda;
+    let Inst{2}   = 0b0;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR8>;
+
+  def : Pat<(op imm0_3:$tile, (nxv16i1 PPR3bAny:$pn), (nxv16i1 PPR3bAny:$pm),
+                (nxv16i8 ZPR8:$zn), (nxv16i8 ZPR8:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
-class sme_int_outer_product_i64<bits<3> opc, string mnemonic>
-    : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b1, TileOp64, ZPR16,
-                                 mnemonic> {
-  bits<3> ZAda;
-  let Inst{2-0} = ZAda;
+multiclass sme_int_outer_product_i64<bits<3> opc, string mnemonic,
+                                     SDPatternOperator op> {
+  def NAME : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b1, TileOp64,
+                                        ZPR16, mnemonic> {
+    bits<3> ZAda;
+    let Inst{2-0} = ZAda;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
+
+  def : Pat<(op imm0_7:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
+                (nxv8i16 ZPR16:$zn), (nxv8i16 ZPR16:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_7:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 class sme_outer_product_widening_inst<bit op, bit S, string mnemonic>
@@ -131,12 +169,24 @@ class sme_outer_product_widening_inst<bit op, bit S, string mnemonic>
   let Constraints = "$ZAda = $_ZAda";
 }
 
-multiclass sme_bf16_outer_product<bit S, string mnemonic> {
-  def : sme_outer_product_widening_inst<0b0, S, mnemonic>;
+multiclass sme_bf16_outer_product<bit S, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_outer_product_widening_inst<0b0, S, mnemonic>;
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
+
+  def : Pat<(op imm0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
+                (nxv8bf16 ZPR16:$zn), (nxv8bf16 ZPR16:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
-multiclass sme_f16_outer_product<bit S, string mnemonic> {
-  def : sme_outer_product_widening_inst<0b1, S, mnemonic>;
+multiclass sme_f16_outer_product<bit S, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_outer_product_widening_inst<0b1, S, mnemonic>;
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
+
+  def : Pat<(op imm0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
+                (nxv8f16 ZPR16:$zn), (nxv8f16 ZPR16:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -251,25 +301,13 @@ multiclass sme_mem_ld_ss_patterns<Instruction Inst, SDPatternOperator Load,
                                   Operand tile_ty, Operand offset_ty,
                                   ComplexPattern addr,
                                   ComplexPattern tileslice> {
-  // base
-  def : Pat<(Load PPR3bAny:$pg, GPR64sp:$base, tile_ty:$tile,
-                  MatrixIndexGPR32Op12_15:$idx),
-            (Inst tile_ty:$tile, $idx, 0, $pg, $base, XZR)>;
-  // reg + reg
-  let AddedComplexity = 1 in {
-    def : Pat<(Load PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
-                    tile_ty:$tile, MatrixIndexGPR32Op12_15:$idx),
-              (Inst tile_ty:$tile, $idx, 0, $pg, $base, $offset)>;
-  }
-
   // base, tileslice
-  let AddedComplexity = 1 in {
-    def : Pat<(Load PPR3bAny:$pg, GPR64sp:$base, tile_ty:$tile,
-                    (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
-              (Inst tile_ty:$tile, $idx, $imm, $pg, $base, XZR)>;
-  }
+  def : Pat<(Load PPR3bAny:$pg, GPR64sp:$base, tile_ty:$tile,
+                  (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
+            (Inst tile_ty:$tile, $idx, $imm, $pg, $base, XZR)>;
+
   // reg + reg, tileslice
-  let AddedComplexity = 2 in {
+  let AddedComplexity = 1 in {
     def : Pat<(Load PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
                     tile_ty:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$idx,
                                               offset_ty:$imm))),
@@ -410,24 +448,13 @@ multiclass sme_mem_st_ss_patterns<Instruction Inst, SDPatternOperator Store,
                                   ComplexPattern imm2tile,
                                   ComplexPattern addr,
                                   ComplexPattern tileslice> {
-  // base
-  def : Pat<(Store PPR3bAny:$pg, GPR64sp:$base, (imm2tile untyped:$tile),
-                   MatrixIndexGPR32Op12_15:$idx),
-            (Inst $tile, $idx, 0, $pg, $base, XZR)>;
-  // reg + reg
-  let AddedComplexity = 1 in {
-    def : Pat<(Store PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
-                     (imm2tile untyped:$tile), MatrixIndexGPR32Op12_15:$idx),
-              (Inst $tile, $idx, 0, $pg, $base, $offset)>;
-  }
   // base, tileslice
-  let AddedComplexity = 1 in {
-    def : Pat<(Store PPR3bAny:$pg, GPR64sp:$base, (imm2tile untyped:$tile),
-                     (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
-              (Inst $tile, $idx, $imm, $pg, $base, XZR)>;
-  }
+  def : Pat<(Store PPR3bAny:$pg, GPR64sp:$base, (imm2tile untyped:$tile),
+                   (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
+            (Inst $tile, $idx, $imm, $pg, $base, XZR)>;
+
   // reg + reg, tileslice
-  let AddedComplexity = 2 in {
+  let AddedComplexity = 1 in {
     def : Pat<(Store PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
                      (imm2tile untyped:$tile),
                      (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
@@ -1010,6 +1037,15 @@ class sve2_int_perm_revd<string asm>
   let ElementSize = ZPR128.ElementSize;
 }
 
+multiclass sve2_int_perm_revd<string asm, SDPatternOperator op> {
+  def NAME : sve2_int_perm_revd<asm>;
+
+  def : SVE_1_Op_Passthru_Pat<nxv16i8, op, nxv16i1, nxv16i8, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME)>;
+}
+
 class sve2_clamp<string asm, bits<2> sz, bit U, ZPRRegOp zpr_ty>
     : I<(outs zpr_ty:$Zd), (ins zpr_ty:$Zn, zpr_ty:$Zm, zpr_ty:$_Zd),
         asm, "\t$Zd, $Zn, $Zm", "", []>,
@@ -1031,11 +1067,16 @@ class sve2_clamp<string asm, bits<2> sz, bit U, ZPRRegOp zpr_ty>
   let ElementSize = zpr_ty.ElementSize;
 }
 
-multiclass sve2_clamp<string asm, bit U> {
+multiclass sve2_clamp<string asm, bit U, SDPatternOperator op> {
   def _B : sve2_clamp<asm, 0b00, U, ZPR8>;
   def _H : sve2_clamp<asm, 0b01, U, ZPR16>;
   def _S : sve2_clamp<asm, 0b10, U, ZPR32>;
   def _D : sve2_clamp<asm, 0b11, U, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_perm_sel_p<string asm, PPRRegOp ppr_ty, Operand imm_ty>
@@ -1058,7 +1099,7 @@ class sve2_int_perm_sel_p<string asm, PPRRegOp ppr_ty, Operand imm_ty>
   let Inst{3-0}   = Pd;
 }
 
-multiclass sve2_int_perm_sel_p<string asm> {
+multiclass sve2_int_perm_sel_p<string asm, SDPatternOperator op> {
   def _B : sve2_int_perm_sel_p<asm, PPR8, sme_elm_idx0_15> {
     bits<4> imm;
     let Inst{23-22} = imm{3-2};
@@ -1081,5 +1122,33 @@ multiclass sve2_int_perm_sel_p<string asm> {
     let Inst{23}    = imm;
     let Inst{22}    = 0b1;
     let Inst{20-18} = 0b000;
+  }
+
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPRAny:$Pm),
+             MatrixIndexGPR32Op12_15:$idx)),
+            (!cast<Instruction>(NAME # _B) $Pn, $Pm, $idx, 0)>;
+  def : Pat<(nxv8i1 (op (nxv8i1 PPRAny:$Pn), (nxv8i1 PPRAny:$Pm),
+             MatrixIndexGPR32Op12_15:$idx)),
+            (!cast<Instruction>(NAME # _H) $Pn, $Pm, $idx, 0)>;
+  def : Pat<(nxv4i1 (op (nxv4i1 PPRAny:$Pn), (nxv4i1 PPRAny:$Pm),
+             MatrixIndexGPR32Op12_15:$idx)),
+            (!cast<Instruction>(NAME # _S) $Pn, $Pm, $idx, 0)>;
+  def : Pat<(nxv2i1 (op (nxv2i1 PPRAny:$Pn), (nxv2i1 PPRAny:$Pm),
+             MatrixIndexGPR32Op12_15:$idx)),
+            (!cast<Instruction>(NAME # _D) $Pn, $Pm, $idx, 0)>;
+
+  let AddedComplexity = 1 in {
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPRAny:$Pm),
+               (i32 (tileslice8 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm)))),
+              (!cast<Instruction>(NAME # _B) $Pn, $Pm, $idx, $imm)>;
+    def : Pat<(nxv8i1 (op (nxv8i1 PPRAny:$Pn), (nxv8i1 PPRAny:$Pm),
+               (i32 (tileslice16 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_7:$imm)))),
+              (!cast<Instruction>(NAME # _H) $Pn, $Pm, $idx, $imm)>;
+    def : Pat<(nxv4i1 (op (nxv4i1 PPRAny:$Pn), (nxv4i1 PPRAny:$Pm),
+               (i32 (tileslice32 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_3:$imm)))),
+              (!cast<Instruction>(NAME # _S) $Pn, $Pm, $idx, $imm)>;
+    def : Pat<(nxv2i1 (op (nxv2i1 PPRAny:$Pn), (nxv2i1 PPRAny:$Pm),
+               (i32 (tileslice64 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_1:$imm)))),
+              (!cast<Instruction>(NAME # _D) $Pn, $Pm, $idx, $imm)>;
   }
 }

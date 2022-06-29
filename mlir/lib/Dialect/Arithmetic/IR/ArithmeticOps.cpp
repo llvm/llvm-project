@@ -773,9 +773,9 @@ void arith::DivFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 OpFoldResult arith::RemFOp::fold(ArrayRef<Attribute> operands) {
   return constFoldBinaryOp<FloatAttr>(operands,
                                       [](const APFloat &a, const APFloat &b) {
-                                        APFloat Result(a);
-                                        (void)Result.remainder(b);
-                                        return Result;
+                                        APFloat result(a);
+                                        (void)result.remainder(b);
+                                        return result;
                                       });
 }
 

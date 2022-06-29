@@ -387,7 +387,7 @@ static void getProducerOfTensor(Value tensor, OpResult &opResult) {
       return;
     }
     if (auto sliceOp = tensor.getDefiningOp<tensor::ExtractSliceOp>()) {
-      tensor = sliceOp.source();
+      tensor = sliceOp.getSource();
       continue;
     }
     if (auto blockArg = tensor.dyn_cast<BlockArgument>()) {

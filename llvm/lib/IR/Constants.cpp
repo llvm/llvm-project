@@ -547,8 +547,6 @@ void llvm::deleteConstant(Constant *C) {
       delete static_cast<InsertElementConstantExpr *>(C);
     else if (isa<ShuffleVectorConstantExpr>(C))
       delete static_cast<ShuffleVectorConstantExpr *>(C);
-    else if (isa<ExtractValueConstantExpr>(C))
-      delete static_cast<ExtractValueConstantExpr *>(C);
     else if (isa<InsertValueConstantExpr>(C))
       delete static_cast<InsertValueConstantExpr *>(C);
     else if (isa<GetElementPtrConstantExpr>(C))
@@ -1491,15 +1489,10 @@ bool ConstantExpr::isCompare() const {
 }
 
 bool ConstantExpr::hasIndices() const {
-  return getOpcode() == Instruction::ExtractValue ||
-         getOpcode() == Instruction::InsertValue;
+  return getOpcode() == Instruction::InsertValue;
 }
 
 ArrayRef<unsigned> ConstantExpr::getIndices() const {
-  if (const ExtractValueConstantExpr *EVCE =
-        dyn_cast<ExtractValueConstantExpr>(this))
-    return EVCE->Indices;
-
   return cast<InsertValueConstantExpr>(this)->Indices;
 }
 
@@ -1549,8 +1542,6 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::InsertValue:
     return ConstantExpr::getInsertValue(Ops[0], Ops[1], getIndices(),
                                         OnlyIfReducedTy);
-  case Instruction::ExtractValue:
-    return ConstantExpr::getExtractValue(Ops[0], getIndices(), OnlyIfReducedTy);
   case Instruction::FNeg:
     return ConstantExpr::getFNeg(Ops[0]);
   case Instruction::ShuffleVector:
@@ -2677,30 +2668,6 @@ Constant *ConstantExpr::getInsertValue(Constant *Agg, Constant *Val,
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
 }
 
-Constant *ConstantExpr::getExtractValue(Constant *Agg, ArrayRef<unsigned> Idxs,
-                                        Type *OnlyIfReducedTy) {
-  assert(Agg->getType()->isFirstClassType() &&
-         "Tried to create extractelement operation on non-first-class type!");
-
-  Type *ReqTy = ExtractValueInst::getIndexedType(Agg->getType(), Idxs);
-  (void)ReqTy;
-  assert(ReqTy && "extractvalue indices invalid!");
-
-  assert(Agg->getType()->isFirstClassType() &&
-         "Non-first-class type for constant extractvalue expression");
-  if (Constant *FC = ConstantFoldExtractValueInstruction(Agg, Idxs))
-    return FC;
-
-  if (OnlyIfReducedTy == ReqTy)
-    return nullptr;
-
-  Constant *ArgVec[] = { Agg };
-  const ConstantExprKeyType Key(Instruction::ExtractValue, ArgVec, 0, 0, Idxs);
-
-  LLVMContextImpl *pImpl = Agg->getContext().pImpl;
-  return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
-}
-
 Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
   assert(C->getType()->isIntOrIntVectorTy() &&
          "Cannot NEG a nonintegral value!");
@@ -3553,8 +3520,6 @@ Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
   case Instruction::InsertValue:
     return InsertValueInst::Create(Ops[0], Ops[1], getIndices(), "",
                                    InsertBefore);
-  case Instruction::ExtractValue:
-    return ExtractValueInst::Create(Ops[0], getIndices(), "", InsertBefore);
   case Instruction::ShuffleVector:
     return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask(), "",
                                  InsertBefore);

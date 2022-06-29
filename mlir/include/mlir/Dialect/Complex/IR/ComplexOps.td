@@ -73,6 +73,8 @@ def AddOp : ComplexArithmeticOp<"add"> {
     %a = complex.add %b, %c : complex<f32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -363,6 +365,8 @@ def NegOp : ComplexUnaryOp<"neg", [SameOperandsAndResultType]> {
   }];
 
   let results = (outs Complex<AnyFloat>:$result);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

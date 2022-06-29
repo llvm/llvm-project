@@ -1052,7 +1052,7 @@ llvm.func @collapse_wsloop(
     // CHECK: %[[TOTAL_SUB_1:.*]] = sub i32 %[[TOTAL]], 1
     // CHECK: store i32 %[[TOTAL_SUB_1]], i32*
     // CHECK: call void @__kmpc_for_static_init_4u
-    omp.wsloop collapse(3)
+    omp.wsloop
     for (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) {
       %31 = llvm.load %20 : !llvm.ptr<i32>
       %32 = llvm.add %31, %arg0 : i32
@@ -1113,7 +1113,7 @@ llvm.func @collapse_wsloop_dynamic(
     // CHECK: store i32 1, i32*
     // CHECK: store i32 %[[TOTAL]], i32*
     // CHECK: call void @__kmpc_dispatch_init_4u
-    omp.wsloop collapse(3) schedule(dynamic)
+    omp.wsloop schedule(dynamic)
     for (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) {
       %31 = llvm.load %20 : !llvm.ptr<i32>
       %32 = llvm.add %31, %arg0 : i32

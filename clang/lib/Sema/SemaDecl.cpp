@@ -4629,11 +4629,12 @@ bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
 
 /// ParsedFreeStandingDeclSpec - This method is invoked when a declspec with
 /// no declarator (e.g. "struct foo;") is parsed.
-Decl *
-Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
-                                 RecordDecl *&AnonRecord) {
-  return ParsedFreeStandingDeclSpec(S, AS, DS, MultiTemplateParamsArg(), false,
-                                    AnonRecord);
+Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
+                                       DeclSpec &DS,
+                                       const ParsedAttributesView &DeclAttrs,
+                                       RecordDecl *&AnonRecord) {
+  return ParsedFreeStandingDeclSpec(
+      S, AS, DS, DeclAttrs, MultiTemplateParamsArg(), false, AnonRecord);
 }
 
 // The MS ABI changed between VS2013 and VS2015 with regard to numbers used to
@@ -4846,11 +4847,12 @@ static unsigned GetDiagnosticTypeSpecifierID(DeclSpec::TST T) {
 /// ParsedFreeStandingDeclSpec - This method is invoked when a declspec with
 /// no declarator (e.g. "struct foo;") is parsed. It also accepts template
 /// parameters to cope with template friend declarations.
-Decl *
-Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
-                                 MultiTemplateParamsArg TemplateParams,
-                                 bool IsExplicitInstantiation,
-                                 RecordDecl *&AnonRecord) {
+Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
+                                       DeclSpec &DS,
+                                       const ParsedAttributesView &DeclAttrs,
+                                       MultiTemplateParamsArg TemplateParams,
+                                       bool IsExplicitInstantiation,
+                                       RecordDecl *&AnonRecord) {
   Decl *TagD = nullptr;
   TagDecl *Tag = nullptr;
   if (DS.getTypeSpecType() == DeclSpec::TST_class ||
@@ -5089,7 +5091,7 @@ Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
   // Warn about ignored type attributes, for example:
   // __attribute__((aligned)) struct A;
   // Attributes should be placed after tag to apply to type declaration.
-  if (!DS.getAttributes().empty()) {
+  if (!DS.getAttributes().empty() || !DeclAttrs.empty()) {
     DeclSpec::TST TypeSpecType = DS.getTypeSpecType();
     if (TypeSpecType == DeclSpec::TST_class ||
         TypeSpecType == DeclSpec::TST_struct ||
@@ -5097,6 +5099,9 @@ Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
         TypeSpecType == DeclSpec::TST_union ||
         TypeSpecType == DeclSpec::TST_enum) {
       for (const ParsedAttr &AL : DS.getAttributes())
+        Diag(AL.getLoc(), diag::warn_declspec_attribute_ignored)
+            << AL << GetDiagnosticTypeSpecifierID(TypeSpecType);
+      for (const ParsedAttr &AL : DeclAttrs)
         Diag(AL.getLoc(), diag::warn_declspec_attribute_ignored)
             << AL << GetDiagnosticTypeSpecifierID(TypeSpecType);
     }

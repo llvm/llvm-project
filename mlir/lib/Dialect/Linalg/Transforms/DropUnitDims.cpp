@@ -499,14 +499,15 @@ struct UseRankReducedExtractSliceOp
     if (!reassociation ||
         reassociation->size() == static_cast<size_t>(resultType.getRank()))
       return failure();
-    auto rankReducedType = tensor::ExtractSliceOp::inferRankReducedResultType(
-                               reassociation->size(), sliceOp.getSourceType(),
-                               offsets, sizes, strides)
-                               .cast<RankedTensorType>();
+    auto rankReducedType =
+        tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
+            reassociation->size(), sliceOp.getSourceType(), offsets, sizes,
+            strides)
+            .cast<RankedTensorType>();
 
     Location loc = sliceOp.getLoc();
     Value newSlice = rewriter.create<tensor::ExtractSliceOp>(
-        loc, rankReducedType, sliceOp.source(), offsets, sizes, strides);
+        loc, rankReducedType, sliceOp.getSource(), offsets, sizes, strides);
     rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
         sliceOp, resultType, newSlice, *reassociation);
     return success();
@@ -530,10 +531,11 @@ struct UseRankReducedInsertSliceOp
       return failure();
     Location loc = insertOp.getLoc();
     auto reshapedSource = rewriter.create<tensor::CollapseShapeOp>(
-        loc, insertOp.source(), *reassociation);
+        loc, insertOp.getSource(), *reassociation);
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        insertOp, reshapedSource, insertOp.dest(), insertOp.getMixedOffsets(),
-        insertOp.getMixedSizes(), insertOp.getMixedStrides());
+        insertOp, reshapedSource, insertOp.getDest(),
+        insertOp.getMixedOffsets(), insertOp.getMixedSizes(),
+        insertOp.getMixedStrides());
     return success();
   }
 };

@@ -2239,6 +2239,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         // Mask to only valid indices.
         unsigned MaxIndex = OpVecTy->getMinNumElements() / VecTy->getMinNumElements();
         assert(isPowerOf2_32(MaxIndex));
+        Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
         Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
         Ops[1] = Builder.CreateMul(Ops[1],
                                    ConstantInt::get(Ops[1]->getType(),
@@ -2263,6 +2264,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         // Mask to only valid indices.
         unsigned MaxIndex = ResVecTy->getMinNumElements() / VecTy->getMinNumElements();
         assert(isPowerOf2_32(MaxIndex));
+        Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
         Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
         Ops[1] = Builder.CreateMul(Ops[1],
                                    ConstantInt::get(Ops[1]->getType(),

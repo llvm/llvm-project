@@ -71,6 +71,10 @@ namespace std {
 #include <type_traits>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iosfwd>
+#endif
+
 #if defined(__IBMCPP__)
 #  include "__support/ibm/support.h"
 #endif

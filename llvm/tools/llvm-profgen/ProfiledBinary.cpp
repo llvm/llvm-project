@@ -83,25 +83,23 @@ void BinarySizeContextTracker::addInstructionForContext(
 }
 
 uint32_t
-BinarySizeContextTracker::getFuncSizeForContext(const SampleContext &Context) {
+BinarySizeContextTracker::getFuncSizeForContext(const ContextTrieNode *Node) {
   ContextTrieNode *CurrNode = &RootContext;
   ContextTrieNode *PrevNode = nullptr;
-  SampleContextFrames Frames = Context.getContextFrames();
-  int32_t I = Frames.size() - 1;
+
   Optional<uint32_t> Size;
 
   // Start from top-level context-less function, traverse down the reverse
   // context trie to find the best/longest match for given context, then
   // retrieve the size.
-
-  while (CurrNode && I >= 0) {
-    // Process from leaf function to callers (added to context).
-    const auto &ChildFrame = Frames[I--];
+  LineLocation CallSiteLoc(0, 0);
+  while (CurrNode && Node->getParentContext() != nullptr) {
     PrevNode = CurrNode;
-    CurrNode =
-        CurrNode->getChildContext(ChildFrame.Location, ChildFrame.FuncName);
+    CurrNode = CurrNode->getChildContext(CallSiteLoc, Node->getFuncName());
     if (CurrNode && CurrNode->getFunctionSize())
       Size = CurrNode->getFunctionSize().getValue();
+    CallSiteLoc = Node->getCallSiteLoc();
+    Node = Node->getParentContext();
   }
 
   // If we traversed all nodes along the path of the context and haven't
