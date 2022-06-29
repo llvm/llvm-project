@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include <vector>
 
@@ -107,12 +106,22 @@ public:
 };
 
 namespace {
-// Collection of symbol name/value pairs to be searched prior to any libraries.
-static llvm::ManagedStatic<llvm::StringMap<void *>> ExplicitSymbols;
-// Collection of known library handles.
-static llvm::ManagedStatic<DynamicLibrary::HandleSet> OpenedHandles;
-// Lock for ExplicitSymbols and OpenedHandles.
-static llvm::ManagedStatic<llvm::sys::SmartMutex<true>> SymbolsMutex;
+
+struct Globals {
+  // Collection of symbol name/value pairs to be searched prior to any
+  // libraries.
+  llvm::StringMap<void *> ExplicitSymbols;
+  // Collection of known library handles.
+  DynamicLibrary::HandleSet OpenedHandles;
+  // Lock for ExplicitSymbols and OpenedHandles.
+  llvm::sys::SmartMutex<true> SymbolsMutex;
+};
+
+Globals &getGlobals() {
+  static Globals G;
+  return G;
+}
+
 } // namespace
 
 #ifdef _WIN32
@@ -136,20 +145,18 @@ void *SearchForAddressOfSpecialSymbol(const char *SymbolName) {
 } // namespace llvm
 
 void DynamicLibrary::AddSymbol(StringRef SymbolName, void *SymbolValue) {
-  SmartScopedLock<true> Lock(*SymbolsMutex);
-  (*ExplicitSymbols)[SymbolName] = SymbolValue;
+  auto &G = getGlobals();
+  SmartScopedLock<true> Lock(G.SymbolsMutex);
+  G.ExplicitSymbols[SymbolName] = SymbolValue;
 }
 
 DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *FileName,
                                                    std::string *Err) {
-  // Force OpenedHandles to be added into the ManagedStatic list before any
-  // ManagedStatic can be added from static constructors in HandleSet::DLOpen.
-  HandleSet& HS = *OpenedHandles;
-
+  auto &G = getGlobals();
   void *Handle = HandleSet::DLOpen(FileName, Err);
   if (Handle != &Invalid) {
-    SmartScopedLock<true> Lock(*SymbolsMutex);
-    HS.AddLibrary(Handle, /*IsProcess*/ FileName == nullptr);
+    SmartScopedLock<true> Lock(G.SymbolsMutex);
+    G.OpenedHandles.AddLibrary(Handle, /*IsProcess*/ FileName == nullptr);
   }
 
   return DynamicLibrary(Handle);
@@ -157,9 +164,11 @@ DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *FileName,
 
 DynamicLibrary DynamicLibrary::addPermanentLibrary(void *Handle,
                                                    std::string *Err) {
-  SmartScopedLock<true> Lock(*SymbolsMutex);
+  auto &G = getGlobals();
+  SmartScopedLock<true> Lock(G.SymbolsMutex);
   // If we've already loaded this library, tell the caller.
-  if (!OpenedHandles->AddLibrary(Handle, /*IsProcess*/false, /*CanClose*/false))
+  if (!G.OpenedHandles.AddLibrary(Handle, /*IsProcess*/ false,
+                                  /*CanClose*/ false))
     *Err = "Library already loaded";
 
   return DynamicLibrary(Handle);
@@ -173,21 +182,18 @@ void *DynamicLibrary::getAddressOfSymbol(const char *SymbolName) {
 
 void *DynamicLibrary::SearchForAddressOfSymbol(const char *SymbolName) {
   {
-    SmartScopedLock<true> Lock(*SymbolsMutex);
+    auto &G = getGlobals();
+    SmartScopedLock<true> Lock(G.SymbolsMutex);
 
     // First check symbols added via AddSymbol().
-    if (ExplicitSymbols.isConstructed()) {
-      StringMap<void *>::iterator i = ExplicitSymbols->find(SymbolName);
+    StringMap<void *>::iterator i = G.ExplicitSymbols.find(SymbolName);
 
-      if (i != ExplicitSymbols->end())
-        return i->second;
-    }
+    if (i != G.ExplicitSymbols.end())
+      return i->second;
 
     // Now search the libraries.
-    if (OpenedHandles.isConstructed()) {
-      if (void *Ptr = OpenedHandles->Lookup(SymbolName, SearchOrder))
-        return Ptr;
-    }
+    if (void *Ptr = G.OpenedHandles.Lookup(SymbolName, SearchOrder))
+      return Ptr;
   }
 
   return llvm::SearchForAddressOfSpecialSymbol(SymbolName);
