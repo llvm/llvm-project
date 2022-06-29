@@ -5868,11 +5868,24 @@ void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
 
 Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   D.setFunctionDefinitionKind(FunctionDefinitionKind::Declaration);
+
+  // Check if we are in an `omp begin/end declare variant` scope. Handle this
+  // declaration only if the `bind_to_declaration` extension is set.
+  SmallVector<FunctionDecl *, 4> Bases;
+  if (LangOpts.OpenMP && isInOpenMPDeclareVariantScope())
+    if (getOMPTraitInfoForSurroundingScope()->isExtensionActive(llvm::omp::TraitProperty::
+              implementation_extension_bind_to_declaration))
+    ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
+        S, D, MultiTemplateParamsArg(), Bases);
+
   Decl *Dcl = HandleDeclarator(S, D, MultiTemplateParamsArg());
 
   if (OriginalLexicalContext && OriginalLexicalContext->isObjCContainer() &&
       Dcl && Dcl->getDeclContext()->isFileContext())
     Dcl->setTopLevelDeclInObjCContainer();
+
+  if (!Bases.empty())
+    ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl, Bases);
 
   return Dcl;
 }
