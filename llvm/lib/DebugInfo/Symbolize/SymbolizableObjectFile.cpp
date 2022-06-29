@@ -274,7 +274,7 @@ DILineInfo SymbolizableObjectFile::symbolizeCode(object::SectionedAddress Module
   DILineInfo LineInfo =
       DebugInfoContext->getLineInfoForAddress(ModuleOffset, LineInfoSpecifier);
 
-  // HACK: Always provide symbol table names
+  // HACK: Always provide symbol table function name
   std::string FunctionName, FileName;
   uint64_t Start, Size;
   if (getNameFromSymbolTable(ModuleOffset.Address, FunctionName, Start, Size,
@@ -286,6 +286,7 @@ DILineInfo SymbolizableObjectFile::symbolizeCode(object::SectionedAddress Module
     }
   }
 
+  // Strip compilation directory from filenames
   std::string FullPath = LineInfo.FileName;
   std::string Prefix = DebugInfoContext->getCompilationDirectory().str();
   if (Prefix.back() != '/') {
@@ -303,38 +304,28 @@ DILineInfo SymbolizableObjectFile::symbolizeCode(object::SectionedAddress Module
 DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
     object::SectionedAddress ModuleOffset,
     DILineInfoSpecifier LineInfoSpecifier, bool UseSymbolTable) const {
-  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection) {
-    ModuleOffset.SectionIndex = getModuleSectionIndexForAddress(ModuleOffset.Address);
-  }
+  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
+    ModuleOffset.SectionIndex =
+        getModuleSectionIndexForAddress(ModuleOffset.Address);
   DIInliningInfo InlinedContext = DebugInfoContext->getInliningInfoForAddress(
       ModuleOffset, LineInfoSpecifier);
 
   // Make sure there is at least one frame in context.
-  if (InlinedContext.getNumberOfFrames() == 0) {
+  if (InlinedContext.getNumberOfFrames() == 0)
     InlinedContext.addFrame(DILineInfo());
-  }
 
-  // HACK: Always provide symbol table names
-  std::string FunctionName, FileName;
-  uint64_t Start, Size;
-  if (getNameFromSymbolTable(ModuleOffset.Address, FunctionName, Start, Size, FileName)) {
-    DILineInfo *LI = InlinedContext.getMutableFrame(
-        InlinedContext.getNumberOfFrames() - 1);
-    LI->SymbolTableFunctionName = FunctionName;
-    LI->StartAddress = Start;
-    if (LI->FileName == DILineInfo::BadString && !FileName.empty()) {
-      LI->FileName = FileName;
-    }
-
-    std::string FullPath = LI->FileName;
-    std::string Prefix = DebugInfoContext->getCompilationDirectory().str();
-    if (Prefix.back() != '/') {
-      Prefix.push_back('/');
-    }
-
-    if (FullPath.length() > Prefix.length() &&
-        FullPath.substr(0, Prefix.length()) == Prefix) {
-      LI->FileName = FullPath.substr(Prefix.length());
+  // Override the function name in lower frame with name from symbol table.
+  if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
+    std::string FunctionName, FileName;
+    uint64_t Start, Size;
+    if (getNameFromSymbolTable(ModuleOffset.Address, FunctionName, Start, Size,
+                               FileName)) {
+      DILineInfo *LI = InlinedContext.getMutableFrame(
+          InlinedContext.getNumberOfFrames() - 1);
+      LI->SymbolTableFunctionName = FunctionName;
+      LI->StartAddress = Start;
+      if (LI->FileName == DILineInfo::BadString && !FileName.empty())
+        LI->FileName = FileName;
     }
   }
 
