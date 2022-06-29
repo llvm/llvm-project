@@ -1066,3 +1066,86 @@ loop.latch:
 exit:
   ret void
 }
+
+; Test case with a dead GEP between the load and store regions. Dead recipes
+; need to be removed before merging.
+define void @merge_with_dead_gep_between_regions(i32 %n, i32* noalias %src, i32* noalias %dst) optsize {
+; CHECK-LABEL: LV: Checking a loop in 'merge_with_dead_gep_between_regions'
+; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<%n>, ir<-1>
+; CHECK-NEXT:     EMIT vp<[[WIDE_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_IV]]> vp<[[BTC]]>
+; CHECK-NEXT:   Successor(s): pred.load
+; CHECK-EMPTY:
+; CHECK-NEXT:   <xVFxUF> pred.load: {
+; CHECK-NEXT:     pred.load.entry:
+; CHECK-NEXT:       BRANCH-ON-MASK vp<[[MASK]]>
+; CHECK-NEXT:     Successor(s): pred.load.if, pred.load.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.load.if:
+; CHECK-NEXT:       REPLICATE ir<%gep.src> = getelementptr ir<%src>, vp<[[SCALAR_STEPS]]>
+; CHECK-NEXT:       REPLICATE ir<%l> = load ir<%gep.src>
+; CHECK-NEXT:     Successor(s): pred.load.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.load.continue:
+; CHECK-NEXT:       PHI-PREDICATED-INSTRUCTION vp<[[P_LOAD:%.+]]> = ir<%l>
+; CHECK-NEXT:     No successors
+; CHECK-NEXT:   }
+; CHECK-NEXT:   Successor(s): loop.0
+; CHECK-EMPTY:
+; CHECK-NEXT:   loop.0:
+; CHECK-NEXT:   Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT:   <xVFxUF> pred.store: {
+; CHECK-NEXT:     pred.store.entry:
+; CHECK-NEXT:       BRANCH-ON-MASK vp<[[MASK]]>
+; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.store.if:
+; CHECK-NEXT:       REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[SCALAR_STEPS]]>
+; CHECK-NEXT:       REPLICATE store vp<[[P_LOAD]]>, ir<%gep.dst>
+; CHECK-NEXT:     Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.store.continue:
+; CHECK-NEXT:     No successors
+; CHECK-NEXT:   }
+; CHECK-NEXT:   Successor(s): loop.1
+; CHECK-EMPTY:
+; CHECK-NEXT:   loop.1:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +  vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32[ %n, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i32 %iv, -1
+  %gep.src = getelementptr inbounds i32, i32* %src, i32 %iv
+  %l = load i32, i32* %gep.src, align 16
+  %dead_gep = getelementptr inbounds i32, i32* %dst, i64 1
+  %gep.dst = getelementptr inbounds i32, i32* %dst, i32 %iv
+  store i32 %l, i32* %gep.dst, align 16
+  %ec = icmp eq i32 %iv.next, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
