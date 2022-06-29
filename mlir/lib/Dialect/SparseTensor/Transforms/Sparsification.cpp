@@ -41,7 +41,12 @@ using namespace mlir::sparse_tensor;
 namespace {
 
 // Iteration graph sorting.
-enum SortMask { kSparseOnly = 0x0, kIncludeDense = 0x1, kIncludeUndef = 0x2 };
+enum SortMask {
+  kSparseOnly = 0x0,
+  kIncludeDense = 0x1,
+  kIncludeUndef = 0x2,
+  kIncludeAll = 0x3
+};
 
 // Reduction kinds.
 enum Reduction { kNoReduc, kSum, kProduct, kAnd, kOr, kXor };
@@ -104,6 +109,17 @@ struct CodeGen {
 //===----------------------------------------------------------------------===//
 // Sparse compiler analysis methods.
 //===----------------------------------------------------------------------===//
+
+/// Helper method to construct a permuted dimension ordering
+/// that adheres to the given topological sort.
+static AffineMap permute(MLIRContext *context, AffineMap m,
+                         std::vector<unsigned> &topSort) {
+  unsigned sz = topSort.size();
+  SmallVector<unsigned, 4> perm(sz);
+  for (unsigned i = 0; i < sz; i++)
+    perm[i] = m.getPermutedPosition(topSort[i]);
+  return AffineMap::getPermutationMap(perm, context);
+}
 
 /// Helper method to apply dimension ordering permutation.
 static unsigned perm(const SparseTensorEncodingAttr &enc, unsigned d) {
@@ -231,8 +247,8 @@ static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
 /// dimensions. Even for dense storage formats, however, the natural index
 /// order yields innermost unit-stride access with better spatial locality.
 static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
-                                  std::vector<unsigned> &topSort,
-                                  unsigned mask) {
+                                  std::vector<unsigned> &topSort, unsigned mask,
+                                  OpOperand *skip = nullptr) {
   // Set up an n x n from/to adjacency matrix of the iteration graph
   // for the implicit loop indices i_0 .. i_n-1.
   unsigned n = op.getNumLoops();
@@ -240,6 +256,10 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
 
   // Iterate over the indexing maps of every tensor in the tensor expression.
   for (OpOperand *t : op.getInputAndOutputOperands()) {
+    // Skip tensor during cycle resolution.
+    if (t == skip)
+      continue;
+    // Get map and encoding.
     auto map = op.getTiedIndexingMap(t);
     auto enc = getSparseTensorEncoding(t->get().getType());
     assert(map.getNumDims() == n);
@@ -328,7 +348,7 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   // A tensor expression with a sparse output tensor that changes its values
   // but not its nonzero structure, an operation called "simply dynamic" in
   // [Bik96,Ch9], is also admissable without special codegen, provided
-  // the tensor's underlying sparse storage scheme can be modified in place.
+  // the tensor's underlying sparse storage scheme can be modified in-place.
   if (merger.isSingleCondition(tensor, exp) && isInPlace(lhs->get()))
     return true;
   // Accept "truly dynamic" if the output tensor materializes uninitialized
@@ -1725,18 +1745,18 @@ public:
     if (!findSparseAnnotations(merger, op))
       return failure();
 
-    // Computes a topologically sorted iteration graph to ensure
-    // tensors are visited in natural index order. Fails on cycles.
-    // This assumes that higher-level passes have already put the
-    // tensors in each tensor expression in a feasible order.
+    // Computes a topologically sorted iteration graph to ensure tensors
+    // are visited in natural index order. Gradually relaxes the considered
+    // constraints until an acyclic iteration graph results, such that sparse
+    // code generation can proceed. As a last resort, an attempt is made
+    // to resolve cycles by inserting a conversion.
     std::vector<unsigned> topSort;
-    if (!computeIterationGraph(merger, op, topSort,
-                               SortMask::kIncludeUndef |
-                                   SortMask::kIncludeDense) &&
+    if (!computeIterationGraph(merger, op, topSort, SortMask::kIncludeAll) &&
         !computeIterationGraph(merger, op, topSort, SortMask::kIncludeUndef) &&
         !computeIterationGraph(merger, op, topSort, SortMask::kIncludeDense) &&
-        !computeIterationGraph(merger, op, topSort, SortMask::kSparseOnly))
-      return failure();
+        !computeIterationGraph(merger, op, topSort, SortMask::kSparseOnly)) {
+      return resolveCycle(merger, rewriter, op);
+    }
 
     // Builds the tensor expression for the Linalg operation in SSA form.
     Optional<unsigned> optExp = merger.buildTensorExpFromLinalg(op);
@@ -1761,6 +1781,45 @@ public:
   }
 
 private:
+  // Last resort cycle resolution.
+  LogicalResult resolveCycle(Merger &merger, PatternRewriter &rewriter,
+                             linalg::GenericOp op) const {
+    // Compute topological sort while leaving out every
+    // sparse input tensor in succession until an acylic
+    // iteration graph results.
+    std::vector<unsigned> topSort;
+    for (OpOperand *t : op.getInputOperands()) {
+      unsigned tensor = t->getOperandNumber();
+      Value tval = t->get();
+      auto srcEnc = getSparseTensorEncoding(tval.getType());
+      if (!srcEnc ||
+          !computeIterationGraph(merger, op, topSort, SortMask::kSparseOnly, t))
+        continue;
+      // Found an input tensor that resolves the cycle by inserting a
+      // conversion into a sparse tensor that adheres to the iteration
+      // graph order. Also releases the temporary sparse tensor.
+      //
+      // TODO: investigate fusing the conversion with computation,
+      //       especially if it is a direct yield!
+      //
+      auto srcTp = tval.getType().cast<RankedTensorType>();
+      auto dstEnc = SparseTensorEncodingAttr::get(
+          op->getContext(), srcEnc.getDimLevelType(),
+          permute(getContext(), op.getTiedIndexingMap(t), topSort), // new order
+          srcEnc.getPointerBitWidth(), srcEnc.getIndexBitWidth());
+      auto dstTp = RankedTensorType::get(srcTp.getShape(),
+                                         srcTp.getElementType(), dstEnc);
+      auto convert = rewriter.create<ConvertOp>(tval.getLoc(), dstTp, tval);
+      op->setOperand(tensor, convert);
+      rewriter.setInsertionPointAfter(op);
+      rewriter.create<ReleaseOp>(tval.getLoc(), convert);
+      return success();
+    }
+    // Cannot be resolved with a single conversion.
+    // TODO: convert more than one?
+    return failure();
+  }
+
   /// Options to control sparse code generation.
   SparsificationOptions options;
 };
