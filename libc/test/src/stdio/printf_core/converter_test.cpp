@@ -196,9 +196,6 @@ TEST_F(LlvmLibcPrintfConverterTest, IntConversionSimple) {
   ASSERT_EQ(writer.get_chars_written(), 5);
 }
 
-// This needs to be switched to the new testing layout, but that's still in the
-// int patch so I need to land that first. This is what I get for not keeping my
-// patches small and focused.
 TEST(LlvmLibcPrintfConverterTest, HexConversion) {
   char str[20];
   __llvm_libc::printf_core::StringWriter str_writer(str);
@@ -206,18 +203,17 @@ TEST(LlvmLibcPrintfConverterTest, HexConversion) {
       reinterpret_cast<void *>(&str_writer),
       __llvm_libc::printf_core::write_to_string);
 
-  __llvm_libc::printf_core::FormatSection left_justified_conv;
-  left_justified_conv.has_conv = true;
-  left_justified_conv.raw_string = "%#018x";
-  left_justified_conv.raw_len = 6;
-  left_justified_conv.conv_name = 'x';
-  left_justified_conv.flags =
-      static_cast<__llvm_libc::printf_core::FormatFlags>(
-          __llvm_libc::printf_core::FormatFlags::ALTERNATE_FORM |
-          __llvm_libc::printf_core::FormatFlags::LEADING_ZEROES);
-  left_justified_conv.min_width = 18;
-  left_justified_conv.conv_val_raw = 0x123456ab;
-  __llvm_libc::printf_core::convert(&writer, left_justified_conv);
+  __llvm_libc::printf_core::FormatSection section;
+  section.has_conv = true;
+  section.raw_string = "%#018x";
+  section.raw_len = 6;
+  section.conv_name = 'x';
+  section.flags = static_cast<__llvm_libc::printf_core::FormatFlags>(
+      __llvm_libc::printf_core::FormatFlags::ALTERNATE_FORM |
+      __llvm_libc::printf_core::FormatFlags::LEADING_ZEROES);
+  section.min_width = 18;
+  section.conv_val_raw = 0x123456ab;
+  __llvm_libc::printf_core::convert(&writer, section);
 
   str_writer.terminate();
   ASSERT_STREQ(str, "0x00000000123456ab");
@@ -242,4 +238,24 @@ TEST(LlvmLibcPrintfConverterTest, PointerConversion) {
   str_writer.terminate();
   ASSERT_STREQ(str, "0x123456ab");
   ASSERT_EQ(writer.get_chars_written(), 10);
+}
+
+TEST(LlvmLibcPrintfConverterTest, OctConversion) {
+  char str[20];
+  __llvm_libc::printf_core::StringWriter str_writer(str);
+  __llvm_libc::printf_core::Writer writer(
+      reinterpret_cast<void *>(&str_writer),
+      __llvm_libc::printf_core::write_to_string);
+
+  __llvm_libc::printf_core::FormatSection section;
+  section.has_conv = true;
+  section.raw_string = "%o";
+  section.raw_len = 2;
+  section.conv_name = 'o';
+  section.conv_val_raw = 01234;
+  __llvm_libc::printf_core::convert(&writer, section);
+
+  str_writer.terminate();
+  ASSERT_STREQ(str, "1234");
+  ASSERT_EQ(writer.get_chars_written(), 4);
 }
