@@ -7176,7 +7176,7 @@ Example:
     !0 = !{!"auto-init"}
 
 '``func_sanitize``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``func_sanitize`` metadata is used to attach two values for the function
 sanitizer instrumentation. The first value is the ubsan function signature.
