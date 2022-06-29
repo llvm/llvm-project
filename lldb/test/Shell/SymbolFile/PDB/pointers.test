@@ -19,7 +19,7 @@ MAIN-ST-NEXT: int a;
 MAIN-ST-NEXT: int {{.*}}f(int);
 MAIN-ST-NEXT:}
 
-MAIN:   Function{[[FID1:.*]]}, mangled = _main
+MAIN:   Function{[[FID1:.*]]}, mangled = {{_?}}main
 MAIN-NEXT:  Block{[[FID1]]}
 MAIN:     Variable{{.*}}, name = "array_pointer"
 MAIN-SAME:    (int (*)[2][4]), scope = local
@@ -28,11 +28,11 @@ MAIN-SAME:    (int *), scope = local
 MAIN:     Variable{{.*}}, name = "p_member_field"
 MAIN-SAME:    (int ST::*), scope = local
 MAIN:     Variable{{.*}}, name = "p_member_method"
-MAIN-SAME:    (int (ST::*)(int) __attribute__((thiscall))), scope = local
+MAIN-SAME:    (int (ST::*)(int){{( __attribute__\(\(thiscall\)\))?}}), scope = local
 
 F:   Function{[[FID2:.*]]}, demangled = {{.*}}f(int)
 F-NEXT:  Block{[[FID2]]}
 F:     Variable{{.*}}, name = "this"
-F-SAME:    (ST *), scope = parameter, location = {{.*}}, artificial
+F-SAME:    (ST *), scope = parameter,{{( location = DW_OP.*,)?}} artificial
 F:     Variable{{.*}}, name = "x"
 F-SAME:    (int), scope = parameter, decl = PointerTypeTest.cpp:8
