@@ -122,8 +122,33 @@ TEST_F(ForestTest, DumpAmbiguousAndRefs) {
             "[  0, end) │     └─IDENTIFIER := tok[0]\n"
             "[  0, end) └─type := enum-type\n"
             "[  0, end)   └─enum-type := shared-type\n"
-            "[  0, end)     └─shared-type := IDENTIFIER =#1\n"
-            "[  0, end)       └─IDENTIFIER := tok[0]\n");
+            "[  0, end)     └─shared-type =#1\n");
+}
+
+TEST_F(ForestTest, DumpAbbreviatedShared) {
+  build(R"cpp(
+    _ := A
+    A := B
+    B := *
+  )cpp");
+
+  ForestArena Arena;
+  const auto *Star = &Arena.createTerminal(tok::star, 0);
+
+  const auto *B = &Arena.createSequence(symbol("B"), ruleFor("B"), {Star});
+  // We have two identical (but distinct) A nodes.
+  // The GLR parser would never produce this, but it makes the example simpler.
+  const auto *A1 = &Arena.createSequence(symbol("A"), ruleFor("A"), {B});
+  const auto *A2 = &Arena.createSequence(symbol("A"), ruleFor("A"), {B});
+  const auto *A = &Arena.createAmbiguous(symbol("A"), {A1, A2});
+
+  // We must not abbreviate away shared nodes: if we show A~* there's no way to
+  // show that the intermediate B node is shared between A1 and A2.
+  EXPECT_EQ(A->dumpRecursive(G, /*Abbreviate=*/true),
+            "[  0, end) A := <ambiguous>\n"
+            "[  0, end) ├─A~B := * #1\n"
+            "[  0, end) │ └─* := tok[0]\n"
+            "[  0, end) └─A~B =#1\n");
 }
 
 } // namespace
