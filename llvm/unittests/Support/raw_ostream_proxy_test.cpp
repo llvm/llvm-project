@@ -157,7 +157,7 @@ TEST(raw_ostream_proxyTest, resetProxiedOS) {
   EXPECT_EQ(0u, ProxyOS.GetBufferSize());
   EXPECT_FALSE(ProxyOS.hasProxiedOS());
 
-#if GTEST_HAS_DEATH_TEST
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
   EXPECT_DEATH(ProxyOS << "e", "use after reset");
   EXPECT_DEATH(ProxyOS.getProxiedOS(), "use after reset");
 #endif
