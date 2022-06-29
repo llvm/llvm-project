@@ -549,6 +549,11 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     The rank-altering behavior of tensor.insert_slice matches the rank-reducing
     behavior of tensor.extract_slice.
 
+    Verification in the rank-reduced case:
+    ======================================
+    The same verification discussion and mechanisms apply as for ExtractSliceOp.
+    Unlike ExtractSliceOp however, there is no need for a specific inference.
+
     Example:
 
     ```
