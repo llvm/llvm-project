@@ -18,24 +18,10 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
-#include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include <ostream>
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 
 namespace clang {
 namespace dataflow {
-
-class NoopLattice {
-public:
-  bool operator==(const NoopLattice &) const { return true; }
-
-  LatticeJoinEffect join(const NoopLattice &) {
-    return LatticeJoinEffect::Unchanged;
-  }
-};
-
-inline std::ostream &operator<<(std::ostream &OS, const NoopLattice &) {
-  return OS << "noop";
-}
 
 class NoopAnalysis : public DataflowAnalysis<NoopAnalysis, NoopLattice> {
 public:
