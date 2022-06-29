@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines public interfaces for the C++ grammar
-//  (pseudo/lib/cxx.bnf). It provides a fast way to access core building pieces
-//  of the LR parser, e.g. Grammar, LRTable, rather than parsing the grammar
-//  file at the runtime.
+//  (pseudo/lib/cxx/cxx.bnf). It provides a fast way to access core building
+//  pieces of the LR parser, e.g. Grammar, LRTable, rather than parsing the
+//  grammar file at the runtime.
 //
 //  We do a compilation of the C++ BNF grammar at build time, and generate
 //  critical data sources. The implementation of the interfaces are based on the
