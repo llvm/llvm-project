@@ -3480,12 +3480,8 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
       }
 
       // Fold if both operands are constant.
-      if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS)) {
-        Constant *LHSCV = LHSC->getValue();
-        Constant *RHSCV = RHSC->getValue();
-        return getConstant(cast<ConstantInt>(ConstantExpr::getUDiv(LHSCV,
-                                                                   RHSCV)));
-      }
+      if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS))
+        return getConstant(LHSC->getAPInt().udiv(RHSC->getAPInt()));
     }
   }
 
