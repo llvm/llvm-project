@@ -255,11 +255,7 @@ void LongJmpPass::updateStubGroups() {
     for (auto &KeyVal : StubGroups) {
       for (StubTy &Elem : KeyVal.second)
         Elem.first = BBAddresses[Elem.second];
-      llvm::sort(KeyVal.second,
-                 [&](const std::pair<uint64_t, BinaryBasicBlock *> &LHS,
-                     const std::pair<uint64_t, BinaryBasicBlock *> &RHS) {
-                   return LHS.first < RHS.first;
-                 });
+      llvm::sort(KeyVal.second, llvm::less_first());
     }
   };
 
