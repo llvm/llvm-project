@@ -261,6 +261,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
                 found.add(int(m.group(1), 16))
         return found
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_vCont_run_subset_of_threads(self):
         self.build()
