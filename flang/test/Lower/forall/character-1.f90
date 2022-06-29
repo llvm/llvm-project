@@ -18,7 +18,7 @@ contains
 end program test
 
 ! CHECK-LABEL: define void @_QFPsub(
-! CHECK-SAME: ptr %[[arg:.*]])
+! CHECK-SAME:    ptr %[[arg:.*]])
 ! CHECK: %[[extent:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 7, i64 0, i32 1
 ! CHECK: %[[extval:.*]] = load i64, ptr %[[extent]]
 ! CHECK: %[[elesize:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 1

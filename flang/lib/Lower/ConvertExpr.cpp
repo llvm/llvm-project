@@ -2593,6 +2593,12 @@ public:
           cast = builder.create<fir::EmboxProcOp>(loc, boxProcTy, fst);
         }
       } else {
+        if (fir::isa_derived(snd)) {
+          // FIXME: This seems like a serious bug elsewhere in lowering. Paper
+          // over the problem for now.
+          TODO(loc, "derived type argument passed by value");
+        }
+        assert(!fir::isa_derived(snd));
         cast = builder.convertWithSemantics(loc, snd, fst,
                                             callingImplicitInterface);
       }
@@ -4620,7 +4626,7 @@ private:
     auto seqTy = type.dyn_cast<fir::SequenceType>();
     assert(seqTy && "must be an array");
     mlir::Location loc = getLoc();
-    // TODO: Need to thread the length parameters here. For character, they may
+    // TODO: Need to thread the LEN parameters here. For character, they may
     // differ from the operands length (e.g concatenation). So the array loads
     // type parameters are not enough.
     if (auto charTy = seqTy.getEleTy().dyn_cast<fir::CharacterType>())
@@ -6137,7 +6143,7 @@ private:
     mlir::Value multiplier = builder.createIntegerConstant(loc, idxTy, 1);
     if (fir::hasDynamicSize(eleTy)) {
       if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
-        // Array of char with dynamic length parameter. Downcast to an array
+        // Array of char with dynamic LEN parameter. Downcast to an array
         // of singleton char, and scale by the len type parameter from
         // `exv`.
         exv.match(

@@ -344,6 +344,24 @@ mlir::LogicalResult fir::AllocMemOp::verify() {
 // ArrayCoorOp
 //===----------------------------------------------------------------------===//
 
+// CHARACTERs and derived types with LEN PARAMETERs are dependent types that
+// require runtime values to fully define the type of an object.
+static bool validTypeParams(mlir::Type dynTy, mlir::ValueRange typeParams) {
+  dynTy = fir::unwrapAllRefAndSeqType(dynTy);
+  // A box value will contain type parameter values itself.
+  if (dynTy.isa<fir::BoxType>())
+    return typeParams.size() == 0;
+  // Derived type must have all type parameters satisfied.
+  if (auto recTy = dynTy.dyn_cast<fir::RecordType>())
+    return typeParams.size() == recTy.getNumLenParams();
+  // Characters with non-constant LEN must have a type parameter value.
+  if (auto charTy = dynTy.dyn_cast<fir::CharacterType>())
+    if (charTy.hasDynamicLen())
+      return typeParams.size() == 1;
+  // Otherwise, any type parameters are invalid.
+  return typeParams.size() == 0;
+}
+
 mlir::LogicalResult fir::ArrayCoorOp::verify() {
   auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(getMemref().getType());
   auto arrTy = eleTy.dyn_cast<fir::SequenceType>();
@@ -378,6 +396,8 @@ mlir::LogicalResult fir::ArrayCoorOp::verify() {
       if (sliceTy.getRank() != arrDim)
         return emitOpError("rank of dimension in slice mismatched");
   }
+  if (!validTypeParams(getMemref().getType(), getTypeparams()))
+    return emitOpError("invalid type parameters");
 
   return mlir::success();
 }
@@ -444,6 +464,9 @@ mlir::LogicalResult fir::ArrayLoadOp::verify() {
         return emitOpError("rank of dimension in slice mismatched");
   }
 
+  if (!validTypeParams(getMemref().getType(), getTypeparams()))
+    return emitOpError("invalid type parameters");
+
   return mlir::success();
 }
 
@@ -485,6 +508,8 @@ mlir::LogicalResult fir::ArrayMergeStoreOp::verify() {
     return emitOpError("type of origin does not match memref element type");
   if (getSequence().getType() != eleTy)
     return emitOpError("type of sequence does not match memref element type");
+  if (!validTypeParams(getMemref().getType(), getTypeparams()))
+    return emitOpError("invalid type parameters");
   return mlir::success();
 }
 
@@ -512,6 +537,8 @@ mlir::LogicalResult fir::ArrayFetchOp::verify() {
     return emitOpError("return type and/or indices do not type check");
   if (!mlir::isa<fir::ArrayLoadOp>(getSequence().getDefiningOp()))
     return emitOpError("argument #0 must be result of fir.array_load");
+  if (!validTypeParams(arrTy, getTypeparams()))
+    return emitOpError("invalid type parameters");
   return mlir::success();
 }
 
@@ -530,6 +557,8 @@ mlir::LogicalResult fir::ArrayAccessOp::verify() {
   mlir::Type ty = validArraySubobject(*this);
   if (!ty || fir::ReferenceType::get(ty) != getType())
     return emitOpError("return type and/or indices do not type check");
+  if (!validTypeParams(arrTy, getTypeparams()))
+    return emitOpError("invalid type parameters");
   return mlir::success();
 }
 
@@ -550,6 +579,8 @@ mlir::LogicalResult fir::ArrayUpdateOp::verify() {
   auto ty = validArraySubobject(*this);
   if (!ty || ty != ::adjustedElementType(getMerge().getType()))
     return emitOpError("merged value and/or indices do not type check");
+  if (!validTypeParams(arrTy, getTypeparams()))
+    return emitOpError("invalid type parameters");
   return mlir::success();
 }
 
@@ -690,6 +721,24 @@ void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
 }
 
 //===----------------------------------------------------------------------===//
+// CharConvertOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult fir::CharConvertOp::verify() {
+  auto unwrap = [&](mlir::Type t) {
+    t = fir::unwrapSequenceType(fir::dyn_cast_ptrEleTy(t));
+    return t.dyn_cast<fir::CharacterType>();
+  };
+  auto inTy = unwrap(getFrom().getType());
+  auto outTy = unwrap(getTo().getType());
+  if (!(inTy && outTy))
+    return emitOpError("not a reference to a character");
+  if (inTy.getFKind() == outTy.getFKind())
+    return emitOpError("buffers must have different KIND values");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // CmpOp
 //===----------------------------------------------------------------------===//
 
@@ -739,24 +788,6 @@ static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
             builder.getI64IntegerAttr(static_cast<std::int64_t>(predicate)));
   result.attributes = attrs;
   result.addTypes({i1Type});
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// CharConvertOp
-//===----------------------------------------------------------------------===//
-
-mlir::LogicalResult fir::CharConvertOp::verify() {
-  auto unwrap = [&](mlir::Type t) {
-    t = fir::unwrapSequenceType(fir::dyn_cast_ptrEleTy(t));
-    return t.dyn_cast<fir::CharacterType>();
-  };
-  auto inTy = unwrap(getFrom().getType());
-  auto outTy = unwrap(getTo().getType());
-  if (!(inTy && outTy))
-    return emitOpError("not a reference to a character");
-  if (inTy.getFKind() == outTy.getFKind())
-    return emitOpError("buffers must have different KIND values");
   return mlir::success();
 }
 
