@@ -2788,7 +2788,10 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
 
     SVal Base = state->getLValue(DD, LCtx);
     if (DD->getType()->isReferenceType()) {
-      Base = state->getSVal(Base.getAsRegion());
+      if (const MemRegion *R = Base.getAsRegion())
+        Base = state->getSVal(R);
+      else
+        Base = UnknownVal();
     }
 
     SVal V = UnknownVal();
@@ -2809,15 +2812,27 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
 
       V = state->getLValue(BD->getType(), Idx, Base);
     }
-    // Handle binding to tuple-like strcutures
-    else if (BD->getHoldingVar()) {
-      // FIXME: handle tuples
-      return;
+    // Handle binding to tuple-like structures
+    else if (const auto *HV = BD->getHoldingVar()) {
+      V = state->getLValue(HV, LCtx);
+
+      if (HV->getType()->isReferenceType()) {
+        if (const MemRegion *R = V.getAsRegion())
+          V = state->getSVal(R);
+        else
+          V = UnknownVal();
+      }
     } else
       llvm_unreachable("An unknown case of structured binding encountered!");
 
-    if (BD->getType()->isReferenceType())
-      V = state->getSVal(V.getAsRegion());
+    // In case of tuple-like types the references are already handled, so we
+    // don't want to handle them again.
+    if (BD->getType()->isReferenceType() && !BD->getHoldingVar()) {
+      if (const MemRegion *R = V.getAsRegion())
+        V = state->getSVal(R);
+      else
+        V = UnknownVal();
+    }
 
     Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, V), nullptr,
                       ProgramPoint::PostLValueKind);

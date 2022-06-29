@@ -72,6 +72,11 @@ bool LiveVariables::LivenessValues::isLive(const VarDecl *D) const {
     bool alive = false;
     for (const BindingDecl *BD : DD->bindings())
       alive |= liveBindings.contains(BD);
+
+    // Note: the only known case this condition is necessary, is when a bindig
+    // to a tuple-like structure is created. The HoldingVar initializers have a
+    // DeclRefExpr to the DecompositionDecl.
+    alive |= liveDecls.contains(DD);
     return alive;
   }
   return liveDecls.contains(D);
@@ -343,8 +348,12 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
 
       if (const BindingDecl* BD = dyn_cast<BindingDecl>(D)) {
         Killed = !BD->getType()->isReferenceType();
-        if (Killed)
+        if (Killed) {
+          if (const auto *HV = BD->getHoldingVar())
+            val.liveDecls = LV.DSetFact.remove(val.liveDecls, HV);
+
           val.liveBindings = LV.BSetFact.remove(val.liveBindings, BD);
+        }
       } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
         Killed = writeShouldKill(VD);
         if (Killed)
@@ -371,8 +380,12 @@ void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DR) {
   const Decl* D = DR->getDecl();
   bool InAssignment = LV.inAssignment[DR];
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
-    if (!InAssignment)
+    if (!InAssignment) {
+      if (const auto *HV = BD->getHoldingVar())
+        val.liveDecls = LV.DSetFact.add(val.liveDecls, HV);
+
       val.liveBindings = LV.BSetFact.add(val.liveBindings, BD);
+    }
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (!InAssignment && !isAlwaysAlive(VD))
       val.liveDecls = LV.DSetFact.add(val.liveDecls, VD);
@@ -382,8 +395,16 @@ void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DR) {
 void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
   for (const auto *DI : DS->decls()) {
     if (const auto *DD = dyn_cast<DecompositionDecl>(DI)) {
-      for (const auto *BD : DD->bindings())
+      for (const auto *BD : DD->bindings()) {
+        if (const auto *HV = BD->getHoldingVar())
+          val.liveDecls = LV.DSetFact.remove(val.liveDecls, HV);
+
         val.liveBindings = LV.BSetFact.remove(val.liveBindings, BD);
+      }
+
+      // When a bindig to a tuple-like structure is created, the HoldingVar
+      // initializers have a DeclRefExpr to the DecompositionDecl.
+      val.liveDecls = LV.DSetFact.remove(val.liveDecls, DD);
     } else if (const auto *VD = dyn_cast<VarDecl>(DI)) {
       if (!isAlwaysAlive(VD))
         val.liveDecls = LV.DSetFact.remove(val.liveDecls, VD);
