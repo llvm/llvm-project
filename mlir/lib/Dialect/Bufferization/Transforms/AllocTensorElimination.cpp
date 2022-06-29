@@ -228,7 +228,7 @@ mlir::bufferization::insertSliceAnchoredAllocTensorEliminationStep(
                 return b.create<tensor::DimOp>(loc, target, dim).getResult();
               return b.getIndexAttr(shapedType.getDimSize(dim));
             });
-        auto t = tensor::ExtractSliceOp::inferRankReducedResultType(
+        auto t = tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
             insertOp.getSourceType().getRank(),
             insertOp.getDest().getType().cast<RankedTensorType>(), mixedOffsets,
             mixedSizes, mixedStrides);
