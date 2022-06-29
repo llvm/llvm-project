@@ -23,6 +23,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <vector>
@@ -32,12 +33,13 @@ namespace tidy {
 namespace bugprone {
 using ast_matchers::MatchFinder;
 using dataflow::SourceLocationsLattice;
+using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
 using llvm::Optional;
 
 static constexpr llvm::StringLiteral FuncID("fun");
 
-static Optional<SourceLocationsLattice>
+static Optional<std::vector<SourceLocation>>
 analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
   using dataflow::ControlFlowContext;
   using dataflow::DataflowAnalysisState;
@@ -52,23 +54,22 @@ analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
       std::make_unique<dataflow::WatchedLiteralsSolver>());
   dataflow::Environment Env(AnalysisContext, FuncDecl);
   UncheckedOptionalAccessModel Analysis(ASTCtx);
+  UncheckedOptionalAccessDiagnoser Diagnoser;
+  std::vector<SourceLocation> Diagnostics;
   Expected<std::vector<Optional<DataflowAnalysisState<SourceLocationsLattice>>>>
-      BlockToOutputState =
-          dataflow::runDataflowAnalysis(*Context, Analysis, Env);
+      BlockToOutputState = dataflow::runDataflowAnalysis(
+          *Context, Analysis, Env,
+          [&ASTCtx, &Diagnoser,
+           &Diagnostics](const Stmt *Stmt,
+                         const DataflowAnalysisState<SourceLocationsLattice>
+                             &State) mutable {
+            auto StmtDiagnostics = Diagnoser.diagnose(ASTCtx, Stmt, State.Env);
+            llvm::move(StmtDiagnostics, std::back_inserter(Diagnostics));
+          });
   if (!BlockToOutputState)
     return llvm::None;
-  assert(Context->getCFG().getExit().getBlockID() < BlockToOutputState->size());
 
-  const Optional<DataflowAnalysisState<SourceLocationsLattice>>
-      &ExitBlockState =
-          (*BlockToOutputState)[Context->getCFG().getExit().getBlockID()];
-  // `runDataflowAnalysis` doesn't guarantee that the exit block is visited;
-  // for example, when it is unreachable.
-  // FIXME: Diagnose violations even when the exit block is unreachable.
-  if (!ExitBlockState)
-    return llvm::None;
-
-  return std::move(ExitBlockState->Lattice);
+  return Diagnostics;
 }
 
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
@@ -97,9 +98,9 @@ void UncheckedOptionalAccessCheck::check(
   if (FuncDecl->isTemplated())
     return;
 
-  if (Optional<SourceLocationsLattice> Errors =
+  if (Optional<std::vector<SourceLocation>> Errors =
           analyzeFunction(*FuncDecl, *Result.Context))
-    for (const SourceLocation &Loc : Errors->getSourceLocations())
+    for (const SourceLocation &Loc : *Errors)
       diag(Loc, "unchecked access to optional value");
 }
 
