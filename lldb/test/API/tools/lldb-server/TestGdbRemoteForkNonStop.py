@@ -15,8 +15,8 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
             "read packet: $c#00",
             "send packet: $OK#00",
             {"direction": "send",
-             "regex": r"%Stop:T05thread:p{}[.]{}.*vforkdone.*".format(
-                 parent_pid, parent_tid),
+             "regex": r"%Stop:T[0-9a-fA-F]{{2}}thread:p{}[.]{}.*vforkdone.*"
+                      .format(parent_pid, parent_tid),
              },
             "read packet: $vStopped#00",
             "send packet: $OK#00",
