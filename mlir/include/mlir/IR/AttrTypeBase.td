@@ -295,6 +295,8 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // The C++ storage type of of this parameter if it is a reference, e.g.
   // `std::string` for `StringRef` or `SmallVector` for `ArrayRef`.
   string cppStorageType = ?;
+  // The C++ code to convert from the storage type to the parameter type.
+  string convertFromStorage = "$_self";
   // One-line human-readable description of the argument.
   string summary = desc;
   // The format string for the asm syntax (documentation only).
