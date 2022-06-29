@@ -37,10 +37,8 @@ define i32 @neg_sel_special_constant(i32 signext %a) {
 ;
 ; RV64-LABEL: neg_sel_special_constant:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1
-; RV64-NEXT:    slli a1, a1, 31
-; RV64-NEXT:    and a0, a0, a1
-; RV64-NEXT:    srli a0, a0, 22
+; RV64-NEXT:    srliw a0, a0, 31
+; RV64-NEXT:    slli a0, a0, 9
 ; RV64-NEXT:    ret
   %tmp.1 = icmp slt i32 %a, 0
   %retval = select i1 %tmp.1, i32 512, i32 0
