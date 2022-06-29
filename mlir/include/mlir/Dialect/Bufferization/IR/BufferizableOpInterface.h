@@ -472,9 +472,10 @@ private:
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
 /// If `copy` is set, the shaped value is copied. Otherwise, a tensor with
 /// undefined contents is allocated.
-Value allocateTensorForShapedValue(OpBuilder &b, Location loc,
-                                   Value shapedValue, bool escape,
-                                   bool copy = true);
+FailureOr<Value>
+allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
+                             bool escape, const BufferizationOptions &options,
+                             bool copy = true);
 
 /// Lookup the buffer for the given value. If the value was not bufferized
 /// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
