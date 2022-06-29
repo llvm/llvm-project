@@ -202,8 +202,18 @@ static void encodeRebase(const OutputSection *osec, uint64_t outSecOff,
       lastRebase.offset = offset;
     } else {
       assert(lastRebase.offset != offset);
-      os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_ULEB);
-      encodeULEB128(offset - lastRebase.offset, os);
+      uint64_t delta = offset - lastRebase.offset;
+      // For unknown reasons, ld64 checks if the scaled offset is strictly less
+      // than REBASE_IMMEDIATE_MASK instead of allowing equality. We match this
+      // behavior as a precaution.
+      if ((delta % target->wordSize == 0) &&
+          (delta / target->wordSize < REBASE_IMMEDIATE_MASK)) {
+        os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_IMM_SCALED |
+                                   (delta / target->wordSize));
+      } else {
+        os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_ULEB);
+        encodeULEB128(delta, os);
+      }
       lastRebase.offset = offset;
     }
   }
