@@ -49,6 +49,12 @@ class LogHandler {
 public:
   virtual ~LogHandler() = default;
   virtual void Emit(llvm::StringRef message) = 0;
+
+  virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
+  static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
+
+private:
+  static char ID;
 };
 
 class StreamLogHandler : public LogHandler {
@@ -59,9 +65,13 @@ public:
   void Emit(llvm::StringRef message) override;
   void Flush();
 
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
+
 private:
   std::mutex m_mutex;
   llvm::raw_fd_ostream m_stream;
+  static char ID;
 };
 
 class CallbackLogHandler : public LogHandler {
@@ -70,9 +80,13 @@ public:
 
   void Emit(llvm::StringRef message) override;
 
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
+
 private:
   lldb::LogOutputCallback m_callback;
   void *m_baton;
+  static char ID;
 };
 
 class RotatingLogHandler : public LogHandler {
@@ -81,6 +95,9 @@ public:
 
   void Emit(llvm::StringRef message) override;
   void Dump(llvm::raw_ostream &stream) const;
+
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
 
 private:
   size_t NormalizeIndex(size_t i) const;
@@ -92,6 +109,7 @@ private:
   const size_t m_size = 0;
   size_t m_next_index = 0;
   size_t m_total_count = 0;
+  static char ID;
 };
 
 class Log final {
@@ -168,6 +186,10 @@ public:
   static bool DisableLogChannel(llvm::StringRef channel,
                                 llvm::ArrayRef<const char *> categories,
                                 llvm::raw_ostream &error_stream);
+
+  static bool DumpLogChannel(llvm::StringRef channel,
+                             llvm::raw_ostream &output_stream,
+                             llvm::raw_ostream &error_stream);
 
   static bool ListChannelCategories(llvm::StringRef channel,
                                     llvm::raw_ostream &stream);
@@ -257,6 +279,8 @@ private:
               uint32_t flags);
 
   void Disable(uint32_t flags);
+
+  bool Dump(llvm::raw_ostream &stream);
 
   typedef llvm::StringMap<Log> ChannelMap;
   static llvm::ManagedStatic<ChannelMap> g_channel_map;
