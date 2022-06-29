@@ -128,7 +128,7 @@ TEST(VirtualOutputFileTest, destroyProxy) {
   std::unique_ptr<raw_pwrite_stream> Proxy;
   EXPECT_THAT_ERROR(F->createProxy().moveInto(Proxy), Succeeded());
   F.reset();
-#if GTEST_HAS_DEATH_TEST
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
   EXPECT_DEATH(*Proxy << "data", "use after reset");
 #endif
   Proxy.reset();
