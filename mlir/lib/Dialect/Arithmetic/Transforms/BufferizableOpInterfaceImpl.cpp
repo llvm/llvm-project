@@ -26,6 +26,11 @@ struct ConstantOpInterface
                           const BufferizationOptions &options) const {
     auto constantOp = cast<arith::ConstantOp>(op);
 
+    // TODO: Implement memory space for this op. E.g., by adding a memory_space
+    // attribute to ConstantOp.
+    if (options.defaultMemorySpace != static_cast<unsigned>(0))
+      return op->emitError("memory space not implemented yet");
+
     // Only ranked tensors are supported.
     if (!constantOp.getType().isa<RankedTensorType>())
       return failure();
@@ -150,6 +155,10 @@ struct SelectOpInterface
       return failure();
     Value trueBuffer = *maybeTrueBuffer;
     Value falseBuffer = *maybeFalseBuffer;
+    BaseMemRefType trueType = trueBuffer.getType().cast<BaseMemRefType>();
+    BaseMemRefType falseType = falseBuffer.getType().cast<BaseMemRefType>();
+    if (trueType.getMemorySpaceAsInt() != falseType.getMemorySpaceAsInt())
+      return op->emitError("inconsistent memory space on true/false operands");
 
     // The "true" and the "false" operands must have the same type. If the
     // buffers have different types, they differ only in their layout map. Cast

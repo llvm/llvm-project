@@ -707,6 +707,8 @@ struct WhileOpInterface
     return success();
   }
 
+  // TODO: Implement getBufferType interface method and infer buffer types.
+
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto whileOp = cast<scf::WhileOp>(op);

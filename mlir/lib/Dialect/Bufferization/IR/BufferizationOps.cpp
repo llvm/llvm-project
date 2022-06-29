@@ -176,6 +176,9 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   unsigned memorySpace;
   if (getMemorySpace().hasValue()) {
     memorySpace = *getMemorySpace();
+  } else if (getCopy()) {
+    memorySpace =
+        copyBuffer.getType().cast<BaseMemRefType>().getMemorySpaceAsInt();
   } else if (options.defaultMemorySpace.hasValue()) {
     memorySpace = *options.defaultMemorySpace;
   } else {
