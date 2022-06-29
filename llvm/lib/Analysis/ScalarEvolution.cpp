@@ -7365,6 +7365,8 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
         Ops.push_back(II->getArgOperand(1));
         return nullptr;
       case Intrinsic::start_loop_iterations:
+      case Intrinsic::annotation:
+      case Intrinsic::ptr_annotation:
         Ops.push_back(II->getArgOperand(0));
         return nullptr;
       default:
@@ -7816,8 +7818,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         return getAddExpr(ClampedX, Y, SCEV::FlagNUW);
       }
       case Intrinsic::start_loop_iterations:
-        // A start_loop_iterations is just equivalent to the first operand for
-        // SCEV purposes.
+      case Intrinsic::annotation:
+      case Intrinsic::ptr_annotation:
+        // A start_loop_iterations or llvm.annotation or llvm.prt.annotation is
+        // just eqivalent to the first operand for SCEV purposes.
         return getSCEV(II->getArgOperand(0));
       default:
         break;
