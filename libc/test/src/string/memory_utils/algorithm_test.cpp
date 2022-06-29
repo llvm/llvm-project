@@ -6,9 +6,7 @@
 #include <src/string/memory_utils/algorithm.h>
 #include <src/string/memory_utils/backends.h>
 
-#include <string>
-#include <type_traits>
-#include <vector>
+#include <sstream>
 
 namespace __llvm_libc {
 
@@ -25,26 +23,7 @@ struct alignas(64) Buffer : cpp::Array<char, 128> {
 
 static Buffer buffer1;
 static Buffer buffer2;
-struct Logger {
-  Logger &operator<<(const char *str) {
-    Buffer.append(str);
-    return *this;
-  }
-  Logger &operator<<(char c) {
-    Buffer.push_back(c);
-    return *this;
-  }
-  template <typename Scalar>
-  std::enable_if_t<std::is_integral<Scalar>::value, Logger &>
-  operator<<(Scalar number) {
-    Buffer.append(std::to_string(number));
-    return *this;
-  }
-  const std::string &str() const { return Buffer; }
-
-private:
-  std::string Buffer;
-} LOG;
+static std::ostringstream LOG;
 
 struct TestBackend {
   static constexpr bool IS_BACKEND_TYPE = true;
@@ -93,7 +72,7 @@ struct TestBackend {
 
 struct LlvmLibcAlgorithm : public testing::Test {
   void SetUp() override {
-    LOG = Logger();
+    LOG = std::ostringstream();
     LOG << '\n';
   }
 
@@ -112,20 +91,11 @@ struct LlvmLibcAlgorithm : public testing::Test {
     return trace_.c_str();
   }
 
-  const char *stripComments(std::string expected) {
+  const char *stripComments(const char *expected) {
     expected_.clear();
-    // split expected by lines
-    std::vector<std::string> lines;
-    lines.emplace_back();
-    for (const char c : expected) {
-      if (c == '\n') {
-        lines.emplace_back();
-      } else {
-        lines.back().push_back(c);
-      }
-    }
-    // strip comment for each lines
-    for (const std::string &line : lines) {
+    std::stringstream ss(expected);
+    std::string line;
+    while (std::getline(ss, line, '\n')) {
       const auto pos = line.find('#');
       if (pos == std::string::npos) {
         expected_ += line;
@@ -135,8 +105,7 @@ struct LlvmLibcAlgorithm : public testing::Test {
           log.pop_back();
         expected_ += log;
       }
-      if (expected_.back() != '\n')
-        expected_.push_back('\n');
+      expected_ += '\n';
     }
     return expected_.c_str();
   }
