@@ -13,6 +13,8 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
 
+#include <utility>
+
 using namespace mlir;
 using namespace presburger;
 
@@ -144,7 +146,7 @@ PresburgerRelation PresburgerRelation::computeReprWithOnlyDivLocals() const {
   PresburgerRelation result(getSpace());
   for (const IntegerRelation &disjunct : disjuncts)
     result.unionInPlace(disjunct.computeReprWithOnlyDivLocals());
-  return result;
+  return std::move(result);
 }
 
 /// Return the set difference b \ s.
