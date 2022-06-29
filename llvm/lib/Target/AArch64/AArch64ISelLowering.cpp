@@ -14863,16 +14863,6 @@ static SDValue performANDCombine(SDNode *N,
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
-  // Although NEON has no EORV instruction, when only the least significant bit
-  // is required the operation is synonymous with ADDV.
-  if (LHS.getOpcode() == ISD::VECREDUCE_XOR && isOneConstant(RHS) &&
-      LHS.getOperand(0).getValueType().isFixedLengthVector() &&
-      LHS.hasOneUse()) {
-    SDLoc DL(N);
-    SDValue ADDV = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, LHS.getOperand(0));
-    return DAG.getNode(ISD::AND, DL, VT, ADDV, RHS);
-  }
-
   if (VT.isScalableVector())
     return performSVEAndCombine(N, DCI);
 

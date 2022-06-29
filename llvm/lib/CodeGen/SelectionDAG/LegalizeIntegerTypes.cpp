@@ -2259,16 +2259,40 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECREDUCE(SDNode *N) {
   SDLoc dl(N);
   SDValue Op = PromoteIntOpVectorReduction(N, N->getOperand(0));
 
-  EVT EltVT = Op.getValueType().getVectorElementType();
-  EVT VT = N->getValueType(0);
+  EVT OrigEltVT = N->getOperand(0).getValueType().getVectorElementType();
+  EVT InVT = Op.getValueType();
+  EVT EltVT = InVT.getVectorElementType();
+  EVT ResVT = N->getValueType(0);
+  unsigned Opcode = N->getOpcode();
 
-  if (VT.bitsGE(EltVT))
-    return DAG.getNode(N->getOpcode(), SDLoc(N), VT, Op);
+  // An i1 vecreduce_xor is equivalent to vecreduce_add, use that instead if
+  // vecreduce_xor is not legal
+  if (Opcode == ISD::VECREDUCE_XOR && OrigEltVT == MVT::i1 &&
+      !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_XOR, InVT) &&
+      TLI.isOperationLegalOrCustom(ISD::VECREDUCE_ADD, InVT))
+    Opcode = ISD::VECREDUCE_ADD;
+
+  // An i1 vecreduce_or is equivalent to vecreduce_umax, use that instead if
+  // vecreduce_or is not legal
+  else if (Opcode == ISD::VECREDUCE_OR && OrigEltVT == MVT::i1 &&
+      !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_OR, InVT) &&
+      TLI.isOperationLegalOrCustom(ISD::VECREDUCE_UMAX, InVT))
+    Opcode = ISD::VECREDUCE_UMAX;
+
+  // An i1 vecreduce_and is equivalent to vecreduce_umin, use that instead if
+  // vecreduce_and is not legal
+  else if (Opcode == ISD::VECREDUCE_AND && OrigEltVT == MVT::i1 &&
+      !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_AND, InVT) &&
+      TLI.isOperationLegalOrCustom(ISD::VECREDUCE_UMIN, InVT))
+    Opcode = ISD::VECREDUCE_UMIN;
+
+  if (ResVT.bitsGE(EltVT))
+    return DAG.getNode(Opcode, SDLoc(N), ResVT, Op);
 
   // Result size must be >= element size. If this is not the case after
   // promotion, also promote the result type and then truncate.
-  SDValue Reduce = DAG.getNode(N->getOpcode(), dl, EltVT, Op);
-  return DAG.getNode(ISD::TRUNCATE, dl, VT, Reduce);
+  SDValue Reduce = DAG.getNode(Opcode, dl, EltVT, Op);
+  return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Reduce);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VP_REDUCE(SDNode *N, unsigned OpNo) {
