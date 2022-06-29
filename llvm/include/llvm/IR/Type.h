@@ -366,11 +366,14 @@ public:
     return ContainedTys[0];
   }
 
+  // Skip the deprecation warning while Swift migrates to opaque pointers
+#ifndef SWIFT_LLVM_SUPPORT_IS_AVAILABLE
   /// This method is deprecated without replacement. Pointer element types are
   /// not available with opaque pointers.
   [[deprecated("Deprecated without replacement, see "
                "https://llvm.org/docs/OpaquePointers.html for context and "
                "migration instructions")]]
+#endif
   Type *getPointerElementType() const {
     return getNonOpaquePointerElementType();
   }
