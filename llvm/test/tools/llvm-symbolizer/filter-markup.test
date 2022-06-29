@@ -1,0 +1,21 @@
+RUN: echo -e "a{{{symbol:foo}}}b\n{{{symbol:bar}}}\n" > %t.input
+RUN: llvm-symbolizer --filter-markup < %t.input > %t.nocolor
+RUN: FileCheck %s --check-prefix=NOCOLOR --input-file=%t.nocolor --match-full-lines --implicit-check-not {{.}}
+
+NOCOLOR: afoob
+NOCOLOR: bar
+
+RUN: llvm-symbolizer --filter-markup --color < %t.input > %t.color
+RUN: FileCheck %s --check-prefix=COLOR --input-file=%t.color --match-full-lines --implicit-check-not {{.}}
+
+RUN: llvm-symbolizer --filter-markup --color=auto < %t.input > %t.autocolor
+RUN: FileCheck %s --check-prefix=NOCOLOR --input-file=%t.autocolor --match-full-lines --implicit-check-not {{.}}
+
+RUN: llvm-symbolizer --filter-markup --color=never < %t.input > %t.nevercolor
+RUN: FileCheck %s --check-prefix=NOCOLOR --input-file=%t.nevercolor --match-full-lines --implicit-check-not {{.}}
+
+RUN: llvm-symbolizer --filter-markup --color=always < %t.input > %t.alwayscolor
+RUN: FileCheck %s --check-prefix=COLOR --input-file=%t.alwayscolor --match-full-lines --implicit-check-not {{.}}
+
+COLOR: a{{.}}[0;34mfoo{{.}}[0mb
+COLOR: {{.}}[0;34mbar{{.}}[0m
