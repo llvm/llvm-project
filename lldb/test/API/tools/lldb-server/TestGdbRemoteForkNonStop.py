@@ -99,16 +99,12 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
         self.vkill_test(kill_parent=True, kill_child=True, nonstop=True)
 
     @expectedFailureAll(archs=["arm"])  # TODO
-    @expectedFailureAll(archs=["aarch64"],
-                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_c_interspersed_nonstop(self):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"],
                              nonstop=True)
 
     @expectedFailureAll(archs=["arm"])  # TODO
-    @expectedFailureAll(archs=["aarch64"],
-                        bugnumber="https://github.com/llvm/llvm-project/issues/56268")
     @add_test_categories(["fork"])
     def test_vCont_interspersed_nonstop(self):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"],
