@@ -93,7 +93,7 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     if (const char *CASPath = ::getenv("CLANG_CACHE_CAS_PATH")) {
       Args.append({"-Xclang", "-fcas-path", "-Xclang", CASPath});
     }
-    Args.append({"-greproducible", "-Xclang", "-fcas-token-cache"});
+    Args.append({"-greproducible"});
     return None;
   }
 

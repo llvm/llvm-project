@@ -13,16 +13,16 @@
 // RUN: env CLANG_CACHE_CAS_PATH=%t/cas PATH="%t:$PATH" clang-cache clang-symlink-outside-bindir -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG -DPREFIX=%t
 
 // CLANG: "-cc1depscan" "-fdepscan=auto"
-// CLANG: "-fcas-path" "[[PREFIX]]/cas" "-fcas-token-cache" "-greproducible"
+// CLANG: "-fcas-path" "[[PREFIX]]/cas" "-greproducible"
 // CLANG: "-x" "c"
 
 // CLANGPP: "-cc1depscan" "-fdepscan=auto"
-// CLANGPP: "-fcas-path" "[[PREFIX]]/cas" "-fcas-token-cache" "-greproducible"
+// CLANGPP: "-fcas-path" "[[PREFIX]]/cas" "-greproducible"
 // CLANGPP: "-x" "c++"
 
 // RUN: env CLANG_CACHE_CAS_PATH=%t/cas cache-build-session clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=SESSION -DPREFIX=%t
 // SESSION: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
-// SESSION: "-fcas-path" "[[PREFIX]]/cas" "-fcas-token-cache" "-greproducible"
+// SESSION: "-fcas-path" "[[PREFIX]]/cas" "-greproducible"
 
 // RUN: cp -R %S/Inputs/cmake-build %t/cmake-build
 // RUN: pushd %t/cmake-build
