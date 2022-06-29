@@ -2674,9 +2674,8 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Record.push_back(VE.getValueID(C->getOperand(1)));
         Record.push_back(CE->getPredicate());
         break;
-      case Instruction::ExtractValue:
       case Instruction::InsertValue:
-        report_fatal_error("extractvalue/insertvalue constexprs not supported");
+        report_fatal_error("insertvalue constexprs not supported");
         break;
       }
     } else if (const BlockAddress *BA = dyn_cast<BlockAddress>(C)) {

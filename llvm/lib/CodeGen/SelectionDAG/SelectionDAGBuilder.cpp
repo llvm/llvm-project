@@ -3801,13 +3801,8 @@ void SelectionDAGBuilder::visitInsertValue(const User &I) {
                            DAG.getVTList(AggValueVTs), Values));
 }
 
-void SelectionDAGBuilder::visitExtractValue(const User &I) {
-  ArrayRef<unsigned> Indices;
-  if (const ExtractValueInst *EV = dyn_cast<ExtractValueInst>(&I))
-    Indices = EV->getIndices();
-  else
-    Indices = cast<ConstantExpr>(&I)->getIndices();
-
+void SelectionDAGBuilder::visitExtractValue(const ExtractValueInst &I) {
+  ArrayRef<unsigned> Indices = I.getIndices();
   const Value *Op0 = I.getOperand(0);
   Type *AggTy = Op0->getType();
   Type *ValTy = I.getType();
