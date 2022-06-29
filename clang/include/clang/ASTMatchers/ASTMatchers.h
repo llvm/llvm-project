@@ -1515,6 +1515,15 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXMemberCallExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCMessageExpr>
     objcMessageExpr;
 
+/// Matches ObjectiveC String literal expressions.
+///
+/// Example matches @"abcd"
+/// \code
+///   NSString *s = @"abcd";
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCStringLiteral>
+    objcStringLiteral;
+
 /// Matches Objective-C interface declarations.
 ///
 /// Example matches Foo

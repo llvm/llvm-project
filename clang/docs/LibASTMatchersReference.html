@@ -1236,7 +1236,7 @@ Given
   #pragma omp parallel
 
 ``ompDefaultClause()`` matches ``default(none)``, ``default(shared)``,
-``default(private)`` and ``default(firstprivate)``
+`` default(private)`` and ``default(firstprivate)``
 </pre></td></tr>
 
 
@@ -2033,6 +2033,14 @@ NSString class, while the outermost message send invokes the
 "initWithString" instance method on the object returned from
 NSString's "alloc". This matcher should match both message sends.
   [[NSString alloc] initWithString:@"Hello"]
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('objcStringLiteral0')"><a name="objcStringLiteral0Anchor">objcStringLiteral</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCStringLiteral.html">ObjCStringLiteral</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcStringLiteral0"><pre>Matches ObjectiveC String literal expressions.
+
+Example matches @"abcd"
+  NSString *s = @"abcd";
 </pre></td></tr>
 
 
@@ -4716,22 +4724,6 @@ varDecl(isInline()) will match Foo;
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isPrivateKind0')"><a name="isPrivateKind0Anchor">isFirstPrivateKind</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``private`` kind
-specified.
-
-Given
-
-  #pragma omp parallel
-  #pragma omp parallel default(none)
-  #pragma omp parallel default(shared)
-  #pragma omp parallel default(private)
-  #pragma omp parallel default(firstprivate)
-
-``ompDefaultClause(isFirstPrivateKind())`` matches only
-``default(private)``.
-</pre></td></tr>
-
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isFirstPrivateKind0')"><a name="isFirstPrivateKind0Anchor">isFirstPrivateKind</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isFirstPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``firstprivate`` kind
 specified.
@@ -4761,6 +4753,23 @@ Given
   #pragma omp parallel default(firstprivate)
 
 ``ompDefaultClause(isNoneKind())`` matches only ``default(none)``.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isPrivateKind0')"><a name="isPrivateKind0Anchor">isPrivateKind</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``private`` kind
+specified.
+
+Given
+
+  #pragma omp parallel
+  #pragma omp parallel default(none)
+  #pragma omp parallel default(shared)
+  #pragma omp parallel default(private)
+  #pragma omp parallel default(firstprivate)
+
+``ompDefaultClause(isPrivateKind())`` matches only
+``default(private)``.
 </pre></td></tr>
 
 
@@ -7411,8 +7420,9 @@ int a = b ?: 1;
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument0')"><a name="forEachTemplateArgument0Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachTemplateArgument0"><pre>Matches classTemplateSpecialization, templateSpecializationType and functionDecl nodes where the template argument matches the inner matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument0')"><a name="forEachTemplateArgument0Anchor">forEachTemplateArgument</a></td><td>clang::ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument0"><pre>Matches classTemplateSpecialization, templateSpecializationType and
+functionDecl nodes where the template argument matches the inner matcher.
 This matcher may produce multiple matches.
 
 Given
@@ -7427,10 +7437,8 @@ Given
 
   bool B = false;
   f(R, B);
-
 templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
   matches twice, with expr() matching 'R * 2' and 'R * 4'
-
 functionDecl(forEachTemplateArgument(refersToType(builtinType())))
   matches the specialization f&lt;unsigned, bool&gt; twice, for 'unsigned'
   and 'bool'
@@ -8180,6 +8188,31 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument2')"><a name="forEachTemplateArgument2Anchor">forEachTemplateArgument</a></td><td>clang::ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument2"><pre>Matches classTemplateSpecialization, templateSpecializationType and
+functionDecl nodes where the template argument matches the inner matcher.
+This matcher may produce multiple matches.
+
+Given
+  template &lt;typename T, unsigned N, unsigned M&gt;
+  struct Matrix {};
+
+  constexpr unsigned R = 2;
+  Matrix&lt;int, R * 2, R * 4&gt; M;
+
+  template &lt;typename T, typename U&gt;
+  void f(T&amp;&amp; t, U&amp;&amp; u) {}
+
+  bool B = false;
+  f(R, B);
+templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
+  matches twice, with expr() matching 'R * 2' and 'R * 4'
+functionDecl(forEachTemplateArgument(refersToType(builtinType())))
+  matches the specialization f&lt;unsigned, bool&gt; twice, for 'unsigned'
+  and 'bool'
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyBody0')"><a name="hasAnyBody0Anchor">hasAnyBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyBody0"><pre>Matches a function declaration that has a given body present in the AST.
 Note that this matcher matches all the declarations of a function whose
@@ -8224,32 +8257,6 @@ For blocks, given
 the matcher blockDecl(hasAnyParameter(hasName("y")))
 matches the declaration of the block b with hasParameter
 matching y.
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument1')"><a name="forEachTemplateArgument1Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachTemplateArgument1"><pre>Matches classTemplateSpecialization, templateSpecializationType and functionDecl nodes where the template argument matches the inner matcher.
-This matcher may produce multiple matches.
-
-Given
-  template &lt;typename T, unsigned N, unsigned M&gt;
-  struct Matrix {};
-
-  constexpr unsigned R = 2;
-  Matrix&lt;int, R * 2, R * 4&gt; M;
-
-  template &lt;typename T, typename U&gt;
-  void f(T&amp;&amp; t, U&amp;&amp; u) {}
-
-  bool B = false;
-  f(R, B);
-
-templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
-  matches twice, with expr() matching 'R * 2' and 'R * 4'
-
-functionDecl(forEachTemplateArgument(refersToType(builtinType())))
-  matches the specialization f&lt;unsigned, bool&gt; twice, for 'unsigned'
-  and 'bool'
 </pre></td></tr>
 
 
@@ -9477,10 +9484,10 @@ varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(0,
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument2')"><a name="forEachTemplateArgument2Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachTemplateArgument2"><pre>Matches classTemplateSpecialization, templateSpecializationType and functionDecl nodes where the template argument matches the inner matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument1')"><a name="forEachTemplateArgument1Anchor">forEachTemplateArgument</a></td><td>clang::ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument1"><pre>Matches classTemplateSpecialization, templateSpecializationType and
+functionDecl nodes where the template argument matches the inner matcher.
 This matcher may produce multiple matches.
-
 
 Given
   template &lt;typename T, unsigned N, unsigned M&gt;
@@ -9494,10 +9501,8 @@ Given
 
   bool B = false;
   f(R, B);
-
 templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
   matches twice, with expr() matching 'R * 2' and 'R * 4'
-
 functionDecl(forEachTemplateArgument(refersToType(builtinType())))
   matches the specialization f&lt;unsigned, bool&gt; twice, for 'unsigned'
   and 'bool'

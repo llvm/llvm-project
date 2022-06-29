@@ -2352,6 +2352,26 @@ TEST(ASTMatchersTestObjC, ObjCMessageExpr) {
                                                argumentCountIs(0))));
 }
 
+TEST(ASTMatchersTestObjC, ObjCStringLiteral) {
+
+  StringRef Objc1String = "@interface NSObject "
+                          "@end "
+                          "@interface NSString "
+                          "@end "
+                          "@interface Test : NSObject "
+                          "+ (void)someFunction:(NSString *)Desc; "
+                          "@end "
+                          "@implementation Test "
+                          "+ (void)someFunction:(NSString *)Desc { "
+                          "    return; "
+                          "} "
+                          "- (void) foo { "
+                          "    [Test someFunction:@\"Ola!\"]; "
+                          "}\n"
+                          "@end ";
+    EXPECT_TRUE(matchesObjC(Objc1String, objcStringLiteral()));
+}
+
 TEST(ASTMatchersTestObjC, ObjCDecls) {
   StringRef ObjCString = "@protocol Proto "
                          "- (void)protoDidThing; "
