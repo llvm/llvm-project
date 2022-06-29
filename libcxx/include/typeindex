@@ -50,6 +50,12 @@ struct hash<type_index>
 #include <typeinfo>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iosfwd>
+#  include <new>
+#  include <utility>
+#endif
+
 // standard-mandated includes
 #include <compare>
 

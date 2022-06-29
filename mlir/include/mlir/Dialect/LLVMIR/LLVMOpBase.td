@@ -61,6 +61,15 @@ def LLVM_Dialect : Dialect {
     static StringRef getEmitCWrapperAttrName() {
       return "llvm.emit_c_interface";
     }
+
+    /// Returns `true` if the given type is compatible with the LLVM dialect.
+    static bool isCompatibleType(Type);
+
+  private:
+    /// A cache storing compatible LLVM types that have been verified. This
+    /// can save us lots of verification time if there are many occurrences
+    /// of some deeply-nested aggregate types in the program.
+    ThreadLocalCache<DenseSet<Type>> compatibleTypes;
   }];
 
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;

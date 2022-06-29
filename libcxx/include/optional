@@ -177,6 +177,21 @@ template<class T>
 #include <type_traits>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <atomic>
+#  include <chrono>
+#  include <climits>
+#  include <concepts>
+#  include <ctime>
+#  include <iterator>
+#  include <memory>
+#  include <ratio>
+#  include <tuple>
+#  include <typeinfo>
+#  include <utility>
+#  include <variant>
+#endif
+
 // standard-mandated includes
 #include <compare>
 

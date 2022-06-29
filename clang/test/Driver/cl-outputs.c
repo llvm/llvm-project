@@ -82,6 +82,11 @@
 // RUN: %clang_cl /c /o mydir/ -### -- %s %s 2>&1 | FileCheck -check-prefix=CHECK-oMULTIPLESOURCEOK2 %s
 // CHECK-oMULTIPLESOURCEOK2: "-o" "mydir{{[/\\]+}}cl-outputs.obj"
 
+// RUN: %clang_cl -emit-ast /otest.ast -###  -- %s  2>&1 | FileCheck -check-prefix=oASTNAME %s
+// oASTNAME:  "-o" "test.ast"
+
+// RUN: %clang_cl --analyze /otest.plist -###  -- %s  2>&1 | FileCheck -check-prefix=oPLIST %s
+// oPLIST:  "-o" "test.plist"
 
 // RUN: %clang_cl /c /obar /Fofoo -### -- %s 2>&1 | FileCheck -check-prefix=FooRACE1 %s
 // FooRACE1: "-o" "foo.obj"

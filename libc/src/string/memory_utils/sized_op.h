@@ -33,6 +33,9 @@ namespace __llvm_libc {
 
 template <typename Backend, size_t Size> struct SizedOp {
   static constexpr size_t SIZE = Size;
+  // Define instantiations of SizedOp as a fixed size operation.
+  // i.e. an operation that is composable by types in algorithm.h
+  static constexpr bool IS_FIXED_SIZE = true;
 
 private:
   static_assert(Backend::IS_BACKEND_TYPE);
@@ -109,7 +112,7 @@ public:
     if constexpr (LLVM_LIBC_USE_BUILTIN_MEMSET_INLINE &&
                   DstAddrT::TEMPORALITY == Temporality::TEMPORAL) {
       // delegate optimized set to compiler.
-      __builtin_memset_inline(dst.ptr(), value, Size);
+      __builtin_memset_inline(dst.ptr(), static_cast<int>(value), Size);
       return;
     }
     nativeStore(Backend::template splat<type>(value), dst);

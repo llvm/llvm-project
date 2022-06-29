@@ -56,8 +56,8 @@ class TestDarwinSignalHandlers(TestBase):
         self.assertEqual(len(threads), 1, "Stopped at return breakpoint")
 
         # Make sure we really changed the value:
-        
+
         process.Continue()
-        self.assertEqual(process.state, lldb.eStateExited, "Process exited")
+        self.assertState(process.state, lldb.eStateExited, "Process exited")
         self.assertEqual(process.exit_state, 20, "Got the right exit status")
-                         
+

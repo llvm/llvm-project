@@ -161,7 +161,7 @@ public:
   // Get function size with a specific context. When there's no exact match
   // for the given context, try to retrieve the size of that function from
   // closest matching context.
-  uint32_t getFuncSizeForContext(const SampleContext &Context);
+  uint32_t getFuncSizeForContext(const ContextTrieNode *Context);
 
   // For inlinees that are full optimized away, we can establish zero size using
   // their remaining probes.
@@ -485,8 +485,8 @@ public:
     return &I->second;
   }
 
-  uint32_t getFuncSizeForContext(SampleContext &Context) {
-    return FuncSizeTracker.getFuncSizeForContext(Context);
+  uint32_t getFuncSizeForContext(const ContextTrieNode *ContextNode) {
+    return FuncSizeTracker.getFuncSizeForContext(ContextNode);
   }
 
   // Load the symbols from debug table and populate into symbol list.

@@ -107,6 +107,10 @@ template <class T, class Container>
 #include <type_traits>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <functional>
+#endif
+
 // standard-mandated includes
 #include <compare>
 #include <initializer_list>

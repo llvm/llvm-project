@@ -12,7 +12,7 @@
 
 // -----
 
-// expected-error@+1{{'fir.string_lit' op values in list must be integers}}
+// expected-error@+1{{'fir.string_lit' op values in initializer must be integers}}
 %2 = fir.string_lit [158, 2.0](2) : !fir.char<2>
 
 // -----

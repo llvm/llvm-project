@@ -578,6 +578,10 @@ def ParallelInsertSliceOp : SCF_Op<"foreach_thread.parallel_insert_slice", [
     /// Return the number of leading operands before `offsets`, `sizes` and
     /// `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
+
+    /// Return the OpResult of the enclosing ForeachThreadOp that is
+    /// corresponding to this ParallelInsertSliceOp.
+    OpResult getTiedOpResult();
   }];
 
   let builders = [

@@ -231,7 +231,7 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
     DeclEnd = ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
     Decl *Decl = Actions.ParsedFreeStandingDeclSpec(
-        getCurScope(), AS, DS,
+        getCurScope(), AS, DS, ParsedAttributesView::none(),
         TemplateInfo.TemplateParams ? *TemplateInfo.TemplateParams
                                     : MultiTemplateParamsArg(),
         TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation,

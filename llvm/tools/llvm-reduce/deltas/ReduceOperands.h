@@ -14,6 +14,7 @@
 namespace llvm {
 void reduceOperandsOneDeltaPass(TestRunner &Test);
 void reduceOperandsZeroDeltaPass(TestRunner &Test);
+void reduceOperandsNaNDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

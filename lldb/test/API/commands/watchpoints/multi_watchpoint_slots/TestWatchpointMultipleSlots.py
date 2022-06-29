@@ -88,10 +88,10 @@ class WatchpointSlotsTestCase(TestBase):
         # The stop reason of the thread should be watchpoint.
         if self.platformIsDarwin():
             # On darwin we'll hit byteArray[3] which is watchpoint 2
-            self.expect("thread list -v", STOPPED_DUE_TO_WATCHPOINT,
+            self.expect("thread list", STOPPED_DUE_TO_WATCHPOINT,
                         substrs=['stopped', 'stop reason = watchpoint 2'])
         else:
-            self.expect("thread list -v", STOPPED_DUE_TO_WATCHPOINT,
+            self.expect("thread list", STOPPED_DUE_TO_WATCHPOINT,
                         substrs=['stopped', 'stop reason = watchpoint 3'])
 
         # Resume inferior.

@@ -9,7 +9,7 @@
 /// \file
 /// This file declares the log symbolizer markup data model and parser.
 ///
-/// \todo Add a link to the reference documentation once added.
+/// See https://llvm.org/docs/SymbolizerMarkupFormat.html
 ///
 //===----------------------------------------------------------------------===//
 

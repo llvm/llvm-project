@@ -1260,6 +1260,12 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/upper_bound.h>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <chrono>
+#  include <iterator>
+#  include <utility>
+#endif
+
 // standard-mandated includes
 #include <initializer_list>
 

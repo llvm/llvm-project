@@ -123,6 +123,12 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <type_traits>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <algorithm>
+#  include <iterator>
+#  include <utility>
+#endif
+
 // standard-mandated includes
 
 // [iterator.range]

@@ -31,6 +31,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -623,8 +624,7 @@ namespace {
 
 /// AddressSanitizer: instrument the code in module to find memory bugs.
 struct AddressSanitizer {
-  AddressSanitizer(Module &M, const GlobalsMetadata *GlobalsMD,
-                   const StackSafetyGlobalInfo *SSGI,
+  AddressSanitizer(Module &M, const StackSafetyGlobalInfo *SSGI,
                    bool CompileKernel = false, bool Recover = false,
                    bool UseAfterScope = false,
                    AsanDetectStackUseAfterReturnMode UseAfterReturn =
@@ -635,7 +635,7 @@ struct AddressSanitizer {
         UseAfterScope(UseAfterScope || ClUseAfterScope),
         UseAfterReturn(ClUseAfterReturn.getNumOccurrences() ? ClUseAfterReturn
                                                             : UseAfterReturn),
-        GlobalsMD(*GlobalsMD), SSGI(SSGI) {
+        SSGI(SSGI) {
     C = &(M.getContext());
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -748,7 +748,6 @@ private:
 
   FunctionCallee AsanMemmove, AsanMemcpy, AsanMemset;
   Value *LocalDynamicShadow = nullptr;
-  const GlobalsMetadata &GlobalsMD;
   const StackSafetyGlobalInfo *SSGI;
   DenseMap<const AllocaInst *, bool> ProcessedAllocas;
 
@@ -758,12 +757,11 @@ private:
 
 class ModuleAddressSanitizer {
 public:
-  ModuleAddressSanitizer(Module &M, const GlobalsMetadata *GlobalsMD,
-                         bool CompileKernel = false, bool Recover = false,
-                         bool UseGlobalsGC = true, bool UseOdrIndicator = false,
+  ModuleAddressSanitizer(Module &M, bool CompileKernel = false,
+                         bool Recover = false, bool UseGlobalsGC = true,
+                         bool UseOdrIndicator = false,
                          AsanDtorKind DestructorKind = AsanDtorKind::Global)
-      : GlobalsMD(*GlobalsMD),
-        CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
+      : CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
                                                             : CompileKernel),
         Recover(ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover),
         UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC && !this->CompileKernel),
@@ -829,7 +827,6 @@ private:
   uint64_t getRedzoneSizeForGlobal(uint64_t SizeInBytes) const;
   int GetAsanVersion(const Module &M) const;
 
-  const GlobalsMetadata &GlobalsMD;
   bool CompileKernel;
   bool Recover;
   bool UseGlobalsGC;
@@ -1106,55 +1103,6 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
 } // end anonymous namespace
 
-void LocationMetadata::parse(MDNode *MDN) {
-  assert(MDN->getNumOperands() == 3);
-  MDString *DIFilename = cast<MDString>(MDN->getOperand(0));
-  Filename = DIFilename->getString();
-  LineNo = mdconst::extract<ConstantInt>(MDN->getOperand(1))->getLimitedValue();
-  ColumnNo =
-      mdconst::extract<ConstantInt>(MDN->getOperand(2))->getLimitedValue();
-}
-
-// FIXME: It would be cleaner to instead attach relevant metadata to the globals
-// we want to sanitize instead and reading this metadata on each pass over a
-// function instead of reading module level metadata at first.
-GlobalsMetadata::GlobalsMetadata(Module &M) {
-  NamedMDNode *Globals = M.getNamedMetadata("llvm.asan.globals");
-  if (!Globals)
-    return;
-  for (auto MDN : Globals->operands()) {
-    // Metadata node contains the global and the fields of "Entry".
-    assert(MDN->getNumOperands() == 5);
-    auto *V = mdconst::extract_or_null<Constant>(MDN->getOperand(0));
-    // The optimizer may optimize away a global entirely.
-    if (!V)
-      continue;
-    auto *StrippedV = V->stripPointerCasts();
-    auto *GV = dyn_cast<GlobalVariable>(StrippedV);
-    if (!GV)
-      continue;
-    // We can already have an entry for GV if it was merged with another
-    // global.
-    Entry &E = Entries[GV];
-    if (auto *Loc = cast_or_null<MDNode>(MDN->getOperand(1)))
-      E.SourceLoc.parse(Loc);
-    if (auto *Name = cast_or_null<MDString>(MDN->getOperand(2)))
-      E.Name = Name->getString();
-    ConstantInt *IsDynInit = mdconst::extract<ConstantInt>(MDN->getOperand(3));
-    E.IsDynInit |= IsDynInit->isOne();
-    ConstantInt *IsExcluded =
-        mdconst::extract<ConstantInt>(MDN->getOperand(4));
-    E.IsExcluded |= IsExcluded->isOne();
-  }
-}
-
-AnalysisKey ASanGlobalsMetadataAnalysis::Key;
-
-GlobalsMetadata ASanGlobalsMetadataAnalysis::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
-  return GlobalsMetadata(M);
-}
-
 void ModuleAddressSanitizerPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<ModuleAddressSanitizerPass> *>(this)->printPipeline(
@@ -1173,8 +1121,7 @@ ModuleAddressSanitizerPass::ModuleAddressSanitizerPass(
 
 PreservedAnalyses ModuleAddressSanitizerPass::run(Module &M,
                                                   ModuleAnalysisManager &MAM) {
-  GlobalsMetadata &GlobalsMD = MAM.getResult<ASanGlobalsMetadataAnalysis>(M);
-  ModuleAddressSanitizer ModuleSanitizer(M, &GlobalsMD, Options.CompileKernel,
+  ModuleAddressSanitizer ModuleSanitizer(M, Options.CompileKernel,
                                          Options.Recover, UseGlobalGC,
                                          UseOdrIndicator, DestructorKind);
   bool Modified = false;
@@ -1182,9 +1129,9 @@ PreservedAnalyses ModuleAddressSanitizerPass::run(Module &M,
   const StackSafetyGlobalInfo *const SSGI =
       ClUseStackSafety ? &MAM.getResult<StackSafetyGlobalAnalysis>(M) : nullptr;
   for (Function &F : M) {
-    AddressSanitizer FunctionSanitizer(
-        M, &GlobalsMD, SSGI, Options.CompileKernel, Options.Recover,
-        Options.UseAfterScope, Options.UseAfterReturn);
+    AddressSanitizer FunctionSanitizer(M, SSGI, Options.CompileKernel,
+                                       Options.Recover, Options.UseAfterScope,
+                                       Options.UseAfterReturn);
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     Modified |= FunctionSanitizer.instrumentFunction(F, &TLI);
   }
@@ -1198,36 +1145,20 @@ static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
   return Res;
 }
 
-/// Create a global describing a source location.
-static GlobalVariable *createPrivateGlobalForSourceLoc(Module &M,
-                                                       LocationMetadata MD) {
-  Constant *LocData[] = {
-      createPrivateGlobalForString(M, MD.Filename, true, kAsanGenPrefix),
-      ConstantInt::get(Type::getInt32Ty(M.getContext()), MD.LineNo),
-      ConstantInt::get(Type::getInt32Ty(M.getContext()), MD.ColumnNo),
-  };
-  auto LocStruct = ConstantStruct::getAnon(LocData);
-  auto GV = new GlobalVariable(M, LocStruct->getType(), true,
-                               GlobalValue::PrivateLinkage, LocStruct,
-                               kAsanGenPrefix);
-  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  return GV;
-}
-
 /// Check if \p G has been created by a trusted compiler pass.
 static bool GlobalWasGeneratedByCompiler(GlobalVariable *G) {
   // Do not instrument @llvm.global_ctors, @llvm.used, etc.
-  if (G->getName().startswith("llvm."))
+  if (G->getName().startswith("llvm.") ||
+      // Do not instrument gcov counter arrays.
+      G->getName().startswith("__llvm_gcov_ctr") ||
+      // Do not instrument rtti proxy symbols for function sanitizer.
+      G->getName().startswith("__llvm_rtti_proxy"))
     return true;
 
   // Do not instrument asan globals.
   if (G->getName().startswith(kAsanGenPrefix) ||
       G->getName().startswith(kSanCovGenPrefix) ||
       G->getName().startswith(kODRGenPrefix))
-    return true;
-
-  // Do not instrument gcov counter arrays.
-  if (G->getName() == "__llvm_gcov_ctr")
     return true;
 
   return false;
@@ -1421,10 +1352,13 @@ bool AddressSanitizer::GlobalIsLinkerInitialized(GlobalVariable *G) {
   // If a global variable does not have dynamic initialization we don't
   // have to instrument it.  However, if a global does not have initializer
   // at all, we assume it has dynamic initializer (in other TU).
-  //
-  // FIXME: Metadata should be attched directly to the global directly instead
-  // of being added to llvm.asan.globals.
-  return G->hasInitializer() && !GlobalsMD.get(G).IsDynInit;
+  if (!G->hasInitializer())
+    return false;
+
+  if (G->hasSanitizerMetadata() && G->getSanitizerMetadata().IsDynInit)
+    return false;
+
+  return true;
 }
 
 void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
@@ -1785,9 +1719,8 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
   Type *Ty = G->getValueType();
   LLVM_DEBUG(dbgs() << "GLOBAL: " << *G << "\n");
 
-  // FIXME: Metadata should be attched directly to the global directly instead
-  // of being added to llvm.asan.globals.
-  if (GlobalsMD.get(G).IsExcluded) return false;
+  if (G->hasSanitizerMetadata() && G->getSanitizerMetadata().NoAddress)
+    return false;
   if (!Ty->isSized()) return false;
   if (!G->hasInitializer()) return false;
   // Globals in address space 1 and 4 are supported for AMDGPU.
@@ -2282,7 +2215,7 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
   //   const char *name;
   //   const char *module_name;
   //   size_t has_dynamic_init;
-  //   void *source_location;
+  //   size_t padding_for_windows_msvc_incremental_link;
   //   size_t odr_indicator;
   // We initialize an array of such structures and pass it to a run-time call.
   StructType *GlobalStructTy =
@@ -2301,15 +2234,16 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
   for (size_t i = 0; i < n; i++) {
     GlobalVariable *G = GlobalsToChange[i];
 
-    // FIXME: Metadata should be attched directly to the global directly instead
-    // of being added to llvm.asan.globals.
-    auto MD = GlobalsMD.get(G);
-    StringRef NameForGlobal = G->getName();
-    // Create string holding the global name (use global name from metadata
-    // if it's available, otherwise just write the name of global variable).
-    GlobalVariable *Name = createPrivateGlobalForString(
-        M, MD.Name.empty() ? NameForGlobal : MD.Name,
-        /*AllowMerging*/ true, kAsanGenPrefix);
+    GlobalValue::SanitizerMetadata MD;
+    if (G->hasSanitizerMetadata())
+      MD = G->getSanitizerMetadata();
+
+    // TODO: Symbol names in the descriptor can be demangled by the runtime
+    // library. This could save ~0.4% of VM size for a private large binary.
+    std::string NameForGlobal = llvm::demangle(G->getName().str());
+    GlobalVariable *Name =
+        createPrivateGlobalForString(M, NameForGlobal,
+                                     /*AllowMerging*/ true, kAsanGenPrefix);
 
     Type *Ty = G->getValueType();
     const uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
@@ -2357,14 +2291,6 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
     G->eraseFromParent();
     NewGlobals[i] = NewGlobal;
 
-    Constant *SourceLoc;
-    if (!MD.SourceLoc.empty()) {
-      auto SourceLocGlobal = createPrivateGlobalForSourceLoc(M, MD.SourceLoc);
-      SourceLoc = ConstantExpr::getPointerCast(SourceLocGlobal, IntptrTy);
-    } else {
-      SourceLoc = ConstantInt::get(IntptrTy, 0);
-    }
-
     Constant *ODRIndicator = ConstantExpr::getNullValue(IRB.getInt8PtrTy());
     GlobalValue *InstrumentedGlobal = NewGlobal;
 
@@ -2405,10 +2331,12 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
         ConstantInt::get(IntptrTy, SizeInBytes + RightRedzoneSize),
         ConstantExpr::getPointerCast(Name, IntptrTy),
         ConstantExpr::getPointerCast(ModuleName, IntptrTy),
-        ConstantInt::get(IntptrTy, MD.IsDynInit), SourceLoc,
+        ConstantInt::get(IntptrTy, MD.IsDynInit),
+        Constant::getNullValue(IntptrTy),
         ConstantExpr::getPointerCast(ODRIndicator, IntptrTy));
 
-    if (ClInitializers && MD.IsDynInit) HasDynamicallyInitializedGlobals = true;
+    if (ClInitializers && MD.IsDynInit)
+      HasDynamicallyInitializedGlobals = true;
 
     LLVM_DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
 

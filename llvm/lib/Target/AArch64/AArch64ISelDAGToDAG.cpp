@@ -5256,9 +5256,12 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
 }
 
 bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned Scale,
-                                             SDValue &Vector, SDValue &Offset) {
-  if (N.getOpcode() != ISD::ADD)
-    return false;
+                                             SDValue &Base, SDValue &Offset) {
+  if (N.getOpcode() != ISD::ADD) {
+    Base = N;
+    Offset = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
+    return true;
+  }
 
   // Process an ADD node.
   const SDValue LHS = N.getOperand(0);
@@ -5271,7 +5274,7 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned Scale,
     if (ImmOff < 0 || ImmOff > MaxSize)
       return false;
 
-    Vector = LHS;
+    Base = LHS;
     Offset = CurDAG->getTargetConstant(ImmOff, SDLoc(N), MVT::i64);
     return true;
   }

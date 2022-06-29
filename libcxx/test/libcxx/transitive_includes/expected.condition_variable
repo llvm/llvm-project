@@ -1,6 +1,10 @@
+algorithm
+array
 atomic
+bit
 cctype
 cerrno
+chrono
 climits
 cmath
 compare
@@ -15,11 +19,14 @@ ctime
 cwchar
 cwctype
 exception
+functional
 initializer_list
 iosfwd
+iterator
 limits
 memory
 new
+optional
 ratio
 stdexcept
 string
@@ -28,4 +35,8 @@ system_error
 tuple
 type_traits
 typeinfo
+unordered_map
+utility
+variant
+vector
 version

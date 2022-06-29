@@ -690,8 +690,8 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
     if (ConstSrc1 && ConstSrc1->Value == 0) {
       // build_vector_trunc (lshr $src0, 16), 0 -> s_lshr_b32 $src0, 16
       auto MIB = BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst)
-        .addReg(ShiftSrc0)
-        .addImm(16);
+                     .addReg(ShiftSrc0)
+                     .addImm(16);
 
       MI.eraseFromParent();
       return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);

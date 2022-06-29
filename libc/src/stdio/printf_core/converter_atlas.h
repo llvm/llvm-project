@@ -23,6 +23,7 @@
 #include "src/stdio/printf_core/int_converter.h"
 
 // defines convert_oct
+#include "src/stdio/printf_core/oct_converter.h"
 // defines convert_hex
 #include "src/stdio/printf_core/hex_converter.h"
 

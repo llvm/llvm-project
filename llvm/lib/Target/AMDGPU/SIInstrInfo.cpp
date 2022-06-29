@@ -7157,12 +7157,12 @@ void SIInstrInfo::movePackToVALU(SetVectorType &Worklist,
   case AMDGPU::S_PACK_HL_B32_B16: {
     Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
-      .addImm(16)
-      .add(Src0);
+        .addImm(16)
+        .add(Src0);
     BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHL_OR_B32_e64), ResultReg)
-      .add(Src1)
-      .addImm(16)
-      .addReg(TmpReg, RegState::Kill);
+        .add(Src1)
+        .addImm(16)
+        .addReg(TmpReg, RegState::Kill);
     break;
   }
   case AMDGPU::S_PACK_HH_B32_B16: {

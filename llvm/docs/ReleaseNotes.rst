@@ -68,6 +68,9 @@ Changes to the LLVM IR
 
 * Renamed ``llvm.experimental.vector.extract`` intrinsic to ``llvm.vector.extract``.
 * Renamed ``llvm.experimental.vector.insert`` intrinsic to ``llvm.vector.insert``.
+* The constant expression variants of the following instructions have been
+  removed:
+  * ``extractvalue``
 
 Changes to building LLVM
 ------------------------
@@ -112,6 +115,16 @@ Changes to the AVR Backend
 --------------------------
 
 * ...
+
+Changes to the DirectX Backend
+------------------------------
+
+* DirectX has been added as an experimental target. Specify
+  ``-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=DirectX`` in your CMake configuration
+  to enable it. The target is not packaged in pre-built binaries.
+* The DirectX backend supports the ``dxil`` architecture which is based on LLVM
+  3.6 IR encoded as bitcode and is the format used for DirectX GPU Shader
+  programs.
 
 Changes to the Hexagon Backend
 ------------------------------
@@ -161,6 +174,12 @@ Changes to the C API
   favor of the new function, which works on all constant aggregates, rather than
   only instances of ``ConstantDataSequential``.
 
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+  * ``LLVMConstExtractValue``
+
 Changes to the Go bindings
 --------------------------
 
@@ -181,6 +200,10 @@ During this release ...
 
 Changes to the LLVM tools
 ---------------------------------
+
+* (Experimental) :manpage:`llvm-symbolizer(1)` now has ``--filter-markup`` to
+  filter :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` into human-readable
+  form.
 
 Changes to LLDB
 ---------------------------------

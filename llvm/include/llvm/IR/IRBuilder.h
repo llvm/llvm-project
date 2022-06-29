@@ -2281,9 +2281,8 @@ public:
 
   Value *CreateExtractElement(Value *Vec, Value *Idx,
                               const Twine &Name = "") {
-    if (auto *VC = dyn_cast<Constant>(Vec))
-      if (auto *IC = dyn_cast<Constant>(Idx))
-        return Insert(Folder.CreateExtractElement(VC, IC), Name);
+    if (Value *V = Folder.FoldExtractElement(Vec, Idx))
+      return V;
     return Insert(ExtractElementInst::Create(Vec, Idx), Name);
   }
 
@@ -2304,10 +2303,8 @@ public:
 
   Value *CreateInsertElement(Value *Vec, Value *NewElt, Value *Idx,
                              const Twine &Name = "") {
-    if (auto *VC = dyn_cast<Constant>(Vec))
-      if (auto *NC = dyn_cast<Constant>(NewElt))
-        if (auto *IC = dyn_cast<Constant>(Idx))
-          return Insert(Folder.CreateInsertElement(VC, NC, IC), Name);
+    if (Value *V = Folder.FoldInsertElement(Vec, NewElt, Idx))
+      return V;
     return Insert(InsertElementInst::Create(Vec, NewElt, Idx), Name);
   }
 
@@ -2326,9 +2323,8 @@ public:
   /// See class ShuffleVectorInst for a description of the mask representation.
   Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<int> Mask,
                              const Twine &Name = "") {
-    if (auto *V1C = dyn_cast<Constant>(V1))
-      if (auto *V2C = dyn_cast<Constant>(V2))
-        return Insert(Folder.CreateShuffleVector(V1C, V2C, Mask), Name);
+    if (Value *V = Folder.FoldShuffleVector(V1, V2, Mask))
+      return V;
     return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
   }
 

@@ -46,13 +46,13 @@ TEST(LlvmLibcMemcmpTest, Sweep) {
   reset(lhs);
   reset(rhs);
   for (size_t i = 0; i < K_MAX_SIZE; ++i)
-    EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, i), 0);
+    ASSERT_EQ(__llvm_libc::memcmp(lhs, rhs, i), 0);
 
   reset(lhs);
   reset(rhs);
   for (size_t i = 0; i < K_MAX_SIZE; ++i) {
     rhs[i] = 'z';
-    EXPECT_LT(__llvm_libc::memcmp(lhs, rhs, K_MAX_SIZE), 0);
+    ASSERT_LT(__llvm_libc::memcmp(lhs, rhs, K_MAX_SIZE), 0);
     rhs[i] = 'a';
   }
 }

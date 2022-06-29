@@ -400,6 +400,27 @@ def FeatureStdExtZvfh
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
                        [FeatureStdExtZve32f]>;
 
+def FeatureStdExtZicbom
+    : SubtargetFeature<"zicbom", "HasStdExtZicbom", "true",
+                       "'Zicbom' (Cache-Block Management Instructions)">;
+def HasStdExtZicbom : Predicate<"Subtarget->hasStdExtZicbom()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZicbom),
+                                "'Zicbom' (Cache-Block Management Instructions)">;
+
+def FeatureStdExtZicboz
+    : SubtargetFeature<"zicboz", "HasStdExtZicboz", "true",
+                       "'Zicboz' (Cache-Block Zero Instructions)">;
+def HasStdExtZicboz : Predicate<"Subtarget->hasStdExtZicboz()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZicboz),
+                                "'Zicboz' (Cache-Block Zero Instructions)">;
+
+def FeatureStdExtZicbop
+    : SubtargetFeature<"zicbop", "HasStdExtZicbop", "true",
+                       "'Zicbop' (Cache-Block Prefetch Instructions)">;
+def HasStdExtZicbop : Predicate<"Subtarget->hasStdExtZicbop()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZicbop),
+                                "'Zicbop' (Cache-Block Prefetch Instructions)">;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasRV64", "true", "Implements RV64">;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,

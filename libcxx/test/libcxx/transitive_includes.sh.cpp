@@ -34,6 +34,11 @@
 // This test doesn't work on AIX or Windows, but it should. Needs investigation.
 // XFAIL: buildhost=aix, buildhost=windows
 
+// This test is not supported when we remove the transitive includes provided for backwards
+// compatibility. When we bulk-remove them, we'll adjust the includes that are expected by
+// this test instead.
+// XFAIL: transitive-includes-disabled
+
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)
 #    undef __DEPRECATED
