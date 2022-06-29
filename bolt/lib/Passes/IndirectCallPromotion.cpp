@@ -977,10 +977,8 @@ size_t IndirectCallPromotion::canPromoteCallsite(
 
   const size_t TrialN = TopN ? std::min(TopN, Targets.size()) : Targets.size();
 
-  if (opts::ICPTopCallsites > 0) {
-    if (!BC.MIB->hasAnnotation(Inst, "DoICP"))
-      return 0;
-  }
+  if (opts::ICPTopCallsites && !BC.MIB->hasAnnotation(Inst, "DoICP"))
+    return 0;
 
   // Pick the top N targets.
   uint64_t TotalMispredictsTopN = 0;
@@ -1064,11 +1062,11 @@ size_t IndirectCallPromotion::canPromoteCallsite(
 
   // Filter by inline-ability of target functions, stop at first target that
   // can't be inlined.
-  if (opts::ICPPeelForInline) {
+  if (!IsJumpTable && opts::ICPPeelForInline) {
     for (size_t I = 0; I < N; ++I) {
       const MCSymbol *TargetSym = Targets[I].To.Sym;
       const BinaryFunction *TargetBF = BC.getFunctionForSymbol(TargetSym);
-      if (!BinaryFunctionPass::shouldOptimize(*TargetBF) ||
+      if (!TargetBF || !BinaryFunctionPass::shouldOptimize(*TargetBF) ||
           getInliningInfo(*TargetBF).Type == InliningType::INL_NONE) {
         N = I;
         break;
