@@ -887,16 +887,20 @@ void ExternalFileUnit::DoImpliedEndfile(IoErrorHandler &handler) {
 
 void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   if (IsRecordFile() && access != Access::Direct) {
+    furthestPositionInRecord =
+        std::max(positionInRecord, furthestPositionInRecord);
     if (furthestPositionInRecord > 0) {
-      // Last write was non-advancing, so AdvanceRecord() was not called.
+      // Last read/write was non-advancing, so AdvanceRecord() was not called.
       leftTabLimit.reset();
       ++currentRecordNumber;
     }
     endfileRecordNumber = currentRecordNumber;
   }
-  FlushOutput(handler);
-  Truncate(frameOffsetInFile_ + recordOffsetInFrame_ + furthestPositionInRecord,
-      handler);
+  frameOffsetInFile_ += recordOffsetInFrame_ + furthestPositionInRecord;
+  recordOffsetInFrame_ = 0;
+  // Flush (if dirty) and reset the frame (even if reading)
+  WriteFrame(frameOffsetInFile_, 0, handler);
+  Truncate(frameOffsetInFile_, handler);
   BeginRecord();
   impliedEndfile_ = false;
 }
