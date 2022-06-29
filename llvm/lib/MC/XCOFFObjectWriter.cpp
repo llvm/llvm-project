@@ -180,9 +180,14 @@ struct DwarfSectionEntry : public SectionEntry {
   // For DWARF section entry.
   std::unique_ptr<XCOFFSection> DwarfSect;
 
+  // For DWARF section, we must use real size in the section header. MemorySize
+  // is for the size the DWARF section occupies including paddings.
+  uint32_t MemorySize;
+
   DwarfSectionEntry(StringRef N, int32_t Flags,
                     std::unique_ptr<XCOFFSection> Sect)
-      : SectionEntry(N, Flags | XCOFF::STYP_DWARF), DwarfSect(std::move(Sect)) {
+      : SectionEntry(N, Flags | XCOFF::STYP_DWARF), DwarfSect(std::move(Sect)),
+        MemorySize(0) {
     assert(DwarfSect->MCSec->isDwarfSect() &&
            "This should be a DWARF section!");
     assert(N.size() <= XCOFF::NameSize && "section name too long");
@@ -982,6 +987,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
   // Section indices are 1-based in XCOFF.
   int32_t SectionIndex = 1;
   bool HasTDataSection = false;
+  uint32_t PaddingsBeforeDwarf = 0;
 
   for (auto *Section : Sections) {
     const bool IsEmpty =
@@ -1041,6 +1047,19 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
     Section->Size = Address - Section->Address;
   }
 
+  // Start to generate DWARF sections. Sections other than DWARF section use
+  // DefaultSectionAlign as the default alignment, while DWARF sections have
+  // their own alignments. If these two alignments are not the same, we need
+  // some paddings here and record the paddings bytes for FileOffsetToData
+  // calculation.
+  if (!DwarfSections.empty())
+    PaddingsBeforeDwarf =
+        alignTo(Address,
+                (*DwarfSections.begin()).DwarfSect->MCSec->getAlignment()) -
+        Address;
+
+  DwarfSectionEntry *LastDwarfSection = nullptr;
+
   for (auto &DwarfSection : DwarfSections) {
     assert((SectionIndex <= MaxSectionIndex) && "Section index overflow!");
 
@@ -1068,8 +1087,19 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
     // For DWARF section, we must use the real size which may be not aligned.
     DwarfSection.Size = DwarfSect.Size = Layout.getSectionAddressSize(MCSec);
 
-    // Make the Address align to default alignment for follow section.
-    Address = alignTo(DwarfSect.Address + DwarfSect.Size, DefaultSectionAlign);
+    Address = DwarfSection.Address + DwarfSection.Size;
+
+    if (LastDwarfSection)
+      LastDwarfSection->MemorySize =
+          DwarfSection.Address - LastDwarfSection->Address;
+    LastDwarfSection = &DwarfSection;
+  }
+  if (LastDwarfSection) {
+    // Make the final DWARF section address align to the default section
+    // alignment for follow contents.
+    Address = alignTo(LastDwarfSection->Address + LastDwarfSection->Size,
+                      DefaultSectionAlign);
+    LastDwarfSection->MemorySize = Address - LastDwarfSection->Address;
   }
 
   SymbolTableEntryCount = SymbolTableIndex;
@@ -1092,19 +1122,15 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
       report_fatal_error("Section raw data overflowed this object file.");
   }
 
-  for (auto &DwarfSection : DwarfSections) {
-    // Address of csect sections are always aligned to DefaultSectionAlign, but
-    // address of DWARF section are aligned to Section alignment which may be
-    // bigger than DefaultSectionAlign, need to execlude the padding bits.
-    RawPointer =
-        alignTo(RawPointer, DwarfSection.DwarfSect->MCSec->getAlignment());
+  // Increase the raw pointer for the padding bytes between csect sections and
+  // DWARF sections.
+  if (!DwarfSections.empty())
+    RawPointer += PaddingsBeforeDwarf;
 
+  for (auto &DwarfSection : DwarfSections) {
     DwarfSection.FileOffsetToData = RawPointer;
-    // Some section entries, like DWARF section size is not aligned, so
-    // RawPointer may be not aligned.
-    RawPointer += DwarfSection.Size;
-    // Make sure RawPointer is aligned.
-    RawPointer = alignTo(RawPointer, DefaultSectionAlign);
+
+    RawPointer += DwarfSection.MemorySize;
 
     assert(RawPointer <= MaxRawDataSize &&
            "Section raw data overflowed this object file.");
