@@ -18,7 +18,6 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
-#include "clang/Analysis/FlowSensitive/SourceLocationsLattice.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/Any.h"
@@ -32,7 +31,6 @@ namespace clang {
 namespace tidy {
 namespace bugprone {
 using ast_matchers::MatchFinder;
-using dataflow::SourceLocationsLattice;
 using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
 using llvm::Optional;
@@ -56,13 +54,14 @@ analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
   UncheckedOptionalAccessModel Analysis(ASTCtx);
   UncheckedOptionalAccessDiagnoser Diagnoser;
   std::vector<SourceLocation> Diagnostics;
-  Expected<std::vector<Optional<DataflowAnalysisState<SourceLocationsLattice>>>>
+  Expected<std::vector<
+      Optional<DataflowAnalysisState<UncheckedOptionalAccessModel::Lattice>>>>
       BlockToOutputState = dataflow::runDataflowAnalysis(
           *Context, Analysis, Env,
-          [&ASTCtx, &Diagnoser,
-           &Diagnostics](const Stmt *Stmt,
-                         const DataflowAnalysisState<SourceLocationsLattice>
-                             &State) mutable {
+          [&ASTCtx, &Diagnoser, &Diagnostics](
+              const Stmt *Stmt,
+              const DataflowAnalysisState<UncheckedOptionalAccessModel::Lattice>
+                  &State) mutable {
             auto StmtDiagnostics = Diagnoser.diagnose(ASTCtx, Stmt, State.Env);
             llvm::move(StmtDiagnostics, std::back_inserter(Diagnostics));
           });
