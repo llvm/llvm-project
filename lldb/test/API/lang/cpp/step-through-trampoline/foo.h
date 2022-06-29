@@ -1,2 +1,2 @@
-extern void foo();
+LLDB_TEST_API extern void foo();
 
