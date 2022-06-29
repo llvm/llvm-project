@@ -333,6 +333,7 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     }
     unsigned getNumFields() { return getTypeList().size(); }
     unsigned getNumLenParams() { return getLenParamList().size(); }
+    bool isDependentType() { return getNumLenParams(); }
 
     void finalize(llvm::ArrayRef<TypePair> lenPList,
                   llvm::ArrayRef<TypePair> typeList);
@@ -451,7 +452,7 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
 
   let extraClassDeclaration = [{
     using Extent = int64_t;
-    using Shape = llvm::SmallVector<Extent, 8>;
+    using Shape = llvm::SmallVector<Extent>;
     using ShapeRef = llvm::ArrayRef<int64_t>;
     unsigned getConstantRows() const;
 
