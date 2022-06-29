@@ -31,6 +31,7 @@ namespace {
 
 using Action = LRTable::Action;
 using testing::AllOf;
+using testing::ElementsAre;
 using testing::UnorderedElementsAre;
 
 MATCHER_P(state, StateID, "") { return arg->State == StateID; }
@@ -112,11 +113,13 @@ TEST_F(GLRTest, ShiftMergingHeads) {
 
   buildGrammar({}, {}); // Create a fake empty grammar.
   LRTable T =
-      LRTable::buildForTests(G->table(), /*Entries=*/{
+      LRTable::buildForTests(*G, /*Entries=*/
+                             {
                                  {1, tokenSymbol(tok::semi), Action::shift(4)},
                                  {2, tokenSymbol(tok::semi), Action::shift(4)},
                                  {3, tokenSymbol(tok::semi), Action::shift(5)},
-                             });
+                             },
+                             {});
 
   ForestNode &SemiTerminal = Arena.createTerminal(tok::semi, 0);
   std::vector<const GSS::Node *> NewHeads;
@@ -142,14 +145,15 @@ TEST_F(GLRTest, ReduceConflictsSplitting) {
                {"class-name := IDENTIFIER", "enum-name := IDENTIFIER"});
 
   LRTable Table = LRTable::buildForTests(
-      G->table(), {
-                      {/*State=*/0, id("class-name"), Action::goTo(2)},
-                      {/*State=*/0, id("enum-name"), Action::goTo(3)},
-                      {/*State=*/1, tokenSymbol(tok::l_brace),
-                       Action::reduce(ruleFor("class-name"))},
-                      {/*State=*/1, tokenSymbol(tok::l_brace),
-                       Action::reduce(ruleFor("enum-name"))},
-                  });
+      *G,
+      {
+          {/*State=*/0, id("class-name"), Action::goTo(2)},
+          {/*State=*/0, id("enum-name"), Action::goTo(3)},
+      },
+      {
+          {/*State=*/1, ruleFor("class-name")},
+          {/*State=*/1, ruleFor("enum-name")},
+      });
 
   const auto *GSSNode0 =
       GSStack.addNode(/*State=*/0, /*ForestNode=*/nullptr, /*Parents=*/{});
@@ -157,7 +161,7 @@ TEST_F(GLRTest, ReduceConflictsSplitting) {
       GSStack.addNode(1, &Arena.createTerminal(tok::identifier, 0), {GSSNode0});
 
   std::vector<const GSS::Node *> Heads = {GSSNode1};
-  glrReduce(Heads, tokenSymbol(tok::l_brace), {*G, Table, Arena, GSStack});
+  glrReduce(Heads, tokenSymbol(tok::eof), {*G, Table, Arena, GSStack});
   EXPECT_THAT(Heads, UnorderedElementsAre(
                          GSSNode1,
                          AllOf(state(2), parsedSymbolID(id("class-name")),
@@ -189,15 +193,16 @@ TEST_F(GLRTest, ReduceSplittingDueToMultipleBases) {
       /*Parents=*/{GSSNode2, GSSNode3});
 
   LRTable Table = LRTable::buildForTests(
-      G->table(),
+      *G,
       {
           {/*State=*/2, id("ptr-operator"), Action::goTo(/*NextState=*/5)},
           {/*State=*/3, id("ptr-operator"), Action::goTo(/*NextState=*/6)},
-          {/*State=*/4, tokenSymbol(tok::identifier),
-           Action::reduce(ruleFor("ptr-operator"))},
+      },
+      {
+          {/*State=*/4, ruleFor("ptr-operator")},
       });
   std::vector<const GSS::Node *> Heads = {GSSNode4};
-  glrReduce(Heads, tokenSymbol(tok::identifier), {*G, Table, Arena, GSStack});
+  glrReduce(Heads, tokenSymbol(tok::eof), {*G, Table, Arena, GSStack});
 
   EXPECT_THAT(Heads, UnorderedElementsAre(
                          GSSNode4,
@@ -242,17 +247,17 @@ TEST_F(GLRTest, ReduceJoiningWithMultipleBases) {
 
   // FIXME: figure out a way to get rid of the hard-coded reduce RuleID!
   LRTable Table = LRTable::buildForTests(
-      G->table(),
+      *G,
       {
           {/*State=*/1, id("type-name"), Action::goTo(/*NextState=*/5)},
           {/*State=*/2, id("type-name"), Action::goTo(/*NextState=*/5)},
-          {/*State=*/3, tokenSymbol(tok::l_paren),
-           Action::reduce(/* type-name := class-name */ 0)},
-          {/*State=*/4, tokenSymbol(tok::l_paren),
-           Action::reduce(/* type-name := enum-name */ 1)},
+      },
+      {
+          {/*State=*/3, /* type-name := class-name */ 0},
+          {/*State=*/4, /* type-name := enum-name */ 1},
       });
   std::vector<const GSS::Node *> Heads = {GSSNode3, GSSNode4};
-  glrReduce(Heads, tokenSymbol(tok::l_paren), {*G, Table, Arena, GSStack});
+  glrReduce(Heads, tokenSymbol(tok::eof), {*G, Table, Arena, GSStack});
 
   // Verify that the stack heads are joint at state 5 after reduces.
   EXPECT_THAT(Heads, UnorderedElementsAre(GSSNode3, GSSNode4,
@@ -299,16 +304,17 @@ TEST_F(GLRTest, ReduceJoiningWithSameBase) {
                       /*Parents=*/{GSSNode2});
 
   // FIXME: figure out a way to get rid of the hard-coded reduce RuleID!
-  LRTable Table = LRTable::buildForTests(
-      G->table(), {
-                      {/*State=*/0, id("pointer"), Action::goTo(5)},
-                      {3, tokenSymbol(tok::l_paren),
-                       Action::reduce(/* pointer := class-name */ 0)},
-                      {4, tokenSymbol(tok::l_paren),
-                       Action::reduce(/* pointer := enum-name */ 1)},
-                  });
+  LRTable Table =
+      LRTable::buildForTests(*G,
+                             {
+                                 {/*State=*/0, id("pointer"), Action::goTo(5)},
+                             },
+                             {
+                                 {3, /* pointer := class-name */ 0},
+                                 {4, /* pointer := enum-name */ 1},
+                             });
   std::vector<const GSS::Node *> Heads = {GSSNode3, GSSNode4};
-  glrReduce(Heads, tokenSymbol(tok::l_paren), {*G, Table, Arena, GSStack});
+  glrReduce(Heads, tokenSymbol(tok::eof), {*G, Table, Arena, GSStack});
 
   EXPECT_THAT(
       Heads, UnorderedElementsAre(GSSNode3, GSSNode4,
@@ -323,6 +329,38 @@ TEST_F(GLRTest, ReduceJoiningWithSameBase) {
             "[  0, end) └─pointer := enum-name *\n"
             "[  0,   1)   ├─enum-name := <opaque>\n"
             "[  1, end)   └─* := tok[1]\n");
+}
+
+TEST_F(GLRTest, ReduceLookahead) {
+  // A term can be followed by +, but not by -.
+  buildGrammar({"sum", "term"}, {"expr := term + term", "term := IDENTIFIER"});
+  LRTable Table =
+      LRTable::buildForTests(*G,
+                             {
+                                 {/*State=*/0, id("term"), Action::goTo(2)},
+                             },
+                             {
+                                 {/*State=*/1, 0},
+                             });
+
+  auto *Identifier = &Arena.createTerminal(tok::identifier, /*Start=*/0);
+
+  const auto *Root =
+      GSStack.addNode(/*State=*/0, /*ForestNode=*/nullptr, /*Parents=*/{});
+  const auto *GSSNode1 =
+      GSStack.addNode(/*State=*/1, /*ForestNode=*/Identifier, {Root});
+
+  // When the lookahead is +, reduce is performed.
+  std::vector<const GSS::Node *> Heads = {GSSNode1};
+  glrReduce(Heads, tokenSymbol(tok::plus), {*G, Table, Arena, GSStack});
+  EXPECT_THAT(Heads,
+              ElementsAre(GSSNode1, AllOf(state(2), parsedSymbolID(id("term")),
+                                          parents(Root))));
+
+  // When the lookahead is -, reduce is not performed.
+  Heads = {GSSNode1};
+  glrReduce(Heads, tokenSymbol(tok::minus), {*G, Table, Arena, GSStack});
+  EXPECT_THAT(Heads, ElementsAre(GSSNode1));
 }
 
 TEST_F(GLRTest, PerfectForestNodeSharing) {
