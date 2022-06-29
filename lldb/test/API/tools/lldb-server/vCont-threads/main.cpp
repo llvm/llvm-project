@@ -22,7 +22,10 @@ static void sigusr1_handler(int signo) {
 
 static void thread_func() {
   pseudo_barrier_wait(barrier);
-  std::this_thread::sleep_for(std::chrono::minutes(1));
+  for (int i = 0; i < 300; ++i) {
+    std::printf("thread %" PRIx64 " running\n", get_thread_id());
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  }
 }
 
 int main(int argc, char **argv) {
