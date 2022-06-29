@@ -1,6 +1,5 @@
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -47,7 +46,9 @@ public:
 };
 } // namespace
 
-static llvm::ManagedStatic<RawErrorCategory> RawCategory;
-const std::error_category &llvm::pdb::RawErrCategory() { return *RawCategory; }
+const std::error_category &llvm::pdb::RawErrCategory() {
+  static RawErrorCategory RawCategory;
+  return RawCategory;
+}
 
 char RawError::ID;
