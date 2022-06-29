@@ -351,6 +351,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":Parser",
         ":Support",
         "//llvm:Support",
     ],
