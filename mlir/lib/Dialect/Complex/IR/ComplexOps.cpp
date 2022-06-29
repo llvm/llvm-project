@@ -125,6 +125,20 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// NegOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult NegOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1 && "unary op takes 1 operand");
+
+  // complex.neg(complex.neg(a)) -> a
+  if (auto negOp = getOperand().getDefiningOp<NegOp>())
+    return negOp.getOperand();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

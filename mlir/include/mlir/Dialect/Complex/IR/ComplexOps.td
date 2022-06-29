@@ -365,6 +365,8 @@ def NegOp : ComplexUnaryOp<"neg", [SameOperandsAndResultType]> {
   }];
 
   let results = (outs Complex<AnyFloat>:$result);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
