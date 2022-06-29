@@ -276,6 +276,34 @@ TEST_F(DataflowAnalysisContextTest, EquivBoolVals) {
       Context.getOrCreateConjunction(X, Context.getOrCreateConjunction(Y, Z))));
 }
 
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsTrueUnchanged) {
+  auto &True = Context.getBoolLiteralValue(true);
+  auto &Other = Context.createAtomicBoolValue();
+
+  // FC = True
+  auto &FC = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC, True);
+
+  // `True` should never be substituted
+  EXPECT_DEATH(Context.buildAndSubstituteFlowCondition(FC, {{&True, &Other}}),
+               "Do not substitute true/false boolean literals");
+}
+
+TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsFalseUnchanged) {
+  auto &False = Context.getBoolLiteralValue(false);
+  auto &Other = Context.createAtomicBoolValue();
+
+  // FC = False
+  auto &FC = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC, False);
+
+  // `False` should never be substituted
+  EXPECT_DEATH(Context.buildAndSubstituteFlowCondition(FC, {{&False, &Other}}),
+               "Do not substitute true/false boolean literals");
+}
+#endif
+
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsAtomicFC) {
   auto &X = Context.createAtomicBoolValue();
   auto &True = Context.getBoolLiteralValue(true);
