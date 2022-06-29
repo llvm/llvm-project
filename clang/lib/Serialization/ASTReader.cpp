@@ -10636,7 +10636,7 @@ void ASTReader::diagnoseOdrViolations() {
 
         // Compare the hash generated to the hash stored.  A difference means
         // that a body was present in the original source.  Due to merging,
-        // the stardard way of detecting a body will not work.
+        // the standard way of detecting a body will not work.
         const bool HasFirstBody =
             ComputeCXXMethodODRHash(FirstMethod) != FirstMethod->getODRHash();
         const bool HasSecondBody =
@@ -11166,8 +11166,8 @@ void ASTReader::diagnoseOdrViolations() {
       DifferentSpecifiedTypes,
       DifferentNumberEnumConstants,
       EnumConstantName,
-      EnumConstantSingleInitilizer,
-      EnumConstantDifferentInitilizer,
+      EnumConstantSingleInitializer,
+      EnumConstantDifferentInitializer,
     };
 
     // If we've already pointed out a specific problem with this enum, don't
@@ -11301,18 +11301,18 @@ void ASTReader::diagnoseOdrViolations() {
           continue;
 
         if (!FirstInit || !SecondInit) {
-          ODRDiagError(FirstEnumConstant, EnumConstantSingleInitilizer)
+          ODRDiagError(FirstEnumConstant, EnumConstantSingleInitializer)
               << I + 1 << FirstEnumConstant << (FirstInit != nullptr);
-          ODRDiagNote(SecondEnumConstant, EnumConstantSingleInitilizer)
+          ODRDiagNote(SecondEnumConstant, EnumConstantSingleInitializer)
               << I + 1 << SecondEnumConstant << (SecondInit != nullptr);
           Diagnosed = true;
           break;
         }
 
         if (ComputeODRHash(FirstInit) != ComputeODRHash(SecondInit)) {
-          ODRDiagError(FirstEnumConstant, EnumConstantDifferentInitilizer)
+          ODRDiagError(FirstEnumConstant, EnumConstantDifferentInitializer)
               << I + 1 << FirstEnumConstant;
-          ODRDiagNote(SecondEnumConstant, EnumConstantDifferentInitilizer)
+          ODRDiagNote(SecondEnumConstant, EnumConstantDifferentInitializer)
               << I + 1 << SecondEnumConstant;
           Diagnosed = true;
           break;
