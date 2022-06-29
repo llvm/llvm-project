@@ -3827,4 +3827,30 @@ TEST_F(TransferTest, ForStmtBranchExtendsFlowCondition) {
       });
 }
 
+TEST_F(TransferTest, ForStmtBranchWithoutConditionDoesNotExtendFlowCondition) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      for (;;) {
+        (void)0;
+        // [[loop_body]]
+      }
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("loop_body", _)));
+        const Environment &LoopBodyEnv = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        BoolValue &LoopBodyFooVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_FALSE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
+      });
+}
+
 } // namespace
