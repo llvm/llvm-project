@@ -1116,7 +1116,8 @@ void CGNVCUDARuntime::createOffloadingEntries() {
   llvm::OpenMPIRBuilder OMPBuilder(CGM.getModule());
   OMPBuilder.initialize();
 
-  StringRef Section = "cuda_offloading_entries";
+  StringRef Section = CGM.getLangOpts().HIP ? "hip_offloading_entries"
+                                            : "cuda_offloading_entries";
   for (KernelInfo &I : EmittedKernels)
     OMPBuilder.emitOffloadingEntry(KernelHandles[I.Kernel],
                                    getDeviceSideName(cast<NamedDecl>(I.D)), 0,
