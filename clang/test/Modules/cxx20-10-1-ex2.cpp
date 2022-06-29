@@ -53,8 +53,7 @@ int &c = n; // OK
 //--- std10-1-ex2-tu6.cpp
 import B;
 // error, n is module-local and this is not a module.
-int &c = n; // expected-error {{declaration of 'n' must be imported}}
-            // expected-note@* {{declaration here is not visible}}
+int &c = n; // expected-error {{use of undeclared identifier}}
 
 //--- std10-1-ex2-tu7.cpp
 // expected-no-diagnostics

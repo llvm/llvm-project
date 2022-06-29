@@ -170,8 +170,6 @@ public:
 
   bool isPrivateModule() const { return Kind == PrivateModuleFragment; }
 
-  bool isModuleMapModule() const { return Kind == ModuleMapModule; }
-
 private:
   /// The submodules of this module, indexed by name.
   std::vector<Module *> SubModules;
@@ -536,10 +534,6 @@ public:
   // Is this a C++20 module interface or a partition.
   bool isInterfaceOrPartition() const {
     return Kind == ModuleInterfaceUnit || isModulePartition();
-  }
-
-  bool isModuleInterfaceUnit() const {
-    return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface;
   }
 
   /// Get the primary module interface name from a partition.

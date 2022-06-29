@@ -69,29 +69,22 @@ import "header.h";
 
 void use() {
   // namespace A is implicitly exported by the export of A::g.
-  A::f(); // expected-error {{declaration of 'f' must be imported from module 'p2' before it is required}}
-          // expected-note@* {{declaration here is not visible}}
+  A::f(); // expected-error {{no member named 'f' in namespace 'A'}}
   A::g();
-  A::h();                   // expected-error {{declaration of 'h' must be imported from module 'p2' before it is required}}
-                            // expected-note@* {{declaration here is not visible}}
-  using namespace A::inner; // expected-error {{declaration of 'inner' must be imported from module 'p2' before it is required}}
-                            // expected-note@* {{declaration here is not visible}}
+  A::h(); // expected-error {{no member named 'h' in namespace 'A'}}
+  using namespace A::inner; // expected-error {{expected namespace name}}
 
   // namespace B and B::inner are explicitly exported
   using namespace B;
   using namespace B::inner;
-  B::f(); // expected-error {{declaration of 'f' must be imported from module 'p2' before it is required}}
-          // expected-note@* {{declaration here is not visible}}
-  f();    // expected-error {{declaration of 'f' must be imported from module 'p2' before it is required}}
-          // expected-note@* {{declaration here is not visible}}
+  B::f(); // expected-error {{no member named 'f' in namespace 'B'}}
+  f(); // expected-error {{undeclared identifier 'f'}}
 
   // namespace C is not exported
-  using namespace C; // expected-error {{declaration of 'C' must be imported from module 'p2' before it is required}}
-                     // expected-note@* {{declaration here is not visible}}
+  using namespace C; // expected-error {{expected namespace name}}
 
   // namespace D is exported, but D::f is not
-  D::f(); // expected-error {{declaration of 'f' must be imported from module 'p2' before it is required}}
-          // expected-note@* {{declaration here is not visible}}
+  D::f(); // expected-error {{no member named 'f' in namespace 'D'}}
 }
 
 int use_header() { return foo + bar::baz(); }
