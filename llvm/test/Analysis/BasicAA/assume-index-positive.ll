@@ -130,5 +130,53 @@ define void @shl_nsw_of_non_negative(ptr %ptr, i64 %a) {
   ret void
 }
 
+define void @test5(ptr %ptr, i32 %stride) {
+; CHECK-LABEL: Function: test5: 2 pointers, 1 call sites
+; CHECK-NEXT:    MayAlias:   <6 x double>* %col.ptr.2, <6 x double>* %ptr
+;
+  %gt = icmp sge i32 %stride, 5
+  call void @llvm.assume(i1 %gt)
+  %lv.1 = load <6 x double>, ptr %ptr, align 8
+  %col.ptr.2= getelementptr double, ptr %ptr, i32 %stride
+  %lv.2 = load <6 x double>, ptr %col.ptr.2, align 8
+  %res.1 = fadd <6 x double> %lv.1, %lv.1
+  %res.2 = fadd <6 x double> %lv.2, %lv.2
+  store <6 x double> %res.1, ptr %ptr, align 8
+  store <6 x double> %res.2, ptr %col.ptr.2, align 8
+  ret void
+}
+
+define void @test6(ptr %ptr, i32 %stride) {
+; CHECK-LABEL: Function: test6: 2 pointers, 1 call sites
+; CHECK-NEXT:    NoAlias:  <6 x double>* %col.ptr.2, <6 x double>* %ptr
+;
+  %gt = icmp sge i32 %stride, 6
+  call void @llvm.assume(i1 %gt)
+  %lv.1 = load <6 x double>, ptr %ptr, align 8
+  %col.ptr.2= getelementptr double, ptr %ptr, i32 %stride
+  %lv.2 = load <6 x double>, ptr %col.ptr.2, align 8
+  %res.1 = fadd <6 x double> %lv.1, %lv.1
+  %res.2 = fadd <6 x double> %lv.2, %lv.2
+  store <6 x double> %res.1, ptr %ptr, align 8
+  store <6 x double> %res.2, ptr %col.ptr.2, align 8
+  ret void
+}
+
+define void @test7(ptr %ptr, i32 %stride) {
+; CHECK-LABEL: Function: test7: 2 pointers, 1 call sites
+; CHECK-NEXT:    MayAlias: <6 x double>* %col.ptr.2, <6 x double>* %ptr
+;
+  %gt = icmp sge i32 %stride, 0
+  call void @llvm.assume(i1 %gt)
+  %lv.1 = load <6 x double>, ptr %ptr, align 8
+  %col.ptr.2= getelementptr double, ptr %ptr, i32 %stride
+  %lv.2 = load <6 x double>, ptr %col.ptr.2, align 8
+  %res.1 = fadd <6 x double> %lv.1, %lv.1
+  %res.2 = fadd <6 x double> %lv.2, %lv.2
+  store <6 x double> %res.1, ptr %ptr, align 8
+  store <6 x double> %res.2, ptr %col.ptr.2, align 8
+  ret void
+}
+
 declare void @llvm.assume(i1 %cond)
 declare void @barrier()
