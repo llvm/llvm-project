@@ -139,7 +139,6 @@ define amdgpu_kernel void @v_clamp_f16(half addrspace(1)* %out, half addrspace(1
 ; GCN: {{buffer|flat|global}}_load_ushort [[A:v[0-9]+]]
 ; GFX89: v_max_f16_e64 v{{[0-9]+}}, -[[A]], -[[A]] clamp{{$}}
 
-; FIXME: Better to fold neg into max
 ; SI: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -[[A]] clamp{{$}}
 ; SI: v_cvt_f16_f32_e32 v{{[0-9]+}}, [[CVT]]
 define amdgpu_kernel void @v_clamp_neg_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #0 {
@@ -158,8 +157,6 @@ define amdgpu_kernel void @v_clamp_neg_f16(half addrspace(1)* %out, half addrspa
 ; GCN-LABEL: {{^}}v_clamp_negabs_f16:
 ; GCN: {{buffer|flat|global}}_load_ushort [[A:v[0-9]+]]
 ; GFX89: v_max_f16_e64 v{{[0-9]+}}, -|[[A]]|, -|[[A]]| clamp{{$}}
-
-; FIXME: Better to fold neg/abs into max
 
 ; SI: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -|[[A]]| clamp{{$}}
 ; SI: v_cvt_f16_f32_e32 v{{[0-9]+}}, [[CVT]]
