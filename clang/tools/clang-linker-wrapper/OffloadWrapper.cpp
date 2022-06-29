@@ -23,6 +23,19 @@ namespace {
 /// Magic number that begins the section containing the CUDA fatbinary.
 constexpr unsigned CudaFatMagic = 0x466243b1;
 
+/// Copied from clang/CGCudaRuntime.h.
+enum OffloadEntryKindFlag : uint32_t {
+  /// Mark the entry as a global entry. This indicates the presense of a
+  /// kernel if the size size field is zero and a variable otherwise.
+  OffloadGlobalEntry = 0x0,
+  /// Mark the entry as a managed global variable.
+  OffloadGlobalManagedEntry = 0x1,
+  /// Mark the entry as a surface variable.
+  OffloadGlobalSurfaceEntry = 0x2,
+  /// Mark the entry as a texture variable.
+  OffloadGlobalTextureEntry = 0x3,
+};
+
 IntegerType *getSizeTTy(Module &M) {
   LLVMContext &C = M.getContext();
   switch (M.getDataLayout().getPointerTypeSize(Type::getInt8PtrTy(C))) {
@@ -345,9 +358,6 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image) {
 ///                         0, entry->size, 0, 0);
 ///   }
 /// }
-///
-/// TODO: This only registers functions are variables. Additional support is
-///       required for texture / surface / managed variables.
 Function *createRegisterGlobalsFunction(Module &M) {
   LLVMContext &C = M.getContext();
   // Get the __cudaRegisterFunction function declaration.
@@ -363,7 +373,7 @@ Function *createRegisterGlobalsFunction(Module &M) {
 
   // Get the __cudaRegisterVar function declaration.
   auto *RegVarTy = FunctionType::get(
-      Type::getInt32Ty(C),
+      Type::getVoidTy(C),
       {Type::getInt8PtrTy(C)->getPointerTo(), Type::getInt8PtrTy(C),
        Type::getInt8PtrTy(C), Type::getInt8PtrTy(C), Type::getInt32Ty(C),
        getSizeTTy(M), Type::getInt32Ty(C), Type::getInt32Ty(C)},
@@ -394,6 +404,10 @@ Function *createRegisterGlobalsFunction(Module &M) {
   auto *EntryBB = BasicBlock::Create(C, "while.entry", RegGlobalsFn);
   auto *IfThenBB = BasicBlock::Create(C, "if.then", RegGlobalsFn);
   auto *IfElseBB = BasicBlock::Create(C, "if.else", RegGlobalsFn);
+  auto *SwGlobalBB = BasicBlock::Create(C, "sw.global", RegGlobalsFn);
+  auto *SwManagedBB = BasicBlock::Create(C, "sw.managed", RegGlobalsFn);
+  auto *SwSurfaceBB = BasicBlock::Create(C, "sw.surface", RegGlobalsFn);
+  auto *SwTextureBB = BasicBlock::Create(C, "sw.texture", RegGlobalsFn);
   auto *IfEndBB = BasicBlock::Create(C, "if.end", RegGlobalsFn);
   auto *ExitBB = BasicBlock::Create(C, "while.end", RegGlobalsFn);
 
@@ -416,9 +430,16 @@ Function *createRegisterGlobalsFunction(Module &M) {
                                 {ConstantInt::get(getSizeTTy(M), 0),
                                  ConstantInt::get(Type::getInt32Ty(C), 2)});
   auto *Size = Builder.CreateLoad(getSizeTTy(M), SizePtr, "size");
+  auto *FlagsPtr =
+      Builder.CreateInBoundsGEP(getEntryTy(M), Entry,
+                                {ConstantInt::get(getSizeTTy(M), 0),
+                                 ConstantInt::get(Type::getInt32Ty(C), 3)});
+  auto *Flags = Builder.CreateLoad(Type::getInt32Ty(C), FlagsPtr, "flag");
   auto *FnCond =
       Builder.CreateICmpEQ(Size, ConstantInt::getNullValue(getSizeTTy(M)));
   Builder.CreateCondBr(FnCond, IfThenBB, IfElseBB);
+
+  // Create kernel registration code.
   Builder.SetInsertPoint(IfThenBB);
   Builder.CreateCall(RegFunc,
                      {RegGlobalsFn->arg_begin(), Addr, Name, Name,
@@ -430,11 +451,32 @@ Function *createRegisterGlobalsFunction(Module &M) {
                       ConstantPointerNull::get(Type::getInt32PtrTy(C))});
   Builder.CreateBr(IfEndBB);
   Builder.SetInsertPoint(IfElseBB);
+
+  auto *Switch = Builder.CreateSwitch(Flags, IfEndBB);
+  // Create global variable registration code.
+  Builder.SetInsertPoint(SwGlobalBB);
   Builder.CreateCall(RegVar, {RegGlobalsFn->arg_begin(), Addr, Name, Name,
                               ConstantInt::get(Type::getInt32Ty(C), 0), Size,
                               ConstantInt::get(Type::getInt32Ty(C), 0),
                               ConstantInt::get(Type::getInt32Ty(C), 0)});
   Builder.CreateBr(IfEndBB);
+  Switch->addCase(Builder.getInt32(OffloadGlobalEntry), SwGlobalBB);
+
+  // Create managed variable registration code.
+  Builder.SetInsertPoint(SwManagedBB);
+  Builder.CreateBr(IfEndBB);
+  Switch->addCase(Builder.getInt32(OffloadGlobalManagedEntry), SwManagedBB);
+
+  // Create surface variable registration code.
+  Builder.SetInsertPoint(SwSurfaceBB);
+  Builder.CreateBr(IfEndBB);
+  Switch->addCase(Builder.getInt32(OffloadGlobalSurfaceEntry), SwSurfaceBB);
+
+  // Create texture variable registration code.
+  Builder.SetInsertPoint(SwTextureBB);
+  Builder.CreateBr(IfEndBB);
+  Switch->addCase(Builder.getInt32(OffloadGlobalTextureEntry), SwTextureBB);
+
   Builder.SetInsertPoint(IfEndBB);
   auto *NewEntry = Builder.CreateInBoundsGEP(
       getEntryTy(M), Entry, ConstantInt::get(getSizeTTy(M), 1));
