@@ -496,3 +496,29 @@ module {
     llvm.return
   }
 }
+
+// CHECK-LABEL: llvm.func @vararg_func
+llvm.func @vararg_func(%arg0: i32, ...) {
+  // CHECK: %{{.*}} = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %{{.*}} = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA0:.+]] = llvm.alloca %{{.*}} x !llvm.struct<"struct.va_list", (ptr<i8>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>>
+  // CHECK: %[[CAST0:.+]] = llvm.bitcast %[[ALLOCA0]] : !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>> to !llvm.ptr<i8>
+  %2 = llvm.alloca %1 x !llvm.struct<"struct.va_list", (ptr<i8>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>>
+  %3 = llvm.bitcast %2 : !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>> to !llvm.ptr<i8>
+  // CHECK: llvm.intr.vastart %[[CAST0]]
+  llvm.intr.vastart %3
+  // CHECK: %[[ALLOCA1:.+]] = llvm.alloca %{{.*}} x !llvm.ptr<i8> {alignment = 8 : i64} : (i32) -> !llvm.ptr<ptr<i8>>
+  // CHECK: %[[CAST1:.+]] = llvm.bitcast %[[ALLOCA1]] : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
+  %4 = llvm.alloca %0 x !llvm.ptr<i8> {alignment = 8 : i64} : (i32) -> !llvm.ptr<ptr<i8>>
+  %5 = llvm.bitcast %4 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
+  // CHECK: llvm.intr.vacopy %[[CAST0]] to %[[CAST1]]
+  llvm.intr.vacopy %3 to %5
+  // CHECK: llvm.intr.vaend %[[CAST1]]
+  // CHECK: llvm.intr.vaend %[[CAST0]]
+  llvm.intr.vaend %5
+  llvm.intr.vaend %3
+  // CHECK: llvm.return
+  llvm.return
+}
