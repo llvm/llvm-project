@@ -3472,24 +3472,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.Kind = ValID::t_Constant;
     return false;
   }
-  case lltok::kw_extractvalue: {
-    Lex.Lex();
-    Constant *Val;
-    SmallVector<unsigned, 4> Indices;
-    if (parseToken(lltok::lparen,
-                   "expected '(' in extractvalue constantexpr") ||
-        parseGlobalTypeAndValue(Val) || parseIndexList(Indices) ||
-        parseToken(lltok::rparen, "expected ')' in extractvalue constantexpr"))
-      return true;
-
-    if (!Val->getType()->isAggregateType())
-      return error(ID.Loc, "extractvalue operand must be aggregate type");
-    if (!ExtractValueInst::getIndexedType(Val->getType(), Indices))
-      return error(ID.Loc, "invalid indices for extractvalue");
-    ID.ConstantVal = ConstantExpr::getExtractValue(Val, Indices);
-    ID.Kind = ValID::t_Constant;
-    return false;
-  }
+  case lltok::kw_extractvalue:
+    return error(ID.Loc, "extractvalue constexprs are no longer supported");
   case lltok::kw_insertvalue: {
     Lex.Lex();
     Constant *Val0, *Val1;

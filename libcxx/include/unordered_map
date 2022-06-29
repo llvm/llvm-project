@@ -531,6 +531,12 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <tuple>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <algorithm>
+#  include <bit>
+#  include <iterator>
+#endif
+
 // standard-mandated includes
 
 // [iterator.range]

@@ -68,6 +68,9 @@ Changes to the LLVM IR
 
 * Renamed ``llvm.experimental.vector.extract`` intrinsic to ``llvm.vector.extract``.
 * Renamed ``llvm.experimental.vector.insert`` intrinsic to ``llvm.vector.insert``.
+* The constant expression variants of the following instructions have been
+  removed:
+  * ``extractvalue``
 
 Changes to building LLVM
 ------------------------
@@ -170,6 +173,12 @@ Changes to the C API
   representation. The ``LLVMGetElementAsConstant`` function is deprecated in
   favor of the new function, which works on all constant aggregates, rather than
   only instances of ``ConstantDataSequential``.
+
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+  * ``LLVMConstExtractValue``
 
 Changes to the Go bindings
 --------------------------

@@ -1116,27 +1116,6 @@ func.func @reduce_unsupported_third_argument(%arg0: vector<16xf32>, %arg1: f32) 
 
 // -----
 
-func.func @reduce_unsupported_accumulator_kind(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  // expected-error@+1 {{'vector.reduction' op no accumulator for reduction kind: min}}
-  %0 = vector.reduction <minf>, %arg0, %arg1 : vector<16xf32> into f32
-}
-
-// -----
-
-func.func @reduce_unsupported_accumulator_type(%arg0: vector<16xi32>, %arg1: i32) -> i32 {
-  // expected-error@+1 {{'vector.reduction' op no accumulator for type: 'i32'}}
-  %0 = vector.reduction <add>, %arg0, %arg1 : vector<16xi32> into i32
-}
-
-// -----
-
-func.func @reduce_unsupported_type(%arg0: vector<16xf32>) -> f32 {
-  // expected-error@+1 {{'vector.reduction' op unsupported reduction type}}
-  %0 = vector.reduction <xor>, %arg0 : vector<16xf32> into f32
-}
-
-// -----
-
 func.func @reduce_unsupported_rank(%arg0: vector<4x16xf32>) -> f32 {
   // expected-error@+1 {{'vector.reduction' op unsupported reduction rank: 2}}
   %0 = vector.reduction <add>, %arg0 : vector<4x16xf32> into f32

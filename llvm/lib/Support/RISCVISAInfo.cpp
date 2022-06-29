@@ -348,7 +348,7 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
 
   if (!MajorStr.empty() && In.consume_front("p")) {
     MinorStr = In.take_while(isDigit);
-    In = In.substr(MajorStr.size() + 1);
+    In = In.substr(MajorStr.size() + MinorStr.size() - 1);
 
     // Expected 'p' to be followed by minor version number.
     if (MinorStr.empty()) {
