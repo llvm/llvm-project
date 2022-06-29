@@ -18,7 +18,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include <algorithm>
 #include <cstring>
@@ -32,19 +31,27 @@ namespace llvm {
 namespace {
 typedef std::map<std::string, std::vector<unsigned> > key_val_pair_t;
 typedef std::map<const GlobalValue *, key_val_pair_t> global_val_annot_t;
-typedef std::map<const Module *, global_val_annot_t> per_module_annot_t;
+
+struct AnnotationCache {
+  sys::Mutex Lock;
+  std::map<const Module *, global_val_annot_t> Cache;
+};
+
+AnnotationCache &getAnnotationCache() {
+  static AnnotationCache AC;
+  return AC;
+}
 } // anonymous namespace
 
-static ManagedStatic<per_module_annot_t> annotationCache;
-static sys::Mutex Lock;
-
 void clearAnnotationCache(const Module *Mod) {
-  std::lock_guard<sys::Mutex> Guard(Lock);
-  annotationCache->erase(Mod);
+  auto &AC = getAnnotationCache();
+  std::lock_guard<sys::Mutex> Guard(AC.Lock);
+  AC.Cache.erase(Mod);
 }
 
 static void cacheAnnotationFromMD(const MDNode *md, key_val_pair_t &retval) {
-  std::lock_guard<sys::Mutex> Guard(Lock);
+  auto &AC = getAnnotationCache();
+  std::lock_guard<sys::Mutex> Guard(AC.Lock);
   assert(md && "Invalid mdnode for annotation");
   assert((md->getNumOperands() % 2) == 1 && "Invalid number of operands");
   // start index = 1, to skip the global variable key
@@ -70,7 +77,8 @@ static void cacheAnnotationFromMD(const MDNode *md, key_val_pair_t &retval) {
 }
 
 static void cacheAnnotationFromMD(const Module *m, const GlobalValue *gv) {
-  std::lock_guard<sys::Mutex> Guard(Lock);
+  auto &AC = getAnnotationCache();
+  std::lock_guard<sys::Mutex> Guard(AC.Lock);
   NamedMDNode *NMD = m->getNamedMetadata("nvvm.annotations");
   if (!NMD)
     return;
@@ -93,40 +101,42 @@ static void cacheAnnotationFromMD(const Module *m, const GlobalValue *gv) {
   if (tmp.empty()) // no annotations for this gv
     return;
 
-  if ((*annotationCache).find(m) != (*annotationCache).end())
-    (*annotationCache)[m][gv] = std::move(tmp);
+  if (AC.Cache.find(m) != AC.Cache.end())
+    AC.Cache[m][gv] = std::move(tmp);
   else {
     global_val_annot_t tmp1;
     tmp1[gv] = std::move(tmp);
-    (*annotationCache)[m] = std::move(tmp1);
+    AC.Cache[m] = std::move(tmp1);
   }
 }
 
 bool findOneNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                            unsigned &retval) {
-  std::lock_guard<sys::Mutex> Guard(Lock);
+  auto &AC = getAnnotationCache();
+  std::lock_guard<sys::Mutex> Guard(AC.Lock);
   const Module *m = gv->getParent();
-  if ((*annotationCache).find(m) == (*annotationCache).end())
+  if (AC.Cache.find(m) == AC.Cache.end())
     cacheAnnotationFromMD(m, gv);
-  else if ((*annotationCache)[m].find(gv) == (*annotationCache)[m].end())
+  else if (AC.Cache[m].find(gv) == AC.Cache[m].end())
     cacheAnnotationFromMD(m, gv);
-  if ((*annotationCache)[m][gv].find(prop) == (*annotationCache)[m][gv].end())
+  if (AC.Cache[m][gv].find(prop) == AC.Cache[m][gv].end())
     return false;
-  retval = (*annotationCache)[m][gv][prop][0];
+  retval = AC.Cache[m][gv][prop][0];
   return true;
 }
 
 bool findAllNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                            std::vector<unsigned> &retval) {
-  std::lock_guard<sys::Mutex> Guard(Lock);
+  auto &AC = getAnnotationCache();
+  std::lock_guard<sys::Mutex> Guard(AC.Lock);
   const Module *m = gv->getParent();
-  if ((*annotationCache).find(m) == (*annotationCache).end())
+  if (AC.Cache.find(m) == AC.Cache.end())
     cacheAnnotationFromMD(m, gv);
-  else if ((*annotationCache)[m].find(gv) == (*annotationCache)[m].end())
+  else if (AC.Cache[m].find(gv) == AC.Cache[m].end())
     cacheAnnotationFromMD(m, gv);
-  if ((*annotationCache)[m][gv].find(prop) == (*annotationCache)[m][gv].end())
+  if (AC.Cache[m][gv].find(prop) == AC.Cache[m][gv].end())
     return false;
-  retval = (*annotationCache)[m][gv][prop];
+  retval = AC.Cache[m][gv][prop];
   return true;
 }
 
