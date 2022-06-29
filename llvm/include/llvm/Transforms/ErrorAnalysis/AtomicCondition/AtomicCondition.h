@@ -69,6 +69,7 @@ typedef struct ACTable {
 } ACTable;
 
 ACTable *StorageTable;
+int NodeCounter;
 
 void fACCreate() {
   ACTable *AtomicConditionsTable = NULL;
@@ -102,6 +103,8 @@ void fACCreate() {
   AtomicConditionsTable->FP32ListSize = 0;
   AtomicConditionsTable->FP64ListSize = 0;
   StorageTable = AtomicConditionsTable;
+
+  NodeCounter=0;
 }
 
 
@@ -225,11 +228,11 @@ void fACSetDoubleItem(ACTable *AtomicConditionsTable, DoubleACItem *NewValue)
 // ---------------------------------------------------------------------------
 
 // Driver function selecting atomic condition function for unary float operation
-void fACfp32UnaryDriver(int NodeId, const char *XName, float X, enum Operation OP) {
+void fACfp32UnaryDriver(const char *XName, float X, enum Operation OP) {
   FloatACItem Item;
   float AC;
 
-  Item.NodeId = NodeId;
+  Item.NodeId = NodeCounter;
   Item.XName = XName;
   Item.X = X;
   Item.YName = "";
@@ -297,12 +300,12 @@ void fACfp32UnaryDriver(int NodeId, const char *XName, float X, enum Operation O
 }
 
 // Driver function selecting atomic condition function for binary float operation
-void fACfp32BinaryDriver(int NodeId, const char *XName, float X, const char *YName, float Y, enum Operation OP) {
+void fACfp32BinaryDriver(const char *XName, float X, const char *YName, float Y, enum Operation OP) {
   FloatACItem Item;
   float ACWRTX;
   float ACWRTY;
 
-  Item.NodeId = NodeId;
+  Item.NodeId = NodeCounter;
   Item.XName = XName;
   Item.X = X;
   Item.YName = YName;
@@ -345,11 +348,11 @@ void fACfp32BinaryDriver(int NodeId, const char *XName, float X, const char *YNa
 }
 
 // Driver function selecting atomic condition function for unary double operation
-void fACfp64UnaryDriver(int NodeId, const char *XName, double X, enum Operation OP) {
+void fACfp64UnaryDriver(const char *XName, double X, enum Operation OP) {
   DoubleACItem Item;
   double AC;
 
-  Item.NodeId = NodeId;
+  Item.NodeId = NodeCounter;
   Item.XName = XName;
   Item.X = X;
   Item.YName = "";
@@ -421,12 +424,12 @@ void fACfp64UnaryDriver(int NodeId, const char *XName, double X, enum Operation 
 }
 
 // Driver function selecting atomic condition function for binary double operation
-void fACfp64BinaryDriver(int NodeId, const char *XName, double X, const char *YName, double Y, enum Operation OP) {
+void fACfp64BinaryDriver(const char *XName, double X, const char *YName, double Y, enum Operation OP) {
   DoubleACItem Item;
   double ACWRTX;
   double ACWRTY;
 
-  Item.NodeId = NodeId;
+  Item.NodeId = NodeCounter;
   Item.XName = XName;
   Item.X = X;
   Item.YName = YName;

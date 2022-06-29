@@ -16,6 +16,7 @@ enum NodeKind {
 
 typedef struct CGNode {
   int NodeId;
+  char *InstructionString;
   enum NodeKind Kind;
   struct CGNode *LeftNode;
   struct CGNode *RightNode;
@@ -24,9 +25,16 @@ typedef struct CGNode {
   struct CGNode *Next;
 } CGNode;
 
+typedef struct InstructionNodePair {
+  char *InstructionString;
+  int NodeId;
+  struct InstructionNodePair *Next;
+} InstructionNodePair;
+
 typedef struct ComputationGraph {
   uint64_t LinkedListSize;
   CGNode* NodesLinkedListHead;
+  InstructionNodePair* InstructionNodeMapHead;
 } ComputationGraph;
 
 ComputationGraph *CG;
@@ -41,9 +49,16 @@ void fCGInitialize() {
     exit(EXIT_FAILURE);
   }
 
-  // Allocate memory to the linked list
+  // Allocate memory to the Nodes linked list
   if( (CGObject->NodesLinkedListHead =
            (struct CGNode *)malloc((size_t)((int64_t)sizeof(CGNode) * Size))) == NULL) {
+    printf("#CG: graph out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  // Allocate memory to the Instruction Node Map
+  if( (CGObject->InstructionNodeMapHead =
+           (struct InstructionNodePair *)malloc((size_t)((int64_t)sizeof(InstructionNodePair) * Size))) == NULL) {
     printf("#CG: graph out of memory error!");
     exit(EXIT_FAILURE);
   }
@@ -60,17 +75,18 @@ int fCGnodesEqual(CGNode *Node1, CGNode *Node2)
   return 0;
 }
 
-void fCGcreateNode(int NodeId, int LeftOpNodeId, int RightOpNodeId, enum NodeKind NK){
+void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char *RightOpInstructionString, enum NodeKind NK){
   CGNode *Node=NULL;
   CGNode *CurrNode=NULL;
   CGNode *PrevNode=NULL;
+  InstructionNodePair *NewPair=NULL;
 
   if((Node = (CGNode *)malloc(sizeof(CGNode))) == NULL) {
     printf("#fAC: AC table out of memory error!");
     exit(EXIT_FAILURE);
   }
-
-  Node->NodeId = NodeId;
+  Node->NodeId = NodeCounter;
+  Node->InstructionString = InstructionString;
   Node->Kind = NK;
   Node->LeftNode = NULL;
   Node->RightNode = NULL;
@@ -78,16 +94,54 @@ void fCGcreateNode(int NodeId, int LeftOpNodeId, int RightOpNodeId, enum NodeKin
   Node->RootNode = 1;
   Node->Next = NULL;
 
+  if((NewPair = (InstructionNodePair *)malloc(sizeof(InstructionNodePair))) == NULL) {
+    printf("#fAC: AC table out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+  NewPair->InstructionString = InstructionString;
+  NewPair->NodeId = NodeCounter;
+  NewPair->Next = NULL;
+
+  // Update/Insert a New Key-Value pair in InstructionNodeMap
+  InstructionNodePair *CurrPair = CG->InstructionNodeMapHead;
+  InstructionNodePair *PrevPair = NULL;
+  if (CG->LinkedListSize==0)
+    CG->InstructionNodeMapHead = NewPair;
+  else {
+    while (CurrPair != NULL &&
+           CurrPair->InstructionString != InstructionString) {
+      PrevPair = CurrPair;
+      CurrPair = CurrPair->Next;
+    }
+
+    if (CurrPair != NULL) {
+      CurrPair->NodeId = NodeCounter;
+    } else { // Nope, could't find it
+      PrevPair->Next = NewPair;
+    }
+  }
+  NodeCounter++;
+
+
+  int LeftOpNodeId=-1;
+  int RightOpNodeId=-1;
   // Linking Left and Right operand nodes to Node if any
   switch (NK) {
   case 0:
   case 1:
     break;
   case 2:
+    CurrPair = CG->InstructionNodeMapHead;
+    while(CurrPair != NULL && strcmp(CurrPair->InstructionString, LeftOpInstructionString)!=0) {
+      CurrPair = CurrPair->Next;
+    }
+    LeftOpNodeId = CurrPair->NodeId;
+
     CurrNode = CG->NodesLinkedListHead;
     while(CurrNode != NULL && CurrNode->NodeId!=LeftOpNodeId) {
       CurrNode = CurrNode->Next;
     }
+
     Node->LeftNode = CurrNode;
     Node->Height = Node->LeftNode->Height+1;
     Node->LeftNode->RootNode = 0;
@@ -96,6 +150,12 @@ void fCGcreateNode(int NodeId, int LeftOpNodeId, int RightOpNodeId, enum NodeKin
     break;
   case 3:
     // Setting the Left Node
+    CurrPair = CG->InstructionNodeMapHead;
+    while(CurrPair != NULL && strcmp(CurrPair->InstructionString, LeftOpInstructionString) != 0) {
+      CurrPair = CurrPair->Next;
+    }
+    LeftOpNodeId = CurrPair->NodeId;
+
     CurrNode = CG->NodesLinkedListHead;
     while(CurrNode != NULL && CurrNode->NodeId!=LeftOpNodeId) {
       CurrNode = CurrNode->Next;
@@ -103,6 +163,12 @@ void fCGcreateNode(int NodeId, int LeftOpNodeId, int RightOpNodeId, enum NodeKin
     Node->LeftNode = CurrNode;
 
     // Setting the Right Node
+    CurrPair = CG->InstructionNodeMapHead;
+    while(CurrPair != NULL && strcmp(CurrPair->InstructionString, RightOpInstructionString) != 0) {
+      CurrPair = CurrPair->Next;
+    }
+    RightOpNodeId = CurrPair->NodeId;
+
     CurrNode = CG->NodesLinkedListHead;
     while(CurrNode != NULL && CurrNode->NodeId!=RightOpNodeId) {
       CurrNode = CurrNode->Next;
@@ -179,12 +245,14 @@ void fCGStoreResult() {
     fprintf(FP,
             "\t\t{\n"
             "\t\t\t\"NodeId\":%d,\n"
+            "\t\t\t\"Instruction\":\"%s\",\n"
             "\t\t\t\"NodeKind\": %d,\n"
             "\t\t\t\"Height\": %d, \n"
             "\t\t\t\"RootNode\": %d, \n"
             "\t\t\t\"LeftNode\": %d,\n"
             "\t\t\t\"RightNode\": %d\n",
             CurrentNode->NodeId,
+            CurrentNode->InstructionString,
             CurrentNode->Kind,
             CurrentNode->Height,
             CurrentNode->RootNode,
@@ -250,11 +318,11 @@ void fCGDotGraph() {
       fprintf(FP, "\t%d;\n", CurrentNode->NodeId);
       break;
     case 2:
-      fprintf(FP, "\t%d -> %d;\n", CurrentNode->NodeId, CurrentNode->LeftNode->NodeId);
+      fprintf(FP, "\t%d -> %d;\n", CurrentNode->LeftNode->NodeId, CurrentNode->NodeId);
       break;
     case 3:
-      fprintf(FP, "\t%d -> %d;\n", CurrentNode->NodeId, CurrentNode->LeftNode->NodeId);
-      fprintf(FP, "\t%d -> %d;\n", CurrentNode->NodeId, CurrentNode->RightNode->NodeId);
+      fprintf(FP, "\t%d -> %d;\n", CurrentNode->LeftNode->NodeId, CurrentNode->NodeId);
+      fprintf(FP, "\t%d -> %d;\n", CurrentNode->RightNode->NodeId, CurrentNode->NodeId);
       break;
     default:
       break;
@@ -268,6 +336,8 @@ void fCGDotGraph() {
 }
 
 void fAFAnalysis() {
+
+
   return ;
 }
 

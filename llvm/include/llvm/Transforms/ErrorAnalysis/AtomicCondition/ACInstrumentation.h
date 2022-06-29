@@ -37,19 +37,14 @@ private:
 
 public:
   static int VarCounter;
-  static int NodeCounter;
-  ValueMap<Value*, int> InstructionNodeMapping;
 
   ACInstrumentation(Function *F);
 
   bool instrumentCallsForMemoryLoadOperation(Instruction* BaseInstruction,
-                                             int NodeId,
                                              long int *NumInstrumentedInstructions);
   bool instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
-                           int NodeId,
                            long int *NumInstrumentedInstructions);
   bool instrumentCallsForBinaryOperation(Instruction* BaseInstruction,
-                            int NodeId,
                             long int *NumInstrumentedInstructions);
 
   bool instrumentBasicBlock(BasicBlock *BB,
