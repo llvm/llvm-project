@@ -75,7 +75,10 @@ public:
       : CommandObjectParsed(
             interpreter, "trace load",
             "Load a post-mortem processor trace session from a trace bundle.",
-            "trace load") {}
+            "trace load") {
+    CommandArgumentData session_file_arg{eArgTypePath, eArgRepeatPlain};
+    m_arguments.push_back({session_file_arg});
+  }
 
   ~CommandObjectTraceLoad() override = default;
 
@@ -223,7 +226,10 @@ public:
       : CommandObjectParsed(interpreter, "trace schema",
                             "Show the schema of the given trace plugin.",
                             "trace schema <plug-in>. Use the plug-in name "
-                            "\"all\" to see all schemas.\n") {}
+                            "\"all\" to see all schemas.\n") {
+    CommandArgumentData plugin_arg{eArgTypeNone, eArgRepeatPlain};
+    m_arguments.push_back({plugin_arg});
+  }
 
   ~CommandObjectTraceSchema() override = default;
 

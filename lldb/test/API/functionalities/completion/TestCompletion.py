@@ -675,7 +675,7 @@ class CommandLineCompletionTestCase(TestBase):
 
         self.build()
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.runCmd('target stop-hook add test DONE')
+        self.runCmd('target stop-hook add -o test')
 
         for subcommand in subcommands:
             self.complete_from_to('target stop-hook ' + subcommand + ' ',

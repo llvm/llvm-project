@@ -924,7 +924,11 @@ class CommandObjectFrameRecognizerDelete : public CommandObjectParsed {
 public:
   CommandObjectFrameRecognizerDelete(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "frame recognizer delete",
-                            "Delete an existing frame recognizer.", nullptr) {}
+                            "Delete an existing frame recognizer by id.",
+                            nullptr) {
+    CommandArgumentData thread_arg{eArgTypeRecognizerID, eArgRepeatPlain};
+    m_arguments.push_back({thread_arg});
+  }
 
   ~CommandObjectFrameRecognizerDelete() override = default;
 
