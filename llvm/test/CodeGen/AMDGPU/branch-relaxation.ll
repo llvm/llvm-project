@@ -431,9 +431,9 @@ endif:
 ; GCN-NEXT: s_and_saveexec_b64 [[TEMP_MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN-NEXT: s_xor_b64  [[MASK:s\[[0-9]+:[0-9]+\]]], exec, [[TEMP_MASK]]
 
-; GCN: BB{{[0-9]+_[0-9]+}}: ; %Flow
-; GCN-NEXT: s_or_saveexec_b64 [[TEMP_MASK1:s\[[0-9]+:[0-9]+\]]], [[MASK]]
-; GCN-NEXT: s_xor_b64 exec, exec, [[TEMP_MASK1]]
+; GCN: .LBB{{[0-9]+_[0-9]+}}: ; %Flow1
+; GCN-NEXT: s_andn2_saveexec_b64 [[MASK]], [[MASK]]
+; GCN-NEXT: s_cbranch_execnz
 
 ; GCN: .L[[LOOP_BODY:BB[0-9]+_[0-9]+]]: ; %loop{{$}}
 ; GCN: ;;#ASMSTART
