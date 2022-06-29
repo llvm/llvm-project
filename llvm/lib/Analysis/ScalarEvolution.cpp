@@ -4406,18 +4406,9 @@ void ScalarEvolution::insertValueToMap(Value *V, const SCEV *S) {
 const SCEV *ScalarEvolution::getSCEV(Value *V) {
   assert(isSCEVable(V->getType()) && "Value is not SCEVable!");
 
-  const SCEV *S = getExistingSCEV(V);
-  if (S == nullptr) {
-    S = createSCEV(V);
-    // During PHI resolution, it is possible to create two SCEVs for the same
-    // V, so it is needed to double check whether V->S is inserted into
-    // ValueExprMap before insert S->{V, 0} into ExprValueMap.
-    std::pair<ValueExprMapType::iterator, bool> Pair =
-        ValueExprMap.insert({SCEVCallbackVH(V, this), S});
-    if (Pair.second)
-      ExprValueMap[S].insert(V);
-  }
-  return S;
+  if (const SCEV *S = getExistingSCEV(V))
+    return S;
+  return createSCEVIter(V);
 }
 
 const SCEV *ScalarEvolution::getExistingSCEV(Value *V) {
@@ -7183,6 +7174,211 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
   return isFinite(L) || (isMustProgress(L) && loopHasNoSideEffects(L));
+}
+
+const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
+  // Worklist item with a Value and a bool indicating whether all operands have
+  // been visited already.
+  using PointerTy = PointerIntPair<Value *, 1, bool>;
+  SmallVector<PointerTy> Stack;
+
+  Stack.emplace_back(V, true);
+  Stack.emplace_back(V, false);
+  while (!Stack.empty()) {
+    auto E = Stack.pop_back_val();
+    Value *CurV = E.getPointer();
+
+    if (getExistingSCEV(CurV))
+      continue;
+
+    SmallVector<Value *> Ops;
+    const SCEV *CreatedSCEV = nullptr;
+    // If all operands have been visited already, create the SCEV.
+    if (E.getInt()) {
+      CreatedSCEV = createSCEV(CurV);
+    } else {
+      // Otherwise get the operands we need to create SCEV's for before creating
+      // the SCEV for CurV. If the SCEV for CurV can be constructed trivially,
+      // just use it.
+      CreatedSCEV = getOperandsToCreate(CurV, Ops);
+    }
+
+    if (CreatedSCEV) {
+      insertValueToMap(CurV, CreatedSCEV);
+    } else {
+      // Queue CurV for SCEV creation, followed by its's operands which need to
+      // be constructed first.
+      Stack.emplace_back(CurV, true);
+      for (Value *Op : Ops)
+        Stack.emplace_back(Op, false);
+    }
+  }
+
+  return getExistingSCEV(V);
+}
+
+const SCEV *
+ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
+  if (!isSCEVable(V->getType()))
+    return getUnknown(V);
+
+  if (Instruction *I = dyn_cast<Instruction>(V)) {
+    // Don't attempt to analyze instructions in blocks that aren't
+    // reachable. Such instructions don't matter, and they aren't required
+    // to obey basic rules for definitions dominating uses which this
+    // analysis depends on.
+    if (!DT.isReachableFromEntry(I->getParent()))
+      return getUnknown(PoisonValue::get(V->getType()));
+  } else if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
+    return getConstant(CI);
+  else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
+    if (!GA->isInterposable()) {
+      Ops.push_back(GA->getAliasee());
+      return nullptr;
+    }
+    return getUnknown(V);
+  } else if (!isa<ConstantExpr>(V))
+    return getUnknown(V);
+
+  Operator *U = cast<Operator>(V);
+  if (auto BO = MatchBinaryOp(U, DT)) {
+    bool IsConstArg = isa<ConstantInt>(BO->RHS);
+    switch (U->getOpcode()) {
+    case Instruction::Add: {
+      // For additions and multiplications, traverse add/mul chains for which we
+      // can potentially create a single SCEV, to reduce the number of
+      // get{Add,Mul}Expr calls.
+      do {
+        if (BO->Op) {
+          if (BO->Op != V && getExistingSCEV(BO->Op)) {
+            Ops.push_back(BO->Op);
+            break;
+          }
+        }
+        Ops.push_back(BO->RHS);
+        auto NewBO = MatchBinaryOp(BO->LHS, DT);
+        if (!NewBO || (NewBO->Opcode != Instruction::Add &&
+                       NewBO->Opcode != Instruction::Sub)) {
+          Ops.push_back(BO->LHS);
+          break;
+        }
+        BO = NewBO;
+      } while (true);
+      return nullptr;
+    }
+
+    case Instruction::Mul: {
+      do {
+        if (BO->Op) {
+          if (BO->Op != V && getExistingSCEV(BO->Op)) {
+            Ops.push_back(BO->Op);
+            break;
+          }
+        }
+        Ops.push_back(BO->RHS);
+        auto NewBO = MatchBinaryOp(BO->LHS, DT);
+        if (!NewBO || NewBO->Opcode != Instruction::Mul) {
+          Ops.push_back(BO->LHS);
+          break;
+        }
+        BO = NewBO;
+      } while (true);
+      return nullptr;
+    }
+
+    case Instruction::AShr:
+    case Instruction::Shl:
+    case Instruction::Xor:
+      if (!IsConstArg)
+        return nullptr;
+      break;
+    case Instruction::And:
+    case Instruction::Or:
+      if (!IsConstArg && BO->LHS->getType()->isIntegerTy(1))
+        return nullptr;
+      break;
+    default:
+      break;
+    }
+
+    Ops.push_back(BO->LHS);
+    Ops.push_back(BO->RHS);
+    return nullptr;
+  }
+
+  switch (U->getOpcode()) {
+  case Instruction::Trunc:
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::PtrToInt:
+    Ops.push_back(U->getOperand(0));
+    return nullptr;
+
+  case Instruction::BitCast:
+    if (isSCEVable(U->getType()) && isSCEVable(U->getOperand(0)->getType())) {
+      Ops.push_back(U->getOperand(0));
+      return nullptr;
+    }
+    return getUnknown(V);
+
+  case Instruction::SDiv:
+  case Instruction::SRem:
+    Ops.push_back(U->getOperand(0));
+    Ops.push_back(U->getOperand(1));
+    return nullptr;
+
+  case Instruction::GetElementPtr:
+    assert(cast<GEPOperator>(U)->getSourceElementType()->isSized() &&
+           "GEP source element type must be sized");
+    for (Value *Index : U->operands())
+      Ops.push_back(Index);
+    return nullptr;
+
+  case Instruction::IntToPtr:
+    return getUnknown(V);
+
+  case Instruction::PHI:
+    // Keep constructing SCEVs' for phis recursively for now.
+    return nullptr;
+
+  case Instruction::Select:
+    for (Value *Inc : U->operands())
+      Ops.push_back(Inc);
+    return nullptr;
+    break;
+
+  case Instruction::Call:
+  case Instruction::Invoke:
+    if (Value *RV = cast<CallBase>(U)->getReturnedArgOperand()) {
+      Ops.push_back(RV);
+      return nullptr;
+    }
+
+    if (auto *II = dyn_cast<IntrinsicInst>(U)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::abs:
+        Ops.push_back(II->getArgOperand(0));
+        return nullptr;
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+      case Intrinsic::usub_sat:
+      case Intrinsic::uadd_sat:
+        Ops.push_back(II->getArgOperand(0));
+        Ops.push_back(II->getArgOperand(1));
+        return nullptr;
+      case Intrinsic::start_loop_iterations:
+        Ops.push_back(II->getArgOperand(0));
+        return nullptr;
+      default:
+        break;
+      }
+    }
+    break;
+  }
+
+  return nullptr;
 }
 
 const SCEV *ScalarEvolution::createSCEV(Value *V) {
