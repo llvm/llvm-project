@@ -64,10 +64,15 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
   return true;
 }
 
-template <class T, class HelperClass>
-static T *coerceAvailableValueToLoadTypeHelper(T *StoredVal, Type *LoadedTy,
-                                               HelperClass &Helper,
-                                               const DataLayout &DL) {
+/// If we saw a store of a value to memory, and
+/// then a load from a must-aliased pointer of a different type, try to coerce
+/// the stored value.  LoadedTy is the type of the load we want to replace.
+/// IRB is IRBuilder used to insert new instructions.
+///
+/// If we can't do it, return null.
+Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
+                                      IRBuilderBase &Helper,
+                                      const DataLayout &DL) {
   assert(canCoerceMustAliasedValueToLoad(StoredVal, LoadedTy, DL) &&
          "precondition violation - materialization can't fail");
   if (auto *C = dyn_cast<Constant>(StoredVal))
@@ -152,18 +157,6 @@ static T *coerceAvailableValueToLoadTypeHelper(T *StoredVal, Type *LoadedTy,
     StoredVal = ConstantFoldConstant(C, DL);
 
   return StoredVal;
-}
-
-/// If we saw a store of a value to memory, and
-/// then a load from a must-aliased pointer of a different type, try to coerce
-/// the stored value.  LoadedTy is the type of the load we want to replace.
-/// IRB is IRBuilder used to insert new instructions.
-///
-/// If we can't do it, return null.
-Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
-                                      IRBuilderBase &IRB,
-                                      const DataLayout &DL) {
-  return coerceAvailableValueToLoadTypeHelper(StoredVal, LoadedTy, IRB, DL);
 }
 
 /// This function is called when we have a memdep query of a load that ends up
@@ -451,7 +444,7 @@ Value *getStoreValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
 
   IRBuilder<> Builder(InsertPt);
   SrcVal = getStoreValueForLoadHelper(SrcVal, Offset, LoadTy, Builder, DL);
-  return coerceAvailableValueToLoadTypeHelper(SrcVal, LoadTy, Builder, DL);
+  return coerceAvailableValueToLoadType(SrcVal, LoadTy, Builder, DL);
 }
 
 Constant *getConstantStoreValueForLoad(Constant *SrcVal, unsigned Offset,
@@ -521,75 +514,77 @@ Constant *getConstantLoadValueForLoad(Constant *SrcVal, unsigned Offset,
   return getConstantStoreValueForLoad(SrcVal, Offset, LoadTy, DL);
 }
 
-template <class T, class HelperClass>
-T *getMemInstValueForLoadHelper(MemIntrinsic *SrcInst, unsigned Offset,
-                                Type *LoadTy, HelperClass &Helper,
-                                const DataLayout &DL) {
+/// This function is called when we have a
+/// memdep query of a load that ends up being a clobbering mem intrinsic.
+Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
+                              Type *LoadTy, Instruction *InsertPt,
+                              const DataLayout &DL) {
   LLVMContext &Ctx = LoadTy->getContext();
   uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy).getFixedSize() / 8;
+  IRBuilder<> Builder(InsertPt);
 
   // We know that this method is only called when the mem transfer fully
   // provides the bits for the load.
   if (MemSetInst *MSI = dyn_cast<MemSetInst>(SrcInst)) {
     // memset(P, 'x', 1234) -> splat('x'), even if x is a variable, and
     // independently of what the offset is.
-    T *Val = cast<T>(MSI->getValue());
+    Value *Val = MSI->getValue();
     if (LoadSize != 1)
       Val =
-          Helper.CreateZExtOrBitCast(Val, IntegerType::get(Ctx, LoadSize * 8));
-    T *OneElt = Val;
+          Builder.CreateZExtOrBitCast(Val, IntegerType::get(Ctx, LoadSize * 8));
+    Value *OneElt = Val;
 
     // Splat the value out to the right number of bits.
     for (unsigned NumBytesSet = 1; NumBytesSet != LoadSize;) {
       // If we can double the number of bytes set, do it.
       if (NumBytesSet * 2 <= LoadSize) {
-        T *ShVal = Helper.CreateShl(
+        Value *ShVal = Builder.CreateShl(
             Val, ConstantInt::get(Val->getType(), NumBytesSet * 8));
-        Val = Helper.CreateOr(Val, ShVal);
+        Val = Builder.CreateOr(Val, ShVal);
         NumBytesSet <<= 1;
         continue;
       }
 
       // Otherwise insert one byte at a time.
-      T *ShVal = Helper.CreateShl(Val, ConstantInt::get(Val->getType(), 1 * 8));
-      Val = Helper.CreateOr(OneElt, ShVal);
+      Value *ShVal =
+          Builder.CreateShl(Val, ConstantInt::get(Val->getType(), 1 * 8));
+      Val = Builder.CreateOr(OneElt, ShVal);
       ++NumBytesSet;
     }
 
-    return coerceAvailableValueToLoadTypeHelper(Val, LoadTy, Helper, DL);
+    return coerceAvailableValueToLoadType(Val, LoadTy, Builder, DL);
   }
 
   // Otherwise, this is a memcpy/memmove from a constant global.
   MemTransferInst *MTI = cast<MemTransferInst>(SrcInst);
   Constant *Src = cast<Constant>(MTI->getSource());
-
-  // Otherwise, see if we can constant fold a load from the constant with the
-  // offset applied as appropriate.
   unsigned IndexSize = DL.getIndexTypeSizeInBits(Src->getType());
-  return ConstantFoldLoadFromConstPtr(
-      Src, LoadTy, APInt(IndexSize, Offset), DL);
-}
-
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering mem intrinsic.
-Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
-                              Type *LoadTy, Instruction *InsertPt,
-                              const DataLayout &DL) {
-  IRBuilder<> Builder(InsertPt);
-  return getMemInstValueForLoadHelper<Value, IRBuilder<>>(SrcInst, Offset,
-                                                          LoadTy, Builder, DL);
+  return ConstantFoldLoadFromConstPtr(Src, LoadTy, APInt(IndexSize, Offset),
+                                      DL);
 }
 
 Constant *getConstantMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
                                          Type *LoadTy, const DataLayout &DL) {
-  // The only case analyzeLoadFromClobberingMemInst cannot be converted to a
-  // constant is when it's a memset of a non-constant.
-  if (auto *MSI = dyn_cast<MemSetInst>(SrcInst))
-    if (!isa<Constant>(MSI->getValue()))
+  LLVMContext &Ctx = LoadTy->getContext();
+  uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy).getFixedSize() / 8;
+
+  // We know that this method is only called when the mem transfer fully
+  // provides the bits for the load.
+  if (MemSetInst *MSI = dyn_cast<MemSetInst>(SrcInst)) {
+    auto *Val = dyn_cast<ConstantInt>(MSI->getValue());
+    if (!Val)
       return nullptr;
-  ConstantFolder F;
-  return getMemInstValueForLoadHelper<Constant, ConstantFolder>(SrcInst, Offset,
-                                                                LoadTy, F, DL);
+
+    Val = ConstantInt::get(Ctx, APInt::getSplat(LoadSize * 8, Val->getValue()));
+    return ConstantFoldLoadFromConst(Val, LoadTy, DL);
+  }
+
+  // Otherwise, this is a memcpy/memmove from a constant global.
+  MemTransferInst *MTI = cast<MemTransferInst>(SrcInst);
+  Constant *Src = cast<Constant>(MTI->getSource());
+  unsigned IndexSize = DL.getIndexTypeSizeInBits(Src->getType());
+  return ConstantFoldLoadFromConstPtr(Src, LoadTy, APInt(IndexSize, Offset),
+                                      DL);
 }
 } // namespace VNCoercion
 } // namespace llvm
