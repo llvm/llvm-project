@@ -195,6 +195,14 @@ SubElementAttrInterface TestSubElementsAccessAttr::replaceImmediateSubAttribute(
 }
 
 //===----------------------------------------------------------------------===//
+// TestExtern1DI64ElementsAttr
+//===----------------------------------------------------------------------===//
+
+ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
+  return getHandle().getData()->getData();
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 

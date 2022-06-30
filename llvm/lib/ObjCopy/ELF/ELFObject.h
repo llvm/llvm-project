@@ -554,8 +554,7 @@ public:
   Error accept(MutableSectionVisitor &Visitor) override;
 
   static bool classof(const SectionBase *S) {
-    return (S->OriginalFlags & ELF::SHF_COMPRESSED) ||
-           (StringRef(S->Name).startswith(".zdebug"));
+    return S->OriginalFlags & ELF::SHF_COMPRESSED;
   }
 };
 
@@ -568,8 +567,6 @@ public:
     Size = Sec.getDecompressedSize();
     Align = Sec.getDecompressedAlign();
     Flags = OriginalFlags = (Flags & ~ELF::SHF_COMPRESSED);
-    if (StringRef(Name).startswith(".zdebug"))
-      Name = "." + Name.substr(2);
   }
 
   Error accept(SectionVisitor &Visitor) const override;

@@ -85,6 +85,7 @@ static void printArHelp(StringRef ToolName) {
     =aix                -   aix (big archive)
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
+  --output              - the directory to extract archive members to
   --rsp-quoting         - quoting style for response files
     =posix              -   posix
     =windows            -   windows
@@ -236,6 +237,9 @@ static int CountParam = 0;
 // This variable holds the name of the archive file as given on the
 // command line.
 static std::string ArchiveName;
+
+// Output directory specified by --output.
+static std::string OutputDir;
 
 static std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
 static std::vector<std::unique_ptr<object::Archive>> Archives;
@@ -454,6 +458,19 @@ static ArchiveOperation parseCommandLine() {
   if (AddLibrary && Operation != QuickAppend)
     badUsage("the 'L' modifier is only applicable to the 'q' operation");
 
+  if (!OutputDir.empty()) {
+    if (Operation != Extract)
+      badUsage("--output is only applicable to the 'x' operation");
+    bool IsDir = false;
+    // If OutputDir is not a directory, create_directories may still succeed if
+    // all components of the path prefix are directories. Test is_directory as
+    // well.
+    if (!sys::fs::create_directories(OutputDir))
+      sys::fs::is_directory(OutputDir, IsDir);
+    if (!IsDir)
+      fail("'" + OutputDir + "' is not a directory");
+  }
+
   // Return the parsed operation to the caller
   return Operation;
 }
@@ -554,7 +571,15 @@ static void doExtract(StringRef Name, const object::Archive::Child &C) {
   failIfError(ModeOrErr.takeError());
   sys::fs::perms Mode = ModeOrErr.get();
 
-  llvm::StringRef outputFilePath = sys::path::filename(Name);
+  StringRef outputFilePath;
+  SmallString<128> path;
+  if (OutputDir.empty()) {
+    outputFilePath = sys::path::filename(Name);
+  } else {
+    sys::path::append(path, OutputDir, sys::path::filename(Name));
+    outputFilePath = path.str();
+  }
+
   if (Verbose)
     outs() << "x - " << outputFilePath << '\n';
 
@@ -1221,6 +1246,11 @@ static int ar_main(int argc, char **argv) {
                        .Default(Unknown);
       if (FormatType == Unknown)
         fail(std::string("Invalid format ") + Match);
+      continue;
+    }
+
+    if ((Match = matchFlagWithArg("output", ArgIt, Argv))) {
+      OutputDir = Match;
       continue;
     }
 

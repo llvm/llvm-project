@@ -212,6 +212,12 @@ ifneq (,$(findstring clang,$(CC)))
    MODULE_DEBUG_INFO_FLAGS += -gmodules
 endif
 
+# If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
+# with codeview by default but all the tests rely on dwarf.
+ifeq "$(OS)" "Windows_NT"
+	DEBUG_INFO_FLAG ?= -gdwarf
+endif
+
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0
@@ -235,12 +241,6 @@ ifndef NO_TEST_COMMON_H
 endif
 
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
-
-# If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
-# with codeview by default but all the tests rely on dwarf.
-ifeq "$(OS)" "Windows_NT"
-	CFLAGS += -gdwarf
-endif
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"

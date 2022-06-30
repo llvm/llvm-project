@@ -1166,6 +1166,7 @@ __OMP_TRAIT_PROPERTY(implementation, extension, match_any)
 __OMP_TRAIT_PROPERTY(implementation, extension, match_none)
 __OMP_TRAIT_PROPERTY(implementation, extension, disable_implicit_base)
 __OMP_TRAIT_PROPERTY(implementation, extension, allow_templates)
+__OMP_TRAIT_PROPERTY(implementation, extension, bind_to_declaration)
 
 __OMP_TRAIT_SET(user)
 

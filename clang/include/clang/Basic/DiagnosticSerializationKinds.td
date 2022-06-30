@@ -355,7 +355,7 @@ def err_module_odr_violation_enum : Error<
   "enum with specified type %4|"
   "enum with %4 element%s4|"
   "%ordinal4 element has name %5|"
-  "%ordinal4 element %5 %select{has|does not have}6 an initilizer|"
+  "%ordinal4 element %5 %select{has|does not have}6 an initializer|"
   "%ordinal4 element %5 has an initializer|"
   "}3">;
 

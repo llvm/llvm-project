@@ -16,6 +16,9 @@
 // RUN: %clang_cc1 -E -dM -triple=arm64_32-apple-ios -target-feature -sse \
 // RUN:   %s -o - | FileCheck %s  -strict-whitespace
 
+// RUN: %clang_cc1 -E -dM -triple=x86_64-apple-macos13.0 -ffast-math \
+// RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-MINUS-ONE -strict-whitespace
+
 // RUN: %clang_cc1 -E -dM -triple i386-pc-windows -target-cpu pentium4 %s -o - \
 // RUN:   | FileCheck %s  -strict-whitespace
 
@@ -35,7 +38,9 @@
 #define __GLIBC_FLT_EVAL_METHOD 2
 #endif
 
-#if __GLIBC_FLT_EVAL_METHOD == 0 || __GLIBC_FLT_EVAL_METHOD == 16
+#if __GLIBC_FLT_EVAL_METHOD == -1
+#define Name "MinusOne"
+#elif __GLIBC_FLT_EVAL_METHOD == 0 || __GLIBC_FLT_EVAL_METHOD == 16
 #define Name "One"
 #elif __GLIBC_FLT_EVAL_METHOD == 1
 #define Name "Two"
@@ -59,6 +64,7 @@
 
 int foo() {
   // CHECK: #define Name "One"
+  // CHECK-MINUS-ONE: #define Name "MinusOne"
   // EXT: #define Name "Three"
   return Name;
 }
