@@ -10,6 +10,8 @@
 
 // UNSUPPORTED: c++03
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <locale>
 
 // wstring_convert<Codecvt, Elem, Wide_alloc, Byte_alloc>
