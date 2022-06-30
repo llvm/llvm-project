@@ -22,6 +22,19 @@ entry:
 ; CHECKFUSE-NEXT: add {{x[0-9]+}}, [[R]], :lo12:litp
 }
 
+define dso_local i8* @litp_tune_generic(i32 %a, i32 %b) "tune-cpu"="generic" {
+entry:
+  %add = add nsw i32 %b, %a
+  %idx.ext = sext i32 %add to i64
+  %add.ptr = getelementptr i8, i8* bitcast (i8* (i32, i32)* @litp_tune_generic to i8*), i64 %idx.ext
+  store i8* %add.ptr, i8** @g, align 8
+  ret i8* %add.ptr
+
+; CHECK-LABEL: litp_tune_generic:
+; CHECK:         adrp [[R:x[0-9]+]], litp_tune_generic
+; CHECK-NEXT:    add {{x[0-9]+}}, [[R]], :lo12:litp_tune_generic
+}
+
 define dso_local i32 @liti(i32 %a, i32 %b) {
 entry:
   %add = add i32 %a, -262095121
