@@ -940,6 +940,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine({ISD::INTRINSIC_WO_CHAIN, ISD::ADD, ISD::SUB, ISD::AND,
                        ISD::OR, ISD::XOR});
+  if (Subtarget.is64Bit())
+    setTargetDAGCombine(ISD::SRA);
 
   if (Subtarget.hasStdExtF())
     setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM});
@@ -8527,6 +8529,33 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
 
   return Opcode;
 }
+
+// Combine (sra (shl X, 32), 32 - C) -> (shl (sext_inreg X, i32), C)
+// FIXME: Should this be a generic combine? There's a similar combine on X86.
+static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  assert(N->getOpcode() == ISD::SRA && "Unexpected opcode");
+
+  if (N->getValueType(0) != MVT::i64 || !Subtarget.is64Bit())
+    return SDValue();
+
+  auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!C || C->getZExtValue() >= 32)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() != ISD::SHL || !N0.hasOneUse() ||
+      !isa<ConstantSDNode>(N0.getOperand(1)) ||
+      N0.getConstantOperandVal(1) != 32)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64,
+                             N0.getOperand(0), DAG.getValueType(MVT::i32));
+  return DAG.getNode(ISD::SHL, DL, MVT::i64, SExt,
+                     DAG.getConstant(32 - C->getZExtValue(), DL, MVT::i64));
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -9003,6 +9032,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::SRA:
+    if (SDValue V = performSRACombine(N, DAG, Subtarget))
+      return V;
+    LLVM_FALLTHROUGH;
   case ISD::SRL:
   case ISD::SHL: {
     SDValue ShAmt = N->getOperand(1);
