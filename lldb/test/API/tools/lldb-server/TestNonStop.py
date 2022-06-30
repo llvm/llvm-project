@@ -362,3 +362,33 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
              "send packet: $OK#00",
              ], True)
         self.expect_gdbremote_sequence()
+
+    @add_test_categories(["llgs"])
+    def test_leave_nonstop(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["thread:new", "thread:new", "stop", "sleep:15"])
+        self.test_sequence.add_log_lines(
+            ["read packet: $QNonStop:1#00",
+             "send packet: $OK#00",
+             # stop is used to synchronize starting threads
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             {"direction": "send", "regex": "%Stop:T.*"},
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             # verify that the threads are running now
+             "read packet: $?#00",
+             "send packet: $OK#00",
+             "read packet: $QNonStop:0#00",
+             "send packet: $OK#00",
+             # we should issue some random request now to verify that the stub
+             # did not send stop reasons -- we may verify whether notification
+             # queue was cleared while at it
+             "read packet: $vStopped#00",
+             "send packet: $Eff#00",
+             "read packet: $?#00",
+             {"direction": "send", "regex": "[$]T.*"},
+             ], True)
+        self.expect_gdbremote_sequence()
