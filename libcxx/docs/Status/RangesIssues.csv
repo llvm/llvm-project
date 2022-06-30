@@ -18,9 +18,9 @@
 `P1871R1 <https://wg21.link/P1871R1>`__,disable_sized_sentinel_for,|Complete|,14.0
 `P1878R1 <https://wg21.link/P1878R1>`__,Constraining Readable Types,|Complete|,15.0
 `P1970R2 <https://wg21.link/P1970R2>`__,Consistency for size() functions: Add ranges::ssize,|Complete|,15.0
-`P1983R0 <https://wg21.link/P1983R0>`__,Wording for GB301, US296, US292, US291, and US283,|Complete|,15.0
+`P1983R0 <https://wg21.link/P1983R0>`__,"Wording for GB301, US296, US292, US291, and US283",|Complete|,15.0
 `P1994R1 <https://wg21.link/P1994R1>`__,elements_view Needs Its Own sentinel,,
-`P2091R0 <https://wg21.link/P2091R0>`__,Fixing Issues With Range Access CPOs,,
+`P2091R0 <https://wg21.link/P2091R0>`__,Fixing Issues With Range Access CPOs,|Complete|,15.0
 `P2106R0 <https://wg21.link/P2106R0>`__,Range Algorithm Result Types,,
 
 `P2325R3 <https://wg21.link/P2325R3>`__,Views should not be required to be default constructible ,,

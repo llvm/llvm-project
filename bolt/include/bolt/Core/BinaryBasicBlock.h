@@ -634,14 +634,12 @@ public:
 
   /// Test if BB is a predecessor of this block.
   bool isPredecessor(const BinaryBasicBlock *BB) const {
-    auto Itr = std::find(Predecessors.begin(), Predecessors.end(), BB);
-    return Itr != Predecessors.end();
+    return llvm::is_contained(Predecessors, BB);
   }
 
   /// Test if BB is a successor of this block.
   bool isSuccessor(const BinaryBasicBlock *BB) const {
-    auto Itr = std::find(Successors.begin(), Successors.end(), BB);
-    return Itr != Successors.end();
+    return llvm::is_contained(Successors, BB);
   }
 
   /// Test if this BB has a valid execution count.

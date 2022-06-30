@@ -59,7 +59,7 @@ using DistributionMapFn = std::function<AffineMap(vector::TransferWriteOp)>;
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
 void populateDistributeTransferWriteOpPatterns(
-    RewritePatternSet &patterns, DistributionMapFn distributionMapFn);
+    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn);
 
 /// Move scalar operations with no dependency on the warp op outside of the
 /// region.

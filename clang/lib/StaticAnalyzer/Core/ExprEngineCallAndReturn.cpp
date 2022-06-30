@@ -1015,7 +1015,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
 
   // Check if this function has been marked as non-inlinable.
   Optional<bool> MayInline = Engine.FunctionSummaries->mayInline(D);
-  if (MayInline.hasValue()) {
+  if (MayInline) {
     if (!MayInline.getValue())
       return false;
 

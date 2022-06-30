@@ -676,6 +676,10 @@ bool X86RegisterInfo::isFixedRegister(const MachineFunction &MF,
   return X86GenRegisterInfo::isFixedRegister(MF, PhysReg);
 }
 
+bool X86RegisterInfo::isTileRegisterClass(const TargetRegisterClass *RC) const {
+  return RC->getID() == X86::TILERegClassID;
+}
+
 void X86RegisterInfo::adjustStackMapLiveOutMask(uint32_t *Mask) const {
   // Check if the EFLAGS register is marked as live-out. This shouldn't happen,
   // because the calling convention defines the EFLAGS register as NOT

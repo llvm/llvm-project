@@ -8,8 +8,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: test_const_const_1
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: $sgpr0 = COPY [[C]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $sgpr0
+    ; CHECK-NEXT: $sgpr0 = COPY [[C]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
     %0:_(s32) = G_CONSTANT i32 255
     %1:_(s32) = G_CONSTANT i32 15
     %2:_(s32) = G_OR %0(s32), %1(s32)
@@ -24,8 +24,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: test_const_const_2
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: $vgpr0 = COPY [[C]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = G_CONSTANT i32 15
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_OR %0(s32), %1(s32)
@@ -40,8 +40,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: test_const_const_3
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1431655765
-    ; CHECK: $vgpr0 = COPY [[C]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = G_CONSTANT i32 1431655765
     %1:_(s32) = G_CONSTANT i32 1145324612
     %2:_(s32) = G_OR %1(s32), %0(s32)
@@ -58,11 +58,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_or_or
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[C]]
-    ; CHECK: $vgpr0 = COPY [[OR]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[C]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[OR]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_CONSTANT i32 15
@@ -81,13 +82,14 @@ body:             |
 
     ; CHECK-LABEL: name: test_shl_xor_or
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[SHL]], [[C1]]
-    ; CHECK: $sgpr0 = COPY [[XOR]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[SHL]], [[C1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_CONSTANT i32 5
     %2:_(s32) = G_CONSTANT i32 -1
@@ -108,13 +110,14 @@ body:             |
 
     ; CHECK-LABEL: name: test_lshr_xor_or
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[LSHR]], [[C1]]
-    ; CHECK: $vgpr0 = COPY [[XOR]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[LSHR]], [[C1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 5
     %2:_(s32) = G_CONSTANT i32 -1
@@ -135,13 +138,14 @@ body:             |
 
     ; CHECK-LABEL: name: test_or_non_const
     ; CHECK: liveins: $sgpr0, $sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[LSHR]], [[C1]]
-    ; CHECK: $sgpr0 = COPY [[XOR]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[LSHR]], [[C1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_CONSTANT i32 16

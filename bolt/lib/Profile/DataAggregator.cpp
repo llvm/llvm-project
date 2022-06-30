@@ -114,10 +114,10 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
     sections.push_back(
         {Section.getName(), Section.getAddress(), Section.getEndAddress()});
   }
-  std::sort(sections.begin(), sections.end(),
-            [](const SectionNameAndRange &A, const SectionNameAndRange &B) {
-              return A.BeginAddress < B.BeginAddress;
-            });
+  llvm::sort(sections,
+             [](const SectionNameAndRange &A, const SectionNameAndRange &B) {
+               return A.BeginAddress < B.BeginAddress;
+             });
   return sections;
 }
 }

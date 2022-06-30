@@ -479,6 +479,31 @@ void DWARFRewriter::updateUnitDebugInfo(
                                      AbbrevWriter);
       break;
     }
+    case dwarf::DW_TAG_call_site: {
+      auto patchPC = [&](AttrInfo &AttrVal, StringRef Entry) -> void {
+        Optional<uint64_t> Address = AttrVal.V.getAsAddress();
+        const BinaryFunction *Function =
+            BC.getBinaryFunctionContainingAddress(*Address);
+        const uint64_t UpdatedAddress =
+            Function->translateInputToOutputAddress(*Address);
+        const uint32_t Index =
+            AddrWriter->getIndexFromAddress(UpdatedAddress, Unit);
+        if (AttrVal.V.getForm() == dwarf::DW_FORM_addrx)
+          DebugInfoPatcher.addUDataPatch(AttrVal.Offset, Index, AttrVal.Size);
+        else
+          errs() << "BOLT-ERROR: unsupported form for " << Entry << "\n";
+      };
+
+      if (Optional<AttrInfo> AttrVal =
+              findAttributeInfo(DIE, dwarf::DW_AT_call_pc))
+        patchPC(*AttrVal, "DW_AT_call_pc");
+
+      if (Optional<AttrInfo> AttrVal =
+              findAttributeInfo(DIE, dwarf::DW_AT_call_return_pc))
+        patchPC(*AttrVal, "DW_AT_call_return_pc");
+
+      break;
+    }
     default: {
       // Handle any tag that can have DW_AT_location attribute.
       DWARFFormValue Value;
@@ -1243,10 +1268,9 @@ static std::string extractDWOTUFromDWP(
 
   // Sorting so it's easy to compare output.
   // They should be sharing the same Abbrev.
-  std::sort(TUContributions.begin(), TUContributions.end(),
-            [](const TUEntry &V1, const TUEntry &V2) -> bool {
-              return V1.second->Offset < V2.second->Offset;
-            });
+  llvm::sort(TUContributions, [](const TUEntry &V1, const TUEntry &V2) -> bool {
+    return V1.second->Offset < V2.second->Offset;
+  });
 
   for (auto &PairEntry : TUContributions) {
     const DWARFUnitIndex::Entry::SectionContribution *C = PairEntry.second;
@@ -1289,11 +1313,11 @@ static void extractTypesFromDWPDWARF5(
   }
   // Sorting so it's easy to compare output.
   // They should be sharing the same Abbrev.
-  std::sort(TUContributions.begin(), TUContributions.end(),
-            [](const DWARFUnitIndex::Entry::SectionContribution *V1,
-               const DWARFUnitIndex::Entry::SectionContribution *V2) -> bool {
-              return V1->Offset < V2->Offset;
-            });
+  llvm::sort(TUContributions,
+             [](const DWARFUnitIndex::Entry::SectionContribution *V1,
+                const DWARFUnitIndex::Entry::SectionContribution *V2) -> bool {
+               return V1->Offset < V2->Offset;
+             });
   Streamer.switchSection(MCOFI.getDwarfInfoDWOSection());
   for (const auto *C : TUContributions)
     Streamer.emitBytes(Contents.slice(C->Offset, C->Offset + C->Length));

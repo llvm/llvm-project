@@ -63,6 +63,8 @@ add_object_library(
     int_converter.h
     hex_converter.h
     ptr_converter.h
+    oct_converter.h
+    write_int_converter.h
   DEPENDS
     .writer
     .core_structs

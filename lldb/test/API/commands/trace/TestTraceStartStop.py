@@ -68,7 +68,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         # process stopping should stop the thread
         self.expect("process trace stop")
         self.expect("n")
-        self.expect("thread trace dump instructions", substrs=["not traced"])
+        self.expect("thread trace dump instructions", substrs=["not traced"], error=True)
 
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
@@ -121,18 +121,18 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
   a.out`main \+ 4 at main.cpp:2
     0: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 11 at main.cpp:4
-    1: {ADDRESS_REGEX}    movl .*
-    2: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
-    3: {ADDRESS_REGEX}    cmpl .*
-    4: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5'''])
+    2: {ADDRESS_REGEX}    movl .*
+    4: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
+    6: {ADDRESS_REGEX}    cmpl .*
+    8: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5'''])
 
         self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 32 at main.cpp:4
-    4: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5
-    3: {ADDRESS_REGEX}    cmpl .*
-    2: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
-    1: {ADDRESS_REGEX}    movl .*
+    8: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5
+    6: {ADDRESS_REGEX}    cmpl .*
+    4: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
+    2: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 4 at main.cpp:2
     0: {ADDRESS_REGEX}    movl .* '''])
 

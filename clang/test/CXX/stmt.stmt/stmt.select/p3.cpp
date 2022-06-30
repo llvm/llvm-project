@@ -63,8 +63,6 @@ void whileInitStatement() {
   // expected-note@-1 {{to match this '('}}
   // expected-error@-2 {{expected ';' after expression}}
   // expected-error@-3 {{expected expression}}
-  // expected-warning@-4 {{while loop has empty body}}
-  // expected-note@-5 {{put the semicolon on a separate line to silence this warning}}
 }
 
 // TODO: This is needed because clang can't seem to diagnose invalid syntax after the

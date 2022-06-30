@@ -19,7 +19,7 @@ TEST(DarwinSDKInfo, VersionMapping) {
   Optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj,
                                                             VersionTuple());
-  EXPECT_TRUE(Mapping.hasValue());
+  EXPECT_TRUE(Mapping);
   EXPECT_EQ(Mapping->getMinimumValue(), VersionTuple(1));
 
   // Exact mapping.
@@ -54,7 +54,7 @@ TEST(DarwinSDKInfo, VersionMappingMissingKey) {
   Optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj,
                                                             VersionTuple());
-  EXPECT_TRUE(Mapping.hasValue());
+  EXPECT_TRUE(Mapping);
   EXPECT_EQ(
       Mapping->map(VersionTuple(4), VersionTuple(0, 1), VersionTuple(100)),
       None);

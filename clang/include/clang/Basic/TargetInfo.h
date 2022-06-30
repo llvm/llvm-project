@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_TARGETINFO_H
 
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -52,14 +53,14 @@ class MacroBuilder;
 namespace Builtin { struct Info; }
 
 enum class FloatModeKind {
-  NoFloat = 255,
-  Half = 0,
-  Float,
-  Double,
-  LongDouble,
-  Float128,
-  Ibm128,
-  Last = Ibm128
+  NoFloat = 0,
+  Half = 1 << 0,
+  Float = 1 << 1,
+  Double = 1 << 2,
+  LongDouble = 1 << 3,
+  Float128 = 1 << 4,
+  Ibm128 = 1 << 5,
+  LLVM_MARK_AS_BITMASK_ENUM(Ibm128)
 };
 
 /// Fields controlling how types are laid out in memory; these may need to
@@ -221,7 +222,9 @@ protected:
   mutable VersionTuple PlatformMinVersion;
 
   unsigned HasAlignMac68kSupport : 1;
-  unsigned RealTypeUsesObjCFPRetMask : (int)FloatModeKind::Last + 1;
+  unsigned RealTypeUsesObjCFPRetMask
+      : llvm::BitmaskEnumDetail::bitWidth(
+            (int)FloatModeKind::LLVM_BITMASK_LARGEST_ENUMERATOR);
   unsigned ComplexLongDoubleUsesFP2Ret : 1;
 
   unsigned HasBuiltinMSVaList : 1;
@@ -890,9 +893,7 @@ public:
   /// Check whether the given real type should use the "fpret" flavor of
   /// Objective-C message passing on this target.
   bool useObjCFPRetForRealType(FloatModeKind T) const {
-    assert(T <= FloatModeKind::Last &&
-           "T value is larger than RealTypeUsesObjCFPRetMask can handle");
-    return RealTypeUsesObjCFPRetMask & (1 << (int)T);
+    return RealTypeUsesObjCFPRetMask & llvm::BitmaskEnumDetail::Underlying(T);
   }
 
   /// Check whether _Complex long double should use the "fp2ret" flavor

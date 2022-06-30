@@ -204,3 +204,29 @@ TEST_F(MatchSwitchTest, Neither) {
   RunDataflow(Code,
               UnorderedElementsAre(Pair("p", Holds(BooleanLattice(false)))));
 }
+
+TEST_F(MatchSwitchTest, ReturnNonVoid) {
+  using namespace ast_matchers;
+
+  auto Unit =
+      tooling::buildASTFromCode("void f() { int x = 42; }", "input.cc",
+                                std::make_shared<PCHContainerOperations>());
+  auto &Context = Unit->getASTContext();
+  const auto *S =
+      selectFirst<FunctionDecl>(
+          "f",
+          match(functionDecl(isDefinition(), hasName("f")).bind("f"), Context))
+          ->getBody();
+
+  MatchSwitch<const int, std::vector<int>> Switch =
+      MatchSwitchBuilder<const int, std::vector<int>>()
+          .CaseOf<Stmt>(stmt(),
+                        [](const Stmt *, const MatchFinder::MatchResult &,
+                           const int &State) -> std::vector<int> {
+                          return {1, State, 3};
+                        })
+          .Build();
+  std::vector<int> Actual = Switch(*S, Context, 7);
+  std::vector<int> Expected{1, 7, 3};
+  EXPECT_EQ(Actual, Expected);
+}

@@ -10,10 +10,11 @@ body: |
 
     ; GCN-LABEL: name: zext_trunc_s32_s16_s32
     ; GCN: liveins: $vgpr0
-    ; GCN: %var:_(s32) = COPY $vgpr0
-    ; GCN: %c3FFF:_(s32) = G_CONSTANT i32 16383
-    ; GCN: %low_bits:_(s32) = G_AND %var, %c3FFF
-    ; GCN: $vgpr0 = COPY %low_bits(s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: %c3FFF:_(s32) = G_CONSTANT i32 16383
+    ; GCN-NEXT: %low_bits:_(s32) = G_AND %var, %c3FFF
+    ; GCN-NEXT: $vgpr0 = COPY %low_bits(s32)
     %var:_(s32) = COPY $vgpr0
     %c3FFF:_(s32) = G_CONSTANT i32 16383
     %low_bits:_(s32) = G_AND %var, %c3FFF
@@ -31,12 +32,13 @@ body: |
 
     ; GCN-LABEL: name: zext_trunc_s32_s16_s32_unknown_high_bits
     ; GCN: liveins: $vgpr0
-    ; GCN: %var:_(s32) = COPY $vgpr0
-    ; GCN: %cFFFFF:_(s32) = G_CONSTANT i32 1048575
-    ; GCN: %low_bits:_(s32) = G_AND %var, %cFFFFF
-    ; GCN: %trunc:_(s16) = G_TRUNC %low_bits(s32)
-    ; GCN: %zext:_(s32) = G_ZEXT %trunc(s16)
-    ; GCN: $vgpr0 = COPY %zext(s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: %cFFFFF:_(s32) = G_CONSTANT i32 1048575
+    ; GCN-NEXT: %low_bits:_(s32) = G_AND %var, %cFFFFF
+    ; GCN-NEXT: %trunc:_(s16) = G_TRUNC %low_bits(s32)
+    ; GCN-NEXT: %zext:_(s32) = G_ZEXT %trunc(s16)
+    ; GCN-NEXT: $vgpr0 = COPY %zext(s32)
     %var:_(s32) = COPY $vgpr0
     %cFFFFF:_(s32) = G_CONSTANT i32 1048575
     %low_bits:_(s32) = G_AND %var, %cFFFFF
@@ -54,12 +56,13 @@ body: |
 
     ; GCN-LABEL: name: zext_trunc_s64_s16_s32
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: %var:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN: %c3FFF:_(s64) = G_CONSTANT i64 16383
-    ; GCN: %low_bits:_(s64) = G_AND %var, %c3FFF
-    ; GCN: %trunc:_(s16) = G_TRUNC %low_bits(s64)
-    ; GCN: %zext:_(s32) = G_ZEXT %trunc(s16)
-    ; GCN: $vgpr0 = COPY %zext(s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(s64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %c3FFF:_(s64) = G_CONSTANT i64 16383
+    ; GCN-NEXT: %low_bits:_(s64) = G_AND %var, %c3FFF
+    ; GCN-NEXT: %trunc:_(s16) = G_TRUNC %low_bits(s64)
+    ; GCN-NEXT: %zext:_(s32) = G_ZEXT %trunc(s16)
+    ; GCN-NEXT: $vgpr0 = COPY %zext(s32)
     %var:_(s64) = COPY $vgpr0_vgpr1
     %c3FFF:_(s64) = G_CONSTANT i64 16383
     %low_bits:_(s64) = G_AND %var, %c3FFF
@@ -77,12 +80,13 @@ body: |
 
     ; GCN-LABEL: name: zext_trunc_s32_s16_s64
     ; GCN: liveins: $vgpr0
-    ; GCN: %var:_(s32) = COPY $vgpr0
-    ; GCN: %c3FFF:_(s32) = G_CONSTANT i32 16383
-    ; GCN: %low_bits:_(s32) = G_AND %var, %c3FFF
-    ; GCN: %trunc:_(s16) = G_TRUNC %low_bits(s32)
-    ; GCN: %zext:_(s64) = G_ZEXT %trunc(s16)
-    ; GCN: $vgpr0_vgpr1 = COPY %zext(s64)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(s32) = COPY $vgpr0
+    ; GCN-NEXT: %c3FFF:_(s32) = G_CONSTANT i32 16383
+    ; GCN-NEXT: %low_bits:_(s32) = G_AND %var, %c3FFF
+    ; GCN-NEXT: %trunc:_(s16) = G_TRUNC %low_bits(s32)
+    ; GCN-NEXT: %zext:_(s64) = G_ZEXT %trunc(s16)
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %zext(s64)
     %var:_(s32) = COPY $vgpr0
     %c3FFF:_(s32) = G_CONSTANT i32 16383
     %low_bits:_(s32) = G_AND %var, %c3FFF
@@ -100,12 +104,13 @@ body: |
 
     ; GCN-LABEL: name: zext_trunc_v2s32_v2s16_v2s32
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GCN: %c3FFF:_(s32) = G_CONSTANT i32 16383
-    ; GCN: %c7FFF:_(s32) = G_CONSTANT i32 32767
-    ; GCN: %c:_(<2 x s32>) = G_BUILD_VECTOR %c3FFF(s32), %c7FFF(s32)
-    ; GCN: %low_bits:_(<2 x s32>) = G_AND %var, %c
-    ; GCN: $vgpr0_vgpr1 = COPY %low_bits(<2 x s32>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %c3FFF:_(s32) = G_CONSTANT i32 16383
+    ; GCN-NEXT: %c7FFF:_(s32) = G_CONSTANT i32 32767
+    ; GCN-NEXT: %c:_(<2 x s32>) = G_BUILD_VECTOR %c3FFF(s32), %c7FFF(s32)
+    ; GCN-NEXT: %low_bits:_(<2 x s32>) = G_AND %var, %c
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %low_bits(<2 x s32>)
     %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %c3FFF:_(s32) = G_CONSTANT i32 16383
     %c7FFF:_(s32) = G_CONSTANT i32 32767
@@ -125,14 +130,15 @@ body: |
 
     ; GCN-LABEL: name: zext_trunc_v2s32_v2s16_v2s32_unknown_high_bits
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GCN: %cFFFFF:_(s32) = G_CONSTANT i32 1048575
-    ; GCN: %c7FFF:_(s32) = G_CONSTANT i32 32767
-    ; GCN: %c:_(<2 x s32>) = G_BUILD_VECTOR %cFFFFF(s32), %c7FFF(s32)
-    ; GCN: %low_bits:_(<2 x s32>) = G_AND %var, %c
-    ; GCN: %trunc:_(<2 x s16>) = G_TRUNC %low_bits(<2 x s32>)
-    ; GCN: %zext:_(<2 x s32>) = G_ZEXT %trunc(<2 x s16>)
-    ; GCN: $vgpr0_vgpr1 = COPY %zext(<2 x s32>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %cFFFFF:_(s32) = G_CONSTANT i32 1048575
+    ; GCN-NEXT: %c7FFF:_(s32) = G_CONSTANT i32 32767
+    ; GCN-NEXT: %c:_(<2 x s32>) = G_BUILD_VECTOR %cFFFFF(s32), %c7FFF(s32)
+    ; GCN-NEXT: %low_bits:_(<2 x s32>) = G_AND %var, %c
+    ; GCN-NEXT: %trunc:_(<2 x s16>) = G_TRUNC %low_bits(<2 x s32>)
+    ; GCN-NEXT: %zext:_(<2 x s32>) = G_ZEXT %trunc(<2 x s16>)
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %zext(<2 x s32>)
     %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %cFFFFF:_(s32) = G_CONSTANT i32 1048575
     %c7FFF:_(s32) = G_CONSTANT i32 32767
@@ -152,14 +158,15 @@ body: |
 
     ; GCN-LABEL: name: zext_trunc_v2s64_v2s16_v2s32
     ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN: %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN: %c3FFF:_(s64) = G_CONSTANT i64 16383
-    ; GCN: %c7FFF:_(s64) = G_CONSTANT i64 32767
-    ; GCN: %c:_(<2 x s64>) = G_BUILD_VECTOR %c3FFF(s64), %c7FFF(s64)
-    ; GCN: %low_bits:_(<2 x s64>) = G_AND %var, %c
-    ; GCN: %trunc:_(<2 x s16>) = G_TRUNC %low_bits(<2 x s64>)
-    ; GCN: %zext:_(<2 x s32>) = G_ZEXT %trunc(<2 x s16>)
-    ; GCN: $vgpr0_vgpr1 = COPY %zext(<2 x s32>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: %c3FFF:_(s64) = G_CONSTANT i64 16383
+    ; GCN-NEXT: %c7FFF:_(s64) = G_CONSTANT i64 32767
+    ; GCN-NEXT: %c:_(<2 x s64>) = G_BUILD_VECTOR %c3FFF(s64), %c7FFF(s64)
+    ; GCN-NEXT: %low_bits:_(<2 x s64>) = G_AND %var, %c
+    ; GCN-NEXT: %trunc:_(<2 x s16>) = G_TRUNC %low_bits(<2 x s64>)
+    ; GCN-NEXT: %zext:_(<2 x s32>) = G_ZEXT %trunc(<2 x s16>)
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %zext(<2 x s32>)
     %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %c3FFF:_(s64) = G_CONSTANT i64 16383
     %c7FFF:_(s64) = G_CONSTANT i64 32767
@@ -179,14 +186,15 @@ body: |
 
     ; GCN-LABEL: name: zext_trunc_v2s32_v2s16_v2s64
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GCN: %c3FFF:_(s32) = G_CONSTANT i32 16383
-    ; GCN: %c7FFF:_(s32) = G_CONSTANT i32 32767
-    ; GCN: %c:_(<2 x s32>) = G_BUILD_VECTOR %c3FFF(s32), %c7FFF(s32)
-    ; GCN: %low_bits:_(<2 x s32>) = G_AND %var, %c
-    ; GCN: %trunc:_(<2 x s16>) = G_TRUNC %low_bits(<2 x s32>)
-    ; GCN: %zext:_(<2 x s64>) = G_ZEXT %trunc(<2 x s16>)
-    ; GCN: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %zext(<2 x s64>)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %c3FFF:_(s32) = G_CONSTANT i32 16383
+    ; GCN-NEXT: %c7FFF:_(s32) = G_CONSTANT i32 32767
+    ; GCN-NEXT: %c:_(<2 x s32>) = G_BUILD_VECTOR %c3FFF(s32), %c7FFF(s32)
+    ; GCN-NEXT: %low_bits:_(<2 x s32>) = G_AND %var, %c
+    ; GCN-NEXT: %trunc:_(<2 x s16>) = G_TRUNC %low_bits(<2 x s32>)
+    ; GCN-NEXT: %zext:_(<2 x s64>) = G_ZEXT %trunc(<2 x s16>)
+    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %zext(<2 x s64>)
     %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %c3FFF:_(s32) = G_CONSTANT i32 16383
     %c7FFF:_(s32) = G_CONSTANT i32 32767

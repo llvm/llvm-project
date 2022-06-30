@@ -475,7 +475,7 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::warn_drv_avr_stdlib_not_linked);
   }
 
-  if (SectionAddressData.hasValue()) {
+  if (SectionAddressData) {
     std::string DataSectionArg = std::string("-Tdata=0x") +
                                  llvm::utohexstr(SectionAddressData.getValue());
     CmdArgs.push_back(Args.MakeArgString(DataSectionArg));

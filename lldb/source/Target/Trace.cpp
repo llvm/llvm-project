@@ -24,19 +24,20 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
-// Helper structs used to extract the type of a trace session json without
-// having to parse the entire object.
+// Helper structs used to extract the type of a JSON trace bundle description
+// object without having to parse the entire object.
 
-struct JSONSimpleTraceSession {
+struct JSONSimpleTraceBundleDescription {
   std::string type;
 };
 
 namespace llvm {
 namespace json {
 
-bool fromJSON(const Value &value, JSONSimpleTraceSession &session, Path path) {
+bool fromJSON(const Value &value, JSONSimpleTraceBundleDescription &bundle,
+              Path path) {
   json::ObjectMapper o(value, path);
-  return o && o.map("type", session.type);
+  return o && o.map("type", bundle.type);
 }
 
 } // namespace json
@@ -113,20 +114,19 @@ Trace::LoadPostMortemTraceFromFile(Debugger &debugger,
       trace_description_file.GetDirectory().AsCString());
 }
 
-Expected<lldb::TraceSP>
-Trace::FindPluginForPostMortemProcess(Debugger &debugger,
-                                      const json::Value &trace_session_file,
-                                      StringRef session_file_dir) {
-  JSONSimpleTraceSession json_session;
-  json::Path::Root root("traceSession");
-  if (!json::fromJSON(trace_session_file, json_session, root))
+Expected<lldb::TraceSP> Trace::FindPluginForPostMortemProcess(
+    Debugger &debugger, const json::Value &trace_bundle_description,
+    StringRef bundle_dir) {
+  JSONSimpleTraceBundleDescription json_bundle;
+  json::Path::Root root("traceBundle");
+  if (!json::fromJSON(trace_bundle_description, json_bundle, root))
     return root.getError();
 
   if (auto create_callback =
-          PluginManager::GetTraceCreateCallback(json_session.type))
-    return create_callback(trace_session_file, session_file_dir, debugger);
+          PluginManager::GetTraceCreateCallback(json_bundle.type))
+    return create_callback(trace_bundle_description, bundle_dir, debugger);
 
-  return createInvalidPlugInError(json_session.type);
+  return createInvalidPlugInError(json_bundle.type);
 }
 
 Expected<lldb::TraceSP> Trace::FindPluginForLiveProcess(llvm::StringRef name,

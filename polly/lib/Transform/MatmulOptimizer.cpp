@@ -491,9 +491,6 @@ createMacroKernel(isl::schedule_node Node,
   Node = permuteBandNodeDimensions(Node, DimOutNum - 2, DimOutNum - 1);
   Node = permuteBandNodeDimensions(Node, DimOutNum - 3, DimOutNum - 1);
 
-  // Mark the outermost loop as parallelizable.
-  Node = Node.as<isl::schedule_node_band>().member_set_coincident(0, true);
-
   return Node.child(0).child(0);
 }
 
@@ -570,19 +567,19 @@ static void getTargetCacheParameters(const llvm::TargetTransformInfo *TTI) {
   auto L1DCache = llvm::TargetTransformInfo::CacheLevel::L1D;
   auto L2DCache = llvm::TargetTransformInfo::CacheLevel::L2D;
   if (FirstCacheLevelSize == -1) {
-    if (TTI->getCacheSize(L1DCache).hasValue())
+    if (TTI->getCacheSize(L1DCache))
       FirstCacheLevelSize = TTI->getCacheSize(L1DCache).getValue();
     else
       FirstCacheLevelSize = static_cast<int>(FirstCacheLevelDefaultSize);
   }
   if (SecondCacheLevelSize == -1) {
-    if (TTI->getCacheSize(L2DCache).hasValue())
+    if (TTI->getCacheSize(L2DCache))
       SecondCacheLevelSize = TTI->getCacheSize(L2DCache).getValue();
     else
       SecondCacheLevelSize = static_cast<int>(SecondCacheLevelDefaultSize);
   }
   if (FirstCacheLevelAssociativity == -1) {
-    if (TTI->getCacheAssociativity(L1DCache).hasValue())
+    if (TTI->getCacheAssociativity(L1DCache))
       FirstCacheLevelAssociativity =
           TTI->getCacheAssociativity(L1DCache).getValue();
     else
@@ -590,7 +587,7 @@ static void getTargetCacheParameters(const llvm::TargetTransformInfo *TTI) {
           static_cast<int>(FirstCacheLevelDefaultAssociativity);
   }
   if (SecondCacheLevelAssociativity == -1) {
-    if (TTI->getCacheAssociativity(L2DCache).hasValue())
+    if (TTI->getCacheAssociativity(L2DCache))
       SecondCacheLevelAssociativity =
           TTI->getCacheAssociativity(L2DCache).getValue();
     else

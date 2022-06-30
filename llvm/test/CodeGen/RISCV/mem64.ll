@@ -229,6 +229,41 @@ define dso_local i64 @ld_sd_global(i64 %a) nounwind {
   ret i64 %1
 }
 
+define i64 @lw_near_local(i64* %a)  {
+; RV64I-LABEL: lw_near_local:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    ld a0, 9(a0)
+; RV64I-NEXT:    ret
+  %1 = getelementptr inbounds i64, i64* %a, i64 257
+  %2 = load volatile i64, i64* %1
+  ret i64 %2
+}
+
+define void @st_near_local(i64* %a, i64 %b)  {
+; RV64I-LABEL: st_near_local:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    sd a1, 9(a0)
+; RV64I-NEXT:    ret
+  %1 = getelementptr inbounds i64, i64* %a, i64 257
+  store i64 %b, i64* %1
+  ret void
+}
+
+define i64 @lw_sw_near_local(i64* %a, i64 %b)  {
+; RV64I-LABEL: lw_sw_near_local:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a2, a0, 2047
+; RV64I-NEXT:    ld a0, 9(a2)
+; RV64I-NEXT:    sd a1, 9(a2)
+; RV64I-NEXT:    ret
+  %1 = getelementptr inbounds i64, i64* %a, i64 257
+  %2 = load volatile i64, i64* %1
+  store i64 %b, i64* %1
+  ret i64 %2
+}
+
 define i64 @lw_far_local(i64* %a)  {
 ; RV64I-LABEL: lw_far_local:
 ; RV64I:       # %bb.0:

@@ -210,10 +210,6 @@ inline unsigned Log2(Align A) { return A.ShiftValue; }
 
 /// Returns the alignment that satisfies both alignments.
 /// Same semantic as MinAlign.
-inline Align commonAlignment(Align A, Align B) { return std::min(A, B); }
-
-/// Returns the alignment that satisfies both alignments.
-/// Same semantic as MinAlign.
 inline Align commonAlignment(Align A, uint64_t Offset) {
   return Align(MinAlign(A.value(), Offset));
 }
@@ -258,14 +254,6 @@ inline bool operator<(Align Lhs, uint64_t Rhs) {
 inline bool operator>(Align Lhs, uint64_t Rhs) {
   ALIGN_CHECK_ISPOSITIVE(Rhs);
   return Lhs.value() > Rhs;
-}
-
-/// Comparisons between MaybeAlign and scalars.
-inline bool operator==(MaybeAlign Lhs, uint64_t Rhs) {
-  return Lhs ? (*Lhs).value() == Rhs : Rhs == 0;
-}
-inline bool operator!=(MaybeAlign Lhs, uint64_t Rhs) {
-  return Lhs ? (*Lhs).value() != Rhs : Rhs != 0;
 }
 
 /// Comparisons operators between Align.

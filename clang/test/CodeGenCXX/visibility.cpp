@@ -118,6 +118,8 @@ namespace test48 {
 // CHECK-HIDDEN: @_ZN6Test143varE = external global
 // CHECK: @_ZN6Test154TempINS_1AEE5Inner6bufferE = external global [0 x i8]
 // CHECK-HIDDEN: @_ZN6Test154TempINS_1AEE5Inner6bufferE = external global [0 x i8]
+// CHECK: @_ZTVN6test701BE = external hidden unnamed_addr constant { [5 x ptr] }, align 8
+// CHECK: @_ZTTN6test701BE = external hidden unnamed_addr constant [2 x ptr], align 8
 
 namespace test27 {
   template<typename T>
@@ -1316,4 +1318,17 @@ namespace test69 {
   }
   // CHECK-LABEL: define void @_ZN6test693foo1fEv
   // CHECK-HIDDEN-LABEL: define hidden void @_ZN6test693foo1fEv
+}
+
+namespace test70 {
+  // Make sure both the vtable and VTT declarations are marked "hidden"
+  class HIDDEN A {
+    virtual void a();
+  };
+  class HIDDEN B : virtual A {
+    void a() override;
+    ~B();
+  };
+  B::~B() {}
+  // Check lines at top of file.
 }

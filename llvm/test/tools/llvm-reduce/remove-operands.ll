@@ -1,7 +1,5 @@
 ; Test that llvm-reduce can reduce operands
 ;
-; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-undef --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: cat %t | FileCheck %s --check-prefixes=CHECK,UNDEF
 ; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-one --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck %s --check-prefixes=CHECK,ONE
 ; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-zero --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
@@ -24,10 +22,6 @@ declare void @llvm.foo(metadata)
 define i32 @main(%t* %a, i32 %a2) {
 
 ; CHECK-LABEL: lb1:
-; UNDEF: inttoptr i16 0
-; UNDEF: inttoptr i16 1
-; UNDEF: inttoptr i16 2
-; UNDEF: inttoptr i16 undef
 ; ONE: inttoptr i16 0
 ; ONE: inttoptr i16 1
 ; ONE: inttoptr i16 1
@@ -47,7 +41,6 @@ lb1:
   br label %lb2
 
 ; CHECK-LABEL: lb2:
-; UNDEF: ret i32 undef
 ; ONE: ret i32 1
 ; ZERO: ret i32 0
 lb2:

@@ -141,7 +141,7 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
     bool hasHighPad = getConstantIntValue(high) != static_cast<int64_t>(0);
     auto offset = getValueOrCreateConstantIndexOp(b, loc, offsets[dim]);
     auto length = getValueOrCreateConstantIndexOp(b, loc, sizes[dim]);
-    auto srcSize = b.createOrFold<tensor::DimOp>(loc, padOp.source(), dim);
+    auto srcSize = b.createOrFold<tensor::DimOp>(loc, padOp.getSource(), dim);
 
     // The new amount of low padding is `low - offset`. Except for the case
     // where none of the low padding is read. In that case, the new amount of
@@ -246,13 +246,13 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
   auto createPadOfExtractSlice = [&]() {
     // Create pad(extract_slice(x)).
     auto newSliceOp = b.create<tensor::ExtractSliceOp>(
-        loc, padOp.source(), newOffsets, newLengths, newStrides);
+        loc, padOp.getSource(), newOffsets, newLengths, newStrides);
     auto newPadOp = b.create<PadOp>(loc, newSliceOp, staticNewLows,
                                     staticNewHighs, newLows, newHighs);
 
     // Copy region to new PadOp.
     BlockAndValueMapping bvm;
-    padOp.region().cloneInto(&newPadOp.getRegion(), bvm);
+    padOp.getRegion().cloneInto(&newPadOp.getRegion(), bvm);
 
     // Cast result and return.
     return castResult(newPadOp);

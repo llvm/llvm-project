@@ -189,13 +189,25 @@ template <class T, bool POCCAValue>
 class MaybePOCCAAllocator {
     int id_ = 0;
     bool* copy_assigned_into_ = nullptr;
+
+    template<class, bool> friend class MaybePOCCAAllocator;
+
 public:
     typedef std::integral_constant<bool, POCCAValue> propagate_on_container_copy_assignment;
     typedef T value_type;
 
+    template <class U>
+    struct rebind {
+        typedef MaybePOCCAAllocator<U, POCCAValue> other;
+    };
+
     MaybePOCCAAllocator() = default;
     MaybePOCCAAllocator(int id, bool* copy_assigned_into)
         : id_(id), copy_assigned_into_(copy_assigned_into) {}
+
+    template <class U>
+    MaybePOCCAAllocator(const MaybePOCCAAllocator<U, POCCAValue>& that)
+        : id_(that.id_), copy_assigned_into_(that.copy_assigned_into_) {}
 
     MaybePOCCAAllocator(const MaybePOCCAAllocator&) = default;
     MaybePOCCAAllocator& operator=(const MaybePOCCAAllocator& a)
@@ -218,12 +230,14 @@ public:
 
     int id() const { return id_; }
 
-    friend bool operator==(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator& rhs)
+    template <class U>
+    friend bool operator==(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator<U, POCCAValue>& rhs)
     {
         return lhs.id() == rhs.id();
     }
 
-    friend bool operator!=(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator& rhs)
+    template <class U>
+    friend bool operator!=(const MaybePOCCAAllocator& lhs, const MaybePOCCAAllocator<U, POCCAValue>& rhs)
     {
         return !(lhs == rhs);
     }

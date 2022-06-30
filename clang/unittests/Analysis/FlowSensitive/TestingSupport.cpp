@@ -40,9 +40,8 @@ isAnnotationDirectlyAfterStatement(const Stmt *Stmt, unsigned AnnotationBegin,
   auto NextToken =
       Lexer::findNextToken(Stmt->getEndLoc(), SourceManager, LangOptions);
 
-  while (NextToken.hasValue() &&
-         SourceManager.getFileOffset(NextToken->getLocation()) <
-             AnnotationBegin) {
+  while (NextToken && SourceManager.getFileOffset(NextToken->getLocation()) <
+                          AnnotationBegin) {
     if (NextToken->isNot(tok::semi))
       return false;
 

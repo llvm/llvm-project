@@ -738,6 +738,11 @@ sizeof...($TemplateParameter[[Elements]]);
       )cpp",
       // Modifier for variables passed as non-const references
       R"cpp(
+        struct $Class_decl[[ClassWithOp]] {
+            void operator()(int);
+            void operator()(int, int &);
+            void operator()(int, int, const int &);
+        };
         void $Function_decl[[fun]](int, const int,
                                    int*, const int*,
                                    int&, const int&,
@@ -759,6 +764,13 @@ sizeof...($TemplateParameter[[Elements]]);
                            $LocalVariable[[array]], $LocalVariable_usedAsMutableReference[[array]], 
                            $LocalVariable[[array]]
                            );
+          [](int){}($LocalVariable[[val]]);
+          [](int&){}($LocalVariable_usedAsMutableReference[[val]]);
+          [](const int&){}($LocalVariable[[val]]);
+          $Class[[ClassWithOp]] $LocalVariable_decl[[c]];
+          $LocalVariable[[c]]($LocalVariable[[val]]);
+          $LocalVariable[[c]](0, $LocalVariable_usedAsMutableReference[[val]]);
+          $LocalVariable[[c]](0, 0, $LocalVariable[[val]]);
         }
         struct $Class_decl[[S]] {
           $Class_decl[[S]](int&) {
@@ -944,7 +956,7 @@ TEST(SemanticHighlighting, toSemanticTokens) {
   )");
   Tokens.front().Modifiers |= unsigned(HighlightingModifier::Declaration);
   Tokens.front().Modifiers |= unsigned(HighlightingModifier::Readonly);
-  auto Results = toSemanticTokens(Tokens);
+  auto Results = toSemanticTokens(Tokens, /*Code=*/"");
 
   ASSERT_THAT(Results, SizeIs(3));
   EXPECT_EQ(Results[0].tokenType, unsigned(HighlightingKind::Variable));
@@ -972,13 +984,15 @@ TEST(SemanticHighlighting, diffSemanticTokens) {
   auto Before = toSemanticTokens(tokens(R"(
     [[foo]] [[bar]] [[baz]]
     [[one]] [[two]] [[three]]
-  )"));
+  )"),
+                                 /*Code=*/"");
   EXPECT_THAT(diffTokens(Before, Before), IsEmpty());
 
   auto After = toSemanticTokens(tokens(R"(
     [[foo]] [[hello]] [[world]] [[baz]]
     [[one]] [[two]] [[three]]
-  )"));
+  )"),
+                                /*Code=*/"");
 
   // Replace [bar, baz] with [hello, world, baz]
   auto Diff = diffTokens(Before, After);
@@ -1000,6 +1014,30 @@ TEST(SemanticHighlighting, diffSemanticTokens) {
   EXPECT_EQ(3u, Diff.front().tokens[2].length);
 }
 
+TEST(SemanticHighlighting, MultilineTokens) {
+  llvm::StringRef AnnotatedCode = R"cpp(
+  [[fo
+o
+o]] [[bar]])cpp";
+  auto Toks = toSemanticTokens(tokens(AnnotatedCode),
+                               Annotations(AnnotatedCode).code());
+  ASSERT_THAT(Toks, SizeIs(4));
+  // foo
+  EXPECT_EQ(Toks[0].deltaLine, 1u);
+  EXPECT_EQ(Toks[0].deltaStart, 2u);
+  EXPECT_EQ(Toks[0].length, 2u);
+  EXPECT_EQ(Toks[1].deltaLine, 1u);
+  EXPECT_EQ(Toks[1].deltaStart, 0u);
+  EXPECT_EQ(Toks[1].length, 1u);
+  EXPECT_EQ(Toks[2].deltaLine, 1u);
+  EXPECT_EQ(Toks[2].deltaStart, 0u);
+  EXPECT_EQ(Toks[2].length, 1u);
+
+  // bar
+  EXPECT_EQ(Toks[3].deltaLine, 0u);
+  EXPECT_EQ(Toks[3].deltaStart, 2u);
+  EXPECT_EQ(Toks[3].length, 3u);
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

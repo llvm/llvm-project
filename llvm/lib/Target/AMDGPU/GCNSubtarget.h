@@ -107,6 +107,7 @@ protected:
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
   bool SGPRInitBug = false;
+  bool UserSGPRInit16Bug = false;
   bool NegativeScratchOffsetBug = false;
   bool NegativeUnalignedScratchOffsetBug = false;
   bool HasSMemRealTime = false;
@@ -926,6 +927,10 @@ public:
 
   bool hasSGPRInitBug() const {
     return SGPRInitBug;
+  }
+
+  bool hasUserSGPRInit16Bug() const {
+    return UserSGPRInit16Bug;
   }
 
   bool hasNegativeScratchOffsetBug() const { return NegativeScratchOffsetBug; }

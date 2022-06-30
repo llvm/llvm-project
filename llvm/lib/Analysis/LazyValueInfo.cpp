@@ -918,7 +918,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueCast(
   // transfer rule on the full set since we may be able to locally infer
   // interesting facts.
   Optional<ConstantRange> LHSRes = getRangeFor(CI->getOperand(0), CI, BB);
-  if (!LHSRes.hasValue())
+  if (!LHSRes)
     // More work to do before applying this transfer rule.
     return None;
   const ConstantRange &LHSRange = LHSRes.getValue();

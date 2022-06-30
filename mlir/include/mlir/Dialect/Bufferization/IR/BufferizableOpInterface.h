@@ -230,6 +230,11 @@ struct BufferizationOptions {
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
 
+  /// The default memory space that should be used when it cannot be inferred
+  /// from the context. If no default memory space is specified, bufferization
+  /// fails when the memory space cannot be inferred at any point.
+  Optional<unsigned> defaultMemorySpace = 0;
+
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced
   /// with buffer copies.
@@ -467,21 +472,23 @@ private:
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
 /// If `copy` is set, the shaped value is copied. Otherwise, a tensor with
 /// undefined contents is allocated.
-Value allocateTensorForShapedValue(OpBuilder &b, Location loc,
-                                   Value shapedValue, bool escape,
-                                   bool copy = true);
+FailureOr<Value>
+allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
+                             bool escape, const BufferizationOptions &options,
+                             bool copy = true);
 
 /// Lookup the buffer for the given value. If the value was not bufferized
 /// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
 /// from which the memref operand is returned.
-Value getBuffer(RewriterBase &rewriter, Value value,
-                const BufferizationOptions &options);
+FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
+                           const BufferizationOptions &options);
 
 /// Return the buffer type for a given Value (tensor) after bufferization.
 ///
 /// Note: Op implementations should preferrably call `getBuffer()->getType()`.
 /// This function should only be used if `getBuffer` cannot be used.
-BaseMemRefType getBufferType(Value value, const BufferizationOptions &options);
+FailureOr<BaseMemRefType> getBufferType(Value value,
+                                        const BufferizationOptions &options);
 
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
 /// must be replaced with memref values.
@@ -513,18 +520,17 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
 BaseMemRefType getMemRefType(TensorType tensorType,
                              const BufferizationOptions &options,
                              MemRefLayoutAttrInterface layout = {},
-                             Attribute memorySpace = {});
+                             unsigned memorySpace = 0);
 
 /// Return a MemRef type with fully dynamic layout. If the given tensor type
 /// is unranked, return an unranked MemRef type.
 BaseMemRefType getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
-                                                   Attribute memorySpace = {});
+                                                   unsigned memorySpace = 0);
 
 /// Return a MemRef type with a static identity layout (i.e., no layout map). If
 /// the given tensor type is unranked, return an unranked MemRef type.
-BaseMemRefType
-getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
-                                      Attribute memorySpace = {});
+BaseMemRefType getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
+                                                     unsigned memorySpace = 0);
 
 } // namespace bufferization
 } // namespace mlir

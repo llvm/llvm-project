@@ -217,10 +217,13 @@ Constant *Evaluator::ComputeLoadResult(Constant *P, Type *Ty) {
   P = cast<Constant>(P->stripAndAccumulateConstantOffsets(
       DL, Offset, /* AllowNonInbounds */ true));
   Offset = Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(P->getType()));
-  auto *GV = dyn_cast<GlobalVariable>(P);
-  if (!GV)
-    return nullptr;
+  if (auto *GV = dyn_cast<GlobalVariable>(P))
+    return ComputeLoadResult(GV, Ty, Offset);
+  return nullptr;
+}
 
+Constant *Evaluator::ComputeLoadResult(GlobalVariable *GV, Type *Ty,
+                                       const APInt &Offset) {
   auto It = MutatedMemory.find(GV);
   if (It != MutatedMemory.end())
     return It->second.read(Ty, Offset, DL);
@@ -358,8 +361,10 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       LLVM_DEBUG(dbgs() << "Found a Select! Simplifying: " << *InstResult
                         << "\n");
     } else if (auto *EVI = dyn_cast<ExtractValueInst>(CurInst)) {
-      InstResult = ConstantExpr::getExtractValue(
+      InstResult = ConstantFoldExtractValueInstruction(
           getVal(EVI->getAggregateOperand()), EVI->getIndices());
+      if (!InstResult)
+        return false;
       LLVM_DEBUG(dbgs() << "Found an ExtractValueInst! Simplifying: "
                         << *InstResult << "\n");
     } else if (auto *IVI = dyn_cast<InsertValueInst>(CurInst)) {
@@ -436,16 +441,39 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
                               << "intrinsic.\n");
             return false;
           }
-          Constant *Ptr = getVal(MSI->getDest());
-          Constant *Val = getVal(MSI->getValue());
-          Constant *DestVal =
-              ComputeLoadResult(getVal(Ptr), MSI->getValue()->getType());
-          if (Val->isNullValue() && DestVal && DestVal->isNullValue()) {
-            // This memset is a no-op.
-            LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
-            ++CurInst;
-            continue;
+
+          auto *LenC = dyn_cast<ConstantInt>(getVal(MSI->getLength()));
+          if (!LenC) {
+            LLVM_DEBUG(dbgs() << "Memset with unknown length.\n");
+            return false;
           }
+
+          Constant *Ptr = getVal(MSI->getDest());
+          APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+          Ptr = cast<Constant>(Ptr->stripAndAccumulateConstantOffsets(
+              DL, Offset, /* AllowNonInbounds */ true));
+          auto *GV = dyn_cast<GlobalVariable>(Ptr);
+          if (!GV) {
+            LLVM_DEBUG(dbgs() << "Memset with unknown base.\n");
+            return false;
+          }
+
+          Constant *Val = getVal(MSI->getValue());
+          APInt Len = LenC->getValue();
+          while (Len != 0) {
+            Constant *DestVal = ComputeLoadResult(GV, Val->getType(), Offset);
+            if (DestVal != Val) {
+              LLVM_DEBUG(dbgs() << "Memset is not a no-op at offset "
+                                << Offset << " of " << *GV << ".\n");
+              return false;
+            }
+            ++Offset;
+            --Len;
+          }
+
+          LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
+          ++CurInst;
+          continue;
         }
 
         if (II->isLifetimeStartOrEnd()) {

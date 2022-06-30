@@ -21,6 +21,7 @@ add_llvm_tool(llvm-reduce
   ReducerWorkItem.cpp
   TestRunner.cpp
   deltas/Delta.cpp
+  deltas/Utils.cpp
   deltas/ReduceAliases.cpp
   deltas/ReduceArguments.cpp
   deltas/ReduceAttributes.cpp

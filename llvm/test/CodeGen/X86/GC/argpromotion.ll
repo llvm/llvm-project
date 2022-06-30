@@ -1,4 +1,4 @@
-; RUN: opt < %s -argpromotion
+; RUN: opt < %s -passes=argpromotion
 
 declare void @llvm.gcroot(ptr, ptr)
 

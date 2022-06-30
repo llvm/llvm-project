@@ -1279,8 +1279,6 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
         const size_t num_ranges = ranges.GetSize();
         for (size_t i = 0; i < num_ranges; ++i) {
           const DWARFRangeList::Entry &range = ranges.GetEntryRef(i);
-          if (range.GetByteSize() == 0)
-            continue;
           const addr_t range_base = range.GetRangeBase();
           if (range_base >= subprogram_low_pc)
             block->AddRange(Block::Range(range_base - subprogram_low_pc,

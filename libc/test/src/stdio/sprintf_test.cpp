@@ -92,7 +92,7 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
 
   // Length Modifier Tests.
 
-  written = __llvm_libc::sprintf(buff, "%hhu", 257); // 0x10001
+  written = __llvm_libc::sprintf(buff, "%hhu", 257); // 0x101
   EXPECT_EQ(written, 1);
   ASSERT_STREQ(buff, "1");
 
@@ -361,6 +361,162 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
   written = __llvm_libc::sprintf(buff, "%p", buff);
   EXPECT_GT(written, 0);
 }
+
+TEST(LlvmLibcSPrintfTest, OctConv) {
+  char buff[64];
+  int written;
+
+  // Basic Tests.
+
+  written = __llvm_libc::sprintf(buff, "%o", 01234);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "1234");
+
+  written = __llvm_libc::sprintf(buff, "%o", 04567);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "4567");
+
+  // Length Modifier Tests.
+
+  written = __llvm_libc::sprintf(buff, "%hho", 0401);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "1");
+
+  written = __llvm_libc::sprintf(buff, "%llo", 01777777777777777777777ull);
+  EXPECT_EQ(written, 22);
+  ASSERT_STREQ(buff, "1777777777777777777777"); // ull max
+
+  written = __llvm_libc::sprintf(buff, "%to", ~ptrdiff_t(0));
+  if (sizeof(ptrdiff_t) == 8) {
+    EXPECT_EQ(written, 22);
+    ASSERT_STREQ(buff, "1777777777777777777777");
+  } else if (sizeof(ptrdiff_t) == 4) {
+    EXPECT_EQ(written, 11);
+    ASSERT_STREQ(buff, "37777777777");
+  }
+
+  // Min Width Tests.
+
+  written = __llvm_libc::sprintf(buff, "%4o", 0701);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, " 701");
+
+  written = __llvm_libc::sprintf(buff, "%2o", 0107);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "107");
+
+  // Precision Tests.
+
+  written = __llvm_libc::sprintf(buff, "%o", 0);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "0");
+
+  written = __llvm_libc::sprintf(buff, "%.0o", 0);
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ(buff, "");
+
+  written = __llvm_libc::sprintf(buff, "%.5o", 0153);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "00153");
+
+  written = __llvm_libc::sprintf(buff, "%.2o", 0135);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "135");
+
+  // Flag Tests.
+
+  written = __llvm_libc::sprintf(buff, "%-5o", 0246);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "246  ");
+
+  written = __llvm_libc::sprintf(buff, "%#o", 0234);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "0234");
+
+  written = __llvm_libc::sprintf(buff, "%05o", 0470);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "00470");
+
+  written = __llvm_libc::sprintf(buff, "%0#6o", 0753);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "000753");
+
+  written = __llvm_libc::sprintf(buff, "%-#6o", 0642);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "0642  ");
+
+  // Combined Tests.
+
+  written = __llvm_libc::sprintf(buff, "%#-07o", 0703);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "0703   ");
+
+  written = __llvm_libc::sprintf(buff, "%7.5o", 0314);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "  00314");
+
+  written = __llvm_libc::sprintf(buff, "%#9.5o", 0234);
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ(buff, "    00234");
+
+  written = __llvm_libc::sprintf(buff, "%-7.5o", 0260);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "00260  ");
+
+  written = __llvm_libc::sprintf(buff, "%5.4o", 010000);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "10000");
+
+  // Multiple Conversion Tests.
+
+  written = __llvm_libc::sprintf(buff, "%10o %-#10o", 0456, 0123);
+  EXPECT_EQ(written, 21);
+  ASSERT_STREQ(buff, "       456 0123      ");
+
+  written = __llvm_libc::sprintf(buff, "%-5.4o%#.4o", 075, 025);
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ(buff, "0075 0025");
+
+  written = __llvm_libc::sprintf(buff, "%04hho %#.5llo %-6.3zo", 256 + 077,
+                                 01000000000000ll, size_t(2));
+  EXPECT_EQ(written, 26);
+  ASSERT_STREQ(buff, "0077 01000000000000 002   ");
+}
+
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+TEST(LlvmLibcSPrintfTest, WriteIntConv) {
+  char buff[64];
+  int written;
+  int test_val = -1;
+
+  test_val = -1;
+  written = __llvm_libc::sprintf(buff, "12345%n67890", &test_val);
+  EXPECT_EQ(written, 10);
+  EXPECT_EQ(test_val, 5);
+  ASSERT_STREQ(buff, "1234567890");
+
+  test_val = -1;
+  written = __llvm_libc::sprintf(buff, "%n", &test_val);
+  EXPECT_EQ(written, 0);
+  EXPECT_EQ(test_val, 0);
+  ASSERT_STREQ(buff, "");
+
+  test_val = 0x100;
+  written = __llvm_libc::sprintf(buff, "ABC%hhnDEF", &test_val);
+  EXPECT_EQ(written, 6);
+  EXPECT_EQ(test_val, 0x103);
+  ASSERT_STREQ(buff, "ABCDEF");
+
+  test_val = -1;
+  written = __llvm_libc::sprintf(buff, "%s%n", "87654321", &test_val);
+  EXPECT_EQ(written, 8);
+  EXPECT_EQ(test_val, 8);
+  ASSERT_STREQ(buff, "87654321");
+
+  written = __llvm_libc::sprintf(buff, "abc123%n", nullptr);
+  EXPECT_LT(written, 0);
+}
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
 
 #ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
 TEST(LlvmLibcSPrintfTest, IndexModeParsing) {

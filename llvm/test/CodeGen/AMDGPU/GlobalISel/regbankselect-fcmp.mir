@@ -10,10 +10,12 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
     ; CHECK-LABEL: name: fcmp_ss
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(uge), [[COPY]](s32), [[COPY2]]
+    ; CHECK: liveins: $sgpr0, $sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(uge), [[COPY]](s32), [[COPY2]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_FCMP floatpred(uge), %0(s32), %1
@@ -27,9 +29,11 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr0
     ; CHECK-LABEL: name: fcmp_sv
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(uge), [[COPY]](s32), [[COPY1]]
+    ; CHECK: liveins: $sgpr0, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(uge), [[COPY]](s32), [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s1) = G_FCMP floatpred(uge), %0, %1
@@ -43,10 +47,12 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr0
     ; CHECK-LABEL: name: fcmp_vs
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(uge), [[COPY1]](s32), [[COPY2]]
+    ; CHECK: liveins: $sgpr0, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(uge), [[COPY1]](s32), [[COPY2]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s1) = G_FCMP floatpred(uge), %1, %0
@@ -60,9 +66,11 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: fcmp_vv
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; CHECK: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP floatpred(uge), [[COPY]](s32), [[COPY1]]
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP floatpred(uge), [[COPY]](s32), [[COPY1]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s1) = G_ICMP floatpred(uge), %0, %1

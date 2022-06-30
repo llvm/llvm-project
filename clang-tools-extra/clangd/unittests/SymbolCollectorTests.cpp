@@ -119,7 +119,7 @@ public:
 
   // build() must have been called.
   bool shouldCollect(llvm::StringRef Name, bool Qualified = true) {
-    assert(AST.hasValue());
+    assert(AST);
     const NamedDecl &ND =
         Qualified ? findDecl(*AST, Name) : findUnqualifiedDecl(*AST, Name);
     const SourceManager &SM = AST->getSourceManager();

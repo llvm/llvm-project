@@ -351,6 +351,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":Parser",
         ":Support",
         "//llvm:Support",
     ],
@@ -2082,6 +2083,7 @@ cc_library(
         "lib/Dialect/SparseTensor/Transforms/*.h",
     ]),
     hdrs = [
+        "include/mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/SparseTensor/Transforms/Passes.h",
         "include/mlir/ExecutionEngine/SparseTensorUtils.h",
     ],
@@ -2090,6 +2092,7 @@ cc_library(
         ":AffineDialect",
         ":ArithmeticDialect",
         ":BufferizationDialect",
+        ":BufferizationTransforms",
         ":ComplexDialect",
         ":FuncDialect",
         ":FuncTransforms",
@@ -2834,6 +2837,14 @@ gentbl_cc_library(
         (
             ["-gen-dialect-defs"],
             "include/mlir/Dialect/Shape/IR/ShapeOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/Shape/IR/ShapeOpsTypes.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/Shape/IR/ShapeOpsTypes.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -7472,6 +7483,7 @@ cc_library(
         ":ArithmeticDialect",
         ":ArithmeticUtils",
         ":DialectUtils",
+        ":FuncDialect",
         ":IR",
         ":LinalgAnalysis",
         ":LinalgDialect",
@@ -8955,6 +8967,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":MemRefDialect",
+        ":SparseTensorDialect",
         ":Support",
         ":TensorDialect",
         "//llvm:Support",

@@ -82,38 +82,6 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
-static bool isSplatMoveInstr(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-  case RISCV::PseudoVMV_V_X_M1:
-  case RISCV::PseudoVMV_V_X_M2:
-  case RISCV::PseudoVMV_V_X_M4:
-  case RISCV::PseudoVMV_V_X_M8:
-  case RISCV::PseudoVMV_V_X_MF2:
-  case RISCV::PseudoVMV_V_X_MF4:
-  case RISCV::PseudoVMV_V_X_MF8:
-  case RISCV::PseudoVMV_V_I_M1:
-  case RISCV::PseudoVMV_V_I_M2:
-  case RISCV::PseudoVMV_V_I_M4:
-  case RISCV::PseudoVMV_V_I_M8:
-  case RISCV::PseudoVMV_V_I_MF2:
-  case RISCV::PseudoVMV_V_I_MF4:
-  case RISCV::PseudoVMV_V_I_MF8:
-    return true;
-  }
-}
-
-static bool isSplatOfZeroOrMinusOne(const MachineInstr &MI) {
-  if (!isSplatMoveInstr(MI))
-    return false;
-
-  const MachineOperand &SrcMO = MI.getOperand(1);
-  if (SrcMO.isImm())
-    return SrcMO.getImm() == 0 || SrcMO.getImm() == -1;
-  return SrcMO.isReg() && SrcMO.getReg() == RISCV::X0;
-}
-
 /// Get the EEW for a load or store instruction.  Return None if MI is not
 /// a load or store which ignores SEW.
 static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
@@ -421,14 +389,6 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
     Res.MaskPolicy = false;
   }
 
-  // A splat of 0/-1 is always a splat of 0/-1, regardless of etype.
-  // TODO: We're currently demanding VL + SEWLMULRatio which is sufficient
-  // but not neccessary.  What we really need is VLInBytes.
-  if (isSplatOfZeroOrMinusOne(MI)) {
-    Res.SEW = false;
-    Res.LMUL = false;
-  }
-
   // If this is a mask reg operation, it only cares about VLMAX.
   // TODO: Possible extensions to this logic
   // * Probably ok if available VLMax is larger than demanded
@@ -706,7 +666,7 @@ public:
     if (!isValid())
       OS << "Uninitialized";
     if (isUnknown())
-      OS << "unknown";;
+      OS << "unknown";
     if (hasAVLReg())
       OS << "AVLReg=" << (unsigned)AVLReg;
     if (hasAVLImm())
@@ -990,6 +950,9 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   if (CurInfo.isCompatible(MI, Require))
     return false;
 
+  if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
+    return true;
+
   // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
   // VL=0 is uninteresting (as it should have been deleted already), so it is
   // compatible if we can prove both are non-zero.  Additionally, if writing
@@ -1009,8 +972,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   // it might be defined by a VSET(I)VLI. If it has the same VLMAX we need
   // and the last VL/VTYPE we observed is the same, we don't need a
   // VSETVLI here.
-  if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
-      Require.getAVLReg().isVirtual() && !CurInfo.hasSEWLMULRatioOnly() &&
+  if (Require.hasAVLReg() && Require.getAVLReg().isVirtual() &&
       CurInfo.hasCompatibleVTYPE(MI, Require)) {
     if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
       if (isVectorConfigInstr(*DefMI)) {

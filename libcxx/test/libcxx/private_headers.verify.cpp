@@ -136,6 +136,8 @@ END-SCRIPT
 #include <__algorithm/ranges_minmax.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_minmax.h'}}
 #include <__algorithm/ranges_minmax_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_minmax_element.h'}}
 #include <__algorithm/ranges_mismatch.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_mismatch.h'}}
+#include <__algorithm/ranges_move.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move.h'}}
+#include <__algorithm/ranges_move_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move_backward.h'}}
 #include <__algorithm/ranges_none_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_none_of.h'}}
 #include <__algorithm/ranges_replace.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_replace.h'}}
 #include <__algorithm/ranges_replace_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_replace_if.h'}}
@@ -318,6 +320,7 @@ END-SCRIPT
 #include <__iterator/access.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/access.h'}}
 #include <__iterator/advance.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/advance.h'}}
 #include <__iterator/back_insert_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/back_insert_iterator.h'}}
+#include <__iterator/bounded_iter.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/bounded_iter.h'}}
 #include <__iterator/common_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/common_iterator.h'}}
 #include <__iterator/concepts.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/concepts.h'}}
 #include <__iterator/counted_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/counted_iterator.h'}}

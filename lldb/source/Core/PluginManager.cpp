@@ -1033,14 +1033,14 @@ PluginManager::GetSymbolVendorCreateCallbackAtIndex(uint32_t idx) {
 #pragma mark Trace
 
 struct TraceInstance
-    : public PluginInstance<TraceCreateInstanceForSessionFile> {
+    : public PluginInstance<TraceCreateInstanceFromBundle> {
   TraceInstance(
       llvm::StringRef name, llvm::StringRef description,
-      CallbackType create_callback_for_session_file,
+      CallbackType create_callback_from_bundle,
       TraceCreateInstanceForLiveProcess create_callback_for_live_process,
       llvm::StringRef schema)
-      : PluginInstance<TraceCreateInstanceForSessionFile>(
-            name, description, create_callback_for_session_file),
+      : PluginInstance<TraceCreateInstanceFromBundle>(
+            name, description, create_callback_from_bundle),
         schema(schema),
         create_callback_for_live_process(create_callback_for_live_process) {}
 
@@ -1057,21 +1057,21 @@ static TraceInstances &GetTracePluginInstances() {
 
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
-    TraceCreateInstanceForSessionFile create_callback_for_session_file,
+    TraceCreateInstanceFromBundle create_callback_from_bundle,
     TraceCreateInstanceForLiveProcess create_callback_for_live_process,
     llvm::StringRef schema) {
   return GetTracePluginInstances().RegisterPlugin(
-      name, description, create_callback_for_session_file,
+      name, description, create_callback_from_bundle,
       create_callback_for_live_process, schema);
 }
 
 bool PluginManager::UnregisterPlugin(
-    TraceCreateInstanceForSessionFile create_callback_for_session_file) {
+    TraceCreateInstanceFromBundle create_callback_from_bundle) {
   return GetTracePluginInstances().UnregisterPlugin(
-      create_callback_for_session_file);
+      create_callback_from_bundle);
 }
 
-TraceCreateInstanceForSessionFile
+TraceCreateInstanceFromBundle
 PluginManager::GetTraceCreateCallback(llvm::StringRef plugin_name) {
   return GetTracePluginInstances().GetCallbackForName(plugin_name);
 }

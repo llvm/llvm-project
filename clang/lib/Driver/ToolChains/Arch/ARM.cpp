@@ -121,7 +121,8 @@ static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
   if (ArchKind == llvm::ARM::ArchKind::INVALID ||
       (Split.second.size() && !DecodeARMFeatures(D, Split.second, CPUName,
                                                  ArchKind, Features, ArgFPUID)))
-    D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
+    D.Diag(clang::diag::err_drv_unsupported_option_argument)
+        << A->getOption().getName() << A->getValue();
 }
 
 // Check -mcpu=. Needs ArchName to handle -mcpu=generic.
@@ -137,7 +138,8 @@ static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
   if (ArchKind == llvm::ARM::ArchKind::INVALID ||
       (Split.second.size() &&
        !DecodeARMFeatures(D, Split.second, CPU, ArchKind, Features, ArgFPUID)))
-    D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
+    D.Diag(clang::diag::err_drv_unsupported_option_argument)
+        << A->getOption().getName() << A->getValue();
 }
 
 bool arm::useAAPCSForMachO(const llvm::Triple &T) {
@@ -716,6 +718,15 @@ fp16_fml_fallthrough:
         Features.push_back("-aes");
       }
     }
+  }
+
+  // Propagate frame-chain model selection
+  if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
+    StringRef FrameChainOption = A->getValue();
+    if (FrameChainOption.startswith("aapcs"))
+      Features.push_back("+aapcs-frame-chain");
+    if (FrameChainOption == "aapcs+leaf")
+      Features.push_back("+aapcs-frame-chain-leaf");
   }
 
   // CMSE: Check for target 8M (for -mcmse to be applicable) is performed later.

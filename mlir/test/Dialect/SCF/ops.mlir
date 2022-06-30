@@ -338,11 +338,11 @@ func.func @elide_terminator() -> () {
   %num_threads = arith.constant 100 : index
 
   //      CHECK:    scf.foreach_thread
-  // CHECK-NEXT:  }
+  // CHECK-NEXT:  } {thread_dim_mapping = [42]}
   // CHECK-NEXT:  return
   scf.foreach_thread (%thread_idx) in (%num_threads) -> () {
     scf.foreach_thread.perform_concurrently {
     }
-  }
+  } {thread_dim_mapping = [42]}
   return
 }

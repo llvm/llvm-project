@@ -13,7 +13,7 @@ define i32 @main(i1 %c) {
 ; CHECK-NEXT:    br label %interesting2
 
 ; CHECK-LABEL: interesting2:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 0
 
 interesting:
   br label %interesting2

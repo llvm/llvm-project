@@ -199,7 +199,7 @@ const char *RealOutputEditingBase::FormatExponent(
   }
   *--exponent = expo < 0 ? '-' : '+';
   if (edit.expoDigits || edit.IsListDirected() || exponent + 3 == eEnd) {
-    *--exponent = edit.descriptor == 'D' ? 'D' : 'E'; // not 'G'
+    *--exponent = edit.descriptor == 'D' ? 'D' : 'E'; // not 'G' or 'Q'
   }
   length = eEnd - exponent;
   return overflow ? nullptr : exponent;
@@ -261,12 +261,11 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
     flags |= decimal::AlwaysSign;
   }
   bool noLeadingSpaces{editWidth == 0};
+  int scale{edit.modes.scale}; // 'kP' value
   if (editWidth == 0) { // "the processor selects the field width"
     if (edit.digits.has_value()) { // E0.d
-      if (editDigits == 0) { // E0.0
-        editWidth = 7; // -.0E+ee
-      } else {
-        editWidth = editDigits + 6; // -.666E+ee
+      if (editDigits == 0 && scale <= 0) { // E0.0
+        significantDigits = 1;
       }
     } else { // E0
       flags |= decimal::Minimize;
@@ -276,7 +275,6 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   }
   bool isEN{edit.variation == 'N'};
   bool isES{edit.variation == 'S'};
-  int scale{edit.modes.scale}; // 'kP' value
   int zeroesAfterPoint{0};
   if (isEN) {
     scale = IsZero() ? 1 : 3;
@@ -485,7 +483,7 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   int significantDigits{
       edit.digits.value_or(BinaryFloatingPoint::decimalPrecision)}; // 'd'
   if (editWidth > 0 && significantDigits == 0) {
-    return edit; // Gw.0 -> Ew.0 for w > 0
+    return edit; // Gw.0Ee -> Ew.0Ee for w > 0
   }
   int flags{0};
   if (edit.modes.editingFlags & signPlus) {
@@ -498,7 +496,10 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   }
   int expo{IsZero() ? 1 : converted.decimalExponent}; // 's'
   if (expo < 0 || expo > significantDigits) {
-    return edit; // Ew.d
+    if (editWidth == 0 && !edit.expoDigits) { // G0.d -> G0.dE0
+      edit.expoDigits = 0;
+    }
+    return edit; // Ew.dEe
   }
   edit.descriptor = 'F';
   edit.modes.scale = 0; // kP is ignored for G when no exponent field

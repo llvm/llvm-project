@@ -1493,7 +1493,11 @@ def int_ppc_tsuspend : ClangBuiltin<"__builtin_tsuspend">,
 def int_ppc_ttest : ClangBuiltin<"__builtin_ttest">,
       Intrinsic<[llvm_i64_ty], [], []>;
 
-def int_ppc_cfence : Intrinsic<[], [llvm_anyint_ty], []>;
+// We currently use llvm.ppc.cfence in the context of atomic load which
+// in LLVM IR requires its type to be one of integer, pointer and
+// float point type. So llvm_any_ty here refers to type mentioned above.
+// Backend is supposed to lower these types to appropriate MVTs.
+def int_ppc_cfence : Intrinsic<[], [llvm_any_ty], []>;
 
 // PowerPC set FPSCR Intrinsic Definitions.
 def int_ppc_setrnd : ClangBuiltin<"__builtin_setrnd">,

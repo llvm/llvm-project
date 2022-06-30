@@ -82,7 +82,7 @@ ConstString ValueObjectChild::GetDisplayTypeName() {
 }
 
 LazyBool ValueObjectChild::CanUpdateWithInvalidExecutionContext() {
-  if (m_can_update_with_invalid_exe_ctx.hasValue())
+  if (m_can_update_with_invalid_exe_ctx)
     return m_can_update_with_invalid_exe_ctx.getValue();
   if (m_parent) {
     ValueObject *opinionated_parent =

@@ -12,15 +12,15 @@ add_header_library(
     NearestIntegerOperations.h
     NormalFloat.h
     PlatformDefs.h
-    UInt.h
     builtin_wrappers.h
   DEPENDS
     libc.include.math
     libc.include.errno
     libc.include.fenv
     libc.src.__support.common
-    libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.uint128
     libc.src.errno.errno
 )
 

@@ -491,14 +491,14 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
   using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
-    auto oldFill = reshapeOp.src().template getDefiningOp<FillOp>();
+    auto oldFill = reshapeOp.getSrc().template getDefiningOp<FillOp>();
     if (!oldFill)
       return failure();
 
     Location loc = oldFill.getLoc();
     auto newInit = rewriter.create<TensorReshapeOp>(
         loc, reshapeOp.getResultType(), oldFill.output(),
-        reshapeOp.reassociation());
+        reshapeOp.getReassociation());
     rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, ValueRange{oldFill.value()},
                                         ValueRange{newInit});
 
@@ -513,7 +513,7 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
 
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
-    auto fillOp = padOp.source().getDefiningOp<linalg::FillOp>();
+    auto fillOp = padOp.getSource().getDefiningOp<linalg::FillOp>();
     if (!fillOp)
       return failure();
 
@@ -553,7 +553,7 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
 
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertOp,
                                 PatternRewriter &rewriter) const override {
-    auto srcPadOp = insertOp.source().getDefiningOp<tensor::PadOp>();
+    auto srcPadOp = insertOp.getSource().getDefiningOp<tensor::PadOp>();
     if (!srcPadOp)
       return failure();
 
@@ -562,7 +562,7 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
 
     // Walk back the tensor.insert_slice chain and find the first destination
     // value at the start of the chain.
-    Value firstDest = insertOp.dest();
+    Value firstDest = insertOp.getDest();
     while (auto prevOp = firstDest.getDefiningOp<tensor::InsertSliceOp>()) {
       if (prevOp.getType().getRank() != prevOp.getSourceType().getRank())
         return failure();
@@ -593,7 +593,7 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
 
       if (!disjoint)
         break;
-      firstDest = prevOp.dest();
+      firstDest = prevOp.getDest();
     }
 
     // Check whether the first destination is a fill op. For overlapped cases,
@@ -633,12 +633,13 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
     SmallVector<OpFoldResult, 4> newSizes;
     for (int i = 0, e = srcPadOp.getSourceType().getRank(); i < e; ++i) {
       newSizes.push_back(
-          rewriter.create<tensor::DimOp>(loc, srcPadOp.source(), i).result());
+          rewriter.create<tensor::DimOp>(loc, srcPadOp.getSource(), i)
+              .getResult());
     }
 
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        insertOp, srcPadOp.source(), insertOp.dest(), newOffsets, newSizes,
-        insertOp.getMixedStrides());
+        insertOp, srcPadOp.getSource(), insertOp.getDest(), newOffsets,
+        newSizes, insertOp.getMixedStrides());
     return success();
   }
 };
@@ -1216,13 +1217,13 @@ struct FoldInitTensorWithExtractSliceOp
 
   LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
-    if (!sliceOp.source().getDefiningOp<linalg::InitTensorOp>())
+    if (!sliceOp.getSource().getDefiningOp<linalg::InitTensorOp>())
       return failure();
     // ExtractSliceOp may be rank-reducing; its dynamic sizes must be preserved
     // as well as its result type.
     rewriter.replaceOpWithNewOp<linalg::InitTensorOp>(
-        sliceOp, sliceOp.sizes(),
-        sliceOp.result().getType().cast<RankedTensorType>().getShape(),
+        sliceOp, sliceOp.getSizes(),
+        sliceOp.getResult().getType().cast<RankedTensorType>().getShape(),
         sliceOp.getSourceType().getElementType());
     return success();
   }
@@ -1235,7 +1236,7 @@ struct FoldInitTensorWithTensorReshapeOp
 
   LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
-    if (!reshapeOp.src().template getDefiningOp<InitTensorOp>())
+    if (!reshapeOp.getSrc().template getDefiningOp<InitTensorOp>())
       return failure();
     Location loc = reshapeOp.getLoc();
     ReifiedRankedShapedTypeDims resultShapes;
@@ -1264,7 +1265,7 @@ struct FoldInitTensorWithDimOp : public OpRewritePattern<tensor::DimOp> {
   LogicalResult matchAndRewrite(tensor::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
     Optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
-    auto initTensorOp = dimOp.source().getDefiningOp<linalg::InitTensorOp>();
+    auto initTensorOp = dimOp.getSource().getDefiningOp<linalg::InitTensorOp>();
     if (!initTensorOp || !maybeConstantIndex)
       return failure();
     if (!initTensorOp.isDynamicSize(*maybeConstantIndex))
@@ -1299,7 +1300,7 @@ struct FoldInitTensorWithTensorCastOp
                                 PatternRewriter &rewriter) const override {
     if (!canFoldIntoProducerOp(castOp))
       return failure();
-    auto producer = castOp.source().getDefiningOp<InitTensorOp>();
+    auto producer = castOp.getSource().getDefiningOp<InitTensorOp>();
     if (!producer)
       return failure();
 
@@ -1581,7 +1582,7 @@ struct FoldTensorCastProducerOp : public OpInterfaceRewritePattern<LinalgOp> {
     for (OpOperand *opOperand : op.getInputOperands()) {
       auto tensorCastOp = opOperand->get().getDefiningOp<tensor::CastOp>();
       newOperands.push_back(canFoldIntoConsumerOp(tensorCastOp)
-                                ? tensorCastOp.source()
+                                ? tensorCastOp.getSource()
                                 : opOperand->get());
     }
     // Init tensors may fold, in which case the resultType must also change.
@@ -1622,7 +1623,7 @@ struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
                                 PatternRewriter &rewriter) const override {
     if (!tensor::canFoldIntoProducerOp(castOp))
       return failure();
-    auto linalgOp = castOp.source().getDefiningOp<LinalgOp>();
+    auto linalgOp = castOp.getSource().getDefiningOp<LinalgOp>();
     if (!linalgOp)
       return failure();
 
@@ -1630,7 +1631,7 @@ struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
     rewriter.setInsertionPoint(linalgOp);
 
     Location loc = linalgOp.getLoc();
-    OpResult resultValue = castOp.source().cast<OpResult>();
+    OpResult resultValue = castOp.getSource().cast<OpResult>();
     unsigned resultNumber = resultValue.getResultNumber();
     auto resultType = castOp->getResult(0).getType().cast<RankedTensorType>();
     // Replace the `outs` for the result with a `tensor.cast`. This cast is now
@@ -1681,7 +1682,7 @@ static void populateMap(LinalgOp linalgOp, ArrayRef<OpOperand *> operands,
     ArrayRef<int64_t> sourceShape = sourceType.getShape();
     if (parentOp) {
       if (auto castOp = dyn_cast<tensor::CastOp>(parentOp)) {
-        Value castSource = castOp.source();
+        Value castSource = castOp.getSource();
         auto castSourceType = castSource.getType().cast<RankedTensorType>();
         if (castSourceType.hasStaticShape())
           sourceShape = castSourceType.getShape();

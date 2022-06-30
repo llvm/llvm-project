@@ -11,14 +11,8 @@
 ! RUN: %flang_fc1 -fdebug-dump-provenance %s  2>&1 | FileCheck %s --check-prefix=WITHOUT
 ! RUN: %flang_fc1 -fdebug-measure-parse-tree %s  2>&1 | FileCheck %s --check-prefix=WITHOUT
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITH -Werror
-!-----------------------------------------
 ! WITH: Could not scan
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITHOUT -Werror
-!-----------------------------------------
 ! WITHOUT-NOT: Could not scan
 
 1 continue

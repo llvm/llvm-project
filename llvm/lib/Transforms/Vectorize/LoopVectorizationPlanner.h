@@ -188,12 +188,16 @@ struct VectorizationFactor {
   /// Cost of the loop with that width.
   InstructionCost Cost;
 
-  VectorizationFactor(ElementCount Width, InstructionCost Cost)
-      : Width(Width), Cost(Cost) {}
+  /// Cost of the scalar loop.
+  InstructionCost ScalarCost;
+
+  VectorizationFactor(ElementCount Width, InstructionCost Cost,
+                      InstructionCost ScalarCost)
+      : Width(Width), Cost(Cost), ScalarCost(ScalarCost) {}
 
   /// Width 1 means no vectorization, cost 0 means uncomputed cost.
   static VectorizationFactor Disabled() {
-    return {ElementCount::getFixed(1), 0};
+    return {ElementCount::getFixed(1), 0, 0};
   }
 
   bool operator==(const VectorizationFactor &rhs) const {

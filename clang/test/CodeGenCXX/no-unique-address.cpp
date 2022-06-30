@@ -93,3 +93,14 @@ int loadWhereLaterDeclaredFieldHasLowerOffset(LaterDeclaredFieldHasLowerOffset &
 // Note, never emit TBAA for zero-size fields.
 // CHECK-OPT: ![[TBAA_AB]] = !{![[TBAA_A:[0-9]*]], ![[TBAA_INT:[0-9]*]], i64 4}
 // CHECK-OPT: ![[TBAA_A]] = !{!"_ZTS32LaterDeclaredFieldHasLowerOffset", ![[TBAA_INT]], i64 0, ![[TBAA_INT]], i64 4}
+
+struct NonTrivialInit {
+  NonTrivialInit();
+};
+struct HasZeroSizedFieldWithNonTrivialInit {
+  int a;
+  [[no_unique_address]] NonTrivialInit b;
+};
+HasZeroSizedFieldWithNonTrivialInit testHasZeroSizedFieldWithNonTrivialInit = {.a = 1};
+// CHECK-LABEL: define {{.*}}cxx_global_var_init
+// CHECK: call {{.*}}@_ZN14NonTrivialInitC1Ev({{.*}}@testHasZeroSizedFieldWithNonTrivialInit

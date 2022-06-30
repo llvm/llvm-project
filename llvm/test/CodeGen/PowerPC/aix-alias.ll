@@ -56,7 +56,7 @@ entry:
 ; ASM-NEXT:    .csect fun[DS]
 ; ASM-NEXT:  fun_weak:                               # @fun
 ; ASM-NEXT:  fun_hidden:
-; ASM:         .csect .text[PR],2
+; ASM:         .csect .text[PR],5
 ; ASM-NEXT:  .fun:
 ; ASM-NEXT:  .fun_weak:
 ; ASM-NEXT:  .fun_hidden:
@@ -64,7 +64,7 @@ entry:
 ; ASM-NEXT:    li 3, 0
 ; ASM-NEXT:    blr
 ; ASM-NEXT:                                          # -- End function
-; ASM:       .csect .text[PR],2
+; ASM:       .csect .text[PR],5
 ; ASM-NEXT:  .test:
 ; ASM-NEXT:  # %bb.0:                                # %entry
 ; ASM:         bl .fun

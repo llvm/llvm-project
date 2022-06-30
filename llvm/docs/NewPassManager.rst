@@ -220,29 +220,47 @@ call
       AM.getResult<ModuleAnalysisManagerCGSCCProxy>(InitialC, CG);
   FooAnalysisResult *AR = MAMProxy.getCachedResult<FooAnalysis>(M);
 
-Getting direct access to an outer level IR analysis manager is not allowed.
-This is to keep in mind potential future pass concurrency, for example
-parallelizing function passes over different functions in a CGSCC or module.
-Since passes can ask for a cached analysis result, allowing passes to trigger
-outer level analysis computation could result in non-determinism if
-concurrency was supported. Therefore a pass running on inner level IR cannot
-change the state of outer level IR analyses. Another limitation is that outer
-level IR analyses that are used must be immutable, or else they could be
-invalidated by changes to inner level IR. Outer analyses unused by inner
-passes can and often will be invalidated by changes to inner level IR. These
-invalidations happen after the inner pass manager finishes, so accessing
-mutable analyses would give invalid results.
+Asking for a cached and immutable outer level IR analysis works via
+``getCachedResult()``, but getting direct access to an outer level IR analysis
+manager to compute an outer level IR analysis is not allowed. This is for a
+couple reasons.
 
-The exception to the above is accessing function analyses in loop passes.
-Loop passes inherently require modifying the function the loop is in, and
-that includes some function analyses the loop analyses depend on. This
-discounts future concurrency over separate loops in a function, but that's a
-tradeoff due to how tightly a loop and its function are coupled. To make sure
-the function analyses loop passes use are valid, they are manually updated in
-the loop passes to ensure that invalidation is not necessary. There is a set
-of common function analyses that loop passes and analyses have access to
-which is passed into loop passes as a ``LoopStandardAnalysisResults``
-parameter. Other function analyses are not accessible from loop passes.
+The first reason is that running analyses across outer level IR in inner level
+IR passes can result in quadratic compile time behavior. For example, a module
+analysis often scans every function and allowing function passes to run a module
+analysis may cause us to scan functions a quadratic number of times. If passes
+could keep outer level analyses up to date rather than computing them on demand
+this wouldn't be an issue, but that would be a lot of work to ensure every pass
+updates all outer level analyses, and so far this hasn't been necessary and
+there isn't infrastructure for this (aside from function analyses in loop passes
+as described below). Self-updating analyses that gracefully degrade also handle
+this problem (e.g. GlobalsAA), but they run into the issue of having to be
+manually recomputed somewhere in the optimization pipeline if we want precision,
+and they block potential future concurrency.
+
+The second reason is to keep in mind potential future pass concurrency, for
+example parallelizing function passes over different functions in a CGSCC or
+module. Since passes can ask for a cached analysis result, allowing passes to
+trigger outer level analysis computation could result in non-determinism if
+concurrency was supported. A related limitation is that outer level IR analyses
+that are used must be immutable, or else they could be invalidated by changes to
+inner level IR. Outer analyses unused by inner passes can and often will be
+invalidated by changes to inner level IR. These invalidations happen after the
+inner pass manager finishes, so accessing mutable analyses would give invalid
+results.
+
+The exception to not being able to access outer level analyses is accessing
+function analyses in loop passes. Loop passes often use function analyses such
+as the dominator tree. Loop passes inherently require modifying the function the
+loop is in, and that includes some function analyses the loop analyses depend
+on. This discounts future concurrency over separate loops in a function, but
+that's a tradeoff due to how tightly a loop and its function are coupled. To
+make sure the function analyses that loop passes use are valid, they are
+manually updated in the loop passes to ensure that invalidation is not
+necessary. There is a set of common function analyses that loop passes and
+analyses have access to which is passed into loop passes as a
+``LoopStandardAnalysisResults`` parameter. Other mutable function analyses are
+not accessible from loop passes.
 
 As with any caching mechanism, we need some way to tell analysis managers
 when results are no longer valid. Much of the analysis manager complexity
@@ -293,25 +311,31 @@ manually within the pass:
   FooModulePass::run(Module& M, ModuleAnalysisManager& AM) {
     auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-    // Invalidate all analysis results for function F
-    FAM.invalidate(F, PreservedAnalyses::none());
+    // Invalidate all analysis results for function F1.
+    FAM.invalidate(F1, PreservedAnalyses::none());
 
-    // Invalidate all analysis results
+    // Invalidate all analysis results across the entire module.
     AM.invalidate(M, PreservedAnalyses::none());
+
+    // Clear the entry in the analysis manager for function F2 if we've completely removed it from the module.
+    FAM.clear(F2);
 
     ...
   }
 
-This is especially important when a pass removes then adds a function. The
-analysis manager may store a pointer to a function that has been deleted, and
-if the pass creates a new function before invalidating analysis results, the
-new function may be at the same address as the old one, causing invalid
-cached results. This is also useful for being more precise about
-invalidation. Selectively invalidating analysis results only for functions
-modified in an SCC pass can allow more analysis results to remain. But except
-for complex fine-grain invalidation with inner proxies, passes should
-typically just return a proper ``PreservedAnalyses`` and let the pass manager
-deal with proper invalidation.
+One thing to note when accessing inner level IR analyses is cached results for
+deleted IR. If a function is deleted in a module pass, its address is still used
+as the key for cached analyses. Take care in the pass to either clear the
+results for that function or not use inner analyses at all.
+
+``AM.invalidate(M, PreservedAnalyses::none());`` will invalidate the inner
+analysis manager proxy which will clear all cached analyses, conservatively
+assuming that there are invalid addresses used as keys for cached analyses.
+However, if you'd like to be more selective about which analyses are
+cached/invalidated, you can mark the analysis manager proxy as preserved,
+essentially saying that all deleted entries have been taken care of manually.
+This should only be done with measurable compile time gains as it can be tricky
+to make sure all the right analyses are invalidated.
 
 Implementing Analysis Invalidation
 ==================================

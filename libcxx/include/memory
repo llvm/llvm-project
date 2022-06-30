@@ -871,6 +871,11 @@ template<size_t N, class T>
 #include <typeinfo>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iterator>
+#  include <utility>
+#endif
+
 // standard-mandated includes
 #include <compare>
 

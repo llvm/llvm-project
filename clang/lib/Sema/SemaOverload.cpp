@@ -11266,6 +11266,13 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   if (shouldSkipNotingLambdaConversionDecl(Fn))
     return;
 
+  // There is no physical candidate declaration to point to for OpenCL builtins.
+  // Except for failed conversions, the notes are identical for each candidate,
+  // so do not generate such notes.
+  if (S.getLangOpts().OpenCL && Fn->isImplicit() &&
+      Cand->FailureKind != ovl_fail_bad_conversion)
+    return;
+
   // Note deleted candidates, but only if they're viable.
   if (Cand->Viable) {
     if (Fn->isDeleted()) {

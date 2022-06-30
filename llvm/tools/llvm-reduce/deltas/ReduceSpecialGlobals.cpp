@@ -16,6 +16,7 @@
 
 #include "ReduceSpecialGlobals.h"
 #include "Delta.h"
+#include "Utils.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
@@ -29,7 +30,7 @@ static StringRef SpecialGlobalNames[] = {"llvm.used", "llvm.compiler.used"};
 static void extractSpecialGlobalsFromModule(Oracle &O, Module &Program) {
   for (StringRef Name : SpecialGlobalNames) {
     if (auto *Used = Program.getNamedGlobal(Name)) {
-      Used->replaceAllUsesWith(UndefValue::get(Used->getType()));
+      Used->replaceAllUsesWith(getDefaultValue(Used->getType()));
       Used->eraseFromParent();
     }
   }

@@ -519,17 +519,15 @@ be set in a ``.clang-tidy`` file in the following way:
 .. code-block:: yaml
 
   CheckOptions:
-    - key: my-check.SomeOption1
-      value: 123
-    - key: my-check.SomeOption2
-      value: 'some other value'
+    my-check.SomeOption1: 123
+    my-check.SomeOption2: 'some other value'
 
 If you need to specify check options on a command line, you can use the inline
 YAML format:
 
 .. code-block:: console
 
-  $ clang-tidy -config="{CheckOptions: [{key: a, value: b}, {key: x, value: y}]}" ...
+  $ clang-tidy -config="{CheckOptions: {a: b, x: y}}" ...
 
 
 Testing Checks

@@ -30,6 +30,13 @@ static llvm::cl::opt<bool> nonRecursiveProcedures(
                    "default for all Fortran standards prior to 2018."),
     llvm::cl::init(/*2018 standard=*/false));
 
+static llvm::cl::opt<bool> mainProgramGlobals(
+    "main-program-globals",
+    llvm::cl::desc(
+        "Allocate all variables in the main program as global variables and "
+        "not on the stack regardless of type, kind, and rank."),
+    llvm::cl::init(/*2018 standard=*/false), llvm::cl::Hidden);
+
 using namespace Fortran;
 
 namespace {
@@ -416,6 +423,8 @@ private:
     } else if (const auto *entryStmt = p->getIf<parser::EntryStmt>()) {
       const semantics::Symbol *sym =
           std::get<parser::Name>(entryStmt->t).symbol;
+      if (auto *details = sym->detailsIf<semantics::GenericDetails>())
+        sym = details->specific();
       assert(sym->has<semantics::SubprogramDetails>() &&
              "entry must be a subprogram");
       entryPointList.push_back(std::pair{sym, p});
@@ -1257,7 +1266,7 @@ bool Fortran::lower::definedInCommonBlock(const semantics::Symbol &sym) {
   return semantics::FindCommonBlockContaining(sym);
 }
 
-static bool isReEntrant(const Fortran::semantics::Scope &scope) {
+static bool isReentrant(const Fortran::semantics::Scope &scope) {
   if (scope.kind() == Fortran::semantics::Scope::Kind::MainProgram)
     return false;
   if (scope.kind() == Fortran::semantics::Scope::Kind::Subprogram) {
@@ -1277,7 +1286,7 @@ bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
   if (const auto *details = sym.detailsIf<semantics::ObjectEntityDetails>()) {
     if (details->init())
       return true;
-    if (!isReEntrant(sym.owner())) {
+    if (!isReentrant(sym.owner())) {
       // Turn array and character of non re-entrant programs (like the main
       // program) into global memory.
       if (const Fortran::semantics::DeclTypeSpec *symTy = sym.GetType())
@@ -1287,6 +1296,9 @@ bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
       if (!details->shape().empty() || !details->coshape().empty())
         return true;
     }
+    if (mainProgramGlobals &&
+        sym.owner().kind() == Fortran::semantics::Scope::Kind::MainProgram)
+      return true;
   }
   return semantics::IsSaved(sym) || lower::definedInCommonBlock(sym) ||
          semantics::IsNamedConstant(sym);
@@ -1781,7 +1793,8 @@ struct SymbolVisitor {
     return false;
   }
 
-  void visitExpr(const Fortran::lower::SomeExpr &expr) {
+  template <typename T>
+  void visitExpr(const Fortran::evaluate::Expr<T> &expr) {
     for (const semantics::Symbol &symbol :
          Fortran::evaluate::CollectSymbols(expr))
       visitSymbol(symbol);
@@ -1789,11 +1802,46 @@ struct SymbolVisitor {
 
   void visitSymbol(const Fortran::semantics::Symbol &symbol) {
     callBack(symbol);
-    // Visit statement function body since it will be inlined in lowering.
+    // - Visit statement function body since it will be inlined in lowering.
+    // - Visit function results specification expressions because allocations
+    //   happens on the caller side.
     if (const auto *subprogramDetails =
-            symbol.detailsIf<Fortran::semantics::SubprogramDetails>())
-      if (const auto &maybeExpr = subprogramDetails->stmtFunction())
+            symbol.detailsIf<Fortran::semantics::SubprogramDetails>()) {
+      if (const auto &maybeExpr = subprogramDetails->stmtFunction()) {
         visitExpr(*maybeExpr);
+      } else {
+        if (subprogramDetails->isFunction()) {
+          // Visit result extents expressions that are explicit.
+          const Fortran::semantics::Symbol &result =
+              subprogramDetails->result();
+          if (const auto *objectDetails =
+                  result.detailsIf<Fortran::semantics::ObjectEntityDetails>())
+            if (objectDetails->shape().IsExplicitShape())
+              for (const Fortran::semantics::ShapeSpec &shapeSpec :
+                   objectDetails->shape()) {
+                visitExpr(shapeSpec.lbound().GetExplicit().value());
+                visitExpr(shapeSpec.ubound().GetExplicit().value());
+              }
+        }
+      }
+    }
+    if (Fortran::semantics::IsProcedure(symbol)) {
+      if (auto dynamicType = Fortran::evaluate::DynamicType::From(symbol)) {
+        // Visit result length specification expressions that are explicit.
+        if (dynamicType->category() ==
+            Fortran::common::TypeCategory::Character) {
+          if (std::optional<Fortran::evaluate::ExtentExpr> length =
+                  dynamicType->GetCharLength())
+            visitExpr(*length);
+        } else if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+                       Fortran::evaluate::GetDerivedTypeSpec(dynamicType)) {
+          for (const auto &[_, param] : derivedTypeSpec->parameters())
+            if (const Fortran::semantics::MaybeIntExpr &expr =
+                    param.GetExplicit())
+              visitExpr(expr.value());
+        }
+      }
+    }
   }
 
   template <typename A>

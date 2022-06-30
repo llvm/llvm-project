@@ -1,15 +1,15 @@
 ; Test that llvm-reduce can reduce floating point operands
 ;
-; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-undef --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: FileCheck --check-prefixes=CHECK,UNDEF %s < %t
-
 ; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-one --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK,ONE %s < %t
 
 ; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-zero --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK,ZERO %s < %t
 
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=operands-nan --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck --check-prefixes=CHECK,NAN %s < %t
+
+; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK,ZERO %s < %t
 
 ; CHECK-INTERESTINGNESS: = fadd float %
@@ -27,19 +27,6 @@
 ; CHECK-INTERESTINGNESS: = fadd <2 x float>
 
 ; CHECK-LABEL: define void @foo(
-
-; UNDEF: %fadd0 = fadd float %arg0, undef
-; UNDEF: %fadd1 = fadd float undef, undef
-; UNDEF: %fadd2 = fadd float undef, 0.000000e+00
-; UNDEF: %fadd3 = fadd float undef, 1.000000e+00
-; UNDEF: %fadd4 = fadd float undef, 0x7FF8000000000000
-; UNDEF: %fadd5 = fadd float undef, undef
-; UNDEF: %fadd6 = fadd <2 x float> %arg2, undef
-; UNDEF: %fadd7 = fadd <2 x float> undef, undef
-; UNDEF: %fadd8 = fadd <2 x float> undef, zeroinitializer
-; UNDEF: %fadd9 = fadd <2 x float> undef, <float 1.000000e+00, float 1.000000e+00>
-; UNDEF: %fadd10 = fadd <2 x float> undef, undef
-; UNDEF: %fadd11 = fadd <2 x float> undef, <float 0x7FF8000000000000, float 0x7FF8000000000000>
 
 
 ; ONE: %fadd0 = fadd float %arg0, 1.000000e+00
@@ -68,6 +55,20 @@
 ; ZERO: %fadd9 = fadd <2 x float> zeroinitializer, zeroinitializer
 ; ZERO: %fadd10 = fadd <2 x float> zeroinitializer, zeroinitializer
 ; ZERO: %fadd11 = fadd <2 x float> zeroinitializer, zeroinitializer
+
+
+; NAN: %fadd0 = fadd float %arg0, 0x7FF8000000000000
+; NAN: %fadd1 = fadd float 0x7FF8000000000000, 0x7FF8000000000000
+; NAN: %fadd2 = fadd float 0x7FF8000000000000, 0.000000e+00
+; NAN: %fadd3 = fadd float 0x7FF8000000000000, 1.000000e+00
+; NAN: %fadd4 = fadd float 0x7FF8000000000000, 0x7FF8000000000000
+; NAN: %fadd5 = fadd float 0x7FF8000000000000, 0x7FF8000000000000
+; NAN: %fadd6 = fadd <2 x float> %arg2, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; NAN: %fadd7 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; NAN: %fadd8 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, zeroinitializer
+; NAN: %fadd9 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 1.000000e+00, float 1.000000e+00>
+; NAN: %fadd10 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; NAN: %fadd11 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
 
 define void @foo(float %arg0, float %arg1, <2 x float> %arg2, <2 x float> %arg3) {
 bb0:

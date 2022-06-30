@@ -31,7 +31,7 @@ class JITLoaderGDBTestCase(TestBase):
 
         # The inferior will now pass bogus values over the interface. Make sure
         # we don't crash.
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
     def gen_log_file(self):
@@ -67,7 +67,7 @@ class JITLoaderGDBTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         self.assertTrue(os.path.exists(logfile))
@@ -95,7 +95,7 @@ class JITLoaderGDBTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         self.assertTrue(os.path.exists(logfile))

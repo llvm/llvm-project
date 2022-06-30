@@ -18,7 +18,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_0(<vscale x 8 x i32> %vec, <2 x 
 ; CHECK-NEXT:    vslideup.vi v8, v12, 0
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
-  %v = call <vscale x 8 x i32> @llvm.experimental.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> %vec, <2 x i32> %sv, i64 0)
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> %vec, <2 x i32> %sv, i64 0)
   ret <vscale x 8 x i32> %v
 }
 
@@ -31,7 +31,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_2(<vscale x 8 x i32> %vec, <2 x 
 ; CHECK-NEXT:    vslideup.vi v8, v12, 2
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
-  %v = call <vscale x 8 x i32> @llvm.experimental.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> %vec, <2 x i32> %sv, i64 2)
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> %vec, <2 x i32> %sv, i64 2)
   ret <vscale x 8 x i32> %v
 }
 
@@ -44,7 +44,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v2i32_6(<vscale x 8 x i32> %vec, <2 x 
 ; CHECK-NEXT:    vslideup.vi v8, v12, 6
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
-  %v = call <vscale x 8 x i32> @llvm.experimental.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> %vec, <2 x i32> %sv, i64 6)
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> %vec, <2 x i32> %sv, i64 6)
   ret <vscale x 8 x i32> %v
 }
 
@@ -69,7 +69,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v8i32_0(<vscale x 8 x i32> %vec, <8 x 
 ; LMULMAX1-NEXT:    vslideup.vi v8, v16, 4
 ; LMULMAX1-NEXT:    ret
   %sv = load <8 x i32>, <8 x i32>* %svp
-  %v = call <vscale x 8 x i32> @llvm.experimental.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32> %vec, <8 x i32> %sv, i64 0)
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32> %vec, <8 x i32> %sv, i64 0)
   ret <vscale x 8 x i32> %v
 }
 
@@ -94,7 +94,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_v8i32_8(<vscale x 8 x i32> %vec, <8 x 
 ; LMULMAX1-NEXT:    vslideup.vi v8, v16, 12
 ; LMULMAX1-NEXT:    ret
   %sv = load <8 x i32>, <8 x i32>* %svp
-  %v = call <vscale x 8 x i32> @llvm.experimental.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32> %vec, <8 x i32> %sv, i64 8)
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32> %vec, <8 x i32> %sv, i64 8)
   ret <vscale x 8 x i32> %v
 }
 
@@ -105,7 +105,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_undef_v2i32_0(<2 x i32>* %svp) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
-  %v = call <vscale x 8 x i32> @llvm.experimental.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> undef, <2 x i32> %sv, i64 0)
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> undef, <2 x i32> %sv, i64 0)
   ret <vscale x 8 x i32> %v
 }
 
@@ -123,7 +123,7 @@ define void @insert_v4i32_v2i32_0(<4 x i32>* %vp, <2 x i32>* %svp) {
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
   %vec = load <4 x i32>, <4 x i32>* %vp
-  %v = call <4 x i32> @llvm.experimental.vector.insert.v2i32.v4i32(<4 x i32> %vec, <2 x i32> %sv, i64 0)
+  %v = call <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32> %vec, <2 x i32> %sv, i64 0)
   store <4 x i32> %v, <4 x i32>* %vp
   ret void
 }
@@ -141,7 +141,7 @@ define void @insert_v4i32_v2i32_2(<4 x i32>* %vp, <2 x i32>* %svp) {
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
   %vec = load <4 x i32>, <4 x i32>* %vp
-  %v = call <4 x i32> @llvm.experimental.vector.insert.v2i32.v4i32(<4 x i32> %vec, <2 x i32> %sv, i64 2)
+  %v = call <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32> %vec, <2 x i32> %sv, i64 2)
   store <4 x i32> %v, <4 x i32>* %vp
   ret void
 }
@@ -155,7 +155,7 @@ define void @insert_v4i32_undef_v2i32_0(<4 x i32>* %vp, <2 x i32>* %svp) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
-  %v = call <4 x i32> @llvm.experimental.vector.insert.v2i32.v4i32(<4 x i32> undef, <2 x i32> %sv, i64 0)
+  %v = call <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32> undef, <2 x i32> %sv, i64 0)
   store <4 x i32> %v, <4 x i32>* %vp
   ret void
 }
@@ -186,7 +186,7 @@ define void @insert_v8i32_v2i32_0(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX1-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
   %vec = load <8 x i32>, <8 x i32>* %vp
-  %v = call <8 x i32> @llvm.experimental.vector.insert.v2i32.v8i32(<8 x i32> %vec, <2 x i32> %sv, i64 0)
+  %v = call <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32> %vec, <2 x i32> %sv, i64 0)
   store <8 x i32> %v, <8 x i32>* %vp
   ret void
 }
@@ -216,7 +216,7 @@ define void @insert_v8i32_v2i32_2(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX1-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
   %vec = load <8 x i32>, <8 x i32>* %vp
-  %v = call <8 x i32> @llvm.experimental.vector.insert.v2i32.v8i32(<8 x i32> %vec, <2 x i32> %sv, i64 2)
+  %v = call <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32> %vec, <2 x i32> %sv, i64 2)
   store <8 x i32> %v, <8 x i32>* %vp
   ret void
 }
@@ -246,7 +246,7 @@ define void @insert_v8i32_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX1-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
   %vec = load <8 x i32>, <8 x i32>* %vp
-  %v = call <8 x i32> @llvm.experimental.vector.insert.v2i32.v8i32(<8 x i32> %vec, <2 x i32> %sv, i64 6)
+  %v = call <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32> %vec, <2 x i32> %sv, i64 6)
   store <8 x i32> %v, <8 x i32>* %vp
   ret void
 }
@@ -271,7 +271,7 @@ define void @insert_v8i32_undef_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX1-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
-  %v = call <8 x i32> @llvm.experimental.vector.insert.v2i32.v8i32(<8 x i32> undef, <2 x i32> %sv, i64 6)
+  %v = call <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32> undef, <2 x i32> %sv, i64 6)
   store <8 x i32> %v, <8 x i32>* %vp
   ret void
 }
@@ -290,7 +290,7 @@ define void @insert_v4i16_v2i16_0(<4 x i16>* %vp, <2 x i16>* %svp) {
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %vp
   %sv = load <2 x i16>, <2 x i16>* %svp
-  %c = call <4 x i16> @llvm.experimental.vector.insert.v2i16.v4i16(<4 x i16> %v, <2 x i16> %sv, i64 0)
+  %c = call <4 x i16> @llvm.vector.insert.v2i16.v4i16(<4 x i16> %v, <2 x i16> %sv, i64 0)
   store <4 x i16> %c, <4 x i16>* %vp
   ret void
 }
@@ -308,7 +308,7 @@ define void @insert_v4i16_v2i16_2(<4 x i16>* %vp, <2 x i16>* %svp) {
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %vp
   %sv = load <2 x i16>, <2 x i16>* %svp
-  %c = call <4 x i16> @llvm.experimental.vector.insert.v2i16.v4i16(<4 x i16> %v, <2 x i16> %sv, i64 2)
+  %c = call <4 x i16> @llvm.vector.insert.v2i16.v4i16(<4 x i16> %v, <2 x i16> %sv, i64 2)
   store <4 x i16> %c, <4 x i16>* %vp
   ret void
 }
@@ -340,7 +340,7 @@ define void @insert_v32i1_v8i1_0(<32 x i1>* %vp, <8 x i1>* %svp) {
 ; LMULMAX1-NEXT:    ret
   %v = load <32 x i1>, <32 x i1>* %vp
   %sv = load <8 x i1>, <8 x i1>* %svp
-  %c = call <32 x i1> @llvm.experimental.vector.insert.v8i1.v32i1(<32 x i1> %v, <8 x i1> %sv, i64 0)
+  %c = call <32 x i1> @llvm.vector.insert.v8i1.v32i1(<32 x i1> %v, <8 x i1> %sv, i64 0)
   store <32 x i1> %c, <32 x i1>* %vp
   ret void
 }
@@ -373,7 +373,7 @@ define void @insert_v32i1_v8i1_16(<32 x i1>* %vp, <8 x i1>* %svp) {
 ; LMULMAX1-NEXT:    ret
   %v = load <32 x i1>, <32 x i1>* %vp
   %sv = load <8 x i1>, <8 x i1>* %svp
-  %c = call <32 x i1> @llvm.experimental.vector.insert.v8i1.v32i1(<32 x i1> %v, <8 x i1> %sv, i64 16)
+  %c = call <32 x i1> @llvm.vector.insert.v8i1.v32i1(<32 x i1> %v, <8 x i1> %sv, i64 16)
   store <32 x i1> %c, <32 x i1>* %vp
   ret void
 }
@@ -400,7 +400,7 @@ define void @insert_v8i1_v4i1_0(<8 x i1>* %vp, <4 x i1>* %svp) {
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, <8 x i1>* %vp
   %sv = load <4 x i1>, <4 x i1>* %svp
-  %c = call <8 x i1> @llvm.experimental.vector.insert.v4i1.v8i1(<8 x i1> %v, <4 x i1> %sv, i64 0)
+  %c = call <8 x i1> @llvm.vector.insert.v4i1.v8i1(<8 x i1> %v, <4 x i1> %sv, i64 0)
   store <8 x i1> %c, <8 x i1>* %vp
   ret void
 }
@@ -427,7 +427,7 @@ define void @insert_v8i1_v4i1_4(<8 x i1>* %vp, <4 x i1>* %svp) {
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, <8 x i1>* %vp
   %sv = load <4 x i1>, <4 x i1>* %svp
-  %c = call <8 x i1> @llvm.experimental.vector.insert.v4i1.v8i1(<8 x i1> %v, <4 x i1> %sv, i64 4)
+  %c = call <8 x i1> @llvm.vector.insert.v4i1.v8i1(<8 x i1> %v, <4 x i1> %sv, i64 4)
   store <8 x i1> %c, <8 x i1>* %vp
   ret void
 }
@@ -441,7 +441,7 @@ define <vscale x 2 x i16> @insert_nxv2i16_v2i16_0(<vscale x 2 x i16> %v, <2 x i1
 ; CHECK-NEXT:    vslideup.vi v8, v9, 0
 ; CHECK-NEXT:    ret
   %sv = load <2 x i16>, <2 x i16>* %svp
-  %c = call <vscale x 2 x i16> @llvm.experimental.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16> %v, <2 x i16> %sv, i64 0)
+  %c = call <vscale x 2 x i16> @llvm.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16> %v, <2 x i16> %sv, i64 0)
   ret <vscale x 2 x i16> %c
 }
 
@@ -454,7 +454,7 @@ define <vscale x 2 x i16> @insert_nxv2i16_v2i16_2(<vscale x 2 x i16> %v, <2 x i1
 ; CHECK-NEXT:    vslideup.vi v8, v9, 4
 ; CHECK-NEXT:    ret
   %sv = load <2 x i16>, <2 x i16>* %svp
-  %c = call <vscale x 2 x i16> @llvm.experimental.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16> %v, <2 x i16> %sv, i64 4)
+  %c = call <vscale x 2 x i16> @llvm.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16> %v, <2 x i16> %sv, i64 4)
   ret <vscale x 2 x i16> %c
 }
 
@@ -476,7 +476,7 @@ define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, <4 x i1>* %
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
   %sv = load <4 x i1>, <4 x i1>* %svp
-  %c = call <vscale x 2 x i1> @llvm.experimental.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1> %v, <4 x i1> %sv, i64 0)
+  %c = call <vscale x 2 x i1> @llvm.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1> %v, <4 x i1> %sv, i64 0)
   ret <vscale x 2 x i1> %c
 }
 
@@ -489,7 +489,7 @@ define <vscale x 8 x i1> @insert_nxv8i1_v4i1_0(<vscale x 8 x i1> %v, <8 x i1>* %
 ; CHECK-NEXT:    vslideup.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %sv = load <8 x i1>, <8 x i1>* %svp
-  %c = call <vscale x 8 x i1> @llvm.experimental.vector.insert.v8i1.nxv8i1(<vscale x 8 x i1> %v, <8 x i1> %sv, i64 0)
+  %c = call <vscale x 8 x i1> @llvm.vector.insert.v8i1.nxv8i1(<vscale x 8 x i1> %v, <8 x i1> %sv, i64 0)
   ret <vscale x 8 x i1> %c
 }
 
@@ -502,11 +502,11 @@ define <vscale x 8 x i1> @insert_nxv8i1_v8i1_16(<vscale x 8 x i1> %v, <8 x i1>* 
 ; CHECK-NEXT:    vslideup.vi v0, v8, 2
 ; CHECK-NEXT:    ret
   %sv = load <8 x i1>, <8 x i1>* %svp
-  %c = call <vscale x 8 x i1> @llvm.experimental.vector.insert.v8i1.nxv8i1(<vscale x 8 x i1> %v, <8 x i1> %sv, i64 16)
+  %c = call <vscale x 8 x i1> @llvm.vector.insert.v8i1.nxv8i1(<vscale x 8 x i1> %v, <8 x i1> %sv, i64 16)
   ret <vscale x 8 x i1> %c
 }
 
-declare <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64>, <2 x i64>, i64)
+declare <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64>, <2 x i64>, i64)
 
 define void @insert_v2i64_nxv16i64(<2 x i64>* %psv0, <2 x i64>* %psv1, <vscale x 16 x i64>* %out) {
 ; CHECK-LABEL: insert_v2i64_nxv16i64:
@@ -520,8 +520,8 @@ define void @insert_v2i64_nxv16i64(<2 x i64>* %psv0, <2 x i64>* %psv1, <vscale x
 ; CHECK-NEXT:    ret
   %sv0 = load <2 x i64>, <2 x i64>* %psv0
   %sv1 = load <2 x i64>, <2 x i64>* %psv1
-  %v0 = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv0, i64 0)
-  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> %v0, <2 x i64> %sv1, i64 4)
+  %v0 = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv0, i64 0)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> %v0, <2 x i64> %sv1, i64 4)
   store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
   ret void
 }
@@ -534,7 +534,7 @@ define void @insert_v2i64_nxv16i64_lo0(<2 x i64>* %psv, <vscale x 16 x i64>* %ou
 ; CHECK-NEXT:    vs8r.v v8, (a1)
 ; CHECK-NEXT:    ret
   %sv = load <2 x i64>, <2 x i64>* %psv
-  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 0)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 0)
   store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
   ret void
 }
@@ -549,7 +549,7 @@ define void @insert_v2i64_nxv16i64_lo2(<2 x i64>* %psv, <vscale x 16 x i64>* %ou
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    ret
   %sv = load <2 x i64>, <2 x i64>* %psv
-  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 2)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 2)
   store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
   ret void
 }
@@ -585,24 +585,24 @@ define void @insert_v2i64_nxv16i64_hi(<2 x i64>* %psv, <vscale x 16 x i64>* %out
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
   %sv = load <2 x i64>, <2 x i64>* %psv
-  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 8)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 8)
   store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
   ret void
 }
 
-declare <8 x i1> @llvm.experimental.vector.insert.v4i1.v8i1(<8 x i1>, <4 x i1>, i64)
-declare <32 x i1> @llvm.experimental.vector.insert.v8i1.v32i1(<32 x i1>, <8 x i1>, i64)
+declare <8 x i1> @llvm.vector.insert.v4i1.v8i1(<8 x i1>, <4 x i1>, i64)
+declare <32 x i1> @llvm.vector.insert.v8i1.v32i1(<32 x i1>, <8 x i1>, i64)
 
-declare <4 x i16> @llvm.experimental.vector.insert.v2i16.v4i16(<4 x i16>, <2 x i16>, i64)
+declare <4 x i16> @llvm.vector.insert.v2i16.v4i16(<4 x i16>, <2 x i16>, i64)
 
-declare <4 x i32> @llvm.experimental.vector.insert.v2i32.v4i32(<4 x i32>, <2 x i32>, i64)
-declare <8 x i32> @llvm.experimental.vector.insert.v2i32.v8i32(<8 x i32>, <2 x i32>, i64)
+declare <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32>, <2 x i32>, i64)
+declare <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32>, <2 x i32>, i64)
 
-declare <vscale x 2 x i1> @llvm.experimental.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1>, <4 x i1>, i64)
-declare <vscale x 8 x i1> @llvm.experimental.vector.insert.v8i1.nxv8i1(<vscale x 8 x i1>, <8 x i1>, i64)
+declare <vscale x 2 x i1> @llvm.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1>, <4 x i1>, i64)
+declare <vscale x 8 x i1> @llvm.vector.insert.v8i1.nxv8i1(<vscale x 8 x i1>, <8 x i1>, i64)
 
-declare <vscale x 2 x i16> @llvm.experimental.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16>, <2 x i16>, i64)
+declare <vscale x 2 x i16> @llvm.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16>, <2 x i16>, i64)
 
-declare <vscale x 8 x i32> @llvm.experimental.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32>, <2 x i32>, i64)
-declare <vscale x 8 x i32> @llvm.experimental.vector.insert.v4i32.nxv8i32(<vscale x 8 x i32>, <4 x i32>, i64)
-declare <vscale x 8 x i32> @llvm.experimental.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32>, <8 x i32>, i64)
+declare <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32>, <2 x i32>, i64)
+declare <vscale x 8 x i32> @llvm.vector.insert.v4i32.nxv8i32(<vscale x 8 x i32>, <4 x i32>, i64)
+declare <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32>, <8 x i32>, i64)

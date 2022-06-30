@@ -198,7 +198,7 @@ public:
                     tok::TokenKind kind);
 
   bool hadError() const { return HadError; }
-  bool isAscii() const { return Kind == tok::char_constant; }
+  bool isOrdinary() const { return Kind == tok::char_constant; }
   bool isWide() const { return Kind == tok::wide_char_constant; }
   bool isUTF8() const { return Kind == tok::utf8_char_constant; }
   bool isUTF16() const { return Kind == tok::utf16_char_constant; }
@@ -263,7 +263,7 @@ public:
   /// checking of the string literal and emit errors and warnings.
   unsigned getOffsetOfStringByte(const Token &TheTok, unsigned ByteNo) const;
 
-  bool isAscii() const { return Kind == tok::string_literal; }
+  bool isOrdinary() const { return Kind == tok::string_literal; }
   bool isWide() const { return Kind == tok::wide_string_literal; }
   bool isUTF8() const { return Kind == tok::utf8_string_literal; }
   bool isUTF16() const { return Kind == tok::utf16_string_literal; }

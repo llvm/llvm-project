@@ -11,9 +11,6 @@
 ! RUN: %flang_fc1 -help 2>&1 | FileCheck %s --check-prefix=HELP-FC1
 ! RUN: not %flang_fc1 -helps 2>&1 | FileCheck %s --check-prefix=ERROR
 
-!----------------------------------------------------
-! EXPECTED OUTPUT FOR FLANG DRIVER (flang)
-!----------------------------------------------------
 ! HELP:USAGE: flang
 ! HELP-EMPTY:
 ! HELP-NEXT:OPTIONS:
@@ -67,9 +64,6 @@
 ! HELP-NEXT: -W<warning>            Enable the specified warning
 ! HELP-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
 
-!-------------------------------------------------------------
-! EXPECTED OUTPUT FOR FLANG FRONTEND DRIVER (flang -fc1)
-!-------------------------------------------------------------
 ! HELP-FC1:USAGE: flang
 ! HELP-FC1-EMPTY:
 ! HELP-FC1-NEXT:OPTIONS:
@@ -96,6 +90,7 @@
 ! HELP-FC1-NEXT: -fdebug-measure-parse-tree
 ! HELP-FC1-NEXT:                         Measure the parse tree
 ! HELP-FC1-NEXT: -fdebug-module-writer   Enable debug messages while writing module files
+! HELP-FC1-NEXT: -fdebug-pass-manager    Prints debug information for the new pass manage
 ! HELP-FC1-NEXT: -fdebug-pre-fir-tree    Dump the pre-FIR tree
 ! HELP-FC1-NEXT: -fdebug-unparse-no-sema Unparse and stop (skips the semantic checks)
 ! HELP-FC1-NEXT: -fdebug-unparse-with-symbols
@@ -120,6 +115,7 @@
 ! HELP-FC1-NEXT: -fno-analyzed-objects-for-unparse
 ! HELP-FC1-NEXT:                        Do not use the analyzed objects when unparsing
 ! HELP-FC1-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
+! HELP-FC1-NEXT: -fno-debug-pass-manager Disables debug printing for the new pass manager
 ! HELP-FC1-NEXT: -fno-reformat          Dump the cooked character stream in -E mode
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
@@ -145,7 +141,4 @@
 ! HELP-FC1-NEXT: -version               Print the compiler version
 ! HELP-FC1-NEXT: -W<warning>            Enable the specified warning
 
-!---------------
-! EXPECTED ERROR
-!---------------
 ! ERROR: error: unknown argument '-helps'; did you mean '-help'

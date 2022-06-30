@@ -65,7 +65,7 @@ public:
     if (!resultType)
       return failure();
     auto newOp =
-        rewriter.create<OpType>(op.getLoc(), resultType, op.source(),
+        rewriter.create<OpType>(op.getLoc(), resultType, op.getSource(),
                                 mixedOffsets, mixedSizes, mixedStrides);
     CastOpFunc func;
     func(rewriter, op, newOp);

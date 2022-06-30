@@ -680,6 +680,33 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
   llvm.return
 }
 
+// CHECK-LABEL: @vector_insert_extract
+llvm.func @vector_insert_extract(%f256: vector<8xi32>, %f128: vector<4xi32>,
+                                 %sv: vector<[4]xi32>) {
+  // CHECK: call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v8i32
+  %0 = llvm.intr.vector.insert %f256, %sv[0] :
+              vector<8xi32> into vector<[4]xi32>
+  // CHECK: call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32
+  %1 = llvm.intr.vector.insert %f128, %sv[0] :
+              vector<4xi32> into vector<[4]xi32>
+  // CHECK: call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32
+  %2 = llvm.intr.vector.insert %f128, %1[4] :
+              vector<4xi32> into vector<[4]xi32>
+  // CHECK: call <8 x i32> @llvm.vector.insert.v8i32.v4i32
+  %3 = llvm.intr.vector.insert %f128, %f256[4] :
+              vector<4xi32> into vector<8xi32>
+  // CHECK: call <8 x i32> @llvm.vector.extract.v8i32.nxv4i32
+  %4 = llvm.intr.vector.extract %2[0] :
+              vector<8xi32> from vector<[4]xi32>
+  // CHECK: call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32
+  %5 = llvm.intr.vector.extract %2[0] :
+              vector<4xi32> from vector<[4]xi32>
+  // CHECK: call <2 x i32> @llvm.vector.extract.v2i32.v8i32
+  %6 = llvm.intr.vector.extract %f256[6] :
+              vector<2xi32> from vector<8xi32>
+  llvm.return
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
@@ -781,3 +808,9 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
 // CHECK-DAG: declare <8 x i64> @llvm.vp.fptosi.v8i64.v8f64(<8 x double>, <8 x i1>, i32) #2
 // CHECK-DAG: declare <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0(<8 x ptr>, <8 x i1>, i32) #2
 // CHECK-DAG: declare <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64(<8 x i64>, <8 x i1>, i32) #2
+// CHECK-DAG: declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v8i32(<vscale x 4 x i32>, <8 x i32>, i64 immarg) #2
+// CHECK-DAG: declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32>, <4 x i32>, i64 immarg) #2
+// CHECK-DAG: declare <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32>, <4 x i32>, i64 immarg) #2
+// CHECK-DAG: declare <8 x i32> @llvm.vector.extract.v8i32.nxv4i32(<vscale x 4 x i32>, i64 immarg) #2
+// CHECK-DAG: declare <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32>, i64 immarg) #2
+// CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg) #2

@@ -425,7 +425,13 @@ int __kmp_env_consistency_check = FALSE; /* KMP_CONSISTENCY_CHECK specified? */
 // 0 = never yield;
 // 1 = always yield (default);
 // 2 = yield only if oversubscribed
+#if KMP_OS_DARWIN && KMP_ARCH_AARCH64
+// Set to 0 for environments where yield is slower
+kmp_int32 __kmp_use_yield = 0;
+#else
 kmp_int32 __kmp_use_yield = 1;
+#endif
+
 // This will be 1 if KMP_USE_YIELD environment variable was set explicitly
 kmp_int32 __kmp_use_yield_exp_set = 0;
 

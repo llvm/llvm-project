@@ -10,6 +10,7 @@
 #include "clang-pseudo/grammar/Grammar.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -21,8 +22,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LRTable::Action &A) {
   switch (A.kind()) {
   case LRTable::Action::Shift:
     return OS << llvm::formatv("shift state {0}", A.getShiftState());
-  case LRTable::Action::Reduce:
-    return OS << llvm::formatv("reduce by rule {0}", A.getReduceRule());
   case LRTable::Action::GoTo:
     return OS << llvm::formatv("go to state {0}", A.getGoToState());
   case LRTable::Action::Sentinel:
@@ -36,9 +35,11 @@ std::string LRTable::dumpStatistics() const {
 Statistics of the LR parsing table:
     number of states: {0}
     number of actions: {1}
-    size of the table (bytes): {2}
+    number of reduces: {2}
+    size of the table (bytes): {3}
 )",
-                       StateOffset.size() - 1, Actions.size(), bytes())
+                       StateOffset.size() - 1, Actions.size(), Reduces.size(),
+                       bytes())
       .str();
 }
 
@@ -52,19 +53,27 @@ std::string LRTable::dumpForTests(const Grammar &G) const {
       SymbolID TokID = tokenSymbol(static_cast<tok::TokenKind>(Terminal));
       for (auto A : find(S, TokID)) {
         if (A.kind() == LRTable::Action::Shift)
-          OS.indent(4) << llvm::formatv("'{0}': shift state {1}\n",
+          OS.indent(4) << llvm::formatv("{0}: shift state {1}\n",
                                         G.symbolName(TokID), A.getShiftState());
-        else if (A.kind() == LRTable::Action::Reduce)
-          OS.indent(4) << llvm::formatv("'{0}': reduce by rule {1} '{2}'\n",
-                                        G.symbolName(TokID), A.getReduceRule(),
-                                        G.dumpRule(A.getReduceRule()));
       }
+    }
+    for (RuleID R : getReduceRules(S)) {
+      SymbolID Target = G.lookupRule(R).Target;
+      std::vector<llvm::StringRef> Terminals;
+      for (unsigned Terminal = 0; Terminal < NumTerminals; ++Terminal) {
+        SymbolID TokID = tokenSymbol(static_cast<tok::TokenKind>(Terminal));
+        if (canFollow(Target, TokID))
+          Terminals.push_back(G.symbolName(TokID));
+      }
+      OS.indent(4) << llvm::formatv("{0}: reduce by rule {1} '{2}'\n",
+                                    llvm::join(Terminals, " "), R,
+                                    G.dumpRule(R));
     }
     for (SymbolID NontermID = 0; NontermID < G.table().Nonterminals.size();
          ++NontermID) {
       if (find(S, NontermID).empty())
         continue;
-      OS.indent(4) << llvm::formatv("'{0}': go to state {1}\n",
+      OS.indent(4) << llvm::formatv("{0}: go to state {1}\n",
                                     G.symbolName(NontermID),
                                     getGoToState(S, NontermID));
     }
@@ -72,10 +81,15 @@ std::string LRTable::dumpForTests(const Grammar &G) const {
   return OS.str();
 }
 
-llvm::ArrayRef<LRTable::Action> LRTable::getActions(StateID State,
-                                                    SymbolID Terminal) const {
-  assert(pseudo::isToken(Terminal) && "expect terminal symbol!");
-  return find(State, Terminal);
+llvm::Optional<LRTable::StateID>
+LRTable::getShiftState(StateID State, SymbolID Terminal) const {
+  // FIXME: we spend a significant amount of time on misses here.
+  // We could consider storing a std::bitset for a cheaper test?
+  assert(pseudo::isToken(Terminal) && "expected terminal symbol!");
+  for (const auto &Result : find(State, Terminal))
+    if (Result.kind() == Action::Shift)
+      return Result.getShiftState(); // unique: no shift/shift conflicts.
+  return llvm::None;
 }
 
 LRTable::StateID LRTable::getGoToState(StateID State,

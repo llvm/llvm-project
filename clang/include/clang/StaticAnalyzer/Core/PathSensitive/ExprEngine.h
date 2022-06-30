@@ -444,6 +444,10 @@ public:
   ///  other functions that handle specific kinds of statements.
   void Visit(const Stmt *S, ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
+  /// VisitArrayInitLoopExpr - Transfer function for array init loop.
+  void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex, ExplodedNode *Pred,
+                              ExplodedNodeSet &Dst);
+
   /// VisitArraySubscriptExpr - Transfer function for array accesses.
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *Ex,
                                ExplodedNode *Pred,

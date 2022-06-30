@@ -202,13 +202,13 @@ mlir::bufferization::insertSliceAnchoredAllocTensorEliminationStep(
           return false;
 
         // Collect all values that are needed to construct the replacement op.
-        neededValues.append(insertSliceOp.offsets().begin(),
-                            insertSliceOp.offsets().end());
-        neededValues.append(insertSliceOp.sizes().begin(),
-                            insertSliceOp.sizes().end());
-        neededValues.append(insertSliceOp.strides().begin(),
-                            insertSliceOp.strides().end());
-        neededValues.push_back(insertSliceOp.dest());
+        neededValues.append(insertSliceOp.getOffsets().begin(),
+                            insertSliceOp.getOffsets().end());
+        neededValues.append(insertSliceOp.getSizes().begin(),
+                            insertSliceOp.getSizes().end());
+        neededValues.append(insertSliceOp.getStrides().begin(),
+                            insertSliceOp.getStrides().end());
+        neededValues.push_back(insertSliceOp.getDest());
 
         return true;
       },
@@ -221,20 +221,20 @@ mlir::bufferization::insertSliceAnchoredAllocTensorEliminationStep(
         SmallVector<OpFoldResult> mixedSizes = insertOp.getMixedSizes();
         SmallVector<OpFoldResult> mixedStrides = insertOp.getMixedStrides();
         OffsetSizeAndStrideOpInterface::expandToRank(
-            insertOp.dest(), mixedOffsets, mixedSizes, mixedStrides,
+            insertOp.getDest(), mixedOffsets, mixedSizes, mixedStrides,
             [&](Value target, int64_t dim) -> OpFoldResult {
               auto shapedType = target.getType().cast<ShapedType>();
               if (shapedType.isDynamicDim(dim))
-                return b.create<tensor::DimOp>(loc, target, dim).result();
+                return b.create<tensor::DimOp>(loc, target, dim).getResult();
               return b.getIndexAttr(shapedType.getDimSize(dim));
             });
-        auto t = tensor::ExtractSliceOp::inferRankReducedResultType(
+        auto t = tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
             insertOp.getSourceType().getRank(),
-            insertOp.dest().getType().cast<RankedTensorType>(), mixedOffsets,
+            insertOp.getDest().getType().cast<RankedTensorType>(), mixedOffsets,
             mixedSizes, mixedStrides);
         auto extractOp = b.create<tensor::ExtractSliceOp>(
-            loc, t, insertOp.dest(), mixedOffsets, mixedSizes, mixedStrides);
-        return extractOp.result();
+            loc, t, insertOp.getDest(), mixedOffsets, mixedSizes, mixedStrides);
+        return extractOp.getResult();
       });
 }
 

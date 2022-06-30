@@ -48,6 +48,23 @@ static void LLVMErrorHandler(void *UserData, const char *Message,
   exit(GenCrashDiag ? 70 : 1);
 }
 
+// If we are running with -verify a reported has to be returned as unsuccess.
+// This is relevant especially for the test suite.
+static int checkDiagErrors(const clang::CompilerInstance *CI) {
+  unsigned Errs = CI->getDiagnostics().getClient()->getNumErrors();
+  if (CI->getDiagnosticOpts().VerifyDiagnostics) {
+    // If there was an error that came from the verifier we must return 1 as
+    // an exit code for the process. This will make the test fail as expected.
+    clang::DiagnosticConsumer *Client = CI->getDiagnostics().getClient();
+    Client->EndSourceFile();
+    Errs = Client->getNumErrors();
+
+    // The interpreter expects BeginSourceFile/EndSourceFiles to be balanced.
+    Client->BeginSourceFile(CI->getLangOpts(), &CI->getPreprocessor());
+  }
+  return Errs ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
 llvm::ExitOnError ExitOnErr;
 int main(int argc, const char **argv) {
   ExitOnErr.setBanner("clang-repl: ");
@@ -92,8 +109,14 @@ int main(int argc, const char **argv) {
     llvm::LineEditor LE("clang-repl");
     // FIXME: Add LE.setListCompleter
     while (llvm::Optional<std::string> Line = LE.readLine()) {
-      if (*Line == "quit")
+      if (*Line == R"(%quit)")
         break;
+      if (*Line == R"(%undo)") {
+        if (auto Err = Interp->Undo())
+          llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+        continue;
+      }
+
       if (auto Err = Interp->ParseAndExecute(*Line))
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
     }
@@ -106,5 +129,5 @@ int main(int argc, const char **argv) {
 
   llvm::llvm_shutdown();
 
-  return 0;
+  return checkDiagErrors(Interp->getCompilerInstance());
 }

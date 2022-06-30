@@ -38,6 +38,10 @@ cl::opt<IndirectCallPromotionType> ICP(
         clEnumValN(ICP_ALL, "all", "perform ICP on calls and jump tables")),
     cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
+static cl::alias ICPAlias("icp",
+                          cl::desc("Alias for --indirect-call-promotion"),
+                          cl::aliasopt(ICP));
+
 extern cl::opt<JumpTableSupportLevel> JumpTables;
 
 static cl::opt<bool> FixFuncCounts(

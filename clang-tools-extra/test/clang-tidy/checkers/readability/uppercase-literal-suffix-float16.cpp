@@ -1,6 +1,6 @@
-// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -target aarch64-linux-gnu -I %S
+// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -target aarch64-linux-gnu -I %clang_tidy_headers
 
-#include "uppercase-literal-suffix.h"
+#include "integral_constant.h"
 
 void float16_normal_literals() {
   // _Float16

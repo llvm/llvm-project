@@ -3471,6 +3471,12 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
     return FormatStyle::LK_CSharp;
   if (FileName.endswith_insensitive(".json"))
     return FormatStyle::LK_Json;
+  if (FileName.endswith_insensitive(".sv") ||
+      FileName.endswith_insensitive(".svh") ||
+      FileName.endswith_insensitive(".v") ||
+      FileName.endswith_insensitive(".vh")) {
+    return FormatStyle::LK_Verilog;
+  }
   return FormatStyle::LK_Cpp;
 }
 

@@ -5287,7 +5287,7 @@ multiple metadata attachments with the same identifier.
 
 A transformation is required to drop any metadata attachment that it does not
 know or know it can't preserve. Currently there is an exception for metadata
-attachment to globals for ``!type`` and ``!absolute_symbol`` which can't be
+attachment to globals for ``!func_sanitize``, ``!type`` and ``!absolute_symbol`` which can't be
 unconditionally dropped unless the global is itself deleted.
 
 Metadata attached to a module using named metadata may not be dropped, with
@@ -7174,6 +7174,26 @@ Example:
 
     %a.addr = alloca float*, align 8, !annotation !0
     !0 = !{!"auto-init"}
+
+'``func_sanitize``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``func_sanitize`` metadata is used to attach two values for the function
+sanitizer instrumentation. The first value is the ubsan function signature.
+The second value is the address of the proxy variable which stores the address
+of the RTTI descriptor. If :ref:`prologue <prologuedata>` and '``func_sanitize``'
+are used at the same time, :ref:`prologue <prologuedata>` is emitted before
+'``func_sanitize``' in the output.
+
+Example:
+
+.. code-block:: text
+
+    @__llvm_rtti_proxy = private unnamed_addr constant i8* bitcast ({ i8*, i8* }* @_ZTIFvvE to i8*)
+    define void @_Z3funv() !func_sanitize !0 {
+      return void
+    }
+    !0 = !{i32 846595819, i8** @__llvm_rtti_proxy}
 
 Module Flags Metadata
 =====================
@@ -17268,27 +17288,35 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
 
-'``llvm.experimental.vector.insert``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.vector.insert``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
-This is an overloaded intrinsic. You can use ``llvm.experimental.vector.insert``
-to insert a fixed-width vector into a scalable vector, but not the other way
-around.
+This is an overloaded intrinsic.
 
 ::
 
-      declare <vscale x 4 x float> @llvm.experimental.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> %vec, <4 x float> %subvec, i64 %idx)
-      declare <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> %vec, <2 x double> %subvec, i64 %idx)
+      ; Insert fixed type into scalable type
+      declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> %vec, <4 x float> %subvec, i64 <idx>)
+      declare <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> %vec, <2 x double> %subvec, i64 <idx>)
+
+      ; Insert scalable type into scalable type
+      declare <vscale x 4 x float> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x float> %vec, <vscale x 2 x float> %subvec, i64 <idx>)
+
+      ; Insert fixed type into fixed type
+      declare <4 x double> @llvm.vector.insert.v4f64.v2f64(<4 x double> %vec, <2 x double> %subvec, i64 <idx>)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.insert.*``' intrinsics insert a vector into another vector
+The '``llvm.vector.insert.*``' intrinsics insert a vector into another vector
 starting from a given index. The return type matches the type of the vector we
 insert into. Conceptually, this can be used to build a scalable vector out of
-non-scalable vectors.
+non-scalable vectors, however this intrinsic can also be used on purely fixed
+types.
+
+Scalable vectors can only be inserted into other scalable vectors.
 
 Arguments:
 """"""""""
@@ -17306,27 +17334,35 @@ cannot be determined statically but is false at runtime, then the result vector
 is undefined.
 
 
-'``llvm.experimental.vector.extract``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.vector.extract``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
-This is an overloaded intrinsic. You can use
-``llvm.experimental.vector.extract`` to extract a fixed-width vector from a
-scalable vector, but not the other way around.
+This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x float> @llvm.experimental.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> %vec, i64 %idx)
-      declare <2 x double> @llvm.experimental.vector.extract.v2f64.nxv2f64(<vscale x 2 x double> %vec, i64 %idx)
+      ; Extract fixed type from scalable type
+      declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> %vec, i64 <idx>)
+      declare <2 x double> @llvm.vector.extract.v2f64.nxv2f64(<vscale x 2 x double> %vec, i64 <idx>)
+
+      ; Extract scalable type from scalable type
+      declare <vscale x 2 x float> @llvm.vector.extract.nxv2f32.nxv4f32(<vscale x 4 x float> %vec, i64 <idx>)
+
+      ; Extract fixed type from fixed type
+      declare <2 x double> @llvm.vector.extract.v2f64.v4f64(<4 x double> %vec, i64 <idx>)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.extract.*``' intrinsics extract a vector from
-within another vector starting from a given index. The return type must be
-explicitly specified. Conceptually, this can be used to decompose a scalable
-vector into non-scalable parts.
+The '``llvm.vector.extract.*``' intrinsics extract a vector from within another
+vector starting from a given index. The return type must be explicitly
+specified. Conceptually, this can be used to decompose a scalable vector into
+non-scalable parts, however this intrinsic can also be used on purely fixed
+types.
+
+Scalable vectors can only be extracted from other scalable vectors.
 
 Arguments:
 """"""""""

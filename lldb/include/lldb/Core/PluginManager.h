@@ -336,21 +336,21 @@ public:
   // Trace
   static bool RegisterPlugin(
       llvm::StringRef name, llvm::StringRef description,
-      TraceCreateInstanceForSessionFile create_callback_for_session_file,
+      TraceCreateInstanceFromBundle create_callback_from_bundle,
       TraceCreateInstanceForLiveProcess create_callback_for_live_process,
       llvm::StringRef schema);
 
   static bool
-  UnregisterPlugin(TraceCreateInstanceForSessionFile create_callback);
+  UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
 
-  static TraceCreateInstanceForSessionFile
+  static TraceCreateInstanceFromBundle
   GetTraceCreateCallback(llvm::StringRef plugin_name);
 
   static TraceCreateInstanceForLiveProcess
   GetTraceCreateCallbackForLiveProcess(llvm::StringRef plugin_name);
 
-  /// Get the JSON schema for a trace session file corresponding to the given
-  /// plugin.
+  /// Get the JSON schema for a trace bundle description file corresponding to
+  /// the given plugin.
   ///
   /// \param[in] plugin_name
   ///     The name of the plugin.
@@ -360,8 +360,8 @@ public:
   ///     otherwise the actual schema is returned.
   static llvm::StringRef GetTraceSchema(llvm::StringRef plugin_name);
 
-  /// Get the JSON schema for a trace session file corresponding to the plugin
-  /// given by its index.
+  /// Get the JSON schema for a trace bundle description file corresponding to
+  /// the plugin given by its index.
   ///
   /// \param[in] index
   ///     The index of the plugin to get the schema of.
