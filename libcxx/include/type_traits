@@ -532,35 +532,24 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 template <bool> struct _MetaBase;
 template <>
 struct _MetaBase<true> {
-  template <class _Tp, class _Up>
-  using _SelectImpl _LIBCPP_NODEBUG = _Tp;
   template <template <class...> class _FirstFn, template <class...> class, class ..._Args>
   using _SelectApplyImpl _LIBCPP_NODEBUG = _FirstFn<_Args...>;
-  template <class _Result, class _First, class ..._Rest>
-  using _OrImpl _LIBCPP_NODEBUG = typename _MetaBase<_First::value != true && sizeof...(_Rest) != 0>::template _OrImpl<_First, _Rest...>;
+  template <class _First, class...>
+  using _FirstImpl _LIBCPP_NODEBUG = _First;
+  template <class, class _Second, class...>
+  using _SecondImpl _LIBCPP_NODEBUG = _Second;
 };
 
 template <>
 struct _MetaBase<false> {
-  template <class _Tp, class _Up>
-  using _SelectImpl _LIBCPP_NODEBUG = _Up;
   template <template <class...> class, template <class...> class _SecondFn, class ..._Args>
   using _SelectApplyImpl _LIBCPP_NODEBUG = _SecondFn<_Args...>;
-  template <class _Result, class ...>
-  using _OrImpl _LIBCPP_NODEBUG = _Result;
 };
-template <bool _Cond, class _IfRes, class _ElseRes>
-using _If _LIBCPP_NODEBUG = typename _MetaBase<_Cond>::template _SelectImpl<_IfRes, _ElseRes>;
-template <class ..._Rest>
-using _Or _LIBCPP_NODEBUG = typename _MetaBase< sizeof...(_Rest) != 0 >::template _OrImpl<false_type, _Rest...>;
 
-template <class ...> using __expand_to_true = true_type;
-template <class ..._Pred>
-__expand_to_true<__enable_if_t<_Pred::value>...> __and_helper(int);
-template <class ...>
-false_type __and_helper(...);
-template <class ..._Pred>
-using _And _LIBCPP_NODEBUG = decltype(__and_helper<_Pred...>(0));
+template <class ..._Args>
+using _FirstType _LIBCPP_NODEBUG = typename _MetaBase<(sizeof...(_Args) >= 1)>::template _FirstImpl<_Args...>;
+template <class ..._Args>
+using _SecondType _LIBCPP_NODEBUG = typename _MetaBase<(sizeof...(_Args) >= 2)>::template _SecondImpl<_Args...>;
 
 template <template <class...> class _Func, class ..._Args>
 struct _Lazy : _Func<_Args...> {};
