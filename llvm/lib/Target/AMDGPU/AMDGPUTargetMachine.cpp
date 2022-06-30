@@ -275,11 +275,10 @@ static cl::opt<bool> EnableSIModeRegisterPass(
   cl::Hidden);
 
 // Enable GFX11+ s_delay_alu insertion
-static cl::opt<bool> EnableInsertDelayAlu(
-  "amdgpu-enable-delay-alu",
-  cl::desc("Enable s_delay_alu insertion"),
-  cl::init(true),
-  cl::Hidden);
+static cl::opt<bool>
+    EnableInsertDelayAlu("amdgpu-enable-delay-alu",
+                         cl::desc("Enable s_delay_alu insertion"),
+                         cl::init(true), cl::Hidden);
 
 // Enable GFX11+ VOPD
 static cl::opt<bool> EnableVOPD(
@@ -1440,7 +1439,7 @@ void GCNPassConfig::addPreEmitPass() {
   if (getOptLevel() > CodeGenOpt::Less)
     addPass(&AMDGPUReleaseVGPRsID);
 
-  if (EnableInsertDelayAlu && getOptLevel() > CodeGenOpt::None)
+  if (isPassEnabled(EnableInsertDelayAlu, CodeGenOpt::Less))
     addPass(&AMDGPUInsertDelayAluID);
 
   addPass(&BranchRelaxationPassID);
