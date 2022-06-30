@@ -32,6 +32,7 @@ using ProbeCounterMap =
 class ProfileGeneratorBase {
 
 public:
+  ProfileGeneratorBase(ProfiledBinary *Binary) : Binary(Binary){};
   ProfileGeneratorBase(ProfiledBinary *Binary,
                        const ContextSampleCounterMap *Counters)
       : Binary(Binary), SampleCounters(Counters){};
@@ -44,7 +45,7 @@ public:
   create(ProfiledBinary *Binary, const ContextSampleCounterMap *Counters,
          bool profileIsCS);
   static std::unique_ptr<ProfileGeneratorBase>
-  create(ProfiledBinary *Binary, const SampleProfileMap &&ProfileMap,
+  create(ProfiledBinary *Binary, SampleProfileMap &ProfileMap,
          bool profileIsCS);
   virtual void generateProfile() = 0;
   void write();
@@ -109,7 +110,7 @@ protected:
 
   StringRef getCalleeNameForOffset(uint64_t TargetOffset);
 
-  void computeSummaryAndThreshold();
+  void computeSummaryAndThreshold(SampleProfileMap &ProfileMap);
 
   void calculateAndShowDensity(const SampleProfileMap &Profiles);
 
@@ -119,6 +120,13 @@ protected:
   void showDensitySuggestion(double Density);
 
   void collectProfiledFunctions();
+
+  bool collectFunctionsFromRawProfile(
+      std::unordered_set<const BinaryFunction *> &ProfiledFunctions);
+
+  // Collect profiled Functions for llvm sample profile input.
+  virtual bool collectFunctionsFromLLVMProfile(
+      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) = 0;
 
   // Thresholds from profile summary to answer isHotCount/isColdCount queries.
   uint64_t HotCountThreshold;
@@ -166,6 +174,8 @@ private:
   void postProcessProfiles();
   void trimColdProfiles(const SampleProfileMap &Profiles,
                         uint64_t ColdCntThreshold);
+  bool collectFunctionsFromLLVMProfile(
+      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
 };
 
 class CSProfileGenerator : public ProfileGeneratorBase {
@@ -173,8 +183,8 @@ public:
   CSProfileGenerator(ProfiledBinary *Binary,
                      const ContextSampleCounterMap *Counters)
       : ProfileGeneratorBase(Binary, Counters){};
-  CSProfileGenerator(ProfiledBinary *Binary, const SampleProfileMap &&Profiles)
-      : ProfileGeneratorBase(Binary, std::move(Profiles)){};
+  CSProfileGenerator(ProfiledBinary *Binary, SampleProfileMap &Profiles)
+      : ProfileGeneratorBase(Binary), ContextTracker(Profiles, nullptr){};
   void generateProfile() override;
 
   // Trim the context stack at a given depth.
@@ -342,6 +352,11 @@ private:
                            SampleContextFrameVector &Context);
 
   void convertToProfileMap();
+
+  void computeSummaryAndThreshold();
+
+  bool collectFunctionsFromLLVMProfile(
+      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
 
   ContextTrieNode &getRootContext() { return ContextTracker.getRootContext(); };
 

@@ -142,6 +142,9 @@ public:
   ContextTrieNode &getRootContext();
   void promoteMergeContextSamplesTree(const Instruction &Inst,
                                       StringRef CalleeName);
+
+  // Create a merged conext-less profile map.
+  void createContextLessProfileMap(SampleProfileMap &ContextLessProfiles);
   // Dump the internal context profile trie.
   void dump();
 
@@ -158,7 +161,6 @@ private:
   promoteMergeContextSamplesTree(ContextTrieNode &FromNode,
                                  ContextTrieNode &ToNodeParent,
                                  uint32_t ContextFramesToRemove);
-
   // Map from function name to context profiles (excluding base profile)
   StringMap<ContextSamplesTy> FuncToCtxtProfiles;
 
