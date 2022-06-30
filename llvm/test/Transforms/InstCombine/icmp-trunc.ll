@@ -313,10 +313,15 @@ define i1 @sgt_n1_use(i32 %x) {
 }
 
 define i1 @trunc_eq_i32_i8(i32 %x) {
-; CHECK-LABEL: @trunc_eq_i32_i8(
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[T]], 42
-; CHECK-NEXT:    ret i1 [[R]]
+; DL64-LABEL: @trunc_eq_i32_i8(
+; DL64-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 255
+; DL64-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 42
+; DL64-NEXT:    ret i1 [[R]]
+;
+; DL8-LABEL: @trunc_eq_i32_i8(
+; DL8-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; DL8-NEXT:    [[R:%.*]] = icmp eq i8 [[T]], 42
+; DL8-NEXT:    ret i1 [[R]]
 ;
   %t = trunc i32 %x to i8
   %r = icmp eq i8 %t, 42
@@ -335,10 +340,15 @@ define <2 x i1> @trunc_eq_v2i32_v2i8(<2 x i32> %x) {
 }
 
 define i1 @trunc_ne_i64_i10(i64 %x) {
-; CHECK-LABEL: @trunc_ne_i64_i10(
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[X:%.*]] to i10
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i10 [[T]], 42
-; CHECK-NEXT:    ret i1 [[R]]
+; DL64-LABEL: @trunc_ne_i64_i10(
+; DL64-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 1023
+; DL64-NEXT:    [[R:%.*]] = icmp eq i64 [[TMP1]], 42
+; DL64-NEXT:    ret i1 [[R]]
+;
+; DL8-LABEL: @trunc_ne_i64_i10(
+; DL8-NEXT:    [[T:%.*]] = trunc i64 [[X:%.*]] to i10
+; DL8-NEXT:    [[R:%.*]] = icmp eq i10 [[T]], 42
+; DL8-NEXT:    ret i1 [[R]]
 ;
   %t = trunc i64 %x to i10
   %r = icmp eq i10 %t, 42
