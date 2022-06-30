@@ -1106,6 +1106,7 @@ const Symbol *GetMainEntry(const Symbol *);
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);
 bool IsFunction(const Scope &);
 bool IsProcedure(const Symbol &);

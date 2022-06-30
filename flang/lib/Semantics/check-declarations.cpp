@@ -91,7 +91,7 @@ private:
     return innermostSymbol_ && IsPureProcedure(*innermostSymbol_);
   }
   bool InElemental() const {
-    return innermostSymbol_ && innermostSymbol_->attrs().test(Attr::ELEMENTAL);
+    return innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
   }
   bool InFunction() const {
     return innermostSymbol_ && IsFunction(*innermostSymbol_);
@@ -319,13 +319,12 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "An assumed-length CHARACTER(*) function cannot return an array"_err_en_US);
     }
-    if (symbol.attrs().test(Attr::PURE)) {
-      messages_.Say(
-          "An assumed-length CHARACTER(*) function cannot be PURE"_err_en_US);
-    }
-    if (symbol.attrs().test(Attr::ELEMENTAL)) {
+    if (IsElementalProcedure(symbol)) {
       messages_.Say(
           "An assumed-length CHARACTER(*) function cannot be ELEMENTAL"_err_en_US);
+    } else if (IsPureProcedure(symbol)) {
+      messages_.Say(
+          "An assumed-length CHARACTER(*) function cannot be PURE"_err_en_US);
     }
     if (const Symbol * result{FindFunctionResult(symbol)}) {
       if (IsPointer(*result)) {
@@ -670,7 +669,7 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
           context_.Say("Procedure pointer '%s' initializer '%s' is neither "
                        "an external nor a module procedure"_err_en_US,
               symbol.name(), ultimate.name());
-        } else if (ultimate.attrs().test(Attr::ELEMENTAL)) {
+        } else if (IsElementalProcedure(ultimate)) {
           context_.Say("Procedure pointer '%s' cannot be initialized with the "
                        "elemental procedure '%s"_err_en_US,
               symbol.name(), ultimate.name());
@@ -779,9 +778,9 @@ void CheckHelper::CheckProcEntity(
     }
     const Symbol *interface { details.interface().symbol() };
     if (!symbol.attrs().test(Attr::INTRINSIC) &&
-        (symbol.attrs().test(Attr::ELEMENTAL) ||
+        (IsElementalProcedure(symbol) ||
             (interface && !interface->attrs().test(Attr::INTRINSIC) &&
-                interface->attrs().test(Attr::ELEMENTAL)))) {
+                IsElementalProcedure(*interface)))) {
       // There's no explicit constraint or "shall" that we can find in the
       // standard for this check, but it seems to be implied in multiple
       // sites, and ELEMENTAL non-intrinsic actual arguments *are*
@@ -821,7 +820,7 @@ void CheckHelper::CheckProcEntity(
               "to procedure pointer '%s'"_err_en_US,
               interface->name(), symbol.name());
         }
-      } else if (interface->attrs().test(Attr::ELEMENTAL)) {
+      } else if (IsElementalProcedure(*interface)) {
         messages_.Say("Procedure pointer '%s' may not be ELEMENTAL"_err_en_US,
             symbol.name()); // C1517
       }
@@ -931,7 +930,7 @@ void CheckHelper::CheckSubprogram(
       }
     }
   }
-  if (symbol.attrs().test(Attr::ELEMENTAL)) {
+  if (IsElementalProcedure(symbol)) {
     // See comment on the similar check in CheckProcEntity()
     if (details.isDummy()) {
       messages_.Say("A dummy procedure may not be ELEMENTAL"_err_en_US);
@@ -1661,8 +1660,8 @@ void CheckHelper::CheckProcBinding(
             "An overridden pure type-bound procedure binding must also be pure"_err_en_US);
         return;
       }
-      if (!binding.symbol().attrs().test(Attr::ELEMENTAL) &&
-          overriddenBinding->symbol().attrs().test(Attr::ELEMENTAL)) {
+      if (!IsElementalProcedure(binding.symbol()) &&
+          IsElementalProcedure(overriddenBinding->symbol())) {
         SayWithDeclaration(*overridden,
             "A type-bound procedure and its override must both, or neither, be ELEMENTAL"_err_en_US);
         return;

@@ -133,9 +133,9 @@ const Symbol *ProcedureDesignator::GetInterfaceSymbol() const {
 
 bool ProcedureDesignator::IsElemental() const {
   if (const Symbol * interface{GetInterfaceSymbol()}) {
-    return interface->attrs().test(semantics::Attr::ELEMENTAL);
+    return IsElementalProcedure(*interface);
   } else if (const Symbol * symbol{GetSymbol()}) {
-    return symbol->attrs().test(semantics::Attr::ELEMENTAL);
+    return IsElementalProcedure(*symbol);
   } else if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&u)}) {
     return intrinsic->characteristics.value().attrs.test(
         characteristics::Procedure::Attr::Elemental);
