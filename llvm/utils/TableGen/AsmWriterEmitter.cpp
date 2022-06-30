@@ -999,6 +999,17 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         if (D->getNumArgs() == 0)
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         bool IsOr = CombineType == "any_of";
+        // Change (any_of FeatureAll, (any_of ...)) to (any_of FeatureAll, ...).
+        if (IsOr && D->getNumArgs() == 2 && isa<DagInit>(D->getArg(1))) {
+          DagInit *RHS = dyn_cast<DagInit>(D->getArg(1));
+          SmallVector<Init *> Args{D->getArg(0)};
+          SmallVector<StringInit *> ArgNames{D->getArgName(0)};
+          for (unsigned i = 0, e = RHS->getNumArgs(); i != e; ++i) {
+            Args.push_back(RHS->getArg(i));
+            ArgNames.push_back(RHS->getArgName(i));
+          }
+          D = DagInit::get(D->getOperator(), nullptr, Args, ArgNames);
+        }
 
         for (auto *Arg : D->getArgs()) {
           bool IsNeg = false;

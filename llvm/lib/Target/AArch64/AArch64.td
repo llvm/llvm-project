@@ -556,6 +556,13 @@ def HasV8_0rOps : SubtargetFeature<
   FeatureSpecRestrict
   ]>;
 
+// Only intended to be used by disassemblers.
+def FeatureAll
+    : SubtargetFeature<"all", "IsAll", "true", "Enable all instructions", []>;
+
+class AssemblerPredicateWithAll<dag cond, string name="">
+    : AssemblerPredicate<(any_of FeatureAll, cond), name>;
+
 //===----------------------------------------------------------------------===//
 // Register File Description
 //===----------------------------------------------------------------------===//
