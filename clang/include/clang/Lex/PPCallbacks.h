@@ -43,11 +43,33 @@ public:
   /// Callback invoked whenever a source file is entered or exited.
   ///
   /// \param Loc Indicates the new location.
-  /// \param PrevFID the file that was exited if \p Reason is ExitFile.
+  /// \param PrevFID the file that was exited if \p Reason is ExitFile or the
+  /// the file before the new one entered for \p Reason EnterFile.
   virtual void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                            SrcMgr::CharacteristicKind FileType,
                            FileID PrevFID = FileID()) {
   }
+
+  enum class LexedFileChangeReason { EnterFile, ExitFile };
+
+  /// Callback invoked whenever the \p Lexer moves to a different file for
+  /// lexing. Unlike \p FileChanged line number directives and other related
+  /// pragmas do not trigger callbacks to \p LexedFileChanged.
+  ///
+  /// \param FID The \p FileID that the \p Lexer moved to.
+  ///
+  /// \param Reason Whether the \p Lexer entered a new file or exited one.
+  ///
+  /// \param FileType The \p CharacteristicKind of the file the \p Lexer moved
+  /// to.
+  ///
+  /// \param PrevFID The \p FileID the \p Lexer was using before the change.
+  ///
+  /// \param Loc The location where the \p Lexer entered a new file from or the
+  /// location that the \p Lexer moved into after exiting a file.
+  virtual void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
+                                SrcMgr::CharacteristicKind FileType,
+                                FileID PrevFID, SourceLocation Loc) {}
 
   /// Callback invoked whenever a source file is skipped as the result
   /// of header guard optimization.
@@ -418,6 +440,13 @@ public:
                    FileID PrevFID) override {
     First->FileChanged(Loc, Reason, FileType, PrevFID);
     Second->FileChanged(Loc, Reason, FileType, PrevFID);
+  }
+
+  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
+                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
+                        SourceLocation Loc) override {
+    First->LexedFileChanged(FID, Reason, FileType, PrevFID, Loc);
+    Second->LexedFileChanged(FID, Reason, FileType, PrevFID, Loc);
   }
 
   void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
