@@ -382,7 +382,7 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   RecursivelyDeleteTriviallyDeadInstructions(Compare, TLI, MSSAU.get());
 
   // Delete the old floating point increment.
-  Incr->replaceAllUsesWith(UndefValue::get(Incr->getType()));
+  Incr->replaceAllUsesWith(PoisonValue::get(Incr->getType()));
   RecursivelyDeleteTriviallyDeadInstructions(Incr, TLI, MSSAU.get());
 
   // If the FP induction variable still has uses, this is because something else
