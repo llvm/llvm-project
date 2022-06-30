@@ -11,9 +11,10 @@ declare i8* @strchr(i8*, i32)
 
 define i1 @fold_strchr_s_c_eq_s(i8* %s, i32 %c) {
 ; CHECK-LABEL: @fold_strchr_s_c_eq_s(
-; CHECK-NEXT:    [[P:%.*]] = call i8* @strchr(i8* noundef nonnull dereferenceable(1) [[S:%.*]], i32 [[C:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[P]], [[S]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[CHAR0CMP:%.*]] = icmp eq i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CHAR0CMP]]
 ;
   %p = call i8* @strchr(i8* %s, i32 %c)
   %cmp = icmp eq i8* %p, %s
@@ -25,9 +26,10 @@ define i1 @fold_strchr_s_c_eq_s(i8* %s, i32 %c) {
 
 define i1 @fold_strchr_s_c_neq_s(i8* %s, i32 %c) {
 ; CHECK-LABEL: @fold_strchr_s_c_neq_s(
-; CHECK-NEXT:    [[P:%.*]] = call i8* @strchr(i8* noundef nonnull dereferenceable(1) [[S:%.*]], i32 [[C:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[P]], [[S]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[CHAR0CMP:%.*]] = icmp ne i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CHAR0CMP]]
 ;
   %p = call i8* @strchr(i8* %s, i32 %c)
   %cmp = icmp ne i8* %p, %s
@@ -40,8 +42,7 @@ define i1 @fold_strchr_s_c_neq_s(i8* %s, i32 %c) {
 
 define i1 @fold_strchr_s_nul_eqz(i8* %s) {
 ; CHECK-LABEL: @fold_strchr_s_nul_eqz(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[S:%.*]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %p = call i8* @strchr(i8* %s, i32 0)
   %cmp = icmp eq i8* %p, null
@@ -53,8 +54,7 @@ define i1 @fold_strchr_s_nul_eqz(i8* %s) {
 
 define i1 @fold_strchr_s_nul_nez(i8* %s) {
 ; CHECK-LABEL: @fold_strchr_s_nul_nez(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[S:%.*]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %p = call i8* @strchr(i8* %s, i32 0)
   %cmp = icmp ne i8* %p, null
@@ -68,9 +68,9 @@ define i1 @fold_strchr_s_nul_nez(i8* %s) {
 
 define i1 @fold_strchr_a_c_eq_a(i32 %c) {
 ; CHECK-LABEL: @fold_strchr_a_c_eq_a(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0), i32 [[C:%.*]], i64 6)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[MEMCHR]], getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0)
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[CHAR0CMP:%.*]] = icmp eq i8 [[TMP1]], 49
+; CHECK-NEXT:    ret i1 [[CHAR0CMP]]
 ;
   %p = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
   %q = call i8* @strchr(i8* %p, i32 %c)

@@ -295,29 +295,67 @@ Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilderBase &B) {
   return copyFlags(*CI, emitStrLenMemCpy(Src, Dst, SrcLen, B));
 }
 
+// Helper to transform memchr(S, C, N) == S to N && *S == C and, when
+// NBytes is null, strchr(S, C) to *S == C.  A precondition of the function
+// is that either S is dereferenceable or the value of N is nonzero.
+static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
+                                  IRBuilderBase &B, const DataLayout &DL)
+{
+  Value *Src = CI->getArgOperand(0);
+  Value *CharVal = CI->getArgOperand(1);
+
+  // Fold memchr(A, C, N) == A to N && *A == C.
+  Type *CharTy = B.getInt8Ty();
+  Value *Char0 = B.CreateLoad(CharTy, Src);
+  CharVal = B.CreateTrunc(CharVal, CharTy);
+  Value *Cmp = B.CreateICmpEQ(Char0, CharVal, "char0cmp");
+
+  if (NBytes) {
+    Value *Zero = ConstantInt::get(NBytes->getType(), 0);
+    Value *And = B.CreateICmpNE(NBytes, Zero);
+    Cmp = B.CreateLogicalAnd(And, Cmp);
+  }
+
+  Value *NullPtr = Constant::getNullValue(CI->getType());
+  return B.CreateSelect(Cmp, Src, NullPtr);
+}
+
 Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
   Value *SrcStr = CI->getArgOperand(0);
+  Value *CharVal = CI->getArgOperand(1);
   annotateNonNullNoUndefBasedOnAccess(CI, 0);
+
+  if (isOnlyUsedInEqualityComparison(CI, SrcStr))
+    return memChrToCharCompare(CI, nullptr, B, DL);
 
   // If the second operand is non-constant, see if we can compute the length
   // of the input string and turn this into memchr.
-  ConstantInt *CharC = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+  ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   if (!CharC) {
     uint64_t Len = GetStringLength(SrcStr);
     if (Len)
       annotateDereferenceableBytes(CI, 0, Len);
     else
       return nullptr;
+
+    Function *Callee = CI->getCalledFunction();
+    FunctionType *FT = Callee->getFunctionType();
     if (!FT->getParamType(1)->isIntegerTy(32)) // memchr needs i32.
       return nullptr;
 
     return copyFlags(
         *CI,
-        emitMemChr(SrcStr, CI->getArgOperand(1), // include nul.
+        emitMemChr(SrcStr, CharVal, // include nul.
                    ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len), B,
                    DL, TLI));
+  }
+
+  if (CharC->isZero()) {
+    Value *NullPtr = Constant::getNullValue(CI->getType());
+    if (isOnlyUsedInEqualityComparison(CI, NullPtr))
+      // Pre-empt the transformation to strlen below and fold
+      // strchr(A, '\0') == null to false.
+      return B.CreateIntToPtr(B.getTrue(), CI->getType());
   }
 
   // Otherwise, the character is a constant, see if the first argument is
@@ -1008,8 +1046,12 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   Value *SrcStr = CI->getArgOperand(0);
   Value *Size = CI->getArgOperand(2);
-  if (isKnownNonZero(Size, DL))
+
+  if (isKnownNonZero(Size, DL)) {
     annotateNonNullNoUndefBasedOnAccess(CI, 0);
+    if (isOnlyUsedInEqualityComparison(CI, SrcStr))
+      return memChrToCharCompare(CI, Size, B, DL);
+  }
 
   Value *CharVal = CI->getArgOperand(1);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
@@ -1099,9 +1141,16 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     return B.CreateSelect(And, SrcStr, Sel1, "memchr.sel2");
   }
 
-  if (!LenC)
+  if (!LenC) {
+    if (isOnlyUsedInEqualityComparison(CI, SrcStr))
+      // S is dereferenceable so it's safe to load from it and fold
+      //   memchr(S, C, N) == S to N && *S == C for any C and N.
+      // TODO: This is safe even even for nonconstant S.
+      return memChrToCharCompare(CI, Size, B, DL);
+
     // From now on we need a constant length and constant array.
     return nullptr;
+  }
 
   // If the char is variable but the input str and length are not we can turn
   // this memchr call into a simple bit field test. Of course this only works
