@@ -554,7 +554,6 @@ void reportDuplicate(const Symbol &sym, const InputFile *newFile,
                      InputSectionBase *errSec, uint64_t errOffset);
 void maybeWarnUnorderableSymbol(const Symbol *sym);
 bool computeIsPreemptible(const Symbol &sym);
-void reportBackrefs();
 
 } // namespace elf
 } // namespace lld

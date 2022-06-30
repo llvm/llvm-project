@@ -380,6 +380,14 @@ struct Ctx {
   SmallVector<std::pair<Symbol *, unsigned>, 0> nonPrevailingSyms;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
+  // A tuple of (reference, extractedFile, sym). Used by --why-extract=.
+  SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
+      whyExtractRecords;
+  // A mapping from a symbol to an InputFile referencing it backward. Used by
+  // --warn-backrefs.
+  llvm::DenseMap<const Symbol *,
+                 std::pair<const InputFile *, const InputFile *>>
+      backwardReferences;
 };
 
 // The only instance of Ctx struct.
