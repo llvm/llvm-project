@@ -587,11 +587,11 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         Ops.push_back(getVal(Op));
       InstResult = ConstantFoldInstOperands(&*CurInst, Ops, DL, TLI);
       if (!InstResult) {
-        dbgs() << "Cannot fold instruction: " << *CurInst << "\n";
+        LLVM_DEBUG(dbgs() << "Cannot fold instruction: " << *CurInst << "\n");
         return false;
       }
-      dbgs() << "Folded instruction " << *CurInst << " to " << *InstResult
-             << "\n";
+      LLVM_DEBUG(dbgs() << "Folded instruction " << *CurInst << " to "
+                        << *InstResult << "\n");
     }
 
     if (!CurInst->use_empty()) {
