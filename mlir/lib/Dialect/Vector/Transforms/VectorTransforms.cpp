@@ -1875,10 +1875,9 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
     assert(rhsType.getRank() == 1 && "corrupt contraction");
     Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter);
     auto kind = vector::CombiningKind::ADD;
-    Value res = rewriter.create<vector::ReductionOp>(loc, kind, m);
     if (auto acc = op.getAcc())
-      res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
-    return res;
+      return rewriter.create<vector::ReductionOp>(loc, kind, m, acc);
+    return rewriter.create<vector::ReductionOp>(loc, kind, m);
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
