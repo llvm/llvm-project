@@ -112,3 +112,33 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
     def test_vCont_interspersed_nonstop(self):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"],
                              use_vCont=True, nonstop=True)
+
+    @add_test_categories(["fork"])
+    def test_c_both_nonstop(self):
+        lock1 = self.getBuildArtifact("lock1")
+        lock2 = self.getBuildArtifact("lock2")
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "process:sync:" + lock1, "print-pid",
+                                  "process:sync:" + lock2, "stop"],
+                                 nonstop=True))
+
+        self.test_sequence.add_log_lines([
+            "read packet: $Hcp{}.{}#00".format(parent_pid, parent_tid),
+            "send packet: $OK#00",
+            "read packet: $c#00",
+            "send packet: $OK#00",
+            "read packet: $Hcp{}.{}#00".format(child_pid, child_tid),
+            "send packet: $OK#00",
+            "read packet: $c#00",
+            "send packet: $OK#00",
+            {"direction": "send", "regex": "%Stop:T.*"},
+            # see the comment in TestNonStop.py, test_stdio
+            "read packet: $vStdio#00",
+            "read packet: $vStdio#00",
+            "send packet: $OK#00",
+            ], True)
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(),
+                      ret["O_content"])
+        self.assertIn("PID: {}".format(int(child_pid, 16)).encode(),
+                      ret["O_content"])

@@ -1113,14 +1113,16 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
     SendProcessOutput();
     // Then stop the forwarding, so that any late output (see llvm.org/pr25652)
     // does not interfere with our protocol.
-    StopSTDIOForwarding();
+    if (!m_non_stop)
+      StopSTDIOForwarding();
     HandleInferiorState_Stopped(process);
     break;
 
   case StateType::eStateExited:
     // Same as above
     SendProcessOutput();
-    StopSTDIOForwarding();
+    if (!m_non_stop)
+      StopSTDIOForwarding();
     HandleInferiorState_Exited(process);
     break;
 
@@ -1425,7 +1427,8 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_k(StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Process);
 
-  StopSTDIOForwarding();
+  if (!m_non_stop)
+    StopSTDIOForwarding();
 
   if (m_debugged_processes.empty()) {
     LLDB_LOG(log, "No debugged process found.");
@@ -1451,7 +1454,8 @@ GDBRemoteCommunicationServerLLGS::Handle_k(StringExtractorGDBRemote &packet) {
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_vKill(
     StringExtractorGDBRemote &packet) {
-  StopSTDIOForwarding();
+  if (!m_non_stop)
+    StopSTDIOForwarding();
 
   packet.SetFilePos(6); // vKill;
   uint32_t pid = packet.GetU32(LLDB_INVALID_PROCESS_ID, 16);
@@ -3524,7 +3528,8 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Process);
-  StopSTDIOForwarding();
+  if (!m_non_stop)
+    StopSTDIOForwarding();
 
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
 
@@ -3923,6 +3928,8 @@ GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
   assert(packet_str.startswith("QNonStop:"));
   packet_str.consume_front("QNonStop:");
   if (packet_str == "0") {
+    if (m_non_stop)
+      StopSTDIOForwarding();
     for (auto &process_it : m_debugged_processes) {
       if (process_it.second.process_up->IsRunning()) {
         assert(m_non_stop);
@@ -3945,6 +3952,8 @@ GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
     if (m_disabling_non_stop)
       return PacketResult::Success;
   } else if (packet_str == "1") {
+    if (!m_non_stop)
+      StartSTDIOForwarding();
     m_non_stop = true;
   } else
     return SendErrorResponse(Status("Invalid QNonStop packet"));
@@ -4238,9 +4247,10 @@ void GDBRemoteCommunicationServerLLGS::SetEnabledExtensions(
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::SendContinueSuccessResponse() {
-  // TODO: how to handle forwarding in non-stop mode?
+  if (m_non_stop)
+    return SendOKResponse();
   StartSTDIOForwarding();
-  return m_non_stop ? SendOKResponse() : PacketResult::Success;
+  return PacketResult::Success;
 }
 
 void GDBRemoteCommunicationServerLLGS::AppendThreadIDToResponse(
