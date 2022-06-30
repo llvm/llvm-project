@@ -1685,57 +1685,6 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(Scope* S,
   return Param;
 }
 
-namespace {
-class ConstraintRefersToContainingTemplateChecker
-    : public TreeTransform<ConstraintRefersToContainingTemplateChecker> {
-  bool Result = false;
-  unsigned TemplateDepth = 0;
-
-public:
-  using inherited = TreeTransform<ConstraintRefersToContainingTemplateChecker>;
-
-  ConstraintRefersToContainingTemplateChecker(Sema &SemaRef,
-                                              unsigned TemplateDepth)
-      : inherited(SemaRef), TemplateDepth(TemplateDepth) {}
-  bool getResult() const { return Result; }
-
-  // This should be the only template parm type that we have to deal with.
-  // SubstTempalteTypeParmPack, SubstNonTypeTemplateParmPack, and
-  // FunctionParmPackExpr are all partially substituted, which cannot happen
-  // with concepts at this point in translation.
-  QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
-                                         TemplateTypeParmTypeLoc TL) {
-    assert(TL.getDecl()->getDepth() <= TemplateDepth &&
-           "Nothing should reference a value below the actual template depth, "
-           "depth is likely wrong");
-    if (TL.getDecl()->getDepth() != TemplateDepth)
-      Result = true;
-    return inherited::TransformTemplateTypeParmType(TLB, TL);
-  }
-
-  Decl *TransformDecl(SourceLocation Loc, Decl *D) {
-    // FIXME : This is possibly an incomplete list, but it is unclear what other
-    // Decl kinds could be used to refer to the template parameters.  This is a
-    // best guess so far based on examples currently available, but the
-    // unreachable should catch future instances/cases.
-    if (auto *TD = dyn_cast<TypedefNameDecl>(D))
-      TransformType(TD->getUnderlyingType());
-    else if (auto *VD = dyn_cast<ValueDecl>(D))
-      TransformType(VD->getType());
-    else
-      llvm_unreachable("Don't know how to handle this declaration type yet");
-    return D;
-  }
-};
-} // namespace
-
-bool Sema::ConstraintExpressionDependsOnEnclosingTemplate(
-    unsigned TemplateDepth, const Expr *Constraint) {
-  ConstraintRefersToContainingTemplateChecker Checker(*this, TemplateDepth);
-  Checker.TransformExpr(const_cast<Expr *>(Constraint));
-  return Checker.getResult();
-}
-
 /// ActOnTemplateParameterList - Builds a TemplateParameterList, optionally
 /// constrained by RequiresClause, that contains the template parameters in
 /// Params.
@@ -2337,8 +2286,7 @@ private:
           TTP->isExpandedParameterPack() ?
           llvm::Optional<unsigned>(TTP->getNumExpansionParameters()) : None);
       if (const auto *TC = TTP->getTypeConstraint())
-        SemaRef.SubstTypeConstraint(NewTTP, TC, Args,
-                                    /*IsEvaluatingAConstraint*/ false);
+        SemaRef.SubstTypeConstraint(NewTTP, TC, Args);
       if (TTP->hasDefaultArgument()) {
         TypeSourceInfo *InstantiatedDefaultArg =
             SemaRef.SubstType(TTP->getDefaultArgumentInfo(), Args,
@@ -4755,11 +4703,9 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   bool AreArgsDependent =
       TemplateSpecializationType::anyDependentTemplateArguments(*TemplateArgs,
                                                                 Converted);
-  MultiLevelTemplateArgumentList MLTAL;
-  MLTAL.addOuterTemplateArguments(Converted);
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
-          NamedConcept, {NamedConcept->getConstraintExpr()}, MLTAL,
+          NamedConcept, {NamedConcept->getConstraintExpr()}, Converted,
           SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
                       TemplateArgs->getRAngleLoc()),
           Satisfaction))
@@ -5621,8 +5567,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
 
     TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, Converted);
     Params = SubstTemplateParams(Params, CurContext,
-                                 MultiLevelTemplateArgumentList(TemplateArgs),
-                                 /*InstantiateConstraints*/ true);
+                                 MultiLevelTemplateArgumentList(TemplateArgs));
     if (!Params)
       return true;
   }
@@ -5977,20 +5922,13 @@ bool Sema::CheckTemplateArgumentList(
   if (UpdateArgsWithConversions)
     TemplateArgs = std::move(NewArgs);
 
-  if (!PartialTemplateArgs) {
-    TemplateArgumentList StackTemplateArgs(TemplateArgumentList::OnStack,
-                                           Converted);
-    MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, &StackTemplateArgs, /*RelativeToPrimary*/ true,
-        /*Pattern*/ nullptr,
-        /*LookBeyondLambda*/ true, /*IncludeContainingStruct*/ true);
-    if (EnsureTemplateArgumentListConstraints(
-            Template, MLTAL,
-            SourceRange(TemplateLoc, TemplateArgs.getRAngleLoc()))) {
-      if (ConstraintsNotSatisfied)
-        *ConstraintsNotSatisfied = true;
-      return true;
-    }
+  if (!PartialTemplateArgs &&
+      EnsureTemplateArgumentListConstraints(
+        Template, Converted, SourceRange(TemplateLoc,
+                                         TemplateArgs.getRAngleLoc()))) {
+    if (ConstraintsNotSatisfied)
+      *ConstraintsNotSatisfied = true;
+    return true;
   }
 
   return false;
@@ -7520,9 +7458,7 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
       //   are not considered.
       if (ParamsAC.empty())
         return false;
-
       Template->getAssociatedConstraints(TemplateAC);
-
       bool IsParamAtLeastAsConstrained;
       if (IsAtLeastAsConstrained(Param, ParamsAC, Template, TemplateAC,
                                  IsParamAtLeastAsConstrained))
