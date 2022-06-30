@@ -14,6 +14,8 @@
 #include "clang-pseudo/grammar/LRGraph.h"
 #include "clang-pseudo/grammar/LRTable.h"
 #include "clang/Basic/LangOptions.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -58,6 +60,34 @@ static std::string readOrDie(llvm::StringRef Path) {
   }
   return Text.get()->getBuffer().str();
 }
+
+namespace clang {
+namespace pseudo {
+namespace {
+
+struct NodeStats {
+  unsigned Total = 0;
+  std::vector<std::pair<SymbolID, unsigned>> BySymbol;
+
+  NodeStats(const ForestNode &Root,
+            llvm::function_ref<bool(const ForestNode &)> Filter) {
+    llvm::DenseMap<SymbolID, unsigned> Map;
+    for (const ForestNode &N : Root.descendants())
+      if (Filter(N)) {
+        ++Total;
+        ++Map[N.symbol()];
+      }
+    BySymbol = {Map.begin(), Map.end()};
+    // Sort by count descending, then symbol ascending.
+    llvm::sort(BySymbol, [](const auto &L, const auto &R) {
+      return std::tie(R.second, L.first) < std::tie(L.second, R.first);
+    });
+  }
+};
+
+} // namespace
+} // namespace pseudo
+} // namespace clang
 
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "");
@@ -135,6 +165,17 @@ int main(int argc, char *argv[]) {
                      << " nodes: " << Arena.nodeCount() << "\n";
         llvm::outs() << "GSS bytes: " << GSS.bytes()
                      << " nodes: " << GSS.nodesCreated() << "\n";
+
+        for (auto &P :
+             {std::make_pair("Ambiguous", clang::pseudo::ForestNode::Ambiguous),
+              std::make_pair("Opaque", clang::pseudo::ForestNode::Opaque)}) {
+          clang::pseudo::NodeStats Stats(
+              Root, [&](const auto &N) { return N.kind() == P.second; });
+          llvm::outs() << "\n" << Stats.Total << " " << P.first << " nodes:\n";
+          for (const auto &S : Stats.BySymbol)
+            llvm::outs() << llvm::formatv("  {0,3} {1}\n", S.second,
+                                          G.symbolName(S.first));
+        }
       }
     }
   }

@@ -16,6 +16,35 @@
 namespace clang {
 namespace pseudo {
 
+void ForestNode::RecursiveIterator::operator++() {
+  auto C = Cur->children();
+  // Try to find a child of the current node to descend into.
+  for (unsigned I = 0; I < C.size(); ++I) {
+    if (Seen.insert(C[I]).second) {
+      Stack.push_back({Cur, I});
+      Cur = C[I];
+      return;
+    }
+  }
+  // Try to find a sibling af an ancestor to advance to.
+  for (; !Stack.empty(); Stack.pop_back()) {
+    C = Stack.back().Parent->children();
+    unsigned &Index = Stack.back().ChildIndex;
+    while (++Index < C.size()) {
+      if (Seen.insert(C[Index]).second) {
+        Cur = C[Index];
+        return;
+      }
+    }
+  }
+  Cur = nullptr;
+}
+
+llvm::iterator_range<ForestNode::RecursiveIterator>
+ForestNode::descendants() const {
+  return {RecursiveIterator(this), RecursiveIterator()};
+}
+
 std::string ForestNode::dump(const Grammar &G) const {
   switch (kind()) {
   case Ambiguous:
