@@ -1,3 +1,5 @@
+; REQUIRES: webassembly-registered-target
+;
 ; Tests that we wouldn't convert coro.resume to a musttail call if the target is
 ; Wasm64.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
