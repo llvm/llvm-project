@@ -68,7 +68,7 @@ class TestDetachVrsProfile(TestBase):
         success = listener.WaitForEventForBroadcaster(0, process.GetBroadcaster(), event)
         self.assertTrue(success, "Got an event which should be running.")
         event_state = process.GetStateFromEvent(event)
-        self.assertEqual(event_state, lldb.eStateRunning, "Got the running event")
+        self.assertState(event_state, lldb.eStateRunning, "Got the running event")
 
         # Now detach:
         error = process.Detach()

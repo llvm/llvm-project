@@ -87,4 +87,4 @@ class ChangeProcessGroupTestCase(TestBase):
 
         # run to completion
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
