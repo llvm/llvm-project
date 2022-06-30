@@ -85,6 +85,32 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   Tokens = annotate("case &x:");
   EXPECT_EQ(Tokens.size(), 5u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::amp, TT_UnaryOperator);
+
+  Tokens = annotate("struct {\n"
+                    "} *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  Tokens = annotate("union {\n"
+                    "} *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  Tokens = annotate("class {\n"
+                    "} *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("struct {\n"
+                    "} &&ptr = {};");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
+  Tokens = annotate("union {\n"
+                    "} &&ptr = {};");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
+  Tokens = annotate("class {\n"
+                    "} &&ptr = {};");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {

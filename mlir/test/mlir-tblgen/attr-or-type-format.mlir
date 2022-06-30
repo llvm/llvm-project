@@ -123,7 +123,7 @@ func.func private @test_type_syntax_error() -> !test.type_with_format<42, two = 
 
 func.func private @test_verifier_fails() -> () attributes {
   // expected-error@+1 {{expected 'one' to equal 'four.size()'}}
-  attr = #test.attr_with_format<42 : two = "hello", four = [1, 2, 3] : 42 : i64>
+  attr = #test.attr_with_format<42 : two = "hello", four = [1, 2, 3] : 42 : i64, [10 : i16]>
 }
 
 // -----

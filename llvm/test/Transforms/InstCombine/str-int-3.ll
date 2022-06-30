@@ -57,25 +57,24 @@ define void @fold_atoi_member(i32* %pi) {
 }
 
 
-; Do not fold atoi with an excessive offset.  It's undefined so folding
-; it (e.g., to zero) would be valid and might prevent crashes or returning
-; a bogus value but could also prevent detecting the bug by sanitizers.
+; Fold atoi with an excessive offset.  It's undefined so folding it to zero
+; is valid and might prevent crashes or returning a bogus value, even though
+; it prevents detecting the bug by sanitizers.
 
 define void @call_atoi_offset_out_of_bounds(i32* %pi) {
 ; CHECK-LABEL: @call_atoi_offset_out_of_bounds(
-; CHECK-NEXT:    [[IA_0_0_32:%.*]] = call i32 @atoi(i8* getelementptr inbounds ([2 x %struct.A], [2 x %struct.A]* @a, i64 1, i64 0, i32 0, i64 0))
-; CHECK-NEXT:    store i32 [[IA_0_0_32]], i32* [[PI:%.*]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[PI:%.*]], align 4
 ; CHECK-NEXT:    [[IA_0_0_33:%.*]] = call i32 @atoi(i8* getelementptr ([2 x %struct.A], [2 x %struct.A]* @a, i64 1, i64 0, i32 0, i64 1))
 ; CHECK-NEXT:    store i32 [[IA_0_0_33]], i32* [[PI]], align 4
 ; CHECK-NEXT:    ret void
 ;
-; Do not fold atoi((const char*)a + sizeof a).
+; Fold atoi((const char*)a + sizeof a) to zero.
   %pa_0_0_32 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 32
   %ia_0_0_32 = call i32 @atoi(i8* %pa_0_0_32)
   %pia_0_0_32 = getelementptr i32, i32* %pi, i32 0
   store i32 %ia_0_0_32, i32* %pia_0_0_32
 
-; Likewise, do not fold atoi((const char*)a + sizeof a + 1).
+; Likewise, fold atoi((const char*)a + sizeof a + 1) to zero.
   %pa_0_0_33 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 33
   %ia_0_0_33 = call i32 @atoi(i8* %pa_0_0_33)
   %pia_0_0_33 = getelementptr i32, i32* %pi, i32 0

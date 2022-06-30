@@ -30,23 +30,23 @@ void func() {
 // GLOBS:     @{{.*}}dyn_init_global{{.*}} ={{.*}} global {{.*}}, sanitize_address_dyninit
 // GLOBS-NOT: no_sanitize_address
 
-// GLOBS:     @attributed_global = global {{.*}} no_sanitize_address
-// GLOBS:     @disable_instrumentation_global = global {{.*}} no_sanitize_address
-// GLOBS:     @ignorelisted_global = global {{.*}} no_sanitize_address
+// GLOBS:     @{{.*}}attributed_global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// GLOBS:     @{{.*}}disable_instrumentation_global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// GLOBS:     @{{.*}}ignorelisted_global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
 
-// ASAN:     sectioned_global{{.*}} global { i32, [28 x i8] }{{.*}}, align 32
+// ASAN:     @{{.*}}sectioned_global{{.*}} ={{.*}} global { i32, [28 x i8] }{{.*}}, align 32
 // ASAN-NOT: no_sanitize_address
-// ASAN:     @__special_global{{.*}} global { i32, [28 x i8] }{{.*}}, align 32
+// ASAN:     @{{.*}}__special_global{{.*}} ={{.*}} global { i32, [28 x i8] }{{.*}}, align 32
 // ASAN-NOT: no_sanitize_address
 
 /// Note: No attribute is added by the IR pass, but the type didn't change, so
 /// that checks our assertions that the globals didn't get instrumented.
-// KASAN:    sectioned_global{{.*}} global i32 {{.*}}
-// KASAN:    @__special_global{{.*}} global i32 {{.*}}
+// KASAN:    @{{.*}}sectioned_global{{.*}} ={{.*}} global i32 {{.*}}
+// KASAN:    @{{.*}}__special_global{{.*}} ={{.*}} global i32 {{.*}}
 
-// GLOBS:     @{{[^ ]*}}static_var{{[^ ]*}} = internal global {{.*}}
+// GLOBS:     @{{[^ ]*}}static_var{{[^ ]*}} ={{.*}} global {{.*}}
 // GLOBS-NOT: no_sanitize_address
-// GLOBS:     @{{.*}} = internal constant {{.*}}"Hello, world!{{.*}}
+// GLOBS:     @{{.*}} = {{.*}}c"Hello, world!\00"
 // GLOBS-NOT: no_sanitize_address
 
 /// Without -fasynchronous-unwind-tables, ctor and dtor get the uwtable attribute.
@@ -72,14 +72,14 @@ void func() {
 // UWTABLE: attributes #[[#ATTR]] = { nounwind uwtable }
 // UWTABLE: ![[#]] = !{i32 7, !"uwtable", i32 2}
 
-// IGNORELIST-SRC:     @extra_global = global {{.*}}
+// IGNORELIST-SRC:     @{{.*}}extra_global{{.*}} ={{.*}} global
 // IGNORELIST-SRC-NOT: no_sanitize_address
-// IGNORELIST-SRC:     @global = global {{.*}} no_sanitize_address
-// IGNORELIST-SRC:     @dyn_init_global = global {{.*}} no_sanitize_address
-// IGNORELIST-SRC:     @attributed_global = global {{.*}} no_sanitize_address
-// IGNORELIST-SRC:     @disable_instrumentation_global = global {{.*}} no_sanitize_address
-// IGNORELIST-SRC:     @ignorelisted_global = global {{.*}} no_sanitize_address
-// IGNORELIST-SRC:     @sectioned_global = global {{.*}} no_sanitize_address
-// IGNORELIST-SRC:     @__special_global = global {{.*}} no_sanitize_address
-// IGNORELIST-SRC:     @{{[^ ]*}}static_var{{[^ ]*}} = internal global {{.*}} no_sanitize_address
-// IGNORELIST-SRC:     @.str = {{.*}} constant {{.*}}"Hello, world!{{.*}} no_sanitize_address
+// IGNORELIST-SRC:     @{{.*}}global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// IGNORELIST-SRC:     @{{.*}}dyn_init_global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// IGNORELIST-SRC:     @{{.*}}attributed_global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// IGNORELIST-SRC:     @{{.*}}disable_instrumentation_global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// IGNORELIST-SRC:     @{{.*}}ignorelisted_global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// IGNORELIST-SRC:     @{{.*}}sectioned_global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// IGNORELIST-SRC:     @{{.*}}__special_global{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// IGNORELIST-SRC:     @{{.*}}static_var{{.*}} ={{.*}} global {{.*}} no_sanitize_address
+// IGNORELIST-SRC:     @{{.*}} ={{.*}} c"Hello, world!\00"{{.*}} no_sanitize_address

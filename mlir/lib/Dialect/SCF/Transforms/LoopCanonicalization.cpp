@@ -46,7 +46,7 @@ static bool isShapePreserving(ForOp forOp, int64_t arg) {
     value =
         llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
             .template Case<InsertSliceOp>(
-                [&](InsertSliceOp op) { return op.dest(); })
+                [&](InsertSliceOp op) { return op.getDest(); })
             .template Case<ForOp>([&](ForOp forOp) {
               return isShapePreserving(forOp, opResult.getResultNumber())
                          ? forOp.getIterOperands()[opResult.getResultNumber()]
@@ -86,7 +86,7 @@ struct DimOfIterArgFolder : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto blockArg = dimOp.source().template dyn_cast<BlockArgument>();
+    auto blockArg = dimOp.getSource().template dyn_cast<BlockArgument>();
     if (!blockArg)
       return failure();
     auto forOp = dyn_cast<ForOp>(blockArg.getParentBlock()->getParentOp());
@@ -97,7 +97,7 @@ struct DimOfIterArgFolder : public OpRewritePattern<OpTy> {
 
     Value initArg = forOp.getOpOperandForRegionIterArg(blockArg).get();
     rewriter.updateRootInPlace(
-        dimOp, [&]() { dimOp.sourceMutable().assign(initArg); });
+        dimOp, [&]() { dimOp.getSourceMutable().assign(initArg); });
 
     return success();
   };
@@ -131,15 +131,15 @@ struct DimOfLoopResultFolder : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto forOp = dimOp.source().template getDefiningOp<scf::ForOp>();
+    auto forOp = dimOp.getSource().template getDefiningOp<scf::ForOp>();
     if (!forOp)
       return failure();
-    auto opResult = dimOp.source().template cast<OpResult>();
+    auto opResult = dimOp.getSource().template cast<OpResult>();
     unsigned resultNumber = opResult.getResultNumber();
     if (!isShapePreserving(forOp, resultNumber))
       return failure();
     rewriter.updateRootInPlace(dimOp, [&]() {
-      dimOp.sourceMutable().assign(forOp.getIterOperands()[resultNumber]);
+      dimOp.getSourceMutable().assign(forOp.getIterOperands()[resultNumber]);
     });
     return success();
   }

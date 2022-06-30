@@ -36,6 +36,12 @@
 
 using namespace llvm;
 
+cl::OptionCategory InstrInfoEmitterCat("Options for -gen-instr-info");
+static cl::opt<bool> ExpandMIOperandInfo(
+    "instr-info-expand-mi-operand-info",
+    cl::desc("Expand operand's MIOperandInfo DAG into suboperands"),
+    cl::cat(InstrInfoEmitterCat), cl::init(true));
+
 namespace {
 
 class InstrInfoEmitter {
@@ -391,7 +397,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
       OperandOffsets.push_back(CurrentOffset);
       for (const auto &Op : Inst->Operands) {
         const DagInit *MIOI = Op.MIOperandInfo;
-        if (!MIOI || MIOI->getNumArgs() == 0) {
+        if (!ExpandMIOperandInfo || !MIOI || MIOI->getNumArgs() == 0) {
           // Single, anonymous, operand.
           OperandRecords.push_back(Op.Rec);
           ++CurrentOffset;

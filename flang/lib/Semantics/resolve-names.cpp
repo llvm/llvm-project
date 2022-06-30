@@ -1662,12 +1662,18 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
   }
   std::optional<std::string> label{
       evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
-  // 18.9.2(2): discard leading and trailing blanks, ignore if all blank
+  if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
+    if (label) { // C1552: no NAME= allowed even if null
+      Say(symbol.name(),
+          "An internal procedure may not have a BIND(C,NAME=) binding label"_err_en_US);
+    }
+    return;
+  }
+  // 18.9.2(2): discard leading and trailing blanks
   if (label) {
     auto first{label->find_first_not_of(" ")};
     if (first == std::string::npos) {
       // Empty NAME= means no binding at all (18.10.2p2)
-      Say(currStmtSource().value(), "Blank binding label ignored"_warn_en_US);
       return;
     }
     auto last{label->find_last_not_of(" ")};
@@ -3904,7 +3910,17 @@ bool DeclarationVisitor::Pre(const parser::BindEntity &x) {
     symbol = &MakeCommonBlockSymbol(name);
     symbol->attrs().set(Attr::BIND_C);
   }
-  SetBindNameOn(*symbol);
+  // 8.6.4(1)
+  // Some entities such as named constant or module name need to checked
+  // elsewhere. This is to skip the ICE caused by setting Bind name for non-name
+  // things such as data type and also checks for procedures.
+  if (symbol->has<CommonBlockDetails>() || symbol->has<ObjectEntityDetails>() ||
+      symbol->has<EntityDetails>()) {
+    SetBindNameOn(*symbol);
+  } else {
+    Say(name,
+        "Only variable and named common block can be in BIND statement"_err_en_US);
+  }
   return false;
 }
 bool DeclarationVisitor::Pre(const parser::OldParameterStmt &x) {
@@ -4172,10 +4188,10 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
       SetType(name, *type);
     }
     charInfo_.length.reset();
-    SetBindNameOn(symbol);
     if (symbol.attrs().test(Attr::EXTERNAL)) {
       ConvertToProcEntity(symbol);
     }
+    SetBindNameOn(symbol);
     return symbol;
   }
 }

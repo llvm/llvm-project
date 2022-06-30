@@ -30,10 +30,24 @@ S<int> s2;
 
 static_assert(false, L"\xFFFFFFFF"); // expected-error {{static_assert failed L"\xFFFFFFFF"}}
 static_assert(false, u"\U000317FF"); // expected-error {{static_assert failed u"\U000317FF"}}
-// FIXME: render this as u8"\u03A9"
+
 static_assert(false, u8"Ω"); // expected-error {{static_assert failed u8"\316\251"}}
 static_assert(false, L"\u1234"); // expected-error {{static_assert failed L"\x1234"}}
 static_assert(false, L"\x1ff" "0\x123" "fx\xfffff" "goop"); // expected-error {{static_assert failed L"\x1FF""0\x123""fx\xFFFFFgoop"}}
+
+static_assert(false, R"(a
+\tb
+c
+)"); // expected-error@-3 {{static_assert failed "a\n\tb\nc\n"}}
+
+static_assert(false, "\u0080\u0081\u0082\u0083\u0099\u009A\u009B\u009C\u009D\u009E\u009F");
+// expected-error@-1 {{static_assert failed "<U+0080><U+0081><U+0082><U+0083><U+0099><U+009A><U+009B><U+009C><U+009D><U+009E><U+009F>"}}
+
+//! Contains RTL/LTR marks
+static_assert(false, "\u200Eabc\u200Fdef\u200Fgh"); // expected-error {{static_assert failed "‎abc‏def‏gh"}}
+
+//! Contains ZWJ/regional indicators
+static_assert(false, "🏳️‍🌈 🏴󠁧󠁢󠁥󠁮󠁧󠁿 🇪🇺"); // expected-error {{static_assert failed "🏳️‍🌈 🏴󠁧󠁢󠁥󠁮󠁧󠁿 🇪🇺"}}
 
 template<typename T> struct AlwaysFails {
   // Only give one error here.

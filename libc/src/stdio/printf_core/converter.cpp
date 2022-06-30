@@ -57,9 +57,10 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'g':
   case 'G':
     // return convert_float_mixed(writer, to_conv);
-  // TODO(michaelrj): add a flag to disable writing an int here
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
   case 'n':
-    // return convert_write_int(writer, to_conv);
+    return convert_write_int(writer, to_conv);
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
   case 'p':
     return convert_pointer(writer, to_conv);
   default:

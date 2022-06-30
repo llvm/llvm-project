@@ -69,9 +69,9 @@ define i64 @fold_strnlen_ax_0() {
 define i64 @fold_strnlen_ax_1() {
 ; CHECK-LABEL: @fold_strnlen_ax_1(
 ; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
-; CHECK-NEXT:    [[STRNLEN_CHAR0CMP_NOT:%.*]] = icmp ne i8 [[STRNLEN_CHAR0]], 0
-; CHECK-NEXT:    [[STRNLEN_SEL:%.*]] = zext i1 [[STRNLEN_CHAR0CMP_NOT]] to i64
-; CHECK-NEXT:    ret i64 [[STRNLEN_SEL]]
+; CHECK-NEXT:    [[STRNLEN_CHAR0CMP:%.*]] = icmp ne i8 [[STRNLEN_CHAR0]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[STRNLEN_CHAR0CMP]] to i64
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
   %len = call i64 @strnlen(i8* %ptr, i64 1)
@@ -151,13 +151,28 @@ define i64 @fold_strnlen_s5_3_p5_5() {
 }
 
 
-; Fold strnlen(s5_3 + 6, 5) to 3.
+; Fold strnlen(s5_3 + 6, 3) to 3.
 
-define i64 @fold_strnlen_s5_3_p6_5() {
-; CHECK-LABEL: @fold_strnlen_s5_3_p6_5(
+define i64 @fold_strnlen_s5_3_p6_3() {
+; CHECK-LABEL: @fold_strnlen_s5_3_p6_3(
 ; CHECK-NEXT:    ret i64 3
 ;
   %ptr = getelementptr [9 x i8], [9 x i8]* @s5_3, i32 0, i32 6
-  %len = call i64 @strnlen(i8* %ptr, i64 5)
+  %len = call i64 @strnlen(i8* %ptr, i64 3)
+  ret i64 %len
+}
+
+
+; Fold even the invalid strnlen(s5_3 + 6, 4) call where the bound exceeds
+; the number of characters in the array.  This is arguably safer than
+; making the library call (although the low bound makes it unlikely that
+; the call would misbehave).
+
+define i64 @call_strnlen_s5_3_p6_4() {
+; CHECK-LABEL: @call_strnlen_s5_3_p6_4(
+; CHECK-NEXT:    ret i64 3
+;
+  %ptr = getelementptr [9 x i8], [9 x i8]* @s5_3, i32 0, i32 6
+  %len = call i64 @strnlen(i8* %ptr, i64 4)
   ret i64 %len
 }

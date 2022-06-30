@@ -225,10 +225,6 @@ DecodedThread::DecodedThread(ThreadSP thread_sp, Error &&error)
 }
 
 lldb::TraceCursorUP DecodedThread::GetCursor() {
-  // We insert a fake error signaling an empty trace if needed becasue the
-  // TraceCursor requires non-empty traces.
-  if (m_instruction_ips.empty())
-    AppendError(createStringError(inconvertibleErrorCode(), "empty trace"));
   return std::make_unique<TraceCursorIntelPT>(m_thread_sp, shared_from_this());
 }
 

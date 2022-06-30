@@ -1,5 +1,5 @@
 # The cxx.bnf grammar file
-set(cxx_bnf ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxx.bnf)
+set(cxx_bnf ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxx/cxx.bnf)
 
 set(CLANG_PSEUDO_GEN "clang-pseudo-gen" CACHE
   STRING "Host clang-pseudo-gen executable. Saves building if cross-compiling.")

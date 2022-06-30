@@ -28,6 +28,13 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 * The bash wrapper script, `flang`, is renamed as `flang-to-external-fc`.
+* In contrast to Clang, Flang will not default to using `-fpie` when linking
+  executables. This is only a temporary solution and the goal is to align with
+  Clang in the near future. First, however, the frontend driver needs to be
+  extended so that it can generate position independent code (that requires
+  adding support for e.g. `-fpic` and `-mrelocation-model` in `flang-new
+  -fc1`). Once that is available, support for the `-fpie` can officially be
+  added and the default behaviour updated.
 
 ## New Compiler Flags
 * Refined how `-f{no-}color-diagnostics` is treated to better align with Clang.

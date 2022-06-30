@@ -1105,6 +1105,11 @@ void StmtProfiler::VisitOMPMasterTaskLoopSimdDirective(
   VisitOMPLoopDirective(S);
 }
 
+void StmtProfiler::VisitOMPMaskedTaskLoopSimdDirective(
+    const OMPMaskedTaskLoopSimdDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
 void StmtProfiler::VisitOMPParallelMasterTaskLoopDirective(
     const OMPParallelMasterTaskLoopDirective *S) {
   VisitOMPLoopDirective(S);

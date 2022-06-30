@@ -261,32 +261,19 @@ TraceInstructionDumper::TraceInstructionDumper(
     : m_cursor_up(std::move(cursor_up)), m_options(options),
       m_writer_up(CreateWriter(s, m_options)) {
 
-  if (m_options.id) {
-    if (!m_cursor_up->GoToId(*m_options.id)) {
-      m_writer_up->InfoMessage("invalid instruction id");
-      SetNoMoreData();
-    }
-  } else if (m_options.forwards) {
+  if (m_options.id)
+    m_cursor_up->GoToId(*m_options.id);
+  else if (m_options.forwards)
     m_cursor_up->Seek(0, TraceCursor::SeekType::Beginning);
-  } else {
+  else
     m_cursor_up->Seek(0, TraceCursor::SeekType::End);
-  }
 
   m_cursor_up->SetForwards(m_options.forwards);
   if (m_options.skip) {
-    uint64_t to_skip = *m_options.skip;
-    if (m_cursor_up->Seek((m_options.forwards ? 1 : -1) * to_skip,
-                          TraceCursor::SeekType::Current) < to_skip) {
-      // This happens when the skip value was more than the number of
-      // available instructions.
-      SetNoMoreData();
-    }
+    m_cursor_up->Seek((m_options.forwards ? 1 : -1) * *m_options.skip,
+                      TraceCursor::SeekType::Current);
   }
 }
-
-void TraceInstructionDumper::SetNoMoreData() { m_no_more_data = true; }
-
-bool TraceInstructionDumper::HasMoreData() { return !m_no_more_data; }
 
 TraceInstructionDumper::InstructionEntry
 TraceInstructionDumper::CreatRawInstructionEntry() {
@@ -375,11 +362,8 @@ TraceInstructionDumper::DumpInstructions(size_t count) {
   ExecutionContext exe_ctx;
   thread_sp->GetProcess()->GetTarget().CalculateExecutionContext(exe_ctx);
 
-  for (size_t i = 0; i < count; i++) {
-    if (!HasMoreData()) {
-      m_writer_up->InfoMessage("no more data");
-      break;
-    }
+  for (size_t i = 0; i < count && m_cursor_up->HasValue();
+       m_cursor_up->Next(), i++) {
     last_id = m_cursor_up->GetId();
 
     if (m_options.forwards) {
@@ -418,9 +402,8 @@ TraceInstructionDumper::DumpInstructions(size_t count) {
       // makes sense.
       PrintEvents();
     }
-
-    if (!m_cursor_up->Next())
-      SetNoMoreData();
   }
+  if (!m_cursor_up->HasValue())
+    m_writer_up->InfoMessage("no more data");
   return last_id;
 }

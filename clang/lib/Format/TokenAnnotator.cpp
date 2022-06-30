@@ -2314,6 +2314,31 @@ private:
     if (NextToken->isOneOf(tok::comma, tok::semi))
       return TT_PointerOrReference;
 
+    // After right braces, star tokens are likely to be pointers to struct,
+    // union, or class.
+    //   struct {} *ptr;
+    if (PrevToken->is(tok::r_brace) && Tok.is(tok::star))
+      return TT_PointerOrReference;
+
+    // For "} &&"
+    if (PrevToken->is(tok::r_brace) && Tok.is(tok::ampamp)) {
+      const FormatToken *MatchingLBrace = PrevToken->MatchingParen;
+
+      // We check whether there is a TemplateCloser(">") to indicate it's a
+      // template or not. If it's not a template, "&&" is likely a reference
+      // operator.
+      //   struct {} &&ref = {};
+      if (!MatchingLBrace)
+        return TT_PointerOrReference;
+      FormatToken *BeforeLBrace = MatchingLBrace->getPreviousNonComment();
+      if (!BeforeLBrace || BeforeLBrace->isNot(TT_TemplateCloser))
+        return TT_PointerOrReference;
+
+      // If it is a template, "&&" is a binary operator.
+      //   enable_if<>{} && ...
+      return TT_BinaryOperator;
+    }
+
     if (PrevToken->Tok.isLiteral() ||
         PrevToken->isOneOf(tok::r_paren, tok::r_square, tok::kw_true,
                            tok::kw_false, tok::r_brace)) {

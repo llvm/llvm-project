@@ -21,15 +21,6 @@ ExecutionContextRef &TraceCursor::GetExecutionContextRef() {
   return m_exe_ctx_ref;
 }
 
-void TraceCursor::SetGranularity(
-    lldb::TraceInstructionControlFlowType granularity) {
-  m_granularity = granularity;
-}
-
-void TraceCursor::SetIgnoreErrors(bool ignore_errors) {
-  m_ignore_errors = ignore_errors;
-}
-
 void TraceCursor::SetForwards(bool forwards) { m_forwards = forwards; }
 
 bool TraceCursor::IsForwards() const { return m_forwards; }

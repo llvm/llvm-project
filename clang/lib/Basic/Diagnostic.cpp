@@ -25,8 +25,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/CrashRecoveryContext.h"
-#include "llvm/Support/Locale.h"
+#include "llvm/Support/Unicode.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -803,6 +804,50 @@ FormatDiagnostic(SmallVectorImpl<char> &OutStr) const {
   FormatDiagnostic(Diag.begin(), Diag.end(), OutStr);
 }
 
+/// pushEscapedString - Append Str to the diagnostic buffer,
+/// escaping non-printable characters and ill-formed code unit sequences.
+static void pushEscapedString(StringRef Str, SmallVectorImpl<char> &OutStr) {
+  OutStr.reserve(OutStr.size() + Str.size());
+  auto *Begin = reinterpret_cast<const unsigned char *>(Str.data());
+  llvm::raw_svector_ostream OutStream(OutStr);
+  const unsigned char *End = Begin + Str.size();
+  while (Begin != End) {
+    // ASCII case
+    if (isPrintable(*Begin) || isWhitespace(*Begin)) {
+      OutStream << *Begin;
+      ++Begin;
+      continue;
+    }
+    if (llvm::isLegalUTF8Sequence(Begin, End)) {
+      llvm::UTF32 CodepointValue;
+      llvm::UTF32 *CpPtr = &CodepointValue;
+      const unsigned char *CodepointBegin = Begin;
+      const unsigned char *CodepointEnd =
+          Begin + llvm::getNumBytesForUTF8(*Begin);
+      llvm::ConversionResult Res = llvm::ConvertUTF8toUTF32(
+          &Begin, CodepointEnd, &CpPtr, CpPtr + 1, llvm::strictConversion);
+      (void)Res;
+      assert(
+          llvm::conversionOK == Res &&
+          "the sequence is legal UTF-8 but we couldn't convert it to UTF-32");
+      assert(Begin == CodepointEnd &&
+             "we must be further along in the string now");
+      if (llvm::sys::unicode::isPrintable(CodepointValue) ||
+          llvm::sys::unicode::isFormatting(CodepointValue)) {
+        OutStr.append(CodepointBegin, CodepointEnd);
+        continue;
+      }
+      // Unprintable code point.
+      OutStream << "<U+" << llvm::format_hex_no_prefix(CodepointValue, 4, true)
+                << ">";
+      continue;
+    }
+    // Invalid code unit.
+    OutStream << "<" << llvm::format_hex_no_prefix(*Begin, 2, true) << ">";
+    ++Begin;
+  }
+}
+
 void Diagnostic::
 FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                  SmallVectorImpl<char> &OutStr) const {
@@ -813,11 +858,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       StringRef(DiagStr, DiagEnd - DiagStr).equals("%0") &&
       getArgKind(0) == DiagnosticsEngine::ak_std_string) {
     const std::string &S = getArgStdStr(0);
-    for (char c : S) {
-      if (llvm::sys::locale::isPrint(c) || c == '\t') {
-        OutStr.push_back(c);
-      }
-    }
+    pushEscapedString(S, OutStr);
     return;
   }
 
@@ -924,7 +965,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     case DiagnosticsEngine::ak_std_string: {
       const std::string &S = getArgStdStr(ArgNo);
       assert(ModifierLen == 0 && "No modifiers for strings yet");
-      OutStr.append(S.begin(), S.end());
+      pushEscapedString(S, OutStr);
       break;
     }
     case DiagnosticsEngine::ak_c_string: {
@@ -934,8 +975,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       // Don't crash if get passed a null pointer by accident.
       if (!S)
         S = "(null)";
-
-      OutStr.append(S, S + strlen(S));
+      pushEscapedString(S, OutStr);
       break;
     }
     // ---- INTEGERS ----

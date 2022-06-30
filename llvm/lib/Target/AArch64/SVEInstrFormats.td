@@ -527,6 +527,12 @@ class SVE_3_Op_BSP_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
 : Pat<(vtd (op vt1:$Op1, vt2:$Op2, vt3:$Op3)),
       (inst $Op2, $Op3, $Op1)>;
 
+class SVE_Shift_Add_All_Active_Pat<ValueType vtd, SDPatternOperator op, ValueType pt,
+                                   ValueType vt1, ValueType vt2, ValueType vt3,
+                                   Instruction inst>
+: Pat<(vtd (add vt1:$Op1, (op (pt (SVEAllActive)), vt2:$Op2, vt3:$Op3))),
+      (inst $Op1, $Op2, $Op3)>;
+
 //===----------------------------------------------------------------------===//
 // SVE pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -3802,7 +3808,8 @@ class sve2_int_bin_accum_shift_imm<bits<4> tsz8_64, bits<2> opc, string asm,
 }
 
 multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm,
-                                              SDPatternOperator op> {
+                                              SDPatternOperator op,
+                                              SDPatternOperator shift_op = null_frag> {
   def _B : sve2_int_bin_accum_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
   def _H : sve2_int_bin_accum_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
     let Inst{19} = imm{3};
@@ -3819,6 +3826,11 @@ multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm,
   def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, i32, tvecshiftR16, !cast<Instruction>(NAME # _H)>;
   def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, i32, tvecshiftR32, !cast<Instruction>(NAME # _S)>;
   def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, tvecshiftR64, !cast<Instruction>(NAME # _D)>;
+
+  def : SVE_Shift_Add_All_Active_Pat<nxv16i8, shift_op, nxv16i1, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME # _B)>;
+  def : SVE_Shift_Add_All_Active_Pat<nxv8i16, shift_op, nxv8i1, nxv8i16, nxv8i16, i32, !cast<Instruction>(NAME # _H)>;
+  def : SVE_Shift_Add_All_Active_Pat<nxv4i32, shift_op, nxv4i1, nxv4i32, nxv4i32, i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_Shift_Add_All_Active_Pat<nxv2i64, shift_op, nxv2i1, nxv2i64, nxv2i64, i32, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_cadd<bits<2> sz, bit opc, string asm, ZPRRegOp zprty>

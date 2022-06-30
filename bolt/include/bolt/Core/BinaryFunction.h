@@ -253,6 +253,10 @@ private:
 
   std::unique_ptr<BinaryLoopInfo> BLI;
 
+  /// Set of external addresses in the code that are not a function start
+  /// and are referenced from this function.
+  std::set<uint64_t> InterproceduralReferences;
+
   /// All labels in the function that are referenced via relocations from
   /// data objects. Typically these are jump table destinations and computed
   /// goto labels.

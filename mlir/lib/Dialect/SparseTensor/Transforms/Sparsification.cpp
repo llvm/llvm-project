@@ -450,26 +450,37 @@ static void updateReduc(Merger &merger, CodeGen &codegen, Value reduc) {
 /// the output buffer is already initialized to all zeroes and only nonzeroes
 /// values are computed and written out. For updates (viz. x(i) += y(i) * z(i)),
 /// only nonzeroes values are used for the updates and no assumption on the
-/// original contents of the output buffer is necessary..
+/// original contents of the output buffer is necessary.
 static Value genOutputBuffer(CodeGen &codegen, OpBuilder &builder,
                              linalg::GenericOp op, MemRefType denseTp,
                              ArrayRef<Value> args) {
   Location loc = op.getLoc();
-  Value tensor = op.getOutputOperand(0)->get();
-  // The output tensor simply could materialize from the buffer that will
-  // be generated for the tensor present in the outs() clause. This has
-  // the major advantage that the sparse kernel only updates the nonzero
-  // positions for the output tensor.
-  if (isInPlace(tensor))
-    return builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
-  // By default, a new buffer is allocated which is initialized to the
-  // tensor defined in the outs() clause. This is always correct but
-  // introduces a dense initialization component that may negatively
-  // impact the running complexity of the sparse kernel. If the tensor
-  // materializes into the computation, we need to preserve the zero
-  // initialization assumption of all sparse output buffers.
+  OpOperand *lhs = op.getOutputOperand(0);
+  Value tensor = lhs->get();
+  bool isInit = op.isInitTensor(lhs);
+  // An output tensor that is in-place can simply materialize from the buffer
+  // of the tensor that appears in the outs() clause. For updates, this has
+  // the advantage that only the nonzero value are involved in the computation,
+  // keeping the operation O(nnz). In all other cases, we are forced to zero
+  // out the buffer to enforce the assumption above, which may negatively
+  // impact running complexity (viz. O(n^2 + nnz) vs. O(nnz) for matrices).
+  // TODO: use better analysis to avoid zeroing out the buffer?
+  if (isInPlace(tensor)) {
+    Value init =
+        builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
+    if (!isInit) {
+      Value zero = constantZero(builder, loc, denseTp.getElementType());
+      builder.create<linalg::FillOp>(loc, ValueRange{zero}, ValueRange{init});
+    }
+    return init;
+  }
+  // By default, a new buffer is allocated which is either set to zero (when
+  // no updates occur or the tensor materializes into this computation) or
+  // initialized to the value of the tensor defined in the outs() clause.
+  // This is always correct (since it enforces all assumptions above) but
+  // may negatively impact running complexity as explained above.
   Value alloc = builder.create<memref::AllocOp>(loc, denseTp, args);
-  if (isMaterializing(tensor)) {
+  if (!isInit || isMaterializing(tensor)) {
     Value zero = constantZero(builder, loc, denseTp.getElementType());
     builder.create<linalg::FillOp>(loc, ValueRange{zero}, ValueRange{alloc});
   } else {

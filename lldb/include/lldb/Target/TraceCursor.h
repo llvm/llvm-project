@@ -25,51 +25,66 @@ namespace lldb_private {
 /// Live processes:
 ///  In the case of a live process trace, an instance of a \a TraceCursor should
 ///  point to the trace at the moment it was collected. If the process is later
-///  resumed and new trace data is collected, that should leave that old cursor
-///  unaffected.
+///  resumed and new trace data is collected, then it's up to each trace plug-in
+///  to decide whether to leave the old cursor unaffected or not.
 ///
 /// Errors in the trace:
 ///  As there could be errors when reconstructing the instructions of a trace,
 ///  these errors are represented as failed instructions, and the cursor can
-///  point at them. The consumer should invoke \a TraceCursor::GetError() to
-///  check if the cursor is pointing to either a valid instruction or an error.
+///  point at them. The consumer should invoke \a TraceCursor::IsError() to
+///  check if the cursor is pointing to either a valid instruction or an error,
+///  and then \a TraceCursor::GetError() can return the actual error message.
 ///
 /// Instructions:
 ///  A \a TraceCursor always points to a specific instruction or error in the
 ///  trace.
 ///
 /// Defaults:
-///   By default, the cursor points at the end item of the trace, moves
-///   backwards, has a move granularity of \a
-///   eTraceInstructionControlFlowTypeInstruction (i.e. visit every instruction)
-///   and stops at every error (the "ignore errors" flag is \b false). See the
-///   \a TraceCursor::Next() method for more documentation.
+///   By default, the cursor points at the most recent item in the trace and is
+///   set up to iterate backwards. See the \a TraceCursor::Next() method for
+///   more documentation.
 ///
 /// Sample usage:
 ///
 ///  TraceCursorUP cursor = trace.GetTrace(thread);
 ///
-///  cursor->SetGranularity(eTraceInstructionControlFlowTypeCall |
-///    eTraceInstructionControlFlowTypeReturn);
+///  for (; cursor->HasValue(); cursor->Next()) {
+///     if (cursor->IsError()) {
+///       cout << "error found at: " << cursor->GetError() << endl;
+///       continue;
+///     }
 ///
-///  do {
-///     if (llvm::Error error = cursor->GetError())
-///       cout << "error found at: " << llvm::toString(error) << endl;
-///     else if (cursor->GetInstructionControlFlowType() &
-///         eTraceInstructionControlFlowTypeCall)
-///       std::cout << "call found at " << cursor->GetLoadAddress() <<
-///       std::endl;
-///     else if (cursor->GetInstructionControlFlowType() &
-///         eTraceInstructionControlFlowTypeReturn)
-///       std::cout << "return found at " << cursor->GetLoadAddress() <<
-///       std::endl;
-///  } while(cursor->Next());
+///     switch (cursor->GetInstructionControlFlowType()) {
+///       eTraceInstructionControlFlowTypeCall:
+///         std::cout << "CALL found at " << cursor->GetLoadAddress() <<
+///         std::endl; break;
+///       eTraceInstructionControlFlowTypeReturn:
+///         std::cout << "RETURN found at " << cursor->GetLoadAddress() <<
+///         std::endl; break;
+///     }
+///  }
 ///
-/// Low level traversal:
-///   Unlike the \a TraceCursor::Next() API, which uses a given granularity and
-///   direction to advance the cursor, the \a TraceCursor::Seek() method can be
-///   used to reposition the cursor to an offset of the end, beginning, or
-///   current position of the trace.
+///  As the trace might be empty or the cursor might have reached the end of the
+///  trace, you should always invoke \a HasValue() to make sure you don't access
+///  invalid memory.
+///
+/// Random accesses:
+///
+///   The Trace Cursor offer random acesses in the trace via two APIs:
+///
+///     TraceCursor::Seek():
+///       Unlike the \a TraceCursor::Next() API, which moves instruction by
+///       instruction, the \a TraceCursor::Seek() method can be used to
+///       reposition the cursor to an offset of the end, beginning, or current
+///       position of the trace.
+///
+///     TraceCursor::GetId() / TraceCursor::SetId(id):
+///       Each item (error or instruction) in the trace has a numeric identifier
+///       which is defined by the trace plug-in. It's possible to access the id
+///       of the current item using GetId(), and to reposition the cursor to a
+///       given id using SetId(id).
+///
+///   You can read more in the documentation of these methods.
 class TraceCursor {
 public:
   /// Helper enum to indicate the reference point when invoking
@@ -90,12 +105,6 @@ public:
 
   virtual ~TraceCursor() = default;
 
-  /// Set the granularity to use in the \a TraceCursor::Next() method.
-  void SetGranularity(lldb::TraceInstructionControlFlowType granularity);
-
-  /// Set the "ignore errors" flag to use in the \a TraceCursor::Next() method.
-  void SetIgnoreErrors(bool ignore_errors);
-
   /// Set the direction to use in the \a TraceCursor::Next() method.
   ///
   /// \param[in] forwards
@@ -109,8 +118,7 @@ public:
   ///     \b true if the current direction is forwards, \b false if backwards.
   bool IsForwards() const;
 
-  /// Move the cursor to the next instruction that matches the current
-  /// granularity.
+  /// Move the cursor to the next item (instruction or error).
   ///
   /// Direction:
   ///     The traversal is done following the current direction of the trace. If
@@ -118,21 +126,12 @@ public:
   ///     chronologically. Otherwise, the traversal is done in
   ///     the opposite direction. By default, a cursor moves backwards unless
   ///     changed with \a TraceCursor::SetForwards().
-  ///
-  /// Granularity:
-  ///     The cursor will traverse the trace looking for the first instruction
-  ///     that matches the current granularity. If there aren't any matching
-  ///     instructions, the cursor won't move, to give the opportunity of
-  ///     changing granularities.
-  ///
-  /// Ignore errors:
-  ///     If the "ignore errors" flags is \b false, the traversal will stop as
-  ///     soon as it finds an error in the trace and the cursor will point at
-  ///     it.
-  ///
+  virtual void Next() = 0;
+
   /// \return
-  ///     \b true if the cursor effectively moved, \b false otherwise.
-  virtual bool Next() = 0;
+  ///     \b true if the cursor is pointing to a valid item. \b false if the
+  ///     cursor has reached the end of the trace.
+  virtual bool HasValue() const = 0;
 
   /// Instruction identifiers:
   ///
@@ -169,8 +168,8 @@ public:
   ///
   /// \return
   ///     \b true if the given identifier exists and the cursor effectively
-  ///     moved. Otherwise, \b false is returned and the cursor doesn't change
-  ///     its position.
+  ///     moved to it. Otherwise, \b false is returned and the cursor now points
+  ///     to an invalid item, i.e. calling \a HasValue() will return \b false.
   virtual bool GoToId(lldb::user_id_t id) = 0;
 
   /// \return
@@ -185,25 +184,26 @@ public:
   /// \}
 
   /// Make the cursor point to an item in the trace based on an origin point and
-  /// an offset. This API doesn't distinguishes instruction types nor errors in
-  /// the trace, unlike the \a TraceCursor::Next() method.
+  /// an offset.
   ///
   /// The resulting position of the trace is
   ///     origin + offset
   ///
-  /// If this resulting position would be out of bounds, it will be adjusted to
-  /// the last or first item in the trace correspondingly.
+  /// If this resulting position would be out of bounds, the trace then points
+  /// to an invalid item, i.e. calling \a HasValue() returns \b false.
   ///
   /// \param[in] offset
   ///     How many items to move forwards (if positive) or backwards (if
-  ///     negative) from the given origin point.
+  ///     negative) from the given origin point. For example, if origin is \b
+  ///     End, then a negative offset would move backward in the trace, but a
+  ///     positive offset would move past the trace to an invalid item.
   ///
   /// \param[in] origin
   ///     The reference point to use when moving the cursor.
   ///
   /// \return
-  ///     The number of trace items moved from the origin.
-  virtual uint64_t Seek(int64_t offset, SeekType origin) = 0;
+  ///     \b true if and only if the cursor ends up pointing to a valid item.
+  virtual bool Seek(int64_t offset, SeekType origin) = 0;
 
   /// \return
   ///   The \a ExecutionContextRef of the backing thread from the creation time
@@ -260,10 +260,6 @@ public:
 
 protected:
   ExecutionContextRef m_exe_ctx_ref;
-
-  lldb::TraceInstructionControlFlowType m_granularity =
-      lldb::eTraceInstructionControlFlowTypeInstruction;
-  bool m_ignore_errors = false;
   bool m_forwards = false;
 };
 

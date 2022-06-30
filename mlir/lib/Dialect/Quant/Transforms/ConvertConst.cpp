@@ -42,7 +42,7 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   Attribute value;
 
   // Is the operand a constant?
-  if (!matchPattern(qbarrier.arg(), m_Constant(&value))) {
+  if (!matchPattern(qbarrier.getArg(), m_Constant(&value))) {
     return failure();
   }
 
@@ -63,7 +63,7 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   // type? This will not be true if the qbarrier is superfluous (converts
   // from and to a quantized type).
   if (!quantizedElementType.isCompatibleExpressedType(
-          qbarrier.arg().getType())) {
+          qbarrier.getArg().getType())) {
     return failure();
   }
 
@@ -82,7 +82,7 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   // When creating the new const op, use a fused location that combines the
   // original const and the qbarrier that led to the quantization.
   auto fusedLoc = rewriter.getFusedLoc(
-      {qbarrier.arg().getDefiningOp()->getLoc(), qbarrier.getLoc()});
+      {qbarrier.getArg().getDefiningOp()->getLoc(), qbarrier.getLoc()});
   auto newConstOp = rewriter.create<arith::ConstantOp>(
       fusedLoc, newConstValueType, newConstValue);
   rewriter.replaceOpWithNewOp<StorageCastOp>(qbarrier, qbarrier.getType(),

@@ -59,6 +59,22 @@ public:
     return simplifyOrInst(LHS, RHS, SQ);
   }
 
+  Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    return simplifyUDivInst(LHS, RHS, SQ);
+  }
+
+  Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    return simplifySDivInst(LHS, RHS, SQ);
+  }
+
+  Value *FoldURem(Value *LHS, Value *RHS) const override {
+    return simplifyURemInst(LHS, RHS, SQ);
+  }
+
+  Value *FoldSRem(Value *LHS, Value *RHS) const override {
+    return simplifySRemInst(LHS, RHS, SQ);
+  }
+
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return simplifyICmpInst(P, LHS, RHS, SQ);
   }
@@ -120,22 +136,8 @@ public:
   Value *CreateFMul(Constant *LHS, Constant *RHS) const override {
     return ConstFolder.CreateFMul(LHS, RHS);
   }
-  Value *CreateUDiv(Constant *LHS, Constant *RHS,
-                    bool isExact = false) const override {
-    return ConstFolder.CreateUDiv(LHS, RHS, isExact);
-  }
-  Value *CreateSDiv(Constant *LHS, Constant *RHS,
-                    bool isExact = false) const override {
-    return ConstFolder.CreateSDiv(LHS, RHS, isExact);
-  }
   Value *CreateFDiv(Constant *LHS, Constant *RHS) const override {
     return ConstFolder.CreateFDiv(LHS, RHS);
-  }
-  Value *CreateURem(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateURem(LHS, RHS);
-  }
-  Value *CreateSRem(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateSRem(LHS, RHS);
   }
   Value *CreateFRem(Constant *LHS, Constant *RHS) const override {
     return ConstFolder.CreateFRem(LHS, RHS);

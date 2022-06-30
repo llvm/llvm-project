@@ -24,7 +24,7 @@ namespace fir::runtime {
 /// complex runtime cases handling left or right adjustments.
 ///
 /// \p resultBox must be an unallocated allocatable used for the temporary
-/// result. \p StringBox must be a fir.box describing the adjustl string
+/// result. \p StringBox must be a `fir.box` describing the `ADJUSTL` string
 /// argument. Note that the \p genAdjust() helper is called to do the majority
 /// of the lowering work.
 void genAdjustL(fir::FirOpBuilder &builder, mlir::Location loc,

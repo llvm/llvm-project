@@ -724,17 +724,12 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
   json::Array threads_array;
 
   // Ensure we can get info on the given thread.
-  uint32_t thread_idx = 0;
-  for (NativeThreadProtocol *thread;
-       (thread = process.GetThreadAtIndex(thread_idx)) != nullptr;
-       ++thread_idx) {
-
-    lldb::tid_t tid = thread->GetID();
-
+  for (NativeThreadProtocol &thread : process.Threads()) {
+    lldb::tid_t tid = thread.GetID();
     // Grab the reason this thread stopped.
     struct ThreadStopInfo tid_stop_info;
     std::string description;
-    if (!thread->GetStopReason(tid_stop_info, description))
+    if (!thread.GetStopReason(tid_stop_info, description))
       return llvm::make_error<llvm::StringError>(
           "failed to get stop reason", llvm::inconvertibleErrorCode());
 
@@ -751,7 +746,7 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
     json::Object thread_obj;
 
     if (!abridged) {
-      if (llvm::Optional<json::Object> registers = GetRegistersAsJSON(*thread))
+      if (llvm::Optional<json::Object> registers = GetRegistersAsJSON(thread))
         thread_obj.try_emplace("registers", std::move(*registers));
     }
 
@@ -760,7 +755,7 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
     if (signum != 0)
       thread_obj.try_emplace("signal", signum);
 
-    const std::string thread_name = thread->GetName();
+    const std::string thread_name = thread.GetName();
     if (!thread_name.empty())
       thread_obj.try_emplace("name", thread_name);
 
@@ -856,14 +851,12 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
   if (m_list_threads_in_stop_reply) {
     response.PutCString("threads:");
 
-    uint32_t thread_index = 0;
-    NativeThreadProtocol *listed_thread;
-    for (listed_thread = process.GetThreadAtIndex(thread_index); listed_thread;
-         ++thread_index,
-        listed_thread = process.GetThreadAtIndex(thread_index)) {
-      if (thread_index > 0)
+    uint32_t thread_num = 0;
+    for (NativeThreadProtocol &listed_thread : process.Threads()) {
+      if (thread_num > 0)
         response.PutChar(',');
-      response.Printf("%" PRIx64, listed_thread->GetID());
+      response.Printf("%" PRIx64, listed_thread.GetID());
+      ++thread_num;
     }
     response.PutChar(';');
 
@@ -872,7 +865,7 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
     // is hex ascii JSON that contains the thread IDs thread stop info only for
     // threads that have stop reasons. Only send this if we have more than one
     // thread otherwise this packet has all the info it needs.
-    if (thread_index > 1) {
+    if (thread_num > 1) {
       const bool threads_with_valid_stop_info_only = true;
       llvm::Expected<json::Array> threads_info = GetJSONThreadsInfo(
           *m_current_process, threads_with_valid_stop_info_only);
@@ -889,12 +882,10 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
       }
     }
 
-    uint32_t i = 0;
     response.PutCString("thread-pcs");
     char delimiter = ':';
-    for (NativeThreadProtocol *thread;
-         (thread = process.GetThreadAtIndex(i)) != nullptr; ++i) {
-      NativeRegisterContext &reg_ctx = thread->GetRegisterContext();
+    for (NativeThreadProtocol &thread : process.Threads()) {
+      NativeRegisterContext &reg_ctx = thread.GetRegisterContext();
 
       uint32_t reg_to_read = reg_ctx.ConvertRegisterKindToRegisterNumber(
           eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
@@ -1024,12 +1015,10 @@ void GDBRemoteCommunicationServerLLGS::EnqueueStopReplyPackets(
   if (!m_non_stop)
     return;
 
-  uint32_t thread_index = 0;
-  while (NativeThreadProtocol *listed_thread =
-             m_current_process->GetThreadAtIndex(thread_index++)) {
-    if (listed_thread->GetID() != thread_to_skip)
+  for (NativeThreadProtocol &listed_thread : m_current_process->Threads()) {
+    if (listed_thread.GetID() != thread_to_skip)
       m_stop_notification_queue.push_back(
-          PrepareStopReplyPacketForThread(*listed_thread).GetString().str());
+          PrepareStopReplyPacketForThread(listed_thread).GetString().str());
   }
 }
 
@@ -1990,15 +1979,10 @@ void GDBRemoteCommunicationServerLLGS::AddProcessThreads(
     return;
 
   LLDB_LOG(log, "iterating over threads of process {0}", process.GetID());
-  NativeThreadProtocol *thread;
-  uint32_t thread_index;
-  for (thread_index = 0, thread = process.GetThreadAtIndex(thread_index);
-       thread;
-       ++thread_index, thread = process.GetThreadAtIndex(thread_index)) {
-    LLDB_LOG(log, "iterated thread {0} (tid={1})", thread_index,
-             thread->GetID());
+  for (NativeThreadProtocol &thread : process.Threads()) {
+    LLDB_LOG(log, "iterated thread tid={0}", thread.GetID());
     response.PutChar(had_any ? ',' : 'm');
-    AppendThreadIDToResponse(response, pid, thread->GetID());
+    AppendThreadIDToResponse(response, pid, thread.GetID());
     had_any = true;
   }
 }
@@ -3876,9 +3860,9 @@ GDBRemoteCommunicationServerLLGS::Handle_vStopped(
   m_stop_notification_queue.pop_front();
   if (!m_stop_notification_queue.empty())
     return SendPacketNoLock(m_stop_notification_queue.front());
-  // If this was the last notification and the process exited, terminate
-  // the server.
-  if (m_inferior_prev_state == eStateExited) {
+  // If this was the last notification and all the processes exited,
+  // terminate the server.
+  if (m_debugged_processes.empty()) {
     m_exit_now = true;
     m_mainloop.RequestTermination();
   }

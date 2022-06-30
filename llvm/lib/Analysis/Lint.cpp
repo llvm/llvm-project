@@ -686,11 +686,6 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
                                CE->getOperand(0)->getType(), CE->getType(),
                                *DL))
         return findValueImpl(CE->getOperand(0), OffsetOk, Visited);
-    } else if (CE->getOpcode() == Instruction::ExtractValue) {
-      ArrayRef<unsigned> Indices = CE->getIndices();
-      if (Value *W = FindInsertedValue(CE->getOperand(0), Indices))
-        if (W != V)
-          return findValueImpl(W, OffsetOk, Visited);
     }
   }
 

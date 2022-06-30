@@ -60,8 +60,8 @@ void VeneerElimination::runOnFunctions(BinaryContext &BC) {
     }
   }
 
-  outs() << "BOLT-INFO: number of removed linker-inserted veneers :"
-         << VeneersCount << "\n";
+  LLVM_DEBUG(dbgs() << "BOLT-INFO: number of removed linker-inserted veneers :"
+                    << VeneersCount << "\n");
 
   // Handle veneers to veneers in case they occur
   for (auto entry : VeneerDestinations) {

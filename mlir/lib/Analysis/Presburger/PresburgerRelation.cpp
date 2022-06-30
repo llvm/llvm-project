@@ -22,7 +22,7 @@ PresburgerRelation::PresburgerRelation(const IntegerRelation &disjunct)
 }
 
 void PresburgerRelation::setSpace(const PresburgerSpace &oSpace) {
-  assert(space.getNumLocalIds() == 0 && "no locals should be present");
+  assert(space.getNumLocalVars() == 0 && "no locals should be present");
   space = oSpace;
   for (IntegerRelation &disjunct : disjuncts)
     disjunct.setSpaceExceptLocals(space);
@@ -136,6 +136,17 @@ static SmallVector<int64_t, 8> getIneqCoeffsFromIdx(const IntegerRelation &rel,
   return getNegatedCoeffs(eqCoeffs);
 }
 
+PresburgerRelation PresburgerRelation::computeReprWithOnlyDivLocals() const {
+  if (hasOnlyDivLocals())
+    return *this;
+
+  // The result is just the union of the reprs of the disjuncts.
+  PresburgerRelation result(getSpace());
+  for (const IntegerRelation &disjunct : disjuncts)
+    result.unionInPlace(disjunct.computeReprWithOnlyDivLocals());
+  return result;
+}
+
 /// Return the set difference b \ s.
 ///
 /// In the following, U denotes union, /\ denotes intersection, \ denotes set
@@ -174,8 +185,11 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
   if (b.isEmptyByGCDTest())
     return PresburgerRelation::getEmpty(b.getSpaceWithoutLocals());
 
+  if (!s.hasOnlyDivLocals())
+    return getSetDifference(b, s.computeReprWithOnlyDivLocals());
+
   // Remove duplicate divs up front here to avoid existing
-  // divs disappearing in the call to mergeLocalIds below.
+  // divs disappearing in the call to mergeLocalVars below.
   b.removeDuplicateDivs();
 
   PresburgerRelation result =
@@ -217,7 +231,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       // No frame for this level yet, so we have just recursed into this level.
       IntegerRelation sI = s.getDisjunct(level - 1);
       // Remove the duplicate divs up front to avoid them possibly disappearing
-      // in the call to mergeLocalIds below.
+      // in the call to mergeLocalVars below.
       sI.removeDuplicateDivs();
 
       // Below, we append some additional constraints and ids to b. We want to
@@ -228,30 +242,37 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       // Similarly, we also want to rollback simplex to its original state.
       unsigned initialSnapshot = simplex.getSnapshot();
 
-      // Find out which inequalities of sI correspond to division inequalities
-      // for the local variables of sI.
-      std::vector<MaybeLocalRepr> repr(sI.getNumLocalIds());
-      sI.getLocalReprs(repr);
-
       // Add sI's locals to b, after b's locals. Only those locals of sI which
       // do not already exist in b will be added. (i.e., duplicate divisions
       // will not be added.) Also add b's locals to sI, in such a way that both
       // have the same locals in the same order in the end.
-      b.mergeLocalIds(sI);
+      b.mergeLocalVars(sI);
+
+      // Find out which inequalities of sI correspond to division inequalities
+      // for the local variables of sI.
+      //
+      // Careful! This has to be done after the merge above; otherwise, the
+      // dividends won't contain the new ids inserted during the merge.
+      std::vector<MaybeLocalRepr> repr;
+      std::vector<SmallVector<int64_t, 8>> dividends;
+      SmallVector<unsigned, 4> divisors;
+      sI.getLocalReprs(dividends, divisors, repr);
 
       // Mark which inequalities of sI are division inequalities and add all
       // such inequalities to b.
       llvm::SmallBitVector canIgnoreIneq(sI.getNumInequalities() +
                                          2 * sI.getNumEqualities());
-      for (MaybeLocalRepr &maybeRepr : repr) {
+      for (unsigned i = initBCounts.getSpace().getNumLocalVars(),
+                    e = sI.getNumLocalVars();
+           i < e; ++i) {
         assert(
-            maybeRepr &&
+            repr[i] &&
             "Subtraction is not supported when a representation of the local "
             "variables of the subtrahend cannot be found!");
 
-        if (maybeRepr.kind == ReprKind::Inequality) {
-          unsigned lb = maybeRepr.repr.inequalityPair.lowerBoundIdx;
-          unsigned ub = maybeRepr.repr.inequalityPair.upperBoundIdx;
+        if (repr[i].kind == ReprKind::Inequality) {
+          unsigned lb = repr[i].repr.inequalityPair.lowerBoundIdx;
+          unsigned ub = repr[i].repr.inequalityPair.upperBoundIdx;
 
           b.addInequality(sI.getInequality(lb));
           b.addInequality(sI.getInequality(ub));
@@ -261,20 +282,36 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
           canIgnoreIneq[lb] = true;
           canIgnoreIneq[ub] = true;
         } else {
-          assert(maybeRepr.kind == ReprKind::Equality &&
+          assert(repr[i].kind == ReprKind::Equality &&
                  "ReprKind isn't inequality so should be equality");
-          unsigned idx = maybeRepr.repr.equalityIdx;
-          b.addEquality(sI.getEquality(idx));
-          // We can ignore both inequalities corresponding to this equality.
-          unsigned offset = sI.getNumInequalities();
-          canIgnoreIneq[offset + 2 * idx] = true;
-          canIgnoreIneq[offset + 2 * idx + 1] = true;
+
+          // Consider the case (x) : (x = 3e + 1), where e is a local.
+          // Its complement is (x) : (x = 3e) or (x = 3e + 2).
+          //
+          // This can be computed by considering the set to be
+          // (x) : (x = 3*(x floordiv 3) + 1).
+          //
+          // Now there are no equalities defining divisions; the division is
+          // defined by the standard division equalities for e = x floordiv 3,
+          // i.e., 0 <= x - 3*e <= 2.
+          // So now as before, we add these division inequalities to b. The
+          // equality is now just an ordinary constraint that must be considered
+          // in the remainder of the algorithm. The division inequalities must
+          // need not be considered, same as above, and they automatically will
+          // not be because they were never a part of sI; we just infer them
+          // from the equality and add them only to b.
+          b.addInequality(
+              getDivLowerBound(dividends[i], divisors[i],
+                               sI.getVarKindOffset(VarKind::Local) + i));
+          b.addInequality(
+              getDivUpperBound(dividends[i], divisors[i],
+                               sI.getVarKindOffset(VarKind::Local) + i));
         }
       }
 
       unsigned offset = simplex.getNumConstraints();
       unsigned numLocalsAdded =
-          b.getNumLocalIds() - initBCounts.getSpace().getNumLocalIds();
+          b.getNumLocalVars() - initBCounts.getSpace().getNumLocalVars();
       simplex.appendVariable(numLocalsAdded);
 
       unsigned snapshotBeforeIntersect = simplex.getSnapshot();
@@ -436,7 +473,7 @@ bool PresburgerRelation::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
 }
 
 Optional<uint64_t> PresburgerRelation::computeVolume() const {
-  assert(getNumSymbolIds() == 0 && "Symbols are not yet supported!");
+  assert(getNumSymbolVars() == 0 && "Symbols are not yet supported!");
   // The sum of the volumes of the disjuncts is a valid overapproximation of the
   // volume of their union, even if they overlap.
   uint64_t result = 0;
@@ -715,7 +752,7 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   /// Handling of local ids is not yet implemented, so these cases are
   /// skipped.
   /// TODO: implement local id support.
-  if (a.getNumLocalIds() != 0 || b.getNumLocalIds() != 0)
+  if (a.getNumLocalVars() != 0 || b.getNumLocalVars() != 0)
     return failure();
   Simplex &simpA = simplices[i];
   Simplex &simpB = simplices[j];

@@ -9388,14 +9388,15 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     break;
   }
   case RISCVISD::READ_VLENB: {
-    // If we know the minimum VLen from Zvl extensions, we can use that to
-    // determine the trailing zeros of VLENB.
-    // FIXME: Limit to 128 bit vectors until we have more testing.
-    unsigned MinVLenB = std::min(128U, Subtarget.getMinVLen()) / 8;
-    if (MinVLenB > 0)
-      Known.Zero.setLowBits(Log2_32(MinVLenB));
-    // We assume VLENB is no more than 65536 / 8 bytes.
-    Known.Zero.setBitsFrom(14);
+    // We can use the minimum and maximum VLEN values to bound VLENB.  We
+    // know VLEN must be a power of two.
+    const unsigned MinVLenB = Subtarget.getRealMinVLen() / 8;
+    const unsigned MaxVLenB = Subtarget.getRealMaxVLen() / 8;
+    assert(MinVLenB > 0 && "READ_VLENB without vector extension enabled?");
+    Known.Zero.setLowBits(Log2_32(MinVLenB));
+    Known.Zero.setBitsFrom(Log2_32(MaxVLenB)+1);
+    if (MaxVLenB == MinVLenB)
+      Known.One.setBit(Log2_32(MinVLenB));
     break;
   }
   case ISD::INTRINSIC_W_CHAIN:

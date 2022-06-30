@@ -786,7 +786,7 @@ struct CanonicalizeCastExtentTensorOperandsPattern
             castOp.getType().cast<RankedTensorType>().isDynamicDim(0);
         if (isInformationLoosingCast) {
           anyChange = true;
-          return castOp.source();
+          return castOp.getSource();
         }
       }
       return operand;
@@ -1597,7 +1597,7 @@ struct ShapeOfCastExtentTensor : public OpRewritePattern<tensor::CastOp> {
     if (!ty || ty.getRank() != 1)
       return failure();
 
-    auto shapeOfOp = op.source().getDefiningOp<ShapeOfOp>();
+    auto shapeOfOp = op.getSource().getDefiningOp<ShapeOfOp>();
     if (!shapeOfOp)
       return failure();
 
@@ -1717,7 +1717,7 @@ LogicalResult SplitAtOp::fold(ArrayRef<Attribute> operands,
   // Verify that the split point is in the correct range.
   // TODO: Constant fold to an "error".
   int64_t rank = shape.size();
-  if (!(-rank <= splitPoint && splitPoint <= rank))
+  if (-rank > splitPoint || splitPoint > rank)
     return failure();
   if (splitPoint < 0)
     splitPoint += shape.size();
