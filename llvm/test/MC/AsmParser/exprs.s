@@ -18,6 +18,16 @@ k:
         check_expr -1, ~0
         check_expr +1, 1
         check_expr 1 + 2, 3
+        check_expr 1U + 2U, 3U
+        check_expr 1L + 2L, 3L
+        check_expr 1UL + 2UL, 3UL
+        check_expr 1LL + 2L, 3LL
+        check_expr 1ULL + 2ULL, 3ULL
+        check_expr 1u + 2u, 3u
+        check_expr 1l + 2l, 3l
+        check_expr 1ul + 2ul, 3ul
+        check_expr 1ll + 2L, 3ll
+        check_expr 1ull + 2ull, 3ull
         check_expr 1 & 3, 1
         check_expr 4 / 2, 2
         check_expr 4 / -2, -2
