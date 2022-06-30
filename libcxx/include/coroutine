@@ -46,6 +46,10 @@ struct suspend_always;
 #include <__coroutine/trivial_awaitables.h>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iosfwd>
+#endif
+
 // standard-mandated includes
 #include <compare>
 

@@ -148,6 +148,11 @@ template<class R>
 #include <type_traits>  // for remove_cv, etc
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <functional>
+#  include <iterator>
+#endif
+
 // standard-mandated includes
 
 // [iterator.range]
