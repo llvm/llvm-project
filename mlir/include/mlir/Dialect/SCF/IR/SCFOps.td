@@ -16,6 +16,7 @@
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/RegionKindInterface.td"
+include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
@@ -468,6 +469,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
 def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
        NoSideEffect,
        Terminator,
+       DeclareOpInterfaceMethods<ParallelCombiningOpInterface>,
        HasParent<"ForeachThreadOp">,
       ] # GraphRegionNoTerminator.traits> {
   let summary = "terminates a `foreach_thread` block";
@@ -495,8 +497,9 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
   // TODO: Add a `PerformConcurrentlyOpInterface` interface for ops that can
   // appear inside perform_concurrently.
   let extraClassDeclaration = [{
-    SmallVector<Type> yieldedTypes();
-    ::llvm::iterator_range<Block::iterator> yieldingOps();
+    ::llvm::SmallVector<::mlir::Type> getYieldedTypes();
+    ::llvm::iterator_range<::mlir::Block::iterator> getYieldingOps();
+    ::mlir::OpResult getParentResult(int64_t idx);
   }];
 }
 
@@ -508,7 +511,9 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
 def ParallelInsertSliceOp : SCF_Op<"foreach_thread.parallel_insert_slice", [
        AttrSizedOperandSegments,
        OffsetSizeAndStrideOpInterface,
-       HasParent<"PerformConcurrentlyOp">]> {
+       // TODO: Cannot use an interface here atm, verify this manually for now.
+       // HasParent<"ParallelCombiningOpInterface">
+  ]> {
   let summary = [{
     Specify the tensor slice update of a single thread within the terminator of
     an `scf.foreach_thread`.
@@ -568,6 +573,11 @@ def ParallelInsertSliceOp : SCF_Op<"foreach_thread.parallel_insert_slice", [
       return getSource().getType().cast<RankedTensorType>();
     }
 
+    ParallelCombiningOpInterface getParallelCombiningParent() {
+      return dyn_cast<ParallelCombiningOpInterface>(
+        getOperation()->getParentOp());
+    }
+
     /// Return the expected rank of each of the `static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrMaxRanks() {
@@ -599,6 +609,7 @@ def ParallelInsertSliceOp : SCF_Op<"foreach_thread.parallel_insert_slice", [
   
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
