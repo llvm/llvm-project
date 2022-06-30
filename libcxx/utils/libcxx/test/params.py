@@ -160,7 +160,7 @@ DEFAULT_PARAMETERS = [
 
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=True,
             help="Whether to enable tests for experimental C++ Library features.",
-            actions=lambda experimental: [] if not experimental else [
+            actions=lambda experimental: [
               # When linking in MSVC mode via the Clang driver, a -l<foo>
               # maps to <foo>.lib, so we need to use -llibc++experimental here
               # to make it link against the static libc++experimental.lib.
@@ -172,6 +172,9 @@ DEFAULT_PARAMETERS = [
               AddFeature('c++experimental'),
               PrependLinkFlag(lambda cfg: '-llibc++experimental' if _isMSVC(cfg) else '-lc++experimental'),
               AddCompileFlag('-D_LIBCPP_ENABLE_EXPERIMENTAL'),
+            ] if experimental else [
+              AddFeature('libcpp-has-no-incomplete-format'),
+              AddFeature('libcpp-has-no-incomplete-ranges')
             ]),
 
   Parameter(name='long_tests', choices=[True, False], type=bool, default=True,

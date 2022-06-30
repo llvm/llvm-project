@@ -188,8 +188,6 @@ macros = {
   '_LIBCPP_HAS_NO_RANDOM_DEVICE': 'no-random-device',
   '_LIBCPP_HAS_NO_LOCALIZATION': 'no-localization',
   '_LIBCPP_HAS_NO_WIDE_CHARACTERS': 'no-wide-characters',
-  '_LIBCPP_HAS_NO_INCOMPLETE_FORMAT': 'libcpp-has-no-incomplete-format',
-  '_LIBCPP_HAS_NO_INCOMPLETE_RANGES': 'libcpp-has-no-incomplete-ranges',
   '_LIBCPP_HAS_NO_UNICODE': 'libcpp-has-no-unicode',
   '_LIBCPP_ENABLE_DEBUG_MODE': 'libcpp-has-debug-mode',
 }

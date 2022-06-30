@@ -101,11 +101,6 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    to provide compile-time errors when using features unavailable on some version of
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
-option(LIBCXX_ENABLE_INCOMPLETE_FEATURES
-    "Whether to enable support for incomplete library features. Incomplete features
-    are new library features under development. These features don't guarantee
-    ABI stability nor the quality of completed library features. Vendors
-    shipping the library may want to disable this option." ON)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -866,10 +861,6 @@ if (LIBCXX_ENABLE_ASSERTIONS)
 else()
   config_define(0 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
 endif()
-# Incomplete features get their own specific disabling flags. This makes it
-# easier to grep for target specific flags once the feature is complete.
-config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
-config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 if (LIBCXX_ABI_DEFINES)
   set(abi_defines)
