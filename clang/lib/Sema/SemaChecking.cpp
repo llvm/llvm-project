@@ -3254,7 +3254,7 @@ static bool isValidBPFPreserveTypeInfoArg(Expr *Arg) {
   if (ArgType->getAsPlaceholderType())
     return false;
 
-  // for TYPE_EXISTENCE/TYPE_SIZEOF reloc type
+  // for TYPE_EXISTENCE/TYPE_MATCH/TYPE_SIZEOF reloc type
   // format:
   //   1. __builtin_preserve_type_info(*(<type> *)0, flag);
   //   2. <type> var;
