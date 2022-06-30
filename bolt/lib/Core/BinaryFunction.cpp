@@ -3110,8 +3110,12 @@ void BinaryFunction::viewGraph() const {
 }
 
 void BinaryFunction::dumpGraphForPass(std::string Annotation) const {
+  if (!opts::shouldPrint(*this))
+    return;
+
   std::string Filename = constructFilename(getPrintName(), Annotation, ".dot");
-  outs() << "BOLT-DEBUG: Dumping CFG to " << Filename << "\n";
+  if (opts::Verbosity >= 1)
+    outs() << "BOLT-INFO: dumping CFG to " << Filename << "\n";
   dumpGraphToFile(Filename);
 }
 
@@ -4373,6 +4377,9 @@ DebugLocationsVector BinaryFunction::translateInputToOutputLocationList(
 }
 
 void BinaryFunction::printLoopInfo(raw_ostream &OS) const {
+  if (!opts::shouldPrint(*this))
+    return;
+
   OS << "Loop Info for Function \"" << *this << "\"";
   if (hasValidProfile())
     OS << " (count: " << getExecutionCount() << ")";
