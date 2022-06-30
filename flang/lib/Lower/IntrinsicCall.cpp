@@ -4063,7 +4063,7 @@ static mlir::Value createExtremumCompare(mlir::Location loc,
   } else if (fir::isa_integer(type)) {
     result =
         builder.create<mlir::arith::CmpIOp>(loc, integerPredicate, left, right);
-  } else if (fir::isa_char(type)) {
+  } else if (fir::isa_char(type) || fir::isa_char(fir::unwrapRefType(type))) {
     // TODO: ! character min and max is tricky because the result
     // length is the length of the longest argument!
     // So we may need a temp.

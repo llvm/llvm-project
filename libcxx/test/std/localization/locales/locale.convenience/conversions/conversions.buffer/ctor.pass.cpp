@@ -8,6 +8,8 @@
 
 // <locale>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // wbuffer_convert<Codecvt, Elem, Tr>
 
 // wbuffer_convert(streambuf* bytebuf = 0, Codecvt* pcvt = new Codecvt,

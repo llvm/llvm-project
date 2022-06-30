@@ -15,9 +15,9 @@ using namespace llvm;
 TestRunner::TestRunner(StringRef TestName,
                        const std::vector<std::string> &TestArgs,
                        std::unique_ptr<ReducerWorkItem> Program,
-                       std::unique_ptr<TargetMachine> TM)
+                       std::unique_ptr<TargetMachine> TM, const char *ToolName)
     : TestName(TestName), TestArgs(TestArgs), Program(std::move(Program)),
-      TM(std::move(TM)) {
+      TM(std::move(TM)), ToolName(ToolName) {
   assert(this->Program && "Initialized with null program?");
 }
 

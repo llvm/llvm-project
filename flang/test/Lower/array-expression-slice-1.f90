@@ -399,8 +399,8 @@ end program p
 ! CHECK:         %[[VAL_16:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_12]], %[[VAL_14]], %[[VAL_15]]) : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 ! CHECK:         %[[VAL_17:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_18:.*]] = fir.slice %[[VAL_3]], %[[VAL_1]], %[[VAL_2]] : (index, index, index) -> !fir.slice<1>
-! CHECK:         %[[VAL_19:.*]] = fir.embox %[[VAL_9]](%[[VAL_17]]) {{\[}}%[[VAL_18]]] : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1>>>
-! CHECK:         %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (!fir.box<!fir.array<?x!fir.char<1>>>) -> !fir.box<none>
+! CHECK:         %[[VAL_19:.*]] = fir.embox %[[VAL_9]](%[[VAL_17]]) {{\[}}%[[VAL_18]]] : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<3x!fir.char<1>>>
+! CHECK:         %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (!fir.box<!fir.array<3x!fir.char<1>>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_21:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_12]], %[[VAL_20]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:         %[[VAL_22:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_12]]) : (!fir.ref<i8>) -> i32
 ! CHECK:         return
