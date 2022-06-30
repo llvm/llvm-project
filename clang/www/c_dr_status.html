@@ -1129,7 +1129,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_201.htm">201</a></td>
     <td>NAD</td>
     <td>Integer types longer than long</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="202">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_202.htm">202</a></td>
@@ -1147,7 +1147,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_204.htm">204</a></td>
     <td>C99</td>
     <td>size_t and ptrdiff_t as a long long type</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="205">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_205.htm">205</a></td>
@@ -1159,25 +1159,36 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_206.htm">206</a></td>
     <td>NAD</td>
     <td>Default argument conversion of float _Complex</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="207">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_207.htm">207</a></td>
     <td>C99</td>
     <td>Handling of imaginary types</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="partial" align="center">
+      <details><summary>Partial</summary>
+        Clang detects use of the _Imaginary keyword but does not otherwise
+        support the type yet.
+      </details>
+    </td>
   </tr>
   <tr id="208">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_208.htm">208</a></td>
     <td>C99</td>
     <td>Ambiguity in initialization</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="209">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_209.htm">209</a></td>
     <td>C99</td>
     <td>Problem implementing INTN_C macros</td>
-    <td class="na" align="center">N/A</td>
+    <td class="partial" align="center">
+      <details><summary>Partial</summary>
+        Clang provides these definitions in a freestanding compilation, but the
+        type of the value produced by <code>UINT8_C</code> and <code>UINT16_C</code>
+        is not the type after integer promotion per C99 7.18.4p3.
+      </details>
+    </td>
   </tr>
   <tr id="210">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_210.htm">210</a></td>
@@ -1189,7 +1200,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_211.htm">211</a></td>
     <td>C99</td>
     <td>Accuracy of decimal string to/from "binary" (non-decimal) floating-point conversions</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="212">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_212.htm">212</a></td>
@@ -1213,13 +1224,13 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_215.htm">215</a></td>
     <td>C99</td>
     <td>Equality operators</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="216">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_216.htm">216</a></td>
     <td>C99</td>
     <td>Source character encodings</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="217">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_217.htm">217</a></td>
