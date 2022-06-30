@@ -62,7 +62,7 @@ protected:
     void *get() const { return I == -2u ? P : nullptr; }
 
   public:
-    PointerBase() noexcept = default;
+    PointerBase() noexcept {}
     PointerBase(PointerBase &&) = default;
     PointerBase(const PointerBase &) = default;
     PointerBase &operator=(PointerBase &&) = default;
