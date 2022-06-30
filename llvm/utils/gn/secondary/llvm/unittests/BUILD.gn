@@ -53,6 +53,7 @@ group("unittests") {
     "tools/llvm-cfi-verify:CFIVerifyTests",
     "tools/llvm-exegesis:LLVMExegesisTests",
     "tools/llvm-profgen:LLVMProfgenTests",
+    "tools/llvm-mca:LLVMMCATests",
   ]
 
   # Target-dependent unit tests.

@@ -34,13 +34,13 @@ public:
   ///
   /// \return
   ///     A \a DecodedThread instance.
-  DecodedThreadSP Decode();
+  llvm::Expected<DecodedThreadSP> Decode();
 
   ThreadDecoder(const ThreadDecoder &other) = delete;
   ThreadDecoder &operator=(const ThreadDecoder &other) = delete;
 
 private:
-  DecodedThreadSP DoDecode();
+  llvm::Expected<DecodedThreadSP> DoDecode();
 
   lldb::ThreadSP m_thread_sp;
   TraceIntelPT &m_trace;

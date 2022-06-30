@@ -69,12 +69,11 @@ static void createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
     // variables) happen separately, for everything else privatize here.
     if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
       continue;
+    bool success = converter.createHostAssociateVarClone(*sym);
+    (void)success;
+    assert(success && "Privatization failed due to existing binding");
     if constexpr (std::is_same_v<T, Fortran::parser::OmpClause::Firstprivate>) {
       converter.copyHostAssociateVar(*sym);
-    } else {
-      bool success = converter.createHostAssociateVarClone(*sym);
-      (void)success;
-      assert(success && "Privatization failed due to existing binding");
     }
   }
 }
@@ -161,9 +160,10 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
   };
 
   llvm::SetVector<const Fortran::semantics::Symbol *> threadprivateSyms;
-  converter.collectSymbolSet(
-      eval, threadprivateSyms,
-      Fortran::semantics::Symbol::Flag::OmpThreadprivate);
+  converter.collectSymbolSet(eval, threadprivateSyms,
+                             Fortran::semantics::Symbol::Flag::OmpThreadprivate,
+                             /*isUltimateSymbol=*/false);
+  std::set<Fortran::semantics::SourceName> threadprivateSymNames;
 
   // For a COMMON block, the ThreadprivateOp is generated for itself instead of
   // its members, so only bind the value of the new copied ThreadprivateOp
@@ -173,6 +173,11 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
   for (std::size_t i = 0; i < threadprivateSyms.size(); i++) {
     auto sym = threadprivateSyms[i];
     mlir::Value symThreadprivateValue;
+    // The variable may be used more than once, and each reference has one
+    // symbol with the same name. Only do once for references of one variable.
+    if (threadprivateSymNames.find(sym->name()) != threadprivateSymNames.end())
+      continue;
+    threadprivateSymNames.insert(sym->name());
     if (const Fortran::semantics::Symbol *common =
             Fortran::semantics::FindCommonBlockContaining(sym->GetUltimate())) {
       mlir::Value commonThreadprivateValue;
@@ -195,6 +200,36 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
     converter.bindSymbol(*sym, symThreadprivateExv);
   }
 
+  firOpBuilder.restoreInsertionPoint(insPt);
+}
+
+static void
+genCopyinClause(Fortran::lower::AbstractConverter &converter,
+                const Fortran::parser::OmpClauseList &opClauseList) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
+  firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+  bool hasCopyin = false;
+  for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
+    if (const auto &copyinClause =
+            std::get_if<Fortran::parser::OmpClause::Copyin>(&clause.u)) {
+      hasCopyin = true;
+      const Fortran::parser::OmpObjectList &ompObjectList = copyinClause->v;
+      for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
+        Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
+        if (sym->has<Fortran::semantics::CommonBlockDetails>())
+          TODO(converter.getCurrentLocation(), "common block in Copyin clause");
+        if (Fortran::semantics::IsAllocatableOrPointer(sym->GetUltimate()))
+          TODO(converter.getCurrentLocation(),
+               "pointer or allocatable variables in Copyin clause");
+        assert(sym->has<Fortran::semantics::HostAssocDetails>() &&
+               "No host-association found");
+        converter.copyHostAssociateVar(*sym);
+      }
+    }
+  }
+  if (hasCopyin)
+    firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
   firOpBuilder.restoreInsertionPoint(insPt);
 }
 
@@ -343,8 +378,11 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
   if (clauses && !outerCombined)
     privatizeVars(converter, *clauses);
 
-  if (std::is_same_v<Op, omp::ParallelOp>)
+  if constexpr (std::is_same_v<Op, omp::ParallelOp>) {
     threadPrivatizeVars(converter, eval);
+    if (clauses)
+      genCopyinClause(converter, *clauses);
+  }
 }
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,
@@ -490,7 +528,6 @@ createCombinedParallelOp(Fortran::lower::AbstractConverter &converter,
       std::get<Fortran::parser::OmpClauseList>(directive.t);
   // TODO: Handle the following clauses
   // 1. default
-  // 2. copyin
   // Note: rest of the clauses are handled when the inner operation is created
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
     if (const auto &ifClause =
@@ -570,9 +607,25 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                         allocateOperands);
     } else if (std::get_if<Fortran::parser::OmpClause::Private>(&clause.u) ||
                std::get_if<Fortran::parser::OmpClause::Firstprivate>(
-                   &clause.u)) {
-      // Privatisation clauses are handled elsewhere.
+                   &clause.u) ||
+               std::get_if<Fortran::parser::OmpClause::Copyin>(&clause.u)) {
+      // Privatisation and copyin clauses are handled elsewhere.
       continue;
+    } else if (std::get_if<Fortran::parser::OmpClause::Shared>(&clause.u)) {
+      // Shared is the default behavior in the IR, so no handling is required.
+      continue;
+    } else if (const auto &defaultClause =
+                   std::get_if<Fortran::parser::OmpClause::Default>(
+                       &clause.u)) {
+      if ((defaultClause->v.v ==
+           Fortran::parser::OmpDefaultClause::Type::Shared) ||
+          (defaultClause->v.v ==
+           Fortran::parser::OmpDefaultClause::Type::None)) {
+        // Default clause with shared or none do not require any handling since
+        // Shared is the default behavior in the IR and None is only required
+        // for semantic checks.
+        continue;
+      }
     } else if (std::get_if<Fortran::parser::OmpClause::Threads>(&clause.u)) {
       // Nothing needs to be done for threads clause.
       continue;
@@ -708,8 +761,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, linearVars,
       linearStepVars, reductionVars;
   mlir::Value scheduleChunkClauseOperand;
-  mlir::Attribute scheduleClauseOperand, collapseClauseOperand,
-      noWaitClauseOperand, orderedClauseOperand, orderClauseOperand;
+  mlir::Attribute scheduleClauseOperand, noWaitClauseOperand,
+      orderedClauseOperand, orderClauseOperand;
   const auto &loopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t);
 
@@ -810,7 +863,6 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       scheduleClauseOperand.dyn_cast_or_null<omp::ClauseScheduleKindAttr>(),
       scheduleChunkClauseOperand, /*schedule_modifiers=*/nullptr,
       /*simd_modifier=*/nullptr,
-      collapseClauseOperand.dyn_cast_or_null<IntegerAttr>(),
       noWaitClauseOperand.dyn_cast_or_null<UnitAttr>(),
       orderedClauseOperand.dyn_cast_or_null<IntegerAttr>(),
       orderClauseOperand.dyn_cast_or_null<omp::ClauseOrderKindAttr>(),
@@ -829,13 +881,6 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       } else {
         wsLoopOp.ordered_valAttr(firOpBuilder.getI64IntegerAttr(0));
       }
-    } else if (const auto &collapseClause =
-                   std::get_if<Fortran::parser::OmpClause::Collapse>(
-                       &clause.u)) {
-      const auto *expr = Fortran::semantics::GetExpr(collapseClause->v);
-      const std::optional<std::int64_t> collapseValue =
-          Fortran::evaluate::ToInt64(*expr);
-      wsLoopOp.collapse_valAttr(firOpBuilder.getI64IntegerAttr(*collapseValue));
     } else if (const auto &scheduleClause =
                    std::get_if<Fortran::parser::OmpClause::Schedule>(
                        &clause.u)) {

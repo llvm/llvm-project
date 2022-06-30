@@ -28,6 +28,7 @@ add_libc_unittest(
     limits_test.cpp
   DEPENDS
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.uint
 )
 
 add_libc_unittest(

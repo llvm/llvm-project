@@ -1654,7 +1654,7 @@ func.func @foo() {} // expected-error {{expected non-empty function body}}
 
 // -----
 
-// expected-error@+1 {{expected ']'}}
+// expected-error@+1 {{expected ',' or ']'}}
 "f"() { b = [@m:
 
 // -----

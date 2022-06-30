@@ -71,7 +71,7 @@ Operations, etc.
 
 ```tablegen
 // Include the definition of the necessary tablegen constructs for defining
-// our types. 
+// our types.
 include "mlir/IR/AttrTypeBase.td"
 
 // It's common to define a base classes for types in the same dialect. This
@@ -108,7 +108,7 @@ Below is an example of an Attribute:
 
 ```tablegen
 // Include the definition of the necessary tablegen constructs for defining
-// our attributes. 
+// our attributes.
 include "mlir/IR/AttrTypeBase.td"
 
 // It's common to define a base classes for attributes in the same dialect. This
@@ -128,11 +128,11 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
   }];
   /// Here we've defined two parameters, one is the `self` type of the attribute
   /// (i.e. the type of the Attribute itself), and the other is the integer value
-  /// of the attribute. 
+  /// of the attribute.
   let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
-  
+
   /// Here we've defined a custom builder for the type, that removes the need to pass
-  /// in an MLIRContext instance; as it can be infered from the `type`. 
+  /// in an MLIRContext instance; as it can be infered from the `type`.
   let builders = [
     AttrBuilderWithInferredContext<(ins "Type":$type,
                                         "const APInt &":$value), [{
@@ -147,7 +147,7 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
   ///    #my.int<50> : !my.int<32> // a 32-bit integer of value 50.
   ///
   let assemblyFormat = "`<` $value `>`";
-  
+
   /// Indicate that our attribute will add additional verification to the parameters.
   let genVerifyDecl = 1;
 
@@ -612,6 +612,10 @@ example, `StringRefParameter` uses `std::string` as its storage type, whereas
 `ArrayRefParameter` uses `SmallVector` as its storage type. The parsers for
 these parameters are expected to return `FailureOr<$cppStorageType>`.
 
+To add a custom conversion between the `cppStorageType` and the C++ type of the
+parameter, parameters can override `convertFromStorage`, which by default is
+`"$_self"` (i.e., it attempts an implicit conversion from `cppStorageType`).
+
 ###### Optional Parameters
 
 Optional parameters in the assembly format can be indicated by setting
@@ -1060,7 +1064,7 @@ void MyDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "MyDialect/Attributes.cpp.inc"
   >();
-  
+
     /// Add the defined types to the dialect.
   addTypes<
 #define GET_TYPEDEF_LIST

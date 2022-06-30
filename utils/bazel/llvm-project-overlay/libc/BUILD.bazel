@@ -72,7 +72,7 @@ cc_library(
 cc_library(
     name = "__support_cpp_limits",
     hdrs = ["src/__support/CPP/Limits.h"],
-    deps = [":libc_root"],
+    deps = [":libc_root", "__support_cpp_uint"],
 )
 
 cc_library(
@@ -87,6 +87,14 @@ cc_library(
         "src/__support/CPP/UInt.h",
     ],
     deps = [":libc_root","__support_cpp_array"],
+)
+
+cc_library(
+    name = "__support_cpp_uint128",
+    hdrs = [
+        "src/__support/CPP/UInt128.h",
+    ],
+    deps = [":libc_root",":__support_cpp_uint"],
 )
 
 cc_library(
@@ -174,6 +182,7 @@ cc_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_cpp_uint128",
         ":libc_root",
     ],
 )
@@ -201,6 +210,7 @@ cc_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_cpp_uint128",
         ":__support_fputil",
         ":libc_root",
     ],
@@ -226,6 +236,7 @@ cc_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_cpp_uint128",
         ":__support_fputil",
         ":libc_root",
     ],

@@ -385,6 +385,17 @@ define void @umul_with_overflow_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3)
   ret void
 }
 
+; CHECK-LABEL: llvm.func @va_intrinsics_test
+define void @va_intrinsics_test(i8* %0, i8* %1) {
+; CHECK: llvm.intr.vastart %{{.*}}
+  call void @llvm.va_start(i8* %0)
+; CHECK: llvm.intr.vacopy %{{.*}} to %{{.*}}
+  call void @llvm.va_copy(i8* %1, i8* %0)
+; CHECK: llvm.intr.vaend %{{.*}}
+  call void @llvm.va_end(i8* %0)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @coro_id
 define void @coro_id(i32 %0, i8* %1) {
   ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.token
@@ -686,6 +697,9 @@ declare void @llvm.coro.resume(i8*)
 declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @llvm.stacksave()
 declare void @llvm.stackrestore(i8*)
+declare void @llvm.va_start(i8*)
+declare void @llvm.va_copy(i8*, i8*)
+declare void @llvm.va_end(i8*)
 declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)

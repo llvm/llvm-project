@@ -551,8 +551,8 @@ define i64 @add_mul_combine_infinite_loop(i64 %x) {
 ; RV32IMB-NEXT:    sh3add a1, a1, a2
 ; RV32IMB-NEXT:    sh1add a0, a0, a0
 ; RV32IMB-NEXT:    slli a2, a0, 3
-; RV32IMB-NEXT:    addi a0, a2, 1024
-; RV32IMB-NEXT:    addi a0, a0, 1024
+; RV32IMB-NEXT:    addi a0, a2, 2047
+; RV32IMB-NEXT:    addi a0, a0, 1
 ; RV32IMB-NEXT:    sltu a2, a0, a2
 ; RV32IMB-NEXT:    add a1, a1, a2
 ; RV32IMB-NEXT:    ret

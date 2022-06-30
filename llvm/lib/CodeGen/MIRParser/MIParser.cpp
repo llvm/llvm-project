@@ -741,7 +741,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
-  if (SectionID.hasValue()) {
+  if (SectionID) {
     MBB->setSectionID(SectionID.getValue());
     MF.setBBSectionsType(BasicBlockSection::List);
   }
@@ -2707,19 +2707,19 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
     return true;
 
   uint32_t *Mask = MF.allocateRegMask();
-  while (true) {
-    if (Token.isNot(MIToken::NamedRegister))
-      return error("expected a named register");
-    Register Reg;
-    if (parseNamedRegister(Reg))
-      return true;
-    lex();
-    Mask[Reg / 32] |= 1U << (Reg % 32);
+  do {
+    if (Token.isNot(MIToken::rparen)) {
+      if (Token.isNot(MIToken::NamedRegister))
+        return error("expected a named register");
+      Register Reg;
+      if (parseNamedRegister(Reg))
+        return true;
+      lex();
+      Mask[Reg / 32] |= 1U << (Reg % 32);
+    }
+
     // TODO: Report an error if the same register is used more than once.
-    if (Token.isNot(MIToken::comma))
-      break;
-    lex();
-  }
+  } while (consumeIfPresent(MIToken::comma));
 
   if (expectAndConsume(MIToken::rparen))
     return true;

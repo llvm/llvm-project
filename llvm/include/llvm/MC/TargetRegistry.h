@@ -60,7 +60,7 @@ class TargetOptions;
 namespace mca {
 class CustomBehaviour;
 class InstrPostProcess;
-class SourceMgr;
+struct SourceMgr;
 } // namespace mca
 
 MCStreamer *createNullStreamer(MCContext &Ctx);

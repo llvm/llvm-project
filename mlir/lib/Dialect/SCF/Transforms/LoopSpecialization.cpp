@@ -42,7 +42,7 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
     if (!minOp)
       return;
     int64_t minConstant = std::numeric_limits<int64_t>::max();
-    for (AffineExpr expr : minOp.map().getResults()) {
+    for (AffineExpr expr : minOp.getMap().getResults()) {
       if (auto constantIndex = expr.dyn_cast<AffineConstantExpr>())
         minConstant = std::min(minConstant, constantIndex.getValue());
     }
@@ -78,7 +78,7 @@ static void specializeForLoopForUnrolling(ForOp op) {
   if (!minOp)
     return;
   int64_t minConstant = std::numeric_limits<int64_t>::max();
-  for (AffineExpr expr : minOp.map().getResults()) {
+  for (AffineExpr expr : minOp.getMap().getResults()) {
     if (auto constantIndex = expr.dyn_cast<AffineConstantExpr>())
       minConstant = std::min(minConstant, constantIndex.getValue());
   }
@@ -237,7 +237,7 @@ namespace {
 struct ParallelLoopSpecialization
     : public SCFParallelLoopSpecializationBase<ParallelLoopSpecialization> {
   void runOnOperation() override {
-    getOperation().walk(
+    getOperation()->walk(
         [](ParallelOp op) { specializeParallelLoopForUnrolling(op); });
   }
 };
@@ -245,20 +245,20 @@ struct ParallelLoopSpecialization
 struct ForLoopSpecialization
     : public SCFForLoopSpecializationBase<ForLoopSpecialization> {
   void runOnOperation() override {
-    getOperation().walk([](ForOp op) { specializeForLoopForUnrolling(op); });
+    getOperation()->walk([](ForOp op) { specializeForLoopForUnrolling(op); });
   }
 };
 
 struct ForLoopPeeling : public SCFForLoopPeelingBase<ForLoopPeeling> {
   void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
-    MLIRContext *ctx = funcOp.getContext();
+    auto *parentOp = getOperation();
+    MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopPeelingPattern>(ctx, skipPartial);
-    (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
 
     // Drop the markers.
-    funcOp.walk([](Operation *op) {
+    parentOp->walk([](Operation *op) {
       op->removeAttr(kPeeledLoopLabel);
       op->removeAttr(kPartialIterationLabel);
     });

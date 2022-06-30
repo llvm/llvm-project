@@ -214,3 +214,66 @@ entry:
   store <8 x i32> %7, ptr undef
   ret void
 }
+
+; Regression test for rGb5d7beeb9792
+define void @vselect_concat_splat() {
+; AVX1-LABEL: vselect_concat_splat:
+; AVX1:       ## %bb.0: ## %entry
+; AVX1-NEXT:    vmovups (%rax), %xmm0
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,3,2,1]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,0,3,2]
+; AVX1-NEXT:    vmovups 16, %xmm2
+; AVX1-NEXT:    vmovups 32, %xmm3
+; AVX1-NEXT:    vblendps {{.*#+}} xmm4 = mem[0],xmm3[1],mem[2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm4 = xmm4[0,1],xmm2[2],xmm4[3]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[0,3,2,1]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0],xmm3[1,2],xmm2[3]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[1,0,3,2]
+; AVX1-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vcmpneqps %xmm3, %xmm1, %xmm3
+; AVX1-NEXT:    vblendvps %xmm3, %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vblendvps %xmm3, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovups %xmm0, (%rax)
+; AVX1-NEXT:    vmovups %xmm1, (%rax)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vselect_concat_splat:
+; AVX2:       ## %bb.0: ## %entry
+; AVX2-NEXT:    vmovups (%rax), %ymm0
+; AVX2-NEXT:    vmovups (%rax), %xmm1
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm2 = [0,3,6,1]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7]
+; AVX2-NEXT:    vpermps %ymm3, %ymm2, %ymm3
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm4 = [1,4,7,2]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
+; AVX2-NEXT:    vpermps %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vmovups 0, %ymm1
+; AVX2-NEXT:    vmovups 32, %xmm5
+; AVX2-NEXT:    vblendps {{.*#+}} ymm6 = ymm1[0],ymm5[1],ymm1[2,3,4,5,6,7]
+; AVX2-NEXT:    vpermps %ymm6, %ymm2, %ymm2
+; AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm5[2,3],ymm1[4,5,6,7]
+; AVX2-NEXT:    vpermps %ymm1, %ymm4, %ymm1
+; AVX2-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; AVX2-NEXT:    vcmpneqps %xmm4, %xmm3, %xmm4
+; AVX2-NEXT:    vblendvps %xmm4, %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vblendvps %xmm4, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovups %xmm0, (%rax)
+; AVX2-NEXT:    vmovups %xmm2, (%rax)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+entry:
+  %wide.vec = load <12 x float>, ptr undef, align 1
+  %strided.vec = shufflevector <12 x float> %wide.vec, <12 x float> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %strided.vec29 = shufflevector <12 x float> %wide.vec, <12 x float> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+  %wide.vec31 = load <12 x float>, ptr null, align 1
+  %strided.vec32 = shufflevector <12 x float> %wide.vec31, <12 x float> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %strided.vec33 = shufflevector <12 x float> %wide.vec31, <12 x float> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+  %i = select i1 false, <4 x float> zeroinitializer, <4 x float> %strided.vec
+  %i1 = fcmp une <4 x float> %i, zeroinitializer
+  %i2 = select <4 x i1> %i1, <4 x float> %strided.vec32, <4 x float> %strided.vec
+  %.v = select <4 x i1> %i1, <4 x float> %strided.vec33, <4 x float> %strided.vec29
+  %.uncasted = shufflevector <4 x float> %i2, <4 x float> %.v, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x float>  %.uncasted, ptr undef, align 1
+  ret void
+}

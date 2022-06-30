@@ -1400,7 +1400,14 @@ struct __fields {
 
 // By not placing this constant in the formatter class it's not duplicated for
 // char and wchar_t.
+inline constexpr __fields __fields_integral{
+    .__sign_                 = true,
+    .__alternate_form_       = true,
+    .__zero_padding_         = true,
+    .__locale_specific_form_ = true,
+    .__type_                 = true};
 inline constexpr __fields __fields_string{.__precision_ = true, .__type_ = true};
+inline constexpr __fields __fields_pointer{.__type_ = true};
 
 enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {
   /// No alignment is set in the format string.
@@ -1840,8 +1847,116 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_string(__format_spec
     break;
 
   default:
-    __throw_format_error("The format-spec type has a type not supported for "
-                         "a string argument");
+    std::__throw_format_error("The format-spec type has a type not supported for a string argument");
+  }
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_bool_string(__parser<_CharT>& __parser) {
+  if (__parser.__sign_ != __sign::__default)
+    std::__throw_format_error("A sign field isn't allowed in this format-spec");
+
+  if (__parser.__alternate_form_)
+    std::__throw_format_error("An alternate form field isn't allowed in this format-spec");
+
+  if (__parser.__alignment_ == __alignment::__zero_padding)
+    std::__throw_format_error("A zero-padding field isn't allowed in this format-spec");
+
+  if (__parser.__alignment_ == __alignment::__default)
+    __parser.__alignment_ = __alignment::__left;
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_char(__parser<_CharT>& __parser) {
+  __format_spec::__process_display_type_bool_string(__parser);
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_integer(__parser<_CharT>& __parser) {
+  if (__parser.__alignment_ == __alignment::__default)
+    __parser.__alignment_ = __alignment::__right;
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_bool(__parser<_CharT>& __parser) {
+  switch (__parser.__type_) {
+  case __format_spec::__type::__default:
+    __parser.__type_ = __format_spec::__type::__string;
+    [[fallthrough]];
+  case __format_spec::__type::__string:
+    __format_spec::__process_display_type_bool_string(__parser);
+    break;
+
+  case __format_spec::__type::__binary_lower_case:
+  case __format_spec::__type::__binary_upper_case:
+  case __format_spec::__type::__octal:
+  case __format_spec::__type::__decimal:
+  case __format_spec::__type::__hexadecimal_lower_case:
+  case __format_spec::__type::__hexadecimal_upper_case:
+    __process_display_type_integer(__parser);
+    break;
+
+  default:
+    std::__throw_format_error("The format-spec type has a type not supported for a bool argument");
+  }
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_char(__parser<_CharT>& __parser) {
+  switch (__parser.__type_) {
+  case __format_spec::__type::__default:
+    __parser.__type_ = __format_spec::__type::__char;
+    [[fallthrough]];
+  case __format_spec::__type::__char:
+    __format_spec::__process_display_type_char(__parser);
+    break;
+
+  case __format_spec::__type::__binary_lower_case:
+  case __format_spec::__type::__binary_upper_case:
+  case __format_spec::__type::__octal:
+  case __format_spec::__type::__decimal:
+  case __format_spec::__type::__hexadecimal_lower_case:
+  case __format_spec::__type::__hexadecimal_upper_case:
+    __format_spec::__process_display_type_integer(__parser);
+    break;
+
+  default:
+    std::__throw_format_error("The format-spec type has a type not supported for a char argument");
+  }
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_integer(__parser<_CharT>& __parser) {
+  switch (__parser.__type_) {
+  case __format_spec::__type::__default:
+    __parser.__type_ = __format_spec::__type::__decimal;
+    [[fallthrough]];
+  case __format_spec::__type::__binary_lower_case:
+  case __format_spec::__type::__binary_upper_case:
+  case __format_spec::__type::__octal:
+  case __format_spec::__type::__decimal:
+  case __format_spec::__type::__hexadecimal_lower_case:
+  case __format_spec::__type::__hexadecimal_upper_case:
+    __format_spec::__process_display_type_integer(__parser);
+    break;
+
+  case __format_spec::__type::__char:
+    __format_spec::__process_display_type_char(__parser);
+    break;
+
+  default:
+    std::__throw_format_error("The format-spec type has a type not supported for an integer argument");
+  }
+}
+
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_pointer(__format_spec::__type __type) {
+  switch (__type) {
+  case __format_spec::__type::__default:
+  case __format_spec::__type::__pointer:
+    break;
+
+  default:
+    std::__throw_format_error("The format-spec type has a type not supported for a pointer argument");
   }
 }
 

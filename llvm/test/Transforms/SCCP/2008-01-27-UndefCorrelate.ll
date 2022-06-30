@@ -7,19 +7,7 @@ define i32 @main() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    br i1 undef, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-; CHECK:       cond_true:
-; CHECK-NEXT:    br i1 undef, label [[BB_BACKEDGE:%.*]], label [[BB12:%.*]]
-; CHECK:       bb.backedge:
-; CHECK-NEXT:    br label [[BB]]
-; CHECK:       cond_false:
-; CHECK-NEXT:    br i1 undef, label [[BB_BACKEDGE]], label [[BB12]]
-; CHECK:       bb12:
-; CHECK-NEXT:    br i1 undef, label [[COND_NEXT18:%.*]], label [[COND_TRUE17:%.*]]
-; CHECK:       cond_true17:
 ; CHECK-NEXT:    unreachable
-; CHECK:       cond_next18:
-; CHECK-NEXT:    ret i32 0
 ;
 entry:
   br label %bb

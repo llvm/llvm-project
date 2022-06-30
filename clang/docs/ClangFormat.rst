@@ -43,6 +43,17 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
     --assume-filename=<string>     - Override filename used to determine the language.
                                      When reading from stdin, clang-format assumes this
                                      filename to determine the language.
+                                     Unrecognized filenames are treated as C++.
+                                     supported:
+                                       CSharp: .cs
+                                       Java: .java
+                                       JavaScript: .mjs .js .ts
+                                       Json: .json
+                                       Objective-C: .m .mm
+                                       Proto: .proto .protodevel
+                                       TableGen: .td
+                                       TextProto: .textpb .pb.txt .textproto .asciipb
+                                       Verilog: .sv .svh .v .vh
     --cursor=<uint>                - The position of the cursor when invoking
                                      clang-format from an editor integration
     --dry-run                      - If set, do not actually make the formatting changes

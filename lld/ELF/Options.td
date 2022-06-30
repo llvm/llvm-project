@@ -408,8 +408,10 @@ defm threads
          "Number of threads. '1' disables multi-threading. By default all "
          "available hardware threads are used">;
 
-def time_trace: FF<"time-trace">, HelpText<"Record time trace">;
-def time_trace_file_eq: JJ<"time-trace-file=">, HelpText<"Specify time trace output file">;
+def time_trace_eq: JJ<"time-trace=">, MetaVarName<"<file>">,
+  HelpText<"Record time trace to <file>">;
+def : FF<"time-trace">, Alias<time_trace_eq>,
+  HelpText<"Record time trace to file next to output">;
 
 defm time_trace_granularity: EEq<"time-trace-granularity",
   "Minimum time granularity (in microseconds) traced by time profiler">;
@@ -596,6 +598,7 @@ def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
 def thinlto_emit_imports_files: FF<"thinlto-emit-imports-files">;
+def thinlto_emit_index_files: FF<"thinlto-emit-index-files">;
 def thinlto_index_only: FF<"thinlto-index-only">;
 def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
 def thinlto_jobs: JJ<"thinlto-jobs=">,
@@ -690,7 +693,6 @@ def plugin_opt_eq : J<"plugin-opt=">;
 // Options listed below are silently ignored for now for compatibility.
 def: F<"detect-odr-violations">;
 def: Flag<["-"], "d">;
-def: Flag<["-"], "dc">;
 def: Flag<["-"], "g">;
 def: F<"long-plt">;
 def: FF<"no-add-needed">;

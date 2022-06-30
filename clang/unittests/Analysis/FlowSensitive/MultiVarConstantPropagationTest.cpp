@@ -94,7 +94,7 @@ struct ValueLattice {
 };
 
 std::ostream &operator<<(std::ostream &OS, const ValueLattice &L) {
-  if (L.Value.hasValue())
+  if (L.Value)
     return OS << *L.Value;
   switch (L.State) {
   case ValueLattice::ValueState::Undefined:
@@ -194,9 +194,7 @@ MATCHER_P(Var, name,
   return arg->getName() == name;
 }
 
-MATCHER_P(HasConstantVal, v, "") {
-  return arg.Value.hasValue() && *arg.Value == v;
-}
+MATCHER_P(HasConstantVal, v, "") { return arg.Value && *arg.Value == v; }
 
 MATCHER(Varies, "") { return arg == arg.top(); }
 

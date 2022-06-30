@@ -1058,29 +1058,25 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         switch (OpType) {
         default:
           llvm_unreachable("Unexpected operand type");
-        case RISCVOp::OPERAND_UIMM2:
-          Ok = isUInt<2>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM3:
-          Ok = isUInt<3>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM4:
-          Ok = isUInt<4>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM5:
-          Ok = isUInt<5>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM7:
-          Ok = isUInt<7>(Imm);
-          break;
-        case RISCVOp::OPERAND_UIMM12:
-          Ok = isUInt<12>(Imm);
-          break;
+
+          // clang-format off
+#define CASE_OPERAND_UIMM(NUM)                                                 \
+  case RISCVOp::OPERAND_UIMM##NUM:                                             \
+    Ok = isUInt<NUM>(Imm);                                                     \
+    break;
+        CASE_OPERAND_UIMM(2)
+        CASE_OPERAND_UIMM(3)
+        CASE_OPERAND_UIMM(4)
+        CASE_OPERAND_UIMM(5)
+        CASE_OPERAND_UIMM(7)
+        CASE_OPERAND_UIMM(12)
+        CASE_OPERAND_UIMM(20)
+          // clang-format on
         case RISCVOp::OPERAND_SIMM12:
           Ok = isInt<12>(Imm);
           break;
-        case RISCVOp::OPERAND_UIMM20:
-          Ok = isUInt<20>(Imm);
+        case RISCVOp::OPERAND_SIMM12_LSB00000:
+          Ok = isShiftedInt<7, 5>(Imm);
           break;
         case RISCVOp::OPERAND_UIMMLOG2XLEN:
           if (STI.getTargetTriple().isArch64Bit())

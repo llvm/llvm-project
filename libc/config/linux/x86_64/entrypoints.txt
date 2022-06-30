@@ -156,6 +156,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmax
     libc.src.math.fmaxf
     libc.src.math.fmaxl
+    libc.src.math.fmod
+    libc.src.math.fmodf
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl

@@ -7178,9 +7178,10 @@ AMDGPUAsmParser::getToken() const {
   return Parser.getTok();
 }
 
-AsmToken
-AMDGPUAsmParser::peekToken(bool ShouldSkipSpace) {
-  return isToken(AsmToken::EndOfStatement) ? getToken() : getLexer().peekTok(ShouldSkipSpace);
+AsmToken AMDGPUAsmParser::peekToken(bool ShouldSkipSpace) {
+  return isToken(AsmToken::EndOfStatement)
+             ? getToken()
+             : getLexer().peekTok(ShouldSkipSpace);
 }
 
 void
@@ -8420,7 +8421,7 @@ OperandMatchResultTy AMDGPUAsmParser::parseVOPD(OperandVector &Operands) {
 // MCInst operands have the following order:
 //   dstX, dstY, src0X [, other OpX operands], src0Y [, other OpY operands]
 void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
-  auto addOp = [&](uint16_t i){ // NOLINT:function pointer
+  auto addOp = [&](uint16_t i) { // NOLINT:function pointer
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
     if (Op.isReg()) {
       Op.addRegOperands(Inst, 1);
@@ -8441,7 +8442,7 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
   // Indices into MCInst.Operands
   const auto FmamkOpXImmMCIndex = 3; // dstX, dstY, src0X, imm, ...
   const auto FmaakOpXImmMCIndex = 4; // dstX, dstY, src0X, src1X, imm, ...
-  const auto MinOpYImmMCIndex = 4; // dstX, dstY, src0X, src0Y, imm, ...
+  const auto MinOpYImmMCIndex = 4;   // dstX, dstY, src0X, src0Y, imm, ...
 
   unsigned Opc = Inst.getOpcode();
   bool HasVsrc1X =

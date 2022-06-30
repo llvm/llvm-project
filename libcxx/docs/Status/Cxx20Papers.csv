@@ -187,7 +187,7 @@
 "`P2002R1 <https://wg21.link/P2002R1>`__","CWG","Defaulted comparison specification cleanups","Prague","* *",""
 "`P2045R1 <https://wg21.link/P2045R1>`__","LWG","Missing Mandates for the standard library","Prague","* *",""
 "`P2085R0 <https://wg21.link/P2085R0>`__","CWG","Consistent defaulted comparisons","Prague","* *",""
-"`P2091R0 <https://wg21.link/P2091R0>`__","LWG","Issues with range access CPOs","Prague","* *",""
+"`P2091R0 <https://wg21.link/P2091R0>`__","LWG","Issues with range access CPOs","Prague","|Complete|","15.0"
 "`P2101R0 <https://wg21.link/P2101R0>`__","LWG","'Models' subsumes 'satisfies' (Wording for US298 and US300)","Prague","* *",""
 "`P2102R0 <https://wg21.link/P2102R0>`__","LWG","Make 'implicit expression variations' more explicit (Wording for US185)","Prague","* *",""
 "`P2106R0 <https://wg21.link/P2106R0>`__","LWG","Alternative wording for GB315 and GB316","Prague","* *",""

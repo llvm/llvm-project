@@ -34554,7 +34554,7 @@ X86TargetLowering::EmitLoweredCascadedSelect(MachineInstr &FirstCMOV,
 
   //  SinkMBB:
   //   %Result = phi [ %FalseValue, SecondInsertedMBB ], [ %TrueValue, ThisMBB ]
-  Register DestReg = FirstCMOV.getOperand(0).getReg();
+  Register DestReg = SecondCascadedCMOV.getOperand(0).getReg();
   Register Op1Reg = FirstCMOV.getOperand(1).getReg();
   Register Op2Reg = FirstCMOV.getOperand(2).getReg();
   MachineInstrBuilder MIB =
@@ -34567,11 +34567,6 @@ X86TargetLowering::EmitLoweredCascadedSelect(MachineInstr &FirstCMOV,
   // The second SecondInsertedMBB provides the same incoming value as the
   // FirstInsertedMBB (the True operand of the SELECT_CC/CMOV nodes).
   MIB.addReg(FirstCMOV.getOperand(2).getReg()).addMBB(FirstInsertedMBB);
-  // Copy the PHI result to the register defined by the second CMOV.
-  BuildMI(*SinkMBB, std::next(MachineBasicBlock::iterator(MIB.getInstr())), DL,
-          TII->get(TargetOpcode::COPY),
-          SecondCascadedCMOV.getOperand(0).getReg())
-      .addReg(FirstCMOV.getOperand(0).getReg());
 
   // Now remove the CMOVs.
   FirstCMOV.eraseFromParent();
@@ -53613,11 +53608,16 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         Subs.push_back(SubOp.getOperand(I));
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
     };
-    auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned I) {
-      return all_of(SubOps, [VT, I](SDValue Sub) {
-        return Sub.getOperand(I).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-               Sub.getOperand(I).getOperand(0).getValueType() == VT;
-      });
+    auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned Op) {
+      for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
+        SDValue Sub = SubOps[I].getOperand(Op);
+        unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+        if (Sub.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+            Sub.getOperand(0).getValueType() != VT ||
+            Sub.getConstantOperandAPInt(1) != (I * NumSubElts))
+          return false;
+      }
+      return true;
     };
 
     unsigned NumOps = Ops.size();

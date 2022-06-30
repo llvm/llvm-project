@@ -332,6 +332,8 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
       report_fatal_error("Incorrect flag for llvm.bpf.preserve.type.info intrinsic");
     if (Flag == BPFCoreSharedInfo::PRESERVE_TYPE_INFO_EXISTENCE)
       CInfo.AccessIndex = BPFCoreSharedInfo::TYPE_EXISTENCE;
+    else if (Flag == BPFCoreSharedInfo::PRESERVE_TYPE_INFO_MATCH)
+      CInfo.AccessIndex = BPFCoreSharedInfo::TYPE_MATCH;
     else
       CInfo.AccessIndex = BPFCoreSharedInfo::TYPE_SIZE;
     return true;
@@ -933,7 +935,8 @@ MDNode *BPFAbstractMemberAccess::computeAccessKey(CallInst *Call,
 
   int64_t PatchImm;
   std::string AccessStr("0");
-  if (CInfo.AccessIndex == BPFCoreSharedInfo::TYPE_EXISTENCE) {
+  if (CInfo.AccessIndex == BPFCoreSharedInfo::TYPE_EXISTENCE ||
+      CInfo.AccessIndex == BPFCoreSharedInfo::TYPE_MATCH) {
     PatchImm = 1;
   } else if (CInfo.AccessIndex == BPFCoreSharedInfo::TYPE_SIZE) {
     // typedef debuginfo type has size 0, get the eventual base type.

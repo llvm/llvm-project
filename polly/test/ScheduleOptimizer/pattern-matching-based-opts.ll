@@ -15,8 +15,7 @@
 ;
 ; CHECK-NOT: The matrix multiplication pattern was detected
 ; PATTERN-MATCHING-OPTS: The matrix multiplication pattern was detected
-; PARALLEL-AST: #pragma known-parallel
-; PARALLEL-AST: #pragma known-parallel
+; PARALLEL-AST-NOT: #pragma known-parallel
 ; STATS:  1 polly-opt-isl    - Number of matrix multiplication patterns detected and optimized
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

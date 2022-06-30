@@ -1294,8 +1294,6 @@ public:
   static Constant *getShuffleVector(Constant *V1, Constant *V2,
                                     ArrayRef<int> Mask,
                                     Type *OnlyIfReducedTy = nullptr);
-  static Constant *getExtractValue(Constant *Agg, ArrayRef<unsigned> Idxs,
-                                   Type *OnlyIfReducedTy = nullptr);
   static Constant *getInsertValue(Constant *Agg, Constant *Val,
                                   ArrayRef<unsigned> Idxs,
                                   Type *OnlyIfReducedTy = nullptr);

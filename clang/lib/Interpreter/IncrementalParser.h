@@ -72,6 +72,10 @@ public:
   ///\returns the mangled name of a \c GD.
   llvm::StringRef GetMangledName(GlobalDecl GD) const;
 
+  void CleanUpPTU(PartialTranslationUnit &PTU);
+
+  std::list<PartialTranslationUnit> &getPTUs() { return PTUs; }
+
 private:
   llvm::Expected<PartialTranslationUnit &> ParseOrWrapTopLevelDecl();
 };

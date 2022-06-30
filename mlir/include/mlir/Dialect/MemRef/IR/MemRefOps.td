@@ -90,16 +90,13 @@ class AllocLikeOp<string mnemonic,
               static_cast<int32_t>(dynamicSizes.size()),
               static_cast<int32_t>(symbolOperands.size())}));
       if (alignment)
-        $_state.addAttribute(getAlignmentAttrName(), alignment);
+        $_state.addAttribute(getAlignmentAttrStrName(), alignment);
     }]>];
 
   let extraClassDeclaration = [{
-    static StringRef getAlignmentAttrName() { return "alignment"; }
+    static StringRef getAlignmentAttrStrName() { return "alignment"; }
 
     MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
-
-    /// Returns the dynamic sizes for this alloc operation if specified.
-    operand_range getDynamicSizes() { return dynamicSizes(); }
   }];
 
   let assemblyFormat = [{
@@ -407,11 +404,6 @@ def CopyOp : MemRef_Op<"copy",
                        Arg<AnyRankedOrUnrankedMemRef, "the memref to copy to",
                            [MemWrite]>:$target);
 
-  let extraClassDeclaration = [{
-    Value getSource() { return source();}
-    Value getTarget() { return target(); }
-  }];
-
   let assemblyFormat = [{
     $source `,` $target attr-dict `:` type($source) `to` type($target)
   }];
@@ -602,6 +594,7 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
     Value getTagMemRef() {
       return getOperand(1 + getSrcMemRefRank() + 1 + getDstMemRefRank() + 1);
     }
+
     // Returns the rank (number of indices) of the tag MemRefType.
     unsigned getTagMemRefRank() {
       return getTagMemRef().getType().cast<MemRefType>().getRank();
@@ -691,21 +684,10 @@ def MemRef_DmaWaitOp : MemRef_Op<"dma_wait"> {
     type($tagMemRef)
   }];
   let extraClassDeclaration = [{
-    /// Returns the Tag MemRef associated with the DMA operation being waited
-    /// on.
-    Value getTagMemRef() { return tagMemRef(); }
-
-    /// Returns the tag memref index for this DMA operation.
-    operand_range getTagIndices() { return tagIndices(); }
-
     /// Returns the rank (number of indices) of the tag memref.
     unsigned getTagMemRefRank() {
       return getTagMemRef().getType().cast<MemRefType>().getRank();
     }
-
-    /// Returns the number of elements transferred in the associated DMA
-    /// operation.
-    Value getNumElements() { return numElements(); }
   }];
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -950,8 +932,6 @@ def LoadOp : MemRef_Op<"load",
     MemRefType getMemRefType() {
       return getMemRef().getType().cast<MemRefType>();
     }
-
-    operand_range getIndices() { return {operand_begin() + 1, operand_end()}; }
   }];
 
   let hasFolder = 1;
@@ -993,9 +973,9 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
     MemRefType getMemRefType() {
       return memref().getType().cast<MemRefType>();
     }
-    static StringRef getLocalityHintAttrName() { return "localityHint"; }
-    static StringRef getIsWriteAttrName() { return "isWrite"; }
-    static StringRef getIsDataCacheAttrName() { return "isDataCache"; }
+    static StringRef getLocalityHintAttrStrName() { return "localityHint"; }
+    static StringRef getIsWriteAttrStrName() { return "isWrite"; }
+    static StringRef getIsDataCacheAttrStrName() { return "isDataCache"; }
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -1192,7 +1172,7 @@ class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
       [NoSideEffect, ViewLikeOpInterface])>,
     Arguments<(ins AnyStridedMemRef:$src, IndexListArrayAttr:$reassociation)>,
     Results<(outs AnyStridedMemRef:$result)>{
-  
+
   code commonExtraClassDeclaration = [{
     SmallVector<AffineMap, 4> getReassociationMaps();
 
@@ -1441,10 +1421,6 @@ def MemRef_StoreOp : MemRef_Op<"store",
       void setMemRef(Value value) { setOperand(1, value); }
       MemRefType getMemRefType() {
         return getMemRef().getType().cast<MemRefType>();
-      }
-
-      operand_range getIndices() {
-        return {operand_begin() + 2, operand_end()};
       }
   }];
 
@@ -1756,7 +1732,7 @@ def MemRef_TransposeOp : MemRef_Op<"transpose", [NoSideEffect]>,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
 
   let extraClassDeclaration = [{
-    static StringRef getPermutationAttrName() { return "permutation"; }
+    static StringRef getPermutationAttrStrName() { return "permutation"; }
     ShapedType getShapedType() { return in().getType().cast<ShapedType>(); }
   }];
 

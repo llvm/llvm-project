@@ -1408,7 +1408,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       // Right now, most targets return None i.e ignore to treat a symbol
       // separately. But WebAssembly decodes preludes for some symbols.
       //
-      if (Status.hasValue()) {
+      if (Status) {
         if (Status.getValue() == MCDisassembler::Fail) {
           outs() << "// Error in decoding " << SymbolName
                  << " : Decoding failed region as bytes.\n";

@@ -39,7 +39,7 @@ private:
   MCRegister CondReg;
   MCRegister ExecReg;
 
-  Register optimizeVcndVcmpPair(MachineBasicBlock &MBB);
+  bool optimizeVcndVcmpPair(MachineBasicBlock &MBB);
   bool optimizeElseBranch(MachineBasicBlock &MBB);
 
 public:
@@ -90,8 +90,8 @@ static bool isDefBetween(const LiveRange &LR, SlotIndex AndIdx,
 static bool isDefBetween(const SIRegisterInfo &TRI,
                          LiveIntervals *LIS, Register Reg,
                          const MachineInstr &Sel, const MachineInstr &And) {
-  SlotIndex AndIdx = LIS->getInstructionIndex(And);
-  SlotIndex SelIdx = LIS->getInstructionIndex(Sel);
+  SlotIndex AndIdx = LIS->getInstructionIndex(And).getRegSlot();
+  SlotIndex SelIdx = LIS->getInstructionIndex(Sel).getRegSlot();
 
   if (Reg.isVirtual())
     return isDefBetween(LIS->getInterval(Reg), AndIdx, SelIdx);
@@ -119,21 +119,20 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
 // required part of the pattern since V_CNDMASK_B32 writes zeroes for inactive
 // lanes.
 //
-// Returns %cc register on success.
-Register
-SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
+// Returns true on success.
+bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   auto I = llvm::find_if(MBB.terminators(), [](const MachineInstr &MI) {
                            unsigned Opc = MI.getOpcode();
                            return Opc == AMDGPU::S_CBRANCH_VCCZ ||
                                   Opc == AMDGPU::S_CBRANCH_VCCNZ; });
   if (I == MBB.terminators().end())
-    return Register();
+    return false;
 
   auto *And =
       TRI->findReachingDef(CondReg, AMDGPU::NoSubRegister, *I, *MRI, LIS);
   if (!And || And->getOpcode() != AndOpc ||
       !And->getOperand(1).isReg() || !And->getOperand(2).isReg())
-    return Register();
+    return false;
 
   MachineOperand *AndCC = &And->getOperand(1);
   Register CmpReg = AndCC->getReg();
@@ -143,49 +142,49 @@ SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
     CmpReg = AndCC->getReg();
     CmpSubReg = AndCC->getSubReg();
   } else if (And->getOperand(2).getReg() != Register(ExecReg)) {
-    return Register();
+    return false;
   }
 
   auto *Cmp = TRI->findReachingDef(CmpReg, CmpSubReg, *And, *MRI, LIS);
   if (!Cmp || !(Cmp->getOpcode() == AMDGPU::V_CMP_NE_U32_e32 ||
                 Cmp->getOpcode() == AMDGPU::V_CMP_NE_U32_e64) ||
       Cmp->getParent() != And->getParent())
-    return Register();
+    return false;
 
   MachineOperand *Op1 = TII->getNamedOperand(*Cmp, AMDGPU::OpName::src0);
   MachineOperand *Op2 = TII->getNamedOperand(*Cmp, AMDGPU::OpName::src1);
   if (Op1->isImm() && Op2->isReg())
     std::swap(Op1, Op2);
   if (!Op1->isReg() || !Op2->isImm() || Op2->getImm() != 1)
-    return Register();
+    return false;
 
   Register SelReg = Op1->getReg();
   auto *Sel = TRI->findReachingDef(SelReg, Op1->getSubReg(), *Cmp, *MRI, LIS);
   if (!Sel || Sel->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
-    return Register();
+    return false;
 
   if (TII->hasModifiersSet(*Sel, AMDGPU::OpName::src0_modifiers) ||
       TII->hasModifiersSet(*Sel, AMDGPU::OpName::src1_modifiers))
-    return Register();
+    return false;
 
   Op1 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src0);
   Op2 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src1);
   MachineOperand *CC = TII->getNamedOperand(*Sel, AMDGPU::OpName::src2);
   if (!Op1->isImm() || !Op2->isImm() || !CC->isReg() ||
       Op1->getImm() != 0 || Op2->getImm() != 1)
-    return Register();
+    return false;
 
   Register CCReg = CC->getReg();
 
   // If there was a def between the select and the and, we would need to move it
   // to fold this.
   if (isDefBetween(*TRI, LIS, CCReg, *Sel, *And))
-    return Register();
+    return false;
 
+  // TODO: Guard against implicit def operands?
   LLVM_DEBUG(dbgs() << "Folding sequence:\n\t" << *Sel << '\t' << *Cmp << '\t'
                     << *And);
 
-  LIS->RemoveMachineInstrFromMaps(*And);
   MachineInstr *Andn2 =
       BuildMI(MBB, *And, And->getDebugLoc(), TII->get(Andn2Opc),
               And->getOperand(0).getReg())
@@ -196,34 +195,92 @@ SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   MachineOperand &Andn2SCC = Andn2->getOperand(3);
   assert(Andn2SCC.getReg() == AMDGPU::SCC);
   Andn2SCC.setIsDead(AndSCC.isDead());
+
+  SlotIndex AndIdx = LIS->ReplaceMachineInstrInMaps(*And, *Andn2);
   And->eraseFromParent();
-  LIS->InsertMachineInstrInMaps(*Andn2);
 
   LLVM_DEBUG(dbgs() << "=>\n\t" << *Andn2 << '\n');
 
+  SlotIndex CmpIdx = LIS->getInstructionIndex(*Cmp);
+  SlotIndex SelIdx = LIS->getInstructionIndex(*Sel);
+
+  LiveInterval *CmpLI =
+      CmpReg.isVirtual() ? &LIS->getInterval(CmpReg) : nullptr;
+  LiveInterval *SelLI =
+      SelReg.isVirtual() ? &LIS->getInterval(SelReg) : nullptr;
+
+  // Update live intervals for CCReg before potentially removing CmpReg/SelReg,
+  // and their associated liveness information.
+  if (CCReg.isVirtual()) {
+    // Note: this ignores that SelLI might have multiple internal values
+    // or splits and simply extends the live range to cover all cases
+    // where the result of the v_cndmask_b32 was live (e.g. loops).
+    // This could yield worse register allocation in rare edge cases.
+    SlotIndex EndIdx = AndIdx.getRegSlot();
+    if (SelLI && SelLI->endIndex() > EndIdx && SelLI->endIndex().isBlock())
+      EndIdx = SelLI->endIndex();
+
+    LiveInterval &CCLI = LIS->getInterval(CCReg);
+    auto CCQ = CCLI.Query(SelIdx.getRegSlot());
+    if (CCQ.valueIn()) {
+      CCLI.addSegment(LiveRange::Segment(SelIdx.getRegSlot(),
+                                         EndIdx, CCQ.valueIn()));
+    }
+
+    if (CC->getSubReg()) {
+      LaneBitmask Mask = TRI->getSubRegIndexLaneMask(CC->getSubReg());
+      BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
+      CCLI.refineSubRanges(
+          Allocator, Mask,
+          [=](LiveInterval::SubRange &SR) {
+            auto CCQS = SR.Query(SelIdx.getRegSlot());
+            if (CCQS.valueIn()) {
+              SR.addSegment(LiveRange::Segment(
+                  SelIdx.getRegSlot(), EndIdx, CCQS.valueIn()));
+            }
+          },
+          *LIS->getSlotIndexes(), *TRI);
+      CCLI.removeEmptySubRanges();
+
+      SmallVector<LiveInterval *> SplitLIs;
+      LIS->splitSeparateComponents(CCLI, SplitLIs);
+    }
+  } else
+    LIS->removeAllRegUnitsForPhysReg(CCReg);
+
   // Try to remove compare. Cmp value should not used in between of cmp
   // and s_and_b64 if VCC or just unused if any other register.
-  if ((CmpReg.isVirtual() && MRI->use_nodbg_empty(CmpReg)) ||
+  if ((CmpReg.isVirtual() && CmpLI && CmpLI->Query(AndIdx.getRegSlot()).isKill()) ||
       (CmpReg == Register(CondReg) &&
        std::none_of(std::next(Cmp->getIterator()), Andn2->getIterator(),
                     [&](const MachineInstr &MI) {
                       return MI.readsRegister(CondReg, TRI);
                     }))) {
     LLVM_DEBUG(dbgs() << "Erasing: " << *Cmp << '\n');
-
+    if (CmpLI)
+      LIS->removeVRegDefAt(*CmpLI, CmpIdx.getRegSlot());
     LIS->RemoveMachineInstrFromMaps(*Cmp);
     Cmp->eraseFromParent();
 
     // Try to remove v_cndmask_b32.
-    if (SelReg.isVirtual() && MRI->use_nodbg_empty(SelReg)) {
-      LLVM_DEBUG(dbgs() << "Erasing: " << *Sel << '\n');
+    if (SelLI) {
+      bool CanRemoveSel = SelLI->Query(CmpIdx.getRegSlot()).isKill();
+      if (!CanRemoveSel) {
+        // Try to shrink the live interval and check for dead def instead.
+        LIS->shrinkToUses(SelLI, nullptr);
+        CanRemoveSel = SelLI->Query(SelIdx.getRegSlot()).isDeadDef();
+      }
+      if (CanRemoveSel) {
+        LLVM_DEBUG(dbgs() << "Erasing: " << *Sel << '\n');
 
-      LIS->RemoveMachineInstrFromMaps(*Sel);
-      Sel->eraseFromParent();
+        LIS->removeVRegDefAt(*SelLI, SelIdx.getRegSlot());
+        LIS->RemoveMachineInstrFromMaps(*Sel);
+        Sel->eraseFromParent();
+      }
     }
   }
 
-  return CCReg;
+  return true;
 }
 
 // Optimize sequence
@@ -330,8 +387,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
       Changed = true;
     }
 
-    if (Register Reg = optimizeVcndVcmpPair(MBB)) {
-      RecalcRegs.insert(Reg);
+    if (optimizeVcndVcmpPair(MBB)) {
       RecalcRegs.insert(AMDGPU::VCC_LO);
       RecalcRegs.insert(AMDGPU::VCC_HI);
       RecalcRegs.insert(AMDGPU::SCC);

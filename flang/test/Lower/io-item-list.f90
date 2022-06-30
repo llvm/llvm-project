@@ -104,6 +104,6 @@ subroutine pass_vector_subscript_write(x, j)
   ! CHECK: %[[embox:.*]] = fir.embox %[[temp]](%{{.*}}) : (!fir.heap<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
   ! CHECK: %[[boxCast:.*]] = fir.convert %[[embox]] : (!fir.box<!fir.array<10xf32>>) -> !fir.box<none>
   ! CHECK: fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[boxCast]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
-  ! CHECK: fir.freemem %[[temp]]
+  ! CHECK: fir.freemem %[[temp]] : !fir.heap<!fir.array<10xf32>>
   write(1, rec=1) x(j)
 end

@@ -21,6 +21,7 @@
 #include <memory>
 #include <ranges>
 #include <type_traits>
+#include <utility>
 
 #include "../buffer.h"
 #include "../counted.h"
@@ -146,6 +147,19 @@ int main(int, char**) {
     assert(std::equal(in, in + M, out.begin(), out.end()));
     assert(result.in == in + M);
     assert(result.out == out.end());
+  }
+
+  // Move-only iterators are supported.
+  {
+    using MoveOnlyIter = cpp20_input_iterator<const int*>;
+    static_assert(!std::is_copy_constructible_v<MoveOnlyIter>);
+
+    constexpr int N = 3;
+    int buffer[N] = {1, 2, 3};
+
+    MoveOnlyIter in(buffer);
+    Buffer<int, N> out;
+    std::ranges::uninitialized_copy_n(std::move(in), N, out.begin(), out.end());
   }
 
   return 0;

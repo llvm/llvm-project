@@ -817,7 +817,7 @@ void NotNullTerminatedResultCheck::check(
       ++It;
     }
 
-    if (AreSafeFunctionsWanted.hasValue())
+    if (AreSafeFunctionsWanted)
       UseSafeFunctions = AreSafeFunctionsWanted.getValue();
   }
 

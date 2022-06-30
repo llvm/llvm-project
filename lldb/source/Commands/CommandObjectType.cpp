@@ -914,7 +914,10 @@ public:
                                   uint32_t formatter_kind_mask,
                                   const char *name, const char *help)
       : CommandObjectParsed(interpreter, name, help, nullptr),
-        m_formatter_kind_mask(formatter_kind_mask) {}
+        m_formatter_kind_mask(formatter_kind_mask) {
+    CommandArgumentData category_arg{eArgTypeName, eArgRepeatOptional};
+    m_arguments.push_back({category_arg});
+  }
 
   ~CommandObjectTypeFormatterClear() override = default;
 

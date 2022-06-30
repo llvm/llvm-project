@@ -32,6 +32,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1126,6 +1127,21 @@ struct CombineContractBroadcast
       // relaxed we can remove this case.
       if (innerDimBroadcast)
         continue;
+
+      // It would be incorrect to fold a broadcast onto a reduction dimension
+      // of non-unit size.
+      bool nonUnitDimReductionBroadcast = false;
+      for (int64_t i = 0; i < rankDiff; ++i) {
+        if (broadcast.getVectorType().getDimSize(i) != 1 &&
+            isReductionIterator(contractOp.getIteratorTypes()
+                                    .getValue()[map.getDimPosition(i)])) {
+          nonUnitDimReductionBroadcast = true;
+          break;
+        }
+      }
+      if (nonUnitDimReductionBroadcast)
+        continue;
+
       AffineMap broadcastMap =
           AffineMap::get(broadcast.getVectorType().getRank(), 0, originalDims,
                          contractOp.getContext());
@@ -1133,11 +1149,40 @@ struct CombineContractBroadcast
       *operand = broadcast.getSource();
       changed = true;
     }
+
     if (!changed)
       return failure();
+
+    // Determine which dims are usused, now that the maps have been composed
+    // with the broadcast maps.
+    unsigned numDims = maps[0].getNumDims();
+    llvm::SmallBitVector unusedDims(numDims, true);
+    for (const auto &m : maps) {
+      for (unsigned i = 0; i < numDims; ++i) {
+        if (m.isFunctionOfDim(i))
+          unusedDims.reset(i);
+      }
+    }
+    // Compress unused dims.
+    for (auto &m : maps)
+      m = compressDims(m, unusedDims);
+    // Compute the combined iterators.
+    SmallVector<Attribute, 4> iterators;
+    for (unsigned i = 0; i < numDims; ++i) {
+      if (!unusedDims.test(i))
+        iterators.push_back(contractOp.getIteratorTypes().getValue()[i]);
+    }
+    // Check that compressing unused dims isn't removing all reduction
+    // iterators. For example, if the vector.contract had only one reduction
+    // iterator and that was a unit-dimension created by a broadcast,
+    // then we should bail here, otherwise we would create a contract without
+    // a reduction iterator.
+    if (!llvm::any_of(iterators, isReductionIterator))
+      return failure();
+
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhs, rhs, contractOp.getAcc(),
-        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
+        rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators));
     return success();
   }
 };
@@ -1875,10 +1920,9 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
     assert(rhsType.getRank() == 1 && "corrupt contraction");
     Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter);
     auto kind = vector::CombiningKind::ADD;
-    Value res = rewriter.create<vector::ReductionOp>(loc, kind, m);
     if (auto acc = op.getAcc())
-      res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
-    return res;
+      return rewriter.create<vector::ReductionOp>(loc, kind, m, acc);
+    return rewriter.create<vector::ReductionOp>(loc, kind, m);
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {

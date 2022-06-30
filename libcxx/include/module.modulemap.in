@@ -338,6 +338,8 @@ module std [system] {
       module ranges_minmax                   { private header "__algorithm/ranges_minmax.h" }
       module ranges_minmax_element           { private header "__algorithm/ranges_minmax_element.h" }
       module ranges_mismatch                 { private header "__algorithm/ranges_mismatch.h" }
+      module ranges_move                     { private header "__algorithm/ranges_move.h" }
+      module ranges_move_backward            { private header "__algorithm/ranges_move_backward.h" }
       module ranges_none_of                  { private header "__algorithm/ranges_none_of.h" }
       module ranges_replace                  { private header "__algorithm/ranges_replace.h" }
       module ranges_replace_if               { private header "__algorithm/ranges_replace_if.h" }
@@ -699,6 +701,7 @@ module std [system] {
       module access                { private header "__iterator/access.h" }
       module advance               { private header "__iterator/advance.h" }
       module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
+      module bounded_iter          { private header "__iterator/bounded_iter.h" }
       module common_iterator       { private header "__iterator/common_iterator.h" }
       module concepts              { private header "__iterator/concepts.h" }
       module counted_iterator      { private header "__iterator/counted_iterator.h" }

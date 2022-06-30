@@ -21,6 +21,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
@@ -130,7 +131,9 @@ struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
 /// from type creation.
 class TestRecursiveType
     : public ::mlir::Type::TypeBase<TestRecursiveType, ::mlir::Type,
-                                    TestRecursiveTypeStorage> {
+                                    TestRecursiveTypeStorage,
+                                    ::mlir::SubElementTypeInterface::Trait,
+                                    ::mlir::TypeTrait::IsMutable> {
 public:
   using Base::Base;
 
@@ -141,10 +144,16 @@ public:
 
   /// Body getter and setter.
   ::mlir::LogicalResult setBody(Type body) { return Base::mutate(body); }
-  ::mlir::Type getBody() { return getImpl()->body; }
+  ::mlir::Type getBody() const { return getImpl()->body; }
 
   /// Name/key getter.
   ::llvm::StringRef getName() { return getImpl()->name; }
+
+  void walkImmediateSubElements(
+      ::llvm::function_ref<void(::mlir::Attribute)> walkAttrsFn,
+      ::llvm::function_ref<void(::mlir::Type)> walkTypesFn) const {
+    walkTypesFn(getBody());
+  }
 };
 
 } // namespace test

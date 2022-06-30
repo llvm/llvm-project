@@ -3479,9 +3479,12 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
 
 static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                               types::ID InputType) {
-  const unsigned ForwardedArguments[] = {
-      options::OPT_dxil_validator_version, options::OPT_D, options::OPT_S,
-      options::OPT_emit_llvm, options::OPT_disable_llvm_passes};
+  const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version,
+                                         options::OPT_D,
+                                         options::OPT_S,
+                                         options::OPT_emit_llvm,
+                                         options::OPT_disable_llvm_passes,
+                                         options::OPT_fnative_half_type};
 
   for (const auto &Arg : ForwardedArguments)
     if (const auto *A = Args.getLastArg(Arg))
@@ -3489,6 +3492,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
   // Add the default headers if dxc_no_stdinc is not set.
   if (!Args.hasArg(options::OPT_dxc_no_stdinc))
     CmdArgs.push_back("-finclude-default-header");
+  CmdArgs.push_back("-fallow-half-arguments-and-returns");
 }
 
 static void RenderARCMigrateToolOptions(const Driver &D, const ArgList &Args,
@@ -6276,6 +6280,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasFlag(options::OPT_fgpu_allow_device_init,
                      options::OPT_fno_gpu_allow_device_init, false))
       CmdArgs.push_back("-fgpu-allow-device-init");
+    Args.addOptInFlag(CmdArgs, options::OPT_fhip_kernel_arg_name,
+                      options::OPT_fno_hip_kernel_arg_name);
   }
 
   if (IsCuda || IsHIP) {
@@ -8303,11 +8309,27 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef Arch = (OffloadAction->getOffloadingArch())
                          ? OffloadAction->getOffloadingArch()
                          : TCArgs.getLastArgValue(options::OPT_march_EQ);
+    StringRef Kind =
+      Action::GetOffloadKindName(OffloadAction->getOffloadingDeviceKind());
 
-    CmdArgs.push_back(Args.MakeArgString(
-        "--image=file=" + File + "," + "triple=" + TC->getTripleString() + "," +
-        "arch=" + Arch + "," + "kind=" +
-        Action::GetOffloadKindName(OffloadAction->getOffloadingDeviceKind())));
+    ArgStringList Features;
+    SmallVector<StringRef> FeatureArgs;
+    getTargetFeatures(TC->getDriver(), TC->getTriple(), Args, Features, false);
+    llvm::copy_if(Features, std::back_inserter(FeatureArgs),
+                  [](StringRef Arg) { return !Arg.startswith("-target"); });
+
+    SmallVector<std::string> Parts{
+        "file=" + File.str(),
+        "triple=" + TC->getTripleString(),
+        "arch=" + Arch.str(),
+        "kind=" + Kind.str(),
+    };
+
+    if (TC->getDriver().isUsingLTO(/* IsOffload */ true))
+      for (StringRef Feature : FeatureArgs)
+        Parts.emplace_back("feature=" + Feature.str());
+
+    CmdArgs.push_back(Args.MakeArgString("--image=" + llvm::join(Parts, ",")));
   }
 
   C.addCommand(std::make_unique<Command>(
@@ -8365,20 +8387,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (D.isUsingLTO(/* IsOffload */ true)) {
-    // Pass in target features for each toolchain.
-    for (auto &I :
-         llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
-      const ToolChain *TC = I.second;
-      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
-      ArgStringList FeatureArgs;
-      TC->addClangTargetOptions(TCArgs, FeatureArgs, Action::OFK_OpenMP);
-      auto FeatureIt = llvm::find(FeatureArgs, "-target-feature");
-      if (FeatureIt != FeatureArgs.end())
-        CmdArgs.push_back(
-            Args.MakeArgString("-target-feature=" + TC->getTripleString() +
-                               "=" + *(FeatureIt + 1)));
-    }
-
     // Pass in the optimization level to use for LTO.
     if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
       StringRef OOpt;

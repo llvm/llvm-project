@@ -110,8 +110,10 @@ Improvements to clang-tidy
   from suppressing diagnostics associated with macro arguments. This fixes
   `Issue 55134 <https://github.com/llvm/llvm-project/issues/55134>`_.
 
-- Invalid parameters are no longer treated as being implicitly unused for the
-  `-misc-unused-parameters` check. This fixes `Issue 56152 <https://github.com/llvm/llvm-project/issues/56152>`_.
+- Added an option -verify-config which will check the config file to ensure each
+  `Checks` and `CheckOptions` entries are recognised.
+
+- .clang-tidy files can now use the more natural dictionary syntax for specifying `CheckOptions`.
 
 New checks
 ^^^^^^^^^^
@@ -163,6 +165,15 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/sizeof-expression>` when `sizeof(...)` is
   compared against a `__int128_t`.
 
+- Fixed bugs in :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>`:
+
+  - Treat a move in a lambda capture as happening in the function that defines
+    the lambda, not within the body of the lambda (as we were previously doing
+    erroneously).
+
+  - Don't emit an erroneous warning on self-moves.
+
 - Made :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` more sensitive
   by checking for an arbitrary expression in the second argument of ``memset``.
 
@@ -182,13 +193,18 @@ Changes in existing checks
   <clang-tidy/checks/llvmlibc/callee-namespace>` when executing for C++ code
   that contain calls to advanced constructs, e.g. overloaded operators.
 
-- Fixed a false positive in :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` involving overloaded
-  comparison operators.
+- Fixed false positives in :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>`:
 
-- Fixed a false positive in :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` involving assignments in
-  conditions. This fixes `Issue 35853 <https://github.com/llvm/llvm-project/issues/35853>`_.
+  - Fixed a false positive involving overloaded comparison operators.
+
+  - Fixed a false positive involving assignments in
+    conditions. This fixes `Issue 35853 <https://github.com/llvm/llvm-project/issues/35853>`_.
+
+- Fixed a false positive in :doc:`misc-unused-parameters
+  <clang-tidy/checks/misc/unused-parameters>`
+  where invalid parameters were implicitly being treated as being unused. 
+  This fixes `Issue 56152 <https://github.com/llvm/llvm-project/issues/56152>`_.
 
 - Fixed a false positive in :doc:`modernize-deprecated-headers
   <clang-tidy/checks/modernize/deprecated-headers>` involving including
@@ -202,6 +218,10 @@ Changes in existing checks
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` to work when
   the vector is a member of a structure.
+
+- Fixed a crash in :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` when the specialization
+  template has an unnecessary value parameter. Removed the fix for a template.
 
 - Fixed a crash in :doc:`readability-const-return-type
   <clang-tidy/checks/readability/const-return-type>` when a pure virtual function
@@ -217,19 +237,6 @@ Changes in existing checks
 - Expanded :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` to simplify expressions
   using DeMorgan's Theorem.
-
-- Fixed a crash in :doc:`performance-unnecessary-value-param
-  <clang-tidy/checks/readability/suspicious-call-argument>` when the specialization
-  template has an unnecessary value parameter. Removed the fix for a template.
-
-- Fixed bugs in :doc:`bugprone-use-after-move
-  <clang-tidy/checks/bugprone/use-after-move>`:
-
-  - Treat a move in a lambda capture as happening in the function that defines
-    the lambda, not within the body of the lambda (as we were previously doing
-    erroneously).
-
-  - Don't emit an erroneous warning on self-moves.
 
 Removed checks
 ^^^^^^^^^^^^^^

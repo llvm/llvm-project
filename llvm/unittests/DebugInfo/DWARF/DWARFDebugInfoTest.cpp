@@ -964,7 +964,7 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   EXPECT_EQ(SubprogramDieLowPC.getTag(), DW_TAG_subprogram);
   OptU64 = toAddress(SubprogramDieLowPC.find(DW_AT_low_pc));
   EXPECT_TRUE((bool)OptU64);
-  EXPECT_EQ(OptU64.getValue(), ActualLowPC);
+  EXPECT_EQ(*OptU64, ActualLowPC);
   OptU64 = toAddress(SubprogramDieLowPC.find(DW_AT_high_pc));
   EXPECT_FALSE((bool)OptU64);
   OptU64 = toUnsigned(SubprogramDieLowPC.find(DW_AT_high_pc));
@@ -981,7 +981,7 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   EXPECT_EQ(SubprogramDieLowHighPC.getTag(), DW_TAG_subprogram);
   OptU64 = toAddress(SubprogramDieLowHighPC.find(DW_AT_low_pc));
   EXPECT_TRUE((bool)OptU64);
-  EXPECT_EQ(OptU64.getValue(), ActualLowPC);
+  EXPECT_EQ(*OptU64, ActualLowPC);
   // Get the high PC as an address. This should succeed if the high PC was
   // encoded as an address and fail if the high PC was encoded as an offset.
   OptU64 = toAddress(SubprogramDieLowHighPC.find(DW_AT_high_pc));
@@ -1877,8 +1877,7 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
     EXPECT_EQ(*AttrIndex, 0u);
     uint64_t OffsetVal =
         it->getAttributeOffsetFromIndex(*AttrIndex, /* offset */ 0, *U);
-    EXPECT_TRUE(
-        it->getAttributeValueFromOffset(*AttrIndex, OffsetVal, *U).hasValue());
+    EXPECT_TRUE(it->getAttributeValueFromOffset(*AttrIndex, OffsetVal, *U));
 
     auto FormValue = it->getAttributeValue(/* offset */ 0, A, *U);
     EXPECT_TRUE((bool)FormValue);

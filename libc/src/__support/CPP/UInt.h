@@ -89,6 +89,11 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> operator+=(const UInt<Bits> &other) {
+    *this = *this + other;
+    return *this;
+  }
+
   // Multiply this number with x and store the result in this number. It is
   // implemented using the long multiplication algorithm by splitting the
   // 64-bit words of this number and |x| in to 32-bit halves but peforming
@@ -158,6 +163,11 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> &operator*=(const UInt<Bits> &other) {
+    *this = *this * other;
+    return *this;
+  }
+
   constexpr void shift_left(size_t s) {
     const size_t drop = s / 64;  // Number of words to drop
     const size_t shift = s % 64; // Bits to shift in the remaining words.
@@ -181,6 +191,11 @@ public:
     UInt<Bits> result(*this);
     result.shift_left(s);
     return result;
+  }
+
+  constexpr UInt<Bits> &operator<<=(size_t s) {
+    shift_left(s);
+    return *this;
   }
 
   constexpr void shift_right(size_t s) {
@@ -208,11 +223,22 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> &operator>>=(size_t s) {
+    shift_right(s);
+    return *this;
+  }
+
   constexpr UInt<Bits> operator&(const UInt<Bits> &other) const {
     UInt<Bits> result;
     for (size_t i = 0; i < WordCount; ++i)
       result.val[i] = val[i] & other.val[i];
     return result;
+  }
+
+  constexpr UInt<Bits> &operator&=(const UInt<Bits> &other) {
+    for (size_t i = 0; i < WordCount; ++i)
+      val[i] &= other.val[i];
+    return *this;
   }
 
   constexpr UInt<Bits> operator|(const UInt<Bits> &other) const {
@@ -222,10 +248,29 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> &operator|=(const UInt<Bits> &other) {
+    for (size_t i = 0; i < WordCount; ++i)
+      val[i] |= other.val[i];
+    return *this;
+  }
+
   constexpr UInt<Bits> operator^(const UInt<Bits> &other) const {
     UInt<Bits> result;
     for (size_t i = 0; i < WordCount; ++i)
       result.val[i] = val[i] ^ other.val[i];
+    return result;
+  }
+
+  constexpr UInt<Bits> &operator^=(const UInt<Bits> &other) {
+    for (size_t i = 0; i < WordCount; ++i)
+      val[i] ^= other.val[i];
+    return *this;
+  }
+
+  constexpr UInt<Bits> operator~() const {
+    UInt<Bits> result;
+    for (size_t i = 0; i < WordCount; ++i)
+      result.val[i] = ~val[i];
     return result;
   }
 
@@ -297,6 +342,12 @@ public:
     return true;
   }
 
+  constexpr UInt<Bits> &operator++() {
+    UInt<Bits> one(1);
+    add(one);
+    return *this;
+  }
+
   // Return the i-th 64-bit word of the number.
   constexpr const uint64_t &operator[](size_t i) const { return val[i]; }
 
@@ -344,11 +395,5 @@ constexpr UInt<128> UInt<128>::operator*(const UInt<128> &other) const {
 
 } // namespace cpp
 } // namespace __llvm_libc
-
-/* TODO: determine the best way to support uint128 using this class.
-#if !defined(__SIZEOF_INT128__)
-using __uint128_t = __llvm_libc::internal::UInt<128>;
-#endif // uint128 is not defined, define it with this class.
-*/
 
 #endif // LLVM_LIBC_UTILS_CPP_UINT_H

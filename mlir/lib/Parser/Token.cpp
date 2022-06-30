@@ -129,9 +129,12 @@ Optional<std::string> Token::getHexStringValue() const {
   // Get the internal string data, without the quotes.
   StringRef bytes = getSpelling().drop_front().drop_back();
 
-  // Try to extract the binary data from the hex string.
+  // Try to extract the binary data from the hex string. We expect the hex
+  // string to start with `0x` and have an even number of hex nibbles (nibbles
+  // should come in pairs).
   std::string hex;
-  if (!bytes.consume_front("0x") || !llvm::tryGetFromHex(bytes, hex))
+  if (!bytes.consume_front("0x") || (bytes.size() & 1) ||
+      !llvm::tryGetFromHex(bytes, hex))
     return llvm::None;
   return hex;
 }

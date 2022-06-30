@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRLinalgUtils
   MLIRAffineAnalysis
   MLIRAffineUtils
   MLIRArithmeticDialect
+  MLIRFuncDialect
   MLIRIR
   MLIRLinalgDialect
   MLIRSCFDialect

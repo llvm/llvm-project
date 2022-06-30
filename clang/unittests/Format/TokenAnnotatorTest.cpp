@@ -85,6 +85,32 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   Tokens = annotate("case &x:");
   EXPECT_EQ(Tokens.size(), 5u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::amp, TT_UnaryOperator);
+
+  Tokens = annotate("struct {\n"
+                    "} *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  Tokens = annotate("union {\n"
+                    "} *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  Tokens = annotate("class {\n"
+                    "} *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("struct {\n"
+                    "} &&ptr = {};");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
+  Tokens = annotate("union {\n"
+                    "} &&ptr = {};");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
+  Tokens = annotate("class {\n"
+                    "} &&ptr = {};");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -402,6 +428,33 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[25], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[27], tok::greater, TT_TemplateCloser);
   EXPECT_TOKEN(Tokens[28], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("auto bar() -> int requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("auto bar() -> void requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("auto bar() -> MyType requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+
+  Tokens =
+      annotate("auto bar() -> SOME_MACRO_TYPE requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+
+  Tokens =
+      annotate("auto bar() -> qualified::type requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::kw_requires, TT_RequiresClause);
+
+  Tokens =
+      annotate("auto bar() -> Template<type> requires(is_integral_v<T>) {}");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::kw_requires, TT_RequiresClause);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {

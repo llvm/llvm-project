@@ -18966,23 +18966,23 @@ vec_blendv(vector double __a, vector double __b,
 
 #define vec_replace_unaligned(__a, __b, __c)                                   \
   _Generic((__a), vector signed int                                            \
-           : (vector signed int)__builtin_altivec_vinsw(                       \
-                 (vector unsigned char)__a, (unsigned int)__b, __c),           \
+           : __builtin_altivec_vinsw((vector unsigned char)__a,                \
+                                     (unsigned int)__b, __c),                  \
              vector unsigned int                                               \
-           : (vector unsigned int)__builtin_altivec_vinsw(                     \
-                 (vector unsigned char)__a, (unsigned int)__b, __c),           \
+           : __builtin_altivec_vinsw((vector unsigned char)__a,                \
+                                     (unsigned int)__b, __c),                  \
              vector unsigned long long                                         \
-           : (vector unsigned long long)__builtin_altivec_vinsd(               \
-                 (vector unsigned char)__a, (unsigned long long)__b, __c),     \
+           : __builtin_altivec_vinsd((vector unsigned char)__a,                \
+                                     (unsigned long long)__b, __c),            \
              vector signed long long                                           \
-           : (vector signed long long)__builtin_altivec_vinsd(                 \
-                 (vector unsigned char)__a, (unsigned long long)__b, __c),     \
+           : __builtin_altivec_vinsd((vector unsigned char)__a,                \
+                                     (unsigned long long)__b, __c),            \
              vector float                                                      \
-           : (vector float)__builtin_altivec_vinsw((vector unsigned char)__a,  \
-                                                   (unsigned int)__b, __c),    \
+           : __builtin_altivec_vinsw((vector unsigned char)__a,                \
+                                     (unsigned int)__b, __c),                  \
              vector double                                                     \
-           : (vector double)__builtin_altivec_vinsd(                           \
-               (vector unsigned char)__a, (unsigned long long)__b, __c))
+           : __builtin_altivec_vinsd((vector unsigned char)__a,                \
+                                     (unsigned long long)__b, __c))
 
 #define vec_replace_elt(__a, __b, __c)                                         \
   _Generic((__a), vector signed int                                            \

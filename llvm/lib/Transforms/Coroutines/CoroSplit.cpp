@@ -31,6 +31,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -683,7 +684,7 @@ void CoroCloner::salvageDebugInfo() {
       if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
         Worklist.push_back(DVI);
   for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(DbgPtrAllocaCache, DVI, Shape.Optimizing);
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DVI, Shape.OptimizeFrame);
 
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
@@ -926,6 +927,12 @@ void CoroCloner::create() {
   NewF->setVisibility(savedVisibility);
   NewF->setUnnamedAddr(savedUnnamedAddr);
   NewF->setDLLStorageClass(savedDLLStorageClass);
+  // The function sanitizer metadata needs to match the signature of the
+  // function it is being attached to. However this does not hold for split
+  // functions here. Thus remove the metadata for split functions.
+  if (Shape.ABI == coro::ABI::Switch &&
+      NewF->hasMetadata(LLVMContext::MD_func_sanitize))
+    NewF->eraseMetadata(LLVMContext::MD_func_sanitize);
 
   // Replace the attributes of the new function:
   auto OrigAttrs = NewF->getAttributes();
@@ -1351,8 +1358,8 @@ static bool shouldBeMustTail(const CallInst &CI, const Function &F) {
 }
 
 // Add musttail to any resume instructions that is immediately followed by a
-// suspend (i.e. ret) to implement symmetric transfer. We wouldn't do this in
-// O0 since symmetric transfer is not part of standard now.
+// suspend (i.e. ret). We do this even in -O0 to support guaranteed tail call
+// for symmetrical coroutine control transfer (C++ Coroutines TS extension).
 // This transformation is done only in the resume part of the coroutine that has
 // identical signature and calling convention as the coro.resume call.
 static void addMustTailToCoroResumes(Function &F) {
@@ -1565,7 +1572,8 @@ static void simplifySuspendPoints(coro::Shape &Shape) {
 }
 
 static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,
-                                 SmallVectorImpl<Function *> &Clones) {
+                                 SmallVectorImpl<Function *> &Clones,
+                                 TargetTransformInfo &TTI) {
   assert(Shape.ABI == coro::ABI::Switch);
 
   createResumeEntryBlock(F, Shape);
@@ -1580,9 +1588,12 @@ static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,
   postSplitCleanup(*DestroyClone);
   postSplitCleanup(*CleanupClone);
 
-  // Prepare to do symmetric transfer. We only do this if optimization is
-  // enabled since the symmetric transfer is not part of the C++ standard now.
-  if (Shape.Optimizing)
+  // Adding musttail call to support symmetric transfer.
+  // Skip targets which don't support tail call.
+  //
+  // FIXME: Could we support symmetric transfer effectively without musttail
+  // call?
+  if (TTI.supportsTailCalls())
     addMustTailToCoroResumes(*ResumeClone);
 
   // Store addresses resume/destroy/cleanup functions in the coroutine frame.
@@ -1888,14 +1899,15 @@ namespace {
 
 static coro::Shape splitCoroutine(Function &F,
                                   SmallVectorImpl<Function *> &Clones,
-                                  bool Optimizing) {
+                                  TargetTransformInfo &TTI,
+                                  bool OptimizeFrame) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
   // The suspend-crossing algorithm in buildCoroutineFrame get tripped
   // up by uses in unreachable blocks, so remove them as a first pass.
   removeUnreachableBlocks(F);
 
-  coro::Shape Shape(F, Optimizing);
+  coro::Shape Shape(F, OptimizeFrame);
   if (!Shape.CoroBegin)
     return Shape;
 
@@ -1910,7 +1922,7 @@ static coro::Shape splitCoroutine(Function &F,
   } else {
     switch (Shape.ABI) {
     case coro::ABI::Switch:
-      splitSwitchCoroutine(F, Shape, Clones);
+      splitSwitchCoroutine(F, Shape, Clones, TTI);
       break;
     case coro::ABI::Async:
       splitAsyncCoroutine(F, Shape, Clones);
@@ -1944,7 +1956,7 @@ static coro::Shape splitCoroutine(Function &F,
     }
   }
   for (auto *DDI : Worklist)
-    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.Optimizing);
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.OptimizeFrame);
 
   return Shape;
 }
@@ -2087,7 +2099,8 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     F.setSplittedCoroutine();
 
     SmallVector<Function *, 4> Clones;
-    const coro::Shape Shape = splitCoroutine(F, Clones, Optimizing);
+    const coro::Shape Shape = splitCoroutine(
+        F, Clones, FAM.getResult<TargetIRAnalysis>(F), OptimizeFrame);
     updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
 
     if (!Shape.CoroSuspends.empty()) {

@@ -242,16 +242,11 @@ public:
     return success();
   }
 
-  /// Returns true if the current token corresponds to a keyword.
-  bool isCurrentTokenAKeyword() const {
-    return parser.getToken().isAny(Token::bare_identifier, Token::inttype) ||
-           parser.getToken().isKeyword();
-  }
-
   /// Parse the given keyword if present.
   ParseResult parseOptionalKeyword(StringRef keyword) override {
     // Check that the current token has the same spelling.
-    if (!isCurrentTokenAKeyword() || parser.getTokenSpelling() != keyword)
+    if (!parser.isCurrentTokenAKeyword() ||
+        parser.getTokenSpelling() != keyword)
       return failure();
     parser.consumeToken();
     return success();
@@ -260,7 +255,7 @@ public:
   /// Parse a keyword, if present, into 'keyword'.
   ParseResult parseOptionalKeyword(StringRef *keyword) override {
     // Check that the current token is a keyword.
-    if (!isCurrentTokenAKeyword())
+    if (!parser.isCurrentTokenAKeyword())
       return failure();
 
     *keyword = parser.getTokenSpelling();
@@ -273,7 +268,7 @@ public:
   parseOptionalKeyword(StringRef *keyword,
                        ArrayRef<StringRef> allowedKeywords) override {
     // Check that the current token is a keyword.
-    if (!isCurrentTokenAKeyword())
+    if (!parser.isCurrentTokenAKeyword())
       return failure();
 
     StringRef currentKeyword = parser.getTokenSpelling();
@@ -437,6 +432,22 @@ public:
                                           atToken.getLocRange());
     }
     return success();
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Resource Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// Parse a handle to a resource within the assembly format.
+  FailureOr<AsmDialectResourceHandle>
+  parseResourceHandle(Dialect *dialect) override {
+    const auto *interface = dyn_cast_or_null<OpAsmDialectInterface>(dialect);
+    if (!interface) {
+      return parser.emitError() << "dialect '" << dialect->getNamespace()
+                                << "' does not expect resource handles";
+    }
+    StringRef resourceName;
+    return parser.parseResourceHandle(interface, resourceName);
   }
 
   //===--------------------------------------------------------------------===//

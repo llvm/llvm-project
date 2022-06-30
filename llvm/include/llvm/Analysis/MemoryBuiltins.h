@@ -115,9 +115,10 @@ Optional<APInt> getAllocSize(const CallBase *CB,
                              const TargetLibraryInfo *TLI,
                              std::function<const Value*(const Value*)> Mapper);
 
-/// If this allocation function initializes memory to a fixed value, return
-/// said value in the requested type.  Otherwise, return nullptr.
-Constant *getInitialValueOfAllocation(const CallBase *Alloc,
+/// If this is a call to an allocation function that initializes memory to a
+/// fixed value, return said value in the requested type.  Otherwise, return
+/// nullptr.
+Constant *getInitialValueOfAllocation(const Value *V,
                                       const TargetLibraryInfo *TLI,
                                       Type *Ty);
 

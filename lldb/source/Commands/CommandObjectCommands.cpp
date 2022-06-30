@@ -824,6 +824,8 @@ a number follows 'f':"
         R"(
 
     (lldb) command regex f s/^$/finish/ 's/([0-9]+)/frame select %1/')");
+    CommandArgumentData thread_arg{eArgTypeSEDStylePair, eArgRepeatOptional};
+    m_arguments.push_back({thread_arg});
   }
 
   ~CommandObjectCommandsAddRegex() override = default;
@@ -1664,11 +1666,6 @@ public:
   ~CommandObjectCommandsScriptList() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (command.GetArgumentCount() != 0) {
-      result.AppendError("'command script list' doesn't take any arguments");
-      return false;
-    }
-
     m_interpreter.GetHelp(result, CommandInterpreter::eCommandTypesUserDef);
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1689,11 +1686,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (command.GetArgumentCount() != 0) {
-      result.AppendError("'command script clear' doesn't take any arguments");
-      return false;
-    }
-
     m_interpreter.RemoveAllUser();
 
     result.SetStatus(eReturnStatusSuccessFinishResult);

@@ -838,6 +838,13 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     unsigned Idx = OpPair.second;
     assert(MI == OpPair.first && "Instruction conflict during operand folding");
     MachineOperand &MO = MI->getOperand(Idx);
+
+    // No point restoring an undef read, and we'll produce an invalid live
+    // interval.
+    // TODO: Is this really the correct way to handle undef tied uses?
+    if (MO.isUse() && !MO.readsReg() && !MO.isTied())
+      continue;
+
     if (MO.isImplicit()) {
       ImpReg = MO.getReg();
       continue;

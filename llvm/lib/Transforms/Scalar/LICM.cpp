@@ -538,7 +538,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
          CurLoop != nullptr && SafetyInfo != nullptr &&
          "Unexpected input to sinkRegion.");
 
-  // We want to visit children before parents. We will enque all the parents
+  // We want to visit children before parents. We will enqueue all the parents
   // before their children in the worklist and process the worklist in reverse
   // order.
   SmallVector<DomTreeNode *, 16> Worklist = collectChildrenInLoop(N, CurLoop);
@@ -1606,7 +1606,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
       continue;
 
     if (!DT->isReachableFromEntry(User->getParent())) {
-      U = UndefValue::get(I.getType());
+      U = PoisonValue::get(I.getType());
       Changed = true;
       continue;
     }
@@ -1619,7 +1619,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
     // unreachable.
     BasicBlock *BB = PN->getIncomingBlock(U);
     if (!DT->isReachableFromEntry(BB)) {
-      U = UndefValue::get(I.getType());
+      U = PoisonValue::get(I.getType());
       Changed = true;
       continue;
     }

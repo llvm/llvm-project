@@ -1819,8 +1819,8 @@ define void @mscatter_baseidx_nxv8f64(<vscale x 8 x double> %val, double* %base,
 
 declare void @llvm.masked.scatter.nxv16f64.nxv16p0f64(<vscale x 16 x double>, <vscale x 16 x double*>, i32, <vscale x 16 x i1>)
 
-declare <vscale x 16 x double> @llvm.experimental.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double>, <vscale x 8 x double>, i64)
-declare <vscale x 16 x double*> @llvm.experimental.vector.insert.nxv8p0f64.nxv16p0f64(<vscale x 16 x double*>, <vscale x 8 x double*>, i64)
+declare <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double>, <vscale x 8 x double>, i64)
+declare <vscale x 16 x double*> @llvm.vector.insert.nxv8p0f64.nxv16p0f64(<vscale x 16 x double*>, <vscale x 8 x double*>, i64)
 
 define void @mscatter_nxv16f64(<vscale x 8 x double> %val0, <vscale x 8 x double> %val1, <vscale x 8 x double*> %ptrs0, <vscale x 8 x double*> %ptrs1, <vscale x 16 x i1> %m) {
 ; RV32-LABEL: mscatter_nxv16f64:
@@ -1863,10 +1863,10 @@ define void @mscatter_nxv16f64(<vscale x 8 x double> %val0, <vscale x 8 x double
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
-  %p0 = call <vscale x 16 x double*> @llvm.experimental.vector.insert.nxv8p0f64.nxv16p0f64(<vscale x 16 x double*> undef, <vscale x 8 x double*> %ptrs0, i64 0)
-  %p1 = call <vscale x 16 x double*> @llvm.experimental.vector.insert.nxv8p0f64.nxv16p0f64(<vscale x 16 x double*> %p0, <vscale x 8 x double*> %ptrs1, i64 8)
-  %v0 = call <vscale x 16 x double> @llvm.experimental.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
-  %v1 = call <vscale x 16 x double> @llvm.experimental.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
+  %p0 = call <vscale x 16 x double*> @llvm.vector.insert.nxv8p0f64.nxv16p0f64(<vscale x 16 x double*> undef, <vscale x 8 x double*> %ptrs0, i64 0)
+  %p1 = call <vscale x 16 x double*> @llvm.vector.insert.nxv8p0f64.nxv16p0f64(<vscale x 16 x double*> %p0, <vscale x 8 x double*> %ptrs1, i64 8)
+  %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
+  %v1 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
   call void @llvm.masked.scatter.nxv16f64.nxv16p0f64(<vscale x 16 x double> %v1, <vscale x 16 x double*> %p1, i32 8, <vscale x 16 x i1> %m)
   ret void
 }
@@ -1905,8 +1905,8 @@ define void @mscatter_baseidx_nxv16i8_nxv16f64(<vscale x 8 x double> %val0, <vsc
 ; RV64-NEXT:    vsoxei64.v v16, (a0), v8, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, double* %base, <vscale x 16 x i8> %idxs
-  %v0 = call <vscale x 16 x double> @llvm.experimental.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
-  %v1 = call <vscale x 16 x double> @llvm.experimental.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
+  %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
+  %v1 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
   call void @llvm.masked.scatter.nxv16f64.nxv16p0f64(<vscale x 16 x double> %v1, <vscale x 16 x double*> %ptrs, i32 8, <vscale x 16 x i1> %m)
   ret void
 }
@@ -1945,8 +1945,8 @@ define void @mscatter_baseidx_nxv16i16_nxv16f64(<vscale x 8 x double> %val0, <vs
 ; RV64-NEXT:    vsoxei64.v v16, (a0), v8, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, double* %base, <vscale x 16 x i16> %idxs
-  %v0 = call <vscale x 16 x double> @llvm.experimental.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
-  %v1 = call <vscale x 16 x double> @llvm.experimental.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
+  %v0 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> undef, <vscale x 8 x double> %val0, i64 0)
+  %v1 = call <vscale x 16 x double> @llvm.vector.insert.nxv8f64.nxv16f64(<vscale x 16 x double> %v0, <vscale x 8 x double> %val1, i64 8)
   call void @llvm.masked.scatter.nxv16f64.nxv16p0f64(<vscale x 16 x double> %v1, <vscale x 16 x double*> %ptrs, i32 8, <vscale x 16 x i1> %m)
   ret void
 }

@@ -70,7 +70,7 @@ subroutine foo_num_array(x)
 ! CHECK:         fir.array_merge_store %[[VAL_8]], %[[VAL_18:.*]] to %[[VAL_6]] : !fir.array<100xi32>, !fir.array<100xi32>, !fir.heap<!fir.array<100xi32>>
 ! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_6]] : (!fir.heap<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>>
 ! CHECK:         fir.call @_QPbar_num_array(%[[VAL_19]]) : (!fir.ref<!fir.array<100xi32>>) -> ()
-! CHECK:         fir.freemem %[[VAL_6]]
+! CHECK:         fir.freemem %[[VAL_6]] : !fir.heap<!fir.array<100xi32>>
 ! CHECK:         return
 ! CHECK:       }
 end subroutine
@@ -114,7 +114,7 @@ subroutine foo_char_array(x)
   ! CHECK: %[[VAL_33:.*]] = fir.convert %[[VAL_11]] : (!fir.heap<!fir.array<100x!fir.char<1,10>>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[VAL_34:.*]] = fir.emboxchar %[[VAL_33]], %[[VAL_32]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPbar_char_array(%[[VAL_34]]) : (!fir.boxchar<1>) -> ()
-  ! CHECK: fir.freemem %[[VAL_11]]
+  ! CHECK: fir.freemem %[[VAL_11]] : !fir.heap<!fir.array<100x!fir.char<1,10>>>
 
   character(10) :: x(100)
   call bar_char_array(x)
@@ -151,7 +151,7 @@ subroutine foo_num_array_box(x)
   ! CHECK: %[[VAL_23:.*]] = fir.embox %[[VAL_9]](%[[VAL_22]]) : (!fir.heap<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<100xi32>>
   ! CHECK: %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.box<!fir.array<100xi32>>) -> !fir.box<!fir.array<?xi32>>
   ! CHECK: fir.call @_QPbar_num_array_box(%[[VAL_24]]) : (!fir.box<!fir.array<?xi32>>) -> ()
-  ! CHECK: fir.freemem %[[VAL_9]]
+  ! CHECK: fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<100xi32>>
 
   integer :: x(100)
   interface
@@ -175,7 +175,7 @@ subroutine foo_char_array_box(x, n)
   ! CHECK: %[[VAL_6A:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
   ! CHECK: %[[C0:.*]] = arith.constant 0 : index 
   ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[VAL_6A]], %[[C0]] : index 
-  ! CHECK: %[[VAL_6:.*]] = arith.select %[[CMP]], %[[VAL_6A]], %[[C0]] : index 
+  ! CHECK: %[[VAL_6:.*]] = arith.select %[[CMP]], %[[VAL_6A]], %[[C0]] : index
   ! CHECK: %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
   ! CHECK: %[[VAL_8:.*]] = fir.embox %[[VAL_3]](%[[VAL_7]]) : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,10>>>
   ! CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
@@ -208,7 +208,7 @@ subroutine foo_char_array_box(x, n)
   ! CHECK: %[[VAL_34:.*]] = fir.embox %[[VAL_12]](%[[VAL_33]]) : (!fir.heap<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,10>>>
   ! CHECK: %[[VAL_35:.*]] = fir.convert %[[VAL_34]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
   ! CHECK: fir.call @_QPbar_char_array_box(%[[VAL_35]]) : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> ()
-  ! CHECK: fir.freemem %[[VAL_12]]
+  ! CHECK: fir.freemem %[[VAL_12]] : !fir.heap<!fir.array<?x!fir.char<1,10>>>
 
   integer :: n
   character(10) :: x(n)

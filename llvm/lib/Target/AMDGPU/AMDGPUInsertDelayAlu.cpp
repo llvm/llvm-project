@@ -39,8 +39,36 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  // Return true if MI waits for all outstanding VALU instructions to complete.
+  static bool instructionWaitsForVALU(const MachineInstr &MI) {
+    // These instruction types wait for VA_VDST==0 before issuing.
+    const uint64_t VA_VDST_0 = SIInstrFlags::DS | SIInstrFlags::EXP |
+                               SIInstrFlags::FLAT | SIInstrFlags::MIMG |
+                               SIInstrFlags::MTBUF | SIInstrFlags::MUBUF;
+    if (MI.getDesc().TSFlags & VA_VDST_0)
+      return true;
+    if (MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B32 ||
+        MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64)
+      return true;
+    if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+        (MI.getOperand(0).getImm() & 0xf000) == 0)
+      return true;
+    return false;
+  }
+
   // Types of delay that can be encoded in an s_delay_alu instruction.
   enum DelayType { VALU, TRANS, SALU, OTHER };
+
+  // Get the delay type for an instruction with the specified TSFlags.
+  static DelayType getDelayType(uint64_t TSFlags) {
+    if (TSFlags & SIInstrFlags::TRANS)
+      return TRANS;
+    if (TSFlags & SIInstrFlags::VALU)
+      return VALU;
+    if (TSFlags & SIInstrFlags::SALU)
+      return SALU;
+    return OTHER;
+  }
 
   // Information about the last instruction(s) that wrote to a particular
   // regunit. In straight-line code there will only be one such instruction, but
@@ -159,7 +187,7 @@ public:
       return Erase;
     }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump() const {
       if (VALUCycles)
         dbgs() << " VALUCycles=" << (int)VALUCycles;
@@ -202,7 +230,7 @@ public:
       }
     }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump(const TargetRegisterInfo *TRI) const {
       if (empty()) {
         dbgs() << "    empty\n";
@@ -214,7 +242,7 @@ public:
       Order.reserve(size());
       for (const_iterator I = begin(), E = end(); I != E; ++I)
         Order.push_back(I);
-      llvm::sort(Order, [](const auto &A, const auto &B) {
+      llvm::sort(Order, [](const const_iterator &A, const const_iterator &B) {
         return A->first < B->first;
       });
       for (const_iterator I : Order) {
@@ -298,8 +326,9 @@ public:
     for (auto *Pred : MBB.predecessors())
       State.merge(BlockState[Pred]);
 
-    LLVM_DEBUG(dbgs() << "  State at start of BB" << MBB.getNumber() << "\n");
-    LLVM_DEBUG(State.dump(TRI));
+    LLVM_DEBUG(dbgs() << "  State at start of " << printMBBReference(MBB)
+                      << "\n";
+               State.dump(TRI););
 
     bool Changed = false;
     MachineInstr *LastDelayAlu = nullptr;
@@ -311,31 +340,15 @@ public:
         continue;
 
       // Ignore some more instructions that do not generate any code.
-      // FIXME: should these be marked as isMetaInstruction?
       switch (MI.getOpcode()) {
-      case AMDGPU::SI_MASKED_UNREACHABLE:
       case AMDGPU::SI_RETURN_TO_EPILOG:
-      case AMDGPU::WAVE_BARRIER:
         continue;
       }
 
-      auto TSFlags = MI.getDesc().TSFlags;
-      DelayType Type =
-          (TSFlags & SIInstrFlags::TRANS)
-              ? TRANS
-              : (TSFlags & SIInstrFlags::VALU)
-                    ? VALU
-                    : (TSFlags & SIInstrFlags::SALU) ? SALU : OTHER;
+      DelayType Type = getDelayType(MI.getDesc().TSFlags);
 
-      if (TSFlags & (SIInstrFlags::DS | SIInstrFlags::EXP | SIInstrFlags::FLAT |
-                     SIInstrFlags::MIMG | SIInstrFlags::MTBUF |
-                     SIInstrFlags::MUBUF) ||
-          MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B32 ||
-          MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64 ||
-          (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-           (MI.getOperand(0).getImm() & 0xf000) == 0)) {
-        // These instructions wait for all outstanding VALU instructions to
-        // complete.
+      if (instructionWaitsForVALU(MI)) {
+        // Forget about all outstanding VALU delays.
         State = DelayState();
       } else if (Type != OTHER) {
         DelayInfo Delay;
@@ -382,8 +395,7 @@ public:
       // twice?
       State.advance(Type, Cycles);
 
-      LLVM_DEBUG(dbgs() << "  State after " << MI);
-      LLVM_DEBUG(State.dump(TRI));
+      LLVM_DEBUG(dbgs() << "  State after " << MI; State.dump(TRI););
     }
 
     if (Emit) {

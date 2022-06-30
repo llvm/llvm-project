@@ -100,6 +100,12 @@ void Defined::canonicalize() {
     isec = isec->canonical();
 }
 
+std::string Defined::getSourceLocation() {
+  if (!isec)
+    return {};
+  return isec->getSourceLocation(value);
+}
+
 uint64_t DylibSymbol::getVA() const {
   return isInStubs() ? getStubVA() : Symbol::getVA();
 }

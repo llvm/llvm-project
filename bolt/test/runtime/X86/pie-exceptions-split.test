@@ -10,7 +10,7 @@ RUN: llvm-bolt %t -o %t.instr --instrument --instrumentation-file=%t.fdata
 RUN: %t.instr
 
 RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp \
-RUN:   --split-functions=1 --split-eh --print-after-lowering \
+RUN:   --split-functions --split-eh --print-after-lowering \
 RUN:   --print-only=main 2>&1 | FileCheck %s
 
 ## All calls to printf() should be from exception handling code that was
@@ -26,4 +26,3 @@ RUN: %t.bolt arg1 arg2 arg3 2>&1 | FileCheck --check-prefix=CHECK-BOLTED %s
 
 CHECK-BOLTED:      catch 2
 CHECK-BOLTED-NEXT: catch 1
-

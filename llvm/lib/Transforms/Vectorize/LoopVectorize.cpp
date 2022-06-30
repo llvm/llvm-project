@@ -5298,7 +5298,8 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
   assert(VFCandidates.count(ElementCount::getFixed(1)) &&
          "Expected Scalar VF to be a candidate");
 
-  const VectorizationFactor ScalarCost(ElementCount::getFixed(1), ExpectedCost);
+  const VectorizationFactor ScalarCost(ElementCount::getFixed(1), ExpectedCost,
+                                       ExpectedCost);
   VectorizationFactor ChosenFactor = ScalarCost;
 
   bool ForceVectorization = Hints->getForce() == LoopVectorizeHints::FK_Enabled;
@@ -5316,7 +5317,7 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
       continue;
 
     VectorizationCostTy C = expectedCost(i, &InvalidCosts);
-    VectorizationFactor Candidate(i, C.first);
+    VectorizationFactor Candidate(i, C.first, ScalarCost.ScalarCost);
 
 #ifndef NDEBUG
     unsigned AssumedMinimumVscale = 1;
@@ -5509,7 +5510,7 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n";);
     ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
     if (LVP.hasPlanWithVF(ForcedEC))
-      return {ForcedEC, 0};
+      return {ForcedEC, 0, 0};
     else {
       LLVM_DEBUG(
           dbgs()
@@ -6711,10 +6712,17 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
 
   bool TypeNotScalarized = false;
   if (VF.isVector() && VectorTy->isVectorTy()) {
-    unsigned NumParts = TTI.getNumberOfParts(VectorTy);
-    if (NumParts)
-      TypeNotScalarized = NumParts < VF.getKnownMinValue();
-    else
+    if (unsigned NumParts = TTI.getNumberOfParts(VectorTy)) {
+      if (VF.isScalable())
+        // <vscale x 1 x iN> is assumed to be profitable over iN because
+        // scalable registers are a distinct register class from scalar ones.
+        // If we ever find a target which wants to lower scalable vectors
+        // back to scalars, we'll need to update this code to explicitly
+        // ask TTI about the register class uses for each part.
+        TypeNotScalarized = NumParts <= VF.getKnownMinValue();
+      else
+        TypeNotScalarized = NumParts < VF.getKnownMinValue();
+    } else
       C = InstructionCost::getInvalid();
   }
   return VectorizationCostTy(C, TypeNotScalarized);
@@ -6790,8 +6798,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           Cost = getGatherScatterCost(&I, VF);
           setWideningDecision(&I, VF, CM_GatherScatter, Cost);
         } else {
-          assert((isa<LoadInst>(&I) || !VF.isScalable()) &&
-                 "Cannot yet scalarize uniform stores");
           Cost = getUniformMemOpCost(&I, VF);
           setWideningDecision(&I, VF, CM_Scalarize, Cost);
         }
@@ -7149,8 +7155,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       InstWidening Decision = getWideningDecision(I, Width);
       assert(Decision != CM_Unknown &&
              "CM decision should be taken at this point");
-      if (Decision == CM_Scalarize)
+      if (Decision == CM_Scalarize) {
+        if (VF.isScalable() && isa<StoreInst>(I))
+          // We can't scalarize a scalable vector store (even a uniform one
+          // currently), return an invalid cost so as to prevent vectorization.
+          return InstructionCost::getInvalid();
         Width = ElementCount::getFixed(1);
+      }
     }
     VectorTy = ToVectorTy(getLoadStoreType(I), Width);
     return getMemoryInstructionCost(I, VF);
@@ -7429,7 +7440,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
     if (VPlanBuildStressTest)
       return VectorizationFactor::Disabled();
 
-    return {VF, 0 /*Cost*/};
+    return {VF, 0 /*Cost*/, 0 /* ScalarCost */};
   }
 
   LLVM_DEBUG(
@@ -7480,7 +7491,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       CM.collectInLoopReductions();
       buildVPlansWithVPRecipes(UserVF, UserVF);
       LLVM_DEBUG(printPlans(dbgs()));
-      return {{UserVF, 0}};
+      return {{UserVF, 0, 0}};
     } else
       reportVectorizationInfo("UserVF ignored because of invalid costs.",
                               "InvalidCost", ORE, OrigLoop);
@@ -7608,7 +7619,7 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   VPBasicBlock *HeaderVPBB =
       BestVPlan.getVectorLoopRegion()->getEntryBasicBlock();
   Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
-  if (VectorizedLoopID.hasValue())
+  if (VectorizedLoopID)
     L->setLoopID(VectorizedLoopID.getValue());
   else {
     // Keep all loop hints from the original loop on the vector loop (we'll
@@ -8997,16 +9008,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       }
   }
 
-  // From this point onwards, VPlan-to-VPlan transformations may change the plan
-  // in ways that accessing values using original IR values is incorrect.
-  Plan->disableValue2VPValue();
-
-  VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
-  VPlanTransforms::sinkScalarOperands(*Plan);
-  VPlanTransforms::mergeReplicateRegions(*Plan);
-  VPlanTransforms::removeDeadRecipes(*Plan);
-  VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
-
   std::string PlanName;
   raw_string_ostream RSO(PlanName);
   ElementCount VF = Range.Start;
@@ -9019,6 +9020,16 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   RSO << "},UF>=1";
   RSO.flush();
   Plan->setName(PlanName);
+
+  // From this point onwards, VPlan-to-VPlan transformations may change the plan
+  // in ways that accessing values using original IR values is incorrect.
+  Plan->disableValue2VPValue();
+
+  VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
+  VPlanTransforms::sinkScalarOperands(*Plan);
+  VPlanTransforms::mergeReplicateRegions(*Plan);
+  VPlanTransforms::removeDeadRecipes(*Plan);
+  VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
 
   // Fold Exit block into its predecessor if possible.
   // TODO: Fold block earlier once all VPlan transforms properly maintain a
@@ -10408,6 +10419,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   VectorizationFactor VF = VectorizationFactor::Disabled();
   unsigned IC = 1;
 
+  GeneratedRTChecks Checks(*PSE.getSE(), DT, LI,
+                           F->getParent()->getDataLayout());
   if (MaybeVF) {
     if (LVP.requiresTooManyRuntimeChecks()) {
       ORE->emit([&]() {
@@ -10424,6 +10437,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     VF = *MaybeVF;
     // Select the interleave count.
     IC = CM.selectInterleaveCount(VF.Width, *VF.Cost.getValue());
+
+    unsigned SelectedIC = std::max(IC, UserIC);
+    //  Optimistically generate runtime checks if they are needed. Drop them if
+    //  they turn out to not be profitable.
+    if (VF.Width.isVector() || SelectedIC > 1)
+      Checks.Create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
   }
 
   // Identify the diagnostic messages that should be produced.
@@ -10511,14 +10530,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool DisableRuntimeUnroll = false;
   MDNode *OrigLoopID = L->getLoopID();
   {
-    // Optimistically generate runtime checks. Drop them if they turn out to not
-    // be profitable. Limit the scope of Checks, so the cleanup happens
-    // immediately after vector codegeneration is done.
-    GeneratedRTChecks Checks(*PSE.getSE(), DT, LI,
-                             F->getParent()->getDataLayout());
-    if (!VF.Width.isScalar() || IC > 1)
-      Checks.Create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, IC);
-
     using namespace ore;
     if (!VectorizeLoop) {
       assert(IC > 1 && "interleave count should not be 1 or 0");
@@ -10618,7 +10629,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   Optional<MDNode *> RemainderLoopID =
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupEpilogue});
-  if (RemainderLoopID.hasValue()) {
+  if (RemainderLoopID) {
     L->setLoopID(RemainderLoopID.getValue());
   } else {
     if (DisableRuntimeUnroll)

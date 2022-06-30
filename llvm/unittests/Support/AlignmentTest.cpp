@@ -52,9 +52,7 @@ std::vector<uint64_t> getValidAlignments() {
 
 TEST(AlignmentTest, AlignDefaultCTor) { EXPECT_EQ(Align().value(), 1ULL); }
 
-TEST(AlignmentTest, MaybeAlignDefaultCTor) {
-  EXPECT_FALSE(MaybeAlign().hasValue());
-}
+TEST(AlignmentTest, MaybeAlignDefaultCTor) { EXPECT_FALSE(MaybeAlign()); }
 
 TEST(AlignmentTest, ValidCTors) {
   for (uint64_t Value : getValidAlignments()) {
@@ -115,26 +113,11 @@ TEST(AlignmentTest, Log2) {
   }
 }
 
-TEST(AlignmentTest, MinAlign) {
-  struct {
-    uint64_t A;
-    uint64_t B;
-    uint64_t MinAlign;
-  } kTests[] = {
-      {1, 2, 1},
-      {8, 4, 4},
-  };
-  for (const auto &T : kTests) {
-    EXPECT_EQ(MinAlign(T.A, T.B), T.MinAlign);
-    EXPECT_EQ(commonAlignment(Align(T.A), Align(T.B)), T.MinAlign);
-  }
-}
-
 TEST(AlignmentTest, Encode_Decode) {
   for (uint64_t Value : getValidAlignments()) {
     {
       Align Actual(Value);
-      Align Expected = decodeMaybeAlign(encode(Actual)).getValue();
+      Align Expected = *decodeMaybeAlign(encode(Actual));
       EXPECT_EQ(Expected, Actual);
     }
     {
@@ -227,9 +210,6 @@ TEST(AlignmentTest, AlignComparisons) {
     EXPECT_EQ(MA, MA);
     EXPECT_NE(MA, MB);
 
-    EXPECT_EQ(MA, MA ? (*MA).value() : 0);
-    EXPECT_NE(MA, MB ? (*MB).value() : 0);
-
     EXPECT_EQ(std::max(A, B), B);
     EXPECT_EQ(std::min(A, B), A);
   }
@@ -254,7 +234,7 @@ std::vector<uint64_t> getValidAlignmentsForDeathTest() {
 std::vector<uint64_t> getNonPowerOfTwo() { return {3, 10, 15}; }
 
 TEST(AlignmentDeathTest, CantConvertUnsetMaybe) {
-  EXPECT_DEATH((MaybeAlign(0).getValue()), ".*");
+  EXPECT_DEATH((*MaybeAlign(0)), ".*");
 }
 
 TEST(AlignmentDeathTest, InvalidCTors) {
@@ -274,14 +254,6 @@ TEST(AlignmentDeathTest, ComparisonsWithZero) {
     EXPECT_DEATH((void)(Align(Value) <= 0), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) > 0), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) < 0), ".* should be defined");
-  }
-}
-
-TEST(AlignmentDeathTest, CompareMaybeAlignToZero) {
-  for (uint64_t Value : getValidAlignmentsForDeathTest()) {
-    // MaybeAlign is allowed to be == or != 0
-    (void)(MaybeAlign(Value) == 0);
-    (void)(MaybeAlign(Value) != 0);
   }
 }
 

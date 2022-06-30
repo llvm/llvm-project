@@ -365,6 +365,8 @@ private:
     /// Given a DIE, update its incompleteness based on whether the DIEs it
     /// references are incomplete.
     UpdateRefIncompleteness,
+    /// Given a DIE, mark it as ODR Canonical if applicable.
+    MarkODRCanonicalDie,
   };
 
   /// This class represents an item in the work list. The type defines what kind
@@ -463,6 +465,10 @@ private:
                             unsigned Flags, const UnitListTy &Units,
                             const DWARFFile &File,
                             SmallVectorImpl<WorklistItem> &Worklist);
+
+  /// Mark context corresponding to the specified \p Die as having canonical
+  /// die, if applicable.
+  void markODRCanonicalDie(const DWARFDie &Die, CompileUnit &CU);
 
   /// \defgroup FindRootDIEs Find DIEs corresponding to Address map entries.
   ///

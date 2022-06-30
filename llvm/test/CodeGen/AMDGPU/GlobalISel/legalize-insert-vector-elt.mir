@@ -8,7 +8,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
     ; CHECK-LABEL: name: insert_vector_elt_0_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[UV1]](s32)
@@ -27,7 +29,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
     ; CHECK-LABEL: name: insert_vector_elt_1_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[COPY1]](s32)
@@ -46,7 +50,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
     ; CHECK-LABEL: name: insert_vector_elt_2_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[DEF]](<2 x s32>)
@@ -65,7 +71,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3_vgpr4
 
     ; CHECK-LABEL: name: insert_vector_elt_v2s32_varidx_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3_vgpr4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr3_vgpr4
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
@@ -86,7 +94,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16, $vgpr17_vgpr18
 
     ; CHECK-LABEL: name: insert_vector_elt_v16s32_varidx_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16, $vgpr17_vgpr18
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr16
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr17_vgpr18
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
@@ -107,7 +117,9 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: insert_vector_elt_0_v16s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<16 x s64>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64), [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64), [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64), [[UV8:%[0-9]+]]:_(s64), [[UV9:%[0-9]+]]:_(s64), [[UV10:%[0-9]+]]:_(s64), [[UV11:%[0-9]+]]:_(s64), [[UV12:%[0-9]+]]:_(s64), [[UV13:%[0-9]+]]:_(s64), [[UV14:%[0-9]+]]:_(s64), [[UV15:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[DEF]](<16 x s64>)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[UV1]](s64), [[UV2]](s64), [[UV3]](s64), [[UV4]](s64), [[UV5]](s64), [[UV6]](s64), [[UV7]](s64), [[UV8]](s64), [[UV9]](s64), [[UV10]](s64), [[UV11]](s64), [[UV12]](s64), [[UV13]](s64), [[UV14]](s64), [[UV15]](s64)
@@ -127,7 +139,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: insert_vector_elt_0_v2s32_s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[UV1]](s32)
@@ -147,7 +161,9 @@ body: |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: insert_vector_elt_0_v2i8_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[UV1]](s32)
@@ -169,7 +185,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
 
     ; CHECK-LABEL: name: insert_vector_elt_v4s32_s32_look_through_trunc_0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32)
@@ -190,7 +208,9 @@ body: |
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; CHECK-LABEL: name: insert_vector_elt_64_65_v64s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: liveins: $sgpr0_sgpr1, $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>), [[UV2:%[0-9]+]]:_(<4 x s32>), [[UV3:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[DEF]](<16 x s32>)
@@ -299,7 +319,9 @@ body: |
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: insert_vector_elt_33_v64s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x s32>), align 4, addrspace 4)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
@@ -384,7 +406,9 @@ body: |
     liveins: $sgpr0_sgpr1, $sgpr2, $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: insert_vector_elt_varidx_v64s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
+    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2, $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x s32>), align 4, addrspace 4)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
@@ -800,7 +824,9 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-LABEL: name: insert_vector_elt_varidx_v4s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
@@ -861,7 +887,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
     ; CHECK-LABEL: name: insert_vector_elt_varidx_v8s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)

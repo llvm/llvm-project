@@ -93,12 +93,12 @@ TYPED_TEST(LlvmLibcMemoryBackend, splat, FunctionTypes) {
 
 TYPED_TEST(LlvmLibcMemoryBackend, notEquals, FunctionTypes) {
   alignas(64) const auto a = GetRandomBuffer<ParamType::SIZE>();
-  EXPECT_EQ(ParamType::notEquals(a, a), 0UL);
+  EXPECT_EQ(ParamType::notEquals(a, a), uint64_t(0));
   for (size_t i = 0; i < a.size(); ++i) {
     alignas(64) auto b = a;
     ++b[i];
-    EXPECT_NE(ParamType::notEquals(a, b), 0UL);
-    EXPECT_NE(ParamType::notEquals(b, a), 0UL);
+    EXPECT_NE(ParamType::notEquals(a, b), uint64_t(0));
+    EXPECT_NE(ParamType::notEquals(b, a), uint64_t(0));
   }
 }
 

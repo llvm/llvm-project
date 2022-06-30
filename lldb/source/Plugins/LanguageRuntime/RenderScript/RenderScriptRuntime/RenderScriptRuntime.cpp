@@ -4067,7 +4067,10 @@ public:
             "<reduction_kernel_type,...>]",
             eCommandRequiresProcess | eCommandProcessMustBeLaunched |
                 eCommandProcessMustBePaused),
-        m_options(){};
+        m_options() {
+    CommandArgumentData name_arg{eArgTypeName, eArgRepeatPlain};
+    m_arguments.push_back({name_arg});
+  };
 
   class CommandOptions : public Options {
   public:
@@ -4216,7 +4219,10 @@ public:
             "renderscript kernel breakpoint set <kernel_name> [-c x,y,z]",
             eCommandRequiresProcess | eCommandProcessMustBeLaunched |
                 eCommandProcessMustBePaused),
-        m_options() {}
+        m_options() {
+    CommandArgumentData name_arg{eArgTypeName, eArgRepeatPlain};
+    m_arguments.push_back({name_arg});
+  }
 
   ~CommandObjectRenderScriptRuntimeKernelBreakpointSet() override = default;
 
@@ -4311,7 +4317,10 @@ public:
             "but does not remove currently set breakpoints.",
             "renderscript kernel breakpoint all <enable/disable>",
             eCommandRequiresProcess | eCommandProcessMustBeLaunched |
-                eCommandProcessMustBePaused) {}
+                eCommandProcessMustBePaused) {
+    CommandArgumentData enable_arg{eArgTypeNone, eArgRepeatPlain};
+    m_arguments.push_back({enable_arg});
+  }
 
   ~CommandObjectRenderScriptRuntimeKernelBreakpointAll() override = default;
 
@@ -4493,7 +4502,10 @@ public:
                             "renderscript allocation dump <ID>",
                             eCommandRequiresProcess |
                                 eCommandProcessMustBeLaunched),
-        m_options() {}
+        m_options() {
+    CommandArgumentData id_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
+    m_arguments.push_back({id_arg});
+  }
 
   ~CommandObjectRenderScriptRuntimeAllocationDump() override = default;
 
@@ -4679,7 +4691,12 @@ public:
             interpreter, "renderscript allocation load",
             "Loads renderscript allocation contents from a file.",
             "renderscript allocation load <ID> <filename>",
-            eCommandRequiresProcess | eCommandProcessMustBeLaunched) {}
+            eCommandRequiresProcess | eCommandProcessMustBeLaunched) {
+    CommandArgumentData id_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
+    CommandArgumentData name_arg{eArgTypeFilename, eArgRepeatPlain};
+    m_arguments.push_back({id_arg});
+    m_arguments.push_back({name_arg});
+  }
 
   ~CommandObjectRenderScriptRuntimeAllocationLoad() override = default;
 
@@ -4726,7 +4743,12 @@ public:
                             "Write renderscript allocation contents to a file.",
                             "renderscript allocation save <ID> <filename>",
                             eCommandRequiresProcess |
-                                eCommandProcessMustBeLaunched) {}
+                                eCommandProcessMustBeLaunched) {
+    CommandArgumentData id_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
+    CommandArgumentData name_arg{eArgTypeFilename, eArgRepeatPlain};
+    m_arguments.push_back({id_arg});
+    m_arguments.push_back({name_arg});
+  }
 
   ~CommandObjectRenderScriptRuntimeAllocationSave() override = default;
 

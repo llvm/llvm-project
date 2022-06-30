@@ -588,7 +588,7 @@ void testBinarySetOperationExhaustive(Fn1 OpFn, Fn2 ExactOpFn, Fn3 InResultFn) {
 
         Optional<ConstantRange> ExactCR = ExactOpFn(CR1, CR2);
         if (SmallestCR.isSizeLargerThan(Elems.count())) {
-          EXPECT_TRUE(!ExactCR.hasValue());
+          EXPECT_TRUE(!ExactCR);
         } else {
           EXPECT_EQ(SmallestCR, *ExactCR);
         }

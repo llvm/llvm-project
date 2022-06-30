@@ -778,6 +778,11 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <vector>
 #include <version>
 
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iterator>
+#  include <utility>
+#endif
+
 // standard-mandated includes
 
 // [iterator.range]

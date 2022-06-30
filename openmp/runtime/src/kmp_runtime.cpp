@@ -8300,7 +8300,7 @@ void __kmp_aux_set_library(enum library_type arg) {
     break;
   case library_throughput:
     if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME)
-      __kmp_dflt_blocktime = 200;
+      __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
     break;
   default:
     KMP_FATAL(UnknownLibraryType, arg);

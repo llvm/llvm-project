@@ -311,6 +311,7 @@ protected:
     IK_CondOpInit,
     IK_FoldOpInit,
     IK_IsAOpInit,
+    IK_ExistsOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -1085,6 +1086,40 @@ public:
   // Fold - If possible, fold this to a simpler init.  Return this if not
   // possible to fold.
   Init *Fold() const;
+
+  bool isComplete() const override { return false; }
+
+  Init *resolveReferences(Resolver &R) const override;
+
+  Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
+/// !exists<type>(expr) - Dynamically determine if a record of `type` named
+/// `expr` exists.
+class ExistsOpInit : public TypedInit, public FoldingSetNode {
+private:
+  RecTy *CheckType;
+  Init *Expr;
+
+  ExistsOpInit(RecTy *CheckType, Init *Expr)
+      : TypedInit(IK_ExistsOpInit, IntRecTy::get(CheckType->getRecordKeeper())),
+        CheckType(CheckType), Expr(Expr) {}
+
+public:
+  ExistsOpInit(const ExistsOpInit &) = delete;
+  ExistsOpInit &operator=(const ExistsOpInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_ExistsOpInit; }
+
+  static ExistsOpInit *get(RecTy *CheckType, Init *Expr);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // possible to fold.
+  Init *Fold(Record *CurRec, bool IsFinal = false) const;
 
   bool isComplete() const override { return false; }
 

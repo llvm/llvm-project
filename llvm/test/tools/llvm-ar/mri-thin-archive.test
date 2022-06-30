@@ -1,23 +1,47 @@
-RUN: rm -rf %t && mkdir -p %t/addlib/
+# UNSUPPORTED: system-aix
+# RUN: rm -rf %t && mkdir -p %t/addlib/ && split-file %s %t
+# RUN: cd %t
 
-RUN: yaml2obj %S/Inputs/elf.yaml -o %t/elf.o
-RUN: cp %t/elf.o %t/addlib/elf.o
-RUN: cp %t/elf.o %t/delete.o
+# RUN: yaml2obj %S/Inputs/elf.yaml -o %t/elf.o
+# RUN: cp %t/elf.o %t/addlib/elf.o
+# RUN: cp %t/elf.o %t/delete.o
 
-RUN: cd %t && llvm-ar rTc addlib/addlib.ar addlib/elf.o
+# RUN: llvm-ar rc --thin addlib/thin.ar addlib/elf.o
+# RUN: llvm-ar rc addlib/regular.ar addlib/elf.o
 
-RUN: echo "createthin %t/archive.ar" > %t/mri.script
-RUN: echo "addmod elf.o" >> %t/mri.script
-RUN: echo "addlib addlib/addlib.ar" >> %t/mri.script
-RUN: echo "addmod delete.o" >> %t/mri.script
-RUN: echo "delete delete.o" >> %t/mri.script
-RUN: echo "save" >> %t/mri.script
-RUN: echo "end" >> %t/mri.script
+# RUN: llvm-ar -M < thin.script
+# RUN: FileCheck -input-file=archive.ar %s --check-prefixes=THIN --implicit-check-not=delete.o --match-full-lines
 
-RUN: cd %t && llvm-ar -M < mri.script
-RUN: FileCheck -input-file=%t/archive.ar %s
+# THIN: !<thin>
+# THIN: elf.o/
+# THIN-NEXT: addlib/elf.o/
 
-CHECK: !<thin>
-CHECK: elf.o
-CHECK-NEXT: addlib/elf.o/
-CHECK-NOT: delete.o
+# RUN: llvm-ar -M < thin-to-regular.script
+# RUN: FileCheck -input-file=regular.ar %s --check-prefixes=REGULAR
+
+# REGULAR: !<arch>
+
+# RUN: not llvm-ar -M < regular-to-thin.script 2>&1 | FileCheck %s --check-prefix=ERROR
+# RUN: not ls thin.ar
+# ERROR: error: script line 2: cannot add a regular archive's contents to a thin archive
+
+#--- thin.script
+createthin archive.ar
+addmod elf.o
+addlib addlib/thin.ar
+addmod delete.o
+delete delete.o
+save
+end
+
+#--- thin-to-regular.script
+create regular.ar
+addlib addlib/thin.ar
+save
+end
+
+#--- regular-to-thin.script
+createthin thin.ar
+addlib addlib/regular.ar
+save
+end

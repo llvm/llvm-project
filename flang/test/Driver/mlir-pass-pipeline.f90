@@ -5,11 +5,13 @@ end program
 
 ! CHECK: Pass statistics report
 
+! CHECK: CSE
 ! CHECK-LABEL: 'func.func' Pipeline
 ! CHECK: ArrayValueCopy
 ! CHECK: CharacterConversion
 ! CHECK: Canonicalizer
 ! CHECK: SimplifyRegionLite
+! CHECK: CSE
 
 ! CHECK-LABEL: 'func.func' Pipeline
 ! CHECK: MemoryAllocationOpt
@@ -21,6 +23,7 @@ end program
 ! CHECK: SCFToControlFlow
 ! CHECK: Canonicalizer
 ! CHECK: SimplifyRegionLite
+! CHECK: CSE
 ! CHECK: BoxedProcedurePass
 
 ! CHECK-LABEL: 'func.func' Pipeline

@@ -45,7 +45,7 @@ fixed_int32_t fixed_callee(fixed_int32_t x) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <16 x i32>* [[COERCE1]] to <vscale x 4 x i32>*
 // CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], <vscale x 4 x i32>* [[TMP0]], align 16
 // CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, <16 x i32>* [[COERCE1]], align 16, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-NEXT:    [[CASTSCALABLESVE2:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TMP1]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE2:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TMP1]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE2]]
 //
 svint32_t sizeless_caller(svint32_t x) {

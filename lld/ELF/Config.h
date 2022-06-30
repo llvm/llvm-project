@@ -29,6 +29,10 @@ namespace lld {
 namespace elf {
 
 class InputFile;
+class BinaryFile;
+class BitcodeFile;
+class ELFFileBase;
+class SharedFile;
 class InputSectionBase;
 class Symbol;
 
@@ -221,6 +225,7 @@ struct Configuration {
   bool target1Rel;
   bool trace;
   bool thinLTOEmitImportsFiles;
+  bool thinLTOEmitIndexFiles;
   bool thinLTOIndexOnly;
   bool timeTraceEnabled;
   bool tocOptimize;
@@ -372,6 +377,12 @@ struct DuplicateSymbol {
 };
 
 struct Ctx {
+  SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
+  SmallVector<ELFFileBase *, 0> objectFiles;
+  SmallVector<SharedFile *, 0> sharedFiles;
+  SmallVector<BinaryFile *, 0> binaryFiles;
+  SmallVector<BitcodeFile *, 0> bitcodeFiles;
+  SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
   // Duplicate symbol candidates.
   SmallVector<DuplicateSymbol, 0> duplicates;
   // Symbols in a non-prevailing COMDAT group which should be changed to an
@@ -379,6 +390,14 @@ struct Ctx {
   SmallVector<std::pair<Symbol *, unsigned>, 0> nonPrevailingSyms;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
+  // A tuple of (reference, extractedFile, sym). Used by --why-extract=.
+  SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
+      whyExtractRecords;
+  // A mapping from a symbol to an InputFile referencing it backward. Used by
+  // --warn-backrefs.
+  llvm::DenseMap<const Symbol *,
+                 std::pair<const InputFile *, const InputFile *>>
+      backwardReferences;
 };
 
 // The only instance of Ctx struct.

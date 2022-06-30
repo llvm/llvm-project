@@ -73,6 +73,8 @@ def AddOp : ComplexArithmeticOp<"add"> {
     %a = complex.add %b, %c : complex<f32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -363,6 +365,8 @@ def NegOp : ComplexUnaryOp<"neg", [SameOperandsAndResultType]> {
   }];
 
   let results = (outs Complex<AnyFloat>:$result);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -582,6 +586,27 @@ def ConjOp : ComplexUnaryOp<"conj", [SameOperandsAndResultType]> {
   }];
 
   let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
+// AngleOp
+//===----------------------------------------------------------------------===//
+
+def AngleOp : ComplexUnaryOp<"angle",
+                           [TypesMatchWith<"complex element type matches result type",
+                                           "complex", "result",
+                                           "$_self.cast<ComplexType>().getElementType()">]> {
+  let summary = "computes argument value of a complex number";
+  let description = [{
+    The `angle` op takes a single complex number and computes its argument value with a branch cut along the negative real axis.
+
+    Example:
+
+    ```mlir
+         %a = complex.angle %b : complex<f32>
+    ```
+  }];
+  let results = (outs AnyFloat:$result);
 }
 
 #endif // COMPLEX_OPS

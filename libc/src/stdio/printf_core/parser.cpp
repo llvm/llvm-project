@@ -137,7 +137,9 @@ FormatSection Parser::get_next_section() {
         section.conv_val_raw = bit_cast<fputil::FPBits<long double>::UIntType>(
             GET_ARG_VAL_SIMPLEST(long double, conv_index));
       break;
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
     case ('n'):
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
     case ('p'):
     case ('s'):
       section.conv_val_ptr = GET_ARG_VAL_SIMPLEST(void *, conv_index);
@@ -351,7 +353,9 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
         else
           conv_size = TYPE_DESC<long double>;
         break;
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
       case ('n'):
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
       case ('p'):
       case ('s'):
         conv_size = TYPE_DESC<void *>;

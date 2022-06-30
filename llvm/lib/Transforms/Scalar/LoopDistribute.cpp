@@ -600,7 +600,7 @@ private:
         {LLVMLoopDistributeFollowupAll,
          Part->hasDepCycle() ? LLVMLoopDistributeFollowupSequential
                              : LLVMLoopDistributeFollowupCoincident});
-    if (PartitionID.hasValue()) {
+    if (PartitionID) {
       Loop *NewLoop = Part->getDistributedLoop();
       NewLoop->setLoopID(PartitionID.getValue());
     }

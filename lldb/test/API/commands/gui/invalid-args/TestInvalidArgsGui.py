@@ -8,4 +8,4 @@ class GuiTestCase(TestBase):
     @skipIfCursesSupportMissing
     def test_reproducer_generate_invalid_invocation(self):
         self.expect("gui blub", error=True,
-                    substrs=["the gui command takes no arguments."])
+                    substrs=["'gui' doesn't take any arguments."])

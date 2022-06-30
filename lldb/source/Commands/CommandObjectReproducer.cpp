@@ -182,12 +182,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
-      return false;
-    }
-
     auto &r = Reproducer::Instance();
     if (auto generator = r.GetGenerator()) {
       generator->Keep();
@@ -260,12 +254,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
-      return false;
-    }
-
     auto &r = Reproducer::Instance();
 
     if (!r.IsCapturing()) {
@@ -309,12 +297,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
-      return false;
-    }
-
     auto &r = Reproducer::Instance();
     if (r.IsCapturing()) {
       result.GetOutputStream() << "Reproducer is in capture mode.\n";
@@ -394,12 +376,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
-      return false;
-    }
-
     llvm::Optional<Loader> loader_storage;
     Loader *loader =
         GetLoaderFromPathOrCurrent(loader_storage, result, m_options.file);

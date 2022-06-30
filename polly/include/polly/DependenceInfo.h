@@ -208,6 +208,15 @@ struct DependenceAnalysis final : public AnalysisInfoMixin<DependenceAnalysis> {
 
     /// Recompute dependences from schedule and memory accesses.
     const Dependences &recomputeDependences(Dependences::AnalysisLevel Level);
+
+    /// Invalidate the dependence information and recompute it when needed
+    /// again.
+    /// May be required when the underlaying Scop was changed in a way that
+    /// would add new dependencies (e.g. between new statement instances
+    /// insierted into the SCoP) or intentionally breaks existing ones. It is
+    /// not required when updating the schedule that conforms the existing
+    /// dependencies.
+    void abandonDependences();
   };
   Result run(Scop &S, ScopAnalysisManager &SAM,
              ScopStandardAnalysisResults &SAR);
@@ -240,6 +249,13 @@ public:
 
   /// Recompute dependences from schedule and memory accesses.
   const Dependences &recomputeDependences(Dependences::AnalysisLevel Level);
+
+  /// Invalidate the dependence information and recompute it when needed again.
+  /// May be required when the underlaying Scop was changed in a way that would
+  /// add new dependencies (e.g. between new statement instances insierted into
+  /// the SCoP) or intentionally breaks existing ones. It is not required when
+  /// updating the schedule that conforms the existing dependencies.
+  void abandonDependences();
 
   /// Compute the dependence information for the SCoP @p S.
   bool runOnScop(Scop &S) override;

@@ -92,7 +92,7 @@ Matcher<const std::vector<CodeCompletion> &> has(std::string Name,
                                                  CompletionItemKind K) {
   return Contains(AllOf(named(std::move(Name)), kind(K)));
 }
-MATCHER(isDocumented, "") { return arg.Documentation.hasValue(); }
+MATCHER(isDocumented, "") { return arg.Documentation.has_value(); }
 MATCHER(deprecated, "") { return arg.Deprecated; }
 
 std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {

@@ -783,7 +783,8 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
   unsigned DescNumOps = MCII->get(Opc).getNumOperands();
   if (MCII->get(Opc).TSFlags & SIInstrFlags::VOP3P) {
     convertVOP3PDPPInst(MI);
-  } else if (MCII->get(Opc).TSFlags & SIInstrFlags::VOPC) {
+  } else if ((MCII->get(Opc).TSFlags & SIInstrFlags::VOPC) ||
+             AMDGPU::isVOPC64DPP(Opc)) {
     convertVOPCDPPInst(MI);
   } else {
     // Insert dummy unused src modifiers.

@@ -945,7 +945,7 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
     test.assertFalse(error.Fail(),
                      "Process launch failed: %s" % (error.GetCString()))
 
-    test.assertEqual(process.GetState(), lldb.eStateStopped)
+    test.assertState(process.GetState(), lldb.eStateStopped)
 
     # Frame #0 should be at our breakpoint.
     threads = get_threads_stopped_at_breakpoint(

@@ -102,17 +102,14 @@ public:
   ///     The debugger instance where new Targets will be created as part of the
   ///     JSON data parsing.
   ///
-  /// \param[in] trace_session_file
-  ///     The contents of the trace session file describing the trace session.
-  ///     See \a TraceSessionFileParser::BuildSchema for more information about
-  ///     the schema of this JSON file.
+  /// \param[in] bundle_description
+  ///     The trace bundle description object describing the trace session.
   ///
-  /// \param[in] session_file_dir
-  ///     The path to the directory that contains the session file. It's used to
-  ///     resolved relative paths in the session file.
+  /// \param[in] bundle_dir
+  ///     The path to the directory that contains the trace bundle.
   static llvm::Expected<lldb::TraceSP>
   FindPluginForPostMortemProcess(Debugger &debugger,
-                                 const llvm::json::Value &trace_session_file,
+                                 const llvm::json::Value &bundle_description,
                                  llvm::StringRef session_file_dir);
 
   /// Find a trace plug-in to trace a live process.
@@ -170,9 +167,9 @@ public:
   ///
   /// \return
   ///     A \a TraceCursorUP. If the thread is not traced or its trace
-  ///     information failed to load, the corresponding error is embedded in the
-  ///     trace.
-  virtual lldb::TraceCursorUP GetCursor(Thread &thread) = 0;
+  ///     information failed to load, an \a llvm::Error is returned.
+  virtual llvm::Expected<lldb::TraceCursorUP>
+  CreateNewCursor(Thread &thread) = 0;
 
   /// Dump general info about a given thread's trace. Each Trace plug-in
   /// decides which data to show.

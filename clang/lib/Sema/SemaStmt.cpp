@@ -888,8 +888,7 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
     CommaVisitor(*this).Visit(CondExpr);
 
   if (!ConstevalOrNegatedConsteval && !elseStmt)
-    DiagnoseEmptyStmtBody(CondExpr->getEndLoc(), thenStmt,
-                          diag::warn_empty_if_body);
+    DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
 
   if (ConstevalOrNegatedConsteval ||
       StatementKind == IfStatementKind::Constexpr) {

@@ -385,8 +385,8 @@ body: |
     ; CHECK-LABEL: name: sched_barrier_mask_256
     ; CHECK: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DS_READ_U16_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_U16_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 3)
-    ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[DS_READ_U16_gfx9_]], [[DS_READ_U16_gfx9_]], implicit $exec
     ; CHECK-NEXT: [[DS_READ_U16_gfx9_1:%[0-9]+]]:vgpr_32 = DS_READ_U16_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 3)
+    ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[DS_READ_U16_gfx9_]], [[DS_READ_U16_gfx9_]], implicit $exec
     ; CHECK-NEXT: S_NOP 0
     ; CHECK-NEXT: DS_WRITE_B32 [[V_MUL_LO_U32_e64_]], [[DEF]], 0, 16, implicit $m0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 3)
     ; CHECK-NEXT: SCHED_BARRIER 256

@@ -3,7 +3,7 @@
 ; The difference between this and coro-split-musttail5.ll is that there is
 ; an extra bitcast instruction in the path, which makes it harder to
 ; optimize.
-; RUN: opt < %s -passes='cgscc(coro-split<optimizing>),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 declare void @fakeresume1(i64* align 8)
 

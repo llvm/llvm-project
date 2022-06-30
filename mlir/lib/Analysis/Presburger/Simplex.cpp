@@ -429,7 +429,7 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
 }
 
 void SymbolicLexSimplex::recordOutput(SymbolicLexMin &result) const {
-  Matrix output(0, domainPoly.getNumIds() + 1);
+  Matrix output(0, domainPoly.getNumVars() + 1);
   output.reserveRows(result.lexmin.getNumOutputs());
   for (const Unknown &u : var) {
     if (u.isSymbol)
@@ -1295,7 +1295,7 @@ void SimplexBase::appendVariable(unsigned count) {
 
 /// Add all the constraints from the given IntegerRelation.
 void SimplexBase::intersectIntegerRelation(const IntegerRelation &rel) {
-  assert(rel.getNumIds() == getNumVariables() &&
+  assert(rel.getNumVars() == getNumVariables() &&
          "IntegerRelation must have same dimensionality as simplex");
   for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i)
     addInequality(rel.getInequality(i));
