@@ -2520,17 +2520,14 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
             SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
       if (auto result = runtime->GetBitSize({this, type}, exe_scope))
         return result;
-      // If this is an expression context, perhaps the type was
-      // defined in the expression. In that case we don't have debug
-      // info for it, so defer to SwiftASTContext.
-      if (llvm::isa_and_nonnull<SwiftASTContextForExpressions>(
-              GetSwiftASTContext()))
-        return ReconstructType({this, type}).GetBitSize(exe_scope);
+      // Runtime failed, fallback to SwiftASTContext.
       LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Couldn't compute size of type %s using SwiftLanguageRuntime.",
                 AsMangledName(type));
-      return {};
+      if (auto *swift_ast_context = GetSwiftASTContext())
+        return swift_ast_context->GetBitSize(ReconstructType(type), exe_scope);
     }
+
 
     // FIXME: Move this to the top. Currently this causes VALIDATE
     // errors on resilient types, and Foundation overlay types. These
