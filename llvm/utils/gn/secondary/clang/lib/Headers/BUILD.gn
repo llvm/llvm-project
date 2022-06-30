@@ -156,6 +156,7 @@ copy("Headers") {
     "hexagon_types.h",
     "hlsl.h",
     "hlsl/hlsl_basic_types.h",
+    "hlsl/hlsl_intrinsics.h",
     "hresetintrin.h",
     "htmintrin.h",
     "htmxlintrin.h",
