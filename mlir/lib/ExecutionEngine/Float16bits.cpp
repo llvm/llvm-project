@@ -116,8 +116,8 @@ uint16_t float2bfloat(float floatValue) {
 
   // Least significant bit of resulting bfloat.
   uint32_t lsb = (floatBits.u >> kF32BfMantiBitDiff) & 1;
-  uint32_t rounding_bias = 0x7fff + lsb;
-  floatBits.u += rounding_bias;
+  uint32_t roundingBias = 0x7fff + lsb;
+  floatBits.u += roundingBias;
   bfloatBits = static_cast<uint16_t>(floatBits.u >> kF32BfMantiBitDiff);
   return bfloatBits;
 }

@@ -53,8 +53,7 @@ using namespace llvm::object;
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
 static bool isDebugSection(const SectionBase &Sec) {
-  return StringRef(Sec.Name).startswith(".debug") ||
-         StringRef(Sec.Name).startswith(".zdebug") || Sec.Name == ".gdb_index";
+  return StringRef(Sec.Name).startswith(".debug") || Sec.Name == ".gdb_index";
 }
 
 static bool isDWOSection(const SectionBase &Sec) {

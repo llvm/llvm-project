@@ -23,6 +23,8 @@
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
+#include "mlir/Conversion/MathToLibm/MathToLibm.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -2183,16 +2185,11 @@ struct XArrayCoorOpConversion
         assert(eleTy && "result must be a reference-like type");
         if (fir::characterWithDynamicLen(eleTy)) {
           assert(coor.lenParams().size() == 1);
-          auto bitsInChar = lowerTy().getKindMap().getCharacterBitsize(
-              eleTy.cast<fir::CharacterType>().getFKind());
-          auto scaling = genConstantIndex(loc, idxTy, rewriter, bitsInChar / 8);
-          auto scaledBySize =
-              rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, offset, scaling);
-          auto length =
-              integerCast(loc, rewriter, idxTy,
-                          adaptor.getOperands()[coor.lenParamsOffset()]);
-          offset = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, scaledBySize,
-                                                      length);
+          auto length = integerCast(loc, rewriter, idxTy,
+                                    operands[coor.lenParamsOffset()]);
+          offset =
+              rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, offset, length);
+
         } else {
           TODO(loc, "compute size of derived type with type parameters");
         }
@@ -3380,6 +3377,10 @@ public:
                                                             pattern);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           pattern);
+    // Convert math-like dialect operations, which can be produced
+    // when late math lowering mode is used, into llvm dialect.
+    mlir::populateMathToLLVMConversionPatterns(typeConverter, pattern);
+    mlir::populateMathToLibmConversionPatterns(pattern, /*benefit=*/0);
     mlir::ConversionTarget target{*context};
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     // The OpenMP dialect is legal for Operations without regions, for those

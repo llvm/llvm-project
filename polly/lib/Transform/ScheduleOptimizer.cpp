@@ -228,6 +228,7 @@ struct OptimizerAdditionalInfoTy {
   bool PatternOpts;
   bool Postopts;
   bool Prevect;
+  bool &DepsChanged;
 };
 
 class ScheduleTreeOptimizer final {
@@ -526,6 +527,7 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
         tryOptimizeMatMulPattern(Node, OAI->TTI, OAI->D);
     if (!PatternOptimizedSchedule.is_null()) {
       MatMulOpts++;
+      OAI->DepsChanged = true;
       return PatternOptimizedSchedule.release();
     }
   }
@@ -676,21 +678,21 @@ static void walkScheduleTreeForStatistics(isl::schedule Schedule, int Version) {
       &Version);
 }
 
-static bool runIslScheduleOptimizer(
+static void runIslScheduleOptimizer(
     Scop &S,
     function_ref<const Dependences &(Dependences::AnalysisLevel)> GetDeps,
     TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
-    isl::schedule &LastSchedule) {
+    isl::schedule &LastSchedule, bool &DepsChanged) {
 
   // Skip SCoPs in case they're already optimised by PPCGCodeGeneration
   if (S.isToBeSkipped())
-    return false;
+    return;
 
   // Skip empty SCoPs but still allow code generation as it will delete the
   // loops present but not needed.
   if (S.getSize() == 0) {
     S.markAsOptimized();
-    return false;
+    return;
   }
 
   ScopsProcessed++;
@@ -706,7 +708,7 @@ static bool runIslScheduleOptimizer(
         &S, Schedule, GetDeps(Dependences::AL_Statement), ORE);
     if (ManuallyTransformed.is_null()) {
       LLVM_DEBUG(dbgs() << "Error during manual optimization\n");
-      return false;
+      return;
     }
 
     if (ManuallyTransformed.get() != Schedule.get()) {
@@ -724,18 +726,18 @@ static bool runIslScheduleOptimizer(
   // metadata earlier in ScopDetection.
   if (!HasUserTransformation && S.hasDisableHeuristicsHint()) {
     LLVM_DEBUG(dbgs() << "Heuristic optimizations disabled by metadata\n");
-    return false;
+    return;
   }
 
   // Get dependency analysis.
   const Dependences &D = GetDeps(Dependences::AL_Statement);
   if (D.getSharedIslCtx() != S.getSharedIslCtx()) {
     LLVM_DEBUG(dbgs() << "DependenceInfo for another SCoP/isl_ctx\n");
-    return false;
+    return;
   }
   if (!D.hasValidDependences()) {
     LLVM_DEBUG(dbgs() << "Dependency information not available\n");
-    return false;
+    return;
   }
 
   // Apply ISL's algorithm only if not overriden by the user. Note that
@@ -769,7 +771,7 @@ static bool runIslScheduleOptimizer(
     isl::union_set Domain = S.getDomains();
 
     if (Domain.is_null())
-      return false;
+      return;
 
     isl::union_map Validity = D.getDependences(ValidityKinds);
     isl::union_map Proximity = D.getDependences(ProximityKinds);
@@ -847,7 +849,7 @@ static bool runIslScheduleOptimizer(
   // In cases the scheduler is not able to optimize the code, we just do not
   // touch the schedule.
   if (Schedule.is_null())
-    return false;
+    return;
 
   if (GreedyFusion) {
     isl::union_map Validity = D.getDependences(
@@ -858,10 +860,12 @@ static bool runIslScheduleOptimizer(
 
   // Apply post-rescheduling optimizations (if enabled) and/or prevectorization.
   const OptimizerAdditionalInfoTy OAI = {
-      TTI, const_cast<Dependences *>(&D),
+      TTI,
+      const_cast<Dependences *>(&D),
       /*PatternOpts=*/!HasUserTransformation && PMBasedOpts,
       /*Postopts=*/!HasUserTransformation && EnablePostopts,
-      /*Prevect=*/PollyVectorizerChoice != VECTORIZER_NONE};
+      /*Prevect=*/PollyVectorizerChoice != VECTORIZER_NONE,
+      DepsChanged};
   if (OAI.PatternOpts || OAI.Postopts || OAI.Prevect) {
     Schedule = ScheduleTreeOptimizer::optimizeSchedule(Schedule, &OAI);
     Schedule = hoistExtensionNodes(Schedule);
@@ -872,7 +876,7 @@ static bool runIslScheduleOptimizer(
   // Skip profitability check if user transformation(s) have been applied.
   if (!HasUserTransformation &&
       !ScheduleTreeOptimizer::isProfitableSchedule(S, Schedule))
-    return false;
+    return;
 
   auto ScopStats = S.getStatistics();
   ScopsOptimized++;
@@ -885,8 +889,6 @@ static bool runIslScheduleOptimizer(
 
   if (OptimizedScops)
     errs() << S;
-
-  return false;
 }
 
 bool IslScheduleOptimizerWrapperPass::runOnScop(Scop &S) {
@@ -904,7 +906,13 @@ bool IslScheduleOptimizerWrapperPass::runOnScop(Scop &S) {
       getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
   TargetTransformInfo *TTI =
       &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  return runIslScheduleOptimizer(S, getDependences, TTI, &ORE, LastSchedule);
+
+  bool DepsChanged = false;
+  runIslScheduleOptimizer(S, getDependences, TTI, &ORE, LastSchedule,
+                          DepsChanged);
+  if (DepsChanged)
+    getAnalysis<DependenceInfo>().abandonDependences();
+  return false;
 }
 
 static void runScheduleOptimizerPrinter(raw_ostream &OS,
@@ -971,22 +979,18 @@ runIslScheduleOptimizerUsingNPM(Scop &S, ScopAnalysisManager &SAM,
   OptimizationRemarkEmitter ORE(&S.getFunction());
   TargetTransformInfo *TTI = &SAR.TTI;
   isl::schedule LastSchedule;
-  bool Modified = runIslScheduleOptimizer(S, GetDeps, TTI, &ORE, LastSchedule);
+  bool DepsChanged = false;
+  runIslScheduleOptimizer(S, GetDeps, TTI, &ORE, LastSchedule, DepsChanged);
+  if (DepsChanged)
+    Deps.abandonDependences();
+
   if (OS) {
     *OS << "Printing analysis 'Polly - Optimize schedule of SCoP' for region: '"
         << S.getName() << "' in function '" << S.getFunction().getName()
         << "':\n";
     runScheduleOptimizerPrinter(*OS, LastSchedule);
   }
-
-  if (!Modified)
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
+  return PreservedAnalyses::all();
 }
 
 llvm::PreservedAnalyses

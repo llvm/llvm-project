@@ -190,7 +190,7 @@
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_4-L..JTI0_0
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_5-L..JTI0_0
 
-; FUNC-ASM:         .csect .jump_table[PR],2
+; FUNC-ASM:         .csect .jump_table[PR],5
 ; FUNC-ASM: L..BB0_2:
 ; FUNC-ASM: L..BB0_3:
 ; FUNC-ASM: L..BB0_4:

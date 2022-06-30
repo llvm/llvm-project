@@ -2,20 +2,10 @@
 ; RUN: opt %loadPolly -polly-parallel -polly-opt-isl -polly-codegen -S < %s | FileCheck --check-prefix=CODEGEN %s
 ; REQUIRES: asserts
 
-; Parellization of detected matrix-multiplication. The allocations
-; Packed_A and Packed_B must be passed to the outlined function.
-; llvm.org/PR43164
-;
-; #define N 1536
-; int foo(float A[N][N],float B[N][N],float C[N][N]) {
-;     for (int i = 0; i < N; i++) {
-;         for (int j = 0; j < N; j++) {
-;             for (int k = 0; k < N; k++)
-;                 C[i][j] = C[i][j] + A[i][k] * B[k][j];
-;         }
-;     }
-;     return 0;
-; }
+; Parallelization of detected matrix-multiplication.
+; Currently, this is not supported. Due to Packed_A/Packed_B not private
+; per-thread the outer loops cannot be parallelized and a
+; '#pragma omp parallel for' on an inner loop may impose too much overhead.
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.16.27034"
@@ -65,8 +55,6 @@ for.body8:
 }
 
 
-; AST: #pragma omp parallel for
+; AST-NOT: parallel
 
-; CODGEN-LABEL: define internal void @init_array_polly_subfn(i8* %polly.par.userContext)
-; CODEGEN: %polly.subfunc.arg.Packed_A = load
-; CODEGEN: %polly.subfunc.arg.Packed_B = load
+; CODEGEN-NOT: subfunc

@@ -41,6 +41,12 @@ def Test_Dialect : Dialect {
      ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
      void printType(::mlir::Type type,
                     ::mlir::DialectAsmPrinter &printer) const override;
+
+    /// Returns the external elements data manager for this dialect.
+    TestExternalElementsDataManager &getExternalDataManager() {
+      return externalDataManager;
+    }
+
   private:
     // Storage for a custom fallback interface.
     void *fallbackEffectOpInterfaces;
@@ -49,6 +55,9 @@ def Test_Dialect : Dialect {
                                ::llvm::SetVector<::mlir::Type> &stack) const;
     void printTestType(::mlir::Type type, ::mlir::AsmPrinter &printer,
                        ::llvm::SetVector<::mlir::Type> &stack) const;
+
+    /// An external data manager used to test external elements data.
+    TestExternalElementsDataManager externalDataManager;
   }];
 }
 

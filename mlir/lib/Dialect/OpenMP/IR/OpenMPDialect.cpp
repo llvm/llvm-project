@@ -748,8 +748,8 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &state,
         /*linear_step_vars=*/ValueRange(), /*reduction_vars=*/ValueRange(),
         /*reductions=*/nullptr, /*schedule_val=*/nullptr,
         /*schedule_chunk_var=*/nullptr, /*schedule_modifier=*/nullptr,
-        /*simd_modifier=*/false, /*collapse_val=*/nullptr, /*nowait=*/false,
-        /*ordered_val=*/nullptr, /*order_val=*/nullptr, /*inclusive=*/false);
+        /*simd_modifier=*/false, /*nowait=*/false, /*ordered_val=*/nullptr,
+        /*order_val=*/nullptr, /*inclusive=*/false);
   state.addAttributes(attributes);
 }
 

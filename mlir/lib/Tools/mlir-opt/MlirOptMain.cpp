@@ -57,19 +57,24 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
   bool wasThreadingEnabled = context->isMultithreadingEnabled();
   context->disableMultithreading();
 
-  // Parse the input file and reset the context threading state.
-  TimingScope parserTiming = timing.nest("Parser");
-  OwningOpRef<ModuleOp> module(parseSourceFile<ModuleOp>(sourceMgr, context));
-  context->enableMultithreading(wasThreadingEnabled);
-  if (!module)
-    return failure();
-  parserTiming.stop();
-
-  // Apply any pass manager command line options.
+  // Prepare the pass manager and apply any command line options.
   PassManager pm(context, OpPassManager::Nesting::Implicit);
   pm.enableVerifier(verifyPasses);
   applyPassManagerCLOptions(pm);
   pm.enableTiming(timing);
+
+  // Prepare the parser config, and attach any useful/necessary resource
+  // handlers.
+  ParserConfig config(context);
+  attachPassReproducerAsmResource(config, pm, wasThreadingEnabled);
+
+  // Parse the input file and reset the context threading state.
+  TimingScope parserTiming = timing.nest("Parser");
+  OwningOpRef<ModuleOp> module(parseSourceFile<ModuleOp>(sourceMgr, config));
+  context->enableMultithreading(wasThreadingEnabled);
+  if (!module)
+    return failure();
+  parserTiming.stop();
 
   // Callback to build the pipeline.
   if (failed(passManagerSetupFn(pm)))
@@ -145,6 +150,7 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
   // We use an explicit threadpool to avoid creating and joining/destroying
   // threads for each of the split.
   ThreadPool *threadPool = nullptr;
+
   // Create a temporary context for the sake of checking if
   // --mlir-disable-threading was passed on the command line.
   // We use the thread-pool this context is creating, and avoid
@@ -153,23 +159,15 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
   if (threadPoolCtx.isMultithreadingEnabled())
     threadPool = &threadPoolCtx.getThreadPool();
 
-  if (splitInputFile)
-    return splitAndProcessBuffer(
-        std::move(buffer),
-        [&](std::unique_ptr<MemoryBuffer> chunkBuffer, raw_ostream &os) {
-          LogicalResult result = processBuffer(
-              os, std::move(chunkBuffer), verifyDiagnostics, verifyPasses,
-              allowUnregisteredDialects, preloadDialectsInContext,
-              passManagerSetupFn, registry, threadPool);
-          os << "// -----\n";
-          return result;
-        },
-        outputStream);
-
-  return processBuffer(outputStream, std::move(buffer), verifyDiagnostics,
-                       verifyPasses, allowUnregisteredDialects,
-                       preloadDialectsInContext, passManagerSetupFn, registry,
-                       threadPool);
+  auto chunkFn = [&](std::unique_ptr<MemoryBuffer> chunkBuffer,
+                     raw_ostream &os) {
+    return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
+                         verifyPasses, allowUnregisteredDialects,
+                         preloadDialectsInContext, passManagerSetupFn, registry,
+                         threadPool);
+  };
+  return splitAndProcessBuffer(std::move(buffer), chunkFn, outputStream,
+                               splitInputFile, /*insertMarkerInOutput=*/true);
 }
 
 LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
@@ -226,11 +224,6 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
       "show-dialects", cl::desc("Print the list of registered dialects"),
       cl::init(false));
 
-  static cl::opt<bool> runRepro(
-      "run-reproducer",
-      cl::desc("Append the command line options of the reproducer"),
-      cl::init(false));
-
   InitLLVM y(argc, argv);
 
   // Register any command line options.
@@ -265,23 +258,6 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   if (!file) {
     llvm::errs() << errorMessage << "\n";
     return failure();
-  }
-
-  // Parse reproducer options.
-  BumpPtrAllocator a;
-  StringSaver saver(a);
-  if (runRepro) {
-    auto pair = file->getBuffer().split('\n');
-    if (!pair.first.consume_front("// configuration:")) {
-      llvm::errs() << "Failed to find repro configuration, expect file to "
-                      "begin with '// configuration:'\n";
-      return failure();
-    }
-    // Tokenize & parse the first line.
-    SmallVector<const char *, 4> newArgv;
-    newArgv.push_back(argv[0]);
-    llvm::cl::TokenizeGNUCommandLine(pair.first, saver, newArgv);
-    cl::ParseCommandLineOptions(newArgv.size(), &newArgv[0], helpHeader);
   }
 
   auto output = openOutputFile(outputFilename, &errorMessage);

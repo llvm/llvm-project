@@ -1405,6 +1405,11 @@ FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
   return createTargetRegisterAllocator(Optimized);
 }
 
+bool TargetPassConfig::isCustomizedRegAlloc() {
+  return RegAlloc !=
+         (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator;
+}
+
 bool TargetPassConfig::addRegAssignAndRewriteFast() {
   if (RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator &&
       RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator)

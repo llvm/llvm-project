@@ -1,4 +1,5 @@
-! RUN: bbc -emit-fir %s -o - --math-runtime=llvm | FileCheck %s
+! RUN: bbc -emit-fir %s -o - --math-runtime=llvm --outline-intrinsics | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=llvm -mllvm -outline-intrinsics %s -o - | FileCheck %s
 
       SUBROUTINE POW_WRAPPER(IN, IN2, OUT)
       DOUBLE PRECISION IN, IN2

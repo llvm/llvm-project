@@ -39,23 +39,25 @@ program p
 
   call nest
 
-  associate (x=>i)
-    ! CHECK: [[IVAL:%[0-9]+]] = fir.load [[I]] : !fir.ref<i32>
-    ! CHECK: [[TWO:%.*]] = arith.constant 2 : i32
-    ! CHECK: arith.cmpi eq, [[IVAL]], [[TWO]] : i32
-    ! CHECK: ^bb
-    if (x==2) goto 9
-    ! CHECK: [[IVAL:%[0-9]+]] = fir.load [[I]] : !fir.ref<i32>
-    ! CHECK: [[THREE:%.*]] = arith.constant 3 : i32
-    ! CHECK: arith.cmpi eq, [[IVAL]], [[THREE]] : i32
-    ! CHECK: ^bb
-    ! CHECK: fir.call @_FortranAStopStatementText
-    ! CHECK: fir.unreachable
-    ! CHECK: ^bb
-    if (x==3) stop 'Halt'
-    ! CHECK: fir.call @_FortranAioOutputAscii
-    print*, "ok"
+  do i=1,4
+    associate (x=>i)
+      ! CHECK: [[IVAL:%[0-9]+]] = fir.load [[I]] : !fir.ref<i32>
+      ! CHECK: [[TWO:%.*]] = arith.constant 2 : i32
+      ! CHECK: arith.cmpi eq, [[IVAL]], [[TWO]] : i32
+      ! CHECK: ^bb
+      if (x==2) goto 9
+      ! CHECK: [[IVAL:%[0-9]+]] = fir.load [[I]] : !fir.ref<i32>
+      ! CHECK: [[THREE:%.*]] = arith.constant 3 : i32
+      ! CHECK: arith.cmpi eq, [[IVAL]], [[THREE]] : i32
+      ! CHECK: ^bb
+      ! CHECK: fir.call @_FortranAStopStatementText
+      ! CHECK: fir.unreachable
+      ! CHECK: ^bb
+      if (x==3) stop 'Halt'
+      ! CHECK: fir.call @_FortranAioOutputAscii
+      print*, "ok"
   9 end associate
+  enddo
 end
 
 ! CHECK-LABEL: func @_QPfoo

@@ -1,8 +1,8 @@
-/* RUN: %clang_cc1 -std=c89 -verify=expected,c89only -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c99 -verify=expected,c99untilc2x -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c11 -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c17 -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c2x -verify=expected,c2xandup -pedantic %s
+/* RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c99 -fsyntax-only -verify=expected,c99untilc2x -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
+   RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
+   RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=expected,c2xandup -pedantic %s
  */
 
 /* The following are DRs which do not require tests to demonstrate
@@ -49,6 +49,28 @@
  *
  * WG14 DR146: yes
  * Nugatory constraint
+ *
+ * WG14 DR147: yes
+ * Sequence points in library functions
+ *
+ * WG14 DR148: yes
+ * Defining library functions
+ *
+ * WG14 DR149: yes
+ * The term "variable"
+ *
+ * WG14 DR154: yes
+ * Consistency of implementation-defined values
+ *
+ * WG14 DR159: yes
+ * Consistency of the C Standard Defects exist in the way the Standard refers
+ * to itself
+ *
+ * WG14 DR161: yes
+ * Details of reserved symbols
+ *
+ * WG14 DR169: yes
+ * Trigraphs
  */
 
 
@@ -330,4 +352,32 @@ void dr145(void) {
    * this DR properly or not.
    * static int i = array[0] + array[1]; broken-expected-error {{initializer element is not a compile-time constant}}
    */
+}
+
+/* WG14 DR150: yes
+ * Initialization of a char array from a string literal
+ */
+void dr150(void) {
+  /* Accept even though a string literal is not a constant expression. */
+  static char array[] = "Hello, World";
+}
+
+/* WG14 DR163: yes
+ * Undeclared identifiers
+ */
+void dr163(void) {
+  int i;
+  i = undeclared; /* expected-error {{use of undeclared identifier 'undeclared'}} */
+  sdfsdfsf = 1;   /* expected-error {{use of undeclared identifier 'sdfsdfsf'}} */
+  i = also_undeclared(); /* c99untilc2x-error {{call to undeclared function 'also_undeclared'; ISO C99 and later do not support implicit function declarations}}
+                            c2xandup-error {{use of undeclared identifier 'also_undeclared'}}
+                          */
+}
+
+/* WG14 DR164: yes
+ * Bad declarations
+ */
+void dr164(void) {
+  int a [][5];    /* expected-error {{definition of variable with array type needs an explicit size or an initializer}} */
+  int x, b [][5]; /* expected-error {{definition of variable with array type needs an explicit size or an initializer}} */
 }

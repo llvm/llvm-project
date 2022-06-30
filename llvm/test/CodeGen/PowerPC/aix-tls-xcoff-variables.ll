@@ -128,7 +128,7 @@
 ; SYMS-NEXT:       SectionLen: 0
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
-; SYMS-NEXT:       SymbolAlignmentLog2: 2
+; SYMS-NEXT:       SymbolAlignmentLog2: 5
 ; SYMS-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYMS-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; SYMS-NEXT:       StabInfoIndex: 0x0

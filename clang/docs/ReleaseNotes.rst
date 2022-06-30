@@ -273,6 +273,8 @@ Improvements to Clang's diagnostics
 - When using class templates without arguments, clang now tells developers
   that template arguments are missing in certain contexts.
   This fixes `Issue 55962 <https://github.com/llvm/llvm-project/issues/55962>`_.
+- Printable Unicode characters within `static_assert` messages are no longer
+  escaped.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

@@ -491,9 +491,6 @@ createMacroKernel(isl::schedule_node Node,
   Node = permuteBandNodeDimensions(Node, DimOutNum - 2, DimOutNum - 1);
   Node = permuteBandNodeDimensions(Node, DimOutNum - 3, DimOutNum - 1);
 
-  // Mark the outermost loop as parallelizable.
-  Node = Node.as<isl::schedule_node_band>().member_set_coincident(0, true);
-
   return Node.child(0).child(0);
 }
 

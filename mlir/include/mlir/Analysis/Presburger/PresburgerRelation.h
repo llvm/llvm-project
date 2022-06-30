@@ -44,11 +44,11 @@ public:
 
   explicit PresburgerRelation(const IntegerRelation &disjunct);
 
-  unsigned getNumDomainIds() const { return space.getNumDomainIds(); }
-  unsigned getNumRangeIds() const { return space.getNumRangeIds(); }
-  unsigned getNumSymbolIds() const { return space.getNumSymbolIds(); }
-  unsigned getNumLocalIds() const { return space.getNumLocalIds(); }
-  unsigned getNumIds() const { return space.getNumIds(); }
+  unsigned getNumDomainVars() const { return space.getNumDomainVars(); }
+  unsigned getNumRangeVars() const { return space.getNumRangeVars(); }
+  unsigned getNumSymbolVars() const { return space.getNumSymbolVars(); }
+  unsigned getNumLocalVars() const { return space.getNumLocalVars(); }
+  unsigned getNumVars() const { return space.getNumVars(); }
 
   /// Return the number of disjuncts in the union.
   unsigned getNumDisjuncts() const;
@@ -111,7 +111,7 @@ public:
   bool findIntegerSample(SmallVectorImpl<int64_t> &sample);
 
   /// Compute an overapproximation of the number of integer points in the
-  /// disjunct. Symbol ids are currently not supported. If the computed
+  /// disjunct. Symbol vars are currently not supported. If the computed
   /// overapproximation is infinite, an empty optional is returned.
   ///
   /// This currently just sums up the overapproximations of the volumes of the
@@ -128,6 +128,12 @@ public:
   /// Check whether all local ids in all disjuncts have a div representation.
   bool hasOnlyDivLocals() const;
 
+  /// Compute an equivalent representation of the same relation, such that all
+  /// local ids in all disjuncts have division representations. This
+  /// representation may involve local ids that correspond to divisions, and may
+  /// also be a union of convex disjuncts.
+  PresburgerRelation computeReprWithOnlyDivLocals() const;
+
   /// Print the set's internal state.
   void print(raw_ostream &os) const;
   void dump() const;
@@ -136,8 +142,8 @@ protected:
   /// Construct an empty PresburgerRelation with the specified number of
   /// dimension and symbols.
   explicit PresburgerRelation(const PresburgerSpace &space) : space(space) {
-    assert(space.getNumLocalIds() == 0 &&
-           "PresburgerRelation cannot have local ids.");
+    assert(space.getNumLocalVars() == 0 &&
+           "PresburgerRelation cannot have local vars.");
   }
 
   PresburgerSpace space;
@@ -174,9 +180,10 @@ protected:
   /// dimension and symbols.
   explicit PresburgerSet(const PresburgerSpace &space)
       : PresburgerRelation(space) {
-    assert(space.getNumDomainIds() == 0 && "Set type cannot have domain ids.");
-    assert(space.getNumLocalIds() == 0 &&
-           "PresburgerRelation cannot have local ids.");
+    assert(space.getNumDomainVars() == 0 &&
+           "Set type cannot have domain vars.");
+    assert(space.getNumLocalVars() == 0 &&
+           "PresburgerRelation cannot have local vars.");
   }
 };
 

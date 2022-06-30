@@ -86,6 +86,98 @@ func.func @contract_broadcast(
   return %1 : vector<8x32xf32>
 }
 
+// -----
+// Test that CombineContractBroadcast is able to combine a broadcast that
+// creates a unit dim that is consumed by a reduction iterator, dropping that
+// reduction iterator, as long as there is another reduction iterator left.
+
+#map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+// CHECK-DAG: #[[$map0:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$map1:.*]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$map2:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: contract_broadcast_unit_dim_reduction
+//  CHECK-SAME: (%[[ARG0:.+]]: vector<8x4xi32>, %[[ARG1:.+]]: vector<8x4xi32>, %[[ARG2:.+]]: vector<8x8xi32>)
+//  CHECK: vector.contract
+//  CHECK-SAME: indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]]
+//  CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]
+//  CHECK-SAME: %[[ARG0]], %[[ARG1]], %[[ARG2]] : vector<8x4xi32>, vector<8x4xi32> into vector<8x8xi32>
+func.func @contract_broadcast_unit_dim_reduction(%arg0 : vector<8x4xi32>, %arg1 : vector<8x4xi32>, %arg2 : vector<8x8xi32>) -> vector<8x8xi32> {
+    %0 = vector.broadcast %arg0 : vector<8x4xi32> to vector<1x8x4xi32>
+    %1 = vector.broadcast %arg1 : vector<8x4xi32> to vector<1x8x4xi32>
+    %result = vector.contract {
+        indexing_maps = [#map0, #map1, #map2],
+        iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+        kind = #vector.kind<add>
+      } %0, %1, %arg2 : vector<1x8x4xi32>, vector<1x8x4xi32> into vector<8x8xi32>
+    return %result : vector<8x8xi32>
+}
+
+// -----
+// Test that CombineContractBroadcast will not combine a broadcast that creates
+// a non-unit dim that is consumed by a reduction iterator.
+// Moreover, the affine_map's are permuting the position of that reduction
+// iterator with the position of a parallel iterator to ensure that
+// the logic guarding that case does not mix up dimensions here.
+
+#map0 = affine_map<(d0, d1, d2, d3) -> (d1, d0, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d1, d2, d3)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d0, d2)>
+
+// CHECK-DAG: #[[$map0:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, d0, d3)>
+// CHECK-DAG: #[[$map1:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, d2, d3)>
+// CHECK-DAG: #[[$map2:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d2)>
+
+// CHECK-LABEL: contract_broadcast_non_unit_dim_reduction_with_permutation
+//  CHECK-SAME: (%[[ARG0:.+]]: vector<8x4xi32>, %[[ARG1:.+]]: vector<8x4xi32>, %[[ARG2:.+]]: vector<8x8xi32>)
+//  CHECK: %[[BROADCAST0:.+]] = vector.broadcast %[[ARG0]] : vector<8x4xi32> to vector<2x8x4xi32>
+//  CHECK: %[[BROADCAST1:.+]] = vector.broadcast %[[ARG1]] : vector<8x4xi32> to vector<2x8x4xi32>
+//  CHECK: vector.contract
+//  CHECK-SAME: indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]]
+//  CHECK-SAME: iterator_types = ["parallel", "reduction", "parallel", "reduction"]
+//  CHECK-SAME: %[[BROADCAST0]], %[[BROADCAST1]], %[[ARG2]] : vector<2x8x4xi32>, vector<2x8x4xi32> into vector<8x8xi32>
+func.func @contract_broadcast_non_unit_dim_reduction_with_permutation(%arg0 : vector<8x4xi32>, %arg1 : vector<8x4xi32>, %arg2 : vector<8x8xi32>) -> vector<8x8xi32> {
+    %0 = vector.broadcast %arg0 : vector<8x4xi32> to vector<2x8x4xi32>
+    %1 = vector.broadcast %arg1 : vector<8x4xi32> to vector<2x8x4xi32>
+    %result = vector.contract {
+        indexing_maps = [#map0, #map1, #map2],
+        iterator_types = ["parallel", "reduction", "parallel", "reduction"],
+        kind = #vector.kind<add>
+      } %0, %1, %arg2 : vector<2x8x4xi32>, vector<2x8x4xi32> into vector<8x8xi32>
+    return %result : vector<8x8xi32>
+}
+
+// -----
+
+// Test that CombineContractBroadcast is not combining this case, as that would
+// result in dropping this contract's only reduction iterator.
+
+#map0 = affine_map<(d0, d1, d2) -> (d0, d1)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
+
+// CHECK-LABEL: contract_broadcast_unit_dim_reduction_as_only_reduction
+//  CHECK-SAME: (%[[ARG0:.+]]: vector<8xi32>, %[[ARG1:.+]]: vector<8xi32>, %[[ARG2:.+]]: vector<8x8xi32>)
+//  CHECK: %[[BROADCAST0:.+]] = vector.broadcast %[[ARG0]] : vector<8xi32> to vector<1x8xi32>
+//  CHECK: %[[BROADCAST1:.+]] = vector.broadcast %[[ARG1]] : vector<8xi32> to vector<1x8xi32>
+//  CHECK: vector.contract
+//  CHECK-SAME: indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]]
+//  CHECK-SAME: iterator_types = ["reduction", "parallel", "parallel"]
+//  CHECK-SAME: %[[BROADCAST0]], %[[BROADCAST1]], %[[ARG2]] : vector<1x8xi32>, vector<1x8xi32> into vector<8x8xi32>
+func.func @contract_broadcast_unit_dim_reduction_as_only_reduction(%arg0 : vector<8xi32>, %arg1 : vector<8xi32>, %arg2 : vector<8x8xi32>) -> vector<8x8xi32> {
+    %0 = vector.broadcast %arg0 : vector<8xi32> to vector<1x8xi32>
+    %1 = vector.broadcast %arg1 : vector<8xi32> to vector<1x8xi32>
+    %result = vector.contract {
+        indexing_maps = [#map0, #map1, #map2],
+        iterator_types = ["reduction", "parallel", "parallel"],
+        kind = #vector.kind<add>
+      } %0, %1, %arg2 : vector<1x8xi32>, vector<1x8xi32> into vector<8x8xi32>
+    return %result : vector<8x8xi32>
+}
+
 //===----------------------------------------------------------------------===//
 // Reorder casting ops and vector ops. The casting ops have almost identical
 // pattern, so only arith.extsi op is tested.

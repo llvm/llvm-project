@@ -62,10 +62,10 @@ static void applyFoldConstantExtractSlicePatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::ControlConstantExtractSliceFusionFn controlFn =
       [](tensor::ExtractSliceOp op) {
-        if (!op.source().hasOneUse())
+        if (!op.getSource().hasOneUse())
           return false;
 
-        auto resultType = op.result().getType().cast<ShapedType>();
+        auto resultType = op.getResult().getType().cast<ShapedType>();
         constexpr int64_t kConstantFoldingMaxNumElements = 1024;
         return resultType.getNumElements() <= kConstantFoldingMaxNumElements;
       };

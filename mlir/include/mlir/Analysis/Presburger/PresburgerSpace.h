@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Classes representing space information like number of identifiers and kind of
-// identifiers.
+// Classes representing space information like number of variables and kind of
+// variables.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,23 +23,23 @@
 namespace mlir {
 namespace presburger {
 
-/// Kind of identifier. Implementation wise SetDims are treated as Range
-/// ids, and spaces with no distinction between dimension ids are treated
-/// as relations with zero domain ids.
-enum class IdKind { Symbol, Local, Domain, Range, SetDim = Range };
+/// Kind of variable. Implementation wise SetDims are treated as Range
+/// vars, and spaces with no distinction between dimension vars are treated
+/// as relations with zero domain vars.
+enum class VarKind { Symbol, Local, Domain, Range, SetDim = Range };
 
 /// PresburgerSpace is the space of all possible values of a tuple of integer
-/// valued variables/identifiers. Each identifier has one of the three types:
+/// valued variables/variables. Each variable has one of the three types:
 ///
 /// Dimension: Ordinary variables over which the space is represented.
 ///
-/// Symbol: Symbol identifiers correspond to fixed but unknown values.
-/// Mathematically, a space with symbolic identifiers is like a
-/// family of spaces indexed by the symbolic identifiers.
+/// Symbol: Symbol variables correspond to fixed but unknown values.
+/// Mathematically, a space with symbolic variables is like a
+/// family of spaces indexed by the symbolic variables.
 ///
-/// Local: Local identifiers correspond to existentially quantified variables.
+/// Local: Local variables correspond to existentially quantified variables.
 /// For example, consider the space: `(x, exists q)` where x is a dimension
-/// identifier and q is a local identifier. Let us put the constraints:
+/// variable and q is a local variable. Let us put the constraints:
 ///       `1 <= x <= 7, x = 2q`
 /// on this space to get the set:
 ///       `(x) : (exists q : q <= x <= 7, x = 2q)`.
@@ -52,19 +52,19 @@ enum class IdKind { Symbol, Local, Domain, Range, SetDim = Range };
 /// i.e. we obtained {2, 4, 6} by projecting out the second dimension from
 /// {(2, 1), (4, 2), (6, 2)}.
 ///
-/// Dimension identifiers are further divided into Domain and Range identifiers
+/// Dimension variables are further divided into Domain and Range variables
 /// to support building relations.
 ///
-/// Identifiers are stored in the following order:
+/// Variables are stored in the following order:
 ///       [Domain, Range, Symbols, Locals]
 ///
-/// A space with no distinction between types of dimension identifiers can
-/// be implemented as a space with zero domain. IdKind::SetDim should be used
+/// A space with no distinction between types of dimension variables can
+/// be implemented as a space with zero domain. VarKind::SetDim should be used
 /// to refer to dimensions in such spaces.
 ///
-/// Compatibility of two spaces implies that number of identifiers of each kind
+/// Compatibility of two spaces implies that number of variables of each kind
 /// other than Locals are equal. Equality of two spaces implies that number of
-/// identifiers of each kind are equal.
+/// variables of each kind are equal.
 ///
 /// PresburgerSpace optionally also supports attaching attachments to each
 /// variable in space. `resetAttachments<AttachmentType>` enables attaching
@@ -91,67 +91,67 @@ public:
                            numLocals);
   }
 
-  unsigned getNumDomainIds() const { return numDomain; }
-  unsigned getNumRangeIds() const { return numRange; }
-  unsigned getNumSetDimIds() const { return numRange; }
-  unsigned getNumSymbolIds() const { return numSymbols; }
-  unsigned getNumLocalIds() const { return numLocals; }
+  unsigned getNumDomainVars() const { return numDomain; }
+  unsigned getNumRangeVars() const { return numRange; }
+  unsigned getNumSetDimVars() const { return numRange; }
+  unsigned getNumSymbolVars() const { return numSymbols; }
+  unsigned getNumLocalVars() const { return numLocals; }
 
-  unsigned getNumDimIds() const { return numDomain + numRange; }
-  unsigned getNumDimAndSymbolIds() const {
+  unsigned getNumDimVars() const { return numDomain + numRange; }
+  unsigned getNumDimAndSymbolVars() const {
     return numDomain + numRange + numSymbols;
   }
-  unsigned getNumIds() const {
+  unsigned getNumVars() const {
     return numDomain + numRange + numSymbols + numLocals;
   }
 
-  /// Get the number of ids of the specified kind.
-  unsigned getNumIdKind(IdKind kind) const;
+  /// Get the number of vars of the specified kind.
+  unsigned getNumVarKind(VarKind kind) const;
 
-  /// Return the index at which the specified kind of id starts.
-  unsigned getIdKindOffset(IdKind kind) const;
+  /// Return the index at which the specified kind of var starts.
+  unsigned getVarKindOffset(VarKind kind) const;
 
-  /// Return the index at Which the specified kind of id ends.
-  unsigned getIdKindEnd(IdKind kind) const;
+  /// Return the index at Which the specified kind of var ends.
+  unsigned getVarKindEnd(VarKind kind) const;
 
   /// Get the number of elements of the specified kind in the range
-  /// [idStart, idLimit).
-  unsigned getIdKindOverlap(IdKind kind, unsigned idStart,
-                            unsigned idLimit) const;
+  /// [varStart, varLimit).
+  unsigned getVarKindOverlap(VarKind kind, unsigned varStart,
+                             unsigned varLimit) const;
 
-  /// Return the IdKind of the id at the specified position.
-  IdKind getIdKindAt(unsigned pos) const;
+  /// Return the VarKind of the var at the specified position.
+  VarKind getVarKindAt(unsigned pos) const;
 
-  /// Insert `num` identifiers of the specified kind at position `pos`.
-  /// Positions are relative to the kind of identifier. Return the absolute
-  /// column position (i.e., not relative to the kind of identifier) of the
-  /// first added identifier.
+  /// Insert `num` variables of the specified kind at position `pos`.
+  /// Positions are relative to the kind of variable. Return the absolute
+  /// column position (i.e., not relative to the kind of variable) of the
+  /// first added variable.
   ///
   /// If attachments are being used, the newly added variables have no
   /// attachments.
-  unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1);
+  unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1);
 
-  /// Removes identifiers of the specified kind in the column range [idStart,
-  /// idLimit). The range is relative to the kind of identifier.
-  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
+  /// Removes variables of the specified kind in the column range [varStart,
+  /// varLimit). The range is relative to the kind of variable.
+  void removeVarRange(VarKind kind, unsigned varStart, unsigned varLimit);
 
   /// Swaps the posA^th variable of kindA and posB^th variable of kindB.
-  void swapId(IdKind kindA, IdKind kindB, unsigned posA, unsigned posB);
+  void swapVar(VarKind kindA, VarKind kindB, unsigned posA, unsigned posB);
 
   /// Returns true if both the spaces are compatible i.e. if both spaces have
-  /// the same number of identifiers of each kind (excluding locals).
+  /// the same number of variables of each kind (excluding locals).
   bool isCompatible(const PresburgerSpace &other) const;
 
-  /// Returns true if both the spaces are equal including local identifiers i.e.
-  /// if both spaces have the same number of identifiers of each kind (including
+  /// Returns true if both the spaces are equal including local variables i.e.
+  /// if both spaces have the same number of variables of each kind (including
   /// locals).
   bool isEqual(const PresburgerSpace &other) const;
 
   /// Changes the partition between dimensions and symbols. Depending on the new
-  /// symbol count, either a chunk of dimensional identifiers immediately before
+  /// symbol count, either a chunk of dimensional variables immediately before
   /// the split become symbols, or some of the symbols immediately after the
   /// split become dimensions.
-  void setDimSymbolSeparation(unsigned newSymbolCount);
+  void setVarSymbolSeperation(unsigned newSymbolCount);
 
   void print(llvm::raw_ostream &os) const;
   void dump() const;
@@ -163,7 +163,7 @@ public:
   /// Set the attachment for `i^th` variable to `attachment`. `T` here should
   /// match the type used to enable attachments.
   template <typename T>
-  void setAttachment(IdKind kind, unsigned i, T attachment) {
+  void setAttachment(VarKind kind, unsigned i, T attachment) {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(TypeID::get<T>() == attachmentType && "Type mismatch");
 #endif
@@ -174,7 +174,7 @@ public:
   /// Get the attachment for `i^th` variable casted to type `T`. `T` here
   /// should match the type used to enable attachments.
   template <typename T>
-  T getAttachment(IdKind kind, unsigned i) const {
+  T getAttachment(VarKind kind, unsigned i) const {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(TypeID::get<T>() == attachmentType && "Type mismatch");
 #endif
@@ -184,7 +184,7 @@ public:
 
   /// Check if the i^th variable of the specified kind has a non-null
   /// attachment.
-  bool hasAttachment(IdKind kind, unsigned i) const {
+  bool hasAttachment(VarKind kind, unsigned i) const {
     return atAttachment(kind, i) != nullptr;
   }
 
@@ -193,14 +193,14 @@ public:
   bool isAligned(const PresburgerSpace &other) const;
   /// Check if the number of variables of the specified kind match, and have
   /// same attachments with the other space.
-  bool isAligned(const PresburgerSpace &other, IdKind kind) const;
+  bool isAligned(const PresburgerSpace &other, VarKind kind) const;
 
   /// Find the variable of the specified kind with attachment `val`.
   /// PresburgerSpace::kIdNotFound if attachment is not found.
   template <typename T>
-  unsigned findId(IdKind kind, T val) const {
+  unsigned findId(VarKind kind, T val) const {
     unsigned i = 0;
-    for (unsigned e = getNumIdKind(kind); i < e; ++i)
+    for (unsigned e = getNumVarKind(kind); i < e; ++i)
       if (hasAttachment(kind, i) && getAttachment<T>(kind, i) == val)
         return i;
     return kIdNotFound;
@@ -215,7 +215,7 @@ public:
   template <typename T>
   void resetAttachments() {
     attachments.clear();
-    attachments.resize(getNumDimAndSymbolIds());
+    attachments.resize(getNumDimAndSymbolVars());
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     attachmentType = TypeID::get<T>();
 #endif
@@ -235,32 +235,34 @@ protected:
       : numDomain(numDomain), numRange(numRange), numSymbols(numSymbols),
         numLocals(numLocals) {}
 
-  void *&atAttachment(IdKind kind, unsigned i) {
+  void *&atAttachment(VarKind kind, unsigned i) {
     assert(usingAttachments &&
            "Cannot access attachments when `usingAttachments` is false.");
-    assert(kind != IdKind::Local && "Local variables cannot have attachments.");
-    return attachments[getIdKindOffset(kind) + i];
+    assert(kind != VarKind::Local &&
+           "Local variables cannot have attachments.");
+    return attachments[getVarKindOffset(kind) + i];
   }
 
-  void *atAttachment(IdKind kind, unsigned i) const {
+  void *atAttachment(VarKind kind, unsigned i) const {
     assert(usingAttachments &&
            "Cannot access attachments when `usingAttachments` is false.");
-    assert(kind != IdKind::Local && "Local variables cannot have attachments.");
-    return attachments[getIdKindOffset(kind) + i];
+    assert(kind != VarKind::Local &&
+           "Local variables cannot have attachments.");
+    return attachments[getVarKindOffset(kind) + i];
   }
 
 private:
-  // Number of identifiers corresponding to domain identifiers.
+  // Number of variables corresponding to domain variables.
   unsigned numDomain;
 
-  // Number of identifiers corresponding to range identifiers.
+  // Number of variables corresponding to range variables.
   unsigned numRange;
 
-  /// Number of identifiers corresponding to symbols (unknown but constant for
+  /// Number of variables corresponding to symbols (unknown but constant for
   /// analysis).
   unsigned numSymbols;
 
-  /// Number of identifers corresponding to locals (identifiers corresponding
+  /// Number of variables corresponding to locals (variables corresponding
   /// to existentially quantified variables).
   unsigned numLocals;
 
@@ -272,7 +274,7 @@ private:
   TypeID attachmentType;
 #endif
 
-  /// Stores a attachment for each non-local identifier as a `void` pointer.
+  /// Stores a attachment for each non-local variable as a `void` pointer.
   SmallVector<void *, 0> attachments;
 };
 

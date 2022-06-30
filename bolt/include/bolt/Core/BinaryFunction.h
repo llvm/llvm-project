@@ -887,8 +887,9 @@ public:
 
   /// Update layout of basic blocks used for output.
   void updateBasicBlockLayout(BasicBlockOrderType &NewLayout) {
-    BasicBlocksPreviousLayout = BasicBlocksLayout;
+    assert(NewLayout.size() == BasicBlocks.size() && "Layout size mismatch.");
 
+    BasicBlocksPreviousLayout = BasicBlocksLayout;
     if (NewLayout != BasicBlocksLayout) {
       ModifiedLayout = true;
       BasicBlocksLayout.clear();

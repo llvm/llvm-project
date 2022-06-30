@@ -5,10 +5,10 @@
 // CHECK: !test.type_with_format<2147, three = "hi", two = "hi">
 func.func private @test_roundtrip_parameter_parsers(!test.type_with_format<111, three = #test<"attr_ugly begin 5 : index end">, two = "foo">) -> !test.type_with_format<2147, two = "hi", three = "hi">
 attributes {
-  // CHECK: #test.attr_with_format<3 : two = "hello", four = [1, 2, 3] : 42 : i64>
-  attr0 = #test.attr_with_format<3 : two = "hello", four = [1, 2, 3] : 42 : i64>,
-  // CHECK: #test.attr_with_format<5 : two = "a_string", four = [4, 5, 6, 7, 8] : 8 : i8>
-  attr1 = #test.attr_with_format<5 : two = "a_string", four = [4, 5, 6, 7, 8] : 8 : i8>,
+  // CHECK: #test.attr_with_format<3 : two = "hello", four = [1, 2, 3] : 42 : i64, [ 10 : i16]
+  attr0 = #test.attr_with_format<3 : two = "hello", four = [1, 2, 3] : 42 : i64, [10 : i16]>,
+  // CHECK: #test.attr_with_format<5 : two = "a_string", four = [4, 5, 6, 7, 8] : 8 : i8, [ 10 : i16]>,
+  attr1 = #test.attr_with_format<5 : two = "a_string", four = [4, 5, 6, 7, 8] : 8 : i8, [10 : i16]>,
   // CHECK: #test<"attr_ugly begin 5 : index end">
   attr2 = #test<"attr_ugly begin 5 : index end">,
   // CHECK: #test.attr_params<42, 24>

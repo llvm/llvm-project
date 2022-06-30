@@ -92,7 +92,7 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
 
   // Length Modifier Tests.
 
-  written = __llvm_libc::sprintf(buff, "%hhu", 257); // 0x10001
+  written = __llvm_libc::sprintf(buff, "%hhu", 257); // 0x101
   EXPECT_EQ(written, 1);
   ASSERT_STREQ(buff, "1");
 
@@ -482,6 +482,41 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
   EXPECT_EQ(written, 26);
   ASSERT_STREQ(buff, "0077 01000000000000 002   ");
 }
+
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
+TEST(LlvmLibcSPrintfTest, WriteIntConv) {
+  char buff[64];
+  int written;
+  int test_val = -1;
+
+  test_val = -1;
+  written = __llvm_libc::sprintf(buff, "12345%n67890", &test_val);
+  EXPECT_EQ(written, 10);
+  EXPECT_EQ(test_val, 5);
+  ASSERT_STREQ(buff, "1234567890");
+
+  test_val = -1;
+  written = __llvm_libc::sprintf(buff, "%n", &test_val);
+  EXPECT_EQ(written, 0);
+  EXPECT_EQ(test_val, 0);
+  ASSERT_STREQ(buff, "");
+
+  test_val = 0x100;
+  written = __llvm_libc::sprintf(buff, "ABC%hhnDEF", &test_val);
+  EXPECT_EQ(written, 6);
+  EXPECT_EQ(test_val, 0x103);
+  ASSERT_STREQ(buff, "ABCDEF");
+
+  test_val = -1;
+  written = __llvm_libc::sprintf(buff, "%s%n", "87654321", &test_val);
+  EXPECT_EQ(written, 8);
+  EXPECT_EQ(test_val, 8);
+  ASSERT_STREQ(buff, "87654321");
+
+  written = __llvm_libc::sprintf(buff, "abc123%n", nullptr);
+  EXPECT_LT(written, 0);
+}
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
 
 #ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
 TEST(LlvmLibcSPrintfTest, IndexModeParsing) {

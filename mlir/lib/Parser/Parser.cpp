@@ -13,6 +13,7 @@
 #include "Parser.h"
 #include "AsmParserImpl.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
@@ -289,6 +290,48 @@ ParseResult Parser::parseFloatFromIntegerLiteral(
   result = APFloat(semantics, apInt);
 
   return success();
+}
+
+ParseResult Parser::parseOptionalKeyword(StringRef *keyword) {
+  // Check that the current token is a keyword.
+  if (!isCurrentTokenAKeyword())
+    return failure();
+
+  *keyword = getTokenSpelling();
+  consumeToken();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Resource Parsing
+
+FailureOr<AsmDialectResourceHandle>
+Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
+                            StringRef &name) {
+  assert(dialect && "expected valid dialect interface");
+  SMLoc nameLoc = getToken().getLoc();
+  if (failed(parseOptionalKeyword(&name)))
+    return emitError("expected identifier key for 'resource' entry");
+  auto &resources = getState().symbols.dialectResources;
+
+  // If this is the first time encountering this handle, ask the dialect to
+  // resolve a reference to this handle. This allows for us to remap the name of
+  // the handle if necessary.
+  std::pair<std::string, AsmDialectResourceHandle> &entry =
+      resources[dialect][name];
+  if (entry.first.empty()) {
+    FailureOr<AsmDialectResourceHandle> result = dialect->declareResource(name);
+    if (failed(result)) {
+      return emitError(nameLoc)
+             << "unknown 'resource' key '" << name << "' for dialect '"
+             << dialect->getDialect()->getNamespace() << "'";
+    }
+    entry.first = dialect->getResourceKey(*result);
+    entry.second = *result;
+  }
+
+  name = entry.first;
+  return entry.second;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2064,17 +2107,103 @@ public:
 
 private:
   /// Parse an attribute alias declaration.
+  ///
+  ///   attribute-alias-def ::= '#' alias-name `=` attribute-value
+  ///
   ParseResult parseAttributeAliasDef();
 
-  /// Parse an attribute alias declaration.
+  /// Parse a type alias declaration.
+  ///
+  ///   type-alias-def ::= '!' alias-name `=` type
+  ///
   ParseResult parseTypeAliasDef();
+
+  /// Parse a top-level file metadata dictionary.
+  ///
+  ///   file-metadata-dict ::= '{-#' file-metadata-entry* `#-}'
+  ///
+  ParseResult parseFileMetadataDictionary();
+
+  /// Parse a resource metadata dictionary.
+  ParseResult parseResourceFileMetadata(
+      function_ref<ParseResult(StringRef, SMLoc)> parseBody);
+  ParseResult parseDialectResourceFileMetadata();
+  ParseResult parseExternalResourceFileMetadata();
+};
+
+/// This class represents an implementation of a resource entry for the MLIR
+/// textual format.
+class ParsedResourceEntry : public AsmParsedResourceEntry {
+public:
+  ParsedResourceEntry(StringRef key, SMLoc keyLoc, Token value, Parser &p)
+      : key(key), keyLoc(keyLoc), value(value), p(p) {}
+  ~ParsedResourceEntry() override = default;
+
+  StringRef getKey() const final { return key; }
+
+  InFlightDiagnostic emitError() const final { return p.emitError(keyLoc); }
+
+  FailureOr<bool> parseAsBool() const final {
+    if (value.is(Token::kw_true))
+      return true;
+    if (value.is(Token::kw_false))
+      return false;
+    return p.emitError(value.getLoc(),
+                       "expected 'true' or 'false' value for key '" + key +
+                           "'");
+  }
+
+  FailureOr<std::string> parseAsString() const final {
+    if (value.isNot(Token::string))
+      return p.emitError(value.getLoc(),
+                         "expected string value for key '" + key + "'");
+    return value.getStringValue();
+  }
+
+  FailureOr<AsmResourceBlob>
+  parseAsBlob(BlobAllocatorFn allocator) const final {
+    // Blob data within then textual format is represented as a hex string.
+    // TODO: We could avoid an additional alloc+copy here if we pre-allocated
+    // the buffer to use during hex processing.
+    Optional<std::string> blobData =
+        value.is(Token::string) ? value.getHexStringValue() : llvm::None;
+    if (!blobData)
+      return p.emitError(value.getLoc(),
+                         "expected hex string blob for key '" + key + "'");
+
+    // Extract the alignment of the blob data, which gets stored at the
+    // beginning of the string.
+    if (blobData->size() < sizeof(uint32_t)) {
+      return p.emitError(value.getLoc(),
+                         "expected hex string blob for key '" + key +
+                             "' to encode alignment in first 4 bytes");
+    }
+    uint32_t align = 0;
+    memcpy(&align, blobData->data(), sizeof(uint32_t));
+
+    // Get the data portion of the blob.
+    StringRef data = StringRef(*blobData).drop_front(sizeof(uint32_t));
+    if (data.empty())
+      return AsmResourceBlob();
+
+    // Allocate memory for the blob using the provided allocator and copy the
+    // data into it.
+    AsmResourceBlob blob = allocator(data.size(), align);
+    assert(llvm::isAddrAligned(llvm::Align(align), blob.getData().data()) &&
+           blob.isMutable() &&
+           "blob allocator did not return a properly aligned address");
+    memcpy(blob.getMutableData().data(), data.data(), data.size());
+    return blob;
+  }
+
+private:
+  StringRef key;
+  SMLoc keyLoc;
+  Token value;
+  Parser &p;
 };
 } // namespace
 
-/// Parses an attribute alias declaration.
-///
-///   attribute-alias-def ::= '#' alias-name `=` attribute-value
-///
 ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
   assert(getToken().is(Token::hash_identifier));
   StringRef aliasName = getTokenSpelling().drop_front();
@@ -2103,10 +2232,6 @@ ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
   return success();
 }
 
-/// Parse a type alias declaration.
-///
-///   type-alias-def ::= '!' alias-name `=` type
-///
 ParseResult TopLevelOperationParser::parseTypeAliasDef() {
   assert(getToken().is(Token::exclamation_identifier));
   StringRef aliasName = getTokenSpelling().drop_front();
@@ -2133,6 +2258,108 @@ ParseResult TopLevelOperationParser::parseTypeAliasDef() {
   // Register this alias with the parser state.
   state.symbols.typeAliasDefinitions.try_emplace(aliasName, aliasedType);
   return success();
+}
+
+ParseResult TopLevelOperationParser::parseFileMetadataDictionary() {
+  consumeToken(Token::file_metadata_begin);
+  return parseCommaSeparatedListUntil(
+      Token::file_metadata_end, [&]() -> ParseResult {
+        // Parse the key of the metadata dictionary.
+        SMLoc keyLoc = getToken().getLoc();
+        StringRef key;
+        if (failed(parseOptionalKeyword(&key)))
+          return emitError("expected identifier key in file "
+                           "metadata dictionary");
+        if (parseToken(Token::colon, "expected ':'"))
+          return failure();
+
+        // Process the metadata entry.
+        if (key == "dialect_resources")
+          return parseDialectResourceFileMetadata();
+        if (key == "external_resources")
+          return parseExternalResourceFileMetadata();
+        return emitError(keyLoc, "unknown key '" + key +
+                                     "' in file metadata dictionary");
+      });
+}
+
+ParseResult TopLevelOperationParser::parseResourceFileMetadata(
+    function_ref<ParseResult(StringRef, SMLoc)> parseBody) {
+  if (parseToken(Token::l_brace, "expected '{'"))
+    return failure();
+
+  return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
+    // Parse the top-level name entry.
+    SMLoc nameLoc = getToken().getLoc();
+    StringRef name;
+    if (failed(parseOptionalKeyword(&name)))
+      return emitError("expected identifier key for 'resource' entry");
+
+    if (parseToken(Token::colon, "expected ':'") ||
+        parseToken(Token::l_brace, "expected '{'"))
+      return failure();
+    return parseBody(name, nameLoc);
+  });
+}
+
+ParseResult TopLevelOperationParser::parseDialectResourceFileMetadata() {
+  return parseResourceFileMetadata([&](StringRef name,
+                                       SMLoc nameLoc) -> ParseResult {
+    // Lookup the dialect and check that it can handle a resource entry.
+    Dialect *dialect = getContext()->getOrLoadDialect(name);
+    if (!dialect)
+      return emitError(nameLoc, "dialect '" + name + "' is unknown");
+    const auto *handler = dyn_cast<OpAsmDialectInterface>(dialect);
+    if (!handler) {
+      return emitError() << "unexpected 'resource' section for dialect '"
+                         << dialect->getNamespace() << "'";
+    }
+
+    return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
+      // Parse the name of the resource entry.
+      SMLoc keyLoc = getToken().getLoc();
+      StringRef key;
+      if (failed(parseResourceHandle(handler, key)) ||
+          parseToken(Token::colon, "expected ':'"))
+        return failure();
+      Token valueTok = getToken();
+      consumeToken();
+
+      ParsedResourceEntry entry(key, keyLoc, valueTok, *this);
+      return handler->parseResource(entry);
+    });
+  });
+}
+
+ParseResult TopLevelOperationParser::parseExternalResourceFileMetadata() {
+  return parseResourceFileMetadata([&](StringRef name,
+                                       SMLoc nameLoc) -> ParseResult {
+    AsmResourceParser *handler = state.config.getResourceParser(name);
+
+    // TODO: Should we require handling external resources in some scenarios?
+    if (!handler) {
+      emitWarning(getEncodedSourceLocation(nameLoc))
+          << "ignoring unknown external resources for '" << name << "'";
+    }
+
+    return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
+      // Parse the name of the resource entry.
+      SMLoc keyLoc = getToken().getLoc();
+      StringRef key;
+      if (failed(parseOptionalKeyword(&key)))
+        return emitError(
+            "expected identifier key for 'external_resources' entry");
+      if (parseToken(Token::colon, "expected ':'"))
+        return failure();
+      Token valueTok = getToken();
+      consumeToken();
+
+      if (!handler)
+        return success();
+      ParsedResourceEntry entry(key, keyLoc, valueTok, *this);
+      return handler->parseResource(entry);
+    });
+  });
 }
 
 ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
@@ -2179,6 +2406,12 @@ ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
       if (parseTypeAliasDef())
         return failure();
       break;
+
+      // Parse a file-level metadata dictionary.
+    case Token::file_metadata_begin:
+      if (parseFileMetadataDictionary())
+        return failure();
+      break;
     }
   }
 }
@@ -2186,50 +2419,51 @@ ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
 //===----------------------------------------------------------------------===//
 
 LogicalResult mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr,
-                                    Block *block, MLIRContext *context,
+                                    Block *block, const ParserConfig &config,
                                     LocationAttr *sourceFileLoc,
                                     AsmParserState *asmState) {
   const auto *sourceBuf = sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID());
 
-  Location parserLoc = FileLineColLoc::get(
-      context, sourceBuf->getBufferIdentifier(), /*line=*/0, /*column=*/0);
+  Location parserLoc =
+      FileLineColLoc::get(config.getContext(), sourceBuf->getBufferIdentifier(),
+                          /*line=*/0, /*column=*/0);
   if (sourceFileLoc)
     *sourceFileLoc = parserLoc;
 
   SymbolState aliasState;
-  ParserState state(sourceMgr, context, aliasState, asmState);
+  ParserState state(sourceMgr, config, aliasState, asmState);
   return TopLevelOperationParser(state).parse(block, parserLoc);
 }
 
 LogicalResult mlir::parseSourceFile(llvm::StringRef filename, Block *block,
-                                    MLIRContext *context,
+                                    const ParserConfig &config,
                                     LocationAttr *sourceFileLoc) {
   llvm::SourceMgr sourceMgr;
-  return parseSourceFile(filename, sourceMgr, block, context, sourceFileLoc);
+  return parseSourceFile(filename, sourceMgr, block, config, sourceFileLoc);
 }
 
 LogicalResult mlir::parseSourceFile(llvm::StringRef filename,
                                     llvm::SourceMgr &sourceMgr, Block *block,
-                                    MLIRContext *context,
+                                    const ParserConfig &config,
                                     LocationAttr *sourceFileLoc,
                                     AsmParserState *asmState) {
   if (sourceMgr.getNumBuffers() != 0) {
     // TODO: Extend to support multiple buffers.
-    return emitError(mlir::UnknownLoc::get(context),
+    return emitError(mlir::UnknownLoc::get(config.getContext()),
                      "only main buffer parsed at the moment");
   }
   auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(filename);
   if (std::error_code error = fileOrErr.getError())
-    return emitError(mlir::UnknownLoc::get(context),
+    return emitError(mlir::UnknownLoc::get(config.getContext()),
                      "could not open input file " + filename);
 
   // Load the MLIR source file.
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
-  return parseSourceFile(sourceMgr, block, context, sourceFileLoc, asmState);
+  return parseSourceFile(sourceMgr, block, config, sourceFileLoc, asmState);
 }
 
 LogicalResult mlir::parseSourceString(llvm::StringRef sourceStr, Block *block,
-                                      MLIRContext *context,
+                                      const ParserConfig &config,
                                       LocationAttr *sourceFileLoc) {
   auto memBuffer = MemoryBuffer::getMemBuffer(sourceStr);
   if (!memBuffer)
@@ -2237,5 +2471,5 @@ LogicalResult mlir::parseSourceString(llvm::StringRef sourceStr, Block *block,
 
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  return parseSourceFile(sourceMgr, block, context, sourceFileLoc);
+  return parseSourceFile(sourceMgr, block, config, sourceFileLoc);
 }

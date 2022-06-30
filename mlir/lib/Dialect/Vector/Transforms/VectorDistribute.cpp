@@ -15,6 +15,8 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Transforms/SideEffectUtils.h"
 
+#include <utility>
+
 using namespace mlir;
 using namespace mlir::vector;
 
@@ -281,7 +283,7 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
   WarpOpTransferWrite(MLIRContext *ctx, DistributionMapFn fn,
                       PatternBenefit b = 1)
       : OpRewritePattern<vector::TransferWriteOp>(ctx, b),
-        distributionMapFn(fn) {}
+        distributionMapFn(std::move(fn)) {}
 
   /// Distribute the TransferWriteOp. Only 1D distributions and vector dims that
   /// are multiples of the distribution ratio are supported at the moment.
@@ -815,7 +817,7 @@ void mlir::vector::populateWarpExecuteOnLane0OpToScfForPattern(
 }
 
 void mlir::vector::populateDistributeTransferWriteOpPatterns(
-    RewritePatternSet &patterns, DistributionMapFn distributionMapFn) {
+    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn) {
   patterns.add<WarpOpTransferWrite>(patterns.getContext(), distributionMapFn);
 }
 

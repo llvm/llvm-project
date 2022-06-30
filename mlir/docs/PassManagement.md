@@ -1262,22 +1262,31 @@ generate reproducibles in the event of a crash, or a
 `mlir-pass-pipeline-crash-reproducer`. In either case, an argument is provided that
 corresponds to the output `.mlir` file name that the reproducible should be
 written to. The reproducible contains the configuration of the pass manager that
-was executing, as well as the initial IR before any passes were run. A potential
-reproducible may have the form:
+was executing, as well as the initial IR before any passes were run. The reproducer
+is stored within the assembly format as an external resource. A potential reproducible
+may have the form:
 
 ```mlir
-// configuration: -pass-pipeline='func.func(cse,canonicalize),inline' -verify-each
-
 module {
   func.func @foo() {
     ...
   }
 }
+
+{-#
+  external_resources: {
+    mlir_reproducer: {
+      pipeline: "func.func(cse,canonicalize),inline",
+      disable_threading: true,
+      verify_each: true
+    }
+  }
+#-}
 ```
 
 The configuration dumped can be passed to `mlir-opt` by specifying
-`-run-reproducer` flag. This will result in parsing the first line configuration
-of the reproducer and adding those to the command line options.
+`-run-reproducer` flag. This will result in parsing the configuration of the reproducer
+and adjusting the necessary opt state, e.g. configuring the pass manager, context, etc.
 
 Beyond specifying a filename, one can also register a `ReproducerStreamFactory`
 function that would be invoked in the case of a crash and the reproducer written
@@ -1297,15 +1306,23 @@ not always be available.
 Note: Local reproducer generation requires that multi-threading is
 disabled(`-mlir-disable-threading`)
 
-For example, if the failure in the previous example came from `canonicalize`,
-the following reproducer will be generated:
+For example, if the failure in the previous example came from the `canonicalize` pass,
+the following reproducer would be generated:
 
 ```mlir
-// configuration: -pass-pipeline='func.func(canonicalize)' -verify-each -mlir-disable-threading
-
 module {
   func.func @foo() {
     ...
   }
 }
+
+{-#
+  external_resources: {
+    mlir_reproducer: {
+      pipeline: "func.func(canonicalize)",
+      disable_threading: true,
+      verify_each: true
+    }
+  }
+#-}
 ```

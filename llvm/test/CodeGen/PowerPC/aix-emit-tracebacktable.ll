@@ -141,7 +141,7 @@ entry:
 }
 
 ; CHECK-ASM-LABEL:  ._Z10add_structifd1SP2SD1Di:{{[[:space:]] *}}# %bb.0:
-; CHECK-FUNC-LABEL: csect ._Z10add_structifd1SP2SD1Di[PR],2{{[[:space:]] *}}# %bb.0:
+; CHECK-FUNC-LABEL: csect ._Z10add_structifd1SP2SD1Di[PR],5{{[[:space:]] *}}# %bb.0:
 ; COMMON-NEXT:   lwz 4, L..C0(2)
 ; COMMON-NEXT:   stfs 1, -24(1)
 ; COMMON-NEXT:   lfs 0, 0(4)
@@ -174,7 +174,7 @@ entry:
 
 
 ; CHECK-ASM-LABEL:     .main:{{[[:space:]] *}}# %bb.0:
-; CHECK-FUNC-LABEL:   .csect .main[PR],2{{[[:space:]] *}}# %bb.0
+; CHECK-FUNC-LABEL:    .csect .main[PR],5{{[[:space:]] *}}# %bb.0
 ; COMMON-NEXT:   mflr 0
 ; COMMON-NEXT:   stw 0, 8(1)
 ; COMMON:        mtlr 0
@@ -202,7 +202,7 @@ entry:
 
 
 ; CHECK-ASM-LABEL:    ._Z7add_bari1SfdP2SD1Di:{{[[:space:]] *}}# %bb.0:
-; CHECK-FUNC-LABEL:   .csect ._Z7add_bari1SfdP2SD1Di[PR],2{{[[:space:]] *}}# %bb.0:
+; CHECK-FUNC-LABEL:   .csect ._Z7add_bari1SfdP2SD1Di[PR],5{{[[:space:]] *}}# %bb.0:
 ; COMMON:       .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
@@ -226,7 +226,7 @@ entry:
 
 
 ; CHECK-ASM-LABEL:    .foo:{{[[:space:]] *}}# %bb.0:
-; CHECK-FUNC-LABEL:   .csect .foo[PR],2{{[[:space:]] *}}# %bb.0:
+; CHECK-FUNC-LABEL:   .csect .foo[PR],5{{[[:space:]] *}}# %bb.0:
 ; COMMON:       stw 3, -4(1)
 ; COMMON-NEXT:  blr
 ; COMMON-NEXT:L..foo0:

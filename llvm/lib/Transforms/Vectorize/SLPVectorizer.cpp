@@ -3558,7 +3558,7 @@ static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
       Align CommonAlignment = cast<LoadInst>(VL0)->getAlign();
       for (Value *V : VL)
         CommonAlignment =
-            commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
+            std::min(CommonAlignment, cast<LoadInst>(V)->getAlign());
       auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
       if (TTI.isLegalMaskedGather(VecTy, CommonAlignment) &&
           !TTI.forceScalarizeMaskedGather(VecTy, CommonAlignment))
@@ -3946,19 +3946,23 @@ bool BoUpSLP::canReorderOperands(
         GatherOps.push_back(TE);
       continue;
     }
-    ArrayRef<Value *> VL = UserTE->getOperand(I);
     TreeEntry *Gather = nullptr;
     if (count_if(ReorderableGathers,
-                 [VL, &Gather](TreeEntry *TE) {
+                 [&Gather, UserTE, I](TreeEntry *TE) {
                    assert(TE->State != TreeEntry::Vectorize &&
                           "Only non-vectorized nodes are expected.");
-                   if (TE->isSame(VL)) {
+                   if (any_of(TE->UserTreeIndices,
+                              [UserTE, I](const EdgeInfo &EI) {
+                                return EI.UserTE == UserTE && EI.EdgeIdx == I;
+                              })) {
+                     assert(TE->isSame(UserTE->getOperand(I)) &&
+                            "Operand entry does not match operands.");
                      Gather = TE;
                      return true;
                    }
                    return false;
                  }) > 1 &&
-        !all_of(VL, isConstant))
+        !all_of(UserTE->getOperand(I), isConstant))
       return false;
     if (Gather)
       GatherOps.push_back(Gather);
@@ -4053,8 +4057,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         TreeEntry *OpTE = Op.second;
         if (!VisitedOps.insert(OpTE).second)
           continue;
-        if (!OpTE->ReuseShuffleIndices.empty() ||
-            (IgnoreReorder && OpTE == VectorizableTree.front().get()))
+        if (!OpTE->ReuseShuffleIndices.empty())
           continue;
         const auto &Order = [OpTE, &GathersToOrders]() -> const OrdersType & {
           if (OpTE->State == TreeEntry::NeedToGather)
@@ -4174,6 +4177,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                 TE->ReorderIndices.empty()) &&
                "Non-matching sizes of user/operand entries.");
         reorderOrder(TE->ReorderIndices, Mask);
+        if (IgnoreReorder && TE == VectorizableTree.front().get())
+          IgnoreReorder = false;
       }
       // For gathers just need to reorder its scalars.
       for (TreeEntry *Gather : GatherOps) {
@@ -6440,7 +6445,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         Align CommonAlignment = Alignment;
         for (Value *V : VL)
           CommonAlignment =
-              commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
+              std::min(CommonAlignment, cast<LoadInst>(V)->getAlign());
         VecLdCost = TTI->getGatherScatterOpCost(
             Instruction::Load, VecTy, cast<LoadInst>(VL0)->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind, VL0);
@@ -7853,9 +7858,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   auto *VecTy = FixedVectorType::get(ScalarTy, E->Scalars.size());
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
-      assert(
-          (E->ReorderIndices.empty() || E != VectorizableTree.front().get()) &&
-          "PHI reordering is free.");
+      assert((E->ReorderIndices.empty() ||
+              E != VectorizableTree.front().get() ||
+              !E->UserTreeIndices.empty()) &&
+             "PHI reordering is free.");
       auto *PH = cast<PHINode>(VL0);
       Builder.SetInsertPoint(PH->getParent()->getFirstNonPHI());
       Builder.SetCurrentDebugLocation(PH->getDebugLoc());
@@ -8157,7 +8163,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Align CommonAlignment = LI->getAlign();
         for (Value *V : E->Scalars)
           CommonAlignment =
-              commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
+              std::min(CommonAlignment, cast<LoadInst>(V)->getAlign());
         NewLI = Builder.CreateMaskedGather(VecTy, VecPtr, CommonAlignment);
       }
       Value *V = propagateMetadata(NewLI, E->Scalars);

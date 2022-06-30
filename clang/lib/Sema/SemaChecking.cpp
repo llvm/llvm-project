@@ -175,7 +175,7 @@ static bool SemaBuiltinAnnotation(Sema &S, CallExpr *TheCall) {
   // Second argument should be a constant string.
   Expr *StrArg = TheCall->getArg(1)->IgnoreParenCasts();
   StringLiteral *Literal = dyn_cast<StringLiteral>(StrArg);
-  if (!Literal || !Literal->isAscii()) {
+  if (!Literal || !Literal->isOrdinary()) {
     S.Diag(StrArg->getBeginLoc(), diag::err_builtin_annotation_second_arg)
         << StrArg->getSourceRange();
     return true;
@@ -1153,7 +1153,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     if (!Format)
       return;
 
-    if (!Format->isAscii() && !Format->isUTF8())
+    if (!Format->isOrdinary() && !Format->isUTF8())
       return;
 
     auto Diagnose = [&](unsigned ArgIndex, unsigned DestSize,
@@ -1198,7 +1198,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
 
     if (auto *Format = dyn_cast<StringLiteral>(FormatExpr)) {
 
-      if (!Format->isAscii() && !Format->isUTF8())
+      if (!Format->isOrdinary() && !Format->isUTF8())
         return;
 
       StringRef FormatStrRef = Format->getString();
@@ -7264,7 +7264,7 @@ bool Sema::CheckObjCString(Expr *Arg) {
   Arg = Arg->IgnoreParenCasts();
   StringLiteral *Literal = dyn_cast<StringLiteral>(Arg);
 
-  if (!Literal || !Literal->isAscii()) {
+  if (!Literal || !Literal->isOrdinary()) {
     Diag(Arg->getBeginLoc(), diag::err_cfstring_literal_not_string_constant)
         << Arg->getSourceRange();
     return true;
@@ -7299,7 +7299,7 @@ ExprResult Sema::CheckOSLogFormatStringArg(Expr *Arg) {
     }
   }
 
-  if (!Literal || (!Literal->isAscii() && !Literal->isUTF8())) {
+  if (!Literal || (!Literal->isOrdinary() && !Literal->isUTF8())) {
     return ExprError(
         Diag(Arg->getBeginLoc(), diag::err_os_log_format_not_string_constant)
         << Arg->getSourceRange());
@@ -8716,7 +8716,7 @@ class FormatStringLiteral {
 
   QualType getType() const { return FExpr->getType(); }
 
-  bool isAscii() const { return FExpr->isAscii(); }
+  bool isAscii() const { return FExpr->isOrdinary(); }
   bool isWide() const { return FExpr->isWide(); }
   bool isUTF8() const { return FExpr->isUTF8(); }
   bool isUTF16() const { return FExpr->isUTF16(); }

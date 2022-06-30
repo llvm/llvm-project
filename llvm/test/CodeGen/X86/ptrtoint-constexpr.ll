@@ -9,6 +9,6 @@
 
 ; CHECK:	.globl x
 ; CHECK: x:
-; CHECK: .quad	((0+1)&4294967295)*3
+; CHECK: .quad	3
 
 @x = global i64 mul (i64 3, i64 ptrtoint (ptr getelementptr (i2, ptr null, i64 1) to i64))

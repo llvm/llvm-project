@@ -42,7 +42,7 @@ entry:
 !15 = !DILocation(line: 3, column: 10, scope: !14)
 !16 = !DILocation(line: 3, column: 3, scope: !14)
 
-; CHECK:               .csect .text[PR],2
+; CHECK:               .csect .text[PR],5
 ; CHECK-NEXT:          .file   "2.c"
 ; CHECK-NEXT:          .globl  bar[DS]                         # -- Begin function bar
 ; CHECK-NEXT:          .globl  .bar
@@ -51,7 +51,7 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, .bar                         # @bar
 ; CHECK-NEXT:          .vbyte  4, TOC[TC0]
 ; CHECK-NEXT:          .vbyte  4, 0
-; CHECK-NEXT:          .csect .text[PR],2
+; CHECK-NEXT:          .csect .text[PR],5
 ; CHECK-NEXT:  .bar:
 ; CHECK-NEXT:  L..func_begin0:
 ; CHECK-NEXT:  # %bb.0:                                # %entry
@@ -80,7 +80,7 @@ entry:
 ; CHECK-NEXT:          .byte   "bar"                           # Function Name
 ; CHECK-NEXT:  L..func_end0:
 ; CHECK-NEXT:                                          # -- End function
-; CHECK-NEXT:          .csect explicit_main_sec[PR],2
+; CHECK-NEXT:          .csect explicit_main_sec[PR],5
 ; CHECK-NEXT:          .globl  main[DS]                        # -- Begin function main
 ; CHECK-NEXT:          .globl  .main
 ; CHECK-NEXT:          .align  2
@@ -88,7 +88,7 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, .main                        # @main
 ; CHECK-NEXT:          .vbyte  4, TOC[TC0]
 ; CHECK-NEXT:          .vbyte  4, 0
-; CHECK-NEXT:          .csect explicit_main_sec[PR],2
+; CHECK-NEXT:          .csect explicit_main_sec[PR],5
 ; CHECK-NEXT:  .main:
 ; CHECK-NEXT:  L..func_begin1:
 ; CHECK-NEXT:  # %bb.0:                                # %entry

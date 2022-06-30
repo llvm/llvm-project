@@ -1347,11 +1347,6 @@ val const_insertelement : llvalue -> llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getShuffleVector]. *)
 val const_shufflevector : llvalue -> llvalue -> llvalue -> llvalue
 
-(** [const_extractvalue agg idxs] returns the constant [idxs]th value of
-    constant aggregate [agg]. Each [idxs] must be less than the size of the
-    aggregate.  See the method [llvm::ConstantExpr::getExtractValue]. *)
-val const_extractvalue : llvalue -> int array -> llvalue
-
 (** [const_insertvalue agg val idxs] inserts the value [val] in the specified
     indexs [idxs] in the aggregate [agg]. Each [idxs] must be less than the size
     of the aggregate. See the method [llvm::ConstantExpr::getInsertValue]. *)

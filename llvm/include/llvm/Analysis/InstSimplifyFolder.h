@@ -59,6 +59,22 @@ public:
     return simplifyOrInst(LHS, RHS, SQ);
   }
 
+  Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    return simplifyUDivInst(LHS, RHS, SQ);
+  }
+
+  Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+    return simplifySDivInst(LHS, RHS, SQ);
+  }
+
+  Value *FoldURem(Value *LHS, Value *RHS) const override {
+    return simplifyURemInst(LHS, RHS, SQ);
+  }
+
+  Value *FoldSRem(Value *LHS, Value *RHS) const override {
+    return simplifySRemInst(LHS, RHS, SQ);
+  }
+
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return simplifyICmpInst(P, LHS, RHS, SQ);
   }
@@ -82,6 +98,23 @@ public:
     return simplifyInsertValueInst(Agg, Val, IdxList, SQ);
   }
 
+  Value *FoldExtractElement(Value *Vec, Value *Idx) const override {
+    return simplifyExtractElementInst(Vec, Idx, SQ);
+  }
+
+  Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                           Value *Idx) const override {
+    return simplifyInsertElementInst(Vec, NewElt, Idx, SQ);
+  }
+
+  Value *FoldShuffleVector(Value *V1, Value *V2,
+                           ArrayRef<int> Mask) const override {
+    Type *RetTy = VectorType::get(
+        cast<VectorType>(V1->getType())->getElementType(), Mask.size(),
+        isa<ScalableVectorType>(V1->getType()));
+    return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -103,22 +136,8 @@ public:
   Value *CreateFMul(Constant *LHS, Constant *RHS) const override {
     return ConstFolder.CreateFMul(LHS, RHS);
   }
-  Value *CreateUDiv(Constant *LHS, Constant *RHS,
-                    bool isExact = false) const override {
-    return ConstFolder.CreateUDiv(LHS, RHS, isExact);
-  }
-  Value *CreateSDiv(Constant *LHS, Constant *RHS,
-                    bool isExact = false) const override {
-    return ConstFolder.CreateSDiv(LHS, RHS, isExact);
-  }
   Value *CreateFDiv(Constant *LHS, Constant *RHS) const override {
     return ConstFolder.CreateFDiv(LHS, RHS);
-  }
-  Value *CreateURem(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateURem(LHS, RHS);
-  }
-  Value *CreateSRem(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateSRem(LHS, RHS);
   }
   Value *CreateFRem(Constant *LHS, Constant *RHS) const override {
     return ConstFolder.CreateFRem(LHS, RHS);
@@ -228,24 +247,6 @@ public:
   Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                     Constant *RHS) const override {
     return ConstFolder.CreateFCmp(P, LHS, RHS);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  Value *CreateExtractElement(Constant *Vec, Constant *Idx) const override {
-    return ConstFolder.CreateExtractElement(Vec, Idx);
-  }
-
-  Value *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                             Constant *Idx) const override {
-    return ConstFolder.CreateInsertElement(Vec, NewElt, Idx);
-  }
-
-  Value *CreateShuffleVector(Constant *V1, Constant *V2,
-                             ArrayRef<int> Mask) const override {
-    return ConstFolder.CreateShuffleVector(V1, V2, Mask);
   }
 };
 

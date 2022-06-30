@@ -717,8 +717,8 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
   expandedOpOperands.reserve(genericOp.getNumInputs());
   for (OpOperand *opOperand : genericOp.getInputOperands()) {
     if (opOperand == fusableOpOperand) {
-      expandedOpOperands.push_back(isExpanding ? expandingReshapeOp.src()
-                                               : collapsingReshapeOp.src());
+      expandedOpOperands.push_back(isExpanding ? expandingReshapeOp.getSrc()
+                                               : collapsingReshapeOp.getSrc());
       continue;
     }
     if (genericOp.isInputTensor(opOperand)) {
@@ -865,7 +865,7 @@ struct FoldReshapeWithGenericOpByExpansion
   LogicalResult matchAndRewrite(tensor::ExpandShapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
     // Fold only if all constraints of fusing with reshape by expansion are met.
-    GenericOp producer = reshapeOp.src().getDefiningOp<GenericOp>();
+    GenericOp producer = reshapeOp.getSrc().getDefiningOp<GenericOp>();
     if (!producer || producer.getNumOutputs() != 1 ||
         !isFusableWithReshapeByDimExpansion(producer,
                                             producer.getOutputOperand(0)) ||

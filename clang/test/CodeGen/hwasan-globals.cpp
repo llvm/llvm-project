@@ -34,4 +34,4 @@ void func() {
 // IGNORELIST: @{{.*}}ignorelisted_globa{{.*}} ={{.*}} global {{.*}}, no_sanitize_hwaddress
 // IGNORELIST: @{{.*}}static_var{{.*}} ={{.*}} global {{.*}}, no_sanitize_hwaddress
 // IGNORELIST: @{{.*}} = {{.*}} c"Hello, world!\00"{{.*}}, no_sanitize_hwaddress
-// IGNORELIST: @extra_global.hwasan =
+// IGNORELIST: @{{.*}}extra_global{{.*}}.hwasan{{.*}} =

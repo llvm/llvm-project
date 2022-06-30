@@ -106,14 +106,14 @@ define dso_local void @test2(ptr%buf) nounwind {
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw $8, %r14w
+; CHECK-NEXT:    movw $8, %bp
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %loop.header.preheader
-; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    movq %rdi, %r14
+; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_2: # %loop.header
@@ -123,12 +123,12 @@ define dso_local void @test2(ptr%buf) nounwind {
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tilezero %tmm2
-; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm0
-; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm1
+; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm0
+; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm1
 ; CHECK-NEXT:    tdpbssd %tmm1, %tmm0, %tmm2
-; CHECK-NEXT:    tilestored %tmm2, (%rbx,%r15)
-; CHECK-NEXT:    incl %ebp
-; CHECK-NEXT:    cmpw $100, %bp
+; CHECK-NEXT:    tilestored %tmm2, (%r14,%r15)
+; CHECK-NEXT:    incl %ebx
+; CHECK-NEXT:    cmpw $100, %bx
 ; CHECK-NEXT:    jl .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: # %exit
 ; CHECK-NEXT:    addq $72, %rsp

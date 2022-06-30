@@ -3,7 +3,7 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck -check-prefixes=GFX81 %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 
 define amdgpu_ps half @image_sample_2d_f16(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
 ; TONGA-LABEL: image_sample_2d_f16:

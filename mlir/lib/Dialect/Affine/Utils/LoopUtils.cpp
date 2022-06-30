@@ -1668,7 +1668,7 @@ stripmineSink(AffineForOp forOp, uint64_t factor,
         newForOp.getBody()->getOperations().begin(),
         t.getBody()->getOperations(), begin, std::next(begin, nOps));
     replaceAllUsesInRegionWith(iv, newForOp.getInductionVar(),
-                               newForOp.region());
+                               newForOp.getRegion());
     innerLoops.push_back(newForOp);
   }
 
@@ -1813,7 +1813,7 @@ LogicalResult mlir::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
           applyOperands);
     }
     replaceAllUsesInRegionWith(loops[idx - 1].getInductionVar(),
-                               inductionVariable, loops.back().region());
+                               inductionVariable, loops.back().getRegion());
   }
 
   // 4. Move the operations from the innermost just above the second-outermost
@@ -1873,7 +1873,7 @@ findHighestBlockForPlacement(const MemRefRegion &region, Block &block,
                              Block::iterator *copyOutPlacementStart) {
   const auto *cst = region.getConstraints();
   SmallVector<Value, 4> symbols;
-  cst->getValues(cst->getNumDimIds(), cst->getNumDimAndSymbolIds(), &symbols);
+  cst->getValues(cst->getNumDimVars(), cst->getNumDimAndSymbolVars(), &symbols);
 
   SmallVector<AffineForOp, 4> enclosingFors;
   getLoopIVs(*block.begin(), &enclosingFors);
@@ -2110,7 +2110,7 @@ static LogicalResult generateCopy(
   // on; these typically include loop IVs surrounding the level at which the
   // copy generation is being done or other valid symbols in MLIR.
   SmallVector<Value, 8> regionSymbols;
-  cst->getValues(rank, cst->getNumIds(), &regionSymbols);
+  cst->getValues(rank, cst->getNumVars(), &regionSymbols);
 
   // Construct the index expressions for the fast memory buffer. The index
   // expression for a particular dimension of the fast buffer is obtained by
@@ -2144,7 +2144,7 @@ static LogicalResult generateCopy(
       // The coordinate for the start location is just the lower bound along the
       // corresponding dimension on the memory region (stored in 'offset').
       auto map = AffineMap::get(
-          cst->getNumDimIds() + cst->getNumSymbolIds() - rank, 0, offset);
+          cst->getNumDimVars() + cst->getNumSymbolVars() - rank, 0, offset);
       memIndices.push_back(b.create<AffineApplyOp>(loc, map, regionSymbols));
     }
     // The fast buffer is copied into at location zero; addressing is relative.
@@ -2671,7 +2671,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
     // TODO: Non-unit stride is not an issue to generalize to.
     assert(loop.getStep() == 1 && "point loop step expected to be one");
     // Mark everything symbols for the purpose of finding a constant diff pair.
-    cst.setDimSymbolSeparation(/*newSymbolCount=*/cst.getNumDimAndSymbolIds() -
+    cst.setDimSymbolSeparation(/*newSymbolCount=*/cst.getNumDimAndSymbolVars() -
                                1);
     unsigned fullTileLbPos, fullTileUbPos;
     if (!cst.getConstantBoundOnDimSize(0, /*lb=*/nullptr,
@@ -2700,7 +2700,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
       for (unsigned i = 0, e = cst.getNumCols(); i < e; ++i)
         cst.atIneq(ubIndex, i) -= fullTileUb[i];
 
-    cst.removeId(0);
+    cst.removeVar(0);
   }
 
   // The previous step leads to all zeros for the full tile lb and ub position
@@ -2719,7 +2719,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
     return nullptr;
 
   SmallVector<Value, 4> setOperands;
-  cst.getValues(0, cst.getNumDimAndSymbolIds(), &setOperands);
+  cst.getValues(0, cst.getNumDimAndSymbolVars(), &setOperands);
   canonicalizeSetAndOperands(&ifCondSet, &setOperands);
   return b.create<AffineIfOp>(loops[0].getLoc(), ifCondSet, setOperands,
                               /*withElseRegion=*/true);
@@ -2745,7 +2745,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
     (void)getIndexSet(loopOp, &cst);
     // We will mark everything other than this loop IV as symbol for getting a
     // pair of <lb, ub> with a constant difference.
-    cst.setDimSymbolSeparation(cst.getNumDimAndSymbolIds() - 1);
+    cst.setDimSymbolSeparation(cst.getNumDimAndSymbolVars() - 1);
     unsigned lbPos, ubPos;
     if (!cst.getConstantBoundOnDimSize(/*pos=*/0, /*lb=*/nullptr,
                                        /*lbDivisor=*/nullptr, /*ub=*/nullptr,
@@ -2756,7 +2756,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
       return failure();
     }
 
-    // Set all identifiers as dimensions uniformly since some of those marked as
+    // Set all variables as dimensions uniformly since some of those marked as
     // symbols above could be outer loop IVs (corresponding tile space IVs).
     cst.setDimSymbolSeparation(/*newSymbolCount=*/0);
 

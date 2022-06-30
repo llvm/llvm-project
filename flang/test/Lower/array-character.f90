@@ -43,7 +43,9 @@ subroutine issue(c1, c2)
   ! CHECK: %[[VAL_33:.*]] = arith.subi %[[VAL_28]], %[[VAL_7]] : index
   ! CHECK: cf.br ^bb3(%[[VAL_32]], %[[VAL_33]] : index, index)
   ! CHECK: ^bb5:
- 
+  ! CHECK: %[[VAL_34:.*]] = arith.subi %[[VAL_14]], %[[VAL_7]] : index
+  ! CHECK: cf.br ^bb1(%[[VAL_16]], %[[VAL_34]] : index, index)
+
   character(4) :: c1(3)
   character(*) :: c2(3)
   c1 = c2
@@ -141,7 +143,7 @@ subroutine charlit
   ! CHECK: %[[VAL_40:.*]] = fir.embox %[[VAL_29]](%[[VAL_12]]) : (!fir.heap<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
   ! CHECK: %[[VAL_41:.*]] = fir.convert %[[VAL_40]] : (!fir.box<!fir.array<4x!fir.char<1,3>>>) -> !fir.box<none>
   ! CHECK: %[[VAL_42:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_28]], %[[VAL_41]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
-  ! CHECK: fir.freemem %[[VAL_29]]
+  ! CHECK: fir.freemem %[[VAL_29]] : !fir.heap<!fir.array<4x!fir.char<1,3>>>
   ! CHECK: %[[VAL_43:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_28]]) : (!fir.ref<i8>) -> i32
   ! CHECK: %[[VAL_44:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_0]], %[[VAL_9]], %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_45:.*]] = fir.allocmem !fir.array<4x!fir.char<1,3>>
@@ -163,7 +165,7 @@ subroutine charlit
   ! CHECK: %[[VAL_56:.*]] = fir.embox %[[VAL_45]](%[[VAL_12]]) : (!fir.heap<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
   ! CHECK: %[[VAL_57:.*]] = fir.convert %[[VAL_56]] : (!fir.box<!fir.array<4x!fir.char<1,3>>>) -> !fir.box<none>
   ! CHECK: %[[VAL_58:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_44]], %[[VAL_57]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
-  ! CHECK: fir.freemem %[[VAL_45]]
+  ! CHECK: fir.freemem %[[VAL_45]] : !fir.heap<!fir.array<4x!fir.char<1,3>>>
   ! CHECK: %[[VAL_59:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_44]]) : (!fir.ref<i8>) -> i32
   print*, ['AA ', 'MM ', 'MM ', 'ZZ ']
   print*, ['AA ', 'MM ', 'MM ', 'ZZ ']
@@ -171,3 +173,12 @@ subroutine charlit
   ! CHECK:         return
   ! CHECK:       }
 end
+
+! CHECK: fir.global internal @_QQro.4x3xc1.1636b396a657de68ffb870a885ac44b4 constant : !fir.array<4x!fir.char<1,3>>
+! CHECK: AA
+! CHECK: MM
+! CHECK: ZZ
+! CHECK-NOT: fir.global internal @_QQro.4x3xc1
+! CHECK-NOT: AA
+! CHECK-NOT: MM
+! CHECK-NOT: ZZ

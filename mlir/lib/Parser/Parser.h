@@ -28,11 +28,12 @@ public:
 
   Builder builder;
 
-  Parser(ParserState &state) : builder(state.context), state(state) {}
+  Parser(ParserState &state)
+      : builder(state.config.getContext()), state(state) {}
 
   // Helper methods to get stuff from the parser-global state.
   ParserState &getState() const { return state; }
-  MLIRContext *getContext() const { return state.context; }
+  MLIRContext *getContext() const { return state.config.getContext(); }
   const llvm::SourceMgr &getSourceMgr() { return state.lex.getSourceMgr(); }
 
   /// Parse a comma-separated list of elements up until the specified end token.
@@ -153,6 +154,23 @@ public:
                                            const llvm::fltSemantics &semantics,
                                            size_t typeSizeInBits);
 
+  /// Returns true if the current token corresponds to a keyword.
+  bool isCurrentTokenAKeyword() const {
+    return getToken().isAny(Token::bare_identifier, Token::inttype) ||
+           getToken().isKeyword();
+  }
+
+  /// Parse a keyword, if present, into 'keyword'.
+  ParseResult parseOptionalKeyword(StringRef *keyword);
+
+  //===--------------------------------------------------------------------===//
+  // Resource Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// Parse a handle to a dialect resource within the assembly format.
+  FailureOr<AsmDialectResourceHandle>
+  parseResourceHandle(const OpAsmDialectInterface *dialect, StringRef &name);
+
   //===--------------------------------------------------------------------===//
   // Type Parsing
   //===--------------------------------------------------------------------===//
@@ -263,6 +281,9 @@ public:
   /// Parse a dense elements attribute.
   Attribute parseDenseElementsAttr(Type attrType);
   ShapedType parseElementsLiteralType(Type type);
+
+  /// Parse a DenseArrayAttr.
+  Attribute parseDenseArrayAttr();
 
   /// Parse a sparse elements attribute.
   Attribute parseSparseElementsAttr(Type attrType);

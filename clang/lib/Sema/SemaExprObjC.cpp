@@ -50,7 +50,7 @@ ExprResult Sema::ParseObjCStringLiteral(SourceLocation *AtLocs,
       S = cast<StringLiteral>(E);
 
       // ObjC strings can't be wide or UTF.
-      if (!S->isAscii()) {
+      if (!S->isOrdinary()) {
         Diag(S->getBeginLoc(), diag::err_cfstring_literal_not_string_constant)
             << S->getSourceRange();
         return true;
@@ -70,7 +70,7 @@ ExprResult Sema::ParseObjCStringLiteral(SourceLocation *AtLocs,
     QualType StrTy = Context.getConstantArrayType(
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
-    S = StringLiteral::Create(Context, StrBuf, StringLiteral::Ascii,
+    S = StringLiteral::Create(Context, StrBuf, StringLiteral::Ordinary,
                               /*Pascal=*/false, StrTy, &StrLocs[0],
                               StrLocs.size());
   }
@@ -448,7 +448,7 @@ static ExprResult CheckObjCCollectionLiteralElement(Sema &S, Expr *Element,
     }
     // If this is potentially an Objective-C string literal, add the '@'.
     else if (StringLiteral *String = dyn_cast<StringLiteral>(OrigElement)) {
-      if (String->isAscii()) {
+      if (String->isOrdinary()) {
         S.Diag(OrigElement->getBeginLoc(), diag::err_box_literal_collection)
             << 0 << OrigElement->getSourceRange()
             << FixItHint::CreateInsertion(OrigElement->getBeginLoc(), "@");
@@ -533,7 +533,7 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
         if (CE->getCastKind() == CK_ArrayToPointerDecay)
           if (auto *SL =
                   dyn_cast<StringLiteral>(CE->getSubExpr()->IgnoreParens())) {
-            assert((SL->isAscii() || SL->isUTF8()) &&
+            assert((SL->isOrdinary() || SL->isUTF8()) &&
                    "unexpected character encoding");
             StringRef Str = SL->getString();
             const llvm::UTF8 *StrBegin = Str.bytes_begin();

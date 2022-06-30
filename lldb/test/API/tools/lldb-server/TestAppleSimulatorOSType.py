@@ -46,9 +46,10 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
                 # Stop searching in this runtime
                 break
 
-        # Launch the process using simctl
-        self.assertIsNotNone(deviceUDID, 'Could not find a simulator for {} ({})'.format(platform_name, arch))
+        if not deviceUDID:
+            self.skipTest('Could not find a simulator for {} ({})'.format(platform_name, arch))
 
+        # Launch the process using simctl
         exe_name = 'test_simulator_platform_{}'.format(platform_name)
         sdkroot = lldbutil.get_xcode_sdk_root(sdk)
         vers = lldbutil.get_xcode_sdk_version(sdk)
