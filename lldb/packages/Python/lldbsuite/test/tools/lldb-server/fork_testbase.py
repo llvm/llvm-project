@@ -2,9 +2,10 @@ import gdbremote_testcase
 
 
 class GdbRemoteForkTestBase(gdbremote_testcase.GdbRemoteTestCaseBase):
-    fork_regex = ("[$]T05thread:p([0-9a-f]+)[.]([0-9a-f]+);.*"
+    fork_regex = ("[$]T[0-9a-fA-F]{{2}}thread:p([0-9a-f]+)[.]([0-9a-f]+);.*"
                   "{}:p([0-9a-f]+)[.]([0-9a-f]+).*")
-    fork_regex_nonstop = ("%Stop:T05thread:p([0-9a-f]+)[.]([0-9a-f]+);.*"
+    fork_regex_nonstop = ("%Stop:T[0-9a-fA-F]{{2}}"
+                          "thread:p([0-9a-f]+)[.]([0-9a-f]+);.*"
                           "{}:p([0-9a-f]+)[.]([0-9a-f]+).*")
     fork_capture = {1: "parent_pid", 2: "parent_tid",
                     3: "child_pid", 4: "child_tid"}

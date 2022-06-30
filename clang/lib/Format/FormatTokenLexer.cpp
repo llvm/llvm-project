@@ -864,8 +864,10 @@ static size_t countLeadingWhitespace(StringRef Text) {
   // Directly using the regex turned out to be slow. With the regex
   // version formatting all files in this directory took about 1.25
   // seconds. This version took about 0.5 seconds.
-  const char *Cur = Text.begin();
-  while (Cur < Text.end()) {
+  const unsigned char *const Begin = Text.bytes_begin();
+  const unsigned char *const End = Text.bytes_end();
+  const unsigned char *Cur = Begin;
+  while (Cur < End) {
     if (isspace(Cur[0])) {
       ++Cur;
     } else if (Cur[0] == '\\' && (Cur[1] == '\n' || Cur[1] == '\r')) {
@@ -874,20 +876,20 @@ static size_t countLeadingWhitespace(StringRef Text) {
       // The source has a null byte at the end. So the end of the entire input
       // isn't reached yet. Also the lexer doesn't break apart an escaped
       // newline.
-      assert(Text.end() - Cur >= 2);
+      assert(End - Cur >= 2);
       Cur += 2;
     } else if (Cur[0] == '?' && Cur[1] == '?' && Cur[2] == '/' &&
                (Cur[3] == '\n' || Cur[3] == '\r')) {
       // Newlines can also be escaped by a '?' '?' '/' trigraph. By the way, the
       // characters are quoted individually in this comment because if we write
       // them together some compilers warn that we have a trigraph in the code.
-      assert(Text.end() - Cur >= 4);
+      assert(End - Cur >= 4);
       Cur += 4;
     } else {
       break;
     }
   }
-  return Cur - Text.begin();
+  return Cur - Begin;
 }
 
 FormatToken *FormatTokenLexer::getNextToken() {
