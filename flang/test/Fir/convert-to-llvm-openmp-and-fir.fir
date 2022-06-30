@@ -181,7 +181,7 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
   omp.parallel  {
     %1 = fir.alloca i32 {adapt.valuebyref, pinned}
     %2 = fir.load %arg0 : !fir.ref<i32>
-    omp.simdloop (%arg2) : i32 = (%c1_i32) to (%2) step (%c1_i32)  {
+    omp.simdloop for (%arg2) : i32 = (%c1_i32) to (%2) step (%c1_i32)  {
       fir.store %arg2 to %1 : !fir.ref<i32>
       %3 = fir.load %1 : !fir.ref<i32>
       %4 = fir.convert %3 : (i32) -> i64

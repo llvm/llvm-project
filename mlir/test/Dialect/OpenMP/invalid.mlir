@@ -197,7 +197,7 @@ func.func @omp_simdloop(%lb : index, %ub : index, %step : i32) -> () {
   "omp.simdloop" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1]> : vector<3xi32>} :
+  }) {operand_segment_sizes = dense<[1,1,1,0]> : vector<4xi32>} :
     (index, index, i32) -> () 
 
   return
