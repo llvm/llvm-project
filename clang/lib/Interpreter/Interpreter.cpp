@@ -213,10 +213,10 @@ Interpreter::Parse(llvm::StringRef Code) {
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
   if (!IncrExecutor) {
-    const llvm::Triple &Triple =
-        getCompilerInstance()->getASTContext().getTargetInfo().getTriple();
+    const clang::TargetInfo &TI =
+        getCompilerInstance()->getASTContext().getTargetInfo();
     llvm::Error Err = llvm::Error::success();
-    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, Triple);
+    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
 
     if (Err)
       return Err;

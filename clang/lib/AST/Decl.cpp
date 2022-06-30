@@ -3732,12 +3732,8 @@ const IdentifierInfo *FunctionDecl::getLiteralIdentifier() const {
 FunctionDecl::TemplatedKind FunctionDecl::getTemplatedKind() const {
   if (TemplateOrSpecialization.isNull())
     return TK_NonTemplate;
-  if (auto *ND = TemplateOrSpecialization.dyn_cast<NamedDecl *>()) {
-    if (isa<FunctionDecl>(ND))
-      return TK_DependentNonTemplate;
-    assert(isa<FunctionTemplateDecl>(ND) && "No other types it could be?");
+  if (TemplateOrSpecialization.is<FunctionTemplateDecl *>())
     return TK_FunctionTemplate;
-  }
   if (TemplateOrSpecialization.is<MemberSpecializationInfo *>())
     return TK_MemberSpecialization;
   if (TemplateOrSpecialization.is<FunctionTemplateSpecializationInfo *>())
@@ -3778,26 +3774,13 @@ FunctionDecl::setInstantiationOfMemberFunction(ASTContext &C,
 }
 
 FunctionTemplateDecl *FunctionDecl::getDescribedFunctionTemplate() const {
-  return dyn_cast_or_null<FunctionTemplateDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
+  return TemplateOrSpecialization.dyn_cast<FunctionTemplateDecl *>();
 }
 
-void FunctionDecl::setDescribedFunctionTemplate(
-    FunctionTemplateDecl *Template) {
+void FunctionDecl::setDescribedFunctionTemplate(FunctionTemplateDecl *Template) {
   assert(TemplateOrSpecialization.isNull() &&
          "Member function is already a specialization");
   TemplateOrSpecialization = Template;
-}
-
-void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
-  assert(TemplateOrSpecialization.isNull() &&
-         "function is already a specialization");
-  TemplateOrSpecialization = FD;
-}
-
-FunctionDecl *FunctionDecl::getInstantiatedFromDecl() const {
-  return dyn_cast_or_null<FunctionDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
 }
 
 bool FunctionDecl::isImplicitlyInstantiable() const {
