@@ -3854,6 +3854,11 @@ bool TypeSystemSwiftTypeRef::ShouldSkipValidation(opaque_compiler_type_t type) {
   if (mangled_name == "$sSo11CFStringRefaD")
     return true;
 
+  if (mangled_name == "$sSo7CGPointVD")
+    return true;
+
+  if (mangled_name == "$sSo6CGSizeVD")
+    return true;
   // We skip validation when dealing with a builtin type since builtins are
   // considered type aliases by Swift, which we're deviating from since
   // SwiftASTContext reconstructs Builtin types as TypeAliases pointing to the
