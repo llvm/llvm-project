@@ -9237,10 +9237,6 @@ static Constant *EvaluateExpression(Value *V, const Loop *L,
     Operands[i] = C;
   }
 
-  if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!LI->isVolatile())
-      return ConstantFoldLoadFromConstPtr(Operands[0], LI->getType(), DL);
-  }
   return ConstantFoldInstOperands(I, Operands, DL, TLI);
 }
 
@@ -9660,12 +9656,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
         if (MadeImprovement) {
           Constant *C = nullptr;
           const DataLayout &DL = getDataLayout();
-          if (const LoadInst *Load = dyn_cast<LoadInst>(I)) {
-            if (!Load->isVolatile())
-              C = ConstantFoldLoadFromConstPtr(Operands[0], Load->getType(),
-                                               DL);
-          } else
-            C = ConstantFoldInstOperands(I, Operands, DL, &TLI);
+          C = ConstantFoldInstOperands(I, Operands, DL, &TLI);
           if (!C) return V;
           return getSCEV(C);
         }
