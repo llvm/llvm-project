@@ -778,7 +778,7 @@ let Predicates = [HasSVEorSME] in {
   defm BRKB_PPmP  : sve_int_break_m<0b101, "brkb",  int_aarch64_sve_brkb>;
   defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs", null_frag>;
 
-  def PTEST_PP : sve_int_ptest<0b010000, "ptest">;
+  def PTEST_PP : sve_int_ptest<0b010000, "ptest", AArch64ptest>;
   defm PFALSE  : sve_int_pfalse<0b000000, "pfalse">;
   defm PFIRST  : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
   defm PNEXT   : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
@@ -2130,17 +2130,6 @@ let Predicates = [HasSVEorSME] in {
     def STR_ZZZXI  : Pseudo<(outs), (ins  ZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
     def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
   }
-
-  def : Pat<(AArch64ptest (nxv16i1 PPR:$pg), (nxv16i1 PPR:$src)),
-            (PTEST_PP PPR:$pg, PPR:$src)>;
-  def : Pat<(AArch64ptest (nxv8i1 PPR:$pg), (nxv8i1 PPR:$src)),
-            (PTEST_PP PPR:$pg, PPR:$src)>;
-  def : Pat<(AArch64ptest (nxv4i1 PPR:$pg), (nxv4i1 PPR:$src)),
-            (PTEST_PP PPR:$pg, PPR:$src)>;
-  def : Pat<(AArch64ptest (nxv2i1 PPR:$pg), (nxv2i1 PPR:$src)),
-            (PTEST_PP PPR:$pg, PPR:$src)>;
-  def : Pat<(AArch64ptest (nxv1i1 PPR:$pg), (nxv1i1 PPR:$src)),
-            (PTEST_PP PPR:$pg, PPR:$src)>;
 
   let AddedComplexity = 1 in {
   class LD1RPat<ValueType vt, SDPatternOperator operator,
