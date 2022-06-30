@@ -408,7 +408,7 @@ void Value::takeName(Value *V) {
     }
   }
 
-  // Get V's ST, this should always succed, because V has a name.
+  // Get V's ST, this should always succeed, because V has a name.
   ValueSymbolTable *VST;
   bool Failure = getSymTab(V, VST);
   assert(!Failure && "V has a name, so it should have a ST!"); (void)Failure;
