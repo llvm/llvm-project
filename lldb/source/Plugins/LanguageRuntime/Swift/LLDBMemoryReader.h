@@ -2,8 +2,14 @@
 #ifndef liblldb_LLDBMemoryReader_h_
 #define liblldb_LLDBMemoryReader_h_
 
+
 #include "SwiftLanguageRuntime.h"
+
+// We need to include ReflectionContext.h before TypeLowering.h to avoid
+// conflicts between mach/machine.h and llvm/BinaryFormat/MachO.h.
+#include "swift/Reflection/ReflectionContext.h"
 #include "swift/Reflection/TypeLowering.h"
+
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Memory.h"
 
