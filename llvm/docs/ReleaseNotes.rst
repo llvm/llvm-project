@@ -163,6 +163,7 @@ Changes to the X86 Backend
 --------------------------
 
 * Support ``half`` type on SSE2 and above targets.
+* Support ``rdpru`` instruction on Zen2 and above targets.
 
 Changes to the OCaml bindings
 -----------------------------
