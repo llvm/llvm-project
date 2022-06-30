@@ -145,7 +145,7 @@ define amdgpu_kernel void @fma_f16() #0 {
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef) #2
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef) #2
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef) #2
-; FAST-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef) #2
+; FAST-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef) #2
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW-LABEL: 'fma_f16'
@@ -165,7 +165,7 @@ define amdgpu_kernel void @fma_f16() #0 {
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef) #2
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef) #2
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef) #2
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef) #2
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef) #2
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'fma_f16'
