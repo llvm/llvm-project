@@ -10,11 +10,11 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: src_bundle_latency
     ; GCN: $vgpr0, $vgpr1 = BUNDLE undef $vgpr3_vgpr4, implicit $exec {
-    ; GCN:   $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN:   $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 4, 0, implicit $exec
-    ; GCN: }
-    ; GCN: $vgpr6 = V_ADD_F32_e32 killed $vgpr0, $vgpr0, implicit $mode, implicit $exec
-    ; GCN: $vgpr5 = V_ADD_F32_e32 killed $vgpr1, $vgpr1, implicit $mode, implicit $exec
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 4, 0, implicit $exec
+    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr6 = V_ADD_F32_e32 killed $vgpr0, $vgpr0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr5 = V_ADD_F32_e32 killed $vgpr1, $vgpr1, implicit $mode, implicit $exec
     $vgpr0, $vgpr1 = BUNDLE undef $vgpr3_vgpr4, implicit $exec {
       $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
       $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 4, 0, implicit $exec
@@ -30,11 +30,11 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: dst_bundle_latency
     ; GCN: $vgpr1 = V_ADD_F32_e32 undef $vgpr6, undef $vgpr6, implicit $mode, implicit $exec
-    ; GCN: $vgpr0 = V_ADD_F32_e32 undef $vgpr5, undef $vgpr5, implicit $mode, implicit $exec
-    ; GCN: BUNDLE killed $vgpr0, killed $vgpr1, undef $vgpr3_vgpr4, implicit $exec {
-    ; GCN:   GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, killed $vgpr1, 0, 0, implicit $exec
-    ; GCN:   GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, killed $vgpr0, 4, 0, implicit $exec
-    ; GCN: }
+    ; GCN-NEXT: $vgpr0 = V_ADD_F32_e32 undef $vgpr5, undef $vgpr5, implicit $mode, implicit $exec
+    ; GCN-NEXT: BUNDLE killed $vgpr0, killed $vgpr1, undef $vgpr3_vgpr4, implicit $exec {
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, killed $vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, killed $vgpr0, 4, 0, implicit $exec
+    ; GCN-NEXT: }
     $vgpr0 = V_ADD_F32_e32 undef $vgpr5, undef $vgpr5, implicit $mode, implicit $exec
     $vgpr1 = V_ADD_F32_e32 undef $vgpr6, undef $vgpr6, implicit $mode, implicit $exec
     BUNDLE $vgpr0, $vgpr1, undef $vgpr3_vgpr4, implicit $exec {

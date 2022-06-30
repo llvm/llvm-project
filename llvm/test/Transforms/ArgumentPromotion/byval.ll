@@ -7,17 +7,9 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 define internal void @f(%struct.ss* byval(%struct.ss) align 4 %b) nounwind  {
 ; CHECK-LABEL: define {{[^@]+}}@f
-; CHECK-SAME: (i32 [[B_0:%.*]], i64 [[B_1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i32 [[B_0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
-; CHECK-NEXT:    store i32 [[B_0]], i32* [[DOT0]], align 4
-; CHECK-NEXT:    [[DOT1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 1
-; CHECK-NEXT:    store i64 [[B_1]], i64* [[DOT1]], align 4
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
-; CHECK-NEXT:    [[TEMP1:%.*]] = load i32, i32* [[TEMP]], align 4
-; CHECK-NEXT:    [[TEMP2:%.*]] = add i32 [[TEMP1]], 1
-; CHECK-NEXT:    store i32 [[TEMP2]], i32* [[TEMP]], align 4
+; CHECK-NEXT:    [[TEMP:%.*]] = add i32 [[B_0]], 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -28,20 +20,11 @@ entry:
   ret void
 }
 
-
 define internal void @g(%struct.ss* byval(%struct.ss) align 32 %b) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@g
-; CHECK-SAME: (i32 [[B_0:%.*]], i64 [[B_1:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32 [[B_0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_SS:%.*]], align 32
-; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
-; CHECK-NEXT:    store i32 [[B_0]], i32* [[DOT0]], align 32
-; CHECK-NEXT:    [[DOT1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 1
-; CHECK-NEXT:    store i64 [[B_1]], i64* [[DOT1]], align 4
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
-; CHECK-NEXT:    [[TEMP1:%.*]] = load i32, i32* [[TEMP]], align 4
-; CHECK-NEXT:    [[TEMP2:%.*]] = add i32 [[TEMP1]], 1
-; CHECK-NEXT:    store i32 [[TEMP2]], i32* [[TEMP]], align 4
+; CHECK-NEXT:    [[TEMP:%.*]] = add i32 [[B_0]], 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -75,6 +58,63 @@ entry:
   ret void
 }
 
+; Transform even if an argument is written to and then is loaded from.
+define internal void @k(%struct.ss* byval(%struct.ss) align 4 %b) nounwind  {
+; CHECK-LABEL: define {{[^@]+}}@k
+; CHECK-SAME: (i32 [[B_0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TEMP:%.*]] = add i32 [[B_0]], 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %temp = getelementptr %struct.ss, %struct.ss* %b, i32 0, i32 0
+  %temp1 = load i32, i32* %temp, align 4
+  %temp2 = add i32 %temp1, 1
+  store i32 %temp2, i32* %temp, align 4
+  %temp3 = load i32, i32* %temp, align 4
+  ret void
+}
+
+; Transform even if a store instruction is the single user.
+define internal void @l(%struct.ss* byval(%struct.ss) align 4 %b) nounwind  {
+; CHECK-LABEL: define {{[^@]+}}@l
+; CHECK-SAME: (i32 [[B_0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %temp = getelementptr %struct.ss, %struct.ss* %b, i32 0, i32 0
+  store i32 1, i32* %temp, align 4
+  ret void
+}
+
+; Transform all the arguments creating the required number of 'alloca's and
+; then optimize them out.
+define internal void @m(%struct.ss* byval(%struct.ss) align 4 %b, %struct.ss* byval(%struct.ss) align 4 %c) nounwind  {
+; CHECK-LABEL: define {{[^@]+}}@m
+; CHECK-SAME: (i32 [[B_0:%.*]], i32 [[C_0:%.*]], i64 [[C_1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TEMP2:%.*]] = add i32 [[B_0]], 1
+; CHECK-NEXT:    [[TEMP6:%.*]] = add i64 [[C_1]], 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %temp = getelementptr %struct.ss, %struct.ss* %b, i32 0, i32 0
+  %temp1 = load i32, i32* %temp, align 4
+  %temp2 = add i32 %temp1, 1
+  store i32 %temp2, i32* %temp, align 4
+
+  %temp3 = getelementptr %struct.ss, %struct.ss* %c, i32 0, i32 0
+  store i32 %temp2, i32* %temp3, align 4
+  
+  %temp4 = getelementptr %struct.ss, %struct.ss* %c, i32 0, i32 1
+  %temp5 = load i64, i64* %temp4, align 8
+  %temp6 = add i64 %temp5, 1
+  store i64 %temp6, i64* %temp4, align 8
+
+  ret void
+}
+
 define i32 @main() nounwind  {
 ; CHECK-LABEL: define {{[^@]+}}@main
 ; CHECK-SAME: () #[[ATTR0]] {
@@ -84,17 +124,26 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    store i32 1, i32* [[TEMP1]], align 8
 ; CHECK-NEXT:    [[TEMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; CHECK-NEXT:    store i64 2, i64* [[TEMP4]], align 4
-; CHECK-NEXT:    [[S_0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; CHECK-NEXT:    [[S_0_VAL:%.*]] = load i32, i32* [[S_0]], align 4
-; CHECK-NEXT:    [[S_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; CHECK-NEXT:    [[S_1_VAL:%.*]] = load i64, i64* [[S_1]], align 4
-; CHECK-NEXT:    call void @f(i32 [[S_0_VAL]], i64 [[S_1_VAL]])
-; CHECK-NEXT:    [[S_01:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; CHECK-NEXT:    [[S_01_VAL:%.*]] = load i32, i32* [[S_01]], align 32
-; CHECK-NEXT:    [[S_12:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; CHECK-NEXT:    [[S_12_VAL:%.*]] = load i64, i64* [[S_12]], align 4
-; CHECK-NEXT:    call void @g(i32 [[S_01_VAL]], i64 [[S_12_VAL]])
+; CHECK-NEXT:    [[S_0_0_0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 0
+; CHECK-NEXT:    [[S_0_0_0_VAL:%.*]] = load i32, i32* [[S_0_0_0]], align 4
+; CHECK-NEXT:    call void @f(i32 [[S_0_0_0_VAL]])
+; CHECK-NEXT:    [[S_1_0_0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 0
+; CHECK-NEXT:    [[S_1_0_0_VAL:%.*]] = load i32, i32* [[S_1_0_0]], align 4
+; CHECK-NEXT:    call void @g(i32 [[S_1_0_0_VAL]])
 ; CHECK-NEXT:    call void @h(%struct.ss* byval([[STRUCT_SS]]) [[S]])
+; CHECK-NEXT:    [[S_2_0_0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 0
+; CHECK-NEXT:    [[S_2_0_0_VAL:%.*]] = load i32, i32* [[S_2_0_0]], align 4
+; CHECK-NEXT:    call void @k(i32 [[S_2_0_0_VAL]])
+; CHECK-NEXT:    [[S_3_0_0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 0
+; CHECK-NEXT:    [[S_3_0_0_VAL:%.*]] = load i32, i32* [[S_3_0_0]], align 4
+; CHECK-NEXT:    call void @l(i32 [[S_3_0_0_VAL]])
+; CHECK-NEXT:    [[S_4_0_0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 0
+; CHECK-NEXT:    [[S_4_0_0_VAL:%.*]] = load i32, i32* [[S_4_0_0]], align 4
+; CHECK-NEXT:    [[S_4_1_0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 0
+; CHECK-NEXT:    [[S_4_1_0_VAL:%.*]] = load i32, i32* [[S_4_1_0]], align 4
+; CHECK-NEXT:    [[S_4_1_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 1
+; CHECK-NEXT:    [[S_4_1_1_VAL:%.*]] = load i64, i64* [[S_4_1_1]], align 8
+; CHECK-NEXT:    call void @m(i32 [[S_4_0_0_VAL]], i32 [[S_4_1_0_VAL]], i64 [[S_4_1_1_VAL]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -106,7 +155,8 @@ entry:
   call void @f(%struct.ss* byval(%struct.ss) align 4 %S) nounwind
   call void @g(%struct.ss* byval(%struct.ss) align 32 %S) nounwind
   call void @h(%struct.ss* byval(%struct.ss) %S) nounwind
+  call void @k(%struct.ss* byval(%struct.ss) align 4 %S) nounwind
+  call void @l(%struct.ss* byval(%struct.ss) align 4 %S) nounwind
+  call void @m(%struct.ss* byval(%struct.ss) align 4 %S, %struct.ss* byval(%struct.ss) align 4 %S) nounwind
   ret i32 0
 }
-
-

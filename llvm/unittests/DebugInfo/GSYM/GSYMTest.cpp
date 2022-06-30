@@ -2097,7 +2097,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
   auto ExpFI = GR->getFunctionInfo(0x1000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
-  EXPECT_TRUE(ExpFI->OptLineTable.hasValue());
+  EXPECT_TRUE(ExpFI->OptLineTable);
   StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "lines_no_decl");
   // Make sure have two line table entries and that get the first line entry
@@ -2109,7 +2109,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
   ExpFI = GR->getFunctionInfo(0x2000);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(ExpFI->Range, AddressRange(0x2000, 0x3000));
-  EXPECT_TRUE(ExpFI->OptLineTable.hasValue());
+  EXPECT_TRUE(ExpFI->OptLineTable);
   MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "lines_with_decl");
   // Make sure have two line table entries and that we don't use line 20

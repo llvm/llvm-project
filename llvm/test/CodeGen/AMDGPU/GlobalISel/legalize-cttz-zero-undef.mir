@@ -8,7 +8,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: cttz_zero_undef_s32_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[CTTZ_ZERO_UNDEF]](s32)
     %0:_(s32) = COPY $vgpr0
@@ -23,7 +25,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: cttz_zero_undef_s32_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY]](s64)
     ; CHECK-NEXT: $vgpr0 = COPY [[CTTZ_ZERO_UNDEF]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
@@ -38,7 +42,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: cttz_zero_undef_s64_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY]](s64)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[CTTZ_ZERO_UNDEF]](s32)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
@@ -54,7 +60,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: cttz_zero_undef_s16_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[CTTZ_ZERO_UNDEF]], [[C]]
@@ -72,7 +80,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: cttz_zero_undef_s16_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[CTTZ_ZERO_UNDEF]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
@@ -92,7 +102,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: cttz_zero_undef_v2s32_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UV]](s32)
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UV1]](s32)
@@ -110,7 +122,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-LABEL: name: cttz_zero_undef_v2s32_v2s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UV]](s64)
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UV1]](s64)
@@ -128,7 +142,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: cttz_zero_undef_v2s16_v2s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
@@ -156,7 +172,9 @@ body: |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: cttz_zero_undef_s7_s7
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[CTTZ_ZERO_UNDEF]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
@@ -177,7 +195,9 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: cttz_zero_undef_s33_s33
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[COPY]](s64)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[CTTZ_ZERO_UNDEF]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295

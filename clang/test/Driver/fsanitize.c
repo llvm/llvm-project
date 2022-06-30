@@ -942,3 +942,6 @@
 
 // RUN: %clang -fsanitize=undefined,float-divide-by-zero %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DIVBYZERO-UBSAN
 // CHECK-DIVBYZERO-UBSAN: "-fsanitize={{.*}},float-divide-by-zero,{{.*}}"
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined,function -mcmodel=large %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-CODE-MODEL
+// CHECK-UBSAN-FUNCTION-CODE-MODEL: error: invalid argument '-fsanitize=function' only allowed with '-mcmodel=small'

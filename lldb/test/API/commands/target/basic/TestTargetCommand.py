@@ -325,7 +325,7 @@ class targetCommandTestCase(TestBase):
     @no_debug_info_test
     def test_target_list_args(self):
         self.expect("target list blub", error=True,
-                    substrs=["the 'target list' command takes no arguments"])
+                    substrs=["'target list' doesn't take any arguments"])
 
     @no_debug_info_test
     def test_target_select_no_index(self):

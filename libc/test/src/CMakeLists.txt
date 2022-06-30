@@ -50,7 +50,6 @@ endif()
 # add_subdirectory(assert)
 # add_subdirectory(signal)
 add_subdirectory(stdio)
-add_subdirectory(threads)
 add_subdirectory(time)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")

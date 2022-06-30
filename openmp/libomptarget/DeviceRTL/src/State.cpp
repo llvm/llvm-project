@@ -504,6 +504,8 @@ int omp_get_default_device(void) { return -1; }
 
 int omp_get_num_devices(void) { return config::getNumDevices(); }
 
+int omp_get_device_num(void) { return config::getDeviceNum(); }
+
 int omp_get_num_teams(void) { return mapping::getNumberOfBlocks(); }
 
 int omp_get_team_num() { return mapping::getBlockId(); }

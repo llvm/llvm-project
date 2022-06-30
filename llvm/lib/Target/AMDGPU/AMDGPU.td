@@ -177,6 +177,12 @@ def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "VI SGPR initialization bug requiring a fixed SGPR allocation size"
 >;
 
+def FeatureUserSGPRInit16Bug : SubtargetFeature<"user-sgpr-init16-bug",
+  "UserSGPRInit16Bug",
+  "true",
+  "Bug requiring at least 16 user+system SGPRs to be enabled"
+>;
+
 def FeatureLdsMisalignedBug : SubtargetFeature<"lds-misaligned-bug",
   "LDSMisalignedBug",
   "true",
@@ -1274,12 +1280,13 @@ def FeatureISAVersion11_Common : FeatureSet<
 // Features for GFX 11.0.0 and 11.0.1
 def FeatureISAVersion11_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureGFX11ExtraVGPRs])>;
+    [FeatureGFX11ExtraVGPRs,
+     FeatureUserSGPRInit16Bug])>;
 
 // Features for GFX 11.0.2 and 11.0.3
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [])>;
+    [FeatureUserSGPRInit16Bug])>;
 
 // Features for GFX 11.5.0
 def FeatureISAVersion11_5_0 : FeatureSet<

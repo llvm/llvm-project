@@ -302,10 +302,10 @@ class RewriteInstanceDiff {
           continue;
         Unmapped.emplace_back(&Function);
       }
-      std::sort(Unmapped.begin(), Unmapped.end(),
-                [&](const BinaryFunction *A, const BinaryFunction *B) {
-                  return A->getFunctionScore() > B->getFunctionScore();
-                });
+      llvm::sort(Unmapped,
+                 [&](const BinaryFunction *A, const BinaryFunction *B) {
+                   return A->getFunctionScore() > B->getFunctionScore();
+                 });
       for (const BinaryFunction *Function : Unmapped) {
         outs() << Function->getPrintName() << " : ";
         outs() << Function->getFunctionScore() << "\n";

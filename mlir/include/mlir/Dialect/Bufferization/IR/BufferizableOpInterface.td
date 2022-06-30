@@ -15,9 +15,29 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
   let description = [{
     An op interface for One-Shot Bufferize. Ops that implement this interface
     interface can be analyzed and bufferized using One-Shot Bufferize.
+
+    Note: All "bufferizesTo*" and "getAliasing*" interface methods must be
+    implemented conservatively. If it is not statically known whether an
+    OpOperand/OpResult bufferizes in a certain way (e.g., to a memory write),
+    the worst case must be assumed (e.g., that it does). Similarly,
+    "getAliasing*" interface methods may always return additional OpOperands or
+    OpResults, but must not miss an OpOperand or OpResult that could potentially
+    alias at runtime.
   }];
   let cppNamespace = "::mlir::bufferization";
   let methods = [
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given OpResult may bufferize to a new buffer
+          allocation. If it is statically unknown if the given OpResult
+          bufferizes to a buffer allocation, `true` should be returned.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"bufferizesToAllocation",
+        /*args=*/(ins "OpResult":$opResult),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return false;"
+      >,
       InterfaceMethod<
         /*desc=*/[{
           Return `true` if the given OpOperand bufferizes to a memory read. This
@@ -317,7 +337,43 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           return success();
         }]
-      >
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return the bufferized type of the given tensor block argument. The
+          block argument is guaranteed to belong to a block of this op.
+        }],
+        /*retType=*/"FailureOr<BaseMemRefType>",
+        /*methodName=*/"getBufferType",
+        /*args=*/(ins "BlockArgument":$bbArg,
+                      "const BufferizationOptions &":$options),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          assert(bbArg.getOwner()->getParentOp() == $_op &&
+                 "bbArg must belong to this op");
+          auto tensorType = bbArg.getType().cast<TensorType>();
+          return bufferization::getMemRefType(tensorType, options);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return the memory space of the given tensor OpResult if specified on
+          this op. If not specified, return `failure`.
+
+          This method will never be called with OpResults that do not bufferize
+          to a memory allocation.
+        }],
+        /*retType=*/"FailureOr<unsigned>",
+        /*methodName=*/"getMemorySpace",
+        /*args=*/(ins "OpResult":$opResult),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          assert(cast<BufferizableOpInterface>($_op.getOperation())
+                     .bufferizesToAllocation(opResult)
+                 && "expected allocation");
+          return failure();
+        }]
+      >,
   ];
 
   let extraClassDeclaration = [{

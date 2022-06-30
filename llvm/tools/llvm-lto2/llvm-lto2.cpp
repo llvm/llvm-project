@@ -73,6 +73,18 @@ static cl::opt<bool>
                                        "import files for the "
                                        "distributed backend case"));
 
+static cl::opt<bool>
+    ThinLTOEmitIndexes("thinlto-emit-indexes", cl::init(false),
+                       cl::desc("Write out individual index files via "
+                                "InProcessThinLTO"));
+
+static cl::opt<bool>
+    ThinLTOEmitImports("thinlto-emit-imports", cl::init(false),
+                       cl::desc("Write out individual imports files via "
+                                "InProcessThinLTO. Has no effect unless "
+                                "specified with -thinlto-emit-indexes or "
+                                "-thinlto-distributed-indexes"));
+
 // Default to using all available threads in the system, but using only one
 // thread per core (no SMT).
 // Use -thinlto-threads=all to use hardware_concurrency() instead, which means
@@ -299,14 +311,16 @@ static int run(int argc, char **argv) {
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
-    Backend = createWriteIndexesThinBackend(/* OldPrefix */ "",
-                                            /* NewPrefix */ "",
-                                            /* ShouldEmitImportsFiles */ true,
-                                            /* LinkedObjectsFile */ nullptr,
-                                            /* OnWrite */ {});
+    Backend =
+        createWriteIndexesThinBackend(/* OldPrefix */ "",
+                                      /* NewPrefix */ "", ThinLTOEmitImports,
+                                      /* LinkedObjectsFile */ nullptr,
+                                      /* OnWrite */ {});
   else
     Backend = createInProcessThinBackend(
-        llvm::heavyweight_hardware_concurrency(Threads));
+        llvm::heavyweight_hardware_concurrency(Threads),
+        /* OnWrite */ {}, ThinLTOEmitIndexes, ThinLTOEmitImports);
+
   // Track whether we hit an error; in particular, in the multi-threaded case,
   // we can't exit() early because the rest of the threads wouldn't have had a
   // change to be join-ed, and that would result in a "terminate called without

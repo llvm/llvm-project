@@ -345,7 +345,7 @@ bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
 
 template <typename A>
 std::optional<NamedEntity> ExtractNamedEntity(const A &x) {
-  if (auto dataRef{ExtractDataRef(x, true)}) {
+  if (auto dataRef{ExtractDataRef(x)}) {
     return common::visit(
         common::visitors{
             [](SymbolRef &&symbol) -> std::optional<NamedEntity> {

@@ -120,6 +120,9 @@ public:
   bool isArgumentRegister(const MachineFunction &MF,
                           MCRegister Reg) const override;
 
+  /// Return true if it is tile register class.
+  bool isTileRegisterClass(const TargetRegisterClass *RC) const;
+
   /// Returns true if PhysReg is a fixed register.
   bool isFixedRegister(const MachineFunction &MF,
                        MCRegister PhysReg) const override;

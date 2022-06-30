@@ -414,12 +414,6 @@ protected:
     ModuleSP old_exec_module_sp = target->GetExecutableModule();
     ArchSpec old_arch_spec = target->GetArchitecture();
 
-    if (command.GetArgumentCount()) {
-      result.AppendErrorWithFormat("Invalid arguments for '%s'.\nUsage: %s\n",
-                                   m_cmd_name.c_str(), m_cmd_syntax.c_str());
-      return false;
-    }
-
     StreamString stream;
     ProcessSP process_sp;
     const auto error = target->Attach(m_options.attach_info, &stream);
@@ -562,13 +556,6 @@ protected:
     bool synchronous_execution = m_interpreter.GetSynchronous();
     StateType state = process->GetState();
     if (state == eStateStopped) {
-      if (command.GetArgumentCount() != 0) {
-        result.AppendErrorWithFormat(
-            "The '%s' command does not take any arguments.\n",
-            m_cmd_name.c_str());
-        return false;
-      }
-
       if (m_options.m_ignore > 0) {
         ThreadSP sel_thread_sp(GetDefaultThread()->shared_from_this());
         if (sel_thread_sp) {
@@ -943,7 +930,10 @@ public:
   CommandObjectProcessConnect(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "process connect",
                             "Connect to a remote debug service.",
-                            "process connect <remote-url>", 0) {}
+                            "process connect <remote-url>", 0) {
+    CommandArgumentData connect_arg{eArgTypeConnectURL, eArgRepeatPlain};
+    m_arguments.push_back({connect_arg});
+  }
 
   ~CommandObjectProcessConnect() override = default;
 
@@ -1068,7 +1058,10 @@ public:
                             "process load <filename> [<filename> ...]",
                             eCommandRequiresProcess | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
-                                eCommandProcessMustBePaused) {}
+                                eCommandProcessMustBePaused) {
+    CommandArgumentData file_arg{eArgTypePath, eArgRepeatPlus};
+    m_arguments.push_back({file_arg});
+  }
 
   ~CommandObjectProcessLoad() override = default;
 
@@ -1143,7 +1136,10 @@ public:
             "returned by a previous call to \"process load\".",
             "process unload <index>",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
-                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {}
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
+    CommandArgumentData load_idx_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
+    m_arguments.push_back({load_idx_arg});
+  }
 
   ~CommandObjectProcessUnload() override = default;
 
@@ -1291,18 +1287,13 @@ protected:
       return false;
     }
 
-    if (command.GetArgumentCount() == 0) {
-      bool clear_thread_plans = true;
-      Status error(process->Halt(clear_thread_plans));
-      if (error.Success()) {
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-      } else {
-        result.AppendErrorWithFormat("Failed to halt process: %s\n",
-                                     error.AsCString());
-      }
+    bool clear_thread_plans = true;
+    Status error(process->Halt(clear_thread_plans));
+    if (error.Success()) {
+      result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("'%s' takes no arguments:\nUsage: %s\n",
-                                   m_cmd_name.c_str(), m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Failed to halt process: %s\n",
+                                   error.AsCString());
     }
     return result.Succeeded();
   }
@@ -1330,17 +1321,12 @@ protected:
       return false;
     }
 
-    if (command.GetArgumentCount() == 0) {
-      Status error(process->Destroy(true));
-      if (error.Success()) {
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-      } else {
-        result.AppendErrorWithFormat("Failed to kill process: %s\n",
-                                     error.AsCString());
-      }
+    Status error(process->Destroy(true));
+    if (error.Success()) {
+      result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("'%s' takes no arguments:\nUsage: %s\n",
-                                   m_cmd_name.c_str(), m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Failed to kill process: %s\n",
+                                   error.AsCString());
     }
     return result.Succeeded();
   }
@@ -1372,7 +1358,10 @@ public:
             "appropriate file type.",
             "process save-core [-s corefile-style -p plugin-name] FILE",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
-                eCommandProcessMustBeLaunched) {}
+                eCommandProcessMustBeLaunched) {
+    CommandArgumentData file_arg{eArgTypePath, eArgRepeatPlain};
+    m_arguments.push_back({file_arg});
+  }
 
   ~CommandObjectProcessSaveCore() override = default;
 
@@ -1518,11 +1507,6 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
-
-    if (command.GetArgumentCount()) {
-      result.AppendError("'process status' takes no arguments");
-      return result.Succeeded();
-    }
 
     // No need to check "process" for validity as eCommandRequiresProcess
     // ensures it is valid

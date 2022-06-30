@@ -12,13 +12,13 @@ define void @widen_within_loop(i1 %cond_0, i1 %cond_1, i1 %cond_2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    store i32 0, i32* @G
+; CHECK-NEXT:    store i32 0, i32* @G, align 4
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1:%.*]]
 ; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[WIDE_CHK]], [[COND_2:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK1]]) [ "deopt"(i32 0) ]
-; CHECK-NEXT:    store i32 1, i32* @G
-; CHECK-NEXT:    store i32 2, i32* @G
-; CHECK-NEXT:    store i32 3, i32* @G
+; CHECK-NEXT:    store i32 1, i32* @G, align 4
+; CHECK-NEXT:    store i32 2, i32* @G, align 4
+; CHECK-NEXT:    store i32 3, i32* @G, align 4
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -38,15 +38,15 @@ loop:
 define void @widen_into_preheader(i1 %cond_0, i1 %cond_1, i1 %cond_2) {
 ; CHECK-LABEL: @widen_into_preheader(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* @G
+; CHECK-NEXT:    store i32 0, i32* @G, align 4
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1:%.*]]
 ; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[WIDE_CHK]], [[COND_2:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK1]]) [ "deopt"(i32 0) ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    store i32 1, i32* @G
-; CHECK-NEXT:    store i32 2, i32* @G
-; CHECK-NEXT:    store i32 3, i32* @G
+; CHECK-NEXT:    store i32 1, i32* @G, align 4
+; CHECK-NEXT:    store i32 2, i32* @G, align 4
+; CHECK-NEXT:    store i32 3, i32* @G, align 4
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -68,14 +68,14 @@ define void @dont_widen_over_common_exit(i1 %cond_0, i1 %cond_1, i1 %cond_2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    store i32 0, i32* @G
+; CHECK-NEXT:    store i32 0, i32* @G, align 4
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_0:%.*]]) [ "deopt"(i32 0) ]
-; CHECK-NEXT:    store i32 1, i32* @G
+; CHECK-NEXT:    store i32 1, i32* @G, align 4
 ; CHECK-NEXT:    br i1 [[COND_1:%.*]], label [[BACKEDGE:%.*]], label [[EXIT:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    store i32 2, i32* @G
+; CHECK-NEXT:    store i32 2, i32* @G, align 4
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_2:%.*]]) [ "deopt"(i32 2) ]
-; CHECK-NEXT:    store i32 3, i32* @G
+; CHECK-NEXT:    store i32 3, i32* @G, align 4
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -102,16 +102,16 @@ exit:
 define void @widen_over_common_exit_to_ph(i1 %cond_0, i1 %cond_1, i1 %cond_2) {
 ; CHECK-LABEL: @widen_over_common_exit_to_ph(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* @G
+; CHECK-NEXT:    store i32 0, i32* @G, align 4
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_2:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"(i32 0) ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    store i32 1, i32* @G
+; CHECK-NEXT:    store i32 1, i32* @G, align 4
 ; CHECK-NEXT:    br i1 [[COND_1:%.*]], label [[BACKEDGE:%.*]], label [[EXIT:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    store i32 2, i32* @G
-; CHECK-NEXT:    store i32 3, i32* @G
+; CHECK-NEXT:    store i32 2, i32* @G, align 4
+; CHECK-NEXT:    store i32 3, i32* @G, align 4
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

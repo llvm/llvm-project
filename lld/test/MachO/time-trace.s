@@ -11,14 +11,14 @@
 # RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:   | FileCheck %s
 
-## Test specified trace file name, also test that `--time-trace` is not needed if the other two are used.
-# RUN: %lld --time-trace-file=%t2.json --time-trace-granularity=0 -o %t2.macho %t.o
+## Test specified trace file name.
+# RUN: %lld --time-trace=%t2.json --time-trace-granularity=0 -o %t2.macho %t.o
 # RUN: cat %t2.json \
 # RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:   | FileCheck %s
 
-## Test trace requested to stdout, also test that `--time-trace` is not needed if the other two are used.
-# RUN: %lld --time-trace-file=- --time-trace-granularity=0 -o %t3.macho %t.o \
+## Test trace requested to stdout.
+# RUN: %lld --time-trace=- --time-trace-granularity=0 -o %t3.macho %t.o \
 # RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:   | FileCheck %s
 

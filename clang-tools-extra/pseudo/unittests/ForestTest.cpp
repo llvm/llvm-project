@@ -28,19 +28,19 @@ public:
 
   SymbolID symbol(llvm::StringRef Name) const {
     for (unsigned I = 0; I < NumTerminals; ++I)
-      if (G->table().Terminals[I] == Name)
+      if (G.table().Terminals[I] == Name)
         return tokenSymbol(static_cast<tok::TokenKind>(I));
-    for (SymbolID ID = 0; ID < G->table().Nonterminals.size(); ++ID)
-      if (G->table().Nonterminals[ID].Name == Name)
+    for (SymbolID ID = 0; ID < G.table().Nonterminals.size(); ++ID)
+      if (G.table().Nonterminals[ID].Name == Name)
         return ID;
     ADD_FAILURE() << "No such symbol found: " << Name;
     return 0;
   }
 
   RuleID ruleFor(llvm::StringRef NonterminalName) const {
-    auto RuleRange = G->table().Nonterminals[symbol(NonterminalName)].RuleRange;
+    auto RuleRange = G.table().Nonterminals[symbol(NonterminalName)].RuleRange;
     if (RuleRange.End - RuleRange.Start == 1)
-      return G->table().Nonterminals[symbol(NonterminalName)].RuleRange.Start;
+      return G.table().Nonterminals[symbol(NonterminalName)].RuleRange.Start;
     ADD_FAILURE() << "Expected a single rule for " << NonterminalName
                   << ", but it has " << RuleRange.End - RuleRange.Start
                   << " rule!\n";
@@ -48,7 +48,7 @@ public:
   }
 
 protected:
-  std::unique_ptr<Grammar> G;
+  Grammar G;
   std::vector<std::string> Diags;
 };
 
@@ -73,12 +73,12 @@ TEST_F(ForestTest, DumpBasic) {
   const auto *Add =
       &Arena.createSequence(symbol("add-expression"), ruleFor("add-expression"),
                             {Left, &T[1], Right});
-  EXPECT_EQ(Add->dumpRecursive(*G, true),
+  EXPECT_EQ(Add->dumpRecursive(G, true),
             "[  0, end) add-expression := id-expression + id-expression\n"
             "[  0,   1) ├─id-expression~IDENTIFIER := tok[0]\n"
             "[  1,   2) ├─+ := tok[1]\n"
             "[  2, end) └─id-expression~IDENTIFIER := tok[2]\n");
-  EXPECT_EQ(Add->dumpRecursive(*G, false),
+  EXPECT_EQ(Add->dumpRecursive(G, false),
             "[  0, end) add-expression := id-expression + id-expression\n"
             "[  0,   1) ├─id-expression := IDENTIFIER\n"
             "[  0,   1) │ └─IDENTIFIER := tok[0]\n"
@@ -114,7 +114,7 @@ TEST_F(ForestTest, DumpAmbiguousAndRefs) {
       &Arena.createSequence(symbol("type"), /*RuleID=*/4, {EnumType});
   const auto *Type =
       &Arena.createAmbiguous(symbol("type"), {Alternative1, Alternative2});
-  EXPECT_EQ(Type->dumpRecursive(*G),
+  EXPECT_EQ(Type->dumpRecursive(G),
             "[  0, end) type := <ambiguous>\n"
             "[  0, end) ├─type := class-type\n"
             "[  0, end) │ └─class-type := shared-type\n"
@@ -122,8 +122,33 @@ TEST_F(ForestTest, DumpAmbiguousAndRefs) {
             "[  0, end) │     └─IDENTIFIER := tok[0]\n"
             "[  0, end) └─type := enum-type\n"
             "[  0, end)   └─enum-type := shared-type\n"
-            "[  0, end)     └─shared-type := IDENTIFIER =#1\n"
-            "[  0, end)       └─IDENTIFIER := tok[0]\n");
+            "[  0, end)     └─shared-type =#1\n");
+}
+
+TEST_F(ForestTest, DumpAbbreviatedShared) {
+  build(R"cpp(
+    _ := A
+    A := B
+    B := *
+  )cpp");
+
+  ForestArena Arena;
+  const auto *Star = &Arena.createTerminal(tok::star, 0);
+
+  const auto *B = &Arena.createSequence(symbol("B"), ruleFor("B"), {Star});
+  // We have two identical (but distinct) A nodes.
+  // The GLR parser would never produce this, but it makes the example simpler.
+  const auto *A1 = &Arena.createSequence(symbol("A"), ruleFor("A"), {B});
+  const auto *A2 = &Arena.createSequence(symbol("A"), ruleFor("A"), {B});
+  const auto *A = &Arena.createAmbiguous(symbol("A"), {A1, A2});
+
+  // We must not abbreviate away shared nodes: if we show A~* there's no way to
+  // show that the intermediate B node is shared between A1 and A2.
+  EXPECT_EQ(A->dumpRecursive(G, /*Abbreviate=*/true),
+            "[  0, end) A := <ambiguous>\n"
+            "[  0, end) ├─A~B := * #1\n"
+            "[  0, end) │ └─* := tok[0]\n"
+            "[  0, end) └─A~B =#1\n");
 }
 
 } // namespace

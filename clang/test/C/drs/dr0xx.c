@@ -1,9 +1,9 @@
-/* RUN: %clang_cc1 -std=c89 -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c89 -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions -fno-signed-char %s
-   RUN: %clang_cc1 -std=c99 -verify=expected,c99untilc2x -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c11 -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c17 -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c2x -verify=expected,c2xandup -pedantic %s
+/* RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions -fno-signed-char %s
+   RUN: %clang_cc1 -std=c99 -fsyntax-only -verify=expected,c99untilc2x -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
+   RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
+   RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=expected,c2xandup -pedantic %s
  */
 
 /* The following are DRs which do not require tests to demonstrate

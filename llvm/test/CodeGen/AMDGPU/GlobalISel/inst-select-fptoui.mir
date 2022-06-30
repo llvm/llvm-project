@@ -13,7 +13,9 @@ body: |
     liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4
 
     ; GCN-LABEL: name: fptoui
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN: liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
     ; GCN-NEXT: %3:vgpr_32 = nofpexcept V_CVT_U32_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
@@ -21,7 +23,9 @@ body: |
     ; GCN-NEXT: FLAT_STORE_DWORD [[COPY2]], %3, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ; GCN-NEXT: FLAT_STORE_DWORD [[COPY2]], %4, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ; VI-LABEL: name: fptoui
-    ; VI: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; VI: liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; VI-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
     ; VI-NEXT: %3:vgpr_32 = nofpexcept V_CVT_U32_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec

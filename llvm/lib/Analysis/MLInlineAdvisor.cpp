@@ -232,7 +232,10 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   Function *Callee = Advice.getCallee();
   // The caller features aren't valid anymore.
   {
-    PreservedAnalyses PA = PreservedAnalyses::none();
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<FunctionPropertiesAnalysis>();
+    PA.abandon<DominatorTreeAnalysis>();
+    PA.abandon<LoopAnalysis>();
     FAM.invalidate(*Caller, PA);
   }
   Advice.updateCachedCallerFPI(FAM);

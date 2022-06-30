@@ -1390,6 +1390,8 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
       LLVM_READOBJ_ENUM_CASE(ELF, PT_MIPS_ABIFLAGS);
     }
     break;
+  case ELF::EM_RISCV:
+    switch (Type) { LLVM_READOBJ_ENUM_CASE(ELF, PT_RISCV_ATTRIBUTES); }
   }
 
   switch (Type) {
@@ -1423,12 +1425,16 @@ static std::string getGNUPtType(unsigned Arch, unsigned Type) {
     return std::string("<unknown>: ") + to_string(format_hex(Type, 1));
 
   // E.g. "PT_ARM_EXIDX" -> "EXIDX".
-  if (Seg.startswith("PT_ARM_"))
-    return Seg.drop_front(7).str();
+  if (Seg.consume_front("PT_ARM_"))
+    return Seg.str();
 
   // E.g. "PT_MIPS_REGINFO" -> "REGINFO".
-  if (Seg.startswith("PT_MIPS_"))
-    return Seg.drop_front(8).str();
+  if (Seg.consume_front("PT_MIPS_"))
+    return Seg.str();
+
+  // E.g. "PT_RISCV_ATTRIBUTES"
+  if (Seg.consume_front("PT_RISCV_"))
+    return Seg.str();
 
   // E.g. "PT_LOAD" -> "LOAD".
   assert(Seg.startswith("PT_"));
@@ -3643,18 +3649,18 @@ static std::string getSectionTypeString(unsigned Machine, unsigned Type) {
   StringRef Name = getELFSectionTypeName(Machine, Type);
 
   // Handle SHT_GNU_* type names.
-  if (Name.startswith("SHT_GNU_")) {
-    if (Name == "SHT_GNU_HASH")
+  if (Name.consume_front("SHT_GNU_")) {
+    if (Name == "HASH")
       return "GNU_HASH";
     // E.g. SHT_GNU_verneed -> VERNEED.
-    return Name.drop_front(8).upper();
+    return Name.upper();
   }
 
   if (Name == "SHT_SYMTAB_SHNDX")
     return "SYMTAB SECTION INDICES";
 
-  if (Name.startswith("SHT_"))
-    return Name.drop_front(4).str();
+  if (Name.consume_front("SHT_"))
+    return Name.str();
   return getSectionTypeOffsetString(Type);
 }
 
@@ -7030,8 +7036,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
-    if (Sec.sh_type != SHT_LLVM_BB_ADDR_MAP)
+    if (Sec.sh_type != SHT_LLVM_BB_ADDR_MAP &&
+        Sec.sh_type != SHT_LLVM_BB_ADDR_MAP_V0) {
       continue;
+    }
     Optional<const Elf_Shdr *> FunctionSec = None;
     if (IsRelocatable)
       FunctionSec =

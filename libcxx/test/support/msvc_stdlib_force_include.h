@@ -69,6 +69,9 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
     // Restore features that are removed in C++20.
     #define _HAS_FEATURES_REMOVED_IN_CXX20 1
 
+    // Silence warnings about the unspecified complex<non-floating-point>
+    #define _SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING
+
     // Silence warnings about features that are deprecated in non-default language modes.
     #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
     #define _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS

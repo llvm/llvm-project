@@ -8,7 +8,9 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_and_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
@@ -25,7 +27,9 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_and_s1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: S_NOP 0, implicit [[AND]](s32)
@@ -45,7 +49,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
 
     ; CHECK-LABEL: name: test_and_v2s1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
@@ -79,7 +85,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8
 
     ; CHECK-LABEL: name: test_and_v3s1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
@@ -117,7 +125,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_and_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AND]](s64)
@@ -134,7 +144,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
 
     ; CHECK-LABEL: name: test_and_s96
-    ; CHECK: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s96) = COPY $vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[COPY]](s96), 0
     ; CHECK-NEXT: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY]](s96), 64
@@ -158,7 +170,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
 
     ; CHECK-LABEL: name: test_and_128
-    ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](s128)
@@ -179,7 +193,9 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_and_s7
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
@@ -199,7 +215,9 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_and_s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
@@ -219,7 +237,9 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_and_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -242,7 +262,9 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_and_s24
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
@@ -262,7 +284,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_and_s48
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AND]](s64)
@@ -282,7 +306,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_and_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AND]](<2 x s32>)
@@ -299,7 +325,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
 
     ; CHECK-LABEL: name: test_and_v3s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32)
@@ -323,7 +351,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
 
     ; CHECK-LABEL: name: test_and_v4s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY1]](<4 x s32>)
@@ -375,7 +405,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
 
     ; CHECK-LABEL: name: test_and_v2s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
@@ -396,7 +428,9 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_and_v2s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<2 x s16>) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AND]](<2 x s16>)
@@ -412,7 +446,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
     ; CHECK-LABEL: name: test_and_v3s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
@@ -491,7 +527,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_and_v4s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<4 x s16>) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AND]](<4 x s16>)

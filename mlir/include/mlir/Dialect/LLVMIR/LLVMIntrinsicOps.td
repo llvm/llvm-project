@@ -187,6 +187,28 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
 }
 
 //
+// Variadic function intrinsics.
+//
+
+def LLVM_VaStartOp : LLVM_ZeroResultIntrOp<"vastart">,
+                     Arguments<(ins LLVM_i8Ptr:$arg_list)> {
+  let assemblyFormat = "$arg_list attr-dict";
+  let summary = "Initializes `arg_list` for subsequent variadic argument extractions.";
+}
+
+def LLVM_VaCopyOp : LLVM_ZeroResultIntrOp<"vacopy">,
+                    Arguments<(ins LLVM_i8Ptr:$dest_list, LLVM_i8Ptr:$src_list)> {
+  let assemblyFormat = "$src_list `to` $dest_list attr-dict";
+  let summary = "Copies the current argument position from `src_list` to `dest_list`.";
+}
+
+def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend">,
+                   Arguments<(ins LLVM_i8Ptr:$arg_list)> {
+  let assemblyFormat = "$arg_list attr-dict";
+  let summary = "Destroys `arg_list`, which has been initialized by `intr.vastart` or `intr.vacopy`.";
+}
+
+//
 // Exception handling intrinsics.
 //
 
@@ -406,6 +428,75 @@ def LLVM_StepVectorOp
   let arguments = (ins);
   let results = (outs LLVM_Type:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+/// Create a call to vector.insert intrinsic
+def LLVM_vector_insert
+    : LLVM_Op<"intr.vector.insert",
+                 [NoSideEffect, AllTypesMatch<["dstvec", "res"]>,
+                  PredOpTrait<"vectors are not bigger than 2^17 bits.", And<[
+                    CPred<"getSrcVectorBitWidth() <= 131072">,
+                    CPred<"getDstVectorBitWidth() <= 131072">
+                  ]>>,
+                  PredOpTrait<"it is not inserting scalable into fixed-length vectors.",
+                    CPred<"!isScalableVectorType($srcvec.getType()) || "
+                          "isScalableVectorType($dstvec.getType())">>]> {
+  let arguments = (ins LLVM_AnyVector:$srcvec, LLVM_AnyVector:$dstvec,
+                       I64Attr:$pos);
+  let results = (outs LLVM_AnyVector:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  string llvmBuilder = [{
+    $res = builder.CreateInsertVector(
+        $_resultType, $dstvec, $srcvec, builder.getInt64($pos));
+  }];
+  let assemblyFormat = "$srcvec `,` $dstvec `[` $pos `]` attr-dict `:` "
+    "type($srcvec) `into` type($res)";
+  let extraClassDeclaration = [{
+    uint64_t getVectorBitWidth(Type vector) {
+      return getVectorNumElements(vector).getKnownMinValue() *
+             getVectorElementType(vector).getIntOrFloatBitWidth();
+    }
+    uint64_t getSrcVectorBitWidth() {
+      return getVectorBitWidth(getSrcvec().getType());
+    }
+    uint64_t getDstVectorBitWidth() {
+      return getVectorBitWidth(getDstvec().getType());
+    }
+  }];
+}
+
+/// Create a call to vector.extract intrinsic
+def LLVM_vector_extract
+    : LLVM_Op<"intr.vector.extract",
+                 [NoSideEffect,
+                  PredOpTrait<"vectors are not bigger than 2^17 bits.", And<[
+                    CPred<"getSrcVectorBitWidth() <= 131072">,
+                    CPred<"getResVectorBitWidth() <= 131072">
+                  ]>>,
+                  PredOpTrait<"it is not extracting scalable from fixed-length vectors.",
+                    CPred<"!isScalableVectorType($res.getType()) || "
+                          "isScalableVectorType($srcvec.getType())">>]> {
+  let arguments = (ins LLVM_AnyVector:$srcvec, I64Attr:$pos);
+  let results = (outs LLVM_AnyVector:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  string llvmBuilder = [{
+    $res = builder.CreateExtractVector(
+        $_resultType, $srcvec, builder.getInt64($pos));
+  }];
+  let assemblyFormat = "$srcvec `[` $pos `]` attr-dict `:` "
+    "type($res) `from` type($srcvec)";
+  let extraClassDeclaration = [{
+    uint64_t getVectorBitWidth(Type vector) {
+      return getVectorNumElements(vector).getKnownMinValue() *
+             getVectorElementType(vector).getIntOrFloatBitWidth();
+    }
+    uint64_t getSrcVectorBitWidth() {
+      return getVectorBitWidth(getSrcvec().getType());
+    }
+    uint64_t getResVectorBitWidth() {
+      return getVectorBitWidth(getRes().getType());
+    }
+  }];
 }
 
 //

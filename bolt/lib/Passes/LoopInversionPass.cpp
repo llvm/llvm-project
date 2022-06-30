@@ -73,10 +73,9 @@ bool LoopInversionPass::runOnFunction(BinaryFunction &BF) {
 
   if (IsChanged) {
     BinaryFunction::BasicBlockOrderType NewOrder = BF.getLayout();
-    std::sort(NewOrder.begin(), NewOrder.end(),
-              [&](BinaryBasicBlock *BB1, BinaryBasicBlock *BB2) {
-                return BB1->getLayoutIndex() < BB2->getLayoutIndex();
-              });
+    llvm::sort(NewOrder, [&](BinaryBasicBlock *BB1, BinaryBasicBlock *BB2) {
+      return BB1->getLayoutIndex() < BB2->getLayoutIndex();
+    });
     BF.updateBasicBlockLayout(NewOrder);
   }
 

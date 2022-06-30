@@ -136,6 +136,10 @@
 #define Xp NASTY_MACRO
 #define Xs NASTY_MACRO
 
+// The classic Windows min/max macros
+#define min NASTY_MACRO
+#define max NASTY_MACRO
+
 /*
 BEGIN-SCRIPT
 

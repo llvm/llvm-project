@@ -33,7 +33,7 @@ buildStmtToBasicBlockMap(const CFG &Cfg) {
 
     for (const CFGElement &Element : *Block) {
       auto Stmt = Element.getAs<CFGStmt>();
-      if (!Stmt.hasValue())
+      if (!Stmt)
         continue;
 
       StmtToBlock[Stmt.getValue().getStmt()] = Block;

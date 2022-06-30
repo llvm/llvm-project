@@ -99,6 +99,8 @@ set(files
   __algorithm/ranges_minmax.h
   __algorithm/ranges_minmax_element.h
   __algorithm/ranges_mismatch.h
+  __algorithm/ranges_move.h
+  __algorithm/ranges_move_backward.h
   __algorithm/ranges_none_of.h
   __algorithm/ranges_replace.h
   __algorithm/ranges_replace_if.h
@@ -287,6 +289,7 @@ set(files
   __iterator/access.h
   __iterator/advance.h
   __iterator/back_insert_iterator.h
+  __iterator/bounded_iter.h
   __iterator/common_iterator.h
   __iterator/concepts.h
   __iterator/counted_iterator.h

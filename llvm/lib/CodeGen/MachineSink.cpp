@@ -1289,6 +1289,12 @@ bool MachineSinking::SinkIntoCycle(MachineCycle *Cycle, MachineInstr &I) {
   SinkBlock->splice(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()), Preheader,
                     I);
 
+  // Conservatively clear any kill flags on uses of sunk instruction
+  for (MachineOperand &MO : I.operands()) {
+    if (MO.isReg() && MO.readsReg())
+      RegsToClearKillFlags.insert(MO.getReg());
+  }
+
   // The instruction is moved from its basic block, so do not retain the
   // debug information.
   assert(!I.isDebugInstr() && "Should not sink debug inst");

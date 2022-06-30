@@ -229,14 +229,9 @@ StringRef AttrOrTypeParameter::getComparator() const {
 }
 
 StringRef AttrOrTypeParameter::getCppType() const {
-  llvm::Init *parameterType = getDef();
-  if (auto *stringType = dyn_cast<llvm::StringInit>(parameterType))
+  if (auto *stringType = dyn_cast<llvm::StringInit>(getDef()))
     return stringType->getValue();
-  if (auto *param = dyn_cast<llvm::DefInit>(parameterType))
-    return param->getDef()->getValueAsString("cppType");
-  llvm::PrintFatalError(
-      "Parameters DAG arguments must be either strings or defs "
-      "which inherit from AttrOrTypeParameter\n");
+  return getDefValue<llvm::StringInit>("cppType").getValue();
 }
 
 StringRef AttrOrTypeParameter::getCppAccessorType() const {
@@ -246,6 +241,10 @@ StringRef AttrOrTypeParameter::getCppAccessorType() const {
 
 StringRef AttrOrTypeParameter::getCppStorageType() const {
   return getDefValue<llvm::StringInit>("cppStorageType").value_or(getCppType());
+}
+
+StringRef AttrOrTypeParameter::getConvertFromStorage() const {
+  return getDefValue<llvm::StringInit>("convertFromStorage").value_or("$_self");
 }
 
 Optional<StringRef> AttrOrTypeParameter::getParser() const {

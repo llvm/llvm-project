@@ -417,48 +417,6 @@ vectorizeOneOp(OpBuilder &b, LinalgOp linalgOp, Operation *op,
                llvm::to_vector<4>(returnTypes), op->getAttrs())};
 }
 
-/// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.
-static bool hasOnlyScalarElementwiseOp(Region &r) {
-  if (!llvm::hasSingleElement(r))
-    return false;
-  for (Operation &op : r.front()) {
-    if (!(isa<arith::ConstantOp, func::ConstantOp, linalg::YieldOp,
-              linalg::IndexOp>(op) ||
-          OpTrait::hasElementwiseMappableTraits(&op)) ||
-        llvm::any_of(op.getResultTypes(),
-                     [](Type type) { return !type.isIntOrIndexOrFloat(); }))
-      return false;
-  }
-  return true;
-}
-
-/// Returns `true` if all indexing maps of the linalg op are projected
-/// permutations.
-static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
-  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
-    return m.isProjectedPermutation(/*allowZeroInResults=*/true);
-  });
-}
-
-// Return true if the op is an element-wise linalg op.
-static bool isElementwise(Operation *op) {
-  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
-  if (!linalgOp)
-    return false;
-  if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
-    return false;
-
-  if (!allIndexingsAreProjectedPermutation(linalgOp))
-    return false;
-
-  // TODO: relax the restrictions on indexing map.
-  for (OpOperand *opOperand : linalgOp.getOutputOperands()) {
-    if (!linalgOp.getTiedIndexingMap(opOperand).isPermutation())
-      return false;
-  }
-  return hasOnlyScalarElementwiseOp(linalgOp->getRegion(0));
-}
-
 /// Generic vectorization function that rewrites the body of a `linalgOp` into
 /// vector form. Generic vectorization proceeds as follows:
 ///   1. Verify the `linalgOp` has one non-empty region.
@@ -594,6 +552,19 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 }
 
 static LogicalResult vectorizeStaticLinalgOpPrecondition(linalg::LinalgOp op) {
+  // All types in the body should be a supported element type for VectorType.
+  for (Operation &innerOp : op->getRegion(0).front()) {
+    if (llvm::any_of(innerOp.getOperandTypes(), [](Type type) {
+          return !VectorType::isValidElementType(type);
+        })) {
+      return failure();
+    }
+    if (llvm::any_of(innerOp.getResultTypes(), [](Type type) {
+          return !VectorType::isValidElementType(type);
+        })) {
+      return failure();
+    }
+  }
   if (isElementwise(op))
     return success();
   // TODO: isaConvolutionOpInterface that can also infer from generic features.
@@ -772,7 +743,7 @@ struct GenericPadOpVectorizationPattern : public GeneralizePadOpPattern {
         vecType.getRank(),
         rewriter.create<arith::ConstantIndexOp>(padOp.getLoc(), 0));
     auto read = rewriter.create<vector::TransferReadOp>(
-        padOp.getLoc(), vecType, padOp.source(), readIndices, padValue,
+        padOp.getLoc(), vecType, padOp.getSource(), readIndices, padValue,
         ArrayRef<bool>{readInBounds});
 
     // If `dest` is a FillOp and the TransferWriteOp would overwrite the
@@ -854,7 +825,7 @@ struct PadOpVectorizationWithTransferReadPattern
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
       xferOp->setAttr(xferOp.getInBoundsAttrName(),
                       rewriter.getBoolArrayAttr(inBounds));
-      xferOp.getSourceMutable().assign(padOp.source());
+      xferOp.getSourceMutable().assign(padOp.getSource());
       xferOp.getPaddingMutable().assign(padValue);
     });
 
@@ -922,7 +893,7 @@ struct PadOpVectorizationWithTransferWritePattern
     if (!trimPadding.hasZeroOffset())
       return failure();
     // trimPadding must remove the amount of padding that was added earlier.
-    if (!hasSameTensorSize(padOp.source(), trimPadding))
+    if (!hasSameTensorSize(padOp.getSource(), trimPadding))
       return failure();
 
     // Insert the new TransferWriteOp at position of the old TransferWriteOp.
@@ -930,9 +901,9 @@ struct PadOpVectorizationWithTransferWritePattern
 
     SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
     auto newXferOp = rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        xferOp, padOp.source().getType(), xferOp.getVector(), padOp.source(),
-        xferOp.getIndices(), xferOp.getPermutationMapAttr(), xferOp.getMask(),
-        rewriter.getBoolArrayAttr(inBounds));
+        xferOp, padOp.getSource().getType(), xferOp.getVector(),
+        padOp.getSource(), xferOp.getIndices(), xferOp.getPermutationMapAttr(),
+        xferOp.getMask(), rewriter.getBoolArrayAttr(inBounds));
     rewriter.replaceOp(trimPadding, newXferOp->getResult(0));
 
     return success();
@@ -953,7 +924,7 @@ struct PadOpVectorizationWithTransferWritePattern
     // If the input to tensor::PadOp is a CastOp, try with with both CastOp
     // result and CastOp operand.
     if (auto castOp = beforePadding.getDefiningOp<tensor::CastOp>())
-      if (hasSameTensorSize(castOp.source(), afterTrimming))
+      if (hasSameTensorSize(castOp.getSource(), afterTrimming))
         return true;
 
     auto t1 = beforePadding.getType().dyn_cast<RankedTensorType>();
@@ -1066,10 +1037,10 @@ struct PadOpVectorizationWithInsertSlicePattern
     if (!padValue)
       return failure();
     // Dynamic shapes not supported.
-    if (!padOp.result().getType().cast<ShapedType>().hasStaticShape())
+    if (!padOp.getResult().getType().cast<ShapedType>().hasStaticShape())
       return failure();
     // Pad result not used as destination.
-    if (insertOp.dest() == padOp.result())
+    if (insertOp.getDest() == padOp.getResult())
       return failure();
 
     auto vecType = VectorType::get(padOp.getType().getShape(),
@@ -1096,7 +1067,7 @@ struct PadOpVectorizationWithInsertSlicePattern
     SmallVector<Value> readIndices(
         vecRank, rewriter.create<arith::ConstantIndexOp>(padOp.getLoc(), 0));
     auto read = rewriter.create<vector::TransferReadOp>(
-        padOp.getLoc(), vecType, padOp.source(), readIndices, padValue);
+        padOp.getLoc(), vecType, padOp.getSource(), readIndices, padValue);
 
     // Generate TransferWriteOp: Write to InsertSliceOp's dest tensor at
     // specified offsets. Write is fully in-bounds because a InsertSliceOp's
@@ -1105,7 +1076,7 @@ struct PadOpVectorizationWithInsertSlicePattern
         ofrToIndexValues(rewriter, padOp.getLoc(), insertOp.getMixedOffsets());
     SmallVector<bool> inBounds(vecRank, true);
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        insertOp, read, insertOp.dest(), writeIndices,
+        insertOp, read, insertOp.getDest(), writeIndices,
         ArrayRef<bool>{inBounds});
 
     return success();

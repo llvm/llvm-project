@@ -37,7 +37,17 @@
 ; RUN:          -exported-symbol _func2 \
 ; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty
-; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
+; RUN: cat %t.yaml | FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE
+
+; Try again with `-annotate-inline-lto-phase`.
+; RUN: rm -f %t.yaml
+; RUN: llvm-lto \
+; RUN:          -annotate-inline-phase \
+; RUN:          -lto-pass-remarks-output=%t.yaml \
+; RUN:          -exported-symbol _func2 \
+; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
+; RUN:     FileCheck %s -allow-empty
+; RUN: cat %t.yaml | FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE
 
 ; REMARKS: remark: {{.*}} 'foo' inlined into 'main'
 ; REMARKS: remark: {{.*}} loop not vectorized: cannot prove it is safe to reorder memory operations
@@ -50,7 +60,8 @@
 ; NM: main
 
 ; YAML:      --- !Passed
-; YAML-NEXT: Pass:            inline
+; YAML-NO-ANNOTATE-NEXT: Pass:            inline
+; YAML-ANNOTATE-NEXT: Pass:            postlink-cgscc-inline
 ; YAML-NEXT: Name:            Inlined
 ; YAML-NEXT: Function:        main
 ; YAML-NEXT: Args:

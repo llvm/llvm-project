@@ -231,6 +231,8 @@ def SVEShiftImmR16 : ComplexPattern<i32, 1, "SelectSVEShiftImm<1, 16, true>", []
 def SVEShiftImmR32 : ComplexPattern<i32, 1, "SelectSVEShiftImm<1, 32, true>", []>;
 def SVEShiftImmR64 : ComplexPattern<i64, 1, "SelectSVEShiftImm<1, 64, true>", []>;
 
+def SVEShiftSplatImmR : ComplexPattern<iAny, 1, "SelectSVEShiftSplatImmR", []>;
+
 def SVEAllActive : ComplexPattern<untyped, 0, "SelectAllActivePredicate", []>;
 
 class SVEExactFPImm<string Suffix, string ValA, string ValB> : AsmOperandClass {
@@ -382,17 +384,17 @@ multiclass SVE_1_Op_PassthruUndef_Round_Pat<ValueType vtd, SDPatternOperator op,
 
 class SVE_1_Op_Imm_OptLsl_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
                               ValueType it, ComplexPattern cpx, Instruction inst>
-  : Pat<(vt (op (vt zprty:$Op1), (vt (AArch64dup (it (cpx i32:$imm, i32:$shift)))))),
+  : Pat<(vt (op (vt zprty:$Op1), (vt (splat_vector (it (cpx i32:$imm, i32:$shift)))))),
         (inst $Op1, i32:$imm, i32:$shift)>;
 
 class SVE_1_Op_Imm_Arith_All_Active<ValueType vt, ValueType pt, SDPatternOperator op,
                                   ZPRRegOp zprty, ValueType it, ComplexPattern cpx, Instruction inst>
-  : Pat<(vt (op (pt (SVEAllActive)), (vt zprty:$Op1), (vt (AArch64dup (it (cpx i32:$imm)))))),
+  : Pat<(vt (op (pt (SVEAllActive)), (vt zprty:$Op1), (vt (splat_vector (it (cpx i32:$imm)))))),
         (inst $Op1, i32:$imm)>;
 
 class SVE_1_Op_Imm_Log_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
                            ValueType it, ComplexPattern cpx, Instruction inst>
-  : Pat<(vt (op (vt zprty:$Op1), (vt (AArch64dup (it (cpx i64:$imm)))))),
+  : Pat<(vt (op (vt zprty:$Op1), (vt (splat_vector (it (cpx i64:$imm)))))),
         (inst $Op1, i64:$imm)>;
 
 class SVE_2_Op_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
@@ -494,20 +496,20 @@ multiclass SVE_InReg_Extend_PassthruUndef<ValueType vt, SDPatternOperator op, Va
 class SVE_Shift_DupImm_Pred_Pat<ValueType vt, SDPatternOperator op,
                                 ValueType pt, ValueType it,
                                 ComplexPattern cast, Instruction inst>
-: Pat<(vt (op pt:$Pg, vt:$Rn, (vt (AArch64dup (it (cast i32:$imm)))))),
+: Pat<(vt (op pt:$Pg, vt:$Rn, (vt (splat_vector (it (cast i32:$imm)))))),
       (inst $Pg, $Rn, i32:$imm)>;
 
 class SVE_Shift_DupImm_All_Active_Pat<ValueType vt, SDPatternOperator op,
                                       ValueType pt, ValueType it,
                                       ComplexPattern cast, Instruction inst>
-: Pat<(vt (op (pt (SVEAllActive)), vt:$Rn, (vt (AArch64dup (it (cast i32:$imm)))))),
+: Pat<(vt (op (pt (SVEAllActive)), vt:$Rn, (vt (splat_vector (it (cast i32:$imm)))))),
       (inst $Rn, i32:$imm)>;
 
 class SVE_2_Op_Fp_Imm_Pat<ValueType vt, SDPatternOperator op,
                           ValueType pt, ValueType it,
                           FPImmLeaf immL, int imm,
                           Instruction inst>
-: Pat<(vt (op (pt PPR_3b:$Pg), (vt ZPR:$Zs1), (vt (AArch64dup (it immL))))),
+: Pat<(vt (op (pt PPR_3b:$Pg), (vt ZPR:$Zs1), (vt (splat_vector (it immL))))),
       (inst $Pg, $Zs1, imm)>;
 
 class SVE_2_Op_Fp_Imm_Pat_Zero<ValueType vt, SDPatternOperator op,
@@ -515,7 +517,7 @@ class SVE_2_Op_Fp_Imm_Pat_Zero<ValueType vt, SDPatternOperator op,
                               FPImmLeaf immL, int imm,
                               Instruction inst>
 : Pat<(vt (op pt:$Pg, (vselect pt:$Pg, vt:$Zs1, (SVEDup0)),
-                      (vt (AArch64dup (it immL))))),
+                      (vt (splat_vector (it immL))))),
       (inst $Pg, $Zs1, imm)>;
 
 // Used to re-order the operands of BSP when lowering to BSL. BSP has the order:
@@ -524,6 +526,12 @@ class SVE_3_Op_BSP_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
                    ValueType vt2, ValueType vt3, Instruction inst>
 : Pat<(vtd (op vt1:$Op1, vt2:$Op2, vt3:$Op3)),
       (inst $Op2, $Op3, $Op1)>;
+
+class SVE_Shift_Add_All_Active_Pat<ValueType vtd, SDPatternOperator op, ValueType pt,
+                                   ValueType vt1, ValueType vt2, ValueType vt3,
+                                   Instruction inst>
+: Pat<(vtd (add vt1:$Op1, (op (pt (SVEAllActive)), vt2:$Op2, vt3:$Op3))),
+      (inst $Op1, $Op2, $Op3)>;
 
 //===----------------------------------------------------------------------===//
 // SVE pattern match helpers.
@@ -1195,27 +1203,27 @@ multiclass sve_int_perm_dup_i<string asm> {
                   (!cast<Instruction>(NAME # _Q) ZPR128:$Zd, FPR128asZPR:$Qn, 0), 2>;
 
   // Duplicate extracted element of vector into all vector elements
-  def : Pat<(nxv16i8 (AArch64dup (i32 (vector_extract (nxv16i8 ZPR:$vec), sve_elm_idx_extdup_b:$index)))),
+  def : Pat<(nxv16i8 (splat_vector (i32 (vector_extract (nxv16i8 ZPR:$vec), sve_elm_idx_extdup_b:$index)))),
             (!cast<Instruction>(NAME # _B) ZPR:$vec, sve_elm_idx_extdup_b:$index)>;
-  def : Pat<(nxv8i16 (AArch64dup (i32 (vector_extract (nxv8i16 ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
+  def : Pat<(nxv8i16 (splat_vector (i32 (vector_extract (nxv8i16 ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
             (!cast<Instruction>(NAME # _H) ZPR:$vec, sve_elm_idx_extdup_h:$index)>;
-  def : Pat<(nxv4i32 (AArch64dup (i32 (vector_extract (nxv4i32 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
+  def : Pat<(nxv4i32 (splat_vector (i32 (vector_extract (nxv4i32 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
             (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
-  def : Pat<(nxv2i64 (AArch64dup (i64 (vector_extract (nxv2i64 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
+  def : Pat<(nxv2i64 (splat_vector (i64 (vector_extract (nxv2i64 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
             (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
-  def : Pat<(nxv8f16 (AArch64dup (f16 (vector_extract (nxv8f16 ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
+  def : Pat<(nxv8f16 (splat_vector (f16 (vector_extract (nxv8f16 ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
             (!cast<Instruction>(NAME # _H) ZPR:$vec, sve_elm_idx_extdup_h:$index)>;
-  def : Pat<(nxv8bf16 (AArch64dup (bf16 (vector_extract (nxv8bf16 ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
+  def : Pat<(nxv8bf16 (splat_vector (bf16 (vector_extract (nxv8bf16 ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
             (!cast<Instruction>(NAME # _H) ZPR:$vec, sve_elm_idx_extdup_h:$index)>;
-  def : Pat<(nxv4f16 (AArch64dup (f16 (vector_extract (nxv4f16 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
+  def : Pat<(nxv4f16 (splat_vector (f16 (vector_extract (nxv4f16 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
             (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
-  def : Pat<(nxv2f16 (AArch64dup (f16 (vector_extract (nxv2f16 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
+  def : Pat<(nxv2f16 (splat_vector (f16 (vector_extract (nxv2f16 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
             (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
-  def : Pat<(nxv4f32 (AArch64dup (f32 (vector_extract (nxv4f32 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
+  def : Pat<(nxv4f32 (splat_vector (f32 (vector_extract (nxv4f32 ZPR:$vec), sve_elm_idx_extdup_s:$index)))),
             (!cast<Instruction>(NAME # _S) ZPR:$vec, sve_elm_idx_extdup_s:$index)>;
-  def : Pat<(nxv2f32 (AArch64dup (f32 (vector_extract (nxv2f32 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
+  def : Pat<(nxv2f32 (splat_vector (f32 (vector_extract (nxv2f32 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
             (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
-  def : Pat<(nxv2f64 (AArch64dup (f64 (vector_extract (nxv2f64 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
+  def : Pat<(nxv2f64 (splat_vector (f64 (vector_extract (nxv2f64 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
             (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
 }
 
@@ -1768,7 +1776,7 @@ multiclass sve_int_dup_mask_imm<string asm> {
   def : InstAlias<"mov $Zd, $imm",
                   (!cast<Instruction>(NAME) ZPR64:$Zd, sve_preferred_logical_imm64:$imm), 5>;
 
-  def : Pat<(nxv2i64 (AArch64dup (i64 logical_imm64:$imm))),
+  def : Pat<(nxv2i64 (splat_vector (i64 logical_imm64:$imm))),
             (!cast<Instruction>(NAME) logical_imm64:$imm)>;
 }
 
@@ -3800,7 +3808,8 @@ class sve2_int_bin_accum_shift_imm<bits<4> tsz8_64, bits<2> opc, string asm,
 }
 
 multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm,
-                                              SDPatternOperator op> {
+                                              SDPatternOperator op,
+                                              SDPatternOperator shift_op = null_frag> {
   def _B : sve2_int_bin_accum_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
   def _H : sve2_int_bin_accum_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
     let Inst{19} = imm{3};
@@ -3817,6 +3826,11 @@ multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm,
   def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, i32, tvecshiftR16, !cast<Instruction>(NAME # _H)>;
   def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, i32, tvecshiftR32, !cast<Instruction>(NAME # _S)>;
   def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, tvecshiftR64, !cast<Instruction>(NAME # _D)>;
+
+  def : SVE_Shift_Add_All_Active_Pat<nxv16i8, shift_op, nxv16i1, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME # _B)>;
+  def : SVE_Shift_Add_All_Active_Pat<nxv8i16, shift_op, nxv8i1, nxv8i16, nxv8i16, i32, !cast<Instruction>(NAME # _H)>;
+  def : SVE_Shift_Add_All_Active_Pat<nxv4i32, shift_op, nxv4i1, nxv4i32, nxv4i32, i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_Shift_Add_All_Active_Pat<nxv2i64, shift_op, nxv2i1, nxv2i64, nxv2i64, i32, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_cadd<bits<2> sz, bit opc, string asm, ZPRRegOp zprty>
@@ -4625,7 +4639,7 @@ multiclass sve_int_dup_imm_pred_merge_inst<
   def : InstAlias<"mov $Zd, $Pg/m, $imm",
                   (!cast<Instruction>(NAME) zprty:$Zd, PPRAny:$Pg, cpyimm:$imm), 1>;
   def : Pat<(vselect predty:$Pg,
-                (intty (AArch64dup (scalarty (cpx i32:$imm, i32:$shift)))),
+                (intty (splat_vector (scalarty (cpx i32:$imm, i32:$shift)))),
                 ZPR:$Zd),
             (!cast<Instruction>(NAME) $Zd, $Pg, $imm, $shift)>;
 }
@@ -4662,8 +4676,8 @@ multiclass sve_int_dup_imm_pred_zero_inst<
   def : Pat<(intty (anyext (predty PPRAny:$Ps1))),
             (!cast<Instruction>(NAME) PPRAny:$Ps1, 1, 0)>;
   def : Pat<(vselect predty:$Pg,
-                (intty (AArch64dup (scalarty (cpx i32:$imm, i32:$shift)))),
-                (intty (AArch64dup (scalarty 0)))),
+                (intty (splat_vector (scalarty (cpx i32:$imm, i32:$shift)))),
+                (intty (splat_vector (scalarty 0)))),
             (!cast<Instruction>(NAME) $Pg, $imm, $shift)>;
 }
 
@@ -4799,11 +4813,11 @@ multiclass SVE_SETCC_Imm_Pat<CondCode cc, CondCode commuted_cc,
                              Operand immtype, Instruction cmp> {
   def : Pat<(predvt (AArch64setcc_z (predvt PPR_3b:$Pg),
                                        (intvt ZPR:$Zs1),
-                                       (intvt (AArch64dup (immtype:$imm))),
+                                       (intvt (splat_vector (immtype:$imm))),
                                        cc)),
             (cmp $Pg, $Zs1, immtype:$imm)>;
   def : Pat<(predvt (AArch64setcc_z (predvt PPR_3b:$Pg),
-                                       (intvt (AArch64dup (immtype:$imm))),
+                                       (intvt (splat_vector (immtype:$imm))),
                                        (intvt ZPR:$Zs1),
                                        commuted_cc)),
             (cmp $Pg, $Zs1, immtype:$imm)>;
@@ -5205,13 +5219,13 @@ multiclass sve_int_index_ii<string asm> {
             (!cast<Instruction>(NAME # "_D") (i64 0), simm5_64b:$imm5b)>;
 
   // add(step_vector(step), dup(X)) -> index(X, step).
-  def : Pat<(add (nxv16i8 (step_vector_oneuse simm5_8b_tgt:$imm5b)), (nxv16i8 (AArch64dup(simm5_8b:$imm5)))),
+  def : Pat<(add (nxv16i8 (step_vector_oneuse simm5_8b_tgt:$imm5b)), (nxv16i8 (splat_vector(simm5_8b:$imm5)))),
             (!cast<Instruction>(NAME # "_B") simm5_8b:$imm5, (!cast<SDNodeXForm>("trunc_imm") $imm5b))>;
-  def : Pat<(add (nxv8i16 (step_vector_oneuse simm5_16b_tgt:$imm5b)), (nxv8i16 (AArch64dup(simm5_16b:$imm5)))),
+  def : Pat<(add (nxv8i16 (step_vector_oneuse simm5_16b_tgt:$imm5b)), (nxv8i16 (splat_vector(simm5_16b:$imm5)))),
             (!cast<Instruction>(NAME # "_H") simm5_16b:$imm5, (!cast<SDNodeXForm>("trunc_imm") $imm5b))>;
-  def : Pat<(add (nxv4i32 (step_vector_oneuse simm5_32b_tgt:$imm5b)), (nxv4i32 (AArch64dup(simm5_32b:$imm5)))),
+  def : Pat<(add (nxv4i32 (step_vector_oneuse simm5_32b_tgt:$imm5b)), (nxv4i32 (splat_vector(simm5_32b:$imm5)))),
             (!cast<Instruction>(NAME # "_S") simm5_32b:$imm5, simm5_32b:$imm5b)>;
-  def : Pat<(add (nxv2i64 (step_vector_oneuse simm5_64b_tgt:$imm5b)), (nxv2i64 (AArch64dup(simm5_64b:$imm5)))),
+  def : Pat<(add (nxv2i64 (step_vector_oneuse simm5_64b_tgt:$imm5b)), (nxv2i64 (splat_vector(simm5_64b:$imm5)))),
             (!cast<Instruction>(NAME # "_D") simm5_64b:$imm5, simm5_64b:$imm5b)>;
 }
 
@@ -5250,35 +5264,35 @@ multiclass sve_int_index_ir<string asm, SDPatternOperator mulop, SDPatternOperat
             (!cast<Instruction>(NAME # "_D") (i64 0), (SUBREG_TO_REG (i64 0), (!cast<Instruction>("MOVi32imm") (!cast<SDNodeXForm>("trunc_imm") $imm)), sub_32))>;
 
   // add(step_vector(step), dup(X)) -> index(X, step).
-  def : Pat<(add (nxv16i8 (step_vector_oneuse i8:$imm)), (nxv16i8 (AArch64dup(simm5_8b:$imm5)))),
+  def : Pat<(add (nxv16i8 (step_vector_oneuse i8:$imm)), (nxv16i8 (splat_vector(simm5_8b:$imm5)))),
             (!cast<Instruction>(NAME # "_B") simm5_8b:$imm5, (!cast<Instruction>("MOVi32imm") (!cast<SDNodeXForm>("trunc_imm") $imm)))>;
-  def : Pat<(add (nxv8i16 (step_vector_oneuse i16:$imm)), (nxv8i16 (AArch64dup(simm5_16b:$imm5)))),
+  def : Pat<(add (nxv8i16 (step_vector_oneuse i16:$imm)), (nxv8i16 (splat_vector(simm5_16b:$imm5)))),
             (!cast<Instruction>(NAME # "_H") simm5_16b:$imm5, (!cast<Instruction>("MOVi32imm") (!cast<SDNodeXForm>("trunc_imm") $imm)))>;
-  def : Pat<(add (nxv4i32 (step_vector_oneuse i32:$imm)), (nxv4i32 (AArch64dup(simm5_32b:$imm5)))),
+  def : Pat<(add (nxv4i32 (step_vector_oneuse i32:$imm)), (nxv4i32 (splat_vector(simm5_32b:$imm5)))),
             (!cast<Instruction>(NAME # "_S") simm5_32b:$imm5, (!cast<Instruction>("MOVi32imm") $imm))>;
-  def : Pat<(add (nxv2i64 (step_vector_oneuse i64:$imm)), (nxv2i64 (AArch64dup(simm5_64b:$imm5)))),
+  def : Pat<(add (nxv2i64 (step_vector_oneuse i64:$imm)), (nxv2i64 (splat_vector(simm5_64b:$imm5)))),
             (!cast<Instruction>(NAME # "_D") simm5_64b:$imm5, (!cast<Instruction>("MOVi64imm") $imm))>;
-  def : Pat<(add (nxv2i64 (step_vector_oneuse i64imm_32bit_tgt:$imm)), (nxv2i64 (AArch64dup(simm5_64b:$imm5)))),
+  def : Pat<(add (nxv2i64 (step_vector_oneuse i64imm_32bit_tgt:$imm)), (nxv2i64 (splat_vector(simm5_64b:$imm5)))),
             (!cast<Instruction>(NAME # "_D") simm5_64b:$imm5, (SUBREG_TO_REG (i64 0), (!cast<Instruction>("MOVi32imm") (!cast<SDNodeXForm>("trunc_imm") $imm)), sub_32))>;
 
   // mul(step_vector(1), dup(Y)) -> index(0, Y).
-  def : Pat<(mulop (nxv16i1 (AArch64ptrue 31)), (nxv16i8 (step_vector_oneuse (i8 1))), (nxv16i8 (AArch64dup(i32 GPR32:$Rm)))),
+  def : Pat<(mulop (nxv16i1 (AArch64ptrue 31)), (nxv16i8 (step_vector_oneuse (i8 1))), (nxv16i8 (splat_vector(i32 GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "_B") (i32 0), GPR32:$Rm)>;
-  def : Pat<(mulop (nxv8i1 (AArch64ptrue 31)), (nxv8i16 (step_vector_oneuse (i16 1))), (nxv8i16 (AArch64dup(i32 GPR32:$Rm)))),
+  def : Pat<(mulop (nxv8i1 (AArch64ptrue 31)), (nxv8i16 (step_vector_oneuse (i16 1))), (nxv8i16 (splat_vector(i32 GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "_H") (i32 0), GPR32:$Rm)>;
-  def : Pat<(mulop (nxv4i1 (AArch64ptrue 31)), (nxv4i32 (step_vector_oneuse (i32 1))), (nxv4i32 (AArch64dup(i32 GPR32:$Rm)))),
+  def : Pat<(mulop (nxv4i1 (AArch64ptrue 31)), (nxv4i32 (step_vector_oneuse (i32 1))), (nxv4i32 (splat_vector(i32 GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "_S") (i32 0), GPR32:$Rm)>;
-  def : Pat<(mulop (nxv2i1 (AArch64ptrue 31)), (nxv2i64 (step_vector_oneuse (i64 1))), (nxv2i64 (AArch64dup(i64 GPR64:$Rm)))),
+  def : Pat<(mulop (nxv2i1 (AArch64ptrue 31)), (nxv2i64 (step_vector_oneuse (i64 1))), (nxv2i64 (splat_vector(i64 GPR64:$Rm)))),
             (!cast<Instruction>(NAME # "_D") (i64 0), GPR64:$Rm)>;
 
   // add(mul(step_vector(1), dup(Y)), dup(X)) -> index(X, Y).
-  def : Pat<(add (muloneuseop (nxv16i1 (AArch64ptrue 31)), (nxv16i8 (step_vector_oneuse (i8 1))), (nxv16i8 (AArch64dup(i32 GPR32:$Rm)))), (nxv16i8 (AArch64dup(simm5_8b:$imm5)))),
+  def : Pat<(add (muloneuseop (nxv16i1 (AArch64ptrue 31)), (nxv16i8 (step_vector_oneuse (i8 1))), (nxv16i8 (splat_vector(i32 GPR32:$Rm)))), (nxv16i8 (splat_vector(simm5_8b:$imm5)))),
             (!cast<Instruction>(NAME # "_B") simm5_8b:$imm5, GPR32:$Rm)>;
-  def : Pat<(add (muloneuseop (nxv8i1 (AArch64ptrue 31)), (nxv8i16 (step_vector_oneuse (i16 1))), (nxv8i16 (AArch64dup(i32 GPR32:$Rm)))), (nxv8i16 (AArch64dup(simm5_16b:$imm5)))),
+  def : Pat<(add (muloneuseop (nxv8i1 (AArch64ptrue 31)), (nxv8i16 (step_vector_oneuse (i16 1))), (nxv8i16 (splat_vector(i32 GPR32:$Rm)))), (nxv8i16 (splat_vector(simm5_16b:$imm5)))),
             (!cast<Instruction>(NAME # "_H") simm5_16b:$imm5, GPR32:$Rm)>;
-  def : Pat<(add (muloneuseop (nxv4i1 (AArch64ptrue 31)), (nxv4i32 (step_vector_oneuse (i32 1))), (nxv4i32 (AArch64dup(i32 GPR32:$Rm)))), (nxv4i32 (AArch64dup(simm5_32b:$imm5)))),
+  def : Pat<(add (muloneuseop (nxv4i1 (AArch64ptrue 31)), (nxv4i32 (step_vector_oneuse (i32 1))), (nxv4i32 (splat_vector(i32 GPR32:$Rm)))), (nxv4i32 (splat_vector(simm5_32b:$imm5)))),
             (!cast<Instruction>(NAME # "_S") simm5_32b:$imm5, GPR32:$Rm)>;
-  def : Pat<(add (muloneuseop (nxv2i1 (AArch64ptrue 31)), (nxv2i64 (step_vector_oneuse (i64 1))), (nxv2i64 (AArch64dup(i64 GPR64:$Rm)))), (nxv2i64 (AArch64dup(simm5_64b:$imm5)))),
+  def : Pat<(add (muloneuseop (nxv2i1 (AArch64ptrue 31)), (nxv2i64 (step_vector_oneuse (i64 1))), (nxv2i64 (splat_vector(i64 GPR64:$Rm)))), (nxv2i64 (splat_vector(simm5_64b:$imm5)))),
             (!cast<Instruction>(NAME # "_D") simm5_64b:$imm5, GPR64:$Rm)>;
 }
 
@@ -5306,13 +5320,13 @@ multiclass sve_int_index_ri<string asm> {
   def _D : sve_int_index_ri<0b11, asm, ZPR64, GPR64, simm5_64b>;
 
   // add(step_vector(step), dup(X)) -> index(X, step).
-  def : Pat<(add (nxv16i8 (step_vector_oneuse simm5_8b_tgt:$imm5)), (nxv16i8 (AArch64dup(i32 GPR32:$Rm)))),
+  def : Pat<(add (nxv16i8 (step_vector_oneuse simm5_8b_tgt:$imm5)), (nxv16i8 (splat_vector(i32 GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "_B") GPR32:$Rm, (!cast<SDNodeXForm>("trunc_imm") $imm5))>;
-  def : Pat<(add (nxv8i16 (step_vector_oneuse simm5_16b_tgt:$imm5)), (nxv8i16 (AArch64dup(i32 GPR32:$Rm)))),
+  def : Pat<(add (nxv8i16 (step_vector_oneuse simm5_16b_tgt:$imm5)), (nxv8i16 (splat_vector(i32 GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "_H") GPR32:$Rm, (!cast<SDNodeXForm>("trunc_imm") $imm5))>;
-  def : Pat<(add (nxv4i32 (step_vector_oneuse simm5_32b_tgt:$imm5)), (nxv4i32 (AArch64dup(i32 GPR32:$Rm)))),
+  def : Pat<(add (nxv4i32 (step_vector_oneuse simm5_32b_tgt:$imm5)), (nxv4i32 (splat_vector(i32 GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "_S") GPR32:$Rm, simm5_32b:$imm5)>;
-  def : Pat<(add (nxv2i64 (step_vector_oneuse simm5_64b_tgt:$imm5)), (nxv2i64 (AArch64dup(i64 GPR64:$Rm)))),
+  def : Pat<(add (nxv2i64 (step_vector_oneuse simm5_64b_tgt:$imm5)), (nxv2i64 (splat_vector(i64 GPR64:$Rm)))),
             (!cast<Instruction>(NAME # "_D") GPR64:$Rm, simm5_64b:$imm5)>;
 }
 
@@ -5340,25 +5354,25 @@ multiclass sve_int_index_rr<string asm, SDPatternOperator mulop> {
   def _D : sve_int_index_rr<0b11, asm, ZPR64, GPR64>;
 
   // add(step_vector(step), dup(X)) -> index(X, step).
-  def : Pat<(add (nxv16i8 (step_vector_oneuse i8:$imm)), (nxv16i8 (AArch64dup(i32 GPR32:$Rn)))),
+  def : Pat<(add (nxv16i8 (step_vector_oneuse i8:$imm)), (nxv16i8 (splat_vector(i32 GPR32:$Rn)))),
             (!cast<Instruction>(NAME # "_B") GPR32:$Rn, (!cast<Instruction>("MOVi32imm") (!cast<SDNodeXForm>("trunc_imm") $imm)))>;
-  def : Pat<(add (nxv8i16 (step_vector_oneuse i16:$imm)), (nxv8i16 (AArch64dup(i32 GPR32:$Rn)))),
+  def : Pat<(add (nxv8i16 (step_vector_oneuse i16:$imm)), (nxv8i16 (splat_vector(i32 GPR32:$Rn)))),
             (!cast<Instruction>(NAME # "_H") GPR32:$Rn, (!cast<Instruction>("MOVi32imm") (!cast<SDNodeXForm>("trunc_imm") $imm)))>;
-  def : Pat<(add (nxv4i32 (step_vector_oneuse i32:$imm)), (nxv4i32 (AArch64dup(i32 GPR32:$Rn)))),
+  def : Pat<(add (nxv4i32 (step_vector_oneuse i32:$imm)), (nxv4i32 (splat_vector(i32 GPR32:$Rn)))),
             (!cast<Instruction>(NAME # "_S") GPR32:$Rn, (!cast<Instruction>("MOVi32imm") $imm))>;
-  def : Pat<(add (nxv2i64 (step_vector_oneuse i64:$imm)), (nxv2i64 (AArch64dup(i64 GPR64:$Rn)))),
+  def : Pat<(add (nxv2i64 (step_vector_oneuse i64:$imm)), (nxv2i64 (splat_vector(i64 GPR64:$Rn)))),
             (!cast<Instruction>(NAME # "_D") GPR64:$Rn, (!cast<Instruction>("MOVi64imm") $imm))>;
-  def : Pat<(add (nxv2i64 (step_vector_oneuse i64imm_32bit_tgt:$imm)), (nxv2i64 (AArch64dup(i64 GPR64:$Rn)))),
+  def : Pat<(add (nxv2i64 (step_vector_oneuse i64imm_32bit_tgt:$imm)), (nxv2i64 (splat_vector(i64 GPR64:$Rn)))),
             (!cast<Instruction>(NAME # "_D") GPR64:$Rn, (SUBREG_TO_REG (i64 0), (!cast<Instruction>("MOVi32imm") (!cast<SDNodeXForm>("trunc_imm") $imm)), sub_32))>;
 
   // add(mul(step_vector(1), dup(Y)), dup(X)) -> index(X, Y).
-  def : Pat<(add (mulop (nxv16i1 (AArch64ptrue 31)), (nxv16i8 (step_vector_oneuse (i8 1))), (nxv16i8 (AArch64dup(i32 GPR32:$Rm)))), (nxv16i8 (AArch64dup(i32 GPR32:$Rn)))),
+  def : Pat<(add (mulop (nxv16i1 (AArch64ptrue 31)), (nxv16i8 (step_vector_oneuse (i8 1))), (nxv16i8 (splat_vector(i32 GPR32:$Rm)))), (nxv16i8 (splat_vector(i32 GPR32:$Rn)))),
             (!cast<Instruction>(NAME # "_B") GPR32:$Rn, GPR32:$Rm)>;
-  def : Pat<(add (mulop (nxv8i1 (AArch64ptrue 31)), (nxv8i16 (step_vector_oneuse (i16 1))), (nxv8i16 (AArch64dup(i32 GPR32:$Rm)))),(nxv8i16 (AArch64dup(i32 GPR32:$Rn)))),
+  def : Pat<(add (mulop (nxv8i1 (AArch64ptrue 31)), (nxv8i16 (step_vector_oneuse (i16 1))), (nxv8i16 (splat_vector(i32 GPR32:$Rm)))),(nxv8i16 (splat_vector(i32 GPR32:$Rn)))),
             (!cast<Instruction>(NAME # "_H") GPR32:$Rn, GPR32:$Rm)>;
-  def : Pat<(add (mulop (nxv4i1 (AArch64ptrue 31)), (nxv4i32 (step_vector_oneuse (i32 1))), (nxv4i32 (AArch64dup(i32 GPR32:$Rm)))),(nxv4i32 (AArch64dup(i32 GPR32:$Rn)))),
+  def : Pat<(add (mulop (nxv4i1 (AArch64ptrue 31)), (nxv4i32 (step_vector_oneuse (i32 1))), (nxv4i32 (splat_vector(i32 GPR32:$Rm)))),(nxv4i32 (splat_vector(i32 GPR32:$Rn)))),
             (!cast<Instruction>(NAME # "_S") GPR32:$Rn, GPR32:$Rm)>;
-  def : Pat<(add (mulop (nxv2i1 (AArch64ptrue 31)), (nxv2i64 (step_vector_oneuse (i64 1))), (nxv2i64 (AArch64dup(i64 GPR64:$Rm)))),(nxv2i64 (AArch64dup(i64 GPR64:$Rn)))),
+  def : Pat<(add (mulop (nxv2i1 (AArch64ptrue 31)), (nxv2i64 (step_vector_oneuse (i64 1))), (nxv2i64 (splat_vector(i64 GPR64:$Rm)))),(nxv2i64 (splat_vector(i64 GPR64:$Rn)))),
             (!cast<Instruction>(NAME # "_D") GPR64:$Rn, GPR64:$Rm)>;
 }
 

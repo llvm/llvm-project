@@ -1090,3 +1090,29 @@ add_object_library(
   COMPILE_OPTIONS
    -O3
 )
+
+add_entrypoint_object(
+  fmod
+  SRCS
+    fmod.cpp
+  HDRS
+    ../fmod.h
+  DEPENDS
+    libc.include.math
+    libc.src.__support.FPUtil.generic.fmod
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmodf
+  SRCS
+    fmodf.cpp
+  HDRS
+    ../fmodf.h
+  DEPENDS
+    libc.include.math
+    libc.src.__support.FPUtil.generic.fmod
+  COMPILE_OPTIONS
+    -O3
+)

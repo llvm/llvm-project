@@ -292,7 +292,7 @@ TEST(CheckOptionsValidation, MissingOptions) {
                        &DiagConsumer, false);
   Context.setDiagnosticsEngine(&DE);
   TestCheck TestCheck(&Context);
-  EXPECT_FALSE(TestCheck.getLocal("Opt").hasValue());
+  EXPECT_FALSE(TestCheck.getLocal("Opt"));
   EXPECT_EQ(TestCheck.getLocal("Opt", "Unknown"), "Unknown");
   // Missing options aren't errors.
   EXPECT_TRUE(DiagConsumer.take().empty());
@@ -336,7 +336,7 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolFalseValue"), false);
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolTrueShort"), true);
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolFalseShort"), false);
-  EXPECT_FALSE(TestCheck.getIntLocal<bool>("BoolUnparseable").hasValue());
+  EXPECT_FALSE(TestCheck.getIntLocal<bool>("BoolUnparseable"));
 
   EXPECT_THAT(
       DiagConsumer.take(),

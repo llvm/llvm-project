@@ -801,8 +801,7 @@ private:
     }
 
     // Remove chain From from the list of active chains
-    auto Iter = std::remove(HotChains.begin(), HotChains.end(), From);
-    HotChains.erase(Iter, HotChains.end());
+    llvm::erase_value(HotChains, From);
 
     // Invalidate caches
     for (std::pair<Chain *, Edge *> EdgeIter : Into->edges())
@@ -818,26 +817,23 @@ private:
         SortedChains.push_back(&Chain);
 
     // Sorting chains by density in decreasing order
-    std::stable_sort(
-      SortedChains.begin(), SortedChains.end(),
-      [](const Chain *C1, const Chain *C2) {
-        // Original entry point to the front
-        if (C1->isEntryPoint() != C2->isEntryPoint()) {
-          if (C1->isEntryPoint())
-            return true;
-          if (C2->isEntryPoint())
-            return false;
-        }
-
-        const double D1 = C1->density();
-        const double D2 = C2->density();
-        if (D1 != D2)
-          return D1 > D2;
-
-        // Making the order deterministic
-        return C1->id() < C2->id();
+    llvm::stable_sort(SortedChains, [](const Chain *C1, const Chain *C2) {
+      // Original entry point to the front
+      if (C1->isEntryPoint() != C2->isEntryPoint()) {
+        if (C1->isEntryPoint())
+          return true;
+        if (C2->isEntryPoint())
+          return false;
       }
-    );
+
+      const double D1 = C1->density();
+      const double D2 = C2->density();
+      if (D1 != D2)
+        return D1 > D2;
+
+      // Making the order deterministic
+      return C1->id() < C2->id();
+    });
 
     // Collect the basic blocks in the order specified by their chains
     Order.reserve(BF.layout_size());

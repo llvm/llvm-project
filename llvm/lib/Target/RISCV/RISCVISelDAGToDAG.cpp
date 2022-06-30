@@ -220,9 +220,45 @@ static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   return Result;
 }
 
-static SDValue createTupleImpl(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                               unsigned RegClassID, unsigned SubReg0) {
+static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
+                           unsigned NF, RISCVII::VLMUL LMUL) {
+  static const unsigned M1TupleRegClassIDs[] = {
+      RISCV::VRN2M1RegClassID, RISCV::VRN3M1RegClassID, RISCV::VRN4M1RegClassID,
+      RISCV::VRN5M1RegClassID, RISCV::VRN6M1RegClassID, RISCV::VRN7M1RegClassID,
+      RISCV::VRN8M1RegClassID};
+  static const unsigned M2TupleRegClassIDs[] = {RISCV::VRN2M2RegClassID,
+                                                RISCV::VRN3M2RegClassID,
+                                                RISCV::VRN4M2RegClassID};
+
   assert(Regs.size() >= 2 && Regs.size() <= 8);
+
+  unsigned RegClassID;
+  unsigned SubReg0;
+  switch (LMUL) {
+  default:
+    llvm_unreachable("Invalid LMUL.");
+  case RISCVII::VLMUL::LMUL_F8:
+  case RISCVII::VLMUL::LMUL_F4:
+  case RISCVII::VLMUL::LMUL_F2:
+  case RISCVII::VLMUL::LMUL_1:
+    static_assert(RISCV::sub_vrm1_7 == RISCV::sub_vrm1_0 + 7,
+                  "Unexpected subreg numbering");
+    SubReg0 = RISCV::sub_vrm1_0;
+    RegClassID = M1TupleRegClassIDs[NF - 2];
+    break;
+  case RISCVII::VLMUL::LMUL_2:
+    static_assert(RISCV::sub_vrm2_3 == RISCV::sub_vrm2_0 + 3,
+                  "Unexpected subreg numbering");
+    SubReg0 = RISCV::sub_vrm2_0;
+    RegClassID = M2TupleRegClassIDs[NF - 2];
+    break;
+  case RISCVII::VLMUL::LMUL_4:
+    static_assert(RISCV::sub_vrm4_1 == RISCV::sub_vrm4_0 + 1,
+                  "Unexpected subreg numbering");
+    SubReg0 = RISCV::sub_vrm4_0;
+    RegClassID = RISCV::VRN2M4RegClassID;
+    break;
+  }
 
   SDLoc DL(Regs[0]);
   SmallVector<SDValue, 8> Ops;
@@ -236,48 +272,6 @@ static SDValue createTupleImpl(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
   SDNode *N =
       CurDAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::Untyped, Ops);
   return SDValue(N, 0);
-}
-
-static SDValue createM1Tuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                             unsigned NF) {
-  static const unsigned RegClassIDs[] = {
-      RISCV::VRN2M1RegClassID, RISCV::VRN3M1RegClassID, RISCV::VRN4M1RegClassID,
-      RISCV::VRN5M1RegClassID, RISCV::VRN6M1RegClassID, RISCV::VRN7M1RegClassID,
-      RISCV::VRN8M1RegClassID};
-
-  return createTupleImpl(CurDAG, Regs, RegClassIDs[NF - 2], RISCV::sub_vrm1_0);
-}
-
-static SDValue createM2Tuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                             unsigned NF) {
-  static const unsigned RegClassIDs[] = {RISCV::VRN2M2RegClassID,
-                                         RISCV::VRN3M2RegClassID,
-                                         RISCV::VRN4M2RegClassID};
-
-  return createTupleImpl(CurDAG, Regs, RegClassIDs[NF - 2], RISCV::sub_vrm2_0);
-}
-
-static SDValue createM4Tuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                             unsigned NF) {
-  return createTupleImpl(CurDAG, Regs, RISCV::VRN2M4RegClassID,
-                         RISCV::sub_vrm4_0);
-}
-
-static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                           unsigned NF, RISCVII::VLMUL LMUL) {
-  switch (LMUL) {
-  default:
-    llvm_unreachable("Invalid LMUL.");
-  case RISCVII::VLMUL::LMUL_F8:
-  case RISCVII::VLMUL::LMUL_F4:
-  case RISCVII::VLMUL::LMUL_F2:
-  case RISCVII::VLMUL::LMUL_1:
-    return createM1Tuple(CurDAG, Regs, NF);
-  case RISCVII::VLMUL::LMUL_2:
-    return createM2Tuple(CurDAG, Regs, NF);
-  case RISCVII::VLMUL::LMUL_4:
-    return createM4Tuple(CurDAG, Regs, NF);
-  }
 }
 
 void RISCVDAGToDAGISel::addVectorLoadStoreOperands(
@@ -718,13 +712,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SRL: {
-    // Optimize (srl (and X, C2), C) ->
-    //          (srli (slli X, (XLen-C3), (XLen-C3) + C)
-    // Where C2 is a mask with C3 trailing ones.
-    // Taking into account that the C2 may have had lower bits unset by
-    // SimplifyDemandedBits. This avoids materializing the C2 immediate.
-    // This pattern occurs when type legalizing right shifts for types with
-    // less than XLen bits.
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
       break;
@@ -734,6 +721,32 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
     unsigned ShAmt = N1C->getZExtValue();
     uint64_t Mask = N0.getConstantOperandVal(1);
+
+    // Optimize (srl (and X, C2), C) -> (slli (srliw X, C3), C3-C) where C2 has
+    // 32 leading zeros and C3 trailing zeros.
+    if (isShiftedMask_64(Mask)) {
+      unsigned XLen = Subtarget->getXLen();
+      unsigned LeadingZeros = XLen - (64 - countLeadingZeros(Mask));
+      unsigned TrailingZeros = countTrailingZeros(Mask);
+      if (LeadingZeros == 32 && TrailingZeros > ShAmt) {
+        SDNode *SRLIW = CurDAG->getMachineNode(
+            RISCV::SRLIW, DL, VT, N0->getOperand(0),
+            CurDAG->getTargetConstant(TrailingZeros, DL, VT));
+        SDNode *SLLI = CurDAG->getMachineNode(
+            RISCV::SLLI, DL, VT, SDValue(SRLIW, 0),
+            CurDAG->getTargetConstant(TrailingZeros - ShAmt, DL, VT));
+        ReplaceNode(Node, SLLI);
+        return;
+      }
+    }
+
+    // Optimize (srl (and X, C2), C) ->
+    //          (srli (slli X, (XLen-C3), (XLen-C3) + C)
+    // Where C2 is a mask with C3 trailing ones.
+    // Taking into account that the C2 may have had lower bits unset by
+    // SimplifyDemandedBits. This avoids materializing the C2 immediate.
+    // This pattern occurs when type legalizing right shifts for types with
+    // less than XLen bits.
     Mask |= maskTrailingOnes<uint64_t>(ShAmt);
     if (!isMask_64(Mask))
       break;
@@ -1796,24 +1809,32 @@ bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
   return true;
 }
 
-// Select a frame index and an optional immediate offset from an ADD or OR.
-bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
-                                              SDValue &Offset) {
+bool RISCVDAGToDAGISel::SelectAddrFrameIndex(SDValue Addr, SDValue &Base,
+                                             SDValue &Offset) {
   if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), Subtarget->getXLenVT());
     Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Subtarget->getXLenVT());
     return true;
   }
 
+  return false;
+}
+
+// Select a frame index and an optional immediate offset from an ADD or OR.
+bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
+                                              SDValue &Offset) {
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
+
   if (!CurDAG->isBaseWithConstantOffset(Addr))
     return false;
 
   if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
-    auto *CN = cast<ConstantSDNode>(Addr.getOperand(1));
-    if (isInt<12>(CN->getSExtValue())) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isInt<12>(CVal)) {
       Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
                                          Subtarget->getXLenVT());
-      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
+      Offset = CurDAG->getTargetConstant(CVal, SDLoc(Addr),
                                          Subtarget->getXLenVT());
       return true;
     }
@@ -1834,17 +1855,45 @@ bool RISCVDAGToDAGISel::SelectBaseAddr(SDValue Addr, SDValue &Base) {
 
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
+
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
-    auto *CN = cast<ConstantSDNode>(Addr.getOperand(1));
-    if (isInt<12>(CN->getSExtValue())) {
-      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isInt<12>(CVal)) {
+      Base = Addr.getOperand(0);
+      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
+                                           Subtarget->getXLenVT());
+      Offset = CurDAG->getTargetConstant(CVal, SDLoc(Addr),
                                          Subtarget->getXLenVT());
-      return SelectBaseAddr(Addr.getOperand(0), Base);
+      return true;
     }
   }
 
+  // Handle ADD with large immediates.
+  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1))) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    assert(!isInt<12>(CVal) && "simm12 not already handled?");
+
+    if (isInt<12>(CVal / 2) && isInt<12>(CVal - CVal / 2)) {
+      // We can use an ADDI for part of the offset and fold the rest into the
+      // load/store. This mirrors the AddiPair PatFrag in RISCVInstrInfo.td.
+      int64_t Adj = CVal < 0 ? -2048 : 2047;
+      SDLoc DL(Addr);
+      MVT VT = Addr.getSimpleValueType();
+      Base = SDValue(
+          CurDAG->getMachineNode(RISCV::ADDI, DL, VT, Addr.getOperand(0),
+                                 CurDAG->getTargetConstant(Adj, DL, VT)),
+          0);
+      Offset = CurDAG->getTargetConstant(CVal - Adj, DL, VT);
+      return true;
+    }
+  }
+
+  Base = Addr;
   Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Subtarget->getXLenVT());
-  return SelectBaseAddr(Addr, Base);
+  return true;
 }
 
 bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,

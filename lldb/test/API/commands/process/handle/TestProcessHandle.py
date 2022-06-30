@@ -34,7 +34,7 @@ class TestProcessHandle(TestBase):
 
         process.Continue()
         
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
         
         # Check that we preserved the setting:

@@ -358,7 +358,7 @@ TransformationMode llvm::hasUnrollTransformation(const Loop *L) {
 
   Optional<int> Count =
       getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
-  if (Count.hasValue())
+  if (Count)
     return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable"))
@@ -379,7 +379,7 @@ TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
 
   Optional<int> Count =
       getOptionalIntLoopAttribute(L, "llvm.loop.unroll_and_jam.count");
-  if (Count.hasValue())
+  if (Count)
     return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll_and_jam.enable"))

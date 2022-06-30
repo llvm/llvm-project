@@ -285,6 +285,10 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
            "function-boundary-type-conversion", "std::string",
            /*default=*/"\"infer-layout-map\"",
            "Controls layout maps when bufferizing function signatures.">,
+    Option<"mustInferMemorySpace", "must-infer-memory-space", "bool",
+           /*default=*/"false",
+           "The memory space of an memref types must always be inferred. If "
+           "unset, a default memory space of 0 is used otherwise.">,
     Option<"testAnalysisOnly", "test-analysis-only", "bool",
             /*default=*/"false",
            "Test only: Only run inplaceability analysis and annotate IR">,
@@ -343,6 +347,10 @@ def TensorCopyInsertion : Pass<"tensor-copy-insertion"> {
            "Bufferize function boundaries (experimental).">,
     Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
            "Specify if new allocations should be deallocated.">,
+    Option<"mustInferMemorySpace", "must-infer-memory-space", "bool",
+           /*default=*/"false",
+           "The memory space of an memref types must always be inferred. If "
+           "unset, a default memory space of 0 is used otherwise.">,
   ];
   let constructor = "mlir::bufferization::createTensorCopyInsertionPass()";
 }

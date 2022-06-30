@@ -18,8 +18,6 @@ namespace lldb_private {
 /// Thread implementation used for representing threads gotten from trace
 /// session files, which are similar to threads from core files.
 ///
-/// See \a TraceSessionFileParser for more information regarding trace session
-/// files.
 class ThreadPostMortemTrace : public Thread {
 public:
   /// \param[in] process

@@ -9,6 +9,7 @@
 #include "clang-pseudo/grammar/LRTable.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "clang/Basic/TokenKinds.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <vector>
@@ -17,36 +18,59 @@ namespace clang {
 namespace pseudo {
 namespace {
 
-using testing::IsEmpty;
-using testing::UnorderedElementsAre;
+using llvm::ValueIs;
+using testing::ElementsAre;
 using Action = LRTable::Action;
 
 TEST(LRTable, Builder) {
-  GrammarTable GTable;
+  std::vector<std::string> GrammarDiags;
+  Grammar G = Grammar::parseBNF(R"bnf(
+    _ := expr            # rule 0
+    expr := term         # rule 1
+    expr := expr + term  # rule 2
+    term := IDENTIFIER   # rule 3
+  )bnf",
+                                GrammarDiags);
+  EXPECT_THAT(GrammarDiags, testing::IsEmpty());
 
-  //           eof   semi  ...
-  // +-------+----+-------+---
-  // |state0 |    | s0,r0 |...
-  // |state1 | acc|       |...
-  // |state2 |    |  r1   |...
-  // +-------+----+-------+---
+  SymbolID Term = *G.findNonterminal("term");
+  SymbolID Eof = tokenSymbol(tok::eof);
+  SymbolID Identifier = tokenSymbol(tok::identifier);
+  SymbolID Plus = tokenSymbol(tok::plus);
+
+  //           eof  IDENT   term
+  // +-------+----+-------+------+
+  // |state0 |    | s0    |      |
+  // |state1 |    |       | g3   |
+  // |state2 |    |       |      |
+  // +-------+----+-------+------+-------
   std::vector<LRTable::Entry> Entries = {
-      {/* State */ 0, tokenSymbol(tok::semi), Action::shift(0)},
-      {/* State */ 0, tokenSymbol(tok::semi), Action::reduce(0)},
-      {/* State */ 1, tokenSymbol(tok::eof), Action::reduce(2)},
-      {/* State */ 2, tokenSymbol(tok::semi), Action::reduce(1)}};
-  GrammarTable GT;
-  LRTable T = LRTable::buildForTests(GT, Entries);
-  EXPECT_THAT(T.find(0, tokenSymbol(tok::eof)), IsEmpty());
-  EXPECT_THAT(T.find(0, tokenSymbol(tok::semi)),
-              UnorderedElementsAre(Action::shift(0), Action::reduce(0)));
-  EXPECT_THAT(T.find(1, tokenSymbol(tok::eof)),
-              UnorderedElementsAre(Action::reduce(2)));
-  EXPECT_THAT(T.find(1, tokenSymbol(tok::semi)), IsEmpty());
-  EXPECT_THAT(T.find(2, tokenSymbol(tok::semi)),
-              UnorderedElementsAre(Action::reduce(1)));
+      {/* State */ 0, Identifier, Action::shift(0)},
+      {/* State */ 1, Term, Action::goTo(3)},
+  };
+  std::vector<LRTable::ReduceEntry> ReduceEntries = {
+      {/*State=*/0, /*Rule=*/0},
+      {/*State=*/1, /*Rule=*/2},
+      {/*State=*/2, /*Rule=*/1},
+  };
+  LRTable T = LRTable::buildForTests(G, Entries, ReduceEntries);
+  EXPECT_EQ(T.getShiftState(0, Eof), llvm::None);
+  EXPECT_THAT(T.getShiftState(0, Identifier), ValueIs(0));
+  EXPECT_THAT(T.getReduceRules(0), ElementsAre(0));
+
+  EXPECT_EQ(T.getShiftState(1, Eof), llvm::None);
+  EXPECT_EQ(T.getShiftState(1, Identifier), llvm::None);
+  EXPECT_EQ(T.getGoToState(1, Term), 3);
+  EXPECT_THAT(T.getReduceRules(1), ElementsAre(2));
+
   // Verify the behaivor for other non-available-actions terminals.
-  EXPECT_THAT(T.find(2, tokenSymbol(tok::kw_int)), IsEmpty());
+  SymbolID Int = tokenSymbol(tok::kw_int);
+  EXPECT_EQ(T.getShiftState(2, Int), llvm::None);
+
+  // Check follow sets.
+  EXPECT_TRUE(T.canFollow(Term, Plus));
+  EXPECT_TRUE(T.canFollow(Term, Eof));
+  EXPECT_FALSE(T.canFollow(Term, Int));
 }
 
 } // namespace

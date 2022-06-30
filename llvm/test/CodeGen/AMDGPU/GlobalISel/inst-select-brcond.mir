@@ -16,14 +16,17 @@ regBankSelected: true
 body: |
   ; GCN-LABEL: name: brcond_scc
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-  ; GCN:   S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-  ; GCN:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
-  ; GCN:   $scc = COPY [[COPY2]]
-  ; GCN:   S_CBRANCH_SCC1 %bb.1, implicit $scc
-  ; GCN: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $sgpr0, $sgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; GCN-NEXT:   S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
+  ; GCN-NEXT:   $scc = COPY [[COPY2]]
+  ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
   bb.0:
     liveins: $sgpr0, $sgpr1
 
@@ -45,11 +48,14 @@ regBankSelected: true
 body: |
   ; GCN-LABEL: name: brcond_scc_impdef
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GCN:   $scc = COPY [[DEF]]
-  ; GCN:   S_CBRANCH_SCC1 %bb.1, implicit $scc
-  ; GCN: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $sgpr0, $sgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   $scc = COPY [[DEF]]
+  ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
   bb.0:
     liveins: $sgpr0, $sgpr1
 
@@ -69,17 +75,22 @@ regBankSelected: true
 body: |
   ; GCN-LABEL: name: brcond_scc_br
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-  ; GCN:   S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-  ; GCN:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
-  ; GCN:   $scc = COPY [[COPY2]]
-  ; GCN:   S_CBRANCH_SCC1 %bb.1, implicit $scc
-  ; GCN:   S_BRANCH %bb.1
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.2(0x80000000)
-  ; GCN: bb.2:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $sgpr0, $sgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; GCN-NEXT:   S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
+  ; GCN-NEXT:   $scc = COPY [[COPY2]]
+  ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
   bb.0:
     liveins: $sgpr0, $sgpr1
 
@@ -104,13 +115,16 @@ regBankSelected: true
 body: |
   ; GCN-LABEL: name: brcond_vcc
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; GCN:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
-  ; GCN:   $vcc = COPY [[V_CMP_EQ_U32_e64_]]
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
+  ; GCN-NEXT:   $vcc = COPY [[V_CMP_EQ_U32_e64_]]
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
   bb.0:
     liveins: $vgpr0, $vgpr1
 
@@ -133,11 +147,14 @@ regBankSelected: true
 body: |
   ; GCN-LABEL: name: brcond_sgpr
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-  ; GCN:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-  ; GCN:   G_BRCOND [[TRUNC]](s1), %bb.1
-  ; GCN: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $sgpr0, $sgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
+  ; GCN-NEXT:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
   bb.0:
     liveins: $sgpr0, $sgpr1
 
@@ -159,11 +176,14 @@ regBankSelected: true
 body: |
   ; GCN-LABEL: name: brcond_vgpr
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GCN:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-  ; GCN:   G_BRCOND [[TRUNC]](s1), %bb.1
-  ; GCN: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+  ; GCN-NEXT:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
   bb.0:
     liveins: $vgpr0, $vgpr1
 
@@ -184,13 +204,16 @@ regBankSelected: true
 body:             |
   ; GCN-LABEL: name: brcond_class_intrinsic
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; GCN:   [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
-  ; GCN:   $vcc = COPY [[V_CMP_CLASS_F32_e64_]]
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GCN-NEXT:   [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
+  ; GCN-NEXT:   $vcc = COPY [[V_CMP_CLASS_F32_e64_]]
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
   bb.0:
     liveins: $vgpr0, $vgpr1
 
@@ -212,17 +235,20 @@ regBankSelected: true
 body: |
   ; GCN-LABEL: name: brcond_cmp_logic
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; GCN:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-  ; GCN:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
-  ; GCN:   %5:sreg_64_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY2]], 0, [[COPY3]], 0, implicit $mode, implicit $exec
-  ; GCN:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], %5, implicit-def dead $scc
-  ; GCN:   $vcc = COPY [[S_AND_B64_]]
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
+  ; GCN-NEXT:   %5:sreg_64_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY2]], 0, [[COPY3]], 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], %5, implicit-def dead $scc
+  ; GCN-NEXT:   $vcc = COPY [[S_AND_B64_]]
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
@@ -248,18 +274,21 @@ regBankSelected: true
 body:             |
   ; GCN-LABEL: name: brcond_logic
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; GCN:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY2]], implicit-def $scc
-  ; GCN:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
-  ; GCN:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
-  ; GCN:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
-  ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_AND_B64_]], $exec, implicit-def $scc
-  ; GCN:   $vcc = COPY [[S_AND_B64_1]]
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY2]], implicit-def $scc
+  ; GCN-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
+  ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_AND_B64_]], $exec, implicit-def $scc
+  ; GCN-NEXT:   $vcc = COPY [[S_AND_B64_1]]
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1
 
@@ -285,16 +314,19 @@ regBankSelected: true
 body:             |
   ; GCN-LABEL: name: brcond_logic_const
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; GCN:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
-  ; GCN:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 -1
-  ; GCN:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[V_CMP_EQ_U32_e64_]], [[S_MOV_B64_]], implicit-def dead $scc
-  ; GCN:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_XOR_B64_]], $exec, implicit-def $scc
-  ; GCN:   $vcc = COPY [[S_AND_B64_]]
-  ; GCN:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; GCN: bb.1:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
+  ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 -1
+  ; GCN-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[V_CMP_EQ_U32_e64_]], [[S_MOV_B64_]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_XOR_B64_]], $exec, implicit-def $scc
+  ; GCN-NEXT:   $vcc = COPY [[S_AND_B64_]]
+  ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
   bb.0:
     liveins: $vgpr0, $vgpr1
 

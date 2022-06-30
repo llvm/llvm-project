@@ -201,9 +201,7 @@ template <class charT> class messages_byname;
 #include <__iterator/istreambuf_iterator.h>
 #include <__iterator/ostreambuf_iterator.h>
 #include <__locale>
-#ifndef __APPLE__
-# include <cstdarg>
-#endif
+#include <cstdarg> // TODO: Remove this include
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -212,6 +210,10 @@ template <class charT> class messages_byname;
 #include <memory>
 #include <streambuf>
 #include <version>
+
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <iterator>
+#endif
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 // Most unix variants have catopen.  These are the specific ones that don't.

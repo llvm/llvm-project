@@ -883,87 +883,81 @@ public:
   ~CommandObjectProcessKDPPacketSend() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    const size_t argc = command.GetArgumentCount();
-    if (argc == 0) {
-      if (!m_command_byte.GetOptionValue().OptionWasSet()) {
-        result.AppendError(
-            "the --command option must be set to a valid command byte");
-      } else {
-        const uint64_t command_byte =
-            m_command_byte.GetOptionValue().GetUInt64Value(0);
-        if (command_byte > 0 && command_byte <= UINT8_MAX) {
-          ProcessKDP *process =
-              (ProcessKDP *)m_interpreter.GetExecutionContext().GetProcessPtr();
-          if (process) {
-            const StateType state = process->GetState();
+    if (!m_command_byte.GetOptionValue().OptionWasSet()) {
+      result.AppendError(
+          "the --command option must be set to a valid command byte");
+    } else {
+      const uint64_t command_byte =
+          m_command_byte.GetOptionValue().GetUInt64Value(0);
+      if (command_byte > 0 && command_byte <= UINT8_MAX) {
+        ProcessKDP *process =
+            (ProcessKDP *)m_interpreter.GetExecutionContext().GetProcessPtr();
+        if (process) {
+          const StateType state = process->GetState();
 
-            if (StateIsStoppedState(state, true)) {
-              std::vector<uint8_t> payload_bytes;
-              const char *ascii_hex_bytes_cstr =
-                  m_packet_data.GetOptionValue().GetCurrentValue();
-              if (ascii_hex_bytes_cstr && ascii_hex_bytes_cstr[0]) {
-                StringExtractor extractor(ascii_hex_bytes_cstr);
-                const size_t ascii_hex_bytes_cstr_len =
-                    extractor.GetStringRef().size();
-                if (ascii_hex_bytes_cstr_len & 1) {
-                  result.AppendErrorWithFormat("payload data must contain an "
-                                               "even number of ASCII hex "
-                                               "characters: '%s'",
-                                               ascii_hex_bytes_cstr);
-                  return false;
-                }
-                payload_bytes.resize(ascii_hex_bytes_cstr_len / 2);
-                if (extractor.GetHexBytes(payload_bytes, '\xdd') !=
-                    payload_bytes.size()) {
-                  result.AppendErrorWithFormat("payload data must only contain "
-                                               "ASCII hex characters (no "
-                                               "spaces or hex prefixes): '%s'",
-                                               ascii_hex_bytes_cstr);
-                  return false;
-                }
-              }
-              Status error;
-              DataExtractor reply;
-              process->GetCommunication().SendRawRequest(
-                  command_byte,
-                  payload_bytes.empty() ? NULL : payload_bytes.data(),
-                  payload_bytes.size(), reply, error);
-
-              if (error.Success()) {
-                // Copy the binary bytes into a hex ASCII string for the result
-                StreamString packet;
-                packet.PutBytesAsRawHex8(
-                    reply.GetDataStart(), reply.GetByteSize(),
-                    endian::InlHostByteOrder(), endian::InlHostByteOrder());
-                result.AppendMessage(packet.GetString());
-                result.SetStatus(eReturnStatusSuccessFinishResult);
-                return true;
-              } else {
-                const char *error_cstr = error.AsCString();
-                if (error_cstr && error_cstr[0])
-                  result.AppendError(error_cstr);
-                else
-                  result.AppendErrorWithFormat("unknown error 0x%8.8x",
-                                               error.GetError());
+          if (StateIsStoppedState(state, true)) {
+            std::vector<uint8_t> payload_bytes;
+            const char *ascii_hex_bytes_cstr =
+                m_packet_data.GetOptionValue().GetCurrentValue();
+            if (ascii_hex_bytes_cstr && ascii_hex_bytes_cstr[0]) {
+              StringExtractor extractor(ascii_hex_bytes_cstr);
+              const size_t ascii_hex_bytes_cstr_len =
+                  extractor.GetStringRef().size();
+              if (ascii_hex_bytes_cstr_len & 1) {
+                result.AppendErrorWithFormat("payload data must contain an "
+                                             "even number of ASCII hex "
+                                             "characters: '%s'",
+                                             ascii_hex_bytes_cstr);
                 return false;
               }
+              payload_bytes.resize(ascii_hex_bytes_cstr_len / 2);
+              if (extractor.GetHexBytes(payload_bytes, '\xdd') !=
+                  payload_bytes.size()) {
+                result.AppendErrorWithFormat("payload data must only contain "
+                                             "ASCII hex characters (no "
+                                             "spaces or hex prefixes): '%s'",
+                                             ascii_hex_bytes_cstr);
+                return false;
+              }
+            }
+            Status error;
+            DataExtractor reply;
+            process->GetCommunication().SendRawRequest(
+                command_byte,
+                payload_bytes.empty() ? NULL : payload_bytes.data(),
+                payload_bytes.size(), reply, error);
+
+            if (error.Success()) {
+              // Copy the binary bytes into a hex ASCII string for the result
+              StreamString packet;
+              packet.PutBytesAsRawHex8(
+                  reply.GetDataStart(), reply.GetByteSize(),
+                  endian::InlHostByteOrder(), endian::InlHostByteOrder());
+              result.AppendMessage(packet.GetString());
+              result.SetStatus(eReturnStatusSuccessFinishResult);
+              return true;
             } else {
-              result.AppendErrorWithFormat("process must be stopped in order "
-                                           "to send KDP packets, state is %s",
-                                           StateAsCString(state));
+              const char *error_cstr = error.AsCString();
+              if (error_cstr && error_cstr[0])
+                result.AppendError(error_cstr);
+              else
+                result.AppendErrorWithFormat("unknown error 0x%8.8x",
+                                             error.GetError());
+              return false;
             }
           } else {
-            result.AppendError("invalid process");
+            result.AppendErrorWithFormat("process must be stopped in order "
+                                         "to send KDP packets, state is %s",
+                                         StateAsCString(state));
           }
         } else {
-          result.AppendErrorWithFormat("invalid command byte 0x%" PRIx64
-                                       ", valid values are 1 - 255",
-                                       command_byte);
+          result.AppendError("invalid process");
         }
+      } else {
+        result.AppendErrorWithFormat("invalid command byte 0x%" PRIx64
+                                     ", valid values are 1 - 255",
+                                     command_byte);
       }
-    } else {
-      result.AppendErrorWithFormat("'%s' takes no arguments, only options.",
-                                   m_cmd_name.c_str());
     }
     return false;
   }

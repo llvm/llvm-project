@@ -329,7 +329,7 @@ TEST_F(HeadersTest, DontInsertDuplicateResolved) {
 
 TEST_F(HeadersTest, PreferInserted) {
   auto Edit = insert("<y>");
-  EXPECT_TRUE(Edit.hasValue());
+  EXPECT_TRUE(Edit);
   EXPECT_TRUE(StringRef(Edit->newText).contains("<y>"));
 }
 

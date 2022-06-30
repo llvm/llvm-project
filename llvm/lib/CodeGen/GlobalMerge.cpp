@@ -592,6 +592,13 @@ void GlobalMerge::setMustKeepGlobalVariables(Module &M) {
         if (const GlobalVariable *GV =
                 dyn_cast<GlobalVariable>(U->stripPointerCasts()))
           MustKeepGlobalVariables.insert(GV);
+        else if (const ConstantArray *CA = dyn_cast<ConstantArray>(U->stripPointerCasts())) {
+          for (const Use &Elt : CA->operands()) {
+            if (const GlobalVariable *GV =
+                    dyn_cast<GlobalVariable>(Elt->stripPointerCasts()))
+              MustKeepGlobalVariables.insert(GV);
+          }
+        }
       }
     }
   }
@@ -609,6 +616,13 @@ bool GlobalMerge::doInitialization(Module &M) {
   bool Changed = false;
   setMustKeepGlobalVariables(M);
 
+  LLVM_DEBUG({
+      dbgs() << "Number of GV that must be kept:  " <<
+                MustKeepGlobalVariables.size() << "\n";
+      for (auto KeptGV = MustKeepGlobalVariables.begin();
+           KeptGV != MustKeepGlobalVariables.end(); KeptGV++)
+        dbgs() << "Kept: " << **KeptGV << "\n";
+  });
   // Grab all non-const globals.
   for (auto &GV : M.globals()) {
     // Merge is safe for "normal" internal or external globals only

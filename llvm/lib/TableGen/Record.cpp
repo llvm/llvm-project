@@ -79,6 +79,7 @@ struct RecordKeeperImpl {
   FoldingSet<TernOpInit> TheTernOpInitPool;
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
+  FoldingSet<ExistsOpInit> TheExistsOpInitPool;
   DenseMap<std::pair<RecTy *, Init *>, VarInit *> TheVarInitPool;
   DenseMap<std::pair<TypedInit *, unsigned>, VarBitInit *> TheVarBitInitPool;
   DenseMap<std::pair<TypedInit *, unsigned>, VarListElementInit *>
@@ -1660,6 +1661,81 @@ std::string IsAOpInit::getAsString() const {
       .str();
 }
 
+static void ProfileExistsOpInit(FoldingSetNodeID &ID, RecTy *CheckType,
+                                Init *Expr) {
+  ID.AddPointer(CheckType);
+  ID.AddPointer(Expr);
+}
+
+ExistsOpInit *ExistsOpInit::get(RecTy *CheckType, Init *Expr) {
+  FoldingSetNodeID ID;
+  ProfileExistsOpInit(ID, CheckType, Expr);
+
+  detail::RecordKeeperImpl &RK = Expr->getRecordKeeper().getImpl();
+  void *IP = nullptr;
+  if (ExistsOpInit *I = RK.TheExistsOpInitPool.FindNodeOrInsertPos(ID, IP))
+    return I;
+
+  ExistsOpInit *I = new (RK.Allocator) ExistsOpInit(CheckType, Expr);
+  RK.TheExistsOpInitPool.InsertNode(I, IP);
+  return I;
+}
+
+void ExistsOpInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileExistsOpInit(ID, CheckType, Expr);
+}
+
+Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
+  if (StringInit *Name = dyn_cast<StringInit>(Expr)) {
+    if (!CurRec && !IsFinal)
+      return const_cast<ExistsOpInit *>(this);
+
+    // Self-references are allowed, but their resolution is delayed until
+    // the final resolve to ensure that we get the correct type for them.
+    auto *Anonymous = dyn_cast<AnonymousNameInit>(CurRec->getNameInit());
+    if (Name == CurRec->getNameInit() ||
+        (Anonymous && Name == Anonymous->getNameInit())) {
+      if (!IsFinal)
+        return const_cast<ExistsOpInit *>(this);
+
+      // No doubt that there exists a record, so we should check if types are
+      // compatiable.
+      return IntInit::get(getRecordKeeper(),
+                          CurRec->getType()->typeIsA(CheckType));
+    }
+
+    // Look up all defined records to see if we can find one.
+    Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
+    if (!D) {
+      if (IsFinal)
+        return IntInit::get(getRecordKeeper(), 0);
+      return const_cast<ExistsOpInit *>(this);
+    }
+
+    // Check if types are compatiable.
+    return IntInit::get(getRecordKeeper(),
+                        DefInit::get(D)->getType()->typeIsA(CheckType));
+  }
+  return const_cast<ExistsOpInit *>(this);
+}
+
+Init *ExistsOpInit::resolveReferences(Resolver &R) const {
+  Init *NewExpr = Expr->resolveReferences(R);
+  if (Expr != NewExpr || R.isFinal())
+    return get(CheckType, NewExpr)->Fold(R.getCurrentRecord(), R.isFinal());
+  return const_cast<ExistsOpInit *>(this);
+}
+
+Init *ExistsOpInit::getBit(unsigned Bit) const {
+  return VarBitInit::get(const_cast<ExistsOpInit *>(this), Bit);
+}
+
+std::string ExistsOpInit::getAsString() const {
+  return (Twine("!exists<") + CheckType->getAsString() + ">(" +
+          Expr->getAsString() + ")")
+      .str();
+}
+
 RecTy *TypedInit::getFieldType(StringInit *FieldName) const {
   if (RecordRecTy *RecordType = dyn_cast<RecordRecTy>(getType())) {
     for (Record *Rec : RecordType->getClasses()) {
@@ -2522,7 +2598,7 @@ Init *Record::getValueInit(StringRef FieldName) const {
 
 StringRef Record::getValueAsString(StringRef FieldName) const {
   llvm::Optional<StringRef> S = getValueAsOptionalString(FieldName);
-  if (!S.hasValue())
+  if (!S)
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
   return S.getValue();

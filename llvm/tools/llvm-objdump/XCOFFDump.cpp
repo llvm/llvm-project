@@ -106,7 +106,7 @@ std::string objdump::getXCOFFSymbolDescription(const SymbolInfoTy &SymbolInfo,
   if (SymbolInfo.XCOFFSymInfo.StorageMappingClass &&
       !SymbolInfo.XCOFFSymInfo.IsLabel) {
     const XCOFF::StorageMappingClass Smc =
-        SymbolInfo.XCOFFSymInfo.StorageMappingClass.getValue();
+        *SymbolInfo.XCOFFSymInfo.StorageMappingClass;
     Result.append(("[" + XCOFF::getMappingClassString(Smc) + "]").str());
   }
 

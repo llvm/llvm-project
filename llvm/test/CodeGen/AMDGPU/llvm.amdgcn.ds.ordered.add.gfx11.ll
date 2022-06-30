@@ -56,4 +56,3 @@ define amdgpu_gs float @ds_ordered_add_gs(i32 addrspace(2)* inreg %gds) {
 }
 
 declare i32 @llvm.amdgcn.ds.ordered.add(i32 addrspace(2)* nocapture, i32, i32, i32, i1, i32, i1, i1)
-

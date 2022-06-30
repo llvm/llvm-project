@@ -19,12 +19,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Check emitted location descriptions:
 ; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
-; CHECK: [[FILENAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [22 x i8] c"/tmp/asan-globals.cpp\00", align 1
-; CHECK: [[LOCDESCR:@___asan_gen_.[0-9]+]] = private unnamed_addr constant { [22 x i8]*, i32, i32 } { [22 x i8]* [[FILENAME]], i32 5, i32 5 }
 
 ; Check that location descriptors and global names were passed into __asan_register_globals:
 ; CHECK: i64 ptrtoint ([7 x i8]* [[VARNAME]] to i64)
-; CHECK: i64 ptrtoint ({ [22 x i8]*, i32, i32 }* [[LOCDESCR]] to i64)
 ; Check alignment of metadata_array.
 ; CHECK-S5-SAME: {{align 32$}}
 
@@ -54,14 +51,7 @@ entry:
 attributes #0 = { nounwind sanitize_address }
 attributes #1 = { nounwind sanitize_address "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!llvm.asan.globals = !{!0, !1, !2, !3, !4}
 !llvm.ident = !{!5}
-
-!0 = !{i32* @global, !6, !"global", i1 false, i1 false}
-!1 = !{i32* @dyn_init_global, !7, !"dyn_init_global", i1 true, i1 false}
-!2 = !{i32* @blocked_global, null, null, i1 false, i1 true}
-!3 = !{i32* @_ZZ4funcvE10static_var, !8, !"static_var", i1 false, i1 false}
-!4 = !{[14 x i8]* @.str, !9, !"<string literal>", i1 false, i1 false}
 
 !5 = !{!"clang version 3.5.0 (211282)"}
 

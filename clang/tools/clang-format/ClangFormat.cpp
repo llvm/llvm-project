@@ -79,7 +79,18 @@ static cl::opt<std::string> AssumeFileName(
     "assume-filename",
     cl::desc("Override filename used to determine the language.\n"
              "When reading from stdin, clang-format assumes this\n"
-             "filename to determine the language."),
+             "filename to determine the language.\n"
+             "Unrecognized filenames are treated as C++.\n"
+             "supported:\n"
+             "  CSharp: .cs\n"
+             "  Java: .java\n"
+             "  JavaScript: .mjs .js .ts\n"
+             "  Json: .json\n"
+             "  Objective-C: .m .mm\n"
+             "  Proto: .proto .protodevel\n"
+             "  TableGen: .td\n"
+             "  TextProto: .textpb .pb.txt .textproto .asciipb\n"
+             "  Verilog: .sv .svh .v .vh"),
     cl::init("<stdin>"), cl::cat(ClangFormatCategory));
 
 static cl::opt<bool> Inplace("i",

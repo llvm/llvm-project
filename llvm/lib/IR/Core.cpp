@@ -1445,6 +1445,10 @@ LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
                                   DontNullTerminate);
 }
 
+LLVMValueRef LLVMGetAggregateElement(LLVMValueRef C, unsigned Idx) {
+  return wrap(unwrap<Constant>(C)->getAggregateElement(Idx));
+}
+
 LLVMValueRef LLVMGetElementAsConstant(LLVMValueRef C, unsigned idx) {
   return wrap(unwrap<ConstantDataSequential>(C)->getElementAsConstant(idx));
 }
@@ -1869,12 +1873,6 @@ LLVMValueRef LLVMConstShuffleVector(LLVMValueRef VectorAConstant,
   return wrap(ConstantExpr::getShuffleVector(unwrap<Constant>(VectorAConstant),
                                              unwrap<Constant>(VectorBConstant),
                                              IntMask));
-}
-
-LLVMValueRef LLVMConstExtractValue(LLVMValueRef AggConstant, unsigned *IdxList,
-                                   unsigned NumIdx) {
-  return wrap(ConstantExpr::getExtractValue(unwrap<Constant>(AggConstant),
-                                            makeArrayRef(IdxList, NumIdx)));
 }
 
 LLVMValueRef LLVMConstInsertValue(LLVMValueRef AggConstant,

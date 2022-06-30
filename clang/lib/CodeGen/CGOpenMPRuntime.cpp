@@ -10233,7 +10233,8 @@ void CGOpenMPRuntime::emitTargetCall(
   assert((OffloadingMandatory || OutlinedFn) && "Invalid outlined function!");
 
   const bool RequiresOuterTask = D.hasClausesOfKind<OMPDependClause>() ||
-                                 D.hasClausesOfKind<OMPNowaitClause>();
+                                 D.hasClausesOfKind<OMPNowaitClause>() ||
+                                 D.hasClausesOfKind<OMPInReductionClause>();
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
   const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
   auto &&ArgsCodegen = [&CS, &CapturedVars](CodeGenFunction &CGF,

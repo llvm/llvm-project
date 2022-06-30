@@ -33,18 +33,6 @@ protected:
   Environment Env;
 };
 
-TEST_F(EnvironmentTest, MakeImplicationReturnsTrueGivenSameArgs) {
-  auto &X = Env.makeAtomicBoolValue();
-  auto &XEqX = Env.makeImplication(X, X);
-  EXPECT_EQ(&XEqX, &Env.getBoolLiteralValue(true));
-}
-
-TEST_F(EnvironmentTest, MakeIffReturnsTrueGivenSameArgs) {
-  auto &X = Env.makeAtomicBoolValue();
-  auto &XEqX = Env.makeIff(X, X);
-  EXPECT_EQ(&XEqX, &Env.getBoolLiteralValue(true));
-}
-
 TEST_F(EnvironmentTest, FlowCondition) {
   EXPECT_TRUE(Env.flowConditionImplies(Env.getBoolLiteralValue(true)));
   EXPECT_FALSE(Env.flowConditionImplies(Env.getBoolLiteralValue(false)));

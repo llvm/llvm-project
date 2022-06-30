@@ -13,6 +13,7 @@
 #ifndef SHAPE_BASE_TD
 #define SHAPE_BASE_TD
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -43,9 +44,11 @@ def ShapeDialect : Dialect {
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
-def Shape_ShapeType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ShapeType>()">, "shape">,
-    BuildableType<"$_builder.getType<::mlir::shape::ShapeType>()"> {
+class Shape_Type<string name, string typeMnemonic> : TypeDef<ShapeDialect, name> {
+  let mnemonic = typeMnemonic;
+}
+
+def Shape_ShapeType : Shape_Type<"Shape", "shape"> {
   let description = [{
     `shape.shape` represents either an unranked shape, a ranked shape with
     possibly unknown dimensions or an invalid shape. The rank is of type
@@ -62,9 +65,7 @@ def Shape_ShapeType : DialectType<ShapeDialect,
   }];
 }
 
-def Shape_SizeType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::SizeType>()">, "size">,
-    BuildableType<"$_builder.getType<::mlir::shape::SizeType>()"> {
+def Shape_SizeType : Shape_Type<"Size", "size"> {
   let description = [{
     `shape.size` represents a non-negative integer with support for being
     unknown and invalid.
@@ -75,10 +76,7 @@ def Shape_SizeType : DialectType<ShapeDialect,
   }];
 }
 
-def Shape_ValueShapeType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ValueShapeType>()">, "value shape">,
-    BuildableType<"::mlir::shape::ValueShapeType::get($_builder.getContext())">
-{
+def Shape_ValueShapeType : Shape_Type<"ValueShape", "value_shape"> {
   let description = [{
     `shape.value_shape` represents the value produced by an operation (this
     corresponds to `Value` in the compiler) and a shape. Conceptually this is a
@@ -112,9 +110,7 @@ def Shape_ShapeOrExtentTensorType : AnyTypeOf<[Shape_ShapeType,
 
 def Shape_SizeOrIndexType : AnyTypeOf<[Shape_SizeType, Index], "size or index">;
 
-def Shape_WitnessType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::WitnessType>()">, "witness">,
-    BuildableType<"$_builder.getType<::mlir::shape::WitnessType>()"> {
+def Shape_WitnessType : Shape_Type<"Witness", "witness"> {
   let description = [{
     A witness is a structural device in the compiler to maintain ordering of
     code relying on information obtained from passing assertions. Witnesses do

@@ -292,7 +292,8 @@ public:
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
   bool instrumentStack(memtag::StackInfo &Info, Value *StackTag,
-                       const DominatorTree &DT, const PostDominatorTree &PDT);
+                       const DominatorTree &DT, const PostDominatorTree &PDT,
+                       const LoopInfo &LI);
   Value *readRegister(IRBuilder<> &IRB, StringRef Name);
   bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
@@ -309,6 +310,9 @@ public:
 
   void instrumentGlobal(GlobalVariable *GV, uint8_t Tag);
   void instrumentGlobals();
+
+  Value *getPC(IRBuilder<> &IRB);
+  Value *getSP(IRBuilder<> &IRB);
 
   void instrumentPersonalityFunctions();
 
@@ -379,6 +383,7 @@ private:
 
   Value *ShadowBase = nullptr;
   Value *StackBaseTag = nullptr;
+  Value *CachedSP = nullptr;
   GlobalValue *ThreadPtrGlobal = nullptr;
 };
 
@@ -1020,19 +1025,10 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
     return getNextTagWithCall(IRB);
   if (StackBaseTag)
     return StackBaseTag;
-  // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
-  // first).
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  auto GetStackPointerFn = Intrinsic::getDeclaration(
-      M, Intrinsic::frameaddress,
-      IRB.getInt8PtrTy(M->getDataLayout().getAllocaAddrSpace()));
-  Value *StackPointer = IRB.CreateCall(
-      GetStackPointerFn, {Constant::getNullValue(IRB.getInt32Ty())});
-
   // Extract some entropy from the stack pointer for the tags.
   // Take bits 20..28 (ASLR entropy) and xor with bits 0..8 (these differ
   // between functions).
-  Value *StackPointerLong = IRB.CreatePointerCast(StackPointer, IntptrTy);
+  Value *StackPointerLong = getSP(IRB);
   Value *StackTag =
       applyTagMask(IRB, IRB.CreateXor(StackPointerLong,
                                       IRB.CreateLShr(StackPointerLong, 20)));
@@ -1112,6 +1108,30 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
   return nullptr;
 }
 
+Value *HWAddressSanitizer::getPC(IRBuilder<> &IRB) {
+  if (TargetTriple.getArch() == Triple::aarch64)
+    return readRegister(IRB, "pc");
+  else
+    return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(), IntptrTy);
+}
+
+Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
+  if (!CachedSP) {
+    // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
+    // first).
+    Function *F = IRB.GetInsertBlock()->getParent();
+    Module *M = F->getParent();
+    auto GetStackPointerFn = Intrinsic::getDeclaration(
+        M, Intrinsic::frameaddress,
+        IRB.getInt8PtrTy(M->getDataLayout().getAllocaAddrSpace()));
+    CachedSP = IRB.CreatePtrToInt(
+        IRB.CreateCall(GetStackPointerFn,
+                       {Constant::getNullValue(IRB.getInt32Ty())}),
+        IntptrTy);
+  }
+  return CachedSP;
+}
+
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   if (!Mapping.InTls)
     ShadowBase = getShadowNonTls(IRB);
@@ -1130,23 +1150,12 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
       TargetTriple.isAArch64() ? ThreadLong : untagPointer(IRB, ThreadLong);
 
   if (WithFrameRecord) {
-    Function *F = IRB.GetInsertBlock()->getParent();
     StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
 
     // Prepare ring buffer data.
-    Value *PC;
-    if (TargetTriple.getArch() == Triple::aarch64)
-      PC = readRegister(IRB, "pc");
-    else
-      PC = IRB.CreatePtrToInt(F, IntptrTy);
-    Module *M = F->getParent();
-    auto GetStackPointerFn = Intrinsic::getDeclaration(
-        M, Intrinsic::frameaddress,
-        IRB.getInt8PtrTy(M->getDataLayout().getAllocaAddrSpace()));
-    Value *SP = IRB.CreatePtrToInt(
-        IRB.CreateCall(GetStackPointerFn,
-                       {Constant::getNullValue(IRB.getInt32Ty())}),
-        IntptrTy);
+    Value *PC = getPC(IRB);
+    Value *SP = getSP(IRB);
+
     // Mix SP and PC.
     // Assumptions:
     // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
@@ -1217,7 +1226,8 @@ static bool isLifetimeIntrinsic(Value *V) {
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          Value *StackTag,
                                          const DominatorTree &DT,
-                                         const PostDominatorTree &PDT) {
+                                         const PostDominatorTree &PDT,
+                                         const LoopInfo &LI) {
   // Ideally, we want to calculate tagged stack base pointer, and rewrite all
   // alloca addresses using that. Unfortunately, offsets are not known yet
   // (unless we use ASan-style mega-alloca). Instead we keep the base tag in a
@@ -1294,13 +1304,13 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     bool StandardLifetime =
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
-                                   ClMaxLifetimes) &&
+                                   &LI, ClMaxLifetimes) &&
         !SInfo.CallsReturnTwice;
     if (DetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
       tagAlloca(IRB, AI, Tag, Size);
-      if (!memtag::forAllReachableExits(DT, PDT, Start, Info.LifetimeEnd,
+      if (!memtag::forAllReachableExits(DT, PDT, LI, Start, Info.LifetimeEnd,
                                         SInfo.RetVec, TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
@@ -1405,9 +1415,10 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F,
   if (!SInfo.AllocasToInstrument.empty()) {
     const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     const PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
+    const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    instrumentStack(SInfo, StackTag, DT, PDT);
+    instrumentStack(SInfo, StackTag, DT, PDT, LI);
   }
 
   // If we split the entry block, move any allocas that were originally in the
@@ -1433,6 +1444,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F,
 
   ShadowBase = nullptr;
   StackBaseTag = nullptr;
+  CachedSP = nullptr;
 
   return true;
 }
@@ -1514,34 +1526,10 @@ void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
   GV->eraseFromParent();
 }
 
-static DenseSet<GlobalVariable *> getExcludedGlobals(Module &M) {
-  NamedMDNode *Globals = M.getNamedMetadata("llvm.asan.globals");
-  if (!Globals)
-    return DenseSet<GlobalVariable *>();
-  DenseSet<GlobalVariable *> Excluded(Globals->getNumOperands());
-  for (auto MDN : Globals->operands()) {
-    // Metadata node contains the global and the fields of "Entry".
-    assert(MDN->getNumOperands() == 5);
-    auto *V = mdconst::extract_or_null<Constant>(MDN->getOperand(0));
-    // The optimizer may optimize away a global entirely.
-    if (!V)
-      continue;
-    auto *StrippedV = V->stripPointerCasts();
-    auto *GV = dyn_cast<GlobalVariable>(StrippedV);
-    if (!GV)
-      continue;
-    ConstantInt *IsExcluded = mdconst::extract<ConstantInt>(MDN->getOperand(4));
-    if (IsExcluded->isOne())
-      Excluded.insert(GV);
-  }
-  return Excluded;
-}
-
 void HWAddressSanitizer::instrumentGlobals() {
   std::vector<GlobalVariable *> Globals;
-  auto ExcludedGlobals = getExcludedGlobals(M);
   for (GlobalVariable &GV : M.globals()) {
-    if (ExcludedGlobals.count(&GV))
+    if (GV.hasSanitizerMetadata() && GV.getSanitizerMetadata().NoHWAddress)
       continue;
 
     if (GV.isDeclarationForLinker() || GV.getName().startswith("llvm.") ||

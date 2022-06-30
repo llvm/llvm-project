@@ -78,7 +78,7 @@ inline PWMAFunction parsePWMAF(
     IntegerPolyhedron domain = parsePoly(pair.first);
 
     result.addPiece(
-        domain, makeMatrix(numOutputs, domain.getNumIds() + 1, pair.second));
+        domain, makeMatrix(numOutputs, domain.getNumVars() + 1, pair.second));
   }
   return result;
 }

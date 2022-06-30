@@ -8,7 +8,6 @@
 //
 // NetBSD does not support LC_TIME at the moment
 // XFAIL: netbsd
-// XFAIL: LIBCXX-AIX-FIXME
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
@@ -54,6 +53,8 @@ int main(int, char**)
         const char in[] = "12/31/2061 11:55:59 PM";
 #elif defined(TEST_HAS_GLIBC)
         const char in[] = "Sat 31 Dec 2061 11:55:59 PM";
+#elif defined(_AIX)
+        const char in[] = "Dec 31, 2061 at 11:55:59 PM";
 #else
         const char in[] = "Sat Dec 31 23:55:59 2061";
 #endif
@@ -67,14 +68,14 @@ int main(int, char**)
         assert(t.tm_mday == 31);
         assert(t.tm_mon == 11);
         assert(t.tm_year == 161);
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_AIX)
         assert(t.tm_wday == 6);
 #endif
         assert(err == std::ios_base::eofbit);
     }
     {
         const my_facet f(LOCALE_en_US_UTF_8, 1);
-#if defined(_WIN32) || defined(TEST_HAS_GLIBC)
+#if defined(_WIN32) || defined(TEST_HAS_GLIBC) || defined(_AIX)
         const char in[] = "11:55:59 PM";
 #else
         const char in[] = "23:55:59";
@@ -94,6 +95,8 @@ int main(int, char**)
         const char in[] = "31/12/2061 23:55:59";
 #elif defined(TEST_HAS_GLIBC)
         const char in[] = "sam. 31 d""\xC3\xA9""c. 2061 23:55:59";
+#elif defined(_AIX)
+        const char in[] = "31 d""\xC3\xA9""c. 2061 ""\xC3\xA0"" 23:55:59";
 #else
         const char in[] = "Sam 31 d""\xC3\xA9""c 23:55:59 2061";
 #endif
@@ -107,7 +110,7 @@ int main(int, char**)
         assert(t.tm_mday == 31);
         assert(t.tm_mon == 11);
         assert(t.tm_year == 161);
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_AIX)
         assert(t.tm_wday == 6);
 #endif
         assert(err == std::ios_base::eofbit);
@@ -130,6 +133,8 @@ int main(int, char**)
         const char in[] = "\xD0\xA1\xD0\xB1 31 \xD0\xB4\xD0\xB5\xD0\xBA 2061 23:55:59";
 #elif defined(_WIN32)
         const char in[] = "31.12.2061 23:55:59";
+#elif defined(_AIX)
+        const char in[] = "31 \xD0\xB4\xD0\xB5\xD0\xBA. 2061 \xD0\xB3., 23:55:59";
 #else
         const char in[] = "\xD1\x81\xD1\x83\xD0\xB1\xD0\xB1"
                           "\xD0\xBE\xD1\x82\xD0\xB0"
@@ -150,7 +155,7 @@ int main(int, char**)
         assert(t.tm_mday == 31);
         assert(t.tm_mon == 11);
         assert(t.tm_year == 161);
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_AIX)
         assert(t.tm_wday == 6);
 #endif
         assert(err == std::ios_base::eofbit);
@@ -177,6 +182,14 @@ int main(int, char**)
                           "\xE7\xA7\x92";
 #elif defined(_WIN32)
         const char in[] = "2061/12/31 23:55:59";
+#elif defined(_AIX)
+        // The time field is omitted in the definition below because in the
+        // date-time format of locale zh_CN.UTF-8 on AIX, there is %Z before
+        // the time field, i.e, "... %Z %p%I:%M:%S", and its value varies
+        // depending on the date of the year and the location of the machine
+        // where the test case is run.
+        const char in[] = "2061" "\xE5\xB9\xB4" "12" "\xE6\x9C\x88" "31"
+                          "\xE6\x97\xA5";
 #else
         const char in[] = "\xE5\x85\xAD 12/31 23:55:59 2061";
 #endif
@@ -184,21 +197,27 @@ int main(int, char**)
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t, 'c');
         assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
+#ifndef _AIX
         assert(t.tm_sec == 59);
         assert(t.tm_min == 55);
         assert(t.tm_hour == 23);
+#endif
         assert(t.tm_mday == 31);
         assert(t.tm_mon == 11);
         assert(t.tm_year == 161);
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(_AIX)
         assert(t.tm_wday == 6);
 #endif
+#if !defined(_AIX)
         assert(err == std::ios_base::eofbit);
+#endif
     }
     {
         const my_facet f(LOCALE_zh_CN_UTF_8, 1);
 #if defined(_WIN32)
         const char in[] = "23:55:59";
+#elif defined(_AIX)
+        const char in[] = "\xE4\xB8\x8B\xE5\x8D\x88" "11:55:59";
 #else
         const char in[] = "23""\xE6\x97\xB6""55""\xE5\x88\x86""59""\xE7\xA7\x92";
 #endif
@@ -208,7 +227,11 @@ int main(int, char**)
         assert(base(i) == in+sizeof(in)/sizeof(in[0])-1);
         assert(t.tm_sec == 59);
         assert(t.tm_min == 55);
+#if defined(_AIX)
+        assert(t.tm_hour == 11);
+#else
         assert(t.tm_hour == 23);
+#endif
         assert(err == std::ios_base::eofbit);
     }
 

@@ -703,8 +703,8 @@ bool ConstStructBuilder::Build(InitListExpr *ILE, bool AllowOverwrite) {
         !declaresSameEntity(ILE->getInitializedFieldInUnion(), Field))
       continue;
 
-    // Don't emit anonymous bitfields or zero-sized fields.
-    if (Field->isUnnamedBitfield() || Field->isZeroSize(CGM.getContext()))
+    // Don't emit anonymous bitfields.
+    if (Field->isUnnamedBitfield())
       continue;
 
     // Get the initializer.  A struct can include fields without initializers,
@@ -714,6 +714,14 @@ bool ConstStructBuilder::Build(InitListExpr *ILE, bool AllowOverwrite) {
       Init = ILE->getInit(ElementNo++);
     if (Init && isa<NoInitExpr>(Init))
       continue;
+
+    // Zero-sized fields are not emitted, but their initializers may still
+    // prevent emission of this struct as a constant.
+    if (Field->isZeroSize(CGM.getContext())) {
+      if (Init->HasSideEffects(CGM.getContext()))
+        return false;
+      continue;
+    }
 
     // When emitting a DesignatedInitUpdateExpr, a nested InitListExpr
     // represents additional overwriting of our current constant value, and not

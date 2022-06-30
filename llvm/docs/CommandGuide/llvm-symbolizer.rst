@@ -12,7 +12,9 @@ DESCRIPTION
 -----------
 
 :program:`llvm-symbolizer` reads input names and addresses from the command-line
-and prints corresponding source code locations to standard output.
+and prints corresponding source code locations to standard output. It can also
+symbolize logs containing :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` via
+:option:`--filter-markup`.
 
 If no address is specified on the command-line, it reads the addresses from
 standard input. If no input name is specified on the command-line, but addresses
@@ -213,6 +215,12 @@ OPTIONS
   Look up the object using the given build ID, specified as a hexadecimal
   string. Mutually exclusive with :option:`--obj`.
 
+.. option:: --color [=<always|auto|never>]
+
+  Specify whether to use color in :option:`--filter-markup` mode. Defaults to
+  ``auto``, which detects whether standard output supports color. Specifying
+  ``--color`` alone is equivalent to ``--color=always``.
+
 .. option:: --debuginfod, --no-debuginfod
 
   Whether or not to try debuginfod lookups for debug binaries. Unless specified,
@@ -238,6 +246,15 @@ OPTIONS
   When a separate file contains debug data, and is referenced by a GNU debug
   link section, use the specified path as a basis for locating the debug data if
   it cannot be found relative to the object.
+
+.. option:: --filter-markup
+
+  Reads from standard input, converts contained
+  :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` into human-readable form,
+  and prints the results to standard output. Presently, only the following
+  markup elements are supported:
+
+  * ``{{symbol}}``
 
 .. _llvm-symbolizer-opt-f:
 

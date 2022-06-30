@@ -737,6 +737,15 @@ public:
   /// other block.
   bool isLayoutSuccessor(const MachineBasicBlock *MBB) const;
 
+  /// Return the successor of this block if it has a single successor.
+  /// Otherwise return a null pointer.
+  ///
+  const MachineBasicBlock *getSingleSuccessor() const;
+  MachineBasicBlock *getSingleSuccessor() {
+    return const_cast<MachineBasicBlock *>(
+        static_cast<const MachineBasicBlock *>(this)->getSingleSuccessor());
+  }
+
   /// Return the fallthrough block if the block can implicitly
   /// transfer control to the block after it by falling off the end of
   /// it.  This should return null if it can reach the block after

@@ -7,6 +7,9 @@
 // COFF doesn't support debuginfo for globals. For the non-debuginfo tests, see global-location-nodebug.cpp.
 // XFAIL: windows-msvc
 
+// atos doesn't show source line numbers for global variables.
+// UNSUPPORTED: darwin
+
 // CHECK: AddressSanitizer: global-buffer-overflow
 
 #include <string.h>
@@ -27,7 +30,7 @@ int main(int argc, char **argv) {
   case 'c': return C::array[one * 11];
   case 'f':
     static int array[10];
-    // FUNC_STATIC:      0x{{.*}} is located 4 bytes to the right of global variable 'array' defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 40
+    // FUNC_STATIC:      0x{{.*}} is located 4 bytes to the right of global variable 'main::array' defined in '{{.*}}global-location.cpp:[[@LINE-1]]' {{.*}} of size 40
     memset(array, 0, 10);
     return array[one * 11];
   case 'l':

@@ -70,10 +70,10 @@ uint32_t CodeViewRecordIO::maxFieldLength() const {
   Optional<uint32_t> Min = Limits.front().bytesRemaining(Offset);
   for (auto X : makeArrayRef(Limits).drop_front()) {
     Optional<uint32_t> ThisMin = X.bytesRemaining(Offset);
-    if (ThisMin.hasValue())
-      Min = (Min.hasValue()) ? std::min(*Min, *ThisMin) : *ThisMin;
+    if (ThisMin)
+      Min = Min ? std::min(*Min, *ThisMin) : *ThisMin;
   }
-  assert(Min.hasValue() && "Every field must have a maximum length!");
+  assert(Min && "Every field must have a maximum length!");
 
   return *Min;
 }

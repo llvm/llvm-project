@@ -403,6 +403,23 @@ void ConstraintInfo::transferToOtherSystem(
   switch (Pred) {
   default:
     break;
+  case CmpInst::ICMP_ULT:
+    //  If B is a signed positive constant, A >=s 0 and A <s B.
+    if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0))) {
+      addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0),
+              IsNegated, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_SLT, A, B, IsNegated, NumIn, NumOut, DFSInStack);
+    }
+    break;
+  case CmpInst::ICMP_SLT:
+    if (doesHold(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0)))
+      addFact(CmpInst::ICMP_ULT, A, B, IsNegated, NumIn, NumOut, DFSInStack);
+    break;
+  case CmpInst::ICMP_SGT:
+    if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), -1)))
+      addFact(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0),
+              IsNegated, NumIn, NumOut, DFSInStack);
+    break;
   case CmpInst::ICMP_SGE:
     if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0))) {
       addFact(CmpInst::ICMP_UGE, A, B, IsNegated, NumIn, NumOut, DFSInStack);
@@ -670,7 +687,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   // come before blocks and conditions dominated by them. If a block and a
   // condition have the same numbers, the condition comes before the block, as
   // it holds on entry to the block.
-  sort(S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
+  stable_sort(S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
     return std::tie(A.NumIn, A.IsBlock) < std::tie(B.NumIn, B.IsBlock);
   });
 

@@ -35,7 +35,7 @@
 "`P0185R1 <https://wg21.link/P0185R1>`__","LWG","Adding [nothrow-]swappable traits","Jacksonville","|Complete|","3.9"
 "`P0253R1 <https://wg21.link/P0253R1>`__","LWG","Fixing a design mistake in the searchers interface","Jacksonville","|Complete|","3.9"
 "`P0025R0 <https://wg21.link/P0025R0>`__","LWG","An algorithm to ""clamp"" a value between a pair of boundary values","Jacksonville","|Complete|","3.9"
-"`P0154R1 <https://wg21.link/P0154R1>`__","LWG","constexpr std::hardware_{constructive,destructive}_interference_size","Jacksonville","",""
+"`P0154R1 <https://wg21.link/P0154R1>`__","LWG","constexpr std::hardware_{constructive,destructive}_interference_size","Jacksonville","|Partial| [#note-P0154]_","15.0"
 "`P0030R1 <https://wg21.link/P0030R1>`__","LWG","Proposal to Introduce a 3-Argument Overload to std::hypot","Jacksonville","|Complete|","3.9"
 "`P0031R0 <https://wg21.link/P0031R0>`__","LWG","A Proposal to Add Constexpr Modifiers to reverse_iterator, move_iterator, array and Range Access","Jacksonville","|Complete|","4.0"
 "`P0272R1 <https://wg21.link/P0272R1>`__","LWG","Give ``std::string``\  a non-const ``.data()``\  member function","Jacksonville","|Complete|","3.9"

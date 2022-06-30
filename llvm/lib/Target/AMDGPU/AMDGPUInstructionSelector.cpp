@@ -690,8 +690,8 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
     if (ConstSrc1 && ConstSrc1->Value == 0) {
       // build_vector_trunc (lshr $src0, 16), 0 -> s_lshr_b32 $src0, 16
       auto MIB = BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst)
-        .addReg(ShiftSrc0)
-        .addImm(16);
+                     .addReg(ShiftSrc0)
+                     .addImm(16);
 
       MI.eraseFromParent();
       return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
@@ -1179,7 +1179,7 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
   Optional<ValueAndVReg> Arg =
       getIConstantVRegValWithLookThrough(I.getOperand(2).getReg(), *MRI);
 
-  if (Arg.hasValue()) {
+  if (Arg) {
     const int64_t Value = Arg.getValue().Value.getSExtValue();
     if (Value == 0) {
       unsigned Opcode = Is64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
@@ -1861,11 +1861,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
     return selectDSBvhStackIntrinsic(I);
-  default: {
-    return selectImpl(I, *CoverageInfo);
   }
-  }
-
   return selectImpl(I, *CoverageInfo);
 }
 
@@ -3043,13 +3039,15 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
 
 bool AMDGPUInstructionSelector::selectAMDGPU_BUFFER_ATOMIC_FADD(
   MachineInstr &MI) const {
-  if (STI.hasGFX90AInsts())
+  const Register DefReg = MI.getOperand(0).getReg();
+  LLT DefTy = MRI->getType(DefReg);
+  if (AMDGPU::hasAtomicFaddRtnForTy(STI, DefTy))
     return selectImpl(MI, *CoverageInfo);
 
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  if (!MRI->use_nodbg_empty(MI.getOperand(0).getReg())) {
+  if (!MRI->use_nodbg_empty(DefReg)) {
     Function &F = MBB->getParent()->getFunction();
     DiagnosticInfoUnsupported
       NoFpRet(F, "return versions of fp atomics not supported",
@@ -4262,7 +4260,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
              MIB.addReg(Info->getScratchRSrcReg());
            },
            [=](MachineInstrBuilder &MIB) { // vaddr
-             if (FI.hasValue())
+             if (FI)
                MIB.addFrameIndex(FI.getValue());
              else
                MIB.addReg(VAddr);

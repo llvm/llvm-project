@@ -1,0 +1,17 @@
+RUN: split-file %s %t
+RUN: llvm-symbolizer --debug-file-directory=%p/Inputs --filter-markup < %t/log > /dev/null 2> %t.err
+RUN: FileCheck %s -input-file=%t.err --match-full-lines --strict-whitespace
+
+CHECK:error: expected 1 fields; found 0
+CHECK:[[BEGIN:[{]{3}]]symbol[[END:[}]{3}]]
+CHECK:         ^
+CHECK:error: expected 1 fields; found 0
+CHECK:foo[[BEGIN]]symbol[[END]]bar[[BEGIN]]symbol[[END]]baz
+CHECK:            ^
+CHECK:error: expected 1 fields; found 0
+CHECK:foo[[BEGIN]]symbol[[END]]bar[[BEGIN]]symbol[[END]]baz
+CHECK:                           ^
+
+;--- log
+{{{symbol}}}
+foo{{{symbol}}}bar{{{symbol}}}baz

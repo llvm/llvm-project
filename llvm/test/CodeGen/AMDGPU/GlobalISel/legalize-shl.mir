@@ -12,17 +12,23 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_shl_s32_s32
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: liveins: $vgpr0, $vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; VI-LABEL: name: test_shl_s32_s32
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: liveins: $vgpr0, $vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; GFX9-LABEL: name: test_shl_s32_s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
     ; GFX9-NEXT: $vgpr0 = COPY [[SHL]](s32)
@@ -38,19 +44,25 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; SI-LABEL: name: test_shl_s64_s64
-    ; SI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[TRUNC]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
     ; VI-LABEL: name: test_shl_s64_s64
-    ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[TRUNC]](s32)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
     ; GFX9-LABEL: name: test_shl_s64_s64
-    ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[TRUNC]](s32)
@@ -67,17 +79,23 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2
 
     ; SI-LABEL: name: test_shl_s64_s32
-    ; SI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1, $vgpr2
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[COPY1]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
     ; VI-LABEL: name: test_shl_s64_s32
-    ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1, $vgpr2
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[COPY1]](s32)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
     ; GFX9-LABEL: name: test_shl_s64_s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[COPY1]](s32)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
@@ -93,21 +111,27 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2
 
     ; SI-LABEL: name: test_shl_s64_s16
-    ; SI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1, $vgpr2
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[AND]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
     ; VI-LABEL: name: test_shl_s64_s16
-    ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1, $vgpr2
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; VI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[AND]](s32)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](s64)
     ; GFX9-LABEL: name: test_shl_s64_s16
-    ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
@@ -127,12 +151,16 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_shl_s16_s32
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: liveins: $vgpr0, $vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; VI-LABEL: name: test_shl_s16_s32
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: liveins: $vgpr0, $vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -140,7 +168,9 @@ body: |
     ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL]](s16)
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_shl_s16_s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -162,14 +192,18 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_shl_s16_s16
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: liveins: $vgpr0, $vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; VI-LABEL: name: test_shl_s16_s16
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: liveins: $vgpr0, $vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -177,7 +211,9 @@ body: |
     ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL]](s16)
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_shl_s16_s16
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -200,14 +236,18 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_shl_s16_i8
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: liveins: $vgpr0, $vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; VI-LABEL: name: test_shl_s16_i8
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: liveins: $vgpr0, $vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; VI-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
@@ -217,7 +257,9 @@ body: |
     ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL]](s16)
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_shl_s16_i8
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
@@ -242,14 +284,18 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_shl_i8_i8
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: liveins: $vgpr0, $vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; VI-LABEL: name: test_shl_i8_i8
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: liveins: $vgpr0, $vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; VI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
@@ -259,7 +305,9 @@ body: |
     ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL]](s16)
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_shl_i8_i8
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
@@ -285,7 +333,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; SI-LABEL: name: test_shl_v2s32_v2s32
-    ; SI: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; SI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
@@ -294,7 +344,9 @@ body: |
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SHL]](s32), [[SHL1]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     ; VI-LABEL: name: test_shl_v2s32_v2s32
-    ; VI: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; VI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
@@ -303,7 +355,9 @@ body: |
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SHL]](s32), [[SHL1]](s32)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     ; GFX9-LABEL: name: test_shl_v2s32_v2s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; GFX9-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
@@ -324,7 +378,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
 
     ; SI-LABEL: name: test_shl_v3s32_v3s32
-    ; SI: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; SI-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
@@ -334,7 +390,9 @@ body: |
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SHL]](s32), [[SHL1]](s32), [[SHL2]](s32)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
     ; VI-LABEL: name: test_shl_v3s32_v3s32
-    ; VI: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; VI-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
@@ -344,7 +402,9 @@ body: |
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SHL]](s32), [[SHL1]](s32), [[SHL2]](s32)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
     ; GFX9-LABEL: name: test_shl_v3s32_v3s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; GFX9-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
@@ -366,7 +426,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
 
     ; SI-LABEL: name: test_shl_v2s64_v2s32
-    ; SI: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; SI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
@@ -375,7 +437,9 @@ body: |
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SHL]](s64), [[SHL1]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; VI-LABEL: name: test_shl_v2s64_v2s32
-    ; VI: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; VI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
@@ -384,7 +448,9 @@ body: |
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SHL]](s64), [[SHL1]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; GFX9-LABEL: name: test_shl_v2s64_v2s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; GFX9-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
@@ -405,7 +471,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10
 
     ; SI-LABEL: name: test_shl_v3s64_v3s32
-    ; SI: [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<4 x s64>)
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr8_vgpr9_vgpr10
     ; SI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
@@ -417,7 +485,9 @@ body: |
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[SHL]](s64), [[SHL1]](s64), [[SHL2]](s64), [[UV10]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<4 x s64>)
     ; VI-LABEL: name: test_shl_v3s64_v3s32
-    ; VI: [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<4 x s64>)
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr8_vgpr9_vgpr10
     ; VI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
@@ -429,7 +499,9 @@ body: |
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[SHL]](s64), [[SHL1]](s64), [[SHL2]](s64), [[UV10]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<4 x s64>)
     ; GFX9-LABEL: name: test_shl_v3s64_v3s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<4 x s64>)
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr8_vgpr9_vgpr10
     ; GFX9-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
@@ -456,7 +528,9 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_shl_v2s16_v2s16
-    ; SI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; SI: liveins: $vgpr0, $vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -475,7 +549,9 @@ body: |
     ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
     ; VI-LABEL: name: test_shl_v2s16_v2s16
-    ; VI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; VI: liveins: $vgpr0, $vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
@@ -495,7 +571,9 @@ body: |
     ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
     ; GFX9-LABEL: name: test_shl_v2s16_v2s16
-    ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(<2 x s16>) = G_SHL [[COPY]], [[COPY1]](<2 x s16>)
     ; GFX9-NEXT: $vgpr0 = COPY [[SHL]](<2 x s16>)
@@ -512,7 +590,9 @@ body: |
     liveins: $vgpr0, $vgpr0_vgpr1
 
     ; SI-LABEL: name: test_shl_v2s16_v2s32
-    ; SI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; SI: liveins: $vgpr0, $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -528,7 +608,9 @@ body: |
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ; VI-LABEL: name: test_shl_v2s16_v2s32
-    ; VI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; VI: liveins: $vgpr0, $vgpr0_vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
@@ -547,7 +629,9 @@ body: |
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ; GFX9-LABEL: name: test_shl_v2s16_v2s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr0_vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
@@ -575,7 +659,9 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
     ; SI-LABEL: name: test_shl_v3s16_v3s16
-    ; SI: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr3_vgpr4_vgpr5
     ; SI-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
@@ -616,7 +702,9 @@ body: |
     ; SI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>), [[BITCAST8]](<2 x s16>)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ; VI-LABEL: name: test_shl_v3s16_v3s16
-    ; VI: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr3_vgpr4_vgpr5
     ; VI-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
@@ -660,7 +748,9 @@ body: |
     ; VI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>), [[BITCAST8]](<2 x s16>)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ; GFX9-LABEL: name: test_shl_v3s16_v3s16
-    ; GFX9: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr3_vgpr4_vgpr5
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
     ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
@@ -708,7 +798,9 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; SI-LABEL: name: test_shl_v4s16_v4s16
-    ; SI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3
     ; SI-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
@@ -743,7 +835,9 @@ body: |
     ; SI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; VI-LABEL: name: test_shl_v4s16_v4s16
-    ; VI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3
     ; VI-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
@@ -781,7 +875,9 @@ body: |
     ; VI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; GFX9-LABEL: name: test_shl_v4s16_v4s16
-    ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
     ; GFX9-NEXT: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY1]](<4 x s16>)
@@ -802,14 +898,18 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_shl_s7_s7
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: liveins: $vgpr0, $vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; VI-LABEL: name: test_shl_s7_s7
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: liveins: $vgpr0, $vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
     ; VI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
@@ -819,7 +919,9 @@ body: |
     ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL]](s16)
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_shl_s7_s7
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
@@ -844,17 +946,23 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_shl_i24_i32
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: liveins: $vgpr0, $vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; VI-LABEL: name: test_shl_i24_i32
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: liveins: $vgpr0, $vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[SHL]](s32)
     ; GFX9-LABEL: name: test_shl_i24_i32
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: liveins: $vgpr0, $vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
     ; GFX9-NEXT: $vgpr0 = COPY [[SHL]](s32)
@@ -873,7 +981,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
 
     ; SI-LABEL: name: test_shl_s128_s128
-    ; SI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; SI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
@@ -894,7 +1004,9 @@ body: |
     ; SI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT]](s64), [[SELECT2]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; VI-LABEL: name: test_shl_s128_s128
-    ; VI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
@@ -915,7 +1027,9 @@ body: |
     ; VI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT]](s64), [[SELECT2]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; GFX9-LABEL: name: test_shl_s128_s128
-    ; GFX9: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
@@ -949,7 +1063,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
 
     ; SI-LABEL: name: test_shl_s128_s132
-    ; SI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
@@ -970,7 +1086,9 @@ body: |
     ; SI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT]](s64), [[SELECT2]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; VI-LABEL: name: test_shl_s128_s132
-    ; VI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
@@ -991,7 +1109,9 @@ body: |
     ; VI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT]](s64), [[SELECT2]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; GFX9-LABEL: name: test_shl_s128_s132
-    ; GFX9: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
@@ -1024,17 +1144,23 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
 
     ; SI-LABEL: name: test_shl_s128_s32_0
-    ; SI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; SI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UV]](s64), [[UV1]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; VI-LABEL: name: test_shl_s128_s32_0
-    ; VI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; VI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UV]](s64), [[UV1]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; GFX9-LABEL: name: test_shl_s128_s32_0
-    ; GFX9: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UV]](s64), [[UV1]](s64)
     ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
@@ -1052,7 +1178,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
 
     ; SI-LABEL: name: test_shl_s128_s32_23
-    ; SI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1063,7 +1191,9 @@ body: |
     ; SI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SHL]](s64), [[OR]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; VI-LABEL: name: test_shl_s128_s32_23
-    ; VI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1074,7 +1204,9 @@ body: |
     ; VI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SHL]](s64), [[OR]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; GFX9-LABEL: name: test_shl_s128_s32_23
-    ; GFX9: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1097,7 +1229,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
 
     ; SI-LABEL: name: test_shl_s128_s32_31
-    ; SI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1108,7 +1242,9 @@ body: |
     ; SI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SHL]](s64), [[OR]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; VI-LABEL: name: test_shl_s128_s32_31
-    ; VI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1119,7 +1255,9 @@ body: |
     ; VI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SHL]](s64), [[OR]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; GFX9-LABEL: name: test_shl_s128_s32_31
-    ; GFX9: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1142,7 +1280,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
 
     ; SI-LABEL: name: test_shl_s128_s32_32
-    ; SI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1152,7 +1292,9 @@ body: |
     ; SI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SHL]](s64), [[OR]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; VI-LABEL: name: test_shl_s128_s32_32
-    ; VI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1162,7 +1304,9 @@ body: |
     ; VI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SHL]](s64), [[OR]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; GFX9-LABEL: name: test_shl_s128_s32_32
-    ; GFX9: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1184,7 +1328,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
 
     ; SI-LABEL: name: test_shl_s128_s32_33
-    ; SI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 33
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1195,7 +1341,9 @@ body: |
     ; SI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SHL]](s64), [[OR]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; VI-LABEL: name: test_shl_s128_s32_33
-    ; VI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 33
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1206,7 +1354,9 @@ body: |
     ; VI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SHL]](s64), [[OR]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; GFX9-LABEL: name: test_shl_s128_s32_33
-    ; GFX9: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 33
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[C]](s32)
@@ -1229,7 +1379,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
 
     ; SI-LABEL: name: test_shl_s128_s32_127
-    ; SI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 63
@@ -1237,7 +1389,9 @@ body: |
     ; SI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[C]](s64), [[SHL]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; VI-LABEL: name: test_shl_s128_s32_127
-    ; VI: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 63
@@ -1245,7 +1399,9 @@ body: |
     ; VI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[C]](s64), [[SHL]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ; GFX9-LABEL: name: test_shl_s128_s32_127
-    ; GFX9: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 63
@@ -1265,7 +1421,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
 
     ; SI-LABEL: name: test_shl_s256_s256
-    ; SI: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr8
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; SI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
@@ -1342,7 +1500,9 @@ body: |
     ; SI-NEXT: [[MV2:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[MV]](s128), [[MV1]](s128)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV2]](s256)
     ; VI-LABEL: name: test_shl_s256_s256
-    ; VI: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr8
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
@@ -1419,7 +1579,9 @@ body: |
     ; VI-NEXT: [[MV2:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[MV]](s128), [[MV1]](s128)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV2]](s256)
     ; GFX9-LABEL: name: test_shl_s256_s256
-    ; GFX9: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr8
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
@@ -1509,7 +1671,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr4_vgpr5
 
     ; SI-LABEL: name: test_shl_v2s128_v2s32
-    ; SI: [[COPY:%[0-9]+]]:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr4_vgpr5
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s128), [[UV1:%[0-9]+]]:_(s128) = G_UNMERGE_VALUES [[COPY]](<2 x s128>)
     ; SI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
@@ -1547,7 +1711,9 @@ body: |
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s128>) = G_BUILD_VECTOR [[MV]](s128), [[MV1]](s128)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<2 x s128>)
     ; VI-LABEL: name: test_shl_v2s128_v2s32
-    ; VI: [[COPY:%[0-9]+]]:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr4_vgpr5
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s128), [[UV1:%[0-9]+]]:_(s128) = G_UNMERGE_VALUES [[COPY]](<2 x s128>)
     ; VI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
@@ -1585,7 +1751,9 @@ body: |
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s128>) = G_BUILD_VECTOR [[MV]](s128), [[MV1]](s128)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<2 x s128>)
     ; GFX9-LABEL: name: test_shl_v2s128_v2s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr4_vgpr5
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s128), [[UV1:%[0-9]+]]:_(s128) = G_UNMERGE_VALUES [[COPY]](<2 x s128>)
     ; GFX9-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
@@ -1635,7 +1803,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
 
     ; SI-LABEL: name: test_shl_s65_s32
-    ; SI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %22(s64)
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
@@ -1661,7 +1831,9 @@ body: |
     ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
     ; VI-LABEL: name: test_shl_s65_s32
-    ; VI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %22(s64)
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
@@ -1687,7 +1859,9 @@ body: |
     ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
     ; GFX9-LABEL: name: test_shl_s65_s32
-    ; GFX9: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %22(s64)
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
@@ -1727,7 +1901,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2
 
     ; SI-LABEL: name: test_shl_s65_s32_constant8
-    ; SI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %22(s64)
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
     ; SI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
@@ -1752,7 +1928,9 @@ body: |
     ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
     ; VI-LABEL: name: test_shl_s65_s32_constant8
-    ; VI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %22(s64)
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
     ; VI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
@@ -1777,7 +1955,9 @@ body: |
     ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
     ; GFX9-LABEL: name: test_shl_s65_s32_constant8
-    ; GFX9: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %22(s64)
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
     ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
@@ -1816,7 +1996,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
 
     ; SI-LABEL: name: test_shl_s65_s32_known_pow2
-    ; SI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; SI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C]], [[COPY1]](s32)
@@ -1843,7 +2025,9 @@ body: |
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC]](s96)
     ; VI-LABEL: name: test_shl_s65_s32_known_pow2
-    ; VI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; VI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C]], [[COPY1]](s32)
@@ -1870,7 +2054,9 @@ body: |
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC]](s96)
     ; GFX9-LABEL: name: test_shl_s65_s32_known_pow2
-    ; GFX9: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C]], [[COPY1]](s32)

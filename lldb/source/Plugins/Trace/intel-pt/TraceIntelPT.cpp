@@ -12,8 +12,8 @@
 #include "CommandObjectTraceStartIntelPT.h"
 #include "DecodedThread.h"
 #include "TraceIntelPTConstants.h"
-#include "TraceIntelPTSessionFileParser.h"
-#include "TraceIntelPTSessionSaver.h"
+#include "TraceIntelPTBundleLoader.h"
+#include "TraceIntelPTBundleSaver.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -40,32 +40,32 @@ TraceIntelPT::GetThreadTraceStartCommand(CommandInterpreter &interpreter) {
 
 void TraceIntelPT::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Intel Processor Trace",
-                                CreateInstanceForSessionFile,
+                                CreateInstanceForTraceBundle,
                                 CreateInstanceForLiveProcess,
-                                TraceIntelPTSessionFileParser::GetSchema());
+                                TraceIntelPTBundleLoader::GetSchema());
 }
 
 void TraceIntelPT::Terminate() {
-  PluginManager::UnregisterPlugin(CreateInstanceForSessionFile);
+  PluginManager::UnregisterPlugin(CreateInstanceForTraceBundle);
 }
 
 StringRef TraceIntelPT::GetSchema() {
-  return TraceIntelPTSessionFileParser::GetSchema();
+  return TraceIntelPTBundleLoader::GetSchema();
 }
 
 void TraceIntelPT::Dump(Stream *s) const {}
 
 llvm::Error TraceIntelPT::SaveLiveTraceToDisk(FileSpec directory) {
   RefreshLiveProcessState();
-  return TraceIntelPTSessionSaver().SaveToDisk(*this, directory);
+  return TraceIntelPTBundleSaver().SaveToDisk(*this, directory);
 }
 
-Expected<TraceSP> TraceIntelPT::CreateInstanceForSessionFile(
-    const json::Value &trace_session_file, StringRef session_file_dir,
+Expected<TraceSP> TraceIntelPT::CreateInstanceForTraceBundle(
+    const json::Value &bundle_description, StringRef bundle_dir,
     Debugger &debugger) {
-  return TraceIntelPTSessionFileParser(debugger, trace_session_file,
-                                       session_file_dir)
-      .Parse();
+  return TraceIntelPTBundleLoader(debugger, bundle_description,
+                                       bundle_dir)
+      .Load();
 }
 
 Expected<TraceSP> TraceIntelPT::CreateInstanceForLiveProcess(Process &process) {
@@ -79,15 +79,15 @@ TraceIntelPTSP TraceIntelPT::GetSharedPtr() {
 }
 
 TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
-    JSONTraceSession &session, ArrayRef<ProcessSP> traced_processes,
+    JSONTraceBundleDescription &bundle_description, ArrayRef<ProcessSP> traced_processes,
     ArrayRef<ThreadPostMortemTraceSP> traced_threads) {
-  TraceIntelPTSP trace_sp(new TraceIntelPT(session, traced_processes));
-  trace_sp->m_storage.tsc_conversion = session.tsc_perf_zero_conversion;
+  TraceIntelPTSP trace_sp(new TraceIntelPT(bundle_description, traced_processes));
+  trace_sp->m_storage.tsc_conversion = bundle_description.tsc_perf_zero_conversion;
 
-  if (session.cpus) {
+  if (bundle_description.cpus) {
     std::vector<cpu_id_t> cpus;
 
-    for (const JSONCpu &cpu : *session.cpus) {
+    for (const JSONCpu &cpu : *bundle_description.cpus) {
       trace_sp->SetPostMortemCpuDataFile(cpu.id, IntelPTDataKinds::kIptTrace,
                                          FileSpec(cpu.ipt_trace));
 
@@ -98,7 +98,7 @@ TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
     }
 
     std::vector<tid_t> tids;
-    for (const JSONProcess &process : session.processes)
+    for (const JSONProcess &process : bundle_description.processes)
       for (const JSONThread &thread : process.threads)
         tids.push_back(thread.tid);
 
@@ -119,16 +119,14 @@ TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
   return trace_sp;
 }
 
-TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
+TraceIntelPT::TraceIntelPT(JSONTraceBundleDescription &bundle_description,
                            ArrayRef<ProcessSP> traced_processes)
-    : Trace(traced_processes, session.GetCpuIds()),
-      m_cpu_info(session.cpu_info) {}
+    : Trace(traced_processes, bundle_description.GetCpuIds()),
+      m_cpu_info(bundle_description.cpu_info) {}
 
-DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
+Expected<DecodedThreadSP> TraceIntelPT::Decode(Thread &thread) {
   if (const char *error = RefreshLiveProcessState())
-    return std::make_shared<DecodedThread>(
-        thread.shared_from_this(),
-        createStringError(inconvertibleErrorCode(), error));
+    return createStringError(inconvertibleErrorCode(), error);
 
   Storage &storage = GetUpdatedStorage();
   if (storage.multicpu_decoder)
@@ -136,14 +134,16 @@ DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
 
   auto it = storage.thread_decoders.find(thread.GetID());
   if (it == storage.thread_decoders.end())
-    return std::make_shared<DecodedThread>(
-        thread.shared_from_this(),
-        createStringError(inconvertibleErrorCode(), "thread not traced"));
+    return createStringError(inconvertibleErrorCode(), "thread not traced");
   return it->second->Decode();
 }
 
-lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
-  return Decode(thread)->GetCursor();
+llvm::Expected<lldb::TraceCursorUP>
+TraceIntelPT::CreateNewCursor(Thread &thread) {
+  if (Expected<DecodedThreadSP> decoded_thread = Decode(thread))
+    return decoded_thread.get()->CreateNewCursor();
+  else
+    return decoded_thread.takeError();
 }
 
 void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
@@ -157,6 +157,14 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   }
   s << "\n";
 
+  Expected<DecodedThreadSP> decoded_thread_sp_or_err = Decode(thread);
+  if (!decoded_thread_sp_or_err) {
+    s << toString(decoded_thread_sp_or_err.takeError()) << "\n";
+    return;
+  }
+
+  DecodedThreadSP &decoded_thread_sp = *decoded_thread_sp_or_err;
+
   Expected<Optional<uint64_t>> raw_size_or_error = GetRawTraceSize(thread);
   if (!raw_size_or_error) {
     s.Format("  {0}\n", toString(raw_size_or_error.takeError()));
@@ -164,14 +172,12 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   }
   Optional<uint64_t> raw_size = *raw_size_or_error;
 
-  DecodedThreadSP decoded_trace_sp = Decode(thread);
-
   /// Instruction stats
   {
-    uint64_t insn_len = decoded_trace_sp->GetInstructionsCount();
-    uint64_t mem_used = decoded_trace_sp->CalculateApproximateMemoryUsage();
+    uint64_t items_count = decoded_thread_sp->GetItemsCount();
+    uint64_t mem_used = decoded_thread_sp->CalculateApproximateMemoryUsage();
 
-    s.Format("  Total number of instructions: {0}\n", insn_len);
+    s.Format("  Total number of trace items: {0}\n", items_count);
 
     s << "\n  Memory usage:\n";
     if (raw_size)
@@ -180,11 +186,10 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
     s.Format(
         "    Total approximate memory usage (excluding raw trace): {0:2} KiB\n",
         (double)mem_used / 1024);
-    if (insn_len != 0)
-      s.Format(
-          "    Average memory usage per instruction (excluding raw trace): "
-          "{0:2} bytes\n",
-          (double)mem_used / insn_len);
+    if (items_count != 0)
+      s.Format("    Average memory usage per item (excluding raw trace): "
+               "{0:2} bytes\n",
+               (double)mem_used / items_count);
   }
 
   // Timing
@@ -203,15 +208,13 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   // Instruction events stats
   {
     const DecodedThread::EventsStats &events_stats =
-        decoded_trace_sp->GetEventsStats();
+        decoded_thread_sp->GetEventsStats();
     s << "\n  Events:\n";
-    s.Format("    Number of instructions with events: {0}\n",
-             events_stats.total_instructions_with_events);
     s.Format("    Number of individual events: {0}\n",
              events_stats.total_count);
     for (const auto &event_to_count : events_stats.events_counts) {
       s.Format("      {0}: {1}\n",
-               trace_event_utils::EventToDisplayString(event_to_count.first),
+               TraceCursor::EventKindToString(event_to_count.first),
                event_to_count.second);
     }
   }
@@ -229,7 +232,7 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   {
     s << "\n  Errors:\n";
     const DecodedThread::LibiptErrorsStats &tsc_errors_stats =
-        decoded_trace_sp->GetTscErrorsStats();
+        decoded_thread_sp->GetTscErrorsStats();
     s.Format("    Number of TSC decoding errors: {0}\n",
              tsc_errors_stats.total_count);
     for (const auto &error_message_to_count :

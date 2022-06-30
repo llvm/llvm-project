@@ -914,18 +914,18 @@ public:
                            Name);
   }
 
-  /// Create a call to the experimental.vector.extract intrinsic.
+  /// Create a call to the vector.extract intrinsic.
   CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, Value *Idx,
                                 const Twine &Name = "") {
-    return CreateIntrinsic(Intrinsic::experimental_vector_extract,
+    return CreateIntrinsic(Intrinsic::vector_extract,
                            {DstType, SrcVec->getType()}, {SrcVec, Idx}, nullptr,
                            Name);
   }
 
-  /// Create a call to the experimental.vector.insert intrinsic.
+  /// Create a call to the vector.insert intrinsic.
   CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
                                Value *Idx, const Twine &Name = "") {
-    return CreateIntrinsic(Intrinsic::experimental_vector_insert,
+    return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
                            nullptr, Name);
   }
@@ -1168,11 +1168,11 @@ private:
   Value *getConstrainedFPRounding(Optional<RoundingMode> Rounding) {
     RoundingMode UseRounding = DefaultConstrainedRounding;
 
-    if (Rounding.hasValue())
+    if (Rounding)
       UseRounding = Rounding.getValue();
 
     Optional<StringRef> RoundingStr = convertRoundingModeToStr(UseRounding);
-    assert(RoundingStr.hasValue() && "Garbage strict rounding mode!");
+    assert(RoundingStr && "Garbage strict rounding mode!");
     auto *RoundingMDS = MDString::get(Context, RoundingStr.getValue());
 
     return MetadataAsValue::get(Context, RoundingMDS);
@@ -1181,11 +1181,11 @@ private:
   Value *getConstrainedFPExcept(Optional<fp::ExceptionBehavior> Except) {
     fp::ExceptionBehavior UseExcept = DefaultConstrainedExcept;
 
-    if (Except.hasValue())
+    if (Except)
       UseExcept = Except.getValue();
 
     Optional<StringRef> ExceptStr = convertExceptionBehaviorToStr(UseExcept);
-    assert(ExceptStr.hasValue() && "Garbage strict exception behavior!");
+    assert(ExceptStr && "Garbage strict exception behavior!");
     auto *ExceptMDS = MDString::get(Context, ExceptStr.getValue());
 
     return MetadataAsValue::get(Context, ExceptMDS);
@@ -1256,9 +1256,8 @@ public:
 
   Value *CreateUDiv(Value *LHS, Value *RHS, const Twine &Name = "",
                     bool isExact = false) {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateUDiv(LC, RC, isExact), Name);
+    if (Value *V = Folder.FoldUDiv(LHS, RHS, isExact))
+      return V;
     if (!isExact)
       return Insert(BinaryOperator::CreateUDiv(LHS, RHS), Name);
     return Insert(BinaryOperator::CreateExactUDiv(LHS, RHS), Name);
@@ -1270,9 +1269,8 @@ public:
 
   Value *CreateSDiv(Value *LHS, Value *RHS, const Twine &Name = "",
                     bool isExact = false) {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateSDiv(LC, RC, isExact), Name);
+    if (Value *V = Folder.FoldSDiv(LHS, RHS, isExact))
+      return V;
     if (!isExact)
       return Insert(BinaryOperator::CreateSDiv(LHS, RHS), Name);
     return Insert(BinaryOperator::CreateExactSDiv(LHS, RHS), Name);
@@ -1283,12 +1281,14 @@ public:
   }
 
   Value *CreateURem(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (Value *V = foldConstant(Instruction::URem, LHS, RHS, Name)) return V;
+    if (Value *V = Folder.FoldURem(LHS, RHS))
+      return V;
     return Insert(BinaryOperator::CreateURem(LHS, RHS), Name);
   }
 
   Value *CreateSRem(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (Value *V = foldConstant(Instruction::SRem, LHS, RHS, Name)) return V;
+    if (Value *V = Folder.FoldSRem(LHS, RHS))
+      return V;
     return Insert(BinaryOperator::CreateSRem(LHS, RHS), Name);
   }
 
@@ -2281,9 +2281,8 @@ public:
 
   Value *CreateExtractElement(Value *Vec, Value *Idx,
                               const Twine &Name = "") {
-    if (auto *VC = dyn_cast<Constant>(Vec))
-      if (auto *IC = dyn_cast<Constant>(Idx))
-        return Insert(Folder.CreateExtractElement(VC, IC), Name);
+    if (Value *V = Folder.FoldExtractElement(Vec, Idx))
+      return V;
     return Insert(ExtractElementInst::Create(Vec, Idx), Name);
   }
 
@@ -2304,10 +2303,8 @@ public:
 
   Value *CreateInsertElement(Value *Vec, Value *NewElt, Value *Idx,
                              const Twine &Name = "") {
-    if (auto *VC = dyn_cast<Constant>(Vec))
-      if (auto *NC = dyn_cast<Constant>(NewElt))
-        if (auto *IC = dyn_cast<Constant>(Idx))
-          return Insert(Folder.CreateInsertElement(VC, NC, IC), Name);
+    if (Value *V = Folder.FoldInsertElement(Vec, NewElt, Idx))
+      return V;
     return Insert(InsertElementInst::Create(Vec, NewElt, Idx), Name);
   }
 
@@ -2326,9 +2323,8 @@ public:
   /// See class ShuffleVectorInst for a description of the mask representation.
   Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<int> Mask,
                              const Twine &Name = "") {
-    if (auto *V1C = dyn_cast<Constant>(V1))
-      if (auto *V2C = dyn_cast<Constant>(V2))
-        return Insert(Folder.CreateShuffleVector(V1C, V2C, Mask), Name);
+    if (Value *V = Folder.FoldShuffleVector(V1, V2, Mask))
+      return V;
     return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
   }
 

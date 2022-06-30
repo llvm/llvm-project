@@ -25,7 +25,7 @@ bb1:
 ; CHECK-ALL: bb3:
 bb3:
 ; CHECK-INTERESTINGNESS: call void @did_not_throw(i32
-; CHECK-FINAL: call void @did_not_throw(i32 undef)
+; CHECK-FINAL: call void @did_not_throw(i32 0)
 ; CHECK-ALL: br label %bb4
   call void @did_not_throw(i32 %i0)
   br label %bb4

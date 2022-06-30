@@ -348,8 +348,9 @@ bool Sema::CheckConstraintSatisfaction(const Expr *ConstraintExpr,
                                        ConstraintSatisfaction &Satisfaction) {
   return calculateConstraintSatisfaction(
       *this, ConstraintExpr, Satisfaction,
-      [](const Expr *AtomicExpr) -> ExprResult {
-        return ExprResult(const_cast<Expr *>(AtomicExpr));
+      [this](const Expr *AtomicExpr) -> ExprResult {
+        // We only do this to immitate lvalue-to-rvalue conversion.
+        return PerformContextuallyConvertToBool(const_cast<Expr *>(AtomicExpr));
       });
 }
 

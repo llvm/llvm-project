@@ -336,14 +336,13 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
   assert(Resumers && "PostSplit coro.id Info argument must refer to an array"
                      "of coroutine subfunctions");
   auto *ResumeAddrConstant =
-      ConstantExpr::getExtractValue(Resumers, CoroSubFnInst::ResumeIndex);
+      Resumers->getAggregateElement(CoroSubFnInst::ResumeIndex);
 
   replaceWithConstant(ResumeAddrConstant, ResumeAddr);
 
   bool ShouldElide = shouldElide(CoroId->getFunction(), DT);
 
-  auto *DestroyAddrConstant = ConstantExpr::getExtractValue(
-      Resumers,
+  auto *DestroyAddrConstant = Resumers->getAggregateElement(
       ShouldElide ? CoroSubFnInst::CleanupIndex : CoroSubFnInst::DestroyIndex);
 
   for (auto &It : DestroyAddr)

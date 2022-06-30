@@ -20,20 +20,17 @@ TEST(TidyProvider, NestedDirectories) {
   FS.Files[testPath(".clang-tidy")] = R"yaml(
   Checks: 'llvm-*'
   CheckOptions:
-    - key: TestKey
-      value: 1
+    TestKey: 1
 )yaml";
   FS.Files[testPath("sub1/.clang-tidy")] = R"yaml(
   Checks: 'misc-*'
   CheckOptions:
-    - key: TestKey
-      value: 2
+    TestKey: 2
 )yaml";
   FS.Files[testPath("sub1/sub2/.clang-tidy")] = R"yaml(
   Checks: 'bugprone-*'
   CheckOptions:
-    - key: TestKey
-      value: 3
+    TestKey: 3
   InheritParentConfig: true
 )yaml";
 

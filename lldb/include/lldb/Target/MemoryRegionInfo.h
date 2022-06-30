@@ -124,7 +124,7 @@ public:
   void SetPageSize(int pagesize) { m_pagesize = pagesize; }
 
   void SetDirtyPageList(std::vector<lldb::addr_t> pagelist) {
-    if (m_dirty_pages.hasValue())
+    if (m_dirty_pages)
       m_dirty_pages.getValue().clear();
     m_dirty_pages = std::move(pagelist);
   }

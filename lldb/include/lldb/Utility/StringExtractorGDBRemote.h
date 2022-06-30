@@ -136,6 +136,7 @@ public:
     eServerPacketType_vAttachName,
     eServerPacketType_vCont,
     eServerPacketType_vCont_actions, // vCont?
+    eServerPacketType_vKill,
     eServerPacketType_vRun,
 
     eServerPacketType_stop_reason, // '?'

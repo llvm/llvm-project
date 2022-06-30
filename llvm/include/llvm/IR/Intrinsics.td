@@ -1961,13 +1961,13 @@ def int_experimental_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 
 //===---------- Intrinsics to perform subvector insertion/extraction ------===//
-def int_experimental_vector_insert : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                                           [LLVMMatchType<0>, llvm_anyvector_ty, llvm_i64_ty],
-                                                           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+def int_vector_insert : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                              [LLVMMatchType<0>, llvm_anyvector_ty, llvm_i64_ty],
+                                              [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
-def int_experimental_vector_extract : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                                            [llvm_anyvector_ty, llvm_i64_ty],
-                                                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_vector_extract : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                               [llvm_anyvector_ty, llvm_i64_ty],
+                                               [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 //===----------------- Pointer Authentication Intrinsics ------------------===//
 //

@@ -3168,8 +3168,8 @@ DWARF address space identifiers are used by:
   applied to pointer type, reference type, subprogram, and subprogram type to
   describe how objects having the given type are dereferenced or called (the
   role that ``DW_AT_address_class`` currently provides). The values of
-  ``DW_AT_address_space`` would be target architecture specific and the same as
-  used in ``DW_OP_xderef*``.
+  ``DW_AT_LLVM_address_space`` would be target architecture specific and the
+  same as used in ``DW_OP_xderef*``.
 
 .. note::
 

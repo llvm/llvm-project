@@ -26,7 +26,7 @@ TEST(TensorSpecTest, JSONParsing) {
   EXPECT_TRUE(!!Value);
   LLVMContext Ctx;
   Optional<TensorSpec> Spec = getTensorSpecFromJSON(Ctx, *Value);
-  EXPECT_TRUE(Spec.hasValue());
+  EXPECT_TRUE(Spec);
   EXPECT_EQ(*Spec, TensorSpec::createSpec<int32_t>("tensor_name", {1, 4}, 2));
 }
 
@@ -42,7 +42,7 @@ TEST(TensorSpecTest, JSONParsingInvalidTensorType) {
   EXPECT_TRUE(!!Value);
   LLVMContext Ctx;
   auto Spec = getTensorSpecFromJSON(Ctx, *Value);
-  EXPECT_FALSE(Spec.hasValue());
+  EXPECT_FALSE(Spec);
 }
 
 TEST(TensorSpecTest, TensorSpecSizesAndTypes) {

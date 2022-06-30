@@ -1869,10 +1869,8 @@ void CheckHelper::CheckGenericOps(const Scope &scope) {
 
 static const std::string *DefinesBindCName(const Symbol &symbol) {
   const auto *subp{symbol.detailsIf<SubprogramDetails>()};
-  if ((subp && !subp->isInterface() &&
-          ClassifyProcedure(symbol) != ProcedureDefinitionClass::Internal) ||
-      symbol.has<ObjectEntityDetails>() || symbol.has<CommonBlockDetails>() ||
-      symbol.has<ProcEntityDetails>()) {
+  if ((subp && !subp->isInterface()) || symbol.has<ObjectEntityDetails>() ||
+      symbol.has<CommonBlockDetails>()) {
     // Symbol defines data or entry point
     return symbol.GetBindName();
   } else {
@@ -1888,19 +1886,21 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
   if (symbol.has<ObjectEntityDetails>() && !symbol.owner().IsModule()) {
     messages_.Say(symbol.name(),
         "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
+    context_.SetError(symbol);
   }
   if (const std::string * name{DefinesBindCName(symbol)}) {
     auto pair{bindC_.emplace(*name, symbol)};
     if (!pair.second) {
       const Symbol &other{*pair.first->second};
-      // Two common blocks with the same name can have the same BIND(C) name.
-      if ((!symbol.has<CommonBlockDetails>() ||
-              symbol.name() != other.name()) &&
-          DefinesBindCName(other) && !context_.HasError(other)) {
+      if (symbol.has<CommonBlockDetails>() && other.has<CommonBlockDetails>() &&
+          symbol.name() == other.name()) {
+        // Two common blocks can have the same BIND(C) name so long as
+        // they're not in the same scope.
+      } else if (!context_.HasError(other)) {
         if (auto *msg{messages_.Say(symbol.name(),
-                "Two symbols have the same BIND(C) name '%s'"_err_en_US,
+                "Two entities have the same BIND(C) name '%s'"_err_en_US,
                 *name)}) {
-          msg->Attach(other.name(), "Conflicting symbol"_en_US);
+          msg->Attach(other.name(), "Conflicting declaration"_en_US);
         }
         context_.SetError(symbol);
         context_.SetError(other);
@@ -1912,6 +1912,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
         !proc->interface().symbol()->attrs().test(Attr::BIND_C)) {
       messages_.Say(symbol.name(),
           "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
+      context_.SetError(symbol);
     }
   }
 }

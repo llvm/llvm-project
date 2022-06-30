@@ -333,6 +333,7 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     }
     unsigned getNumFields() { return getTypeList().size(); }
     unsigned getNumLenParams() { return getLenParamList().size(); }
+    bool isDependentType() { return getNumLenParams(); }
 
     void finalize(llvm::ArrayRef<TypePair> lenPList,
                   llvm::ArrayRef<TypePair> typeList);
@@ -451,7 +452,7 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
 
   let extraClassDeclaration = [{
     using Extent = int64_t;
-    using Shape = llvm::SmallVector<Extent, 8>;
+    using Shape = llvm::SmallVector<Extent>;
     using ShapeRef = llvm::ArrayRef<int64_t>;
     unsigned getConstantRows() const;
 
@@ -580,7 +581,7 @@ def AnyBoxLike : TypeConstraint<Or<[fir_BoxType.predicate,
     fir_BoxCharType.predicate, fir_BoxProcType.predicate]>, "any box">;
 
 def AnyRefOrBoxLike : TypeConstraint<Or<[AnyReferenceLike.predicate,
-    AnyBoxLike.predicate]>,
+    AnyBoxLike.predicate, FunctionType.predicate]>,
     "any reference or box like">;
 def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate, fir_BoxType.predicate]>,

@@ -73,7 +73,8 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                           BasicBlock *OriginalLoopLatchExit,
                           BasicBlock *PreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
-                          LoopInfo *LI, bool PreserveLCSSA) {
+                          LoopInfo *LI, bool PreserveLCSSA,
+                          ScalarEvolution &SE) {
   // Loop structure should be the following:
   // Preheader
   //  PrologHeader
@@ -133,6 +134,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
         PN.setIncomingValueForBlock(NewPreHeader, NewPN);
       else
         PN.addIncoming(NewPN, PrologExit);
+      SE.forgetValue(&PN);
     }
   }
 
@@ -191,7 +193,8 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                           BasicBlock *Exit, BasicBlock *PreHeader,
                           BasicBlock *EpilogPreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
-                          LoopInfo *LI, bool PreserveLCSSA)  {
+                          LoopInfo *LI, bool PreserveLCSSA,
+                          ScalarEvolution &SE) {
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
   BasicBlock *EpilogLatch = cast<BasicBlock>(VMap[Latch]);
@@ -232,6 +235,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
 
     // Add incoming PreHeader from branch around the Loop
     PN.addIncoming(UndefValue::get(PN.getType()), PreHeader);
+    SE.forgetValue(&PN);
 
     Value *V = PN.getIncomingValueForBlock(Latch);
     Instruction *I = dyn_cast<Instruction>(V);
@@ -397,7 +401,7 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
 
   Optional<MDNode *> NewLoopID = makeFollowupLoopID(
       LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
-  if (NewLoopID.hasValue()) {
+  if (NewLoopID) {
     NewLoop->setLoopID(NewLoopID.getValue());
 
     // Do not setLoopAlreadyUnrolled if loop attributes have been defined
@@ -900,9 +904,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
   if (UseEpilogRemainder) {
     // Connect the epilog code to the original loop and update the
     // PHI functions.
-    ConnectEpilog(L, ModVal, NewExit, LatchExit, PreHeader,
-                  EpilogPreHeader, NewPreHeader, VMap, DT, LI,
-                  PreserveLCSSA);
+    ConnectEpilog(L, ModVal, NewExit, LatchExit, PreHeader, EpilogPreHeader,
+                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE);
 
     // Update counter in loop for unrolling.
     // Use an incrementing IV.  Pre-incr/post-incr is backedge/trip count.
@@ -926,7 +929,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // Connect the prolog code to the original loop and update the
     // PHI functions.
     ConnectProlog(L, BECount, Count, PrologExit, LatchExit, PreHeader,
-                  NewPreHeader, VMap, DT, LI, PreserveLCSSA);
+                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE);
   }
 
   // If this loop is nested, then the loop unroller changes the code in the any

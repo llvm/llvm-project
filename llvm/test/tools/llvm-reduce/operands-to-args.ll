@@ -20,7 +20,7 @@
 ; INTERESTING: store i32 %[[KEEP]], i32* @GlobalKeep, align 4
 
 ; INTERESTING-LABEL: define void @func_caller() {
-; REDUCED:             call void @func(i32 21, i32* undef, i32* undef, float* undef)
+; REDUCED:             call void @func(i32 21, i32* null, i32* null, float* null)
 
 
 @Global = global i32 42

@@ -17,6 +17,7 @@
 include "TestDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SubElementInterfaces.td"
 
 // All of the attributes will extend this class.
@@ -175,11 +176,19 @@ def TestAttrWithFormat : Test_Attr<"TestAttrWithFormat"> {
     TestParamOne:$one,
     TestParamTwo:$two,
     "::mlir::IntegerAttr":$three,
-    TestParamFour:$four
+    TestParamFour:$four,
+    // Array of another attribute.
+    ArrayRefParameter<
+      "AttrWithTypeBuilderAttr", // The parameter C++ type.
+      "An example of an array of another Attribute" // Parameter description.
+      >: $arrayOfAttrWithTypeBuilderAttr
   );
 
   let mnemonic = "attr_with_format";
-  let assemblyFormat = "`<` $one `:` struct($two, $four) `:` $three `>`";
+  let assemblyFormat = [{
+    `<` $one `:` struct($two, $four) `:` $three `,`
+    `[` `` $arrayOfAttrWithTypeBuilderAttr `]` `>`
+  }];
   let genVerifyDecl = 1;
 }
 
@@ -212,6 +221,31 @@ def TestAttrSelfTypeParameterFormat
 
   let mnemonic = "attr_self_type_format";
   let assemblyFormat = "`<` $a `>`";
+}
+
+// Test simple extern 1D vector using ElementsAttrInterface.
+def TestExtern1DI64ElementsAttr : Test_Attr<"TestExtern1DI64Elements", [
+    ElementsAttrInterface
+  ]> {
+  let mnemonic = "e1di64_elements";
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "::mlir::ShapedType">:$type,
+    ResourceHandleParameter<"TestExternalElementsDataHandle">:$handle
+  );
+  let extraClassDeclaration = [{
+    /// Return the elements referenced by this attribute.
+    llvm::ArrayRef<uint64_t> getElements() const;
+
+    /// The set of data types that can be iterated by this attribute.
+    using ContiguousIterableTypesT = std::tuple<uint64_t>;
+
+    /// Provide begin iterators for the various iterable types.
+    // * uint64_t
+    auto value_begin_impl(OverloadToken<uint64_t>) const {
+      return getElements().begin();
+    }
+  }];
+  let assemblyFormat = "`<` $handle `>`";
 }
 
 #endif // TEST_ATTRDEFS

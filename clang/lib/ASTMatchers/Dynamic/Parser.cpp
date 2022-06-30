@@ -397,9 +397,9 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
       assert(NamedValue.isMatcher());
       llvm::Optional<DynTypedMatcher> Result =
           NamedValue.getMatcher().getSingleMatcher();
-      if (Result.hasValue()) {
+      if (Result) {
         llvm::Optional<DynTypedMatcher> Bound = Result->tryBind(BindID);
-        if (Bound.hasValue()) {
+        if (Bound) {
           *Value = VariantMatcher::SingleMatcher(*Bound);
           return true;
         }

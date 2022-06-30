@@ -6,13 +6,8 @@
 define <2 x double> @PR53887_v2f64(<2 x double> noundef %x) {
 ; CHECK-LABEL: @PR53887_v2f64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[X:%.*]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[VECEXT]], i32 6)
-; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <2 x double> undef, double [[TMP0]], i64 0
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x double> [[X]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[VECEXT1]], i32 6)
-; CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <2 x double> [[VECINIT]], double [[TMP1]], i64 1
-; CHECK-NEXT:    ret <2 x double> [[VECINIT3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast <2 x double> @llvm.powi.v2f64.i32(<2 x double> [[X:%.*]], i32 6)
+; CHECK-NEXT:    ret <2 x double> [[TMP0]]
 ;
 entry:
   %vecext = extractelement <2 x double> %x, i64 0
@@ -27,20 +22,8 @@ entry:
 define <4 x double> @PR53887_v4f64(<4 x double> noundef %x) {
 ; CHECK-LABEL: @PR53887_v4f64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x double> [[X:%.*]], i64 0
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x double> [[X]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[VECEXT]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[VECEXT1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x double> @llvm.powi.v2f64.i32(<2 x double> [[TMP1]], i32 6)
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[VECEXT4:%.*]] = extractelement <4 x double> [[X]], i64 2
-; CHECK-NEXT:    [[VECEXT7:%.*]] = extractelement <4 x double> [[X]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[VECEXT4]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[VECEXT7]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast <2 x double> @llvm.powi.v2f64.i32(<2 x double> [[TMP5]], i32 6)
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[VECINIT91:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    ret <4 x double> [[VECINIT91]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast <4 x double> @llvm.powi.v4f64.i32(<4 x double> [[X:%.*]], i32 6)
+; CHECK-NEXT:    ret <4 x double> [[TMP0]]
 ;
 entry:
   %vecext = extractelement <4 x double> %x, i64 0

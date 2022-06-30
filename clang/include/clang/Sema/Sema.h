@@ -363,8 +363,6 @@ class Sema final {
 
   static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
 
-  bool isVisibleSlow(const NamedDecl *D);
-
   /// Determine whether two declarations should be linked together, given that
   /// the old declaration might not be visible and the new declaration might
   /// not have external linkage.
@@ -757,6 +755,13 @@ public:
   /// directive if such a directive has not been closed by an "on" yet. If
   /// optimizations are currently "on", this is set to an invalid location.
   SourceLocation OptimizeOffPragmaLocation;
+
+  /// The "on" or "off" argument passed by \#pragma optimize, that denotes
+  /// whether the optimizations in the list passed to the pragma should be
+  /// turned off or on. This boolean is true by default because command line
+  /// options are honored when `#pragma optimize("", on)`.
+  /// (i.e. `ModifyFnAttributeMSPragmaOptimze()` does nothing)
+  bool MSPragmaOptimizeIsOn = true;
 
   /// Set of no-builtin functions listed by \#pragma function.
   llvm::SmallSetVector<StringRef, 4> MSFunctionNoBuiltins;
@@ -1759,9 +1764,9 @@ public:
     template <typename T>
     friend const SemaDiagnosticBuilder &
     operator<<(const SemaDiagnosticBuilder &Diag, const T &Value) {
-      if (Diag.ImmediateDiag.hasValue())
+      if (Diag.ImmediateDiag)
         *Diag.ImmediateDiag << Value;
-      else if (Diag.PartialDiagId.hasValue())
+      else if (Diag.PartialDiagId)
         Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second
             << Value;
       return Diag;
@@ -1773,26 +1778,26 @@ public:
     template <typename T, typename = typename std::enable_if<
                               !std::is_lvalue_reference<T>::value>::type>
     const SemaDiagnosticBuilder &operator<<(T &&V) const {
-      if (ImmediateDiag.hasValue())
+      if (ImmediateDiag)
         *ImmediateDiag << std::move(V);
-      else if (PartialDiagId.hasValue())
+      else if (PartialDiagId)
         S.DeviceDeferredDiags[Fn][*PartialDiagId].second << std::move(V);
       return *this;
     }
 
     friend const SemaDiagnosticBuilder &
     operator<<(const SemaDiagnosticBuilder &Diag, const PartialDiagnostic &PD) {
-      if (Diag.ImmediateDiag.hasValue())
+      if (Diag.ImmediateDiag)
         PD.Emit(*Diag.ImmediateDiag);
-      else if (Diag.PartialDiagId.hasValue())
+      else if (Diag.PartialDiagId)
         Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second = PD;
       return Diag;
     }
 
     void AddFixItHint(const FixItHint &Hint) const {
-      if (ImmediateDiag.hasValue())
+      if (ImmediateDiag)
         ImmediateDiag->AddFixItHint(Hint);
-      else if (PartialDiagId.hasValue())
+      else if (PartialDiagId)
         S.DeviceDeferredDiags[Fn][*PartialDiagId].second.AddFixItHint(Hint);
     }
 
@@ -2211,6 +2216,8 @@ public:
     Default = AcceptSizeless
   };
 
+  enum class AcceptableKind { Visible, Reachable };
+
 private:
   /// Methods for marking which expressions involve dereferencing a pointer
   /// marked with the 'noderef' attribute. Expressions are checked bottom up as
@@ -2245,11 +2252,6 @@ private:
   /// Namespace definitions that we will export when they finish.
   llvm::SmallPtrSet<const NamespaceDecl*, 8> DeferredExportedNamespaces;
 
-  /// Get the module unit whose scope we are currently within.
-  Module *getCurrentModule() const {
-    return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
-  }
-
   /// Helper function to judge if we are in module purview.
   /// Return false if we are not in a module.
   bool isCurrentModulePurview() const {
@@ -2268,7 +2270,14 @@ private:
 
   bool isUsableModule(const Module *M);
 
+  bool isAcceptableSlow(const NamedDecl *D, AcceptableKind Kind);
+
 public:
+  /// Get the module unit whose scope we are currently within.
+  Module *getCurrentModule() const {
+    return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
+  }
+
   /// Get the module owning an entity.
   Module *getOwningModule(const Decl *Entity) {
     return Entity->getOwningModule();
@@ -2292,7 +2301,20 @@ public:
 
   /// Determine whether a declaration is visible to name lookup.
   bool isVisible(const NamedDecl *D) {
-    return D->isUnconditionallyVisible() || isVisibleSlow(D);
+    return D->isUnconditionallyVisible() ||
+           isAcceptableSlow(D, AcceptableKind::Visible);
+  }
+
+  /// Determine whether a declaration is reachable.
+  bool isReachable(const NamedDecl *D) {
+    // All visible declarations are reachable.
+    return D->isUnconditionallyVisible() ||
+           isAcceptableSlow(D, AcceptableKind::Reachable);
+  }
+
+  /// Determine whether a declaration is acceptable (visible/reachable).
+  bool isAcceptable(const NamedDecl *D, AcceptableKind Kind) {
+    return Kind == AcceptableKind::Visible ? isVisible(D) : isReachable(D);
   }
 
   /// Determine whether any declaration of an entity is visible.
@@ -2301,8 +2323,17 @@ public:
                         llvm::SmallVectorImpl<Module *> *Modules = nullptr) {
     return isVisible(D) || hasVisibleDeclarationSlow(D, Modules);
   }
+
   bool hasVisibleDeclarationSlow(const NamedDecl *D,
                                  llvm::SmallVectorImpl<Module *> *Modules);
+  /// Determine whether any declaration of an entity is reachable.
+  bool
+  hasReachableDeclaration(const NamedDecl *D,
+                          llvm::SmallVectorImpl<Module *> *Modules = nullptr) {
+    return isReachable(D) || hasReachableDeclarationSlow(D, Modules);
+  }
+  bool hasReachableDeclarationSlow(
+      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
 
   bool hasVisibleMergedDefinition(NamedDecl *Def);
   bool hasMergedDefinitionInCurrentModule(NamedDecl *Def);
@@ -2320,20 +2351,53 @@ public:
     return hasVisibleDefinition(const_cast<NamedDecl*>(D), &Hidden);
   }
 
+  /// Determine if \p D has a reachable definition. If not, suggest a
+  /// declaration that should be made reachable to expose the definition.
+  bool hasReachableDefinition(NamedDecl *D, NamedDecl **Suggested,
+                              bool OnlyNeedComplete = false);
+  bool hasReachableDefinition(NamedDecl *D) {
+    NamedDecl *Hidden;
+    return hasReachableDefinition(D, &Hidden);
+  }
+
+  bool hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
+                               AcceptableKind Kind,
+                               bool OnlyNeedComplete = false);
+  bool hasAcceptableDefinition(NamedDecl *D, AcceptableKind Kind) {
+    NamedDecl *Hidden;
+    return hasAcceptableDefinition(D, &Hidden, Kind);
+  }
+
   /// Determine if the template parameter \p D has a visible default argument.
   bool
   hasVisibleDefaultArgument(const NamedDecl *D,
                             llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+  /// Determine if the template parameter \p D has a reachable default argument.
+  bool hasReachableDefaultArgument(
+      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+  /// Determine if the template parameter \p D has a reachable default argument.
+  bool hasAcceptableDefaultArgument(const NamedDecl *D,
+                                    llvm::SmallVectorImpl<Module *> *Modules,
+                                    Sema::AcceptableKind Kind);
 
   /// Determine if there is a visible declaration of \p D that is an explicit
   /// specialization declaration for a specialization of a template. (For a
   /// member specialization, use hasVisibleMemberSpecialization.)
   bool hasVisibleExplicitSpecialization(
       const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+  /// Determine if there is a reachable declaration of \p D that is an explicit
+  /// specialization declaration for a specialization of a template. (For a
+  /// member specialization, use hasReachableMemberSpecialization.)
+  bool hasReachableExplicitSpecialization(
+      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
 
   /// Determine if there is a visible declaration of \p D that is a member
   /// specialization declaration (as opposed to an instantiated declaration).
   bool hasVisibleMemberSpecialization(
+      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+  /// Determine if there is a reachable declaration of \p D that is a member
+  /// specialization declaration (as opposed to an instantiated declaration).
+  bool hasReachableMemberSpecialization(
       const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
 
   /// Determine if \p A and \p B are equivalent internal linkage declarations
@@ -3093,8 +3157,9 @@ public:
 
   /// We've found a use of a templated declaration that would trigger an
   /// implicit instantiation. Check that any relevant explicit specializations
-  /// and partial specializations are visible, and diagnose if not.
+  /// and partial specializations are visible/reachable, and diagnose if not.
   void checkSpecializationVisibility(SourceLocation Loc, NamedDecl *Spec);
+  void checkSpecializationReachability(SourceLocation Loc, NamedDecl *Spec);
 
   /// Retrieve a suitable printing policy for diagnostics.
   PrintingPolicy getPrintingPolicy() const {
@@ -3110,8 +3175,10 @@ public:
   void ActOnTranslationUnitScope(Scope *S);
 
   Decl *ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
+                                   const ParsedAttributesView &DeclAttrs,
                                    RecordDecl *&AnonRecord);
   Decl *ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
+                                   const ParsedAttributesView &DeclAttrs,
                                    MultiTemplateParamsArg TemplateParams,
                                    bool IsExplicitInstantiation,
                                    RecordDecl *&AnonRecord);
@@ -10363,6 +10430,9 @@ public:
   /// Called on well formed \#pragma clang optimize.
   void ActOnPragmaOptimize(bool On, SourceLocation PragmaLoc);
 
+  /// #pragma optimize("[optimization-list]", on | off).
+  void ActOnPragmaMSOptimize(SourceLocation Loc, bool IsOn);
+
   /// Call on well formed \#pragma function.
   void
   ActOnPragmaMSFunction(SourceLocation Loc,
@@ -10388,6 +10458,11 @@ public:
   /// are no conflicts; Loc represents the location causing the 'optnone'
   /// attribute to be added (usually because of a pragma).
   void AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD, SourceLocation Loc);
+
+  /// Only called on function definitions; if there is a MSVC #pragma optimize
+  /// in scope, consider changing the function's attributes based on the
+  /// optimization list passed to the pragma.
+  void ModifyFnAttributesMSPragmaOptimize(FunctionDecl *FD);
 
   /// Only called on function definitions; if there is a pragma in scope
   /// with the effect of a range-based no_builtin, consider marking the function
@@ -11092,6 +11167,16 @@ public:
   /// Called on well-formed '\#pragma omp parallel master taskloop simd' after
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPParallelMasterTaskLoopSimdDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp masked taskloop' after parsing of the
+  /// associated statement.
+  StmtResult ActOnOpenMPMaskedTaskLoopDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp masked taskloop simd' after parsing of
+  /// the associated statement.
+  StmtResult ActOnOpenMPMaskedTaskLoopSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
   /// Called on well-formed '\#pragma omp distribute' after parsing

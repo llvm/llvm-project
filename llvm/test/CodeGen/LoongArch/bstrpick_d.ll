@@ -47,3 +47,51 @@ define i64 @and4095(i64 %a) {
   %and = and i64 %a, 4095
   ret i64 %and
 }
+
+;; (srl (and a, 0xff0), 4) => (BSTRPICK a, 11, 4)
+define i64 @and0xff0_lshr4(i64 %a) {
+; CHECK-LABEL: and0xff0_lshr4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 11, 4
+; CHECK-NEXT:    jirl $zero, $ra, 0
+  %and = and i64 %a, 4080
+  %shr = lshr i64 %and, 4
+  ret i64 %shr
+}
+
+;; (sra (and a, 0xff0), 5) can also be combined to (BSTRPICK a, 11, 5).
+;; This is because (sra (and a, 0xff0)) would be combined to (srl (and a, 0xff0), 5)
+;; firstly by DAGCombiner::SimplifyDemandedBits.
+define i64 @and4080_ashr5(i64 %a) {
+; CHECK-LABEL: and4080_ashr5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bstrpick.d $a0, $a0, 11, 5
+; CHECK-NEXT:    jirl $zero, $ra, 0
+  %and = and i64 %a, 4080
+  %shr = ashr i64 %and, 5
+  ret i64 %shr
+}
+
+;; Negative test: the second operand of AND is not a shifted mask
+define i64 @and0xf30_lshr4(i64 %a) {
+; CHECK-LABEL: and0xf30_lshr4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi $a0, $a0, 3888
+; CHECK-NEXT:    srli.d $a0, $a0, 4
+; CHECK-NEXT:    jirl $zero, $ra, 0
+  %and = and i64 %a, 3888
+  %shr = lshr i64 %and, 4
+  ret i64 %shr
+}
+
+;; Negative test: Shamt < MaskIdx
+define i64 @and0xff0_lshr3(i64 %a) {
+; CHECK-LABEL: and0xff0_lshr3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi $a0, $a0, 4080
+; CHECK-NEXT:    srli.d $a0, $a0, 3
+; CHECK-NEXT:    jirl $zero, $ra, 0
+  %and = and i64 %a, 4080
+  %shr = lshr i64 %and, 3
+  ret i64 %shr
+}

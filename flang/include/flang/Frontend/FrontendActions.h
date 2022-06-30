@@ -13,6 +13,7 @@
 #ifndef FORTRAN_FRONTEND_FRONTENDACTIONS_H
 #define FORTRAN_FRONTEND_FRONTENDACTIONS_H
 
+#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/FrontendAction.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Semantics/semantics.h"
@@ -198,7 +199,11 @@ class CodeGenAction : public FrontendAction {
   void executeAction() override;
   /// Runs prescan, parsing, sema and lowers to MLIR.
   bool beginSourceFileAction() override;
+  /// Sets up LLVM's TargetMachine, configures llvmModule accordingly.
   void setUpTargetMachine();
+  /// Runs the optimization (aka middle-end) pipeline on the LLVM module
+  /// associated with this action.
+  void runOptimizationPipeline(llvm::raw_pwrite_stream &os);
 
 protected:
   CodeGenAction(BackendActionTy act) : action{act} {};

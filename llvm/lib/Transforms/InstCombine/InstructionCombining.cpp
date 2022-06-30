@@ -988,8 +988,8 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   // bo (sext i1 X), C --> select X, (bo -1, C), (bo 0, C)
   Constant *Ones = ConstantInt::getAllOnesValue(BO.getType());
   Constant *Zero = ConstantInt::getNullValue(BO.getType());
-  Constant *TVal = ConstantExpr::get(BO.getOpcode(), Ones, C);
-  Constant *FVal = ConstantExpr::get(BO.getOpcode(), Zero, C);
+  Value *TVal = Builder.CreateBinOp(BO.getOpcode(), Ones, C);
+  Value *FVal = Builder.CreateBinOp(BO.getOpcode(), Zero, C);
   return SelectInst::Create(X, TVal, FVal);
 }
 
@@ -1019,12 +1019,6 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
   // Figure out if the constant is the left or the right argument.
   bool ConstIsRHS = isa<Constant>(I.getOperand(1));
   Constant *ConstOperand = cast<Constant>(I.getOperand(ConstIsRHS));
-
-  if (auto *SOC = dyn_cast<Constant>(SO)) {
-    if (ConstIsRHS)
-      return ConstantExpr::get(I.getOpcode(), SOC, ConstOperand);
-    return ConstantExpr::get(I.getOpcode(), ConstOperand, SOC);
-  }
 
   Value *Op0 = SO, *Op1 = ConstOperand;
   if (!ConstIsRHS)
@@ -1115,12 +1109,6 @@ static Value *foldOperationIntoPhiValue(BinaryOperator *I, Value *InV,
                                         InstCombiner::BuilderTy &Builder) {
   bool ConstIsRHS = isa<Constant>(I->getOperand(1));
   Constant *C = cast<Constant>(I->getOperand(ConstIsRHS));
-
-  if (auto *InC = dyn_cast<Constant>(InV)) {
-    if (ConstIsRHS)
-      return ConstantExpr::get(I->getOpcode(), InC, C);
-    return ConstantExpr::get(I->getOpcode(), C, InC);
-  }
 
   Value *Op0 = InV, *Op1 = C;
   if (!ConstIsRHS)

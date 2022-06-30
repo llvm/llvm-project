@@ -27,7 +27,7 @@ class Tensor_OpWithOffsetSizesAndStrides<string mnemonic,
     : Tensor_Op<mnemonic, traits> {
   code extraBaseClassDeclaration = [{
     /// Returns the dynamic sizes for this subview operation if specified.
-    ::mlir::Operation::operand_range getDynamicSizes() { return sizes(); }
+    ::mlir::Operation::operand_range getDynamicSizes() { return getSizes(); }
 
     /// Return the list of Range (i.e. offset, size, stride). Each
     /// Range entry contains either the dynamic value or a ConstantIndexOp
@@ -210,6 +210,25 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     flexibility allows to progressively drop unit dimensions while lowering
     between different flavors of ops on that operate on tensors.
 
+    Verification vs Inference in the rank-reduced case:
+    ===================================================
+    Note that there may be multiple ways to infer a resulting rank-reduced type.
+      e.g. 1x6x1 could potentially rank-reduce to either 1x6 or 6x1 2-D shapes.
+
+    To disambiguate, the inference helpers `inferCanonicalRankReducedResultType`
+    only drop the first unit dimensions, in order:
+      e.g. 1x6x1 rank-reduced to 2-D will infer the 6x1 2-D shape, but not 1x6.
+    
+    Verification however has access to result type and does not need to infer.
+    The verifier calls `isRankReducedType(getSource(), getResult())` to 
+    determine whether the result type is rank-reduced from the source type.
+    This computes a so-called rank-reduction mask, consisting of dropped unit 
+    dims, to map the rank-reduced type to the source type by dropping ones:
+      e.g. 1x6 is a rank-reduced version of 1x6x1 by mask {2}
+           6x1 is a rank-reduced version of 1x6x1 by mask {0}
+           1x2x1x4 is a rank-reduced version of 1x1x2x1x1x4x1 by mask {1, 4, 6}
+             (remaining common 1 dimensions are matched eagerly)
+
     Example:
 
     ```
@@ -266,7 +285,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     /// Returns the type of the base tensor operand.
     RankedTensorType getSourceType() {
-      return source().getType().cast<RankedTensorType>();
+      return getSource().getType().cast<RankedTensorType>();
     }
 
     /// The result of an extract_slice is always a tensor.
@@ -274,26 +293,43 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
       return getResult().getType().cast<RankedTensorType>();
     }
 
-    /// An extract_slice result type can be fully inferred from the source type
-    /// and the static representation of offsets, sizes and strides. Special
-    /// sentinels encode the dynamic case.
+    /// Compute the rank-reduction mask that can be applied to map the source
+    /// tensor type to the result tensor type by dropping unit dims.
+    llvm::Optional<llvm::SmallDenseSet<unsigned>>
+    computeRankReductionMask() {
+      return ::mlir::computeRankReductionMask(getSourceType().getShape(), 
+                                              getType().getShape());
+    };
+
+    /// An extract_slice result type can be inferred, when it is not
+    /// rank-reduced, from the source type and the static representation of 
+    /// offsets, sizes and strides. Special sentinels encode the dynamic case.
     static RankedTensorType inferResultType(
-      RankedTensorType sourceRankedTensorType,
+      ShapedType sourceShapedTensorType,
       ArrayRef<int64_t> staticOffsets,
       ArrayRef<int64_t> staticSizes,
       ArrayRef<int64_t> staticStrides);
     static RankedTensorType inferResultType(
-      RankedTensorType sourceRankedTensorType,
+      ShapedType sourceShapedTensorType,
       ArrayRef<OpFoldResult> staticOffsets,
       ArrayRef<OpFoldResult> staticSizes,
       ArrayRef<OpFoldResult> staticStrides);
-    static RankedTensorType inferRankReducedResultType(
+
+    /// If the rank is reduced (i.e. the desiredResultRank is smaller than the
+    /// number of sizes), drop as many size 1 as needed to produce an inferred type
+    /// with the desired rank.
+    ///
+    /// Note that there may be multiple ways to compute this rank-reduced type:
+    ///   e.g. 1x6x1 can rank-reduce to either 1x6 or 6x1 2-D tensors.
+    ///
+    /// To disambiguate, this function always drops the first 1 sizes occurrences.
+    static RankedTensorType inferCanonicalRankReducedResultType(
       unsigned resultRank,
       RankedTensorType sourceRankedTensorType,
       ArrayRef<int64_t> staticOffsets,
       ArrayRef<int64_t> staticSizes,
       ArrayRef<int64_t> staticStrides);
-    static RankedTensorType inferRankReducedResultType(
+    static RankedTensorType inferCanonicalRankReducedResultType(
       unsigned resultRank,
       RankedTensorType sourceRankedTensorType,
       ArrayRef<OpFoldResult> staticOffsets,
@@ -513,6 +549,11 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     The rank-altering behavior of tensor.insert_slice matches the rank-reducing
     behavior of tensor.extract_slice.
 
+    Verification in the rank-reduced case:
+    ======================================
+    The same verification discussion and mechanisms apply as for ExtractSliceOp.
+    Unlike ExtractSliceOp however, there is no need for a specific inference.
+
     Example:
 
     ```
@@ -559,7 +600,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     /// Returns the type of the base tensor operand.
     RankedTensorType getSourceType() {
-      return source().getType().cast<RankedTensorType>();
+      return getSource().getType().cast<RankedTensorType>();
     }
 
     /// The result of a insert_slice is always a tensor.
@@ -685,7 +726,7 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     SmallVector<ReassociationExprs, 4> getReassociationExprs();
     SmallVector<ReassociationIndices, 4> getReassociationIndices() {
       SmallVector<ReassociationIndices, 4> reassociationIndices;
-      for (auto attr : reassociation())
+      for (auto attr : getReassociation())
         reassociationIndices.push_back(llvm::to_vector<2>(
             llvm::map_range(attr.cast<ArrayAttr>(), [&](Attribute indexAttr) {
               return indexAttr.cast<IntegerAttr>().getInt();
@@ -693,10 +734,10 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
       return reassociationIndices;
     };
     RankedTensorType getSrcType() {
-      return src().getType().cast<RankedTensorType>();
+      return getSrc().getType().cast<RankedTensorType>();
     }
     RankedTensorType getResultType() {
-      return result().getType().cast<RankedTensorType>();
+      return getResult().getType().cast<RankedTensorType>();
     }
   }];
 
@@ -930,7 +971,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
     }
 
     RankedTensorType getSourceType() {
-      return source().getType().cast<RankedTensorType>();
+      return getSource().getType().cast<RankedTensorType>();
     }
     RankedTensorType getResultType() {
       return getResult().getType().cast<RankedTensorType>();
@@ -965,10 +1006,10 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
       return res;
     }
     SmallVector<OpFoldResult> getMixedLowPad() {
-      return getMixedPadImpl(static_low(), low());
+      return getMixedPadImpl(getStaticLow(), getLow());
     }
     SmallVector<OpFoldResult> getMixedHighPad() {
-      return getMixedPadImpl(static_high(), high());
+      return getMixedPadImpl(getStaticHigh(), getHigh());
     }
     // Return true if low padding is guaranteed to be 0.
     bool hasZeroLowPad() {
