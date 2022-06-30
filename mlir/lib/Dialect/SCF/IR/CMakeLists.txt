@@ -13,7 +13,6 @@ add_mlir_dialect_library(MLIRSCFDialect
   MLIRControlFlowDialect
   MLIRIR
   MLIRLoopLikeInterface
-  MLIRParallelCombiningOpInterface
   MLIRSideEffectInterfaces
   )
 

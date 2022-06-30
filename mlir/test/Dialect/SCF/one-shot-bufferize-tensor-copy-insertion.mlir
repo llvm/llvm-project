@@ -124,10 +124,10 @@ func.func @scf_foreach_thread_out_of_place(%in: tensor<100xf32>,
   %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> tensor<100xf32> {
       // CHECK: tensor.extract_slice
       // CHECK: scf.foreach_thread.perform_concurrently
-      // CHECK: scf.foreach_thread.parallel_insert_slice %{{.*}} into %[[alloc]]
+      // CHECK: tensor.parallel_insert_slice %{{.*}} into %[[alloc]]
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.foreach_thread.perform_concurrently {
-        scf.foreach_thread.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+        tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
   // CHECK: } {thread_dim_mapping = [5]}
