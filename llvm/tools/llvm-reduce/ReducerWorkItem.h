@@ -9,9 +9,11 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_REDUCERWORKITEM_H
 #define LLVM_TOOLS_LLVM_REDUCE_REDUCERWORKITEM_H
 
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -19,6 +21,7 @@ using namespace llvm;
 class ReducerWorkItem {
 public:
   std::shared_ptr<Module> M;
+  std::unique_ptr<BitcodeLTOInfo> LTOInfo;
   std::unique_ptr<MachineModuleInfo> MMI;
 
   bool isMIR() const { return MMI != nullptr; }

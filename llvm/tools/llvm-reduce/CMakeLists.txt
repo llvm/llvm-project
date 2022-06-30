@@ -14,6 +14,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   Target
   TransformUtils
+  IPO
   )
 
 add_llvm_tool(llvm-reduce
