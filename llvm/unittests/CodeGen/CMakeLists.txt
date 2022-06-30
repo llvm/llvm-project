@@ -21,7 +21,6 @@ add_llvm_unittest(CodeGenTests
   AsmPrinterDwarfTest.cpp
   DIEHashTest.cpp
   DIETest.cpp
-  DwarfStringPoolEntryRefTest.cpp
   InstrRefLDVTest.cpp
   LowLevelTypeTest.cpp
   LexicalScopesTest.cpp
