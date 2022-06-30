@@ -150,8 +150,8 @@ contains
   ! CHECK:         %[[VAL_19:.*]] = arith.constant 3 : i64
   ! CHECK:         %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i64) -> index
   ! CHECK:         %[[VAL_21:.*]] = fir.slice %[[VAL_10]], %[[VAL_14]], %[[VAL_12]], %[[VAL_16]], %[[VAL_20]], %[[VAL_18]] : (index, index, index, index, index, index) -> !fir.slice<2>
-  ! CHECK:         %[[VAL_22:.*]] = fir.rebox %[[VAL_1]] {{\[}}%[[VAL_21]]] : (!fir.box<!fir.array<?x?xi32>>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xi32>>
-  ! CHECK:         %[[VAL_23:.*]] = fir.rebox %[[VAL_22]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.ptr<!fir.array<?x?xi32>>>
+  ! CHECK:         %[[VAL_22:.*]] = fir.rebox %[[VAL_1]] {{\[}}%[[VAL_21]]] : (!fir.box<!fir.array<?x?xi32>>, !fir.slice<2>) -> !fir.box<!fir.array<2x3xi32>>
+  ! CHECK:         %[[VAL_23:.*]] = fir.rebox %[[VAL_22]] : (!fir.box<!fir.array<2x3xi32>>) -> !fir.box<!fir.ptr<!fir.array<?x?xi32>>>
   ! CHECK:         fir.store %[[VAL_23]] to %[[VAL_8]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>
   ! CHECK:         fir.call @_QMm_struct_ctorPprint_ptr(%[[VAL_3]]) : (!fir.ref<!fir.type<_QMm_struct_ctorTt_ptr{x:f32,p:!fir.box<!fir.ptr<!fir.array<?x?xi32>>>}>>) -> ()
   ! CHECK:         return

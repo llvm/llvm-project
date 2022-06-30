@@ -179,7 +179,7 @@ end subroutine
 ! CHECK:         %[[VAL_22:.*]] = arith.select %[[VAL_21]], %[[VAL_20]], %[[VAL_17]] : index
 ! CHECK:         %[[VAL_23:.*]] = fir.shape_shift %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]] : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:         %[[VAL_24:.*]] = fir.slice %[[VAL_7]], %[[VAL_8]], %[[VAL_8]], %[[VAL_12]], %[[VAL_16]], %[[VAL_14]] : (i64, index, index, index, index, index) -> !fir.slice<2>
-! CHECK:         %[[VAL_25:.*]] = fir.embox %[[VAL_0]](%[[VAL_23]]) {{\[}}%[[VAL_24]]] : (!fir.ref<!fir.array<100x100xf32>>, !fir.shapeshift<2>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:         %[[VAL_25:.*]] = fir.embox %[[VAL_0]](%[[VAL_23]]) {{\[}}%[[VAL_24]]] : (!fir.ref<!fir.array<100x100xf32>>, !fir.shapeshift<2>, !fir.slice<2>) -> !fir.box<!fir.array<41xf32>>
 ! CHECK:         %[[VAL_26:.*]] = fir.embox %[[VAL_0]](%[[VAL_23]]) {{\[}}%[[VAL_24]]] : (!fir.ref<!fir.array<100x100xf32>>, !fir.shapeshift<2>, !fir.slice<2>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:         fir.has_value %[[VAL_26]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:       }

@@ -66,17 +66,17 @@ program call_by_value_attr
   !CHECK: %[[CONV_15:.*]] = fir.convert %[[CONST_15_3]] : (i64) -> index
   !CHECK: %[[SHAPE_7:.*]]  = fir.shape %[[CONST_15_1]] : (index) -> !fir.shape<1>
   !CHECK: %[[SLICE:.*]] = fir.slice %[[CONV_5]], %[[CONV_15]], %[[CONV_1]] : (index, index, index) -> !fir.slice<1>
-  !CHECK: %[[BOX:.*]] = fir.embox %[[ARRAY_B]](%[[SHAPE_7]]) [%[[SLICE]]] : (!fir.ref<!fir.array<15xi32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xi32>>
+  !CHECK: %[[BOX:.*]] = fir.embox %[[ARRAY_B]](%[[SHAPE_7]]) [%[[SLICE]]] : (!fir.ref<!fir.array<15xi32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<11xi32>>
   !CHECK: %[[CONST_0:.*]] = arith.constant 0 : index
-  !CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[CONST_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-  !CHECK: %[[ARRAY_COPY_2:.*]] = fir.allocmem !fir.array<?xi32>, %[[DIMS]]#1 {uniq_name = ".copy"}
+  !CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[CONST_0]] : (!fir.box<!fir.array<11xi32>>, index) -> (index, index, index)
+  !CHECK: %[[ARRAY_COPY_2:.*]] = fir.allocmem !fir.array<11xi32>, %[[DIMS]]#1 {uniq_name = ".copy"}
   !CHECK: %[[SHAPE_8:.*]] = fir.shape %[[DIMS]]#1 : (index) -> !fir.shape<1>
-  !CHECK: %[[ARRAY_LOAD_7:.*]] = fir.array_load %[[ARRAY_COPY_2]](%[[SHAPE_8]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.array<?xi32>
-  !CHECK: %[[ARRAY_LOAD_8:.*]] = fir.array_load %[[BOX]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
+  !CHECK: %[[ARRAY_LOAD_7:.*]] = fir.array_load %[[ARRAY_COPY_2]](%[[SHAPE_8]]) : (!fir.heap<!fir.array<11xi32>>, !fir.shape<1>) -> !fir.array<11xi32>
+  !CHECK: %[[ARRAY_LOAD_8:.*]] = fir.array_load %[[BOX]] : (!fir.box<!fir.array<11xi32>>) -> !fir.array<11xi32>
   !CHECK: %[[DO_4:.*]] = fir.do_loop {{.*}} {
   !CHECK: }
-  !CHECK fir.array_merge_store %[[ARRAY_LOAD_7]], %[[DO_4]] to %[[ARRAY_COPY_2]] : !fir.array<?xi32>, !fir.array<?xi32>, !fir.heap<!fir.array<?xi32>>
-  !CHECK: %[[CONVERT_B:.*]] = fir.convert %[[ARRAY_COPY_2]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<10xi32>>
+  !CHECK fir.array_merge_store %[[ARRAY_LOAD_7]], %[[DO_4]] to %[[ARRAY_COPY_2]] : !fir.array<11xi32>, !fir.array<11xi32>, !fir.heap<!fir.array<11xi32>>
+  !CHECK: %[[CONVERT_B:.*]] = fir.convert %[[ARRAY_COPY_2]] : (!fir.heap<!fir.array<11xi32>>) -> !fir.ref<!fir.array<10xi32>>
   !CHECK: fir.call @_QPsubra(%[[CONVERT_B]])
   call subra(b(5:15))
 end program call_by_value_attr

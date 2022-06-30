@@ -136,8 +136,9 @@ end subroutine
 ! CHECK:         %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i64) -> index
 ! CHECK:         %[[VAL_14:.*]] = fir.shape_shift %[[VAL_6]]#0, %[[VAL_6]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:         %[[VAL_15:.*]] = fir.slice %[[VAL_9]], %[[VAL_13]], %[[VAL_11]] : (index, index, index) -> !fir.slice<1>
-! CHECK:         %[[VAL_16:.*]] = fir.embox %[[VAL_7]](%[[VAL_14]]) {{\[}}%[[VAL_15]]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:         fir.call @_QPtakes_real_array(%[[VAL_16]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:         %[[VAL_16:.*]] = fir.embox %[[VAL_7]](%[[VAL_14]]) {{\[}}%[[VAL_15]]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<16xf32>>
+! CHECK:         %[[VAL_16_NEW:.*]] = fir.convert %[[VAL_16]] : (!fir.box<!fir.array<16xf32>>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:         fir.call @_QPtakes_real_array(%[[VAL_16_NEW]]) : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:         %[[VAL_17:.*]] = arith.constant 5 : i64
 ! CHECK:         %[[VAL_18:.*]] = arith.constant 1 : i64
 ! CHECK:         %[[VAL_19:.*]] = arith.subi %[[VAL_17]], %[[VAL_18]] : i64
@@ -156,8 +157,9 @@ end subroutine
 ! CHECK:         %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i64) -> index
 ! CHECK:         %[[VAL_33:.*]] = fir.shape_shift %[[VAL_25]]#0, %[[VAL_25]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:         %[[VAL_34:.*]] = fir.slice %[[VAL_28]], %[[VAL_32]], %[[VAL_30]] : (index, index, index) -> !fir.slice<1>
-! CHECK:         %[[VAL_35:.*]] = fir.embox %[[VAL_26]](%[[VAL_33]]) {{\[}}%[[VAL_34]]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:         fir.call @_QPtakes_real_array(%[[VAL_35]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:         %[[VAL_35:.*]] = fir.embox %[[VAL_26]](%[[VAL_33]]) {{\[}}%[[VAL_34]]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<16xf32>>
+! CHECK:         %[[VAL_35_NEW:.*]] = fir.convert %[[VAL_35]] : (!fir.box<!fir.array<16xf32>>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:         fir.call @_QPtakes_real_array(%[[VAL_35_NEW]]) : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
