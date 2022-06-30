@@ -52,4 +52,4 @@ class DebugBreakTestCase(TestBase):
             process.Continue()
 
         # The inferior should exit after the last iteration.
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)

@@ -209,7 +209,7 @@ class ProcessIOTestCase(TestBase):
         # Let process continue so it will exit
         self.process.Continue()
         state = self.process.GetState()
-        self.assertEqual(state, lldb.eStateExited, PROCESS_IS_VALID)
+        self.assertState(state, lldb.eStateExited, PROCESS_IS_VALID)
 
     def check_process_output(self, output, error):
             # Since we launched the process without specifying stdin/out/err,

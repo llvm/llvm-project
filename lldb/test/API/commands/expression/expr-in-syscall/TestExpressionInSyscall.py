@@ -80,5 +80,5 @@ class ExprSyscallTestCase(TestBase):
             if new_state == lldb.eStateExited:
                 break
 
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
