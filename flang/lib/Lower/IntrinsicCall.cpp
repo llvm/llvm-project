@@ -3492,10 +3492,10 @@ IntrinsicLibrary::genReshape(mlir::Type resultType,
   assert(fir::BoxValue(shape).rank() == 1);
   mlir::Type shapeTy = shape.getType();
   mlir::Type shapeArrTy = fir::dyn_cast_ptrOrBoxEleTy(shapeTy);
-  auto resultRank = shapeArrTy.cast<fir::SequenceType>().getShape();
+  auto resultRank = shapeArrTy.cast<fir::SequenceType>().getShape()[0];
 
-  assert(resultRank[0] != fir::SequenceType::getUnknownExtent() &&
-         "shape arg must have constant size");
+  if (resultRank == fir::SequenceType::getUnknownExtent())
+    TODO(loc, "RESHAPE intrinsic requires computing rank of result");
 
   // Handle optional pad argument
   mlir::Value pad = isStaticallyAbsent(args[2])
@@ -3510,7 +3510,7 @@ IntrinsicLibrary::genReshape(mlir::Type resultType,
                           : builder.createBox(loc, args[3]);
 
   // Create mutable fir.box to be passed to the runtime for the result.
-  mlir::Type type = builder.getVarLenSeqTy(resultType, resultRank[0]);
+  mlir::Type type = builder.getVarLenSeqTy(resultType, resultRank);
   fir::MutableBoxValue resultMutableBox =
       fir::factory::createTempMutableBox(builder, loc, type);
 
