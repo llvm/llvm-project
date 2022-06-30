@@ -1,4 +1,5 @@
 CXX_SOURCES := main.cpp
-CFLAGS := -g -O0
+
+DEBUG_INFO_FLAG := -gdwarf -O0
 
 include Makefile.rules
