@@ -1454,7 +1454,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           RISCV::getVLEPseudo(IsMasked, IsTU, /*Strided*/ false, /*FF*/ true,
                               Log2SEW, static_cast<unsigned>(LMUL));
       MachineSDNode *Load = CurDAG->getMachineNode(
-          P->Pseudo, DL, Node->getValueType(0), XLenVT, MVT::Other, Operands);
+          P->Pseudo, DL, Node->getVTList(), Operands);
       if (auto *MemOp = dyn_cast<MemSDNode>(Node))
         CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
 
