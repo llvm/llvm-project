@@ -1,0 +1,10 @@
+# RUN: llvm-profdata merge %S/Inputs/relative_dir/main.proftext \
+# RUN:   -o %t.profdata
+# RUN: llvm-cov report %S/Inputs/relative_dir/main.covmapping \
+# RUN:   -instr-profile %t.profdata \
+# RUN:   -compilation-dir=%S/Inputs/relative_dir/out/default \
+# RUN:   %S/Inputs/relative_dir/header.h \
+# RUN:   | FileCheck -DDIR=%S/Inputs/relative_dir --check-prefix=REPORT %s
+
+# REPORT: {{^}}[[DIR]]{{/|\\}}header.h{{.*}}
+# REPORT: {{^}}TOTAL{{.*}}100.00%
