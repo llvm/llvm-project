@@ -11,9 +11,6 @@
 ! RUN: %flang_fc1 -help 2>&1 | FileCheck %s --check-prefix=HELP-FC1
 ! RUN: not %flang_fc1 -helps 2>&1 | FileCheck %s --check-prefix=ERROR
 
-!----------------------------------------------------
-! EXPECTED OUTPUT FOR FLANG DRIVER (flang)
-!----------------------------------------------------
 ! HELP:USAGE: flang
 ! HELP-EMPTY:
 ! HELP-NEXT:OPTIONS:
@@ -67,9 +64,6 @@
 ! HELP-NEXT: -W<warning>            Enable the specified warning
 ! HELP-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
 
-!-------------------------------------------------------------
-! EXPECTED OUTPUT FOR FLANG FRONTEND DRIVER (flang -fc1)
-!-------------------------------------------------------------
 ! HELP-FC1:USAGE: flang
 ! HELP-FC1-EMPTY:
 ! HELP-FC1-NEXT:OPTIONS:
@@ -147,7 +141,4 @@
 ! HELP-FC1-NEXT: -version               Print the compiler version
 ! HELP-FC1-NEXT: -W<warning>            Enable the specified warning
 
-!---------------
-! EXPECTED ERROR
-!---------------
 ! ERROR: error: unknown argument '-helps'; did you mean '-help'

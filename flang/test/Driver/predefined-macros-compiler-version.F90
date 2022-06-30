@@ -10,9 +10,6 @@
 !-----------------------------------------
 ! RUN: %flang_fc1 -E %s  2>&1 | FileCheck %s --ignore-case
 
-!-----------------
-! EXPECTED OUTPUT
-!-----------------
 ! CHECK: flang = 1
 ! CHECK: flang_major = {{[1-9][0-9]*$}}
 ! CHECK: flang_minor = {{[0-9]+$}}

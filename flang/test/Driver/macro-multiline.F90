@@ -10,9 +10,6 @@
 !-----------------------------------------
 ! RUN: printf -- "-DX=A\\\\\nTHIS_SHOULD_NOT_EXIST_IN_THE_OUTPUT\n" | xargs %flang_fc1 -E -P %s  2>&1 | FileCheck --strict-whitespace --match-full-lines %s
 
-!-------------------------------
-! EXPECTED OUTPUT FOR MACRO 'X'
-!-------------------------------
 ! CHECK:       START A END
 ! CHECK-NOT:THIS_SHOULD_NOT_EXIST_IN_THE_OUTPUT
 ! CHECK-NOT:this_should_not_exist_in_the_output

@@ -15,14 +15,8 @@
 ! RUN: %flang_fc1 -std=f2018 -fdebug-unparse %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
 ! RUN: %flang_fc1 -std=f2018 -fdebug-dump-symbols %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITH -Werror
-!-----------------------------------------
 ! WITH: Could not parse
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITHOUT -Werror
-!-----------------------------------------
 ! WITHOUT-NOT: Could not parse
 
 #ifndef _OM_NO_IOSTREAM

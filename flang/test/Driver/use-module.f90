@@ -30,22 +30,13 @@
 ! RUN: not %flang_fc1 -fsyntax-only -J %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
 ! RUN: not %flang_fc1 -fsyntax-only -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
 
-!------------------------------------
-! EXPECTED OUTPUT: all modules found
-!------------------------------------
 ! INCLUDED-NOT: error
 
-!------------------------------------------------------------------
-! EXPECTED OUTPUT: include dir for `basictestingmoduletwo` is missing
-!------------------------------------------------------------------
 ! MISSING_MOD2-NOT:error: Cannot read module file for module 'basictestmoduleone''
 ! MISSING_MOD2-NOT:error: Derived type 't1' not found
 ! MISSING_MOD2:error: Cannot read module file for module 'basictestmoduletwo'
 ! MISSING_MOD2:error: Derived type 't2' not found
 
-!----------------------------------------------------------------------
-! EXPECTED OUTPUT: `Inputs` is not included, and hence `t1` is undefined
-!---------------------------------------------------------------------
 ! SINGLEINCLUDE-NOT:error: Cannot read module file for module 'basictestmoduleone'
 ! SINGLEINCLUDE:error: Derived type 't1' not found
 ! SINGLEINCLUDE-NOT:error: Cannot read module file for module 'basictestmoduletwo'

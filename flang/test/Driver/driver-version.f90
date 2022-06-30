@@ -1,15 +1,9 @@
 
-!-----------
-! RUN LINES
-!-----------
 ! RUN: %flang --version 2>&1 | FileCheck %s --check-prefix=VERSION
 ! RUN: not %flang --versions 2>&1 | FileCheck %s --check-prefix=ERROR
 ! RUN: %flang_fc1 -version 2>&1 | FileCheck %s --check-prefix=VERSION-FC1
 ! RUN: not %flang_fc1 --version 2>&1 | FileCheck %s --check-prefix=ERROR-FC1
 
-!-----------------------
-! EXPECTED OUTPUT
-!-----------------------
 ! VERSION: flang-new version
 ! VERSION-NEXT: Target:
 ! VERSION-NEXT: Thread model:
