@@ -585,9 +585,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   switch (D->getTemplatedKind()) {
   case FunctionDecl::TK_NonTemplate:
     break;
-  case FunctionDecl::TK_DependentNonTemplate:
-    Record.AddDeclRef(D->getInstantiatedFromDecl());
-    break;
   case FunctionDecl::TK_FunctionTemplate:
     Record.AddDeclRef(D->getDescribedFunctionTemplate());
     break;
