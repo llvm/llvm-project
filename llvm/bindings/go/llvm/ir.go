@@ -993,20 +993,6 @@ func ConstShuffleVector(veca, vecb, mask Value) (rv Value) {
 	return
 }
 
-//TODO
-//LLVMValueRef LLVMConstExtractValue(LLVMValueRef AggConstant, unsigned *IdxList,
-//                                   unsigned NumIdx);
-
-func ConstExtractValue(agg Value, indices []uint32) (rv Value) {
-	n := len(indices)
-	if n == 0 {
-		panic("one or more indices are required")
-	}
-	ptr := (*C.unsigned)(&indices[0])
-	rv.C = C.LLVMConstExtractValue(agg.C, ptr, C.unsigned(n))
-	return
-}
-
 func ConstInsertValue(agg, val Value, indices []uint32) (rv Value) {
 	n := len(indices)
 	if n == 0 {

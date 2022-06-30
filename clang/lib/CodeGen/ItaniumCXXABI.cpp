@@ -1016,7 +1016,7 @@ ItaniumCXXABI::EmitMemberPointerConversion(const CastExpr *E,
       assert(UseARMMethodPtrABI && "ARM ABI expected");
       QualType srcType = E->getSubExpr()->getType();
       const auto &curAuthInfo = CGM.getMemberFunctionPointerAuthInfo(srcType);
-      llvm::Constant *memFnPtr = llvm::ConstantExpr::getExtractValue(src, 0);
+      llvm::Constant *memFnPtr = src->getAggregateElement(0u);
       if (memFnPtr->getNumOperands() == 0) {
         // src must be a pair of null pointers.
         assert(isa<llvm::ConstantInt>(memFnPtr) && "constant int expected");
@@ -1060,7 +1060,7 @@ ItaniumCXXABI::EmitMemberPointerConversion(const CastExpr *E,
     adj = llvm::ConstantInt::get(adj->getType(), offset);
   }
 
-  llvm::Constant *srcAdj = llvm::ConstantExpr::getExtractValue(src, 1);
+  llvm::Constant *srcAdj = src->getAggregateElement(1);
   llvm::Constant *dstAdj;
   if (isDerivedToBase)
     dstAdj = llvm::ConstantExpr::getNSWSub(srcAdj, adj);
