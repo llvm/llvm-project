@@ -977,15 +977,16 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
       // Fold memrchr(s, c, N) --> s + Pos for constant N > Pos.
       return B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos));
 
-    if (Str.find(CharC->getZExtValue(), Pos) == StringRef::npos) {
-      // When there is just a single occurrence of C in S, fold
+    if (Str.find(Str[Pos]) == Pos) {
+      // When there is just a single occurrence of C in S, i.e., the one
+      // in Str[Pos], fold
       //   memrchr(s, c, N) --> N <= Pos ? null : s + Pos
       // for nonconstant N.
       Value *Cmp = B.CreateICmpULE(Size, ConstantInt::get(Size->getType(),
-							  Pos),
-				   "memrchr.cmp");
+                                                          Pos),
+                                   "memrchr.cmp");
       Value *SrcPlus = B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos),
-				   "memrchr.ptr_plus");
+                                   "memrchr.ptr_plus");
       return B.CreateSelect(Cmp, NullPtr, SrcPlus, "memrchr.sel");
     }
   }
