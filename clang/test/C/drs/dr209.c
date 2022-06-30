@@ -33,8 +33,6 @@ void dr209(void) {
   (void)_Generic(INT16_C(0), __typeof__(+(int_least16_t){0}) : 1);
   (void)_Generic(INT32_C(0), __typeof__(+(int_least32_t){0}) : 1);
   (void)_Generic(INT64_C(0), __typeof__(+(int_least64_t){0}) : 1);
-  (void)_Generic(UINT8_C(0), __typeof__(+(uint_least8_t){0}) : 1);
-  (void)_Generic(UINT16_C(0), __typeof__(+(uint_least16_t){0}) : 1);
   // FIXME: This is not the expected behavior; the type of the expanded value
   // in both of these cases should be 'int',
   //
@@ -53,6 +51,8 @@ void dr209(void) {
   // but then the value undergoes integer promotions which would convert both
   // of those types to int.
   //
+  (void)_Generic(UINT8_C(0), __typeof__(+(uint_least8_t){0}) : 1);
+  (void)_Generic(UINT16_C(0), __typeof__(+(uint_least16_t){0}) : 1);
   // expected-error@-2 {{controlling expression type 'unsigned int' not compatible with any generic association type}}
   // expected-error@-2 {{controlling expression type 'unsigned int' not compatible with any generic association type}}
   (void)_Generic(UINT32_C(0), __typeof__(+(uint_least32_t){0}) : 1);
