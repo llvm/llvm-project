@@ -514,6 +514,9 @@ X86 Support in Clang
 
 - Support ``-mharden-sls=[none|all|return|indirect-jmp]`` for straight-line
   speculation hardening.
+- Support for the ``_Float16`` type has been added for all targets with SSE2.
+  When AVX512-FP16 is not available, arithmetic on ``_Float16`` is emulated
+  using ``float``.
 
 DWARF Support in Clang
 ----------------------
