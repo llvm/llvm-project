@@ -1919,6 +1919,20 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
     bool force_synchronous) {
   Log *log = GetLog(LLDBLog::Process);
 
+  if (m_disabling_non_stop) {
+    // Check if we are waiting for any more processes to stop.  If we are,
+    // do not send the OK response yet.
+    for (const auto &it : m_debugged_processes) {
+      if (it.second.process_up->IsRunning())
+        return PacketResult::Success;
+    }
+
+    // If all expected processes were stopped after a QNonStop:0 request,
+    // send the OK response.
+    m_disabling_non_stop = false;
+    return SendOKResponse();
+  }
+
   switch (process_state) {
   case eStateAttaching:
   case eStateLaunching:
@@ -3903,12 +3917,33 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
     StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Process);
+
   StringRef packet_str{packet.GetStringRef()};
   assert(packet_str.startswith("QNonStop:"));
   packet_str.consume_front("QNonStop:");
   if (packet_str == "0") {
+    for (auto &process_it : m_debugged_processes) {
+      if (process_it.second.process_up->IsRunning()) {
+        assert(m_non_stop);
+        Status error = process_it.second.process_up->Interrupt();
+        if (error.Fail()) {
+          LLDB_LOG(log,
+                   "while disabling nonstop, failed to halt process {0}: {1}",
+                   process_it.first, error);
+          return SendErrorResponse(0x41);
+        }
+        // we must not send stop reasons after QNonStop
+        m_disabling_non_stop = true;
+      }
+    }
+    m_stdio_notification_queue.clear();
+    m_stop_notification_queue.clear();
     m_non_stop = false;
-    // TODO: stop all threads
+    // If we are stopping anything, defer sending the OK response until we're
+    // done.
+    if (m_disabling_non_stop)
+      return PacketResult::Success;
   } else if (packet_str == "1") {
     m_non_stop = true;
   } else

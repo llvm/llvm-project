@@ -117,6 +117,7 @@ protected:
   bool m_thread_suffix_supported = false;
   bool m_list_threads_in_stop_reply = false;
   bool m_non_stop = false;
+  bool m_disabling_non_stop = false;
   std::deque<std::string> m_stdio_notification_queue;
   std::deque<std::string> m_stop_notification_queue;
 
