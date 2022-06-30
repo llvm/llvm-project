@@ -622,7 +622,7 @@ static uint32_t getEFlags(InputFile *file) {
 // This file implements v2 ABI. This function makes sure that all
 // object files have v2 or an unspecified version as an ABI version.
 uint32_t PPC64::calcEFlags() const {
-  for (InputFile *f : objectFiles) {
+  for (InputFile *f : ctx->objectFiles) {
     uint32_t flag = getEFlags(f);
     if (flag == 1)
       error(toString(f) + ": ABI version 1 is not supported");
