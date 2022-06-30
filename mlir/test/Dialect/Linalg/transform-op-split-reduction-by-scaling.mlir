@@ -3,6 +3,7 @@
 // CHECK-LABEL: func.func @matmul_split
 func.func @matmul_split(%A : tensor<?x256xf32>, %B: tensor<256x32xf32>, %C: tensor<?x32xf32>) -> tensor<?x32xf32> {
 
+  //      CHECK: bufferization.alloc_tensor({{.*}}) : tensor<?x32x64xf32>
   //      CHECK: linalg.generic 
   // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction"]
   // CHECK-SAME: ins(%{{[a-zA-Z0-9]*}}, %{{[a-zA-Z0-9]*}}, %{{[a-zA-Z0-9]*}} : tensor<?x256xf32>, tensor<256x32xf32>, tensor<64x4xi1>)
@@ -30,6 +31,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @pdl_target in %arg1
-    %1:3 = transform.structured.split_reduction_by_scaling %0 { split_factor = 4, insert_split_dimension = 2}
+    %1:3 = transform.structured.split_reduction %0 
+      { split_factor = 4, insert_split_dimension = 2, use_scaling_algorithm, use_alloc}
   }
 }
