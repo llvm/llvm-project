@@ -38,11 +38,9 @@ _start:
 3:
 	blr
 # CHECK-BE:      3c:       60 00 00 00     nop
-# CHECK-BE-NEXT: 40:       06 01 ff ff
-# CHECK-BE-NEXT: 44:       38 22 ff f0
+# CHECK-BE-NEXT: 40:       06 01 ff ff 38 22 ff f0 paddi 1, 2, 8589934576, 0
 # CHECK-BE-NEXT: 48:       4e 80 00 20
 # CHECK-LE:      3c:       00 00 00 60     nop
-# CHECK-LE-NEXT: 40:       ff ff 01 06
-# CHECK-LE-NEXT: 44:       f0 ff 22 38
+# CHECK-LE-NEXT: 40:       ff ff 01 06 f0 ff 22 38 paddi 1, 2, 8589934576, 0
 # CHECK-LE-NEXT: 48:       20 00 80 4e
 
