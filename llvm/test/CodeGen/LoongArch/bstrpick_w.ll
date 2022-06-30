@@ -1,7 +1,7 @@
 ; RUN: llc --mtriple=loongarch32 < %s | FileCheck %s
 
-define i32 @lshr40_and255(i32 %a) {
-; CHECK-LABEL: lshr40_and255:
+define i32 @lshr10_and255(i32 %a) {
+; CHECK-LABEL: lshr10_and255:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bstrpick.w $a0, $a0, 17, 10
 ; CHECK-NEXT:    jirl $zero, $ra, 0
@@ -10,8 +10,8 @@ define i32 @lshr40_and255(i32 %a) {
   ret i32 %and
 }
 
-define i32 @ashr50_and511(i32 %a) {
-; CHECK-LABEL: ashr50_and511:
+define i32 @ashr20_and511(i32 %a) {
+; CHECK-LABEL: ashr20_and511:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bstrpick.w $a0, $a0, 28, 20
 ; CHECK-NEXT:    jirl $zero, $ra, 0

@@ -743,7 +743,13 @@ targets pending ABI standardization:
 * 64-bit ARM (AArch64)
 * AMDGPU
 * SPIR
-* X86 (Only available under feature AVX512-FP16)
+* X86 (see below)
+
+On X86 targets, ``_Float16`` is supported as long as SSE2 is available, which
+includes all 64-bit and all recent 32-bit processors. When the target supports
+AVX512-FP16, ``_Float16`` arithmetic is performed using that native support.
+Otherwise, ``_Float16`` arithmetic is performed by promoting to ``float``,
+performing the operation, and then truncating to ``_Float16``.
 
 ``_Float16`` will be supported on more targets as they define ABIs for it.
 
