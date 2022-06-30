@@ -189,27 +189,26 @@ static bool hasMemOffset(SDNode *N, unsigned &BaseOpIdx,
 
 static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                          int64_t Imm, const RISCVSubtarget &Subtarget) {
-  MVT XLenVT = Subtarget.getXLenVT();
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
 
   SDNode *Result = nullptr;
-  SDValue SrcReg = CurDAG->getRegister(RISCV::X0, XLenVT);
+  SDValue SrcReg = CurDAG->getRegister(RISCV::X0, VT);
   for (RISCVMatInt::Inst &Inst : Seq) {
-    SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, XLenVT);
+    SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, VT);
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
-      Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SDImm);
+      Result = CurDAG->getMachineNode(Inst.Opc, DL, VT, SDImm);
       break;
     case RISCVMatInt::RegX0:
-      Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SrcReg,
-                                      CurDAG->getRegister(RISCV::X0, XLenVT));
+      Result = CurDAG->getMachineNode(Inst.Opc, DL, VT, SrcReg,
+                                      CurDAG->getRegister(RISCV::X0, VT));
       break;
     case RISCVMatInt::RegReg:
-      Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SrcReg, SrcReg);
+      Result = CurDAG->getMachineNode(Inst.Opc, DL, VT, SrcReg, SrcReg);
       break;
     case RISCVMatInt::RegImm:
-      Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SrcReg, SDImm);
+      Result = CurDAG->getMachineNode(Inst.Opc, DL, VT, SrcReg, SDImm);
       break;
     }
 
