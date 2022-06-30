@@ -539,13 +539,17 @@ public:
     if (isa<UserDefinedLiteral>(E))
       return true;
 
-    // FIXME ...here it would make sense though.
-    if (isa<CXXOperatorCallExpr>(E))
-      return true;
+    // FIXME: consider highlighting parameters of some other overloaded
+    // operators as well
+    llvm::ArrayRef<const Expr *> Args = {E->getArgs(), E->getNumArgs()};
+    if (const auto callOp = dyn_cast<CXXOperatorCallExpr>(E)) {
+      if (callOp->getOperator() != OO_Call)
+        return true;
+      Args = Args.drop_front(); // Drop object parameter
+    }
 
     highlightMutableReferenceArguments(
-        dyn_cast_or_null<FunctionDecl>(E->getCalleeDecl()),
-        {E->getArgs(), E->getNumArgs()});
+        dyn_cast_or_null<FunctionDecl>(E->getCalleeDecl()), Args);
 
     return true;
   }

@@ -71,7 +71,8 @@ public:
   bool shouldPrint(const BinaryFunction &BF) const override { return false; }
 
   void runOnFunctions(BinaryContext &BC) override {
-    const DynoStats NewDynoStats = getDynoStats(BC.getBinaryFunctions());
+    const DynoStats NewDynoStats =
+        getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
     const bool Changed = (NewDynoStats != PrevDynoStats);
     outs() << "BOLT-INFO: program-wide dynostats " << Title
            << (Changed ? "" : " (no change)") << ":\n\n"

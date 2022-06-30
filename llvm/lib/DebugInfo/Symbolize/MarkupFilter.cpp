@@ -25,7 +25,7 @@ using namespace llvm;
 using namespace llvm::symbolize;
 
 MarkupFilter::MarkupFilter(raw_ostream &OS, Optional<bool> ColorsEnabled)
-    : OS(OS), ColorsEnabled(ColorsEnabled.getValueOr(
+    : OS(OS), ColorsEnabled(ColorsEnabled.value_or(
                   WithColor::defaultAutoDetectFunction()(OS))) {}
 
 void MarkupFilter::beginLine(StringRef Line) {

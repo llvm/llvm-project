@@ -381,10 +381,13 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
 void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!IV ||
-        all_of(IV->users(), [IV](VPUser *U) { return !U->usesScalars(IV); }))
+    if (!IV)
+      continue;
+    if (HasOnlyVectorVFs &&
+        none_of(IV->users(), [IV](VPUser *U) { return U->usesScalars(IV); }))
       continue;
 
     const InductionDescriptor &ID = IV->getInductionDescriptor();
@@ -400,7 +403,7 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     // the list of users doesn't contain duplicates.
     SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
     for (VPUser *U : Users) {
-      if (!U->usesScalars(IV))
+      if (HasOnlyVectorVFs && !U->usesScalars(IV))
         continue;
       for (unsigned I = 0, E = U->getNumOperands(); I != E; I++) {
         if (U->getOperand(I) != IV)

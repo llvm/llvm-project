@@ -1045,24 +1045,8 @@ struct ParallelInsertSliceOpInterface
 
     // ParallelInsertSliceOp itself has no results. Tensors are returned via
     // the parent op.
-    auto foreachThreadOp = op->getParentOfType<ForeachThreadOp>();
-    assert(foreachThreadOp &&
-           "could not find valid owner of parallel_insert_slice");
-
-    // The i-th ParallelInsertSliceOp result is returned via the i-th OpResult
-    // of the parent ForeachThreadOp.
-    Block *block = op->getBlock();
-    unsigned int opIdx = 0;
-    for (ParallelInsertSliceOp insertOp :
-         block->getOps<ParallelInsertSliceOp>()) {
-      if (insertOp.getOperation() == op)
-        break;
-      ++opIdx;
-    }
-    assert(opIdx < foreachThreadOp->getNumResults() &&
-           "could not find op inside terminator op");
-
-    return {foreachThreadOp->getResult(opIdx)};
+    auto insertOp = cast<ParallelInsertSliceOp>(op);
+    return {insertOp.getTiedOpResult()};
   }
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,

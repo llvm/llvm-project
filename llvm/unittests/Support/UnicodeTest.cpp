@@ -106,7 +106,7 @@ TEST(Unicode, isPrintable) {
 
 TEST(Unicode, nameToCodepointStrict) {
   auto map = [](StringRef Str) {
-    return nameToCodepointStrict(Str).getValueOr(0xFFFF'FFFF);
+    return nameToCodepointStrict(Str).value_or(0xFFFF'FFFF);
   };
 
   // generated codepoints

@@ -399,8 +399,7 @@ TEST_F(GLRTest, PerfectForestNodeSharing) {
                                      "[  0, end) └─test := left-paren expr\n"
                                      "[  0,   1)   ├─left-paren := {\n"
                                      "[  0,   1)   │ └─{ := tok[0]\n"
-                                     "[  1, end)   └─expr := IDENTIFIER =#1\n"
-                                     "[  1, end)     └─IDENTIFIER := tok[1]\n");
+                                     "[  1, end)   └─expr =#1\n");
 }
 
 TEST_F(GLRTest, GLRReduceOrder) {

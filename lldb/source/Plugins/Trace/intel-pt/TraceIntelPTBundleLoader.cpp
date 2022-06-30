@@ -92,7 +92,7 @@ Expected<TraceIntelPTBundleLoader::ParsedProcess>
 TraceIntelPTBundleLoader::ParseProcess(const JSONProcess &process) {
   TargetSP target_sp;
   Status error = m_debugger.GetTargetList().CreateTarget(
-      m_debugger, /*user_exe_path*/ StringRef(), process.triple.getValueOr(""),
+      m_debugger, /*user_exe_path*/ StringRef(), process.triple.value_or(""),
       eLoadDependentsNo,
       /*platform_options*/ nullptr, target_sp);
 
