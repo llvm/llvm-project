@@ -2,6 +2,9 @@
 // RUN: llvm-mc -triple=aarch64 -M no-aliases < %s | FileCheck %s --check-prefixes=CHECK,NOALIAS
 // RUN: not llvm-mc -mattr=+no-neg-immediates -triple=aarch64-none-linux-gnu < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-NEG-IMM
 
+/// +all does not imply +no-neg-immediates.
+// RUN: llvm-mc -triple=aarch64 -mattr=+all -M no-aliases %s | FileCheck %s --check-prefixes=CHECK,NOALIAS
+
         add w0, w2, #4096
         sub w0, w2, #4096
 // CHECK: add w0, w2, #1, lsl #12

@@ -634,7 +634,8 @@ namespace AArch64SysReg {
     FeatureBitset FeaturesRequired;
 
     bool haveFeatures(FeatureBitset ActiveFeatures) const {
-      return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
+      return ActiveFeatures[llvm::AArch64::FeatureAll] ||
+             (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
     }
   };
 

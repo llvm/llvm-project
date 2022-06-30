@@ -1,5 +1,6 @@
 // RUN:     llvm-mc -triple aarch64 -show-encoding  -mattr=+bf16 < %s       | FileCheck %s
 // RUN:     llvm-mc -triple aarch64 -show-encoding  -mattr=+v8.6a < %s      | FileCheck %s
+// RUN:     llvm-mc -triple aarch64 -show-encoding  -mattr=+all %s          | FileCheck %s
 // RUN: not llvm-mc -triple aarch64 -show-encoding  -mattr=-bf16  < %s 2>&1 | FileCheck %s --check-prefix=NOBF16
 // RUN: not llvm-mc -triple aarch64 -show-encoding  < %s 2>&1 | FileCheck %s --check-prefix=NOBF16
 
