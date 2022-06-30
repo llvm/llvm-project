@@ -27,9 +27,6 @@
 ! RUN: %flang_fc1 -test-io %s %S/Inputs/hello-world.f90 -o %t 2>&1 \
 ! RUN:  && FileCheck %s --input-file=%t --match-full-lines -check-prefix=FC1-OUTPUT3
 
-!-----------------------
-! EXPECTED OUTPUT
-!-----------------------
 ! TEST 1: By default, `flang` prints the output from all input files to
 ! stdout
 ! FLANG-LABEL: Program arithmetic
