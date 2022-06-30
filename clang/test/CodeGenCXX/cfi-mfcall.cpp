@@ -10,11 +10,12 @@ struct B3 : B2 {};
 struct S : B1, B3 {};
 
 // DEFAULT-NOT: llvm.type.test
+// DEFAULT-NOT: llvm.public.type.test
 
 void f(S *s, void (S::*p)()) {
   // WPV: [[OFFSET:%.*]] = sub i64 {{.*}}, 1
   // WPV: [[VFPTR:%.*]] = getelementptr i8, i8* %{{.*}}, i64 [[OFFSET]]
-  // WPV: [[TT:%.*]] = call i1 @llvm.type.test(i8* [[VFPTR]], metadata !"_ZTSM1SFvvE.virtual")
+  // WPV: [[TT:%.*]] = call i1 @llvm.public.type.test(i8* [[VFPTR]], metadata !"_ZTSM1SFvvE.virtual")
   // CHECK: [[OFFSET:%.*]] = sub i64 {{.*}}, 1
   // CHECK: [[VFPTR:%.*]] = getelementptr i8, i8* %{{.*}}, i64 [[OFFSET]]
   // CHECK: [[TT:%.*]] = call i1 @llvm.type.test(i8* [[VFPTR]], metadata !"_ZTSM1SFvvE.virtual")
