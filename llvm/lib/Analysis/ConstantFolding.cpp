@@ -1061,13 +1061,19 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
                                           GEP->getInRangeIndex());
   }
 
-  if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE))
+  if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE)) {
+    if (CE->isCompare())
+      return ConstantFoldCompareInstOperands(CE->getPredicate(), Ops[0], Ops[1],
+                                             DL, TLI);
     return CE->getWithOperands(Ops);
+  }
 
   switch (Opcode) {
   default: return nullptr;
   case Instruction::ICmp:
-  case Instruction::FCmp: llvm_unreachable("Invalid for compares");
+  case Instruction::FCmp:
+    return ConstantFoldCompareInstOperands(
+        cast<CmpInst>(InstOrCE)->getPredicate(), Ops[0], Ops[1], DL, TLI);
   case Instruction::Freeze:
     return isGuaranteedNotToBeUndefOrPoison(Ops[0]) ? Ops[0] : nullptr;
   case Instruction::Call:
@@ -1086,6 +1092,9 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
         Ops[0], cast<ExtractValueInst>(InstOrCE)->getIndices());
   case Instruction::InsertElement:
     return ConstantExpr::getInsertElement(Ops[0], Ops[1], Ops[2]);
+  case Instruction::InsertValue:
+    return ConstantExpr::getInsertValue(
+        Ops[0], Ops[1], cast<InsertValueInst>(InstOrCE)->getIndices());
   case Instruction::ShuffleVector:
     return ConstantExpr::getShuffleVector(
         Ops[0], Ops[1], cast<ShuffleVectorInst>(InstOrCE)->getShuffleMask());
@@ -1125,13 +1134,8 @@ ConstantFoldConstantImpl(const Constant *C, const DataLayout &DL,
     Ops.push_back(NewC);
   }
 
-  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
-    if (CE->isCompare())
-      return ConstantFoldCompareInstOperands(CE->getPredicate(), Ops[0], Ops[1],
-                                             DL, TLI);
-
+  if (auto *CE = dyn_cast<ConstantExpr>(C))
     return ConstantFoldInstOperandsImpl(CE, CE->getOpcode(), Ops, DL, TLI);
-  }
 
   assert(isa<ConstantVector>(C));
   return ConstantVector::get(Ops);
@@ -1184,21 +1188,11 @@ Constant *llvm::ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
     Ops.push_back(Op);
   }
 
-  if (const auto *CI = dyn_cast<CmpInst>(I))
-    return ConstantFoldCompareInstOperands(CI->getPredicate(), Ops[0], Ops[1],
-                                           DL, TLI);
-
   if (const auto *LI = dyn_cast<LoadInst>(I)) {
     if (LI->isVolatile())
       return nullptr;
     return ConstantFoldLoadFromConstPtr(Ops[0], LI->getType(), DL);
   }
-
-  if (auto *IVI = dyn_cast<InsertValueInst>(I))
-    return ConstantExpr::getInsertValue(Ops[0], Ops[1], IVI->getIndices());
-
-  if (auto *EVI = dyn_cast<ExtractValueInst>(I))
-    return ConstantFoldExtractValueInstruction(Ops[0], EVI->getIndices());
 
   return ConstantFoldInstOperands(I, Ops, DL, TLI);
 }
