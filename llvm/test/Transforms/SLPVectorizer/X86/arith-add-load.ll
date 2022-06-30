@@ -14,28 +14,10 @@
 define void @add4(ptr noalias nocapture noundef %r, ptr noalias nocapture noundef readonly %a) {
 ; CHECK-LABEL: @add4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[R:%.*]], align 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    store i8 [[ADD]], ptr [[R]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i8, ptr [[R]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX2_1]], align 1
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    store i8 [[ADD_1]], ptr [[ARRAYIDX2_1]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i8, ptr [[R]], i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[ARRAYIDX2_2]], align 1
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i8 [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    store i8 [[ADD_2]], ptr [[ARRAYIDX2_2]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[ARRAYIDX_3]], align 1
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i8, ptr [[R]], i64 3
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX2_3]], align 1
-; CHECK-NEXT:    [[ADD_3:%.*]] = add i8 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    store i8 [[ADD_3]], ptr [[ARRAYIDX2_3]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[A:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[R:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    store <4 x i8> [[TMP2]], ptr [[R]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:

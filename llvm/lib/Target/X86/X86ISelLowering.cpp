@@ -1122,6 +1122,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STORE,              MVT::v4i16, Custom);
     setOperationAction(ISD::STORE,              MVT::v8i8,  Custom);
 
+    // Add 32-bit vector stores to help vectorization opportunities.
+    setOperationAction(ISD::STORE,              MVT::v2i16, Custom);
+    setOperationAction(ISD::STORE,              MVT::v4i8,  Custom);
+
     setOperationAction(ISD::BITCAST,            MVT::v2i32, Custom);
     setOperationAction(ISD::BITCAST,            MVT::v4i16, Custom);
     setOperationAction(ISD::BITCAST,            MVT::v8i8,  Custom);
@@ -25519,6 +25523,9 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
       return splitVectorStore(St, DAG);
     return SDValue();
   }
+
+  if (StoreVT.is32BitVector())
+    return SDValue();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   assert(StoreVT.is64BitVector() && "Unexpected VT");
