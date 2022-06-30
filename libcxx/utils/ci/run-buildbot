@@ -412,6 +412,9 @@ apple-system-backdeployment-*)
     PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
     PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
     PARAMS+=";use_system_cxx_lib=True"
+    # TODO: Enable experimental features during back-deployment -- right now some of the availability
+    #       annotations are incorrect, leading to test failures that could be avoided.
+    PARAMS+=";enable_experimental=False"
 
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
