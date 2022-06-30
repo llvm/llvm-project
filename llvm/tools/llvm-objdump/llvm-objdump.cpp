@@ -1690,9 +1690,12 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   // Package up features to be passed to target/subtarget
   SubtargetFeatures Features = Obj->getFeatures();
-  if (!MAttrs.empty())
+  if (!MAttrs.empty()) {
     for (unsigned I = 0; I != MAttrs.size(); ++I)
       Features.AddFeature(MAttrs[I]);
+  } else if (MCPU.empty() && Obj->getArch() == llvm::Triple::aarch64) {
+    Features.AddFeature("+all");
+  }
 
   std::unique_ptr<const MCRegisterInfo> MRI(
       TheTarget->createMCRegInfo(TripleName));
