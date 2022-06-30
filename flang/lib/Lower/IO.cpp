@@ -196,7 +196,7 @@ static mlir::Value genEndIO(Fortran::lower::AbstractConverter &converter,
                                           mlir::ValueRange{cookie});
   mlir::Value iostat = call.getResult(0);
   if (csi.bigUnitIfOp) {
-    stmtCtx.finalize(/*popScope=*/true);
+    stmtCtx.finalizeAndPop();
     builder.create<fir::ResultOp>(loc, iostat);
     builder.setInsertionPointAfter(csi.bigUnitIfOp);
     iostat = csi.bigUnitIfOp.getResult(0);
