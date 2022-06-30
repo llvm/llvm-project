@@ -407,7 +407,8 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   lldbassert(sym_record.kind() == S_LPROC32 || sym_record.kind() == S_GPROC32);
   SegmentOffsetLength sol = GetSegmentOffsetAndLength(sym_record);
 
-  auto file_vm_addr = m_index->MakeVirtualAddress(sol.so);
+  auto file_vm_addr =
+      m_index->MakeVirtualAddress(sol.so.segment, sol.so.offset);
   if (file_vm_addr == LLDB_INVALID_ADDRESS || file_vm_addr == 0)
     return nullptr;
 
@@ -807,10 +808,12 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
 
   CompUnitSP comp_unit;
   llvm::Optional<uint16_t> modi = m_index->GetModuleIndexForVa(addr);
-  if (modi) {
-    CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(*modi);
-    comp_unit = GetOrCreateCompileUnit(cci);
+  if (!modi) {
+    return nullptr;
   }
+
+  CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(*modi);
+  comp_unit = GetOrCreateCompileUnit(cci);
 
   Declaration decl;
   PdbTypeSymId tid(ti, false);
@@ -869,8 +872,12 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
 VariableSP
 SymbolFileNativePDB::GetOrCreateGlobalVariable(PdbGlobalSymId var_id) {
   auto emplace_result = m_global_vars.try_emplace(toOpaqueUid(var_id), nullptr);
-  if (emplace_result.second)
-    emplace_result.first->second = CreateGlobalVariable(var_id);
+  if (emplace_result.second) {
+    if (VariableSP var_sp = CreateGlobalVariable(var_id))
+      emplace_result.first->second = var_sp;
+    else
+      return nullptr;
+  }
 
   return emplace_result.first->second;
 }
@@ -1102,6 +1109,8 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     const LineFragmentHeader *lfh = lines.header();
     uint64_t virtual_addr =
         m_index->MakeVirtualAddress(lfh->RelocSegment, lfh->RelocOffset);
+    if (virtual_addr == LLDB_INVALID_ADDRESS)
+      continue;
 
     for (const LineColumnEntry &group : lines) {
       llvm::Expected<uint32_t> file_index_or_err =
@@ -1166,7 +1175,11 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     CVSymbol func_record =
         cii->m_debug_stream.readSymbolAtOffset(record_offset);
     SegmentOffsetLength sol = GetSegmentOffsetAndLength(func_record);
-    addr_t file_vm_addr = m_index->MakeVirtualAddress(sol.so);
+    addr_t file_vm_addr =
+        m_index->MakeVirtualAddress(sol.so.segment, sol.so.offset);
+    if (file_vm_addr == LLDB_INVALID_ADDRESS)
+      continue;
+
     AddressRange func_range(file_vm_addr, sol.length,
                             comp_unit.GetModule()->GetSectionList());
     Address func_base = func_range.GetBaseAddress();
@@ -1528,7 +1541,6 @@ void SymbolFileNativePDB::FindGlobalVariables(
   std::vector<SymbolAndOffset> results = m_index->globals().findRecordsByName(
       name.GetStringRef(), m_index->symrecords());
   for (const SymbolAndOffset &result : results) {
-    VariableSP var;
     switch (result.second.kind()) {
     case SymbolKind::S_GDATA32:
     case SymbolKind::S_LDATA32:
@@ -1536,8 +1548,8 @@ void SymbolFileNativePDB::FindGlobalVariables(
     case SymbolKind::S_LTHREAD32:
     case SymbolKind::S_CONSTANT: {
       PdbGlobalSymId global(result.first, false);
-      var = GetOrCreateGlobalVariable(global);
-      variables.AddVariable(var);
+      if (VariableSP var = GetOrCreateGlobalVariable(global))
+        variables.AddVariable(var);
       break;
     }
     default:
