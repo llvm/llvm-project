@@ -527,6 +527,9 @@ X86 Support in Clang
 - Support for the ``_Float16`` type has been added for all targets with SSE2.
   When AVX512-FP16 is not available, arithmetic on ``_Float16`` is emulated
   using ``float``.
+- Added the ``-m[no-]rdpru`` flag to enable/disable the RDPRU instruction
+  provided by AMD Zen2 and later processors. Defined intrinsics for using
+  this instruction (see rdpruintrin.h).
 
 DWARF Support in Clang
 ----------------------

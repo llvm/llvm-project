@@ -735,6 +735,15 @@ def PTWRITE64r : RI<0xAE, MRM4r, (outs), (ins GR64:$dst),
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
+// RDPRU - Read Processor Register instruction.
+
+let SchedRW = [WriteSystem] in {
+let Uses = [ECX], Defs = [EAX, EDX] in
+   def RDPRU : I<0x01, MRM_FD, (outs), (ins), "rdpru", []>, PS,
+               Requires<[HasRDPRU]>;
+}
+
+//===----------------------------------------------------------------------===//
 // Platform Configuration instruction
 
 // From ISA docs:
