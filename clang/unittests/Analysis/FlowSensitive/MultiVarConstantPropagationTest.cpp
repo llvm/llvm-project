@@ -206,28 +206,25 @@ MATCHER_P(HoldsCPLattice, m,
   return ExplainMatchResult(m, arg.Lattice, result_listener);
 }
 
-class MultiVarConstantPropagationTest : public ::testing::Test {
-protected:
-  template <typename Matcher>
-  void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
-    ASSERT_THAT_ERROR(
-        test::checkDataflow<ConstantPropagationAnalysis>(
-            Code, "fun",
-            [](ASTContext &C, Environment &) {
-              return ConstantPropagationAnalysis(C);
-            },
-            [&Expectations](
-                llvm::ArrayRef<std::pair<
-                    std::string, DataflowAnalysisState<
-                                     ConstantPropagationAnalysis::Lattice>>>
-                    Results,
-                ASTContext &) { EXPECT_THAT(Results, Expectations); },
-            {"-fsyntax-only", "-std=c++17"}),
-        llvm::Succeeded());
-  }
-};
+template <typename Matcher>
+void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
+  ASSERT_THAT_ERROR(
+      test::checkDataflow<ConstantPropagationAnalysis>(
+          Code, "fun",
+          [](ASTContext &C, Environment &) {
+            return ConstantPropagationAnalysis(C);
+          },
+          [&Expectations](
+              llvm::ArrayRef<std::pair<
+                  std::string,
+                  DataflowAnalysisState<ConstantPropagationAnalysis::Lattice>>>
+                  Results,
+              ASTContext &) { EXPECT_THAT(Results, Expectations); },
+          {"-fsyntax-only", "-std=c++17"}),
+      llvm::Succeeded());
+}
 
-TEST_F(MultiVarConstantPropagationTest, JustInit) {
+TEST(MultiVarConstantPropagationTest, JustInit) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -239,7 +236,7 @@ TEST_F(MultiVarConstantPropagationTest, JustInit) {
                                       Var("target"), HasConstantVal(1)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, Assignment) {
+TEST(MultiVarConstantPropagationTest, Assignment) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -255,7 +252,7 @@ TEST_F(MultiVarConstantPropagationTest, Assignment) {
                                        Var("target"), HasConstantVal(2)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, AssignmentCall) {
+TEST(MultiVarConstantPropagationTest, AssignmentCall) {
   std::string Code = R"(
     int g();
     void fun() {
@@ -269,7 +266,7 @@ TEST_F(MultiVarConstantPropagationTest, AssignmentCall) {
                                       Pair(Var("target"), Varies()))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, AssignmentBinOp) {
+TEST(MultiVarConstantPropagationTest, AssignmentBinOp) {
   std::string Code = R"(
     void fun() {
       int target;
@@ -282,7 +279,7 @@ TEST_F(MultiVarConstantPropagationTest, AssignmentBinOp) {
                                       Var("target"), HasConstantVal(5)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, PlusAssignment) {
+TEST(MultiVarConstantPropagationTest, PlusAssignment) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -298,7 +295,7 @@ TEST_F(MultiVarConstantPropagationTest, PlusAssignment) {
                                        Pair(Var("target"), Varies()))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, SameAssignmentInBranches) {
+TEST(MultiVarConstantPropagationTest, SameAssignmentInBranches) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target;
@@ -327,7 +324,7 @@ TEST_F(MultiVarConstantPropagationTest, SameAssignmentInBranches) {
 }
 
 // Verifies that the analysis tracks multiple variables simultaneously.
-TEST_F(MultiVarConstantPropagationTest, TwoVariables) {
+TEST(MultiVarConstantPropagationTest, TwoVariables) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -350,7 +347,7 @@ TEST_F(MultiVarConstantPropagationTest, TwoVariables) {
                                  Pair(Var("other"), HasConstantVal(2)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, TwoVariablesInBranches) {
+TEST(MultiVarConstantPropagationTest, TwoVariablesInBranches) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target;
@@ -382,7 +379,7 @@ TEST_F(MultiVarConstantPropagationTest, TwoVariablesInBranches) {
                                        Pair(Var("other"), Varies()))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, SameAssignmentInBranch) {
+TEST(MultiVarConstantPropagationTest, SameAssignmentInBranch) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target = 1;
@@ -401,7 +398,7 @@ TEST_F(MultiVarConstantPropagationTest, SameAssignmentInBranch) {
                                        Var("target"), HasConstantVal(1)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, NewVarInBranch) {
+TEST(MultiVarConstantPropagationTest, NewVarInBranch) {
   std::string Code = R"cc(
     void fun(bool b) {
       if (b) {
@@ -428,7 +425,7 @@ TEST_F(MultiVarConstantPropagationTest, NewVarInBranch) {
                                        Var("target"), HasConstantVal(1)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, DifferentAssignmentInBranches) {
+TEST(MultiVarConstantPropagationTest, DifferentAssignmentInBranches) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target;
@@ -455,7 +452,7 @@ TEST_F(MultiVarConstantPropagationTest, DifferentAssignmentInBranches) {
                                        Pair(Var("target"), Varies()))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, DifferentAssignmentInBranch) {
+TEST(MultiVarConstantPropagationTest, DifferentAssignmentInBranch) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target = 1;
