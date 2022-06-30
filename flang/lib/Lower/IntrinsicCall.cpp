@@ -1505,7 +1505,7 @@ static void checkPrecisionLoss(llvm::StringRef name,
   // lowering and could be used here. Emit an error and continue
   // generating the code with the narrowing cast so that the user
   // can get a complete list of the problematic intrinsic calls.
-  std::string message("TODO: no math runtime available for '");
+  std::string message("not yet implemented: no math runtime available for '");
   llvm::raw_string_ostream sstream(message);
   if (name == "pow") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
