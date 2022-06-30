@@ -731,6 +731,11 @@ static bool GetDumpType(HKEY Key, MINIDUMP_TYPE &ResultType) {
 /// otherwise.
 static std::error_code WINAPI
 WriteWindowsDumpFile(PMINIDUMP_EXCEPTION_INFORMATION ExceptionInfo) {
+  struct ScopedCriticalSection {
+    ScopedCriticalSection() { EnterCriticalSection(&CriticalSection); }
+    ~ScopedCriticalSection() { LeaveCriticalSection(&CriticalSection); }
+  } SCS;
+
   using namespace llvm;
   using namespace llvm::sys;
 
