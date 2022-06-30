@@ -20,7 +20,8 @@ namespace bolt {
 class SplitFunctions : public BinaryFunctionPass {
 private:
   /// Split function body into fragments.
-  void splitFunction(BinaryFunction &Function);
+  template <typename SplitStrategy>
+  void splitFunction(BinaryFunction &Function, SplitStrategy Strategy = {});
 
   /// Create trampoline landing pads for exception handling code to guarantee
   /// that every landing pad is placed in the same function fragment as the

@@ -73,7 +73,8 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                           BasicBlock *OriginalLoopLatchExit,
                           BasicBlock *PreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
-                          LoopInfo *LI, bool PreserveLCSSA) {
+                          LoopInfo *LI, bool PreserveLCSSA,
+                          ScalarEvolution &SE) {
   // Loop structure should be the following:
   // Preheader
   //  PrologHeader
@@ -133,6 +134,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
         PN.setIncomingValueForBlock(NewPreHeader, NewPN);
       else
         PN.addIncoming(NewPN, PrologExit);
+      SE.forgetValue(&PN);
     }
   }
 
@@ -927,7 +929,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // Connect the prolog code to the original loop and update the
     // PHI functions.
     ConnectProlog(L, BECount, Count, PrologExit, LatchExit, PreHeader,
-                  NewPreHeader, VMap, DT, LI, PreserveLCSSA);
+                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE);
   }
 
   // If this loop is nested, then the loop unroller changes the code in the any

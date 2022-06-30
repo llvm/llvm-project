@@ -42,3 +42,18 @@ arith.constant [:i64 10, 11, -12, 13, 14]
 arith.constant [:f32 10., 11., -12., 13., 14.]
 // expected-error@below {{Test iterating `double`: 10.00, 11.00, -12.00, 13.00, 14.00}}
 arith.constant [:f64 10., 11., -12., 13., 14.]
+
+// Check that we handle an external constant parsed from the config.
+// expected-error@below {{Test iterating `int64_t`: unable to iterate type}}
+// expected-error@below {{Test iterating `uint64_t`: 1, 2, 3}}
+// expected-error@below {{Test iterating `APInt`: unable to iterate type}}
+// expected-error@below {{Test iterating `IntegerAttr`: unable to iterate type}}
+arith.constant #test.e1di64_elements<blob1> : tensor<3xi64>
+
+{-#
+  dialect_resources: {
+    test: {
+      blob1: "0x08000000010000000000000002000000000000000300000000000000"
+    }
+  }
+#-}
