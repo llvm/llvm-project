@@ -2023,11 +2023,23 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (!GEP.accumulateConstantOffset(DL, Offset))
       return nullptr;
 
+    APInt OffsetOld = Offset;
     // Convert the total offset back into indices.
     SmallVector<APInt> ConstIndices =
         DL.getGEPIndicesForOffset(BaseType, Offset);
-    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero()))
+    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero())) {
+      // If both GEP are constant-indexed, and cannot be merged in either way,
+      // convert them to a GEP of i8.
+      if (Src->hasAllConstantIndices())
+        return isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))
+            ? GetElementPtrInst::CreateInBounds(
+                Builder.getInt8Ty(), Src->getOperand(0),
+                Builder.getInt(OffsetOld), GEP.getName())
+            : GetElementPtrInst::Create(
+                Builder.getInt8Ty(), Src->getOperand(0),
+                Builder.getInt(OffsetOld), GEP.getName());
       return nullptr;
+    }
 
     bool IsInBounds = isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP));
     SmallVector<Value *> Indices;
