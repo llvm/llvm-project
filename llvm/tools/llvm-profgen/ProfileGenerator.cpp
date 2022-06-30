@@ -456,18 +456,10 @@ bool ProfileGenerator::collectFunctionsFromLLVMProfile(
 
 bool CSProfileGenerator::collectFunctionsFromLLVMProfile(
     std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
-  std::queue<ContextTrieNode *> NodeQueue;
-  NodeQueue.push(&getRootContext());
-  while (!NodeQueue.empty()) {
-    ContextTrieNode *Node = NodeQueue.front();
-    NodeQueue.pop();
-
+  for (auto *Node : ContextTracker) {
     if (!Node->getFuncName().empty())
       if (auto *Func = Binary->getBinaryFunction(Node->getFuncName()))
         ProfiledFunctions.insert(Func);
-
-    for (auto &It : Node->getAllChildContext())
-      NodeQueue.push(&It.second);
   }
   return true;
 }
@@ -806,22 +798,13 @@ void CSProfileGenerator::computeSizeForProfiledFunctions() {
 }
 
 void CSProfileGenerator::updateFunctionSamples() {
-  std::queue<ContextTrieNode *> NodeQueue;
-  NodeQueue.push(&getRootContext());
-
-  while (!NodeQueue.empty()) {
-    ContextTrieNode *Node = NodeQueue.front();
-    NodeQueue.pop();
-
+  for (auto *Node : ContextTracker) {
     FunctionSamples *FSamples = Node->getFunctionSamples();
     if (FSamples) {
       if (UpdateTotalSamples)
         FSamples->updateTotalSamples();
       FSamples->updateCallsiteSamples();
     }
-
-    for (auto &It : Node->getAllChildContext())
-      NodeQueue.push(&It.second);
   }
 }
 
@@ -999,16 +982,17 @@ void CSProfileGenerator::postProcessProfiles() {
   // context profile merging/trimming.
   computeSummaryAndThreshold();
 
-  convertToProfileMap();
-
   // Run global pre-inliner to adjust/merge context profile based on estimated
   // inline decisions.
   if (EnableCSPreInliner) {
-    CSPreInliner(ProfileMap, *Binary, Summary.get()).run();
+    ContextTracker.populateFuncToCtxtMap();
+    CSPreInliner(ContextTracker, *Binary, Summary.get()).run();
     // Turn off the profile merger by default unless it is explicitly enabled.
     if (!CSProfMergeColdContext.getNumOccurrences())
       CSProfMergeColdContext = false;
   }
+
+  convertToProfileMap();
 
   // Trim and merge cold context profile using cold threshold above.
   if (TrimColdProfile || CSProfMergeColdContext) {
