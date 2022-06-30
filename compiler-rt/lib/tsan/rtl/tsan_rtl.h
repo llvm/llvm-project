@@ -372,6 +372,10 @@ struct Context {
   uptr trace_part_total_allocated SANITIZER_GUARDED_BY(slot_mtx);
   uptr trace_part_recycle_finished SANITIZER_GUARDED_BY(slot_mtx);
   uptr trace_part_finished_excess SANITIZER_GUARDED_BY(slot_mtx);
+#if SANITIZER_GO
+  uptr mapped_shadow_begin;
+  uptr mapped_shadow_end;
+#endif
 };
 
 extern Context *ctx;  // The one and the only global runtime context.
