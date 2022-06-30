@@ -1037,9 +1037,6 @@ public:
   // Read memprof data for the instrumented function from profile.
   bool readMemprof(IndexedInstrProfReader *PGOReader);
 
-  // Read memprof data for the instrumented function from profile.
-  bool readMemprof(IndexedInstrProfReader *PGOReader);
-
   // Populate the counts for all BBs.
   void populateCounters();
 
