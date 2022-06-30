@@ -15,7 +15,6 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -383,7 +382,7 @@ inline bool isBitcode(MemoryBufferRef mb) {
 
 std::string replaceThinLTOSuffix(StringRef path);
 
-extern SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
+extern SmallVector<std::unique_ptr<MemoryBuffer>, 6> memoryBuffers;
 extern SmallVector<BinaryFile *, 0> binaryFiles;
 extern SmallVector<BitcodeFile *, 0> bitcodeFiles;
 extern SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
