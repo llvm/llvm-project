@@ -1306,7 +1306,10 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
   }
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
     std::move(ReaderOrErr.get());
-  if (PGOReader->isIRLevelProfile()) {
+  // Currently memprof profiles are only added at the IR level. Mark the profile
+  // type as IR in that case as well and the subsequent matching needs to detect
+  // which is available (might be one or both).
+  if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
     if (PGOReader->hasCSIRLevelProfile())
       Opts.setProfileUse(CodeGenOptions::ProfileCSIRInstr);
     else
