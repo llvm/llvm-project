@@ -694,3 +694,16 @@ func.func @complex_rsqrt(%arg: complex<f32>) -> complex<f32> {
   %rsqrt = complex.rsqrt %arg : complex<f32>
   return %rsqrt : complex<f32>
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @complex_angle
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
+func.func @complex_angle(%arg: complex<f32>) -> f32 {
+  %angle = complex.angle %arg : complex<f32>
+  return %angle : f32
+}
+// CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
+// CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
+// CHECK: %[[RESULT:.*]] = math.atan2 %[[IMAG]], %[[REAL]] : f32
+// CHECK: return %[[RESULT]] : f32

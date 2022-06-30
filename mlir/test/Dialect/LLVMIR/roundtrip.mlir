@@ -305,6 +305,23 @@ func.func @scalable_vect(%arg0: vector<[4]xf32>, %arg1: i32, %arg2: f32) {
   return
 }
 
+// CHECK-LABEL: @mixed_vect
+func.func @mixed_vect(%arg0: vector<8xf32>, %arg1: vector<4xf32>, %arg2: vector<[4]xf32>) {
+  // CHECK: = llvm.intr.vector.insert {{.*}} : vector<8xf32> into vector<[4]xf32>
+  %0 = llvm.intr.vector.insert %arg0, %arg2[0] : vector<8xf32> into vector<[4]xf32>
+  // CHECK: = llvm.intr.vector.insert {{.*}} : vector<4xf32> into vector<[4]xf32>
+  %1 = llvm.intr.vector.insert %arg1, %arg2[0] : vector<4xf32> into vector<[4]xf32>
+  // CHECK: = llvm.intr.vector.insert {{.*}} : vector<4xf32> into vector<[4]xf32>
+  %2 = llvm.intr.vector.insert %arg1, %1[4] : vector<4xf32> into vector<[4]xf32>
+  // CHECK: = llvm.intr.vector.insert {{.*}} : vector<4xf32> into vector<8xf32>
+  %3 = llvm.intr.vector.insert %arg1, %arg0[4] : vector<4xf32> into vector<8xf32>
+  // CHECK: = llvm.intr.vector.extract {{.*}} : vector<8xf32> from vector<[4]xf32>
+  %4 = llvm.intr.vector.extract %2[0] : vector<8xf32> from vector<[4]xf32>
+  // CHECK: = llvm.intr.vector.extract {{.*}} : vector<2xf32> from vector<8xf32>
+  %5 = llvm.intr.vector.extract %arg0[6] : vector<2xf32> from vector<8xf32>
+  return
+}
+
 // CHECK-LABEL: @alloca
 func.func @alloca(%size : i64) {
   // CHECK: llvm.alloca %{{.*}} x i32 : (i64) -> !llvm.ptr<i32>
@@ -478,4 +495,30 @@ module {
     llvm.access_group @group1
     llvm.return
   }
+}
+
+// CHECK-LABEL: llvm.func @vararg_func
+llvm.func @vararg_func(%arg0: i32, ...) {
+  // CHECK: %{{.*}} = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %{{.*}} = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA0:.+]] = llvm.alloca %{{.*}} x !llvm.struct<"struct.va_list", (ptr<i8>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>>
+  // CHECK: %[[CAST0:.+]] = llvm.bitcast %[[ALLOCA0]] : !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>> to !llvm.ptr<i8>
+  %2 = llvm.alloca %1 x !llvm.struct<"struct.va_list", (ptr<i8>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>>
+  %3 = llvm.bitcast %2 : !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>> to !llvm.ptr<i8>
+  // CHECK: llvm.intr.vastart %[[CAST0]]
+  llvm.intr.vastart %3
+  // CHECK: %[[ALLOCA1:.+]] = llvm.alloca %{{.*}} x !llvm.ptr<i8> {alignment = 8 : i64} : (i32) -> !llvm.ptr<ptr<i8>>
+  // CHECK: %[[CAST1:.+]] = llvm.bitcast %[[ALLOCA1]] : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
+  %4 = llvm.alloca %0 x !llvm.ptr<i8> {alignment = 8 : i64} : (i32) -> !llvm.ptr<ptr<i8>>
+  %5 = llvm.bitcast %4 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
+  // CHECK: llvm.intr.vacopy %[[CAST0]] to %[[CAST1]]
+  llvm.intr.vacopy %3 to %5
+  // CHECK: llvm.intr.vaend %[[CAST1]]
+  // CHECK: llvm.intr.vaend %[[CAST0]]
+  llvm.intr.vaend %5
+  llvm.intr.vaend %3
+  // CHECK: llvm.return
+  llvm.return
 }

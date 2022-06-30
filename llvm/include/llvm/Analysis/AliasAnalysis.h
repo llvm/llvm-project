@@ -1271,6 +1271,10 @@ bool isIdentifiedObject(const Value *V);
 /// IdentifiedObjects.
 bool isIdentifiedFunctionLocal(const Value *V);
 
+/// Returns true if the pointer is one which would have been considered an
+/// escape by isNonEscapingLocalObject.
+bool isEscapeSource(const Value *V);
+
 /// Return true if Object memory is not visible after an unwind, in the sense
 /// that program semantics cannot depend on Object containing any particular
 /// value on unwind. If the RequiresNoCaptureBeforeUnwind out parameter is set

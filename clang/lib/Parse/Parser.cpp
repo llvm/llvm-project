@@ -1113,8 +1113,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     ProhibitAttributes(Attrs, CorrectLocationForAttributes);
     ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
-    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
-                                                       DS, AnonRecord);
+    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
+        getCurScope(), AS_none, DS, ParsedAttributesView::none(), AnonRecord);
     DS.complete(TheDecl);
     if (AnonRecord) {
       Decl* decls[] = {AnonRecord, TheDecl};
@@ -1574,7 +1574,7 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
   ExprResult AsmString(ParseStringLiteralExpression());
   if (!AsmString.isInvalid()) {
     const auto *SL = cast<StringLiteral>(AsmString.get());
-    if (!SL->isAscii()) {
+    if (!SL->isOrdinary()) {
       Diag(Tok, diag::err_asm_operand_wide_string_literal)
         << SL->isWide()
         << SL->getSourceRange();

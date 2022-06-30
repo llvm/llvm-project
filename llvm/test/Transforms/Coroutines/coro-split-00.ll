@@ -1,7 +1,7 @@
 ; Tests that coro-split pass splits the coroutine into f, f.resume and f.destroy
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define i8* @f() presplitcoroutine {
+define i8* @f() presplitcoroutine !func_sanitize !0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
@@ -32,7 +32,7 @@ suspend:
   ret i8* %hdl
 }
 
-; CHECK-LABEL: @f(
+; CHECK-LABEL: @f() !func_sanitize !0 {
 ; CHECK: call i8* @malloc
 ; CHECK: @llvm.coro.begin(token %id, i8* %phi)
 ; CHECK: store void (%f.Frame*)* @f.resume, void (%f.Frame*)** %resume.addr
@@ -43,7 +43,7 @@ suspend:
 ; CHECK-NOT: call void @free(
 ; CHECK: ret i8* %hdl
 
-; CHECK-LABEL: @f.resume(
+; CHECK-LABEL: @f.resume({{.*}}) {
 ; CHECK-NOT: call i8* @malloc
 ; CHECK-NOT: call void @print(i32 0)
 ; CHECK: call void @print(i32 1)
@@ -51,13 +51,13 @@ suspend:
 ; CHECK: call void @free(
 ; CHECK: ret void
 
-; CHECK-LABEL: @f.destroy(
+; CHECK-LABEL: @f.destroy({{.*}}) {
 ; CHECK-NOT: call i8* @malloc
 ; CHECK-NOT: call void @print(
 ; CHECK: call void @free(
 ; CHECK: ret void
 
-; CHECK-LABEL: @f.cleanup(
+; CHECK-LABEL: @f.cleanup({{.*}}) {
 ; CHECK-NOT: call i8* @malloc
 ; CHECK-NOT: call void @print(
 ; CHECK-NOT: call void @free(
@@ -77,3 +77,5 @@ declare i1 @llvm.coro.end(i8*, i1)
 declare noalias i8* @malloc(i32)
 declare void @print(i32)
 declare void @free(i8*) willreturn
+
+!0 = !{i32 846595819, i8** null}

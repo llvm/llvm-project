@@ -73,6 +73,7 @@ void LoadStoreOpt::init(MachineFunction &MF) {
 
 void LoadStoreOpt::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
+  AU.setPreservesAll();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }

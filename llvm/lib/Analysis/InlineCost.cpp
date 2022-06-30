@@ -42,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 
 using namespace llvm;
 
@@ -123,6 +124,13 @@ static cl::opt<int> HotCallSiteRelFreq(
 static cl::opt<int> CallPenalty(
     "inline-call-penalty", cl::Hidden, cl::init(25),
     cl::desc("Call penalty that is applied per callsite when inlining"));
+
+static cl::opt<size_t>
+    StackSizeThreshold("inline-max-stacksize", cl::Hidden,
+                       cl::init(std::numeric_limits<size_t>::max()),
+                       cl::ZeroOrMore,
+                       cl::desc("Do not inline functions with a stack size "
+                                "that exceeds the specified limit"));
 
 static cl::opt<bool> OptComputeFullInlineCost(
     "inline-cost-full", cl::Hidden,
@@ -376,8 +384,7 @@ protected:
   bool canFoldInboundsGEP(GetElementPtrInst &I);
   bool accumulateGEPOffset(GEPOperator &GEP, APInt &Offset);
   bool simplifyCallSite(Function *F, CallBase &Call);
-  template <typename Callable>
-  bool simplifyInstruction(Instruction &I, Callable Evaluate);
+  bool simplifyInstruction(Instruction &I);
   bool simplifyIntrinsicCallIsConstant(CallBase &CB);
   ConstantInt *stripAndComputeInBoundsConstantOffsets(Value *&V);
 
@@ -695,7 +702,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       BlockFrequencyInfo *BFI = &(GetBFI(F));
       assert(BFI && "BFI must be available");
       auto ProfileCount = BFI->getBlockProfileCount(BB);
-      assert(ProfileCount.hasValue());
+      assert(ProfileCount);
       if (ProfileCount.getValue() == 0)
         ColdSize += Cost - CostAtBBStart;
     }
@@ -820,14 +827,14 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       }
 
       auto ProfileCount = CalleeBFI->getBlockProfileCount(&BB);
-      assert(ProfileCount.hasValue());
+      assert(ProfileCount);
       CurrentSavings *= ProfileCount.getValue();
       CycleSavings += CurrentSavings;
     }
 
     // Compute the cycle savings per call.
     auto EntryProfileCount = F.getEntryCount();
-    assert(EntryProfileCount.hasValue() && EntryProfileCount->getCount());
+    assert(EntryProfileCount && EntryProfileCount->getCount());
     auto EntryCount = EntryProfileCount->getCount();
     CycleSavings += EntryCount / 2;
     CycleSavings = CycleSavings.udiv(EntryCount);
@@ -973,6 +980,8 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // it.
     if (F.getCallingConv() == CallingConv::Cold)
       Cost += InlineConstants::ColdccPenalty;
+
+    LLVM_DEBUG(dbgs() << "      Initial cost: " << Cost << "\n");
 
     // Check if we're done. This can happen due to bonuses and penalties.
     if (Cost >= Threshold && !ComputeFullInlineCost)
@@ -1501,13 +1510,7 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
   };
 
   if (!DisableGEPConstOperand)
-    if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-          SmallVector<Constant *, 2> Indices;
-          for (unsigned int Index = 1; Index < COps.size(); ++Index)
-            Indices.push_back(COps[Index]);
-          return ConstantExpr::getGetElementPtr(
-              I.getSourceElementType(), COps[0], Indices, I.isInBounds());
-        }))
+    if (simplifyInstruction(I))
       return true;
 
   if ((I.isInBounds() && canFoldInboundsGEP(I)) || IsGEPOffsetConstant(I)) {
@@ -1525,11 +1528,8 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
 }
 
 /// Simplify \p I if its operands are constants and update SimplifiedValues.
-/// \p Evaluate is a callable specific to instruction type that evaluates the
-/// instruction when all the operands are constants.
-template <typename Callable>
-bool CallAnalyzer::simplifyInstruction(Instruction &I, Callable Evaluate) {
-  SmallVector<Constant *, 2> COps;
+bool CallAnalyzer::simplifyInstruction(Instruction &I) {
+  SmallVector<Constant *> COps;
   for (Value *Op : I.operands()) {
     Constant *COp = dyn_cast<Constant>(Op);
     if (!COp)
@@ -1538,7 +1538,7 @@ bool CallAnalyzer::simplifyInstruction(Instruction &I, Callable Evaluate) {
       return false;
     COps.push_back(COp);
   }
-  auto *C = Evaluate(COps);
+  auto *C = ConstantFoldInstOperands(&I, COps, DL);
   if (!C)
     return false;
   SimplifiedValues[&I] = C;
@@ -1568,9 +1568,7 @@ bool CallAnalyzer::simplifyIntrinsicCallIsConstant(CallBase &CB) {
 
 bool CallAnalyzer::visitBitCast(BitCastInst &I) {
   // Propagate constants through bitcasts.
-  if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        return ConstantExpr::getBitCast(COps[0], I.getType());
-      }))
+  if (simplifyInstruction(I))
     return true;
 
   // Track base/offsets through casts
@@ -1590,9 +1588,7 @@ bool CallAnalyzer::visitBitCast(BitCastInst &I) {
 
 bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
   // Propagate constants through ptrtoint.
-  if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        return ConstantExpr::getPtrToInt(COps[0], I.getType());
-      }))
+  if (simplifyInstruction(I))
     return true;
 
   // Track base/offset pairs when converted to a plain integer provided the
@@ -1622,9 +1618,7 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
 
 bool CallAnalyzer::visitIntToPtr(IntToPtrInst &I) {
   // Propagate constants through ptrtoint.
-  if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        return ConstantExpr::getIntToPtr(COps[0], I.getType());
-      }))
+  if (simplifyInstruction(I))
     return true;
 
   // Track base/offset pairs when round-tripped through a pointer without
@@ -1647,9 +1641,7 @@ bool CallAnalyzer::visitIntToPtr(IntToPtrInst &I) {
 
 bool CallAnalyzer::visitCastInst(CastInst &I) {
   // Propagate constants through casts.
-  if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        return ConstantExpr::getCast(I.getOpcode(), COps[0], I.getType());
-      }))
+  if (simplifyInstruction(I))
     return true;
 
   // Disable SROA in the face of arbitrary casts we don't explicitly list
@@ -1906,9 +1898,7 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
 bool CallAnalyzer::visitCmpInst(CmpInst &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   // First try to handle simplified comparisons.
-  if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        return ConstantExpr::getCompare(I.getPredicate(), COps[0], COps[1]);
-      }))
+  if (simplifyInstruction(I))
     return true;
 
   if (I.getOpcode() == Instruction::FCmp)
@@ -2067,9 +2057,7 @@ bool CallAnalyzer::visitStore(StoreInst &I) {
 
 bool CallAnalyzer::visitExtractValue(ExtractValueInst &I) {
   // Constant folding for extract value is trivial.
-  if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        return ConstantExpr::getExtractValue(COps[0], I.getIndices());
-      }))
+  if (simplifyInstruction(I))
     return true;
 
   // SROA can't look through these, but they may be free.
@@ -2078,11 +2066,7 @@ bool CallAnalyzer::visitExtractValue(ExtractValueInst &I) {
 
 bool CallAnalyzer::visitInsertValue(InsertValueInst &I) {
   // Constant folding for insert value is trivial.
-  if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        return ConstantExpr::getInsertValue(/*AggregateOperand*/ COps[0],
-                                            /*InsertedValueOperand*/ COps[1],
-                                            I.getIndices());
-      }))
+  if (simplifyInstruction(I))
     return true;
 
   // SROA can't look through these, but they may be free.
@@ -2706,6 +2690,11 @@ InlineResult CallAnalyzer::analyze() {
   // is not actually duplicated, just moved).
   if (!OnlyOneCallAndLocalLinkage && ContainsNoDuplicateCall)
     return InlineResult::failure("noduplicate");
+
+  // If the callee's stack size exceeds the user-specified threshold,
+  // do not let it be inlined.
+  if (AllocatedSize > StackSizeThreshold)
+    return InlineResult::failure("stacksize");
 
   return finalizeAnalysis();
 }

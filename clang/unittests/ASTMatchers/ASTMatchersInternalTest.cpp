@@ -277,7 +277,7 @@ TEST(Matcher, matchOverEntireASTContext) {
 
 TEST(DynTypedMatcherTest, TraversalKindForwardsToImpl) {
   auto M = DynTypedMatcher(decl());
-  EXPECT_FALSE(M.getTraversalKind().hasValue());
+  EXPECT_FALSE(M.getTraversalKind());
 
   M = DynTypedMatcher(traverse(TK_AsIs, decl()));
   EXPECT_THAT(M.getTraversalKind(), llvm::ValueIs(TK_AsIs));

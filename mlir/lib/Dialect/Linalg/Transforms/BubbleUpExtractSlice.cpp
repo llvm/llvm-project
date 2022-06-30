@@ -49,7 +49,7 @@ struct BubbleUpExtractSliceOpPattern
 
   LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
                                 PatternRewriter &rewriter) const final {
-    Value source = sliceOp.source();
+    Value source = sliceOp.getSource();
     auto linalgOp = source.getDefiningOp<LinalgOp>();
     if (!linalgOp) {
       return rewriter.notifyMatchFailure(sliceOp,

@@ -554,8 +554,8 @@ ProgramHeaders:
     VAddr:    0x1000
     FirstSec: .foo.begin
     LastSec:  .foo.end
-## Case 21: the PT_MIPS_ABIFLAGS segment.
-  - Type:     0x70000003 ## PT_MIPS_ABIFLAGS
+## Case 21: the PT_MIPS_ABIFLAGS/PT_RISCV_ATTRIBUTES segment.
+  - Type:     0x70000003 ## PT_MIPS_ABIFLAGS/PT_RISCV_ATTRIBUTES
     VAddr:    0x1000
     FirstSec: .foo.begin
     LastSec:  .foo.end
@@ -599,6 +599,15 @@ ProgramHeaders:
 # MIPS-LLVM-NEXT:   Type: PT_MIPS_OPTIONS (0x70000002)
 # MIPS-LLVM:      ProgramHeader {
 # MIPS-LLVM-NEXT:   Type: PT_MIPS_ABIFLAGS (0x70000003)
+
+## CHECK how we dump RISCV specific program headers.
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_RISCV %s -o %triscv.elf
+# RUN: llvm-readelf --program-headers %triscv.elf | FileCheck %s --check-prefix=RISCV-GNU
+# RUN: llvm-readobj --program-headers %triscv.elf | FileCheck %s --check-prefix=RISCV-LLVM
+
+# RISCV-GNU:       ATTRIBUTES  0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# RISCV-LLVM:      ProgramHeader {
+# RISCV-LLVM:        Type: PT_RISCV_ATTRIBUTES (0x70000003)
 
 ## Check that llvm-readelf reports a warning when a program interpreter
 ## name is non-null-terminated or when PT_INTERP has an offset that

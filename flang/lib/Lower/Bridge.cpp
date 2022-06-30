@@ -481,16 +481,20 @@ public:
     assert(sym.has<Fortran::semantics::HostAssocDetails>() &&
            "No host-association found");
     const Fortran::semantics::Symbol &hsym = sym.GetUltimate();
-    Fortran::lower::SymbolBox hsb = lookupSymbol(hsym);
+    Fortran::lower::SymbolBox hsb = lookupOneLevelUpSymbol(hsym);
+    assert(hsb && "Host symbol box not found");
     fir::ExtendedValue hexv = getExtendedValue(hsb);
 
-    // 2) Create a copy that will mask the original.
-    createHostAssociateVarClone(sym);
-    Fortran::lower::SymbolBox sb = lookupSymbol(sym);
+    // 2) Fetch the copied one that will mask the original.
+    Fortran::lower::SymbolBox sb = shallowLookupSymbol(sym);
+    assert(sb && "Host-associated symbol box not found");
+    assert(hsb.getAddr() != sb.getAddr() &&
+           "Host and associated symbol boxes are the same");
     fir::ExtendedValue exv = getExtendedValue(sb);
 
     // 3) Perform the assignment.
-    mlir::Location loc = genLocation(sym.name());
+    builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
+    mlir::Location loc = getCurrentLocation();
     mlir::Type symType = genType(sym);
     if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
       Fortran::lower::StatementContext stmtCtx;
@@ -514,11 +518,13 @@ public:
   void collectSymbolSet(
       Fortran::lower::pft::Evaluation &eval,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
-      Fortran::semantics::Symbol::Flag flag) override final {
+      Fortran::semantics::Symbol::Flag flag,
+      bool isUltimateSymbol) override final {
     auto addToList = [&](const Fortran::semantics::Symbol &sym) {
-      const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
-      if (ultimate.test(flag))
-        symbolSet.insert(&ultimate);
+      const Fortran::semantics::Symbol &symbol =
+          isUltimateSymbol ? sym.GetUltimate() : sym;
+      if (symbol.test(flag))
+        symbolSet.insert(&symbol);
     };
     Fortran::lower::pft::visitAllSymbols(eval, addToList);
   }
@@ -605,6 +611,15 @@ private:
   Fortran::lower::SymbolBox
   shallowLookupSymbol(const Fortran::semantics::Symbol &sym) {
     if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
+      return v;
+    return {};
+  }
+
+  /// Find the symbol in one level up of symbol map such as for host-association
+  /// in OpenMP code or return null.
+  Fortran::lower::SymbolBox
+  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) {
+    if (Fortran::lower::SymbolBox v = localSymbols.lookupOneLevelUpSymbol(sym))
       return v;
     return {};
   }
@@ -1734,8 +1749,11 @@ private:
     // Generate a sequence of case value comparisons and branches.
     auto caseValue = valueList.begin();
     auto caseBlock = blockList.begin();
-    for (mlir::Attribute attr : attrList) {
-      if (attr.isa<mlir::UnitAttr>()) {
+    bool skipFinalization = false;
+    for (const auto attr : llvm::enumerate(attrList)) {
+      if (attr.value().isa<mlir::UnitAttr>()) {
+        if (attrList.size() == 1)
+          stmtCtx.finalize();
         genFIRBranch(*caseBlock++);
         break;
       }
@@ -1752,16 +1770,30 @@ private:
             charHelper.createUnboxChar(rhs);
         mlir::Value &rhsAddr = rhsVal.first;
         mlir::Value &rhsLen = rhsVal.second;
-        return fir::runtime::genCharCompare(*builder, loc, pred, lhsAddr,
-                                            lhsLen, rhsAddr, rhsLen);
+        mlir::Value result = fir::runtime::genCharCompare(
+            *builder, loc, pred, lhsAddr, lhsLen, rhsAddr, rhsLen);
+        if (stmtCtx.workListIsEmpty() || skipFinalization)
+          return result;
+        if (attr.index() == attrList.size() - 2) {
+          stmtCtx.finalize();
+          return result;
+        }
+        fir::IfOp ifOp = builder->create<fir::IfOp>(loc, result,
+                                                    /*withElseRegion=*/false);
+        builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
+        stmtCtx.finalizeAndKeep();
+        builder->setInsertionPointAfter(ifOp);
+        return result;
       };
       mlir::Block *newBlock = insertBlock(*caseBlock);
-      if (attr.isa<fir::ClosedIntervalAttr>()) {
+      if (attr.value().isa<fir::ClosedIntervalAttr>()) {
         mlir::Block *newBlock2 = insertBlock(*caseBlock);
+        skipFinalization = true;
         mlir::Value cond =
             genCond(*caseValue++, mlir::arith::CmpIPredicate::sge);
         genFIRConditionalBranch(cond, newBlock, newBlock2);
         builder->setInsertionPointToEnd(newBlock);
+        skipFinalization = false;
         mlir::Value cond2 =
             genCond(*caseValue++, mlir::arith::CmpIPredicate::sle);
         genFIRConditionalBranch(cond2, *caseBlock++, newBlock2);
@@ -1769,12 +1801,13 @@ private:
         continue;
       }
       mlir::arith::CmpIPredicate pred;
-      if (attr.isa<fir::PointIntervalAttr>()) {
+      if (attr.value().isa<fir::PointIntervalAttr>()) {
         pred = mlir::arith::CmpIPredicate::eq;
-      } else if (attr.isa<fir::LowerBoundAttr>()) {
+      } else if (attr.value().isa<fir::LowerBoundAttr>()) {
         pred = mlir::arith::CmpIPredicate::sge;
       } else {
-        assert(attr.isa<fir::UpperBoundAttr>() && "unexpected predicate");
+        assert(attr.value().isa<fir::UpperBoundAttr>() &&
+               "unexpected predicate");
         pred = mlir::arith::CmpIPredicate::sle;
       }
       mlir::Value cond = genCond(*caseValue++, pred);
@@ -1783,12 +1816,7 @@ private:
     }
     assert(caseValue == valueList.end() && caseBlock == blockList.end() &&
            "select case list mismatch");
-    // Clean-up the selector at the end of the construct if it is a temporary
-    // (which is possible with characters).
-    mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    builder->setInsertionPointToEnd(eval.parentConstruct->constructExit->block);
-    stmtCtx.finalize();
-    builder->restoreInsertionPoint(insertPt);
+    assert(stmtCtx.workListIsEmpty() && "statement context must be empty");
   }
 
   fir::ExtendedValue
@@ -2839,10 +2867,10 @@ private:
     if (!funit.isMainProgram()) {
       const Fortran::semantics::Symbol &procSymbol =
           funit.getSubprogramSymbol();
-      if (procSymbol.owner().IsSubmodule()) {
+      if (procSymbol.owner().IsSubmodule())
         TODO(toLocation(), "support for submodules");
-        return;
-      }
+      if (Fortran::semantics::IsSeparateModuleProcedureInterface(&procSymbol))
+        TODO(toLocation(), "separate module procedure");
     }
     setCurrentPosition(funit.getStartingSourceLoc());
     for (int entryIndex = 0, last = funit.entryPointList.size();

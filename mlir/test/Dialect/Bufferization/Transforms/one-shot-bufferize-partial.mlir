@@ -206,9 +206,9 @@ func.func @simple_tensor_test(%t1 : tensor<?xf32>, %f : f32) -> tensor<?xf32> {
 //  CHECK-SCF-SAME:     %[[t1:.*]]: tensor<?xf32> {bufferization.writable = true}, %[[c:.*]]: i1, %[[pos:.*]]: index
 func.func @simple_scf_if(%t1: tensor<?xf32> {bufferization.writable = true}, %c: i1, %pos: index, %f: f32)
     -> (tensor<?xf32>, index) {
+  // CHECK-SCF: %[[t1_memref:.*]] = bufferization.to_memref %[[t1]]
   // CHECK-SCF: %[[r:.*]] = scf.if %[[c]] -> (memref<?xf32, #{{.*}}>) {
   %r1, %r2 = scf.if %c -> (tensor<?xf32>, index) {
-    // CHECK-SCF: %[[t1_memref:.*]] = bufferization.to_memref %[[t1]]
     // CHECK-SCF: scf.yield %[[t1_memref]]
     scf.yield %t1, %pos : tensor<?xf32>, index
   // CHECK-SCF: } else {

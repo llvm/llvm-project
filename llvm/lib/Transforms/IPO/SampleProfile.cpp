@@ -291,6 +291,11 @@ static cl::opt<bool> OverwriteExistingWeights(
     "overwrite-existing-weights", cl::Hidden, cl::init(false),
     cl::desc("Ignore existing branch weights on IR and always overwrite."));
 
+static cl::opt<bool> AnnotateSampleProfileInlinePhase(
+    "annotate-sample-profile-inline-phase", cl::Hidden, cl::init(false),
+    cl::desc("Annotate LTO phase (prelink / postlink), or main (no LTO) for "
+             "sample-profile inline pass name."));
+
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 
 namespace {
@@ -423,7 +428,11 @@ public:
       : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName)),
         GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), GetTLI(std::move(GetTLI)),
-        LTOPhase(LTOPhase) {}
+        LTOPhase(LTOPhase),
+        AnnotatedPassName(AnnotateSampleProfileInlinePhase
+                              ? llvm::AnnotateInlinePassName(InlineContext{
+                                    LTOPhase, InlinePass::SampleProfileInliner})
+                              : CSINLINE_DEBUG) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -490,7 +499,8 @@ protected:
   /// We need to know the LTO phase because for example in ThinLTOPrelink
   /// phase, in annotation, we should not promote indirect calls. Instead,
   /// we will mark GUIDs that needs to be annotated to the function.
-  ThinOrFullLTOPhase LTOPhase;
+  const ThinOrFullLTOPhase LTOPhase;
+  const std::string AnnotatedPassName;
 
   /// Profle Symbol list tells whether a function name appears in the binary
   /// used to generate the current profile.
@@ -530,6 +540,11 @@ protected:
 
   // A pseudo probe helper to correlate the imported sample counts.
   std::unique_ptr<PseudoProbeManager> ProbeManager;
+
+private:
+  const char *getAnnotatedRemarkPassName() const {
+    return AnnotatedPassName.c_str();
+  }
 };
 
 class SampleProfileLoaderLegacyPass : public ModulePass {
@@ -1019,8 +1034,9 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
   for (auto I : Candidates) {
     Function *CalledFunction = I->getCalledFunction();
     if (CalledFunction) {
-      ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "InlineAttempt",
-                                           I->getDebugLoc(), I->getParent())
+      ORE->emit(OptimizationRemarkAnalysis(getAnnotatedRemarkPassName(),
+                                           "InlineAttempt", I->getDebugLoc(),
+                                           I->getParent())
                 << "previous inlining reattempted for "
                 << (Hot ? "hotness: '" : "size: '")
                 << ore::NV("Callee", CalledFunction) << "' into '"
@@ -1057,8 +1073,7 @@ void SampleProfileLoader::findExternalInlineCandidate(
     return;
   }
 
-  ContextTrieNode *Caller =
-      ContextTracker->getContextFor(Samples->getContext());
+  ContextTrieNode *Caller = ContextTracker->getContextNodeForProfile(Samples);
   std::queue<ContextTrieNode *> CalleeList;
   CalleeList.push(Caller);
   while (!CalleeList.empty()) {
@@ -1239,7 +1254,8 @@ bool SampleProfileLoader::tryInlineCandidate(
 
   InlineCost Cost = shouldInlineCandidate(Candidate);
   if (Cost.isNever()) {
-    ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "InlineFail", DLoc, BB)
+    ORE->emit(OptimizationRemarkAnalysis(getAnnotatedRemarkPassName(),
+                                         "InlineFail", DLoc, BB)
               << "incompatible inlining");
     return false;
   }
@@ -1257,8 +1273,8 @@ bool SampleProfileLoader::tryInlineCandidate(
                                              *CalledFunction);
 
   // The call to InlineFunction erases I, so we can't pass it here.
-  emitInlinedIntoBasedOnCost(*ORE, DLoc, BB, *CalledFunction,
-                             *BB->getParent(), Cost, true, CSINLINE_DEBUG);
+  emitInlinedIntoBasedOnCost(*ORE, DLoc, BB, *CalledFunction, *BB->getParent(),
+                             Cost, true, getAnnotatedRemarkPassName());
 
   // Now populate the list of newly exposed call sites.
   if (InlinedCallSites) {
@@ -1544,11 +1560,11 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
     if (!Callee || Callee->isDeclaration())
       continue;
 
-    ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "NotInline",
-                                         I->getDebugLoc(), I->getParent())
-              << "previous inlining not repeated: '"
-              << ore::NV("Callee", Callee) << "' into '"
-              << ore::NV("Caller", &F) << "'");
+    ORE->emit(
+        OptimizationRemarkAnalysis(getAnnotatedRemarkPassName(), "NotInline",
+                                   I->getDebugLoc(), I->getParent())
+        << "previous inlining not repeated: '" << ore::NV("Callee", Callee)
+        << "' into '" << ore::NV("Caller", &F) << "'");
 
     ++NumCSNotInlined;
     const FunctionSamples *FS = Pair.getSecond();
@@ -1998,7 +2014,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
                               ProfileInlineReplayScope,
                               ProfileInlineReplayFallback,
                               {ProfileInlineReplayFormat}},
-        /*EmitRemarks=*/false);
+        /*EmitRemarks=*/false, InlineContext{LTOPhase, InlinePass::ReplaySampleProfileInliner});
   }
 
   // Apply tweaks if context-sensitive or probe-based profile is available.

@@ -810,8 +810,13 @@ void Sema::ActOnPragmaMSAllocText(
       return;
     }
 
-    DeclContext *DC = ND->getDeclContext();
-    if (getLangOpts().CPlusPlus && !DC->isExternCContext()) {
+    auto *FD = dyn_cast<FunctionDecl>(ND->getCanonicalDecl());
+    if (!FD) {
+      Diag(Loc, diag::err_pragma_alloc_text_not_function);
+      return;
+    }
+
+    if (getLangOpts().CPlusPlus && !FD->isInExternCContext()) {
       Diag(Loc, diag::err_pragma_alloc_text_c_linkage);
       return;
     }
@@ -1144,6 +1149,15 @@ void Sema::ActOnPragmaOptimize(bool On, SourceLocation PragmaLoc) {
     OptimizeOffPragmaLocation = PragmaLoc;
 }
 
+void Sema::ActOnPragmaMSOptimize(SourceLocation Loc, bool IsOn) {
+  if (!CurContext->getRedeclContext()->isFileContext()) {
+    Diag(Loc, diag::err_pragma_expected_file_scope) << "optimize";
+    return;
+  }
+
+  MSPragmaOptimizeIsOn = IsOn;
+}
+
 void Sema::ActOnPragmaMSFunction(
     SourceLocation Loc, const llvm::SmallVectorImpl<StringRef> &NoBuiltins) {
   if (!CurContext->getRedeclContext()->isFileContext()) {
@@ -1175,6 +1189,13 @@ void Sema::AddSectionMSAllocText(FunctionDecl *FD) {
     if (!FD->hasAttr<SectionAttr>())
       FD->addAttr(SectionAttr::CreateImplicit(Context, Section));
   }
+}
+
+void Sema::ModifyFnAttributesMSPragmaOptimize(FunctionDecl *FD) {
+  // Don't modify the function attributes if it's "on". "on" resets the
+  // optimizations to the ones listed on the command line
+  if (!MSPragmaOptimizeIsOn)
+    AddOptnoneAttributeIfNoConflicts(FD, FD->getBeginLoc());
 }
 
 void Sema::AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD,

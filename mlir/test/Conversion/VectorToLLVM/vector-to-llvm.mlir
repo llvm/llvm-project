@@ -1178,6 +1178,206 @@ func.func @reduce_i32(%arg0: vector<16xi32>) -> i32 {
 
 // -----
 
+func.func @reduce_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <add>, %arg0, %arg1 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_acc_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.add %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_mul_i32(%arg0: vector<16xi32>) -> i32 {
+  %0 = vector.reduction <mul>, %arg0 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_mul_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.mul"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_mul_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <mul>, %arg0, %arg1 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_mul_acc_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.mul"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.mul %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_minui_i32(%arg0: vector<16xi32>) -> i32 {
+  %0 = vector.reduction <minui>, %arg0 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_minui_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.umin"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_minui_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <minui>, %arg0, %arg1 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_minui_acc_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.umin"(%[[A]])
+//       CHECK: %[[S:.*]] = llvm.icmp "ule" %[[ACC]], %[[R]]
+//       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_maxui_i32(%arg0: vector<16xi32>) -> i32 {
+  %0 = vector.reduction <maxui>, %arg0 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_maxui_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.umax"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_maxui_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <maxui>, %arg0, %arg1 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_maxui_acc_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.umax"(%[[A]])
+//       CHECK: %[[S:.*]] = llvm.icmp "uge" %[[ACC]], %[[R]]
+//       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_minsi_i32(%arg0: vector<16xi32>) -> i32 {
+  %0 = vector.reduction <minsi>, %arg0 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_minsi_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.smin"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_minsi_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <minsi>, %arg0, %arg1 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_minsi_acc_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.smin"(%[[A]])
+//       CHECK: %[[S:.*]] = llvm.icmp "sle" %[[ACC]], %[[R]]
+//       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_maxsi_i32(%arg0: vector<16xi32>) -> i32 {
+  %0 = vector.reduction <maxsi>, %arg0 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_maxsi_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.smax"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_maxsi_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <maxsi>, %arg0, %arg1 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_maxsi_acc_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.smax"(%[[A]])
+//       CHECK: %[[S:.*]] = llvm.icmp "sge" %[[ACC]], %[[R]]
+//       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_and_i32(%arg0: vector<16xi32>) -> i32 {
+  %0 = vector.reduction <and>, %arg0 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_and_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.and"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_and_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <and>, %arg0, %arg1 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_and_acc_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.and"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.and %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_or_i32(%arg0: vector<16xi32>) -> i32 {
+  %0 = vector.reduction <or>, %arg0 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_or_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.or"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_or_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <or>, %arg0, %arg1 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_or_acc_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.or"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.or %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_xor_i32(%arg0: vector<16xi32>) -> i32 {
+  %0 = vector.reduction <xor>, %arg0 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_xor_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.xor"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+// -----
+
+func.func @reduce_xor_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <xor>, %arg0, %arg1 : vector<16xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_xor_acc_i32(
+//  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.xor"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.xor %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+// -----
+
 func.func @reduce_i64(%arg0: vector<16xi64>) -> i64 {
   %0 = vector.reduction <add>, %arg0 : vector<16xi64> into i64
   return %0 : i64

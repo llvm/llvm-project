@@ -1935,6 +1935,7 @@ struct PostOrderFunctionAttrsLegacyPass : public CallGraphSCCPass {
 char PostOrderFunctionAttrsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(PostOrderFunctionAttrsLegacyPass, "function-attrs",
                       "Deduce function attributes", false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_END(PostOrderFunctionAttrsLegacyPass, "function-attrs",

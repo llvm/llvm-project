@@ -30,7 +30,7 @@ struct DimOfShapedTypeOpInterface : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    OpResult dimValue = dimOp.source().template dyn_cast<OpResult>();
+    OpResult dimValue = dimOp.getSource().template dyn_cast<OpResult>();
     if (!dimValue)
       return failure();
     auto shapedTypeOp =
@@ -70,7 +70,7 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    OpResult dimValue = dimOp.source().template dyn_cast<OpResult>();
+    OpResult dimValue = dimOp.getSource().template dyn_cast<OpResult>();
     if (!dimValue)
       return failure();
     auto rankedShapeTypeOp =

@@ -1424,10 +1424,9 @@ struct Attributor {
       return AA;
     }
 
-    // If this is queried in the manifest or cleanup stage, we force the AA to
-    // indicate pessimistic fixpoint immediately.
-    if (Phase == AttributorPhase::MANIFEST ||
-        Phase == AttributorPhase::CLEANUP) {
+    // If this is queried in the manifest stage, we force the AA to indicate
+    // pessimistic fixpoint immediately.
+    if (Phase == AttributorPhase::MANIFEST) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
@@ -4885,12 +4884,10 @@ struct AAPointerInfo : public AbstractAttribute {
     Instruction *getRemoteInst() const { return RemoteI; }
 
     /// Return true if the value written is not known yet.
-    bool isWrittenValueYetUndetermined() const { return !Content.hasValue(); }
+    bool isWrittenValueYetUndetermined() const { return !Content; }
 
     /// Return true if the value written cannot be determined at all.
-    bool isWrittenValueUnknown() const {
-      return Content.hasValue() && !*Content;
-    }
+    bool isWrittenValueUnknown() const { return Content && !*Content; }
 
     /// Return the type associated with the access, if known.
     Type *getType() const { return Ty; }

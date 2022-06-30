@@ -132,6 +132,8 @@ public:
 
   uint64_t getVA() const override;
 
+  std::string getSourceLocation();
+
   // Ensure this symbol's pointers to InputSections point to their canonical
   // copies.
   void canonicalize();

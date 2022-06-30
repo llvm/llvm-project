@@ -144,6 +144,10 @@ expected that the range of topics will change over time. At the time of
 writing, the following sync-ups are organized.
 The :doc:`CodeOfConduct` applies to all online sync-ups.
 
+If you'd like to organize a new sync-up, please add the info in the table
+below. Please also create a calendar event for it and invite calendar@llvm.org
+to the event, so that it'll show up on the :ref:`llvm-community-calendar`. 
+
 .. list-table:: LLVM regular sync-up calls
    :widths: 25 25 25 25
    :header-rows: 1
@@ -222,6 +226,7 @@ The :doc:`CodeOfConduct` applies to all online sync-ups.
      - `gcal <https://calendar.google.com/calendar/u/0?cid=cW1lZGg0ZXNpMnIyZDN2aTVydGVrdWF1YzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
      - `Minutes/docs <https://docs.google.com/document/d/1x5-RbOC6-jnI_NcJ9Dp4pSmGhhNe7lUevuWUIB46TeM/edit?usp=sharing>`__
 
+.. _office-hours:
 
 Office hours
 ------------
@@ -290,7 +295,9 @@ Guidance for office hours hosts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * If you're interested in becoming an office hours host, please add your
-  information to the list above.
+  information to the list above. Please create a calendar event for it and
+  invite calendar@llvm.org to the event so that it'll show up on the 
+  :ref:`llvm-community-calendar`.
 * When starting an office hours session, consider typing something like "*Hi,
   I'm available for chats in the next half hour at* video chat URL. *I'm
   looking forward to having conversations on the video chat or here.*" on the
@@ -387,3 +394,18 @@ can be better.
 
 :doc:`Proposals/VectorPredication`
    Proposal for predicated vector instructions in LLVM.
+
+.. _llvm-community-calendar:
+
+LLVM community calendar
+-----------------------
+
+We aim to maintain a public calendar view of all events happening in the LLVM
+community such as :ref:`online-sync-ups` and :ref:`office-hours`. The calendar
+can be found at
+https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org and can
+also be seen inline below:
+
+.. raw:: html
+
+    <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=UTC&showCalendars=0&showDate=1&showNav=1&src=Y2FsZW5kYXJAbGx2bS5vcmc&color=%23039BE5" style="border:solid 1px #777" width="800" height="600" frameborder="0" scrolling="no"></iframe>

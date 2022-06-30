@@ -363,7 +363,7 @@ VPIntrinsic::getVectorLengthParamPos(Intrinsic::ID IntrinsicID) {
 /// scatter.
 MaybeAlign VPIntrinsic::getPointerAlignment() const {
   Optional<unsigned> PtrParamOpt = getMemoryPointerParamPos(getIntrinsicID());
-  assert(PtrParamOpt.hasValue() && "no pointer argument!");
+  assert(PtrParamOpt && "no pointer argument!");
   return getParamAlign(PtrParamOpt.getValue());
 }
 
@@ -389,7 +389,7 @@ Optional<unsigned> VPIntrinsic::getMemoryPointerParamPos(Intrinsic::ID VPID) {
 /// \return The data (payload) operand of this store or scatter.
 Value *VPIntrinsic::getMemoryDataParam() const {
   auto DataParamOpt = getMemoryDataParamPos(getIntrinsicID());
-  if (!DataParamOpt.hasValue())
+  if (!DataParamOpt)
     return nullptr;
   return getArgOperand(DataParamOpt.getValue());
 }

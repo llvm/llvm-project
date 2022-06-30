@@ -39,7 +39,7 @@ class BreakpointHitCountTestCase(TestBase):
         self.assertTrue(frame0.GetFunctionName() == "a(int)" or frame0.GetFunctionName() == "int a(int)");
 
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
 
     def setUp(self):
         # Call super's setUp().

@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s
 
-// CHECK-LABEL: define{{.*}} void @_Z3funv() #0 prologue <{ i32, i32 }> <{ i32 846595819, i32 trunc (i64 sub (i64 ptrtoint (i8** @0 to i64), i64 ptrtoint (void ()* @_Z3funv to i64)) to i32) }> {
+// CHECK: @[[PROXY:.*]] = private unnamed_addr constant i8* bitcast ({ i8*, i8* }* @_ZTIFvvE to i8*)
+// CHECK: define{{.*}} void @_Z3funv() #0 !func_sanitize ![[FUNCSAN:.*]] {
 void fun() {}
 
 // CHECK-LABEL: define{{.*}} void @_Z6callerPFvvE(void ()* noundef %f)
@@ -20,3 +21,5 @@ void fun() {}
 // CHECK: [[LABEL3]]:
 // CHECK: br label %[[LABEL4]], !nosanitize
 void caller(void (*f)()) { f(); }
+
+// CHECK: ![[FUNCSAN]] = !{i32 846595819, i8** @[[PROXY]]}

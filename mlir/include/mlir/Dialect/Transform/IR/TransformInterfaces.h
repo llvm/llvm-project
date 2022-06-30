@@ -794,6 +794,24 @@ applyTransformToEach(ArrayRef<Operation *> targets,
   }
   return DiagnosedSilenceableFailure::success();
 }
+
+/// Helper function to transform M ops with N results into N results of M ops.
+static inline SmallVector<SmallVector<Operation *, 1>>
+transposeResults(const SmallVector<SmallVector<Operation *>, 1> &m) {
+  SmallVector<SmallVector<Operation *, 1>> res;
+  if (m.empty())
+    return res;
+  int64_t rows = m.size(), cols = m[0].size();
+  for (int64_t j = 0; j < cols; ++j)
+    res.push_back(SmallVector<Operation *, 1>(rows, nullptr));
+  for (int64_t i = 0; i < rows; ++i) {
+    assert(static_cast<int64_t>(m[i].size()) == cols);
+    for (int64_t j = 0; j < cols; ++j) {
+      res[j][i] = m[i][j];
+    }
+  }
+  return res;
+}
 } // namespace detail
 } // namespace transform
 } // namespace mlir
@@ -806,6 +824,17 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
       decltype(&OpTy::applyToOne)>::template arg_t<0>;
   ArrayRef<Operation *> targets =
       state.getPayloadOps(this->getOperation()->getOperand(0));
+  // Handle the corner case where no target is specified.
+  // This is typically the case when the matcher fails to apply and we need to
+  // propagate gracefully.
+  // In this case, we fill all results with an empty vector.
+  if (targets.empty()) {
+    SmallVector<Operation *> emptyResult;
+    for (auto r : this->getOperation()->getResults())
+      transformResults.set(r.template cast<OpResult>(), emptyResult);
+    return DiagnosedSilenceableFailure::success();
+  }
+
   SmallVector<SmallVector<Operation *>, 1> results;
   // In the multi-result case, collect the number of results each transform
   // produced.
@@ -813,29 +842,54 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
       targets, results, [&](TransformOpType specificOp) {
         return static_cast<OpTy *>(this)->applyToOne(specificOp, state);
       });
+  // Propagate the failure (definite or silencable) if any.
   if (!result.succeeded())
     return result;
-  for (const SmallVector<Operation *> &oneTargetResults : results) {
-    if (OpTy::template hasTrait<OpTrait::ZeroResults>())
-      continue;
-    if (OpTy::template hasTrait<OpTrait::OneResult>()) {
-      transformResults.set(
-          this->getOperation()->getResult(0).template cast<OpResult>(),
-          oneTargetResults);
-      continue;
-    }
-    if (this->getOperation()->getNumResults() != oneTargetResults.size()) {
-      Diagnostic diag(this->getOperation()->getLoc(),
-                      DiagnosticSeverity::Error);
-      diag << "unexpected number of results (got " << oneTargetResults.size()
-           << " expected " << this->getOperation()->getNumResults() << ")";
-      return DiagnosedSilenceableFailure::silencableFailure(std::move(diag));
-    }
-    for (const auto &it :
-         llvm::zip(this->getOperation()->getResults(), oneTargetResults)) {
-      transformResults.set(std::get<0>(it).template cast<OpResult>(),
-                           std::get<1>(it));
-    }
+
+  // Legitimately no results, bail early.
+  if (results.empty() && OpTy::template hasTrait<OpTrait::ZeroResults>())
+    return DiagnosedSilenceableFailure::success();
+
+  // Ensure all applications return the same number of results.
+  // Variadic cases are much trickier to handle in a generic fashion.
+  int64_t nRes = results.empty() ? 0 : results[0].size();
+  if (llvm::any_of(results, [&](const auto &r) {
+        return static_cast<int64_t>(r.size()) != nRes;
+      })) {
+    return static_cast<OpTy *>(this)->emitSilenceableError()
+           << "expected all applications of " << OpTy::getOperationName()
+           << " to produce " << nRes
+           << " results.\n If you need variadic results, consider using a "
+              "generic `apply` instead of the specialized `applyToOne`";
+  }
+  // Ensure the number of results agrees with what the transform op expects.
+  // Unless we see empty results, in which case we just want to propagate the
+  // emptiness.
+  if (this->getOperation()->getNumResults() != nRes) {
+    InFlightDiagnostic diag = static_cast<OpTy *>(this)->emitError()
+                              << "unexpected number of results (got " << nRes
+                              << " expected "
+                              << this->getOperation()->getNumResults() << ")";
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  // Perform transposition of M applications producing N results each into N
+  // results for each of the M applications.
+  SmallVector<SmallVector<Operation *, 1>> transposedResults =
+      detail::transposeResults(results);
+  // Single result applies to M ops produces one single M-result.
+  if (OpTy::template hasTrait<OpTrait::OneResult>()) {
+    assert(transposedResults.size() == 1 && "Expected single result");
+    transformResults.set(
+        this->getOperation()->getResult(0).template cast<OpResult>(),
+        transposedResults[0]);
+    return DiagnosedSilenceableFailure::success();
+  }
+  // M ops, N results each.
+  for (const auto &it :
+       llvm::zip(this->getOperation()->getResults(), transposedResults)) {
+    transformResults.set(std::get<0>(it).template cast<OpResult>(),
+                         std::get<1>(it));
   }
   return DiagnosedSilenceableFailure::success();
 }

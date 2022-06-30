@@ -3984,7 +3984,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(double addrspace(1)* %out, i32 
 ; GFX11-NEXT:     enable_mem_ordered = 1
 ; GFX11-NEXT:     enable_fwd_progress = 0
 ; GFX11-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
-; GFX11-NEXT:     user_sgpr_count = 2
+; GFX11-NEXT:     user_sgpr_count = 15
 ; GFX11-NEXT:     enable_trap_handler = 0
 ; GFX11-NEXT:     enable_sgpr_workgroup_id_x = 1
 ; GFX11-NEXT:     enable_sgpr_workgroup_id_y = 0
@@ -5107,7 +5107,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(float addrspace(1)* %out, i32
 ; GFX11-NEXT:     enable_mem_ordered = 1
 ; GFX11-NEXT:     enable_fwd_progress = 0
 ; GFX11-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
-; GFX11-NEXT:     user_sgpr_count = 2
+; GFX11-NEXT:     user_sgpr_count = 15
 ; GFX11-NEXT:     enable_trap_handler = 0
 ; GFX11-NEXT:     enable_sgpr_workgroup_id_x = 1
 ; GFX11-NEXT:     enable_sgpr_workgroup_id_y = 0
@@ -5462,7 +5462,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(double addrspace(1)* %out, i3
 ; GFX11-NEXT:     enable_mem_ordered = 1
 ; GFX11-NEXT:     enable_fwd_progress = 0
 ; GFX11-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
-; GFX11-NEXT:     user_sgpr_count = 2
+; GFX11-NEXT:     user_sgpr_count = 15
 ; GFX11-NEXT:     enable_trap_handler = 0
 ; GFX11-NEXT:     enable_sgpr_workgroup_id_x = 1
 ; GFX11-NEXT:     enable_sgpr_workgroup_id_y = 0

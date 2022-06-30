@@ -3348,7 +3348,7 @@ def : InstRW<[A64FXWrite_6Cyc_GI56], (instrs PRFH_PRI)>;
 def : InstRW<[A64FXWrite_10Cyc_GI056], (instrs PRFH_D_PZI, PRFH_S_PZI)>;
 
 // [351]   "prfw        $prfop, $Pg, [$Rn, $Rm]";
-def : InstRW<[A64FXWrite_6Cyc_GI56], (instrs PRFS_PRR)>;
+def : InstRW<[A64FXWrite_6Cyc_GI56], (instrs PRFW_PRR)>;
 
 // [352]   "prfw        $prfop, $Pg, [$Rn, $Zm]";
 def : InstRW<[A64FXWrite_14Cyc_GI0256], (instrs PRFW_D_SCALED, PRFW_D_SXTW_SCALED, PRFW_D_UXTW_SCALED, PRFW_S_SXTW_SCALED, PRFW_S_UXTW_SCALED)>;

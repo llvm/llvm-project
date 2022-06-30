@@ -101,12 +101,10 @@ void ThreeWayBranch::runOnFunction(BinaryFunction &Function) {
     Blocks.push_back(std::make_pair(SecondEndpoint, SecondCC));
     Blocks.push_back(std::make_pair(ThirdEndpoint, ThirdCC));
 
-    std::sort(Blocks.begin(), Blocks.end(),
-              [&](const std::pair<BinaryBasicBlock *, unsigned> A,
-                  const std::pair<BinaryBasicBlock *, unsigned> B) {
-                return A.first->getExecutionCount() <
-                       B.first->getExecutionCount();
-              });
+    llvm::sort(Blocks, [&](const std::pair<BinaryBasicBlock *, unsigned> A,
+                           const std::pair<BinaryBasicBlock *, unsigned> B) {
+      return A.first->getExecutionCount() < B.first->getExecutionCount();
+    });
 
     uint64_t NewSecondBranchCount = Blocks[1].first->getExecutionCount() +
                                     Blocks[0].first->getExecutionCount();

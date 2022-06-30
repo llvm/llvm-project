@@ -233,7 +233,7 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
     ASSERT_TRUE(F.isIntrinsic());
     Optional<unsigned> MaskParamPos =
         VPIntrinsic::getMaskParamPos(F.getIntrinsicID());
-    if (MaskParamPos.hasValue()) {
+    if (MaskParamPos) {
       Type *MaskParamType = F.getArg(MaskParamPos.getValue())->getType();
       ASSERT_TRUE(MaskParamType->isVectorTy());
       ASSERT_TRUE(
@@ -242,7 +242,7 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
 
     Optional<unsigned> VecLenParamPos =
         VPIntrinsic::getVectorLengthParamPos(F.getIntrinsicID());
-    if (VecLenParamPos.hasValue()) {
+    if (VecLenParamPos) {
       Type *VecLenParamType = F.getArg(VecLenParamPos.getValue())->getType();
       ASSERT_TRUE(VecLenParamType->isIntegerTy(32));
     }

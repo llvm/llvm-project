@@ -53,6 +53,16 @@ protected:
   }
 };
 
+namespace StorageUserTrait {
+/// This trait is used to determine if a storage user, like Type, is mutable
+/// or not. A storage user is mutable if ImplType of the derived class defines
+/// a `mutate` function with a proper signature. Note that this trait is not
+/// supposed to be used publicly. Users should use alias names like
+/// `TypeTrait::IsMutable` instead.
+template <typename ConcreteType>
+struct IsMutable : public StorageUserTraitBase<ConcreteType, IsMutable> {};
+} // namespace StorageUserTrait
+
 //===----------------------------------------------------------------------===//
 // StorageUserBase
 //===----------------------------------------------------------------------===//
@@ -173,6 +183,10 @@ protected:
   /// Mutate the current storage instance. This will not change the unique key.
   /// The arguments are forwarded to 'ConcreteT::mutate'.
   template <typename... Args> LogicalResult mutate(Args &&...args) {
+    static_assert(std::is_base_of<StorageUserTrait::IsMutable<ConcreteT>,
+                                  ConcreteT>::value,
+                  "The `mutate` function expects mutable trait "
+                  "(e.g. TypeTrait::IsMutable) to be attached on parent.");
     return UniquerT::template mutate<ConcreteT>(this->getContext(), getImpl(),
                                                 std::forward<Args>(args)...);
   }

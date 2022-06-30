@@ -428,11 +428,13 @@ let Command = "history" in {
     Desc<"Clears the current command history.">;
 }
 
-let Command = "log" in {
+let Command = "log enable" in {
   def log_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
     Desc<"Set the destination file to log to.">;
-  def log_threadsafe : Option<"threadsafe", "t">, Group<1>,
-    Desc<"Enable thread safe logging to avoid interweaved log lines.">;
+  def log_handler : Option<"log-handler", "h">, Group<1>,
+    EnumArg<"LogHandler", "LogHandlerType()">, Desc<"Specify a log handler which determines where log messages are written.">;
+  def log_buffer_size : Option<"buffer", "b">, Group<1>, Arg<"UnsignedInteger">,
+    Desc<"Set the log to be buffered, using the specified buffer size, if supported by the log handler.">;
   def log_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Enable verbose logging.">;
   def log_sequence : Option<"sequence", "s">, Group<1>,
@@ -452,6 +454,11 @@ let Command = "log" in {
     Desc<"Append to the log file instead of overwriting.">;
   def log_file_function : Option<"file-function", "F">, Group<1>,
     Desc<"Prepend the names of files and function that generate the logs.">;
+}
+
+let Command = "log dump" in {
+  def log_dump_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Desc<"Set the destination file to dump to.">;
 }
 
 let Command = "reproducer dump" in {
@@ -1129,8 +1136,8 @@ let Command = "thread trace dump instructions" in {
     "id can be provided in decimal or hexadecimal representation.">;
   def thread_trace_dump_instructions_skip: Option<"skip", "s">, Group<1>,
     Arg<"Index">,
-    Desc<"How many instruction to skip from the starting position of the trace "
-    "before starting the traversal.">;
+    Desc<"How many trace items (instructions, errors and events) to skip from "
+    "the starting position of the trace before starting the traversal.">;
   def thread_trace_dump_instructions_raw : Option<"raw", "r">, Group<1>,
     Desc<"Dump only instruction address without disassembly nor symbol "
     "information.">;

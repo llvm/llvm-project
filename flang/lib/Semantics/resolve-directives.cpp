@@ -476,7 +476,8 @@ private:
   static constexpr Symbol::Flags ompFlagsRequireNewSymbol{
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpLinear,
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
-      Symbol::Flag::OmpReduction, Symbol::Flag::OmpCriticalLock};
+      Symbol::Flag::OmpReduction, Symbol::Flag::OmpCriticalLock,
+      Symbol::Flag::OmpCopyIn};
 
   static constexpr Symbol::Flags ompFlagsRequireMark{
       Symbol::Flag::OmpThreadprivate};
@@ -580,6 +581,10 @@ Symbol *DirectiveAttributeVisitor<T>::DeclarePrivateAccessEntity(
   if (object.owner() != currScope()) {
     auto &symbol{MakeAssocSymbol(object.name(), object, scope)};
     symbol.set(flag);
+    if (flag == Symbol::Flag::OmpCopyIn) {
+      // The symbol in copyin clause must be threadprivate entity.
+      symbol.set(Symbol::Flag::OmpThreadprivate);
+    }
     return &symbol;
   } else {
     object.set(flag);

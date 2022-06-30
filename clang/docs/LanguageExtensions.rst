@@ -743,7 +743,13 @@ targets pending ABI standardization:
 * 64-bit ARM (AArch64)
 * AMDGPU
 * SPIR
-* X86 (Only available under feature AVX512-FP16)
+* X86 (see below)
+
+On X86 targets, ``_Float16`` is supported as long as SSE2 is available, which
+includes all 64-bit and all recent 32-bit processors. When the target supports
+AVX512-FP16, ``_Float16`` arithmetic is performed using that native support.
+Otherwise, ``_Float16`` arithmetic is performed by promoting to ``float``,
+performing the operation, and then truncating to ``_Float16``.
 
 ``_Float16`` will be supported on more targets as they define ABIs for it.
 
@@ -3812,6 +3818,44 @@ The ``container`` function is also in the region and will not be optimized, but
 it causes the instantiation of ``twice`` and ``thrice`` with an ``int`` type; of
 these two instantiations, ``twice`` will be optimized (because its definition
 was outside the region) and ``thrice`` will not be optimized.
+
+Clang also implements MSVC's range-based pragma,
+``#pragma optimize("[optimization-list]", on | off)``. At the moment, Clang only
+supports an empty optimization list, whereas MSVC supports the arguments, ``s``,
+``g``, ``t``, and ``y``. Currently, the implementation of ``pragma optimize`` behaves
+the same as ``#pragma clang optimize``. All functions
+between ``off`` and ``on`` will be decorated with the ``optnone`` attribute.
+
+.. code-block:: c++
+
+  #pragma optimize("", off)
+  // This function will be decorated with optnone.
+  void f1() {}
+
+  #pragma optimize("", on)
+  // This function will be optimized with whatever was specified on
+  // the commandline.
+  void f2() {}
+
+  // This will warn with Clang's current implementation.
+  #pragma optimize("g", on)
+  void f3() {}
+
+For MSVC, an empty optimization list and ``off`` parameter will turn off
+all optimizations, ``s``, ``g``, ``t``, and ``y``. An empty optimization and
+``on`` parameter will reset the optimizations to the ones specified on the
+commandline.
+
+.. list-table:: Parameters (unsupported by Clang)
+
+   * - Parameter
+     - Type of optimization
+   * - g
+     - Deprecated
+   * - s or t
+     - Short or fast sequences of machine code
+   * - y
+     - Enable frame pointers
 
 Extensions for loop hint optimizations
 ======================================

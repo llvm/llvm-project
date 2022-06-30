@@ -829,7 +829,17 @@ FormatToken *UnwrappedLineParser::parseBlock(
     bool MustBeDeclaration, unsigned AddLevels, bool MunchSemi, bool KeepBraces,
     IfStmtKind *IfKind, bool UnindentWhitesmithsBraces,
     bool CanContainBracedList, TokenType NextLBracesType) {
-  assert(FormatTok->isOneOf(tok::l_brace, TT_MacroBlockBegin) &&
+  auto HandleVerilogBlockLabel = [this]() {
+    // ":" name
+    if (Style.isVerilog() && FormatTok->is(tok::colon)) {
+      nextToken();
+      if (Keywords.isVerilogIdentifier(*FormatTok))
+        nextToken();
+    }
+  };
+
+  assert((FormatTok->isOneOf(tok::l_brace, TT_MacroBlockBegin) ||
+          (Style.isVerilog() && Keywords.isVerilogBegin(*FormatTok))) &&
          "'{' or macro block token expected");
   FormatToken *Tok = FormatTok;
   const bool FollowedByComment = Tokens->peekNextToken()->is(tok::comment);
@@ -846,6 +856,7 @@ FormatToken *UnwrappedLineParser::parseBlock(
 
   const unsigned InitialLevel = Line->Level;
   nextToken(/*LevelDifference=*/AddLevels);
+  HandleVerilogBlockLabel();
 
   // Bail out if there are too many levels. Otherwise, the stack might overflow.
   if (Line->Level > 300)
@@ -926,6 +937,7 @@ FormatToken *UnwrappedLineParser::parseBlock(
 
   // Munch the closing brace.
   nextToken(/*LevelDifference=*/-AddLevels);
+  HandleVerilogBlockLabel();
 
   if (MacroBlock && FormatTok->is(tok::l_paren))
     parseParens();
@@ -1897,9 +1909,18 @@ void UnwrappedLineParser::parseStructuralElement(
       if (Style.isJavaScript())
         break;
 
-      TokenCount = Line->Tokens.size();
-      if (TokenCount == 1 ||
-          (TokenCount == 2 && Line->Tokens.front().Tok->is(tok::comment))) {
+      auto OneTokenSoFar = [&]() {
+        const UnwrappedLineNode *Tok = &Line->Tokens.front(),
+                                *End = Tok + Line->Tokens.size();
+        while (Tok != End && Tok->Tok->is(tok::comment))
+          ++Tok;
+        // In Verilog, macro invocations start with a backtick which the code
+        // treats as a hash.  Skip it.
+        if (Style.isVerilog() && Tok != End && Tok->Tok->is(tok::hash))
+          ++Tok;
+        return End - Tok == 1;
+      };
+      if (OneTokenSoFar()) {
         if (FormatTok->is(tok::colon) && !Line->MustBeDeclaration) {
           Line->Tokens.begin()->Tok->MustBreakBefore = true;
           parseLabel(!Style.IndentGotoLabels);
@@ -2577,7 +2598,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
   FormatToken *IfLeftBrace = nullptr;
   IfStmtKind IfBlockKind = IfStmtKind::NotIf;
 
-  if (FormatTok->is(tok::l_brace)) {
+  if (Keywords.isBlockBegin(*FormatTok, Style)) {
     FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     IfLeftBrace = FormatTok;
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
@@ -2610,7 +2631,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     }
     nextToken();
     handleAttributes();
-    if (FormatTok->is(tok::l_brace)) {
+    if (Keywords.isBlockBegin(*FormatTok, Style)) {
       const bool FollowedByIf = Tokens->peekNextToken()->is(tok::kw_if);
       FormatTok->setFinalizedType(TT_ElseLBrace);
       ElseLeftBrace = FormatTok;
@@ -2877,7 +2898,7 @@ void UnwrappedLineParser::parseNew() {
 void UnwrappedLineParser::parseLoopBody(bool KeepBraces, bool WrapRightBrace) {
   keepAncestorBraces();
 
-  if (FormatTok->is(tok::l_brace)) {
+  if (Keywords.isBlockBegin(*FormatTok, Style)) {
     if (!KeepBraces)
       FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     FormatToken *LeftBrace = FormatTok;
@@ -3168,6 +3189,11 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
     break;
   }
   default:
+    if (PreviousNonComment->isTypeOrIdentifier()) {
+      // This is a requires clause.
+      parseRequiresClause(RequiresToken);
+      return true;
+    }
     // It's an expression.
     parseRequiresExpression(RequiresToken);
     return false;
@@ -4161,6 +4187,16 @@ void UnwrappedLineParser::nextToken(int LevelDifference) {
   else
     readTokenWithJavaScriptASI();
   FormatTok->Previous = Previous;
+  if (Style.isVerilog()) {
+    // Blocks in Verilog can have `begin` and `end` instead of braces.  For
+    // keywords like `begin`, we can't treat them the same as left braces
+    // because some contexts require one of them.  For example structs use
+    // braces and if blocks use keywords, and a left brace can occur in an if
+    // statement, but it is not a block.  For keywords like `end`, we simply
+    // treat them the same as right braces.
+    if (Keywords.isVerilogEnd(*FormatTok))
+      FormatTok->Tok.setKind(tok::r_brace);
+  }
 }
 
 void UnwrappedLineParser::distributeComments(
@@ -4256,6 +4292,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
     PreviousWasComment = FormatTok->is(tok::comment);
 
     while (!Line->InPPDirective && FormatTok->is(tok::hash) &&
+           (!Style.isVerilog() ||
+            Keywords.isVerilogPPDirective(*Tokens->peekNextToken())) &&
            FirstNonCommentOnLine) {
       distributeComments(Comments, FormatTok);
       Comments.clear();

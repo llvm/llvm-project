@@ -232,20 +232,14 @@
 // NEW_DRIVER: 6: backend, {5}, assembler, (device-cuda, sm_52)
 // NEW_DRIVER: 7: assembler, {6}, object, (device-cuda, sm_52)
 // NEW_DRIVER: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, object
-// NEW_DRIVER: 9: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {6}, assembler
-// NEW_DRIVER: 10: linker, {8, 9}, cuda-fatbin, (device-cuda, sm_52)
-// NEW_DRIVER: 11: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {10}, cuda-fatbin
-// NEW_DRIVER: 12: input, "[[INPUT]]", cuda, (device-cuda, sm_70)
-// NEW_DRIVER: 13: preprocessor, {12}, cuda-cpp-output, (device-cuda, sm_70)
-// NEW_DRIVER: 14: compiler, {13}, ir, (device-cuda, sm_70)
-// NEW_DRIVER: 15: backend, {14}, assembler, (device-cuda, sm_70)
-// NEW_DRIVER: 16: assembler, {15}, object, (device-cuda, sm_70)
-// NEW_DRIVER: 17: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {16}, object
-// NEW_DRIVER: 18: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {15}, assembler
-// NEW_DRIVER: 19: linker, {17, 18}, cuda-fatbin, (device-cuda, sm_70)
-// NEW_DRIVER: 20: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {19}, cuda-fatbin
-// NEW_DRIVER: 21: clang-offload-packager, {11, 20}, image
-// NEW_DRIVER: 22: offload, " (powerpc64le-ibm-linux-gnu)" {2}, " (powerpc64le-ibm-linux-gnu)" {21}, ir
-// NEW_DRIVER: 23: backend, {22}, assembler, (host-cuda)
-// NEW_DRIVER: 24: assembler, {23}, object, (host-cuda)
-// NEW_DRIVER: 25: clang-linker-wrapper, {24}, image, (host-cuda)
+// NEW_DRIVER: 9: input, "[[INPUT]]", cuda, (device-cuda, sm_70)
+// NEW_DRIVER: 10: preprocessor, {9}, cuda-cpp-output, (device-cuda, sm_70)
+// NEW_DRIVER: 11: compiler, {10}, ir, (device-cuda, sm_70)
+// NEW_DRIVER: 12: backend, {11}, assembler, (device-cuda, sm_70)
+// NEW_DRIVER: 13: assembler, {12}, object, (device-cuda, sm_70)
+// NEW_DRIVER: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
+// NEW_DRIVER: 15: clang-offload-packager, {8, 14}, image
+// NEW_DRIVER: 16: offload, " (powerpc64le-ibm-linux-gnu)" {2}, " (powerpc64le-ibm-linux-gnu)" {15}, ir
+// NEW_DRIVER: 17: backend, {16}, assembler, (host-cuda)
+// NEW_DRIVER: 18: assembler, {17}, object, (host-cuda)
+// NEW_DRIVER: 19: clang-linker-wrapper, {18}, image, (host-cuda)

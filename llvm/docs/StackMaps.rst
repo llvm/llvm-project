@@ -328,7 +328,7 @@ format of this section follows:
   uint32 : NumRecords
   StkSizeRecord[NumFunctions] {
     uint64 : Function Address
-    uint64 : Stack Size
+    uint64 : Stack Size (or UINT64_MAX if not statically known)
     uint64 : Record Count
   }
   Constants[NumConstants] {

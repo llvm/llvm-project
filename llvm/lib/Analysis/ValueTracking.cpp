@@ -2698,6 +2698,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     if (isKnownNonZero(Op, Depth, Q) &&
         isGuaranteedNotToBePoison(Op, Q.AC, Q.CxtI, Q.DT, Depth))
       return true;
+  } else if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (II->getIntrinsicID() == Intrinsic::vscale)
+      return true;
   }
 
   KnownBits Known(BitWidth);
@@ -4184,45 +4187,30 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
                                     unsigned ElementSize, uint64_t Offset) {
   assert(V);
 
-  // Look through bitcast instructions and geps.
-  V = V->stripPointerCasts();
-
-  // If the value is a GEP instruction or constant expression, treat it as an
-  // offset.
-  if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-    // Fail if the first GEP operand is not a constant zero and we're
-    // not indexing into the initializer.
-    const ConstantInt *FirstIdx = dyn_cast<ConstantInt>(GEP->getOperand(1));
-    if (!FirstIdx || !FirstIdx->isZero())
-      return false;
-
-    Value *Op0 = GEP->getOperand(0);
-    const GlobalVariable *GV = dyn_cast<GlobalVariable>(Op0);
-    if (!GV)
-      return false;
-
-    // Fail if the offset into the initializer is not constant.
-    const DataLayout &DL = GV->getParent()->getDataLayout();
-    APInt Off(DL.getIndexSizeInBits(GEP->getPointerAddressSpace()), 0);
-    if (!GEP->accumulateConstantOffset(DL, Off))
-      return false;
-
-    // Fail if the constant offset is excessive.
-    uint64_t StartIdx = Off.getLimitedValue();
-    if (StartIdx == UINT64_MAX)
-      return false;
-
-    return getConstantDataArrayInfo(Op0, Slice, ElementSize, StartIdx + Offset);
-  }
-
-  // The GEP instruction, constant or instruction, must reference a global
-  // variable that is a constant and is initialized. The referenced constant
-  // initializer is the array that we'll use for optimization.
-  const GlobalVariable *GV = dyn_cast<GlobalVariable>(V);
+  // Drill down into the pointer expression V, ignoring any intervening
+  // casts, and determine the identity of the object it references along
+  // with the cumulative byte offset into it.
+  const GlobalVariable *GV =
+    dyn_cast<GlobalVariable>(getUnderlyingObject(V));
   if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+    // Fail if V is not based on constant global object.
     return false;
 
   const DataLayout &DL = GV->getParent()->getDataLayout();
+  APInt Off(DL.getIndexTypeSizeInBits(V->getType()), 0);
+
+  if (GV != V->stripAndAccumulateConstantOffsets(DL, Off,
+                                                 /*AllowNonInbounds*/ true))
+    // Fail if a constant offset could not be determined.
+    return false;
+
+  uint64_t StartIdx = Off.getLimitedValue();
+  if (StartIdx == UINT64_MAX)
+    // Fail if the constant offset is excessive.
+    return false;
+
+  Offset += StartIdx;
+
   ConstantDataArray *Array = nullptr;
   ArrayType *ArrayTy = nullptr;
 
@@ -4230,14 +4218,14 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
     Type *GVTy = GV->getValueType();
     uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedSize();
     uint64_t Length = SizeInBytes / (ElementSize / 8);
-    if (Length <= Offset)
-      // Bail on undersized constants to let sanitizers detect library
-      // calls with them as arguments.
-      return false;
 
     Slice.Array = nullptr;
     Slice.Offset = 0;
-    Slice.Length = Length - Offset;
+    // Return an empty Slice for undersized constants to let callers
+    // transform even undefined library calls into simpler, well-defined
+    // expressions.  This is preferable to making the calls although it
+    // prevents sanitizers from detecting such calls.
+    Slice.Length = Length < Offset ? 0 : Length - Offset;
     return true;
   }
 
@@ -4289,6 +4277,12 @@ bool llvm::getConstantStringInfo(const Value *V, StringRef &Str,
 
   if (Slice.Array == nullptr) {
     if (TrimAtNul) {
+      // Return a nul-terminated string even for an empty Slice.  This is
+      // safe because all existing SimplifyLibcalls callers require string
+      // arguments and the behavior of the functions they fold is undefined
+      // otherwise.  Folding the calls this way is preferable to making
+      // the undefined library calls, even though it prevents sanitizers
+      // from reporting such calls.
       Str = StringRef();
       return true;
     }
@@ -4368,9 +4362,13 @@ static uint64_t GetStringLengthH(const Value *V,
     return 0;
 
   if (Slice.Array == nullptr)
+    // Zeroinitializer (including an empty one).
     return 1;
 
-  // Search for nul characters
+  // Search for the first nul character.  Return a conservative result even
+  // when there is no nul.  This is safe since otherwise the string function
+  // being folded such as strlen is undefined, and can be preferable to
+  // making the undefined library call.
   unsigned NullIndex = 0;
   for (unsigned E = Slice.Length; NullIndex < E; ++NullIndex) {
     if (Slice.Array->getElementAsInteger(Slice.Offset + NullIndex) == 0)

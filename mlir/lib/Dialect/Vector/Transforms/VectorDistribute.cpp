@@ -15,6 +15,8 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Transforms/SideEffectUtils.h"
 
+#include <utility>
+
 using namespace mlir;
 using namespace mlir::vector;
 
@@ -46,8 +48,8 @@ rewriteWarpOpToScfFor(RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
     Value bbArg = warpOpBody->getArgument(it.index());
 
     rewriter.setInsertionPoint(ifOp);
-    Value buffer = options.warpAllocationFn(warpOp->getLoc(), rewriter, warpOp,
-                                            bbArg.getType());
+    Value buffer =
+        options.warpAllocationFn(loc, rewriter, warpOp, bbArg.getType());
 
     // Store arg vector into buffer.
     rewriter.setInsertionPoint(ifOp);
@@ -68,7 +70,7 @@ rewriteWarpOpToScfFor(RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
   // Insert sync after all the stores and before all the loads.
   if (!warpOp.getArgs().empty()) {
     rewriter.setInsertionPoint(ifOp);
-    options.warpSyncronizationFn(warpOp->getLoc(), rewriter, warpOp);
+    options.warpSyncronizationFn(loc, rewriter, warpOp);
   }
 
   // Move body of warpOp to ifOp.
@@ -82,8 +84,8 @@ rewriteWarpOpToScfFor(RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
     Value val = it.value();
     Type resultType = warpOp->getResultTypes()[it.index()];
     rewriter.setInsertionPoint(ifOp);
-    Value buffer = options.warpAllocationFn(warpOp->getLoc(), rewriter, warpOp,
-                                            val.getType());
+    Value buffer =
+        options.warpAllocationFn(loc, rewriter, warpOp, val.getType());
 
     // Store yielded value into buffer.
     rewriter.setInsertionPoint(yieldOp);
@@ -121,7 +123,7 @@ rewriteWarpOpToScfFor(RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
   // Insert sync after all the stores and before all the loads.
   if (!yieldOp.operands().empty()) {
     rewriter.setInsertionPointAfter(ifOp);
-    options.warpSyncronizationFn(warpOp->getLoc(), rewriter, warpOp);
+    options.warpSyncronizationFn(loc, rewriter, warpOp);
   }
 
   // Delete terminator and add empty scf.yield.
@@ -148,7 +150,12 @@ static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(
 
   Region &opBody = warpOp.getBodyRegion();
   Region &newOpBody = newWarpOp.getBodyRegion();
+  Block &newOpFirstBlock = newOpBody.front();
   rewriter.inlineRegionBefore(opBody, newOpBody, newOpBody.begin());
+  rewriter.eraseBlock(&newOpFirstBlock);
+  assert(newWarpOp.getWarpRegion().hasOneBlock() &&
+         "expected WarpOp with single block");
+
   auto yield =
       cast<vector::YieldOp>(newOpBody.getBlocks().begin()->getTerminator());
 
@@ -276,7 +283,7 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
   WarpOpTransferWrite(MLIRContext *ctx, DistributionMapFn fn,
                       PatternBenefit b = 1)
       : OpRewritePattern<vector::TransferWriteOp>(ctx, b),
-        distributionMapFn(fn) {}
+        distributionMapFn(std::move(fn)) {}
 
   /// Distribute the TransferWriteOp. Only 1D distributions and vector dims that
   /// are multiples of the distribution ratio are supported at the moment.
@@ -341,8 +348,9 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
     Location loc = writeOp.getLoc();
     VectorType vecType = writeOp.getVectorType();
 
-    // Only vector<1x> is supported at the moment.
-    if (vecType.getShape().size() != 1 || vecType.getShape()[0] != 1)
+    // Only sink out vector of 1 element for now to not serialize large vector
+    // store. This can later be controlled by user.
+    if (vecType.getNumElements() != 1)
       return failure();
 
     // Do not process warp ops that contain only TransferWriteOps.
@@ -711,7 +719,8 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
     rewriter.setInsertionPoint(innerWarp.getBody(), innerWarp.getBody()->end());
     rewriter.create<vector::YieldOp>(innerWarp.getLoc(), yieldOperands);
     rewriter.setInsertionPointAfter(innerWarp);
-    rewriter.create<scf::YieldOp>(forOp.getLoc(), innerWarp.getResults());
+    if (!innerWarp.getResults().empty())
+      rewriter.create<scf::YieldOp>(forOp.getLoc(), innerWarp.getResults());
     rewriter.eraseOp(forOp);
     // Replace the warpOp result coming from the original ForOp.
     for (const auto &res : llvm::enumerate(resultIdx)) {
@@ -808,7 +817,7 @@ void mlir::vector::populateWarpExecuteOnLane0OpToScfForPattern(
 }
 
 void mlir::vector::populateDistributeTransferWriteOpPatterns(
-    RewritePatternSet &patterns, DistributionMapFn distributionMapFn) {
+    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn) {
   patterns.add<WarpOpTransferWrite>(patterns.getContext(), distributionMapFn);
 }
 

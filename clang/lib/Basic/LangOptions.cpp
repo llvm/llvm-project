@@ -195,8 +195,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   // OpenCL, C++ and C2x have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C2x;
 
-  // OpenCL has half keyword
-  Opts.Half = Opts.OpenCL;
+  // OpenCL and HLSL have half keyword
+  Opts.Half = Opts.OpenCL || Opts.HLSL;
 }
 
 FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {

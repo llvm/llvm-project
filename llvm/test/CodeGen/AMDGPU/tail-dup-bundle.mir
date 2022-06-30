@@ -9,16 +9,20 @@ name:            tail_dup_bundle
 body:             |
   ; GCN-LABEL: name: tail_dup_bundle
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.2(0x80000000)
-  ; GCN: bb.2:
-  ; GCN:   BUNDLE {
-  ; GCN:     S_NOP 0
-  ; GCN:     S_NOP 0
-  ; GCN:   }
-  ; GCN:   S_ENDPGM 0
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.2(0x80000000)
-  ; GCN:   S_BRANCH %bb.2
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   BUNDLE {
+  ; GCN-NEXT:     S_NOP 0
+  ; GCN-NEXT:     S_NOP 0
+  ; GCN-NEXT:   }
+  ; GCN-NEXT:   S_ENDPGM 0
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_BRANCH %bb.2
   bb.0:
     successors: %bb.2(0x80000000)
 

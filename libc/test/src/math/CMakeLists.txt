@@ -1271,6 +1271,34 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fputil
 )
 
+add_fp_unittest(
+  fmodf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmodf_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmodf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fmod_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmod_test.cpp
+  HDRS
+    FModTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmod
+    libc.src.__support.FPUtil.fputil
+)
+
 add_subdirectory(generic)
 add_subdirectory(exhaustive)
 add_subdirectory(differential_testing)

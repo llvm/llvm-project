@@ -151,15 +151,12 @@ multiclass VOP2Inst_e32<string opName,
                Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
   } // End renamedInGFX9 = GFX9Renamed
 }
-multiclass VOP2Inst_e32_VOPD<string opName,
-                        VOPProfile P,
-                        bits<5> VOPDOp,
-                        string VOPDName,
-                        SDPatternOperator node = null_frag,
-                        string revOp = opName,
-                        bit GFX9Renamed = 0> {
-    defm NAME : VOP2Inst_e32<opName, P, node, revOp, GFX9Renamed>,
-                VOPD_Component<VOPDOp, VOPDName>;
+multiclass
+    VOP2Inst_e32_VOPD<string opName, VOPProfile P, bits<5> VOPDOp,
+                      string VOPDName, SDPatternOperator node = null_frag,
+                      string revOp = opName, bit GFX9Renamed = 0> {
+  defm NAME : VOP2Inst_e32<opName, P, node, revOp, GFX9Renamed>,
+              VOPD_Component<VOPDOp, VOPDName>;
 }
 multiclass VOP2Inst_e64<string opName,
                         VOPProfile P,
@@ -266,16 +263,19 @@ multiclass VOP2bInstAliases<VOP2_Pseudo ps, VOP2_Real inst, string OpName> {
   }
 }
 
-multiclass VOP2eInst <string opName,
-                      VOPProfile P,
-                      SDPatternOperator node = null_frag,
-                      string revOp = opName,
-                      bit useSGPRInput = !eq(P.NumSrcArgs, 3)> {
+multiclass
+    VOP2eInst_Base<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
+                   SDPatternOperator node, string revOp, bit useSGPRInput> {
 
   let SchedRW = [Write32Bit] in {
     let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]) in {
-      def _e32 : VOP2_Pseudo <opName, P>,
-                 Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
+      if !eq(VOPDOp, -1) then
+        def _e32 : VOP2_Pseudo <opName, P>,
+                   Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
+      else
+        def _e32 : VOP2_Pseudo <opName, P>,
+                   Commutable_REV<revOp#"_e32", !eq(revOp, opName)>,
+                   VOPD_Component<VOPDOp, VOPDName>;
 
       foreach _ = BoolToList<P.HasExtSDWA>.ret in
         def _sdwa : VOP2_SDWA_Pseudo <opName, P> {
@@ -298,41 +298,16 @@ multiclass VOP2eInst <string opName,
   }
 }
 
-multiclass VOP2eInst_VOPD <string opName,
-                      VOPProfile P,
-                      bits<5> VOPDOp,
-                      string VOPDName,
-                      SDPatternOperator node = null_frag,
-                      string revOp = opName,
-                      bit useSGPRInput = !eq(P.NumSrcArgs, 3)
-                      > {
+multiclass
+    VOP2eInst<string opName, VOPProfile P, SDPatternOperator node = null_frag,
+              string revOp = opName, bit useSGPRInput = !eq(P.NumSrcArgs, 3)>
+    : VOP2eInst_Base<opName, P, -1, "", node, revOp, useSGPRInput>;
 
-  let SchedRW = [Write32Bit] in {
-    let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]) in {
-      def _e32 : VOP2_Pseudo <opName, P>,
-                 Commutable_REV<revOp#"_e32", !eq(revOp, opName)>,
-                 VOPD_Component<VOPDOp, VOPDName>;
-
-      foreach _ = BoolToList<P.HasExtSDWA>.ret in
-        def _sdwa : VOP2_SDWA_Pseudo <opName, P> {
-          let AsmMatchConverter = "cvtSdwaVOP2e";
-        }
-
-      foreach _ = BoolToList<P.HasExtDPP>.ret in
-        def _dpp  : VOP2_DPP_Pseudo <opName, P>;
-    }
-
-    def _e64 : VOP3InstBase <opName, P, node, 1>,
-               Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
-      let isReMaterializable = 1;
-    }
-
-    let SubtargetPredicate = isGFX11Plus in {
-      foreach _ = BoolToList<P.HasExtVOP3DPP>.ret in
-        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-    } // End SubtargetPredicate = isGFX11Plus
-  }
-}
+multiclass
+    VOP2eInst_VOPD<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
+                   SDPatternOperator node = null_frag, string revOp = opName,
+                   bit useSGPRInput = !eq(P.NumSrcArgs, 3)>
+    : VOP2eInst_Base<opName, P, VOPDOp, VOPDName, node, revOp, useSGPRInput>;
 
 class VOP2eInstAlias <VOP2_Pseudo ps, Instruction inst, string opnd = ""> :
   InstAlias <ps.OpName#" "#ps.Pfl.Asm32#", "#opnd,
@@ -816,7 +791,7 @@ class add16P<VOPProfile P> :  VOPProfile<P.ArgVT> {
 }
 
 let SubtargetPredicate = Has16BitInsts in {
-
+let isReMaterializable = 1 in {
 let FPDPRounding = 1 in {
 def V_MADMK_F16 : VOP2_Pseudo <"v_madmk_f16", VOP_MADMK_F16, [], "">;
 defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", VOP_F16_F16_I32, AMDGPUldexp>;
@@ -852,6 +827,7 @@ def V_MADAK_F16 : VOP2_Pseudo <"v_madak_f16", VOP_MADAK_F16, [], "">;
 }
 
 } // End FPDPRounding = 1
+
 // TODO-GFX11 see above comment for VOP2_to_VOP3_Profile usage.
 /*defm V_ADD_U16 : VOP2Inst <"v_add_u16", VOP2_to_VOP3_Profile<VOP_I16_I16_I16_ARITH>, add>;*/
 /*defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP2_to_VOP3_Profile<VOP_I16_I16_I16_ARITH>, sub>;*/
@@ -876,13 +852,14 @@ let SubtargetPredicate = isGFX8GFX9 in {
   defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP_I16_I16_I16_ARITH, sub>;
   defm V_SUBREV_U16 : VOP2Inst <"v_subrev_u16", VOP_I16_I16_I16_ARITH, null_frag, "v_sub_u16">;
 }
+} // End isCommutable = 1
+} // End isReMaterializable = 1
 
+// FIXME: Missing FPDPRounding
 let Constraints = "$vdst = $src2", DisableEncoding="$src2",
-    isConvertibleToThreeAddress = 1 in {
+    isConvertibleToThreeAddress = 1, isCommutable = 1 in {
 defm V_MAC_F16 : VOP2Inst <"v_mac_f16", VOP_MAC_F16>;
 }
-} // End isCommutable = 1
-
 } // End SubtargetPredicate = Has16BitInsts
 
 let SubtargetPredicate = HasDLInsts in {
@@ -998,12 +975,12 @@ def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">, VOPD_Compon
 
 let SubtargetPredicate = isGFX10Plus in {
 
-let FPDPRounding = 1 in {
+let FPDPRounding = 1, isReMaterializable = 1 in {
 def V_FMAMK_F16 : VOP2_Pseudo <"v_fmamk_f16", VOP_MADMK_F16, [], "">;
 
 let isCommutable = 1 in
 def V_FMAAK_F16 : VOP2_Pseudo <"v_fmaak_f16", VOP_MADAK_F16, [], "">;
-} // End FPDPRounding  = 1
+} // End FPDPRounding  = 1, isReMaterializable = 1
 
 let Constraints = "$vdst = $src2",
     DisableEncoding="$src2",

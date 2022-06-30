@@ -1770,14 +1770,8 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
 
   case AMDGPU::S_NOP:
     return MI.getOperand(0).getImm() + 1;
-
-  // FIXME: Any other pseudo instruction?
   // SI_RETURN_TO_EPILOG is a fallthrough to code outside of the function. The
   // hazard, even if one exist, won't really be visible. Should we handle it?
-  case AMDGPU::SI_MASKED_UNREACHABLE:
-  case AMDGPU::WAVE_BARRIER:
-  case AMDGPU::SCHED_BARRIER:
-    return 0;
   }
 }
 
@@ -4470,7 +4464,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   if (isSMRD(MI)) {
-    if (MI.mayStore()) {
+    if (MI.mayStore() &&
+        ST.getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS) {
       // The register offset form of scalar stores may only use m0 as the
       // soffset register.
       const MachineOperand *Soff = getNamedOperand(MI, AMDGPU::OpName::soffset);
@@ -7121,12 +7116,12 @@ void SIInstrInfo::movePackToVALU(SetVectorType &Worklist,
   case AMDGPU::S_PACK_HL_B32_B16: {
     Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
-      .addImm(16)
-      .add(Src0);
+        .addImm(16)
+        .add(Src0);
     BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHL_OR_B32_e64), ResultReg)
-      .add(Src1)
-      .addImm(16)
-      .addReg(TmpReg, RegState::Kill);
+        .add(Src1)
+        .addImm(16)
+        .addReg(TmpReg, RegState::Kill);
     break;
   }
   case AMDGPU::S_PACK_HH_B32_B16: {

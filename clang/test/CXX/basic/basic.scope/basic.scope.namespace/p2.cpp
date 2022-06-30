@@ -30,17 +30,20 @@ module;
 
 void test_early() {
   in_header = 1; // expected-error {{missing '#include "foo.h"'; 'in_header' must be declared before it is used}}
-  // expected-note@*{{not visible}}
+  // expected-note@* {{not visible}}
 
   global_module_fragment = 1; // expected-error {{missing '#include'; 'global_module_fragment' must be declared before it is used}}
-  // expected-note@p2.cpp:16 {{not visible}}
+                              // expected-note@p2.cpp:16 {{not visible}}
 
   exported = 1; // expected-error {{must be imported from module 'A'}}
-  // expected-note@p2.cpp:18 {{not visible}}
+                // expected-note@p2.cpp:18 {{declaration here is not visible}}
 
-  not_exported = 1; // expected-error {{undeclared identifier}}
+  not_exported = 1; // expected-error {{declaration of 'not_exported' must be imported from module 'A' before it is required}}
+                    // expected-note@p2.cpp:19 {{declaration here is not visible}}
 
-  internal = 1; // expected-error {{undeclared identifier}}
+  // FIXME: We need better diagnostic message for static variable.
+  internal = 1; // expected-error {{declaration of 'internal' must be imported from module 'A' before it is required}}
+                // expected-note@p2.cpp:20 {{declaration here is not visible}}
 
   not_exported_private = 1; // expected-error {{undeclared identifier}}
 
@@ -55,7 +58,7 @@ import A;
 
 void test_late() {
   in_header = 1; // expected-error {{missing '#include "foo.h"'; 'in_header' must be declared before it is used}}
-  // expected-note@*{{not visible}}
+  // expected-note@* {{not visible}}
 
   global_module_fragment = 1; // expected-error {{missing '#include'; 'global_module_fragment' must be declared before it is used}}
   // expected-note@p2.cpp:16 {{not visible}}
@@ -64,14 +67,14 @@ void test_late() {
 
   not_exported = 1;
 #ifndef IMPLEMENTATION
-  // expected-error@-2 {{undeclared identifier 'not_exported'; did you mean 'exported'}}
-  // expected-note@p2.cpp:18 {{declared here}}
+  // expected-error@-2 {{declaration of 'not_exported' must be imported from module 'A' before it is required}}
+  // expected-note@p2.cpp:19 {{declaration here is not visible}}
 #endif
 
   internal = 1;
 #ifndef IMPLEMENTATION
-  // FIXME: should not be visible here
-  // expected-error@-3 {{undeclared identifier}}
+  // expected-error@-2 {{declaration of 'internal' must be imported from module 'A' before it is required}}
+  // expected-note@p2.cpp:20 {{declaration here is not visible}}
 #endif
 
   not_exported_private = 1;

@@ -583,6 +583,7 @@ def OMP_Target : Directive<"target"> {
     VersionedClause<OMPC_IsDevicePtr>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_InReduction, 50>,
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_UsesAllocators, 50>
   ];
@@ -1643,6 +1644,28 @@ def OMP_MasterTaskloop : Directive<"master taskloop"> {
     VersionedClause<OMPC_Allocate>
   ];
 }
+def OMP_MaskedTaskloop : Directive<"masked taskloop"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Final>,
+    VersionedClause<OMPC_Untied>,
+    VersionedClause<OMPC_Mergeable>,
+    VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_GrainSize>,
+    VersionedClause<OMPC_NoGroup>,
+    VersionedClause<OMPC_NumTasks>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_InReduction>,
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_Filter>
+  ];
+}
 def OMP_ParallelMasterTaskloop :
     Directive<"parallel master taskloop"> {
   let allowedClauses = [
@@ -1692,6 +1715,34 @@ def OMP_MasterTaskloopSimd : Directive<"master taskloop simd"> {
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_NonTemporal, 50>,
     VersionedClause<OMPC_Order, 50>
+  ];
+}
+def OMP_MaskedTaskloopSimd : Directive<"masked taskloop simd"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Final>,
+    VersionedClause<OMPC_Untied>,
+    VersionedClause<OMPC_Mergeable>,
+    VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Linear>,
+    VersionedClause<OMPC_Aligned>,
+    VersionedClause<OMPC_SafeLen>,
+    VersionedClause<OMPC_SimdLen>,
+    VersionedClause<OMPC_GrainSize>,
+    VersionedClause<OMPC_NoGroup>,
+    VersionedClause<OMPC_NumTasks>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_InReduction>,
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_NonTemporal, 50>,
+    VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Filter>
   ];
 }
 def OMP_ParallelMasterTaskloopSimd :

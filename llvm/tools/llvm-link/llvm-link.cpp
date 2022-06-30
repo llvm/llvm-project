@@ -124,6 +124,11 @@ static cl::opt<bool> NoVerify("disable-verify",
                               cl::desc("Do not run the verifier"), cl::Hidden,
                               cl::cat(LinkCategory));
 
+static cl::opt<bool> IgnoreNonBitcode(
+    "ignore-non-bitcode",
+    cl::desc("Do not report an error for non-bitcode files in archives"),
+    cl::Hidden);
+
 static ExitOnError ExitOnErr;
 
 // Read the specified bitcode file in and return it. This routine searches the
@@ -199,6 +204,8 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
                        MemBuf.get().getBufferStart()),
                    reinterpret_cast<const unsigned char *>(
                        MemBuf.get().getBufferEnd()))) {
+      if (IgnoreNonBitcode)
+        continue;
       errs() << Argv0 << ": ";
       WithColor::error() << "  member of archive is not a bitcode file: '"
                          << ChildName << "'\n";

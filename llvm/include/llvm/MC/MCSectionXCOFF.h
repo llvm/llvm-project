@@ -38,6 +38,7 @@ class MCSectionXCOFF final : public MCSection {
   Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags;
   bool MultiSymbolsAllowed;
   static constexpr unsigned DefaultAlignVal = 4;
+  static constexpr unsigned DefaultTextAlignVal = 32;
 
   MCSectionXCOFF(StringRef Name, XCOFF::StorageMappingClass SMC,
                  XCOFF::SymbolType ST, SectionKind K, MCSymbolXCOFF *QualName,
@@ -57,9 +58,14 @@ class MCSectionXCOFF final : public MCSection {
 
     QualName->setRepresentedCsect(this);
     QualName->setStorageClass(XCOFF::C_HIDEXT);
-    // A csect is 4 byte aligned by default, except for undefined symbol csects.
-    if (ST != XCOFF::XTY_ER)
-      setAlignment(Align(DefaultAlignVal));
+    if (ST != XCOFF::XTY_ER) {
+      // For a csect for program code, set the alignment to 32 bytes by default.
+      // For other csects, set the alignment to 4 bytes by default.
+      if (SMC == XCOFF::XMC_PR)
+        setAlignment(Align(DefaultTextAlignVal));
+      else
+        setAlignment(Align(DefaultAlignVal));
+    }
   }
 
   MCSectionXCOFF(StringRef Name, SectionKind K, MCSymbolXCOFF *QualName,
@@ -74,9 +80,8 @@ class MCSectionXCOFF final : public MCSection {
     // FIXME: use a more meaningful name for non csect sections.
     QualName->setRepresentedCsect(this);
 
-    // Set default alignment 4 for all non csect sections for now.
-    // FIXME: set different alignments according to section types.
-    setAlignment(Align(DefaultAlignVal));
+    // Use default text alignment as the alignment for DWARF sections.
+    setAlignment(Align(DefaultTextAlignVal));
   }
 
   void printCsectDirective(raw_ostream &OS) const;
@@ -111,8 +116,8 @@ public:
   bool isVirtualSection() const override;
   StringRef getSymbolTableName() const { return SymbolTableName; }
   bool isMultiSymbolsAllowed() const { return MultiSymbolsAllowed; }
-  bool isCsect() const { return CsectProp.hasValue(); }
-  bool isDwarfSect() const { return DwarfSubtypeFlags.hasValue(); }
+  bool isCsect() const { return CsectProp.has_value(); }
+  bool isDwarfSect() const { return DwarfSubtypeFlags.has_value(); }
   Optional<XCOFF::DwarfSectionSubtypeFlags> getDwarfSubtypeFlags() const {
     return DwarfSubtypeFlags;
   }

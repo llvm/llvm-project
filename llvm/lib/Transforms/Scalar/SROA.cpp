@@ -2733,10 +2733,9 @@ private:
     Type *SplatIntTy = Type::getIntNTy(VTy->getContext(), Size * 8);
     V = IRB.CreateMul(
         IRB.CreateZExt(V, SplatIntTy, "zext"),
-        ConstantExpr::getUDiv(
-            Constant::getAllOnesValue(SplatIntTy),
-            ConstantExpr::getZExt(Constant::getAllOnesValue(V->getType()),
-                                  SplatIntTy)),
+        IRB.CreateUDiv(Constant::getAllOnesValue(SplatIntTy),
+                       IRB.CreateZExt(Constant::getAllOnesValue(V->getType()),
+                                      SplatIntTy)),
         "isplat");
     return V;
   }

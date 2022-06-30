@@ -14,9 +14,23 @@
 // RUN: %clang_hwasan -O2 %s -o %t
 // RUN: not %run %t 1 2>&1 | FileCheck --check-prefixes=CHECK,RSYM %s
 
+// RUN: %clang_hwasan -DUSE_NOSANITIZE %s -o %t && %run %t 0
+// RUN: %clang_hwasan -DUSE_NOSANITIZE %s -o %t && %run %t 1
+// RUN: %clang_hwasan -DUSE_NOSANITIZE %s -o %t -fno-pic && %run %t 1
+// RUN: %clang_hwasan -DUSE_NOSANITIZE %s -o %t -O2 && %run %t 1
+// RUN: %clang_hwasan -DUSE_NOSANITIZE %s -o %t -fno-pic -O2 && %run %t 1
+
 // REQUIRES: pointer-tagging
 
+#include <stdlib.h>
+
+int a = 1;
+#ifdef USE_NOSANITIZE
+__attribute__((no_sanitize("hwaddress"))) int x = 1;
+#else // USE_NOSANITIZE
 int x = 1;
+#endif // USE_NOSANITIZE
+int b = 1;
 
 int atoi(const char *);
 

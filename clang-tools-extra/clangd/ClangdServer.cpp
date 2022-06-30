@@ -411,7 +411,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       clang::clangd::trace::Span Tracer("Completion results callback");
       CB(std::move(Result));
     }
-    if (SpecFuzzyFind && SpecFuzzyFind->NewReq.hasValue()) {
+    if (SpecFuzzyFind && SpecFuzzyFind->NewReq) {
       std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
       CachedCompletionFuzzyFindRequestByFile[File] =
           SpecFuzzyFind->NewReq.getValue();

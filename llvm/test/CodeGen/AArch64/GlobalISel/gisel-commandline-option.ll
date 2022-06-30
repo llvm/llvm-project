@@ -61,9 +61,8 @@
 ; VERIFY-O0-NEXT:  AArch64O0PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-O1-NEXT: Basic Alias Analysis (stateless AA impl)
-; ENABLED-O1-NEXT: Function Alias Analysis Results 
+; ENABLED-O1-NEXT: Function Alias Analysis Results
 ; ENABLED-O1-NEXT: LoadStoreOpt
-; ENABLED-O1-NEXT:  Analysis containing CSE Info
 ; VERIFY-O0-NEXT:  Analysis containing CSE Info
 ; ENABLED-NEXT:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code

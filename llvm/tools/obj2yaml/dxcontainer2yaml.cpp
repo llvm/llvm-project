@@ -40,8 +40,8 @@ dumpDXContainer(MemoryBufferRef Source) {
     Obj->Header.PartOffsets->push_back(P.Offset);
     if (P.Part.getName() == "DXIL") {
       Optional<DXContainer::DXILData> DXIL = Container.getDXIL();
-      assert(DXIL.hasValue() && "Since we are iterating and found a DXIL part, "
-                                "this should never not have a value");
+      assert(DXIL && "Since we are iterating and found a DXIL part, "
+                     "this should never not have a value");
       Obj->Parts.push_back(DXContainerYAML::Part{
           P.Part.getName().str(), P.Part.Size,
           DXContainerYAML::DXILProgram{

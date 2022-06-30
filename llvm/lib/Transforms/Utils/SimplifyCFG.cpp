@@ -5550,11 +5550,6 @@ ConstantFold(Instruction *I, const DataLayout &DL,
       return nullptr;
   }
 
-  if (CmpInst *Cmp = dyn_cast<CmpInst>(I)) {
-    return ConstantFoldCompareInstOperands(Cmp->getPredicate(), COps[0],
-                                           COps[1], DL);
-  }
-
   return ConstantFoldInstOperands(I, COps, DL);
 }
 

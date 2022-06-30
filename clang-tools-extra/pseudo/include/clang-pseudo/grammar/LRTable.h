@@ -38,6 +38,8 @@
 
 #include "clang-pseudo/grammar/Grammar.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/Support/Capacity.h"
 #include <cstdint>
 #include <vector>
 
@@ -62,6 +64,9 @@ public:
 
   // Action represents the terminal and nonterminal actions, it combines the
   // entry of the ACTION and GOTO tables from the LR literature.
+  //
+  // FIXME: as we move away from a homogeneous table structure shared between
+  // action types, this class becomes less useful. Remove it.
   class Action {
   public:
     enum Kind : uint8_t {
@@ -73,8 +78,6 @@ public:
       // A shift is a forward transition, and the value n is the next state that
       // the parser is to enter.
       Shift,
-      // Reduce by a rule: pop the state stack.
-      Reduce,
 
       // NOTE: there are no typical accept actions in the LRtable, accept
       // actions are handled specifically in the parser -- if the parser
@@ -91,7 +94,6 @@ public:
 
     static Action goTo(StateID S) { return Action(GoTo, S); }
     static Action shift(StateID S) { return Action(Shift, S); }
-    static Action reduce(RuleID RID) { return Action(Reduce, RID); }
     static Action sentinel() { return Action(Sentinel, 0); }
 
     StateID getShiftState() const {
@@ -100,10 +102,6 @@ public:
     }
     StateID getGoToState() const {
       assert(kind() == GoTo);
-      return Value;
-    }
-    RuleID getReduceRule() const {
-      assert(kind() == Reduce);
       return Value;
     }
     Kind kind() const { return static_cast<Kind>(K); }
@@ -123,16 +121,35 @@ public:
     uint16_t Value : ValueBits;
   };
 
-  // Returns all available actions for the given state on a terminal.
-  // Expected to be called by LR parsers.
-  llvm::ArrayRef<Action> getActions(StateID State, SymbolID Terminal) const;
   // Returns the state after we reduce a nonterminal.
   // Expected to be called by LR parsers.
+  // REQUIRES: Nonterminal is valid here.
   StateID getGoToState(StateID State, SymbolID Nonterminal) const;
+  // Returns the state after we shift a terminal.
+  // Expected to be called by LR parsers.
+  // If the terminal is invalid here, returns None.
+  llvm::Optional<StateID> getShiftState(StateID State, SymbolID Terminal) const;
 
-  // Looks up available actions.
-  // Returns empty if no available actions in the table.
-  llvm::ArrayRef<Action> find(StateID State, SymbolID Symbol) const;
+  // Returns the possible reductions from a state.
+  //
+  // These are not keyed by a lookahead token. Instead, call canFollow() to
+  // check whether a reduction should apply in the current context:
+  //   for (RuleID R : LR.getReduceRules(S)) {
+  //     if (!LR.canFollow(G.lookupRule(R).Target, NextToken))
+  //       continue;
+  //     // ...apply reduce...
+  //   }
+  llvm::ArrayRef<RuleID> getReduceRules(StateID State) const {
+    return llvm::makeArrayRef(&Reduces[ReduceOffset[State]],
+                              &Reduces[ReduceOffset[State + 1]]);
+  }
+  // Returns whether Terminal can follow Nonterminal in a valid source file.
+  bool canFollow(SymbolID Nonterminal, SymbolID Terminal) const {
+    assert(isToken(Terminal));
+    assert(isNonterminal(Nonterminal));
+    return FollowSets.test(tok::NUM_TOKENS * Nonterminal +
+                           symbolToToken(Terminal));
+  }
 
   // Returns the state from which the LR parser should start to parse the input
   // tokens as the given StartSymbol.
@@ -146,9 +163,12 @@ public:
   StateID getStartState(SymbolID StartSymbol) const;
 
   size_t bytes() const {
-    return sizeof(*this) + Actions.capacity() * sizeof(Action) +
-           Symbols.capacity() * sizeof(SymbolID) +
-           StateOffset.capacity() * sizeof(uint32_t);
+    return sizeof(*this) + llvm::capacity_in_bytes(Actions) +
+           llvm::capacity_in_bytes(Symbols) +
+           llvm::capacity_in_bytes(StateOffset) +
+           llvm::capacity_in_bytes(Reduces) +
+           llvm::capacity_in_bytes(ReduceOffset) +
+           llvm::capacity_in_bytes(FollowSets);
   }
 
   std::string dumpStatistics() const;
@@ -157,17 +177,25 @@ public:
   // Build a SLR(1) parsing table.
   static LRTable buildSLR(const Grammar &G);
 
-  class Builder;
+  struct Builder;
   // Represents an entry in the table, used for building the LRTable.
   struct Entry {
     StateID State;
     SymbolID Symbol;
     Action Act;
   };
+  struct ReduceEntry {
+    StateID State;
+    RuleID Rule;
+  };
   // Build a specifid table for testing purposes.
-  static LRTable buildForTests(const GrammarTable &, llvm::ArrayRef<Entry>);
+  static LRTable buildForTests(const Grammar &G, llvm::ArrayRef<Entry>,
+                               llvm::ArrayRef<ReduceEntry>);
 
 private:
+  // Looks up actions stored in the generic table.
+  llvm::ArrayRef<Action> find(StateID State, SymbolID Symbol) const;
+
   // Conceptually the LR table is a multimap from (State, SymbolID) => Action.
   // Our physical representation is quite different for compactness.
 
@@ -183,6 +211,17 @@ private:
   std::vector<Action> Actions;
   // A sorted table, storing the start state for each target parsing symbol.
   std::vector<std::pair<SymbolID, StateID>> StartStates;
+
+  // Given a state ID S, the half-open range of Reduces is
+  // [ReduceOffset[S], ReduceOffset[S+1])
+  std::vector<uint32_t> ReduceOffset;
+  std::vector<RuleID> Reduces;
+  // Conceptually this is a bool[SymbolID][Token], each entry describing whether
+  // the grammar allows the (nonterminal) symbol to be followed by the token.
+  //
+  // This is flattened by encoding the (SymbolID Nonterminal, tok::Kind Token)
+  // as an index: Nonterminal * NUM_TOKENS + Token.
+  llvm::BitVector FollowSets;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LRTable::Action &);
 

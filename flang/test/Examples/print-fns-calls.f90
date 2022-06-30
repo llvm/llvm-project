@@ -5,15 +5,9 @@
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangPrintFunctionNames%pluginext -plugin print-fns %s 2>&1 | FileCheck %s
 
-!-----------------------------
-! EXPECTED OUTPUT: Counts == 0
-!-----------------------------
 ! CHECK: ==== Functions: 0 ====
 ! CHECK-NEXT: ==== Subroutines: 0 ====
 
-!-----------------------------
-! INPUT
-!-----------------------------
 program main
     call subroutine1
     fn1 = function1()

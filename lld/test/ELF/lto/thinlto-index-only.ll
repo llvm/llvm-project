@@ -1,56 +1,54 @@
 ; REQUIRES: x86
+; RUN: rm -rf %t && mkdir %t && cd %t
 
-; First ensure that the ThinLTO handling in lld handles
-; bitcode without summary sections gracefully and generates index file.
-; RUN: llvm-as %s -o %t1.o
-; RUN: llvm-as %p/Inputs/thinlto.ll -o %t2.o
-; RUN: rm -f %t3
-; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t1.o %t2.o -o %t3
-; RUN: ls %t2.o.thinlto.bc
-; RUN: not test -e %t3
-; RUN: ld.lld -shared %t1.o %t2.o -o %t3
-; RUN: llvm-nm %t3 | FileCheck %s --check-prefix=NM
+;; First ensure that the ThinLTO handling in lld handles
+;; bitcode without summary sections gracefully and generates index file.
+; RUN: llvm-as %s -o 1.o
+; RUN: llvm-as %p/Inputs/thinlto.ll -o 2.o
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 2.o -o 3
+; RUN: ls 2.o.thinlto.bc
+; RUN: not test -e 3
+; RUN: ld.lld -shared 1.o 2.o -o 3
+; RUN: llvm-nm 3 | FileCheck %s --check-prefix=NM
 
-; Basic ThinLTO tests.
-; RUN: opt -module-summary %s -o %t1.o
-; RUN: opt -module-summary %p/Inputs/thinlto.ll -o %t2.o
-; RUN: opt -module-summary %p/Inputs/thinlto_empty.ll -o %t3.o
+;; Basic ThinLTO tests.
+; RUN: opt -module-summary %s -o 1.o
+; RUN: opt -module-summary %p/Inputs/thinlto.ll -o 2.o
+; RUN: opt -module-summary %p/Inputs/thinlto_empty.ll -o 3.o
 
-; Ensure lld generates an index and not a binary if requested.
-; RUN: rm -f %t4
-; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t1.o %t2.o -o %t4
-; RUN: llvm-bcanalyzer -dump %t1.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND1
-; RUN: llvm-bcanalyzer -dump %t2.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND2
-; RUN: not test -e %t4
+;; Ensure lld generates an index and not a binary if requested.
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 2.o -o 4
+; RUN: llvm-bcanalyzer -dump 1.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND1
+; RUN: llvm-bcanalyzer -dump 2.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND2
+; RUN: not test -e 4
 
-; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib
-; RUN: rm -f %t2.o.thinlto.bc %t4
-; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t1.o %t3.o --start-lib %t2.o --end-lib -o %t4
-; RUN: llvm-dis < %t2.o.thinlto.bc | grep -q '\^0 = module:'
-; RUN: not test -e %t4
+;; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib
+; RUN: rm -f 2.o.thinlto.bc 4
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 3.o --start-lib 2.o --end-lib -o 4
+; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'
+; RUN: not test -e 4
 
-; Test that LLD generates an empty index even for lazy object file that is not added to link.
-; Test LLD generates empty imports file either because of thinlto-emit-imports-files option.
-; RUN: rm -f %t1.o.thinlto.bc
-; RUN: rm -f %t1.o.imports
-; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t2.o --start-lib %t1.o --end-lib \
-; RUN: --plugin-opt=thinlto-emit-imports-files -o %t3
-; RUN: ls %t1.o.thinlto.bc
-; RUN: ls %t1.o.imports
+;; Test that LLD generates an empty index even for lazy object file that is not added to link.
+;; Test LLD generates empty imports file either because of thinlto-emit-imports-files option.
+; RUN: rm -f 1.o.thinlto.bc 1.o.imports
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 2.o --start-lib 1.o --end-lib \
+; RUN: --plugin-opt=thinlto-emit-imports-files -o 3
+; RUN: ls 1.o.thinlto.bc
+; RUN: ls 1.o.imports
 
-; Ensure LLD generates an empty index for each bitcode file even if all bitcode files are lazy.
-; RUN: rm -f %t1.o.thinlto.bc
-; RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux-gnu /dev/null -o %tdummy.o
-; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %tdummy.o --start-lib %t1.o --end-lib -o /dev/null
-; RUN: ls %t1.o.thinlto.bc
+;; Ensure LLD generates an empty index for each bitcode file even if all bitcode files are lazy.
+; RUN: rm -f 1.o.thinlto.bc
+; RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux-gnu /dev/null -o dummy.o
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared dummy.o --start-lib 1.o --end-lib -o /dev/null
+; RUN: ls 1.o.thinlto.bc
 
 ; NM: T f
 
-; The backend index for this module contains summaries from itself and
-; Inputs/thinlto.ll, as it imports from the latter.
+;; The backend index for this module contains summaries from itself and
+;; Inputs/thinlto.ll, as it imports from the latter.
 ; BACKEND1: <MODULE_STRTAB_BLOCK
-; BACKEND1-NEXT: <ENTRY {{.*}} record string = '{{.*}}thinlto-index-only.ll.tmp{{.*}}.o'
-; BACKEND1-NEXT: <ENTRY {{.*}} record string = '{{.*}}thinlto-index-only.ll.tmp{{.*}}.o'
+; BACKEND1-NEXT: <ENTRY {{.*}} record string = '1.o'
+; BACKEND1-NEXT: <ENTRY {{.*}} record string = '2.o'
 ; BACKEND1-NEXT: </MODULE_STRTAB_BLOCK
 ; BACKEND1: <GLOBALVAL_SUMMARY_BLOCK
 ; BACKEND1: <VERSION
@@ -61,10 +59,10 @@
 ; BACKEND1: <COMBINED
 ; BACKEND1: </GLOBALVAL_SUMMARY_BLOCK
 
-; The backend index for Input/thinlto.ll contains summaries from itself only,
-; as it does not import anything.
+;; The backend index for Input/thinlto.ll contains summaries from itself only,
+;; as it does not import anything.
 ; BACKEND2: <MODULE_STRTAB_BLOCK
-; BACKEND2-NEXT: <ENTRY {{.*}} record string = '{{.*}}thinlto-index-only.ll.tmp2.o'
+; BACKEND2-NEXT: <ENTRY {{.*}} record string = '2.o'
 ; BACKEND2-NEXT: </MODULE_STRTAB_BLOCK
 ; BACKEND2-NEXT: <GLOBALVAL_SUMMARY_BLOCK
 ; BACKEND2-NEXT: <VERSION

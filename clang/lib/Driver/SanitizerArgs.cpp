@@ -369,6 +369,19 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Add &= ~NotAllowedWithMinimalRuntime;
       }
 
+      if (llvm::opt::Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
+        StringRef CM = A->getValue();
+        if (CM != "small" &&
+            (Add & SanitizerKind::Function & ~DiagnosedKinds)) {
+          if (DiagnoseErrors)
+            D.Diag(diag::err_drv_argument_only_allowed_with)
+                << "-fsanitize=function"
+                << "-mcmodel=small";
+          Add &= ~SanitizerKind::Function;
+          DiagnosedKinds |= SanitizerKind::Function;
+        }
+      }
+
       // FIXME: Make CFI on member function calls compatible with cross-DSO CFI.
       // There are currently two problems:
       // - Virtual function call checks need to pass a pointer to the function

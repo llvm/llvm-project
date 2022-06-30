@@ -150,6 +150,14 @@ MDNode *MDBuilder::mergeCallbackEncodings(MDNode *ExistingCallbacks,
   return MDNode::get(Context, Ops);
 }
 
+MDNode *MDBuilder::createRTTIPointerPrologue(Constant *PrologueSig,
+                                             Constant *RTTI) {
+  SmallVector<Metadata *, 4> Ops;
+  Ops.push_back(createConstant(PrologueSig));
+  Ops.push_back(createConstant(RTTI));
+  return MDNode::get(Context, Ops);
+}
+
 MDNode *MDBuilder::createAnonymousAARoot(StringRef Name, MDNode *Extra) {
   SmallVector<Metadata *, 3> Args(1, nullptr);
   if (Extra)

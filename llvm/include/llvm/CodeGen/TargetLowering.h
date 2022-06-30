@@ -2196,6 +2196,18 @@ public:
     return false;
   }
 
+  /// Return true if it is beneficial to expand an @llvm.powi.* intrinsic.
+  /// If not optimizing for size, expanding @llvm.powi.* intrinsics is always
+  /// considered beneficial.
+  /// If optimizing for size, expansion is only considered beneficial for upto
+  /// 5 multiplies and a divide (if the exponent is negative).
+  bool isBeneficialToExpandPowI(int Exponent, bool OptForSize) const {
+    if (Exponent < 0)
+      Exponent = -Exponent;
+    return !OptForSize ||
+           (countPopulation((unsigned int)Exponent) + Log2_32(Exponent) < 7);
+  }
+
   //===--------------------------------------------------------------------===//
   // TargetLowering Configuration Methods - These methods should be invoked by
   // the derived class constructor to configure this object for the target.

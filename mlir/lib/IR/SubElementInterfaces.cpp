@@ -8,12 +8,16 @@
 
 #include "mlir/IR/SubElementInterfaces.h"
 
+#include "llvm/ADT/DenseSet.h"
+
 using namespace mlir;
 
 template <typename InterfaceT>
 static void walkSubElementsImpl(InterfaceT interface,
                                 function_ref<void(Attribute)> walkAttrsFn,
-                                function_ref<void(Type)> walkTypesFn) {
+                                function_ref<void(Type)> walkTypesFn,
+                                DenseSet<Attribute> &visitedAttrs,
+                                DenseSet<Type> &visitedTypes) {
   interface.walkImmediateSubElements(
       [&](Attribute attr) {
         // Guard against potentially null inputs. This removes the need for the
@@ -21,9 +25,17 @@ static void walkSubElementsImpl(InterfaceT interface,
         if (!attr)
           return;
 
+        // Avoid infinite recursion when visiting sub attributes later, if this
+        // is a mutable attribute.
+        if (LLVM_UNLIKELY(attr.hasTrait<AttributeTrait::IsMutable>())) {
+          if (!visitedAttrs.insert(attr).second)
+            return;
+        }
+
         // Walk any sub elements first.
         if (auto interface = attr.dyn_cast<SubElementAttrInterface>())
-          walkSubElementsImpl(interface, walkAttrsFn, walkTypesFn);
+          walkSubElementsImpl(interface, walkAttrsFn, walkTypesFn, visitedAttrs,
+                              visitedTypes);
 
         // Walk this attribute.
         walkAttrsFn(attr);
@@ -34,9 +46,17 @@ static void walkSubElementsImpl(InterfaceT interface,
         if (!type)
           return;
 
+        // Avoid infinite recursion when visiting sub types later, if this
+        // is a mutable type.
+        if (LLVM_UNLIKELY(type.hasTrait<TypeTrait::IsMutable>())) {
+          if (!visitedTypes.insert(type).second)
+            return;
+        }
+
         // Walk any sub elements first.
         if (auto interface = type.dyn_cast<SubElementTypeInterface>())
-          walkSubElementsImpl(interface, walkAttrsFn, walkTypesFn);
+          walkSubElementsImpl(interface, walkAttrsFn, walkTypesFn, visitedAttrs,
+                              visitedTypes);
 
         // Walk this type.
         walkTypesFn(type);
@@ -47,14 +67,20 @@ void SubElementAttrInterface::walkSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) {
   assert(walkAttrsFn && walkTypesFn && "expected valid walk functions");
-  walkSubElementsImpl(*this, walkAttrsFn, walkTypesFn);
+  DenseSet<Attribute> visitedAttrs;
+  DenseSet<Type> visitedTypes;
+  walkSubElementsImpl(*this, walkAttrsFn, walkTypesFn, visitedAttrs,
+                      visitedTypes);
 }
 
 void SubElementTypeInterface::walkSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) {
   assert(walkAttrsFn && walkTypesFn && "expected valid walk functions");
-  walkSubElementsImpl(*this, walkAttrsFn, walkTypesFn);
+  DenseSet<Attribute> visitedAttrs;
+  DenseSet<Type> visitedTypes;
+  walkSubElementsImpl(*this, walkAttrsFn, walkTypesFn, visitedAttrs,
+                      visitedTypes);
 }
 
 //===----------------------------------------------------------------------===//

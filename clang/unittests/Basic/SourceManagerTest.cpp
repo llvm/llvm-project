@@ -51,6 +51,73 @@ protected:
   IntrusiveRefCntPtr<TargetInfo> Target;
 };
 
+TEST_F(SourceManagerTest, isInMemoryBuffersNoSourceLocationInfo) {
+  // Check for invalid source location for each method
+  SourceLocation LocEmpty;
+  bool isWrittenInBuiltInFileFalse = SourceMgr.isWrittenInBuiltinFile(LocEmpty);
+  bool isWrittenInCommandLineFileFalse =
+      SourceMgr.isWrittenInCommandLineFile(LocEmpty);
+  bool isWrittenInScratchSpaceFalse =
+      SourceMgr.isWrittenInScratchSpace(LocEmpty);
+
+  EXPECT_FALSE(isWrittenInBuiltInFileFalse);
+  EXPECT_FALSE(isWrittenInCommandLineFileFalse);
+  EXPECT_FALSE(isWrittenInScratchSpaceFalse);
+
+  // Check for valid source location per filename for each method
+  const char *Source = "int x";
+
+  std::unique_ptr<llvm::MemoryBuffer> BuiltInBuf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *BuiltInFile =
+      FileMgr.getVirtualFile("<built-in>", BuiltInBuf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(BuiltInFile, std::move(BuiltInBuf));
+  FileID BuiltInFileID =
+      SourceMgr.getOrCreateFileID(BuiltInFile, SrcMgr::C_User);
+  SourceMgr.setMainFileID(BuiltInFileID);
+  SourceLocation LocBuiltIn =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+  bool isWrittenInBuiltInFileTrue =
+      SourceMgr.isWrittenInBuiltinFile(LocBuiltIn);
+
+  std::unique_ptr<llvm::MemoryBuffer> CommandLineBuf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *CommandLineFile = FileMgr.getVirtualFile(
+      "<command line>", CommandLineBuf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(CommandLineFile, std::move(CommandLineBuf));
+  FileID CommandLineFileID =
+      SourceMgr.getOrCreateFileID(CommandLineFile, SrcMgr::C_User);
+  SourceMgr.setMainFileID(CommandLineFileID);
+  SourceLocation LocCommandLine =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+  bool isWrittenInCommandLineFileTrue =
+      SourceMgr.isWrittenInCommandLineFile(LocCommandLine);
+
+  std::unique_ptr<llvm::MemoryBuffer> ScratchSpaceBuf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *ScratchSpaceFile = FileMgr.getVirtualFile(
+      "<scratch space>", ScratchSpaceBuf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(ScratchSpaceFile, std::move(ScratchSpaceBuf));
+  FileID ScratchSpaceFileID =
+      SourceMgr.getOrCreateFileID(ScratchSpaceFile, SrcMgr::C_User);
+  SourceMgr.setMainFileID(ScratchSpaceFileID);
+  SourceLocation LocScratchSpace =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+  bool isWrittenInScratchSpaceTrue =
+      SourceMgr.isWrittenInScratchSpace(LocScratchSpace);
+
+  EXPECT_TRUE(isWrittenInBuiltInFileTrue);
+  EXPECT_TRUE(isWrittenInCommandLineFileTrue);
+  EXPECT_TRUE(isWrittenInScratchSpaceTrue);
+}
+
+TEST_F(SourceManagerTest, isInSystemHeader) {
+  // Check for invalid source location
+  SourceLocation LocEmpty;
+  bool isInSystemHeaderFalse = SourceMgr.isInSystemHeader(LocEmpty);
+  ASSERT_FALSE(isInSystemHeaderFalse);
+}
+
 TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   const char *source =
     "#define M(x) [x]\n"

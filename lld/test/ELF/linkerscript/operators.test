@@ -5,28 +5,46 @@
 
 SECTIONS {
   _start = .;
-  plus = 1 + 2 + 3;
-  minus = 5 - 1;
-  div = 6 / 2;
-  mod = 20 % 7;
-  mul = 1 + 2 * 3;
-  nospace = 1+2*6/3;
-  braces = 1 + (2 + 3) * 4;
-  and = 0xbb & 0xee;
-  ternary1 = 1 ? 1 : 2;
-  ternary2 = 0 ? 1 : 2;
+  unary =!0 + !0;  # Test space can be omitted between = and !
+  negate =-1 - 1;
+  not =~0xffff + 4;
+  not_negate = -~5 + 1;
+  multiplicative = 20 / 2 % 7;
+  additive = 1 - 2 + -3 * -2;
+  shift = 2 << 5 >> 1 << 2;
   less = 1 < 0 ? 1 : 2;
-  lesseq = 1 <= 1 ? 1 : 2;
+  lesseq = 1<<0 <= 1>>0 ? 1 : 2;
   greater = 0 > 1 ? 1 : 2;
   greatereq = 1 >= 1 ? 1 : 2;
   eq = 1 == 1 ? 1 : 2;
-  neq = 1 != 1 ? 1 : 2;
-  plusassign = 1;
+  neq = 1 != 1 <= 1 ? 1 : 2;
+  and = 3 & 4 > 0;
+  or = 0xbb & 0xee | 1;
+  logicaland = (0 && 0) + (0&&1)*2 + (1&& 0)*4 + (1 &&1) *8;
+  logicaland2 = 1 & 0 && 1 | 1;
+  logicalor = (0 || 0) + (0||1)*2 + (1|| 0)*4 + (1 ||1) *8;
+  logicalor2 = 0 && 0 || 1 && 1;
+  ternary1 = 0 ? 1 : 2 & 6;
+  ternary2 = 1 ? 2?3:4 : 5?6 :7;
+
+  mulassign =2;
+  mulassign *=2;  # Test space can be omitted after *=
+  divassign = 8;
+  divassign /=2;
+  plusassign =1;
   plusassign += 2;
-  unary = -1 + 3;
-  lshift = 1 << 5;
-  rshift = 0xff >> 3;
-  precedence1 = 1 | 0xff & 1 << 1 + 1 * 2;
+  minusassign = 3;
+  minusassign -= 1;
+  lshiftassign = 1;
+  lshiftassign <<= 2;
+  rshiftassign = 5;
+  rshiftassign >>= 1;
+  andassign = 6;
+  andassign &= 4;
+  orassign = 4;
+  orassign |= 1;
+  braces = 1 + (2 + 3) * 4;
+  precedence1 = 1|0xff&1/1<<1+1*2;
   precedence2 = (1 | (0xff & (1 << (1 + (1 * 2)))));
   maxpagesize = CONSTANT (MAXPAGESIZE);
   commonpagesize = CONSTANT (COMMONPAGESIZE);
@@ -46,46 +64,48 @@ SECTIONS {
   log2ceil100000000 = LOG2CEIL(0x100000000);
   log2ceil100000001 = LOG2CEIL(0x100000001);
   log2ceilmax = LOG2CEIL(0xffffffffffffffff);
-  logicaland1 = 0 && 0;
-  logicaland2 = 0 && 1;
-  logicaland3 = 1 && 0;
-  logicaland4 = 1 && 1;
-  logicalor1 = 0 || 0;
-  logicalor2 = 0 || 1;
-  logicalor3 = 1 || 0;
-  logicalor4 = 1 || 1;
 }
 
-# CHECK:      00000000000006 A plus
-# CHECK-NEXT: 00000000000004 A minus
-# CHECK-NEXT: 00000000000003 A div
-# CHECK-NEXT: 00000000000006 A mod
-# CHECK-NEXT: 00000000000007 A mul
-# CHECK-NEXT: 00000000000005 A nospace
-# CHECK-NEXT: 00000000000015 A braces
-# CHECK-NEXT: 000000000000aa A and
-# CHECK-NEXT: 00000000000001 A ternary1
-# CHECK-NEXT: 00000000000002 A ternary2
-# CHECK-NEXT: 00000000000002 A less
-# CHECK-NEXT: 00000000000001 A lesseq
-# CHECK-NEXT: 00000000000002 A greater
-# CHECK-NEXT: 00000000000001 A greatereq
-# CHECK-NEXT: 00000000000001 A eq
-# CHECK-NEXT: 00000000000002 A neq
-# CHECK-NEXT: 00000000000003 A plusassign
-# CHECK-NEXT: 00000000000002 A unary
-# CHECK-NEXT: 00000000000020 A lshift
-# CHECK-NEXT: 0000000000001f A rshift
-# CHECK-NEXT: 00000000000009 A precedence1
-# CHECK-NEXT: 00000000000009 A precedence2
-# CHECK-NEXT: 00000000001000 A maxpagesize
-# CHECK-NEXT: 00000000001000 A commonpagesize
-# CHECK-NEXT: 0000000000ffff A datasegmentalign
-# CHECK-NEXT: 0000000000fff0 A datasegmentalign2
-# CHECK-NEXT: 0000000000ffe0 T minus_rel
-# CHECK-NEXT: 0000000000fff0 A minus_abs
-# CHECK-NEXT: 00000000000016 A max
-# CHECK-NEXT: 0000000000000b A min
+# CHECK:      0000000000000002 A unary
+# CHECK-NEXT: fffffffffffffffe A negate
+# CHECK-NEXT: ffffffffffff0004 A not
+# CHECK-NEXT: 0000000000000007 A not_negate
+# CHECK-NEXT: 0000000000000003 A multiplicative
+# CHECK-NEXT: 0000000000000005 A additive
+# CHECK-NEXT: 0000000000000080 A shift
+# CHECK-NEXT: 0000000000000002 A less
+# CHECK-NEXT: 0000000000000001 A lesseq
+# CHECK-NEXT: 0000000000000002 A greater
+# CHECK-NEXT: 0000000000000001 A greatereq
+# CHECK-NEXT: 0000000000000001 A eq
+# CHECK-NEXT: 0000000000000002 A neq
+# CHECK-NEXT: 0000000000000001 A and
+# CHECK-NEXT: 00000000000000ab A or
+# CHECK-NEXT: 0000000000000008 A logicaland
+# CHECK-NEXT: 0000000000000000 A logicaland2
+# CHECK-NEXT: 000000000000000e A logicalor
+# CHECK-NEXT: 0000000000000001 A logicalor2
+# CHECK-NEXT: 0000000000000002 A ternary1
+# CHECK-NEXT: 0000000000000003 A ternary2
+# CHECK-NEXT: 0000000000000004 A mulassign
+# CHECK-NEXT: 0000000000000004 A divassign
+# CHECK-NEXT: 0000000000000003 A plusassign
+# CHECK-NEXT: 0000000000000002 A minusassign
+# CHECK-NEXT: 0000000000000004 A lshiftassign
+# CHECK-NEXT: 0000000000000002 A rshiftassign
+# CHECK-NEXT: 0000000000000004 A andassign
+# CHECK-NEXT: 0000000000000005 A orassign
+# CHECK-NEXT: 0000000000000015 A braces
+# CHECK-NEXT: 0000000000000009 A precedence1
+# CHECK-NEXT: 0000000000000009 A precedence2
+# CHECK-NEXT: 0000000000001000 A maxpagesize
+# CHECK-NEXT: 0000000000001000 A commonpagesize
+# CHECK-NEXT: 000000000000ffff A datasegmentalign
+# CHECK-NEXT: 000000000000fff0 A datasegmentalign2
+# CHECK-NEXT: 000000000000ffe0 T minus_rel
+# CHECK-NEXT: 000000000000fff0 A minus_abs
+# CHECK-NEXT: 0000000000000016 A max
+# CHECK-NEXT: 000000000000000b A min
 # CHECK-NEXT: 0000000000000000 A log2ceil0
 # CHECK-NEXT: 0000000000000000 A log2ceil1
 # CHECK-NEXT: 0000000000000001 A log2ceil2
@@ -94,14 +114,6 @@ SECTIONS {
 # CHECK-NEXT: 0000000000000020 A log2ceil100000000
 # CHECK-NEXT: 0000000000000021 A log2ceil100000001
 # CHECK-NEXT: 0000000000000040 A log2ceilmax
-# CHECK-NEXT: 00000000000000 A logicaland1
-# CHECK-NEXT: 00000000000000 A logicaland2
-# CHECK-NEXT: 00000000000000 A logicaland3
-# CHECK-NEXT: 00000000000001 A logicaland4
-# CHECK-NEXT: 00000000000000 A logicalor1
-# CHECK-NEXT: 00000000000001 A logicalor2
-# CHECK-NEXT: 00000000000001 A logicalor3
-# CHECK-NEXT: 00000000000001 A logicalor4
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { . = 0x12Q41; }" > %t.script
@@ -144,3 +156,15 @@ SECTIONS {
 # RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=TERNERR %s
 # TERNERR: : expected, but got ;
+
+## Div by zero error.
+# RUN: echo 'a = 1; a /= 0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=DIVZERO %s
+
+## GNU ld does not support %= or ^=.
+# RUN: echo 'a = 1; a %= 0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN %s
+# RUN: echo 'a = 1; a ^= 0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN %s
+
+# UNKNOWN: error: {{.*}}:1: unknown directive: a

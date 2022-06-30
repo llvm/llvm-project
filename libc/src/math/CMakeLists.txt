@@ -103,6 +103,9 @@ add_math_entrypoint_object(fmin)
 add_math_entrypoint_object(fminf)
 add_math_entrypoint_object(fminl)
 
+add_math_entrypoint_object(fmod)
+add_math_entrypoint_object(fmodf)
+
 add_math_entrypoint_object(frexp)
 add_math_entrypoint_object(frexpf)
 add_math_entrypoint_object(frexpl)

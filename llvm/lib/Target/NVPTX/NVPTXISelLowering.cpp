@@ -1860,7 +1860,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = Ret.getValue(1);
     InFlag = Ret.getValue(2);
 
-    if (ProxyRegTruncates[i].hasValue()) {
+    if (ProxyRegTruncates[i]) {
       Ret = DAG.getNode(ISD::TRUNCATE, dl, ProxyRegTruncates[i].getValue(), Ret);
     }
 

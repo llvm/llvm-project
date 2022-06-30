@@ -4330,6 +4330,7 @@ Clang provides the following context selector extensions, used via
     match_none
     disable_implicit_base
     allow_templates
+    bind_to_declaration
 
 The match extensions change when the *entire* context selector is considered a
 match for an OpenMP context. The default is ``all``, with ``none`` no trait in the
@@ -4345,8 +4346,9 @@ The allow extensions change when the ``begin declare variant`` effect is
 applied to a definition. If ``allow_templates`` is given, template function
 definitions are considered as specializations of existing or assumed template
 declarations with the same name. The template parameters for the base functions
-are used to instantiate the specialization.
-
+are used to instantiate the specialization. If ``bind_to_declartion`` is given,
+apply the same variant rules to function declarations. This allows the user to
+override declarations with only a function declaration.
   }];
 }
 

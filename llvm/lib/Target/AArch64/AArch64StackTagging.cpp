@@ -58,6 +58,7 @@
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include <cassert>
 #include <iterator>
+#include <memory>
 #include <utility>
 
 using namespace llvm;
@@ -523,6 +524,15 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     PDT = DeletePDT.get();
   }
 
+  std::unique_ptr<LoopInfo> DeleteLI;
+  LoopInfo *LI = nullptr;
+  if (auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>()) {
+    LI = &LIWP->getLoopInfo();
+  } else {
+    DeleteLI = std::make_unique<LoopInfo>(*DT);
+    LI = DeleteLI.get();
+  }
+
   SetTagFunc =
       Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag);
 
@@ -555,7 +565,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // statement if return_twice functions are called.
     bool StandardLifetime =
         SInfo.UnrecognizedLifetimes.empty() &&
-        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT,
+        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
                                    ClMaxLifetimes) &&
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
@@ -567,7 +577,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
       if (!DT || !PDT ||
-          !memtag::forAllReachableExits(*DT, *PDT, Start, Info.LifetimeEnd,
+          !memtag::forAllReachableExits(*DT, *PDT, *LI, Start, Info.LifetimeEnd,
                                         SInfo.RetVec, TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();

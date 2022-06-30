@@ -373,6 +373,7 @@ void macho::markSymAsAddrSig(Symbol *s) {
 }
 
 void macho::markAddrSigSymbols() {
+  TimeTraceScope timeScope("Mark addrsig symbols");
   for (InputFile *file : inputFiles) {
     ObjFile *obj = dyn_cast<ObjFile>(file);
     if (!obj)

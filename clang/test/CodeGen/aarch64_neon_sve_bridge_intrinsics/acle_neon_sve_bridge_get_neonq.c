@@ -16,12 +16,12 @@
 
 // CHECK-LABEL: @test_svget_neonq_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svget_neonq_s8u10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <16 x i8> [[TMP0]]
 //
 int8x16_t test_svget_neonq_s8(svint8_t n) {
@@ -31,12 +31,12 @@ int8x16_t test_svget_neonq_s8(svint8_t n) {
 //
 // CHECK-LABEL: @test_svget_neonq_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.experimental.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svget_neonq_s16u11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.experimental.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <8 x i16> [[TMP0]]
 //
 int16x8_t test_svget_neonq_s16(svint16_t n) {
@@ -45,12 +45,12 @@ int16x8_t test_svget_neonq_s16(svint16_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.experimental.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svget_neonq_s32u11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.experimental.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 int32x4_t test_svget_neonq_s32(svint32_t n) {
@@ -59,12 +59,12 @@ int32x4_t test_svget_neonq_s32(svint32_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.experimental.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svget_neonq_s64u11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.experimental.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <2 x i64> [[TMP0]]
 //
 int64x2_t test_svget_neonq_s64(svint64_t n) {
@@ -73,12 +73,12 @@ int64x2_t test_svget_neonq_s64(svint64_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svget_neonq_u8u11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <16 x i8> [[TMP0]]
 //
 uint8x16_t test_svget_neonq_u8(svuint8_t n) {
@@ -87,12 +87,12 @@ uint8x16_t test_svget_neonq_u8(svuint8_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.experimental.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svget_neonq_u16u12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.experimental.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <8 x i16> [[TMP0]]
 //
 uint16x8_t test_svget_neonq_u16(svuint16_t n) {
@@ -101,12 +101,12 @@ uint16x8_t test_svget_neonq_u16(svuint16_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.experimental.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svget_neonq_u32u12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.experimental.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 uint32x4_t test_svget_neonq_u32(svuint32_t n) {
@@ -115,12 +115,12 @@ uint32x4_t test_svget_neonq_u32(svuint32_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.experimental.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <2 x i64> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svget_neonq_u64u12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.experimental.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <2 x i64> [[TMP0]]
 //
 uint64x2_t test_svget_neonq_u64(svuint64_t n) {
@@ -129,12 +129,12 @@ uint64x2_t test_svget_neonq_u64(svuint64_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x half> @llvm.experimental.vector.extract.v8f16.nxv8f16(<vscale x 8 x half> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x half> @llvm.vector.extract.v8f16.nxv8f16(<vscale x 8 x half> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <8 x half> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svget_neonq_f16u13__SVFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <8 x half> @llvm.experimental.vector.extract.v8f16.nxv8f16(<vscale x 8 x half> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <8 x half> @llvm.vector.extract.v8f16.nxv8f16(<vscale x 8 x half> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <8 x half> [[TMP0]]
 //
 float16x8_t test_svget_neonq_f16(svfloat16_t n) {
@@ -143,12 +143,12 @@ float16x8_t test_svget_neonq_f16(svfloat16_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.experimental.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svget_neonq_f32u13__SVFloat32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.experimental.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <4 x float> [[TMP0]]
 //
 float32x4_t test_svget_neonq_f32(svfloat32_t n) {
@@ -157,12 +157,12 @@ float32x4_t test_svget_neonq_f32(svfloat32_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <2 x double> @llvm.experimental.vector.extract.v2f64.nxv2f64(<vscale x 2 x double> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <2 x double> @llvm.vector.extract.v2f64.nxv2f64(<vscale x 2 x double> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <2 x double> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z20test_svget_neonq_f64u13__SVFloat64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <2 x double> @llvm.experimental.vector.extract.v2f64.nxv2f64(<vscale x 2 x double> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <2 x double> @llvm.vector.extract.v2f64.nxv2f64(<vscale x 2 x double> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <2 x double> [[TMP0]]
 //
 float64x2_t test_svget_neonq_f64(svfloat64_t n) {
@@ -171,12 +171,12 @@ float64x2_t test_svget_neonq_f64(svfloat64_t n) {
 
 // CHECK-LABEL: @test_svget_neonq_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x bfloat> @llvm.experimental.vector.extract.v8bf16.nxv8bf16(<vscale x 8 x bfloat> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x bfloat> @llvm.vector.extract.v8bf16.nxv8bf16(<vscale x 8 x bfloat> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <8 x bfloat> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_svget_neonq_bf16u14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <8 x bfloat> @llvm.experimental.vector.extract.v8bf16.nxv8bf16(<vscale x 8 x bfloat> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <8 x bfloat> @llvm.vector.extract.v8bf16.nxv8bf16(<vscale x 8 x bfloat> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <8 x bfloat> [[TMP0]]
 //
 bfloat16x8_t test_svget_neonq_bf16(svbfloat16_t n) {

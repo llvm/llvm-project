@@ -72,9 +72,13 @@ public:
   };
 
   CommandObjectTraceLoad(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "trace load",
-                            "Load a processor trace session from a JSON file.",
-                            "trace load") {}
+      : CommandObjectParsed(
+            interpreter, "trace load",
+            "Load a post-mortem processor trace session from a trace bundle.",
+            "trace load") {
+    CommandArgumentData session_file_arg{eArgTypePath, eArgRepeatPlain};
+    m_arguments.push_back({session_file_arg});
+  }
 
   ~CommandObjectTraceLoad() override = default;
 
@@ -83,9 +87,8 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.size() != 1) {
-      result.AppendError(
-          "a single path to a JSON file containing a trace session"
-          " is required");
+      result.AppendError("a single path to a JSON file containing a the "
+                         "description of the trace bundle is required");
       return false;
     }
 
@@ -223,7 +226,10 @@ public:
       : CommandObjectParsed(interpreter, "trace schema",
                             "Show the schema of the given trace plugin.",
                             "trace schema <plug-in>. Use the plug-in name "
-                            "\"all\" to see all schemas.\n") {}
+                            "\"all\" to see all schemas.\n") {
+    CommandArgumentData plugin_arg{eArgTypeNone, eArgRepeatPlain};
+    m_arguments.push_back({plugin_arg});
+  }
 
   ~CommandObjectTraceSchema() override = default;
 

@@ -663,7 +663,7 @@ void ClangdLSPServer::onDocumentDidOpen(
 void ClangdLSPServer::onDocumentDidChange(
     const DidChangeTextDocumentParams &Params) {
   auto WantDiags = WantDiagnostics::Auto;
-  if (Params.wantDiagnostics.hasValue())
+  if (Params.wantDiagnostics)
     WantDiags = Params.wantDiagnostics.getValue() ? WantDiagnostics::Yes
                                                   : WantDiagnostics::No;
 
@@ -1397,14 +1397,15 @@ static void increment(std::string &S) {
 
 void ClangdLSPServer::onSemanticTokens(const SemanticTokensParams &Params,
                                        Callback<SemanticTokens> CB) {
+  auto File = Params.textDocument.uri.file();
   Server->semanticHighlights(
       Params.textDocument.uri.file(),
-      [this, File(Params.textDocument.uri.file().str()), CB(std::move(CB))](
+      [this, File(File.str()), CB(std::move(CB)), Code(Server->getDraft(File))](
           llvm::Expected<std::vector<HighlightingToken>> HT) mutable {
         if (!HT)
           return CB(HT.takeError());
         SemanticTokens Result;
-        Result.tokens = toSemanticTokens(*HT);
+        Result.tokens = toSemanticTokens(*HT, *Code);
         {
           std::lock_guard<std::mutex> Lock(SemanticTokensMutex);
           auto &Last = LastSemanticTokens[File];
@@ -1420,14 +1421,15 @@ void ClangdLSPServer::onSemanticTokens(const SemanticTokensParams &Params,
 void ClangdLSPServer::onSemanticTokensDelta(
     const SemanticTokensDeltaParams &Params,
     Callback<SemanticTokensOrDelta> CB) {
+  auto File = Params.textDocument.uri.file();
   Server->semanticHighlights(
       Params.textDocument.uri.file(),
-      [this, PrevResultID(Params.previousResultId),
-       File(Params.textDocument.uri.file().str()), CB(std::move(CB))](
+      [this, PrevResultID(Params.previousResultId), File(File.str()),
+       CB(std::move(CB)), Code(Server->getDraft(File))](
           llvm::Expected<std::vector<HighlightingToken>> HT) mutable {
         if (!HT)
           return CB(HT.takeError());
-        std::vector<SemanticToken> Toks = toSemanticTokens(*HT);
+        std::vector<SemanticToken> Toks = toSemanticTokens(*HT, *Code);
 
         SemanticTokensOrDelta Result;
         {

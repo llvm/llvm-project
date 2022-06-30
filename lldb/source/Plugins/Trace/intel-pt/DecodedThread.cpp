@@ -39,114 +39,59 @@ IntelPTError::IntelPTError(int libipt_error_code, lldb::addr_t address)
 }
 
 void IntelPTError::log(llvm::raw_ostream &OS) const {
-  const char *libipt_error_message = pt_errstr(pt_errcode(m_libipt_error_code));
-  if (m_address != LLDB_INVALID_ADDRESS && m_address > 0) {
-    write_hex(OS, m_address, HexPrintStyle::PrefixLower, 18);
-    OS << "    ";
-  }
-  OS << "error: " << libipt_error_message;
+  OS << pt_errstr(pt_errcode(m_libipt_error_code));
+  if (m_address != LLDB_INVALID_ADDRESS && m_address > 0)
+    OS << formatv(": {0:x+16}", m_address);
 }
 
-DecodedInstruction::operator bool() const {
-  return !IsLibiptError(libipt_error);
+int64_t DecodedThread::GetItemsCount() const {
+  return static_cast<int64_t>(m_item_kinds.size());
 }
 
-size_t DecodedThread::GetInstructionsCount() const {
-  return m_instruction_ips.size();
-}
-
-lldb::addr_t DecodedThread::GetInstructionLoadAddress(size_t insn_index) const {
-  return m_instruction_ips[insn_index];
-}
-
-TraceInstructionControlFlowType
-DecodedThread::GetInstructionControlFlowType(size_t insn_index) const {
-  if (IsInstructionAnError(insn_index))
-    return (TraceInstructionControlFlowType)0;
-
-  TraceInstructionControlFlowType mask =
-      eTraceInstructionControlFlowTypeInstruction;
-
-  lldb::addr_t load_address = m_instruction_ips[insn_index];
-  uint8_t insn_byte_size = m_instruction_sizes[insn_index];
-  pt_insn_class iclass = m_instruction_classes[insn_index];
-
-  switch (iclass) {
-  case ptic_cond_jump:
-  case ptic_jump:
-  case ptic_far_jump:
-    mask |= eTraceInstructionControlFlowTypeBranch;
-    if (insn_index + 1 < m_instruction_ips.size() &&
-        load_address + insn_byte_size != m_instruction_ips[insn_index + 1])
-      mask |= eTraceInstructionControlFlowTypeTakenBranch;
-    break;
-  case ptic_return:
-  case ptic_far_return:
-    mask |= eTraceInstructionControlFlowTypeReturn;
-    break;
-  case ptic_call:
-  case ptic_far_call:
-    mask |= eTraceInstructionControlFlowTypeCall;
-    break;
-  default:
-    break;
-  }
-
-  return mask;
+lldb::addr_t DecodedThread::GetInstructionLoadAddress(size_t item_index) const {
+  return m_item_data[item_index].load_address;
 }
 
 ThreadSP DecodedThread::GetThread() { return m_thread_sp; }
 
-void DecodedThread::RecordTscForLastInstruction(uint64_t tsc) {
+DecodedThread::TraceItemStorage &
+DecodedThread::CreateNewTraceItem(lldb::TraceItemKind kind) {
+  m_item_kinds.push_back(kind);
+  m_item_data.emplace_back();
+  return m_item_data.back();
+}
+
+void DecodedThread::NotifyTsc(uint64_t tsc) {
   if (!m_last_tsc || *m_last_tsc != tsc) {
-    // In case the first instructions are errors or did not have a TSC, we'll
-    // get a first valid TSC not in position 0. We can safely force these error
-    // instructions to use the first valid TSC, so that all the trace has TSCs.
-    size_t start_index =
-        m_instruction_timestamps.empty() ? 0 : m_instruction_ips.size() - 1;
-    m_instruction_timestamps.emplace(start_index, tsc);
+    m_instruction_timestamps.emplace(m_item_kinds.size(), tsc);
     m_last_tsc = tsc;
   }
 }
 
-void DecodedThread::Append(const DecodedInstruction &insn) {
-  if (!insn) {
-    // End of stream shouldn't be a public error
-    if (IsEndOfStream(insn.libipt_error))
-      return;
-
-    AppendError(make_error<IntelPTError>(insn.libipt_error, insn.pt_insn.ip));
-  } else {
-    m_instruction_ips.emplace_back(insn.pt_insn.ip);
-    m_instruction_sizes.emplace_back(insn.pt_insn.size);
-    m_instruction_classes.emplace_back(insn.pt_insn.iclass);
-  }
-
-  if (insn.tsc)
-    RecordTscForLastInstruction(*insn.tsc);
-
-  if (insn.events) {
-    m_events.try_emplace(m_instruction_ips.size() - 1, insn.events);
-    m_events_stats.RecordEventsForInstruction(insn.events);
-  }
+void DecodedThread::AppendEvent(lldb::TraceEvent event) {
+  CreateNewTraceItem(lldb::eTraceItemKindEvent).event = event;
+  m_events_stats.RecordEvent(event);
 }
 
-void DecodedThread::AppendError(llvm::Error &&error) {
-  m_errors.try_emplace(m_instruction_ips.size(), toString(std::move(error)));
-  m_instruction_ips.emplace_back(LLDB_INVALID_ADDRESS);
-  m_instruction_sizes.emplace_back(0);
-  m_instruction_classes.emplace_back(pt_insn_class::ptic_error);
+void DecodedThread::AppendInstruction(const pt_insn &insn) {
+  CreateNewTraceItem(lldb::eTraceItemKindInstruction).load_address = insn.ip;
 }
 
-void DecodedThread::SetAsFailed(llvm::Error &&error) {
-  AppendError(std::move(error));
+void DecodedThread::AppendError(const IntelPTError &error) {
+  // End of stream shouldn't be a public error
+  if (IsEndOfStream(error.GetLibiptErrorCode()))
+    return;
+  CreateNewTraceItem(lldb::eTraceItemKindError).error =
+      ConstString(error.message()).AsCString();
 }
 
-lldb::TraceEvents DecodedThread::GetEvents(int insn_index) {
-  auto it = m_events.find(insn_index);
-  if (it != m_events.end())
-    return it->second;
-  return (TraceEvents)0;
+void DecodedThread::AppendCustomError(StringRef err) {
+  CreateNewTraceItem(lldb::eTraceItemKindError).error =
+      ConstString(err).AsCString();
+}
+
+lldb::TraceEvent DecodedThread::GetEventByIndex(int item_index) const {
+  return m_item_data[item_index].event;
 }
 
 void DecodedThread::LibiptErrorsStats::RecordError(int libipt_error_code) {
@@ -167,16 +112,9 @@ const DecodedThread::EventsStats &DecodedThread::GetEventsStats() const {
   return m_events_stats;
 }
 
-void DecodedThread::EventsStats::RecordEventsForInstruction(
-    lldb::TraceEvents events) {
-  if (!events)
-    return;
-
-  total_instructions_with_events++;
-  trace_event_utils::ForEachEvent(events, [&](TraceEvents event) {
-    events_counts[event]++;
-    total_count++;
-  });
+void DecodedThread::EventsStats::RecordEvent(lldb::TraceEvent event) {
+  events_counts[event]++;
+  total_count++;
 }
 
 Optional<DecodedThread::TscRange> DecodedThread::CalculateTscRange(
@@ -205,39 +143,24 @@ Optional<DecodedThread::TscRange> DecodedThread::CalculateTscRange(
   return TscRange(--it, *this);
 }
 
-bool DecodedThread::IsInstructionAnError(size_t insn_idx) const {
-  return m_instruction_ips[insn_idx] == LLDB_INVALID_ADDRESS;
+lldb::TraceItemKind DecodedThread::GetItemKindByIndex(size_t item_index) const {
+  return static_cast<lldb::TraceItemKind>(m_item_kinds[item_index]);
 }
 
-const char *DecodedThread::GetErrorByInstructionIndex(size_t insn_idx) {
-  auto it = m_errors.find(insn_idx);
-  if (it == m_errors.end())
-    return nullptr;
-
-  return it->second.c_str();
+const char *DecodedThread::GetErrorByIndex(size_t item_index) const {
+  return m_item_data[item_index].error;
 }
 
 DecodedThread::DecodedThread(ThreadSP thread_sp) : m_thread_sp(thread_sp) {}
 
-DecodedThread::DecodedThread(ThreadSP thread_sp, Error &&error)
-    : m_thread_sp(thread_sp) {
-  AppendError(std::move(error));
-}
-
-lldb::TraceCursorUP DecodedThread::GetCursor() {
-  // We insert a fake error signaling an empty trace if needed becasue the
-  // TraceCursor requires non-empty traces.
-  if (m_instruction_ips.empty())
-    AppendError(createStringError(inconvertibleErrorCode(), "empty trace"));
+lldb::TraceCursorUP DecodedThread::CreateNewCursor() {
   return std::make_unique<TraceCursorIntelPT>(m_thread_sp, shared_from_this());
 }
 
 size_t DecodedThread::CalculateApproximateMemoryUsage() const {
-  return sizeof(pt_insn::ip) * m_instruction_ips.size() +
-         sizeof(pt_insn::size) * m_instruction_sizes.size() +
-         sizeof(pt_insn::iclass) * m_instruction_classes.size() +
-         (sizeof(size_t) + sizeof(uint64_t)) * m_instruction_timestamps.size() +
-         m_errors.getMemorySize() + m_events.getMemorySize();
+  return sizeof(TraceItemStorage) * m_item_data.size() +
+         sizeof(uint8_t) * m_item_kinds.size() +
+         (sizeof(size_t) + sizeof(uint64_t)) * m_instruction_timestamps.size();
 }
 
 DecodedThread::TscRange::TscRange(std::map<size_t, uint64_t>::const_iterator it,
@@ -246,7 +169,7 @@ DecodedThread::TscRange::TscRange(std::map<size_t, uint64_t>::const_iterator it,
   auto next_it = m_it;
   ++next_it;
   m_end_index = (next_it == m_decoded_thread->m_instruction_timestamps.end())
-                    ? m_decoded_thread->GetInstructionsCount() - 1
+                    ? std::numeric_limits<uint64_t>::max()
                     : next_it->first - 1;
 }
 

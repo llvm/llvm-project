@@ -47,7 +47,7 @@ struct JSONCpu {
   std::string context_switch_trace;
 };
 
-struct JSONTraceSession {
+struct JSONTraceBundleDescription {
   std::string type;
   pt_cpu cpu_info;
   std::vector<JSONProcess> processes;
@@ -67,7 +67,7 @@ llvm::json::Value toJSON(const JSONCpu &cpu);
 
 llvm::json::Value toJSON(const pt_cpu &cpu_info);
 
-llvm::json::Value toJSON(const JSONTraceSession &session);
+llvm::json::Value toJSON(const JSONTraceBundleDescription &bundle_description);
 
 bool fromJSON(const llvm::json::Value &value, JSONModule &module,
               llvm::json::Path path);
@@ -84,7 +84,7 @@ bool fromJSON(const llvm::json::Value &value, JSONCpu &cpu,
 bool fromJSON(const llvm::json::Value &value, pt_cpu &cpu_info,
               llvm::json::Path path);
 
-bool fromJSON(const llvm::json::Value &value, JSONTraceSession &session,
+bool fromJSON(const llvm::json::Value &value, JSONTraceBundleDescription &bundle_description,
               llvm::json::Path path);
 } // namespace trace_intel_pt
 } // namespace lldb_private

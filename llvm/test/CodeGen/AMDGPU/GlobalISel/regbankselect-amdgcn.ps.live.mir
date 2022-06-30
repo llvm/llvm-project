@@ -10,7 +10,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: ps_live
     ; CHECK: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.ps.live)
-    ; CHECK: S_ENDPGM 0, implicit [[INT]](s1)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INT]](s1)
     %0:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.ps.live)
     S_ENDPGM 0, implicit %0
 ...

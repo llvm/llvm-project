@@ -19,11 +19,16 @@ namespace std
 {
 
 namespace ranges {
+
+  // [algorithms.results], algorithm result types
   template <class I, class F>
     struct in_fun_result;     // since C++20
 
   template <class I1, class I2>
     struct in_in_result;      // since C++20
+
+  template <class I, class O>
+    struct in_out_result;  // since C++20
 
   template <class I1, class I2, class O>
     struct in_in_out_result;  // since C++20
@@ -52,6 +57,9 @@ namespace ranges {
   template<forward_range R, class Proj = identity,
     indirect_strict_weak_order<projected<iterator_t<R>, Proj>> Comp = ranges::less>
   constexpr borrowed_iterator_t<R> ranges::max_element(R&& r, Comp comp = {}, Proj proj = {});             // since C++20
+
+  template<class I1, class I2>
+    using mismatch_result = in_in_result<I1, I2>;
 
   template <input_iterator I1, sentinel_for<_I1> S1, input_iterator I2, sentinel_for<_I2> S2,
           class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
@@ -174,6 +182,9 @@ namespace ranges {
     constexpr range_difference_t<R>
       count_if(R&& r, Pred pred, Proj proj = {});                                   // since C++20
 
+  template<class T>
+  using minmax_result = min_max_result<T>;
+
   template<class T, class Proj = identity,
            indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
     constexpr ranges::minmax_result<const T&>
@@ -190,6 +201,9 @@ namespace ranges {
     constexpr ranges::minmax_result<range_value_t<R>>
       minmax(R&& r, Comp comp = {}, Proj proj = {});                                      // since C++20
 
+  template<class I>
+  using minmax_element_result = min_max_result<I>;
+
   template<forward_iterator I, sentinel_for<I> S, class Proj = identity,
            indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>
     constexpr ranges::minmax_element_result<I>
@@ -201,10 +215,10 @@ namespace ranges {
       minmax_element(R&& r, Comp comp = {}, Proj proj = {});                              // since C++20
 
   template<class I, class O>
-      using copy_result = in_out_result<I, O>;                                              // since C++20
+    using copy_result = in_out_result<I, O>;                                              // since C++20
 
-    template<class I, class O>
-      using copy_n_result = in_out_result<I, O>;                                            // since C++20
+  template<class I, class O>
+    using copy_n_result = in_out_result<I, O>;                                            // since C++20
 
   template<class I, class O>
     using copy_if_result = in_out_result<I, O>;                                             // since C++20
@@ -450,6 +464,27 @@ namespace ranges {
       ranges::lexicographical_compare(R1&& r1, R2&& r2, Comp comp = {},
                                       Proj1 proj1 = {}, Proj2 proj2 = {});                    // since C++20
 
+  template<bidirectional_iterator I1, sentinel_for<I1> S1, bidirectional_iterator I2>
+    requires indirectly_movable<I1, I2>
+    constexpr ranges::move_backward_result<I1, I2>
+      ranges::move_backward(I1 first, S1 last, I2 result);                                          // since C++20
+
+  template<bidirectional_range R, bidirectional_iterator I>
+    requires indirectly_movable<iterator_t<R>, I>
+    constexpr ranges::move_backward_result<borrowed_iterator_t<R>, I>
+      ranges::move_backward(R&& r, I result);                                                       // since C++20
+
+  template<input_iterator I, sentinel_for<I> S, weakly_incrementable O>
+    requires indirectly_movable<I, O>
+    constexpr ranges::move_result<I, O>
+      ranges::move(I first, S last, O result);                                                      // since C++20
+
+  template<input_range R, weakly_incrementable O>
+    requires indirectly_movable<iterator_t<R>, O>
+    constexpr ranges::move_result<borrowed_iterator_t<R>, O>
+      ranges::move(R&& r, O result);                                                                // since C++20
+
+
 }
 
     constexpr bool     // constexpr in C++20
@@ -617,19 +652,34 @@ template <class BidirectionalIterator1, class BidirectionalIterator2>
     copy_backward(BidirectionalIterator1 first, BidirectionalIterator1 last,
                   BidirectionalIterator2 result);
 
+// [alg.move], move
+template<class InputIterator, class OutputIterator>
+    constexpr OutputIterator move(InputIterator first, InputIterator last,
+                                OutputIterator result);
+
+template<class BidirectionalIterator1, class BidirectionalIterator2>
+    constexpr BidirectionalIterator2
+    move_backward(BidirectionalIterator1 first, BidirectionalIterator1 last,
+                  BidirectionalIterator2 result);
+
 template <class ForwardIterator1, class ForwardIterator2>
     constexpr ForwardIterator2    // constexpr in C++20
     swap_ranges(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2);
 
+namespace ranges {
+    template<class I1, class I2>
+    using swap_ranges_result = in_in_result<I1, I2>;
+
 template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2>
         requires indirectly_swappable<I1, I2>
     constexpr ranges::swap_ranges_result<I1, I2>
-        ranges::swap_ranges(I1 first1, S1 last1, I2 first2, S2 last2);
+        swap_ranges(I1 first1, S1 last1, I2 first2, S2 last2);
 
 template<input_range R1, input_range R2>
         requires indirectly_swappable<iterator_t<R1>, iterator_t<R2>>
     constexpr ranges::swap_ranges_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>>
-        ranges::swap_ranges(R1&& r1, R2&& r2);
+        swap_ranges(R1&& r1, R2&& r2);
+}
 
 template <class ForwardIterator1, class ForwardIterator2>
     constexpr void                // constexpr in C++20
@@ -1195,6 +1245,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_minmax.h>
 #include <__algorithm/ranges_minmax_element.h>
 #include <__algorithm/ranges_mismatch.h>
+#include <__algorithm/ranges_move.h>
+#include <__algorithm/ranges_move_backward.h>
 #include <__algorithm/ranges_none_of.h>
 #include <__algorithm/ranges_replace.h>
 #include <__algorithm/ranges_replace_if.h>
@@ -1236,6 +1288,12 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/unique_copy.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/upper_bound.h>
+
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <chrono>
+#  include <iterator>
+#  include <utility>
+#endif
 
 // standard-mandated includes
 #include <initializer_list>

@@ -536,10 +536,6 @@ struct _MetaBase<true> {
   using _SelectImpl _LIBCPP_NODEBUG = _Tp;
   template <template <class...> class _FirstFn, template <class...> class, class ..._Args>
   using _SelectApplyImpl _LIBCPP_NODEBUG = _FirstFn<_Args...>;
-  template <class _First, class...>
-  using _FirstImpl _LIBCPP_NODEBUG = _First;
-  template <class, class _Second, class...>
-  using _SecondImpl _LIBCPP_NODEBUG = _Second;
   template <class _Result, class _First, class ..._Rest>
   using _OrImpl _LIBCPP_NODEBUG = typename _MetaBase<_First::value != true && sizeof...(_Rest) != 0>::template _OrImpl<_First, _Rest...>;
 };
@@ -557,10 +553,6 @@ template <bool _Cond, class _IfRes, class _ElseRes>
 using _If _LIBCPP_NODEBUG = typename _MetaBase<_Cond>::template _SelectImpl<_IfRes, _ElseRes>;
 template <class ..._Rest>
 using _Or _LIBCPP_NODEBUG = typename _MetaBase< sizeof...(_Rest) != 0 >::template _OrImpl<false_type, _Rest...>;
-template <class ..._Args>
-using _FirstType _LIBCPP_NODEBUG = typename _MetaBase<(sizeof...(_Args) >= 1)>::template _FirstImpl<_Args...>;
-template <class ..._Args>
-using _SecondType _LIBCPP_NODEBUG = typename _MetaBase<(sizeof...(_Args) >= 2)>::template _SecondImpl<_Args...>;
 
 template <class ...> using __expand_to_true = true_type;
 template <class ..._Pred>
@@ -1154,7 +1146,6 @@ struct _LIBCPP_TEMPLATE_VIS
 template <class ..._Tp> using common_type_t = typename common_type<_Tp...>::type;
 #endif
 
-#if _LIBCPP_STD_VER > 11
 // Let COPYCV(FROM, TO) be an alias for type TO with the addition of FROM's
 // top-level cv-qualifiers.
 template <class _From, class _To>
@@ -1166,19 +1157,19 @@ struct __copy_cv
 template <class _From, class _To>
 struct __copy_cv<const _From, _To>
 {
-    using type = add_const_t<_To>;
+    using type = typename add_const<_To>::type;
 };
 
 template <class _From, class _To>
 struct __copy_cv<volatile _From, _To>
 {
-    using type = add_volatile_t<_To>;
+    using type = typename add_volatile<_To>::type;
 };
 
 template <class _From, class _To>
 struct __copy_cv<const volatile _From, _To>
 {
-    using type = add_cv_t<_To>;
+    using type = typename add_cv<_To>::type;
 };
 
 template <class _From, class _To>
@@ -1193,19 +1184,18 @@ struct __copy_cvref
 template <class _From, class _To>
 struct __copy_cvref<_From&, _To>
 {
-    using type = add_lvalue_reference_t<__copy_cv_t<_From, _To>>;
+    using type = typename add_lvalue_reference<__copy_cv_t<_From, _To> >::type;
 };
 
 template <class _From, class _To>
 struct __copy_cvref<_From&&, _To>
 {
-    using type = add_rvalue_reference_t<__copy_cv_t<_From, _To>>;
+    using type = typename add_rvalue_reference<__copy_cv_t<_From, _To> >::type;
 };
 
 template <class _From, class _To>
 using __copy_cvref_t = typename __copy_cvref<_From, _To>::type;
 
-#endif // _LIBCPP_STD_VER > 11
 
 // common_reference
 #if _LIBCPP_STD_VER > 17
@@ -1697,10 +1687,8 @@ using _IsCharLikeType = _And<is_standard_layout<_CharT>, is_trivial<_CharT> >;
 template<class _Tp>
 using __make_const_lvalue_ref = const typename remove_reference<_Tp>::type&;
 
-#if _LIBCPP_STD_VER > 17
 template<bool _Const, class _Tp>
-using __maybe_const = conditional_t<_Const, const _Tp, _Tp>;
-#endif // _LIBCPP_STD_VER > 17
+using __maybe_const = typename conditional<_Const, const _Tp, _Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 

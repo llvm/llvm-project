@@ -34,6 +34,10 @@ enum class MachineCombinerPattern {
   REASSOC_XY_BCA,
   REASSOC_XY_BAC,
 
+  // These are patterns used to reduce the length of dependence chain.
+  SUBADD_OP1,
+  SUBADD_OP2,
+
   // These are multiply-add patterns matched by the AArch64 machine combiner.
   MULADDW_OP1,
   MULADDW_OP2,

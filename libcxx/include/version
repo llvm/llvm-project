@@ -247,7 +247,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #   define __cpp_lib_filesystem                         201703L
 # endif
 # define __cpp_lib_gcd_lcm                              201606L
-// # define __cpp_lib_hardware_interference_size           201703L
+# if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
+#   define __cpp_lib_hardware_interference_size         201703L
+# endif
 # define __cpp_lib_has_unique_object_representations    201606L
 # define __cpp_lib_hypot                                201603L
 # define __cpp_lib_incomplete_container_elements        201505L

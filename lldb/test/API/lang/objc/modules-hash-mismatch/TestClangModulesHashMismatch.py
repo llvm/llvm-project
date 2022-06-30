@@ -30,12 +30,15 @@ class TestClangModuleHashMismatch(TestBase):
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
 
         logfile = self.getBuildArtifact("host.log")
-        self.runCmd("log enable -v -f %s lldb host" % logfile)
-        target, _, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.m"))
-        target.GetModuleAtIndex(0).FindTypes('my_int')
+        with open(logfile, 'w') as f:
+            sbf = lldb.SBFile(f.fileno(), 'w', False)
+            status = self.dbg.SetErrorFile(sbf)
+            self.assertSuccess(status)
 
-        found = False
+            target, _, _, _ = lldbutil.run_to_source_breakpoint(
+                self, "break here", lldb.SBFileSpec("main.m"))
+            target.GetModuleAtIndex(0).FindTypes('my_int')
+
         with open(logfile, 'r') as f:
             for line in f:
                 if "hash mismatch" in line and "Foo" in line:

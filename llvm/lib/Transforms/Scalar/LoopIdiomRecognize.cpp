@@ -1481,7 +1481,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
       return Changed;
     // We cannot allow unaligned ops for unordered load/store, so reject
     // anything where the alignment isn't at least the element size.
-    assert((StoreAlign.hasValue() && LoadAlign.hasValue()) &&
+    assert((StoreAlign && LoadAlign) &&
            "Expect unordered load/store to have align.");
     if (StoreAlign.getValue() < StoreSize || LoadAlign.getValue() < StoreSize)
       return Changed;

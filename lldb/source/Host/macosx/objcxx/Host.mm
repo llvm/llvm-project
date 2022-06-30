@@ -82,6 +82,7 @@
 #include "../cfcpp/CFCString.h"
 
 #include <objc/objc-auto.h>
+#include <os/log.h>
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Foundation/Foundation.h>
@@ -97,6 +98,20 @@ int __pthread_fchdir(int fildes);
 
 using namespace lldb;
 using namespace lldb_private;
+
+static os_log_t g_os_log;
+static std::once_flag g_os_log_once;
+
+void Host::SystemLog(llvm::StringRef message) {
+  if (__builtin_available(macos 10.12, iOS 10, tvOS 10, watchOS 3, *)) {
+    std::call_once(g_os_log_once, []() {
+      g_os_log = os_log_create("com.apple.dt.lldb", "lldb");
+    });
+    os_log(g_os_log, "%{public}s", message.str().c_str());
+  } else {
+    llvm::errs() << message;
+  }
+}
 
 bool Host::GetBundleDirectory(const FileSpec &file,
                               FileSpec &bundle_directory) {
@@ -1490,41 +1505,4 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
     ::dispatch_resume(source);
   }
   return HostThread();
-}
-
-//----------------------------------------------------------------------
-// Log to both stderr and to ASL Logging when running on MacOSX.
-//----------------------------------------------------------------------
-void Host::SystemLog(SystemLogType type, const char *format, va_list args) {
-  if (format && format[0]) {
-    static aslmsg g_aslmsg = NULL;
-    if (g_aslmsg == NULL) {
-      g_aslmsg = ::asl_new(ASL_TYPE_MSG);
-      char asl_key_sender[PATH_MAX];
-      snprintf(asl_key_sender, sizeof(asl_key_sender),
-               "com.apple.LLDB.framework");
-      ::asl_set(g_aslmsg, ASL_KEY_SENDER, asl_key_sender);
-    }
-
-    // Copy the va_list so we can log this message twice
-    va_list copy_args;
-    va_copy(copy_args, args);
-    // Log to stderr
-    ::vfprintf(stderr, format, copy_args);
-    va_end(copy_args);
-
-    int asl_level;
-    switch (type) {
-    case eSystemLogError:
-      asl_level = ASL_LEVEL_ERR;
-      break;
-
-    case eSystemLogWarning:
-      asl_level = ASL_LEVEL_WARNING;
-      break;
-    }
-
-    // Log to ASL
-    ::asl_vlog(NULL, g_aslmsg, asl_level, format, args);
-  }
 }

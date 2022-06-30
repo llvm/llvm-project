@@ -261,6 +261,24 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
                   FileName);
   }
 
+  // Check whether the profiled binary was built with position independent code
+  // (PIC). For now we provide a error message until symbolization support
+  // is added for pic.
+  auto* Elf64LEObject = llvm::cast<llvm::object::ELF64LEObjectFile>(ElfObject);
+  const llvm::object::ELF64LEFile& ElfFile = Elf64LEObject->getELFFile();
+  auto PHdrsOr = ElfFile.program_headers();
+  if(!PHdrsOr) 
+    return report(make_error<StringError>(Twine("Could not read program headers: "),
+                                          inconvertibleErrorCode()),
+                  FileName);
+  auto FirstLoadHeader = PHdrsOr->begin();
+  while (FirstLoadHeader->p_type != llvm::ELF::PT_LOAD)
+    ++FirstLoadHeader;
+  if(FirstLoadHeader->p_vaddr == 0)
+    return report(make_error<StringError>(Twine("Unsupported position independent code"),
+                                          inconvertibleErrorCode()),
+                  FileName);
+
   auto Triple = ElfObject->makeTriple();
   if (!Triple.isX86())
     return report(make_error<StringError>(Twine("Unsupported target: ") +

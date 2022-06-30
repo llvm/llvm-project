@@ -1169,10 +1169,6 @@ def warn_pragma_pack_malformed : Warning<
 def warn_pragma_intrinsic_builtin : Warning<
   "%0 is not a recognized builtin%select{|; consider including <intrin.h> to access non-builtin intrinsics}1">,
   InGroup<IgnoredPragmaIntrinsic>;
-// - #pragma optimize
-def warn_pragma_optimize : Warning<
-  "'#pragma optimize' is not supported">,
-  InGroup<IgnoredPragmaOptimize>;
 // - #pragma unused
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,

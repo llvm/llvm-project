@@ -49,6 +49,19 @@ SmallVector<OpFoldResult, 4> getMixedStrides(OffsetSizeAndStrideOpInterface op,
                                              ArrayAttr staticStrides,
                                              ValueRange strides);
 
+/// Decompose a vector of mixed static or dynamic strides/offsets into the
+/// corresponding pair of arrays. This is the inverse function of
+/// `getMixedStrides` and `getMixedOffsets`.
+std::pair<ArrayAttr, SmallVector<Value>> decomposeMixedStridesOrOffsets(
+    OpBuilder &b, const SmallVectorImpl<OpFoldResult> &mixedValues);
+
+/// Decompose a vector of mixed static or dynamic strides/offsets into the
+/// corresponding pair of arrays. This is the inverse function of
+/// `getMixedSizes`.
+std::pair<ArrayAttr, SmallVector<Value>>
+decomposeMixedSizes(OpBuilder &b,
+                    const SmallVectorImpl<OpFoldResult> &mixedValues);
+
 namespace detail {
 LogicalResult verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op);
 

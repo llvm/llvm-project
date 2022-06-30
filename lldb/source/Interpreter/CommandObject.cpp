@@ -995,6 +995,11 @@ bool CommandObjectParsed::Execute(const char *args_string,
       if (ParseOptions(cmd_args, result)) {
         // Call the command-specific version of 'Execute', passing it the
         // already processed arguments.
+        if (cmd_args.GetArgumentCount() != 0 && m_arguments.empty()) {
+          result.AppendErrorWithFormatv("'{0}' doesn't take any arguments.",
+                                        GetCommandName());
+          return false;
+        }
         handled = DoExecute(cmd_args, result);
       }
     }
@@ -1126,7 +1131,12 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeCommand, "command", CommandCompletions::eNoCompletion, { nullptr, false }, "An LLDB Command line command element." },
     { eArgTypeColumnNum, "column", CommandCompletions::eNoCompletion, { nullptr, false }, "Column number in a source file." },
     { eArgTypeModuleUUID, "module-uuid", CommandCompletions::eModuleUUIDCompletion, { nullptr, false }, "A module UUID value." },
-    { eArgTypeSaveCoreStyle, "corefile-style", CommandCompletions::eNoCompletion, { nullptr, false }, "The type of corefile that lldb will try to create, dependant on this target's capabilities." }
+    { eArgTypeSaveCoreStyle, "corefile-style", CommandCompletions::eNoCompletion, { nullptr, false }, "The type of corefile that lldb will try to create, dependant on this target's capabilities." },
+    { eArgTypeLogHandler, "log-handler", CommandCompletions::eNoCompletion, { nullptr, false }, "The log handle that will be used to write out log messages." },
+    { eArgTypeSEDStylePair, "substitution-pair", CommandCompletions::eNoCompletion, { nullptr, false }, "A sed-style pattern and target pair." },
+    { eArgTypeConnectURL, "process-connect-url", CommandCompletions::eNoCompletion, { nullptr, false }, "A URL-style specification for a remote connection." },
+    { eArgTypeTargetID, "target-id", CommandCompletions::eNoCompletion, { nullptr, false }, "The index ID for an lldb Target." },
+    { eArgTypeStopHookID, "stop-hook-id", CommandCompletions::eNoCompletion, { nullptr, false }, "The ID you receive when you create a stop-hook." }
     // clang-format on
 };
 

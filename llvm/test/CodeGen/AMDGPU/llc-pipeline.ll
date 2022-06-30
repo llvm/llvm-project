@@ -130,10 +130,11 @@
 ; GCN-O0-NEXT:        Insert fentry calls
 ; GCN-O0-NEXT:        Insert XRay ops
 ; GCN-O0-NEXT:        SI Memory Legalizer
+; GCN-O0-NEXT:        MachineDominator Tree Construction
+; GCN-O0-NEXT:        Machine Natural Loop Construction
 ; GCN-O0-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O0-NEXT:        SI insert wait instructions
 ; GCN-O0-NEXT:        Insert required mode register values
-; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        SI Final Branch Preparation
 ; GCN-O0-NEXT:        Post RA hazard recognizer
 ; GCN-O0-NEXT:        Branch relaxation pass
@@ -389,11 +390,12 @@
 ; GCN-O1-NEXT:        Insert XRay ops
 ; GCN-O1-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-NEXT:        SI Memory Legalizer
+; GCN-O1-NEXT:        MachineDominator Tree Construction
+; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        SI insert wait instructions
 ; GCN-O1-NEXT:        Insert required mode register values
 ; GCN-O1-NEXT:        SI Insert Hard Clauses
-; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        SI Final Branch Preparation
 ; GCN-O1-NEXT:        SI peephole optimizations
 ; GCN-O1-NEXT:        Post RA hazard recognizer
@@ -685,11 +687,12 @@
 ; GCN-O1-OPTS-NEXT:        Insert XRay ops
 ; GCN-O1-OPTS-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-OPTS-NEXT:        SI Memory Legalizer
+; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
+; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        SI insert wait instructions
 ; GCN-O1-OPTS-NEXT:        Insert required mode register values
 ; GCN-O1-OPTS-NEXT:        SI Insert Hard Clauses
-; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        SI Final Branch Preparation
 ; GCN-O1-OPTS-NEXT:        SI peephole optimizations
 ; GCN-O1-OPTS-NEXT:        Post RA hazard recognizer
@@ -983,11 +986,12 @@
 ; GCN-O2-NEXT:        Insert XRay ops
 ; GCN-O2-NEXT:        GCN Create VOPD Instructions
 ; GCN-O2-NEXT:        SI Memory Legalizer
+; GCN-O2-NEXT:        MachineDominator Tree Construction
+; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        SI insert wait instructions
 ; GCN-O2-NEXT:        Insert required mode register values
 ; GCN-O2-NEXT:        SI Insert Hard Clauses
-; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        SI Final Branch Preparation
 ; GCN-O2-NEXT:        SI peephole optimizations
 ; GCN-O2-NEXT:        Post RA hazard recognizer
@@ -1294,11 +1298,12 @@
 ; GCN-O3-NEXT:        Insert XRay ops
 ; GCN-O3-NEXT:        GCN Create VOPD Instructions
 ; GCN-O3-NEXT:        SI Memory Legalizer
+; GCN-O3-NEXT:        MachineDominator Tree Construction
+; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        SI insert wait instructions
 ; GCN-O3-NEXT:        Insert required mode register values
 ; GCN-O3-NEXT:        SI Insert Hard Clauses
-; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        SI Final Branch Preparation
 ; GCN-O3-NEXT:        SI peephole optimizations
 ; GCN-O3-NEXT:        Post RA hazard recognizer

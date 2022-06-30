@@ -29,8 +29,8 @@ using namespace lld::macho;
 // Verify ConcatInputSection's size on 64-bit builds. The size of std::vector
 // can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
 // so account for that.
-static_assert(sizeof(void *) != 8 ||
-                  sizeof(ConcatInputSection) == sizeof(std::vector<Reloc>) + 88,
+static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) ==
+                                         sizeof(std::vector<Reloc>) + 104,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
@@ -85,7 +85,7 @@ std::string InputSection::getLocation(uint64_t off) const {
 }
 
 std::string InputSection::getSourceLocation(uint64_t off) const {
-  auto *obj = dyn_cast<ObjFile>(getFile());
+  auto *obj = dyn_cast_or_null<ObjFile>(getFile());
   if (!obj)
     return {};
 
@@ -177,6 +177,10 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
 
   memcpy(buf, data.data(), data.size());
 
+  std::vector<uint64_t> relocTargets;
+  if (!optimizationHints.empty())
+    relocTargets.reserve(relocs.size());
+
   for (size_t i = 0; i < relocs.size(); i++) {
     const Reloc &r = relocs[i];
     uint8_t *loc = buf + r.offset;
@@ -212,7 +216,13 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       referentVA = referentIsec->getVA(r.addend);
     }
     target->relocateOne(loc, r, referentVA, getVA() + r.offset);
+
+    if (!optimizationHints.empty())
+      relocTargets.push_back(referentVA);
   }
+
+  if (!optimizationHints.empty())
+    target->applyOptimizationHints(buf, this, relocTargets);
 }
 
 ConcatInputSection *macho::makeSyntheticInputSection(StringRef segName,

@@ -406,7 +406,7 @@ public:
     constexpr Iterator base() &&; // From C++20
 
     constexpr reference operator*() const;
-    constexpr pointer operator->() const; // Removed in C++20
+    constexpr pointer operator->() const; // Deprecated in C++20
     constexpr move_iterator& operator++();
     constexpr auto operator++(int); // Return type was move_iterator until C++20
     constexpr move_iterator& operator--();
@@ -680,6 +680,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/access.h>
 #include <__iterator/advance.h>
 #include <__iterator/back_insert_iterator.h>
+#include <__iterator/bounded_iter.h>
 #include <__iterator/common_iterator.h>
 #include <__iterator/concepts.h>
 #include <__iterator/counted_iterator.h>
@@ -722,6 +723,13 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <initializer_list>
 #include <type_traits>
 #include <version>
+
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <exception>
+#  include <new>
+#  include <typeinfo>
+#  include <utility>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -42,7 +42,7 @@ static TransformationMode hasUnrollTransformation(MDNode *LoopID) {
 
   Optional<int> Count =
       getOptionalIntLoopAttribute(LoopID, "llvm.loop.unroll.count");
-  if (Count.hasValue())
+  if (Count)
     return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
   if (getBooleanLoopAttribute(LoopID, "llvm.loop.unroll.enable"))

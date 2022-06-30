@@ -716,9 +716,8 @@ private:
     BB->setOffset(Offset);
 
     BasicBlockOffsets.emplace_back(Offset, BB);
-    assert(std::is_sorted(BasicBlockOffsets.begin(), BasicBlockOffsets.end(),
-                          CompareBasicBlockOffsets()) &&
-           std::is_sorted(begin(), end()));
+    assert(llvm::is_sorted(BasicBlockOffsets, CompareBasicBlockOffsets()) &&
+           llvm::is_sorted(blocks()));
 
     return BB;
   }
@@ -888,8 +887,9 @@ public:
 
   /// Update layout of basic blocks used for output.
   void updateBasicBlockLayout(BasicBlockOrderType &NewLayout) {
-    BasicBlocksPreviousLayout = BasicBlocksLayout;
+    assert(NewLayout.size() == BasicBlocks.size() && "Layout size mismatch.");
 
+    BasicBlocksPreviousLayout = BasicBlocksLayout;
     if (NewLayout != BasicBlocksLayout) {
       ModifiedLayout = true;
       BasicBlocksLayout.clear();

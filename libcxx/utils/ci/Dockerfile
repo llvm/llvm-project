@@ -33,12 +33,6 @@ FROM ubuntu:jammy
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
 
-# This dummy command is meant to be edited from time to time, which causes the
-# CI builders to rebuild their copy of the Docker image. This is not a great
-# solution, however without that, the CI builders will keep the same cached
-# Docker image forever.
-RUN echo 6
-
 RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite

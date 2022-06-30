@@ -12,12 +12,12 @@ tgt
 
 An export target:
 
-    ============== ===================================
-    Syntax         Description
-    ============== ===================================
-    pos{0..3}      Copy vertex position 0..3.
-    param{0..31}   Copy vertex parameter 0..31.
-    mrt{0..7}      Copy pixel color to the MRTs 0..7.
-    mrtz           Copy pixel depth (Z) data.
-    null           Copy nothing.
-    ============== ===================================
+    ================== ===================================
+    Syntax             Description
+    ================== ===================================
+    pos{0..3}          Copy vertex position 0..3.
+    param{0..31}       Copy vertex parameter 0..31.
+    mrt{0..7}          Copy pixel color to the MRTs 0..7.
+    mrtz               Copy pixel depth (Z) data.
+    null               Copy nothing.
+    ================== ===================================

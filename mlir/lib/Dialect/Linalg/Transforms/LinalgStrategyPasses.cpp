@@ -270,7 +270,7 @@ struct LinalgStrategyPeelPass
 
   LinalgStrategyPeelPass(StringRef opName, LinalgPeelOptions opt,
                          LinalgTransformationFilter filt)
-      : options(opt), filter(std::move(filt)) {
+      : options(std::move(opt)), filter(std::move(filt)) {
     this->anchorOpName.setValue(opName.str());
   }
 
@@ -542,7 +542,8 @@ mlir::createLinalgStrategyInterchangePass(
 
 /// Create a LinalgStrategyPeelPass.
 std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgStrategyPeelPass(StringRef opName, LinalgPeelOptions opt,
+mlir::createLinalgStrategyPeelPass(StringRef opName,
+                                   const LinalgPeelOptions &opt,
                                    const LinalgTransformationFilter &filter) {
   return std::make_unique<LinalgStrategyPeelPass>(opName, opt, filter);
 }

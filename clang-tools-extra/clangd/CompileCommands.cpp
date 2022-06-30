@@ -48,7 +48,7 @@ llvm::Optional<std::string> queryXcrun(llvm::ArrayRef<llvm::StringRef> Argv) {
   llvm::sys::fs::createTemporaryFile("clangd-xcrun", "", OutFile);
   llvm::FileRemover OutRemover(OutFile);
   llvm::Optional<llvm::StringRef> Redirects[3] = {
-      /*stdin=*/{""}, /*stdout=*/{OutFile}, /*stderr=*/{""}};
+      /*stdin=*/{""}, /*stdout=*/{OutFile.str()}, /*stderr=*/{""}};
   vlog("Invoking {0} to find clang installation", *Xcrun);
   int Ret = llvm::sys::ExecuteAndWait(*Xcrun, Argv,
                                       /*Env=*/llvm::None, Redirects,

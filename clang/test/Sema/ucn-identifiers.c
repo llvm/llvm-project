@@ -18,6 +18,7 @@ void goodCalls(void) {
   über(2);
   \U000000FCber(3);
   \u{FC}ber(4); // expected-warning {{Clang extension}}
+  \N{LATIN SMALL LETTER U WITH DIAERESIS}ber(4); // expected-warning {{Clang extension}}
 }
 
 void badCalls(void) {
