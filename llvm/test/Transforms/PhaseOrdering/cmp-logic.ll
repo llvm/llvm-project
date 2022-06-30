@@ -124,18 +124,15 @@ define i32 @PR56119(i32 %e.coerce) {
 ; OZ-LABEL: @PR56119(
 ; OZ-NEXT:  entry:
 ; OZ-NEXT:    [[E_COERCE_FR:%.*]] = freeze i32 [[E_COERCE:%.*]]
-; OZ-NEXT:    [[REM_LHS_TRUNC:%.*]] = trunc i32 [[E_COERCE_FR]] to i8
-; OZ-NEXT:    [[DOTNOT:%.*]] = icmp ne i8 [[REM_LHS_TRUNC]], -1
-; OZ-NEXT:    [[E_COERCE_FR_OP:%.*]] = and i32 [[E_COERCE_FR]], 255
-; OZ-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[E_COERCE_FR_OP]], 7
-; OZ-NEXT:    [[CMP:%.*]] = and i1 [[DOTNOT]], [[CMP2]]
-; OZ-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; OZ-NEXT:    [[TMP0:%.*]] = and i32 [[E_COERCE_FR]], 255
+; OZ-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 7
+; OZ-NEXT:    br i1 [[CMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; OZ:       if.then:
 ; OZ-NEXT:    tail call void (...) @foo()
 ; OZ-NEXT:    br label [[IF_END]]
 ; OZ:       if.end:
-; OZ-NEXT:    [[TMP0:%.*]] = load i32, ptr @c, align 4
-; OZ-NEXT:    ret i32 [[TMP0]]
+; OZ-NEXT:    [[TMP1:%.*]] = load i32, ptr @c, align 4
+; OZ-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   %e = alloca %struct.a, align 4
