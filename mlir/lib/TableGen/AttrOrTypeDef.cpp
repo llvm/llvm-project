@@ -244,8 +244,7 @@ StringRef AttrOrTypeParameter::getCppStorageType() const {
 }
 
 StringRef AttrOrTypeParameter::getConvertFromStorage() const {
-  return getDefValue<llvm::StringInit>("convertFromStorage")
-      .getValueOr("$_self");
+  return getDefValue<llvm::StringInit>("convertFromStorage").value_or("$_self");
 }
 
 Optional<StringRef> AttrOrTypeParameter::getParser() const {
