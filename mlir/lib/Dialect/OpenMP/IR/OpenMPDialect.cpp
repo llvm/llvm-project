@@ -571,62 +571,6 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
 }
 
 //===----------------------------------------------------------------------===//
-// SimdLoopOp
-//===----------------------------------------------------------------------===//
-/// Parses an OpenMP Simd construct [2.9.3.1]
-///
-/// simdloop ::= `omp.simdloop` loop-control clause-list
-/// loop-control ::= `(` ssa-id-list `)` `:` type `=`  loop-bounds
-/// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` steps
-/// steps := `step` `(`ssa-id-list`)`
-/// clause-list ::= clause clause-list | empty
-/// clause ::= TODO
-ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::Argument> ivs;
-  Type loopVarType;
-  SmallVector<OpAsmParser::UnresolvedOperand> lower, upper, steps;
-  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
-      parser.parseColonType(loopVarType) ||
-      // Parse loop bounds.
-      parser.parseEqual() ||
-      parser.parseOperandList(lower, ivs.size(),
-                              OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(lower, loopVarType, result.operands) ||
-      parser.parseKeyword("to") ||
-      parser.parseOperandList(upper, ivs.size(),
-                              OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(upper, loopVarType, result.operands) ||
-      // Parse step values.
-      parser.parseKeyword("step") ||
-      parser.parseOperandList(steps, ivs.size(),
-                              OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(steps, loopVarType, result.operands))
-    return failure();
-
-  int numIVs = static_cast<int>(ivs.size());
-  SmallVector<int> segments{numIVs, numIVs, numIVs};
-  // TODO: Add parseClauses() when we support clauses
-  result.addAttribute("operand_segment_sizes",
-                      parser.getBuilder().getI32VectorAttr(segments));
-
-  // Now parse the body.
-  Region *body = result.addRegion();
-  for (auto &iv : ivs)
-    iv.type = loopVarType;
-  return parser.parseRegion(*body, ivs);
-}
-
-void SimdLoopOp::print(OpAsmPrinter &p) {
-  auto args = getRegion().front().getArguments();
-  p << " (" << args << ") : " << args[0].getType() << " = (" << lowerBound()
-    << ") to (" << upperBound() << ") ";
-  p << "step (" << step() << ") ";
-
-  p.printRegion(region(), /*printEntryBlockArgs=*/false);
-}
-
-//===----------------------------------------------------------------------===//
 // Verifier for Simd construct [2.9.3.1]
 //===----------------------------------------------------------------------===//
 
