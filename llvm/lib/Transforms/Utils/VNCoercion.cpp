@@ -400,10 +400,9 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   return -1;
 }
 
-template <class T, class HelperClass>
-static T *getStoreValueForLoadHelper(T *SrcVal, unsigned Offset, Type *LoadTy,
-                                     HelperClass &Helper,
-                                     const DataLayout &DL) {
+static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
+                                         Type *LoadTy, IRBuilderBase &Builder,
+                                         const DataLayout &DL) {
   LLVMContext &Ctx = SrcVal->getType()->getContext();
 
   // If two pointers are in the same address space, they have the same size,
@@ -421,9 +420,11 @@ static T *getStoreValueForLoadHelper(T *SrcVal, unsigned Offset, Type *LoadTy,
   // Compute which bits of the stored value are being used by the load.  Convert
   // to an integer type to start with.
   if (SrcVal->getType()->isPtrOrPtrVectorTy())
-    SrcVal = Helper.CreatePtrToInt(SrcVal, DL.getIntPtrType(SrcVal->getType()));
+    SrcVal =
+        Builder.CreatePtrToInt(SrcVal, DL.getIntPtrType(SrcVal->getType()));
   if (!SrcVal->getType()->isIntegerTy())
-    SrcVal = Helper.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize * 8));
+    SrcVal =
+        Builder.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize * 8));
 
   // Shift the bits to the least significant depending on endianness.
   unsigned ShiftAmt;
@@ -432,12 +433,12 @@ static T *getStoreValueForLoadHelper(T *SrcVal, unsigned Offset, Type *LoadTy,
   else
     ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
   if (ShiftAmt)
-    SrcVal = Helper.CreateLShr(SrcVal,
-                               ConstantInt::get(SrcVal->getType(), ShiftAmt));
+    SrcVal = Builder.CreateLShr(SrcVal,
+                                ConstantInt::get(SrcVal->getType(), ShiftAmt));
 
   if (LoadSize != StoreSize)
-    SrcVal = Helper.CreateTruncOrBitCast(SrcVal,
-                                         IntegerType::get(Ctx, LoadSize * 8));
+    SrcVal = Builder.CreateTruncOrBitCast(SrcVal,
+                                          IntegerType::get(Ctx, LoadSize * 8));
   return SrcVal;
 }
 
@@ -455,9 +456,7 @@ Value *getStoreValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
 
 Constant *getConstantStoreValueForLoad(Constant *SrcVal, unsigned Offset,
                                        Type *LoadTy, const DataLayout &DL) {
-  ConstantFolder F;
-  SrcVal = getStoreValueForLoadHelper(SrcVal, Offset, LoadTy, F, DL);
-  return coerceAvailableValueToLoadTypeHelper(SrcVal, LoadTy, F, DL);
+  return ConstantFoldLoadFromConst(SrcVal, LoadTy, APInt(32, Offset), DL);
 }
 
 /// This function is called when we have a memdep query of a load that ends up
