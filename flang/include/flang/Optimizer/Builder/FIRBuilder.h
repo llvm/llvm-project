@@ -543,6 +543,10 @@ mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Unwrap integer constant from an mlir::Value.
 llvm::Optional<std::int64_t> getIntIfConstant(mlir::Value value);
 
+/// Get the integer constants of triplet and compute the extent.
+llvm::Optional<std::int64_t>
+getExtentFromTriplet(mlir::Value lb, mlir::Value ub, mlir::Value stride);
+
 /// Generate max(\p value, 0) where \p value is a scalar integer.
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value value);
