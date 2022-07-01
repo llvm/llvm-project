@@ -8827,6 +8827,8 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
     }
     LastInsert->replaceAllUsesWith(NewInst);
     for (InsertElementInst *IE : reverse(ShuffledInserts[I].InsertElements)) {
+      IE->replaceUsesOfWith(IE->getOperand(0),
+                            PoisonValue::get(IE->getOperand(0)->getType()));
       IE->replaceUsesOfWith(IE->getOperand(1),
                             PoisonValue::get(IE->getOperand(1)->getType()));
       eraseInstruction(IE);
