@@ -154,8 +154,8 @@ define <8 x i1> @fp2si_v8f32_v8i1(<8 x float> %x) {
 ; LMULMAX1-NEXT:    vfncvt.rtz.x.f.w v10, v9
 ; LMULMAX1-NEXT:    vand.vi v9, v10, 1
 ; LMULMAX1-NEXT:    vmsne.vi v0, v9, 0
-; LMULMAX1-NEXT:    vmv.v.i v9, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v9, 0
 ; LMULMAX1-NEXT:    vmerge.vim v9, v9, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 4
@@ -188,8 +188,8 @@ define <8 x i1> @fp2ui_v8f32_v8i1(<8 x float> %x) {
 ; LMULMAX1-NEXT:    vfncvt.rtz.xu.f.w v10, v9
 ; LMULMAX1-NEXT:    vand.vi v9, v10, 1
 ; LMULMAX1-NEXT:    vmsne.vi v0, v9, 0
-; LMULMAX1-NEXT:    vmv.v.i v9, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v9, 0
 ; LMULMAX1-NEXT:    vmerge.vim v9, v9, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 4
@@ -564,8 +564,8 @@ define <8 x i1> @fp2si_v8f64_v8i1(<8 x double> %x) {
 ; LMULMAX1-NEXT:    vfncvt.rtz.x.f.w v13, v9
 ; LMULMAX1-NEXT:    vand.vi v9, v13, 1
 ; LMULMAX1-NEXT:    vmsne.vi v0, v9, 0
-; LMULMAX1-NEXT:    vmv.v.i v9, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v9, 0
 ; LMULMAX1-NEXT:    vmerge.vim v13, v9, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v12, v13, 2
@@ -620,8 +620,8 @@ define <8 x i1> @fp2ui_v8f64_v8i1(<8 x double> %x) {
 ; LMULMAX1-NEXT:    vfncvt.rtz.xu.f.w v13, v9
 ; LMULMAX1-NEXT:    vand.vi v9, v13, 1
 ; LMULMAX1-NEXT:    vmsne.vi v0, v9, 0
-; LMULMAX1-NEXT:    vmv.v.i v9, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v9, 0
 ; LMULMAX1-NEXT:    vmerge.vim v13, v9, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v12, v13, 2
