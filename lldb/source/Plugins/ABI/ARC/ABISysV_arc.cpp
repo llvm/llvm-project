@@ -154,7 +154,7 @@ bool ABISysV_arc::IsRegisterFileReduced(RegisterContext &reg_ctx) const {
     m_is_reg_file_reduced = (reg_value | rf_entries_bit) != 0;
   }
 
-  return m_is_reg_file_reduced.getValueOr(false);
+  return m_is_reg_file_reduced.value_or(false);
 }
 
 //------------------------------------------------------------------
@@ -458,7 +458,7 @@ ABISysV_arc::GetReturnValueObjectSimple(Thread &thread,
   const uint32_t type_flags = compiler_type.GetTypeInfo();
   // Integer return type.
   if (type_flags & eTypeIsInteger) {
-    const size_t byte_size = compiler_type.GetByteSize(&thread).getValueOr(0);
+    const size_t byte_size = compiler_type.GetByteSize(&thread).value_or(0);
     auto raw_value = ReadRawValue(reg_ctx, byte_size);
 
     const bool is_signed = (type_flags & eTypeIsSigned) != 0;
@@ -482,7 +482,7 @@ ABISysV_arc::GetReturnValueObjectSimple(Thread &thread,
 
     if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
         1 == float_count && !is_complex) {
-      const size_t byte_size = compiler_type.GetByteSize(&thread).getValueOr(0);
+      const size_t byte_size = compiler_type.GetByteSize(&thread).value_or(0);
       auto raw_value = ReadRawValue(reg_ctx, byte_size);
 
       if (!SetSizedFloat(value.GetScalar(), raw_value, byte_size))

@@ -3144,11 +3144,10 @@ Error BitcodeReader::parseConstants() {
         return error("Explicit gep operator type does not match pointee type "
                      "of pointer operand");
 
-      V = BitcodeConstant::create(
-          Alloc, CurTy,
-          {Instruction::GetElementPtr, InBounds, InRangeIndex.getValueOr(-1),
-           PointeeType},
-          Elts);
+      V = BitcodeConstant::create(Alloc, CurTy,
+                                  {Instruction::GetElementPtr, InBounds,
+                                   InRangeIndex.value_or(-1), PointeeType},
+                                  Elts);
       break;
     }
     case bitc::CST_CODE_CE_SELECT: {  // CE_SELECT: [opval#, opval#, opval#]
