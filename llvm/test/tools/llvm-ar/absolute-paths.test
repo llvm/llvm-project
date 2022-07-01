@@ -26,3 +26,7 @@ RUN: rm -f a.o b.o
 RUN: llvm-ar x %S/Inputs/absolute-paths.lib
 RUN: llvm-nm a.o | FileCheck %s --check-prefix=CHECK-A
 RUN: llvm-nm b.o | FileCheck %s --check-prefix=CHECK-B
+
+RUN: mkdir dir
+RUN: llvm-ar x %S/Inputs/absolute-paths.lib --output=dir/
+RUN: cmp a.o dir/a.o
