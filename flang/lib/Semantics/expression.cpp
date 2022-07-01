@@ -527,11 +527,12 @@ template <typename TYPE>
 Constant<TYPE> ReadRealLiteral(
     parser::CharBlock source, FoldingContext &context) {
   const char *p{source.begin()};
-  auto valWithFlags{Scalar<TYPE>::Read(p, context.rounding())};
+  auto valWithFlags{
+      Scalar<TYPE>::Read(p, context.targetCharacteristics().roundingMode())};
   CHECK(p == source.end());
   RealFlagWarnings(context, valWithFlags.flags, "conversion of REAL literal");
   auto value{valWithFlags.value};
-  if (context.flushSubnormalsToZero()) {
+  if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
     value = value.FlushSubnormalToZero();
   }
   return {value};
@@ -904,7 +905,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
             StaticDataObject::Pointer staticData{StaticDataObject::Create()};
             staticData->set_alignment(Result::kind)
                 .set_itemBytes(Result::kind)
-                .Push(cp->GetScalarValue().value());
+                .Push(cp->GetScalarValue().value(),
+                    foldingContext_.targetCharacteristics().isBigEndian());
             Substring substring{std::move(staticData), std::move(lower.value()),
                 std::move(upper.value())};
             return AsGenericExpr(
@@ -3158,7 +3160,13 @@ DynamicType ExpressionAnalyzer::GetDefaultKindOfType(
 
 bool ExpressionAnalyzer::CheckIntrinsicKind(
     TypeCategory category, std::int64_t kind) {
-  if (IsValidKindOfIntrinsicType(category, kind)) { // C712, C714, C715, C727
+  if (foldingContext_.targetCharacteristics().IsTypeEnabled(
+          category, kind)) { // C712, C714, C715, C727
+    return true;
+  } else if (foldingContext_.targetCharacteristics().CanSupportType(
+                 category, kind)) {
+    Say("%s(KIND=%jd) is not an enabled type for this targe"_warn_en_US,
+        ToUpperCase(EnumToString(category)), kind);
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,
@@ -3169,17 +3177,29 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
 
 bool ExpressionAnalyzer::CheckIntrinsicSize(
     TypeCategory category, std::int64_t size) {
+  std::int64_t kind{size};
   if (category == TypeCategory::Complex) {
     // COMPLEX*16 == COMPLEX(KIND=8)
-    if (size % 2 == 0 && IsValidKindOfIntrinsicType(category, size / 2)) {
-      return true;
+    if (size % 2 == 0) {
+      kind = size / 2;
+    } else {
+      Say("COMPLEX*%jd is not a supported type"_err_en_US, size);
+      return false;
     }
-  } else if (IsValidKindOfIntrinsicType(category, size)) {
-    return true;
   }
-  Say("%s*%jd is not a supported type"_err_en_US,
-      ToUpperCase(EnumToString(category)), size);
-  return false;
+  if (foldingContext_.targetCharacteristics().IsTypeEnabled(
+          category, kind)) { // C712, C714, C715, C727
+    return true;
+  } else if (foldingContext_.targetCharacteristics().CanSupportType(
+                 category, kind)) {
+    Say("%s*%jd is not an enabled type for this target"_warn_en_US,
+        ToUpperCase(EnumToString(category)), size);
+    return true;
+  } else {
+    Say("%s*%jd is not a supported type"_err_en_US,
+        ToUpperCase(EnumToString(category)), size);
+    return false;
+  }
 }
 
 bool ExpressionAnalyzer::AddImpliedDo(parser::CharBlock name, int kind) {

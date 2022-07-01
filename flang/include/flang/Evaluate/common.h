@@ -27,6 +27,7 @@ class DerivedTypeSpec;
 
 namespace Fortran::evaluate {
 class IntrinsicProcTable;
+class TargetCharacteristics;
 
 using common::ConstantSubscript;
 using common::RelationalOperator;
@@ -139,21 +140,6 @@ template <typename A> struct ValueWithRealFlags {
   RealFlags flags{};
 };
 
-struct Rounding {
-  common::RoundingMode mode{common::RoundingMode::TiesToEven};
-  // When set, emulate status flag behavior peculiar to x86
-  // (viz., fail to set the Underflow flag when an inexact product of a
-  // multiplication is rounded up to a normal number from a subnormal
-  // in some rounding modes)
-#if __x86_64__
-  bool x86CompatibleBehavior{true};
-#else
-  bool x86CompatibleBehavior{false};
-#endif
-};
-
-static constexpr Rounding defaultRounding;
-
 #if FLANG_BIG_ENDIAN
 constexpr bool isHostLittleEndian{false};
 #elif FLANG_LITTLE_ENDIAN
@@ -228,24 +214,22 @@ template <typename A> class Expr;
 
 class FoldingContext {
 public:
-  FoldingContext(
-      const common::IntrinsicTypeDefaultKinds &d, const IntrinsicProcTable &t)
-      : defaults_{d}, intrinsics_{t} {}
+  FoldingContext(const common::IntrinsicTypeDefaultKinds &d,
+      const IntrinsicProcTable &t, const TargetCharacteristics &c)
+      : defaults_{d}, intrinsics_{t}, targetCharacteristics_{c} {}
   FoldingContext(const parser::ContextualMessages &m,
       const common::IntrinsicTypeDefaultKinds &d, const IntrinsicProcTable &t,
-      Rounding round = defaultRounding, bool flush = false)
-      : messages_{m}, defaults_{d}, intrinsics_{t}, rounding_{round},
-        flushSubnormalsToZero_{flush} {}
+      const TargetCharacteristics &c)
+      : messages_{m}, defaults_{d}, intrinsics_{t}, targetCharacteristics_{c} {}
   FoldingContext(const FoldingContext &that)
       : messages_{that.messages_}, defaults_{that.defaults_},
-        intrinsics_{that.intrinsics_}, rounding_{that.rounding_},
-        flushSubnormalsToZero_{that.flushSubnormalsToZero_},
+        intrinsics_{that.intrinsics_},
+        targetCharacteristics_{that.targetCharacteristics_},
         pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
   FoldingContext(
       const FoldingContext &that, const parser::ContextualMessages &m)
-      : messages_{m}, defaults_{that.defaults_},
-        intrinsics_{that.intrinsics_}, rounding_{that.rounding_},
-        flushSubnormalsToZero_{that.flushSubnormalsToZero_},
+      : messages_{m}, defaults_{that.defaults_}, intrinsics_{that.intrinsics_},
+        targetCharacteristics_{that.targetCharacteristics_},
         pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_} {}
 
   parser::ContextualMessages &messages() { return messages_; }
@@ -253,12 +237,11 @@ public:
   const common::IntrinsicTypeDefaultKinds &defaults() const {
     return defaults_;
   }
-  Rounding rounding() const { return rounding_; }
-  bool flushSubnormalsToZero() const { return flushSubnormalsToZero_; }
-  bool bigEndian() const { return bigEndian_; }
-  std::size_t maxAlignment() const { return maxAlignment_; }
   const semantics::DerivedTypeSpec *pdtInstance() const { return pdtInstance_; }
   const IntrinsicProcTable &intrinsics() const { return intrinsics_; }
+  const TargetCharacteristics &targetCharacteristics() const {
+    return targetCharacteristics_;
+  }
   bool inModuleFile() const { return inModuleFile_; }
   FoldingContext &set_inModuleFile(bool yes = true) {
     inModuleFile_ = yes;
@@ -282,10 +265,7 @@ private:
   parser::ContextualMessages messages_;
   const common::IntrinsicTypeDefaultKinds &defaults_;
   const IntrinsicProcTable &intrinsics_;
-  Rounding rounding_{defaultRounding};
-  bool flushSubnormalsToZero_{false};
-  static constexpr bool bigEndian_{false}; // TODO: configure for target
-  static constexpr std::size_t maxAlignment_{8}; // TODO: configure for target
+  const TargetCharacteristics &targetCharacteristics_;
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
   bool inModuleFile_{false};
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;

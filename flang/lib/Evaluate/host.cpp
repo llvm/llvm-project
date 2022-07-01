@@ -36,7 +36,7 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
   hasSubnormalFlushingHardwareControl_ = true;
   originalMxcsr = _mm_getcsr();
   unsigned int currentMxcsr{originalMxcsr};
-  if (context.flushSubnormalsToZero()) {
+  if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
     currentMxcsr |= 0x8000;
     currentMxcsr |= 0x0040;
   } else {
@@ -46,14 +46,14 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
 #elif defined(__aarch64__)
 #if defined(__GNU_LIBRARY__)
   hasSubnormalFlushingHardwareControl_ = true;
-  if (context.flushSubnormalsToZero()) {
+  if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
     currentFenv.__fpcr |= (1U << 24); // control register
   } else {
     currentFenv.__fpcr &= ~(1U << 24); // control register
   }
 #elif defined(__BIONIC__)
   hasSubnormalFlushingHardwareControl_ = true;
-  if (context.flushSubnormalsToZero()) {
+  if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
     currentFenv.__control |= (1U << 24); // control register
   } else {
     currentFenv.__control &= ~(1U << 24); // control register
@@ -85,7 +85,7 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
   _mm_setcsr(currentMxcsr);
 #endif
 
-  switch (context.rounding().mode) {
+  switch (context.targetCharacteristics().roundingMode().mode) {
   case common::RoundingMode::TiesToEven:
     fesetround(FE_TONEAREST);
     break;
