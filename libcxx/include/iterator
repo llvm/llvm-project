@@ -406,7 +406,7 @@ public:
     constexpr Iterator base() &&; // From C++20
 
     constexpr reference operator*() const;
-    constexpr pointer operator->() const; // Removed in C++20
+    constexpr pointer operator->() const; // Deprecated in C++20
     constexpr move_iterator& operator++();
     constexpr auto operator++(int); // Return type was move_iterator until C++20
     constexpr move_iterator& operator--();
