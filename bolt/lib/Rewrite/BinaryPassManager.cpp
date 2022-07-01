@@ -268,7 +268,7 @@ void BinaryFunctionPassManager::runPasses() {
                        TimerGroupDesc, TimeOpts);
 
     callWithDynoStats([this, &Pass] { Pass->runOnFunctions(BC); }, BFs,
-                      Pass->getName(), opts::DynoStatsAll);
+                      Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
 
     if (opts::VerifyCFG &&
         !std::accumulate(
@@ -307,7 +307,8 @@ void BinaryFunctionPassManager::runPasses() {
 void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
-  const DynoStats InitialDynoStats = getDynoStats(BC.getBinaryFunctions());
+  const DynoStats InitialDynoStats =
+      getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
 
   Manager.registerPass(std::make_unique<AsmDumpPass>(),
                        opts::AsmDump.getNumOccurrences());

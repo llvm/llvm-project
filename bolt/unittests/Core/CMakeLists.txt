@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
 add_bolt_unittest(CoreTests
   BinaryContext.cpp
   MCPlusBuilder.cpp
+  DynoStats.cpp
   )
 
 target_link_libraries(CoreTests
