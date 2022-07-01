@@ -506,7 +506,7 @@ struct UseRankReducedExtractSliceOp
 
     Location loc = sliceOp.getLoc();
     Value newSlice = rewriter.create<tensor::ExtractSliceOp>(
-        loc, rankReducedType, sliceOp.source(), offsets, sizes, strides);
+        loc, rankReducedType, sliceOp.getSource(), offsets, sizes, strides);
     rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
         sliceOp, resultType, newSlice, *reassociation);
     return success();
@@ -530,10 +530,11 @@ struct UseRankReducedInsertSliceOp
       return failure();
     Location loc = insertOp.getLoc();
     auto reshapedSource = rewriter.create<tensor::CollapseShapeOp>(
-        loc, insertOp.source(), *reassociation);
+        loc, insertOp.getSource(), *reassociation);
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        insertOp, reshapedSource, insertOp.dest(), insertOp.getMixedOffsets(),
-        insertOp.getMixedSizes(), insertOp.getMixedStrides());
+        insertOp, reshapedSource, insertOp.getDest(),
+        insertOp.getMixedOffsets(), insertOp.getMixedSizes(),
+        insertOp.getMixedStrides());
     return success();
   }
 };

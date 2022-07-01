@@ -786,7 +786,7 @@ struct CanonicalizeCastExtentTensorOperandsPattern
             castOp.getType().cast<RankedTensorType>().isDynamicDim(0);
         if (isInformationLoosingCast) {
           anyChange = true;
-          return castOp.source();
+          return castOp.getSource();
         }
       }
       return operand;
@@ -1597,7 +1597,7 @@ struct ShapeOfCastExtentTensor : public OpRewritePattern<tensor::CastOp> {
     if (!ty || ty.getRank() != 1)
       return failure();
 
-    auto shapeOfOp = op.source().getDefiningOp<ShapeOfOp>();
+    auto shapeOfOp = op.getSource().getDefiningOp<ShapeOfOp>();
     if (!shapeOfOp)
       return failure();
 

@@ -333,7 +333,7 @@ scf::TileConsumerAndFuseProducersUsingSCFForOp::returningMatchAndRewrite(
     // 2b. Get the producer of the source (potentially walking through
     // `iter_args` of nested `scf.for`)
     Optional<OpResult> fusableProducer =
-        getFusableProducer(candidateSliceOp.source());
+        getFusableProducer(candidateSliceOp.getSource());
     if (!fusableProducer)
       continue;
 

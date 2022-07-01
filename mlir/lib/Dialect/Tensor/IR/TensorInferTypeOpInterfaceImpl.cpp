@@ -154,7 +154,7 @@ struct ReifyExpandOrCollapseShapeOp
     auto loc = op->getLoc();
     auto reshapeOp = cast<OpTy>(op);
     auto resultShape = getReshapeOutputShapeFromInputShape(
-        b, loc, reshapeOp.src(), reshapeOp.getResultType().getShape(),
+        b, loc, reshapeOp.getSrc(), reshapeOp.getResultType().getShape(),
         reshapeOp.getReassociationMaps());
     reifiedReturnShapes.push_back(getAsValues(b, loc, resultShape));
     return success();
@@ -178,7 +178,7 @@ struct ReifyPadOp
       // Shape along each dimension is source dim + low pad + high pad.
       SmallVector<Value> mapOperands;
       mapOperands.push_back(
-          b.createOrFold<tensor::DimOp>(loc, padOp.source(), dim));
+          b.createOrFold<tensor::DimOp>(loc, padOp.getSource(), dim));
       AffineExpr expr = b.getAffineDimExpr(0);
       unsigned numSymbols = 0;
       auto addOpFoldResult = [&](OpFoldResult valueOrAttr) {
