@@ -1,24 +1,24 @@
-; ModuleID = 'scev.c'
-source_filename = "scev.c"
+; ModuleID = 'scev1.c'
+source_filename = "scev1.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @Z = dso_local global i32 5, align 4
-@.str = private unnamed_addr constant [3 x i8] c"%d\00", align 1
+@.str = private unnamed_addr constant [5 x i8] c"%d%d\00", align 1
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
-  %C = alloca i32, align 4
-  %A = alloca [10 x i32], align 16
+  %A = alloca [100 x i32], align 16
+  %B = alloca [100 x i32], align 16
   %N = alloca i32, align 4
-  %B = alloca [12 x i32], align 16
+  %C = alloca i32, align 4
   %I = alloca i32, align 4
-  %i = alloca i32, align 4
+  %I17 = alloca i32, align 4
   store i32 0, i32* %retval, align 4
+  store i32 20, i32* %N, align 4
   store i32 10, i32* %C, align 4
-  store i32 5, i32* %N, align 4
   store i32 0, i32* %I, align 4
   br label %for.cond
 
@@ -36,7 +36,7 @@ for.body:                                         ; preds = %for.cond
   %4 = load i32, i32* %I, align 4
   %add2 = add nsw i32 %4, 2
   %idxprom = sext i32 %add2 to i64
-  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds [100 x i32], [100 x i32]* %A, i64 0, i64 %idxprom
   store i32 %add1, i32* %arrayidx, align 4
   %5 = load i32, i32* %C, align 4
   %6 = load i32, i32* %I, align 4
@@ -45,7 +45,7 @@ for.body:                                         ; preds = %for.cond
   %7 = load i32, i32* %I, align 4
   %add5 = add nsw i32 %7, 1
   %idxprom6 = sext i32 %add5 to i64
-  %arrayidx7 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %idxprom6
+  %arrayidx7 = getelementptr inbounds [100 x i32], [100 x i32]* %B, i64 0, i64 %idxprom6
   store i32 %add4, i32* %arrayidx7, align 4
   %8 = load i32, i32* %C, align 4
   %9 = load i32, i32* %I, align 4
@@ -54,14 +54,14 @@ for.body:                                         ; preds = %for.cond
   %10 = load i32, i32* %I, align 4
   %add10 = add nsw i32 %10, 3
   %idxprom11 = sext i32 %add10 to i64
-  %arrayidx12 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %idxprom11
+  %arrayidx12 = getelementptr inbounds [100 x i32], [100 x i32]* %A, i64 0, i64 %idxprom11
   store i32 %add9, i32* %arrayidx12, align 4
   %11 = load i32, i32* %C, align 4
   %12 = load i32, i32* %I, align 4
   %add13 = add nsw i32 %11, %12
   %13 = load i32, i32* %I, align 4
   %idxprom14 = sext i32 %13 to i64
-  %arrayidx15 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %idxprom14
+  %arrayidx15 = getelementptr inbounds [100 x i32], [100 x i32]* %A, i64 0, i64 %idxprom14
   store i32 %add13, i32* %arrayidx15, align 4
   br label %for.inc
 
@@ -72,30 +72,34 @@ for.inc:                                          ; preds = %for.body
   br label %for.cond, !llvm.loop !4
 
 for.end:                                          ; preds = %for.cond
-  store i32 0, i32* %i, align 4
-  br label %for.cond17
+  store i32 0, i32* %I17, align 4
+  br label %for.cond18
 
-for.cond17:                                       ; preds = %for.inc22, %for.end
-  %15 = load i32, i32* %i, align 4
+for.cond18:                                       ; preds = %for.inc25, %for.end
+  %15 = load i32, i32* %I17, align 4
   %16 = load i32, i32* %N, align 4
-  %cmp18 = icmp slt i32 %15, %16
-  br i1 %cmp18, label %for.body19, label %for.end23
+  %cmp19 = icmp slt i32 %15, %16
+  br i1 %cmp19, label %for.body20, label %for.end26
 
-for.body19:                                       ; preds = %for.cond17
-  %17 = load i32, i32* %i, align 4
-  %idxprom20 = sext i32 %17 to i64
-  %arrayidx21 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %idxprom20
-  %18 = load i32, i32* %arrayidx21, align 4
-  %call = call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i64 0, i64 0), i32 noundef %18)
-  br label %for.inc22
+for.body20:                                       ; preds = %for.cond18
+  %17 = load i32, i32* %I17, align 4
+  %idxprom21 = sext i32 %17 to i64
+  %arrayidx22 = getelementptr inbounds [100 x i32], [100 x i32]* %A, i64 0, i64 %idxprom21
+  %18 = load i32, i32* %arrayidx22, align 4
+  %19 = load i32, i32* %I17, align 4
+  %idxprom23 = sext i32 %19 to i64
+  %arrayidx24 = getelementptr inbounds [100 x i32], [100 x i32]* %B, i64 0, i64 %idxprom23
+  %20 = load i32, i32* %arrayidx24, align 4
+  %call = call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i32 noundef %18, i32 noundef %20)
+  br label %for.inc25
 
-for.inc22:                                        ; preds = %for.body19
-  %19 = load i32, i32* %i, align 4
-  %inc = add nsw i32 %19, 1
-  store i32 %inc, i32* %i, align 4
-  br label %for.cond17, !llvm.loop !6
+for.inc25:                                        ; preds = %for.body20
+  %21 = load i32, i32* %I17, align 4
+  %inc = add nsw i32 %21, 1
+  store i32 %inc, i32* %I17, align 4
+  br label %for.cond18, !llvm.loop !6
 
-for.end23:                                        ; preds = %for.cond17
+for.end26:                                        ; preds = %for.cond18
   ret i32 0
 }
 
@@ -110,7 +114,7 @@ attributes #1 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protect
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"uwtable", i32 1}
 !2 = !{i32 7, !"frame-pointer", i32 2}
-!3 = !{!"clang version 14.0.6 (https://github.com/shravankumar0811/llvm-project.git 8e78085d22f2ac489f95a76f7e2dcfb7d832e9b8)"}
+!3 = !{!"clang version 14.0.6 (https://github.com/shravankumar0811/llvm-project.git 973cbf86551cd15a9cb85bbb0ad01f2406ccb62d)"}
 !4 = distinct !{!4, !5}
 !5 = !{!"llvm.loop.mustprogress"}
 !6 = distinct !{!6, !5}

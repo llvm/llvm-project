@@ -18,25 +18,25 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %0 = add nuw nsw i64 %indvars.iv, 10
-  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %indvars.iv
-  %1 = trunc i64 %0 to i32
+  %0 = add nuw nsw i64 %indvars.iv, 12
+  %1 = or i64 %indvars.iv, 2
   %2 = add nuw nsw i64 %indvars.iv, 11
   %3 = or i64 %indvars.iv, 1
-  %arrayidx5 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %3
-  %4 = trunc i64 %2 to i32
-  %5 = add nuw nsw i64 %indvars.iv, 12
-  %6 = or i64 %indvars.iv, 2
-  %arrayidx10 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %6
-  %7 = trunc i64 %5 to i32
-  %8 = add nuw nsw i64 %indvars.iv, 13
-  %9 = or i64 %indvars.iv, 3
-  %arrayidx15 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %9
-  %10 = trunc i64 %8 to i32
-  store i32 %1, i32* %arrayidx, align 16
-  store i32 %4, i32* %arrayidx5, align 4
-  store i32 %7, i32* %arrayidx10, align 8
-  store i32 %10, i32* %arrayidx15, align 4
+  %4 = add nuw nsw i64 %indvars.iv, 13
+  %5 = or i64 %indvars.iv, 3
+  %6 = add nuw nsw i64 %indvars.iv, 10
+  %7 = trunc i64 %6 to i32
+  %arrayidx15 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %indvars.iv
+  store i32 %7, i32* %arrayidx15, align 16
+  %8 = trunc i64 %2 to i32
+  %arrayidx7 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %3
+  store i32 %8, i32* %arrayidx7, align 4
+  %9 = trunc i64 %0 to i32
+  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %1
+  store i32 %9, i32* %arrayidx, align 8
+  %10 = trunc i64 %4 to i32
+  %arrayidx12 = getelementptr inbounds [10 x i32], [10 x i32]* %A, i64 0, i64 %5
+  store i32 %10, i32* %arrayidx12, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -77,7 +77,7 @@ attributes #2 = { nounwind }
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"uwtable", i32 1}
 !2 = !{i32 7, !"frame-pointer", i32 2}
-!3 = !{!"clang version 14.0.6 (https://github.com/shravankumar0811/llvm-project.git 973cbf86551cd15a9cb85bbb0ad01f2406ccb62d)"}
+!3 = !{!"clang version 14.0.6 (https://github.com/shravankumar0811/llvm-project.git 8e78085d22f2ac489f95a76f7e2dcfb7d832e9b8)"}
 !4 = distinct !{!4, !5}
 !5 = !{!"llvm.loop.mustprogress"}
 !6 = distinct !{!6, !5}

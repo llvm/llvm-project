@@ -1,8 +1,8 @@
 /*===- Scev.cpp -Creates and Simplifies Recurrences for ‘Expressions involving
 Induction Variables’ Algorithm:
 1. Get ScalarEvolution object.
-2. Use getSCEV for the pointer operands
-3. Take the scev pointer base
+2. Use getSCEV for the pointer operands.
+3. Take the scev pointer base.
 4. Subtract scev with scev pointer base to get the SCEVAddRecExpr(DiffVal).
 eg:{8,+,16}<nuw><nsw><%for.cond>
 5. This SCEVAddRecExpr will contain the required indices and Extract it. eg : 8
@@ -10,10 +10,11 @@ eg:{8,+,16}<nuw><nsw><%for.cond>
 7. Sorting the Offset vector values.
 8. Get the BB of store instruction and using that get the terminator
 instruction.
-9. Move all store instructions one by one before terminator instruction.
+9. Move all store instructions and corresponding operands one by one before terminator instruction.
 ===-------------------------------------------------------------------------------------------===*/
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -44,40 +45,53 @@ struct Scev : public FunctionPass {
     SCEV *ScevVal, *BasePtr, *DiffVal, *GetEle, *TempPtr = nullptr;
     SmallVector<int> OffSet;
     llvm::DenseMap<int, Instruction *> StoreInsts;
+    //llvm::DenseMap<SCEV *, SmallVector <Instruction *> > BasePtrMap;
+    Instruction *Inst;
 
     int Value = 0;
 
     // Store the index and corresponding Store instruction in StoreInsts map
     for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
-        if (auto *Store = dyn_cast<StoreInst>(&I)) {
-          if (auto *Gep =
-                  dyn_cast<GetElementPtrInst>(Store->getPointerOperand())) {
-            ScevVal = const_cast<SCEV *>(SE.getSCEV(Gep));
-            if ((BasePtr = const_cast<SCEV *>(SE.getPointerBase(ScevVal)))) {
-              if (TempPtr == nullptr)
-                TempPtr = BasePtr;
-              else if (TempPtr != BasePtr) {
-                LLVM_DEBUG(dbgs()
-                           << "\nBasePointers are not same, stopping the pass");
-                continue;
-              }
-              DiffVal = const_cast<SCEV *>(SE.getMinusSCEV(ScevVal, BasePtr));
-              // Get the index of scev
-              if (SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(DiffVal)) {
-                if ((GetEle = const_cast<SCEV *>(AddRec->getStart()))) {
-                  if (SCEVConstant *BConst = dyn_cast<SCEVConstant>(GetEle)) {
-                    ConstantInt *CI = BConst->getValue();
-                    Value = CI->getSExtValue();
-                  }
-                  OffSet.push_back(Value);
-                  StoreInsts[Value] = &I;
+        if (!isa<StoreInst>(I)) {
+          continue;
+        }
+        auto *Store = dyn_cast<StoreInst>(&I);
+        if (auto *Gep =
+                dyn_cast<GetElementPtrInst>(Store->getPointerOperand())) {
+          ScevVal = const_cast<SCEV *>(SE.getSCEV(Gep));
+          if ((BasePtr = const_cast<SCEV *>(SE.getPointerBase(ScevVal)))) {
+            // BasePtrMap[BasePtr].push_back(Store);
+            if (TempPtr == nullptr)
+              TempPtr = BasePtr;
+            else if (TempPtr != BasePtr) {
+              LLVM_DEBUG(dbgs()
+                         << "\nBasePointers are not same, stopping the pass");
+              continue;
+            }
+            DiffVal = const_cast<SCEV *>(SE.getMinusSCEV(ScevVal, BasePtr));
+            // Get the index of scev
+            if (SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(DiffVal)) {
+              if ((GetEle = const_cast<SCEV *>(AddRec->getStart()))) {
+                if (SCEVConstant *BConst = dyn_cast<SCEVConstant>(GetEle)) {
+                  ConstantInt *CI = BConst->getValue();
+                  Value = CI->getSExtValue();
                 }
+                OffSet.push_back(Value);
+                StoreInsts[Value] = &I;
               }
             }
           }
         }
       }
+    }
+
+    // If vector is already Sorted , then there is use of continuing the code. Stop the pass.
+    if (std::is_sorted(OffSet.begin(), OffSet.end())) {
+      LLVM_DEBUG(
+          dbgs()
+          << "\nScave values are already in sorted order.Exiting the pass");
+          return true;
     }
 
     // Sorting the Offset vector values
@@ -88,10 +102,15 @@ struct Scev : public FunctionPass {
     BasicBlock *StoreInstBB = StoreInsts[OffSet[0]]->getParent();
     Instruction *LastInst = StoreInstBB->getTerminator();
 
-    // Move all store instructions one by one before terminator instruction
+    // Move all store instructions and corresponding operands one by one before terminator instruction
     if (OffSet.size() != 0) {
       for (auto V = OffSet.begin(), E = OffSet.end(); V != E; V = V + 1) {
         StoreInsts[*V]->moveBefore(LastInst);
+        for (Use &U : StoreInsts[*V]->operands()) {
+          llvm::Value *Val = U.get();
+          Inst = dyn_cast<Instruction>(Val);
+          Inst->moveBefore(StoreInsts[*V]);
+        }
       }
     }
     return false;
