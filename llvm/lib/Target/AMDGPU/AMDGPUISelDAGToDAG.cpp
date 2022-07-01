@@ -2797,7 +2797,8 @@ bool AMDGPUDAGToDAGISel::SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const {
   return true;
 }
 
-bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const {
+bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,
+                                                  SDValue &Src) const {
   const ConstantSDNode *C = cast<ConstantSDNode>(In);
   assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
 
@@ -2809,7 +2810,6 @@ bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) cons
   Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
   return true;
 }
-
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
                                          SDValue &SrcMods) const {

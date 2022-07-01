@@ -1704,8 +1704,7 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
     // previous wmma.
     const MachineOperand *Src2 =
         TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    const Register CurSrc2Reg =
-        Src2->isReg() ? Src2->getReg() : AMDGPU::NoRegister;
+    const Register CurSrc2Reg = Src2->isReg() ? Src2->getReg() : Register();
 
     if (CurSrc2Reg != AMDGPU::NoRegister &&
         TRI->regsOverlap(PrevDstReg, CurSrc2Reg)) {

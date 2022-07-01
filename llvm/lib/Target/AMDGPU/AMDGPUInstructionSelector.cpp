@@ -3769,7 +3769,7 @@ AMDGPUInstructionSelector::selectWMMAOpSelVOP3PMods(
   assert((Root.isImm() && (Root.getImm() == -1 || Root.getImm() == 0)) &&
          "expected i1 value");
   unsigned Mods = SISrcMods::OP_SEL_1;
-  if (Root.getImm() == -1)
+  if (Root.getImm() != 0)
     Mods |= SISrcMods::OP_SEL_0;
 
   return {{

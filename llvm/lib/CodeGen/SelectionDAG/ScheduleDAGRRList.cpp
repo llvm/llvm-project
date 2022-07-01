@@ -1294,11 +1294,11 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
 
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static void CheckForLiveRegDef(SUnit *SU, unsigned Reg,
-                               SUnit **LiveRegDefs,
+static void CheckForLiveRegDef(SUnit *SU, unsigned Reg, SUnit **LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
-                               const TargetRegisterInfo *TRI) {
+                               const TargetRegisterInfo *TRI,
+                               const SDNode *Node = nullptr) {
   for (MCRegAliasIterator AliasI(Reg, TRI, true); AliasI.isValid(); ++AliasI) {
 
     // Check if Ref is live.
@@ -1306,6 +1306,10 @@ static void CheckForLiveRegDef(SUnit *SU, unsigned Reg,
 
     // Allow multiple uses of the same def.
     if (LiveRegDefs[*AliasI] == SU) continue;
+
+    // Allow multiple uses of same def
+    if (Node && LiveRegDefs[*AliasI]->getNode() == Node)
+      continue;
 
     // Add Reg to the set of interfering live regs.
     if (RegAdded.insert(*AliasI).second) {
@@ -1385,6 +1389,15 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
           i += NumVals;
       }
       continue;
+    }
+
+    if (Node->getOpcode() == ISD::CopyToReg) {
+      Register Reg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
+      if (Reg.isPhysical()) {
+        SDNode *SrcNode = Node->getOperand(2).getNode();
+        CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI,
+                           SrcNode);
+      }
     }
 
     if (!Node->isMachineOpcode())

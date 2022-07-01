@@ -524,11 +524,6 @@ createNonLdMatrixLoads(vector::TransferReadOp op, OpBuilder &builder,
     return failure();
   }
 
-  NVVM::MMALayout targetLayout =
-      warpMatrixInfo->operandRole == nvgpu::MatMulOperandRole::B
-          ? NVVM::MMALayout::col
-          : NVVM::MMALayout::row;
-
   Value laneId = builder.create<gpu::LaneIdOp>(loc);
   SmallVector<Value, 4> elements;
 
@@ -543,8 +538,9 @@ createNonLdMatrixLoads(vector::TransferReadOp op, OpBuilder &builder,
 
   bool isTransposeLoad = !op.getPermutationMap().isMinorIdentity();
 
-  // Vectorized loads.
-  if (!isTransposeLoad && targetLayout == NVVM::MMALayout::row) {
+  // If we are not transposing, then we can use vectorized loads. Otherwise, we
+  // must load each element individually.
+  if (!isTransposeLoad) {
     if (!loadedElType.isa<VectorType>()) {
       loadedElType = VectorType::get({1}, loadedElType);
     }
@@ -566,11 +562,10 @@ createNonLdMatrixLoads(vector::TransferReadOp op, OpBuilder &builder,
       result = builder.create<vector::InsertOp>(loc, el, result,
                                                 builder.getI64ArrayAttr(i));
     }
-  } else if (isTransposeLoad && targetLayout == NVVM::MMALayout::col) {
+  } else {
     if (auto vecType = loadedElType.dyn_cast<VectorType>()) {
       loadedElType = vecType.getElementType();
     }
-    // Load each element individually.
     for (int i = 0; i < vectorType.getShape()[0]; i++) {
       for (unsigned innerIdx = 0; innerIdx < vectorType.getShape()[1];
            innerIdx++) {
@@ -592,8 +587,6 @@ createNonLdMatrixLoads(vector::TransferReadOp op, OpBuilder &builder,
             op.getLoc(), el, result, builder.getI64ArrayAttr({i, innerIdx}));
       }
     }
-  } else {
-    return failure();
   }
 
   valueMapping[op.getResult()] = result;

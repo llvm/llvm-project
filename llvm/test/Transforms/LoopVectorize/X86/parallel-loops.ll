@@ -30,8 +30,8 @@ define void @loop(i32* nocapture %a, i32* nocapture %b) nounwind uwtable {
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    store i32 [[TMP2]], i32* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], 512
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP3]], 512
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -166,8 +166,8 @@ define void @mixed_metadata(i32* nocapture %a, i32* nocapture %b) nounwind uwtab
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4, !llvm.access.group !7
 ; CHECK-NEXT:    store i32 [[TMP2]], i32* [[ARRAYIDX2]], align 4, !llvm.access.group !7
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], 512
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP3]], 512
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
