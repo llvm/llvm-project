@@ -175,9 +175,6 @@ public:
   Constant *CreateFNeg(Constant *C) const override {
     return Fold(ConstantExpr::getFNeg(C));
   }
-  Constant *CreateNot(Constant *C) const override {
-    return Fold(ConstantExpr::getNot(C));
-  }
 
   Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {
     return Fold(ConstantExpr::get(Opc, C));

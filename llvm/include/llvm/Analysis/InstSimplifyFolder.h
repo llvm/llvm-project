@@ -118,9 +118,6 @@ public:
   Value *CreateFNeg(Constant *C) const override {
     return ConstFolder.CreateFNeg(C);
   }
-  Value *CreateNot(Constant *C) const override {
-    return ConstFolder.CreateNot(C);
-  }
 
   Value *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {
     return ConstFolder.CreateUnOp(Opc, C);

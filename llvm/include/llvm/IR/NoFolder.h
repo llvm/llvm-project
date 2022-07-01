@@ -119,10 +119,6 @@ public:
     return UnaryOperator::CreateFNeg(C);
   }
 
-  Instruction *CreateNot(Constant *C) const override {
-    return BinaryOperator::CreateNot(C);
-  }
-
   Instruction *CreateUnOp(Instruction::UnaryOps Opc,
                           Constant *C) const override {
     return UnaryOperator::Create(Opc, C);
