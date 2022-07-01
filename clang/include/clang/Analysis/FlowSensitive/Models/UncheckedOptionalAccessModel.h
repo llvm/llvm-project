@@ -19,7 +19,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
-#include "clang/Analysis/FlowSensitive/SourceLocationsLattice.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Basic/SourceLocation.h"
 #include <vector>
 
@@ -38,15 +38,11 @@ struct UncheckedOptionalAccessModelOptions {
   bool IgnoreSmartPointerDereference = false;
 };
 
-/// Dataflow analysis that discovers unsafe accesses of optional values and
-/// adds the respective source locations to the lattice.
+/// Dataflow analysis that models whether optionals hold values or not.
 ///
 /// Models the `std::optional`, `absl::optional`, and `base::Optional` types.
-///
-/// FIXME: Consider separating the models from the unchecked access analysis.
 class UncheckedOptionalAccessModel
-    : public DataflowAnalysis<UncheckedOptionalAccessModel,
-                              SourceLocationsLattice> {
+    : public DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice> {
 public:
   UncheckedOptionalAccessModel(
       ASTContext &AstContext, UncheckedOptionalAccessModelOptions Options = {});
@@ -54,12 +50,9 @@ public:
   /// Returns a matcher for the optional classes covered by this model.
   static ast_matchers::DeclarationMatcher optionalClassDecl();
 
-  static SourceLocationsLattice initialElement() {
-    return SourceLocationsLattice();
-  }
+  static NoopLattice initialElement() { return {}; }
 
-  void transfer(const Stmt *Stmt, SourceLocationsLattice &State,
-                Environment &Env);
+  void transfer(const Stmt *Stmt, NoopLattice &State, Environment &Env);
 
   bool compareEquivalent(QualType Type, const Value &Val1,
                          const Environment &Env1, const Value &Val2,
@@ -70,7 +63,7 @@ public:
              Environment &MergedEnv) override;
 
 private:
-  MatchSwitch<TransferState<SourceLocationsLattice>> TransferMatchSwitch;
+  MatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
 };
 
 class UncheckedOptionalAccessDiagnoser {
