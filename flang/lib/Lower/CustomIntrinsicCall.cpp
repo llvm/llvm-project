@@ -92,8 +92,7 @@ static void prepareMinOrMaxArguments(
   mlir::Type resultType = *retTy;
   mlir::Location loc = converter.getCurrentLocation();
   if (fir::isa_char(resultType))
-    TODO(loc,
-         "CHARACTER MIN and MAX lowering with dynamically optional arguments");
+    TODO(loc, "CHARACTER MIN and MAX with dynamically optional arguments");
   for (auto arg : llvm::enumerate(procRef.arguments())) {
     const auto *expr =
         Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());

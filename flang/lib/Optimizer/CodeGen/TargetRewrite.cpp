@@ -119,7 +119,7 @@ public:
     auto m = specifics->complexReturnType(loc, ty.getElementType());
     // Currently targets mandate COMPLEX is a single aggregate or packed
     // scalar, including the sret case.
-    assert(m.size() == 1 && "target lowering of complex return not supported");
+    assert(m.size() == 1 && "target of complex return not supported");
     auto resTy = std::get<mlir::Type>(m[0]);
     auto attr = std::get<fir::CodeGenSpecifics::Attributes>(m[0]);
     if (attr.isSRet()) {

@@ -1538,7 +1538,7 @@ getBuffer(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     if (auto *var = std::get_if<Fortran::parser::Variable>(&iounit->u))
       if (auto *expr = Fortran::semantics::GetExpr(*var))
         return genBuffer(converter, loc, *expr, strTy, lenTy, stmtCtx);
-  llvm::report_fatal_error("failed to get IoUnit expr in lowering");
+  llvm::report_fatal_error("failed to get IoUnit expr");
 }
 
 static mlir::Value genIOUnitNumber(Fortran::lower::AbstractConverter &converter,

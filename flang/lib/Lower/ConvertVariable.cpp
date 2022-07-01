@@ -123,7 +123,7 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
   const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
   if (!ultimate.has<Fortran::semantics::ObjectEntityDetails>() &&
       !Fortran::semantics::IsProcedurePointer(ultimate))
-    mlir::emitError(loc, "lowering global declaration: symbol '")
+    mlir::emitError(loc, "processing global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
   return builder.createGlobal(loc, converter.genType(var), globalName, linkage,
                               mlir::Attribute{}, isConstant(ultimate));
@@ -1410,7 +1410,7 @@ void Fortran::lower::mapSymbolAttributes(
           auto expr = Fortran::lower::SomeExpr{*low};
           lb = builder.createConvert(loc, idxTy, genValue(expr));
         } else {
-          TODO(loc, "assumed rank lowering");
+          TODO(loc, "support for assumed rank entities");
         }
         lbounds.emplace_back(lb);
 
