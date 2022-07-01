@@ -28,7 +28,7 @@
   ! CHECK: call {{.*}}EndIoStatement
   endfile(8)
 
-  ! CHECK: call {{.*}}BeginWaitAll
+  ! CHECK: call {{.*}}BeginWaitAll(%{{.*}}, %{{.*}}, %{{.*}})
   ! CHECK: call {{.*}}EndIoStatement
   wait(unit=8)
 
