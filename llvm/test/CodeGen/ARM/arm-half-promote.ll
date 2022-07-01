@@ -79,3 +79,16 @@ define fastcc { <8 x half>, <8 x half> } @f3() {
   ret { <8 x half>, <8 x half> } zeroinitializer
 }
 
+define void @extract_insert(ptr %dst) optnone noinline {
+; CHECK-LABEL: extract_insert:
+; CHECK: vmov.i32 d0, #0x0
+; CHECK: vcvtb.f16.f32 s0, s0
+; CHECK: vmov r1, s0
+; CHECK: strh r1, [r0]
+  %splat.splatinsert = insertelement <1 x half> zeroinitializer, half 0xH0000, i32 0
+  br label %next
+
+next:
+  store <1 x half> %splat.splatinsert, ptr %dst
+  ret void
+}
