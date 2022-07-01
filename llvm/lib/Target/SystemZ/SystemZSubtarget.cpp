@@ -27,13 +27,14 @@ static cl::opt<bool> UseSubRegLiveness(
 // Pin the vtable to this file.
 void SystemZSubtarget::anchor() {}
 
-SystemZSubtarget &
-SystemZSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  StringRef CPUName = CPU;
-  if (CPUName.empty())
-    CPUName = "generic";
+SystemZSubtarget &SystemZSubtarget::initializeSubtargetDependencies(
+    StringRef CPU, StringRef TuneCPU, StringRef FS) {
+  if (CPU.empty())
+    CPU = "generic";
+  if (TuneCPU.empty())
+    TuneCPU = CPU;
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+  ParseSubtargetFeatures(CPU, TuneCPU, FS);
 
   // -msoft-float implies -mno-vx.
   if (HasSoftFloat)
@@ -64,9 +65,10 @@ SystemZSubtarget::initializeSpecialRegisters() {
 }
 
 SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
+                                   const std::string &TuneCPU,
                                    const std::string &FS,
                                    const TargetMachine &TM)
-    : SystemZGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+    : SystemZGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       HasDistinctOps(false), HasLoadStoreOnCond(false), HasHighWord(false),
       HasFPExtension(false), HasPopulationCount(false),
       HasMessageSecurityAssist3(false), HasMessageSecurityAssist4(false),
@@ -88,8 +90,8 @@ SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
       HasResetDATProtection(false), HasProcessorActivityInstrumentation(false),
       HasSoftFloat(false), TargetTriple(TT),
       SpecialRegisters(initializeSpecialRegisters()),
-      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
-      FrameLowering(SystemZFrameLowering::create(*this)) {}
+      InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
+      TLInfo(TM, *this), FrameLowering(SystemZFrameLowering::create(*this)) {}
 
 bool SystemZSubtarget::enableSubRegLiveness() const {
   return UseSubRegLiveness;
