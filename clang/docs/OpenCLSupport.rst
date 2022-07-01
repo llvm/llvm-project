@@ -408,8 +408,8 @@ Experimental features
 
 Clang provides the following new WIP features for the developers to experiment
 and provide early feedback or contribute with further improvements.
-Feel free to contact us on `cfe-dev
-<https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or file `a GitHub issue
+Feel free to contact us on `the Discourse forums (Clang Frontend category)
+<https://discourse.llvm.org/c/clang/6>`_ or file `a GitHub issue
 <https://github.com/llvm/llvm-project/issues/new>`_.
 
 .. _opencl_experimental_cxxlibs:
