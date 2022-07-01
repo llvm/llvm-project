@@ -13,6 +13,7 @@ Usage:
 
 
 import sys
+import os
 import subprocess
 
 llvm_dis = sys.argv[1]
@@ -20,10 +21,23 @@ filecheck = sys.argv[2]
 filecheck_args = [filecheck, ]
 filecheck_args.extend(sys.argv[3:-1])
 bitcode_file = sys.argv[-1]
+ir_file = bitcode_file + ".ll"
 
-disassemble = subprocess.Popen([llvm_dis, "-o", "-", bitcode_file],
-        stdout=subprocess.PIPE)
-check = subprocess.Popen(filecheck_args, stdin=disassemble.stdout)
-disassemble.stdout.close()
+disassemble = subprocess.Popen([llvm_dis, "-o", ir_file, bitcode_file])
+if os.path.exists(ir_file + ".0"):
+    ir_file = ir_file + ".0"
+
+disassemble.communicate()
+
+if disassemble.returncode != 0:
+    print("stderr:")
+    print(disassemble.stderr)
+    print("stdout:")
+    print(disassemble.stdout)
+    sys.exit(1)
+
+check=None
+with open(ir_file, "r") as ir:
+    check = subprocess.Popen(filecheck_args, stdin=ir, stdout=sys.stdout)
 check.communicate()
 sys.exit(check.returncode)
