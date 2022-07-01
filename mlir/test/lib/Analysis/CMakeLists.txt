@@ -11,6 +11,7 @@ add_mlir_library(MLIRTestAnalysis
   TestMemRefStrideCalculation.cpp
   TestSlice.cpp
 
+  DataFlow/TestDeadCodeAnalysis.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
