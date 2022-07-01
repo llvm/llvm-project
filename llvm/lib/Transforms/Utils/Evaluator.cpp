@@ -336,52 +336,6 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       auto Res = MutatedMemory.try_emplace(GV, GV->getInitializer());
       if (!Res.first->second.write(Val, Offset, DL))
         return false;
-    } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(CurInst)) {
-      InstResult = ConstantExpr::get(BO->getOpcode(),
-                                     getVal(BO->getOperand(0)),
-                                     getVal(BO->getOperand(1)));
-      LLVM_DEBUG(dbgs() << "Found a BinaryOperator! Simplifying: "
-                        << *InstResult << "\n");
-    } else if (CmpInst *CI = dyn_cast<CmpInst>(CurInst)) {
-      InstResult = ConstantExpr::getCompare(CI->getPredicate(),
-                                            getVal(CI->getOperand(0)),
-                                            getVal(CI->getOperand(1)));
-      LLVM_DEBUG(dbgs() << "Found a CmpInst! Simplifying: " << *InstResult
-                        << "\n");
-    } else if (CastInst *CI = dyn_cast<CastInst>(CurInst)) {
-      InstResult = ConstantExpr::getCast(CI->getOpcode(),
-                                         getVal(CI->getOperand(0)),
-                                         CI->getType());
-      LLVM_DEBUG(dbgs() << "Found a Cast! Simplifying: " << *InstResult
-                        << "\n");
-    } else if (SelectInst *SI = dyn_cast<SelectInst>(CurInst)) {
-      InstResult = ConstantExpr::getSelect(getVal(SI->getOperand(0)),
-                                           getVal(SI->getOperand(1)),
-                                           getVal(SI->getOperand(2)));
-      LLVM_DEBUG(dbgs() << "Found a Select! Simplifying: " << *InstResult
-                        << "\n");
-    } else if (auto *EVI = dyn_cast<ExtractValueInst>(CurInst)) {
-      InstResult = ConstantFoldExtractValueInstruction(
-          getVal(EVI->getAggregateOperand()), EVI->getIndices());
-      if (!InstResult)
-        return false;
-      LLVM_DEBUG(dbgs() << "Found an ExtractValueInst! Simplifying: "
-                        << *InstResult << "\n");
-    } else if (auto *IVI = dyn_cast<InsertValueInst>(CurInst)) {
-      InstResult = ConstantExpr::getInsertValue(
-          getVal(IVI->getAggregateOperand()),
-          getVal(IVI->getInsertedValueOperand()), IVI->getIndices());
-      LLVM_DEBUG(dbgs() << "Found an InsertValueInst! Simplifying: "
-                        << *InstResult << "\n");
-    } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(CurInst)) {
-      Constant *P = getVal(GEP->getOperand(0));
-      SmallVector<Constant*, 8> GEPOps;
-      for (Use &Op : llvm::drop_begin(GEP->operands()))
-        GEPOps.push_back(getVal(Op));
-      InstResult =
-          ConstantExpr::getGetElementPtr(GEP->getSourceElementType(), P, GEPOps,
-                                         cast<GEPOperator>(GEP)->isInBounds());
-      LLVM_DEBUG(dbgs() << "Found a GEP! Simplifying: " << *InstResult << "\n");
     } else if (LoadInst *LI = dyn_cast<LoadInst>(CurInst)) {
       if (!LI->isSimple()) {
         LLVM_DEBUG(
@@ -628,11 +582,16 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       LLVM_DEBUG(dbgs() << "Successfully evaluated block.\n");
       return true;
     } else {
-      // Did not know how to evaluate this!
-      LLVM_DEBUG(
-          dbgs() << "Failed to evaluate block due to unhandled instruction."
-                    "\n");
-      return false;
+      SmallVector<Constant *> Ops;
+      for (Value *Op : CurInst->operands())
+        Ops.push_back(getVal(Op));
+      InstResult = ConstantFoldInstOperands(&*CurInst, Ops, DL, TLI);
+      if (!InstResult) {
+        dbgs() << "Cannot fold instruction: " << *CurInst << "\n";
+        return false;
+      }
+      dbgs() << "Folded instruction " << *CurInst << " to " << *InstResult
+             << "\n";
     }
 
     if (!CurInst->use_empty()) {
