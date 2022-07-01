@@ -1259,6 +1259,9 @@ TEST_F(ConstantRangeTest, UDiv) {
 }
 
 TEST_F(ConstantRangeTest, SDiv) {
+  ConstantRange OneBit = ConstantRange::getFull(1);
+  EXPECT_EQ(OneBit.sdiv(OneBit), ConstantRange(APInt(1, 0)));
+
   unsigned Bits = 4;
   EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
                                        const ConstantRange &CR2) {
