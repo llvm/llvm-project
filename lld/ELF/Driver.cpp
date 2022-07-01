@@ -1774,7 +1774,7 @@ static void handleUndefined(Symbol *sym, const char *option) {
     return;
   sym->extract();
   if (!config->whyExtract.empty())
-    driver->whyExtract.emplace_back(option, sym->file, *sym);
+    ctx->whyExtractRecords.emplace_back(option, sym->file, *sym);
 }
 
 // As an extension to GNU linkers, lld supports a variant of `-u`
@@ -1810,7 +1810,7 @@ static void handleLibcall(StringRef name) {
     sym->extract();
 }
 
-void LinkerDriver::writeArchiveStats() const {
+static void writeArchiveStats() {
   if (config->printArchiveStats.empty())
     return;
 
@@ -1832,7 +1832,7 @@ void LinkerDriver::writeArchiveStats() const {
   for (BitcodeFile *file : bitcodeFiles)
     if (file->archiveName.size())
       ++extracted[CachedHashStringRef(file->archiveName)];
-  for (std::pair<StringRef, unsigned> f : archiveFiles) {
+  for (std::pair<StringRef, unsigned> f : driver->archiveFiles) {
     unsigned &v = extracted[CachedHashString(f.first)];
     os << f.second << '\t' << v << '\t' << f.first << '\n';
     // If the archive occurs multiple times, other instances have a count of 0.
@@ -1840,7 +1840,7 @@ void LinkerDriver::writeArchiveStats() const {
   }
 }
 
-void LinkerDriver::writeWhyExtract() const {
+static void writeWhyExtract() {
   if (config->whyExtract.empty())
     return;
 
@@ -1853,14 +1853,14 @@ void LinkerDriver::writeWhyExtract() const {
   }
 
   os << "reference\textracted\tsymbol\n";
-  for (auto &entry : whyExtract) {
+  for (auto &entry : ctx->whyExtractRecords) {
     os << std::get<0>(entry) << '\t' << toString(std::get<1>(entry)) << '\t'
        << toString(std::get<2>(entry)) << '\n';
   }
 }
 
-void LinkerDriver::reportBackrefs() const {
-  for (auto &ref : backwardReferences) {
+static void reportBackrefs() {
+  for (auto &ref : ctx->backwardReferences) {
     const Symbol &sym = *ref.first;
     std::string to = toString(ref.second.second);
     // Some libraries have known problems and can cause noise. Filter them out
