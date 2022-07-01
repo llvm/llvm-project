@@ -543,9 +543,14 @@ public:
     // operators as well
     llvm::ArrayRef<const Expr *> Args = {E->getArgs(), E->getNumArgs()};
     if (const auto callOp = dyn_cast<CXXOperatorCallExpr>(E)) {
-      if (callOp->getOperator() != OO_Call)
+      switch (callOp->getOperator()) {
+      case OO_Call:
+      case OO_Subscript:
+        Args = Args.drop_front(); // Drop object parameter
+        break;
+      default:
         return true;
-      Args = Args.drop_front(); // Drop object parameter
+      }
     }
 
     highlightMutableReferenceArguments(
