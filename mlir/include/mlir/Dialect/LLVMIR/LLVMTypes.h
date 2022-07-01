@@ -264,7 +264,8 @@ public:
 /// structs, but does not in uniquing of identified structs.
 class LLVMStructType
     : public Type::TypeBase<LLVMStructType, Type, detail::LLVMStructTypeStorage,
-                            DataLayoutTypeInterface::Trait> {
+                            DataLayoutTypeInterface::Trait,
+                            TypeTrait::IsMutable> {
 public:
   /// Inherit base constructors.
   using Base::Base;

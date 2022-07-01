@@ -160,6 +160,13 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
         return AliasResult::FinalAlias;
       }
     }
+    if (auto recType = type.dyn_cast<TestRecursiveType>()) {
+      if (recType.getName() == "type_to_alias") {
+        // We only make alias for a specific recursive type.
+        os << "testrec";
+        return AliasResult::FinalAlias;
+      }
+    }
     return AliasResult::NoAlias;
   }
 
