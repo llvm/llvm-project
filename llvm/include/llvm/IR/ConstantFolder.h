@@ -22,6 +22,7 @@
 #include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Operator.h"
 
 namespace llvm {
 
@@ -38,61 +39,44 @@ public:
   // Return an existing value or a constant if the operation can be simplified.
   // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
-  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
-                 bool HasNSW = false) const override {
+
+  Value *FoldBinOp(Instruction::BinaryOps Opc, Value *LHS,
+                   Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC)
-      return ConstantExpr::getAdd(LC, RC, HasNUW, HasNSW);
+      return ConstantExpr::get(Opc, LC, RC);
     return nullptr;
   }
 
-  Value *FoldAnd(Value *LHS, Value *RHS) const override {
+  Value *FoldExactBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                        bool IsExact) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC)
-      return ConstantExpr::getAnd(LC, RC);
+      return ConstantExpr::get(Opc, LC, RC,
+                               IsExact ? PossiblyExactOperator::IsExact : 0);
     return nullptr;
   }
 
-  Value *FoldOr(Value *LHS, Value *RHS) const override {
+  Value *FoldNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                         bool HasNUW, bool HasNSW) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::getOr(LC, RC);
+    if (LC && RC) {
+      unsigned Flags = 0;
+      if (HasNUW)
+        Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
+      if (HasNSW)
+        Flags |= OverflowingBinaryOperator::NoSignedWrap;
+      return ConstantExpr::get(Opc, LC, RC, Flags);
+    }
     return nullptr;
   }
 
-  Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const override {
-    auto *LC = dyn_cast<Constant>(LHS);
-    auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::getUDiv(LC, RC, IsExact);
-    return nullptr;
-  }
-
-  Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const override {
-    auto *LC = dyn_cast<Constant>(LHS);
-    auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::getSDiv(LC, RC, IsExact);
-    return nullptr;
-  }
-
-  Value *FoldURem(Value *LHS, Value *RHS) const override {
-    auto *LC = dyn_cast<Constant>(LHS);
-    auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::getURem(LC, RC);
-    return nullptr;
-  }
-
-  Value *FoldSRem(Value *LHS, Value *RHS) const override {
-    auto *LC = dyn_cast<Constant>(LHS);
-    auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::getSRem(LC, RC);
-    return nullptr;
+  Value *FoldBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                      FastMathFlags FMF) const override {
+    return FoldBinOp(Opc, LHS, RHS);
   }
 
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
@@ -168,68 +152,6 @@ public:
     if (C1 && C2)
       return ConstantExpr::getShuffleVector(C1, C2, Mask);
     return nullptr;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Binary Operators
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateFAdd(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFAdd(LHS, RHS);
-  }
-
-  Constant *CreateSub(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getSub(LHS, RHS, HasNUW, HasNSW);
-  }
-
-  Constant *CreateFSub(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFSub(LHS, RHS);
-  }
-
-  Constant *CreateMul(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getMul(LHS, RHS, HasNUW, HasNSW);
-  }
-
-  Constant *CreateFMul(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFMul(LHS, RHS);
-  }
-
-  Constant *CreateFDiv(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFDiv(LHS, RHS);
-  }
-
-  Constant *CreateFRem(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getFRem(LHS, RHS);
-  }
-
-  Constant *CreateShl(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getShl(LHS, RHS, HasNUW, HasNSW);
-  }
-
-  Constant *CreateLShr(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return ConstantExpr::getLShr(LHS, RHS, isExact);
-  }
-
-  Constant *CreateAShr(Constant *LHS, Constant *RHS,
-                       bool isExact = false) const override {
-    return ConstantExpr::getAShr(LHS, RHS, isExact);
-  }
-
-  Constant *CreateOr(Constant *LHS, Constant *RHS) const {
-    return ConstantExpr::getOr(LHS, RHS);
-  }
-
-  Constant *CreateXor(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getXor(LHS, RHS);
-  }
-
-  Constant *CreateBinOp(Instruction::BinaryOps Opc,
-                        Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::get(Opc, LHS, RHS);
   }
 
   //===--------------------------------------------------------------------===//

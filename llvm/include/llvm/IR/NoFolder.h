@@ -43,26 +43,26 @@ public:
   // Return an existing value or a constant if the operation can be simplified.
   // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
-  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
-                 bool HasNSW = false) const override {
+
+  Value *FoldBinOp(Instruction::BinaryOps Opc, Value *LHS,
+                   Value *RHS) const override {
     return nullptr;
   }
 
-  Value *FoldAnd(Value *LHS, Value *RHS) const override { return nullptr; }
-
-  Value *FoldOr(Value *LHS, Value *RHS) const override { return nullptr; }
-
-  Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+  Value *FoldExactBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                        bool IsExact) const override {
     return nullptr;
   }
 
-  Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const override {
+  Value *FoldNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                         bool HasNUW, bool HasNSW) const override {
     return nullptr;
   }
 
-  Value *FoldURem(Value *LHS, Value *RHS) const override { return nullptr; }
-
-  Value *FoldSRem(Value *LHS, Value *RHS) const override { return nullptr; }
+  Value *FoldBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                      FastMathFlags FMF) const override {
+    return nullptr;
+  }
 
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return nullptr;
@@ -99,79 +99,6 @@ public:
   Value *FoldShuffleVector(Value *V1, Value *V2,
                            ArrayRef<int> Mask) const override {
     return nullptr;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Binary Operators
-  //===--------------------------------------------------------------------===//
-
-  Instruction *CreateFAdd(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFAdd(LHS, RHS);
-  }
-
-  Instruction *CreateSub(Constant *LHS, Constant *RHS,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateSub(LHS, RHS);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
-  }
-
-  Instruction *CreateFSub(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFSub(LHS, RHS);
-  }
-
-  Instruction *CreateMul(Constant *LHS, Constant *RHS,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateMul(LHS, RHS);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
-  }
-
-  Instruction *CreateFMul(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFMul(LHS, RHS);
-  }
-
-  Instruction *CreateFDiv(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFDiv(LHS, RHS);
-  }
-
-  Instruction *CreateFRem(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFRem(LHS, RHS);
-  }
-
-  Instruction *CreateShl(Constant *LHS, Constant *RHS, bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateShl(LHS, RHS);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
-  }
-
-  Instruction *CreateLShr(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateLShr(LHS, RHS);
-    return BinaryOperator::CreateExactLShr(LHS, RHS);
-  }
-
-  Instruction *CreateAShr(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateAShr(LHS, RHS);
-    return BinaryOperator::CreateExactAShr(LHS, RHS);
-  }
-
-  Instruction *CreateXor(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateXor(LHS, RHS);
-  }
-
-  Instruction *CreateBinOp(Instruction::BinaryOps Opc,
-                           Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::Create(Opc, LHS, RHS);
   }
 
   //===--------------------------------------------------------------------===//

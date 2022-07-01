@@ -46,33 +46,25 @@ public:
   // Return an existing value or a constant if the operation can be simplified.
   // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
-  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
-                 bool HasNSW = false) const override {
-    return simplifyAddInst(LHS, RHS, HasNUW, HasNSW, SQ);
+
+  Value *FoldBinOp(Instruction::BinaryOps Opc, Value *LHS,
+                   Value *RHS) const override {
+    return simplifyBinOp(Opc, LHS, RHS, SQ);
   }
 
-  Value *FoldAnd(Value *LHS, Value *RHS) const override {
-    return simplifyAndInst(LHS, RHS, SQ);
+  Value *FoldExactBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                        bool IsExact) const override {
+    return simplifyBinOp(Opc, LHS, RHS, SQ);
   }
 
-  Value *FoldOr(Value *LHS, Value *RHS) const override {
-    return simplifyOrInst(LHS, RHS, SQ);
+  Value *FoldNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                         bool HasNUW, bool HasNSW) const override {
+    return simplifyBinOp(Opc, LHS, RHS, SQ);
   }
 
-  Value *FoldUDiv(Value *LHS, Value *RHS, bool IsExact) const override {
-    return simplifyUDivInst(LHS, RHS, SQ);
-  }
-
-  Value *FoldSDiv(Value *LHS, Value *RHS, bool IsExact) const override {
-    return simplifySDivInst(LHS, RHS, SQ);
-  }
-
-  Value *FoldURem(Value *LHS, Value *RHS) const override {
-    return simplifyURemInst(LHS, RHS, SQ);
-  }
-
-  Value *FoldSRem(Value *LHS, Value *RHS) const override {
-    return simplifySRemInst(LHS, RHS, SQ);
+  Value *FoldBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                      FastMathFlags FMF) const override {
+    return simplifyBinOp(Opc, LHS, RHS, FMF, SQ);
   }
 
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
@@ -113,54 +105,6 @@ public:
         cast<VectorType>(V1->getType())->getElementType(), Mask.size(),
         isa<ScalableVectorType>(V1->getType()));
     return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Binary Operators
-  //===--------------------------------------------------------------------===//
-
-  Value *CreateFAdd(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateFAdd(LHS, RHS);
-  }
-  Value *CreateSub(Constant *LHS, Constant *RHS, bool HasNUW = false,
-                   bool HasNSW = false) const override {
-    return ConstFolder.CreateSub(LHS, RHS, HasNUW, HasNSW);
-  }
-  Value *CreateFSub(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateFSub(LHS, RHS);
-  }
-  Value *CreateMul(Constant *LHS, Constant *RHS, bool HasNUW = false,
-                   bool HasNSW = false) const override {
-    return ConstFolder.CreateMul(LHS, RHS, HasNUW, HasNSW);
-  }
-  Value *CreateFMul(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateFMul(LHS, RHS);
-  }
-  Value *CreateFDiv(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateFDiv(LHS, RHS);
-  }
-  Value *CreateFRem(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateFRem(LHS, RHS);
-  }
-  Value *CreateShl(Constant *LHS, Constant *RHS, bool HasNUW = false,
-                   bool HasNSW = false) const override {
-    return ConstFolder.CreateShl(LHS, RHS, HasNUW, HasNSW);
-  }
-  Value *CreateLShr(Constant *LHS, Constant *RHS,
-                    bool isExact = false) const override {
-    return ConstFolder.CreateLShr(LHS, RHS, isExact);
-  }
-  Value *CreateAShr(Constant *LHS, Constant *RHS,
-                    bool isExact = false) const override {
-    return ConstFolder.CreateAShr(LHS, RHS, isExact);
-  }
-  Value *CreateXor(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateXor(LHS, RHS);
-  }
-
-  Value *CreateBinOp(Instruction::BinaryOps Opc, Constant *LHS,
-                     Constant *RHS) const override {
-    return ConstFolder.CreateBinOp(Opc, LHS, RHS);
   }
 
   //===--------------------------------------------------------------------===//
