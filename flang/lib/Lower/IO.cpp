@@ -1764,6 +1764,11 @@ Fortran::lower::genWaitStatement(Fortran::lower::AbstractConverter &converter,
     mlir::Value id = fir::getBase(converter.genExprValue(
         loc, getExpr<Fortran::parser::IdExpr>(stmt), stmtCtx));
     args.push_back(builder.createConvert(loc, beginFuncTy.getInput(1), id));
+    args.push_back(locToFilename(converter, loc, beginFuncTy.getInput(2)));
+    args.push_back(locToLineNo(converter, loc, beginFuncTy.getInput(3)));
+  } else {
+    args.push_back(locToFilename(converter, loc, beginFuncTy.getInput(1)));
+    args.push_back(locToLineNo(converter, loc, beginFuncTy.getInput(2)));
   }
   auto cookie = builder.create<fir::CallOp>(loc, beginFunc, args).getResult(0);
   genConditionHandlerCall(converter, loc, cookie, stmt.v, csi);
