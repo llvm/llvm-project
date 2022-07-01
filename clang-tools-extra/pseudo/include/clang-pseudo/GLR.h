@@ -30,6 +30,7 @@
 #define CLANG_PSEUDO_GLR_H
 
 #include "clang-pseudo/Forest.h"
+#include "clang-pseudo/Language.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/grammar/LRTable.h"
 #include "llvm/Support/Allocator.h"
@@ -112,38 +113,35 @@ private:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GSS::Node &);
 
 // Parameters for the GLR parsing.
-// FIXME: refine it with the ParseLang struct.
 struct ParseParams {
-  // The grammar of the language we're going to parse.
-  const Grammar &G;
-  // The LR table which GLR uses to parse the input, should correspond to the
-  // Grammar G.
-  const LRTable &Table;
+  // The token stream to parse.
+  const TokenStream &Code;
 
   // Arena for data structure used by the GLR algorithm.
   ForestArena &Forest;  // Storage for the output forest.
   GSS &GSStack;         // Storage for parsing stacks.
 };
+
 // Parses the given token stream as the start symbol with the GLR algorithm,
 // and returns a forest node of the start symbol.
 //
 // A rule `_ := StartSymbol` must exit for the chosen start symbol.
 //
 // If the parsing fails, we model it as an opaque node in the forest.
-const ForestNode &glrParse(const TokenStream &Code, const ParseParams &Params,
-                           SymbolID StartSymbol);
+const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
+                           const Language &Lang);
 
 // Shift a token onto all OldHeads, placing the results into NewHeads.
 //
 // Exposed for testing only.
 void glrShift(llvm::ArrayRef<const GSS::Node *> OldHeads,
               const ForestNode &NextTok, const ParseParams &Params,
-              std::vector<const GSS::Node *> &NewHeads);
+              const Language &Lang, std::vector<const GSS::Node *> &NewHeads);
 // Applies available reductions on Heads, appending resulting heads to the list.
 //
 // Exposed for testing only.
 void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
-               const ParseParams &Params);
+               const ParseParams &Params, const Language &Lang);
 
 } // namespace pseudo
 } // namespace clang

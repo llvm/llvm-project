@@ -122,8 +122,7 @@ static void glrParse(benchmark::State &State) {
   for (auto _ : State) {
     pseudo::ForestArena Forest;
     pseudo::GSS GSS;
-    pseudo::glrParse(Stream, ParseParams{Lang->G, Lang->Table, Forest, GSS},
-                     StartSymbol);
+    pseudo::glrParse(ParseParams{Stream, Forest, GSS}, StartSymbol, *Lang);
   }
   State.SetBytesProcessed(static_cast<uint64_t>(State.iterations()) *
                           SourceText->size());
@@ -136,9 +135,7 @@ static void full(benchmark::State &State) {
     TokenStream Stream = lexAndPreprocess();
     pseudo::ForestArena Forest;
     pseudo::GSS GSS;
-    pseudo::glrParse(lexAndPreprocess(),
-                     ParseParams{Lang->G, Lang->Table, Forest, GSS},
-                     StartSymbol);
+    pseudo::glrParse(ParseParams{Stream, Forest, GSS}, StartSymbol, *Lang);
   }
   State.SetBytesProcessed(static_cast<uint64_t>(State.iterations()) *
                           SourceText->size());
