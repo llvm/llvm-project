@@ -261,7 +261,6 @@ public:
 class CodeGenRewrite : public fir::CodeGenRewriteBase<CodeGenRewrite> {
 public:
   void runOn(mlir::Operation *op, mlir::Region &region) {
-    // auto op = getOperation();
     auto &context = getContext();
     mlir::OpBuilder rewriter(&context);
     mlir::ConversionTarget target(context);
