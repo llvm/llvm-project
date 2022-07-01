@@ -2239,16 +2239,12 @@ Optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
 /// Splat/Merge neighboring bits to widen/narrow the bitmask represented
 /// by \param A to \param NewBitWidth bits.
 ///
-/// MatchAnyBits: (Default)
 /// e.g. ScaleBitMask(0b0101, 8) -> 0b00110011
 /// e.g. ScaleBitMask(0b00011011, 4) -> 0b0111
-///
-/// MatchAllBits:
-/// e.g. ScaleBitMask(0b0101, 8) -> 0b00110011
-/// e.g. ScaleBitMask(0b00011011, 4) -> 0b0001
 /// A.getBitwidth() or NewBitWidth must be a whole multiples of the other.
-APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth,
-                   bool MatchAllBits = false);
+///
+/// TODO: Do we need a mode where all bits must be set when merging down?
+APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth);
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in
