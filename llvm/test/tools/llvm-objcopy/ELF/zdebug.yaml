@@ -1,3 +1,4 @@
+# REQUIRES: zlib
 ## .zdebug is no longer recognized as zlib-gnu compressed sections. It's treated
 ## as an opaque non-debug section.
 # RUN: yaml2obj %s -o %t
