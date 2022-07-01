@@ -435,8 +435,7 @@ define <vscale x 4 x i1> @une_zero(<vscale x 4 x float> %x) {
 define <vscale x 8 x i1> @oeq_zero_pred(<vscale x 8 x i1> %pg, <vscale x 8 x half> %x) {
 ; CHECK-LABEL: oeq_zero_pred:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, #0 // =0x0
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
 ; CHECK-NEXT:    ret
   %y = fcmp oeq <vscale x 8 x half> %x, zeroinitializer
   %z = and <vscale x 8 x i1> %pg, %y
@@ -445,8 +444,7 @@ define <vscale x 8 x i1> @oeq_zero_pred(<vscale x 8 x i1> %pg, <vscale x 8 x hal
 define <vscale x 4 x i1> @ogt_zero_pred(<vscale x 4 x i1> %pg, <vscale x 4 x half> %x) {
 ; CHECK-LABEL: ogt_zero_pred:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, #0 // =0x0
-; CHECK-NEXT:    fcmgt p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    fcmgt p0.h, p0/z, z0.h, #0.0
 ; CHECK-NEXT:    ret
   %y = fcmp ogt <vscale x 4 x half> %x, zeroinitializer
   %z = and <vscale x 4 x i1> %pg, %y
@@ -455,8 +453,7 @@ define <vscale x 4 x i1> @ogt_zero_pred(<vscale x 4 x i1> %pg, <vscale x 4 x hal
 define <vscale x 2 x i1> @oge_zero_pred(<vscale x 2 x i1> %pg, <vscale x 2 x half> %x) {
 ; CHECK-LABEL: oge_zero_pred:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, #0 // =0x0
-; CHECK-NEXT:    fcmge p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    fcmge p0.h, p0/z, z0.h, #0.0
 ; CHECK-NEXT:    ret
   %y = fcmp oge <vscale x 2 x half> %x, zeroinitializer
   %z = and <vscale x 2 x i1> %pg, %y
@@ -465,8 +462,7 @@ define <vscale x 2 x i1> @oge_zero_pred(<vscale x 2 x i1> %pg, <vscale x 2 x hal
 define <vscale x 4 x i1> @olt_zero_pred(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x) {
 ; CHECK-LABEL: olt_zero_pred:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, #0 // =0x0
-; CHECK-NEXT:    fcmgt p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    fcmlt p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    ret
   %y = fcmp olt <vscale x 4 x float> %x, zeroinitializer
   %z = and <vscale x 4 x i1> %pg, %y
@@ -475,8 +471,7 @@ define <vscale x 4 x i1> @olt_zero_pred(<vscale x 4 x i1> %pg, <vscale x 4 x flo
 define <vscale x 2 x i1> @ole_zero_pred(<vscale x 2 x i1> %pg, <vscale x 2 x float> %x) {
 ; CHECK-LABEL: ole_zero_pred:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, #0 // =0x0
-; CHECK-NEXT:    fcmge p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    fcmle p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    ret
   %y = fcmp ole <vscale x 2 x float> %x, zeroinitializer
   %z = and <vscale x 2 x i1> %pg, %y
@@ -485,8 +480,7 @@ define <vscale x 2 x i1> @ole_zero_pred(<vscale x 2 x i1> %pg, <vscale x 2 x flo
 define <vscale x 2 x i1> @une_zero_pred(<vscale x 2 x i1> %pg, <vscale x 2 x double> %x) {
 ; CHECK-LABEL: une_zero_pred:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
-; CHECK-NEXT:    fcmne p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    fcmne p0.d, p0/z, z0.d, #0.0
 ; CHECK-NEXT:    ret
   %y = fcmp une <vscale x 2 x double> %x, zeroinitializer
   %z = and <vscale x 2 x i1> %pg, %y
