@@ -33,21 +33,21 @@ struct LlvmLibcLogfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
 };
 
 TEST_F(LlvmLibcLogfExhaustiveTest, RoundNearestTieToEven) {
-  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U, /*nthreads=*/16,
+  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U,
                   mpfr::RoundingMode::Nearest);
 }
 
 TEST_F(LlvmLibcLogfExhaustiveTest, RoundUp) {
-  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U, /*nthreads=*/16,
+  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U,
                   mpfr::RoundingMode::Upward);
 }
 
 TEST_F(LlvmLibcLogfExhaustiveTest, RoundDown) {
-  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U, /*nthreads=*/16,
+  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U,
                   mpfr::RoundingMode::Downward);
 }
 
 TEST_F(LlvmLibcLogfExhaustiveTest, RoundTowardZero) {
-  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U, /*nthreads=*/16,
+  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U,
                   mpfr::RoundingMode::TowardZero);
 }
