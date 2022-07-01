@@ -81,12 +81,9 @@ inline tok::TokenKind symbolToToken(SymbolID SID) {
   assert(SID < NumTerminals);
   return static_cast<tok::TokenKind>(SID);
 }
-inline constexpr SymbolID tokenSymbol(tok::TokenKind TK) {
+inline SymbolID tokenSymbol(tok::TokenKind TK) {
   return TokenFlag | static_cast<SymbolID>(TK);
 }
-// Error recovery strategies.
-// FIXME: these should be provided as extensions instead.
-enum class RecoveryStrategy : uint8_t { None, Braces };
 
 // An extension is a piece of native code specific to a grammar that modifies
 // the behavior of annotated rules. One ExtensionID is assigned for each unique
@@ -110,7 +107,7 @@ struct Rule {
   // length to 9 (this is the longest sequence in cxx grammar).
   static constexpr unsigned SizeBits = 4;
   static constexpr unsigned MaxElements = 9;
-  static_assert(MaxElements < (1 << SizeBits), "Exceeds the maximum limit");
+  static_assert(MaxElements <= (1 << SizeBits), "Exceeds the maximum limit");
   static_assert(SizeBits + SymbolBits <= 16,
                 "Must be able to store symbol ID + size efficiently");
 
@@ -125,13 +122,6 @@ struct Rule {
   // 0 is sentinel unset extension ID, indicating there is no guard extension
   // being set for this rule.
   ExtensionID Guard = 0;
-
-  // Specifies the index within Sequence eligible for error recovery.
-  // Given stmt := { stmt-seq_opt }, if we fail to parse the stmt-seq then we
-  // should recover by finding the matching brace, and forcing stmt-seq to match
-  // everything between braces.
-  uint8_t RecoveryIndex = -1;
-  RecoveryStrategy Recovery = RecoveryStrategy::None;
 
   llvm::ArrayRef<SymbolID> seq() const {
     return llvm::ArrayRef<SymbolID>(Sequence, Size);
