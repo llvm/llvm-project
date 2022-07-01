@@ -5,9 +5,6 @@
 ! RUN: %flang_fc1 -E -cpp %s 2>&1 | FileCheck %s --check-prefix=DEFINED
 ! RUN: %flang_fc1 -E -nocpp %s 2>&1 | FileCheck %s --check-prefix=NOT_DEFINED
 
-!-----------------
-! EXPECTED OUTPUT
-!-----------------
 ! DEFINED: flang = 1
 ! DEFINED-NEXT: flang_major = {{[1-9][0-9]*$}}
 

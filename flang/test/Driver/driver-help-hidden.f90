@@ -11,9 +11,6 @@
 ! RUN: not %flang_fc1 --help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG-FC1
 ! RUN: not %flang_fc1  -help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG-FC1
 
-!----------------------------------------------------
-! EXPECTED OUTPUT FOR FLANG DRIVER (flang-new)
-!----------------------------------------------------
 ! CHECK:USAGE: flang-new
 ! CHECK-EMPTY:
 ! CHECK-NEXT:OPTIONS:
@@ -69,14 +66,8 @@
 ! CHECK-NEXT: -W<warning>            Enable the specified warning
 ! CHECK-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
 
-!-------------------------------------------------------------
-! EXPECTED OUTPUT FOR FLANG DRIVER (flang-new)
-!-------------------------------------------------------------
 ! ERROR-FLANG: error: unknown argument '-help-hidden'; did you mean '--help-hidden'?
 
-!-------------------------------------------------------------
-! EXPECTED OUTPUT FOR FLANG FRONTEND DRIVER (flang-new -fc1)
-!-------------------------------------------------------------
 ! Frontend driver -help-hidden is not supported
 ! ERROR-FLANG-FC1: error: unknown argument: '{{.*}}'
 
