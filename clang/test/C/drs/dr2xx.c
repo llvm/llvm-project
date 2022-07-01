@@ -31,16 +31,23 @@ void dr204(void) {
   /* If the implementation supports a standard integer type larger than signed
    * long, it's okay for size_t and ptrdiff_t to have a greater integer
    * conversion rank than signed long.
+   *
+   * Note, it's not required that the implementation use that larger conversion
+   * rank; it's acceptable to use an unsigned long or unsigned int for the size
+   * type (those ranks are not greater than that of signed long).
    */
-   (void)_Generic(s + sl, __typeof__(s) : 1);
-   (void)_Generic(p + sl, __typeof__(p) : 1);
+   (void)_Generic(s + sl, __typeof__(s) : 1, unsigned long : 1, unsigned int : 1);
+   (void)_Generic(p + sl, __typeof__(p) : 1, signed long : 1, signed int : 1);
 #elif __LLONG_WIDTH__ == __LONG_WIDTH__
   /* But if the implementation doesn't support a larger standard integer type
    * than signed long, the conversion rank should prefer signed long if the type
    * is signed (ptrdiff_t) or unsigned long if the type is unsigned (size_t).
+   *
+   * Note, as above, unsigned/signed int is also acceptable due to having a
+   * lesser integer conversion rank.
    */
-   (void)_Generic(s + sl, unsigned long : 1);
-   (void)_Generic(p + sl, signed long : 1);
+   (void)_Generic(s + sl, unsigned long : 1, unsigned int : 1);
+   (void)_Generic(p + sl, signed long : 1, signed int : 1);
 #else
 #error "Something has gone off the rails"
 #endif
