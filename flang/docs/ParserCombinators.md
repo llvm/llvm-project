@@ -155,7 +155,10 @@ is built.  All of the following parsers consume characters acquired from
 * `"..."_tok` match the content of the string, skipping spaces before and
   after.  Internal spaces are optional matches.  The `_tok` suffix is
   optional when the parser appears before the combinator `>>` or after
-  the combinator `/`.
+  the combinator `/`.  If the quoted string ends in a character that
+  could appear in an identifier, a missing space will be diagnosed in
+  free form source in pedantic mode if the next character could also
+  be part of an identifier -- add a trailing blank to avoid this.
 * `"..."_sptok` is a string match in which the spaces are required in
    free form source.
 * `"..."_id` is a string match for a complete identifier (not a prefix of
