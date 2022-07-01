@@ -29,6 +29,11 @@ FileHeader:
 # CHECK-NEXT:0000000000000008 R_X86_64_NONE            foo
 #CHECK-EMPTY:
 
+## -r ignores dynamic relocations.
+# RUN: llvm-objdump -r %t2 | FileCheck %s --check-prefix=STATIC-RELOC
+
+# STATIC-RELOC-NOT: RELOCATION RECORDS
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
