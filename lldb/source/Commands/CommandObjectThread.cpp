@@ -33,7 +33,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Target/Trace.h"
-#include "lldb/Target/TraceInstructionDumper.h"
+#include "lldb/Target/TraceDumper.h"
 #include "lldb/Utility/State.h"
 
 using namespace lldb;
@@ -2208,7 +2208,7 @@ public:
     size_t m_count;
     size_t m_continue;
     llvm::Optional<FileSpec> m_output_file;
-    TraceInstructionDumperOptions m_dumper_options;
+    TraceDumperOptions m_dumper_options;
   };
 
   CommandObjectTraceDumpInstructions(CommandInterpreter &interpreter)
@@ -2272,8 +2272,14 @@ protected:
       m_options.m_dumper_options.id = m_last_id;
     }
 
-    TraceCursorUP cursor_up =
-        m_exe_ctx.GetTargetSP()->GetTrace()->GetCursor(*thread_sp);
+    llvm::Expected<TraceCursorUP> cursor_or_error =
+        m_exe_ctx.GetTargetSP()->GetTrace()->CreateNewCursor(*thread_sp);
+
+    if (!cursor_or_error) {
+      result.AppendError(llvm::toString(cursor_or_error.takeError()));
+      return false;
+    }
+    TraceCursorUP &cursor_up = *cursor_or_error;
 
     if (m_options.m_dumper_options.id &&
         !cursor_up->HasId(*m_options.m_dumper_options.id)) {
@@ -2295,9 +2301,9 @@ protected:
       cursor_up->Seek(1, TraceCursor::SeekType::End);
     }
 
-    TraceInstructionDumper dumper(
-        std::move(cursor_up), out_file ? *out_file : result.GetOutputStream(),
-        m_options.m_dumper_options);
+    TraceDumper dumper(std::move(cursor_up),
+                       out_file ? *out_file : result.GetOutputStream(),
+                       m_options.m_dumper_options);
 
     m_last_id = dumper.DumpInstructions(m_options.m_count);
     return true;

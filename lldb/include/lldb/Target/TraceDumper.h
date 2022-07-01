@@ -1,4 +1,4 @@
-//===-- TraceInstructionDumper.h --------------------------------*- C++ -*-===//
+//===-- TraceDumper.h -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,9 +15,9 @@
 
 namespace lldb_private {
 
-/// Class that holds the configuration used by \a TraceInstructionDumper for
+/// Class that holds the configuration used by \a TraceDumper for
 /// traversing and dumping instructions.
-struct TraceInstructionDumperOptions {
+struct TraceDumperOptions {
   /// If \b true, the cursor will be iterated forwards starting from the
   /// oldest instruction. Otherwise, the iteration starts from the most
   /// recent instruction.
@@ -43,7 +43,7 @@ struct TraceInstructionDumperOptions {
 
 /// Class used to dump the instructions of a \a TraceCursor using its current
 /// state and granularity.
-class TraceInstructionDumper {
+class TraceDumper {
 public:
   /// Helper struct that holds symbol, disassembly and address information of an
   /// instruction.
@@ -55,12 +55,13 @@ public:
     lldb_private::ExecutionContext exe_ctx;
   };
 
-  /// Helper struct that holds all the information we know about an instruction
-  struct InstructionEntry {
+  /// Helper struct that holds all the information we know about a trace item
+  struct TraceItem {
     lldb::user_id_t id;
     lldb::addr_t load_address;
     llvm::Optional<uint64_t> tsc;
     llvm::Optional<llvm::StringRef> error;
+    llvm::Optional<lldb::TraceEvent> event;
     llvm::Optional<SymbolInfo> symbol_info;
     llvm::Optional<SymbolInfo> prev_symbol_info;
   };
@@ -71,14 +72,11 @@ public:
   public:
     virtual ~OutputWriter() = default;
 
-    /// Indicate a user-level info message. It's not part of the actual trace.
-    virtual void InfoMessage(llvm::StringRef text) {}
+    /// Notify this writer that the cursor ran out of data.
+    virtual void NoMoreData() {}
 
-    /// Dump a trace event.
-    virtual void Event(llvm::StringRef text) = 0;
-
-    /// Dump an instruction or a trace error.
-    virtual void Instruction(const InstructionEntry &insn) = 0;
+    /// Dump a trace item (instruction, error or event).
+    virtual void TraceItem(const TraceItem &item) = 0;
   };
 
   /// Create a instruction dumper for the cursor.
@@ -91,8 +89,8 @@ public:
   ///
   /// \param[in] options
   ///     Additional options for configuring the dumping.
-  TraceInstructionDumper(lldb::TraceCursorUP &&cursor_up, Stream &s,
-                         const TraceInstructionDumperOptions &options);
+  TraceDumper(lldb::TraceCursorUP &&cursor_up, Stream &s,
+              const TraceDumperOptions &options);
 
   /// Dump \a count instructions of the thread trace starting at the current
   /// cursor position.
@@ -109,14 +107,11 @@ public:
   llvm::Optional<lldb::user_id_t> DumpInstructions(size_t count);
 
 private:
-  /// Create an instruction entry for the current position without symbol
-  /// information.
-  InstructionEntry CreatRawInstructionEntry();
-
-  void PrintEvents();
+  /// Create a trace item for the current position without symbol information.
+  TraceItem CreatRawTraceItem();
 
   lldb::TraceCursorUP m_cursor_up;
-  TraceInstructionDumperOptions m_options;
+  TraceDumperOptions m_options;
   std::unique_ptr<OutputWriter> m_writer_up;
 };
 

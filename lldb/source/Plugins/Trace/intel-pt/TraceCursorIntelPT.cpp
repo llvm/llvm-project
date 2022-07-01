@@ -23,10 +23,6 @@ TraceCursorIntelPT::TraceCursorIntelPT(ThreadSP thread_sp,
   Seek(0, SeekType::End);
 }
 
-int64_t TraceCursorIntelPT::GetItemsCount() const {
-  return m_decoded_thread_sp->GetInstructionsCount();
-}
-
 void TraceCursorIntelPT::CalculateTscRange() {
   // If we failed, then we look for the exact range
   if (!m_tsc_range || !m_tsc_range->InRange(m_pos))
@@ -51,7 +47,7 @@ bool TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
     m_pos = offset;
     break;
   case TraceCursor::SeekType::End:
-    m_pos = GetItemsCount() - 1 + offset;
+    m_pos = m_decoded_thread_sp->GetItemsCount() - 1 + offset;
     break;
   case TraceCursor::SeekType::Current:
     m_pos += offset;
@@ -62,23 +58,23 @@ bool TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
 }
 
 bool TraceCursorIntelPT::HasValue() const {
-  return m_pos >= 0 && m_pos < GetItemsCount();
+  return m_pos >= 0 && m_pos < m_decoded_thread_sp->GetItemsCount();
 }
 
-bool TraceCursorIntelPT::IsError() {
-  return m_decoded_thread_sp->IsInstructionAnError(m_pos);
+lldb::TraceItemKind TraceCursorIntelPT::GetItemKind() const {
+  return m_decoded_thread_sp->GetItemKindByIndex(m_pos);
 }
 
-const char *TraceCursorIntelPT::GetError() {
-  return m_decoded_thread_sp->GetErrorByInstructionIndex(m_pos);
+const char *TraceCursorIntelPT::GetError() const {
+  return m_decoded_thread_sp->GetErrorByIndex(m_pos);
 }
 
-lldb::addr_t TraceCursorIntelPT::GetLoadAddress() {
+lldb::addr_t TraceCursorIntelPT::GetLoadAddress() const {
   return m_decoded_thread_sp->GetInstructionLoadAddress(m_pos);
 }
 
 Optional<uint64_t>
-TraceCursorIntelPT::GetCounter(lldb::TraceCounter counter_type) {
+TraceCursorIntelPT::GetCounter(lldb::TraceCounter counter_type) const {
   switch (counter_type) {
   case lldb::eTraceCounterTSC:
     if (m_tsc_range)
@@ -88,13 +84,8 @@ TraceCursorIntelPT::GetCounter(lldb::TraceCounter counter_type) {
   }
 }
 
-lldb::TraceEvents TraceCursorIntelPT::GetEvents() {
-  return m_decoded_thread_sp->GetEvents(m_pos);
-}
-
-TraceInstructionControlFlowType
-TraceCursorIntelPT::GetInstructionControlFlowType() {
-  return m_decoded_thread_sp->GetInstructionControlFlowType(m_pos);
+lldb::TraceEvent TraceCursorIntelPT::GetEventType() const {
+  return m_decoded_thread_sp->GetEventByIndex(m_pos);
 }
 
 bool TraceCursorIntelPT::GoToId(user_id_t id) {
@@ -107,7 +98,7 @@ bool TraceCursorIntelPT::GoToId(user_id_t id) {
 }
 
 bool TraceCursorIntelPT::HasId(lldb::user_id_t id) const {
-  return id < m_decoded_thread_sp->GetInstructionsCount();
+  return static_cast<int64_t>(id) < m_decoded_thread_sp->GetItemsCount();
 }
 
 user_id_t TraceCursorIntelPT::GetId() const { return m_pos; }
