@@ -608,6 +608,11 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     RankedTensorType getType() {
       return getResult().getType().cast<RankedTensorType>();
     }
+    
+    /// The `dest` type is the same as the result type.
+    RankedTensorType getDestType() {
+      return getType();
+    }
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
@@ -1090,6 +1095,41 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     Note that we cannot mark this operation as pure (NoSideEffects), even
     though it has no side effects, because it will get DCEd during
     canonicalization.
+
+    The parallel_insert_slice operation supports the following arguments:
+
+    * source: the tensor that is inserted.
+    * dest: the tensor into which the source tensor is inserted.
+    * offsets: tensor-rank number of offsets into the `dest` tensor into which
+               the slice is inserted.
+    * sizes: tensor-rank number of sizes which specify the sizes of the source
+             tensor type.
+    * strides: tensor-rank number of strides that specify subsampling in each
+               dimension.
+
+    The representation based on offsets, sizes and strides support a
+    partially-static specification via attributes specified through the
+    `static_offsets`, `static_sizes` and `static_strides` arguments. A special
+    sentinel value ShapedType::kDynamicSize and
+    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    a dynamic value.
+
+    After buffer allocation, the "parallel_insert_slice" op is expected to lower
+    into a memref.subview op.
+
+    A parallel_insert_slice operation may additionally specify insertion into a
+    tensor of higher rank than the source tensor, along dimensions that are 
+    statically known to be of size 1.
+    This rank-altering behavior is not required by the op semantics: this
+    flexibility allows to progressively drop unit dimensions while lowering
+    between different flavors of ops on that operate on tensors.
+    The rank-altering behavior of tensor.parallel_insert_slice matches the 
+    rank-reducing behavior of tensor.insert_slice and tensor.extract_slice.
+
+    Verification in the rank-reduced case:
+    ======================================
+    The same verification discussion and mechanisms apply as for ExtractSliceOp.
+    Unlike ExtractSliceOp however, there is no need for a specific inference.
   }];
 
   let arguments = (ins
@@ -1117,6 +1157,10 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
       return getSource().getType().cast<RankedTensorType>();
     }
 
+    RankedTensorType getDestType() {
+      return getDest().getType().cast<RankedTensorType>();
+    }
+
     ParallelCombiningOpInterface getParallelCombiningParent() {
       return dyn_cast<ParallelCombiningOpInterface>(
         getOperation()->getParentOp());
@@ -1125,7 +1169,7 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     /// Return the expected rank of each of the `static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrMaxRanks() {
-      unsigned rank = getSourceType().getRank();
+      unsigned rank = getDestType().getRank();
       return {rank, rank, rank};
     }
 
