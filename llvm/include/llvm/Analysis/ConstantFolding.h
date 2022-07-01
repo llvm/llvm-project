@@ -67,14 +67,13 @@ Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
                                    const DataLayout &DL,
                                    const TargetLibraryInfo *TLI = nullptr);
 
-/// ConstantFoldCompareInstOperands - Attempt to constant fold a compare
-/// instruction (icmp/fcmp) with the specified operands.  If it fails, it
-/// returns a constant expression of the specified operands.
-///
-Constant *
-ConstantFoldCompareInstOperands(unsigned Predicate, Constant *LHS,
-                                Constant *RHS, const DataLayout &DL,
-                                const TargetLibraryInfo *TLI = nullptr);
+/// Attempt to constant fold a compare instruction (icmp/fcmp) with the
+/// specified operands.  If it fails, it returns a constant expression of the
+/// specified operands.
+/// Denormal inputs may be flushed based on the denormal handling mode.
+Constant *ConstantFoldCompareInstOperands(
+    unsigned Predicate, Constant *LHS, Constant *RHS, const DataLayout &DL,
+    const TargetLibraryInfo *TLI = nullptr, const Instruction *I = nullptr);
 
 /// Attempt to constant fold a unary operation with the specified
 /// operand. If it fails, it returns a constant expression of the specified
@@ -94,6 +93,14 @@ Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
 Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                      Constant *RHS, const DataLayout &DL,
                                      const Instruction *I);
+
+/// Attempt to flush float point constant according to denormal mode set in the
+/// instruction's parent function attributes. If so, return a zero with the
+/// correct sign, otherwise return the original constant. Inputs and outputs to
+/// floating point instructions can have their mode set separately, so the
+/// direction is also needed.
+Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
+                          bool IsOutput);
 
 /// Attempt to constant fold a select instruction with the specified
 /// operands. The constant result is returned if successful; if not, null is
