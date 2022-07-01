@@ -684,20 +684,24 @@ class VOPProfileWMMA<VOPProfile P, string Suffix, RegisterOperand _Src01RC64, bi
   let Src2RC64 = !if(!eq(Suffix, "_w32"), VISrc_256_f64, VISrc_128_f32);
   let HasClamp = _HasClamp;
   let HasOpSel = _HasOpSel;
+  let IsPacked = 1;
   let IsWMMA = 1;
 }
 
-def VOP_V8F32_V8F32_V8F32_V8F32 : VOPProfile <[v8f32, v8f32, v8f32, v8f32]>;
-def VOP_V8F32_V8I32_V8I32_V8F32 : VOPProfile <[v8f32, v8i32, v8i32, v8f32]>;
+def VOP_V8F32_V16F16_V16F16_V8F32 : VOPProfile <[v8f32, v16f16, v16f16, v8f32]>;
+def VOP_V8F32_V16I16_V16I16_V8F32 : VOPProfile <[v8f32, v16i16, v16i16, v8f32]>;
+def VOP_V16F16_V16F16_V16F16_V16F16 : VOPProfile <[v16f16, v16f16, v16f16, v16f16]>;
+def VOP_V16I16_V16I16_V16I16_V16I16 : VOPProfile <[v16i16, v16i16, v16i16, v16i16]>;
 def VOP_V8I32_V4I32_V4I32_V8I32 : VOPProfile <[v8i32, v4i32, v4i32, v8i32]>;
 def VOP_V8I32_V2I32_V2I32_V8I32 : VOPProfile <[v8i32, v2i32, v2i32, v8i32]>;
-def VOP_V8I32_V8I32_V8I32_V8I32 : VOPProfile <[v8i32, v8i32, v8i32, v8i32]>;
 
-def VOP_V4F32_V8F32_V8F32_V4F32 : VOPProfile <[v4f32, v8f32, v8f32, v4f32]>;
-def VOP_V4F32_V8I32_V8I32_V4F32 : VOPProfile <[v4f32, v8i32, v8i32, v4f32]>;
+def VOP_V4F32_V16F16_V16F16_V4F32 : VOPProfile <[v4f32, v16f16, v16f16, v4f32]>;
+def VOP_V4F32_V16I16_V16I16_V4F32 : VOPProfile <[v4f32, v16i16, v16i16, v4f32]>;
+def VOP_V8F16_V16F16_V16F16_V8F16 : VOPProfile <[v8f16, v16f16, v16f16, v8f16]>;
+def VOP_V8I16_V16I16_V16I16_V8I16 : VOPProfile <[v8i16, v16i16, v16i16, v8i16]>;
 def VOP_V4I32_V4I32_V4I32_V4I32 : VOPProfile <[v4i32, v4i32, v4i32, v4i32]>;
 def VOP_V4I32_V2I32_V2I32_V4I32 : VOPProfile <[v4i32, v2i32, v2i32, v4i32]>;
-def VOP_V4I32_V8I32_V8I32_V4I32 : VOPProfile <[v4i32, v8i32, v8i32, v4i32]>;
+
 
 class WMMAType <bits<2> val> {
   bit hasClamp = val{0};
@@ -812,22 +816,24 @@ multiclass WMMAInst<string Suffix, string Instr, VOPProfile P, SDPatternOperator
   }
 }
 
+
 let WaveSizePredicate = isWave32 in {
-  defm V_WMMA_F32_16X16X16_F16   : WMMAInst<"_w32", "v_wmma_f32_16x16x16_f16",  VOP_V8F32_V8F32_V8F32_V8F32, int_amdgcn_wmma_f32_16x16x16_f16, VRegSrc_256, WMMARegular>;
-  defm V_WMMA_F32_16X16X16_BF16  : WMMAInst<"_w32", "v_wmma_f32_16x16x16_bf16", VOP_V8F32_V8I32_V8I32_V8F32, int_amdgcn_wmma_f32_16x16x16_bf16, VRegSrc_256, WMMARegular>;
-  defm V_WMMA_F16_16X16X16_F16   : WMMAInst<"_w32", "v_wmma_f16_16x16x16_f16",   VOP_V8F32_V8F32_V8F32_V8F32, int_amdgcn_wmma_f16_16x16x16_f16, VRegSrc_256, WMMAOpSel>;
-  defm V_WMMA_BF16_16X16X16_BF16 : WMMAInst<"_w32", "v_wmma_bf16_16x16x16_bf16", VOP_V8I32_V8I32_V8I32_V8I32, int_amdgcn_wmma_bf16_16x16x16_bf16, VRegSrc_256, WMMAOpSel>;
+  defm V_WMMA_F32_16X16X16_F16   : WMMAInst<"_w32", "v_wmma_f32_16x16x16_f16",  VOP_V8F32_V16F16_V16F16_V8F32, int_amdgcn_wmma_f32_16x16x16_f16, VRegSrc_256, WMMARegular>;
+  defm V_WMMA_F32_16X16X16_BF16  : WMMAInst<"_w32", "v_wmma_f32_16x16x16_bf16", VOP_V8F32_V16I16_V16I16_V8F32, int_amdgcn_wmma_f32_16x16x16_bf16, VRegSrc_256, WMMARegular>;
+  defm V_WMMA_F16_16X16X16_F16   : WMMAInst<"_w32", "v_wmma_f16_16x16x16_f16",   VOP_V16F16_V16F16_V16F16_V16F16, int_amdgcn_wmma_f16_16x16x16_f16, VRegSrc_256, WMMAOpSel>;
+  defm V_WMMA_BF16_16X16X16_BF16 : WMMAInst<"_w32", "v_wmma_bf16_16x16x16_bf16", VOP_V16I16_V16I16_V16I16_V16I16, int_amdgcn_wmma_bf16_16x16x16_bf16, VRegSrc_256, WMMAOpSel>;
   defm V_WMMA_I32_16X16X16_IU8   : WMMAInst<"_w32", "v_wmma_i32_16x16x16_iu8",   VOP_V8I32_V4I32_V4I32_V8I32, int_amdgcn_wmma_i32_16x16x16_iu8, VRegSrc_128, WMMAUIClamp>;
   defm V_WMMA_I32_16X16X16_IU4   : WMMAInst<"_w32", "v_wmma_i32_16x16x16_iu4",   VOP_V8I32_V2I32_V2I32_V8I32, int_amdgcn_wmma_i32_16x16x16_iu4, VRegSrc_64,  WMMAUIClamp>;
 }
 
 let WaveSizePredicate = isWave64 in {
-  defm V_WMMA_F32_16X16X16_F16   : WMMAInst<"_w64", "v_wmma_f32_16x16x16_f16",   VOP_V4F32_V8F32_V8F32_V4F32, int_amdgcn_wmma_f32_16x16x16_f16, VRegSrc_256, WMMARegular>;
-  defm V_WMMA_F32_16X16X16_BF16  : WMMAInst<"_w64", "v_wmma_f32_16x16x16_bf16",  VOP_V4F32_V8I32_V8I32_V4F32, int_amdgcn_wmma_f32_16x16x16_bf16, VRegSrc_256, WMMARegular>;
-  defm V_WMMA_F16_16X16X16_F16   : WMMAInst<"_w64", "v_wmma_f16_16x16x16_f16",   VOP_V4F32_V8F32_V8F32_V4F32, int_amdgcn_wmma_f16_16x16x16_f16, VRegSrc_256, WMMAOpSel>;
-  defm V_WMMA_BF16_16X16X16_BF16 : WMMAInst<"_w64", "v_wmma_bf16_16x16x16_bf16", VOP_V4I32_V8I32_V8I32_V4I32, int_amdgcn_wmma_bf16_16x16x16_bf16, VRegSrc_256, WMMAOpSel>;
+  defm V_WMMA_F32_16X16X16_F16   : WMMAInst<"_w64", "v_wmma_f32_16x16x16_f16",   VOP_V4F32_V16F16_V16F16_V4F32, int_amdgcn_wmma_f32_16x16x16_f16, VRegSrc_256, WMMARegular>;
+  defm V_WMMA_F32_16X16X16_BF16  : WMMAInst<"_w64", "v_wmma_f32_16x16x16_bf16",  VOP_V4F32_V16I16_V16I16_V4F32, int_amdgcn_wmma_f32_16x16x16_bf16, VRegSrc_256, WMMARegular>;
+  defm V_WMMA_F16_16X16X16_F16   : WMMAInst<"_w64", "v_wmma_f16_16x16x16_f16",   VOP_V8F16_V16F16_V16F16_V8F16, int_amdgcn_wmma_f16_16x16x16_f16, VRegSrc_256, WMMAOpSel>;
+  defm V_WMMA_BF16_16X16X16_BF16 : WMMAInst<"_w64", "v_wmma_bf16_16x16x16_bf16", VOP_V8I16_V16I16_V16I16_V8I16, int_amdgcn_wmma_bf16_16x16x16_bf16, VRegSrc_256, WMMAOpSel>;
   defm V_WMMA_I32_16X16X16_IU8   : WMMAInst<"_w64", "v_wmma_i32_16x16x16_iu8",   VOP_V4I32_V4I32_V4I32_V4I32, int_amdgcn_wmma_i32_16x16x16_iu8, VRegSrc_128, WMMAUIClamp>;
   defm V_WMMA_I32_16X16X16_IU4   : WMMAInst<"_w64", "v_wmma_i32_16x16x16_iu4",   VOP_V4I32_V2I32_V2I32_V4I32, int_amdgcn_wmma_i32_16x16x16_iu4, VRegSrc_64, WMMAUIClamp>;
+
 }
 
 //===----------------------------------------------------------------------===//
