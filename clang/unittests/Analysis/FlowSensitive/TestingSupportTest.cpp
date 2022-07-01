@@ -36,28 +36,25 @@ const FunctionDecl *findTargetFunc(ASTContext &Context, T FunctionMatcher) {
   return nullptr;
 }
 
-class BuildStatementToAnnotationMappingTest : public ::testing::Test {
-public:
-  void
-  runTest(llvm::StringRef Code, llvm::StringRef TargetName,
-          std::function<void(const llvm::DenseMap<const Stmt *, std::string> &)>
-              RunChecks) {
-    llvm::Annotations AnnotatedCode(Code);
-    auto Unit = tooling::buildASTFromCodeWithArgs(
-        AnnotatedCode.code(), {"-fsyntax-only", "-std=c++17"});
-    auto &Context = Unit->getASTContext();
-    const FunctionDecl *Func = findTargetFunc(Context, hasName(TargetName));
-    ASSERT_NE(Func, nullptr);
+void runTest(
+    llvm::StringRef Code, llvm::StringRef TargetName,
+    std::function<void(const llvm::DenseMap<const Stmt *, std::string> &)>
+        RunChecks) {
+  llvm::Annotations AnnotatedCode(Code);
+  auto Unit = tooling::buildASTFromCodeWithArgs(
+      AnnotatedCode.code(), {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+  const FunctionDecl *Func = findTargetFunc(Context, hasName(TargetName));
+  ASSERT_NE(Func, nullptr);
 
-    llvm::Expected<llvm::DenseMap<const Stmt *, std::string>> Mapping =
-        test::buildStatementToAnnotationMapping(Func, AnnotatedCode);
-    ASSERT_TRUE(static_cast<bool>(Mapping));
+  llvm::Expected<llvm::DenseMap<const Stmt *, std::string>> Mapping =
+      test::buildStatementToAnnotationMapping(Func, AnnotatedCode);
+  ASSERT_TRUE(static_cast<bool>(Mapping));
 
-    RunChecks(Mapping.get());
-  }
-};
+  RunChecks(Mapping.get());
+}
 
-TEST_F(BuildStatementToAnnotationMappingTest, ReturnStmt) {
+TEST(BuildStatementToAnnotationMappingTest, ReturnStmt) {
   runTest(R"(
     int target() {
       return 42;
