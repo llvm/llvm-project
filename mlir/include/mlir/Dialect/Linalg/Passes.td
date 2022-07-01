@@ -134,8 +134,7 @@ def LinalgTiling : Pass<"linalg-tile", "func::FuncOp"> {
     "scf::SCFDialect"
   ];
   let options = [
-    ListOption<"tileSizes", "tile-sizes", "int64_t", "Tile sizes",
-               "llvm::cl::ZeroOrMore">,
+    ListOption<"tileSizes", "tile-sizes", "int64_t", "Tile sizes">,
     Option<"loopType", "loop-type", "std::string", /*default=*/"\"for\"",
            "Specify the type of loops to generate: for, parallel">
   ];

@@ -286,8 +286,7 @@ struct TestLinalgTileAndFuseSequencePass
       : PassWrapper(pass){};
 
   ListOption<int64_t> tileSizes{*this, "tile-sizes",
-                                llvm::cl::desc("Tile sizes to use for ops"),
-                                llvm::cl::ZeroOrMore};
+                                llvm::cl::desc("Tile sizes to use for ops")};
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,

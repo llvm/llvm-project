@@ -101,18 +101,14 @@ struct TestLinalgCodegenStrategy
                    llvm::cl::init(false)};
   ListOption<std::string> paddingValues{
       *this, "padding-values",
-      llvm::cl::desc("Operand padding values parsed by the attribute parser."),
-      llvm::cl::ZeroOrMore};
+      llvm::cl::desc("Operand padding values parsed by the attribute parser.")};
   ListOption<int64_t> paddingDimensions{
       *this, "padding-dimensions",
-      llvm::cl::desc("Operation iterator dimensions to pad."),
-      llvm::cl::ZeroOrMore};
+      llvm::cl::desc("Operation iterator dimensions to pad.")};
   ListOption<int64_t> packPaddings{*this, "pack-paddings",
-                                   llvm::cl::desc("Operand packing flags."),
-                                   llvm::cl::ZeroOrMore};
+                                   llvm::cl::desc("Operand packing flags.")};
   ListOption<int64_t> hoistPaddings{*this, "hoist-paddings",
-                                    llvm::cl::desc("Operand hoisting depths."),
-                                    llvm::cl::ZeroOrMore};
+                                    llvm::cl::desc("Operand hoisting depths.")};
   ListOption<SmallVector<int64_t>> transposePaddings{
       *this, "transpose-paddings",
       llvm::cl::desc(
@@ -122,8 +118,7 @@ struct TestLinalgCodegenStrategy
           "It defines the interchange [1, 0, 2] for operand one and "
           "the interchange [0, 1] (no transpose) for the remaining operands."
           "All interchange vectors have to be permuations matching the "
-          "operand rank."),
-      llvm::cl::ZeroOrMore};
+          "operand rank.")};
   Option<bool> generalize{*this, "generalize",
                           llvm::cl::desc("Generalize named operations."),
                           llvm::cl::init(false)};

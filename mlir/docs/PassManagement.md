@@ -780,7 +780,7 @@ struct MyPass : PassWrapper<MyPass, OperationPass<ModuleOp>> {
       llvm::cl::desc("An example option"), llvm::cl::init(true)};
   ListOption<int64_t> listOption{
       *this, "example-list",
-      llvm::cl::desc("An example list option"), llvm::cl::ZeroOrMore};
+      llvm::cl::desc("An example list option")};
 
   // Specify any statistics.
   Statistic statistic{this, "example-statistic", "An example statistic"};
