@@ -1,4 +1,4 @@
-//===- PadOpInterchange.cpp - Interchange tensor.pad with linalg producer -===//
+//===- FusePadOpWithLinalgConsumer.cpp ---- Fuse pad with linalg producer -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements patterns that intechanges a linalg.generic -> tensor.pad
-// op chain into a tensor.extract_slice -> linalg.generic -> tensor.insert_slice
+// This file implements patterns that fuses a linalg.generic -> tensor.pad op
+// chain into a tensor.extract_slice -> linalg.generic -> tensor.insert_slice
 // op chain.
 //
 //===----------------------------------------------------------------------===//
