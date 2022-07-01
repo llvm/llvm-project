@@ -17,27 +17,19 @@ TEST_F(RuntimeCallTest, genCommandArgumentCountTest) {
       /*addLocArgs=*/false);
 }
 
-TEST_F(RuntimeCallTest, genArgumentValue) {
+TEST_F(RuntimeCallTest, genGetCommandArgument) {
   mlir::Location loc = firBuilder->getUnknownLoc();
   mlir::Type intTy = firBuilder->getDefaultIntegerType();
-  mlir::Type charTy = fir::BoxType::get(firBuilder->getNoneType());
+  mlir::Type boxTy = fir::BoxType::get(firBuilder->getNoneType());
   mlir::Value number = firBuilder->create<fir::UndefOp>(loc, intTy);
-  mlir::Value value = firBuilder->create<fir::UndefOp>(loc, charTy);
-  mlir::Value errmsg = firBuilder->create<fir::UndefOp>(loc, charTy);
-  mlir::Value result =
-      fir::runtime::genArgumentValue(*firBuilder, loc, number, value, errmsg);
-  checkCallOp(result.getDefiningOp(), "_FortranAArgumentValue", /*nbArgs=*/3,
-      /*addLocArgs=*/false);
-}
-
-TEST_F(RuntimeCallTest, genArgumentLen) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Type intTy = firBuilder->getDefaultIntegerType();
-  mlir::Value number = firBuilder->create<fir::UndefOp>(loc, intTy);
-  mlir::Value result =
-      fir::runtime::genArgumentLength(*firBuilder, loc, number);
-  checkCallOp(result.getDefiningOp(), "_FortranAArgumentLength", /*nbArgs=*/1,
-      /*addLocArgs=*/false);
+  mlir::Value value = firBuilder->create<fir::UndefOp>(loc, boxTy);
+  mlir::Value length = firBuilder->create<fir::UndefOp>(loc, boxTy);
+  mlir::Value errmsg = firBuilder->create<fir::UndefOp>(loc, boxTy);
+  mlir::Value result = fir::runtime::genGetCommandArgument(
+      *firBuilder, loc, number, value, length, errmsg);
+  checkCallOp(result.getDefiningOp(), "_FortranAGetCommandArgument",
+      /*nbArgs=*/4,
+      /*addLocArgs=*/true);
 }
 
 TEST_F(RuntimeCallTest, genEnvVariableValue) {
