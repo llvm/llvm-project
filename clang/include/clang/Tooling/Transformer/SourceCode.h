@@ -41,6 +41,10 @@ CharSourceRange getExtendedRange(const T &Node, tok::TokenKind Next,
 /// terminators. The returned range consists of file locations, if valid file
 /// locations can be found for the associated content; otherwise, an invalid
 /// range is returned.
+///
+/// Note that parsing comments is disabled by default. In order to select a
+/// range containing associated comments, you may need to invoke the tool with
+/// `-fparse-all-comments`.
 CharSourceRange getAssociatedRange(const Decl &D, ASTContext &Context);
 
 /// Returns the source-code text in the specified range.
