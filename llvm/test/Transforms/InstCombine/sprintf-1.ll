@@ -59,7 +59,7 @@ define void @test_simplify3(i8* %dst) {
 define void @test_simplify4(i8* %dst) {
 ; CHECK-LABEL: @test_simplify4(
 ; CHECK-NEXT:    store i8 104, i8* [[DST:%.*]], align 1
-; CHECK-NEXT:    [[NUL:%.*]] = getelementptr i8, i8* [[DST]], i32 1
+; CHECK-NEXT:    [[NUL:%.*]] = getelementptr inbounds i8, i8* [[DST]], i32 1
 ; CHECK-NEXT:    store i8 0, i8* [[NUL]], align 1
 ; CHECK-NEXT:    ret void
 ;

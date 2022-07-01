@@ -76,7 +76,7 @@ define void @test_simplify5() {
 define void @test_simplify6(i8* %str) {
 ; CHECK-LABEL: @test_simplify6(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) [[STR:%.*]])
-; CHECK-NEXT:    [[STRCHR:%.*]] = getelementptr i8, i8* [[STR]], i32 [[STRLEN]]
+; CHECK-NEXT:    [[STRCHR:%.*]] = getelementptr inbounds i8, i8* [[STR]], i32 [[STRLEN]]
 ; CHECK-NEXT:    store i8* [[STRCHR]], i8** @chp, align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -36,7 +36,7 @@ define i8* @fold_memrchr_a11111_c_n(i32 %C, i64 %N) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], i1 [[TMP3]], i1 false
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[MEMRCHR_PTR_PLUS:%.*]] = getelementptr [5 x i8], [5 x i8]* @a11111, i64 0, i64 [[TMP5]]
+; CHECK-NEXT:    [[MEMRCHR_PTR_PLUS:%.*]] = getelementptr inbounds [5 x i8], [5 x i8]* @a11111, i64 0, i64 [[TMP5]]
 ; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[TMP4]], i8* [[MEMRCHR_PTR_PLUS]], i8* null
 ; CHECK-NEXT:    ret i8* [[MEMRCHR_SEL]]
 ;
