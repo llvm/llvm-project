@@ -2699,6 +2699,15 @@ def : GCNPat <
 >;
 } // End SubtargetPredicate = HasVOP3PInsts
 
+// With multiple uses of the shift, this will duplicate the shift and
+// increase register pressure.
+let SubtargetPredicate = isGFX11Plus in
+def : GCNPat <
+  (v2i16 (build_vector (i16 (trunc (srl_oneuse SReg_32:$src0, (i32 16)))), (i16 SReg_32:$src1))),
+  (v2i16 (S_PACK_HL_B32_B16 SReg_32:$src0, SReg_32:$src1))
+>;
+
+
 def : GCNPat <
   (v2f16 (scalar_to_vector f16:$src0)),
   (COPY $src0)
