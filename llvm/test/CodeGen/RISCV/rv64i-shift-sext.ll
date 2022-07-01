@@ -7,8 +7,8 @@
 define i64 @test1(i64 %a) nounwind {
 ; RV64I-LABEL: test1:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srai a0, a0, 30
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    ret
   %1 = shl i64 %a, 32
   %2 = ashr i64 %1, 30
@@ -18,8 +18,7 @@ define i64 @test1(i64 %a) nounwind {
 define i64 @test2(i32 signext %a) nounwind {
 ; RV64I-LABEL: test2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srai a0, a0, 29
+; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    ret
   %1 = zext i32 %a to i64
   %2 = shl i64 %1, 32
@@ -31,8 +30,7 @@ define i64 @test3(i32* %a) nounwind {
 ; RV64I-LABEL: test3:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a0, 0(a0)
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srai a0, a0, 28
+; RV64I-NEXT:    slli a0, a0, 4
 ; RV64I-NEXT:    ret
   %1 = load i32, i32* %a
   %2 = zext i32 %1 to i64
@@ -45,8 +43,7 @@ define i64 @test4(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: test4:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srai a0, a0, 2
+; RV64I-NEXT:    slli a0, a0, 30
 ; RV64I-NEXT:    ret
   %1 = add i32 %a, %b
   %2 = zext i32 %1 to i64
@@ -59,8 +56,7 @@ define i64 @test5(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: test5:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srai a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 31
 ; RV64I-NEXT:    ret
   %1 = xor i32 %a, %b
   %2 = zext i32 %1 to i64
@@ -73,12 +69,92 @@ define i64 @test6(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: test6:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srai a0, a0, 16
+; RV64I-NEXT:    slli a0, a0, 16
 ; RV64I-NEXT:    ret
   %1 = shl i32 %a, %b
   %2 = zext i32 %1 to i64
   %3 = shl i64 %2, 32
   %4 = ashr i64 %3, 16
   ret i64 %4
+}
+
+; The ashr+add+shl is canonical IR from InstCombine for
+; (sext (add (trunc X to i32), 1) to i32).
+; That can be implemented as addiw make sure we recover it.
+define i64 @test7(i32* %0, i64 %1) {
+; RV64I-LABEL: test7:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addiw a0, a1, 1
+; RV64I-NEXT:    ret
+  %3 = shl i64 %1, 32
+  %4 = add i64 %3, 4294967296
+  %5 = ashr exact i64 %4, 32
+  ret i64 %5
+}
+
+; The ashr+add+shl is canonical IR from InstCombine for
+; (sext (sub 1, (trunc X to i32)) to i32).
+; That can be implemented as (li 1)+subw make sure we recover it.
+define i64 @test8(i32* %0, i64 %1) {
+; RV64I-LABEL: test8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    ret
+  %3 = mul i64 %1, -4294967296
+  %4 = add i64 %3, 4294967296
+  %5 = ashr exact i64 %4, 32
+  ret i64 %5
+}
+
+; The gep is here to introduce a shl by 2 after the ashr that will get folded
+; and make this harder to recover.
+define signext i32 @test9(i32* %0, i64 %1) {
+; RV64I-LABEL: test9:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 1
+; RV64I-NEXT:    addiw a2, a2, 1
+; RV64I-NEXT:    addw a1, a1, a2
+; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    ret
+  %3 = shl i64 %1, 32
+  %4 = add i64 %3, 17596481011712 ; 4097 << 32
+  %5 = ashr exact i64 %4, 32
+  %6 = getelementptr inbounds i32, i32* %0, i64 %5
+  %7 = load i32, i32* %6, align 4
+  ret i32 %7
+}
+
+; The gep is here to introduce a shl by 2 after the ashr that will get folded
+; and make this harder to recover.
+define signext i32 @test10(i32* %0, i64 %1) {
+; RV64I-LABEL: test10:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 30141
+; RV64I-NEXT:    addiw a2, a2, -747
+; RV64I-NEXT:    subw a1, a2, a1
+; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    ret
+  %3 = mul i64 %1, -4294967296
+  %4 = add i64 %3, 530242871224172544 ; 123456789 << 32
+  %5 = ashr exact i64 %4, 32
+  %6 = getelementptr inbounds i32, i32* %0, i64 %5
+  %7 = load i32, i32* %6, align 4
+  ret i32 %7
+}
+
+define i64 @test11(i32* %0, i64 %1) {
+; RV64I-LABEL: test11:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 524288
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    ret
+  %3 = mul i64 %1, -4294967296
+  %4 = add i64 %3, 9223372036854775808 ;0x8000'0000'0000'0000
+  %5 = ashr exact i64 %4, 32
+  ret i64 %5
 }

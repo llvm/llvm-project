@@ -1227,6 +1227,32 @@ llvm::Optional<std::int64_t> fir::factory::getIntIfConstant(mlir::Value value) {
   return {};
 }
 
+llvm::Optional<std::int64_t>
+fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
+                                   mlir::Value stride) {
+  std::function<llvm::Optional<std::int64_t>(mlir::Value)> getConstantValue =
+      [&](mlir::Value value) -> llvm::Optional<std::int64_t> {
+    if (auto valInt = fir::factory::getIntIfConstant(value))
+      return valInt;
+    else if (auto valOp = mlir::dyn_cast<fir::ConvertOp>(value.getDefiningOp()))
+      return getConstantValue(valOp.getValue());
+    return {};
+  };
+  if (auto lbInt = getConstantValue(lb)) {
+    if (auto ubInt = getConstantValue(ub)) {
+      if (auto strideInt = getConstantValue(stride)) {
+        if (strideInt.value() != 0) {
+          std::int64_t extent =
+              1 + (ubInt.value() - lbInt.value()) / strideInt.value();
+          if (extent > 0)
+            return extent;
+        }
+      }
+    }
+  }
+  return {};
+}
+
 mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
                                          mlir::Location loc,
                                          mlir::Value value) {
