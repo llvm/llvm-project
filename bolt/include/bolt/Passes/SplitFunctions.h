@@ -23,12 +23,24 @@ private:
   template <typename SplitStrategy>
   void splitFunction(BinaryFunction &Function, SplitStrategy Strategy = {});
 
+  /// Map basic block labels to their trampoline block labels.
+  using TrampolineSetType = DenseMap<const MCSymbol *, const MCSymbol *>;
+
+  using BasicBlockOrderType = BinaryFunction::BasicBlockOrderType;
+
   /// Create trampoline landing pads for exception handling code to guarantee
   /// that every landing pad is placed in the same function fragment as the
   /// corresponding thrower block. The trampoline landing pad, when created,
   /// will redirect the execution to the real landing pad in a different
   /// fragment.
-  void createEHTrampolines(BinaryFunction &Function) const;
+  TrampolineSetType createEHTrampolines(BinaryFunction &Function) const;
+
+  /// Merge trampolines into \p Layout without trampolines. The merge will place
+  /// a trampoline immediately before its destination. Used to revert the effect
+  /// of trampolines after createEHTrampolines().
+  BasicBlockOrderType
+  mergeEHTrampolines(BinaryFunction &BF, BasicBlockOrderType &Layout,
+                     const TrampolineSetType &Trampolines) const;
 
   std::atomic<uint64_t> SplitBytesHot{0ull};
   std::atomic<uint64_t> SplitBytesCold{0ull};
