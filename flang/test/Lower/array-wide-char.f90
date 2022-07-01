@@ -27,4 +27,4 @@ end subroutine sub1
 ! CHECK: call void @_QPaction_on_char4(ptr @_QFEarr, i64 10)
 
 ! CHECK-LABEL: define void @_QPsub1(
-! CHECK: call void @_QPsub2(ptr @_QQcl.77, i64 63)
+! CHECK: call void @_QPsub2(ptr @_QQcl[[inline]], i64 63)
