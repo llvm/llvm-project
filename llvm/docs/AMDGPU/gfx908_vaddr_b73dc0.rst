@@ -5,7 +5,7 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx908_vaddr_1:
+.. _amdgpu_synid_gfx908_vaddr_b73dc0:
 
 vaddr
 =====

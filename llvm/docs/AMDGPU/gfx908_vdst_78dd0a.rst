@@ -5,13 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx908_vsrc:
+.. _amdgpu_synid_gfx908_vdst_78dd0a:
 
-vsrc
+vdst
 ====
 
-Instruction input.
+Instruction output.
 
 *Size:* 1 dword.
 
-*Operands:* :ref:`v<amdgpu_synid_v>`
+*Operands:* :ref:`a<amdgpu_synid_a>`

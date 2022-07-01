@@ -5,13 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx908_vdst_1:
+.. _amdgpu_synid_gfx908_m_254bcb:
 
-vdst
-====
+m
+=
 
-Instruction output.
-
-*Size:* 1 dword.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`
+This operand may be used with integer operand modifier :ref:`sext<amdgpu_synid_sext>`.
