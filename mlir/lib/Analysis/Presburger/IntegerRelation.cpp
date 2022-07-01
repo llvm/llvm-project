@@ -165,16 +165,16 @@ void IntegerRelation::truncate(const CountsSnapshot &counts) {
   removeEqualityRange(counts.getNumEqs(), getNumEqualities());
 }
 
-PresburgerSet IntegerPolyhedron::computeReprWithOnlyDivLocals() const {
+PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   // If there are no locals, we're done.
   if (getNumLocalVars() == 0)
-    return PresburgerSet(*this);
+    return PresburgerRelation(*this);
 
   // Move all the non-div locals to the end, as the current API to
   // SymbolicLexMin requires these to form a contiguous range.
   //
   // Take a copy so we can perform mutations.
-  IntegerPolyhedron copy = *this;
+  IntegerRelation copy = *this;
   std::vector<MaybeLocalRepr> reprs;
   copy.getLocalReprs(reprs);
 
@@ -197,7 +197,7 @@ PresburgerSet IntegerPolyhedron::computeReprWithOnlyDivLocals() const {
 
   // If there are no non-div locals, we're done.
   if (numNonDivLocals == 0)
-    return PresburgerSet(*this);
+    return PresburgerRelation(*this);
 
   // We computeSymbolicIntegerLexMin by considering the non-div locals as
   // "non-symbols" and considering everything else as "symbols". This will

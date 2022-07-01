@@ -128,6 +128,12 @@ public:
   /// Check whether all local ids in all disjuncts have a div representation.
   bool hasOnlyDivLocals() const;
 
+  /// Compute an equivalent representation of the same relation, such that all
+  /// local ids in all disjuncts have division representations. This
+  /// representation may involve local ids that correspond to divisions, and may
+  /// also be a union of convex disjuncts.
+  PresburgerRelation computeReprWithOnlyDivLocals() const;
+
   /// Print the set's internal state.
   void print(raw_ostream &os) const;
   void dump() const;
