@@ -2371,3 +2371,9 @@ void TextNodeDumper::VisitBlockDecl(const BlockDecl *D) {
 void TextNodeDumper::VisitConceptDecl(const ConceptDecl *D) {
   dumpName(D);
 }
+
+void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {
+  VisitStmt(S);
+  if (S->hasStoredFPFeatures())
+    printFPOptions(S->getStoredFPFeatures());
+}
