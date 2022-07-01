@@ -4660,6 +4660,19 @@ multiclass sve_int_dup_imm_pred_merge<string asm> {
                   (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, 0, 0), 0>;
   def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, 0, 0), 0>;
+
+  def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv8f16 ZPR:$Zd)),
+            (!cast<Instruction>(NAME # _H) $Zd, $Pg, 0, 0)>;
+  def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv4f16 ZPR:$Zd)),
+            (!cast<Instruction>(NAME # _S) $Zd, $Pg, 0, 0)>;
+  def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv2f16 ZPR:$Zd)),
+            (!cast<Instruction>(NAME # _D) $Zd, $Pg, 0, 0)>;
+  def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv4f32 ZPR:$Zd)),
+            (!cast<Instruction>(NAME # _S) $Zd, $Pg, 0, 0)>;
+  def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv2f32 ZPR:$Zd)),
+            (!cast<Instruction>(NAME # _D) $Zd, $Pg, 0, 0)>;
+  def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv2f64 ZPR:$Zd)),
+            (!cast<Instruction>(NAME # _D) $Zd, $Pg, 0, 0)>;
 }
 
 multiclass sve_int_dup_imm_pred_zero_inst<
