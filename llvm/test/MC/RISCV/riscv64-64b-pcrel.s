@@ -18,7 +18,7 @@
 # CHECK-NEXT:    0x0 R_RISCV_ADD64 a 0x0
 # CHECK-NEXT:    0x0 R_RISCV_SUB64 z 0x0
 # CHECK:  }
-# CHECK: ]
+# CHECK-NEXT: ]
 
 	.section	sx,"aw",@progbits
 x:
@@ -35,3 +35,11 @@ z:
 	.section	sa
 a:
 	.quad a-z
+
+## .apple_names/.apple_types are fixed-size and do not need fixups.
+## llvm-dwarfdump --apple-names does not process R_RISCV_{ADD,SUB}32 in them.
+## See llvm/test/DebugInfo/Generic/accel-table-hash-collisions.ll
+	.section	.apple_types
+        .word 0
+        .word .Ltypes0-.apple_types
+.Ltypes0:
