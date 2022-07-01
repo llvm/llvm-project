@@ -1,7 +1,6 @@
 ; Test distributed build thin link output from llvm-lto2
 
-; Generate bitcode files with summary, as well as minimized bitcode without
-; the debug metadata for the thin link.
+; Generate bitcode files with summary, as well as minimized bitcode containing just the summary
 ; RUN: opt -thinlto-bc %s -thin-link-bitcode-file=%t1.thinlink.bc -o %t1.bc
 ; RUN: opt -thinlto-bc %p/Inputs/distributed_import.ll -thin-link-bitcode-file=%t2.thinlink.bc -o %t2.bc
 ; RUN: llvm-bcanalyzer -dump %t1.thinlink.bc | FileCheck --check-prefix=THINLINKBITCODE %s

@@ -16266,7 +16266,7 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
                                            Expr *LangStr,
                                            SourceLocation LBraceLoc) {
   StringLiteral *Lit = cast<StringLiteral>(LangStr);
-  if (!Lit->isAscii()) {
+  if (!Lit->isOrdinary()) {
     Diag(LangStr->getExprLoc(), diag::err_language_linkage_spec_not_ascii)
       << LangStr->getSourceRange();
     return nullptr;
@@ -16586,7 +16586,7 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       llvm::raw_svector_ostream Msg(MsgBuffer);
       if (AssertMessage) {
         const auto *MsgStr = cast<StringLiteral>(AssertMessage);
-        if (MsgStr->isAscii())
+        if (MsgStr->isOrdinary())
           Msg << '"' << MsgStr->getString() << '"';
         else
           MsgStr->printPretty(Msg, nullptr, getPrintingPolicy());

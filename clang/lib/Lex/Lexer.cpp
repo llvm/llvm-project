@@ -4248,6 +4248,10 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
 
   const dependency_directives_scan::Token &DDTok =
       DepDirectives.front().Tokens[NextDepDirectiveTokenIndex++];
+  if (NextDepDirectiveTokenIndex > 1 || DDTok.Kind != tok::hash) {
+    // Read something other than a preprocessor directive hash.
+    MIOpt.ReadToken();
+  }
 
   const char *TokPtr = convertDependencyDirectiveToken(DDTok, Result);
 

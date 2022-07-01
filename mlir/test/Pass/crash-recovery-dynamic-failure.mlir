@@ -11,7 +11,8 @@ module @inner_mod1 {
   module @foo {}
 }
 
-// REPRO_LOCAL_DYNAMIC_FAILURE: configuration: -pass-pipeline='builtin.module(test-pass-failure)'
 
 // REPRO_LOCAL_DYNAMIC_FAILURE: module @inner_mod1
 // REPRO_LOCAL_DYNAMIC_FAILURE: module @foo {
+
+// REPRO_LOCAL_DYNAMIC_FAILURE: pipeline: "builtin.module(test-pass-failure)"

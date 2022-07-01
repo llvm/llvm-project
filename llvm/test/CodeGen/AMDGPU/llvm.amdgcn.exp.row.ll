@@ -86,6 +86,7 @@ define amdgpu_kernel void @id_row_i32() #0 {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0x63
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX11-SDAG-NEXT:    exp pos0 v0, off, off, off done row_en
 ; GFX11-SDAG-NEXT:    s_endpgm

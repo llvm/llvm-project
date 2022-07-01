@@ -1,4 +1,4 @@
-//===-- TraceInstructionDumper.cpp ----------------------------------------===//
+//===-- TraceDumper.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/TraceInstructionDumper.h"
+#include "lldb/Target/TraceDumper.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -29,11 +29,10 @@ static Optional<const char *> ToOptionalString(const char *s) {
 /// \return
 ///   The module name (basename if the module is a file, or the actual name if
 ///   it's a virtual module), or \b nullptr if no name nor module was found.
-static const char *
-GetModuleName(const TraceInstructionDumper::InstructionEntry &insn) {
-  if (!insn.symbol_info || !insn.symbol_info->sc.module_sp)
+static const char *GetModuleName(const TraceDumper::TraceItem &item) {
+  if (!item.symbol_info || !item.symbol_info->sc.module_sp)
     return nullptr;
-  return insn.symbol_info->sc.module_sp->GetFileSpec()
+  return item.symbol_info->sc.module_sp->GetFileSpec()
       .GetFilename()
       .AsCString();
 }
@@ -66,9 +65,9 @@ static bool FileLineAndColumnMatches(const LineEntry &a, const LineEntry &b) {
 ///       - symbol
 ///       - function
 ///       - line
-static bool IsSameInstructionSymbolContext(
-    const TraceInstructionDumper::SymbolInfo &prev_insn,
-    const TraceInstructionDumper::SymbolInfo &insn) {
+static bool
+IsSameInstructionSymbolContext(const TraceDumper::SymbolInfo &prev_insn,
+                               const TraceDumper::SymbolInfo &insn) {
   // module checks
   if (insn.sc.module_sp != prev_insn.sc.module_sp)
     return false;
@@ -92,31 +91,30 @@ static bool IsSameInstructionSymbolContext(
   return curr_line_valid == prev_line_valid;
 }
 
-class OutputWriterCLI : public TraceInstructionDumper::OutputWriter {
+class OutputWriterCLI : public TraceDumper::OutputWriter {
 public:
-  OutputWriterCLI(Stream &s, const TraceInstructionDumperOptions &options)
-      : m_s(s), m_options(options){};
+  OutputWriterCLI(Stream &s, const TraceDumperOptions &options, Thread &thread)
+      : m_s(s), m_options(options) {
+    m_s.Format("thread #{0}: tid = {1}\n", thread.GetIndexID(), thread.GetID());
+  };
 
-  void InfoMessage(StringRef text) override { m_s << "    " << text << "\n"; }
+  void NoMoreData() override { m_s << "    no more data\n"; }
 
-  void Event(StringRef text) override { m_s.Format("  [{0}]\n", text); }
-
-  void
-  Instruction(const TraceInstructionDumper::InstructionEntry &insn) override {
-    if (insn.symbol_info) {
-      if (!insn.prev_symbol_info ||
-          !IsSameInstructionSymbolContext(*insn.prev_symbol_info,
-                                          *insn.symbol_info)) {
+  void TraceItem(const TraceDumper::TraceItem &item) override {
+    if (item.symbol_info) {
+      if (!item.prev_symbol_info ||
+          !IsSameInstructionSymbolContext(*item.prev_symbol_info,
+                                          *item.symbol_info)) {
         m_s << "  ";
-        const char *module_name = GetModuleName(insn);
+        const char *module_name = GetModuleName(item);
         if (!module_name)
           m_s << "(none)";
-        else if (!insn.symbol_info->sc.function && !insn.symbol_info->sc.symbol)
+        else if (!item.symbol_info->sc.function && !item.symbol_info->sc.symbol)
           m_s.Format("{0}`(none)", module_name);
         else
-          insn.symbol_info->sc.DumpStopContext(
-              &m_s, insn.symbol_info->exe_ctx.GetTargetPtr(),
-              insn.symbol_info->address,
+          item.symbol_info->sc.DumpStopContext(
+              &m_s, item.symbol_info->exe_ctx.GetTargetPtr(),
+              item.symbol_info->address,
               /*show_fullpaths=*/false,
               /*show_module=*/true, /*show_inlined_frames=*/false,
               /*show_function_arguments=*/true,
@@ -125,53 +123,57 @@ public:
       }
     }
 
-    if (insn.error && !m_was_prev_instruction_an_error)
-      InfoMessage("...missing instructions");
+    if (item.error && !m_was_prev_instruction_an_error)
+      m_s << "    ...missing instructions\n";
 
-    m_s.Format("    {0}: ", insn.id);
+    m_s.Format("    {0}: ", item.id);
 
     if (m_options.show_tsc) {
       m_s << "[tsc=";
 
-      if (insn.tsc)
-        m_s.Format("{0}", *insn.tsc);
+      if (item.tsc)
+        m_s.Format("{0}", *item.tsc);
       else
         m_s << "unavailable";
 
       m_s << "] ";
     }
 
-    if (insn.error) {
-      m_s << *insn.error;
-      m_was_prev_instruction_an_error = true;
+    if (item.event) {
+      m_s << "(event) " << TraceCursor::EventKindToString(*item.event);
+    } else if (item.error) {
+      m_s << "(error) " << *item.error;
     } else {
-      m_s.Format("{0:x+16}", insn.load_address);
-      if (insn.symbol_info) {
+      m_s.Format("{0:x+16}", item.load_address);
+      if (item.symbol_info) {
         m_s << "    ";
-        insn.symbol_info->instruction->Dump(&m_s, /*max_opcode_byte_size=*/0,
+        item.symbol_info->instruction->Dump(&m_s, /*max_opcode_byte_size=*/0,
                                             /*show_address=*/false,
                                             /*show_bytes=*/false,
-                                            &insn.symbol_info->exe_ctx,
-                                            &insn.symbol_info->sc,
+                                            &item.symbol_info->exe_ctx,
+                                            &item.symbol_info->sc,
                                             /*prev_sym_ctx=*/nullptr,
                                             /*disassembly_addr_format=*/nullptr,
                                             /*max_address_text_size=*/0);
       }
-      m_was_prev_instruction_an_error = false;
     }
+
+    m_was_prev_instruction_an_error = (bool)item.error;
     m_s << "\n";
   }
 
 private:
   Stream &m_s;
-  TraceInstructionDumperOptions m_options;
+  TraceDumperOptions m_options;
   bool m_was_prev_instruction_an_error = false;
 };
 
-class OutputWriterJSON : public TraceInstructionDumper::OutputWriter {
+class OutputWriterJSON : public TraceDumper::OutputWriter {
   /* schema:
     error_message: string
     | {
+      "id": decimal,
+      "tsc"?: string decimal,
       "event": string
     } | {
       "id": decimal,
@@ -189,7 +191,7 @@ class OutputWriterJSON : public TraceInstructionDumper::OutputWriter {
     }
   */
 public:
-  OutputWriterJSON(Stream &s, const TraceInstructionDumperOptions &options)
+  OutputWriterJSON(Stream &s, const TraceDumperOptions &options)
       : m_s(s), m_options(options),
         m_j(m_s.AsRawOstream(),
             /*IndentSize=*/options.pretty_print_json ? 2 : 0) {
@@ -198,42 +200,45 @@ public:
 
   ~OutputWriterJSON() { m_j.arrayEnd(); }
 
-  void Event(StringRef text) override {
-    m_j.object([&] { m_j.attribute("event", text); });
-  }
-
-  void
-  Instruction(const TraceInstructionDumper::InstructionEntry &insn) override {
+  void TraceItem(const TraceDumper::TraceItem &item) override {
     m_j.object([&] {
-      m_j.attribute("id", insn.id);
+      m_j.attribute("id", item.id);
       if (m_options.show_tsc)
         m_j.attribute(
             "tsc",
-            insn.tsc ? Optional<std::string>(std::to_string(*insn.tsc)) : None);
+            item.tsc ? Optional<std::string>(std::to_string(*item.tsc)) : None);
 
-      if (insn.error) {
-        m_j.attribute("error", *insn.error);
+      if (item.event) {
+        m_j.object([&] {
+          m_j.attribute("event", TraceCursor::EventKindToString(*item.event));
+        });
         return;
       }
 
-      m_j.attribute("loadAddress", formatv("{0:x}", insn.load_address));
-      if (insn.symbol_info) {
-        m_j.attribute("module", ToOptionalString(GetModuleName(insn)));
+      if (item.error) {
+        m_j.attribute("error", *item.error);
+        return;
+      }
+
+      // we know we are seeing an actual instruction
+      m_j.attribute("loadAddress", formatv("{0:x}", item.load_address));
+      if (item.symbol_info) {
+        m_j.attribute("module", ToOptionalString(GetModuleName(item)));
         m_j.attribute("symbol",
                       ToOptionalString(
-                          insn.symbol_info->sc.GetFunctionName().AsCString()));
+                          item.symbol_info->sc.GetFunctionName().AsCString()));
         m_j.attribute(
             "mnemonic",
-            ToOptionalString(insn.symbol_info->instruction->GetMnemonic(
-                &insn.symbol_info->exe_ctx)));
+            ToOptionalString(item.symbol_info->instruction->GetMnemonic(
+                &item.symbol_info->exe_ctx)));
 
-        if (IsLineEntryValid(insn.symbol_info->sc.line_entry)) {
+        if (IsLineEntryValid(item.symbol_info->sc.line_entry)) {
           m_j.attribute(
               "source",
               ToOptionalString(
-                  insn.symbol_info->sc.line_entry.file.GetPath().c_str()));
-          m_j.attribute("line", insn.symbol_info->sc.line_entry.line);
-          m_j.attribute("column", insn.symbol_info->sc.line_entry.column);
+                  item.symbol_info->sc.line_entry.file.GetPath().c_str()));
+          m_j.attribute("line", item.symbol_info->sc.line_entry.line);
+          m_j.attribute("column", item.symbol_info->sc.line_entry.column);
         }
       }
     });
@@ -241,25 +246,25 @@ public:
 
 private:
   Stream &m_s;
-  TraceInstructionDumperOptions m_options;
+  TraceDumperOptions m_options;
   json::OStream m_j;
 };
 
-static std::unique_ptr<TraceInstructionDumper::OutputWriter>
-CreateWriter(Stream &s, const TraceInstructionDumperOptions &options) {
+static std::unique_ptr<TraceDumper::OutputWriter>
+CreateWriter(Stream &s, const TraceDumperOptions &options, Thread &thread) {
   if (options.json)
-    return std::unique_ptr<TraceInstructionDumper::OutputWriter>(
+    return std::unique_ptr<TraceDumper::OutputWriter>(
         new OutputWriterJSON(s, options));
   else
-    return std::unique_ptr<TraceInstructionDumper::OutputWriter>(
-        new OutputWriterCLI(s, options));
+    return std::unique_ptr<TraceDumper::OutputWriter>(
+        new OutputWriterCLI(s, options, thread));
 }
 
-TraceInstructionDumper::TraceInstructionDumper(
-    lldb::TraceCursorUP &&cursor_up, Stream &s,
-    const TraceInstructionDumperOptions &options)
+TraceDumper::TraceDumper(lldb::TraceCursorUP &&cursor_up, Stream &s,
+                         const TraceDumperOptions &options)
     : m_cursor_up(std::move(cursor_up)), m_options(options),
-      m_writer_up(CreateWriter(s, m_options)) {
+      m_writer_up(CreateWriter(
+          s, m_options, *m_cursor_up->GetExecutionContextRef().GetThreadSP())) {
 
   if (m_options.id)
     m_cursor_up->GoToId(*m_options.id);
@@ -275,31 +280,20 @@ TraceInstructionDumper::TraceInstructionDumper(
   }
 }
 
-TraceInstructionDumper::InstructionEntry
-TraceInstructionDumper::CreatRawInstructionEntry() {
-  InstructionEntry insn;
-  insn.id = m_cursor_up->GetId();
+TraceDumper::TraceItem TraceDumper::CreatRawTraceItem() {
+  TraceItem item;
+  item.id = m_cursor_up->GetId();
 
   if (m_options.show_tsc)
-    insn.tsc = m_cursor_up->GetCounter(lldb::eTraceCounterTSC);
-  return insn;
-}
-
-void TraceInstructionDumper::PrintEvents() {
-  if (!m_options.show_events)
-    return;
-
-  trace_event_utils::ForEachEvent(
-      m_cursor_up->GetEvents(), [&](TraceEvents event) {
-        m_writer_up->Event(trace_event_utils::EventToDisplayString(event));
-      });
+    item.tsc = m_cursor_up->GetCounter(lldb::eTraceCounterTSC);
+  return item;
 }
 
 /// Find the symbol context for the given address reusing the previous
 /// instruction's symbol context when possible.
-static SymbolContext CalculateSymbolContext(
-    const Address &address,
-    const TraceInstructionDumper::SymbolInfo &prev_symbol_info) {
+static SymbolContext
+CalculateSymbolContext(const Address &address,
+                       const TraceDumper::SymbolInfo &prev_symbol_info) {
   AddressRange range;
   if (prev_symbol_info.sc.GetAddressRange(eSymbolContextEverything, 0,
                                           /*inline_block_range*/ false,
@@ -315,8 +309,8 @@ static SymbolContext CalculateSymbolContext(
 /// Find the disassembler for the given address reusing the previous
 /// instruction's disassembler when possible.
 static std::tuple<DisassemblerSP, InstructionSP>
-CalculateDisass(const TraceInstructionDumper::SymbolInfo &symbol_info,
-                const TraceInstructionDumper::SymbolInfo &prev_symbol_info,
+CalculateDisass(const TraceDumper::SymbolInfo &symbol_info,
+                const TraceDumper::SymbolInfo &prev_symbol_info,
                 const ExecutionContext &exe_ctx) {
   if (prev_symbol_info.disassembler) {
     if (InstructionSP instruction =
@@ -348,13 +342,8 @@ CalculateDisass(const TraceInstructionDumper::SymbolInfo &symbol_info,
                    : InstructionSP());
 }
 
-Optional<lldb::user_id_t>
-TraceInstructionDumper::DumpInstructions(size_t count) {
+Optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
   ThreadSP thread_sp = m_cursor_up->GetExecutionContextRef().GetThreadSP();
-
-  m_writer_up->InfoMessage(formatv("thread #{0}: tid = {1}",
-                                   thread_sp->GetIndexID(), thread_sp->GetID())
-                               .str());
 
   SymbolInfo prev_symbol_info;
   Optional<lldb::user_id_t> last_id;
@@ -362,48 +351,39 @@ TraceInstructionDumper::DumpInstructions(size_t count) {
   ExecutionContext exe_ctx;
   thread_sp->GetProcess()->GetTarget().CalculateExecutionContext(exe_ctx);
 
-  for (size_t i = 0; i < count && m_cursor_up->HasValue();
-       m_cursor_up->Next(), i++) {
+  for (size_t insn_seen = 0; insn_seen < count && m_cursor_up->HasValue();
+       m_cursor_up->Next()) {
+
     last_id = m_cursor_up->GetId();
+    TraceItem item = CreatRawTraceItem();
 
-    if (m_options.forwards) {
-      // When moving forwards, we first print the event before printing
-      // the actual instruction.
-      PrintEvents();
-    }
-
-    InstructionEntry insn = CreatRawInstructionEntry();
-
-    if (const char *err = m_cursor_up->GetError()) {
-      insn.error = err;
-      m_writer_up->Instruction(insn);
+    if (m_cursor_up->IsEvent()) {
+      if (!m_options.show_events)
+        continue;
+      item.event = m_cursor_up->GetEventType();
+    } else if (m_cursor_up->IsError()) {
+      item.error = m_cursor_up->GetError();
     } else {
-      insn.load_address = m_cursor_up->GetLoadAddress();
+      insn_seen++;
+      item.load_address = m_cursor_up->GetLoadAddress();
 
       if (!m_options.raw) {
         SymbolInfo symbol_info;
         symbol_info.exe_ctx = exe_ctx;
-        symbol_info.address.SetLoadAddress(insn.load_address,
+        symbol_info.address.SetLoadAddress(item.load_address,
                                            exe_ctx.GetTargetPtr());
         symbol_info.sc =
             CalculateSymbolContext(symbol_info.address, prev_symbol_info);
         std::tie(symbol_info.disassembler, symbol_info.instruction) =
             CalculateDisass(symbol_info, prev_symbol_info, exe_ctx);
-        insn.prev_symbol_info = prev_symbol_info;
-        insn.symbol_info = symbol_info;
+        item.prev_symbol_info = prev_symbol_info;
+        item.symbol_info = symbol_info;
         prev_symbol_info = symbol_info;
       }
-      m_writer_up->Instruction(insn);
     }
-
-    if (!m_options.forwards) {
-      // If we move backwards, we print the events after printing
-      // the actual instruction so that reading chronologically
-      // makes sense.
-      PrintEvents();
-    }
+    m_writer_up->TraceItem(item);
   }
   if (!m_cursor_up->HasValue())
-    m_writer_up->InfoMessage("no more data");
+    m_writer_up->NoMoreData();
   return last_id;
 }

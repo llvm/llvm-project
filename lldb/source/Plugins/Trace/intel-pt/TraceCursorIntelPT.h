@@ -25,18 +25,16 @@ public:
 
   bool HasValue() const override;
 
-  const char *GetError() override;
+  const char *GetError() const override;
 
-  lldb::addr_t GetLoadAddress() override;
+  lldb::addr_t GetLoadAddress() const override;
 
-  llvm::Optional<uint64_t> GetCounter(lldb::TraceCounter counter_type) override;
+  llvm::Optional<uint64_t>
+  GetCounter(lldb::TraceCounter counter_type) const override;
 
-  lldb::TraceEvents GetEvents() override;
+  lldb::TraceEvent GetEventType() const override;
 
-  lldb::TraceInstructionControlFlowType
-  GetInstructionControlFlowType() override;
-
-  bool IsError() override;
+  lldb::TraceItemKind GetItemKind() const override;
 
   bool GoToId(lldb::user_id_t id) override;
 
@@ -45,10 +43,6 @@ public:
   bool HasId(lldb::user_id_t id) const override;
 
 private:
-  /// \return
-  ///   The number of instructions and errors in the trace.
-  int64_t GetItemsCount() const;
-
   /// Calculate the tsc range for the current position if needed.
   void CalculateTscRange();
 
