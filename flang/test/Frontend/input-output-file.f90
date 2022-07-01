@@ -26,9 +26,6 @@
 ! TEST 5: Write to a file (explicit)
 ! RUN: %flang_fc1 -test-io  -o %t %s 2>&1 && FileCheck %s --match-full-lines --input-file=%t
 
-!-----------------------
-! EXPECTED OUTPUT
-!-----------------------
 ! CHECK-LABEL: Program arithmetic
 ! CHECK-NEXT:    Integer :: i, j
 ! CHECK-NEXT:    i = 2; j = 3; i= i * j;
