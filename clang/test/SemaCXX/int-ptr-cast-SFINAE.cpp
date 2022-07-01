@@ -19,4 +19,4 @@ template<typename T> false_type test(...);
 template<typename T>
 static const auto has_minus_assign = decltype(test<T>())::value;
 
-static_assert(has_minus_assign<int *>, "failed"); // expected-error {{static_assert failed due to requirement 'has_minus_assign<int *>': failed}}
+static_assert(has_minus_assign<int*>, "failed"); // expected-error {{static_assert failed due to requirement 'has_minus_assign<int *>' "failed"}}
