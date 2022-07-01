@@ -108,14 +108,6 @@ public:
   ///     if no instructions were visited.
   llvm::Optional<lldb::user_id_t> DumpInstructions(size_t count);
 
-  /// \return
-  ///     \b true if there's still more data to traverse in the trace.
-  bool HasMoreData();
-
-  /// Indicate to the dumper that no more data is available in the trace.
-  /// This will prevent further iterations.
-  void SetNoMoreData();
-
 private:
   /// Create an instruction entry for the current position without symbol
   /// information.
@@ -125,8 +117,6 @@ private:
 
   lldb::TraceCursorUP m_cursor_up;
   TraceInstructionDumperOptions m_options;
-  /// If \b true, all the instructions have been traversed.
-  bool m_no_more_data = false;
   std::unique_ptr<OutputWriter> m_writer_up;
 };
 
