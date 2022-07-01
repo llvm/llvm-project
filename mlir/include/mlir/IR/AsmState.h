@@ -311,6 +311,7 @@ public:
   void attachResourceParser(std::unique_ptr<AsmResourceParser> parser) {
     StringRef name = parser->getName();
     auto it = resourceParsers.try_emplace(name, std::move(parser));
+    (void)it;
     assert(it.second &&
            "resource parser already registered with the given name");
   }
