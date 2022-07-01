@@ -5,12 +5,12 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx908_vdst_5:
+.. _amdgpu_synid_gfx908_vsrc_036abe:
 
-vdst
+vsrc
 ====
 
-Instruction output.
+Instruction input.
 
 *Size:* 32 dwords.
 

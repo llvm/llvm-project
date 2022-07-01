@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx908_opt:
+.. _amdgpu_synid_gfx908_vdst_2c8d1e:
 
-opt
-===
+vdst
+====
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+Instruction output.
+
+*Size:* 32 dwords.
+
+*Operands:* :ref:`a<amdgpu_synid_a>`
