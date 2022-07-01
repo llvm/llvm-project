@@ -32,7 +32,7 @@ namespace __sanitizer {
 void NORETURN internal__exit(int exitcode) { _zx_process_exit(exitcode); }
 
 uptr internal_sched_yield() {
-  zx_status_t status = _zx_nanosleep(0);
+  zx_status_t status = _zx_thread_legacy_yield(0u);
   CHECK_EQ(status, ZX_OK);
   return 0;  // Why doesn't this return void?
 }
