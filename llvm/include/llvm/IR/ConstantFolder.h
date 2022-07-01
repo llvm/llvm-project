@@ -167,10 +167,6 @@ public:
     return ConstantExpr::getFNeg(C);
   }
 
-  Constant *CreateNot(Constant *C) const override {
-    return ConstantExpr::getNot(C);
-  }
-
   Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {
     return ConstantExpr::get(Opc, C);
   }
