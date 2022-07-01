@@ -546,13 +546,14 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
-                             VPTransformState &State) {
+                             VPTransformState &State,
+                             bool IsEpilogueVectorization) {
 
   VPBasicBlock *ExitingVPBB = getVectorLoopRegion()->getExitingBasicBlock();
   auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
   // Try to simplify BranchOnCount to 'BranchOnCond true' if TC <= VF * UF when
   // preparing to execute the plan for the main vector loop.
-  if (!CanonicalIVStartValue && Term &&
+  if (!IsEpilogueVectorization && Term &&
       Term->getOpcode() == VPInstruction::BranchOnCount &&
       isa<ConstantInt>(TripCountV)) {
     ConstantInt *C = cast<ConstantInt>(TripCountV);

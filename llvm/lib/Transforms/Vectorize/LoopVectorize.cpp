@@ -7520,7 +7520,8 @@ static void AddRuntimeUnrollDisableMetaData(Loop *L) {
 void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
                                            VPlan &BestVPlan,
                                            InnerLoopVectorizer &ILV,
-                                           DominatorTree *DT) {
+                                           DominatorTree *DT,
+                                           bool IsEpilogueVectorization) {
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF << ", UF=" << BestUF
                     << '\n');
 
@@ -7564,7 +7565,8 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   // 2. Copy and widen instructions from the old loop into the new loop.
   BestVPlan.prepareToExecute(ILV.getOrCreateTripCount(nullptr),
                              ILV.getOrCreateVectorTripCount(nullptr),
-                             CanonicalIVStartValue, State);
+                             CanonicalIVStartValue, State,
+                             IsEpilogueVectorization);
 
   BestVPlan.execute(&State);
 
@@ -10155,7 +10157,7 @@ static bool processLoopInVPlanNativePath(
                            &CM, BFI, PSI, Checks);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
                       << L->getHeader()->getParent()->getName() << "\"\n");
-    LVP.executePlan(VF.Width, 1, BestPlan, LB, DT);
+    LVP.executePlan(VF.Width, 1, BestPlan, LB, DT, false);
   }
 
   // Mark the loop as already vectorized to avoid vectorizing again.
@@ -10499,7 +10501,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                  &CM, BFI, PSI, Checks);
 
       VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
-      LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT);
+      LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
         return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
@@ -10524,7 +10526,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
         VPlan &BestMainPlan = LVP.getBestPlanFor(EPI.MainLoopVF);
         LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV,
-                        DT);
+                        DT, true);
         ++LoopsVectorized;
 
         // Second pass vectorizes the epilogue and adjusts the control flow
@@ -10553,7 +10555,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         }
 
         LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV,
-                        DT);
+                        DT, true);
         ++LoopsEpilogueVectorized;
 
         if (!MainILV.areSafetyChecksAdded())
@@ -10563,7 +10565,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                &LVL, &CM, BFI, PSI, Checks);
 
         VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
-        LVP.executePlan(VF.Width, IC, BestPlan, LB, DT);
+        LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 
         // Add metadata to disable runtime unrolling a scalar loop when there
