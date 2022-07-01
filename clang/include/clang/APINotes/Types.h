@@ -674,7 +674,7 @@ public:
   TagInfo &operator|=(const TagInfo &RHS) {
     static_cast<CommonTypeInfo &>(*this) |= RHS;
 
-    if (!HasFlagEnum && HasFlagEnum)
+    if (!HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
 
     if (!EnumExtensibility)
