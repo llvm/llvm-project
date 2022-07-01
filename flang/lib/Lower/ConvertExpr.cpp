@@ -577,7 +577,8 @@ isIntrinsicModuleProcRef(const Fortran::evaluate::ProcedureRef &procRef) {
     return false;
   const Fortran::semantics::Symbol *module =
       symbol->GetUltimate().owner().GetSymbol();
-  return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC);
+  return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC) &&
+         module->name().ToString().find("omp_lib") == std::string::npos;
 }
 
 namespace {
