@@ -21,8 +21,8 @@ int test_broken() {
   vector<int> vec; // expected-error{{no template named 'vector'}}
 
   VisibleStruct vs;
-  vs.field = 0;
-  vs.setField(1);
+  vs.field = 0; // expected-error{{no member named 'field' in 'VisibleStruct'}}
+  vs.setField(1); // expected-error{{no member named 'setField' in 'VisibleStruct'}}
 
   return hidden_var; // expected-error{{use of undeclared identifier 'hidden_var'}}
 }

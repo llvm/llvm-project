@@ -605,27 +605,15 @@ void ASTDeclReader::VisitDecl(Decl *D) {
   D->setTopLevelDeclInObjCContainer(Record.readInt());
   D->setAccess((AccessSpecifier)Record.readInt());
   D->FromASTFile = true;
-  auto ModuleOwnership = (Decl::ModuleOwnershipKind)Record.readInt();
-  bool ModulePrivate =
-      (ModuleOwnership == Decl::ModuleOwnershipKind::ModulePrivate);
+  bool ModulePrivate = Record.readInt();
 
   // Determine whether this declaration is part of a (sub)module. If so, it
   // may not yet be visible.
   if (unsigned SubmoduleID = readSubmoduleID()) {
-
-    switch (ModuleOwnership) {
-    case Decl::ModuleOwnershipKind::Visible:
-      ModuleOwnership = Decl::ModuleOwnershipKind::VisibleWhenImported;
-      break;
-    case Decl::ModuleOwnershipKind::Unowned:
-    case Decl::ModuleOwnershipKind::VisibleWhenImported:
-    case Decl::ModuleOwnershipKind::ReachableWhenImported:
-    case Decl::ModuleOwnershipKind::ModulePrivate:
-      break;
-    }
-
-    D->setModuleOwnershipKind(ModuleOwnership);
     // Store the owning submodule ID in the declaration.
+    D->setModuleOwnershipKind(
+        ModulePrivate ? Decl::ModuleOwnershipKind::ModulePrivate
+                      : Decl::ModuleOwnershipKind::VisibleWhenImported);
     D->setOwningModuleID(SubmoduleID);
 
     if (ModulePrivate) {

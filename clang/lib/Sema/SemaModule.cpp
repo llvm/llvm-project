@@ -90,14 +90,7 @@ Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
 
   // All declarations created from now on are owned by the global module.
   auto *TU = Context.getTranslationUnitDecl();
-  // [module.global.frag]p2
-  // A global-module-fragment specifies the contents of the global module
-  // fragment for a module unit. The global module fragment can be used to
-  // provide declarations that are attached to the global module and usable
-  // within the module unit.
-  //
-  // So the declations in the global module shouldn't be visible by default.
-  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ReachableWhenImported);
+  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::Visible);
   TU->setLocalOwningModule(GlobalModule);
 
   // FIXME: Consider creating an explicit representation of this declaration.
@@ -332,12 +325,10 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   VisibleModules.setVisible(Mod, ModuleLoc);
 
   // From now on, we have an owning module for all declarations we see.
-  // In C++20 modules, those declaration would be reachable when imported
-  // unless explicitily exported.
-  // Otherwise, those declarations are module-private unless explicitly
+  // However, those declarations are module-private unless explicitly
   // exported.
   auto *TU = Context.getTranslationUnitDecl();
-  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ReachableWhenImported);
+  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
   TU->setLocalOwningModule(Mod);
 
   // We are in the module purview, but before any other (non import)

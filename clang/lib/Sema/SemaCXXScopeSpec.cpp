@@ -121,7 +121,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
             // entering the context, and that can't happen in a SFINAE context.
             assert(!isSFINAEContext() &&
                    "partial specialization scope specifier in SFINAE context?");
-            if (!hasReachableDefinition(PartialSpec))
+            if (!hasVisibleDeclaration(PartialSpec))
               diagnoseMissingImport(SS.getLastQualifierNameLoc(), PartialSpec,
                                     MissingImportKind::PartialSpecialization,
                                     /*Recover*/true);
@@ -243,8 +243,8 @@ bool Sema::RequireCompleteEnumDecl(EnumDecl *EnumD, SourceLocation L,
   if (EnumD->isCompleteDefinition()) {
     // If we know about the definition but it is not visible, complain.
     NamedDecl *SuggestedDef = nullptr;
-    if (!hasReachableDefinition(EnumD, &SuggestedDef,
-                                /*OnlyNeedComplete*/ false)) {
+    if (!hasVisibleDefinition(EnumD, &SuggestedDef,
+                              /*OnlyNeedComplete*/false)) {
       // If the user is going to see an error here, recover by making the
       // definition visible.
       bool TreatAsComplete = !isSFINAEContext();

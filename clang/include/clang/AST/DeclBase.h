@@ -225,15 +225,8 @@ public:
     /// module is imported.
     VisibleWhenImported,
 
-    /// This declaration has an owning module, and is visible to lookups
-    /// that occurs within that module. And it is reachable in other module
-    /// when the owning module is transitively imported.
-    ReachableWhenImported,
-
     /// This declaration has an owning module, but is only visible to
     /// lookups that occur within that module.
-    /// The discarded declarations in global module fragment belongs
-    /// to this group too.
     ModulePrivate
   };
 
@@ -242,8 +235,8 @@ protected:
   /// DeclContext. These pointers form the linked list that is
   /// traversed via DeclContext's decls_begin()/decls_end().
   ///
-  /// The extra three bits are used for the ModuleOwnershipKind.
-  llvm::PointerIntPair<Decl *, 3, ModuleOwnershipKind> NextInContextAndBits;
+  /// The extra two bits are used for the ModuleOwnershipKind.
+  llvm::PointerIntPair<Decl *, 2, ModuleOwnershipKind> NextInContextAndBits;
 
 private:
   friend class DeclContext;
@@ -629,14 +622,6 @@ public:
   ///   export void B::f2(); // isInExportDeclContext() == true
   bool isInExportDeclContext() const;
 
-  bool isInvisibleOutsideTheOwningModule() const {
-    return getModuleOwnershipKind() > ModuleOwnershipKind::VisibleWhenImported;
-  }
-
-  /// FIXME: Implement discarding declarations actually in global module
-  /// fragment. See [module.global.frag]p3,4 for details.
-  bool isDiscardedInGlobalModuleFragment() const { return false; }
-
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
   bool hasDefiningAttr() const;
@@ -812,11 +797,6 @@ public:
   /// helper function; most code should be calling Sema::isVisible() instead.
   bool isUnconditionallyVisible() const {
     return (int)getModuleOwnershipKind() <= (int)ModuleOwnershipKind::Visible;
-  }
-
-  bool isReachable() const {
-    return (int)getModuleOwnershipKind() <=
-           (int)ModuleOwnershipKind::ReachableWhenImported;
   }
 
   /// Set that this declaration is globally visible, even if it came from a

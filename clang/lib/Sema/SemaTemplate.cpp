@@ -799,9 +799,8 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
 
   if (PatternDef && !IsEntityBeingDefined) {
     NamedDecl *SuggestedDef = nullptr;
-    if (!hasReachableDefinition(const_cast<NamedDecl *>(PatternDef),
-                                &SuggestedDef,
-                                /*OnlyNeedComplete*/ false)) {
+    if (!hasVisibleDefinition(const_cast<NamedDecl*>(PatternDef), &SuggestedDef,
+                              /*OnlyNeedComplete*/false)) {
       // If we're allowed to diagnose this and recover, do so.
       bool Recover = Complain && !isSFINAEContext();
       if (Complain)
@@ -5257,7 +5256,7 @@ Sema::SubstDefaultTemplateArgumentIfAvailable(TemplateDecl *Template,
   HasDefaultArg = false;
 
   if (TemplateTypeParmDecl *TypeParm = dyn_cast<TemplateTypeParmDecl>(Param)) {
-    if (!hasReachableDefaultArgument(TypeParm))
+    if (!hasVisibleDefaultArgument(TypeParm))
       return TemplateArgumentLoc();
 
     HasDefaultArg = true;
@@ -5274,7 +5273,7 @@ Sema::SubstDefaultTemplateArgumentIfAvailable(TemplateDecl *Template,
 
   if (NonTypeTemplateParmDecl *NonTypeParm
         = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-    if (!hasReachableDefaultArgument(NonTypeParm))
+    if (!hasVisibleDefaultArgument(NonTypeParm))
       return TemplateArgumentLoc();
 
     HasDefaultArg = true;
@@ -5292,7 +5291,7 @@ Sema::SubstDefaultTemplateArgumentIfAvailable(TemplateDecl *Template,
 
   TemplateTemplateParmDecl *TempTempParm
     = cast<TemplateTemplateParmDecl>(Param);
-  if (!hasReachableDefaultArgument(TempTempParm))
+  if (!hasVisibleDefaultArgument(TempTempParm))
     return TemplateArgumentLoc();
 
   HasDefaultArg = true;
@@ -5630,10 +5629,10 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
                                  ->getTemplateParameters()
                                  ->getParam(D->getIndex()));
 
-  // If there's a default argument that's not reachable, diagnose that we're
+  // If there's a default argument that's not visible, diagnose that we're
   // missing a module import.
   llvm::SmallVector<Module*, 8> Modules;
-  if (D->hasDefaultArgument() && !S.hasReachableDefaultArgument(D, &Modules)) {
+  if (D->hasDefaultArgument() && !S.hasVisibleDefaultArgument(D, &Modules)) {
     S.diagnoseMissingImport(Loc, cast<NamedDecl>(TD),
                             D->getDefaultArgumentLoc(), Modules,
                             Sema::MissingImportKind::DefaultArgument,
@@ -5816,7 +5815,7 @@ bool Sema::CheckTemplateArgumentList(
     // (when the template parameter was part of a nested template) into
     // the default argument.
     if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(*Param)) {
-      if (!hasReachableDefaultArgument(TTP))
+      if (!hasVisibleDefaultArgument(TTP))
         return diagnoseMissingArgument(*this, TemplateLoc, Template, TTP,
                                        NewArgs);
 
@@ -5833,7 +5832,7 @@ bool Sema::CheckTemplateArgumentList(
                                 ArgType);
     } else if (NonTypeTemplateParmDecl *NTTP
                  = dyn_cast<NonTypeTemplateParmDecl>(*Param)) {
-      if (!hasReachableDefaultArgument(NTTP))
+      if (!hasVisibleDefaultArgument(NTTP))
         return diagnoseMissingArgument(*this, TemplateLoc, Template, NTTP,
                                        NewArgs);
 
@@ -5851,7 +5850,7 @@ bool Sema::CheckTemplateArgumentList(
       TemplateTemplateParmDecl *TempParm
         = cast<TemplateTemplateParmDecl>(*Param);
 
-      if (!hasReachableDefaultArgument(TempParm))
+      if (!hasVisibleDefaultArgument(TempParm))
         return diagnoseMissingArgument(*this, TemplateLoc, Template, TempParm,
                                        NewArgs);
 
@@ -11014,12 +11013,10 @@ class ExplicitSpecializationVisibilityChecker {
   Sema &S;
   SourceLocation Loc;
   llvm::SmallVector<Module *, 8> Modules;
-  Sema::AcceptableKind Kind;
 
 public:
-  ExplicitSpecializationVisibilityChecker(Sema &S, SourceLocation Loc,
-                                          Sema::AcceptableKind Kind)
-      : S(S), Loc(Loc), Kind(Kind) {}
+  ExplicitSpecializationVisibilityChecker(Sema &S, SourceLocation Loc)
+      : S(S), Loc(Loc) {}
 
   void check(NamedDecl *ND) {
     if (auto *FD = dyn_cast<FunctionDecl>(ND))
@@ -11047,23 +11044,6 @@ private:
       S.diagnoseMissingImport(Loc, D, D->getLocation(), Modules, Kind, Recover);
   }
 
-  bool CheckMemberSpecialization(const NamedDecl *D) {
-    return Kind == Sema::AcceptableKind::Visible
-               ? S.hasVisibleMemberSpecialization(D)
-               : S.hasReachableMemberSpecialization(D);
-  }
-
-  bool CheckExplicitSpecialization(const NamedDecl *D) {
-    return Kind == Sema::AcceptableKind::Visible
-               ? S.hasVisibleExplicitSpecialization(D)
-               : S.hasReachableExplicitSpecialization(D);
-  }
-
-  bool CheckDeclaration(const NamedDecl *D) {
-    return Kind == Sema::AcceptableKind::Visible ? S.hasVisibleDeclaration(D)
-                                                 : S.hasReachableDeclaration(D);
-  }
-
   // Check a specific declaration. There are three problematic cases:
   //
   //  1) The declaration is an explicit specialization of a template
@@ -11080,9 +11060,10 @@ private:
   void checkImpl(SpecDecl *Spec) {
     bool IsHiddenExplicitSpecialization = false;
     if (Spec->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {
-      IsHiddenExplicitSpecialization = Spec->getMemberSpecializationInfo()
-                                           ? !CheckMemberSpecialization(Spec)
-                                           : !CheckExplicitSpecialization(Spec);
+      IsHiddenExplicitSpecialization =
+          Spec->getMemberSpecializationInfo()
+              ? !S.hasVisibleMemberSpecialization(Spec, &Modules)
+              : !S.hasVisibleExplicitSpecialization(Spec, &Modules);
     } else {
       checkInstantiated(Spec);
     }
@@ -11106,7 +11087,7 @@ private:
       checkTemplate(TD);
     else if (auto *TD =
                  From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      if (!CheckDeclaration(TD))
+      if (!S.hasVisibleDeclaration(TD))
         diagnose(TD, true);
       checkTemplate(TD);
     }
@@ -11122,7 +11103,7 @@ private:
       checkTemplate(TD);
     else if (auto *TD =
                  From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-      if (!CheckDeclaration(TD))
+      if (!S.hasVisibleDeclaration(TD))
         diagnose(TD, true);
       checkTemplate(TD);
     }
@@ -11133,7 +11114,7 @@ private:
   template<typename TemplDecl>
   void checkTemplate(TemplDecl *TD) {
     if (TD->isMemberSpecialization()) {
-      if (!CheckMemberSpecialization(TD))
+      if (!S.hasVisibleMemberSpecialization(TD, &Modules))
         diagnose(TD->getMostRecentDecl(), false);
     }
   }
@@ -11144,17 +11125,5 @@ void Sema::checkSpecializationVisibility(SourceLocation Loc, NamedDecl *Spec) {
   if (!getLangOpts().Modules)
     return;
 
-  ExplicitSpecializationVisibilityChecker(*this, Loc,
-                                          Sema::AcceptableKind::Visible)
-      .check(Spec);
-}
-
-void Sema::checkSpecializationReachability(SourceLocation Loc,
-                                           NamedDecl *Spec) {
-  if (!getLangOpts().CPlusPlusModules)
-    return checkSpecializationVisibility(Loc, Spec);
-
-  ExplicitSpecializationVisibilityChecker(*this, Loc,
-                                          Sema::AcceptableKind::Reachable)
-      .check(Spec);
+  ExplicitSpecializationVisibilityChecker(*this, Loc).check(Spec);
 }
