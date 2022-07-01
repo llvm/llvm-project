@@ -10,6 +10,7 @@ config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
 config.llvm_shlib_dir = "@SHLIBDIR@"
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.enable_backtrace = @ENABLE_BACKTRACES@
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.lld_obj_root = "@LLD_BINARY_DIR@"
 config.lld_libs_dir = lit_config.substitute("@CURRENT_LIBS_DIR@")
