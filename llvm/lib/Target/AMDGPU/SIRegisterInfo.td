@@ -786,7 +786,7 @@ defm "" : SRegClass<4, 15, [v4i32, v4f32, v2i64, v2f64, v8i16, v8f16], SGPR_128R
 defm "" : SRegClass<5, 16, [v5i32, v5f32], SGPR_160Regs, TTMP_160Regs>;
 defm "" : SRegClass<6, 17, [v6i32, v6f32, v3i64, v3f64], SGPR_192Regs, TTMP_192Regs>;
 defm "" : SRegClass<7, 18, [v7i32, v7f32], SGPR_224Regs, TTMP_224Regs>;
-defm "" : SRegClass<8, 19, [v8i32, v8f32, v4i64, v4f64], SGPR_256Regs, TTMP_256Regs>;
+defm "" : SRegClass<8, 19, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16], SGPR_256Regs, TTMP_256Regs>;
 defm "" : SRegClass<16, 20, [v16i32, v16f32, v8i64, v8f64], SGPR_512Regs, TTMP_512Regs>;
 defm "" : SRegClass<32, 21, [v32i32, v32f32, v16i64, v16f64], SGPR_1024Regs>;
 
@@ -827,7 +827,7 @@ defm VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
 
 defm VReg_192 : VRegClass<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
 defm VReg_224 : VRegClass<7, [v7i32, v7f32], (add VGPR_224)>;
-defm VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64], (add VGPR_256)>;
+defm VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16], (add VGPR_256)>;
 defm VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64], (add VGPR_512)>;
 defm VReg_1024 : VRegClass<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)>;
 
