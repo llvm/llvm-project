@@ -10,5 +10,6 @@
 #define _HLSL_H_
 
 #include "hlsl/hlsl_basic_types.h"
+#include "hlsl/hlsl_intrinsics.h"
 
 #endif //_HLSL_H_

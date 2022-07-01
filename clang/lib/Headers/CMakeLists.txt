@@ -65,6 +65,7 @@ set(hip_files
 set(hlsl_files
   hlsl.h
   hlsl/hlsl_basic_types.h
+  hlsl/hlsl_intrinsics.h
   )
 
 set(mips_msa_files
