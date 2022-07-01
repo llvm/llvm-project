@@ -462,13 +462,13 @@ private:
   }
 
   void genSourceAllocation(const Allocation &, const fir::MutableBoxValue &) {
-    TODO(loc, "SOURCE allocation lowering");
+    TODO(loc, "SOURCE allocation");
   }
   void genMoldAllocation(const Allocation &, const fir::MutableBoxValue &) {
-    TODO(loc, "MOLD allocation lowering");
+    TODO(loc, "MOLD allocation");
   }
   void genSetType(const Allocation &, const fir::MutableBoxValue &) {
-    TODO(loc, "polymorphic entity allocation lowering");
+    TODO(loc, "polymorphic entity allocation");
   }
 
   /// Returns a pointer to the DeclTypeSpec if a type-spec is provided in the

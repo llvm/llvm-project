@@ -792,7 +792,7 @@ private:
     if (cat == Fortran::common::TypeCategory::Derived) {
       if (dynamicType.IsPolymorphic())
         TODO(interface.converter.getCurrentLocation(),
-             "[translateDynamicType] polymorphic types");
+             "support for polymorphic types");
       return getConverter().genType(dynamicType.GetDerivedTypeSpec());
     }
     // CHARACTER with compile time constant length.
