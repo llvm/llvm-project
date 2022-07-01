@@ -123,6 +123,7 @@ define amdgpu_kernel void @cluster_load_cluster_store(i32* noalias %lb, i32* noa
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v4 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(3)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v5 offset:24
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %la0 = getelementptr inbounds i32, i32* %lb, i32 0
@@ -264,6 +265,7 @@ define amdgpu_kernel void @cluster_load_valu_cluster_store(i32* noalias %lb, i32
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v4 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(3)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v5 offset:24
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %la0 = getelementptr inbounds i32, i32* %lb, i32 0
@@ -344,6 +346,7 @@ define amdgpu_ps void @cluster_image_load(<8 x i32> inreg %src, <8 x i32> inreg 
 ; GFX11-NEXT:    v_add_f32_e32 v3, v3, v7
 ; GFX11-NEXT:    v_add_f32_e32 v2, v2, v6
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %x1 = add i32 %x, 1
@@ -400,6 +403,7 @@ define amdgpu_ps void @no_cluster_image_load(<8 x i32> inreg %src1, <8 x i32> in
 ; GFX11-NEXT:    v_add_f32_e32 v3, v3, v7
 ; GFX11-NEXT:    v_add_f32_e32 v2, v2, v6
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[16:23] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %val1 = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %x, i32 %y, i32 0, <8 x i32> %src1, i32 0, i32 0)
@@ -497,6 +501,7 @@ define amdgpu_ps void @cluster_image_sample(<8 x i32> inreg %src, <4 x i32> inre
 ; GFX11-NEXT:    v_add_f32_e32 v3, v3, v7
 ; GFX11-NEXT:    v_add_f32_e32 v2, v2, v6
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[12:19] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %s = sitofp i32 %x to float
