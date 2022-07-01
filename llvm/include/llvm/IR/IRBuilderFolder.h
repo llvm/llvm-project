@@ -52,6 +52,14 @@ public:
   virtual Value *FoldInsertValue(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> IdxList) const = 0;
 
+  virtual Value *FoldExtractElement(Value *Vec, Value *Idx) const = 0;
+
+  virtual Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                                   Value *Idx) const = 0;
+
+  virtual Value *FoldShuffleVector(Value *V1, Value *V2,
+                                   ArrayRef<int> Mask) const = 0;
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -116,16 +124,6 @@ public:
 
   virtual Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                             Constant *RHS) const = 0;
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  virtual Value *CreateExtractElement(Constant *Vec, Constant *Idx) const = 0;
-  virtual Value *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                                     Constant *Idx) const = 0;
-  virtual Value *CreateShuffleVector(Constant *V1, Constant *V2,
-                                     ArrayRef<int> Mask) const = 0;
 };
 
 } // end namespace llvm
