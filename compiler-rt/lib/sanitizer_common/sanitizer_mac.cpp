@@ -943,6 +943,9 @@ static void DisableMmapExcGuardExceptions() {
   set_behavior(mach_task_self(), task_exc_guard_none);
 }
 
+static void VerifyInterceptorsWorking();
+static void StripEnv();
+
 void InitializePlatformEarly() {
   // Only use xnu_fast_mmap when on x86_64 and the kernel supports it.
   use_xnu_fast_mmap =
@@ -953,17 +956,43 @@ void InitializePlatformEarly() {
 #endif
   if (GetDarwinKernelVersion() >= DarwinKernelVersion(19, 0))
     DisableMmapExcGuardExceptions();
+
+#  if !SANITIZER_GO
+  MonotonicNanoTime();  // Call to initialize mach_timebase_info
+  VerifyInterceptorsWorking();
+  StripEnv();
+#  endif
 }
 
 #if !SANITIZER_GO
 static const char kDyldInsertLibraries[] = "DYLD_INSERT_LIBRARIES";
 LowLevelAllocator allocator_for_env;
 
+static void VerifyInterceptorsWorking() {
+  if (!common_flags()->verify_interceptors)
+    return;
+
+  // Verify that interceptors really work.  We'll use dlsym to locate
+  // "puts", if interceptors are working, it should really point to
+  // "wrap_puts" within our own dylib.
+  Dl_info info_puts, info_runtime;
+  RAW_CHECK(dladdr(dlsym(RTLD_DEFAULT, "puts"), &info_puts));
+  RAW_CHECK(dladdr((void *)__sanitizer_report_error_summary, &info_runtime));
+  if (internal_strcmp(info_puts.dli_fname, info_runtime.dli_fname) != 0) {
+    Report(
+        "ERROR: Interceptors are not working. This may be because %s is "
+        "loaded too late (e.g. via dlopen). Please launch the executable "
+        "with:\n%s=%s\n",
+        SanitizerToolName, kDyldInsertLibraries, info_runtime.dli_fname);
+    RAW_CHECK("interceptors not installed" && 0);
+  }
+}
+
 // Change the value of the env var |name|, leaking the original value.
 // If |name_value| is NULL, the variable is deleted from the environment,
 // otherwise the corresponding "NAME=value" string is replaced with
 // |name_value|.
-void LeakyResetEnv(const char *name, const char *name_value) {
+static void LeakyResetEnv(const char *name, const char *name_value) {
   char **env = GetEnviron();
   uptr name_len = internal_strlen(name);
   while (*env != 0) {
@@ -988,100 +1017,28 @@ void LeakyResetEnv(const char *name, const char *name_value) {
   }
 }
 
-SANITIZER_WEAK_CXX_DEFAULT_IMPL
-bool ReexecDisabled() {
-  return false;
-}
-
-static bool DyldNeedsEnvVariable() {
-  // If running on OS X 10.11+ or iOS 9.0+, dyld will interpose even if
-  // DYLD_INSERT_LIBRARIES is not set.
-  return GetMacosAlignedVersion() < MacosVersion(10, 11);
-}
-
-void MaybeReexec() {
-  // FIXME: This should really live in some "InitializePlatform" method.
-  MonotonicNanoTime();
-
-  if (ReexecDisabled()) return;
-
-  // Make sure the dynamic runtime library is preloaded so that the
-  // wrappers work. If it is not, set DYLD_INSERT_LIBRARIES and re-exec
-  // ourselves.
-  Dl_info info;
-  RAW_CHECK(dladdr((void*)((uptr)&__sanitizer_report_error_summary), &info));
-  char *dyld_insert_libraries =
-      const_cast<char*>(GetEnv(kDyldInsertLibraries));
-  uptr old_env_len = dyld_insert_libraries ?
-      internal_strlen(dyld_insert_libraries) : 0;
-  uptr fname_len = internal_strlen(info.dli_fname);
-  const char *dylib_name = StripModuleName(info.dli_fname);
-  uptr dylib_name_len = internal_strlen(dylib_name);
-
-  bool lib_is_in_env = dyld_insert_libraries &&
-                       internal_strstr(dyld_insert_libraries, dylib_name);
-  if (DyldNeedsEnvVariable() && !lib_is_in_env) {
-    // DYLD_INSERT_LIBRARIES is not set or does not contain the runtime
-    // library.
-    InternalMmapVector<char> program_name(1024);
-    uint32_t buf_size = program_name.size();
-    _NSGetExecutablePath(program_name.data(), &buf_size);
-    char *new_env = const_cast<char*>(info.dli_fname);
-    if (dyld_insert_libraries) {
-      // Append the runtime dylib name to the existing value of
-      // DYLD_INSERT_LIBRARIES.
-      new_env = (char*)allocator_for_env.Allocate(old_env_len + fname_len + 2);
-      internal_strncpy(new_env, dyld_insert_libraries, old_env_len);
-      new_env[old_env_len] = ':';
-      // Copy fname_len and add a trailing zero.
-      internal_strncpy(new_env + old_env_len + 1, info.dli_fname,
-                       fname_len + 1);
-      // Ok to use setenv() since the wrappers don't depend on the value of
-      // asan_inited.
-      setenv(kDyldInsertLibraries, new_env, /*overwrite*/1);
-    } else {
-      // Set DYLD_INSERT_LIBRARIES equal to the runtime dylib name.
-      setenv(kDyldInsertLibraries, info.dli_fname, /*overwrite*/0);
-    }
-    VReport(1, "exec()-ing the program with\n");
-    VReport(1, "%s=%s\n", kDyldInsertLibraries, new_env);
-    VReport(1, "to enable wrappers.\n");
-    execv(program_name.data(), *_NSGetArgv());
-
-    // We get here only if execv() failed.
-    Report("ERROR: The process is launched without DYLD_INSERT_LIBRARIES, "
-           "which is required for the sanitizer to work. We tried to set the "
-           "environment variable and re-execute itself, but execv() failed, "
-           "possibly because of sandbox restrictions. Make sure to launch the "
-           "executable with:\n%s=%s\n", kDyldInsertLibraries, new_env);
-    RAW_CHECK("execv failed" && 0);
-  }
-
-  // Verify that interceptors really work.  We'll use dlsym to locate
-  // "puts", if interceptors are working, it should really point to
-  // "wrap_puts" within our own dylib.
-  Dl_info info_puts;
-  void *dlopen_addr = dlsym(RTLD_DEFAULT, "puts");
-  RAW_CHECK(dladdr(dlopen_addr, &info_puts));
-  if (internal_strcmp(info.dli_fname, info_puts.dli_fname) != 0) {
-    Report(
-        "ERROR: Interceptors are not working. This may be because %s is "
-        "loaded too late (e.g. via dlopen). Please launch the executable "
-        "with:\n%s=%s\n",
-        SanitizerToolName, kDyldInsertLibraries, info.dli_fname);
-    RAW_CHECK("interceptors not installed" && 0);
-  }
-
-  if (!lib_is_in_env)
+static void StripEnv() {
+  if (!common_flags()->strip_env)
     return;
 
-  if (!common_flags()->strip_env)
+  char *dyld_insert_libraries =
+      const_cast<char *>(GetEnv(kDyldInsertLibraries));
+  if (!dyld_insert_libraries)
+    return;
+
+  Dl_info info;
+  RAW_CHECK(dladdr((void *)__sanitizer_report_error_summary, &info));
+  const char *dylib_name = StripModuleName(info.dli_fname);
+  bool lib_is_in_env = internal_strstr(dyld_insert_libraries, dylib_name);
+  if (!lib_is_in_env)
     return;
 
   // DYLD_INSERT_LIBRARIES is set and contains the runtime library. Let's remove
   // the dylib from the environment variable, because interceptors are installed
   // and we don't want our children to inherit the variable.
 
+  uptr old_env_len = internal_strlen(dyld_insert_libraries);
+  uptr dylib_name_len = internal_strlen(dylib_name);
   uptr env_name_len = internal_strlen(kDyldInsertLibraries);
   // Allocate memory to hold the previous env var name, its value, the '='
   // sign and the '\0' char.

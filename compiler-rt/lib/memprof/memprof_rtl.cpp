@@ -170,9 +170,6 @@ static void MemprofInitInternal() {
 
   __sanitizer::InitializePlatformEarly();
 
-  // Re-exec ourselves if we need to set additional env or command line args.
-  MaybeReexec();
-
   // Setup internal allocator callback.
   SetLowLevelAllocateMinAlignment(SHADOW_GRANULARITY);
 
