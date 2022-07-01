@@ -1170,10 +1170,11 @@ void expectSymbolicIntegerLexMin(
 
   PWMAFunction expectedLexmin =
       parsePWMAF(/*numInputs=*/poly.getNumSymbolVars(),
-                 /*numOutputs=*/poly.getNumDimVars(), expectedLexminRepr);
+                 /*numOutputs=*/poly.getNumDimVars(), expectedLexminRepr,
+                 /*numSymbols=*/poly.getNumSymbolVars());
 
   PresburgerSet expectedUnboundedDomain = parsePresburgerSetFromPolyStrings(
-      poly.getNumSymbolVars(), expectedUnboundedDomainRepr);
+      /*numDims=*/0, expectedUnboundedDomainRepr, poly.getNumSymbolVars());
 
   SymbolicLexMin result = poly.findSymbolicIntegerLexMin();
 
@@ -1200,114 +1201,116 @@ void expectSymbolicIntegerLexMin(
 TEST(IntegerPolyhedronTest, findSymbolicIntegerLexMin) {
   expectSymbolicIntegerLexMin("(x)[a] : (x - a >= 0)",
                               {
-                                  {"(a) : ()", {{1, 0}}}, // a
+                                  {"()[a] : ()", {{1, 0}}}, // a
                               });
 
   expectSymbolicIntegerLexMin(
       "(x)[a, b] : (x - a >= 0, x - b >= 0)",
       {
-          {"(a, b) : (a - b >= 0)", {{1, 0, 0}}},     // a
-          {"(a, b) : (b - a - 1 >= 0)", {{0, 1, 0}}}, // b
+          {"()[a, b] : (a - b >= 0)", {{1, 0, 0}}},     // a
+          {"()[a, b] : (b - a - 1 >= 0)", {{0, 1, 0}}}, // b
       });
 
   expectSymbolicIntegerLexMin(
       "(x)[a, b, c] : (x -a >= 0, x - b >= 0, x - c >= 0)",
       {
-          {"(a, b, c) : (a - b >= 0, a - c >= 0)", {{1, 0, 0, 0}}},         // a
-          {"(a, b, c) : (b - a - 1 >= 0, b - c >= 0)", {{0, 1, 0, 0}}},     // b
-          {"(a, b, c) : (c - a - 1 >= 0, c - b - 1 >= 0)", {{0, 0, 1, 0}}}, // c
+          {"()[a, b, c] : (a - b >= 0, a - c >= 0)", {{1, 0, 0, 0}}},     // a
+          {"()[a, b, c] : (b - a - 1 >= 0, b - c >= 0)", {{0, 1, 0, 0}}}, // b
+          {"()[a, b, c] : (c - a - 1 >= 0, c - b - 1 >= 0)",
+           {{0, 0, 1, 0}}}, // c
       });
 
   expectSymbolicIntegerLexMin("(x, y)[a] : (x - a >= 0, x + y >= 0)",
                               {
-                                  {"(a) : ()", {{1, 0}, {-1, 0}}}, // (a, -a)
+                                  {"()[a] : ()", {{1, 0}, {-1, 0}}}, // (a, -a)
                               });
 
   expectSymbolicIntegerLexMin(
       "(x, y)[a] : (x - a >= 0, x + y >= 0, y >= 0)",
       {
-          {"(a) : (a >= 0)", {{1, 0}, {0, 0}}},       // (a, 0)
-          {"(a) : (-a - 1 >= 0)", {{1, 0}, {-1, 0}}}, // (a, -a)
+          {"()[a] : (a >= 0)", {{1, 0}, {0, 0}}},       // (a, 0)
+          {"()[a] : (-a - 1 >= 0)", {{1, 0}, {-1, 0}}}, // (a, -a)
       });
 
   expectSymbolicIntegerLexMin(
       "(x, y)[a, b, c] : (x - a >= 0, y - b >= 0, c - x - y >= 0)",
       {
-          {"(a, b, c) : (c - a - b >= 0)",
+          {"()[a, b, c] : (c - a - b >= 0)",
            {{1, 0, 0, 0}, {0, 1, 0, 0}}}, // (a, b)
       });
 
   expectSymbolicIntegerLexMin(
       "(x, y, z)[a, b, c] : (c - z >= 0, b - y >= 0, x + y + z - a == 0)",
       {
-          {"(a, b, c) : ()",
+          {"()[a, b, c] : ()",
            {{1, -1, -1, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}}}, // (a - b - c, b, c)
       });
 
   expectSymbolicIntegerLexMin(
       "(x)[a, b] : (a >= 0, b >= 0, x >= 0, a + b + x - 1 >= 0)",
       {
-          {"(a, b) : (a >= 0, b >= 0, a + b - 1 >= 0)", {{0, 0, 0}}}, // 0
-          {"(a, b) : (a == 0, b == 0)", {{0, 0, 1}}},                 // 1
+          {"()[a, b] : (a >= 0, b >= 0, a + b - 1 >= 0)", {{0, 0, 0}}}, // 0
+          {"()[a, b] : (a == 0, b == 0)", {{0, 0, 1}}},                 // 1
       });
 
   expectSymbolicIntegerLexMin(
       "(x)[a, b] : (1 - a >= 0, a >= 0, 1 - b >= 0, b >= 0, 1 - x >= 0, x >= "
       "0, a + b + x - 1 >= 0)",
       {
-          {"(a, b) : (1 - a >= 0, a >= 0, 1 - b >= 0, b >= 0, a + b - 1 >= 0)",
-           {{0, 0, 0}}},                              // 0
-          {"(a, b) : (a == 0, b == 0)", {{0, 0, 1}}}, // 1
+          {"()[a, b] : (1 - a >= 0, a >= 0, 1 - b >= 0, b >= 0, a + b - 1 >= "
+           "0)",
+           {{0, 0, 0}}},                                // 0
+          {"()[a, b] : (a == 0, b == 0)", {{0, 0, 1}}}, // 1
       });
 
   expectSymbolicIntegerLexMin(
       "(x, y, z)[a, b] : (x - a == 0, y - b == 0, x >= 0, y >= 0, z >= 0, x + "
       "y + z - 1 >= 0)",
       {
-          {"(a, b) : (a >= 0, b >= 0, 1 - a - b >= 0)",
+          {"()[a, b] : (a >= 0, b >= 0, 1 - a - b >= 0)",
            {{1, 0, 0}, {0, 1, 0}, {-1, -1, 1}}}, // (a, b, 1 - a - b)
-          {"(a, b) : (a >= 0, b >= 0, a + b - 2 >= 0)",
+          {"()[a, b] : (a >= 0, b >= 0, a + b - 2 >= 0)",
            {{1, 0, 0}, {0, 1, 0}, {0, 0, 0}}}, // (a, b, 0)
       });
 
   expectSymbolicIntegerLexMin("(x)[a, b] : (x - a == 0, x - b >= 0)",
                               {
-                                  {"(a, b) : (a - b >= 0)", {{1, 0, 0}}}, // a
+                                  {"()[a, b] : (a - b >= 0)", {{1, 0, 0}}}, // a
                               });
 
   expectSymbolicIntegerLexMin(
       "(q)[a] : (a - 1 - 3*q == 0, q >= 0)",
       {
-          {"(a) : (a - 1 - 3*(a floordiv 3) == 0, a >= 0)",
+          {"()[a] : (a - 1 - 3*(a floordiv 3) == 0, a >= 0)",
            {{0, 1, 0}}}, // a floordiv 3
       });
 
   expectSymbolicIntegerLexMin(
       "(r, q)[a] : (a - r - 3*q == 0, q >= 0, 1 - r >= 0, r >= 0)",
       {
-          {"(a) : (a - 0 - 3*(a floordiv 3) == 0, a >= 0)",
+          {"()[a] : (a - 0 - 3*(a floordiv 3) == 0, a >= 0)",
            {{0, 0, 0}, {0, 1, 0}}}, // (0, a floordiv 3)
-          {"(a) : (a - 1 - 3*(a floordiv 3) == 0, a >= 0)",
+          {"()[a] : (a - 1 - 3*(a floordiv 3) == 0, a >= 0)",
            {{0, 0, 1}, {0, 1, 0}}}, // (1 a floordiv 3)
       });
 
   expectSymbolicIntegerLexMin(
       "(r, q)[a] : (a - r - 3*q == 0, q >= 0, 2 - r >= 0, r - 1 >= 0)",
       {
-          {"(a) : (a - 1 - 3*(a floordiv 3) == 0, a >= 0)",
+          {"()[a] : (a - 1 - 3*(a floordiv 3) == 0, a >= 0)",
            {{0, 0, 1}, {0, 1, 0}}}, // (1, a floordiv 3)
-          {"(a) : (a - 2 - 3*(a floordiv 3) == 0, a >= 0)",
+          {"()[a] : (a - 2 - 3*(a floordiv 3) == 0, a >= 0)",
            {{0, 0, 2}, {0, 1, 0}}}, // (2, a floordiv 3)
       });
 
   expectSymbolicIntegerLexMin(
       "(r, q)[a] : (a - r - 3*q == 0, q >= 0, r >= 0)",
       {
-          {"(a) : (a - 3*(a floordiv 3) == 0, a >= 0)",
+          {"()[a] : (a - 3*(a floordiv 3) == 0, a >= 0)",
            {{0, 0, 0}, {0, 1, 0}}}, // (0, a floordiv 3)
-          {"(a) : (a - 1 - 3*(a floordiv 3) == 0, a >= 0)",
+          {"()[a] : (a - 1 - 3*(a floordiv 3) == 0, a >= 0)",
            {{0, 0, 1}, {0, 1, 0}}}, // (1, a floordiv 3)
-          {"(a) : (a - 2 - 3*(a floordiv 3) == 0, a >= 0)",
+          {"()[a] : (a - 2 - 3*(a floordiv 3) == 0, a >= 0)",
            {{0, 0, 2}, {0, 1, 0}}}, // (2, a floordiv 3)
       });
 
@@ -1323,11 +1326,11 @@ TEST(IntegerPolyhedronTest, findSymbolicIntegerLexMin) {
       // What's the lexmin solution using exactly g true vars?
       "g - x - y - z - w == 0)",
       {
-          {"(g) : (g - 1 == 0)",
+          {"()[g] : (g - 1 == 0)",
            {{0, 0}, {0, 1}, {0, 0}, {0, 0}}}, // (0, 1, 0, 0)
-          {"(g) : (g - 2 == 0)",
+          {"()[g] : (g - 2 == 0)",
            {{0, 0}, {0, 0}, {0, 1}, {0, 1}}}, // (0, 0, 1, 1)
-          {"(g) : (g - 3 == 0)",
+          {"()[g] : (g - 3 == 0)",
            {{0, 0}, {0, 1}, {0, 1}, {0, 1}}}, // (0, 1, 1, 1)
       });
 
@@ -1340,11 +1343,11 @@ TEST(IntegerPolyhedronTest, findSymbolicIntegerLexMin) {
       // According to Bezout's lemma, 14x + 35y can take on all multiples
       // of 7 and no other values. So the solution exists iff r - a is a
       // multiple of 7.
-      {"(a, r) : (a >= 0, r - a - 7*((r - a) floordiv 7) == 0)"});
+      {"()[a, r] : (a >= 0, r - a - 7*((r - a) floordiv 7) == 0)"});
 
   // The lexmins are unbounded.
   expectSymbolicIntegerLexMin("(x, y)[a] : (9*x - 4*y - 2*a >= 0)", {},
-                              {"(a) : ()"});
+                              {"()[a] : ()"});
 
   // Test cases adapted from isl.
   expectSymbolicIntegerLexMin(
@@ -1352,7 +1355,7 @@ TEST(IntegerPolyhedronTest, findSymbolicIntegerLexMin) {
       // So b is minimized when c = b.
       "(b, c)[a] : (a - 4*b + 2*c == 0, c - b >= 0)",
       {
-          {"(a) : (a - 2*(a floordiv 2) == 0)",
+          {"()[a] : (a - 2*(a floordiv 2) == 0)",
            {{0, 1, 0}, {0, 1, 0}}}, // (a floordiv 2, a floordiv 2)
       });
 
@@ -1362,7 +1365,7 @@ TEST(IntegerPolyhedronTest, findSymbolicIntegerLexMin) {
       "(b)[a] : (255 - b >= 0, b >= 0, a - 512*b - 1 >= 0, 512*b -a + 509 >= "
       "0, b + 7 - 16*((8 + b) floordiv 16) >= 0)",
       {
-          {"(a) : (255 - (a floordiv 512) >= 0, a >= 0, a - 512*(a floordiv "
+          {"()[a] : (255 - (a floordiv 512) >= 0, a >= 0, a - 512*(a floordiv "
            "512) - 1 >= 0, 512*(a floordiv 512) - a + 509 >= 0, (a floordiv "
            "512) + 7 - 16*((8 + (a floordiv 512)) floordiv 16) >= 0)",
            {{0, 1, 0, 0}}}, // (a floordiv 2, a floordiv 2)
@@ -1375,7 +1378,8 @@ TEST(IntegerPolyhedronTest, findSymbolicIntegerLexMin) {
       "2*N - 3*K + a - b >= 0, 4*N - K + 1 - 3*b >= 0, b - N >= 0, a - x - 1 "
       ">= 0)",
       {{
-          "(K, N, x, y) : (x + 6 - 2*N >= 0, 2*N - 5 - x >= 0, x + 1 -3*K + N "
+          "()[K, N, x, y] : (x + 6 - 2*N >= 0, 2*N - 5 - x >= 0, x + 1 -3*K + "
+          "N "
           ">= 0, N + K - 2 - x >= 0, x - 4 >= 0)",
           {{0, 0, 1, 0, 1}, {0, 1, 0, 0, 0}} // (1 + x, N)
       }});
