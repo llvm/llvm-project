@@ -7028,8 +7028,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
-    if (Sec.sh_type != SHT_LLVM_BB_ADDR_MAP)
+    if (Sec.sh_type != SHT_LLVM_BB_ADDR_MAP &&
+        Sec.sh_type != SHT_LLVM_BB_ADDR_MAP_V0) {
       continue;
+    }
     Optional<const Elf_Shdr *> FunctionSec = None;
     if (IsRelocatable)
       FunctionSec =
