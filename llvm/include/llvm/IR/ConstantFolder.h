@@ -123,7 +123,7 @@ public:
     auto *CAgg = dyn_cast<Constant>(Agg);
     auto *CVal = dyn_cast<Constant>(Val);
     if (CAgg && CVal)
-      return ConstantExpr::getInsertValue(CAgg, CVal, IdxList);
+      return ConstantFoldInsertValueInstruction(CAgg, CVal, IdxList);
     return nullptr;
   }
 
