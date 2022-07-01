@@ -378,7 +378,7 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
   if (clauses && !outerCombined)
     privatizeVars(converter, *clauses);
 
-  if (std::is_same_v<Op, omp::ParallelOp>) {
+  if constexpr (std::is_same_v<Op, omp::ParallelOp>) {
     threadPrivatizeVars(converter, eval);
     if (clauses)
       genCopyinClause(converter, *clauses);
