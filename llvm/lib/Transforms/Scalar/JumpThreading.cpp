@@ -1333,10 +1333,10 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
       combineMetadataForCSE(NLoadI, LoadI, false);
     };
 
-    // If the returned value is the load itself, replace with an undef. This can
+    // If the returned value is the load itself, replace with poison. This can
     // only happen in dead loops.
     if (AvailableVal == LoadI)
-      AvailableVal = UndefValue::get(LoadI->getType());
+      AvailableVal = PoisonValue::get(LoadI->getType());
     if (AvailableVal->getType() != LoadI->getType())
       AvailableVal = CastInst::CreateBitOrPointerCast(
           AvailableVal, LoadI->getType(), "", LoadI);

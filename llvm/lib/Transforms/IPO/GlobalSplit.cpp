@@ -134,9 +134,9 @@ static bool splitGlobal(GlobalVariable &GV) {
   }
 
   // Finally, remove the original global. Any remaining uses refer to invalid
-  // elements of the global, so replace with undef.
+  // elements of the global, so replace with poison.
   if (!GV.use_empty())
-    GV.replaceAllUsesWith(UndefValue::get(GV.getType()));
+    GV.replaceAllUsesWith(PoisonValue::get(GV.getType()));
   GV.eraseFromParent();
   return true;
 }
