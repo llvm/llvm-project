@@ -150,11 +150,24 @@ private:
 
   void ReportBadFormat(Context &context, const char *msg, int offset) const {
     if constexpr (std::is_same_v<CharType, char>) {
-      context.SignalError(IostatErrorInFormat,
-          "%s; at offset %d in format '%s'", msg, offset, format_);
-    } else {
-      context.SignalError(IostatErrorInFormat, "%s; at offset %d", msg, offset);
+      // Echo the bad format in the error message, but trim any leading or
+      // trailing spaces.
+      int firstNonBlank{0};
+      while (firstNonBlank < formatLength_ && format_[firstNonBlank] == ' ') {
+        ++firstNonBlank;
+      }
+      int lastNonBlank{formatLength_ - 1};
+      while (lastNonBlank > firstNonBlank && format_[lastNonBlank] == ' ') {
+        --lastNonBlank;
+      }
+      if (firstNonBlank <= lastNonBlank) {
+        context.SignalError(IostatErrorInFormat,
+            "%s; at offset %d in format '%.*s'", msg, offset,
+            lastNonBlank - firstNonBlank + 1, format_ + firstNonBlank);
+        return;
+      }
     }
+    context.SignalError(IostatErrorInFormat, "%s; at offset %d", msg, offset);
   }
 
   // Data members are arranged and typed so as to reduce size.
