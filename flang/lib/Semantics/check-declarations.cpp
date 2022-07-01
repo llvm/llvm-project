@@ -1886,6 +1886,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
   if (symbol.has<ObjectEntityDetails>() && !symbol.owner().IsModule()) {
     messages_.Say(symbol.name(),
         "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
+    context_.SetError(symbol);
   }
   if (const std::string * name{DefinesBindCName(symbol)}) {
     auto pair{bindC_.emplace(*name, symbol)};
@@ -1911,6 +1912,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
         !proc->interface().symbol()->attrs().test(Attr::BIND_C)) {
       messages_.Say(symbol.name(),
           "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
+      context_.SetError(symbol);
     }
   }
 }
