@@ -1136,6 +1136,16 @@ define i1 @lshr_not_pow2_ult(i8 %x) {
   ret i1 %r
 }
 
+define i1 @lshr_pow2_ult_equal_constants(i32 %x) {
+; CHECK-LABEL: @lshr_pow2_ult_equal_constants(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shr = lshr i32 16, %x
+  %r = icmp ult i32 %shr, 16
+  ret i1 %r
+}
+
 ; TODO: This should reduce to X != 0.
 
 define i1 @lshr_pow2_ult_smin(i8 %x) {
