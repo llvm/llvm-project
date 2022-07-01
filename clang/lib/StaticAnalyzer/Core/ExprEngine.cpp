@@ -2630,6 +2630,9 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
     } else
       llvm_unreachable("An unknown case of structured binding encountered!");
 
+    if (BD->getType()->isReferenceType())
+      V = state->getSVal(V.getAsRegion());
+
     Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, V), nullptr,
                       ProgramPoint::PostLValueKind);
 
