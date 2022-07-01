@@ -647,6 +647,7 @@ multiclass sve_int_pfalse<bits<6> opc, string asm> {
   def : Pat<(nxv8i1 immAllZerosV), (!cast<Instruction>(NAME))>;
   def : Pat<(nxv4i1 immAllZerosV), (!cast<Instruction>(NAME))>;
   def : Pat<(nxv2i1 immAllZerosV), (!cast<Instruction>(NAME))>;
+  def : Pat<(nxv1i1 immAllZerosV), (!cast<Instruction>(NAME))>;
 }
 
 class sve_int_ptest<bits<6> opc, string asm>
@@ -1681,6 +1682,7 @@ multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op,
   def : SVE_3_Op_Pat<nxv8i1, op, nxv8i1, nxv8i1, nxv8i1, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv4i1, op, nxv4i1, nxv4i1, nxv4i1, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv2i1, op, nxv2i1, nxv2i1, nxv2i1, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv1i1, op, nxv1i1, nxv1i1, nxv1i1, !cast<Instruction>(NAME)>;
   def : SVE_2_Op_AllActive_Pat<nxv16i1, op_nopred, nxv16i1, nxv16i1,
                                !cast<Instruction>(NAME), PTRUE_B>;
   def : SVE_2_Op_AllActive_Pat<nxv8i1, op_nopred, nxv8i1, nxv8i1,
