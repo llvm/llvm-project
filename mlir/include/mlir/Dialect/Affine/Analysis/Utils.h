@@ -88,7 +88,7 @@ struct ComputationSliceState {
   Block::iterator insertPoint;
   // Adds to 'cst' with constraints which represent the slice bounds on 'ivs'
   // in 'this'. Specifically, the values in 'ivs' are added to 'cst' as dim
-  // identifiers and the values in 'lb/ubOperands' are added as symbols.
+  // variables and the values in 'lb/ubOperands' are added as symbols.
   // Constraints are added for all loop IV bounds (dim or symbol), and
   // constraints are added for slice bounds in 'lbs'/'ubs'.
   // Returns failure if we cannot add loop bounds because of unsupported cases.
@@ -250,8 +250,8 @@ struct MemRefRegion {
   /// Computes the memory region accessed by this memref with the region
   /// represented as constraints symbolic/parametric in 'loopDepth' loops
   /// surrounding opInst. The computed region's 'cst' field has exactly as many
-  /// dimensional identifiers as the rank of the memref, and *potentially*
-  /// additional symbolic identifiers which could include any of the loop IVs
+  /// dimensional variables as the rank of the memref, and *potentially*
+  /// additional symbolic variables which could include any of the loop IVs
   /// surrounding opInst up until 'loopDepth' and another additional Function
   /// symbols involved with the access (for eg., those appear in affine.apply's,
   /// loop bounds, etc.). If 'sliceState' is non-null, operands from
@@ -292,7 +292,7 @@ struct MemRefRegion {
   /// bounded by a known constant (always possible for static shapes), None
   /// otherwise. Note that the symbols of the region are treated specially,
   /// i.e., the returned bounding constant holds for *any given* value of the
-  /// symbol identifiers. The 'shape' vector is set to the corresponding
+  /// symbol variables. The 'shape' vector is set to the corresponding
   /// dimension-wise bounds major to minor. The number of elements and all the
   /// dimension-wise bounds are guaranteed to be non-negative. We use int64_t
   /// instead of uint64_t since index types can be at most int64_t. `lbs` are
@@ -303,14 +303,14 @@ struct MemRefRegion {
       std::vector<SmallVector<int64_t, 4>> *lbs = nullptr,
       SmallVectorImpl<int64_t> *lbDivisors = nullptr) const;
 
-  /// Gets the lower and upper bound map for the dimensional identifier at
+  /// Gets the lower and upper bound map for the dimensional variable at
   /// `pos`.
   void getLowerAndUpperBound(unsigned pos, AffineMap &lbMap,
                              AffineMap &ubMap) const;
 
   /// A wrapper around FlatAffineValueConstraints::getConstantBoundOnDimSize().
   /// 'pos' corresponds to the position of the memref shape's dimension (major
-  /// to minor) which matches 1:1 with the dimensional identifier positions in
+  /// to minor) which matches 1:1 with the dimensional variable positions in
   /// 'cst'.
   Optional<int64_t>
   getConstantBoundOnDimSize(unsigned pos,
@@ -340,10 +340,10 @@ struct MemRefRegion {
   Location loc;
 
   /// Region (data space) of the memref accessed. This set will thus have at
-  /// least as many dimensional identifiers as the shape dimensionality of the
+  /// least as many dimensional variables as the shape dimensionality of the
   /// memref, and these are the leading dimensions of the set appearing in that
   /// order (major to minor / outermost to innermost). There may be additional
-  /// identifiers since getMemRefRegion() is called with a specific loop depth,
+  /// variables since getMemRefRegion() is called with a specific loop depth,
   /// and thus the region is symbolic in the outer surrounding loops at that
   /// depth.
   // TODO: Replace this to exploit HyperRectangularSet.

@@ -756,8 +756,8 @@ TEST(SetTest, computeVolume) {
 void testComputeReprAtPoints(IntegerPolyhedron poly,
                              ArrayRef<SmallVector<int64_t, 4>> points,
                              unsigned numToProject) {
-  poly.convertIdKind(IdKind::SetDim, poly.getNumDimIds() - numToProject,
-                     poly.getNumDimIds(), IdKind::Local);
+  poly.convertVarKind(VarKind::SetDim, poly.getNumDimVars() - numToProject,
+                      poly.getNumDimVars(), VarKind::Local);
   PresburgerSet repr = poly.computeReprWithOnlyDivLocals();
   EXPECT_TRUE(repr.hasOnlyDivLocals());
   EXPECT_TRUE(repr.getSpace().isCompatible(poly.getSpace()));
@@ -769,8 +769,8 @@ void testComputeReprAtPoints(IntegerPolyhedron poly,
 
 void testComputeRepr(IntegerPolyhedron poly, const PresburgerSet &expected,
                      unsigned numToProject) {
-  poly.convertIdKind(IdKind::SetDim, poly.getNumDimIds() - numToProject,
-                     poly.getNumDimIds(), IdKind::Local);
+  poly.convertVarKind(VarKind::SetDim, poly.getNumDimVars() - numToProject,
+                      poly.getNumDimVars(), VarKind::Local);
   PresburgerSet repr = poly.computeReprWithOnlyDivLocals();
   EXPECT_TRUE(repr.hasOnlyDivLocals());
   EXPECT_TRUE(repr.getSpace().isCompatible(poly.getSpace()));
