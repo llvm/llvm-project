@@ -28,6 +28,7 @@ class Symbol;
 class Defined;
 class DylibSymbol;
 class InputSection;
+class ConcatInputSection;
 
 class TargetInfo {
 public:
@@ -77,6 +78,9 @@ public:
   }
 
   bool usesThunks() const { return thunkSize > 0; }
+
+  virtual void applyOptimizationHints(uint8_t *buf, const ConcatInputSection *,
+                                      llvm::ArrayRef<uint64_t>) const {};
 
   uint32_t magic;
   llvm::MachO::CPUType cpuType;

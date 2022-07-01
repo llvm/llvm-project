@@ -83,6 +83,7 @@ public:
   OutputSection *parent = nullptr;
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;
+  ArrayRef<OptimizationHint> optimizationHints;
   // The symbols that belong to this InputSection, sorted by value. With
   // .subsections_via_symbols, there is typically only one element here.
   llvm::TinyPtrVector<Defined *> symbols;

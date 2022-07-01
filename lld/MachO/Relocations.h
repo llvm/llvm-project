@@ -70,6 +70,14 @@ struct Reloc {
         addend(addend), referent(referent) {}
 };
 
+struct OptimizationHint {
+  // Offset of the first address within the containing InputSection.
+  uint64_t offset0;
+  // Offset of the other addresses relative to the first one.
+  int16_t delta[2];
+  uint8_t type;
+};
+
 bool validateSymbolRelocation(const Symbol *, const InputSection *,
                               const Reloc &);
 
