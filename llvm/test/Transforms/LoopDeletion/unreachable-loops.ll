@@ -79,7 +79,7 @@ define i64 @test3(i64 %n, i64 %m, i64 %maybe_zero) nounwind {
 ; CHECK:       bb.preheader:
 ; CHECK-NEXT:    br label [[RETURN_LOOPEXIT:%.*]]
 ; CHECK:       return.loopexit:
-; CHECK-NEXT:    [[X_LCSSA_PH:%.*]] = phi i64 [ undef, [[BB_PREHEADER]] ]
+; CHECK-NEXT:    [[X_LCSSA_PH:%.*]] = phi i64 [ poison, [[BB_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[X_LCSSA:%.*]] = phi i64 [ 20, [[ENTRY:%.*]] ], [ [[X_LCSSA_PH]], [[RETURN_LOOPEXIT]] ]
@@ -244,7 +244,7 @@ define i64 @test7(i64 %n) {
 ; CHECK:       L2.preheader:
 ; CHECK-NEXT:    br label [[L1LATCH_LOOPEXIT:%.*]]
 ; CHECK:       L1Latch.loopexit:
-; CHECK-NEXT:    [[Y_L2_LCSSA:%.*]] = phi i64 [ undef, [[L2_PREHEADER]] ]
+; CHECK-NEXT:    [[Y_L2_LCSSA:%.*]] = phi i64 [ poison, [[L2_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[L1LATCH]]
 ; CHECK:       L1Latch:
 ; CHECK-NEXT:    [[Y:%.*]] = phi i64 [ [[Y_NEXT]], [[L1]] ], [ [[Y_L2_LCSSA]], [[L1LATCH_LOOPEXIT]] ]
@@ -430,7 +430,7 @@ define i64 @test12(i64 %n){
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i64 42
 ; CHECK:       exit:
-; CHECK-NEXT:    [[Y_PHI:%.*]] = phi i64 [ undef, [[L1_PREHEADER]] ]
+; CHECK-NEXT:    [[Y_PHI:%.*]] = phi i64 [ poison, [[L1_PREHEADER]] ]
 ; CHECK-NEXT:    ret i64 [[Y_PHI]]
 ;
 ; REMARKS-LABEL: Function: test12
@@ -470,7 +470,7 @@ define i64 @test13(i64 %n) {
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i64 42
 ; CHECK:       exit:
-; CHECK-NEXT:    [[Y_PHI:%.*]] = phi i64 [ undef, [[L1_PREHEADER]] ]
+; CHECK-NEXT:    [[Y_PHI:%.*]] = phi i64 [ poison, [[L1_PREHEADER]] ]
 ; CHECK-NEXT:    ret i64 [[Y_PHI]]
 ;
 ; REMARKS-LABEL: Function: test13

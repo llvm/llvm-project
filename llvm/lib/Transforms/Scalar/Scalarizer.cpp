@@ -400,7 +400,7 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V,
     // need to analyse them further.
     if (!DT->isReachableFromEntry(VOp->getParent()))
       return Scatterer(Point->getParent(), Point->getIterator(),
-                       UndefValue::get(V->getType()), PtrElemTy);
+                       PoisonValue::get(V->getType()), PtrElemTy);
     // Put the scattered form of an instruction directly after the
     // instruction, skipping over PHI nodes and debug intrinsics.
     BasicBlock *BB = VOp->getParent();
