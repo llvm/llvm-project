@@ -77,16 +77,19 @@ inline T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
   return mod;
 }
 template <bool IS_MODULO, typename T>
-inline T RealMod(T x, T p, const char *sourceFile, int sourceLine) {
+inline T RealMod(T a, T p, const char *sourceFile, int sourceLine) {
   if (p == 0) {
     Terminator{sourceFile, sourceLine}.Crash(
         IS_MODULO ? "MODULO with P==0" : "MOD with P==0");
   }
-  if constexpr (IS_MODULO) {
-    return x - std::floor(x / p) * p;
-  } else {
-    return x - std::trunc(x / p) * p;
+  T quotient{a / p};
+  if (std::isinf(quotient) && std::isfinite(a) && std::isfinite(p)) {
+    // a/p overflowed -- so it must be an integer, and the result
+    // must be a zero of the same sign as one of the operands.
+    return std::copysign(T{}, IS_MODULO ? p : a);
   }
+  T toInt{IS_MODULO ? std::floor(quotient) : std::trunc(quotient)};
+  return a - toInt * p;
 }
 
 // RRSPACING (16.9.164)
