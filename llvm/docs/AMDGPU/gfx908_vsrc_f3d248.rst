@@ -5,13 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx908_vdata:
+.. _amdgpu_synid_gfx908_vsrc_f3d248:
 
-vdata
-=====
+vsrc
+====
 
 Instruction input.
 
-*Size:* 1 dword.
+*Size:* 4 dwords.
 
-*Operands:* :ref:`v<amdgpu_synid_v>`
+*Operands:* :ref:`a<amdgpu_synid_a>`

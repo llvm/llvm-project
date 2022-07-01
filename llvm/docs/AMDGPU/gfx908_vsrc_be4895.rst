@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx908_m_1:
+.. _amdgpu_synid_gfx908_vsrc_be4895:
 
-m
-=
+vsrc
+====
 
-This operand may be used with integer operand modifier :ref:`sext<amdgpu_synid_sext>`.
+Instruction input.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
