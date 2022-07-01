@@ -14,10 +14,12 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfWindows # This test is flaky on Windows
     def test_attach_with_vAttachWait(self):
         exe = '%s_%d' % (self.testMethodName, os.getpid())
+        exe_to_attach = exe
+        args = []
 
         def launch_inferior():
             inferior = self.launch_process_for_attach(
-                inferior_args=["sleep:60"],
+                inferior_args=args,
                 exe_path=self.getBuildArtifact(exe))
             self.assertIsNotNone(inferior)
             self.assertTrue(inferior.pid > 0)
@@ -26,7 +28,14 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
                     inferior.pid, True))
             return inferior
 
-        self.build(dictionary={'EXE': exe})
+        self.build(dictionary={'EXE': exe, 'CXX_SOURCES': 'main.cpp'})
+        if self.getPlatform() != "windows":
+            # Use a shim to ensure that the process is ready to be attached from
+            # the get-go.
+            args = [self.getBuildArtifact(exe)]
+            exe = "shim"
+            self.build(dictionary={'EXE': exe, 'CXX_SOURCES': 'shim.cpp'})
+
         self.set_inferior_startup_attach_manually()
 
         server = self.connect_to_debug_monitor()
@@ -38,7 +47,8 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.do_handshake()
         self.test_sequence.add_log_lines([
             # Do the attach.
-            "read packet: $vAttachWait;{}#00".format(lldbgdbserverutils.gdbremote_hex_encode_string(exe)),
+            "read packet: $vAttachWait;{}#00".format(
+                lldbgdbserverutils.gdbremote_hex_encode_string(exe_to_attach)),
         ], True)
         # Run the stream until attachWait.
         context = self.expect_gdbremote_sequence()
