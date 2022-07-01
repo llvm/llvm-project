@@ -1262,16 +1262,16 @@ void IntegerRelation::removeRedundantLocalVars() {
   }
 }
 
-void IntegerRelation::covertVarKind(VarKind srcKind, unsigned idStart,
-                                    unsigned idLimit, VarKind dstKind,
-                                    unsigned pos) {
-  assert(idLimit <= getNumVarKind(srcKind) && "Invalid id range");
+void IntegerRelation::convertVarKind(VarKind srcKind, unsigned varStart,
+                                     unsigned varLimit, VarKind dstKind,
+                                     unsigned pos) {
+  assert(varLimit <= getNumVarKind(srcKind) && "Invalid id range");
 
-  if (idStart >= idLimit)
+  if (varStart >= varLimit)
     return;
 
   // Append new local variables corresponding to the dimensions to be converted.
-  unsigned convertCount = idLimit - idStart;
+  unsigned convertCount = varLimit - varStart;
   unsigned newVarsBegin = insertVar(dstKind, pos, convertCount);
 
   // Swap the new local variables with dimensions.
@@ -1283,10 +1283,10 @@ void IntegerRelation::covertVarKind(VarKind srcKind, unsigned idStart,
   // created ids we're swapping with were zero-initialized).
   unsigned offset = getVarKindOffset(srcKind);
   for (unsigned i = 0; i < convertCount; ++i)
-    swapVar(offset + idStart + i, newVarsBegin + i);
+    swapVar(offset + varStart + i, newVarsBegin + i);
 
   // Complete the move by deleting the initially occupied columns.
-  removeVarRange(srcKind, idStart, idLimit);
+  removeVarRange(srcKind, varStart, varLimit);
 }
 
 void IntegerRelation::addBound(BoundType type, unsigned pos, int64_t value) {
@@ -2225,7 +2225,7 @@ void IntegerRelation::compose(const IntegerRelation &rel) {
   appendVar(VarKind::Range, copyRel.getNumRangeVars());
 
   // Convert R2 to B X C.
-  copyRel.covertVarKind(VarKind::Domain, 0, numBVars, VarKind::Range, 0);
+  copyRel.convertVarKind(VarKind::Domain, 0, numBVars, VarKind::Range, 0);
 
   // Intersect R2 to range of R1.
   intersectRange(IntegerPolyhedron(copyRel));
