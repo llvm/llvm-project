@@ -1043,12 +1043,10 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         }
 
         for (Value *Arg : Call->args()) {
-          // We need to check the underlying objects of all arguments, not just
-          // the pointer arguments, because we might be passing pointers as
-          // integers, etc.
-          // However, if we know that the call only accesses pointer arguments,
-          // then we only need to check the pointer arguments.
-          if (IsArgMemOnlyCall && !Arg->getType()->isPointerTy())
+          // Only care about pointer arguments. If a noalias argument is
+          // accessed through a non-pointer argument, it must be captured
+          // first (e.g. via ptrtoint), and we protect against captures below.
+          if (!Arg->getType()->isPointerTy())
             continue;
 
           PtrArgs.push_back(Arg);

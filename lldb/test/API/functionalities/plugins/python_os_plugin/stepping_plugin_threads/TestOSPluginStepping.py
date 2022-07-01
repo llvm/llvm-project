@@ -103,7 +103,7 @@ class TestOSPluginStepping(TestBase):
             self.assertFalse(result.Succeeded(), "We still found plans for the unreported thread.")
             
             self.process.Continue()
-            self.assertEqual(self.process.GetState(), lldb.eStateExited, "We exited.")
+            self.assertState(self.process.GetState(), lldb.eStateExited, "We exited.")
         else:
             # Now we are going to continue, and when we hit the step-out breakpoint, we will
             # put the OS plugin thread back, lldb will recover its ThreadPlanStack, and
@@ -112,5 +112,3 @@ class TestOSPluginStepping(TestBase):
             os_thread = self.get_os_thread()
             self.assertTrue(os_thread.IsValid(), "The OS thread is back after continue")
             self.assertIn("step out", os_thread.GetStopDescription(100), "Completed step out plan")
-        
-        

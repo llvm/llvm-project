@@ -151,6 +151,30 @@ TEST_F(ForestTest, DumpAbbreviatedShared) {
             "[  0, end) └─A~B =#1\n");
 }
 
+TEST_F(ForestTest, Iteration) {
+  //   Z
+  //  / \
+  //  X Y
+  //  |\|
+  //  A B
+  ForestArena Arena;
+  const auto *A = &Arena.createTerminal(tok::identifier, 0);
+  const auto *B = &Arena.createOpaque(1, 0);
+  const auto *X = &Arena.createSequence(2, 1, {A, B});
+  const auto *Y = &Arena.createSequence(2, 2, {B});
+  const auto *Z = &Arena.createAmbiguous(2, {X, Y});
+
+  std::vector<const ForestNode *> Nodes;
+  for (const ForestNode &N : Z->descendants())
+    Nodes.push_back(&N);
+  EXPECT_THAT(Nodes, testing::UnorderedElementsAre(A, B, X, Y, Z));
+
+  Nodes.clear();
+  for (const ForestNode &N : X->descendants())
+    Nodes.push_back(&N);
+  EXPECT_THAT(Nodes, testing::UnorderedElementsAre(X, A, B));
+}
+
 } // namespace
 } // namespace pseudo
 } // namespace clang

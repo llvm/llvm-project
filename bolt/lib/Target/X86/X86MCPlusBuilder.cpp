@@ -76,6 +76,11 @@ bool isADDri(const MCInst &Inst) {
          Inst.getOpcode() == X86::ADD64ri8;
 }
 
+#define GET_INSTRINFO_OPERAND_TYPES_ENUM
+#define GET_INSTRINFO_OPERAND_TYPE
+#define GET_INSTRINFO_MEM_OPERAND_SIZE
+#include "X86GenInstrInfo.inc"
+
 class X86MCPlusBuilder : public MCPlusBuilder {
 public:
   X86MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
@@ -1003,6 +1008,31 @@ public:
     }
   }
 
+  static uint8_t getMemDataSize(const MCInst &Inst, int MemOpNo) {
+    using namespace llvm::X86;
+    int OpType = getOperandType(Inst.getOpcode(), MemOpNo);
+    return getMemOperandSize(OpType) / 8;
+  }
+
+  /// Classifying a stack access as *not* "SIMPLE" here means we don't know how
+  /// to change this instruction memory access. It will disable any changes to
+  /// the stack layout, so we can't do the most aggressive form of shrink
+  /// wrapping. We must do so in a way that keeps the original stack layout.
+  /// Otherwise you need to adjust the offset of all instructions accessing the
+  /// stack: we can't do that anymore because there is one instruction that is
+  /// not simple. There are other implications as well. We have heuristics to
+  /// detect when a register is callee-saved and thus eligible for shrink
+  /// wrapping. If you are restoring a register using a non-simple stack access,
+  /// then it is classified as NOT callee-saved, and it disables shrink wrapping
+  /// for *that* register (but not for others).
+  ///
+  /// Classifying a stack access as "size 0" or detecting an indexed memory
+  /// access (to address a vector, for example) here means we know there is a
+  /// stack access, but we can't quite understand how wide is the access in
+  /// bytes. This is very serious because we can't understand how memory
+  /// accesses alias with each other for this function. This will essentially
+  /// disable not only shrink wrapping but all frame analysis, it will fail it
+  /// as "we don't understand this function and we give up on it".
   bool isStackAccess(const MCInst &Inst, bool &IsLoad, bool &IsStore,
                      bool &IsStoreFromReg, MCPhysReg &Reg, int32_t &SrcImm,
                      uint16_t &StackPtrReg, int64_t &StackOffset, uint8_t &Size,
@@ -1058,24 +1088,12 @@ public:
 
     switch (Inst.getOpcode()) {
     default: {
-      uint8_t Sz = 0;
       bool IsLoad = MCII.mayLoad();
       bool IsStore = MCII.mayStore();
       // Is it LEA? (deals with memory but is not loading nor storing)
       if (!IsLoad && !IsStore)
         return false;
-
-      // Try to guess data size involved in the load/store by looking at the
-      // register size. If there's no reg involved, return 0 as size, meaning
-      // we don't know.
-      for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
-        if (MCII.OpInfo[I].OperandType != MCOI::OPERAND_REGISTER)
-          continue;
-        if (static_cast<int>(I) >= MemOpNo && I < X86::AddrNumOperands)
-          continue;
-        Sz = RegInfo->getRegClass(MCII.OpInfo[I].RegClass).getSizeInBits() / 8;
-        break;
-      }
+      uint8_t Sz = getMemDataSize(Inst, MemOpNo);
       I = {Sz, IsLoad, IsStore, false, false};
       break;
     }

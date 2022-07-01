@@ -164,8 +164,24 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
     reduction into a parallel and reduction dimension. 
     A new `linalg.generic` op is created to perform the rest of the reduction. 
     
-    Example:
-    
+    The transformation supports different configurations attributes:
+      - split_factor: the factor by which to split (i.e. the size of the 
+        remaining reduction after splitting).
+      - insert_split_dimension: the dimension in the temporary tensor into 
+        which the new parallel dimension is inserted.
+      - use_scaling_algorithm: whether to use a scaling based formulation that 
+        does not create an ExpandShapeOp (default: do not use scaling)
+      - use_alloc: whether to use an alloc op to allocate the temporary 
+        tensor (default: do not use alloc op)
+
+    This op returns 4 handles to:
+      - the init op (or tensor_alloc op if use_alloc = true), 
+      - the fill op used to initialize the neutral element, 
+      - the split op and 
+      - the result-combining op.
+
+    Example (default: use_scaling_algorithm = false, use_alloc = false):
+    ====================================================================
     ```
       %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
                                             affine_map<(d0) -> ()>],
@@ -178,7 +194,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       } -> tensor<f32>
     ```
     
-    To:
+    is split into:
     
     ```
       %cst = arith.constant 0.000000e+00 : f32
@@ -203,34 +219,8 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       } -> tensor<f32>
     ```
 
-    This op returns handles to the fill op used to initialize the neutral 
-    element, the split op and the result-combining op.
-  }];
-
-  let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64Attr, "{}">:$split_factor,
-                   DefaultValuedAttr<I64Attr, "{}">:$insert_split_dimension);
-  let results = (outs PDL_Operation:$fill_op,
-                      PDL_Operation:$split_linalg_op,
-                      PDL_Operation:$combining_linalg_op);
-
-  let assemblyFormat = "$target attr-dict";
-
-  let extraClassDeclaration = [{
-    ::mlir::FailureOr<::llvm::SmallVector<::mlir::Operation *>> applyToOne(
-        ::mlir::linalg::LinalgOp target, TransformState &state);
-  }];
-}
-
-def SplitReductionByScalingOp : 
-  Op<Transform_Dialect, "structured.split_reduction_by_scaling",
-       [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
-        TransformEachOpTrait, TransformOpInterface]> {
-  let description = [{
-    Indicates that the given `target` op should be transformed with the 
-    `splitReductionByScaling` transformation and split factor provided as 
-    attribute.
-
+    Example (use_scaling_algorithm = true, use_alloc = true):
+    =========================================================
     Instead of introducing an ExpandShapeOp, this scaling-based implementation 
     rewrites a reduction dimension `k` into `k * split_factor + kk`.
     The dimension `kk` is added as an extra parallel dimension to the 
@@ -287,12 +277,13 @@ def SplitReductionByScalingOp :
 
      return %4 : tensor<16x32xf32>
     ```
-
   }];
 
   let arguments = (ins PDL_Operation:$target,
                    DefaultValuedAttr<I64Attr, "{}">:$split_factor,
-                   DefaultValuedAttr<I64Attr, "{}">:$insert_split_dimension);
+                   DefaultValuedAttr<I64Attr, "{}">:$insert_split_dimension,
+                   UnitAttr:$use_scaling_algorithm,
+                   UnitAttr:$use_alloc);
   let results = (outs PDL_Operation:$fill_op,
                       PDL_Operation:$split_linalg_op,
                       PDL_Operation:$combining_linalg_op);

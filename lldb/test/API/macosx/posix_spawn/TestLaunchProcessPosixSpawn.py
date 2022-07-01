@@ -35,7 +35,7 @@ class TestLaunchProcessPosixSpawn(TestBase):
         self.runCmd('run')
 
         process = self.dbg.GetSelectedTarget().process
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertIn('slice: {}'.format(arch), process.GetSTDOUT(1000))
 
     @skipUnlessDarwin

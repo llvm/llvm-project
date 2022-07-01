@@ -886,6 +886,7 @@ def Vector_InsertStridedSliceOp :
 
   let hasFolder = 1;
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Vector_OuterProductOp :

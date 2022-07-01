@@ -31,10 +31,6 @@ const PrototypeDescriptor PrototypeDescriptor::VL =
 const PrototypeDescriptor PrototypeDescriptor::Vector =
     PrototypeDescriptor(BaseTypeModifier::Vector);
 
-// Concat BasicType, LMUL and Proto as key
-static std::unordered_map<uint64_t, RVVType> LegalTypes;
-static std::set<uint64_t> IllegalTypes;
-
 //===----------------------------------------------------------------------===//
 // Type implementation
 //===----------------------------------------------------------------------===//
@@ -822,6 +818,9 @@ static uint64_t computeRVVTypeHashValue(BasicType BT, int Log2LMUL,
 
 Optional<RVVTypePtr> RVVType::computeType(BasicType BT, int Log2LMUL,
                                           PrototypeDescriptor Proto) {
+  // Concat BasicType, LMUL and Proto as key
+  static std::unordered_map<uint64_t, RVVType> LegalTypes;
+  static std::set<uint64_t> IllegalTypes;
   uint64_t Idx = computeRVVTypeHashValue(BT, Log2LMUL, Proto);
   // Search first
   auto It = LegalTypes.find(Idx);

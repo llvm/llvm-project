@@ -4209,14 +4209,6 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (!AllowRefinement && canCreatePoison(cast<Operator>(I)))
     return nullptr;
 
-  if (CmpInst *C = dyn_cast<CmpInst>(I))
-    return ConstantFoldCompareInstOperands(C->getPredicate(), ConstOps[0],
-                                           ConstOps[1], Q.DL, Q.TLI);
-
-  if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    if (!LI->isVolatile())
-      return ConstantFoldLoadFromConstPtr(ConstOps[0], LI->getType(), Q.DL);
-
   return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
 }
 

@@ -275,6 +275,10 @@ Improvements to Clang's diagnostics
   This fixes `Issue 55962 <https://github.com/llvm/llvm-project/issues/55962>`_.
 - Printable Unicode characters within `static_assert` messages are no longer
   escaped.
+- The ``-Winfinite-recursion`` diagnostic no longer warns about
+  unevaluated operands of a ``typeid`` expression, as they are now
+  modeled correctly in the CFG. This fixes
+  `Issue 21668 <https://github.com/llvm/llvm-project/issues/21668>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -516,6 +520,9 @@ X86 Support in Clang
 
 - Support ``-mharden-sls=[none|all|return|indirect-jmp]`` for straight-line
   speculation hardening.
+- Support for the ``_Float16`` type has been added for all targets with SSE2.
+  When AVX512-FP16 is not available, arithmetic on ``_Float16`` is emulated
+  using ``float``.
 
 DWARF Support in Clang
 ----------------------
@@ -558,6 +565,9 @@ AST Matchers
 
 - Added ``forEachTemplateArgument`` matcher which creates a match every
   time a ``templateArgument`` matches the matcher supplied to it.
+  
+- Added ``objcStringLiteral`` matcher which matches ObjectiveC String
+  literal expressions.
 
 clang-format
 ------------

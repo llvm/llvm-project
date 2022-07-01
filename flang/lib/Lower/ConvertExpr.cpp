@@ -1513,8 +1513,10 @@ public:
     // Otherwise, the string is in a plain old expression so "outline" the value
     // by hashconsing it to a constant literal object.
 
-    std::string globalName =
-        fir::factory::uniqueCGIdent("cl", (const char *)value.c_str());
+    auto size =
+        converter.getKindMap().getCharacterBitsize(KIND) / 8 * value.size();
+    llvm::StringRef strVal(reinterpret_cast<const char *>(value.c_str()), size);
+    std::string globalName = fir::factory::uniqueCGIdent("cl", strVal);
     fir::GlobalOp global = builder.getNamedGlobal(globalName);
     if (!global)
       global = builder.createGlobalConstant(
@@ -3813,7 +3815,7 @@ public:
     // be needed afterwards.
     stmtCtx.pushScope();
     [[maybe_unused]] ExtValue loopRes = lowerArrayExpression(expr);
-    stmtCtx.finalize(/*popScope=*/true);
+    stmtCtx.finalizeAndPop();
     assert(fir::getBase(loopRes));
   }
 
@@ -4719,7 +4721,7 @@ private:
   /// fir::ResultOp at the end of the innermost loop.
   void finalizeElementCtx() {
     if (elementCtx) {
-      stmtCtx.finalize(/*popScope=*/true);
+      stmtCtx.finalizeAndPop();
       elementCtx = false;
     }
   }
@@ -6088,9 +6090,14 @@ private:
       mlir::Operation::operand_range triples = slOp.getTriples();
       fir::SequenceType::Shape shape;
       // reduce the rank for each invariant dimension
-      for (unsigned i = 1, end = triples.size(); i < end; i += 3)
-        if (!mlir::isa_and_nonnull<fir::UndefOp>(triples[i].getDefiningOp()))
+      for (unsigned i = 1, end = triples.size(); i < end; i += 3) {
+        if (auto extent = fir::factory::getExtentFromTriplet(
+                triples[i - 1], triples[i], triples[i + 1]))
+          shape.push_back(*extent);
+        else if (!mlir::isa_and_nonnull<fir::UndefOp>(
+                     triples[i].getDefiningOp()))
           shape.push_back(fir::SequenceType::getUnknownExtent());
+      }
       return fir::SequenceType::get(shape, seqTy.getEleTy());
     }
     // not sliced, so no change in rank
@@ -6433,7 +6440,7 @@ private:
         builder.create<fir::StoreOp>(loc, castLen, charLen.value());
       }
     }
-    stmtCtx.finalize(/*popScope=*/true);
+    stmtCtx.finalizeAndPop();
 
     builder.create<fir::ResultOp>(loc, mem);
     builder.restoreInsertionPoint(insPt);

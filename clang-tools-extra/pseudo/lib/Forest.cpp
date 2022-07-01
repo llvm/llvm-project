@@ -16,6 +16,35 @@
 namespace clang {
 namespace pseudo {
 
+void ForestNode::RecursiveIterator::operator++() {
+  auto C = Cur->children();
+  // Try to find a child of the current node to descend into.
+  for (unsigned I = 0; I < C.size(); ++I) {
+    if (Seen.insert(C[I]).second) {
+      Stack.push_back({Cur, I});
+      Cur = C[I];
+      return;
+    }
+  }
+  // Try to find a sibling af an ancestor to advance to.
+  for (; !Stack.empty(); Stack.pop_back()) {
+    C = Stack.back().Parent->children();
+    unsigned &Index = Stack.back().ChildIndex;
+    while (++Index < C.size()) {
+      if (Seen.insert(C[Index]).second) {
+        Cur = C[Index];
+        return;
+      }
+    }
+  }
+  Cur = nullptr;
+}
+
+llvm::iterator_range<ForestNode::RecursiveIterator>
+ForestNode::descendants() const {
+  return {RecursiveIterator(this), RecursiveIterator()};
+}
+
 std::string ForestNode::dump(const Grammar &G) const {
   switch (kind()) {
   case Ambiguous:
@@ -33,10 +62,13 @@ std::string ForestNode::dump(const Grammar &G) const {
 
 std::string ForestNode::dumpRecursive(const Grammar &G,
                                       bool Abbreviated) const {
+  using llvm::formatv;
+  Token::Index MaxToken = 0;
   // Count visits of nodes so we can mark those seen multiple times.
   llvm::DenseMap<const ForestNode *, /*VisitCount*/ unsigned> VisitCounts;
   std::function<void(const ForestNode *)> CountVisits =
       [&](const ForestNode *P) {
+        MaxToken = std::max(MaxToken, P->startTokenIndex());
         if (VisitCounts[P]++ > 0)
           return; // Don't count children as multiply visited.
         if (P->kind() == Ambiguous)
@@ -45,6 +77,10 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
           llvm::for_each(P->elements(), CountVisits);
       };
   CountVisits(this);
+
+  unsigned IndexWidth = std::max(3, (int)std::to_string(MaxToken).size());
+  // e.g. "[{0,4}, {1,4})" if MaxToken is 5742.
+  std::string RangeFormat = formatv("[{{0,{0}}, {{1,{0}}) ", IndexWidth);
 
   // The box-drawing characters that should be added as a child is rendered.
   struct LineDecoration {
@@ -93,9 +129,9 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
         }
 
         if (End == KEnd)
-          Result += llvm::formatv("[{0,3}, end) ", P->startTokenIndex());
+          Result += formatv(RangeFormat.c_str(), P->startTokenIndex(), "end");
         else
-          Result += llvm::formatv("[{0,3}, {1,3}) ", P->startTokenIndex(), End);
+          Result += formatv(RangeFormat.c_str(), P->startTokenIndex(), End);
         Result += LineDec.Prefix;
         Result += LineDec.First;
         if (ElidedParent) {
@@ -110,9 +146,9 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
 
           // The first time, print as #1. Later, =#1.
           if (First) {
-            Result += llvm::formatv("{0} #{1}", P->dump(G), ID);
+            Result += formatv("{0} #{1}", P->dump(G), ID);
           } else {
-            Result += llvm::formatv("{0} =#{1}", G.symbolName(P->symbol()), ID);
+            Result += formatv("{0} =#{1}", G.symbolName(P->symbol()), ID);
             Children = {}; // Don't walk the children again.
           }
         } else {

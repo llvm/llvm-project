@@ -34,6 +34,8 @@ MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
               llvm::ArrayRef<LocalVariableAddrGap> gaps) {
   lldb::addr_t start =
       index.MakeVirtualAddress(range.ISectStart, range.OffsetStart);
+  if (start == LLDB_INVALID_ADDRESS)
+    return {};
   lldb::addr_t end = start + range.Range;
 
   Variable::RangeList result;
@@ -733,9 +735,14 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
         }
         if (IsTagRecord(class_cvt)) {
           TagRecord tag_record = CVTagRecord::create(class_cvt).asTag();
-          CVType field_list = index.tpi().getType(tag_record.FieldList);
+          CVType field_list_cvt = index.tpi().getType(tag_record.FieldList);
+          FieldListRecord field_list;
+          if (llvm::Error error =
+                  TypeDeserializer::deserializeAs<FieldListRecord>(
+                      field_list_cvt, field_list))
+            llvm::consumeError(std::move(error));
           FindMembersSize find_members_size(members_info, index.tpi());
-          if (llvm::Error err = visitMemberRecordStream(field_list.data(),
+          if (llvm::Error err = visitMemberRecordStream(field_list.Data,
                                                         find_members_size)) {
             llvm::consumeError(std::move(err));
             break;

@@ -40,4 +40,4 @@ class DefaultCacheLineSizeTestCase(TestBase):
 
         # Run to completion.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
+        self.assertState(process.GetState(), lldb.eStateExited, PROCESS_EXITED)

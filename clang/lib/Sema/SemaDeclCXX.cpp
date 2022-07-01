@@ -16587,7 +16587,7 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       if (AssertMessage) {
         const auto *MsgStr = cast<StringLiteral>(AssertMessage);
         if (MsgStr->isOrdinary())
-          Msg << '"' << MsgStr->getString() << '"';
+          Msg << MsgStr->getString();
         else
           MsgStr->printPretty(Msg, nullptr, getPrintingPolicy());
       }

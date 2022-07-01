@@ -677,6 +677,159 @@ let SubtargetPredicate = HasPackedFP32Ops, isCommutable = 1, isReMaterializable 
 def : MnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
 def : MnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
 
+class VOPProfileWMMA<VOPProfile P, string Suffix, RegisterOperand _Src01RC64, bit _HasClamp, bit _HasOpSel> : VOP3P_Profile<P> {
+  let DstRC = !if(!eq(Suffix, "_w32"), VDst_256, VDst_128);
+  let Src0RC64 = _Src01RC64;
+  let Src1RC64 = _Src01RC64;
+  let Src2RC64 = !if(!eq(Suffix, "_w32"), VISrc_256_f64, VISrc_128_f32);
+  let HasClamp = _HasClamp;
+  let HasOpSel = _HasOpSel;
+  let IsWMMA = 1;
+}
+
+def VOP_V8F32_V8F32_V8F32_V8F32 : VOPProfile <[v8f32, v8f32, v8f32, v8f32]>;
+def VOP_V8F32_V8I32_V8I32_V8F32 : VOPProfile <[v8f32, v8i32, v8i32, v8f32]>;
+def VOP_V8I32_V4I32_V4I32_V8I32 : VOPProfile <[v8i32, v4i32, v4i32, v8i32]>;
+def VOP_V8I32_V2I32_V2I32_V8I32 : VOPProfile <[v8i32, v2i32, v2i32, v8i32]>;
+def VOP_V8I32_V8I32_V8I32_V8I32 : VOPProfile <[v8i32, v8i32, v8i32, v8i32]>;
+
+def VOP_V4F32_V8F32_V8F32_V4F32 : VOPProfile <[v4f32, v8f32, v8f32, v4f32]>;
+def VOP_V4F32_V8I32_V8I32_V4F32 : VOPProfile <[v4f32, v8i32, v8i32, v4f32]>;
+def VOP_V4I32_V4I32_V4I32_V4I32 : VOPProfile <[v4i32, v4i32, v4i32, v4i32]>;
+def VOP_V4I32_V2I32_V2I32_V4I32 : VOPProfile <[v4i32, v2i32, v2i32, v4i32]>;
+def VOP_V4I32_V8I32_V8I32_V4I32 : VOPProfile <[v4i32, v8i32, v8i32, v4i32]>;
+
+class WMMAType <bits<2> val> {
+  bit hasClamp = val{0};
+  bit hasOpsel = val{1};
+}
+
+def WMMARegular      : WMMAType<0b00>;
+def WMMAUIClamp      : WMMAType<0b01>;
+def WMMAOpSel        : WMMAType<0b10>;
+
+class WMMARegularPat<Instruction Inst, SDPatternOperator node, VOPProfile P> :
+  GCNPat < (P.DstVT (node
+                                (P.Src0VT (VOP3PMods P.Src0VT:$src0, i32:$src0_modifiers)),
+                                (P.Src1VT (VOP3PMods P.Src1VT:$src1, i32:$src1_modifiers)),
+                                (P.Src2VT (VOP3PMods P.Src2VT:$src2, i32:$src2_modifiers))
+                   )),
+                   (P.DstVT (Inst i32:$src0_modifiers, P.Src0VT:$src0, i32:$src1_modifiers, P.Src1VT:$src1, $src2_modifiers, P.Src2VT:$src2))
+>;
+
+class WMMAOpSelPat<Instruction Inst, SDPatternOperator node, VOPProfile P> :
+  GCNPat < (P.DstVT (node
+                                (P.Src0VT P.Src0VT:$src0),
+                                (P.Src1VT P.Src1VT:$src1),
+                                (P.Src2VT P.Src2VT:$src2), (WMMAOpSelVOP3PMods i32:$src2_modifiers)
+                   )),
+                   (P.DstVT (Inst (i32 8), P.Src0VT:$src0, (i32 8), P.Src1VT:$src1, i32:$src2_modifiers, P.Src2VT:$src2))
+>;
+
+class WMMAUIClampPat<Instruction Inst, SDPatternOperator node, VOPProfile P> :
+  GCNPat < (P.DstVT (node
+                                (DotIUVOP3PMods i32:$src0_modifiers), (P.Src0VT P.Src0VT:$src0),
+                                (DotIUVOP3PMods i32:$src1_modifiers), (P.Src1VT P.Src1VT:$src1),
+                                (P.Src2VT P.Src2VT:$src2), (i1 timm:$clamp)
+                   )),
+                   (P.DstVT (Inst i32:$src0_modifiers, P.Src0VT:$src0, i32:$src1_modifiers, P.Src1VT:$src1, (i32 8), P.Src2VT:$src2, i1:$clamp))
+>;
+
+class WMMAOpcodeMapping<Instruction TwoAddr, Instruction ThreeAddr> {
+  Instruction Opcode2Addr = TwoAddr;
+  Instruction Opcode3Addr = ThreeAddr;
+  Predicate WaveSizePredicate;
+}
+
+def WMMAOpcode : GenericEnum {
+  let FilterClass = "VOP3P_Pseudo";
+}
+
+class WMMAMappingTable : GenericTable {
+  let FilterClass = "WMMAOpcodeMapping";
+  let CppTypeName = "WMMAOpcodeMappingInfo";
+  let Fields = ["Opcode2Addr", "Opcode3Addr"];
+  string TypeOf_Opcode2Addr = "WMMAOpcode";
+  string TypeOf_Opcode3Addr = "WMMAOpcode";
+}
+
+def WMMAOpcode2AddrMappingTable : WMMAMappingTable {
+  let PrimaryKey = ["Opcode2Addr"];
+  let PrimaryKeyName = "getWMMAMappingInfoFrom2AddrOpcode";
+}
+
+def WMMAOpcode3AddrMappingTable : WMMAMappingTable {
+  let PrimaryKey = ["Opcode3Addr"];
+  let PrimaryKeyName = "getWMMAMappingInfoFrom3AddrOpcode";
+}
+
+// The WMMA instruction has extra constraints:
+// Matrices A and B cannot overlap with D. C cannot partially overlap with D,
+// but it is OK for them to be the same (which is a typical case).
+//
+// We implement it as follows:
+// 1) Map the intrinsic to the pseudo where D is tied to C ($vdst = $src2).
+// 2) The pass twoaddressinstruction checks if src2 is live and if that is the case
+//    it converts the default pseudo to the pseudo where src2 is not the same as vdst.
+// 3) @earlyclobber on the destination satisfies the constraint during RA.
+
+multiclass WMMAInst<string Suffix, string Instr, VOPProfile P, SDPatternOperator node = null_frag, RegisterOperand _Src01RC64 = VRegSrc_256, WMMAType Type> {
+
+  defvar WMMAConstraints2Addr = "@earlyclobber $vdst,$vdst = $src2";
+  defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
+
+  defvar WMMAProfile = VOPProfileWMMA<P, Suffix, _Src01RC64, Type.hasClamp, Type.hasOpsel>;
+  if !eq(Suffix, "_w32") then {
+    let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+      let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in {
+        def _twoaddr_w32 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
+      }
+      let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
+        def _threeaddr_w32 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
+      }
+    }
+    def : WMMAOpcodeMapping<!cast<Instruction>(NAME # _twoaddr_w32),
+                            !cast<Instruction>(NAME # _threeaddr_w32)>;
+  } else if !eq(Suffix, "_w64") then {
+    let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+      let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in {
+        def _twoaddr_w64 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
+      }
+      let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
+        def _threeaddr_w64 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
+      }
+    }
+    def : WMMAOpcodeMapping<!cast<Instruction>(NAME # _twoaddr_w64),
+                            !cast<Instruction>(NAME # _threeaddr_w64)>;
+  }
+
+  if !eq(Type, WMMAOpSel) then {
+    def : WMMAOpSelPat<!cast<Instruction>(NAME # _twoaddr # Suffix), node, P>;
+  } else if !eq(Type, WMMAUIClamp) then {
+    def : WMMAUIClampPat<!cast<Instruction>(NAME # _twoaddr # Suffix), node, P>;
+  } else {
+    def : WMMARegularPat<!cast<Instruction>(NAME # _twoaddr # Suffix), node, P>;
+  }
+}
+
+let WaveSizePredicate = isWave32 in {
+  defm V_WMMA_F32_16X16X16_F16   : WMMAInst<"_w32", "v_wmma_f32_16x16x16_f16",  VOP_V8F32_V8F32_V8F32_V8F32, int_amdgcn_wmma_f32_16x16x16_f16, VRegSrc_256, WMMARegular>;
+  defm V_WMMA_F32_16X16X16_BF16  : WMMAInst<"_w32", "v_wmma_f32_16x16x16_bf16", VOP_V8F32_V8I32_V8I32_V8F32, int_amdgcn_wmma_f32_16x16x16_bf16, VRegSrc_256, WMMARegular>;
+  defm V_WMMA_F16_16X16X16_F16   : WMMAInst<"_w32", "v_wmma_f16_16x16x16_f16",   VOP_V8F32_V8F32_V8F32_V8F32, int_amdgcn_wmma_f16_16x16x16_f16, VRegSrc_256, WMMAOpSel>;
+  defm V_WMMA_BF16_16X16X16_BF16 : WMMAInst<"_w32", "v_wmma_bf16_16x16x16_bf16", VOP_V8I32_V8I32_V8I32_V8I32, int_amdgcn_wmma_bf16_16x16x16_bf16, VRegSrc_256, WMMAOpSel>;
+  defm V_WMMA_I32_16X16X16_IU8   : WMMAInst<"_w32", "v_wmma_i32_16x16x16_iu8",   VOP_V8I32_V4I32_V4I32_V8I32, int_amdgcn_wmma_i32_16x16x16_iu8, VRegSrc_128, WMMAUIClamp>;
+  defm V_WMMA_I32_16X16X16_IU4   : WMMAInst<"_w32", "v_wmma_i32_16x16x16_iu4",   VOP_V8I32_V2I32_V2I32_V8I32, int_amdgcn_wmma_i32_16x16x16_iu4, VRegSrc_64,  WMMAUIClamp>;
+}
+
+let WaveSizePredicate = isWave64 in {
+  defm V_WMMA_F32_16X16X16_F16   : WMMAInst<"_w64", "v_wmma_f32_16x16x16_f16",   VOP_V4F32_V8F32_V8F32_V4F32, int_amdgcn_wmma_f32_16x16x16_f16, VRegSrc_256, WMMARegular>;
+  defm V_WMMA_F32_16X16X16_BF16  : WMMAInst<"_w64", "v_wmma_f32_16x16x16_bf16",  VOP_V4F32_V8I32_V8I32_V4F32, int_amdgcn_wmma_f32_16x16x16_bf16, VRegSrc_256, WMMARegular>;
+  defm V_WMMA_F16_16X16X16_F16   : WMMAInst<"_w64", "v_wmma_f16_16x16x16_f16",   VOP_V4F32_V8F32_V8F32_V4F32, int_amdgcn_wmma_f16_16x16x16_f16, VRegSrc_256, WMMAOpSel>;
+  defm V_WMMA_BF16_16X16X16_BF16 : WMMAInst<"_w64", "v_wmma_bf16_16x16x16_bf16", VOP_V4I32_V8I32_V8I32_V4I32, int_amdgcn_wmma_bf16_16x16x16_bf16, VRegSrc_256, WMMAOpSel>;
+  defm V_WMMA_I32_16X16X16_IU8   : WMMAInst<"_w64", "v_wmma_i32_16x16x16_iu8",   VOP_V4I32_V4I32_V4I32_V4I32, int_amdgcn_wmma_i32_16x16x16_iu8, VRegSrc_128, WMMAUIClamp>;
+  defm V_WMMA_I32_16X16X16_IU4   : WMMAInst<"_w64", "v_wmma_i32_16x16x16_iu4",   VOP_V4I32_V2I32_V2I32_V4I32, int_amdgcn_wmma_i32_16x16x16_iu4, VRegSrc_64, WMMAUIClamp>;
+}
+
 //===----------------------------------------------------------------------===//
 // Begin Real Encodings
 //===----------------------------------------------------------------------===//
@@ -746,6 +899,22 @@ let AssemblerPredicate = isGFX11Plus,
 defm V_DOT4_I32_IU8              : VOP3P_Real_gfx11 <0x16>;
 defm V_DOT8_I32_IU4              : VOP3P_Real_gfx11 <0x18>;
 defm V_DOT2_F32_BF16             : VOP3P_Real_gfx11 <0x1a>;
+
+multiclass VOP3P_Real_WMMA <bits<7> op> {
+  let WaveSizePredicate = isWave32, DecoderNamespace = "GFX11" in {
+    defm _twoaddr_w32 : VOP3P_Real_gfx11 <op>;
+  }
+  let WaveSizePredicate = isWave64, DecoderNamespace = "WMMAGFX11" in {
+    defm _twoaddr_w64 : VOP3P_Real_gfx11 <op>;
+  }
+}
+
+defm V_WMMA_F32_16X16X16_F16   : VOP3P_Real_WMMA <0x040>;
+defm V_WMMA_F32_16X16X16_BF16  : VOP3P_Real_WMMA <0x041>;
+defm V_WMMA_F16_16X16X16_F16   : VOP3P_Real_WMMA <0x042>;
+defm V_WMMA_BF16_16X16X16_BF16 : VOP3P_Real_WMMA <0x043>;
+defm V_WMMA_I32_16X16X16_IU8   : VOP3P_Real_WMMA <0x044>;
+defm V_WMMA_I32_16X16X16_IU4   : VOP3P_Real_WMMA <0x045>;
 
 //===----------------------------------------------------------------------===//
 // GFX8 (VI)

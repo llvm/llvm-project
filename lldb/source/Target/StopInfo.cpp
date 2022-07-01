@@ -275,7 +275,13 @@ protected:
       BreakpointSiteSP bp_site_sp(
           thread_sp->GetProcess()->GetBreakpointSiteList().FindByID(m_value));
       std::unordered_set<break_id_t> precondition_breakpoints;
-
+      // Breakpoints that fail their condition check are not considered to
+      // have been hit.  If the only locations at this site have failed their
+      // conditions, we should change the stop-info to none.  Otherwise, if we
+      // hit another breakpoint on a different thread which does stop, users
+      // will see a breakpont hit with a failed condition, which is wrong.
+      // Use this variable to tell us if that is true.
+      bool actually_hit_any_locations = false;
       if (bp_site_sp) {
         // Let's copy the owners list out of the site and store them in a local
         // list.  That way if one of the breakpoint actions changes the site,
@@ -285,6 +291,8 @@ protected:
 
         if (num_owners == 0) {
           m_should_stop = true;
+          actually_hit_any_locations = true;  // We're going to stop, don't 
+                                              // change the stop info.
         } else {
           // We go through each location, and test first its precondition -
           // this overrides everything.  Note, we only do this once per
@@ -440,12 +448,17 @@ protected:
             // should stop, then we'll run the callback for the breakpoint.  If
             // the callback says we shouldn't stop that will win.
 
-            if (bp_loc_sp->GetConditionText() != nullptr) {
+            if (bp_loc_sp->GetConditionText() == nullptr)
+              actually_hit_any_locations = true;
+            else {
               Status condition_error;
               bool condition_says_stop =
                   bp_loc_sp->ConditionSaysStop(exe_ctx, condition_error);
 
               if (!condition_error.Success()) {
+                // If the condition fails to evaluate, we are going to stop 
+                // at it, so the location was hit.
+                actually_hit_any_locations = true;
                 const char *err_str =
                     condition_error.AsCString("<unknown error>");
                 LLDB_LOGF(log, "Error evaluating condition: \"%s\"\n", err_str);
@@ -467,7 +480,9 @@ protected:
                           loc_desc.GetData(),
                           static_cast<unsigned long long>(thread_sp->GetID()),
                           condition_says_stop);
-                if (!condition_says_stop) {
+                if (condition_says_stop) 
+                  actually_hit_any_locations = true;
+                else {
                   // We don't want to increment the hit count of breakpoints if
                   // the condition fails. We've already bumped it by the time
                   // we get here, so undo the bump:
@@ -559,6 +574,7 @@ protected:
       } else {
         m_should_stop = true;
         m_should_stop_is_valid = true;
+        actually_hit_any_locations = true;
         Log *log_process(GetLog(LLDBLog::Process));
 
         LLDB_LOGF(log_process,
@@ -578,6 +594,12 @@ protected:
         // show the breakpoint stop, so compute the public stop info immediately
         // here.
         thread_sp->CalculatePublicStopInfo();
+      } else if (!actually_hit_any_locations) {
+        // In the end, we didn't actually have any locations that passed their
+        // "was I hit" checks.  So say we aren't stopped.
+        GetThread()->ResetStopInfo();
+        LLDB_LOGF(log, "Process::%s all locations failed condition checks.",
+          __FUNCTION__);
       }
 
       LLDB_LOGF(log,
