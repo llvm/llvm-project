@@ -29,4 +29,4 @@ class TestBreakpointThumbCodesection(TestBase):
             self.process(), bpid), "Process is not stopped at breakpoint")
 
         self.process().Continue()
-        self.assertEqual(self.process().GetState(), lldb.eStateExited, PROCESS_EXITED)
+        self.assertState(self.process().GetState(), lldb.eStateExited, PROCESS_EXITED)

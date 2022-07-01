@@ -199,4 +199,4 @@ class ProcessLaunchTestCase(TestBase):
 
         self.assertEqual(value, evil_var)
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
+        self.assertState(process.GetState(), lldb.eStateExited, PROCESS_EXITED)

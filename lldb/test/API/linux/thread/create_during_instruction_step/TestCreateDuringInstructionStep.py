@@ -74,4 +74,4 @@ class CreateDuringInstructionStepTestCase(TestBase):
         process.Continue()
 
         # At this point, the inferior process should have exited.
-        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
+        self.assertState(process.GetState(), lldb.eStateExited, PROCESS_EXITED)

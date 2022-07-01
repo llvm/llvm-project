@@ -93,7 +93,7 @@ class RaiseTestCase(TestBase):
 
         # Continue until we exit.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         process = self.launch(target, signal)
@@ -106,7 +106,7 @@ class RaiseTestCase(TestBase):
             substrs=[
                 "stopped and restarted",
                 signal])
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         # launch again
@@ -119,7 +119,7 @@ class RaiseTestCase(TestBase):
             "process continue",
             substrs=["stopped and restarted"],
             matching=False)
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         if not test_passing:
@@ -149,7 +149,7 @@ class RaiseTestCase(TestBase):
 
         # Continue until we exit. The process should receive the signal.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), signo)
 
         # launch again
@@ -163,7 +163,7 @@ class RaiseTestCase(TestBase):
             substrs=[
                 "stopped and restarted",
                 signal])
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), signo)
 
         # launch again
@@ -176,7 +176,7 @@ class RaiseTestCase(TestBase):
             "process continue",
             substrs=["stopped and restarted"],
             matching=False)
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), signo)
 
         # reset signal handling to default
