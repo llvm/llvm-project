@@ -58,10 +58,10 @@ define void @test_simplify4() {
   ret void
 }
 
-define void @test_nosimplify1(i32 %chr) {
-; CHECK-LABEL: @test_nosimplify1(
-; CHECK-NEXT:    [[DST:%.*]] = call i8* @strrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]])
-; CHECK-NEXT:    store i8* [[DST]], i8** @chp, align 4
+define void @test_xform_to_memrchr(i32 %chr) {
+; CHECK-LABEL: @test_xform_to_memrchr(
+; CHECK-NEXT:    [[MEMRCHR:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(14) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]], i32 14)
+; CHECK-NEXT:    store i8* [[MEMRCHR]], i8** @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 

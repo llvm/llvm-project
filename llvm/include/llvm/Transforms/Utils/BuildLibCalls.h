@@ -139,6 +139,10 @@ namespace llvm {
   Value *emitMemChr(Value *Ptr, Value *Val, Value *Len, IRBuilderBase &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
+  /// Emit a call to the memrchr function, analogously to emitMemChr.
+  Value *emitMemRChr(Value *Ptr, Value *Val, Value *Len, IRBuilderBase &B,
+                    const DataLayout &DL, const TargetLibraryInfo *TLI);
+
   /// Emit a call to the memcmp function.
   Value *emitMemCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilderBase &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
