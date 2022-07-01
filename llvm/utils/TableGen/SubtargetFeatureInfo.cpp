@@ -108,6 +108,39 @@ void SubtargetFeatureInfo::emitComputeAvailableFeatures(
   OS << "}\n\n";
 }
 
+// If ParenIfBinOp is true, print a surrounding () if Val uses && or ||.
+static bool emitFeaturesAux(StringRef TargetName, const Init &Val,
+                            bool ParenIfBinOp, raw_ostream &OS) {
+  if (auto *D = dyn_cast<DefInit>(&Val)) {
+    if (!D->getDef()->isSubClassOf("SubtargetFeature"))
+      return true;
+    OS << "FB[" << TargetName << "::" << D->getAsString() << "]";
+    return false;
+  }
+  if (auto *D = dyn_cast<DagInit>(&Val)) {
+    std::string Op = D->getOperator()->getAsString();
+    if (Op == "not" && D->getNumArgs() == 1) {
+      OS << '!';
+      return emitFeaturesAux(TargetName, *D->getArg(0), true, OS);
+    }
+    if ((Op == "any_of" || Op == "all_of") && D->getNumArgs() > 0) {
+      bool Paren = D->getNumArgs() > 1 && std::exchange(ParenIfBinOp, true);
+      if (Paren)
+        OS << '(';
+      ListSeparator LS(Op == "any_of" ? " || " : " && ");
+      for (auto *Arg : D->getArgs()) {
+        OS << LS;
+        if (emitFeaturesAux(TargetName, *Arg, ParenIfBinOp, OS))
+          return true;
+      }
+      if (Paren)
+        OS << ')';
+      return false;
+    }
+  }
+  return true;
+}
+
 void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     StringRef TargetName, StringRef ClassName, StringRef FuncName,
     SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {
@@ -118,37 +151,8 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     const SubtargetFeatureInfo &SFI = SF.second;
 
     OS << "  if (";
-
-    const DagInit *D = SFI.TheDef->getValueAsDag("AssemblerCondDag");
-    std::string CombineType = D->getOperator()->getAsString();
-    if (CombineType != "any_of" && CombineType != "all_of")
-      PrintFatalError(SFI.TheDef->getLoc(), "Invalid AssemblerCondDag!");
-    if (D->getNumArgs() == 0)
-      PrintFatalError(SFI.TheDef->getLoc(), "Invalid AssemblerCondDag!");
-    bool IsOr = CombineType == "any_of";
-
-    if (IsOr)
-      OS << "(";
-
-    ListSeparator LS(IsOr ? " || " : " && ");
-    for (auto *Arg : D->getArgs()) {
-      OS << LS;
-      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-        if (NotArg->getOperator()->getAsString() != "not" ||
-            NotArg->getNumArgs() != 1)
-          PrintFatalError(SFI.TheDef->getLoc(), "Invalid AssemblerCondDag!");
-        Arg = NotArg->getArg(0);
-        OS << "!";
-      }
-      if (!isa<DefInit>(Arg) ||
-          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
-        PrintFatalError(SFI.TheDef->getLoc(), "Invalid AssemblerCondDag!");
-      OS << "FB[" << TargetName << "::" << Arg->getAsString() << "]";
-    }
-
-    if (IsOr)
-      OS << ")";
-
+    emitFeaturesAux(TargetName, *SFI.TheDef->getValueAsDag("AssemblerCondDag"),
+                    /*ParenIfBinOp=*/false, OS);
     OS << ")\n";
     OS << "    Features.set(" << SFI.getEnumBitName() << ");\n";
   }

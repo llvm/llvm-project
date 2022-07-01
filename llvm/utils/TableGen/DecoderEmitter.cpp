@@ -509,6 +509,8 @@ protected:
   // Returns true if predicate matches were emitted, false otherwise.
   bool emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
                           unsigned Opc) const;
+  bool emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
+                             raw_ostream &OS) const;
 
   bool doesOpcodeNeedPredicate(unsigned Opc) const;
   unsigned getPredicateIndex(DecoderTableInfo &TableInfo, StringRef P) const;
@@ -1226,6 +1228,40 @@ unsigned FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   return (unsigned)(P - Decoders.begin());
 }
 
+// If ParenIfBinOp is true, print a surrounding () if Val uses && or ||.
+bool FilterChooser::emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
+                                          raw_ostream &OS) const {
+  if (auto *D = dyn_cast<DefInit>(&Val)) {
+    if (!D->getDef()->isSubClassOf("SubtargetFeature"))
+      return true;
+    OS << "Bits[" << Emitter->PredicateNamespace << "::" << D->getAsString()
+       << "]";
+    return false;
+  }
+  if (auto *D = dyn_cast<DagInit>(&Val)) {
+    std::string Op = D->getOperator()->getAsString();
+    if (Op == "not" && D->getNumArgs() == 1) {
+      OS << '!';
+      return emitPredicateMatchAux(*D->getArg(0), true, OS);
+    }
+    if ((Op == "any_of" || Op == "all_of") && D->getNumArgs() > 0) {
+      bool Paren = D->getNumArgs() > 1 && std::exchange(ParenIfBinOp, true);
+      if (Paren)
+        OS << '(';
+      ListSeparator LS(Op == "any_of" ? " || " : " && ");
+      for (auto *Arg : D->getArgs()) {
+        OS << LS;
+        if (emitPredicateMatchAux(*Arg, ParenIfBinOp, OS))
+          return true;
+      }
+      if (Paren)
+        OS << ')';
+      return false;
+    }
+  }
+  return true;
+}
+
 bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
                                        unsigned Opc) const {
   ListInit *Predicates =
@@ -1239,40 +1275,11 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
     if (!isa<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
       continue;
 
-    const DagInit *D = Pred->getValueAsDag("AssemblerCondDag");
-    std::string CombineType = D->getOperator()->getAsString();
-    if (CombineType != "any_of" && CombineType != "all_of")
-      PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-    if (D->getNumArgs() == 0)
-      PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-    bool IsOr = CombineType == "any_of";
-
     if (!IsFirstEmission)
       o << " && ";
-
-    if (IsOr)
-      o << "(";
-
-    ListSeparator LS(IsOr ? " || " : " && ");
-    for (auto *Arg : D->getArgs()) {
-      o << LS;
-      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-        if (NotArg->getOperator()->getAsString() != "not" ||
-            NotArg->getNumArgs() != 1)
-          PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-        Arg = NotArg->getArg(0);
-        o << "!";
-      }
-      if (!isa<DefInit>(Arg) ||
-          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
-        PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-      o << "Bits[" << Emitter->PredicateNamespace << "::" << Arg->getAsString()
-        << "]";
-    }
-
-    if (IsOr)
-      o << ")";
-
+    if (emitPredicateMatchAux(*Pred->getValueAsDag("AssemblerCondDag"),
+                              Predicates->size() > 1, o))
+      PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
     IsFirstEmission = false;
   }
   return !Predicates->empty();
