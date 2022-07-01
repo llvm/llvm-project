@@ -198,6 +198,8 @@ void StmtPrinter::PrintFPPragmas(CompoundStmt *S) {
     if (!FEnvAccess || EM != LangOptions::FPE_Strict) {
       Indent() << "#pragma clang fp exceptions(";
       switch (FPO.getSpecifiedExceptionModeOverride()) {
+      default:
+        break;
       case LangOptions::FPE_Ignore:
         OS << "ignore";
         break;
