@@ -31,23 +31,28 @@ scaleAndAddForAssert(ArrayRef<int64_t> a, int64_t scale, ArrayRef<int64_t> b) {
   return res;
 }
 
-SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM, unsigned symbolOffset,
-                         unsigned nSymbol)
-    : usingBigM(mustUseBigM), nRedundant(0), nSymbol(nSymbol),
+SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM)
+    : usingBigM(mustUseBigM), nRedundant(0), nSymbol(0),
       tableau(0, getNumFixedCols() + nVar), empty(false) {
-  assert(symbolOffset + nSymbol <= nVar);
-
   colUnknown.insert(colUnknown.begin(), getNumFixedCols(), nullIndex);
   for (unsigned i = 0; i < nVar; ++i) {
     var.emplace_back(Orientation::Column, /*restricted=*/false,
                      /*pos=*/getNumFixedCols() + i);
     colUnknown.push_back(i);
   }
+}
 
-  // Move the symbols to be in columns [3, 3 + nSymbol).
-  for (unsigned i = 0; i < nSymbol; ++i) {
-    var[symbolOffset + i].isSymbol = true;
-    swapColumns(var[symbolOffset + i].pos, getNumFixedCols() + i);
+SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM,
+                         const llvm::SmallBitVector &isSymbol)
+    : SimplexBase(nVar, mustUseBigM) {
+  assert(isSymbol.size() == nVar && "invalid bitmask!");
+  // Invariant: nSymbol is the number of symbols that have been marked
+  // already and these occupy the columns
+  // [getNumFixedCols(), getNumFixedCols() + nSymbol).
+  for (unsigned symbolIdx : isSymbol.set_bits()) {
+    var[symbolIdx].isSymbol = true;
+    swapColumns(var[symbolIdx].pos, getNumFixedCols() + nSymbol);
+    ++nSymbol;
   }
 }
 
@@ -502,7 +507,7 @@ LogicalResult SymbolicLexSimplex::doNonBranchingPivots() {
 }
 
 SymbolicLexMin SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
-  SymbolicLexMin result(nSymbol, var.size() - nSymbol);
+  SymbolicLexMin result(domainPoly.getSpace(), var.size() - nSymbol);
 
   /// The algorithm is more naturally expressed recursively, but we implement
   /// it iteratively here to avoid potential issues with stack overflows in the
