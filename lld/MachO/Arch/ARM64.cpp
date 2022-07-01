@@ -264,7 +264,7 @@ static void writeAdr(void *loc, uint32_t dest, int32_t delta) {
 static void writeNop(void *loc) { write32le(loc, 0xd503201f); }
 
 static void writeLiteralLdr(void *loc, Ldr original, int32_t delta) {
-  uint32_t imm19 = (delta << 3) & 0x00ffffe0;
+  uint32_t imm19 = (delta & 0x001ffffc) << 3;
   uint32_t opcode = 0;
   switch (original.size) {
   case 4:
