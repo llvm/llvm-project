@@ -356,8 +356,7 @@ struct TestVectorUnrollingPatterns
   }
 
   ListOption<int64_t> unrollOrder{*this, "unroll-order",
-                                  llvm::cl::desc("set the unroll order"),
-                                  llvm::cl::ZeroOrMore};
+                                  llvm::cl::desc("set the unroll order")};
 
   Option<bool> unrollBasedOnType{
       *this, "unroll-based-on-type",

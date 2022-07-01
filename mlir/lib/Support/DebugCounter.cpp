@@ -27,7 +27,7 @@ struct DebugCounterOptions {
       "mlir-debug-counter",
       llvm::cl::desc(
           "Comma separated list of debug counter skip and count arguments"),
-      llvm::cl::CommaSeparated, llvm::cl::ZeroOrMore};
+      llvm::cl::CommaSeparated};
 
   llvm::cl::opt<bool> printCounterInfo{
       "mlir-print-debug-counter", llvm::cl::init(false), llvm::cl::Optional,
