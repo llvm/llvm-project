@@ -196,8 +196,9 @@ define i8* @fold_memrchr_a12345_0_n(i64 %N) {
 
 define i8* @fold_memrchr_a12345_3_n(i64 %n) {
 ; CHECK-LABEL: @fold_memrchr_a12345_3_n(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 3, i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[MEMRCHR_CMP:%.*]] = icmp ult i64 [[N:%.*]], 3
+; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CMP]], i8* null, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 2)
+; CHECK-NEXT:    ret i8* [[MEMRCHR_SEL]]
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -210,8 +211,9 @@ define i8* @fold_memrchr_a12345_3_n(i64 %n) {
 
 define i8* @fold_memrchr_a12345_5_n(i64 %n) {
 ; CHECK-LABEL: @fold_memrchr_a12345_5_n(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 5, i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[MEMRCHR_CMP:%.*]] = icmp ult i64 [[N:%.*]], 5
+; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CMP]], i8* null, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 4)
+; CHECK-NEXT:    ret i8* [[MEMRCHR_SEL]]
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -322,5 +324,19 @@ define i8* @call_memrchr_a123123_2_n(i64 %n) {
 
   %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
   %ret = call i8* @memrchr(i8* %ptr, i32 2, i64 %n)
+  ret i8* %ret
+}
+
+
+; And again for 1 to exercise the other edge case.
+
+define i8* @call_memrchr_a123123_1_n(i64 %n) {
+; CHECK-LABEL: @call_memrchr_a123123_1_n(
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 1, i64 [[N:%.*]])
+; CHECK-NEXT:    ret i8* [[RET]]
+;
+
+  %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
+  %ret = call i8* @memrchr(i8* %ptr, i32 1, i64 %n)
   ret i8* %ret
 }

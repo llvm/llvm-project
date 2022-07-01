@@ -106,7 +106,7 @@
 "`P0599R1 <https://wg21.link/P0599R1>`__","LWG","noexcept for hash functions","Kona","|Complete|","5.0"
 "`P0604R0 <https://wg21.link/P0604R0>`__","LWG","Resolving GB 55, US 84, US 85, US 86","Kona","|Complete|",""
 "`P0607R0 <https://wg21.link/P0607R0>`__","LWG","Inline Variables for the Standard Library","Kona","|In Progress| [#note-P0607]_","6.0"
-"`P0618R0 <https://wg21.link/P0618R0>`__","LWG","Deprecating <codecvt>","Kona","",""
+"`P0618R0 <https://wg21.link/P0618R0>`__","LWG","Deprecating <codecvt>","Kona","|Complete|","15.0"
 "`P0623R0 <https://wg21.link/P0623R0>`__","LWG","Final C++17 Parallel Algorithms Fixes","Kona","",""
 "","","","","",""
 "`P0682R1 <https://wg21.link/P0682R1>`__","LWG","Repairing elementary string conversions","Toronto","",""
