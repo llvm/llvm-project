@@ -11,7 +11,7 @@ define void @transpose_store(<8 x double> %a, <8 x double>* %Ptr) {
 ; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[SPLIT]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> undef, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP1]], double [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[SPLIT2]], i64 0
@@ -19,7 +19,7 @@ define void @transpose_store(<8 x double> %a, <8 x double>* %Ptr) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[SPLIT3]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP5]], double [[TMP6]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[SPLIT]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> undef, double [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[SPLIT2]], i64 1
@@ -50,7 +50,7 @@ define <8 x double> @transpose_fadd(<8 x double> %a) {
 ; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[SPLIT]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> undef, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP1]], double [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[SPLIT2]], i64 0
@@ -58,7 +58,7 @@ define <8 x double> @transpose_fadd(<8 x double> %a) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[SPLIT3]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP5]], double [[TMP6]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[SPLIT]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> undef, double [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[SPLIT2]], i64 1
@@ -86,7 +86,7 @@ define <8 x double> @transpose_fmul(<8 x double> %a) {
 ; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[SPLIT]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> undef, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP1]], double [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[SPLIT2]], i64 0
@@ -94,7 +94,7 @@ define <8 x double> @transpose_fmul(<8 x double> %a) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[SPLIT3]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP5]], double [[TMP6]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[SPLIT]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> undef, double [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[SPLIT2]], i64 1
@@ -122,7 +122,7 @@ define <8 x double> @transpose_fneg(<8 x double> %a) {
 ; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[SPLIT]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> undef, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP1]], double [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[SPLIT2]], i64 0
@@ -130,7 +130,7 @@ define <8 x double> @transpose_fneg(<8 x double> %a) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[SPLIT3]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP5]], double [[TMP6]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[SPLIT]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> undef, double [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[SPLIT2]], i64 1
