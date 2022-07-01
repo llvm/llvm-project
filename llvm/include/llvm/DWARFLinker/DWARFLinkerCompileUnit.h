@@ -74,6 +74,12 @@ public:
 
     /// Does DIE transitively refer an incomplete decl?
     bool Incomplete : 1;
+
+    /// Is DIE in the clang module scope?
+    bool InModuleScope : 1;
+
+    /// Is ODR marking done?
+    bool ODRMarkingDone : 1;
   };
 
   CompileUnit(DWARFUnit &OrigUnit, unsigned ID, bool CanUseODR,
