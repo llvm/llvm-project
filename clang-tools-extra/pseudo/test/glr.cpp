@@ -1,4 +1,4 @@
-// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest | FileCheck %s
+// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest -print-statistics | FileCheck %s
 
 void foo() {
   T* a; // a multiply expression or a pointer declaration?
@@ -22,3 +22,10 @@ void foo() {
 // CHECK-NEXT:   │ └─ptr-declarator~id-expression =#1
 // CHECK-NEXT:   └─; := tok[8]
 }
+
+// CHECK:      3 Ambiguous nodes:
+// CHECK-NEXT: 1 simple-type-specifier
+// CHECK-NEXT: 1 statement
+// CHECK-NEXT: 1 type-name
+// CHECK-EMPTY:
+// CHECK-NEXT: 0 Opaque nodes:
