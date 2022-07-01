@@ -213,10 +213,15 @@ public:
     virtual bool addImage(
         llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
             swift::ReflectionSectionKind)>
-            find_section) = 0;
-    virtual bool addImage(swift::remote::RemoteAddress image_start) = 0;
-    virtual bool readELF(swift::remote::RemoteAddress ImageStart,
-                         llvm::Optional<llvm::sys::MemoryBlock> FileBuffer) = 0;
+            find_section,
+        llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
+    virtual bool addImage(
+        swift::remote::RemoteAddress image_start,
+        llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
+    virtual bool
+    readELF(swift::remote::RemoteAddress ImageStart,
+            llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
+            llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
     virtual const swift::reflection::TypeInfo *
     getTypeInfo(const swift::reflection::TypeRef *type_ref,
                 swift::remote::TypeInfoProvider *provider) = 0;
@@ -388,13 +393,15 @@ private:
   /// Add the contents of the object file to the reflection context.
   /// \return true on success.
   bool AddJitObjectFileToReflectionContext(
-      ObjectFile &obj_file, llvm::Triple::ObjectFormatType obj_format_type);
+      ObjectFile &obj_file, llvm::Triple::ObjectFormatType obj_format_type,
+      llvm::SmallVector<llvm::StringRef, 1> likely_module_names);
 
   /// Add the reflections sections to the reflection context by extracting
   /// the directly from the object file.
   /// \return true on success.
   bool AddObjectFileToReflectionContext(
-      lldb::ModuleSP module);
+      lldb::ModuleSP module,
+      llvm::SmallVector<llvm::StringRef, 1> likely_module_names);
 
   /// Cache for the debug-info-originating type infos.
   /// \{
