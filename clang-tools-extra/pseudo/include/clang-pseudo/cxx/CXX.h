@@ -23,12 +23,11 @@
 #ifndef CLANG_PSEUDO_CXX_CXX_H
 #define CLANG_PSEUDO_CXX_CXX_H
 
+#include "clang-pseudo/Language.h"
 #include "clang-pseudo/grammar/Grammar.h"
 
 namespace clang {
 namespace pseudo {
-class LRTable;
-
 namespace cxx {
 // Symbol represents nonterminal symbols in the C++ grammar.
 // It provides a simple uniform way to access a particular nonterminal.
@@ -38,10 +37,8 @@ enum class Symbol : SymbolID {
 #undef NONTERMINAL
 };
 
-// Returns the C++ grammar.
-const Grammar &getGrammar();
-// Returns the corresponding LRTable for the C++ grammar.
-const LRTable &getLRTable();
+// Returns the Language for the cxx.bnf grammar.
+const Language &getLanguage();
 
 } // namespace cxx
 

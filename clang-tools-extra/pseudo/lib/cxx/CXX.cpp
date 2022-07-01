@@ -7,26 +7,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-pseudo/cxx/CXX.h"
+#include "clang-pseudo/Language.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/grammar/LRTable.h"
+#include <utility>
 
 namespace clang {
 namespace pseudo {
 namespace cxx {
-
+namespace {
 static const char *CXXBNF =
 #include "CXXBNF.inc"
     ;
+} // namespace
 
-const Grammar &getGrammar() {
-  static std::vector<std::string> Diags;
-  static Grammar *G = new Grammar(Grammar::parseBNF(CXXBNF, Diags));
-  assert(Diags.empty());
-  return *G;
-}
-
-const LRTable &getLRTable() {
-  static LRTable *Table = new LRTable(LRTable::buildSLR(getGrammar()));
-  return *Table;
+const Language &getLanguage() {
+  static const auto &CXXLanguage = []() -> const Language & {
+    std::vector<std::string> Diags;
+    auto G = Grammar::parseBNF(CXXBNF, Diags);
+    assert(Diags.empty());
+    LRTable Table = LRTable::buildSLR(G);
+    const Language *PL = new Language{
+        std::move(G),
+        std::move(Table),
+    };
+    return *PL;
+  }();
+  return CXXLanguage;
 }
 
 } // namespace cxx
