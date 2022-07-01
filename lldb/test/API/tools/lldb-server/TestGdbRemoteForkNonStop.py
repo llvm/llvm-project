@@ -92,8 +92,7 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
             "send packet: $OK#00",
         ], True)
         self.expect_gdbremote_sequence()
-        self.assertEqual(set([ret["pid1"], ret["pid2"]]),
-                         set([parent_pid, child_pid]))
+        self.assertEqual(set([pid1, pid2]), set([parent_pid, child_pid]))
 
     @add_test_categories(["fork"])
     def test_vkill_both_nonstop(self):
