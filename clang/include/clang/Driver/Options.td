@@ -7259,3 +7259,7 @@ def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Flags<[DXCOption, NoXarchOption]>,
                      HelpText<"Entry point name">;
+
+def fsuppress_conflicting_types: Flag<["-"], "fsuppress-conflicting-types">, Group<f_Group>,
+  MarshallingInfoFlag<LangOpts<"IgnoreConflictingTypes">>,
+  HelpText<"Ignore errors from conflicting types in function declarations">, Flags<[CC1Option]>;
