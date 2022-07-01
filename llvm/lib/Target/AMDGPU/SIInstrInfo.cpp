@@ -4792,6 +4792,64 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_FLBIT_I32: return AMDGPU::V_FFBH_I32_e64;
   case AMDGPU::S_CBRANCH_SCC0: return AMDGPU::S_CBRANCH_VCCZ;
   case AMDGPU::S_CBRANCH_SCC1: return AMDGPU::S_CBRANCH_VCCNZ;
+  case AMDGPU::S_CVT_F32_I32: return AMDGPU::V_CVT_F32_I32_e32;
+  case AMDGPU::S_CVT_F32_U32: return AMDGPU::V_CVT_F32_U32_e32;
+  case AMDGPU::S_CVT_I32_F32: return AMDGPU::V_CVT_I32_F32_e32;
+  case AMDGPU::S_CVT_U32_F32: return AMDGPU::V_CVT_U32_F32_e32;
+  case AMDGPU::S_CVT_F32_F16: return AMDGPU::V_CVT_F32_F16_e32;
+  case AMDGPU::S_CVT_HI_F32_F16: return AMDGPU::V_CVT_F32_F16_e32;
+  case AMDGPU::S_CVT_F16_F32: return AMDGPU::V_CVT_F16_F32_e32;
+  case AMDGPU::S_CEIL_F32: return AMDGPU::V_CEIL_F32_e32;
+  case AMDGPU::S_FLOOR_F32: return AMDGPU::V_FLOOR_F32_e32;
+  case AMDGPU::S_TRUNC_F32: return AMDGPU::V_TRUNC_F32_e32;
+  case AMDGPU::S_RNDNE_F32: return AMDGPU::V_RNDNE_F32_e32;
+  case AMDGPU::S_CEIL_F16: return AMDGPU::V_CEIL_F16_e32;
+  case AMDGPU::S_FLOOR_F16: return AMDGPU::V_FLOOR_F16_e32;
+  case AMDGPU::S_TRUNC_F16: return AMDGPU::V_TRUNC_F16_e32;
+  case AMDGPU::S_RNDNE_F16: return AMDGPU::V_RNDNE_F16_e32;
+  case AMDGPU::S_ADD_F32: return AMDGPU::V_ADD_F32_e32;
+  case AMDGPU::S_SUB_F32: return AMDGPU::V_SUB_F32_e32;
+  case AMDGPU::S_MIN_F32: return AMDGPU::V_MIN_F32_e32;
+  case AMDGPU::S_MAX_F32: return AMDGPU::V_MAX_F32_e32;
+  case AMDGPU::S_MUL_F32: return AMDGPU::V_MUL_F32_e32;
+  case AMDGPU::S_ADD_F16: return AMDGPU::V_ADD_F16_e32;
+  case AMDGPU::S_SUB_F16: return AMDGPU::V_SUB_F16_e32;
+  case AMDGPU::S_MIN_F16: return AMDGPU::V_MIN_F16_e32;
+  case AMDGPU::S_MAX_F16: return AMDGPU::V_MAX_F16_e32;
+  case AMDGPU::S_MUL_F16: return AMDGPU::V_MUL_F16_e32;
+  case AMDGPU::S_CVT_PK_RTZ_F16_F32: return AMDGPU::V_CVT_PKRTZ_F16_F32_e32;
+  case AMDGPU::S_FMAC_F32: return AMDGPU::V_FMAC_F32_e32;
+  case AMDGPU::S_FMAC_F16: return AMDGPU::V_FMAC_F16_e32;
+  case AMDGPU::S_FMAMK_F32: return AMDGPU::V_FMAMK_F32;
+  case AMDGPU::S_FMAAK_F32: return AMDGPU::V_FMAAK_F32;
+  case AMDGPU::S_CMP_LT_F32: return AMDGPU::V_CMP_LT_F32_e64;
+  case AMDGPU::S_CMP_EQ_F32: return AMDGPU::V_CMP_EQ_F32_e64;
+  case AMDGPU::S_CMP_LE_F32: return AMDGPU::V_CMP_LE_F32_e64;
+  case AMDGPU::S_CMP_GT_F32: return AMDGPU::V_CMP_GT_F32_e64;
+  case AMDGPU::S_CMP_LG_F32: return AMDGPU::V_CMP_LG_F32_e64;
+  case AMDGPU::S_CMP_GE_F32: return AMDGPU::V_CMP_GE_F32_e64;
+  case AMDGPU::S_CMP_O_F32: return AMDGPU::V_CMP_O_F32_e64;
+  case AMDGPU::S_CMP_U_F32: return AMDGPU::V_CMP_U_F32_e64;
+  case AMDGPU::S_CMP_NGE_F32: return AMDGPU::V_CMP_NGE_F32_e64;
+  case AMDGPU::S_CMP_NLG_F32: return AMDGPU::V_CMP_NLG_F32_e64;
+  case AMDGPU::S_CMP_NGT_F32: return AMDGPU::V_CMP_NGT_F32_e64;
+  case AMDGPU::S_CMP_NLE_F32: return AMDGPU::V_CMP_NLE_F32_e64;
+  case AMDGPU::S_CMP_NEQ_F32: return AMDGPU::V_CMP_NEQ_F32_e64;
+  case AMDGPU::S_CMP_NLT_F32: return AMDGPU::V_CMP_NLT_F32_e64;
+  case AMDGPU::S_CMP_LT_F16: return AMDGPU::V_CMP_LT_F16_e64;
+  case AMDGPU::S_CMP_EQ_F16: return AMDGPU::V_CMP_EQ_F16_e64;
+  case AMDGPU::S_CMP_LE_F16: return AMDGPU::V_CMP_LE_F16_e64;
+  case AMDGPU::S_CMP_GT_F16: return AMDGPU::V_CMP_GT_F16_e64;
+  case AMDGPU::S_CMP_LG_F16: return AMDGPU::V_CMP_LG_F16_e64;
+  case AMDGPU::S_CMP_GE_F16: return AMDGPU::V_CMP_GE_F16_e64;
+  case AMDGPU::S_CMP_O_F16: return AMDGPU::V_CMP_O_F16_e64;
+  case AMDGPU::S_CMP_U_F16: return AMDGPU::V_CMP_U_F16_e64;
+  case AMDGPU::S_CMP_NGE_F16: return AMDGPU::V_CMP_NGE_F16_e64;
+  case AMDGPU::S_CMP_NLG_F16: return AMDGPU::V_CMP_NLG_F16_e64;
+  case AMDGPU::S_CMP_NGT_F16: return AMDGPU::V_CMP_NGT_F16_e64;
+  case AMDGPU::S_CMP_NLE_F16: return AMDGPU::V_CMP_NLE_F16_e64;
+  case AMDGPU::S_CMP_NEQ_F16: return AMDGPU::V_CMP_NEQ_F16_e64;
+  case AMDGPU::S_CMP_NLT_F16: return AMDGPU::V_CMP_NLT_F16_e64;
   }
   llvm_unreachable(
       "Unexpected scalar opcode without corresponding vector one!");
@@ -5149,6 +5207,14 @@ void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
 
   if (Src1.isReg() && RI.isAGPR(MRI, Src1.getReg()))
     legalizeOpWithMove(MI, Src1Idx);
+
+  // Special case: V_FMAC_F32 and V_FMAC_F16 have src2.
+  if (Opc == AMDGPU::V_FMAC_F32_e32 || Opc == AMDGPU::V_FMAC_F32_e64 ||
+      Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64) {
+    int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+    if (!RI.isVGPR(MRI, MI.getOperand(Src2Idx).getReg()))
+      legalizeOpWithMove(MI, Src2Idx);
+  }
 
   // VOP2 src0 instructions support all operand types, so we don't need to check
   // their legality. If src1 is already legal, we don't need to do anything.
@@ -6365,6 +6431,65 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
         Inst.eraseFromParent();
       }
       continue;
+    case AMDGPU::S_CMP_LT_F32:
+    case AMDGPU::S_CMP_EQ_F32:
+    case AMDGPU::S_CMP_LE_F32:
+    case AMDGPU::S_CMP_GT_F32:
+    case AMDGPU::S_CMP_LG_F32:
+    case AMDGPU::S_CMP_GE_F32:
+    case AMDGPU::S_CMP_O_F32:
+    case AMDGPU::S_CMP_U_F32:
+    case AMDGPU::S_CMP_NGE_F32:
+    case AMDGPU::S_CMP_NLG_F32:
+    case AMDGPU::S_CMP_NGT_F32:
+    case AMDGPU::S_CMP_NLE_F32:
+    case AMDGPU::S_CMP_NEQ_F32:
+    case AMDGPU::S_CMP_NLT_F32:
+    case AMDGPU::S_CMP_LT_F16:
+    case AMDGPU::S_CMP_EQ_F16:
+    case AMDGPU::S_CMP_LE_F16:
+    case AMDGPU::S_CMP_GT_F16:
+    case AMDGPU::S_CMP_LG_F16:
+    case AMDGPU::S_CMP_GE_F16:
+    case AMDGPU::S_CMP_O_F16:
+    case AMDGPU::S_CMP_U_F16:
+    case AMDGPU::S_CMP_NGE_F16:
+    case AMDGPU::S_CMP_NLG_F16:
+    case AMDGPU::S_CMP_NGT_F16:
+    case AMDGPU::S_CMP_NLE_F16:
+    case AMDGPU::S_CMP_NEQ_F16:
+    case AMDGPU::S_CMP_NLT_F16: {
+      const MCInstrDesc &NewDesc = get(NewOpcode);
+      Register CondReg = MRI.createVirtualRegister(RI.getWaveMaskRegClass());
+      MachineInstr *NewInstr =
+          BuildMI(*MBB, Inst, Inst.getDebugLoc(), NewDesc, CondReg)
+              .addImm(0)               // src0_modifiers
+              .add(Inst.getOperand(0)) // src0
+              .addImm(0)               // src1_modifiers
+              .add(Inst.getOperand(1)) // src1
+              .addImm(0)               // clamp
+              .setMIFlags(Inst.getFlags());
+      legalizeOperands(*NewInstr, MDT);
+      int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC);
+      MachineOperand SCCOp = Inst.getOperand(SCCIdx);
+      addSCCDefUsersToVALUWorklist(SCCOp, Inst, Worklist, CondReg);
+      Inst.eraseFromParent();
+      continue;
+    }
+    case AMDGPU::S_CVT_HI_F32_F16: {
+      const DebugLoc &DL = Inst.getDebugLoc();
+      Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      Register NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
+          .addImm(16)
+          .add(Inst.getOperand(1));
+      BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst).addReg(TmpReg);
+
+      MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+      addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
+      Inst.eraseFromParent();
+      continue;
+    }
     }
 
 

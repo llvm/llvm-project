@@ -942,8 +942,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .legalIf(all(typeInSet(0, {S1, S32}), isPointer(1)));
 
-  getActionDefinitionsBuilder(G_FCMP)
-    .legalForCartesianProduct({S1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase)
+  auto &FCmpBuilder =
+      getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct(
+          {S1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase);
+
+  if (ST.hasSALUFloatInsts())
+    FCmpBuilder.legalForCartesianProduct({S32}, {S16, S32});
+
+  FCmpBuilder
     .widenScalarToNextPow2(1)
     .clampScalar(1, S32, S64)
     .scalarize(0);

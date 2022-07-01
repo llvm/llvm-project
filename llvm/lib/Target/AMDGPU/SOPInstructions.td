@@ -82,6 +82,11 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{31-23} = 0x17d; //encoding;
 }
 
+// 16-bit input, 32-bit output
+class SOP1_32_16 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs SReg_32:$sdst), (ins SSrc_b16:$src0),
+  "$sdst, $src0", pattern>;
+
 class SOP1_32 <string opName, list<dag> pattern=[], bit tied_in = 0> : SOP1_Pseudo <
   opName, (outs SReg_32:$sdst),
   !if(tied_in, (ins SSrc_b32:$src0, SReg_32:$sdst_in),
@@ -172,6 +177,18 @@ class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
 class UniformBinFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0, node:$src1),
   (Op $src0, $src1),
+  [{ return !N->isDivergent(); }]> {
+  // This check is unnecessary as it's captured by the result register
+  // bank constraint.
+  //
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
+}
+
+class UniformTernaryFrag<SDPatternOperator Op> : PatFrag <
+  (ops node:$src0, node:$src1, node:$src2),
+  (Op $src0, $src1, $src2),
   [{ return !N->isDivergent(); }]> {
   // This check is unnecessary as it's captured by the result register
   // bank constraint.
@@ -399,29 +416,33 @@ let SubtargetPredicate = isGFX11Plus in {
   }
 } // End SubtargetPredicate = isGFX11Plus
 
+class SOP1_F32_Inst<string opName, SDPatternOperator Op, ValueType vt0=f32,
+                    ValueType vt1=vt0> :
+  SOP1_32<opName, [(set vt0:$sdst, (UniformUnaryFrag<Op> vt1:$src0))]>;
+
 let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE],
     SchedRW = [WriteSFPU], isReMaterializable = 1 in {
-  def S_CVT_F32_I32 : SOP1_32<"s_cvt_f32_i32">;
-  def S_CVT_F32_U32 : SOP1_32<"s_cvt_f32_u32">;
+  def S_CVT_F32_I32 : SOP1_F32_Inst<"s_cvt_f32_i32", sint_to_fp, f32, i32>;
+  def S_CVT_F32_U32 : SOP1_F32_Inst<"s_cvt_f32_u32", uint_to_fp, f32, i32>;
 
   let mayRaiseFPException = 1 in {
-    def S_CVT_I32_F32    : SOP1_32<"s_cvt_i32_f32">;
-    def S_CVT_U32_F32    : SOP1_32<"s_cvt_u32_f32">;
-    def S_CVT_F32_F16    : SOP1_32<"s_cvt_f32_f16">;
+    def S_CVT_I32_F32    : SOP1_F32_Inst<"s_cvt_i32_f32", fp_to_sint, i32, f32>;
+    def S_CVT_U32_F32    : SOP1_F32_Inst<"s_cvt_u32_f32", fp_to_uint, i32, f32>;
+    def S_CVT_F32_F16    : SOP1_F32_Inst<"s_cvt_f32_f16", fpextend, f32, f16>;
     def S_CVT_HI_F32_F16 : SOP1_32<"s_cvt_hi_f32_f16">;
 
-    def S_CEIL_F32  : SOP1_32<"s_ceil_f32">;
-    def S_FLOOR_F32 : SOP1_32<"s_floor_f32">;
-    def S_TRUNC_F32 : SOP1_32<"s_trunc_f32">;
-    def S_RNDNE_F32 : SOP1_32<"s_rndne_f32">;
+    def S_CEIL_F32  : SOP1_F32_Inst<"s_ceil_f32", fceil>;
+    def S_FLOOR_F32 : SOP1_F32_Inst<"s_floor_f32", ffloor>;
+    def S_TRUNC_F32 : SOP1_F32_Inst<"s_trunc_f32", ftrunc>;
+    def S_RNDNE_F32 : SOP1_F32_Inst<"s_rndne_f32", frint>;
 
     let FPDPRounding = 1 in
-      def S_CVT_F16_F32 : SOP1_32<"s_cvt_f16_f32">;
+      def S_CVT_F16_F32 : SOP1_F32_Inst<"s_cvt_f16_f32", fpround, f16, f32>;
 
-    def S_CEIL_F16  : SOP1_32<"s_ceil_f16">;
-    def S_FLOOR_F16 : SOP1_32<"s_floor_f16">;
-    def S_TRUNC_F16 : SOP1_32<"s_trunc_f16">;
-    def S_RNDNE_F16 : SOP1_32<"s_rndne_f16">;
+    def S_CEIL_F16  : SOP1_F32_Inst<"s_ceil_f16", fceil, f16>;
+    def S_FLOOR_F16 : SOP1_F32_Inst<"s_floor_f16", ffloor, f16>;
+    def S_TRUNC_F16 : SOP1_F32_Inst<"s_trunc_f16", ftrunc, f16>;
+    def S_RNDNE_F16 : SOP1_F32_Inst<"s_rndne_f16", frint, f16>;
   } // End mayRaiseFPException = 1
 } // End SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE]
   // SchedRW = [WriteSFPU], isReMaterializable = 1
@@ -776,14 +797,22 @@ let SubtargetPredicate = isGFX11Plus in {
   def S_PACK_HL_B32_B16 : SOP2_32<"s_pack_hl_b32_b16">;
 } // End SubtargetPredicate = isGFX11Plus
 
+class SOP2_F32_Inst<string opName, SDPatternOperator Op, ValueType dstVt=f32> :
+  SOP2_F32<opName,
+    [(set dstVt:$sdst, (UniformBinFrag<Op> SSrc_f32:$src0, SSrc_f32:$src1))]>;
+
+class SOP2_F16_Inst<string opName, SDPatternOperator Op> :
+  SOP2_F16<opName,
+    [(set f16:$sdst, (UniformBinFrag<Op> SSrc_f16:$src0, SSrc_f16:$src1))]>;
+
 let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     Uses = [MODE], SchedRW = [WriteSFPU] in {
   let isReMaterializable = 1 in {
     let isCommutable = 1 in {
-      def S_ADD_F32 : SOP2_F32<"s_add_f32">;
-      def S_MIN_F32 : SOP2_F32<"s_min_f32">;
-      def S_MAX_F32 : SOP2_F32<"s_max_f32">;
-      def S_MUL_F32 : SOP2_F32<"s_mul_f32">;
+      def S_ADD_F32 : SOP2_F32_Inst<"s_add_f32", any_fadd>;
+      def S_MIN_F32 : SOP2_F32_Inst<"s_min_f32", fminnum_like>;
+      def S_MAX_F32 : SOP2_F32_Inst<"s_max_f32", fmaxnum_like>;
+      def S_MUL_F32 : SOP2_F32_Inst<"s_mul_f32", any_fmul>;
 
       def S_FMAAK_F32 : SOP2_Pseudo<
         "s_fmaak_f32", (outs SReg_32:$sdst),
@@ -792,19 +821,20 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
       >;
 
       let FPDPRounding = 1 in {
-        def S_ADD_F16 : SOP2_F16<"s_add_f16">;
-        def S_MUL_F16 : SOP2_F16<"s_mul_f16">;
+        def S_ADD_F16 : SOP2_F16_Inst<"s_add_f16", any_fadd>;
+        def S_MUL_F16 : SOP2_F16_Inst<"s_mul_f16", any_fmul>;
       } // End FPDPRounding
 
-      def S_MIN_F16 : SOP2_F16<"s_min_f16">;
-      def S_MAX_F16 : SOP2_F16<"s_max_f16">;
+      def S_MIN_F16 : SOP2_F16_Inst<"s_min_f16", fminnum_like>;
+      def S_MAX_F16 : SOP2_F16_Inst<"s_max_f16", fmaxnum_like>;
     } // End isCommutable = 1
 
     let FPDPRounding = 1 in
-      def S_SUB_F16 : SOP2_F16<"s_sub_f16">;
+      def S_SUB_F16 : SOP2_F16_Inst<"s_sub_f16", any_fsub>;
 
-    def S_SUB_F32            : SOP2_F32<"s_sub_f32">;
-    def S_CVT_PK_RTZ_F16_F32 : SOP2_F32<"s_cvt_pk_rtz_f16_f32">;
+    def S_SUB_F32            : SOP2_F32_Inst<"s_sub_f32", any_fsub>;
+    def S_CVT_PK_RTZ_F16_F32 : SOP2_F32_Inst<"s_cvt_pk_rtz_f16_f32",
+                                             AMDGPUpkrtz_f16_f32, v2f16>;
 
     def S_FMAMK_F32 : SOP2_Pseudo<
       "s_fmamk_f32", (outs SReg_32:$sdst),
@@ -814,20 +844,22 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   } // End isReMaterializable = 1
 
   let Constraints = "$sdst = $src2", DisableEncoding="$src2",
-      isCommutable = 1 in {
+      isCommutable = 1, AddedComplexity = 20 in {
     def S_FMAC_F32 : SOP2_Pseudo<
       "s_fmac_f32", (outs SReg_32:$sdst),
       (ins SSrc_f32:$src0, SSrc_f32:$src1, SReg_32:$src2),
-      "$sdst, $src0, $src1"
+      "$sdst, $src0, $src1",
+      [(set f32:$sdst, (UniformTernaryFrag<any_fma> SSrc_f32:$src0, SSrc_f32:$src1, SReg_32:$src2))]
     >;
 
     def S_FMAC_F16 : SOP2_Pseudo<
       "s_fmac_f16", (outs SReg_32:$sdst),
       (ins SSrc_f16:$src0, SSrc_f16:$src1, SReg_32:$src2),
-      "$sdst, $src0, $src1"
+      "$sdst, $src0, $src1",
+      [(set f16:$sdst, (UniformTernaryFrag<any_fma> SSrc_f16:$src0, SSrc_f16:$src1, SReg_32:$src2))]
     >;
   } // End Constraints = "$sdst = $src2", DisableEncoding="$src2",
-    // isCommutable = 1
+    // isCommutable = 1, AddedComplexity = 20
 } // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   // Uses = [MODE], SchedRW = [WriteSFPU]
 
