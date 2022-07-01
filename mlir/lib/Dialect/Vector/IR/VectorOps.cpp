@@ -1882,6 +1882,36 @@ OpFoldResult vector::ShuffleOp::fold(ArrayRef<Attribute> operands) {
   return DenseElementsAttr::get(getVectorType(), results);
 }
 
+namespace {
+
+/// Pattern to rewrite a ShuffleOp(SplatOp, SplatOp) to SplatOp.
+class ShuffleSplat final : public OpRewritePattern<ShuffleOp> {
+public:
+  using OpRewritePattern<ShuffleOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    auto v1Splat = op.getV1().getDefiningOp<SplatOp>();
+    auto v2Splat = op.getV2().getDefiningOp<SplatOp>();
+
+    if (!v1Splat || !v2Splat)
+      return failure();
+
+    if (v1Splat.getInput() != v2Splat.getInput())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), v1Splat.getInput());
+    return success();
+  }
+};
+
+} // namespace
+
+void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  results.add<ShuffleSplat>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // InsertElementOp
 //===----------------------------------------------------------------------===//

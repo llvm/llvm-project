@@ -487,6 +487,7 @@ def Vector_ShuffleOp :
   }];
   let assemblyFormat = "operands $mask attr-dict `:` type(operands)";
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Vector_ExtractElementOp :
