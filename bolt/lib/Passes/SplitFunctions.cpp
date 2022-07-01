@@ -15,7 +15,8 @@
 #include "bolt/Core/ParallelUtilities.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
-
+#include <algorithm>
+#include <random>
 #include <vector>
 
 #define DEBUG_TYPE "bolt-opts"
@@ -48,6 +49,7 @@ extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> SplitEH;
 extern cl::opt<unsigned> ExecutionCountThreshold;
+extern cl::opt<uint32_t> RandomSeed;
 
 static cl::opt<bool> AggressiveSplitting(
     "split-all-cold", cl::desc("outline as many cold basic blocks as possible"),
@@ -75,7 +77,83 @@ static cl::opt<unsigned> SplitThreshold(
              "increase after splitting."),
     cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
+static cl::opt<bool>
+    RandomSplit("split-random",
+                cl::desc("split functions randomly into hot/cold regions"),
+                cl::Hidden);
 } // namespace opts
+
+namespace {
+struct SplitCold {
+  bool canSplit(const BinaryFunction &BF) {
+    if (!BF.hasValidProfile())
+      return false;
+
+    bool AllCold = true;
+    for (BinaryBasicBlock *BB : BF.layout()) {
+      const uint64_t ExecCount = BB->getExecutionCount();
+      if (ExecCount == BinaryBasicBlock::COUNT_NO_PROFILE)
+        return false;
+      if (ExecCount != 0)
+        AllCold = false;
+    }
+
+    return !AllCold;
+  }
+
+  bool canOutline(const BinaryBasicBlock &BB) {
+    return BB.getExecutionCount() == 0;
+  }
+
+  void partition(BinaryFunction::reverse_order_iterator Start,
+                 BinaryFunction::reverse_order_iterator End) const {
+    for (auto I = Start; I != End; ++I) {
+      BinaryBasicBlock *BB = *I;
+      if (!BB->canOutline())
+        break;
+      BB->setIsCold(true);
+    }
+  }
+};
+
+struct SplitRandom {
+  std::minstd_rand0 *Gen;
+
+  explicit SplitRandom(std::minstd_rand0 &Gen) : Gen(&Gen) {}
+
+  bool canSplit(const BinaryFunction &BF) { return true; }
+  bool canOutline(const BinaryBasicBlock &BB) { return true; }
+
+  void partition(BinaryFunction::reverse_order_iterator Start,
+                 BinaryFunction::reverse_order_iterator End) const {
+    using It = decltype(Start);
+
+    const It OutlineableBegin = Start;
+    const It OutlineableEnd =
+        std::find_if(OutlineableBegin, End,
+                     [](BinaryBasicBlock *BB) { return !BB->canOutline(); });
+    const It::difference_type NumOutlineableBlocks =
+        OutlineableEnd - OutlineableBegin;
+
+    // We want to split at least one block unless there are not blocks that can
+    // be outlined
+    const auto MinimumSplit =
+        std::min<It::difference_type>(NumOutlineableBlocks, 1);
+    std::uniform_int_distribution<It::difference_type> Dist(
+        MinimumSplit, NumOutlineableBlocks);
+    const It::difference_type NumColdBlocks = Dist(*Gen);
+    const It ColdEnd = OutlineableBegin + NumColdBlocks;
+
+    LLVM_DEBUG(dbgs() << formatv("BOLT-DEBUG: randomly chose last {0} (out of "
+                                 "{1} possible) blocks to split\n",
+                                 ColdEnd - OutlineableBegin,
+                                 OutlineableEnd - OutlineableBegin));
+
+    std::for_each(OutlineableBegin, ColdEnd,
+                  [](BinaryBasicBlock *BB) { BB->setIsCold(true); });
+  }
+};
+} // namespace
 
 namespace llvm {
 namespace bolt {
@@ -92,17 +170,26 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
   if (!opts::SplitFunctions)
     return;
 
-  ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    splitFunction(BF);
-  };
+  ParallelUtilities::WorkFuncTy WorkFun;
+  std::minstd_rand0 RandGen(opts::RandomSeed.getValue());
+  if (opts::RandomSplit)
+    WorkFun = [&](BinaryFunction &BF) {
+      splitFunction(BF, SplitRandom(RandGen));
+    };
+  else
+    WorkFun = [&](BinaryFunction &BF) { splitFunction<SplitCold>(BF); };
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
     return !shouldOptimize(BF);
   };
 
+  // If we split functions randomly, we need to ensure that across runs with the
+  // same input, we generate random numbers for each function in the same order.
+  const bool ForceSequential = opts::RandomSplit;
+
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_BB_LINEAR, WorkFun, SkipFunc,
-      "SplitFunctions");
+      "SplitFunctions", ForceSequential);
 
   if (SplitBytesHot + SplitBytesCold > 0)
     outs() << "BOLT-INFO: splitting separates " << SplitBytesHot
@@ -111,23 +198,12 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
                      100.0 * SplitBytesHot / (SplitBytesHot + SplitBytesCold));
 }
 
-void SplitFunctions::splitFunction(BinaryFunction &BF) {
-  if (!BF.size())
+template <typename SplitStrategy>
+void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
+  if (BF.empty())
     return;
 
-  if (!BF.hasValidProfile())
-    return;
-
-  bool AllCold = true;
-  for (BinaryBasicBlock *BB : BF.layout()) {
-    const uint64_t ExecCount = BB->getExecutionCount();
-    if (ExecCount == BinaryBasicBlock::COUNT_NO_PROFILE)
-      return;
-    if (ExecCount != 0)
-      AllCold = false;
-  }
-
-  if (AllCold)
+  if (!Strategy.canSplit(BF))
     return;
 
   BinaryFunction::BasicBlockOrderType PreSplitLayout = BF.getLayout();
@@ -149,7 +225,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF) {
   for (BinaryBasicBlock *BB : BF.layout()) {
     if (!BB->canOutline())
       continue;
-    if (BB->getExecutionCount() != 0) {
+    if (!Strategy.canOutline(*BB)) {
       BB->setCanOutline(false);
       continue;
     }
@@ -203,12 +279,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF) {
   }
 
   // Separate hot from cold starting from the bottom.
-  for (auto I = BF.layout_rbegin(), E = BF.layout_rend(); I != E; ++I) {
-    BinaryBasicBlock *BB = *I;
-    if (!BB->canOutline())
-      break;
-    BB->setIsCold(true);
-  }
+  Strategy.partition(BF.layout_rbegin(), BF.layout_rend());
 
   // For shared objects, place invoke instructions and corresponding landing
   // pads in the same fragment. To reduce hot code size, create trampoline
