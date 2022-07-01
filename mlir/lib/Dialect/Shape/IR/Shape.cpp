@@ -1717,7 +1717,7 @@ LogicalResult SplitAtOp::fold(ArrayRef<Attribute> operands,
   // Verify that the split point is in the correct range.
   // TODO: Constant fold to an "error".
   int64_t rank = shape.size();
-  if (!(-rank <= splitPoint && splitPoint <= rank))
+  if (-rank > splitPoint || splitPoint > rank)
     return failure();
   if (splitPoint < 0)
     splitPoint += shape.size();
