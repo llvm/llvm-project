@@ -36,8 +36,8 @@ void dr204(void) {
    * rank; it's acceptable to use an unsigned long or unsigned int for the size
    * type (those ranks are not greater than that of signed long).
    */
-   (void)_Generic(s + sl, unsigned long long : 1, unsigned long : 1, unsigned int : 1);
-   (void)_Generic(p + sl, signed long long : 1, signed long : 1, signed int : 1);
+   (void)_Generic(s + sl, unsigned long long : 1, unsigned long : 1, unsigned int : 1); /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
+   (void)_Generic(p + sl, signed long long : 1, signed long : 1, signed int : 1);       /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
 #elif __LLONG_WIDTH__ == __LONG_WIDTH__
   /* But if the implementation doesn't support a larger standard integer type
    * than signed long, the conversion rank should prefer signed long if the type
