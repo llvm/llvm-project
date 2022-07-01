@@ -139,3 +139,7 @@ void WebAssemblyTTIImpl::getUnrollingPreferences(
   // becomes "fall through" to default value of 2.
   UP.BEInsns = 2;
 }
+
+bool WebAssemblyTTIImpl::supportsTailCalls() const {
+  return getST()->hasTailCall();
+}

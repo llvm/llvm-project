@@ -522,6 +522,10 @@ bool TargetTransformInfo::supportsEfficientVectorElementLoadStore() const {
   return TTIImpl->supportsEfficientVectorElementLoadStore();
 }
 
+bool TargetTransformInfo::supportsTailCalls() const {
+  return TTIImpl->supportsTailCalls();
+}
+
 bool TargetTransformInfo::enableAggressiveInterleaving(
     bool LoopHasReductions) const {
   return TTIImpl->enableAggressiveInterleaving(LoopHasReductions);
