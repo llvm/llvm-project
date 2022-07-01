@@ -1092,8 +1092,7 @@ define i1 @lshr_pow2_sgt(i8 %x) {
 
 define i1 @lshr_pow2_ult(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_ult(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 4, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], 2
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 4, %x
@@ -1105,7 +1104,7 @@ define i1 @lshr_pow2_ult_use(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_ult_use(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], 5
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], 4
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i8 128, %x
@@ -1116,14 +1115,15 @@ define i1 @lshr_pow2_ult_use(i8 %x) {
 
 define <2 x i1> @lshr_pow2_ult_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_pow2_ult_vec(
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i8> <i8 8, i8 8>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[S]], <i8 6, i8 6>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %s = lshr <2 x i8> <i8 8, i8 8>, %x
   %r = icmp ult <2 x i8> %s, <i8 6, i8 6>
   ret <2 x i1> %r
 }
+
+; negative test - need power-of-2
 
 define i1 @lshr_not_pow2_ult(i8 %x) {
 ; CHECK-LABEL: @lshr_not_pow2_ult(
@@ -1136,6 +1136,8 @@ define i1 @lshr_not_pow2_ult(i8 %x) {
   ret i1 %r
 }
 
+; TODO: This should reduce to X != 0.
+
 define i1 @lshr_pow2_ult_smin(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_ult_smin(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
@@ -1147,6 +1149,8 @@ define i1 @lshr_pow2_ult_smin(i8 %x) {
   ret i1 %r
 }
 
+; negative test - need logical shift
+
 define i1 @ashr_pow2_ult(i8 %x) {
 ; CHECK-LABEL: @ashr_pow2_ult(
 ; CHECK-NEXT:    [[S:%.*]] = ashr i8 -128, [[X:%.*]]
@@ -1157,6 +1161,8 @@ define i1 @ashr_pow2_ult(i8 %x) {
   %r = icmp ult i8 %s, 160
   ret i1 %r
 }
+
+; negative test - need unsigned pred
 
 define i1 @lshr_pow2_slt(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_slt(
