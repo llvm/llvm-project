@@ -108,8 +108,19 @@ struct SparseTensorConversionPass
       return converter.isLegal(op.getOperandTypes());
     });
     target.addDynamicallyLegalOp<tensor::CastOp>([&](tensor::CastOp op) {
-      return converter.isLegal(op.getOperand().getType());
+      return converter.isLegal(op.source().getType()) &&
+             converter.isLegal(op.dest().getType());
     });
+    target.addDynamicallyLegalOp<tensor::ExpandShapeOp>(
+        [&](tensor::ExpandShapeOp op) {
+          return converter.isLegal(op.src().getType()) &&
+                 converter.isLegal(op.result().getType());
+        });
+    target.addDynamicallyLegalOp<tensor::CollapseShapeOp>(
+        [&](tensor::CollapseShapeOp op) {
+          return converter.isLegal(op.src().getType()) &&
+                 converter.isLegal(op.result().getType());
+        });
     target.addDynamicallyLegalOp<bufferization::AllocTensorOp>(
         [&](bufferization::AllocTensorOp op) {
           return converter.isLegal(op.getType());
