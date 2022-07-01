@@ -22,11 +22,17 @@ namespace detail {
 
 /// This class contains record of any parsed top-level symbols.
 struct SymbolState {
-  // A map from attribute alias identifier to Attribute.
+  /// A map from attribute alias identifier to Attribute.
   llvm::StringMap<Attribute> attributeAliasDefinitions;
 
-  // A map from type alias identifier to Type.
+  /// A map from type alias identifier to Type.
   llvm::StringMap<Type> typeAliasDefinitions;
+
+  /// A map of dialect resource keys to the resolved resource name and handle
+  /// to use during parsing.
+  DenseMap<const OpAsmDialectInterface *,
+           llvm::StringMap<std::pair<std::string, AsmDialectResourceHandle>>>
+      dialectResources;
 
   /// A set of locations into the main parser memory buffer for each of the
   /// active nested parsers. Given that some nested parsers, i.e. custom dialect
@@ -47,11 +53,11 @@ struct SymbolState {
 /// This class refers to all of the state maintained globally by the parser,
 /// such as the current lexer position etc.
 struct ParserState {
-  ParserState(const llvm::SourceMgr &sourceMgr, MLIRContext *ctx,
+  ParserState(const llvm::SourceMgr &sourceMgr, const ParserConfig &config,
               SymbolState &symbols, AsmParserState *asmState)
-      : context(ctx), lex(sourceMgr, ctx), curToken(lex.lexToken()),
-        symbols(symbols), parserDepth(symbols.nestedParserLocs.size()),
-        asmState(asmState) {
+      : config(config), lex(sourceMgr, config.getContext()),
+        curToken(lex.lexToken()), symbols(symbols),
+        parserDepth(symbols.nestedParserLocs.size()), asmState(asmState) {
     // Set the top level lexer for the symbol state if one doesn't exist.
     if (!symbols.topLevelLexer)
       symbols.topLevelLexer = &lex;
@@ -64,8 +70,8 @@ struct ParserState {
   ParserState(const ParserState &) = delete;
   void operator=(const ParserState &) = delete;
 
-  /// The context we're parsing into.
-  MLIRContext *const context;
+  /// The configuration used to setup the parser.
+  const ParserConfig &config;
 
   /// The lexer for the source file we're parsing.
   Lexer lex;

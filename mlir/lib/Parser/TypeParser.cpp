@@ -232,8 +232,7 @@ Type Parser::parseMemRefType() {
       if (failed(parseStridedLayout(offset, strides)))
         return failure();
       // Construct strided affine map.
-      AffineMap map =
-          makeStridedLinearLayoutMap(strides, offset, state.context);
+      AffineMap map = makeStridedLinearLayoutMap(strides, offset, getContext());
       layout = AffineMapAttr::get(map);
     } else {
       // Either it is MemRefLayoutAttrInterface or memory space attribute.

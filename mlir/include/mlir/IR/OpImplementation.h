@@ -20,8 +20,81 @@
 #include "llvm/Support/SMLoc.h"
 
 namespace mlir {
-
+class AsmParsedResourceEntry;
+class AsmResourceBuilder;
 class Builder;
+
+//===----------------------------------------------------------------------===//
+// AsmDialectResourceHandle
+//===----------------------------------------------------------------------===//
+
+/// This class represents an opaque handle to a dialect resource entry.
+class AsmDialectResourceHandle {
+public:
+  AsmDialectResourceHandle() = default;
+  AsmDialectResourceHandle(void *resource, TypeID resourceID, Dialect *dialect)
+      : resource(resource), opaqueID(resourceID), dialect(dialect) {}
+  bool operator==(const AsmDialectResourceHandle &other) const {
+    return resource == other.resource;
+  }
+
+  /// Return an opaque pointer to the referenced resource.
+  void *getResource() const { return resource; }
+
+  /// Return the type ID of the resource.
+  TypeID getTypeID() const { return opaqueID; }
+
+  /// Return the dialect that owns the resource.
+  Dialect *getDialect() const { return dialect; }
+
+private:
+  /// The opaque handle to the dialect resource.
+  void *resource = nullptr;
+  /// The type of the resource referenced.
+  TypeID opaqueID;
+  /// The dialect owning the given resource.
+  Dialect *dialect;
+};
+
+/// This class represents a CRTP base class for dialect resource handles. It
+/// abstracts away various utilities necessary for defined derived resource
+/// handles.
+template <typename DerivedT, typename ResourceT, typename DialectT>
+class AsmDialectResourceHandleBase : public AsmDialectResourceHandle {
+public:
+  using Dialect = DialectT;
+
+  /// Construct a handle from a pointer to the resource. The given pointer
+  /// should be guaranteed to live beyond the life of this handle.
+  AsmDialectResourceHandleBase(ResourceT *resource, DialectT *dialect)
+      : AsmDialectResourceHandle(resource, TypeID::get<DerivedT>(), dialect) {}
+  AsmDialectResourceHandleBase(AsmDialectResourceHandle handle)
+      : AsmDialectResourceHandle(handle) {
+    assert(handle.getTypeID() == TypeID::get<DerivedT>());
+  }
+
+  /// Return the resource referenced by this handle.
+  ResourceT *getResource() {
+    return static_cast<ResourceT *>(AsmDialectResourceHandle::getResource());
+  }
+  const ResourceT *getResource() const {
+    return const_cast<AsmDialectResourceHandleBase *>(this)->getResource();
+  }
+
+  /// Return the dialect that owns the resource.
+  DialectT *getDialect() const {
+    return static_cast<DialectT *>(AsmDialectResourceHandle::getDialect());
+  }
+
+  /// Support llvm style casting.
+  static bool classof(const AsmDialectResourceHandle *handle) {
+    return handle->getTypeID() == TypeID::get<DerivedT>();
+  }
+};
+
+inline llvm::hash_code hash_value(const AsmDialectResourceHandle &param) {
+  return llvm::hash_value(param.getResource());
+}
 
 //===----------------------------------------------------------------------===//
 // AsmPrinter
@@ -107,6 +180,9 @@ public:
   /// with '@'. The reference is surrounded with ""'s and escaped if it has any
   /// special or non-printable characters in it.
   virtual void printSymbolName(StringRef symbolRef);
+
+  /// Print a handle to the given dialect resource.
+  void printResourceHandle(const AsmDialectResourceHandle &resource);
 
   /// Print an optional arrow followed by a type list.
   template <typename TypeRange>
@@ -871,6 +947,24 @@ public:
                                               NamedAttrList &attrs) = 0;
 
   //===--------------------------------------------------------------------===//
+  // Resource Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// Parse a handle to a resource within the assembly format.
+  template <typename ResourceT>
+  FailureOr<ResourceT> parseResourceHandle() {
+    SMLoc handleLoc = getCurrentLocation();
+    FailureOr<AsmDialectResourceHandle> handle = parseResourceHandle(
+        getContext()->getOrLoadDialect<typename ResourceT::Dialect>());
+    if (failed(handle))
+      return failure();
+    if (auto *result = dyn_cast<ResourceT>(&*handle))
+      return std::move(*result);
+    return emitError(handleLoc) << "provided resource handle differs from the "
+                                   "expected resource type";
+  }
+
+  //===--------------------------------------------------------------------===//
   // Type Parsing
   //===--------------------------------------------------------------------===//
 
@@ -1025,6 +1119,12 @@ public:
   /// juxtaposed with an element type, as in "xf32", leaving the "f32" as the
   /// next token.
   virtual ParseResult parseXInDimensionList() = 0;
+
+protected:
+  /// Parse a handle to a resource within the assembly format for the given
+  /// dialect.
+  virtual FailureOr<AsmDialectResourceHandle>
+  parseResourceHandle(Dialect *dialect) = 0;
 
 private:
   AsmParser(const AsmParser &) = delete;
@@ -1338,6 +1438,12 @@ using OpAsmSetBlockNameFn = function_ref<void(Block *, StringRef)>;
 class OpAsmDialectInterface
     : public DialectInterface::Base<OpAsmDialectInterface> {
 public:
+  OpAsmDialectInterface(Dialect *dialect) : Base(dialect) {}
+
+  //===------------------------------------------------------------------===//
+  // Aliases
+  //===------------------------------------------------------------------===//
+
   /// Holds the result of `getAlias` hook call.
   enum class AliasResult {
     /// The object (type or attribute) is not supported by the hook
@@ -1350,8 +1456,6 @@ public:
     FinalAlias
   };
 
-  OpAsmDialectInterface(Dialect *dialect) : Base(dialect) {}
-
   /// Hooks for getting an alias identifier alias for a given symbol, that is
   /// not necessarily a part of this dialect. The identifier is used in place of
   /// the symbol when printing textual IR. These aliases must not contain `.` or
@@ -1362,6 +1466,41 @@ public:
   virtual AliasResult getAlias(Type type, raw_ostream &os) const {
     return AliasResult::NoAlias;
   }
+
+  //===--------------------------------------------------------------------===//
+  // Resources
+  //===--------------------------------------------------------------------===//
+
+  /// Declare a resource with the given key, returning a handle to use for any
+  /// references of this resource key within the IR during parsing. The result
+  /// of `getResourceKey` on the returned handle is permitted to be different
+  /// than `key`.
+  virtual FailureOr<AsmDialectResourceHandle>
+  declareResource(StringRef key) const {
+    return failure();
+  }
+
+  /// Return a key to use for the given resource. This key should uniquely
+  /// identify this resource within the dialect.
+  virtual std::string
+  getResourceKey(const AsmDialectResourceHandle &handle) const {
+    llvm_unreachable(
+        "Dialect must implement `getResourceKey` when defining resources");
+  }
+
+  /// Hook for parsing resource entries. Returns failure if the entry was not
+  /// valid, or could otherwise not be processed correctly. Any necessary errors
+  /// can be emitted via the provided entry.
+  virtual LogicalResult parseResource(AsmParsedResourceEntry &entry) const;
+
+  /// Hook for building resources to use during printing. The given `op` may be
+  /// inspected to help determine what information to include.
+  /// `referencedResources` contains all of the resources detected when printing
+  /// 'op'.
+  virtual void
+  buildResources(Operation *op,
+                 const SetVector<AsmDialectResourceHandle> &referencedResources,
+                 AsmResourceBuilder &builder) const {}
 };
 } // namespace mlir
 
@@ -1371,5 +1510,26 @@ public:
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
 #include "mlir/IR/OpAsmInterface.h.inc"
+
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::AsmDialectResourceHandle> {
+  static inline mlir::AsmDialectResourceHandle getEmptyKey() {
+    return {DenseMapInfo<void *>::getEmptyKey(),
+            DenseMapInfo<mlir::TypeID>::getEmptyKey(), nullptr};
+  }
+  static inline mlir::AsmDialectResourceHandle getTombstoneKey() {
+    return {DenseMapInfo<void *>::getTombstoneKey(),
+            DenseMapInfo<mlir::TypeID>::getTombstoneKey(), nullptr};
+  }
+  static unsigned getHashValue(const mlir::AsmDialectResourceHandle &handle) {
+    return DenseMapInfo<void *>::getHashValue(handle.getResource());
+  }
+  static bool isEqual(const mlir::AsmDialectResourceHandle &lhs,
+                      const mlir::AsmDialectResourceHandle &rhs) {
+    return lhs.getResource() == rhs.getResource();
+  }
+};
+} // namespace llvm
 
 #endif
