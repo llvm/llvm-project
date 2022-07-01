@@ -15,10 +15,10 @@ void dr208(void) {
     [0] = dr208_init(2) /* expected-warning {{initializer overrides prior initialization of this subobject}} */
   };
 
-  /* CHECK-NOT: call i32 @dr208_init(i32 noundef 0)
-     CHECK-DAG: call i32 @dr208_init(i32 noundef 1)
-     CHECK-DAG: call i32 @dr208_init(i32 noundef 2)
-     CHECK-NOT: call i32 @dr208_init(i32 noundef 0)
+  /* CHECK-NOT: call {{signext i32|i32}} @dr208_init(i32 noundef {{(signext )?}}0)
+     CHECK-DAG: call {{signext i32|i32}} @dr208_init(i32 noundef {{(signext )?}}1)
+     CHECK-DAG: call {{signext i32|i32}} @dr208_init(i32 noundef {{(signext )?}}2)
+     CHECK-NOT: call {{signext i32|i32}} @dr208_init(i32 noundef {{(signext )?}}0)
    */
 }
 
