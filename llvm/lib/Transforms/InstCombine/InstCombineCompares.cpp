@@ -1551,6 +1551,8 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
            SrcBits = X->getType()->getScalarSizeInBits();
   if (Cmp.isEquality() && Trunc->hasOneUse()) {
+    // Canonicalize to a mask and wider compare if the wide type is suitable:
+    // (trunc X to i8) == C --> (X & 0xff) == (zext C)
     if (!X->getType()->isVectorTy() && shouldChangeType(DstBits, SrcBits)) {
       Constant *Mask = ConstantInt::get(X->getType(),
                                         APInt::getLowBitsSet(SrcBits, DstBits));
