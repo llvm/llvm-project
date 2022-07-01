@@ -4188,12 +4188,46 @@ public:
   }
 };
 
+/// Pattern to rewrite a ShapeCast(Broadcast) -> Broadcast.
+/// This only applies when the shape of the broadcast source is a suffix of the
+/// shape of the result (i.e. when broadcast without reshape is expressive
+/// enough to capture the result in a single op).
+class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
+public:
+  using OpRewritePattern<ShapeCastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto broadcastOp =
+        shapeCastOp.getSource().getDefiningOp<vector::BroadcastOp>();
+    if (!broadcastOp)
+      return failure();
+
+    auto broadcastSourceVectorType =
+        broadcastOp.getSourceType().dyn_cast<VectorType>();
+    auto broadcastSourceShape = broadcastSourceVectorType
+                                    ? broadcastSourceVectorType.getShape()
+                                    : ArrayRef<int64_t>{};
+    auto shapeCastTargetShape = shapeCastOp.getResultVectorType().getShape();
+
+    // Bail if `broadcastSourceShape` is not a suffix of the result.
+    bool isSuffix = (broadcastSourceShape == shapeCastTargetShape.take_back(
+                                                 broadcastSourceShape.size()));
+    if (!isSuffix)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        shapeCastOp, shapeCastOp.getResultVectorType(),
+        broadcastOp.getSource());
+    return success();
+  }
+};
+
 } // namespace
 
 void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  // Pattern to rewrite a ShapeCastOp(ConstantOp) -> ConstantOp.
-  results.add<ShapeCastConstantFolder>(context);
+  results.add<ShapeCastConstantFolder, ShapeCastBroadcastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
