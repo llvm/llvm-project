@@ -1215,6 +1215,18 @@ ForeachThreadOp mlir::scf::getForeachThreadOpThreadIndexOwner(Value val) {
 // ParallelInsertSliceOp
 //===----------------------------------------------------------------------===//
 
+OpResult ParallelInsertSliceOp::getTiedOpResult() {
+  auto foreachThreadOp = getOperation()->getParentOfType<ForeachThreadOp>();
+  assert(foreachThreadOp && "unlinked ParallelInsertSliceOp");
+  PerformConcurrentlyOp performConcurrentlyOp = foreachThreadOp.getTerminator();
+  for (const auto &it : llvm::enumerate(performConcurrentlyOp.yieldingOps())) {
+    Operation &nextOp = it.value();
+    if (&nextOp == getOperation())
+      return foreachThreadOp->getResult(it.index());
+  }
+  llvm_unreachable("ParallelInsertSliceOp not found");
+}
+
 // Build a ParallelInsertSliceOp with mixed static and dynamic entries.
 void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
                                   Value source, Value dest,
