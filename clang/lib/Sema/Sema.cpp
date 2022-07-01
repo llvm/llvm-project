@@ -2225,7 +2225,8 @@ operator()(sema::FunctionScopeInfo *Scope) const {
 }
 
 void Sema::PushCompoundScope(bool IsStmtExpr) {
-  getCurFunction()->CompoundScopes.push_back(CompoundScopeInfo(IsStmtExpr));
+  getCurFunction()->CompoundScopes.push_back(
+      CompoundScopeInfo(IsStmtExpr, getCurFPFeatures()));
 }
 
 void Sema::PopCompoundScope() {
