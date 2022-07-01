@@ -1482,7 +1482,7 @@ private:
         auto lp = builder->create<fir::DoLoopOp>(
             loc, lb, ub, by, /*unordered=*/true,
             /*finalCount=*/false, explicitIterSpace.getInnerArgs());
-        if (!loops.empty() || !outermost)
+        if ((!loops.empty() || !outermost) && !lp.getRegionIterArgs().empty())
           builder->create<fir::ResultOp>(loc, lp.getResults());
         explicitIterSpace.setInnerArgs(lp.getRegionIterArgs());
         builder->setInsertionPointToStart(lp.getBody());
@@ -2198,7 +2198,7 @@ private:
                     lengthParams.push_back(charBox->getLen());
                   else if (fir::isDerivedWithLenParameters(rhs))
                     TODO(loc, "assignment to derived type allocatable with "
-                              "length parameters");
+                              "LEN parameters");
                   lhsRealloc = fir::factory::genReallocIfNeeded(
                       *builder, loc, *lhsMutableBox,
                       /*shape=*/llvm::None, lengthParams);
