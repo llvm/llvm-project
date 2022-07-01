@@ -111,10 +111,6 @@ public:
   // Unary Operators
   //===--------------------------------------------------------------------===//
 
-  Value *CreateNeg(Constant *C, bool HasNUW = false,
-                   bool HasNSW = false) const override {
-    return ConstFolder.CreateNeg(C, HasNUW, HasNSW);
-  }
   Value *CreateFNeg(Constant *C) const override {
     return ConstFolder.CreateFNeg(C);
   }
