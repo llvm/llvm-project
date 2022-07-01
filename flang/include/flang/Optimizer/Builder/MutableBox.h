@@ -35,7 +35,7 @@ namespace fir::factory {
 /// allocatable variable. Initialization of such variable has to be done at the
 /// beginning of the variable lifetime by storing the created box in the memory
 /// for the variable box.
-/// \p nonDeferredParams must provide the non deferred length parameters so that
+/// \p nonDeferredParams must provide the non deferred LEN parameters so that
 /// they can already be placed in the unallocated box (inquiries about these
 /// parameters are legal even in unallocated state).
 mlir::Value createUnallocatedBox(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -77,13 +77,13 @@ void disassociateMutableBox(fir::FirOpBuilder &builder, mlir::Location loc,
                             const fir::MutableBoxValue &box);
 
 /// Generate code to conditionally reallocate a MutableBoxValue with a new
-/// shape, lower bounds, and length parameters if it is unallocated or if its
-/// current shape or deferred  length parameters do not match the provided ones.
+/// shape, lower bounds, and LEN parameters if it is unallocated or if its
+/// current shape or deferred  LEN parameters do not match the provided ones.
 /// Lower bounds are only used if the entity needs to be allocated, otherwise,
 /// the MutableBoxValue will keep its current lower bounds.
 /// If the MutableBoxValue is an array, the provided shape can be empty, in
 /// which case the MutableBoxValue must already be allocated at runtime and its
-/// shape and lower bounds will be kept. If \p shape is empty, only a length
+/// shape and lower bounds will be kept. If \p shape is empty, only a LEN
 /// parameter mismatch can trigger a reallocation. See Fortran 10.2.1.3 point 3
 /// that this function is implementing for more details. The polymorphic
 /// requirements are not yet covered by this function.
