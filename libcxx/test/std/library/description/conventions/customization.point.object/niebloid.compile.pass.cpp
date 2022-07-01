@@ -140,7 +140,7 @@ static_assert(test(std::ranges::reverse, a));
 static_assert(test(std::ranges::sort, a));
 //static_assert(test(std::ranges::sort_heap, a));
 //static_assert(test(std::ranges::stable_partition, a, odd));
-//static_assert(test(std::ranges::stable_sort, a));
+static_assert(test(std::ranges::stable_sort, a));
 //static_assert(test(std::ranges::starts_with, a, a));
 static_assert(test(std::ranges::swap_ranges, a, a));
 static_assert(test(std::ranges::transform, a, a, triple));

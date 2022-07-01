@@ -213,8 +213,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::sort_heap(a, Less(&copies)); assert(copies == 0);
     //if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(first, last, UnaryTrue(&copies)); assert(copies == 0); }
     //if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(a, UnaryTrue(&copies)); assert(copies == 0); }
-    //if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(first, last, Less(&copies)); assert(copies == 0); }
-    //if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(a, Less(&copies)); assert(copies == 0); }
+    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(first, last, Less(&copies)); assert(copies == 0); }
+    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(a, Less(&copies)); assert(copies == 0); }
 #if TEST_STD_VER > 20
     //(void)std::ranges::starts_with(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
 #endif

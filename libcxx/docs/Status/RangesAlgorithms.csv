@@ -74,7 +74,7 @@ Permutation,unique,Not assigned,n/a,Not started
 Permutation,partition,Not assigned,n/a,Not started
 Permutation,stable_partition,Not assigned,n/a,Not started
 Permutation,sort,Konstantin Varlamov,`D127557 <https://llvm.org/D127557>`_,✅
-Permutation,stable_sort,Konstantin Varlamov,n/a,In progress
+Permutation,stable_sort,Konstantin Varlamov,`D127834 <https://llvm.org/D127834>`_,✅
 Permutation,partial_sort,Konstantin Varlamov,n/a,In progress
 Permutation,nth_element,Not assigned,n/a,Not started
 Permutation,inplace_merge,Not assigned,n/a,Not started
