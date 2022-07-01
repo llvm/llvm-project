@@ -8,7 +8,6 @@
 #include "AtomicCondition.h"
 
 enum NodeKind {
-  Number,
   Register,
   UnaryInstruction,
   BinaryInstruction
@@ -33,8 +32,9 @@ typedef struct InstructionNodePair {
 
 typedef struct ComputationGraph {
   uint64_t LinkedListSize;
-  CGNode* NodesLinkedListHead;
+  CGNode *NodesLinkedListHead;
   InstructionNodePair* InstructionNodeMapHead;
+  char *PreviousBasicBlock;
 } ComputationGraph;
 
 ComputationGraph *CG;
@@ -75,11 +75,13 @@ int fCGnodesEqual(CGNode *Node1, CGNode *Node2)
   return 0;
 }
 
-void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char *RightOpInstructionString, enum NodeKind NK){
+void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char *RightOpInstructionString, char *BasicBlockName, enum NodeKind NK){
   CGNode *Node=NULL;
   CGNode *CurrNode=NULL;
   CGNode *PrevNode=NULL;
   InstructionNodePair *NewPair=NULL;
+  InstructionNodePair *CurrPair = NULL;
+  InstructionNodePair *PrevPair = NULL;
 
   if((Node = (CGNode *)malloc(sizeof(CGNode))) == NULL) {
     printf("#fAC: AC table out of memory error!");
@@ -102,9 +104,186 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
   NewPair->NodeId = NodeCounter;
   NewPair->Next = NULL;
 
+  int LeftOpNodeId=-1;
+  int RightOpNodeId=-1;
+  char *ResolvedLeftInstruction;
+  char *ResolvedRightInstruction;
+  // Linking Left and Right operand nodes to Node if any
+  switch (NK) {
+  case 0:
+    break;
+  case 1:
+    // Setting the Left Node
+    ResolvedLeftInstruction = (char*)malloc ( strlen(LeftOpInstructionString) * sizeof (char));
+    strncpy(ResolvedLeftInstruction, LeftOpInstructionString, strlen(LeftOpInstructionString)+1);
+
+    if (strstr(LeftOpInstructionString, "phi")!=NULL) {
+      const unsigned long LeftSplitLen = strstr(LeftOpInstructionString, CG->PreviousBasicBlock) - LeftOpInstructionString-3;
+      char *LeftOpLeftSplit = (char*)malloc ( (LeftSplitLen+1) * sizeof (char));
+
+      strncpy(LeftOpLeftSplit, LeftOpInstructionString, LeftSplitLen+1);
+      LeftOpLeftSplit[LeftSplitLen]=' ';
+      LeftOpLeftSplit[LeftSplitLen]=0;
+
+      if ((strrchr(LeftOpLeftSplit, '[')+2)[0] == '%') {
+        CurrPair = CG->InstructionNodeMapHead;
+        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
+                                          strrchr(LeftOpLeftSplit, '[') + 2) !=
+                                       CurrPair->InstructionString) {
+          CurrPair = CurrPair->Next;
+        }
+        ResolvedLeftInstruction = CurrPair->InstructionString;
+      } else {
+        ResolvedLeftInstruction[0] = 0;
+      }
+      free(LeftOpLeftSplit);
+    }
+
+    if(strcmp(ResolvedLeftInstruction, "")!=0) {
+      CurrPair = CG->InstructionNodeMapHead;
+      while (CurrPair != NULL && strncmp(CurrPair->InstructionString,
+                                        ResolvedLeftInstruction,
+                                        strlen(ResolvedLeftInstruction)) != 0) {
+        CurrPair = CurrPair->Next;
+      }
+      LeftOpNodeId = CurrPair->NodeId;
+
+      CurrNode = CG->NodesLinkedListHead;
+      while (CurrNode != NULL && CurrNode->NodeId != LeftOpNodeId) {
+        CurrNode = CurrNode->Next;
+      }
+      Node->LeftNode = CurrNode;
+    }
+
+    if(Node->LeftNode != NULL) {
+      Node->Height = Node->LeftNode->Height;
+      Node->LeftNode->RootNode = 0;
+    }
+    Node->Height = Node->Height+1;
+    Node->RootNode = 1;
+
+    break;
+  case 2:
+    // Setting the Left Node
+//    printf("InstructionString: %s\n", InstructionString);
+//    printf("LeftOpInstructionString: %s\n", LeftOpInstructionString);
+//    printf("RightOpInstructionString: %s\n", RightOpInstructionString);
+//    printf("Current BasicBlockName: %s\n", BasicBlockName);
+//    printf("Previous BasicBlockName: %s\n", CG->PreviousBasicBlock);
+    ResolvedLeftInstruction = (char*)malloc ( strlen(LeftOpInstructionString) * sizeof (char));
+    strncpy(ResolvedLeftInstruction, LeftOpInstructionString, strlen(LeftOpInstructionString)+1);
+
+    if (strstr(LeftOpInstructionString, "phi")!=NULL) {
+
+      unsigned long LeftSplitLen = strstr(LeftOpInstructionString, CG->PreviousBasicBlock) - LeftOpInstructionString-3;
+      char *LeftOpLeftSplit = (char*)malloc ( (LeftSplitLen+1) * sizeof (char));
+
+      strncpy(LeftOpLeftSplit, LeftOpInstructionString, LeftSplitLen+1);
+      LeftOpLeftSplit[LeftSplitLen]=' ';
+      LeftOpLeftSplit[LeftSplitLen]=0;
+
+      if ((strrchr(LeftOpLeftSplit, '[')+2)[0] == '%') {
+        CurrPair = CG->InstructionNodeMapHead;
+        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
+                                          strrchr(LeftOpLeftSplit, '[') + 2) !=
+                                       CurrPair->InstructionString) {
+          CurrPair = CurrPair->Next;
+        }
+        ResolvedLeftInstruction = CurrPair->InstructionString;
+      } else {
+        ResolvedLeftInstruction[0] = 0;
+      }
+      free(LeftOpLeftSplit);
+    }
+
+//    printf("ResolvedLeftInstruction: %s\n", ResolvedLeftInstruction);
+
+    if(strcmp(ResolvedLeftInstruction, "")!=0) {
+      CurrPair = CG->InstructionNodeMapHead;
+      while (CurrPair != NULL &&
+             strncmp(CurrPair->InstructionString,
+                     ResolvedLeftInstruction,
+                     strlen(ResolvedLeftInstruction)) != 0) {
+        CurrPair = CurrPair->Next;
+      }
+      LeftOpNodeId = CurrPair->NodeId;
+
+//      printf("LeftOpNodeId: %d\n", LeftOpNodeId);
+
+      CurrNode = CG->NodesLinkedListHead;
+      while (CurrNode != NULL && CurrNode->NodeId != LeftOpNodeId) {
+        CurrNode = CurrNode->Next;
+      }
+      Node->LeftNode = CurrNode;
+    }
+
+    // Setting the Right Node
+    ResolvedRightInstruction = (char*)malloc ( strlen(RightOpInstructionString) * sizeof (char));
+    strncpy(ResolvedRightInstruction, RightOpInstructionString, strlen(RightOpInstructionString)+1);
+
+    if (strstr(RightOpInstructionString, "phi")!=NULL) {
+      unsigned long LeftSplitLen = strstr(RightOpInstructionString, CG->PreviousBasicBlock) - RightOpInstructionString-3;
+      char *RightOpLeftSplit = (char*)malloc ( (LeftSplitLen+1) * sizeof (char));
+
+      strncpy(RightOpLeftSplit, RightOpInstructionString, LeftSplitLen+1);
+      RightOpLeftSplit[LeftSplitLen]=' ';
+      RightOpLeftSplit[LeftSplitLen]=0;
+
+
+      if ((strrchr(RightOpLeftSplit, '[')+2)[0] == '%') {
+        CurrPair = CG->InstructionNodeMapHead;
+        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
+                                          strrchr(RightOpLeftSplit, '[') + 2) !=
+                                       CurrPair->InstructionString) {
+          CurrPair = CurrPair->Next;
+        }
+        ResolvedRightInstruction = CurrPair->InstructionString;
+      } else {
+        ResolvedRightInstruction[0] = 0;
+      }
+      free(RightOpLeftSplit);
+    }
+
+//    printf("ResolvedRightInstruction: %s\n", ResolvedRightInstruction);
+
+    if(strcmp(ResolvedRightInstruction, "")!=0) {
+      CurrPair = CG->InstructionNodeMapHead;
+      while (CurrPair != NULL && strncmp(CurrPair->InstructionString,
+                                        ResolvedRightInstruction,
+                                         strlen(ResolvedRightInstruction)) != 0) {
+        CurrPair = CurrPair->Next;
+      }
+      RightOpNodeId = CurrPair->NodeId;
+
+//      printf("RightOpNodeId: %d\n", RightOpNodeId);
+
+      CurrNode = CG->NodesLinkedListHead;
+      while (CurrNode != NULL && CurrNode->NodeId != RightOpNodeId) {
+        CurrNode = CurrNode->Next;
+      }
+      Node->RightNode = CurrNode;
+    }
+
+    if(Node->LeftNode != NULL) {
+      Node->Height = Node->LeftNode->Height;
+      Node->LeftNode->RootNode = 0;
+    }
+    if(Node->RightNode != NULL && Node->Height < Node->RightNode->Height) {
+      Node->Height = Node->RightNode->Height;
+      Node->RightNode->RootNode = 0;
+    }
+    Node->Height = Node->Height+1;
+    Node->RootNode = 1;
+
+    break;
+  default:
+    printf("#fAC: Node Kind Unknown!");
+    exit(EXIT_FAILURE);
+  }
+
   // Update/Insert a New Key-Value pair in InstructionNodeMap
-  InstructionNodePair *CurrPair = CG->InstructionNodeMapHead;
-  InstructionNodePair *PrevPair = NULL;
+  CurrPair = CG->InstructionNodeMapHead;
+  PrevPair = NULL;
   if (CG->LinkedListSize==0)
     CG->InstructionNodeMapHead = NewPair;
   else {
@@ -123,70 +302,6 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
   NodeCounter++;
 
 
-  int LeftOpNodeId=-1;
-  int RightOpNodeId=-1;
-  // Linking Left and Right operand nodes to Node if any
-  switch (NK) {
-  case 0:
-  case 1:
-    break;
-  case 2:
-    CurrPair = CG->InstructionNodeMapHead;
-    while(CurrPair != NULL && strcmp(CurrPair->InstructionString, LeftOpInstructionString)!=0) {
-      CurrPair = CurrPair->Next;
-    }
-    LeftOpNodeId = CurrPair->NodeId;
-
-    CurrNode = CG->NodesLinkedListHead;
-    while(CurrNode != NULL && CurrNode->NodeId!=LeftOpNodeId) {
-      CurrNode = CurrNode->Next;
-    }
-
-    Node->LeftNode = CurrNode;
-    Node->Height = Node->LeftNode->Height+1;
-    Node->LeftNode->RootNode = 0;
-    Node->RootNode = 1;
-
-    break;
-  case 3:
-    // Setting the Left Node
-    CurrPair = CG->InstructionNodeMapHead;
-    while(CurrPair != NULL && strcmp(CurrPair->InstructionString, LeftOpInstructionString) != 0) {
-      CurrPair = CurrPair->Next;
-    }
-    LeftOpNodeId = CurrPair->NodeId;
-
-    CurrNode = CG->NodesLinkedListHead;
-    while(CurrNode != NULL && CurrNode->NodeId!=LeftOpNodeId) {
-      CurrNode = CurrNode->Next;
-    }
-    Node->LeftNode = CurrNode;
-
-    // Setting the Right Node
-    CurrPair = CG->InstructionNodeMapHead;
-    while(CurrPair != NULL && strcmp(CurrPair->InstructionString, RightOpInstructionString) != 0) {
-      CurrPair = CurrPair->Next;
-    }
-    RightOpNodeId = CurrPair->NodeId;
-
-    CurrNode = CG->NodesLinkedListHead;
-    while(CurrNode != NULL && CurrNode->NodeId!=RightOpNodeId) {
-      CurrNode = CurrNode->Next;
-    }
-    Node->RightNode = CurrNode;
-    if(Node->LeftNode->Height > Node->RightNode->Height)
-      Node->Height = Node->LeftNode->Height+1;
-    else
-      Node->Height = Node->RightNode->Height+1;
-    Node->LeftNode->RootNode = 0;
-    Node->RightNode->RootNode = 0;
-    Node->RootNode = 1;
-
-    break;
-  default:
-    printf("#fAC: Node Kind Unknown!");
-    exit(EXIT_FAILURE);
-  }
   // Adding Node to linked list
   if (CG->LinkedListSize==0)
     CG->NodesLinkedListHead = Node;
@@ -201,6 +316,9 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
   }
   CG->LinkedListSize++;
 
+  // Setting PreviousBasicBlock
+  CG->PreviousBasicBlock = BasicBlockName;
+//  printf("\n");
   return ;
 }
 
@@ -304,7 +422,7 @@ void fCGDotGraph() {
   //    strcat(prog_input, " ");
   //  }
 
-  // Table Output
+  // Building Graph
   FILE *FP = fopen(FileName, "w");
   fprintf(FP, "digraph ");
   fprintf(FP, "G ");
@@ -314,15 +432,17 @@ void fCGDotGraph() {
   while (CurrentNode!=NULL) {
     switch (CurrentNode->Kind) {
     case 0:
+      fprintf(FP, "\t%d [shape=rectangle];\n", CurrentNode->NodeId);
+      break;
     case 1:
-      fprintf(FP, "\t%d;\n", CurrentNode->NodeId);
+      if (CurrentNode->LeftNode != NULL)
+        fprintf(FP, "\t%d -> %d;\n", CurrentNode->LeftNode->NodeId, CurrentNode->NodeId);
       break;
     case 2:
-      fprintf(FP, "\t%d -> %d;\n", CurrentNode->LeftNode->NodeId, CurrentNode->NodeId);
-      break;
-    case 3:
-      fprintf(FP, "\t%d -> %d;\n", CurrentNode->LeftNode->NodeId, CurrentNode->NodeId);
-      fprintf(FP, "\t%d -> %d;\n", CurrentNode->RightNode->NodeId, CurrentNode->NodeId);
+      if (CurrentNode->LeftNode != NULL)
+        fprintf(FP, "\t%d -> %d;\n", CurrentNode->LeftNode->NodeId, CurrentNode->NodeId);
+      if (CurrentNode->RightNode != NULL)
+        fprintf(FP, "\t%d -> %d;\n", CurrentNode->RightNode->NodeId, CurrentNode->NodeId);
       break;
     default:
       break;
@@ -330,6 +450,23 @@ void fCGDotGraph() {
     CurrentNode = CurrentNode->Next;
   }
 
+  // Creating Legend
+  fprintf(FP, "\tsubgraph cluster {\n");
+  fprintf(FP, "\t\tnode [shape=plaintext];\n");
+  fprintf(FP, "\t\tlabel = \"Legend\";\n");
+  fprintf(FP, "\t\tkey [label=<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">\n");
+  CurrentNode = CG->NodesLinkedListHead;
+  while (CurrentNode!=NULL) {
+    fprintf(FP, "\t\t\t<tr><td>%d</td><td align=\"left\">%s</td></tr>\n",
+            CurrentNode->NodeId, CurrentNode->InstructionString);
+    CurrentNode = CurrentNode->Next;
+  }
+  fprintf(FP, "\t\t\t</table>>]\n");
+
+  // Ending Legend
+  fprintf(FP, "\t}\n");
+
+  // Ending Digraph
   fprintf(FP, "}\n");
 
   fclose(FP);

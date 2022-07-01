@@ -106,13 +106,19 @@ bool ACInstrumentation::instrumentCallsForMemoryLoadOperation(
 
   CallInst *NewCallInstruction = nullptr;
 
+  unsigned long NonEmptyPosition;
+  string Initializer;
+
   string InstructionString;
   raw_string_ostream RawInstructionString(InstructionString);
   RawInstructionString << *BaseInstruction;
+  NonEmptyPosition= RawInstructionString.str().find_first_not_of(" \n\r\t\f\v");
+  Initializer = (NonEmptyPosition == std::string::npos) ? "" :
+                                                        RawInstructionString.str().substr(NonEmptyPosition);
 
   Constant *InstructionValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
-                                                  RawInstructionString.str().c_str(),
-                                                  true);
+                                                            Initializer.c_str(),
+                                                            true);
 
   Value *InstructionValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
                                                       InstructionValue->getType(),
@@ -130,9 +136,22 @@ bool ACInstrumentation::instrumentCallsForMemoryLoadOperation(
                                                       GlobalValue::InternalLinkage,
                                                       EmptyValue);
 
+  // TODO: Handle the case where Basic Block is unnamed
+  Constant *CurrentBBName = ConstantDataArray::getString(
+      BaseInstruction->getModule()->getContext(),
+      BaseInstruction->getParent()->getName().str()+' ', true);
+
+  Value *CurrentBBNamePointer = new GlobalVariable(*BaseInstruction->getModule(),
+                                                   CurrentBBName->getType(),
+                                                   true,
+                                                   GlobalValue::InternalLinkage,
+                                                   CurrentBBName);
+
+
   Args.push_back(InstructionValuePointer);
   Args.push_back(EmptyValuePointer);
   Args.push_back(EmptyValuePointer);
+  Args.push_back(CurrentBBNamePointer);
   Args.push_back(InstructionBuilder.getInt32(NodeKind::Register));
   ArrayRef<Value *> ArgsRef(Args);
 
@@ -239,12 +258,18 @@ bool ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
 
   CallInst *CGCallInstruction = nullptr;
 
+  unsigned long NonEmptyPosition;
+  string Initializer;
+
   string InstructionString;
   raw_string_ostream RawInstructionString(InstructionString);
   RawInstructionString << *BaseInstruction;
+  NonEmptyPosition= RawInstructionString.str().find_first_not_of(" \n\r\t\f\v");
+  Initializer = (NonEmptyPosition == std::string::npos) ? "" :
+                                                        RawInstructionString.str().substr(NonEmptyPosition);
 
   Constant *InstructionValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
-                                                            RawInstructionString.str().c_str(),
+                                                            Initializer.c_str(),
                                                             true);
 
   Value *InstructionValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
@@ -256,10 +281,16 @@ bool ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
 
   string LeftOpInstructionString;
   raw_string_ostream RawLeftOpInstructionString(LeftOpInstructionString);
-  RawLeftOpInstructionString << *BaseInstruction->getOperand(0);
+  if (!isa<Constant>(BaseInstruction->getOperand(0)))
+    RawLeftOpInstructionString << *BaseInstruction->getOperand(0);
+  else
+    RawLeftOpInstructionString << "";
+  NonEmptyPosition= RawLeftOpInstructionString.str().find_first_not_of(" \n\r\t\f\v");
+  Initializer = (NonEmptyPosition == std::string::npos) ? "" :
+                                                        RawLeftOpInstructionString.str().substr(NonEmptyPosition);
 
   Constant *LeftOpInstructionValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
-                                                                  RawLeftOpInstructionString.str().c_str(),
+                                                                  Initializer.c_str(),
                                                                   true);
 
   Value *LeftOpInstructionValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
@@ -278,10 +309,21 @@ bool ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
                                                 GlobalValue::InternalLinkage,
                                                 EmptyValue);
 
+  // TODO: Handle the case where Basic Block is unnamed
+  Constant *CurrentBBName = ConstantDataArray::getString(
+      BaseInstruction->getModule()->getContext(),
+      BaseInstruction->getParent()->getName().str()+' ', true);
+
+  Value *CurrentBBNamePointer = new GlobalVariable(*BaseInstruction->getModule(),
+                                                   CurrentBBName->getType(),
+                                                   true,
+                                                   GlobalValue::InternalLinkage,
+                                                   CurrentBBName);
+
   CGArgs.push_back(InstructionValuePointer);
   CGArgs.push_back(LeftOpInstructionValuePointer);
   CGArgs.push_back(EmptyValuePointer);
-
+  CGArgs.push_back(CurrentBBNamePointer);
   CGArgs.push_back(InstructionBuilder.getInt32(NodeKind::UnaryInstruction));
   ArrayRef<Value *> CGArgsRef(CGArgs);
 
@@ -378,12 +420,18 @@ bool ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
 
   CallInst *CGCallInstruction = nullptr;
 
+  unsigned long NonEmptyPosition;
+  string Initializer;
+
   string InstructionString;
   raw_string_ostream RawInstructionString(InstructionString);
   RawInstructionString << *BaseInstruction;
+  NonEmptyPosition= RawInstructionString.str().find_first_not_of(" \n\r\t\f\v");
+  Initializer = (NonEmptyPosition == std::string::npos) ? "" :
+                                                        RawInstructionString.str().substr(NonEmptyPosition);
 
   Constant *InstructionValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
-                                                            RawInstructionString.str().c_str(),
+                                                            Initializer.c_str(),
                                                             true);
 
   Value *InstructionValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
@@ -395,10 +443,17 @@ bool ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
 
   string LeftOpInstructionString;
   raw_string_ostream RawLeftOpInstructionString(LeftOpInstructionString);
-  RawLeftOpInstructionString << *BaseInstruction->getOperand(0);
+  if (!isa<Constant>(BaseInstruction->getOperand(0)))
+    RawLeftOpInstructionString << *BaseInstruction->getOperand(0);
+  else
+    RawLeftOpInstructionString << "";
+  NonEmptyPosition= RawLeftOpInstructionString.str().find_first_not_of(" \n\r\t\f\v");
+  Initializer = (NonEmptyPosition == std::string::npos) ? "" :
+                                                        RawLeftOpInstructionString.str().substr(NonEmptyPosition);
+
 
   Constant *LeftOpInstructionValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
-                                                                  RawLeftOpInstructionString.str().c_str(),
+                                                                  Initializer.c_str(),
                                                                   true);
 
   Value *LeftOpInstructionValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
@@ -409,10 +464,16 @@ bool ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
 
   string RightOpInstructionString;
   raw_string_ostream RawRightOpInstructionString(RightOpInstructionString);
-  RawRightOpInstructionString << *BaseInstruction->getOperand(1);
+  if (!isa<Constant>(BaseInstruction->getOperand(1)))
+    RawRightOpInstructionString << *BaseInstruction->getOperand(1);
+  else
+    RawRightOpInstructionString << "";
+  NonEmptyPosition= RawRightOpInstructionString.str().find_first_not_of(" \n\r\t\f\v");
+  Initializer = (NonEmptyPosition == std::string::npos) ? "" :
+                                                        RawRightOpInstructionString.str().substr(NonEmptyPosition);
 
   Constant *RightOpInstructionValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
-                                                                   RawRightOpInstructionString.str().c_str(),
+                                                                   Initializer.c_str(),
                                                                   true);
 
   Value *RightOpInstructionValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
@@ -421,10 +482,21 @@ bool ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
                                                             GlobalValue::InternalLinkage,
                                                             RightOpInstructionValue);
 
+  // TODO: Handle the case where Basic Block is unnamed
+  Constant *CurrentBBName = ConstantDataArray::getString(
+        BaseInstruction->getModule()->getContext(),
+        BaseInstruction->getParent()->getName().str()+' ', true);
+
+  Value *CurrentBBNamePointer = new GlobalVariable(*BaseInstruction->getModule(),
+                                                   CurrentBBName->getType(),
+                                                      true,
+                                                      GlobalValue::InternalLinkage,
+                                                   CurrentBBName);
+
   CGArgs.push_back(InstructionValuePointer);
   CGArgs.push_back(LeftOpInstructionValuePointer);
   CGArgs.push_back(RightOpInstructionValuePointer);
-
+  CGArgs.push_back(CurrentBBNamePointer);
   CGArgs.push_back(InstructionBuilder.getInt32(NodeKind::BinaryInstruction));
   ArrayRef<Value *> CGArgsRef(CGArgs);
 
