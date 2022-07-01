@@ -38,8 +38,8 @@ class TestGdbRemoteFork(GdbRemoteForkTestBase):
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
             {"direction": "send",
-             "regex": r"[$]T05thread:p{}[.]{}.*vforkdone.*".format(parent_pid,
-                                                                   parent_tid),
+             "regex": r"[$]T[0-9a-fA-F]{{2}}thread:p{}[.]{}.*vforkdone.*"
+                      .format(parent_pid, parent_tid),
              },
             "read packet: $c#00",
             "send packet: $W00;process:{}#00".format(parent_pid),
