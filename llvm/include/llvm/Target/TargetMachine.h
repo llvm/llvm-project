@@ -222,7 +222,10 @@ public:
 
   /// Returns the code model. The choices are small, kernel, medium, large, and
   /// target default.
-  CodeModel::Model getCodeModel() const;
+  CodeModel::Model getCodeModel() const { return CMModel; }
+
+  /// Set the code model.
+  void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
 
   bool isPositionIndependent() const;
 
