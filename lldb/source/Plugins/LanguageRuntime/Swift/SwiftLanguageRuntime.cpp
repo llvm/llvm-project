@@ -623,8 +623,25 @@ GetObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
   return obj_file_format;
 }
 
+static llvm::SmallVector<llvm::StringRef, 1>
+GetLikelySwiftImageNamesForModule(ModuleSP module) {
+  if (!module || !module->GetFileSpec())
+    return {};
+
+  auto name =
+      module->GetFileSpec().GetFileNameStrippingExtension().GetStringRef();
+  if (name == "libswiftCore")
+    name = "Swift";
+  if (name.startswith("libswift"))
+    name = name.drop_front(8);
+  if (name.startswith("lib"))
+    name = name.drop_front(3);
+  return {name};
+}
+
 bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
-    ObjectFile &obj_file, llvm::Triple::ObjectFormatType obj_format_type) {
+    ObjectFile &obj_file, llvm::Triple::ObjectFormatType obj_format_type,
+      llvm::SmallVector<llvm::StringRef, 1> likely_module_names) {
   assert(obj_file.GetType() == ObjectFile::eTypeJIT &&
          "Not a JIT object file!");
   auto obj_file_format = GetObjectFileFormat(obj_format_type);
@@ -635,8 +652,7 @@ bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
   return m_reflection_ctx->addImage(
       [&](swift::ReflectionSectionKind section_kind)
           -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
-        auto section_name =
-            obj_file_format->getSectionName(section_kind);
+        auto section_name = obj_file_format->getSectionName(section_kind);
         for (auto section : *obj_file.GetSectionList()) {
           JITSection *jit_section = llvm::dyn_cast<JITSection>(section.get());
           if (jit_section && section->GetName().AsCString() == section_name) {
@@ -658,11 +674,13 @@ bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
           }
         }
         return {};
-      });
+      },
+      likely_module_names);
 }
 
 bool SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
-    ModuleSP module) {
+    ModuleSP module,
+    llvm::SmallVector<llvm::StringRef, 1> likely_module_names) {
   auto obj_format_type =
       module->GetArchitecture().GetTriple().getObjectFormat();
 
@@ -787,6 +805,7 @@ bool SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
     }
     return {};
   };
+
   return m_reflection_ctx->addImage(
       [&](swift::ReflectionSectionKind section_kind)
           -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
@@ -794,7 +813,8 @@ bool SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
         if (pair.first)
           return pair;
         return find_section_with_kind(maybe_secondary_segment, section_kind);
-      });
+      },
+      likely_module_names);
 }
 
 bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
@@ -813,10 +833,12 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
   Address start_address = obj_file->GetBaseAddress();
   auto load_ptr = static_cast<uintptr_t>(
       start_address.GetLoadAddress(&target));
+  auto likely_module_names = GetLikelySwiftImageNamesForModule(module_sp);
   if (obj_file->GetType() == ObjectFile::eTypeJIT) {
     auto object_format_type =
         module_sp->GetArchitecture().GetTriple().getObjectFormat();
-    return AddJitObjectFileToReflectionContext(*obj_file, object_format_type);
+    return AddJitObjectFileToReflectionContext(*obj_file, object_format_type,
+                                               likely_module_names);
   }
 
   if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS) {
@@ -843,13 +865,17 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
     llvm::sys::MemoryBlock file_buffer((void *)file_data, size);
     m_reflection_ctx->readELF(
         swift::remote::RemoteAddress(load_ptr),
-        llvm::Optional<llvm::sys::MemoryBlock>(file_buffer));
+        llvm::Optional<llvm::sys::MemoryBlock>(file_buffer),
+        likely_module_names);
   } else if (read_from_file_cache &&
              obj_file->GetPluginName().equals("mach-o")) {
-    if (!AddObjectFileToReflectionContext(module_sp))
-      m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+    if (!AddObjectFileToReflectionContext(module_sp, likely_module_names)) {
+      m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr),
+                                 likely_module_names);
+    }
   } else {
-    m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+    m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr),
+                               likely_module_names);
   }
   return true;
 }
