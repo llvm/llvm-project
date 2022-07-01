@@ -303,8 +303,12 @@ public:
 
   /// Generate the IR code for the body of the vectorized loop according to the
   /// best selected \p VF, \p UF and VPlan \p BestPlan.
+  /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
+  /// vectorization re-using plans for both the main and epilogue vector loops.
+  /// It should be removed once the re-use issue has been fixed.
   void executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-                   InnerLoopVectorizer &LB, DominatorTree *DT);
+                   InnerLoopVectorizer &LB, DominatorTree *DT,
+                   bool IsEpilogueVectorization);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);

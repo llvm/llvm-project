@@ -2511,7 +2511,8 @@ public:
 
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
-                        Value *CanonicalIVStartValue, VPTransformState &State);
+                        Value *CanonicalIVStartValue, VPTransformState &State,
+                        bool IsEpilogueVectorization);
 
   /// Generate the IR code for this VPlan.
   void execute(struct VPTransformState *State);
