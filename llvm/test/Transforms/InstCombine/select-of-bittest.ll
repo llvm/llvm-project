@@ -300,16 +300,16 @@ define <3 x i32> @f_var1_vec_undef(<3 x i32> %arg, <3 x i32> %arg1) {
 }
 
 ; ============================================================================ ;
-; Shift can be a variable, too.
+; Shift can't be a variable in general.
 ; ============================================================================ ;
 
 define i32 @f_var2(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @f_var2(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 1, [[ARG1:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-NEXT:    [[T5:%.*]] = zext i1 [[TMP4]] to i32
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[ARG]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 1
+; CHECK-NEXT:    [[T5:%.*]] = select i1 [[T2]], i32 [[T4]], i32 1
 ; CHECK-NEXT:    ret i32 [[T5]]
 ;
   %t = and i32 %arg, 1
@@ -322,11 +322,11 @@ define i32 @f_var2(i32 %arg, i32 %arg1) {
 
 define <2 x i32> @f_var2_splatvec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @f_var2_splatvec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[ARG1:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> [[TMP1]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[ARG:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T]], zeroinitializer
+; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[ARG]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T3]], <i32 1, i32 1>
+; CHECK-NEXT:    [[T5:%.*]] = select <2 x i1> [[T2]], <2 x i32> [[T4]], <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[T5]]
 ;
   %t = and <2 x i32> %arg, <i32 1, i32 1>
@@ -339,11 +339,11 @@ define <2 x i32> @f_var2_splatvec(<2 x i32> %arg, <2 x i32> %arg1) {
 
 define <2 x i32> @f_var2_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @f_var2_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[ARG1:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> [[TMP1]], <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[ARG:%.*]], <i32 2, i32 1>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T]], zeroinitializer
+; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[ARG]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T3]], <i32 1, i32 1>
+; CHECK-NEXT:    [[T5:%.*]] = select <2 x i1> [[T2]], <2 x i32> [[T4]], <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[T5]]
 ;
   %t = and <2 x i32> %arg, <i32 2, i32 1>; mask is not splat
@@ -356,11 +356,11 @@ define <2 x i32> @f_var2_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 
 define <3 x i32> @f_var2_vec_undef(<3 x i32> %arg, <3 x i32> %arg1) {
 ; CHECK-LABEL: @f_var2_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <3 x i32> <i32 1, i32 1, i32 1>, [[ARG1:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or <3 x i32> [[TMP1]], <i32 1, i32 undef, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <3 x i32> [[TMP2]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <3 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = zext <3 x i1> [[TMP4]] to <3 x i32>
+; CHECK-NEXT:    [[T:%.*]] = and <3 x i32> [[ARG:%.*]], <i32 1, i32 undef, i32 1>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <3 x i32> [[T]], <i32 0, i32 undef, i32 0>
+; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[ARG]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = and <3 x i32> [[T3]], <i32 1, i32 undef, i32 1>
+; CHECK-NEXT:    [[T5:%.*]] = select <3 x i1> [[T2]], <3 x i32> [[T4]], <3 x i32> <i32 1, i32 undef, i32 1>
 ; CHECK-NEXT:    ret <3 x i32> [[T5]]
 ;
   %t = and <3 x i32> %arg, <i32 1, i32 undef, i32 1>
@@ -377,11 +377,11 @@ define <3 x i32> @f_var2_vec_undef(<3 x i32> %arg, <3 x i32> %arg1) {
 
 define i32 @f_var3(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @f_var3(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 1, [[ARG2:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-NEXT:    [[T6:%.*]] = zext i1 [[TMP4]] to i32
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[T4:%.*]] = lshr i32 [[ARG]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T4]], 1
+; CHECK-NEXT:    [[T6:%.*]] = select i1 [[T3]], i32 [[T5]], i32 1
 ; CHECK-NEXT:    ret i32 [[T6]]
 ;
   %t = and i32 %arg, %arg1
@@ -395,11 +395,11 @@ define i32 @f_var3(i32 %arg, i32 %arg1, i32 %arg2) {
 ; Should be exactly as the previous one
 define i32 @f_var3_commutative_and(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @f_var3_commutative_and(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 1, [[ARG2:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-NEXT:    [[T6:%.*]] = zext i1 [[TMP4]] to i32
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[T4:%.*]] = lshr i32 [[ARG]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T4]], 1
+; CHECK-NEXT:    [[T6:%.*]] = select i1 [[T3]], i32 [[T5]], i32 1
 ; CHECK-NEXT:    ret i32 [[T6]]
 ;
   %t = and i32 %arg1, %arg ; in different order
@@ -412,11 +412,11 @@ define i32 @f_var3_commutative_and(i32 %arg, i32 %arg1, i32 %arg2) {
 
 define <2 x i32> @f_var3_splatvec(<2 x i32> %arg, <2 x i32> %arg1, <2 x i32> %arg2) {
 ; CHECK-LABEL: @f_var3_splatvec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[ARG2:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> [[TMP1]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[T6:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[ARG:%.*]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = icmp eq <2 x i32> [[T]], zeroinitializer
+; CHECK-NEXT:    [[T4:%.*]] = lshr <2 x i32> [[ARG]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], <i32 1, i32 1>
+; CHECK-NEXT:    [[T6:%.*]] = select <2 x i1> [[T3]], <2 x i32> [[T5]], <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[T6]]
 ;
   %t = and <2 x i32> %arg, %arg1
@@ -429,11 +429,11 @@ define <2 x i32> @f_var3_splatvec(<2 x i32> %arg, <2 x i32> %arg1, <2 x i32> %ar
 
 define <3 x i32> @f_var3_vec_undef(<3 x i32> %arg, <3 x i32> %arg1, <3 x i32> %arg2) {
 ; CHECK-LABEL: @f_var3_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <3 x i32> <i32 1, i32 1, i32 1>, [[ARG2:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or <3 x i32> [[TMP1]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and <3 x i32> [[TMP2]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <3 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[T6:%.*]] = zext <3 x i1> [[TMP4]] to <3 x i32>
+; CHECK-NEXT:    [[T:%.*]] = and <3 x i32> [[ARG:%.*]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = icmp eq <3 x i32> [[T]], <i32 0, i32 undef, i32 0>
+; CHECK-NEXT:    [[T4:%.*]] = lshr <3 x i32> [[ARG]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[T5:%.*]] = and <3 x i32> [[T4]], <i32 1, i32 undef, i32 1>
+; CHECK-NEXT:    [[T6:%.*]] = select <3 x i1> [[T3]], <3 x i32> [[T5]], <3 x i32> <i32 1, i32 undef, i32 1>
 ; CHECK-NEXT:    ret <3 x i32> [[T6]]
 ;
   %t = and <3 x i32> %arg, %arg1
