@@ -1583,9 +1583,9 @@ SDValue VETargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   SDValue NextPtr;
 
   if (VT == MVT::f128) {
-    // VE f128 values must be stored with 16 bytes alignment.  We doesn't
+    // VE f128 values must be stored with 16 bytes alignment.  We don't
     // know the actual alignment of VAList, so we take alignment of it
-    // dyanmically.
+    // dynamically.
     int Align = 16;
     VAList = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
                          DAG.getConstant(Align - 1, DL, PtrVT));
