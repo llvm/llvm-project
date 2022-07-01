@@ -34,29 +34,24 @@ struct LlvmLibcExpfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
   }
 };
 
-static const int NUM_THREADS = std::thread::hardware_concurrency();
-
 // Range: [0, 89];
 static constexpr uint32_t POS_START = 0x0000'0000U;
 static constexpr uint32_t POS_STOP = 0x42b2'0000U;
 
 TEST_F(LlvmLibcExpfExhaustiveTest, PostiveRangeRoundNearestTieToEven) {
-  test_full_range(POS_START, POS_STOP, NUM_THREADS,
-                  mpfr::RoundingMode::Nearest);
+  test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::Nearest);
 }
 
 TEST_F(LlvmLibcExpfExhaustiveTest, PostiveRangeRoundUp) {
-  test_full_range(POS_START, POS_STOP, NUM_THREADS, mpfr::RoundingMode::Upward);
+  test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::Upward);
 }
 
 TEST_F(LlvmLibcExpfExhaustiveTest, PostiveRangeRoundDown) {
-  test_full_range(POS_START, POS_STOP, NUM_THREADS,
-                  mpfr::RoundingMode::Downward);
+  test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::Downward);
 }
 
 TEST_F(LlvmLibcExpfExhaustiveTest, PostiveRangeRoundTowardZero) {
-  test_full_range(POS_START, POS_STOP, NUM_THREADS,
-                  mpfr::RoundingMode::TowardZero);
+  test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::TowardZero);
 }
 
 // Range: [-104, 0];
@@ -64,20 +59,17 @@ static constexpr uint32_t NEG_START = 0x8000'0000U;
 static constexpr uint32_t NEG_STOP = 0xc2d0'0000U;
 
 TEST_F(LlvmLibcExpfExhaustiveTest, NegativeRangeRoundNearestTieToEven) {
-  test_full_range(NEG_START, NEG_STOP, NUM_THREADS,
-                  mpfr::RoundingMode::Nearest);
+  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Nearest);
 }
 
 TEST_F(LlvmLibcExpfExhaustiveTest, NegativeRangeRoundUp) {
-  test_full_range(NEG_START, NEG_STOP, NUM_THREADS, mpfr::RoundingMode::Upward);
+  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Upward);
 }
 
 TEST_F(LlvmLibcExpfExhaustiveTest, NegativeRangeRoundDown) {
-  test_full_range(NEG_START, NEG_STOP, NUM_THREADS,
-                  mpfr::RoundingMode::Downward);
+  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Downward);
 }
 
 TEST_F(LlvmLibcExpfExhaustiveTest, NegativeRangeRoundTowardZero) {
-  test_full_range(NEG_START, NEG_STOP, NUM_THREADS,
-                  mpfr::RoundingMode::TowardZero);
+  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::TowardZero);
 }
