@@ -729,7 +729,6 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       Config.CompressionType =
           StringSwitch<DebugCompressionType>(
               InputArgs.getLastArgValue(OBJCOPY_compress_debug_sections_eq))
-              .Case("zlib-gnu", DebugCompressionType::GNU)
               .Case("zlib", DebugCompressionType::Z)
               .Default(DebugCompressionType::None);
       if (Config.CompressionType == DebugCompressionType::None)
