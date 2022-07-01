@@ -3661,7 +3661,7 @@ public:
     // changed by concatenations).
     if ((mutableBox.isCharacter() && !mutableBox.hasNonDeferredLenParams()) ||
         mutableBox.isDerivedWithLenParameters())
-      TODO(loc, "gather rhs length parameters in assignment to allocatable");
+      TODO(loc, "gather rhs LEN parameters in assignment to allocatable");
 
     // The allocatable must take lower bounds from the expr if it is
     // reallocated and the right hand side is not a scalar.
