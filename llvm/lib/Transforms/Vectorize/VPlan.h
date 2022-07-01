@@ -794,6 +794,9 @@ private:
   FastMathFlags FMF;
   DebugLoc DL;
 
+  /// An optional name that can be used for the generated IR instruction.
+  const std::string Name;
+
   /// Utility method serving execute(): generates a single instance of the
   /// modeled instruction.
   void generateInstruction(VPTransformState &State, unsigned Part);
@@ -802,14 +805,15 @@ protected:
   void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
 
 public:
-  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL)
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
+                const Twine &Name = "")
       : VPRecipeBase(VPRecipeBase::VPInstructionSC, Operands),
         VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode),
-        DL(DL) {}
+        DL(DL), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                DebugLoc DL = {})
-      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL) {}
+                DebugLoc DL = {}, const Twine &Name = "")
+      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name) {}
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPValue *V) {
@@ -818,7 +822,7 @@ public:
 
   VPInstruction *clone() const {
     SmallVector<VPValue *, 2> Operands(operands());
-    return new VPInstruction(Opcode, Operands, DL);
+    return new VPInstruction(Opcode, Operands, DL, Name);
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
