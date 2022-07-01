@@ -491,9 +491,11 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   if (SE)
     SE->forgetLoop(L);
 
-  auto *OldBr = dyn_cast<BranchInst>(Preheader->getTerminator());
-  assert(OldBr && "Preheader must end with a branch");
-  assert(OldBr->isUnconditional() && "Preheader must have a single successor");
+  Instruction *OldTerm = Preheader->getTerminator();
+  assert(!OldTerm->mayHaveSideEffects() &&
+         "Preheader must end with a side-effect-free terminator");
+  assert(OldTerm->getNumSuccessors() == 1 &&
+         "Preheader must have a single successor");
   // Connect the preheader to the exit block. Keep the old edge to the header
   // around to perform the dominator tree update in two separate steps
   // -- #1 insertion of the edge preheader -> exit and #2 deletion of the edge
@@ -519,7 +521,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   // coming to this inner loop, this will break the outer loop structure (by
   // deleting the backedge of the outer loop). If the outer loop is indeed a
   // non-loop, it will be deleted in a future iteration of loop deletion pass.
-  IRBuilder<> Builder(OldBr);
+  IRBuilder<> Builder(OldTerm);
 
   auto *ExitBlock = L->getUniqueExitBlock();
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
@@ -529,7 +531,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
 
     Builder.CreateCondBr(Builder.getFalse(), L->getHeader(), ExitBlock);
     // Remove the old branch. The conditional branch becomes a new terminator.
-    OldBr->eraseFromParent();
+    OldTerm->eraseFromParent();
 
     // Rewrite phis in the exit block to get their inputs from the Preheader
     // instead of the exiting block.
@@ -573,7 +575,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     assert(L->hasNoExitBlocks() &&
            "Loop should have either zero or one exit blocks.");
 
-    Builder.SetInsertPoint(OldBr);
+    Builder.SetInsertPoint(OldTerm);
     Builder.CreateUnreachable();
     Preheader->getTerminator()->eraseFromParent();
   }
