@@ -1780,10 +1780,6 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 void objdump::printRelocations(const ObjectFile *Obj) {
   StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 :
                                                  "%08" PRIx64;
-  // Regular objdump doesn't print relocations in non-relocatable object
-  // files.
-  if (!Obj->isRelocatableObject())
-    return;
 
   // Build a mapping from relocation target to a vector of relocation
   // sections. Usually, there is an only one relocation section for
@@ -1791,6 +1787,8 @@ void objdump::printRelocations(const ObjectFile *Obj) {
   MapVector<SectionRef, std::vector<SectionRef>> SecToRelSec;
   uint64_t Ndx;
   for (const SectionRef &Section : ToolSectionFilter(*Obj, &Ndx)) {
+    if (Obj->isELF() && (ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC))
+      continue;
     if (Section.relocation_begin() == Section.relocation_end())
       continue;
     Expected<section_iterator> SecOrErr = Section.getRelocatedSection();
