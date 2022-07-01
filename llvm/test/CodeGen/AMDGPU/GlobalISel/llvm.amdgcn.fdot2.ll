@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX906 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10PLUS %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10PLUS %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10PLUS %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10PLUS %s
 
 define float @v_fdot2(<2 x half> %a, <2 x half> %b, float %c) {
 ; GFX906-LABEL: v_fdot2:
