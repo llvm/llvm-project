@@ -261,7 +261,7 @@ information) and construct our function definition:
   unsigned ScopeLine = 0;
   DISubprogram *SP = DBuilder->createFunction(
       FContext, P.getName(), StringRef(), Unit, LineNo,
-      CreateFunctionType(TheFunction->arg_size(), Unit),
+      CreateFunctionType(TheFunction->arg_size()),
       false /* internal linkage */, true /* definition */, ScopeLine,
       DINode::FlagPrototyped, false);
   TheFunction->setSubprogram(SP);
