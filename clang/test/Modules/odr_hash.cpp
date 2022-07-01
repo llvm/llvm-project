@@ -3300,7 +3300,7 @@ enum E7 { x71 = 0 };
 enum E7 { x71 };
 #else
 E7 e7;
-// expected-error@second.h:* {{'Enums::E7' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st element 'x71' has an initilizer}}
+// expected-error@second.h:* {{'Enums::E7' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st element 'x71' has an initializer}}
 // expected-note@first.h:* {{but in 'FirstModule' found 1st element 'x71' does not have an initializer}}
 #endif
 
@@ -3310,7 +3310,7 @@ enum E8 { x81 };
 enum E8 { x81 = 0 };
 #else
 E8 e8;
-// expected-error@second.h:* {{'Enums::E8' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st element 'x81' does not have an initilizer}}
+// expected-error@second.h:* {{'Enums::E8' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st element 'x81' does not have an initializer}}
 // expected-note@first.h:* {{but in 'FirstModule' found 1st element 'x81' has an initializer}}
 #endif
 
