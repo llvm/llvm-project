@@ -119,7 +119,7 @@ subroutine alloc()
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
   ! CHECK: %[[cmpi:.*]] = arith.cmpi
   ! CHECK: fir.if %[[cmpi]]
-  ! CHECK: fir.freemem %[[addr]]
+  ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xf32>>
 end subroutine
 
 ! CHECK-LABEL: func @_QMcallerPcst_char_alloc()
@@ -133,7 +133,7 @@ subroutine cst_char_alloc()
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,10>>>
   ! CHECK: %[[cmpi:.*]] = arith.cmpi
   ! CHECK: fir.if %[[cmpi]]
-  ! CHECK: fir.freemem %[[addr]]
+  ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?x!fir.char<1,10>>>
 end subroutine
 
 ! CHECK-LABEL: func @_QMcallerPdef_char_alloc()
@@ -147,7 +147,7 @@ subroutine def_char_alloc()
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
   ! CHECK: %[[cmpi:.*]] = arith.cmpi
   ! CHECK: fir.if %[[cmpi]]
-  ! CHECK: fir.freemem %[[addr]]
+  ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 end subroutine
 
 ! CHECK-LABEL: func @_QMcallerPpointer_test()
@@ -271,7 +271,7 @@ subroutine dyn_char_alloc(l)
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
   ! CHECK: %[[cmpi:.*]] = arith.cmpi
   ! CHECK: fir.if %[[cmpi]]
-  ! CHECK: fir.freemem %[[addr]]
+  ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 end subroutine
 
 ! CHECK-LABEL: @_QMcallerPdyn_char_pointer

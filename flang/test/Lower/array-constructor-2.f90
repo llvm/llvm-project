@@ -47,7 +47,7 @@ subroutine test2(a, b)
   ! CHECK-DAG: fir.array_coor %[[tmp:.*]](%
   ! CHECK-DAG: %[[ai:.*]] = fir.array_coor %[[a]](%
   ! CHECK: fir.store %{{.*}} to %[[ai]] : !fir.ref<f32>
-  ! CHECK: fir.freemem %[[tmp]]
+  ! CHECK: fir.freemem %[[tmp]] : !fir.heap<!fir.array<5xf32>>
 
   a = [f(b), f(b+1), f(b+2), f(b+5), f(b+11)]
 end subroutine test2
@@ -113,7 +113,7 @@ subroutine test4(a, b, n1, m1)
   ! CHECK: %[[q:.*]] = fir.coordinate_of %arg1, %{{.*}}, %{{.*}} : (!fir.box<!fir.array<?x?xf32>>, i64, i64) -> !fir.ref<f32>
   ! CHECK: %[[q2:.*]] = fir.load %[[q]] : !fir.ref<f32>
   ! CHECK: fir.store %[[q2]] to %{{.*}} : !fir.ref<f32>
-  ! CHECK: fir.freemem %{{.*}}
+  ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xf32>>
   ! CHECK-NEXT: return
   a = [ ((b(i,j), j=f1(i),f2(n1),f3(m1+i)), i=1,n1,m1) ]
 end subroutine test4
@@ -137,9 +137,9 @@ subroutine test5(a, array2)
   ! CHECK: fir.call @llvm.memcpy.p0.p0.i64(%{{.*}}, %{{.*}}, %{{.*}}, %false{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK: = fir.array_coor %{{.*}}(%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
   ! CHECK: = fir.array_coor %[[a]] %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-  ! CHECK-DAG: fir.freemem %{{.*}}
-  ! CHECK-DAG: fir.freemem %[[tmp2]]
-  ! CHECK-DAG: fir.freemem %[[tmp1]]
+  ! CHECK-DAG: fir.freemem %{{.*}} : !fir.heap<!fir.array<4xf32>>
+  ! CHECK-DAG: fir.freemem %[[tmp2]] : !fir.heap<!fir.array<2xf32>>
+  ! CHECK-DAG: fir.freemem %[[tmp1]] : !fir.heap<!fir.array<2xf32>>
   ! CHECK: return
   a = [ const_array1, array2 ]
 end subroutine test5
@@ -157,7 +157,7 @@ subroutine test6(c, d, e)
   ! CHECK: %[[t:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.heap<!fir.array<2x!fir.char<1,5>>>, index) -> !fir.ref<!fir.char<1,5>>
   ! CHECK: %[[to:.*]] = fir.convert %[[t]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK: fir.call @llvm.memcpy.p0.p0.i64(%[[to]], %{{.*}}, %{{.*}}, %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK: fir.freemem %{{.*}}
+  ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<2x!fir.char<1,5>>>
   c = (/ d, e /)
 end subroutine test6
 
