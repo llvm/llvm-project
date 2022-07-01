@@ -1484,10 +1484,6 @@ void BinaryContext::preprocessDebugInfo() {
     ContainsDwarfLegacy |= CU->getVersion() < 5;
   }
 
-  if (ContainsDwarf5 && ContainsDwarfLegacy)
-    llvm::errs() << "BOLT-WARNING: BOLT does not support mix mode binary with "
-                    "DWARF5 and DWARF{2,3,4}.\n";
-
   llvm::sort(AllRanges);
   for (auto &KV : BinaryFunctions) {
     const uint64_t FunctionAddress = KV.first;
