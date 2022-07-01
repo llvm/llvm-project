@@ -1,4 +1,5 @@
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
+#include "llvm/Support/Compiler.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -103,7 +104,7 @@ static std::shared_ptr<Pattern> tensorPattern(unsigned tensorNum) {
 }
 
 #define IMPL_BINOP_PATTERN(OP, KIND)                                           \
-  static std::shared_ptr<Pattern> OP##Pattern(                                 \
+  LLVM_ATTRIBUTE_UNUSED static std::shared_ptr<Pattern> OP##Pattern(           \
       const std::shared_ptr<Pattern> &e0,                                      \
       const std::shared_ptr<Pattern> &e1) {                                    \
     return std::make_shared<Pattern>(KIND, e0, e1);                            \
@@ -128,7 +129,7 @@ protected:
   }
 
 #define IMPL_BINOP_EXPR(OP, KIND)                                              \
-  unsigned OP##Expr(unsigned e0, unsigned e1) {                                \
+  LLVM_ATTRIBUTE_UNUSED unsigned OP##Expr(unsigned e0, unsigned e1) {          \
     return merger.addExp(KIND, e0, e1);                                        \
   }
 
