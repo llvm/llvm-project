@@ -34,6 +34,8 @@ MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
               llvm::ArrayRef<LocalVariableAddrGap> gaps) {
   lldb::addr_t start =
       index.MakeVirtualAddress(range.ISectStart, range.OffsetStart);
+  if (start == LLDB_INVALID_ADDRESS)
+    return {};
   lldb::addr_t end = start + range.Range;
 
   Variable::RangeList result;
