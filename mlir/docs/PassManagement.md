@@ -816,7 +816,7 @@ def MyPass : Pass<"my-pass", "ModuleOp"> {
     Option<"option", "example-option", "bool", /*default=*/"true",
            "An example option">,
     ListOption<"listOption", "example-list", "int64_t",
-               "An example list option", "llvm::cl::ZeroOrMore">
+               "An example list option">
   ];
 
   // Specify any statistics.
@@ -952,7 +952,7 @@ The `ListOption` class takes the following fields:
 def MyPass : Pass<"my-pass"> {
   let options = [
     ListOption<"listOption", "example-list", "int64_t",
-               "An example list option", "llvm::cl::ZeroOrMore">
+               "An example list option">
   ];
 }
 ```

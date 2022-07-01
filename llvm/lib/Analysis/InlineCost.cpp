@@ -128,7 +128,6 @@ static cl::opt<int> CallPenalty(
 static cl::opt<size_t>
     StackSizeThreshold("inline-max-stacksize", cl::Hidden,
                        cl::init(std::numeric_limits<size_t>::max()),
-                       cl::ZeroOrMore,
                        cl::desc("Do not inline functions with a stack size "
                                 "that exceeds the specified limit"));
 
