@@ -2239,7 +2239,7 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
         (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_ULT)) {
       bool IsUGT = Pred == CmpInst::ICMP_UGT;
       assert(ShiftValC->uge(C) && "Expected simplify of compare");
-      assert(IsUGT || !C.isZero() && "Expected X u< 0 to simplify");
+      assert((IsUGT || !C.isZero()) && "Expected X u< 0 to simplify");
 
       unsigned CmpLZ =
           IsUGT ? C.countLeadingZeros() : (C - 1).countLeadingZeros();
