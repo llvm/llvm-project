@@ -234,6 +234,12 @@ ifneq (,$(findstring clang,$(CC)))
    MODULE_DEBUG_INFO_FLAGS += -gmodules
 endif
 
+# If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
+# with codeview by default but all the tests rely on dwarf.
+ifeq "$(OS)" "Windows_NT"
+	DEBUG_INFO_FLAG ?= -gdwarf
+endif
+
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
@@ -279,12 +285,6 @@ else
 # No bridging header.
 SWIFT_BRIDGING_PCH :=
 SWIFT_HFLAGS :=
-endif
-
-# If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
-# with codeview by default but all the tests rely on dwarf.
-ifeq "$(OS)" "Windows_NT"
-	CFLAGS += -gdwarf
 endif
 
 # Use this one if you want to build one part of the result without debug information:
