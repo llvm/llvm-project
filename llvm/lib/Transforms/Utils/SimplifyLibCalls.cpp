@@ -428,6 +428,12 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
   return nullptr;
 }
 
+// Optimize a memcmp or, when StrNCmp is true, strncmp call CI with constant
+// arrays LHS and RHS and nonconstant Size.
+static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
+                                    Value *Size, bool StrNCmp,
+                                    IRBuilderBase &B, const DataLayout &DL);
+
 Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
   Value *Str1P = CI->getArgOperand(0);
   Value *Str2P = CI->getArgOperand(1);
@@ -442,7 +448,7 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
   if (ConstantInt *LengthArg = dyn_cast<ConstantInt>(Size))
     Length = LengthArg->getZExtValue();
   else
-    return nullptr;
+    return optimizeMemCmpVarSize(CI, Str1P, Str2P, Size, true, B, DL);
 
   if (Length == 0) // strncmp(x,y,0)   -> 0
     return ConstantInt::get(CI->getType(), 0);
@@ -1155,11 +1161,11 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
                           CI->getType());
 }
 
-// Optimize a memcmp call CI with constant arrays LHS and RHS and either
-// nonconstant Size or constant size known to be in bounds.
+// Optimize a memcmp or, when StrNCmp is true, strncmp call CI with constant
+// arrays LHS and RHS and nonconstant Size.
 static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
-                                    Value *Size, IRBuilderBase &B,
-                                    const DataLayout &DL) {
+                                    Value *Size, bool StrNCmp,
+                                    IRBuilderBase &B, const DataLayout &DL) {
   if (LHS == RHS) // memcmp(s,s,x) -> 0
     return Constant::getNullValue(CI->getType());
 
@@ -1173,30 +1179,29 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
   //   N <= Pos ? 0 : (A < B ? -1 : B < A ? +1 : 0)
   // where Pos is the first mismatch between A and B, determined below.
 
+  uint64_t Pos = 0;
   Value *Zero = ConstantInt::get(CI->getType(), 0);
-
-  uint64_t MinSize = std::min(LStr.size(), RStr.size());
-  for (uint64_t Pos = 0; Pos < MinSize; ++Pos) {
-    if (LStr[Pos] != RStr[Pos]) {
-      Value *MaxSize = ConstantInt::get(Size->getType(), Pos);
-      Value *Cmp = B.CreateICmp(ICmpInst::ICMP_ULE, Size, MaxSize);
-      typedef unsigned char UChar;
-      int IRes = UChar(LStr[Pos]) < UChar(RStr[Pos]) ? -1 : 1;
-      Value *Res = ConstantInt::get(CI->getType(), IRes);
-      return B.CreateSelect(Cmp, Zero, Res);
+  for (uint64_t MinSize = std::min(LStr.size(), RStr.size()); ; ++Pos) {
+    if (Pos == MinSize ||
+        (StrNCmp && (LStr[Pos] == '\0' && RStr[Pos] == '\0'))) {
+      // One array is a leading part of the other of equal or greater
+      // size, or for strncmp, the arrays are equal strings.
+      // Fold the result to zero.  Size is assumed to be in bounds, since
+      // otherwise the call would be undefined.
+      return Zero;
     }
+
+    if (LStr[Pos] != RStr[Pos])
+      break;
   }
 
-  if (auto *SizeC = dyn_cast<ConstantInt>(Size))
-    if (MinSize < SizeC->getZExtValue())
-      // Fail if the bound happens to be constant and excessive and
-      // let sanitizers catch it.
-      return nullptr;
-
-  // One array is a leading part of the other of equal or greater size.
-  // Fold the result to zero.  Nonconstant size is assumed to be in bounds,
-  // since otherwise the call would be undefined.
-  return Zero;
+  // Normalize the result.
+  typedef unsigned char UChar;
+  int IRes = UChar(LStr[Pos]) < UChar(RStr[Pos]) ? -1 : 1;
+  Value *MaxSize = ConstantInt::get(Size->getType(), Pos);
+  Value *Cmp = B.CreateICmp(ICmpInst::ICMP_ULE, Size, MaxSize);
+  Value *Res = ConstantInt::get(CI->getType(), IRes);
+  return B.CreateSelect(Cmp, Zero, Res);
 }
 
 // Optimize a memcmp call CI with constant size Len.
@@ -1265,7 +1270,7 @@ Value *LibCallSimplifier::optimizeMemCmpBCmpCommon(CallInst *CI,
 
   annotateNonNullAndDereferenceable(CI, {0, 1}, Size, DL);
 
-  if (Value *Res = optimizeMemCmpVarSize(CI, LHS, RHS, Size, B, DL))
+  if (Value *Res = optimizeMemCmpVarSize(CI, LHS, RHS, Size, false, B, DL))
     return Res;
 
   // Handle constant Size.
