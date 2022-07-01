@@ -52,30 +52,6 @@ static_assert(F<unsigned>::value == 2);
 static_assert(F<char[10]>::value == 3);
 static_assert(F<char>::value == 1);
 
-template <unsigned I>
-struct S {
-  template <typename T>
-  struct F {
-    enum { value = 1 };
-  };
-
-  template <typename T>
-    requires C1<T> && C2<T>
-  struct F<T> {
-    enum { value = 2 };
-  };
-
-  template <typename T>
-    requires C1<T> || C2<T>
-  struct F<T> {
-    enum { value = 3 };
-  };
-};
-
-static_assert(S<1>::F<unsigned>::value == 2);
-static_assert(S<1>::F<char[10]>::value == 3);
-static_assert(S<1>::F<char>::value == 1);
-
 // Make sure atomic constraints subsume each other only if their parameter
 // mappings are identical.
 
