@@ -308,7 +308,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     `linear_step_vars` variadic lists should contain the same number of
     elements.
 
-    Reductions can be performed in a workshare loop by specifying reduction
+    Reductions can be performed in a worksharing-loop by specifying reduction
     accumulator variables in `reduction_vars` and symbols referring to reduction
     declarations in the `reductions` attribute. Each reduction is identified
     by the accumulator it uses and accumulators must not be repeated in the same
@@ -325,8 +325,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     The optional `schedule_chunk_var` associated with this determines further
     controls this distribution.
 
-    The optional `collapse_val` attribute specifies the number of loops which
-    are collapsed to form the worksharing loop.
+    Collapsed loops are represented by the worksharing-loop having a list of
+    indices, bounds and steps where the size of the list is equal to the
+    collapse value.
 
     The `nowait` attribute, when present, signifies that there should be no
     implicit barrier at the end of the loop.
@@ -351,7 +352,6 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              Optional<AnyType>:$schedule_chunk_var,
              OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
              UnitAttr:$simd_modifier,
-             Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$collapse_val,
              UnitAttr:$nowait,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
              OptionalAttr<OrderKindAttr>:$order_val,
@@ -366,7 +366,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
-    /// Returns the number of loops in the workshape loop nest.
+    /// Returns the number of loops in the worksharing-loop nest.
     unsigned getNumLoops() { return lowerBound().size(); }
 
     /// Returns the number of reduction variables.
@@ -386,7 +386,6 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
               custom<ScheduleClause>(
                 $schedule_val, $schedule_modifier, $simd_modifier,
                 $schedule_chunk_var, type($schedule_chunk_var)) `)`
-          |`collapse` `(` $collapse_val `)`
           |`nowait` $nowait
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
