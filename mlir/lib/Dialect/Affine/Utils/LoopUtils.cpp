@@ -2756,7 +2756,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
       return failure();
     }
 
-    // Set all identifiers as dimensions uniformly since some of those marked as
+    // Set all variables as dimensions uniformly since some of those marked as
     // symbols above could be outer loop IVs (corresponding tile space IVs).
     cst.setDimSymbolSeparation(/*newSymbolCount=*/0);
 

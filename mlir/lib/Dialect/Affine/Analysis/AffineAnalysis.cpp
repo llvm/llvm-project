@@ -233,7 +233,7 @@ void mlir::getReachableAffineApplyOps(
   }
 }
 
-// Builds a system of constraints with dimensional identifiers corresponding to
+// Builds a system of constraints with dimensional variables corresponding to
 // the loop IVs of the forOps appearing in that order. Any symbols founds in
 // the bound operands are added as symbols in the system. Returns failure for
 // the yet unimplemented cases.
@@ -269,7 +269,7 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
 
 /// Computes the iteration domain for 'op' and populates 'indexSet', which
 /// encapsulates the constraints involving loops surrounding 'op' and
-/// potentially involving any Function symbols. The dimensional identifiers in
+/// potentially involving any Function symbols. The dimensional variables in
 /// 'indexSet' correspond to the loops surrounding 'op' from outermost to
 /// innermost.
 static LogicalResult getOpIndexSet(Operation *op,
@@ -533,7 +533,7 @@ void MemRefAccess::getAccessMap(AffineValueMap *accessMap) const {
 //
 // This method builds a constraint system with the following column format:
 //
-//  [src-dim-identifiers, dst-dim-identifiers, symbols, constant]
+//  [src-dim-variables, dst-dim-variables, symbols, constant]
 //
 // For example, given the following MLIR code with "source" and "destination"
 // accesses to the same memref label, and symbols %M, %N, %K:
