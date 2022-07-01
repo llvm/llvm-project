@@ -46,6 +46,7 @@ Implemented Papers
 - P0174R2 (Deprecating Vestigial Library Parts in C++17)
 - N4190 (Removing auto_ptr, random_shuffle(), And Old <functional> Stuff)
 - P0154R1 (Hardware inference size)
+- P0618R0 (Deprecating <codecvt>)
 
 - Marked the following papers as "Complete" (note that some of those might have
   been implemented in a previous release but not marked as such):
@@ -154,6 +155,10 @@ API Changes
   They are also marked as ``[[deprecated]]`` in C++11 and later. To disable deprecation warnings
   you have to define ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS``. Note that this disables
   all deprecation warnings.
+
+- The contents of ``<codecvt>``, ``wstring_convert`` and ``wbuffer_convert`` have been marked as deprecated.
+  To disable deprecation warnings you have to define ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS``. Note that this
+  disables all deprecation warnings.
 
 ABI Changes
 -----------

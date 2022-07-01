@@ -953,6 +953,10 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   case FunctionDecl::TK_NonTemplate:
     mergeRedeclarable(FD, Redecl);
     break;
+  case FunctionDecl::TK_DependentNonTemplate:
+    mergeRedeclarable(FD, Redecl);
+    FD->setInstantiatedFromDecl(readDeclAs<FunctionDecl>());
+    break;
   case FunctionDecl::TK_FunctionTemplate:
     // Merged when we merge the template.
     FD->setDescribedFunctionTemplate(readDeclAs<FunctionTemplateDecl>());

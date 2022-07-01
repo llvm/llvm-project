@@ -205,7 +205,6 @@ class XCOFFObjectWriter : public MCObjectWriter {
   uint64_t SymbolTableOffset = 0;
   uint16_t SectionCount = 0;
   uint64_t RelocationEntryOffset = 0;
-  StringRef SourceFileName = ".file";
   std::vector<std::pair<std::string, size_t>> FileNames;
 
   support::endian::Writer W;

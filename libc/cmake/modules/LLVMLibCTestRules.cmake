@@ -236,7 +236,7 @@ function(expand_flags_for_libc_unittest target_name flags)
 
   # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
   # `flag__ONLY` do not.
-  if(NOT "${modifier}")
+  if("${modifier}" STREQUAL "")
     set(TARGET_NAME "${target_name}.__NO_${flag}")
   else()
     set(TARGET_NAME "${target_name}")
