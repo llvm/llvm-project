@@ -560,7 +560,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   };
   for (Symbol *sym : symtab->symbols())
     fold(sym);
-  parallelForEach(objectFiles, [&](ELFFileBase *file) {
+  parallelForEach(ctx->objectFiles, [&](ELFFileBase *file) {
     for (Symbol *sym : file->getLocalSymbols())
       fold(sym);
   });
