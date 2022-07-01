@@ -12,6 +12,26 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// Operand definitions.
+//===----------------------------------------------------------------------===//
+
+// A 12-bit signed immediate where the least significant five bits are zero.
+def simm12_lsb00000 : Operand<XLenVT>,
+                      ImmLeaf<XLenVT, [{return isShiftedInt<7, 5>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<12, "Lsb00000">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<12>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<7, 5>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+  let OperandType = "OPERAND_SIMM12_LSB00000";
+  let OperandNamespace = "RISCVOp";
+}
+
+//===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
@@ -20,6 +40,14 @@ class CBO_r<bits<12> optype, string opcodestr>
               opcodestr, "$rs1"> {
   let imm12 = optype;
   let rd = 0b00000;
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+class Prefetch_ri<bits<5> optype, string opcodestr>
+    : RVInstS<0b110, OPC_OP_IMM, (outs), (ins GPR:$rs1, simm12_lsb00000:$imm12),
+              opcodestr, "${imm12}(${rs1})"> {
+  let Inst{11-7} = 0b00000;
+  let rs2 = optype;
 }
 
 //===----------------------------------------------------------------------===//
@@ -35,3 +63,9 @@ def CBO_INVAL : CBO_r<0b000000000000, "cbo.inval">, Sched<[]>;
 let Predicates = [HasStdExtZicboz] in {
 def CBO_ZERO : CBO_r<0b000000000100, "cbo.zero">, Sched<[]>;
 } // Predicates = [HasStdExtZicboz]
+
+let Predicates = [HasStdExtZicbop] in {
+def PREFETCH_I : Prefetch_ri<0b00000, "prefetch.i">, Sched<[]>;
+def PREFETCH_R : Prefetch_ri<0b00001, "prefetch.r">, Sched<[]>;
+def PREFETCH_W : Prefetch_ri<0b00011, "prefetch.w">, Sched<[]>;
+} // Predicates = [HasStdExtZicbop]

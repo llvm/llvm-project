@@ -22,3 +22,6 @@ cbo.inval 3(t0) # CHECK: :[[@LINE]]:11: error: optional integer offset must be 0
 # Instructions from other zicbo* extensions aren't available without enabling
 # the appropriate -mattr flag.
 cbo.zero (t0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicboz' (Cache-Block Zero Instructions)
+prefetch.i 0(t3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbop' (Cache-Block Prefetch Instructions)
+prefetch.r 0(t4) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbop' (Cache-Block Prefetch Instructions)
+prefetch.w 0(t5) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbop' (Cache-Block Prefetch Instructions)
