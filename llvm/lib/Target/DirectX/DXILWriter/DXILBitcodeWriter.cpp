@@ -1251,7 +1251,7 @@ void DXILBitcodeWriter::writeModuleInfo() {
                                                            //| constant
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // Initializer.
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // Linkage.
-    if (MaxAlignment == 0)                                 // Alignment.
+    if (MaxAlignment == Align(0))                          // Alignment.
       Abbv->Add(BitCodeAbbrevOp(0));
     else {
       unsigned MaxEncAlignment = getEncodedAlign(MaxAlignment);
