@@ -1266,6 +1266,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
     case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
     case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
+    case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
     case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
     case Stmt::OMPDistributeDirectiveClass:
     case Stmt::OMPDistributeParallelForDirectiveClass:

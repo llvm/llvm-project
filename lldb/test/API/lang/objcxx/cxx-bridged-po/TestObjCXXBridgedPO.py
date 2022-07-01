@@ -5,6 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestObjCXXBridgedPO(TestBase):
 
+    @expectedFailureAll(macos_version=[">=", "10.16"]) # rdar://96224141
     def test_bridged_type_po(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

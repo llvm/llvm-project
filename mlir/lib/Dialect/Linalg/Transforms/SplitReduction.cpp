@@ -15,6 +15,7 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -60,14 +61,14 @@ static Attribute getNeutralElement(Operation *op) {
 FailureOr<LinalgOp> mlir::linalg::splitReduction(
     PatternRewriter &b, LinalgOp op,
     const ControlSplitReductionFn &controlSplitReductionFn,
-    const LinalgTransformationFilter &filter) {
+    const LinalgTransformationFilter &filter, bool useAlloc) {
   if (failed(filter.checkAndNotify(b, op)) || !op.hasTensorSemantics() ||
       op.getNumReductionLoops() != 1 || op.getNumOutputs() != 1 ||
       !op.hasOnlyProjectedPermutations())
     return b.notifyMatchFailure(op, "precondition not met");
 
   FailureOr<SplitReductionResult> res =
-      splitReduction(b, op, controlSplitReductionFn);
+      splitReduction(b, op, controlSplitReductionFn, useAlloc);
   if (failed(res))
     return failure();
 
@@ -79,7 +80,7 @@ FailureOr<LinalgOp> mlir::linalg::splitReduction(
 
 FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     PatternRewriter &b, LinalgOp op,
-    const ControlSplitReductionFn &controlSplitReductionFn) {
+    const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(op);
 
@@ -171,11 +172,20 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     outputExpr.push_back(
         b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
   }
-  Value initTensor = b.create<linalg::InitTensorOp>(
-      loc, newOutputShape, op.getRegionOutputArgs()[0].getType());
+  Value initOrAllocTensor;
+  if (useAlloc) {
+    initOrAllocTensor = b.create<bufferization::AllocTensorOp>(
+        loc,
+        RankedTensorType::get(newOutputShape,
+                              op.getRegionOutputArgs()[0].getType()),
+        ValueRange{});
+  } else {
+    initOrAllocTensor = b.create<linalg::InitTensorOp>(
+        loc, newOutputShape, op.getRegionOutputArgs()[0].getType());
+  }
   Value constantOp = b.create<arith::ConstantOp>(loc, identity);
   Value identityTensor =
-      b.create<linalg::FillOp>(op->getLoc(), constantOp, initTensor)
+      b.create<linalg::FillOp>(op->getLoc(), constantOp, initOrAllocTensor)
           .getResult(0);
 
   newMaps.push_back(AffineMap::get(oldOutputMap.getNumDims() + 1, 0, outputExpr,
@@ -189,7 +199,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   // Create the new op matching the original op with an extra parallel
   // dimension.
   GenericOp genericOp = b.create<GenericOp>(
-      loc, TypeRange({initTensor.getType()}), newInputs,
+      loc, TypeRange({initOrAllocTensor.getType()}), newInputs,
       ValueRange({identityTensor}), newMaps, newIteratorTypes);
   b.inlineRegionBefore(op->getRegion(0), genericOp.region(),
                        genericOp.region().begin());
@@ -223,9 +233,9 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
       });
   b.replaceOp(op, reduction.getResults());
 
-  return SplitReductionResult{identityTensor.getDefiningOp<FillOp>(),
-                              cast<LinalgOp>(genericOp.getOperation()),
-                              reduction};
+  return SplitReductionResult{
+      initOrAllocTensor.getDefiningOp(), identityTensor.getDefiningOp<FillOp>(),
+      cast<LinalgOp>(genericOp.getOperation()), reduction};
 }
 
 /// Rewrite f(i, j, k, ...) into f(i, j, k * ratio + kk, ...)
@@ -260,7 +270,7 @@ static AffineMap insertParallelDim(LinalgOp op, OpOperand &opOperand,
 /// Core rewrite implementation.
 FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
     PatternRewriter &b, LinalgOp op,
-    const ControlSplitReductionFn &controlSplitReductionFn) {
+    const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(op);
 
@@ -297,7 +307,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
     return b.notifyMatchFailure(op, "unknown reduction neutral");
 
   // TODO: relax this when multi-reduction support is available.
-  if (op.getNumOutputs() != (int)neutralElements.size())
+  if (op.getNumOutputs() != static_cast<int64_t>(neutralElements.size()))
     return b.notifyMatchFailure(op, "expect one reduction per output");
 
   // Rewrite part.
@@ -318,6 +328,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   // TODO: generalize when multi-reduction support is available.
   SmallVector<Value> newOutputs;
   newOutputs.reserve(op.getNumOutputs());
+  SmallVector<Operation *> initOrAllocTensorOps;
   SmallVector<linalg::FillOp> fillOps;
   fillOps.reserve(op.getNumOutputs());
   for (auto it : llvm::zip(op.outputs(), neutralElements)) {
@@ -327,12 +338,19 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
         reductionDimSize / splitFactor, insertSplitDimension);
     SmallVector<Value> dims =
         tensor::createDynamicDimValues(b, loc, rankedTensor);
-    Value initTensor = b.create<linalg::InitTensorOp>(
-        loc, dims, newT.getShape(), t.getElementType());
+    Value initOrAllocTensor;
+    if (useAlloc) {
+      initOrAllocTensor =
+          b.create<bufferization::AllocTensorOp>(loc, newT, dims);
+    } else {
+      initOrAllocTensor = b.create<linalg::InitTensorOp>(
+          loc, dims, newT.getShape(), t.getElementType());
+    }
     Value constantOp = b.create<arith::ConstantOp>(loc, std::get<1>(it));
     fillOps.push_back(
-        b.create<linalg::FillOp>(op->getLoc(), constantOp, initTensor));
+        b.create<linalg::FillOp>(op->getLoc(), constantOp, initOrAllocTensor));
     newOutputs.push_back(fillOps.back().getResult(0));
+    initOrAllocTensorOps.push_back(initOrAllocTensor.getDefiningOp());
   }
 
   // Step 2. Reindex / expand indexing maps.
@@ -423,7 +441,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   // TODO: extend when multi-reduction support is available.
   assert(fillOps.size() == results.size() && results.size() == 1);
   b.replaceOp(op, results.front()->getResults());
-  return SplitReductionResult{fillOps.front(),
+  return SplitReductionResult{initOrAllocTensorOps.front(), fillOps.front(),
                               cast<LinalgOp>(genericOp.getOperation()),
                               results.front()};
 }
@@ -434,18 +452,21 @@ struct LinalgSplitReduction : public OpInterfaceRewritePattern<LinalgOp> {
   /// Construct a generic pattern applied to all LinalgOp that verify `filter`.
   LinalgSplitReduction(MLIRContext *context,
                        ControlSplitReductionFn controlSplitReductionFn,
-                       LinalgTransformationFilter f, PatternBenefit benefit = 1)
+                       LinalgTransformationFilter f, bool useAlloc = false,
+                       PatternBenefit benefit = 1)
       : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
         controlSplitReductionFn(std::move(controlSplitReductionFn)),
-        filter(std::move(f)) {}
+        useAlloc(useAlloc), filter(std::move(f)) {}
 
   LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
-    return splitReduction(rewriter, op, controlSplitReductionFn, filter);
+    return splitReduction(rewriter, op, controlSplitReductionFn, filter,
+                          useAlloc);
   }
 
 private:
   ControlSplitReductionFn controlSplitReductionFn;
+  bool useAlloc;
   LinalgTransformationFilter filter;
 };
 
@@ -454,7 +475,7 @@ private:
 void linalg::populateSplitReductionPattern(
     RewritePatternSet &patterns,
     const ControlSplitReductionFn &controlSplitReductionFn,
-    const LinalgTransformationFilter &f) {
+    const LinalgTransformationFilter &f, bool useAlloc) {
   patterns.add<LinalgSplitReduction>(patterns.getContext(),
-                                     controlSplitReductionFn, f);
+                                     controlSplitReductionFn, f, useAlloc);
 }

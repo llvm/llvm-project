@@ -275,6 +275,10 @@ Improvements to Clang's diagnostics
   This fixes `Issue 55962 <https://github.com/llvm/llvm-project/issues/55962>`_.
 - Printable Unicode characters within `static_assert` messages are no longer
   escaped.
+- The ``-Winfinite-recursion`` diagnostic no longer warns about
+  unevaluated operands of a ``typeid`` expression, as they are now
+  modeled correctly in the CFG. This fixes
+  `Issue 21668 <https://github.com/llvm/llvm-project/issues/21668>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

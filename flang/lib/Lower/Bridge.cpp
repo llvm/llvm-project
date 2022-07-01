@@ -1750,7 +1750,7 @@ private:
     auto caseValue = valueList.begin();
     auto caseBlock = blockList.begin();
     bool skipFinalization = false;
-    for (const auto attr : llvm::enumerate(attrList)) {
+    for (const auto &attr : llvm::enumerate(attrList)) {
       if (attr.value().isa<mlir::UnitAttr>()) {
         if (attrList.size() == 1)
           stmtCtx.finalize();

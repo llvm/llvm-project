@@ -2065,7 +2065,6 @@ def int_amdgcn_ds_bvh_stack_rtn :
 // the form: D = A * B + C .
 
 class AMDGPUWmmaIntrinsic<LLVMType AB, LLVMType CD> :
-  ClangBuiltin<!subst("int", "__builtin", NAME)>,
   Intrinsic<
     [CD],               // %D
     [
@@ -2077,7 +2076,6 @@ class AMDGPUWmmaIntrinsic<LLVMType AB, LLVMType CD> :
 >;
 
 class AMDGPUWmmaIntrinsicOPSEL<LLVMType AB, LLVMType CD> :
-  ClangBuiltin<!subst("int", "__builtin", NAME)>,
   Intrinsic<
     [CD],               // %D
     [
@@ -2090,7 +2088,6 @@ class AMDGPUWmmaIntrinsicOPSEL<LLVMType AB, LLVMType CD> :
 >;
 
 class AMDGPUWmmaIntrinsicIU<LLVMType AB, LLVMType CD> :
-  ClangBuiltin<!subst("int", "__builtin", NAME)>,
   Intrinsic<
     [CD],               // %D
     [
