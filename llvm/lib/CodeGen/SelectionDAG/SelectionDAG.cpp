@@ -2712,7 +2712,16 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
         SubDemandedElts &= ScaledDemandedElts;
         if (!isSplatValue(Src, SubDemandedElts, SubUndefElts, Depth + 1))
           return false;
-        UndefElts |= APIntOps::ScaleBitMask(SubUndefElts, NumElts);
+
+        // Here we can't do "MatchAnyBits" operation merge for undef bits.
+        // Because some operation only use part value of the source.
+        // Take llvm.fshl.* for example:
+        // t1: v4i32 = Constant:i32<12>, undef:i32, Constant:i32<12>, undef:i32
+        // t2: v2i64 = bitcast t1
+        // t5: v2i64 = fshl t3, t4, t2
+        // We can not convert t2 to {i64 undef, i64 undef}
+        UndefElts |= APIntOps::ScaleBitMask(SubUndefElts, NumElts,
+                                            /*MatchAllBits=*/true);
       }
       return true;
     }
