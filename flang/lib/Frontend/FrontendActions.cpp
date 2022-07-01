@@ -146,6 +146,7 @@ bool CodeGenAction::beginSourceFileAction() {
       llvm::ArrayRef<fir::KindTy>{fir::fromDefaultKinds(defKinds)});
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
       *mlirCtx, defKinds, ci.getInvocation().getSemanticsContext().intrinsics(),
+      ci.getInvocation().getSemanticsContext().targetCharacteristics(),
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap);
 
