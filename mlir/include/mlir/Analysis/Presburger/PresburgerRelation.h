@@ -44,11 +44,6 @@ public:
 
   explicit PresburgerRelation(const IntegerRelation &disjunct);
 
-  PresburgerRelation(const PresburgerRelation &) = default;
-  PresburgerRelation(PresburgerRelation &&) = default;
-  PresburgerRelation &operator=(const PresburgerRelation &) = default;
-  PresburgerRelation &operator=(PresburgerRelation &&) = default;
-
   unsigned getNumDomainVars() const { return space.getNumDomainVars(); }
   unsigned getNumRangeVars() const { return space.getNumRangeVars(); }
   unsigned getNumSymbolVars() const { return space.getNumSymbolVars(); }
