@@ -4,12 +4,11 @@ architecture and/or the platform dependent nature of the tests. """
 from __future__ import absolute_import
 
 # System modules
-import ctypes
 import itertools
-import os
 import re
 import subprocess
 import sys
+import os
 
 # Third-party modules
 import six
@@ -192,14 +191,3 @@ def hasChattyStderr(test_case):
     if match_android_device(test_case.getArchitecture(), ['aarch64'], range(22, 25+1)):
         return True  # The dynamic linker on the device will complain about unknown DT entries
     return False
-
-if getHostPlatform() == "linux":
-    def enable_attach():
-        """Enable attaching to _this_ process, if host requires such an action.
-        Suitable for use as a preexec_fn in subprocess.Popen and similar."""
-        c = ctypes.CDLL(None)
-        PR_SET_PTRACER = ctypes.c_int(0x59616d61)
-        PR_SET_PTRACER_ANY = ctypes.c_ulong(-1)
-        c.prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY)
-else:
-    enable_attach = None
