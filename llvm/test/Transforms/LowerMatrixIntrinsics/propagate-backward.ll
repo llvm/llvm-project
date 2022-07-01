@@ -17,7 +17,7 @@ define <8 x double> @fadd_transpose(<8 x double> %a, <8 x double> %b) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[SPLIT2]], [[SPLIT6]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[SPLIT3]], [[SPLIT7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> poison, double [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> undef, double [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP5]], double [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
@@ -25,7 +25,7 @@ define <8 x double> @fadd_transpose(<8 x double> %a, <8 x double> %b) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP10]], i64 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> poison, double [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> undef, double [[TMP12]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x double> [[TMP13]], double [[TMP14]], i64 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
@@ -65,7 +65,7 @@ define <8 x double> @load_fadd_transpose(<8 x double>* %A.Ptr, <8 x double> %b) 
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[COL_LOAD5]], [[SPLIT10]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[COL_LOAD8]], [[SPLIT11]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> poison, double [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> undef, double [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> [[TMP6]], double [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
@@ -73,7 +73,7 @@ define <8 x double> @load_fadd_transpose(<8 x double>* %A.Ptr, <8 x double> %b) 
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP10]], double [[TMP11]], i64 3
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> poison, double [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> undef, double [[TMP13]], i64 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP14]], double [[TMP15]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
@@ -112,7 +112,7 @@ define <8 x double> @load_fneg_transpose(<8 x double>* %A.Ptr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fneg <2 x double> [[COL_LOAD5]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fneg <2 x double> [[COL_LOAD8]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> poison, double [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> undef, double [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> [[TMP6]], double [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
@@ -120,7 +120,7 @@ define <8 x double> @load_fneg_transpose(<8 x double>* %A.Ptr) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP10]], double [[TMP11]], i64 3
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> poison, double [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> undef, double [[TMP13]], i64 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP14]], double [[TMP15]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x double> [[TMP3]], i64 1

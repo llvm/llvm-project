@@ -36,9 +36,9 @@ define <2 x double> @test(<4 x double> %a, <2 x double> %b, i1 %c) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <1 x double> [[TMP11]], <1 x double> poison, <2 x i32> <i32 0, i32 undef>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> [[TMP12]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[TMP13]], i64 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <1 x double> poison, double [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <1 x double> undef, double [[TMP14]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP13]], i64 1
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <1 x double> poison, double [[TMP16]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <1 x double> undef, double [[TMP16]], i64 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <1 x double> [[TMP15]], <1 x double> [[TMP17]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x double> [[TMP18]]
 ; CHECK:       exit.2:
