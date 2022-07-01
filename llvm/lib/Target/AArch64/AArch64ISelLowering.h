@@ -164,6 +164,7 @@ enum NodeType : unsigned {
   DUPLANE16,
   DUPLANE32,
   DUPLANE64,
+  DUPLANE128,
 
   // Vector immedate moves
   MOVI,
