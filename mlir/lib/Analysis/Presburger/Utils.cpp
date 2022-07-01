@@ -120,7 +120,7 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
 
   // Check if `c` satisfies the condition `0 <= c <= divisor - 1`. This also
   // implictly checks that `divisor` is positive.
-  if (!(c >= 0 && c <= divisor - 1))
+  if (c < 0 || c > divisor - 1)
     return failure();
 
   // The inequality pair can be used to extract the division.
