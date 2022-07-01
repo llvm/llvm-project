@@ -77,7 +77,7 @@ protected:
 
 private:
   enum Counts : int {
-    NumKindBits = 3,
+    NumKindBits = 2,
   };
   PointerIntPair<const InMemoryIndexValueT *, NumKindBits, Kind> IndexAndKind;
   static_assert((1U << NumKindBits) <= alignof(InMemoryIndexValueT),
