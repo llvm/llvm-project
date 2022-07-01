@@ -74,12 +74,7 @@ public:
   /// expression.
   bool IsStmtExpr;
 
-  /// FP options at the beginning of the compound statement, prior to
-  /// any pragma.
-  FPOptions InitialFPFeatures;
-
-  CompoundScopeInfo(bool IsStmtExpr, FPOptions FPO)
-      : IsStmtExpr(IsStmtExpr), InitialFPFeatures(FPO) {}
+  CompoundScopeInfo(bool IsStmtExpr) : IsStmtExpr(IsStmtExpr) {}
 
   void setHasEmptyLoopBodies() {
     HasEmptyLoopBodies = true;

@@ -134,8 +134,7 @@ BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
 }
 
 CompoundStmt *ASTMaker::makeCompound(ArrayRef<Stmt *> Stmts) {
-  return CompoundStmt::Create(C, Stmts, FPOptionsOverride(), SourceLocation(),
-                              SourceLocation());
+  return CompoundStmt::Create(C, Stmts, SourceLocation(), SourceLocation());
 }
 
 DeclRefExpr *ASTMaker::makeDeclRefExpr(
