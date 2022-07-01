@@ -37,9 +37,9 @@ entry:
 !13 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 6, type: !9, scopeLine: 7, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !14 = !DILocation(line: 8, column: 3, scope: !13)
 
-; CHECK:               .csect .text[PR],2
+; CHECK:               .csect .text[PR],5
 ; CHECK-NEXT:          .file   "1.c"
-; CHECK-NEXT:          .csect .foo[PR],2
+; CHECK-NEXT:          .csect .foo[PR],5
 ; CHECK-NEXT:          .globl  foo[DS]                         # -- Begin function foo
 ; CHECK-NEXT:          .globl  .foo[PR]
 ; CHECK-NEXT:          .align  2
@@ -47,7 +47,7 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, .foo[PR]                     # @foo
 ; CHECK-NEXT:          .vbyte  4, TOC[TC0]
 ; CHECK-NEXT:          .vbyte  4, 0
-; CHECK-NEXT:          .csect .foo[PR],2
+; CHECK-NEXT:          .csect .foo[PR],5
 ; CHECK-NEXT:  L..func_begin0:
 ; CHECK-NEXT:  # %bb.0:                                # %entry
 ; CHECK-NEXT:  L..tmp0:
@@ -75,7 +75,7 @@ entry:
 ; CHECK-NEXT:          .byte   "foo"                           # Function Name
 ; CHECK-NEXT:  L..func_end0:
 ; CHECK-NEXT:                                          # -- End function
-; CHECK-NEXT:          .csect .bar[PR],2
+; CHECK-NEXT:          .csect .bar[PR],5
 ; CHECK-NEXT:          .globl  bar[DS]                         # -- Begin function bar
 ; CHECK-NEXT:          .globl  .bar[PR]
 ; CHECK-NEXT:          .align  2
@@ -83,7 +83,7 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, .bar[PR]                     # @bar
 ; CHECK-NEXT:          .vbyte  4, TOC[TC0]
 ; CHECK-NEXT:          .vbyte  4, 0
-; CHECK-NEXT:          .csect .bar[PR],2
+; CHECK-NEXT:          .csect .bar[PR],5
 ; CHECK-NEXT:  L..func_begin1:
 ; CHECK-NEXT:  # %bb.0:                                # %entry
 ; CHECK-NEXT:  L..tmp3:

@@ -28,7 +28,7 @@ entry:
 }
 
 ; ASMNFS: ._Z9throwFuncv:
-; ASMFS:    .csect ._Z9throwFuncv[PR],2
+; ASMFS:    .csect ._Z9throwFuncv[PR],5
 ; ASM:      bl .__cxa_allocate_exception[PR]
 ; ASM:      nop
 ; ASM32:    lwz 4, L..C0(2)
@@ -90,7 +90,7 @@ eh.resume:                                        ; preds = %catch.dispatch
 }
 
 ; ASMNFS: ._Z9catchFuncv:
-; ASMFS:        .csect ._Z9catchFuncv[PR],2
+; ASMFS:        .csect ._Z9catchFuncv[PR],5
 ; ASM:  L..func_begin0:
 ; ASM:  # %bb.0:                                # %entry
 ; ASM:  	mflr 0
