@@ -128,8 +128,6 @@ class MlirOptKernel(Kernel):
                     '-o',
                     '-'
                 ]
-                if code.startswith('// configuration:'):
-                    command.append('--run-reproducer')
                 # Simple handling of repeating last line.
                 if code.endswith('\n_'):
                     if not self._:

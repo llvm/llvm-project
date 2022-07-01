@@ -38,6 +38,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <string>
@@ -224,6 +225,26 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
 BasicBlock *VPTransformState::CFGState::getPreheaderBBFor(VPRecipeBase *R) {
   VPRegionBlock *LoopRegion = R->getParent()->getEnclosingLoopRegion();
   return VPBB2IRBB[LoopRegion->getPreheaderVPBB()];
+}
+
+void VPTransformState::addNewMetadata(Instruction *To,
+                                      const Instruction *Orig) {
+  // If the loop was versioned with memchecks, add the corresponding no-alias
+  // metadata.
+  if (LVer && (isa<LoadInst>(Orig) || isa<StoreInst>(Orig)))
+    LVer->annotateInstWithNoAlias(To, Orig);
+}
+
+void VPTransformState::addMetadata(Instruction *To, Instruction *From) {
+  propagateMetadata(To, From);
+  addNewMetadata(To, From);
+}
+
+void VPTransformState::addMetadata(ArrayRef<Value *> To, Instruction *From) {
+  for (Value *V : To) {
+    if (Instruction *I = dyn_cast<Instruction>(V))
+      addMetadata(I, From);
+  }
 }
 
 BasicBlock *
@@ -525,13 +546,14 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
-                             VPTransformState &State) {
+                             VPTransformState &State,
+                             bool IsEpilogueVectorization) {
 
   VPBasicBlock *ExitingVPBB = getVectorLoopRegion()->getExitingBasicBlock();
   auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
   // Try to simplify BranchOnCount to 'BranchOnCond true' if TC <= VF * UF when
   // preparing to execute the plan for the main vector loop.
-  if (!CanonicalIVStartValue && Term &&
+  if (!IsEpilogueVectorization && Term &&
       Term->getOpcode() == VPInstruction::BranchOnCount &&
       isa<ConstantInt>(TripCountV)) {
     ConstantInt *C = cast<ConstantInt>(TripCountV);

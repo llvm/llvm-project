@@ -163,6 +163,17 @@ struct Add {
   uint32_t addend;
 };
 
+enum ExtendType { ZeroExtend = 1, Sign64 = 2, Sign32 = 3 };
+
+struct Ldr {
+  uint8_t destRegister;
+  uint8_t baseRegister;
+  uint8_t size;
+  bool isFloat;
+  ExtendType extendType;
+  uint64_t offset;
+};
+
 struct PerformedReloc {
   const Reloc &rel;
   uint64_t referentVA;
@@ -177,6 +188,7 @@ public:
 
   void applyAdrpAdd(const OptimizationHint &);
   void applyAdrpAdrp(const OptimizationHint &);
+  void applyAdrpLdr(const OptimizationHint &);
 
 private:
   uint8_t *buf;
@@ -207,6 +219,41 @@ static bool parseAdd(uint32_t insn, Add &add) {
   return true;
 }
 
+static bool parseLdr(uint32_t insn, Ldr &ldr) {
+  ldr.destRegister = insn & 0x1f;
+  ldr.baseRegister = (insn >> 5) & 0x1f;
+  uint8_t size = insn >> 30;
+  uint8_t opc = (insn >> 22) & 3;
+
+  if ((insn & 0x3fc00000) == 0x39400000) {
+    // LDR (immediate), LDRB (immediate), LDRH (immediate)
+    ldr.size = 1 << size;
+    ldr.extendType = ZeroExtend;
+    ldr.isFloat = false;
+  } else if ((insn & 0x3f800000) == 0x39800000) {
+    // LDRSB (immediate), LDRSH (immediate), LDRSW (immediate)
+    ldr.size = 1 << size;
+    ldr.extendType = static_cast<ExtendType>(opc);
+    ldr.isFloat = false;
+  } else if ((insn & 0x3f400000) == 0x3d400000) {
+    // LDR (immediate, SIMD&FP)
+    ldr.extendType = ZeroExtend;
+    ldr.isFloat = true;
+    if (size == 2 && opc == 1)
+      ldr.size = 4;
+    else if (size == 3 && opc == 1)
+      ldr.size = 8;
+    else if (size == 0 && opc == 3)
+      ldr.size = 16;
+    else
+      return false;
+  } else {
+    return false;
+  }
+  ldr.offset = ((insn >> 10) & 0xfff) * ldr.size;
+  return true;
+}
+
 static void writeAdr(void *loc, uint32_t dest, int32_t delta) {
   uint32_t opcode = 0x10000000;
   uint32_t immHi = (delta & 0x001ffffc) << 3;
@@ -215,6 +262,28 @@ static void writeAdr(void *loc, uint32_t dest, int32_t delta) {
 }
 
 static void writeNop(void *loc) { write32le(loc, 0xd503201f); }
+
+static void writeLiteralLdr(void *loc, Ldr original, int32_t delta) {
+  uint32_t imm19 = (delta & 0x001ffffc) << 3;
+  uint32_t opcode = 0;
+  switch (original.size) {
+  case 4:
+    if (original.isFloat)
+      opcode = 0x1c000000;
+    else
+      opcode = original.extendType == Sign64 ? 0x98000000 : 0x18000000;
+    break;
+  case 8:
+    opcode = original.isFloat ? 0x5c000000 : 0x58000000;
+    break;
+  case 16:
+    opcode = 0x9c000000;
+    break;
+  default:
+    assert(false && "Invalid size for literal ldr");
+  }
+  write32le(loc, opcode | imm19 | original.destRegister);
+}
 
 uint64_t OptimizationHintContext::getRelocTarget(const Reloc &reloc) {
   size_t relocIdx = &reloc - isec->relocs.data();
@@ -316,6 +385,45 @@ void OptimizationHintContext::applyAdrpAdrp(const OptimizationHint &hint) {
   writeNop(buf + hint.offset0 + hint.delta[0]);
 }
 
+// Transforms a pair of adrp+ldr (immediate) instructions into an ldr (literal)
+// load from a PC-relative address if it is 4-byte aligned and within +/- 1 MiB,
+// as ldr can encode a signed 19-bit offset that gets multiplied by 4.
+//
+//   adrp xN, _foo@PAGE
+//   ldr  xM, [xN, _foo@PAGEOFF]
+// ->
+//   nop
+//   ldr  xM, _foo
+void OptimizationHintContext::applyAdrpLdr(const OptimizationHint &hint) {
+  uint32_t ins1 = read32le(buf + hint.offset0);
+  uint32_t ins2 = read32le(buf + hint.offset0 + hint.delta[0]);
+  Adrp adrp;
+  if (!parseAdrp(ins1, adrp))
+    return;
+  Ldr ldr;
+  if (!parseLdr(ins2, ldr))
+    return;
+  if (adrp.destRegister != ldr.baseRegister)
+    return;
+
+  Optional<PerformedReloc> rel1 = findPrimaryReloc(hint.offset0);
+  Optional<PerformedReloc> rel2 = findReloc(hint.offset0 + hint.delta[0]);
+  if (!rel1 || !rel2)
+    return;
+  if (ldr.offset != (rel1->referentVA & 0xfff))
+    return;
+  if ((rel1->referentVA & 3) != 0)
+    return;
+  if (ldr.size == 1 || ldr.size == 2)
+    return;
+  int64_t delta = rel1->referentVA - rel2->rel.offset - isec->getVA();
+  if (delta >= (1 << 20) || delta < -(1 << 20))
+    return;
+
+  writeNop(buf + hint.offset0);
+  writeLiteralLdr(buf + hint.offset0 + hint.delta[0], ldr, delta);
+}
+
 void ARM64::applyOptimizationHints(uint8_t *buf, const ConcatInputSection *isec,
                                    ArrayRef<uint64_t> relocTargets) const {
   assert(isec);
@@ -332,6 +440,8 @@ void ARM64::applyOptimizationHints(uint8_t *buf, const ConcatInputSection *isec,
       // might cause its targets to be turned into NOPs.
       break;
     case LOH_ARM64_ADRP_LDR:
+      ctx1.applyAdrpLdr(hint);
+      break;
     case LOH_ARM64_ADRP_ADD_LDR:
     case LOH_ARM64_ADRP_LDR_GOT_LDR:
     case LOH_ARM64_ADRP_ADD_STR:

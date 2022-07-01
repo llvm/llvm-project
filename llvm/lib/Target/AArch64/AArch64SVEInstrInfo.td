@@ -748,6 +748,11 @@ let Predicates = [HasSVEorSME] in {
   defm PUNPKLO_PP : sve_int_perm_punpk<0b0, "punpklo", int_aarch64_sve_punpklo>;
   defm PUNPKHI_PP : sve_int_perm_punpk<0b1, "punpkhi", int_aarch64_sve_punpkhi>;
 
+  // Define pattern for `nxv1i1 splat_vector(1)`.
+  // We do this here instead of in ISelLowering such that PatFrag's can still
+  // recognize a splat.
+  def : Pat<(nxv1i1 immAllOnesV), (PUNPKLO_PP (PTRUE_D 31))>;
+
   defm MOVPRFX_ZPzZ : sve_int_movprfx_pred_zero<0b000, "movprfx">;
   defm MOVPRFX_ZPmZ : sve_int_movprfx_pred_merge<0b001, "movprfx">;
   def MOVPRFX_ZZ : sve_int_bin_cons_misc_0_c<0b00000001, "movprfx", ZPRAny>;
@@ -1509,6 +1514,10 @@ let Predicates = [HasSVEorSME] in {
   defm TRN2_PPP : sve_int_perm_bin_perm_pp<0b101, "trn2", AArch64trn2>;
 
   // Extract lo/hi halves of legal predicate types.
+  def : Pat<(nxv1i1 (extract_subvector (nxv2i1 PPR:$Ps), (i64 0))),
+            (PUNPKLO_PP PPR:$Ps)>;
+  def : Pat<(nxv1i1 (extract_subvector (nxv2i1 PPR:$Ps), (i64 1))),
+            (PUNPKHI_PP PPR:$Ps)>;
   def : Pat<(nxv2i1 (extract_subvector (nxv4i1 PPR:$Ps), (i64 0))),
             (PUNPKLO_PP PPR:$Ps)>;
   def : Pat<(nxv2i1 (extract_subvector (nxv4i1 PPR:$Ps), (i64 2))),
@@ -1599,6 +1608,8 @@ let Predicates = [HasSVEorSME] in {
             (UUNPKHI_ZZ_D (UUNPKHI_ZZ_S ZPR:$Zs))>;
 
   // Concatenate two predicates.
+  def : Pat<(nxv2i1 (concat_vectors nxv1i1:$p1, nxv1i1:$p2)),
+            (UZP1_PPP_D $p1, $p2)>;
   def : Pat<(nxv4i1 (concat_vectors nxv2i1:$p1, nxv2i1:$p2)),
             (UZP1_PPP_S $p1, $p2)>;
   def : Pat<(nxv8i1 (concat_vectors nxv4i1:$p1, nxv4i1:$p2)),
@@ -2298,15 +2309,23 @@ let Predicates = [HasSVEorSME] in {
   def : Pat<(nxv16i1 (reinterpret_cast (nxv8i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv16i1 (reinterpret_cast (nxv4i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv16i1 (reinterpret_cast (nxv2i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
+  def : Pat<(nxv16i1 (reinterpret_cast (nxv1i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv8i1 (reinterpret_cast (nxv16i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv8i1 (reinterpret_cast  (nxv4i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv8i1 (reinterpret_cast  (nxv2i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
+  def : Pat<(nxv8i1 (reinterpret_cast  (nxv1i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv4i1 (reinterpret_cast (nxv16i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv4i1 (reinterpret_cast  (nxv8i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv4i1 (reinterpret_cast  (nxv2i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
+  def : Pat<(nxv4i1 (reinterpret_cast  (nxv1i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv2i1 (reinterpret_cast (nxv16i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv2i1 (reinterpret_cast  (nxv8i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
   def : Pat<(nxv2i1 (reinterpret_cast  (nxv4i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
+  def : Pat<(nxv2i1 (reinterpret_cast  (nxv1i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
+  def : Pat<(nxv1i1 (reinterpret_cast (nxv16i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
+  def : Pat<(nxv1i1 (reinterpret_cast  (nxv8i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
+  def : Pat<(nxv1i1 (reinterpret_cast  (nxv4i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
+  def : Pat<(nxv1i1 (reinterpret_cast  (nxv2i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
 
   // These allow casting from/to unpacked floating-point types.
   def : Pat<(nxv2f16 (reinterpret_cast (nxv8f16 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;

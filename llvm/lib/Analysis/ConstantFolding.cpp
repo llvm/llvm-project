@@ -1071,9 +1071,11 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   switch (Opcode) {
   default: return nullptr;
   case Instruction::ICmp:
-  case Instruction::FCmp:
-    return ConstantFoldCompareInstOperands(
-        cast<CmpInst>(InstOrCE)->getPredicate(), Ops[0], Ops[1], DL, TLI);
+  case Instruction::FCmp: {
+    auto *C = cast<CmpInst>(InstOrCE);
+    return ConstantFoldCompareInstOperands(C->getPredicate(), Ops[0], Ops[1],
+                                           DL, TLI, C);
+  }
   case Instruction::Freeze:
     return isGuaranteedNotToBeUndefOrPoison(Ops[0]) ? Ops[0] : nullptr;
   case Instruction::Call:
@@ -1093,7 +1095,7 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::InsertElement:
     return ConstantExpr::getInsertElement(Ops[0], Ops[1], Ops[2]);
   case Instruction::InsertValue:
-    return ConstantExpr::getInsertValue(
+    return ConstantFoldInsertValueInstruction(
         Ops[0], Ops[1], cast<InsertValueInst>(InstOrCE)->getIndices());
   case Instruction::ShuffleVector:
     return ConstantExpr::getShuffleVector(
@@ -1210,10 +1212,9 @@ Constant *llvm::ConstantFoldInstOperands(Instruction *I,
   return ConstantFoldInstOperandsImpl(I, I->getOpcode(), Ops, DL, TLI);
 }
 
-Constant *llvm::ConstantFoldCompareInstOperands(unsigned IntPredicate,
-                                                Constant *Ops0, Constant *Ops1,
-                                                const DataLayout &DL,
-                                                const TargetLibraryInfo *TLI) {
+Constant *llvm::ConstantFoldCompareInstOperands(
+    unsigned IntPredicate, Constant *Ops0, Constant *Ops1, const DataLayout &DL,
+    const TargetLibraryInfo *TLI, const Instruction *I) {
   CmpInst::Predicate Predicate = (CmpInst::Predicate)IntPredicate;
   // fold: icmp (inttoptr x), null         -> icmp x, 0
   // fold: icmp null, (inttoptr x)         -> icmp 0, x
@@ -1315,6 +1316,11 @@ Constant *llvm::ConstantFoldCompareInstOperands(unsigned IntPredicate,
     return ConstantFoldCompareInstOperands(Predicate, Ops1, Ops0, DL, TLI);
   }
 
+  // Flush any denormal constant float input according to denormal handling
+  // mode.
+  Ops0 = FlushFPConstant(Ops0, I, /* IsOutput */ false);
+  Ops1 = FlushFPConstant(Ops1, I, /* IsOutput */ false);
+
   return ConstantExpr::getCompare(Predicate, Ops0, Ops1);
 }
 
@@ -1336,41 +1342,40 @@ Constant *llvm::ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
   return ConstantExpr::get(Opcode, LHS, RHS);
 }
 
-// Check whether a constant is a floating point denormal that should be flushed
-// to zero according to the denormal handling mode set in the function
-// attributes. If so, return a zero with the correct sign, otherwise return the
-// original constant. Inputs and outputs to floating point instructions can have
-// their mode set separately, so the direction is also needed.
-Constant *FlushFPConstant(Constant *Operand, const llvm::Function *F,
-                          bool IsOutput) {
-  if (F == nullptr)
+Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *I,
+                                bool IsOutput) {
+  if (!I || !I->getParent() || !I->getFunction())
     return Operand;
-  if (auto *CFP = dyn_cast<ConstantFP>(Operand)) {
-    const APFloat &APF = CFP->getValueAPF();
-    Type *Ty = CFP->getType();
-    DenormalMode DenormMode = F->getDenormalMode(Ty->getFltSemantics());
-    DenormalMode::DenormalModeKind Mode =
-        IsOutput ? DenormMode.Output : DenormMode.Input;
-    switch (Mode) {
-    default:
-      llvm_unreachable("unknown denormal mode");
-      return Operand;
-    case DenormalMode::IEEE:
-      return Operand;
-    case DenormalMode::PreserveSign:
-      if (APF.isDenormal()) {
-        return ConstantFP::get(
-            Ty->getContext(),
-            APFloat::getZero(Ty->getFltSemantics(), APF.isNegative()));
-      }
-      return Operand;
-    case DenormalMode::PositiveZero:
-      if (APF.isDenormal()) {
-        return ConstantFP::get(Ty->getContext(),
-                               APFloat::getZero(Ty->getFltSemantics(), false));
-      }
-      return Operand;
+
+  ConstantFP *CFP = dyn_cast<ConstantFP>(Operand);
+  if (!CFP)
+    return Operand;
+
+  const APFloat &APF = CFP->getValueAPF();
+  Type *Ty = CFP->getType();
+  DenormalMode DenormMode =
+      I->getFunction()->getDenormalMode(Ty->getFltSemantics());
+  DenormalMode::DenormalModeKind Mode =
+      IsOutput ? DenormMode.Output : DenormMode.Input;
+  switch (Mode) {
+  default:
+    llvm_unreachable("unknown denormal mode");
+    return Operand;
+  case DenormalMode::IEEE:
+    return Operand;
+  case DenormalMode::PreserveSign:
+    if (APF.isDenormal()) {
+      return ConstantFP::get(
+          Ty->getContext(),
+          APFloat::getZero(Ty->getFltSemantics(), APF.isNegative()));
     }
+    return Operand;
+  case DenormalMode::PositiveZero:
+    if (APF.isDenormal()) {
+      return ConstantFP::get(Ty->getContext(),
+                             APFloat::getZero(Ty->getFltSemantics(), false));
+    }
+    return Operand;
   }
   return Operand;
 }
@@ -1378,15 +1383,16 @@ Constant *FlushFPConstant(Constant *Operand, const llvm::Function *F,
 Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                            Constant *RHS, const DataLayout &DL,
                                            const Instruction *I) {
-  if (auto *BB = I->getParent()) {
-    if (auto *F = BB->getParent()) {
-      if (Instruction::isBinaryOp(Opcode)) {
-        Constant *Op0 = FlushFPConstant(LHS, F, false);
-        Constant *Op1 = FlushFPConstant(RHS, F, false);
-        Constant *C = ConstantFoldBinaryOpOperands(Opcode, Op0, Op1, DL);
-        return FlushFPConstant(C, F, true);
-      }
-    }
+  if (Instruction::isBinaryOp(Opcode)) {
+    // Flush denormal inputs if needed.
+    Constant *Op0 = FlushFPConstant(LHS, I, /* IsOutput */ false);
+    Constant *Op1 = FlushFPConstant(RHS, I, /* IsOutput */ false);
+
+    // Calculate constant result.
+    Constant *C = ConstantFoldBinaryOpOperands(Opcode, Op0, Op1, DL);
+
+    // Flush denormal output if needed.
+    return FlushFPConstant(C, I, /* IsOutput */ true);
   }
   // If instruction lacks a parent/function and the denormal mode cannot be
   // determined, use the default (IEEE).

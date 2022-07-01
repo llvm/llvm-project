@@ -1103,10 +1103,6 @@ public:
 
         return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
       }
-      default:
-        REPORT("Unknown PeerAccessState %d.\n",
-               int(PeerAccessMatrix[SrcDevId][DstDevId]));
-        return OFFLOAD_FAIL;
       }
     }
 

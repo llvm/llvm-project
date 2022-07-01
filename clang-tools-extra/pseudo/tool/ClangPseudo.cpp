@@ -9,7 +9,9 @@
 #include "clang-pseudo/Bracket.h"
 #include "clang-pseudo/DirectiveTree.h"
 #include "clang-pseudo/GLR.h"
+#include "clang-pseudo/Language.h"
 #include "clang-pseudo/Token.h"
+#include "clang-pseudo/cli/CLI.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/grammar/LRGraph.h"
 #include "clang-pseudo/grammar/LRTable.h"
@@ -22,14 +24,11 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 
-using clang::pseudo::Grammar;
 using clang::pseudo::TokenStream;
 using llvm::cl::desc;
 using llvm::cl::init;
 using llvm::cl::opt;
 
-static opt<std::string>
-    Grammar("grammar", desc("Parse and check a BNF grammar file."), init(""));
 static opt<bool> PrintGrammar("print-grammar", desc("Print the grammar."));
 static opt<bool> PrintGraph("print-graph",
                             desc("Print the LR graph for the grammar"));
@@ -123,42 +122,51 @@ int main(int argc, char *argv[]) {
     pairBrackets(*ParseableStream);
   }
 
-  if (Grammar.getNumOccurrences()) {
-    std::string Text = readOrDie(Grammar);
-    std::vector<std::string> Diags;
-    auto G = Grammar::parseBNF(Text, Diags);
+  const auto &Lang = clang::pseudo::getLanguageFromFlags();
+  if (PrintGrammar)
+    llvm::outs() << Lang.G.dump();
+  if (PrintGraph)
+    llvm::outs() << clang::pseudo::LRGraph::buildLR0(Lang.G).dumpForTests(
+        Lang.G);
 
-    if (!Diags.empty()) {
-      llvm::errs() << llvm::join(Diags, "\n");
+  if (PrintTable)
+    llvm::outs() << Lang.Table.dumpForTests(Lang.G);
+  if (PrintStatistics)
+    llvm::outs() << Lang.Table.dumpStatistics();
+
+  if (ParseableStream) {
+    clang::pseudo::ForestArena Arena;
+    clang::pseudo::GSS GSS;
+    llvm::Optional<clang::pseudo::SymbolID> StartSymID =
+        Lang.G.findNonterminal(StartSymbol);
+    if (!StartSymID) {
+      llvm::errs() << llvm::formatv(
+          "The start symbol {0} doesn't exit in the grammar!\n", StartSymbol);
       return 2;
     }
-    llvm::outs() << llvm::formatv("grammar file {0} is parsed successfully\n",
-                                  Grammar);
-    if (PrintGrammar)
-      llvm::outs() << G.dump();
-    if (PrintGraph)
-      llvm::outs() << clang::pseudo::LRGraph::buildLR0(G).dumpForTests(G);
-    auto LRTable = clang::pseudo::LRTable::buildSLR(G);
-    if (PrintTable)
-      llvm::outs() << LRTable.dumpForTests(G);
-    if (PrintStatistics)
-      llvm::outs() << LRTable.dumpStatistics();
+    auto &Root =
+        glrParse(*ParseableStream,
+                 clang::pseudo::ParseParams{Lang.G, Lang.Table, Arena, GSS},
+                 *StartSymID);
+    if (PrintForest)
+      llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/true);
 
     if (ParseableStream) {
       clang::pseudo::ForestArena Arena;
       clang::pseudo::GSS GSS;
       llvm::Optional<clang::pseudo::SymbolID> StartSymID =
-          G.findNonterminal(StartSymbol);
+          Lang.G.findNonterminal(StartSymbol);
       if (!StartSymID) {
         llvm::errs() << llvm::formatv(
-            "The start symbol {0} doesn't exit in the grammar!\n", Grammar);
+            "The start symbol {0} doesn't exit in the grammar!\n", StartSymbol);
         return 2;
       }
-      auto &Root = glrParse(*ParseableStream,
-                            clang::pseudo::ParseParams{G, LRTable, Arena, GSS},
-                            *StartSymID);
+      auto &Root =
+          glrParse(*ParseableStream,
+                   clang::pseudo::ParseParams{Lang.G, Lang.Table, Arena, GSS},
+                   *StartSymID);
       if (PrintForest)
-        llvm::outs() << Root.dumpRecursive(G, /*Abbreviated=*/true);
+        llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/true);
 
       if (PrintStatistics) {
         llvm::outs() << "Forest bytes: " << Arena.bytes()
@@ -174,7 +182,7 @@ int main(int argc, char *argv[]) {
           llvm::outs() << "\n" << Stats.Total << " " << P.first << " nodes:\n";
           for (const auto &S : Stats.BySymbol)
             llvm::outs() << llvm::formatv("  {0,3} {1}\n", S.second,
-                                          G.symbolName(S.first));
+                                          Lang.G.symbolName(S.first));
         }
       }
     }

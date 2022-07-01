@@ -13,7 +13,7 @@ declare i8* @strncat(i8*, i8*, i32)
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0))
-; CHECK-NEXT:    [[ENDPTR:%.*]] = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 [[STRLEN]]
+; CHECK-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds [32 x i8], [32 x i8]* @a, i32 0, i32 [[STRLEN]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(6) [[ENDPTR]], i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 6, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -103,7 +103,7 @@ define i8* @test4(i8* %str1, i8* %str2, i32 %n) null_pointer_is_valid {
 define i8* @test5(i8* %str, i32 %n) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) [[STR:%.*]])
-; CHECK-NEXT:    [[ENDPTR:%.*]] = getelementptr i8, i8* [[STR]], i32 [[STRLEN]]
+; CHECK-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, i8* [[STR]], i32 [[STRLEN]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(6) [[ENDPTR]], i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 6, i1 false)
 ; CHECK-NEXT:    ret i8* [[STR]]
 ;

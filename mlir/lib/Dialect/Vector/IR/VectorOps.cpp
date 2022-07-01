@@ -2205,11 +2205,43 @@ public:
     return success();
   }
 };
+
+/// Pattern to rewrite an InsertStridedSliceOp(ExtractStridedSliceOp(dst), dst)
+/// to dst.
+class FoldInsertStridedSliceOfExtract final
+    : public OpRewritePattern<InsertStridedSliceOp> {
+public:
+  using OpRewritePattern<InsertStridedSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InsertStridedSliceOp insertStridedSliceOp,
+                                PatternRewriter &rewriter) const override {
+    auto extractStridedSliceOp =
+        insertStridedSliceOp.getSource()
+            .getDefiningOp<vector::ExtractStridedSliceOp>();
+
+    if (!extractStridedSliceOp)
+      return failure();
+
+    if (extractStridedSliceOp.getOperand() != insertStridedSliceOp.getDest())
+      return failure();
+
+    // Check if have the same strides and offsets.
+    if (extractStridedSliceOp.getStrides() !=
+            insertStridedSliceOp.getStrides() ||
+        extractStridedSliceOp.getOffsets() != insertStridedSliceOp.getOffsets())
+      return failure();
+
+    rewriter.replaceOp(insertStridedSliceOp, insertStridedSliceOp.getDest());
+    return success();
+  }
+};
+
 } // namespace
 
 void vector::InsertStridedSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<FoldInsertStridedSliceSplat>(context);
+  results.add<FoldInsertStridedSliceSplat, FoldInsertStridedSliceOfExtract>(
+      context);
 }
 
 OpFoldResult InsertStridedSliceOp::fold(ArrayRef<Attribute> operands) {

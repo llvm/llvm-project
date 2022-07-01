@@ -736,6 +736,30 @@ void parallelmaskedtaskloop(int argc) {
     argc = x;
 }
 
+// CHECK-LABEL:  void parallelmaskedtasksimdloop(int argc)
+void parallelmaskedtasksimdloop(int argc) {
+  int x, cond, fp, rd, lin, step, map;
+// CHECK-DAG:   [B3]
+// CHECK-DAG:  [[#PMTLSB:]]: x
+// CHECK-DAG:  [[#PMTLSB+1]]: [B3.[[#PMTLSB]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#PMTLSB+2]]: argc
+// CHECK-DAG:  [[#PMTLSB+3]]: [B3.[[#PMTLSB+2]]] = [B3.[[#PMTLSB+1]]]
+// CHECK-DAG:   [B1]
+// CHECK-DAG:  [[#PMTLS:]]: cond
+// CHECK-DAG:  [[#PMTLS+1]]: [B1.[[#PMTLS]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#PMTLS+2]]: [B1.[[#PMTLS+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-DAG:  [[#PMTLS+3]]: fp
+// CHECK-DAG:  [[#PMTLS+4]]: rd
+// CHECK-DAG:  [[#PMTLS+5]]: [B3.[[#PMTLSB+2]]]
+// CHECK-DAG:  [[#PMTLS+6]]: [B3.[[#PMTLSB]]]
+// CHECK-DAG:  [[#PMTLS+7]]: #pragma omp parallel masked taskloop simd if(cond) firstprivate(fp) reduction(+: rd)
+// CHECK-DAG:    for (int i = 0;
+// CHECK-DAG:        [B3.[[#PMTLSB+3]]];
+#pragma omp parallel masked taskloop simd if(cond) firstprivate(fp) reduction(+:rd)
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}
+
 // CHECK-LABEL:  void tls(int argc)
 void tls(int argc) {
   int x, cond, fp, rd, lin, step, map;
