@@ -355,3 +355,121 @@ body:             |
 
   bb.4:
 ...
+
+# Liveness of V_CNDMASK_B32 source (%0) must be extended through loop.
+
+---
+name:            cndmask_loop_cndmask
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: cndmask_loop_cndmask
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_]], -1, implicit-def $scc
+  ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.4, implicit $scc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, [[DEF1]], implicit-def $scc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.4, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  bb.0:
+    %0:sreg_64_xexec = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
+
+  bb.1:
+    %1:sreg_32 = S_ADD_I32 %1, -1, implicit-def $scc
+    S_CBRANCH_SCC0 %bb.4, implicit $scc
+
+  bb.2:
+    %4:sreg_64_xexec = V_CMP_NE_U32_e64 1, %2, implicit $exec
+    $vcc = S_AND_B64 $exec, %4, implicit-def $scc
+    S_CBRANCH_VCCNZ %bb.4, implicit $vcc
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_BRANCH %bb.1
+
+  bb.4:
+...
+
+---
+name:            cndmask_loop_cndmask_split
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: cndmask_loop_cndmask_split
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vcc = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+  ; CHECK-NEXT:   S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_BRANCH %bb.5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, [[DEF1]], implicit-def $scc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.4, implicit $vcc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.4(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_]], -1, implicit-def $scc
+  ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit $scc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    %0:sreg_64_xexec = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    S_CBRANCH_VCCZ %bb.5, implicit $vcc
+    S_BRANCH %bb.1
+
+  bb.5:
+    S_BRANCH %bb.4
+
+  bb.1:
+    %4:sreg_64_xexec = V_CMP_NE_U32_e64 1, %2, implicit $exec
+    $vcc = S_AND_B64 $exec, %4, implicit-def $scc
+    S_CBRANCH_VCCNZ %bb.3, implicit $vcc
+
+  bb.2:
+    %1:sreg_32 = S_ADD_I32 %1, -1, implicit-def $scc
+    S_CBRANCH_SCC0 %bb.4, implicit $scc
+
+  bb.3:
+    S_BRANCH %bb.1
+
+  bb.4:
+...
