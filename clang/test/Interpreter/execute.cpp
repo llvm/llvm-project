@@ -18,4 +18,8 @@ auto r2 = printf("S[f=%f, m=0x%llx]\n", s.f, reinterpret_cast<unsigned long long
 inline int foo() { return 42; }
 int r3 = foo();
 
+int __attribute__((weak)) bar() { return 1; }
+auto r4 = printf("bar() = %d\n", bar());
+// CHECK-NEXT: bar() = 1
+
 %quit
