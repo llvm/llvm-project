@@ -744,8 +744,8 @@ pointer-literal := NULLPTR
 
 #! Contextual keywords -- clang lexer always lexes them as identifier tokens.
 #! Placeholders for literal text in the grammar that lex as other things.
-contextual-override := IDENTIFIER
-contextual-final := IDENTIFIER
+contextual-override := IDENTIFIER [guard=Override]
+contextual-final := IDENTIFIER [guard=Final]
 contextual-zero := NUMERIC_CONSTANT
 module-keyword := IDENTIFIER
 import-keyword := IDENTIFIER
