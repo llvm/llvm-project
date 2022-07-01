@@ -6966,3 +6966,7 @@ def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
          "lib_6_3, lib_6_4, lib_6_5, lib_6_6, lib_6_7, lib_6_x,"
          "ms_6_5, ms_6_6, ms_6_7,"
          "as_6_5, as_6_6, as_6_7">;
+
+def fsuppress_conflicting_types: Flag<["-"], "fsuppress-conflicting-types">, Group<f_Group>,
+  MarshallingInfoFlag<LangOpts<"IgnoreConflictingTypes">>,
+  HelpText<"Ignore errors from conflicting types in function declarations">, Flags<[CC1Option]>;
