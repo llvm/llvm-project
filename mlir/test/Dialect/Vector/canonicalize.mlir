@@ -1669,3 +1669,16 @@ func.func @shuffle_splat(%x : i32) -> vector<4xi32> {
   return %shuffle : vector<4xi32>
 }
 
+
+// -----
+
+// CHECK-LABEL: func @insert_splat
+//  CHECK-SAME:   (%[[ARG:.*]]: i32)
+//  CHECK-NEXT:   %[[SPLAT:.*]] = vector.splat %[[ARG]] : vector<2x4x3xi32>
+//  CHECK-NEXT:   return %[[SPLAT]] : vector<2x4x3xi32>
+func.func @insert_splat(%x : i32) -> vector<2x4x3xi32> {
+  %v0 = vector.splat %x : vector<4x3xi32>
+  %v1 = vector.splat %x : vector<2x4x3xi32>
+  %insert = vector.insert %v0, %v1[0] : vector<4x3xi32> into vector<2x4x3xi32>
+  return %insert : vector<2x4x3xi32>
+}
