@@ -1,5 +1,5 @@
 ; RUN: llc -enable-machine-outliner -mtriple=amdgcn-adm-amdhsa < %s | FileCheck %s
-;
+
 ; NOTE: Machine outliner doesn't run.
 @x = dso_local global i32 0, align 4
 
