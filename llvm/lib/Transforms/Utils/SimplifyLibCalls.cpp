@@ -344,30 +344,24 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeStrRChr(CallInst *CI, IRBuilderBase &B) {
   Value *SrcStr = CI->getArgOperand(0);
-  ConstantInt *CharC = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+  Value *CharVal = CI->getArgOperand(1);
+  ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   annotateNonNullNoUndefBasedOnAccess(CI, 0);
-
-  // Cannot fold anything if we're not looking for a constant.
-  if (!CharC)
-    return nullptr;
 
   StringRef Str;
   if (!getConstantStringInfo(SrcStr, Str)) {
     // strrchr(s, 0) -> strchr(s, 0)
-    if (CharC->isZero())
+    if (CharC && CharC->isZero())
       return copyFlags(*CI, emitStrChr(SrcStr, '\0', B, TLI));
     return nullptr;
   }
 
-  // Compute the offset.
-  size_t I = (0xFF & CharC->getSExtValue()) == 0
-                 ? Str.size()
-                 : Str.rfind(CharC->getSExtValue());
-  if (I == StringRef::npos) // Didn't find the char. Return null.
-    return Constant::getNullValue(CI->getType());
-
-  // strrchr(s+n,c) -> gep(s+n+i,c)
-  return B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, B.getInt64(I), "strrchr");
+  // Try to expand strrchr to the memrchr nonstandard extension if it's
+  // available, or simply fail otherwise.
+  uint64_t NBytes = Str.size() + 1;   // Include the terminating nul.
+  Type *IntPtrType = DL.getIntPtrType(CI->getContext());
+  Value *Size = ConstantInt::get(IntPtrType, NBytes);
+  return copyFlags(*CI, emitMemRChr(SrcStr, CharVal, Size, B, DL, TLI));
 }
 
 Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {

@@ -101,7 +101,7 @@ define void @fold_strncmp_past_end(i32* %pcmp) {
 
 define i8* @fold_strrchr_past_end(i32 %c) {
 ; CHECK-LABEL: @fold_strrchr_past_end(
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0)
+; CHECK-NEXT:    ret i8* null
 ;
   %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
   %r = call i8* @strrchr(i8* %p5, i32 0)
