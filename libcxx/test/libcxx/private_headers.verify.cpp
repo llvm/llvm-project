@@ -143,6 +143,7 @@ END-SCRIPT
 #include <__algorithm/ranges_replace_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_replace_if.h'}}
 #include <__algorithm/ranges_reverse.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_reverse.h'}}
 #include <__algorithm/ranges_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_sort.h'}}
+#include <__algorithm/ranges_stable_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_stable_sort.h'}}
 #include <__algorithm/ranges_swap_ranges.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_swap_ranges.h'}}
 #include <__algorithm/ranges_transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_transform.h'}}
 #include <__algorithm/ranges_upper_bound.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_upper_bound.h'}}
