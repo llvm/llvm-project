@@ -146,17 +146,15 @@ entry:
 define void @branch_and_tail_call(i1 %a) {
 ; RV32-LABEL: branch_and_tail_call:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    beqz a0, .LBB2_2
+; RV32-NEXT:  # %bb.1: # %blue_pill
+; RV32-NEXT:    tail callee1@plt
+; RV32-NEXT:  .LBB2_2: # %red_pill
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    beqz a0, .LBB2_2
-; RV32-NEXT:  # %bb.1: # %blue_pill
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    tail callee1@plt
-; RV32-NEXT:  .LBB2_2: # %red_pill
 ; RV32-NEXT:    call callee2@plt
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
@@ -164,17 +162,15 @@ define void @branch_and_tail_call(i1 %a) {
 ;
 ; RV64-LABEL: branch_and_tail_call:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    beqz a0, .LBB2_2
+; RV64-NEXT:  # %bb.1: # %blue_pill
+; RV64-NEXT:    tail callee1@plt
+; RV64-NEXT:  .LBB2_2: # %red_pill
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    beqz a0, .LBB2_2
-; RV64-NEXT:  # %bb.1: # %blue_pill
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    tail callee1@plt
-; RV64-NEXT:  .LBB2_2: # %red_pill
 ; RV64-NEXT:    call callee2@plt
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
@@ -182,6 +178,11 @@ define void @branch_and_tail_call(i1 %a) {
 ;
 ; RV32-WITHFP-LABEL: branch_and_tail_call:
 ; RV32-WITHFP:       # %bb.0:
+; RV32-WITHFP-NEXT:    andi a0, a0, 1
+; RV32-WITHFP-NEXT:    beqz a0, .LBB2_2
+; RV32-WITHFP-NEXT:  # %bb.1: # %blue_pill
+; RV32-WITHFP-NEXT:    tail callee1@plt
+; RV32-WITHFP-NEXT:  .LBB2_2: # %red_pill
 ; RV32-WITHFP-NEXT:    addi sp, sp, -16
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -190,14 +191,6 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV32-WITHFP-NEXT:    .cfi_offset s0, -8
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
-; RV32-WITHFP-NEXT:    andi a0, a0, 1
-; RV32-WITHFP-NEXT:    beqz a0, .LBB2_2
-; RV32-WITHFP-NEXT:  # %bb.1: # %blue_pill
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    addi sp, sp, 16
-; RV32-WITHFP-NEXT:    tail callee1@plt
-; RV32-WITHFP-NEXT:  .LBB2_2: # %red_pill
 ; RV32-WITHFP-NEXT:    call callee2@plt
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -206,6 +199,11 @@ define void @branch_and_tail_call(i1 %a) {
 ;
 ; RV64-WITHFP-LABEL: branch_and_tail_call:
 ; RV64-WITHFP:       # %bb.0:
+; RV64-WITHFP-NEXT:    andi a0, a0, 1
+; RV64-WITHFP-NEXT:    beqz a0, .LBB2_2
+; RV64-WITHFP-NEXT:  # %bb.1: # %blue_pill
+; RV64-WITHFP-NEXT:    tail callee1@plt
+; RV64-WITHFP-NEXT:  .LBB2_2: # %red_pill
 ; RV64-WITHFP-NEXT:    addi sp, sp, -16
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -214,14 +212,6 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-WITHFP-NEXT:    .cfi_offset s0, -16
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa s0, 0
-; RV64-WITHFP-NEXT:    andi a0, a0, 1
-; RV64-WITHFP-NEXT:    beqz a0, .LBB2_2
-; RV64-WITHFP-NEXT:  # %bb.1: # %blue_pill
-; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    addi sp, sp, 16
-; RV64-WITHFP-NEXT:    tail callee1@plt
-; RV64-WITHFP-NEXT:  .LBB2_2: # %red_pill
 ; RV64-WITHFP-NEXT:    call callee2@plt
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
