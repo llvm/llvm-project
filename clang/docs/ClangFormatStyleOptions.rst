@@ -3196,6 +3196,11 @@ the configuration (without a prefix: ``Auto``).
     Should be used for Protocol Buffer messages in text format
     (https://developers.google.com/protocol-buffers/).
 
+  * ``LK_Verilog`` (in configuration: ``Verilog``)
+    Should be used for Verilog and SystemVerilog.
+    https://standards.ieee.org/ieee/1800/6700/
+    https://sci-hub.st/10.1109/IEEESTD.2018.8299595
+
 
 
 **MacroBlockBegin** (``String``) :versionbadge:`clang-format 3.7`
