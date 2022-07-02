@@ -109,7 +109,8 @@ void filterDeadComdatFunctions(
 std::string getUniqueModuleId(Module *M);
 
 /// Embed the memory buffer \p Buf into the module \p M as a global using the
-/// specified section name.
+/// specified section name. Also provide a metadata entry to identify it in the
+/// module using the same section name.
 void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
                          Align Alignment = Align(1));
 
