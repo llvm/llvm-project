@@ -247,6 +247,28 @@ void VPTransformState::addMetadata(ArrayRef<Value *> To, Instruction *From) {
   }
 }
 
+void VPTransformState::setDebugLocFromInst(const Value *V) {
+  if (const Instruction *Inst = dyn_cast_or_null<Instruction>(V)) {
+    const DILocation *DIL = Inst->getDebugLoc();
+
+    // When a FSDiscriminator is enabled, we don't need to add the multiply
+    // factors to the discriminators.
+    if (DIL && Inst->getFunction()->isDebugInfoForProfiling() &&
+        !isa<DbgInfoIntrinsic>(Inst) && !EnableFSDiscriminator) {
+      // FIXME: For scalable vectors, assume vscale=1.
+      auto NewDIL =
+          DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
+      if (NewDIL)
+        Builder.SetCurrentDebugLocation(*NewDIL);
+      else
+        LLVM_DEBUG(dbgs() << "Failed to create new discriminator: "
+                          << DIL->getFilename() << " Line: " << DIL->getLine());
+    } else
+      Builder.SetCurrentDebugLocation(DIL);
+  } else
+    Builder.SetCurrentDebugLocation(DebugLoc());
+}
+
 BasicBlock *
 VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   // BB stands for IR BasicBlocks. VPBB stands for VPlan VPBasicBlocks.
