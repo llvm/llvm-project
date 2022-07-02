@@ -16,6 +16,7 @@ MATH_MANGLE(succ)(float x)
     int t = mx + BUILTIN_CLASS_F32(x, CLASS_NINF|CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR);
     int r = SIGNBIT_SP32 - t;
     r = t < 0 ? r : t;
+    r = mx == -1 ? SIGNBIT_SP32 : r;
     return AS_FLOAT(r);
 }
 

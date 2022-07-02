@@ -9,10 +9,12 @@
 #include "builtins.h"
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #define ATTR __attribute__((const))
+#undef AVOID_FP
 
 ATTR half
 OCML_MANGLE_F32(cvtrtn_f16)(float a)
 {
+#if defined AVOID_FP
     uint u = as_uint(a);
     uint um = u & 0x7fffffU;
     int e = (int)((u >> 23) & 0xff) - 127 + 15;
@@ -29,11 +31,17 @@ OCML_MANGLE_F32(cvtrtn_f16)(float a)
     v = e > 30 ? j : v;
     v = e == 143 ? i : v;
     return AS_HALF((ushort)(s | v));
+#else
+    half r = (half)a;
+    half p = OCML_MANGLE_F16(pred)(r);
+    return (float)r > a ? p : r;
+#endif
 }
 
 ATTR half
 OCML_MANGLE_F32(cvtrtp_f16)(float a)
 {
+#if defined AVOID_FP
     uint u = as_uint(a);
     uint um = u & 0x7fffffU;
     int e = (int)((u >> 23) & 0xff) - 127 + 15;
@@ -50,11 +58,17 @@ OCML_MANGLE_F32(cvtrtp_f16)(float a)
     v = e > 30 ? j : v;
     v = e == 143 ? i : v;
     return AS_HALF((ushort)(s | v));
+#else
+    half r = (half)a;
+    half s = OCML_MANGLE_F16(succ)(r);
+    return (float)r < a ? s : r;
+#endif
 }
 
 ATTR half
 OCML_MANGLE_F32(cvtrtz_f16)(float a)
 {
+#if defined AVOID_FP
     uint u = as_uint(a);
     uint um = u & 0x7fffffU;
     int e = (int)((u >> 23) & 0xff) - 127 + 15;
@@ -68,6 +82,13 @@ OCML_MANGLE_F32(cvtrtz_f16)(float a)
     v = e < 1 ? d : v;
     v = e < -10 ? 0 : v;
     return AS_HALF((ushort)(s | v));
+#else
+    float aa = BUILTIN_ABS_F32(a);
+    half r = (half)a;
+    half ar = BUILTIN_ABS_F16(r);
+    half z = OCML_MANGLE_F16(nextafter)(r, 0.0h);
+    return aa < (float)ar ? z : r;
+#endif
 }
 
 ATTR half
@@ -155,6 +176,7 @@ OCML_MANGLE_F64(cvtrtz_f16)(double a)
 ATTR float
 OCML_MANGLE_F64(cvtrtn_f32)(double a)
 {
+#if defined AVOID_FP
     ulong u = as_ulong(a);
     ulong um = u & 0xfffffffffffffUL;
     int e = (int)((u >> 52) & 0x7ff) - 1023 + 127;
@@ -171,11 +193,17 @@ OCML_MANGLE_F64(cvtrtn_f32)(double a)
     v = e > 254 ? j : v;
     v = e == 1151 ? i : v;
     return as_float(s | v);
+#else
+    float r = (float)a;
+    float p = OCML_MANGLE_F32(pred)(r);
+    return (double)r > a ? p : r;
+#endif
 }
 
 ATTR float
 OCML_MANGLE_F64(cvtrtp_f32)(double a)
 {
+#if defined AVOID_FP
     ulong u = as_ulong(a);
     ulong um = u & 0xfffffffffffffUL;
     int e = (int)((u >> 52) & 0x7ff) - 1023 + 127;
@@ -192,11 +220,17 @@ OCML_MANGLE_F64(cvtrtp_f32)(double a)
     v = e > 254 ? j : v;
     v = e == 1151 ? i : v;
     return as_float(s | v);
+#else
+    float r = (float)a;
+    float s = OCML_MANGLE_F32(succ)(r);
+    return (double)r < a ? s : r;
+#endif
 }
 
 ATTR float
 OCML_MANGLE_F64(cvtrtz_f32)(double a)
 {
+#if defined AVOID_FP
     ulong u = as_ulong(a);
     ulong um = u & 0xfffffffffffffUL;
     int e = (int)((u >> 52) & 0x7ff) - 1023 + 127;
@@ -210,5 +244,12 @@ OCML_MANGLE_F64(cvtrtz_f32)(double a)
     v = e < 1 ? d : v;
     v = e < -23 ? 0 : v;
     return as_float(s | v);
+#else
+    double aa = BUILTIN_ABS_F64(a);
+    float r = (float)a;
+    float ar = BUILTIN_ABS_F32(r);
+    float z = OCML_MANGLE_F32(nextafter)(r, 0.0f);
+    return aa < (double)ar ? z : r;
+#endif
 }
 

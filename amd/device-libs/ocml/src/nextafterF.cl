@@ -19,14 +19,14 @@ MATH_MANGLE(nextafter)(float x, float y)
     int t = mx + (mx < my ? 1 : -1);
     int r = SIGNBIT_SP32 - t;
     r = t < 0 ? r : t;
+    r = (mx == -1 && mx < my) ? SIGNBIT_SP32 : r;
+
     if (!FINITE_ONLY_OPT()) {
         r = BUILTIN_ISNAN_F32(x) ? ix : r;
         r = BUILTIN_ISNAN_F32(y) ? iy : r;
     }
 
-    float ax = BUILTIN_ABS_F32(x);
-    float ay = BUILTIN_ABS_F32(y);
-    r = ((AS_INT(ax) | AS_INT(ay)) == 0 | ix == iy) ? iy : r;
+    r = (ix == iy || (AS_INT(BUILTIN_ABS_F32(x)) | AS_INT(BUILTIN_ABS_F32(y))) == 0) ? iy : r;
     return AS_FLOAT(r);
 }
 

@@ -21,14 +21,14 @@ MATH_MANGLE(nextafter)(half x, half y)
     short t = mx + (mx < my ? (short)1 : (short)-1);
     short r = (short)SIGNBIT_HP16 - t;
     r = t < (short)0 ? r : t;
+    r = (mx == (short)-1 && mx < my) ? (short)SIGNBIT_HP16 : r;
+
     if (!FINITE_ONLY_OPT()) {
         r = BUILTIN_ISNAN_F16(x) ? ix : r;
         r = BUILTIN_ISNAN_F16(y) ? iy : r;
     }
 
-    half ax = BUILTIN_ABS_F16(x);
-    half ay = BUILTIN_ABS_F16(y);
-    r = ((AS_SHORT(ax) | AS_SHORT(ay)) == (short)0 | ix == iy) ? iy : r;
+    r = (ix == iy || (AS_SHORT(BUILTIN_ABS_F16(x)) | AS_SHORT(BUILTIN_ABS_F16(y))) == (short)0) ? iy : r;
     return AS_HALF(r);
 }
 
