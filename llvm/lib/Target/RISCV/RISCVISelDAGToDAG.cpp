@@ -728,6 +728,36 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, ADDI);
     return;
   }
+  case ISD::SHL: {
+    auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+    if (!N1C)
+      break;
+    SDValue N0 = Node->getOperand(0);
+    if (N0.getOpcode() != ISD::AND || !N0.hasOneUse() ||
+        !isa<ConstantSDNode>(N0.getOperand(1)))
+      break;
+    unsigned ShAmt = N1C->getZExtValue();
+    uint64_t Mask = N0.getConstantOperandVal(1);
+
+    // Optimize (shl (and X, C2), C) -> (slli (srliw X, C3), C3+C) where C2 has
+    // 32 leading zeros and C3 trailing zeros.
+    if (ShAmt <= 32 && isShiftedMask_64(Mask)) {
+      unsigned XLen = Subtarget->getXLen();
+      unsigned LeadingZeros = XLen - (64 - countLeadingZeros(Mask));
+      unsigned TrailingZeros = countTrailingZeros(Mask);
+      if (TrailingZeros > 0 && LeadingZeros == 32) {
+        SDNode *SRLIW = CurDAG->getMachineNode(
+            RISCV::SRLIW, DL, VT, N0->getOperand(0),
+            CurDAG->getTargetConstant(TrailingZeros, DL, VT));
+        SDNode *SLLI = CurDAG->getMachineNode(
+            RISCV::SLLI, DL, VT, SDValue(SRLIW, 0),
+            CurDAG->getTargetConstant(TrailingZeros + ShAmt, DL, VT));
+        ReplaceNode(Node, SLLI);
+        return;
+      }
+    }
+    break;
+  }
   case ISD::SRL: {
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
