@@ -34,6 +34,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Assumptions.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -6237,6 +6238,17 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
+    LoopInfo *LI =
+        A.getInfoCache().getAnalysisResultForFunction<LoopAnalysis>(*F);
+    Optional<bool> MayContainIrreducibleControl;
+    auto IsInLoop = [&](BasicBlock &BB) {
+      if (!MayContainIrreducibleControl.has_value())
+        MayContainIrreducibleControl = mayContainIrreducibleControl(*F, LI);
+      if (MayContainIrreducibleControl.value())
+        return true;
+      return LI->getLoopFor(&BB) != nullptr;
+    };
+
     for (auto &It : AllocationInfos) {
       AllocationInfo &AI = *It.second;
       if (AI.Status == AllocationInfo::INVALID)
@@ -6278,6 +6290,10 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         Size = SizeOffsetPair.first;
       }
 
+      Instruction *IP = (!SizeAPI.has_value() || IsInLoop(*AI.CB->getParent()))
+                            ? AI.CB
+                            : &F->getEntryBlock().front();
+
       Align Alignment(1);
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
         Alignment = std::max(Alignment, *RetAlign);
@@ -6292,7 +6308,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       // TODO: Hoist the alloca towards the function entry.
       unsigned AS = DL.getAllocaAddrSpace();
       Instruction *Alloca = new AllocaInst(Type::getInt8Ty(F->getContext()), AS,
-                                           Size, Alignment, "", AI.CB);
+                                           Size, Alignment, "", IP);
 
       if (Alloca->getType() != AI.CB->getType())
         Alloca = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
