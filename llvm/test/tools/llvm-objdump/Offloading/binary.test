@@ -5,6 +5,7 @@
 ## Check that we can dump an offloading binary inside of an ELF section.
 # RUN: yaml2obj %s -o %t.elf
 # RUN: llvm-objcopy --add-section .llvm.offloading=%t.bin %t.elf
+# RUN: llvm-objcopy --set-section-alignment .llvm.offloading=8 %t.elf
 # RUN: llvm-objdump --offloading %t.elf | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 
 !ELF
