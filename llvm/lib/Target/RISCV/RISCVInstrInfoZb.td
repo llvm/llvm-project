@@ -1176,6 +1176,13 @@ def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 2)), 0x3FFFFFFFF), non_imm12:$rs2))
 def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 3)), 0x7FFFFFFFF), non_imm12:$rs2)),
           (SH3ADD_UW GPR:$rs1, GPR:$rs2)>;
 
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFE), non_imm12:$rs2)),
+          (SH1ADD (SRLIW GPR:$rs1, 1), GPR:$rs2)>;
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFC), non_imm12:$rs2)),
+          (SH2ADD (SRLIW GPR:$rs1, 2), GPR:$rs2)>;
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFF8), non_imm12:$rs2)),
+          (SH3ADD (SRLIW GPR:$rs1, 3), GPR:$rs2)>;
+
 // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
 def : Pat<(i64 (add (and GPR:$rs1, 0x1FFFFFFFE), non_imm12:$rs2)),
           (SH1ADD_UW (SRLI GPR:$rs1, 1), GPR:$rs2)>;
