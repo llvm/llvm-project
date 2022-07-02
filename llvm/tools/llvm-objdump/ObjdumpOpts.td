@@ -81,6 +81,9 @@ def dwarf_EQ : Joined<["--"], "dwarf=">,
 def fault_map_section : Flag<["--"], "fault-map-section">,
   HelpText<"Display the content of the fault map section">;
 
+def offloading : Flag<["--"], "offloading">,
+  HelpText<"Display the content of the offloading section">;
+
 def file_headers : Flag<["--"], "file-headers">,
   HelpText<"Display the contents of the overall file header">;
 def : Flag<["-"], "f">, Alias<file_headers>,
