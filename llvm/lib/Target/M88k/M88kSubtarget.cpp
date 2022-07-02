@@ -27,10 +27,25 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "M88kGenSubtargetInfo.inc"
 
+M88kSubtarget &M88kSubtarget::initializeSubtargetDependencies(
+    StringRef CPUString, StringRef TuneCPUString, StringRef FS) {
+  if (CPUString.empty())
+    CPUString = "mc88100"; // TODO Is default to mc88100 the correct choice?
+
+  if (TuneCPUString.empty())
+    TuneCPUString = CPUString;
+
+  ParseSubtargetFeatures(CPUString, TuneCPUString, FS);
+
+  return *this;
+}
+
 M88kSubtarget::M88kSubtarget(const Triple &TT, const std::string &CPU,
-                             const std::string &FS, const TargetMachine &TM)
-    : M88kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TargetTriple(TT),
-      InstrInfo(*this), TLInfo(TM, *this), FrameLowering(*this) {
+                             const std::string &TuneCPU, const std::string &FS,
+                             const TargetMachine &TM)
+    : M88kGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
+      InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
+      TLInfo(TM, *this), FrameLowering(*this) {
   // GlobalISEL
   CallLoweringInfo.reset(new M88kCallLowering(*getTargetLowering()));
   Legalizer.reset(new M88kLegalizerInfo(*this));
