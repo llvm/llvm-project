@@ -25,8 +25,7 @@ def err_cas_depscan_failed: Error<
   "CAS-based dependency scan failed: %0">, DefaultFatal;
 
 def warn_clang_cache_disabled_caching: Warning<
-  "clang-cache invokes a different clang binary than itself, it will perform "
-  "a normal non-caching invocation of the compiler">,
+  "caching disabled because %0">,
   InGroup<DiagGroup<"clang-cache">>;
 def err_clang_cache_failed_execution: Error<
   "clang-cache failed to execute compiler: %0">;

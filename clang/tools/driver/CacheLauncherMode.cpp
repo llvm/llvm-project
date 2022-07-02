@@ -8,9 +8,12 @@
 
 #include "CacheLauncherMode.h"
 #include "clang/Basic/DiagnosticCAS.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Frontend/Utils.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -30,15 +33,56 @@ static bool isSameProgram(StringRef clangCachePath, StringRef compilerPath) {
   return CacheStat.getUniqueID() == CompilerStat.getUniqueID();
 }
 
+static bool shouldCacheInvocation(ArrayRef<const char *> Args,
+                                  IntrusiveRefCntPtr<DiagnosticsEngine> Diags) {
+  SmallVector<const char *, 128> CheckArgs(Args.begin(), Args.end());
+  // Make sure "-###" is not present otherwise we won't get an object back.
+  CheckArgs.erase(
+      llvm::remove_if(CheckArgs, [](StringRef Arg) { return Arg == "-###"; }),
+      CheckArgs.end());
+  CreateInvocationOptions Opts;
+  Opts.Diags = Diags;
+  std::shared_ptr<CompilerInvocation> CInvok =
+      createInvocation(CheckArgs, std::move(Opts));
+  if (!CInvok)
+    return false;
+  if (CInvok->getLangOpts()->Modules) {
+    Diags->Report(diag::warn_clang_cache_disabled_caching)
+        << "-fmodules is enabled";
+    return false;
+  }
+  if (CInvok->getLangOpts()->AsmPreprocessor) {
+    Diags->Report(diag::warn_clang_cache_disabled_caching)
+        << "assembler language mode is enabled";
+    return false;
+  }
+  return true;
+}
+
 Optional<int>
 clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
                                   llvm::StringSaver &Saver) {
   assert(Args.size() >= 1);
 
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  if (Optional<std::string> WarnOptsValue =
+          llvm::sys::Process::GetEnv("LLVM_CACHE_WARNINGS")) {
+    SmallVector<const char *, 8> WarnOpts;
+    WarnOpts.push_back(Args.front());
+    llvm::cl::TokenizeGNUCommandLine(*WarnOptsValue, Saver, WarnOpts);
+    DiagOpts = CreateAndPopulateDiagOpts(WarnOpts);
+  } else {
+    DiagOpts = new DiagnosticOptions();
+  }
   auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
-      llvm::errs(), new DiagnosticOptions(), false);
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
+      llvm::errs(), DiagOpts.get(), false);
+  IntrusiveRefCntPtr<DiagnosticsEngine> DiagsPtr(
+      new DiagnosticsEngine(new DiagnosticIDs(), DiagOpts));
+  DiagnosticsEngine &Diags = *DiagsPtr;
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
+  ProcessWarningOptions(Diags, *DiagOpts);
+  if (Diags.hasErrorOccurred())
+    return 1;
 
   if (Args.size() == 1) {
     // FIXME: With just 'clang-cache' invocation consider outputting info, like
@@ -62,6 +106,11 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     Args[0] = Saver.save(compilerPath).data();
 
   if (isSameProgram(clangCachePath, compilerPath)) {
+    if (!shouldCacheInvocation(Args, DiagsPtr)) {
+      if (Diags.hasErrorOccurred())
+        return 1;
+      return None;
+    }
     if (const char *SessionId = ::getenv("LLVM_CACHE_BUILD_SESSION_ID")) {
       // `LLVM_CACHE_BUILD_SESSION_ID` enables sharing of a depscan daemon
       // using the string it is set to. The clang invocations under the same
@@ -102,7 +151,8 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
 
   // Not invoking same clang binary, do a normal invocation without changing
   // arguments, but warn because this may be unexpected to the user.
-  Diags.Report(diag::warn_clang_cache_disabled_caching);
+  Diags.Report(diag::warn_clang_cache_disabled_caching)
+      << "clang-cache invokes a different clang binary than itself";
 
   SmallVector<StringRef, 128> RefArgs;
   RefArgs.reserve(Args.size());
