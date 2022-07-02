@@ -115,9 +115,16 @@ struct CodeGen {
 static AffineMap permute(MLIRContext *context, AffineMap m,
                          std::vector<unsigned> &topSort) {
   unsigned sz = topSort.size();
+  assert(m.getNumResults() == sz && "TopoSort/AffineMap size mismatch");
+  // Construct the inverse of `m`; to avoid the asymptotic complexity
+  // of calling `m.getPermutedPosition` repeatedly.
+  SmallVector<unsigned, 4> inv(sz);
+  for (unsigned i = 0; i < sz; i++)
+    inv[i] = m.getDimPosition(i);
+  // Construct the permutation.
   SmallVector<unsigned, 4> perm(sz);
   for (unsigned i = 0; i < sz; i++)
-    perm[i] = m.getPermutedPosition(topSort[i]);
+    perm[i] = inv[topSort[i]];
   return AffineMap::getPermutationMap(perm, context);
 }
 
