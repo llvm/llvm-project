@@ -3910,7 +3910,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     // we need to cover here is that the number of arguments agree as the
     // default argument promotion rules were already checked by
     // ASTContext::typesAreCompatible().
-    if (Old->hasPrototype() && !New->hasWrittenPrototype() && NewDeclIsDefn &&
+    if (!getLangOpts().IgnoreConflictingTypes && Old->hasPrototype() &&
+        !New->hasWrittenPrototype() && NewDeclIsDefn &&
         Old->getNumParams() != New->getNumParams()) {
       if (Old->hasInheritedPrototype())
         Old = Old->getCanonicalDecl();

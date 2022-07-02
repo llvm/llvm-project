@@ -617,6 +617,7 @@ private:
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);
 
+public:
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them
@@ -625,6 +626,7 @@ private:
                                 const llvm::Triple &Target) const;
 
   /// @}
+private:
 
   /// Retrieves a ToolChain for a particular device \p Target triple
   ///
