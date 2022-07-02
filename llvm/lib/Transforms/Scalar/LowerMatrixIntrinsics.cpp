@@ -888,27 +888,27 @@ public:
     // having to update as many def-use and use-def chains.
     //
     // Because we add to ToRemove during fusion we can't guarantee that defs
-    // are before uses.  Change uses to poison temporarily as these should get
+    // are before uses.  Change uses to undef temporarily as these should get
     // removed as well.
     //
-    // For verification, we keep track of where we changed uses to poison in
-    // PoisonedInsts and then check that we in fact remove them.
-    SmallSet<Instruction *, 16> PoisonedInsts;
+    // For verification, we keep track of where we changed uses to undefs in
+    // UndefedInsts and then check that we in fact remove them.
+    SmallSet<Instruction *, 16> UndefedInsts;
     for (auto *Inst : reverse(ToRemove)) {
       for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
-        if (auto *Poisoned = dyn_cast<Instruction>(U.getUser()))
-          PoisonedInsts.insert(Poisoned);
-        U.set(PoisonValue::get(Inst->getType()));
+        if (auto *Undefed = dyn_cast<Instruction>(U.getUser()))
+          UndefedInsts.insert(Undefed);
+        U.set(UndefValue::get(Inst->getType()));
       }
       Inst->eraseFromParent();
-      PoisonedInsts.erase(Inst);
+      UndefedInsts.erase(Inst);
     }
-    if (!PoisonedInsts.empty()) {
-      // If we didn't remove all poisoned instructions, it's a hard error.
-      dbgs() << "Poisoned but present instructions:\n";
-      for (auto *I : PoisonedInsts)
+    if (!UndefedInsts.empty()) {
+      // If we didn't remove all undefed instructions, it's a hard error.
+      dbgs() << "Undefed but present instructions:\n";
+      for (auto *I : UndefedInsts)
         dbgs() << *I << "\n";
-      llvm_unreachable("Poisoned but instruction not removed");
+      llvm_unreachable("Undefed but instruction not removed");
     }
 
     return Changed;
@@ -1667,7 +1667,7 @@ public:
 
     for (unsigned I = 0; I < NewNumVecs; ++I) {
       // Build a single result vector. First initialize it.
-      Value *ResultVector = PoisonValue::get(
+      Value *ResultVector = UndefValue::get(
           FixedVectorType::get(VectorTy->getElementType(), NewNumElts));
       // Go through the old elements and insert it into the resulting vector.
       for (auto J : enumerate(InputMatrix.vectors())) {

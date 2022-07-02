@@ -20,7 +20,7 @@ define <16 x double> @backpropagation_iterations(<16 x double>* %A.Ptr, <16 x do
 ; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast double* [[VEC_GEP6]] to <4 x double>*
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST7]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[COL_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> undef, double [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[COL_LOAD2]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP3]], double [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[COL_LOAD5]], i64 0
@@ -28,7 +28,7 @@ define <16 x double> @backpropagation_iterations(<16 x double>* %A.Ptr, <16 x do
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[COL_LOAD8]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP7]], double [[TMP8]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x double> [[COL_LOAD]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> poison, double [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> undef, double [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x double> [[COL_LOAD2]], i64 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP12]], i64 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x double> [[COL_LOAD5]], i64 1
@@ -36,7 +36,7 @@ define <16 x double> @backpropagation_iterations(<16 x double>* %A.Ptr, <16 x do
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x double> [[COL_LOAD8]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP15]], double [[TMP16]], i64 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x double> [[COL_LOAD]], i64 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x double> poison, double [[TMP18]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x double> undef, double [[TMP18]], i64 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x double> [[COL_LOAD2]], i64 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x double> [[TMP19]], double [[TMP20]], i64 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x double> [[COL_LOAD5]], i64 2
@@ -44,7 +44,7 @@ define <16 x double> @backpropagation_iterations(<16 x double>* %A.Ptr, <16 x do
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x double> [[COL_LOAD8]], i64 2
 ; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x double> [[TMP23]], double [[TMP24]], i64 3
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x double> [[COL_LOAD]], i64 3
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x double> poison, double [[TMP26]], i64 0
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x double> undef, double [[TMP26]], i64 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x double> [[COL_LOAD2]], i64 3
 ; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x double> [[TMP27]], double [[TMP28]], i64 1
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x double> [[COL_LOAD5]], i64 3
