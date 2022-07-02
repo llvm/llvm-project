@@ -16,7 +16,7 @@ body:             |
     ; CHECK-LABEL: name: assert_zext_gpr
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:gpr32all = COPY $w0
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
     ; CHECK-NEXT: $w1 = COPY %copy
     ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:gpr(s32) = COPY $w0
@@ -104,7 +104,7 @@ body:             |
     ; CHECK-LABEL: name: assert_sext_gpr
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:gpr32all = COPY $w0
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
     ; CHECK-NEXT: $w1 = COPY %copy
     ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:gpr(s32) = COPY $w0
