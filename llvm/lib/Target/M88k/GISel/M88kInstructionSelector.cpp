@@ -675,6 +675,30 @@ bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
   auto &MRI = MF.getRegInfo();
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_CONSTANT: {
+    // Only handle negative 32bit values between -1 and -65536.
+    // Other constants are handled by TableGen.
+    APInt ConstValue = I.getOperand(1).getCImm()->getValue();
+    if (ConstValue.isSignedIntN(32)) {
+      int64_t Cst = ConstValue.getSExtValue();
+      if (Cst < 0 && Cst >= -65536) {
+        MachineInstr *MI;
+        if (Cst == -65536)
+          MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::SETrwo),
+                       I.getOperand(0).getReg())
+                   .addReg(M88k::R0)
+                   .addImm((16 << 5)|16 /*16<16>*/);
+        else
+          MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::SUBUri),
+                       I.getOperand(0).getReg())
+                   .addReg(M88k::R0)
+                   .addImm(-Cst);
+        I.eraseFromParent();
+        return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+      }
+    }
+    return false;
+  }
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR: {
     // Lower

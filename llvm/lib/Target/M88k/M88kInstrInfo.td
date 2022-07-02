@@ -333,9 +333,14 @@ def : Pat<(or GPR:$rs1, uimm32:$imm),
 def : Pat<(xor GPR:$rs1, uimm32:$imm),
           (XORri (XORriu GPR:$rs1, (HI16 i32:$imm)), (LO16 i32:$imm))>;
 
+// Zero immediate.
+def : Pat<(i32 0),
+          (ORri (i32 R0), 0)>;
+
 // Arbitrary constants.
 // 16-bit immediate.
-def : Pat<(i32 imm32lo16:$imm), (ORri (i32 R0), imm32lo16:$imm)>;
+def : Pat<(i32 imm32lo16:$imm), (ORri (i32 R0), (LO16 i32:$imm))>;
+def : Pat<(i32 imm32hi16:$imm), (ORriu (i32 R0), (HI16 i32:$imm))>;
 
 // Arbitrary immediate.
 def : Pat<(i32 imm:$imm),
