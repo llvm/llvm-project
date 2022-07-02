@@ -1,0 +1,11 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+!Offload
+Members:
+  - 
+
+# CHECK: --- !Offload
+# CHECK-NEXT: Members:
+# CHECK-NEXT:   - ImageKind:       IMG_None
+# CHECK-NEXT:     OffloadKind:     OFK_None
+# CHECK-NEXT:     Flags:           0
+# CHECK-NEXT: ...
