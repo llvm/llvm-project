@@ -1364,7 +1364,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       unsigned CurOp = 2;
       // Masked intrinsic only have TU version pseduo instructions.
-      bool IsTU = IsMasked || (!IsMasked && !Node->getOperand(CurOp).isUndef());
+      bool IsTU = IsMasked || !Node->getOperand(CurOp).isUndef();
       SmallVector<SDValue, 8> Operands;
       if (IsTU)
         Operands.push_back(Node->getOperand(CurOp++));
@@ -1416,9 +1416,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // The riscv_vlm intrinsic are always tail agnostic and no passthru operand.
       bool HasPassthruOperand = IntNo != Intrinsic::riscv_vlm;
       // Masked intrinsic only have TU version pseduo instructions.
-      bool IsTU =
-          HasPassthruOperand &&
-          ((!IsMasked && !Node->getOperand(CurOp).isUndef()) || IsMasked);
+      bool IsTU = HasPassthruOperand &&
+                  (IsMasked || !Node->getOperand(CurOp).isUndef());
       SmallVector<SDValue, 8> Operands;
       if (IsTU)
         Operands.push_back(Node->getOperand(CurOp++));
@@ -1451,7 +1450,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       unsigned CurOp = 2;
       // Masked intrinsic only have TU version pseduo instructions.
-      bool IsTU = IsMasked || (!IsMasked && !Node->getOperand(CurOp).isUndef());
+      bool IsTU = IsMasked || !Node->getOperand(CurOp).isUndef();
       SmallVector<SDValue, 7> Operands;
       if (IsTU)
         Operands.push_back(Node->getOperand(CurOp++));
