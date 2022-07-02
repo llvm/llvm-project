@@ -13,3 +13,7 @@
 define i32 @foo() {
   ret i32 0
 }
+
+; CHECK: !llvm.embedded.objects = !{![[METADATA_1:[0-9]+]], ![[METADATA_2:[0-9]+]]}
+; CHECK: ![[METADATA_1]] = !{ptr @[[OBJECT_1]], !".llvm.offloading"}
+; CHECK: ![[METADATA_2]] = !{ptr @[[OBJECT_2]], !".llvm.offloading"}

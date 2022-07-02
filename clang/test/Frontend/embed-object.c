@@ -4,3 +4,6 @@
 // CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr @[[OBJECT]]], section "llvm.metadata"
 
 void foo(void) {}
+
+// CHECK: !llvm.embedded.objects = !{![[METADATA:[0-9]+]]}
+// CHECK: ![[METADATA]] = !{ptr @[[OBJECT]], !".llvm.offloading"}
