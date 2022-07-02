@@ -3978,16 +3978,16 @@ define dso_local void @test_nested_memory(float* %dst, double* %src) {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test_nested_memory
 ; IS__TUNIT_NPM-SAME: (float* nocapture nofree writeonly [[DST:%.*]], double* nocapture nofree readonly [[SRC:%.*]]) {
 ; IS__TUNIT_NPM-NEXT:  entry:
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 24, align 1
 ; IS__TUNIT_NPM-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = bitcast %struct.STy* [[LOCAL]] to i8*
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = bitcast %struct.STy* [[LOCAL]] to i8*
 ; IS__TUNIT_NPM-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 2
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 24, align 1
-; IS__TUNIT_NPM-NEXT:    [[DST1:%.*]] = bitcast i8* [[TMP1]] to float**
+; IS__TUNIT_NPM-NEXT:    [[DST1:%.*]] = bitcast i8* [[TMP0]] to float**
 ; IS__TUNIT_NPM-NEXT:    store float* [[DST]], float** [[DST1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 8
+; IS__TUNIT_NPM-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 8
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SRC2]] to double**
 ; IS__TUNIT_NPM-NEXT:    store double* [[SRC]], double** [[TMP2]], align 8
-; IS__TUNIT_NPM-NEXT:    store i8* [[TMP1]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
+; IS__TUNIT_NPM-NEXT:    store i8* [[TMP0]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
 ; IS__TUNIT_NPM-NEXT:    call fastcc void @nested_memory_callee() #[[ATTR15:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
