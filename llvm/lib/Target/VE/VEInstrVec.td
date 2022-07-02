@@ -2,6 +2,33 @@
 // Vector Instructions
 //===----------------------------------------------------------------------===//
 
+// Pseudo instructions for VM/VM512 spill/restore
+//
+// These pseudo instructions are used for only spill/restore since
+// InlineSpiller assumes storeRegToStackSlot/loadRegFromStackSlot
+// functions emit only single instruction.  Those functions emit a
+// single store/load instruction or one of these pseudo store/load
+// instructions.
+//
+// Specifies hasSideEffects = 0 to disable UnmodeledSideEffects.
+
+let mayLoad = 1, hasSideEffects = 0 in {
+def LDVMrii : Pseudo<
+    (outs VM:$vmx), (ins MEMrii:$addr),
+    "# pseudo ldvm $vmx, $addr", []>;
+def LDVM512rii : Pseudo<
+    (outs VM512:$vmx), (ins MEMrii:$addr),
+    "# pseudo ldvm512 $vmx, $addr", []>;
+}
+let mayStore = 1, hasSideEffects = 0 in {
+def STVMrii : Pseudo<
+    (outs), (ins MEMrii:$addr, VM:$vmx),
+    "# pseudo stvm $addr, $vmx", []>;
+def STVM512rii : Pseudo<
+    (outs), (ins MEMrii:$addr, VM512:$vmx),
+    "# pseudo stvm512 $addr, $vmx", []>;
+}
+
 //===----------------------------------------------------------------------===//
 // Pseudo instructions for VM512 modifications
 //===----------------------------------------------------------------------===//

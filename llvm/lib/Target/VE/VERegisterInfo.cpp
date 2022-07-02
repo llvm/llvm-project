@@ -180,6 +180,16 @@ class EliminateFrameIndex {
                   int FIOperandNum);
   void processLDQ(MachineInstr &MI, Register FrameReg, int64_t Offset,
                   int FIOperandNum);
+  // Expand and eliminate Frame Index of pseudo STVMrii and LDVMrii.
+  void processSTVM(MachineInstr &MI, Register FrameReg, int64_t Offset,
+                   int FIOperandNum);
+  void processLDVM(MachineInstr &MI, Register FrameReg, int64_t Offset,
+                   int FIOperandNum);
+  // Expand and eliminate Frame Index of pseudo STVM512rii and LDVM512rii.
+  void processSTVM512(MachineInstr &MI, Register FrameReg, int64_t Offset,
+                      int FIOperandNum);
+  void processLDVM512(MachineInstr &MI, Register FrameReg, int64_t Offset,
+                      int FIOperandNum);
 
 public:
   EliminateFrameIndex(const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
@@ -271,6 +281,185 @@ void EliminateFrameIndex::processLDQ(MachineInstr &MI, Register FrameReg,
   replaceFI(MI, FrameReg, Offset, FIOperandNum);
 }
 
+void EliminateFrameIndex::processSTVM(MachineInstr &MI, Register FrameReg,
+                                      int64_t Offset, int FIOperandNum) {
+  assert(MI.getOpcode() == VE::STVMrii);
+  LLVM_DEBUG(dbgs() << "processSTVM: "; MI.dump());
+
+  // Original MI is:
+  //   STVMrii frame-index, 0, offset, reg (, memory operand)
+  // Convert it to:
+  //   SVMi   tmp-reg, reg, 0
+  //   STrii  frame-reg, 0, offset, tmp-reg
+  //   SVMi   tmp-reg, reg, 1
+  //   STrii  frame-reg, 0, offset+8, tmp-reg
+  //   SVMi   tmp-reg, reg, 2
+  //   STrii  frame-reg, 0, offset+16, tmp-reg
+  //   SVMi   tmp-reg, reg, 3
+  //   STrii  frame-reg, 0, offset+24, tmp-reg
+
+  prepareReplaceFI(MI, FrameReg, Offset, 24);
+
+  Register SrcReg = MI.getOperand(3).getReg();
+  bool isKill = MI.getOperand(3).isKill();
+  // FIXME: it would be better to scavenge a register here instead of
+  // reserving SX16 all of the time.
+  Register TmpReg = VE::SX16;
+  for (int i = 0; i < 3; ++i) {
+    build(VE::SVMmr, TmpReg).addReg(SrcReg).addImm(i);
+    MachineInstr *StMI =
+        build(VE::STrii).addReg(FrameReg).addImm(0).addImm(0).addReg(
+            TmpReg, getKillRegState(true));
+    replaceFI(*StMI, FrameReg, Offset, 0);
+    Offset += 8;
+  }
+  build(VE::SVMmr, TmpReg).addReg(SrcReg, getKillRegState(isKill)).addImm(3);
+  MI.setDesc(get(VE::STrii));
+  MI.getOperand(3).ChangeToRegister(TmpReg, false, false, true);
+  replaceFI(MI, FrameReg, Offset, FIOperandNum);
+}
+
+void EliminateFrameIndex::processLDVM(MachineInstr &MI, Register FrameReg,
+                                      int64_t Offset, int FIOperandNum) {
+  assert(MI.getOpcode() == VE::LDVMrii);
+  LLVM_DEBUG(dbgs() << "processLDVM: "; MI.dump());
+
+  // Original MI is:
+  //   LDVMri reg, frame-index, 0, offset (, memory operand)
+  // Convert it to:
+  //   LDrii  tmp-reg, frame-reg, 0, offset
+  //   LVMir vm, 0, tmp-reg
+  //   LDrii  tmp-reg, frame-reg, 0, offset+8
+  //   LVMir_m vm, 1, tmp-reg, vm
+  //   LDrii  tmp-reg, frame-reg, 0, offset+16
+  //   LVMir_m vm, 2, tmp-reg, vm
+  //   LDrii  tmp-reg, frame-reg, 0, offset+24
+  //   LVMir_m vm, 3, tmp-reg, vm
+
+  prepareReplaceFI(MI, FrameReg, Offset, 24);
+
+  Register DestReg = MI.getOperand(0).getReg();
+  // FIXME: it would be better to scavenge a register here instead of
+  // reserving SX16 all of the time.
+  unsigned TmpReg = VE::SX16;
+  for (int i = 0; i < 4; ++i) {
+    if (i != 3) {
+      MachineInstr *StMI =
+          build(VE::LDrii, TmpReg).addReg(FrameReg).addImm(0).addImm(0);
+      replaceFI(*StMI, FrameReg, Offset, 1);
+      Offset += 8;
+    } else {
+      // Last LDrii replace the target instruction.
+      MI.setDesc(get(VE::LDrii));
+      MI.getOperand(0).ChangeToRegister(TmpReg, true);
+    }
+    // First LVM is LVMir.  Others are LVMir_m.  Last LVM places at the
+    // next of the target instruction.
+    if (i == 0)
+      build(VE::LVMir, DestReg).addImm(i).addReg(TmpReg, getKillRegState(true));
+    else if (i != 3)
+      build(VE::LVMir_m, DestReg)
+          .addImm(i)
+          .addReg(TmpReg, getKillRegState(true))
+          .addReg(DestReg);
+    else
+      BuildMI(*MI.getParent(), std::next(II), DL, get(VE::LVMir_m), DestReg)
+          .addImm(3)
+          .addReg(TmpReg, getKillRegState(true))
+          .addReg(DestReg);
+  }
+  replaceFI(MI, FrameReg, Offset, FIOperandNum);
+}
+
+void EliminateFrameIndex::processSTVM512(MachineInstr &MI, Register FrameReg,
+                                         int64_t Offset, int FIOperandNum) {
+  assert(MI.getOpcode() == VE::STVM512rii);
+  LLVM_DEBUG(dbgs() << "processSTVM512: "; MI.dump());
+
+  prepareReplaceFI(MI, FrameReg, Offset, 56);
+
+  Register SrcReg = MI.getOperand(3).getReg();
+  Register SrcLoReg = getSubReg(SrcReg, VE::sub_vm_odd);
+  Register SrcHiReg = getSubReg(SrcReg, VE::sub_vm_even);
+  bool isKill = MI.getOperand(3).isKill();
+  // FIXME: it would be better to scavenge a register here instead of
+  // reserving SX16 all of the time.
+  Register TmpReg = VE::SX16;
+  // store low part of VMP
+  MachineInstr *LastMI = nullptr;
+  for (int i = 0; i < 4; ++i) {
+    LastMI = build(VE::SVMmr, TmpReg).addReg(SrcLoReg).addImm(i);
+    MachineInstr *StMI =
+        build(VE::STrii).addReg(FrameReg).addImm(0).addImm(0).addReg(
+            TmpReg, getKillRegState(true));
+    replaceFI(*StMI, FrameReg, Offset, 0);
+    Offset += 8;
+  }
+  if (isKill)
+    LastMI->addRegisterKilled(SrcLoReg, &TRI, true);
+  // store high part of VMP
+  for (int i = 0; i < 3; ++i) {
+    build(VE::SVMmr, TmpReg).addReg(SrcHiReg).addImm(i);
+    MachineInstr *StMI =
+        build(VE::STrii).addReg(FrameReg).addImm(0).addImm(0).addReg(
+            TmpReg, getKillRegState(true));
+    replaceFI(*StMI, FrameReg, Offset, 0);
+    Offset += 8;
+  }
+  LastMI = build(VE::SVMmr, TmpReg).addReg(SrcHiReg).addImm(3);
+  if (isKill) {
+    LastMI->addRegisterKilled(SrcHiReg, &TRI, true);
+    // Add implicit super-register kills to the particular MI.
+    LastMI->addRegisterKilled(SrcReg, &TRI, true);
+  }
+  MI.setDesc(get(VE::STrii));
+  MI.getOperand(3).ChangeToRegister(TmpReg, false, false, true);
+  replaceFI(MI, FrameReg, Offset, FIOperandNum);
+}
+
+void EliminateFrameIndex::processLDVM512(MachineInstr &MI, Register FrameReg,
+                                         int64_t Offset, int FIOperandNum) {
+  assert(MI.getOpcode() == VE::LDVM512rii);
+  LLVM_DEBUG(dbgs() << "processLDVM512: "; MI.dump());
+
+  prepareReplaceFI(MI, FrameReg, Offset, 56);
+
+  Register DestReg = MI.getOperand(0).getReg();
+  Register DestLoReg = getSubReg(DestReg, VE::sub_vm_odd);
+  Register DestHiReg = getSubReg(DestReg, VE::sub_vm_even);
+  // FIXME: it would be better to scavenge a register here instead of
+  // reserving SX16 all of the time.
+  Register TmpReg = VE::SX16;
+  build(VE::IMPLICIT_DEF, DestReg);
+  for (int i = 0; i < 4; ++i) {
+    MachineInstr *LdMI =
+        build(VE::LDrii, TmpReg).addReg(FrameReg).addImm(0).addImm(0);
+    replaceFI(*LdMI, FrameReg, Offset, 1);
+    build(VE::LVMir_m, DestLoReg)
+        .addImm(i)
+        .addReg(TmpReg, getKillRegState(true))
+        .addReg(DestLoReg);
+    Offset += 8;
+  }
+  for (int i = 0; i < 3; ++i) {
+    MachineInstr *LdMI =
+        build(VE::LDrii, TmpReg).addReg(FrameReg).addImm(0).addImm(0);
+    replaceFI(*LdMI, FrameReg, Offset, 1);
+    build(VE::LVMir_m, DestHiReg)
+        .addImm(i)
+        .addReg(TmpReg, getKillRegState(true))
+        .addReg(DestHiReg);
+    Offset += 8;
+  }
+  MI.setDesc(get(VE::LDrii));
+  MI.getOperand(0).ChangeToRegister(TmpReg, true);
+  BuildMI(*MI.getParent(), std::next(II), DL, get(VE::LVMir_m), DestHiReg)
+      .addImm(3)
+      .addReg(TmpReg, getKillRegState(true))
+      .addReg(DestHiReg);
+  replaceFI(MI, FrameReg, Offset, FIOperandNum);
+}
+
 void EliminateFrameIndex::processMI(MachineInstr &MI, Register FrameReg,
                                     int64_t Offset, int FIOperandNum) {
   switch (MI.getOpcode()) {
@@ -279,6 +468,18 @@ void EliminateFrameIndex::processMI(MachineInstr &MI, Register FrameReg,
     return;
   case VE::LDQrii:
     processLDQ(MI, FrameReg, Offset, FIOperandNum);
+    return;
+  case VE::STVMrii:
+    processSTVM(MI, FrameReg, Offset, FIOperandNum);
+    return;
+  case VE::LDVMrii:
+    processLDVM(MI, FrameReg, Offset, FIOperandNum);
+    return;
+  case VE::STVM512rii:
+    processSTVM512(MI, FrameReg, Offset, FIOperandNum);
+    return;
+  case VE::LDVM512rii:
+    processLDVM512(MI, FrameReg, Offset, FIOperandNum);
     return;
   }
   prepareReplaceFI(MI, FrameReg, Offset);
