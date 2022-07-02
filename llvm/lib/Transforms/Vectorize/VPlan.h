@@ -317,6 +317,9 @@ struct VPTransformState {
   /// vector of instructions.
   void addMetadata(ArrayRef<Value *> To, Instruction *From);
 
+  /// Set the debug location in the builder using the debug location in \p V.
+  void setDebugLocFromInst(const Value *V);
+
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
   struct CFGState {
