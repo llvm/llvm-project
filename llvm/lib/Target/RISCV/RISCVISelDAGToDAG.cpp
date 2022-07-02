@@ -2269,7 +2269,8 @@ bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
     // to provide a margin of safety before off1 can overflow the 12 bits.
     // Check if off2 falls within that margin; if so off1+off2 can't overflow.
     const DataLayout &DL = CurDAG->getDataLayout();
-    Align Alignment = GA->getGlobal()->getPointerAlignment(DL);
+    Align Alignment = commonAlignment(GA->getGlobal()->getPointerAlignment(DL),
+                                      GA->getOffset());
     if (Offset2 != 0 && Alignment <= Offset2)
       return false;
     int64_t Offset1 = GA->getOffset();
@@ -2279,7 +2280,7 @@ bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
         CombinedOffset, GA->getTargetFlags());
   } else if (auto *CP = dyn_cast<ConstantPoolSDNode>(ImmOperand)) {
     // Ditto.
-    Align Alignment = CP->getAlign();
+    Align Alignment = commonAlignment(CP->getAlign(), CP->getOffset());
     if (Offset2 != 0 && Alignment <= Offset2)
       return false;
     int64_t Offset1 = CP->getOffset();
