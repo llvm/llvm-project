@@ -90,7 +90,7 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
         Args.push_back(Saver.save("-fdepscan-prefix-map=" + PrefixMap).data());
       }
     }
-    if (const char *CASPath = ::getenv("CLANG_CACHE_CAS_PATH")) {
+    if (const char *CASPath = ::getenv("LLVM_CACHE_CAS_PATH")) {
       Args.append({"-Xclang", "-fcas-path", "-Xclang", CASPath});
     }
     Args.append({"-greproducible"});
