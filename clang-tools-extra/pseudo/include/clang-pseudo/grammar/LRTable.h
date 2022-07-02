@@ -140,8 +140,9 @@ public:
   //     // ...apply reduce...
   //   }
   llvm::ArrayRef<RuleID> getReduceRules(StateID State) const {
-    return llvm::makeArrayRef(&Reduces[ReduceOffset[State]],
-                              &Reduces[ReduceOffset[State + 1]]);
+    assert(State + 1u < ReduceOffset.size());
+    return llvm::makeArrayRef(Reduces.data() + ReduceOffset[State],
+                              Reduces.data() + ReduceOffset[State+1]);
   }
   // Returns whether Terminal can follow Nonterminal in a valid source file.
   bool canFollow(SymbolID Nonterminal, SymbolID Terminal) const {
