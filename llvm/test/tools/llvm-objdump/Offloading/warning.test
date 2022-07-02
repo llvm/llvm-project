@@ -4,6 +4,7 @@
 # RUN: cat %t-bad.bin >> %t-good.bin
 # RUN: yaml2obj %s -o %t.elf
 # RUN: llvm-objcopy --add-section .llvm.offloading=%t-good.bin %t.elf
+# RUN: llvm-objcopy --set-section-alignment .llvm.offloading=8 %t.elf
 # RUN: llvm-objdump --offloading %t.elf 2>&1 | FileCheck %s -DFILENAME=%t.elf
 
 !ELF
