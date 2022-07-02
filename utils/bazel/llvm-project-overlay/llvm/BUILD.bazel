@@ -581,6 +581,10 @@ llvm_target_intrinsics_list = [
         "intrinsic_prefix": "bpf",
     },
     {
+        "name": "DirectX",
+        "intrinsic_prefix": "dxil",
+    },
+    {
         "name": "Hexagon",
         "intrinsic_prefix": "hexagon",
     },
