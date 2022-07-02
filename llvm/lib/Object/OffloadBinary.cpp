@@ -12,6 +12,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/FileOutputBuffer.h"
 
 using namespace llvm;
@@ -24,6 +25,10 @@ OffloadBinary::create(MemoryBufferRef Buf) {
 
   // Check for 0x10FF1OAD magic bytes.
   if (identify_magic(Buf.getBuffer()) != file_magic::offload_binary)
+    return errorCodeToError(object_error::parse_failed);
+
+  // Make sure that the data has sufficient alignment.
+  if (!isAddrAligned(Align(getAlignment()), Buf.getBufferStart()))
     return errorCodeToError(object_error::parse_failed);
 
   const char *Start = Buf.getBufferStart();
