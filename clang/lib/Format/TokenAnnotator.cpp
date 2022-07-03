@@ -4734,7 +4734,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     // the first list element. Otherwise, it should be placed outside of the
     // list.
     return Left.is(BK_BracedInit) ||
-           (Left.is(TT_CtorInitializerColon) &&
+           (Left.is(TT_CtorInitializerColon) && Right.NewlinesBefore > 0 &&
             Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon);
   }
   if (Left.is(tok::question) && Right.is(tok::colon))
@@ -4894,8 +4894,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.is(tok::identifier) && Right.Next && Right.Next->is(TT_DictLiteral))
     return true;
 
-  if (Left.is(TT_CtorInitializerColon))
-    return Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon;
+  if (Left.is(TT_CtorInitializerColon)) {
+    return Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon &&
+           (!Right.isTrailingComment() || Right.NewlinesBefore > 0);
+  }
   if (Right.is(TT_CtorInitializerColon))
     return Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterColon;
   if (Left.is(TT_CtorInitializerComma) &&
