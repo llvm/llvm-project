@@ -146,6 +146,8 @@ void GetAllocatorCacheRange(uptr *begin, uptr *end) {
 }
 
 uptr GetMallocUsableSize(const void *p) {
+  if (!p)
+    return 0;
   ChunkMetadata *m = Metadata(p);
   if (!m) return 0;
   return m->requested_size;
