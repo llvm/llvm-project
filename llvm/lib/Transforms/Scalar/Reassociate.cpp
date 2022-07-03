@@ -1073,7 +1073,7 @@ static BinaryOperator *ConvertShiftToMul(Instruction *Shl) {
 
   BinaryOperator *Mul =
     BinaryOperator::CreateMul(Shl->getOperand(0), MulCst, "", Shl);
-  Shl->setOperand(0, UndefValue::get(Shl->getType())); // Drop use of op.
+  Shl->setOperand(0, PoisonValue::get(Shl->getType())); // Drop use of op.
   Mul->takeName(Shl);
 
   // Everyone now refers to the mul instruction.
