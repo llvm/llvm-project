@@ -83,13 +83,13 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 
 def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.
-  return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingOnes(),
+  return CurDAG->getTargetConstant(countTrailingOnes(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
 def BSETINVXForm : SDNodeXForm<imm, [{
   // Find the lowest 1.
-  return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingZeros(),
+  return CurDAG->getTargetConstant(countTrailingZeros(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
