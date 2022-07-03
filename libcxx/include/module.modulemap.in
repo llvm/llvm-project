@@ -747,6 +747,11 @@ module std [system] {
     header "latch"
     export *
   }
+
+  module __debug_utils {
+    module randomize_range { private header "__debug_utils/randomize_range.h" }
+  }
+
   module limits {
     header "limits"
     export *

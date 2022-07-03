@@ -14,12 +14,9 @@
 #include <__algorithm/sort.h>
 #include <__config>
 #include <__debug>
+#include <__debug_utils/randomize_range.h>
 #include <__iterator/iterator_traits.h>
 #include <__utility/swap.h>
-
-#if defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
-#  include <__algorithm/shuffle.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -227,12 +224,12 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp)
 {
-  _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last);
+  std::__debug_randomize_range(__first, __last);
   typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
   _VSTD::__nth_element<_Comp_ref>(__first, __nth, __last, __comp);
-  _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __nth);
+  std::__debug_randomize_range(__first, __nth);
   if (__nth != __last) {
-    _LIBCPP_DEBUG_RANDOMIZE_RANGE(++__nth, __last);
+    std::__debug_randomize_range(++__nth, __last);
   }
 }
 

@@ -216,6 +216,7 @@ set(files
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
   __debug
+  __debug_utils/randomize_range.h
   __errc
   __filesystem/copy_options.h
   __filesystem/directory_entry.h
