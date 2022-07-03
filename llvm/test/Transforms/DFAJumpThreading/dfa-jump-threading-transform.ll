@@ -10,7 +10,7 @@ define i32 @test1(i32 %num) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[STATE:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ undef, [[FOR_INC]] ]
+; CHECK-NEXT:    [[STATE:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ poison, [[FOR_INC]] ]
 ; CHECK-NEXT:    switch i32 [[STATE]], label [[FOR_INC_JT1:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
 ; CHECK-NEXT:    i32 2, label [[CASE2:%.*]]
@@ -107,7 +107,7 @@ define i32 @test2(i32 %init) {
 ; CHECK-NEXT:    [[STATE_1_JT1:%.*]] = phi i32 [ 1, [[LOOP_1_BACKEDGE:%.*]] ], [ 1, [[LOOP_1_BACKEDGE_JT4:%.*]] ], [ 1, [[LOOP_1_BACKEDGE_JT2:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_JT1:%.*]]
 ; CHECK:       loop.2:
-; CHECK-NEXT:    [[STATE_2:%.*]] = phi i32 [ [[STATE_1]], [[LOOP_1]] ], [ undef, [[LOOP_2_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[STATE_2:%.*]] = phi i32 [ [[STATE_1]], [[LOOP_1]] ], [ poison, [[LOOP_2_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_3:%.*]]
 ; CHECK:       loop.2.jt2:
 ; CHECK-NEXT:    [[STATE_2_JT2:%.*]] = phi i32 [ [[STATE_1_JT2]], [[LOOP_1_JT2]] ]

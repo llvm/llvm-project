@@ -108,7 +108,7 @@ define { i32, i1 } @saddtest_nsw(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[AA:%.*]] = sext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[BB:%.*]] = sext i8 [[B:%.*]] to i32
 ; CHECK-NEXT:    [[X:%.*]] = add nsw i32 [[AA]], [[BB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[X]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %aa = sext i8 %a to i32
@@ -122,7 +122,7 @@ define { i32, i1 } @uaddtest_nuw(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[AA:%.*]] = and i32 [[A:%.*]], 2147483647
 ; CHECK-NEXT:    [[BB:%.*]] = and i32 [[B:%.*]], 2147483647
 ; CHECK-NEXT:    [[X:%.*]] = add nuw i32 [[AA]], [[BB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[X]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %aa = and i32 %a, 2147483647
@@ -136,7 +136,7 @@ define { i32, i1 } @ssubtest_nsw(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[AA:%.*]] = sext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[BB:%.*]] = sext i8 [[B:%.*]] to i32
 ; CHECK-NEXT:    [[X:%.*]] = sub nsw i32 [[AA]], [[BB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[X]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %aa = sext i8 %a to i32
@@ -150,7 +150,7 @@ define { i32, i1 } @usubtest_nuw(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[AA:%.*]] = or i32 [[A:%.*]], -2147483648
 ; CHECK-NEXT:    [[BB:%.*]] = and i32 [[B:%.*]], 2147483647
 ; CHECK-NEXT:    [[X:%.*]] = sub nuw i32 [[AA]], [[BB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[X]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %aa = or i32 %a, 2147483648
@@ -164,7 +164,7 @@ define { i32, i1 } @smultest1_nsw(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[AA:%.*]] = and i32 [[A:%.*]], 4095
 ; CHECK-NEXT:    [[BB:%.*]] = and i32 [[B:%.*]], 524287
 ; CHECK-NEXT:    [[X:%.*]] = mul nuw nsw i32 [[AA]], [[BB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[X]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %aa = and i32 %a, 4095 ; 0xfff
@@ -178,7 +178,7 @@ define { i32, i1 } @smultest2_nsw(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[AA:%.*]] = ashr i32 [[A:%.*]], 16
 ; CHECK-NEXT:    [[BB:%.*]] = ashr i32 [[B:%.*]], 16
 ; CHECK-NEXT:    [[X:%.*]] = mul nsw i32 [[AA]], [[BB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[X]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %aa = ashr i32 %a, 16
@@ -205,7 +205,7 @@ define { i32, i1 } @umultest_nuw(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[AA:%.*]] = and i32 [[A:%.*]], 65535
 ; CHECK-NEXT:    [[BB:%.*]] = and i32 [[B:%.*]], 65535
 ; CHECK-NEXT:    [[X:%.*]] = mul nuw i32 [[AA]], [[BB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[X]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %aa = and i32 %a, 65535 ; 0xffff
@@ -274,7 +274,7 @@ define { i32, i1 } @umultest5(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:    [[OR_X:%.*]] = or i32 [[X:%.*]], -2147483648
 ; CHECK-NEXT:    [[OR_Y:%.*]] = or i32 [[Y:%.*]], -2147483648
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[OR_X]], [[OR_Y]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 true }, i32 [[MUL]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 true }, i32 [[MUL]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %or_x = or i32 %x, 2147483648
@@ -345,7 +345,7 @@ define { i32, i1 } @ssubtest_reorder(i8 %a) {
 ; CHECK-LABEL: @ssubtest_reorder(
 ; CHECK-NEXT:    [[AA:%.*]] = sext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[X:%.*]] = sub nsw i32 0, [[AA]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[X]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %aa = sext i8 %a to i32
@@ -355,7 +355,7 @@ define { i32, i1 } @ssubtest_reorder(i8 %a) {
 
 define { i32, i1 } @never_overflows_ssub_test0(i32 %a) {
 ; CHECK-LABEL: @never_overflows_ssub_test0(
-; CHECK-NEXT:    [[X:%.*]] = insertvalue { i32, i1 } { i32 undef, i1 false }, i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[X:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[A:%.*]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[X]]
 ;
   %x = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %a, i32 0)
@@ -537,7 +537,7 @@ define { i32, i1 } @umul_canonicalize_constant_arg0(i32 %x) nounwind {
 define { i8, i1 } @uadd_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @uadd_always_overflow(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret { i8, i1 } [[TMP2]]
 ;
   %y = or i8 %x, 192
@@ -549,7 +549,7 @@ define { i8, i1 } @usub_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @usub_always_overflow(
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], 64
 ; CHECK-NEXT:    [[A:%.*]] = sub nsw i8 63, [[Y]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[A]], 0
 ; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %y = or i8 %x, 64
@@ -560,7 +560,7 @@ define { i8, i1 } @usub_always_overflow(i8 %x) nounwind {
 define { i8, i1 } @umul_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @umul_always_overflow(
 ; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[A]], 0
 ; CHECK-NEXT:    ret { i8, i1 } [[TMP1]]
 ;
   %y = or i8 %x, 128
@@ -572,7 +572,7 @@ define { i8, i1 } @sadd_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @sadd_always_overflow(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 100)
 ; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[TMP1]], 28
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[A]], 0
 ; CHECK-NEXT:    ret { i8, i1 } [[TMP2]]
 ;
   %c = icmp sgt i8 %x, 100
@@ -585,7 +585,7 @@ define { i8, i1 } @ssub_always_overflow(i8 %x) nounwind {
 ; CHECK-LABEL: @ssub_always_overflow(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 29)
 ; CHECK-NEXT:    [[A:%.*]] = sub nuw i8 -100, [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } { i8 undef, i1 true }, i8 [[A]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8, i1 } { i8 poison, i1 true }, i8 [[A]], 0
 ; CHECK-NEXT:    ret { i8, i1 } [[TMP2]]
 ;
   %c = icmp sgt i8 %x, 29

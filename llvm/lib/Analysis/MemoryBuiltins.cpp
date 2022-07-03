@@ -1014,7 +1014,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute(Value *V) {
 
     // Erase any instructions we inserted as part of the traversal.
     for (Instruction *I : InsertedInstructions) {
-      I->replaceAllUsesWith(UndefValue::get(I->getType()));
+      I->replaceAllUsesWith(PoisonValue::get(I->getType()));
       I->eraseFromParent();
     }
   }
@@ -1161,10 +1161,10 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
     SizeOffsetEvalType EdgeData = compute_(PHI.getIncomingValue(i));
 
     if (!bothKnown(EdgeData)) {
-      OffsetPHI->replaceAllUsesWith(UndefValue::get(IntTy));
+      OffsetPHI->replaceAllUsesWith(PoisonValue::get(IntTy));
       OffsetPHI->eraseFromParent();
       InsertedInstructions.erase(OffsetPHI);
-      SizePHI->replaceAllUsesWith(UndefValue::get(IntTy));
+      SizePHI->replaceAllUsesWith(PoisonValue::get(IntTy));
       SizePHI->eraseFromParent();
       InsertedInstructions.erase(SizePHI);
       return unknown();

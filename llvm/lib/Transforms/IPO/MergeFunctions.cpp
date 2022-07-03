@@ -491,7 +491,7 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
   if (SrcTy->isStructTy()) {
     assert(DestTy->isStructTy());
     assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements());
-    Value *Result = UndefValue::get(DestTy);
+    Value *Result = PoisonValue::get(DestTy);
     for (unsigned int I = 0, E = SrcTy->getStructNumElements(); I < E; ++I) {
       Value *Element = createCast(
           Builder, Builder.CreateExtractValue(V, makeArrayRef(I)),
