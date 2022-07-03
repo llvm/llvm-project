@@ -50,7 +50,7 @@ define {i8*, i1} @ret(i8* %vtablei8) {
   ; CHECK: [[BC2:%[^ ]*]] = bitcast i8* [[GEP2]] to i8**
   ; CHECK: [[LOAD2:%[^ ]*]] = load i8*, i8** [[BC2]]
   ; CHECK: [[TT2:%[^ ]*]] = call i1 @llvm.type.test(i8* [[VT2]], metadata !"typeid")
-  ; CHECK: [[I1:%[^ ]*]] = insertvalue { i8*, i1 } undef, i8* [[LOAD2]], 0
+  ; CHECK: [[I1:%[^ ]*]] = insertvalue { i8*, i1 } poison, i8* [[LOAD2]], 0
   ; CHECK: [[I2:%[^ ]*]] = insertvalue { i8*, i1 } %5, i1 [[TT2]], 1
   %pair = call {i8*, i1} @llvm.type.checked.load(i8* %vtablei8, i32 1, metadata !"typeid")
   ; CHECK: ret { i8*, i1 } [[I2]]

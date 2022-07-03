@@ -1212,7 +1212,7 @@ private:
         PhiToRemove.push_back(Phi);
       }
       for (PHINode *PN : PhiToRemove) {
-        PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
         PN->eraseFromParent();
       }
       return;

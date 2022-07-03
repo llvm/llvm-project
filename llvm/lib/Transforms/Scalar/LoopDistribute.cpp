@@ -230,7 +230,7 @@ public:
     // having to update as many def-use and use-def chains.
     for (auto *Inst : reverse(Unused)) {
       if (!Inst->use_empty())
-        Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
+        Inst->replaceAllUsesWith(PoisonValue::get(Inst->getType()));
       Inst->eraseFromParent();
     }
   }
