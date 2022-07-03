@@ -204,6 +204,15 @@ FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {
   return result;
 }
 
+FPOptionsOverride FPOptions::getChangesSlow(const FPOptions &Base) const {
+  FPOptions::storage_type OverrideMask = 0;
+#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+  if (get##NAME() != Base.get##NAME())                                         \
+    OverrideMask |= NAME##Mask;
+#include "clang/Basic/FPOptions.def"
+  return FPOptionsOverride(*this, OverrideMask);
+}
+
 LLVM_DUMP_METHOD void FPOptions::dump() {
 #define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
   llvm::errs() << "\n " #NAME " " << get##NAME();
