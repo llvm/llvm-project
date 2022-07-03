@@ -248,6 +248,7 @@ END-SCRIPT
 #include <__coroutine/coroutine_traits.h> // expected-error@*:* {{use of private header from outside its module: '__coroutine/coroutine_traits.h'}}
 #include <__coroutine/noop_coroutine_handle.h> // expected-error@*:* {{use of private header from outside its module: '__coroutine/noop_coroutine_handle.h'}}
 #include <__coroutine/trivial_awaitables.h> // expected-error@*:* {{use of private header from outside its module: '__coroutine/trivial_awaitables.h'}}
+#include <__debug_utils/randomize_range.h> // expected-error@*:* {{use of private header from outside its module: '__debug_utils/randomize_range.h'}}
 #include <__errc> // expected-error@*:* {{use of private header from outside its module: '__errc'}}
 #include <__filesystem/copy_options.h> // expected-error@*:* {{use of private header from outside its module: '__filesystem/copy_options.h'}}
 #include <__filesystem/directory_entry.h> // expected-error@*:* {{use of private header from outside its module: '__filesystem/directory_entry.h'}}

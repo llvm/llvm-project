@@ -17,16 +17,13 @@
 #include <__bits>
 #include <__config>
 #include <__debug>
+#include <__debug_utils/randomize_range.h>
 #include <__functional/operations.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/iterator_traits.h>
 #include <__utility/swap.h>
 #include <climits>
 #include <memory>
-
-#if defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
-#  include <__algorithm/shuffle.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -582,7 +579,7 @@ extern template _LIBCPP_FUNC_VIS unsigned __sort5<__less<long double>&, long dou
 template <class _RandomAccessIterator, class _Comp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 void __sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
-  _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last);
+  std::__debug_randomize_range(__first, __last);
   using _Comp_ref = typename __comp_ref_type<_Comp>::type;
   if (__libcpp_is_constant_evaluated()) {
     std::__partial_sort<_Comp_ref>(__first, __last, __last, _Comp_ref(__comp));

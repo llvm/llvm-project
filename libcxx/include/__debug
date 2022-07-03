@@ -28,22 +28,6 @@
 # define _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
 #endif
 
-// TODO: Define this as a function instead
-#if defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
-# if defined(_LIBCPP_CXX03_LANG)
-#   error Support for unspecified stability is only for C++11 and higher
-# endif
-# define _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last)                                                         \
-    do {                                                                                                        \
-      if (!__builtin_is_constant_evaluated())                                                                   \
-        std::shuffle(__first, __last, __libcpp_debug_randomizer());                                             \
-    } while (false)
-#else
-# define _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last)                                                         \
-    do {                                                                                                        \
-    } while (false)
-#endif
-
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
 #   define _LIBCPP_DEBUG_ASSERT(x, m) _LIBCPP_ASSERT(::std::__libcpp_is_constant_evaluated() || (x), m)
 #else
