@@ -2167,3 +2167,61 @@ define <3 x i16> @lshr_shl_pow2_const_case1_undef3_vec(<3 x i16> %x) {
   %r = and <3 x i16> %shl, <i16 undef, i16 128, i16 128>
   ret <3 x i16> %r
 }
+
+define i8 @negate_lowbitmask(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_lowbitmask(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[N:%.*]] = sub nsw i8 0, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = and i8 %x, 1
+  %n = sub i8 0, %a
+  %r = and i8 %n, %y
+  ret i8 %r
+}
+
+define <2 x i5> @negate_lowbitmask_commute(<2 x i5> %x, <2 x i5> %p) {
+; CHECK-LABEL: @negate_lowbitmask_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i5> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i5> [[X:%.*]], <i5 1, i5 poison>
+; CHECK-NEXT:    [[N:%.*]] = sub <2 x i5> <i5 poison, i5 0>, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i5> [[Y]], [[N]]
+; CHECK-NEXT:    ret <2 x i5> [[R]]
+;
+  %y = mul <2 x i5> %p, %p ; thwart complexity-based canonicalization
+  %a = and <2 x i5> %x, <i5 1, i5 poison>
+  %n = sub <2 x i5> <i5 poison, i5 0>, %a
+  %r = and <2 x i5> %y, %n
+  ret <2 x i5> %r
+}
+
+define i8 @negate_lowbitmask_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_lowbitmask_use1(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[N:%.*]] = sub nsw i8 0, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = and i8 %x, 1
+  call void @use8(i8 %a)
+  %n = sub i8 0, %a
+  %r = and i8 %n, %y
+  ret i8 %r
+}
+
+define i8 @negate_lowbitmask_use2(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_lowbitmask_use2(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[N:%.*]] = sub nsw i8 0, [[A]]
+; CHECK-NEXT:    call void @use8(i8 [[N]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = and i8 %x, 1
+  %n = sub i8 0, %a
+  call void @use8(i8 %n)
+  %r = and i8 %n, %y
+  ret i8 %r
+}
