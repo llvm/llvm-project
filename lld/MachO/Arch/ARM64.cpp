@@ -189,6 +189,7 @@ public:
   void applyAdrpAdd(const OptimizationHint &);
   void applyAdrpAdrp(const OptimizationHint &);
   void applyAdrpLdr(const OptimizationHint &);
+  void applyAdrpLdrGot(const OptimizationHint &);
 
 private:
   uint8_t *buf;
@@ -424,6 +425,19 @@ void OptimizationHintContext::applyAdrpLdr(const OptimizationHint &hint) {
   writeLiteralLdr(buf + hint.offset0 + hint.delta[0], ldr, delta);
 }
 
+// GOT loads are emitted by the compiler as a pair of adrp and ldr instructions,
+// but they may be changed to adrp+add by relaxGotLoad(). This hint performs
+// the AdrpLdr or AdrpAdd transformation depending on whether it was relaxed.
+void OptimizationHintContext::applyAdrpLdrGot(const OptimizationHint &hint) {
+  uint32_t ins2 = read32le(buf + hint.offset0 + hint.delta[0]);
+  Add add;
+  Ldr ldr;
+  if (parseAdd(ins2, add))
+    applyAdrpAdd(hint);
+  else if (parseLdr(ins2, ldr))
+    applyAdrpLdr(hint);
+}
+
 void ARM64::applyOptimizationHints(uint8_t *buf, const ConcatInputSection *isec,
                                    ArrayRef<uint64_t> relocTargets) const {
   assert(isec);
@@ -452,7 +466,7 @@ void ARM64::applyOptimizationHints(uint8_t *buf, const ConcatInputSection *isec,
       ctx1.applyAdrpAdd(hint);
       break;
     case LOH_ARM64_ADRP_LDR_GOT:
-      // TODO: Implement this as well
+      ctx1.applyAdrpLdrGot(hint);
       break;
     }
   }
