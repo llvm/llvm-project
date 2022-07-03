@@ -70,16 +70,18 @@ static cl::opt<std::string>
                   cl::desc("The name of the predefined style used as a\n"
                            "fallback in case clang-format is invoked with\n"
                            "-style=file, but can not find the .clang-format\n"
-                           "file to use.\n"
+                           "file to use. Defaults to 'LLVM'.\n"
                            "Use -fallback-style=none to skip formatting."),
                   cl::init(clang::format::DefaultFallbackStyle),
                   cl::cat(ClangFormatCategory));
 
 static cl::opt<std::string> AssumeFileName(
     "assume-filename",
-    cl::desc("Override filename used to determine the language.\n"
-             "When reading from stdin, clang-format assumes this\n"
-             "filename to determine the language.\n"
+    cl::desc("Set filename used to determine the language and to find\n"
+             ".clang-format file.\n"
+             "Only used when reading from stdin.\n"
+             "If this is not passed, the .clang-format file is searched\n"
+             "relative to the current working directory when reading stdin.\n"
              "Unrecognized filenames are treated as C++.\n"
              "supported:\n"
              "  CSharp: .cs\n"
