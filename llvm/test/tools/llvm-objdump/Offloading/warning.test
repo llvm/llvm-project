@@ -3,8 +3,7 @@
 # RUN: yaml2obj %S/Inputs/malformed.yaml -o %t-bad.bin
 # RUN: cat %t-bad.bin >> %t-good.bin
 # RUN: yaml2obj %s -o %t.elf
-# RUN: llvm-objcopy --add-section .llvm.offloading=%t-good.bin %t.elf
-# RUN: llvm-objcopy --set-section-alignment .llvm.offloading=8 %t.elf
+# RUN: llvm-objcopy --update-section .llvm.offloading=%t-good.bin %t.elf
 # RUN: llvm-objdump --offloading %t.elf 2>&1 | FileCheck %s -DFILENAME=%t.elf
 
 !ELF
@@ -12,6 +11,11 @@ FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
+Sections:
+  - Name:            .llvm.offloading
+    Type:            SHT_LLVM_OFFLOADING
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x0000000000000008
 
 # CHECK: OFFLOADING IMAGE [0]:
 # CHECK: warning: '[[FILENAME]]': while parsing offloading files: The end of the file was unexpectedly encountered
