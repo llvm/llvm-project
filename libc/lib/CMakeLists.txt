@@ -16,9 +16,8 @@ install(
   COMPONENT llvmlibc
 )
 
-add_custom_target(
-    install-llvmlibc
-    DEPENDS llvmlibc
-    COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=llvmlibc
-            -P "${LIBC_BINARY_DIR}/cmake_install.cmake"
+add_llvm_install_targets(
+  install-llvmlibc
+  DEPENDS llvmlibc
+  COMPONENT llvmlibc
 )
