@@ -94,3 +94,23 @@ func.func @complex_neg_neg() -> complex<f32> {
   %neg2 = complex.neg %neg1 : complex<f32>
   return %neg2 : complex<f32>
 }
+
+// CHECK-LABEL: func @complex_log_exp
+func.func @complex_log_exp() -> complex<f32> {
+  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  // CHECK: %[[CPLX:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
+  // CHECK-NEXT: return %[[CPLX:.*]] : complex<f32>
+  %exp = complex.exp %complex1 : complex<f32>
+  %log = complex.log %exp : complex<f32>
+  return %log : complex<f32>
+}
+
+// CHECK-LABEL: func @complex_exp_log
+func.func @complex_exp_log() -> complex<f32> {
+  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  // CHECK: %[[CPLX:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
+  // CHECK-NEXT: return %[[CPLX:.*]] : complex<f32>
+  %log = complex.log %complex1 : complex<f32>
+  %exp = complex.exp %log : complex<f32>
+  return %exp : complex<f32>
+}

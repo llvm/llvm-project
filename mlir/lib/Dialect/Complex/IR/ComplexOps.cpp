@@ -139,6 +139,34 @@ OpFoldResult NegOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// LogOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult LogOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1 && "unary op takes 1 operand");
+
+  // complex.log(complex.exp(a)) -> a
+  if (auto expOp = getOperand().getDefiningOp<ExpOp>())
+    return expOp.getOperand();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// ExpOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ExpOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1 && "unary op takes 1 operand");
+
+  // complex.exp(complex.log(a)) -> a
+  if (auto logOp = getOperand().getDefiningOp<LogOp>())
+    return logOp.getOperand();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
