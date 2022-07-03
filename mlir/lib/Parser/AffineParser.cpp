@@ -597,40 +597,42 @@ ParseResult AffineParser::parseAffineMapRange(unsigned numDims,
 }
 
 /// Parse an affine constraint.
+///  affine-constraint ::= affine-expr `>=` `affine-expr`
+///                      | affine-expr `==` `affine-expr`
+///
+/// The constraint is normalized to
 ///  affine-constraint ::= affine-expr `>=` `0`
 ///                      | affine-expr `==` `0`
+/// before returning.
 ///
 /// isEq is set to true if the parsed constraint is an equality, false if it
 /// is an inequality (greater than or equal).
 ///
 AffineExpr AffineParser::parseAffineConstraint(bool *isEq) {
-  AffineExpr expr = parseAffineExpr();
-  if (!expr)
+  AffineExpr lhsExpr = parseAffineExpr();
+  if (!lhsExpr)
     return nullptr;
 
-  if (consumeIf(Token::greater) && consumeIf(Token::equal) &&
-      getToken().is(Token::integer)) {
-    auto dim = getToken().getUnsignedIntegerValue();
-    if (dim && *dim == 0) {
-      consumeToken(Token::integer);
-      *isEq = false;
-      return expr;
-    }
-    return emitError("expected '0' after '>='"), nullptr;
+  // affine-constraint ::= `affine-expr` `>=` `affine-expr`
+  if (consumeIf(Token::greater) && consumeIf(Token::equal)) {
+    AffineExpr rhsExpr = parseAffineExpr();
+    if (!rhsExpr)
+      return nullptr;
+    *isEq = false;
+    return lhsExpr - rhsExpr;
   }
 
-  if (consumeIf(Token::equal) && consumeIf(Token::equal) &&
-      getToken().is(Token::integer)) {
-    auto dim = getToken().getUnsignedIntegerValue();
-    if (dim && *dim == 0) {
-      consumeToken(Token::integer);
-      *isEq = true;
-      return expr;
-    }
-    return emitError("expected '0' after '=='"), nullptr;
+  // affine-constraint ::= `affine-expr` `==` `affine-expr`
+  if (consumeIf(Token::equal) && consumeIf(Token::equal)) {
+    AffineExpr rhsExpr = parseAffineExpr();
+    if (!rhsExpr)
+      return nullptr;
+    *isEq = true;
+    return lhsExpr - rhsExpr;
   }
 
-  return emitError("expected '== 0' or '>= 0' at end of affine constraint"),
+  return emitError("expected '== affine-expr' or '>= affine-expr' at end of "
+                   "affine constraint"),
          nullptr;
 }
 
