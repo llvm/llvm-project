@@ -51,7 +51,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |   | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:    |   | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    |   |-CXXRecordDecl {{.*}} <col:3, col:10> col:10{{( imported)?}} implicit struct V
-// CHECK-NEXT:    |   `-CXXMethodDecl {{.*}} <line:17:5, line:20:5> line:17:10{{( imported)?}} f 'void ()'
+// CHECK-NEXT:    |   `-CXXMethodDecl {{.*}} <line:17:5, line:20:5> line:17:10{{( imported)?}} f 'void ()' implicit-inline
 // CHECK-NEXT:    |     `-CompoundStmt {{.*}} <col:14, line:20:5>
 // CHECK-NEXT:    |       |-LambdaExpr {{.*}} <line:18:7, col:15> '(lambda at {{.*}}ast-dump-lambda.cpp:18:7)'
 // CHECK-NEXT:    |       | |-CXXRecordDecl {{.*}} <col:7> col:7{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
