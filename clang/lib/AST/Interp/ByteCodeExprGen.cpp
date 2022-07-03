@@ -496,7 +496,7 @@ ByteCodeExprGen<Emitter>::getGlobalIdx(const VarDecl *VD) {
 
 template <class Emitter>
 const RecordType *ByteCodeExprGen<Emitter>::getRecordTy(QualType Ty) {
-  if (auto *PT = dyn_cast<PointerType>(Ty))
+  if (const PointerType *PT = dyn_cast<PointerType>(Ty))
     return PT->getPointeeType()->getAs<RecordType>();
   else
     return Ty->getAs<RecordType>();
