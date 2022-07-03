@@ -1310,7 +1310,6 @@ define i64 @srliw_3_sh3add(i64* %0, i32 signext %1) {
   ret i64 %6
 }
 
-; FIXME: This should select sh2add with Zba.
 define signext i32 @srliw_1_sh2add(i32* %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_1_sh2add:
 ; RV64I:       # %bb.0:
@@ -1322,10 +1321,8 @@ define signext i32 @srliw_1_sh2add(i32* %0, i32 signext %1) {
 ;
 ; RV64ZBA-LABEL: srliw_1_sh2add:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    li a2, -2
-; RV64ZBA-NEXT:    zext.w a2, a2
-; RV64ZBA-NEXT:    and a1, a1, a2
-; RV64ZBA-NEXT:    sh1add a0, a1, a0
+; RV64ZBA-NEXT:    srliw a1, a1, 1
+; RV64ZBA-NEXT:    sh2add a0, a1, a0
 ; RV64ZBA-NEXT:    lw a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 1
@@ -1335,7 +1332,6 @@ define signext i32 @srliw_1_sh2add(i32* %0, i32 signext %1) {
   ret i32 %6
 }
 
-; FIXME: This should select sh3add with Zba.
 define i64 @srliw_1_sh3add(i64* %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_1_sh3add:
 ; RV64I:       # %bb.0:
@@ -1347,10 +1343,8 @@ define i64 @srliw_1_sh3add(i64* %0, i32 signext %1) {
 ;
 ; RV64ZBA-LABEL: srliw_1_sh3add:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    li a2, -2
-; RV64ZBA-NEXT:    zext.w a2, a2
-; RV64ZBA-NEXT:    and a1, a1, a2
-; RV64ZBA-NEXT:    sh2add a0, a1, a0
+; RV64ZBA-NEXT:    srliw a1, a1, 1
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 1
@@ -1360,7 +1354,6 @@ define i64 @srliw_1_sh3add(i64* %0, i32 signext %1) {
   ret i64 %6
 }
 
-; FIXME: This should select sh3add with Zba.
 define i64 @srliw_2_sh3add(i64* %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_2_sh3add:
 ; RV64I:       # %bb.0:
@@ -1372,10 +1365,8 @@ define i64 @srliw_2_sh3add(i64* %0, i32 signext %1) {
 ;
 ; RV64ZBA-LABEL: srliw_2_sh3add:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    li a2, -4
-; RV64ZBA-NEXT:    zext.w a2, a2
-; RV64ZBA-NEXT:    and a1, a1, a2
-; RV64ZBA-NEXT:    sh1add a0, a1, a0
+; RV64ZBA-NEXT:    srliw a1, a1, 2
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 2
