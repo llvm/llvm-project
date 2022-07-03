@@ -239,6 +239,10 @@ def non_imm12 : PatLeaf<(XLenVT GPR:$a), [{
   return !C || !isInt<12>(C->getSExtValue());
 }]>;
 
+def sh1add_op : ComplexPattern<XLenVT, 1, "selectSH1ADDOp", [], [], 6>;
+def sh2add_op : ComplexPattern<XLenVT, 1, "selectSH2ADDOp", [], [], 6>;
+def sh3add_op : ComplexPattern<XLenVT, 1, "selectSH3ADDOp", [], [], 6>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -1095,6 +1099,14 @@ def : Pat<(add (shl GPR:$rs1, (XLenVT 2)), non_imm12:$rs2),
 def : Pat<(add (shl GPR:$rs1, (XLenVT 3)), non_imm12:$rs2),
           (SH3ADD GPR:$rs1, GPR:$rs2)>;
 
+// More complex cases use a ComplexPattern.
+def : Pat<(add sh1add_op:$rs1, non_imm12:$rs2),
+          (SH1ADD sh1add_op:$rs1, GPR:$rs2)>;
+def : Pat<(add sh2add_op:$rs1, non_imm12:$rs2),
+          (SH2ADD sh2add_op:$rs1, GPR:$rs2)>;
+def : Pat<(add sh3add_op:$rs1, non_imm12:$rs2),
+          (SH3ADD sh3add_op:$rs1, GPR:$rs2)>;
+
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
           (SH1ADD (SH1ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
@@ -1190,18 +1202,6 @@ def : Pat<(i64 (add (and GPR:$rs1, 0x3FFFFFFFC), non_imm12:$rs2)),
           (SH2ADD_UW (SRLI GPR:$rs1, 2), GPR:$rs2)>;
 def : Pat<(i64 (add (and GPR:$rs1, 0x7FFFFFFF8), non_imm12:$rs2)),
           (SH3ADD_UW (SRLI GPR:$rs1, 3), GPR:$rs2)>;
-
-// Use SRLIW to shift out the LSBs and zero the upper 32-bits. Use SHXADD to
-// shift zeros into the LSBs the addition shl amount.
-def : Pat<(i64 (add (shl (binop_oneuse<and> GPR:$rs1, 0xFFFFFFFE), (i64 1)),
-                    non_imm12:$rs2)),
-          (SH2ADD (SRLIW GPR:$rs1, 1), GPR:$rs2)>;
-def : Pat<(i64 (add (shl (binop_oneuse<and> GPR:$rs1, 0xFFFFFFFE), (i64 2)),
-                    non_imm12:$rs2)),
-          (SH3ADD (SRLIW GPR:$rs1, 1), GPR:$rs2)>;
-def : Pat<(i64 (add (shl (binop_oneuse<and> GPR:$rs1, 0xFFFFFFFC), (i64 1)),
-                    non_imm12:$rs2)),
-          (SH3ADD (SRLIW GPR:$rs1, 2), GPR:$rs2)>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
 let Predicates = [HasStdExtZbcOrZbkc] in {

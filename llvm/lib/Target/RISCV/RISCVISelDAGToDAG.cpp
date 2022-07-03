@@ -2044,6 +2044,38 @@ bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
   return false;
 }
 
+/// Look for various patterns that can be done with a SHL that can be folded
+/// into a SHXADD. \p ShAmt contains 1, 2, or 3 and is set based on which
+/// SHXADD we are trying to match.
+bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
+                                       SDValue &Val) {
+  if (N.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N.getOperand(1))) {
+    unsigned C1 = N.getConstantOperandVal(1);
+    SDValue N0 = N.getOperand(0);
+    if (N0.getOpcode() == ISD::AND && N0.hasOneUse() &&
+        isa<ConstantSDNode>(N0.getOperand(1))) {
+      uint64_t Mask = N0.getConstantOperandVal(1);
+      if (isShiftedMask_64(Mask)) {
+        unsigned XLen = Subtarget->getXLen();
+        unsigned Leading = XLen - (64 - countLeadingZeros(Mask));
+        unsigned Trailing = countTrailingZeros(Mask);
+        // Look for (shl (and X, Mask), C1) where Mask has 32 leading zeros and
+        // C3 trailing zeros. If C1+C3==ShAmt we can use SRLIW+SHXADD.
+        if (Leading == 32 && Trailing > 0 && (C1 + Trailing) == ShAmt) {
+          SDLoc DL(N);
+          EVT VT = N.getValueType();
+          Val = SDValue(CurDAG->getMachineNode(
+            RISCV::SRLIW, DL, VT, N0->getOperand(0),
+            CurDAG->getTargetConstant(Trailing, DL, VT)), 0);
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 // Return true if all users of this SDNode* only consume the lower \p Bits.
 // This can be used to form W instructions for add/sub/mul/shl even when the
 // root isn't a sext_inreg. This can allow the ADDW/SUBW/MULW/SLLIW to CSE if
