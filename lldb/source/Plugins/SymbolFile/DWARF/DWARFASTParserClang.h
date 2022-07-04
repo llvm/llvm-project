@@ -68,6 +68,22 @@ public:
 
   lldb_private::ClangASTImporter &GetClangASTImporter();
 
+  /// Extracts an value for a given Clang integer type from a DWARFFormValue.
+  ///
+  /// \param int_type The Clang type that defines the bit size and signedness
+  ///                 of the integer that should be extracted. Has to be either
+  ///                 an integer type or an enum type. For enum types the
+  ///                 underlying integer type will be considered as the
+  ///                 expected integer type that should be extracted.
+  /// \param form_value The DWARFFormValue that contains the integer value.
+  /// \return An APInt containing the same integer value as the given
+  ///         DWARFFormValue with the bit width of the given integer type.
+  ///         Returns an error if the value in the DWARFFormValue does not fit
+  ///         into the given integer type or the integer type isn't supported.
+  llvm::Expected<llvm::APInt>
+  ExtractIntFromFormValue(const lldb_private::CompilerType &int_type,
+                          const DWARFFormValue &form_value) const;
+
 protected:
   /// Protected typedefs and members.
   /// @{
