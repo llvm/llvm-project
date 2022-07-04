@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivial
-#if __has_feature(is_trivial) || defined(_LIBCPP_COMPILER_GCC)
+#if __has_builtin(__is_trivial)
     : public integral_constant<bool, __is_trivial(_Tp)>
 #else
     : integral_constant<bool, is_trivially_copyable<_Tp>::value &&
