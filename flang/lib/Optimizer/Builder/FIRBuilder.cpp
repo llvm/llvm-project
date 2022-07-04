@@ -1234,8 +1234,11 @@ fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
       [&](mlir::Value value) -> llvm::Optional<std::int64_t> {
     if (auto valInt = fir::factory::getIntIfConstant(value))
       return valInt;
-    else if (auto valOp = mlir::dyn_cast<fir::ConvertOp>(value.getDefiningOp()))
+    auto *definingOp = value.getDefiningOp();
+    if (mlir::isa_and_nonnull<fir::ConvertOp>(definingOp)) {
+      auto valOp = mlir::dyn_cast<fir::ConvertOp>(definingOp);
       return getConstantValue(valOp.getValue());
+    }
     return {};
   };
   if (auto lbInt = getConstantValue(lb)) {
