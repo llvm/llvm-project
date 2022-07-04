@@ -1025,7 +1025,7 @@ ItaniumCXXABI::EmitMemberPointerConversion(const CastExpr *E,
             memFnPtr->getOperand(0), curAuthInfo, newAuthInfo, CGM);
         constPtr =
             llvm::ConstantExpr::getPtrToInt(constPtr, memFnPtr->getType());
-        src = llvm::ConstantExpr::getInsertValue(src, constPtr, 0);
+        src = ConstantFoldInsertValueInstruction(src, constPtr, 0);
       }
     }
 
