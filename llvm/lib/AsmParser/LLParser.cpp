@@ -3476,6 +3476,14 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "extractvalue constexprs are no longer supported");
   case lltok::kw_insertvalue:
     return error(ID.Loc, "insertvalue constexprs are no longer supported");
+  case lltok::kw_udiv:
+    return error(ID.Loc, "udiv constexprs are no longer supported");
+  case lltok::kw_sdiv:
+    return error(ID.Loc, "sdiv constexprs are no longer supported");
+  case lltok::kw_urem:
+    return error(ID.Loc, "urem constexprs are no longer supported");
+  case lltok::kw_srem:
+    return error(ID.Loc, "srem constexprs are no longer supported");
   case lltok::kw_icmp:
   case lltok::kw_fcmp: {
     unsigned PredVal, Opc = Lex.getUIntVal();
@@ -3540,11 +3548,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_fsub:
   case lltok::kw_mul:
   case lltok::kw_fmul:
-  case lltok::kw_udiv:
-  case lltok::kw_sdiv:
   case lltok::kw_fdiv:
-  case lltok::kw_urem:
-  case lltok::kw_srem:
   case lltok::kw_frem:
   case lltok::kw_shl:
   case lltok::kw_lshr:

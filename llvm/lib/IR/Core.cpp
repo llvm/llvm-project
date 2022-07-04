@@ -1620,40 +1620,8 @@ LLVMValueRef LLVMConstFMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
                                     unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstUDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getUDiv(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstExactUDiv(LLVMValueRef LHSConstant,
-                                LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getExactUDiv(unwrap<Constant>(LHSConstant),
-                                         unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstSDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getSDiv(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstExactSDiv(LLVMValueRef LHSConstant,
-                                LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getExactSDiv(unwrap<Constant>(LHSConstant),
-                                         unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstFDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getFDiv(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstURem(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getURem(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstSRem(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getSRem(unwrap<Constant>(LHSConstant),
                                     unwrap<Constant>(RHSConstant)));
 }
 

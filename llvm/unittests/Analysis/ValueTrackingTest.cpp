@@ -1711,20 +1711,6 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRangeNoOverlap) {
   EXPECT_EQ(Known.getMaxValue(), 575);
 }
 
-TEST_F(ComputeKnownBitsTest, ComputeKnownBitsCrash) {
-  parseAssembly(
-      "@g.a = external global i16, align 1\n"
-      "define i16 @test(i16 %i) {\n"
-      "entry:\n"
-      "  %0 = icmp slt i16 sub (i16 0, i16 trunc (i32 udiv (i32 ptrtoint (i16* @g.a to i32), i32 -1) to i16)), 0\n"
-      "  %A = select i1 %0, i16 trunc (i32 udiv (i32 ptrtoint (i16* @g.a to i32), i32 -1) to i16), i16 sub (i16 0, i16 trunc (i32 udiv (i32 ptrtoint (i16* @g.a to i32), i32 -1) to i16))\n"
-      "  ret i16 %A\n"
-      "}\n");
-  AssumptionCache AC(*F);
-  KnownBits Known = computeKnownBits(
-      A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
-}
-
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).

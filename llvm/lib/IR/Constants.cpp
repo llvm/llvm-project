@@ -559,49 +559,8 @@ void llvm::deleteConstant(Constant *C) {
   }
 }
 
-static bool canTrapImpl(const Constant *C,
-                        SmallPtrSetImpl<const Constant *> &NonTrappingOps) {
-  assert(C->getType()->isFirstClassType() &&
-         "Cannot evaluate non-first-class types!");
-  // ConstantExpr or ConstantAggregate trap if any operands can trap.
-  if (isa<ConstantExpr>(C) || isa<ConstantAggregate>(C)) {
-    for (unsigned i = 0, e = C->getNumOperands(); i != e; ++i) {
-      const Constant *Op = cast<Constant>(C->getOperand(i));
-      if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op)) {
-        if (NonTrappingOps.insert(Op).second && canTrapImpl(Op, NonTrappingOps))
-          return true;
-      }
-    }
-  }
-
-  // The only leafs that can trap are constant expressions.
-  const ConstantExpr *CE = dyn_cast<ConstantExpr>(C);
-  if (!CE)
-    return false;
-
-  // Otherwise, only specific operations can trap.
-  switch (CE->getOpcode()) {
-  default:
-    return false;
-  case Instruction::SDiv:
-  case Instruction::SRem:
-    // Signed div/rem can trap for SignedMin / -1.
-    if (!CE->getOperand(0)->isNotMinSignedValue() &&
-        (!isa<ConstantInt>(CE->getOperand(1)) ||
-         CE->getOperand(1)->isAllOnesValue()))
-      return true;
-    LLVM_FALLTHROUGH;
-  case Instruction::UDiv:
-  case Instruction::URem:
-    // Div and rem can trap if the RHS is not known to be non-zero.
-    return !isa<ConstantInt>(CE->getOperand(1)) ||
-           CE->getOperand(1)->isNullValue();
-  }
-}
-
 bool Constant::canTrap() const {
-  SmallPtrSet<const Constant *, 4> NonTrappingOps;
-  return canTrapImpl(this, NonTrappingOps);
+  return false;
 }
 
 /// Check if C contains a GlobalValue for which Predicate is true.
@@ -2311,6 +2270,8 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
   // Check the operands for consistency first.
   assert(Instruction::isBinaryOp(Opcode) &&
          "Invalid opcode in binary constant expression");
+  assert(isSupportedBinOp(Opcode) &&
+         "Binop not supported as constant expression");
   assert(C1->getType() == C2->getType() &&
          "Operand types in binary constant expression should match");
 
@@ -2366,6 +2327,33 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
 }
 
 bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+    return false;
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+    return true;
+  default:
+    llvm_unreachable("Argument must be binop opcode");
+  }
+}
+
+bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   switch (Opcode) {
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -2710,26 +2698,8 @@ Constant *ConstantExpr::getFMul(Constant *C1, Constant *C2) {
   return get(Instruction::FMul, C1, C2);
 }
 
-Constant *ConstantExpr::getUDiv(Constant *C1, Constant *C2, bool isExact) {
-  return get(Instruction::UDiv, C1, C2,
-             isExact ? PossiblyExactOperator::IsExact : 0);
-}
-
-Constant *ConstantExpr::getSDiv(Constant *C1, Constant *C2, bool isExact) {
-  return get(Instruction::SDiv, C1, C2,
-             isExact ? PossiblyExactOperator::IsExact : 0);
-}
-
 Constant *ConstantExpr::getFDiv(Constant *C1, Constant *C2) {
   return get(Instruction::FDiv, C1, C2);
-}
-
-Constant *ConstantExpr::getURem(Constant *C1, Constant *C2) {
-  return get(Instruction::URem, C1, C2);
-}
-
-Constant *ConstantExpr::getSRem(Constant *C1, Constant *C2) {
-  return get(Instruction::SRem, C1, C2);
 }
 
 Constant *ConstantExpr::getFRem(Constant *C1, Constant *C2) {
