@@ -1,5 +1,4 @@
-; RUN: opt < %s -loop-vectorize -dce -instcombine -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize -S 2>&1 | FileCheck %s -check-prefix=OVERRIDE
-; RUN: opt < %s -loop-vectorize -pragma-vectorize-memory-check-threshold=6 -dce -instcombine -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-vectorize -dce -instcombine -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize -S 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -8,20 +7,12 @@ target triple = "x86_64-unknown-linux"
 ; First loop produced diagnostic pass remark.
 ;CHECK: remark: {{.*}}:0:0: vectorized loop (vectorization width: 4, interleaved count: 2)
 ; Second loop produces diagnostic analysis remark.
-;CHECK: remark: {{.*}}:0:0: loop not vectorized: cannot prove it is safe to reorder memory operations
-
-; First loop produced diagnostic pass remark.
-;OVERRIDE: remark: {{.*}}:0:0: vectorized loop (vectorization width: 4, interleaved count: 2)
-; Second loop produces diagnostic pass remark.
-;OVERRIDE: remark: {{.*}}:0:0: loop not vectorized: cannot prove it is safe to reorder memory operations
+;CHECK: remark: {{.*}}:0:0: vectorized loop (vectorization width: 4, interleaved count: 1)
 
 ; We are vectorizing with 6 runtime checks.
 ;CHECK-LABEL: func1x6(
 ;CHECK: <4 x i32>
 ;CHECK: ret
-;OVERRIDE-LABEL: func1x6(
-;OVERRIDE: <4 x i32>
-;OVERRIDE: ret
 define i32 @func1x6(i32* nocapture %out, i32* nocapture %A, i32* nocapture %B, i32* nocapture %C, i32* nocapture %D, i32* nocapture %E, i32* nocapture %F) {
 entry:
   br label %for.body
@@ -52,14 +43,10 @@ for.end:                                          ; preds = %for.body
   ret i32 undef
 }
 
-; We are not vectorizing with 12 runtime checks.
+; We are vectorizing with 12 runtime checks.
 ;CHECK-LABEL: func2x6(
-;CHECK-NOT: <4 x i32>
+;CHECK: <4 x i32>
 ;CHECK: ret
-; We vectorize with 12 checks if a vectorization hint is provided.
-;OVERRIDE-LABEL: func2x6(
-;OVERRIDE-NOT: <4 x i32>
-;OVERRIDE: ret
 define i32 @func2x6(i32* nocapture %out, i32* nocapture %out2, i32* nocapture %A, i32* nocapture %B, i32* nocapture %C, i32* nocapture %D, i32* nocapture %E, i32* nocapture %F) {
 entry:
   br label %for.body
@@ -100,4 +87,3 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret i32 undef
 }
-

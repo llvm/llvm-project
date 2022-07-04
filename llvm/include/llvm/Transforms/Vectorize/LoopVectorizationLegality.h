@@ -219,16 +219,9 @@ public:
       ExactFPMathInst = I;
   }
 
-  void addRuntimePointerChecks(unsigned Num) { NumRuntimePointerChecks = Num; }
-
   Instruction *getExactFPInst() { return ExactFPMathInst; }
 
-  unsigned getNumRuntimePointerChecks() const {
-    return NumRuntimePointerChecks;
-  }
-
 private:
-  unsigned NumRuntimePointerChecks = 0;
   Instruction *ExactFPMathInst = nullptr;
 };
 

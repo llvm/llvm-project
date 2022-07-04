@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -runtime-memory-check-threshold=9 -passes='loop-vectorize' -mtriple=x86_64-unknown-linux -S -debug %s 2>&1 | FileCheck %s
+; RUN: opt -passes='loop-vectorize' -mtriple=x86_64-unknown-linux -S -debug %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -10,11 +10,63 @@ declare double @llvm.pow.f64(double, double)
 
 ; Test case where the memory runtime checks and vector body is more expensive
 ; than running the scalar loop.
-; TODO: should not be vectorized.
 define void @test(double* nocapture %A, double* nocapture %B, double* nocapture %C, double* nocapture %D, double* nocapture %E) {
+
+; CHECK: Calculating cost of runtime checks:
+; CHECK-NEXT:  0  for   {{.+}} = getelementptr double, double* %A, i64 16
+; CHECK-NEXT:  0  for   {{.+}} = bitcast double*
+; CHECK-NEXT:  0  for   {{.+}} = getelementptr double, double* %B, i64 16
+; CHECK-NEXT:  0  for   {{.+}} = bitcast double*
+; CHECK-NEXT:  0  for   {{.+}} = getelementptr double, double* %E, i64 16
+; CHECK-NEXT:  0  for   {{.+}} = bitcast double*
+; CHECK-NEXT:  0  for   {{.+}} = getelementptr double, double* %C, i64 16
+; CHECK-NEXT:  0  for   {{.+}} = bitcast double*
+; CHECK-NEXT:  0  for   {{.+}} = getelementptr double, double* %D, i64 16
+; CHECK-NEXT:  0  for   {{.+}} = bitcast double*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = and i1
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = and i1
+; CHECK-NEXT:  1  for   {{.+}} = or i1
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = and i1
+; CHECK-NEXT:  1  for   {{.+}} = or i1
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = and i1
+; CHECK-NEXT:  1  for   {{.+}} = or i1
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = and i1
+; CHECK-NEXT:  1  for   {{.+}} = or i1
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = and i1
+; CHECK-NEXT:  1  for   {{.+}} = or i1
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = and i1
+; CHECK-NEXT:  1  for   {{.+}} = or i1
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = and i1
+; CHECK-NEXT:  1  for   {{.+}} = or i1
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = icmp ult i8*
+; CHECK-NEXT:  1  for   {{.+}} = and i1
+; CHECK-NEXT:  1  for   {{.+}} = or i1
+; CHECK-NEXT: Total cost of runtime checks: 35
+
+; CHECK: LV: Vectorization is not beneficial: expected trip count < minimum profitable VF (16 < 70)
+;
 ; CHECK-LABEL: @test(
-; CHECK: vector.memcheck
-; CHECK: vector.body
+; CHECK-NEXT: entry:
+; CHECK-NEXT:  br label %for.body
+; CHECK-NOT: vector.memcheck
+; CHECK-NOT: vector.body
 ;
 entry:
   br label %for.body
