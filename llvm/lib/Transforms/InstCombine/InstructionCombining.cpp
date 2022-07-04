@@ -1324,6 +1324,11 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
     if (!isGuaranteedToTransferExecutionToSuccessor(&*BBIter))
       return nullptr;
 
+  // Fold constants for the predecessor block with constant incoming values.
+  Constant *NewC = ConstantFoldBinaryOpOperands(BO.getOpcode(), C0, C1, DL);
+  if (!NewC)
+    return nullptr;
+
   // Make a new binop in the predecessor block with the non-constant incoming
   // values.
   Builder.SetInsertPoint(PredBlockBranch);
@@ -1332,9 +1337,6 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
                                      Phi1->getIncomingValueForBlock(OtherBB));
   if (auto *NotFoldedNewBO = dyn_cast<BinaryOperator>(NewBO))
     NotFoldedNewBO->copyIRFlags(&BO);
-
-  // Fold constants for the predecessor block with constant incoming values.
-  Constant *NewC = ConstantExpr::get(BO.getOpcode(), C0, C1);
 
   // Replace the binop with a phi of the new values. The old phis are dead.
   PHINode *NewPhi = PHINode::Create(BO.getType(), 2);
