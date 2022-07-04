@@ -118,7 +118,7 @@ public:
     void __construct_at_end(size_type __n);
     void __construct_at_end(size_type __n, const_reference __x);
     template <class _InputIter>
-    __enable_if_t<__is_cpp17_input_iterator<_InputIter>::value && !__is_cpp17_forward_iterator<_InputIter>::value>
+    __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIter>::value>
         __construct_at_end(_InputIter __first, _InputIter __last);
     template <class _ForwardIterator>
     __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value>
