@@ -999,7 +999,8 @@ private:
         FormatToken *Prev = Tok->getPreviousNonComment();
         if (!Prev)
           break;
-        if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept)) {
+        if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept) ||
+            Prev->ClosesRequiresClause) {
           Tok->setType(TT_CtorInitializerColon);
         } else if (Prev->is(tok::kw_try)) {
           // Member initializer list within function try block.
