@@ -14,53 +14,53 @@ define void @foo(i8 addrspace(1)* align 8 dereferenceable_or_null(16), i8 addrsp
 ; CHECK-NEXT:    [[DOT11:%.*]] = bitcast i8 addrspace(1)* [[DOT10]] to i8 addrspace(1)* addrspace(1)*
 ; CHECK-NEXT:    [[DOT12:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[TMP1:%.*]], i64 16
 ; CHECK-NEXT:    [[DOT13:%.*]] = bitcast i8 addrspace(1)* [[DOT12]] to i8 addrspace(1)* addrspace(1)*
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2:%.*]], i64 1)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16
+; CHECK-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2:%.*]], i64 1)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX2]], 20
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 16
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8 addrspace(1)* [[TMP0]], i64 [[TMP6]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, i8 addrspace(1)* [[TMP1]], i64 [[TMP6]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[UMAX]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 16
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8 addrspace(1)* [[TMP0]], i64 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, i8 addrspace(1)* [[TMP1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8 addrspace(1)* [[DOT10]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8 addrspace(1)* [[DOT12]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -16
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[UMAX2]], -16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[DOT13]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[DOT13]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP5]] to <4 x i8 addrspace(1)*> addrspace(1)*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8 addrspace(1)*>, <4 x i8 addrspace(1)*> addrspace(1)* [[TMP6]], align 8, !alias.scope !0
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP5]], i64 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP7]] to <4 x i8 addrspace(1)*> addrspace(1)*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8 addrspace(1)*>, <4 x i8 addrspace(1)*> addrspace(1)* [[TMP8]], align 8, !alias.scope !0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP7]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8 addrspace(1)*>, <4 x i8 addrspace(1)*> addrspace(1)* [[TMP8]], align 8, !alias.scope !0
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP5]], i64 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP9]] to <4 x i8 addrspace(1)*> addrspace(1)*
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8 addrspace(1)*>, <4 x i8 addrspace(1)*> addrspace(1)* [[TMP10]], align 8, !alias.scope !0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP7]], i64 8
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8 addrspace(1)*>, <4 x i8 addrspace(1)*> addrspace(1)* [[TMP10]], align 8, !alias.scope !0
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP5]], i64 12
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP11]] to <4 x i8 addrspace(1)*> addrspace(1)*
-; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8 addrspace(1)*>, <4 x i8 addrspace(1)*> addrspace(1)* [[TMP12]], align 8, !alias.scope !0
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP7]], i64 12
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8 addrspace(1)*>, <4 x i8 addrspace(1)*> addrspace(1)* [[TMP12]], align 8, !alias.scope !0
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[DOT11]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP13]] to <4 x i8 addrspace(1)*> addrspace(1)*
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8 addrspace(1)*>, <4 x i8 addrspace(1)*> addrspace(1)* [[TMP14]], align 8, !alias.scope !0
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[DOT11]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i8 addrspace(1)*> [[WIDE_LOAD]], <4 x i8 addrspace(1)*> addrspace(1)* [[TMP14]], align 8, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP13]], i64 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP15]] to <4 x i8 addrspace(1)*> addrspace(1)*
-; CHECK-NEXT:    store <4 x i8 addrspace(1)*> [[WIDE_LOAD]], <4 x i8 addrspace(1)*> addrspace(1)* [[TMP16]], align 8, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP15]], i64 4
+; CHECK-NEXT:    store <4 x i8 addrspace(1)*> [[WIDE_LOAD3]], <4 x i8 addrspace(1)*> addrspace(1)* [[TMP16]], align 8, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP13]], i64 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP17]] to <4 x i8 addrspace(1)*> addrspace(1)*
-; CHECK-NEXT:    store <4 x i8 addrspace(1)*> [[WIDE_LOAD3]], <4 x i8 addrspace(1)*> addrspace(1)* [[TMP18]], align 8, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP15]], i64 8
+; CHECK-NEXT:    store <4 x i8 addrspace(1)*> [[WIDE_LOAD4]], <4 x i8 addrspace(1)*> addrspace(1)* [[TMP18]], align 8, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP13]], i64 12
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP19]] to <4 x i8 addrspace(1)*> addrspace(1)*
-; CHECK-NEXT:    store <4 x i8 addrspace(1)*> [[WIDE_LOAD4]], <4 x i8 addrspace(1)*> addrspace(1)* [[TMP20]], align 8, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP15]], i64 12
-; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP21]] to <4 x i8 addrspace(1)*> addrspace(1)*
-; CHECK-NEXT:    store <4 x i8 addrspace(1)*> [[WIDE_LOAD5]], <4 x i8 addrspace(1)*> addrspace(1)* [[TMP22]], align 8, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store <4 x i8 addrspace(1)*> [[WIDE_LOAD5]], <4 x i8 addrspace(1)*> addrspace(1)* [[TMP20]], align 8, !alias.scope !3, !noalias !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]

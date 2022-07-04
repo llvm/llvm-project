@@ -13,6 +13,7 @@ include "mlir/Dialect/Tensor/IR/TensorBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -607,6 +608,11 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     RankedTensorType getType() {
       return getResult().getType().cast<RankedTensorType>();
     }
+    
+    /// The `dest` type is the same as the result type.
+    RankedTensorType getDestType() {
+      return getType();
+    }
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
@@ -1049,6 +1055,149 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
   let hasFolder = 1;
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ParallelInsertSliceOp
+//===----------------------------------------------------------------------===//
+
+// TODO: Implement PerformConcurrentlyOpInterface.
+def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
+       AttrSizedOperandSegments,
+       OffsetSizeAndStrideOpInterface,
+       // TODO: Cannot use an interface here atm, verify this manually for now.
+       // HasParent<"ParallelCombiningOpInterface">
+  ]> {
+  let summary = [{
+    Specify the tensor slice update of a single thread of a parent 
+    ParallelCombiningOpInterface op.
+  }];
+  let description = [{
+    The `parallel_insert_slice` yields a subset tensor value to its parent 
+    ParallelCombiningOpInterface. These subset tensor values are aggregated to
+    in some unspecified order into a full tensor value returned by the parent 
+    parallel iterating op. 
+    The `parallel_insert_slice` is one such op allowed in the 
+    ParallelCombiningOpInterface op.
+
+    Conflicting writes result in undefined semantics, in that the indices written
+    to by multiple parallel updates might contain data from any of the updates,
+    or even a malformed bit pattern.
+
+    If an index is updated exactly once, the value contained at that index
+    in the resulting tensor will be equal to the value at a corresponding index
+    of a slice that was used for the updated. If an index is not updated at all,
+    its value will be equal to the one in the original tensor.
+
+    This op does not create a new value, which allows maintaining a clean
+    separation between the subset and full tensor.
+
+    Note that we cannot mark this operation as pure (NoSideEffects), even
+    though it has no side effects, because it will get DCEd during
+    canonicalization.
+
+    The parallel_insert_slice operation supports the following arguments:
+
+    * source: the tensor that is inserted.
+    * dest: the tensor into which the source tensor is inserted.
+    * offsets: tensor-rank number of offsets into the `dest` tensor into which
+               the slice is inserted.
+    * sizes: tensor-rank number of sizes which specify the sizes of the source
+             tensor type.
+    * strides: tensor-rank number of strides that specify subsampling in each
+               dimension.
+
+    The representation based on offsets, sizes and strides support a
+    partially-static specification via attributes specified through the
+    `static_offsets`, `static_sizes` and `static_strides` arguments. A special
+    sentinel value ShapedType::kDynamicSize and
+    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    a dynamic value.
+
+    After buffer allocation, the "parallel_insert_slice" op is expected to lower
+    into a memref.subview op.
+
+    A parallel_insert_slice operation may additionally specify insertion into a
+    tensor of higher rank than the source tensor, along dimensions that are 
+    statically known to be of size 1.
+    This rank-altering behavior is not required by the op semantics: this
+    flexibility allows to progressively drop unit dimensions while lowering
+    between different flavors of ops on that operate on tensors.
+    The rank-altering behavior of tensor.parallel_insert_slice matches the 
+    rank-reducing behavior of tensor.insert_slice and tensor.extract_slice.
+
+    Verification in the rank-reduced case:
+    ======================================
+    The same verification discussion and mechanisms apply as for ExtractSliceOp.
+    Unlike ExtractSliceOp however, there is no need for a specific inference.
+  }];
+
+  let arguments = (ins
+    AnyRankedTensor:$source,
+    AnyRankedTensor:$dest,
+    Variadic<Index>:$offsets,
+    Variadic<Index>:$sizes,
+    Variadic<Index>:$strides,
+    I64ArrayAttr:$static_offsets,
+    I64ArrayAttr:$static_sizes,
+    I64ArrayAttr:$static_strides
+  );
+  let assemblyFormat = [{
+    $source `into` $dest ``
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `into` type($dest)
+  }];
+
+  let extraClassDeclaration = [{
+    Type yieldedType() { return getDest().getType(); }
+
+    RankedTensorType getSourceType() {
+      return getSource().getType().cast<RankedTensorType>();
+    }
+
+    RankedTensorType getDestType() {
+      return getDest().getType().cast<RankedTensorType>();
+    }
+
+    ParallelCombiningOpInterface getParallelCombiningParent() {
+      return dyn_cast<ParallelCombiningOpInterface>(
+        getOperation()->getParentOp());
+    }
+
+    /// Return the expected rank of each of the `static_offsets`, `static_sizes`
+    /// and `static_strides` attributes.
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
+      unsigned rank = getDestType().getRank();
+      return {rank, rank, rank};
+    }
+
+    /// Return the number of leading operands before `offsets`, `sizes` and
+    /// `strides` operands.
+    static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
+
+    /// Return the OpResult of the enclosing ForeachThreadOp that is
+    /// corresponding to this ParallelInsertSliceOp.
+    OpResult getTiedOpResult();
+  }];
+
+  let builders = [
+    // Build a ParallelInsertSliceOp with mixed static and dynamic entries.
+    OpBuilder<(ins "Value":$source, "Value":$dest,
+      "ArrayRef<OpFoldResult>":$offsets, "ArrayRef<OpFoldResult>":$sizes,
+      "ArrayRef<OpFoldResult>":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+
+    // Build a ParallelInsertSliceOp with dynamic entries.
+    OpBuilder<(ins "Value":$source, "Value":$dest,
+      "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+  ];
+  
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

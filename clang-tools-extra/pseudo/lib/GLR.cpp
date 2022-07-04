@@ -318,9 +318,11 @@ private:
     do {
       const PushSpec &Push = Sequences.top().second;
       FamilySequences.emplace_back(Sequences.top().first.Rule, *Push.Seq);
-      for (const GSS::Node *Base : Push.LastPop->parents())
-        FamilyBases.emplace_back(
-            Params.Table.getGoToState(Base->State, F.Symbol), Base);
+      for (const GSS::Node *Base : Push.LastPop->parents()) {
+        auto NextState = Params.Table.getGoToState(Base->State, F.Symbol);
+        assert(NextState.hasValue() && "goto must succeed after reduce!");
+        FamilyBases.emplace_back(*NextState, Base);
+      }
 
       Sequences.pop();
     } while (!Sequences.empty() && Sequences.top().first == F);
@@ -393,8 +395,9 @@ private:
     }
     const ForestNode *Parsed =
         &Params.Forest.createSequence(Rule.Target, *RID, TempSequence);
-    StateID NextState = Params.Table.getGoToState(Base->State, Rule.Target);
-    Heads->push_back(Params.GSStack.addNode(NextState, Parsed, {Base}));
+    auto NextState = Params.Table.getGoToState(Base->State, Rule.Target);
+    assert(NextState.hasValue() && "goto must succeed after reduce!");
+    Heads->push_back(Params.GSStack.addNode(*NextState, Parsed, {Base}));
     return true;
   }
 };
@@ -444,7 +447,8 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
   }
   LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Reached eof\n"));
 
-  StateID AcceptState = Params.Table.getGoToState(StartState, StartSymbol);
+  auto AcceptState = Params.Table.getGoToState(StartState, StartSymbol);
+  assert(AcceptState.hasValue() && "goto must succeed after start symbol!");
   const ForestNode *Result = nullptr;
   for (const auto *Head : Heads) {
     if (Head->State == AcceptState) {

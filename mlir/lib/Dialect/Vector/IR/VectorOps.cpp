@@ -687,6 +687,9 @@ static LogicalResult verifyOutputShape(
     MLIRContext *ctx = op.getContext();
     AffineMap lhsMap = op.getIndexingMaps()[0];
     AffineMap rhsMap = op.getIndexingMaps()[1];
+    if (getUnusedDimsBitVector({lhsMap, rhsMap}).any())
+      return op.emitOpError(
+          "expected all dimensions to be either a LHS or a RHS dimension");
     SmallVector<AffineExpr, 4> extents(lhsMap.getNumInputs());
     for (auto pair :
          {std::make_pair(lhsType, lhsMap), std::make_pair(rhsType, rhsMap)}) {
@@ -699,8 +702,8 @@ static LogicalResult verifyOutputShape(
       }
     }
     if (!llvm::all_of(extents, [](AffineExpr e) { return e; }))
-      return op.emitOpError("expected all input dimensions to be used by "
-                            "either the LHS or the RHS");
+      return op.emitOpError("expected all dimensions to get an extent as "
+                            "either a LHS or a RHS dimension");
 
     AffineMap resMap = op.getIndexingMaps()[2];
     auto extentsMap = AffineMap::get(/*dimCount=*/extents.size(),
@@ -1880,6 +1883,36 @@ OpFoldResult vector::ShuffleOp::fold(ArrayRef<Attribute> operands) {
   }
 
   return DenseElementsAttr::get(getVectorType(), results);
+}
+
+namespace {
+
+/// Pattern to rewrite a ShuffleOp(SplatOp, SplatOp) to SplatOp.
+class ShuffleSplat final : public OpRewritePattern<ShuffleOp> {
+public:
+  using OpRewritePattern<ShuffleOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    auto v1Splat = op.getV1().getDefiningOp<SplatOp>();
+    auto v2Splat = op.getV2().getDefiningOp<SplatOp>();
+
+    if (!v1Splat || !v2Splat)
+      return failure();
+
+    if (v1Splat.getInput() != v2Splat.getInput())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), v1Splat.getInput());
+    return success();
+  }
+};
+
+} // namespace
+
+void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  results.add<ShuffleSplat>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -17,7 +17,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
 
 .. code-block:: console
 
-  $ clang-format -help
+  $ clang-format --help
   OVERVIEW: A tool to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
 
   If no arguments are specified, it formats the code from standard input
@@ -40,9 +40,11 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
                                        Use with caution, as this might lead to dramatically
                                        differing format depending on an option being
                                        supported or not.
-    --assume-filename=<string>     - Override filename used to determine the language.
-                                     When reading from stdin, clang-format assumes this
-                                     filename to determine the language.
+    --assume-filename=<string>     - Set filename used to determine the language and to find
+                                     .clang-format file.
+                                     Only used when reading from stdin.
+                                     If this is not passed, the .clang-format file is searched
+                                     relative to the current working directory when reading stdin.
                                      Unrecognized filenames are treated as C++.
                                      supported:
                                        CSharp: .cs
@@ -62,7 +64,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
     --fallback-style=<string>      - The name of the predefined style used as a
                                      fallback in case clang-format is invoked with
                                      -style=file, but can not find the .clang-format
-                                     file to use.
+                                     file to use. Defaults to 'LLVM'.
                                      Use -fallback-style=none to skip formatting.
     --ferror-limit=<uint>          - Set the maximum number of clang-format errors to emit
                                      before stopping (0 = no limit).
@@ -92,17 +94,19 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
                                      determined by the QualifierAlignment style flag
     --sort-includes                - If set, overrides the include sorting behavior
                                      determined by the SortIncludes style flag
-    --style=<string>               - Coding style, currently supports:
-                                       LLVM, GNU, Google, Chromium, Microsoft, Mozilla, WebKit.
-                                     Use -style=file to load style configuration from
-                                     .clang-format file located in one of the parent
-                                     directories of the source file (or current
-                                     directory for stdin).
-                                     Use -style=file:<format_file_path> to explicitly specify
-                                     the configuration file.
-                                     Use -style="{key: value, ...}" to set specific
-                                     parameters, e.g.:
-                                       -style="{BasedOnStyle: llvm, IndentWidth: 8}"
+    --style=<string>               - Set coding style. <string> can be:
+                                     1. A preset: LLVM, GNU, Google, Chromium, Microsoft,
+                                        Mozilla, WebKit.
+                                     2. 'file' to load style configuration from a
+                                        .clang-format file in one of the parent directories
+                                        of the source file (for stdin, see --assume-filename).
+                                        If no .clang-format file is found, falls back to
+                                        --fallback-style.
+                                        --style=file is the default.
+                                     3. 'file:<format_file_path>' to explicitly specify
+                                        the configuration file.
+                                     4. "{key: value, ...}" to set specific parameters, e.g.:
+                                        --style="{BasedOnStyle: llvm, IndentWidth: 8}"
     --verbose                      - If set, shows the list of processed files
 
   Generic Options:
@@ -235,36 +239,40 @@ output of a unified diff and reformats all contained lines with
 
 .. code-block:: console
 
-  usage: clang-format-diff.py [-h] [-i] [-p NUM] [-regex PATTERN] [-style STYLE]
+  usage: clang-format-diff.py [-h] [-i] [-p NUM] [-regex PATTERN] [-iregex PATTERN] [-sort-includes] [-v] [-style STYLE]
+                              [-fallback-style FALLBACK_STYLE] [-binary BINARY]
 
-  Reformat changed lines in diff. Without -i option just output the diff that
-  would be introduced.
+  This script reads input from a unified diff and reformats all the changed
+  lines. This is useful to reformat all the lines touched by a specific patch.
+  Example usage for git/svn users:
+
+    git diff -U0 --no-color --relative HEAD^ | clang-format-diff.py -p1 -i
+    svn diff --diff-cmd=diff -x-U0 | clang-format-diff.py -i
+
+  It should be noted that the filename contained in the diff is used unmodified
+  to determine the source file to update. Users calling this script directly
+  should be careful to ensure that the path in the diff is correct relative to the
+  current working directory.
 
   optional arguments:
-    -h, --help      show this help message and exit
-    -i              apply edits to files instead of displaying a diff
-    -p NUM          strip the smallest prefix containing P slashes
-    -regex PATTERN  custom pattern selecting file paths to reformat
-    -style STYLE    formatting style to apply (LLVM, Google, Chromium, Mozilla,
-                    WebKit)
+    -h, --help            show this help message and exit
+    -i                    apply edits to files instead of displaying a diff
+    -p NUM                strip the smallest prefix containing P slashes
+    -regex PATTERN        custom pattern selecting file paths to reformat (case sensitive, overrides -iregex)
+    -iregex PATTERN       custom pattern selecting file paths to reformat (case insensitive, overridden by -regex)
+    -sort-includes        let clang-format sort include blocks
+    -v, --verbose         be more verbose, ineffective without -i
+    -style STYLE          formatting style to apply (LLVM, GNU, Google, Chromium, Microsoft, Mozilla, WebKit)
+    -fallback-style FALLBACK_STYLE
+                          The name of the predefined style used as afallback in case clang-format is invoked with-style=file, but can not
+                          find the .clang-formatfile to use.
+    -binary BINARY        location of binary to use for clang-format
 
-So to reformat all the lines in the latest :program:`git` commit, just do:
-
-.. code-block:: console
-
-  git diff -U0 --no-color HEAD^ | clang-format-diff.py -i -p1
-
-With Mercurial/:program:`hg`:
+To reformat all the lines in the latest Mercurial/:program:`hg` commit, do:
 
 .. code-block:: console
 
   hg diff -U0 --color=never | clang-format-diff.py -i -p1
-
-In an SVN client, you can do:
-
-.. code-block:: console
-
-  svn diff --diff-cmd=diff -x -U0 | clang-format-diff.py -i
 
 The option `-U0` will create a diff without context lines (the script would format
 those as well).

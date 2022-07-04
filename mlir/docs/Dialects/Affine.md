@@ -257,8 +257,8 @@ while its symbols are enclosed in square brackets.
 Syntax of affine constraints:
 
 ```
-affine-constraint ::= affine-expr `>=` `0`
-                    | affine-expr `==` `0`
+affine-constraint ::= affine-expr `>=` `affine-expr`
+                    | affine-expr `==` `affine-expr`
 affine-constraint-conjunction ::= affine-constraint (`,` affine-constraint)*
 ```
 

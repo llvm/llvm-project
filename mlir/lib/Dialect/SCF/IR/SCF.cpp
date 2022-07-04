@@ -1212,137 +1212,6 @@ ForeachThreadOp mlir::scf::getForeachThreadOpThreadIndexOwner(Value val) {
 }
 
 //===----------------------------------------------------------------------===//
-// ParallelInsertSliceOp
-//===----------------------------------------------------------------------===//
-
-OpResult ParallelInsertSliceOp::getTiedOpResult() {
-  ParallelCombiningOpInterface parallelCombiningParent =
-      getParallelCombiningParent();
-  for (const auto &it :
-       llvm::enumerate(parallelCombiningParent.getYieldingOps())) {
-    Operation &nextOp = it.value();
-    if (&nextOp == getOperation())
-      return parallelCombiningParent.getParentResult(it.index());
-  }
-  llvm_unreachable("ParallelInsertSliceOp no tied OpResult found");
-}
-
-// Build a ParallelInsertSliceOp with mixed static and dynamic entries.
-void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
-                                  Value source, Value dest,
-                                  ArrayRef<OpFoldResult> offsets,
-                                  ArrayRef<OpFoldResult> sizes,
-                                  ArrayRef<OpFoldResult> strides,
-                                  ArrayRef<NamedAttribute> attrs) {
-  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
-  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets,
-                             ShapedType::kDynamicStrideOrOffset);
-  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes,
-                             ShapedType::kDynamicSize);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides,
-                             ShapedType::kDynamicStrideOrOffset);
-  build(b, result, {}, source, dest, dynamicOffsets, dynamicSizes,
-        dynamicStrides, b.getI64ArrayAttr(staticOffsets),
-        b.getI64ArrayAttr(staticSizes), b.getI64ArrayAttr(staticStrides));
-  result.addAttributes(attrs);
-}
-
-// Build a ParallelInsertSliceOp with dynamic entries.
-void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
-                                  Value source, Value dest, ValueRange offsets,
-                                  ValueRange sizes, ValueRange strides,
-                                  ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
-  build(b, result, source, dest, offsetValues, sizeValues, strideValues);
-}
-
-LogicalResult ParallelInsertSliceOp::verify() {
-  if (!isa<ParallelCombiningOpInterface>(getOperation()->getParentOp()))
-    return this->emitError("expected ParallelCombiningOpInterface parent, got:")
-           << *(getOperation()->getParentOp());
-  return success();
-}
-
-namespace {
-/// Pattern to rewrite a parallel_insert_slice op with constant arguments.
-class ParallelInsertSliceOpConstantArgumentFolder final
-    : public OpRewritePattern<ParallelInsertSliceOp> {
-public:
-  using OpRewritePattern<ParallelInsertSliceOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ParallelInsertSliceOp insertSliceOp,
-                                PatternRewriter &rewriter) const override {
-    // No constant operand, just return.
-    if (llvm::none_of(insertSliceOp.getOperands(), [](Value operand) {
-          return matchPattern(operand, matchConstantIndex());
-        }))
-      return failure();
-
-    // At least one of offsets/sizes/strides is a new constant.
-    // Form the new list of operands and constant attributes from the
-    // existing.
-    SmallVector<OpFoldResult> mixedOffsets(insertSliceOp.getMixedOffsets());
-    SmallVector<OpFoldResult> mixedSizes(insertSliceOp.getMixedSizes());
-    SmallVector<OpFoldResult> mixedStrides(insertSliceOp.getMixedStrides());
-    canonicalizeSubViewPart(mixedOffsets, ShapedType::isDynamicStrideOrOffset);
-    canonicalizeSubViewPart(mixedSizes, ShapedType::isDynamic);
-    canonicalizeSubViewPart(mixedStrides, ShapedType::isDynamicStrideOrOffset);
-
-    // Create the new op in canonical form.
-    rewriter.replaceOpWithNewOp<ParallelInsertSliceOp>(
-        insertSliceOp, insertSliceOp.getSource(), insertSliceOp.getDest(),
-        mixedOffsets, mixedSizes, mixedStrides);
-    return success();
-  }
-};
-} // namespace
-
-/// Fold a parallel_insert_slice source coming from a tensor.cast op.
-///
-/// Example:
-/// ```
-/// %0 = scf.foreach_thread (%arg0) in (%c2) -> (tensor<128xf32>) {
-///   %1 = compute_some_tensor() : tensor<64xf32>
-///   %2 = tensor.cast %1 : tensor<64xf32> to tensor<?xf32>
-///   scf.foreach_thread.perform_concurrently {
-///     scf.foreach_thread.parallel_insert_slice %2 into %out[...] [64] [1] :
-///        tensor<?xf32> into tensor<128xf32>
-///   }
-/// }
-/// ```
-///
-/// is folded into:
-/// ```
-/// %0 = scf.foreach_thread (%arg0) in (%c2) -> (tensor<128xf32>) {
-///   %1 = compute_some_tensor() : tensor<64xf32>
-///   scf.foreach_thread.perform_concurrently {
-///     scf.foreach_thread.parallel_insert_slice %1 into %out[...] [64] [1] :
-///        tensor<64xf32> into tensor<128xf32>
-///   }
-/// }
-/// ```
-LogicalResult
-ParallelInsertSliceOp::fold(ArrayRef<Attribute> operands,
-                            SmallVectorImpl<OpFoldResult> &results) {
-  auto sourceCast = getSource().getDefiningOp<tensor::CastOp>();
-  if (!sourceCast)
-    return failure();
-  getSourceMutable().assign(sourceCast.getSource());
-  return success();
-}
-
-void ParallelInsertSliceOp::getCanonicalizationPatterns(
-    RewritePatternSet &results, MLIRContext *context) {
-  results.add<ParallelInsertSliceOpConstantArgumentFolder>(context);
-}
-
-//===----------------------------------------------------------------------===//
 // PerformConcurrentlyOp
 //===----------------------------------------------------------------------===//
 
@@ -1355,10 +1224,12 @@ void PerformConcurrentlyOp::build(OpBuilder &b, OperationState &result) {
 
 LogicalResult PerformConcurrentlyOp::verify() {
   // TODO: PerformConcurrentlyOpInterface.
-  for (const Operation &op : getRegion().front().getOperations())
-    if (!isa<ParallelInsertSliceOp>(op))
-      return emitOpError(
-          "expected only scf.foreach_thread.parallel_insert_slice ops");
+  for (const Operation &op : getRegion().front().getOperations()) {
+    if (!isa<tensor::ParallelInsertSliceOp>(op)) {
+      return this->emitOpError("expected only ")
+             << tensor::ParallelInsertSliceOp::getOperationName() << " ops";
+    }
+  }
   return success();
 }
 
@@ -1396,7 +1267,7 @@ OpResult PerformConcurrentlyOp::getParentResult(int64_t idx) {
 SmallVector<Type> PerformConcurrentlyOp::getYieldedTypes() {
   return llvm::to_vector<4>(
       llvm::map_range(getYieldingOps(), [](Operation &op) {
-        auto insertSliceOp = dyn_cast<ParallelInsertSliceOp>(&op);
+        auto insertSliceOp = dyn_cast<tensor::ParallelInsertSliceOp>(&op);
         return insertSliceOp ? insertSliceOp.yieldedType() : Type();
       }));
 }

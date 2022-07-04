@@ -1591,10 +1591,6 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
         Out << ", ";
     }
 
-    if (CE->hasIndices())
-      for (unsigned I : CE->getIndices())
-        Out << ", " << I;
-
     if (CE->isCast()) {
       Out << " to ";
       WriterCtx.TypePrinter->print(CE->getType(), Out);

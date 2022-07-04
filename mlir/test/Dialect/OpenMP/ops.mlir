@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
 func.func @omp_barrier() -> () {
   // CHECK: omp.barrier
@@ -1394,8 +1394,6 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
   return
 }
 
-// -----
-
 func.func @omp_threadprivate() {
   %0 = arith.constant 1 : i32
   %1 = arith.constant 2 : i32
@@ -1526,5 +1524,143 @@ func.func @omp_taskgroup_multiple_tasks() -> () {
     // CHECK: omp.terminator
     omp.terminator
   }
+  return
+}
+
+// CHECK-LABEL: @omp_taskloop
+func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
+
+  // CHECK: omp.taskloop for (%{{.+}}) : i32 = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
+  omp.taskloop for (%i) : i32 = (%lb) to (%ub) step (%step)  {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop for (%{{.+}}) : i32 = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
+  omp.taskloop for (%i) : i32 = (%lb) to (%ub) step (%step)  {
+    // CHECK: test.op1
+    "test.op1"(%lb) : (i32) -> ()
+    // CHECK: test.op2
+    "test.op2"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) inclusive step (%{{.+}}, %{{.+}}) {
+  omp.taskloop for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) inclusive step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testbool = "test.bool"() : () -> (i1)
+
+  // CHECK: omp.taskloop if(%{{[^)]+}})
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop if(%testbool)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop final(%{{[^)]+}})
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop final(%testbool)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop untied
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop untied
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop mergeable
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop mergeable
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testf32 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  %testf32_2 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  // CHECK: omp.taskloop in_reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>, @add_f32 -> %{{.+}} : !llvm.ptr<f32>)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop in_reduction(@add_f32 -> %testf32 : !llvm.ptr<f32>, @add_f32 -> %testf32_2 : !llvm.ptr<f32>)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>, @add_f32 -> %{{.+}} : !llvm.ptr<f32>)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr<f32>, @add_f32 -> %testf32_2 : !llvm.ptr<f32>)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop in_reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>) reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop in_reduction(@add_f32 -> %testf32 : !llvm.ptr<f32>) reduction(@add_f32 -> %testf32_2 : !llvm.ptr<f32>)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testi32 = "test.i32"() : () -> (i32)
+  // CHECK: omp.taskloop priority(%{{[^:]+}}: i32)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop priority(%testi32: i32)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testmemref = "test.memref"() : () -> (memref<i32>)
+  // CHECK: omp.taskloop allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
+  omp.taskloop allocate(%testmemref : memref<i32> -> %testmemref : memref<i32>)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testi64 = "test.i64"() : () -> (i64)
+  // CHECK: omp.taskloop grain_size(%{{[^:]+}}: i64)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop grain_size(%testi64: i64)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop num_tasks(%{{[^:]+}}: i64)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop num_tasks(%testi64: i64)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop nogroup
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop nogroup
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: return
   return
 }
