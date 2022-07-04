@@ -2049,7 +2049,9 @@ bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
 /// SHXADD we are trying to match.
 bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
                                        SDValue &Val) {
-  if (N.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N.getOperand(1))) {
+  bool LeftShift = N.getOpcode() == ISD::SHL;
+  if ((LeftShift || N.getOpcode() == ISD::SRL) &&
+      isa<ConstantSDNode>(N.getOperand(1))) {
     unsigned C1 = N.getConstantOperandVal(1);
     SDValue N0 = N.getOperand(0);
     if (N0.getOpcode() == ISD::AND && N0.hasOneUse() &&
@@ -2061,12 +2063,26 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
         unsigned Trailing = countTrailingZeros(Mask);
         // Look for (shl (and X, Mask), C1) where Mask has 32 leading zeros and
         // C3 trailing zeros. If C1+C3==ShAmt we can use SRLIW+SHXADD.
-        if (Leading == 32 && Trailing > 0 && (C1 + Trailing) == ShAmt) {
+        if (LeftShift && Leading == 32 && Trailing > 0 &&
+            (Trailing + C1) == ShAmt) {
           SDLoc DL(N);
           EVT VT = N.getValueType();
           Val = SDValue(CurDAG->getMachineNode(
-            RISCV::SRLIW, DL, VT, N0->getOperand(0),
-            CurDAG->getTargetConstant(Trailing, DL, VT)), 0);
+                            RISCV::SRLIW, DL, VT, N0.getOperand(0),
+                            CurDAG->getTargetConstant(Trailing, DL, VT)),
+                        0);
+          return true;
+        }
+        // Look for (srl (and X, Mask), C1) where Mask has 32 leading zeros and
+        // C3 trailing zeros. If C3-C1==ShAmt we can use SRLIW+SHXADD.
+        if (!LeftShift && Leading == 32 && Trailing > C1 &&
+            (Trailing - C1) == ShAmt) {
+          SDLoc DL(N);
+          EVT VT = N.getValueType();
+          Val = SDValue(CurDAG->getMachineNode(
+                            RISCV::SRLIW, DL, VT, N0.getOperand(0),
+                            CurDAG->getTargetConstant(Trailing, DL, VT)),
+                        0);
           return true;
         }
       }
