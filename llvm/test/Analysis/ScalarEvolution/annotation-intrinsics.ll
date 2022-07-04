@@ -8,7 +8,7 @@ define i64 @annotation(i64 %x) {
 ; CHECK-LABEL: 'annotation'
 ; CHECK-NEXT:  Classifying expressions for: @annotation
 ; CHECK-NEXT:    %1 = tail call i64 @llvm.annotation.i64(i64 %x, i8* null, i8* null, i32 0)
-; CHECK-NEXT:    --> %1 U: full-set S: full-set
+; CHECK-NEXT:    --> %x U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @annotation
 ;
   %1 = tail call i64 @llvm.annotation.i64(i64 %x, i8* null, i8* null, i32 0)
@@ -19,7 +19,7 @@ define i8* @ptr_annotation(i8* %x) {
 ; CHECK-LABEL: 'ptr_annotation'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_annotation
 ; CHECK-NEXT:    %1 = call i8* @llvm.ptr.annotation.p0i8(i8* %x, i8* null, i8* null, i32 0, i8* null)
-; CHECK-NEXT:    --> %1 U: full-set S: full-set
+; CHECK-NEXT:    --> %x U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_annotation
 ;
   %1 = call i8* @llvm.ptr.annotation.p0i8(i8* %x, i8* null, i8* null, i32 0, i8* null)
