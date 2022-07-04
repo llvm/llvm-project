@@ -1784,6 +1784,15 @@ static Instruction *foldSubOfMinMax(BinaryOperator &I,
     }
   }
 
+  // sub Op0, smin((sub nsw Op0, Z), 0) --> smax Op0, Z
+  // sub Op0, smax((sub nsw Op0, Z), 0) --> smin Op0, Z
+  if (MinMax->isSigned() && match(Y, m_ZeroInt()) &&
+      match(X, m_NSWSub(m_Specific(Op0), m_Value(Z)))) {
+    Intrinsic::ID InvID = getInverseMinMaxIntrinsic(MinMax->getIntrinsicID());
+    Function *F = Intrinsic::getDeclaration(I.getModule(), InvID, Ty);
+    return CallInst::Create(F, {Op0, Z});
+  }
+
   return nullptr;
 }
 
