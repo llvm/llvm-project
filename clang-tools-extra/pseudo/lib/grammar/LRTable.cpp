@@ -11,24 +11,11 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace pseudo {
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LRTable::Action &A) {
-  switch (A.kind()) {
-  case LRTable::Action::Shift:
-    return OS << llvm::formatv("shift state {0}", A.getShiftState());
-  case LRTable::Action::GoTo:
-    return OS << llvm::formatv("go to state {0}", A.getGoToState());
-  case LRTable::Action::Sentinel:
-    llvm_unreachable("unexpected Sentinel action kind!");
-  }
-  llvm_unreachable("unexpected action kind!");
-}
 
 std::string LRTable::dumpStatistics() const {
   return llvm::formatv(R"(
