@@ -626,13 +626,13 @@ bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
   Constant *FoldedT = SelOpNo ?
     ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CT, *DL) :
     ConstantFoldBinaryOpOperands(BO.getOpcode(), CT, CBO, *DL);
-  if (isa<ConstantExpr>(FoldedT))
+  if (!FoldedT || isa<ConstantExpr>(FoldedT))
     return false;
 
   Constant *FoldedF = SelOpNo ?
     ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CF, *DL) :
     ConstantFoldBinaryOpOperands(BO.getOpcode(), CF, CBO, *DL);
-  if (isa<ConstantExpr>(FoldedF))
+  if (!FoldedF || isa<ConstantExpr>(FoldedF))
     return false;
 
   IRBuilder<> Builder(&BO);
