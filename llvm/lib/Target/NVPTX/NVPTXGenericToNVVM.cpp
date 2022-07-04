@@ -270,10 +270,6 @@ Value *GenericToNVVM::remapConstantExpr(Module *M, Function *F, ConstantExpr *C,
     // ShuffleVector
     return Builder.CreateShuffleVector(NewOperands[0], NewOperands[1],
                                        NewOperands[2]);
-  case Instruction::InsertValue:
-    // InsertValueConstantExpr
-    return Builder.CreateInsertValue(NewOperands[0], NewOperands[1],
-                                     C->getIndices());
   case Instruction::GetElementPtr:
     // GetElementPtrConstantExpr
     return Builder.CreateGEP(cast<GEPOperator>(C)->getSourceElementType(),
