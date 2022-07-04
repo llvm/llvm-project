@@ -24,8 +24,8 @@ namespace dataflow {
 
 StorageLocation &
 DataflowAnalysisContext::getStableStorageLocation(QualType Type) {
-  assert(!Type.isNull());
-  if (Type->isStructureOrClassType() || Type->isUnionType()) {
+  if (!Type.isNull() &&
+      (Type->isStructureOrClassType() || Type->isUnionType())) {
     // FIXME: Explore options to avoid eager initialization of fields as some of
     // them might not be needed for a particular analysis.
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
@@ -57,8 +57,8 @@ DataflowAnalysisContext::getStableStorageLocation(const Expr &E) {
 
 PointerValue &
 DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
-  assert(!PointeeType.isNull());
-  auto CanonicalPointeeType = PointeeType.getCanonicalType();
+  auto CanonicalPointeeType =
+      PointeeType.isNull() ? PointeeType : PointeeType.getCanonicalType();
   auto Res = NullPointerVals.try_emplace(CanonicalPointeeType, nullptr);
   if (Res.second) {
     auto &PointeeLoc = getStableStorageLocation(CanonicalPointeeType);
