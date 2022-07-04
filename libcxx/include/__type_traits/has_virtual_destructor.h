@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_feature(has_virtual_destructor) || defined(_LIBCPP_COMPILER_GCC)
+#if __has_builtin(__has_virtual_destructor)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS has_virtual_destructor
     : public integral_constant<bool, __has_virtual_destructor(_Tp)> {};
