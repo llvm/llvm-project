@@ -4,7 +4,7 @@
 // FIXME: eliminate this false parse.
 // XFAIL: *
 
-// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest | FileCheck %s
+// RUN: clang-pseudo -grammar=cxx -source=%s --print-forest | FileCheck %s
 void s(){};
 // CHECK-NOT:      simple-declaration
 // CHECK:          function-definition := decl-specifier-seq declarator
