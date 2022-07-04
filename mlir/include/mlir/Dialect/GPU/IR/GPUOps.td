@@ -20,6 +20,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -43,7 +44,8 @@ def GPU_Dimension : I32EnumAttr<"Dimension",
 def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
 
 class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
-    GPU_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
+    GPU_Op<mnemonic, !listconcat(traits, [
+        NoSideEffect, DeclareOpInterfaceMethods<InferIntRangeInterface>])>,
     Arguments<(ins GPU_DimensionAttr:$dimension)>, Results<(outs Index)> {
   let assemblyFormat = "$dimension attr-dict";
 }
@@ -97,7 +99,8 @@ def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
   }];
 }
 
-def GPU_LaneIdOp : GPU_Op<"lane_id", [NoSideEffect]> {
+def GPU_LaneIdOp : GPU_Op<"lane_id", [
+      NoSideEffect, DeclareOpInterfaceMethods<InferIntRangeInterface>]> {
   let description = [{
     Returns the lane id within the subgroup (warp/wave).
 
@@ -110,7 +113,8 @@ def GPU_LaneIdOp : GPU_Op<"lane_id", [NoSideEffect]> {
   let assemblyFormat = "attr-dict";
 }
 
-def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [NoSideEffect]>,
+def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [
+      NoSideEffect, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
     Returns the subgroup id, i.e. the index of the current subgroup within the
@@ -141,7 +145,8 @@ def GPU_GlobalIdOp : GPU_IndexOp<"global_id"> {
 }
 
 
-def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [NoSideEffect]>,
+def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [
+      NoSideEffect, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
     Returns the number of subgroups within a workgroup.
@@ -156,7 +161,8 @@ def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [NoSideEffect]>,
   let assemblyFormat = "attr-dict `:` type($result)";
 }
 
-def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [NoSideEffect]>,
+def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
+      NoSideEffect, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
     Returns the number of threads within a subgroup.
@@ -465,8 +471,9 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let hasVerifier = 1;
 }
 
-def GPU_LaunchOp : GPU_Op<"launch",
-    [AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface]>,
+def GPU_LaunchOp : GPU_Op<"launch", [
+      AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface,
+      DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
