@@ -1750,6 +1750,43 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   return Builder.CreateIntCast(Result, Ty, true);
 }
 
+static Instruction *foldSubOfMinMax(BinaryOperator &I,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  Type *Ty = I.getType();
+  auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op1);
+  if (!MinMax)
+    return nullptr;
+
+  // sub(add(X,Y), s/umin(X,Y)) --> s/umax(X,Y)
+  // sub(add(X,Y), s/umax(X,Y)) --> s/umin(X,Y)
+  Value *X = MinMax->getLHS();
+  Value *Y = MinMax->getRHS();
+  if (match(Op0, m_c_Add(m_Specific(X), m_Specific(Y))) &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    Intrinsic::ID InvID = getInverseMinMaxIntrinsic(MinMax->getIntrinsicID());
+    Function *F = Intrinsic::getDeclaration(I.getModule(), InvID, Ty);
+    return CallInst::Create(F, {X, Y});
+  }
+
+  // sub(add(X,Y),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
+  // sub(add(X,Z),umin(Y,Z)) --> add(X,usub.sat(Z,Y))
+  Value *Z;
+  if (match(Op1, m_OneUse(m_UMin(m_Value(Y), m_Value(Z))))) {
+    if (match(Op0, m_OneUse(m_c_Add(m_Specific(Y), m_Value(X))))) {
+      Value *USub = Builder.CreateIntrinsic(Intrinsic::usub_sat, Ty, {Y, Z});
+      return BinaryOperator::CreateAdd(X, USub);
+    }
+    if (match(Op0, m_OneUse(m_c_Add(m_Specific(Z), m_Value(X))))) {
+      Value *USub = Builder.CreateIntrinsic(Intrinsic::usub_sat, Ty, {Z, Y});
+      return BinaryOperator::CreateAdd(X, USub);
+    }
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (Value *V = simplifySubInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -2016,36 +2053,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
-  if (auto *II = dyn_cast<MinMaxIntrinsic>(Op1)) {
-    {
-      // sub(add(X,Y), s/umin(X,Y)) --> s/umax(X,Y)
-      // sub(add(X,Y), s/umax(X,Y)) --> s/umin(X,Y)
-      Value *X = II->getLHS();
-      Value *Y = II->getRHS();
-      if (match(Op0, m_c_Add(m_Specific(X), m_Specific(Y))) &&
-          (Op0->hasOneUse() || Op1->hasOneUse())) {
-        Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
-        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
-        return replaceInstUsesWith(I, InvMaxMin);
-      }
-    }
-
-    {
-      // sub(add(X,Y),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
-      // sub(add(X,Z),umin(Y,Z)) --> add(X,usub.sat(Z,Y))
-      Value *X, *Y, *Z;
-      if (match(Op1, m_OneUse(m_UMin(m_Value(Y), m_Value(Z))))) {
-        if (match(Op0, m_OneUse(m_c_Add(m_Specific(Y), m_Value(X)))))
-          return BinaryOperator::CreateAdd(
-              X, Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(),
-                                         {Y, Z}));
-        if (match(Op0, m_OneUse(m_c_Add(m_Specific(Z), m_Value(X)))))
-          return BinaryOperator::CreateAdd(
-              X, Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(),
-                                         {Z, Y}));
-      }
-    }
-  }
+  if (Instruction *R = foldSubOfMinMax(I, Builder))
+    return R;
 
   {
     // If we have a subtraction between some value and a select between
