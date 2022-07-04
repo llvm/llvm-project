@@ -2803,6 +2803,10 @@ void LLVMInstructionEraseFromParent(LLVMValueRef Inst) {
   unwrap<Instruction>(Inst)->eraseFromParent();
 }
 
+void LLVMDeleteInstruction(LLVMValueRef Inst) {
+  unwrap<Instruction>(Inst)->deleteValue();
+}
+
 LLVMIntPredicate LLVMGetICmpPredicate(LLVMValueRef Inst) {
   if (ICmpInst *I = dyn_cast<ICmpInst>(unwrap(Inst)))
     return (LLVMIntPredicate)I->getPredicate();
