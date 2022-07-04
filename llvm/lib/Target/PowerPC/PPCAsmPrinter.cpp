@@ -230,6 +230,9 @@ private:
 
   void emitGlobalVariableHelper(const GlobalVariable *);
 
+  // Get the offset of an alias based on its AliaseeObject.
+  uint64_t getAliasOffset(const Constant *C);
+
 public:
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : PPCAsmPrinter(TM, std::move(Streamer)) {
@@ -2352,6 +2355,24 @@ static bool isSpecialLLVMGlobalArrayForStaticInit(const GlobalVariable *GV) {
       .Default(false);
 }
 
+uint64_t PPCAIXAsmPrinter::getAliasOffset(const Constant *C) {
+  if (auto *GA = dyn_cast<GlobalAlias>(C))
+    return getAliasOffset(GA->getAliasee());
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
+    const MCExpr *LowC = lowerConstant(CE);
+    const MCBinaryExpr *CBE = dyn_cast<MCBinaryExpr>(LowC);
+    if (!CBE)
+      return 0;
+    if (CBE->getOpcode() != MCBinaryExpr::Add)
+      report_fatal_error("Only adding an offset is supported now.");
+    auto *RHS = dyn_cast<MCConstantExpr>(CBE->getRHS());
+    if (!RHS)
+      report_fatal_error("Unable to get the offset of alias.");
+    return RHS->getValue();
+  }
+  return 0;
+}
+
 void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // Special LLVM global arrays have been handled at the initialization.
   if (isSpecialLLVMGlobalArrayToSkip(GV) || isSpecialLLVMGlobalArrayForStaticInit(GV))
@@ -2422,20 +2443,34 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   }
 
   MCSymbol *EmittedInitSym = GVSym;
+
+  // Emit linkage for the global variable and its aliases.
   emitLinkage(GV, EmittedInitSym);
+  for (const GlobalAlias *GA : GOAliasMap[GV])
+    emitLinkage(GA, getSymbol(GA));
+
   emitAlignment(getGVAlignment(GV, DL), GV);
 
   // When -fdata-sections is enabled, every GlobalVariable will
   // be put into its own csect; therefore, label is not necessary here.
-  if (!TM.getDataSections() || GV->hasSection()) {
+  if (!TM.getDataSections() || GV->hasSection())
     OutStreamer->emitLabel(EmittedInitSym);
+
+  // No alias to emit.
+  if (!GOAliasMap[GV].size()) {
+    emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
+    return;
   }
 
-  // Emit aliasing label for global variable.
-  for (const GlobalAlias *Alias : GOAliasMap[GV])
-    OutStreamer->emitLabel(getSymbol(Alias));
+  // Aliases with the same offset should be aligned. Record the list of aliases
+  // associated with the offset.
+  AliasMapTy AliasList;
+  for (const GlobalAlias *GA : GOAliasMap[GV])
+    AliasList[getAliasOffset(GA->getAliasee())].push_back(GA);
 
-  emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
+  // Emit alias label and element value for global variable.
+  emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer(),
+                     &AliasList);
 }
 
 void PPCAIXAsmPrinter::emitFunctionDescriptor() {
