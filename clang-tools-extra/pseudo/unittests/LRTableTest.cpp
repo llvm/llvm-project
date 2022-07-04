@@ -20,7 +20,7 @@ namespace {
 
 using llvm::ValueIs;
 using testing::ElementsAre;
-using Action = LRTable::Action;
+using StateID = LRTable::StateID;
 
 TEST(LRTable, Builder) {
   std::vector<std::string> GrammarDiags;
@@ -38,22 +38,20 @@ TEST(LRTable, Builder) {
   SymbolID Identifier = tokenSymbol(tok::identifier);
   SymbolID Plus = tokenSymbol(tok::plus);
 
+  LRTable::Builder B(G);
   //           eof  IDENT   term
   // +-------+----+-------+------+
   // |state0 |    | s0    |      |
   // |state1 |    |       | g3   |
   // |state2 |    |       |      |
   // +-------+----+-------+------+-------
-  std::vector<LRTable::Entry> Entries = {
-      {/* State */ 0, Identifier, Action::shift(0)},
-      {/* State */ 1, Term, Action::goTo(3)},
-  };
-  std::vector<LRTable::ReduceEntry> ReduceEntries = {
-      {/*State=*/0, /*Rule=*/0},
-      {/*State=*/1, /*Rule=*/2},
-      {/*State=*/2, /*Rule=*/1},
-  };
-  LRTable T = LRTable::buildForTests(G, Entries, ReduceEntries);
+  B.Transition[{StateID{0}, Identifier}] = StateID{0};
+  B.Transition[{StateID{1}, Term}] = StateID{3};
+  B.Reduce[StateID{0}].insert(RuleID{0});
+  B.Reduce[StateID{1}].insert(RuleID{2});
+  B.Reduce[StateID{2}].insert(RuleID{1});
+  LRTable T = std::move(B).build();
+
   EXPECT_EQ(T.getShiftState(0, Eof), llvm::None);
   EXPECT_THAT(T.getShiftState(0, Identifier), ValueIs(0));
   EXPECT_THAT(T.getReduceRules(0), ElementsAre(0));

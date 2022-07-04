@@ -30,7 +30,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 
 namespace {
 
-using Action = LRTable::Action;
+using StateID = LRTable::StateID;
 using testing::AllOf;
 using testing::ElementsAre;
 using testing::UnorderedElementsAre;
@@ -122,13 +122,11 @@ TEST_F(GLRTest, ShiftMergingHeads) {
                                    /*Parents=*/{GSSNode0});
 
   buildGrammar({}, {}); // Create a fake empty grammar.
-  TestLang.Table =
-      LRTable::buildForTests(TestLang.G, /*Entries=*/{
-                                 {1, tokenSymbol(tok::semi), Action::shift(4)},
-                                 {2, tokenSymbol(tok::semi), Action::shift(4)},
-                                 {3, tokenSymbol(tok::semi), Action::shift(5)},
-                             },
-                             {});
+  LRTable::Builder B(TestLang.G);
+  B.Transition[{StateID{1}, tokenSymbol(tok::semi)}] = StateID{4};
+  B.Transition[{StateID{2}, tokenSymbol(tok::semi)}] = StateID{4};
+  B.Transition[{StateID{3}, tokenSymbol(tok::semi)}] = StateID{5};
+  TestLang.Table = std::move(B).build();
 
   ForestNode &SemiTerminal = Arena.createTerminal(tok::semi, 0);
   std::vector<const GSS::Node *> NewHeads;
@@ -152,17 +150,12 @@ TEST_F(GLRTest, ReduceConflictsSplitting) {
   //    └--3(enum-name)     // 3 is goto(0, enum-name)
   buildGrammar({"class-name", "enum-name"},
                {"class-name := IDENTIFIER", "enum-name := IDENTIFIER"});
-
-  TestLang.Table = LRTable::buildForTests(
-      TestLang.G,
-      {
-          {/*State=*/0, id("class-name"), Action::goTo(2)},
-          {/*State=*/0, id("enum-name"), Action::goTo(3)},
-      },
-      {
-          {/*State=*/1, ruleFor("class-name")},
-          {/*State=*/1, ruleFor("enum-name")},
-      });
+  LRTable::Builder B(TestLang.G);
+  B.Transition[{StateID{0}, id("class-name")}] = StateID{2};
+  B.Transition[{StateID{0}, id("enum-name")}] = StateID{3};
+  B.Reduce[StateID{1}].insert(ruleFor("class-name"));
+  B.Reduce[StateID{1}].insert(ruleFor("enum-name"));
+  TestLang.Table = std::move(B).build();
 
   const auto *GSSNode0 =
       GSStack.addNode(/*State=*/0, /*ForestNode=*/nullptr, /*Parents=*/{});
@@ -202,15 +195,12 @@ TEST_F(GLRTest, ReduceSplittingDueToMultipleBases) {
       /*State=*/4, &Arena.createTerminal(tok::star, /*TokenIndex=*/1),
       /*Parents=*/{GSSNode2, GSSNode3});
 
-  TestLang.Table = LRTable::buildForTests(
-      TestLang.G,
-      {
-          {/*State=*/2, id("ptr-operator"), Action::goTo(/*NextState=*/5)},
-          {/*State=*/3, id("ptr-operator"), Action::goTo(/*NextState=*/6)},
-      },
-      {
-          {/*State=*/4, ruleFor("ptr-operator")},
-      });
+  LRTable::Builder B(TestLang.G);
+  B.Transition[{StateID{2}, id("ptr-operator")}] = StateID{5};
+  B.Transition[{StateID{3}, id("ptr-operator")}] = StateID{6};
+  B.Reduce[StateID{4}].insert(ruleFor("ptr-operator"));
+  TestLang.Table = std::move(B).build();
+
   std::vector<const GSS::Node *> Heads = {GSSNode4};
   glrReduce(Heads, tokenSymbol(tok::eof), {TestLang.G, TestLang.Table, Arena, GSStack});
 
@@ -256,16 +246,13 @@ TEST_F(GLRTest, ReduceJoiningWithMultipleBases) {
                       /*Parents=*/{GSSNode2});
 
   // FIXME: figure out a way to get rid of the hard-coded reduce RuleID!
-  TestLang.Table = LRTable::buildForTests(
-      TestLang.G,
-      {
-          {/*State=*/1, id("type-name"), Action::goTo(/*NextState=*/5)},
-          {/*State=*/2, id("type-name"), Action::goTo(/*NextState=*/5)},
-      },
-      {
-          {/*State=*/3, /* type-name := class-name */ 0},
-          {/*State=*/4, /* type-name := enum-name */ 1},
-      });
+  LRTable::Builder B(TestLang.G);
+  B.Transition[{StateID{1}, id("type-name")}] = StateID{5};
+  B.Transition[{StateID{2}, id("type-name")}] = StateID{5};
+  B.Reduce[StateID{3}].insert(/* type-name := class-name */ RuleID{0});
+  B.Reduce[StateID{4}].insert(/* type-name := enum-name */ RuleID{1});
+  TestLang.Table = std::move(B).build();
+
   std::vector<const GSS::Node *> Heads = {GSSNode3, GSSNode4};
   glrReduce(Heads, tokenSymbol(tok::eof), {TestLang.G, TestLang.Table, Arena, GSStack});
 
@@ -314,15 +301,12 @@ TEST_F(GLRTest, ReduceJoiningWithSameBase) {
                       /*Parents=*/{GSSNode2});
 
   // FIXME: figure out a way to get rid of the hard-coded reduce RuleID!
-  TestLang.Table =
-      LRTable::buildForTests(TestLang.G,
-                             {
-                                 {/*State=*/0, id("pointer"), Action::goTo(5)},
-                             },
-                             {
-                                 {3, /* pointer := class-name */ 0},
-                                 {4, /* pointer := enum-name */ 1},
-                             });
+  LRTable::Builder B(TestLang.G);
+  B.Transition[{StateID{0}, id("pointer")}] = StateID{5};
+  B.Reduce[StateID{3}].insert(/* pointer := class-name */ RuleID{0});
+  B.Reduce[StateID{4}].insert(/* pointer := enum-name */ RuleID{1});
+  TestLang.Table = std::move(B).build();
+
   std::vector<const GSS::Node *> Heads = {GSSNode3, GSSNode4};
   glrReduce(Heads, tokenSymbol(tok::eof),
             {TestLang.G, TestLang.Table, Arena, GSStack});
@@ -345,14 +329,10 @@ TEST_F(GLRTest, ReduceJoiningWithSameBase) {
 TEST_F(GLRTest, ReduceLookahead) {
   // A term can be followed by +, but not by -.
   buildGrammar({"sum", "term"}, {"expr := term + term", "term := IDENTIFIER"});
-  TestLang.Table =
-      LRTable::buildForTests(TestLang.G,
-                             {
-                                 {/*State=*/0, id("term"), Action::goTo(2)},
-                             },
-                             {
-                                 {/*State=*/1, 0},
-                             });
+  LRTable::Builder B(TestLang.G);
+  B.Transition[{StateID{0}, id("term")}] = StateID{2};
+  B.Reduce[StateID{1}].insert(RuleID{0});
+  TestLang.Table = std::move(B).build();
 
   auto *Identifier = &Arena.createTerminal(tok::identifier, /*Start=*/0);
 
