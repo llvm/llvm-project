@@ -227,11 +227,6 @@ public:
   llvm::vfs::FileSystem &getVFS() const;
   const llvm::Triple &getTriple() const { return Triple; }
 
-  /// Addition for Swift. Allows ClangImporter to extract the path to libstdc++.
-  virtual void
-  addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                           llvm::opt::ArgStringList &CC1Args) const {};
-
   /// Get the toolchain's aux triple, if it has one.
   ///
   /// Exactly what the aux triple represents depends on the toolchain, but for

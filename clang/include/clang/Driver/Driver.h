@@ -584,18 +584,6 @@ public:
     return IsOffload ? OffloadLTOMode : LTOMode;
   }
 
-  /// Addition for Swift. Allows ClangImporter to extract the path to libstdc++.
-  std::vector<std::string>
-  getLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                           const llvm::Triple &Target) const {
-    llvm::opt::ArgStringList ArgStrings;
-    getToolChain(DriverArgs, Target)
-        .addLibStdCxxIncludePaths(DriverArgs, ArgStrings);
-    unsigned Unused1, Unused2;
-    auto ParsedArgs = getOpts().ParseArgs(ArgStrings, Unused1, Unused2);
-    return ParsedArgs.getAllArgValues(options::OPT_internal_isystem);
-  }
-
 private:
 
   /// Tries to load options from configuration file.
