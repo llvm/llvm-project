@@ -151,39 +151,21 @@ int main(int argc, char *argv[]) {
     if (PrintForest)
       llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/true);
 
-    if (ParseableStream) {
-      clang::pseudo::ForestArena Arena;
-      clang::pseudo::GSS GSS;
-      llvm::Optional<clang::pseudo::SymbolID> StartSymID =
-          Lang.G.findNonterminal(StartSymbol);
-      if (!StartSymID) {
-        llvm::errs() << llvm::formatv(
-            "The start symbol {0} doesn't exit in the grammar!\n", StartSymbol);
-        return 2;
-      }
-      auto &Root =
-          glrParse(*ParseableStream,
-                   clang::pseudo::ParseParams{Lang.G, Lang.Table, Arena, GSS},
-                   *StartSymID);
-      if (PrintForest)
-        llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/true);
+    if (PrintStatistics) {
+      llvm::outs() << "Forest bytes: " << Arena.bytes()
+                   << " nodes: " << Arena.nodeCount() << "\n";
+      llvm::outs() << "GSS bytes: " << GSS.bytes()
+                   << " nodes: " << GSS.nodesCreated() << "\n";
 
-      if (PrintStatistics) {
-        llvm::outs() << "Forest bytes: " << Arena.bytes()
-                     << " nodes: " << Arena.nodeCount() << "\n";
-        llvm::outs() << "GSS bytes: " << GSS.bytes()
-                     << " nodes: " << GSS.nodesCreated() << "\n";
-
-        for (auto &P :
-             {std::make_pair("Ambiguous", clang::pseudo::ForestNode::Ambiguous),
-              std::make_pair("Opaque", clang::pseudo::ForestNode::Opaque)}) {
-          clang::pseudo::NodeStats Stats(
-              Root, [&](const auto &N) { return N.kind() == P.second; });
-          llvm::outs() << "\n" << Stats.Total << " " << P.first << " nodes:\n";
-          for (const auto &S : Stats.BySymbol)
-            llvm::outs() << llvm::formatv("  {0,3} {1}\n", S.second,
-                                          Lang.G.symbolName(S.first));
-        }
+      for (auto &P :
+           {std::make_pair("Ambiguous", clang::pseudo::ForestNode::Ambiguous),
+            std::make_pair("Opaque", clang::pseudo::ForestNode::Opaque)}) {
+        clang::pseudo::NodeStats Stats(
+            Root, [&](const auto &N) { return N.kind() == P.second; });
+        llvm::outs() << "\n" << Stats.Total << " " << P.first << " nodes:\n";
+        for (const auto &S : Stats.BySymbol)
+          llvm::outs() << llvm::formatv("  {0,3} {1}\n", S.second,
+                                        Lang.G.symbolName(S.first));
       }
     }
   }
