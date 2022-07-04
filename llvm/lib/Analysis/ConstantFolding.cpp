@@ -1142,8 +1142,12 @@ ConstantFoldConstantImpl(const Constant *C, const DataLayout &DL,
     Ops.push_back(NewC);
   }
 
-  if (auto *CE = dyn_cast<ConstantExpr>(C))
-    return ConstantFoldInstOperandsImpl(CE, CE->getOpcode(), Ops, DL, TLI);
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
+    if (Constant *Res =
+            ConstantFoldInstOperandsImpl(CE, CE->getOpcode(), Ops, DL, TLI))
+      return Res;
+    return const_cast<Constant *>(C);
+  }
 
   assert(isa<ConstantVector>(C));
   return ConstantVector::get(Ops);
