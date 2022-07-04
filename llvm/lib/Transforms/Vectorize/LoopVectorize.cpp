@@ -7497,7 +7497,9 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     return VectorizationFactor::Disabled();
 
   // Select the optimal vectorization factor.
-  return CM.selectVectorizationFactor(VFCandidates);
+  VectorizationFactor VF = CM.selectVectorizationFactor(VFCandidates);
+  assert((VF.Width.isScalar() || VF.ScalarCost > 0) && "when vectorizing, the scalar cost must be non-zero.");
+  return VF;
 }
 
 VPlan &LoopVectorizationPlanner::getBestPlanFor(ElementCount VF) const {
@@ -10259,6 +10261,11 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
     return true;
   }
 
+  // The scalar cost should only be 0 when vectorizing with a user specified VF/IC. In those cases, runtime checks should always be generated.
+  double ScalarC = *VF.ScalarCost.getValue();
+  if (ScalarC == 0)
+    return true;
+
   // First, compute the minimum iteration count required so that the vector
   // loop outperforms the scalar loop.
   //  The total cost of the scalar loop is
@@ -10288,7 +10295,6 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
   unsigned IntVF = VF.Width.getKnownMinValue();
-  double ScalarC = *VF.ScalarCost.getValue();
   double VecCOverVF = double(*VF.Cost.getValue()) / IntVF;
   double RtC = *CheckCost.getValue();
   double MinTC1 = RtC / (ScalarC - VecCOverVF);
