@@ -1473,10 +1473,7 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
     while (isa<DbgInfoIntrinsic>(I2))
       I2 = &*BB2_Itr++;
   }
-  // FIXME: Can we define a safety predicate for CallBr?
-  if (isa<PHINode>(I1) || !I1->isIdenticalToWhenDefined(I2) ||
-      (isa<InvokeInst>(I1) && !isSafeToHoistInvoke(BB1, BB2, I1, I2)) ||
-      isa<CallBrInst>(I1))
+  if (isa<PHINode>(I1) || !I1->isIdenticalToWhenDefined(I2))
     return false;
 
   BasicBlock *BIParent = BI->getParent();
