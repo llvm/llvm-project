@@ -18,7 +18,7 @@
 namespace llvm {
 namespace cas {
 
-class TreeProxy;
+class ObjectProxy;
 
 /// A mostly-thread-safe caching on-disk filesystem. The only unsafe operation
 /// is \a setCurrentWorkingDirectory(), which would be dangerous to call in a
@@ -68,12 +68,12 @@ public:
   ///     /new/filename
   ///     /new/sym2 -> filename
   ///     /new/sym3 -> /new/filename [broken]
-  virtual Expected<TreeProxy> createTreeFromNewAccesses(
+  virtual Expected<ObjectProxy> createTreeFromNewAccesses(
       llvm::function_ref<StringRef(const vfs::CachedDirectoryEntry &)>
           RemapPath = nullptr) = 0;
 
   /// Create a tree that represents all known directories, files, and symlinks.
-  virtual Expected<TreeProxy> createTreeFromAllAccesses() = 0;
+  virtual Expected<ObjectProxy> createTreeFromAllAccesses() = 0;
 
   /// Helper class to build a tree with a subset of what has been read.
   class TreeBuilder {
@@ -91,7 +91,7 @@ public:
     /// parent path exists but the filename refers to a broken symlink, that is
     /// not an error; the symlink will be added without the target.
     virtual Error push(const Twine &Path) = 0;
-    virtual Expected<TreeProxy> create() = 0;
+    virtual Expected<ObjectProxy> create() = 0;
     virtual ~TreeBuilder() = default;
   };
 

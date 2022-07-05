@@ -8,6 +8,7 @@
 
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/TreeSchema.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -353,7 +354,7 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
     for (const auto &F : Files)
       EXPECT_FALSE(FS->getRealPath(F.path(), Path));
 
-    Optional<cas::TreeProxy> Tree;
+    Optional<cas::ObjectProxy> Tree;
     ASSERT_THAT_ERROR(FS->createTreeFromNewAccesses(
                             [&](const vfs::CachedDirectoryEntry &Entry) {
                               return Remapper.map(Entry);
@@ -361,10 +362,15 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
                           .moveInto(Tree),
                       Succeeded());
 
+    llvm::cas::TreeSchema Schema(FS->getCAS());
+    Optional<llvm::cas::TreeProxy> TreeNode;
+    ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
+                      Succeeded());
+
     // Check that all the files are found.
-    EXPECT_EQ(Files.size(), Tree->size());
+    EXPECT_EQ(Files.size(), TreeNode->size());
     for (const auto &F : Files)
-      EXPECT_TRUE(Tree->lookup(sys::path::filename(F.path())));
+      EXPECT_TRUE(TreeNode->lookup(sys::path::filename(F.path())));
   }
 }
 

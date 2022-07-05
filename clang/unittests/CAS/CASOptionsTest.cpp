@@ -20,6 +20,7 @@
 
 using namespace llvm;
 using namespace clang;
+using namespace clang::cas;
 
 namespace {
 
@@ -43,7 +44,7 @@ TEST(CASOptionsTest, getOrCreateCAS) {
 
   // Create an in-memory CAS.
   CASOptions Opts;
-  std::shared_ptr<cas::CASDB> InMemory = Opts.getOrCreateCAS(Diags);
+  std::shared_ptr<CASDB> InMemory = Opts.getOrCreateCAS(Diags);
   ASSERT_TRUE(InMemory);
   EXPECT_EQ(InMemory, Opts.getOrCreateCAS(Diags));
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
@@ -52,14 +53,14 @@ TEST(CASOptionsTest, getOrCreateCAS) {
   // Create an on-disk CAS.
   unittest::TempDir Dir("cas-options", /*Unique=*/true);
   Opts.CASPath = Dir.path("cas").str().str();
-  std::shared_ptr<cas::CASDB> OnDisk = Opts.getOrCreateCAS(Diags);
+  std::shared_ptr<CASDB> OnDisk = Opts.getOrCreateCAS(Diags);
   EXPECT_NE(InMemory, OnDisk);
   EXPECT_EQ(OnDisk, Opts.getOrCreateCAS(Diags));
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 
   // Create an on-disk CAS at an automatic location.
   Opts.CASPath = "auto";
-  std::shared_ptr<cas::CASDB> OnDiskAuto = Opts.getOrCreateCAS(Diags);
+  std::shared_ptr<CASDB> OnDiskAuto = Opts.getOrCreateCAS(Diags);
   EXPECT_NE(InMemory, OnDiskAuto);
   EXPECT_NE(OnDisk, OnDiskAuto);
   EXPECT_EQ(OnDiskAuto, Opts.getOrCreateCAS(Diags));
@@ -67,7 +68,7 @@ TEST(CASOptionsTest, getOrCreateCAS) {
 
   // Create another in-memory CAS. It won't be the same one.
   Opts.CASPath = "";
-  std::shared_ptr<cas::CASDB> InMemory2 = Opts.getOrCreateCAS(Diags);
+  std::shared_ptr<CASDB> InMemory2 = Opts.getOrCreateCAS(Diags);
   EXPECT_NE(InMemory, InMemory2);
   EXPECT_NE(OnDisk, InMemory2);
   EXPECT_NE(OnDiskAuto, InMemory2);
@@ -91,7 +92,7 @@ TEST(CASOptionsTest, getOrCreateCASInvalid) {
   Opts.CASPath = File.path().str();
   EXPECT_EQ(nullptr, Opts.getOrCreateCAS(Diags));
 
-  std::shared_ptr<cas::CASDB> Empty =
+  std::shared_ptr<CASDB> Empty =
       Opts.getOrCreateCAS(Diags, /*CreateEmptyCASOnFailure=*/true);
   EXPECT_EQ(Empty, Opts.getOrCreateCAS(Diags));
 
@@ -111,7 +112,7 @@ TEST(CASOptionsTest, getOrCreateCASAndHideConfig) {
   unittest::TempDir Dir("cas-options", /*Unique=*/true);
   CASOptions Opts;
   Opts.CASPath = Dir.path("cas").str().str();
-  std::shared_ptr<cas::CASDB> CAS = Opts.getOrCreateCASAndHideConfig(Diags);
+  std::shared_ptr<CASDB> CAS = Opts.getOrCreateCASAndHideConfig(Diags);
   ASSERT_TRUE(CAS);
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 

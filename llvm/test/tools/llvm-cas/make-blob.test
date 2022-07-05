@@ -19,7 +19,7 @@ RUN:   FileCheck %s -check-prefix CHECK-EMPTY -allow-empty
 RUN: llvm-cas --cas %t.cas --print-kind @%t/empty.casid |\
 RUN:   FileCheck %s -check-prefix CHECK-KIND
 CHECK-EMPTY-NOT: {{.}}
-CHECK-KIND: node
+CHECK-KIND: object
 
 RUN: llvm-cas --cas %t.cas --cat-blob @%t/abc.casid |\
 RUN:   FileCheck %s -check-prefix CHECK-ABC

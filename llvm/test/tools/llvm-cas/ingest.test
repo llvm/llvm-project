@@ -24,5 +24,6 @@ RUN: not llvm-cas --cas  %t/cas --get-cas-id --data %s @%t/cas.id 2>&1 | FileChe
 
 CHECK-ERROR: llvm-cas: get-cas-id: No such file or directory
 
-RUN: not llvm-cas --cas  %t/cas --ls-node-refs @%t/cas.id 2>&1 | FileCheck %s --check-prefix=CHECK-WRONG-TYPE
-CHECK-WRONG-TYPE: llvm-cas: ls-node-refs: wrong object kind
+RUN: llvm-cas --cas  %t/cas --ls-node-refs @%t/cas.id 2>&1 | FileCheck %s --check-prefix=CHECK-NODE-REFS
+CHECK-NODE-REFS: llvmcas://
+CHECK-NODE-REFS: llvmcas://

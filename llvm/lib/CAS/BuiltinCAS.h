@@ -163,39 +163,33 @@ public:
 
   virtual Expected<CASID> parseIDImpl(ArrayRef<uint8_t> Hash) = 0;
 
-  Expected<TreeHandle> storeTree(ArrayRef<NamedTreeEntry> Entries) final;
-  virtual Expected<TreeHandle>
-  storeTreeImpl(ArrayRef<uint8_t> ComputedHash,
-                ArrayRef<NamedTreeEntry> SortedEntries) = 0;
+  Expected<ObjectHandle> store(ArrayRef<ObjectRef> Refs,
+                               ArrayRef<char> Data) final;
+  virtual Expected<ObjectHandle> storeImpl(ArrayRef<uint8_t> ComputedHash,
+                                           ArrayRef<ObjectRef> Refs,
+                                           ArrayRef<char> Data) = 0;
 
-  Expected<NodeHandle> storeNode(ArrayRef<ObjectRef> Refs,
-                                 ArrayRef<char> Data) final;
-  virtual Expected<NodeHandle> storeNodeImpl(ArrayRef<uint8_t> ComputedHash,
-                                             ArrayRef<ObjectRef> Refs,
-                                             ArrayRef<char> Data) = 0;
-
-  Expected<NodeHandle>
-  storeNodeFromOpenFileImpl(sys::fs::file_t FD,
-                            Optional<sys::fs::file_status> Status) override;
-  virtual Expected<NodeHandle>
-  storeNodeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
-                                    sys::fs::mapped_file_region Map) {
-    return storeNodeImpl(ComputedHash, None,
-                         makeArrayRef(Map.data(), Map.size()));
+  Expected<ObjectHandle>
+  storeFromOpenFileImpl(sys::fs::file_t FD,
+                        Optional<sys::fs::file_status> Status) override;
+  virtual Expected<ObjectHandle>
+  storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
+                                sys::fs::mapped_file_region Map) {
+    return storeImpl(ComputedHash, None, makeArrayRef(Map.data(), Map.size()));
   }
 
   /// Both builtin CAS implementations provide lifetime for free, so this can
   /// be const, and readData() and getDataSize() can be implemented on top of
   /// it.
-  virtual ArrayRef<char> getDataConst(NodeHandle Node) const = 0;
+  virtual ArrayRef<char> getDataConst(ObjectHandle Node) const = 0;
 
-  ArrayRef<char> getDataImpl(NodeHandle Node, bool NullTerminate) final {
+  ArrayRef<char> getDataImpl(ObjectHandle Node, bool NullTerminate) final {
     return getDataConst(Node);
   }
-  uint64_t getDataSize(NodeHandle Node) const final {
+  uint64_t getDataSize(ObjectHandle Node) const final {
     return getDataConst(Node).size();
   }
-  uint64_t readDataImpl(NodeHandle Node, raw_ostream &OS, uint64_t Offset,
+  uint64_t readDataImpl(ObjectHandle Node, raw_ostream &OS, uint64_t Offset,
                         uint64_t MaxBytes) const final;
 
   Error createUnknownObjectError(CASID ID) const {
@@ -234,7 +228,7 @@ public:
                                  "'");
   }
 
-  Error validateObject(const CASID &ID) final;
+  Error validate(const CASID &ID) final;
 };
 
 } // end namespace builtin

@@ -53,11 +53,7 @@ public:
     /// Node with refs and data co-allocated.
     InlineNode,
 
-    /// Tree: custom node. Pairs of refs pointing at target (arbitrary object)
-    /// and names (String), and some data to describe the kind of the entry.
-    Tree,
-
-    Max = Tree,
+    Max = InlineNode,
   };
 
   Kind getKind() const { return IndexAndKind.getInt(); }
@@ -83,30 +79,19 @@ private:
   static_assert((1U << NumKindBits) <= alignof(InMemoryIndexValueT),
                 "Kind will clobber pointer");
   static_assert(((int)Kind::Max >> NumKindBits) == 0, "Kind will be truncated");
-};
 
-template <class DerivedT> class GetDataString {
 public:
-  StringRef getDataString() const {
-    ArrayRef<char> Array = static_cast<const DerivedT *>(this)->getData();
-    return StringRef(Array.begin(), Array.size());
-  }
-};
-
-class InMemoryNode : public InMemoryObject, public GetDataString<InMemoryNode> {
-public:
-  static bool classof(const InMemoryObject *O) {
-    return O->getKind() == Kind::RefNode || O->getKind() == Kind::InlineNode;
-  }
   inline ArrayRef<char> getData() const;
 
   inline ArrayRef<const InMemoryObject *> getRefs() const;
 
-private:
-  using InMemoryObject::InMemoryObject;
+  StringRef getDataString() const {
+    ArrayRef<char> Array = getData();
+    return StringRef(Array.begin(), Array.size());
+  }
 };
 
-class InMemoryRefNode : public InMemoryNode {
+class InMemoryRefObject : public InMemoryObject {
 public:
   static constexpr Kind KindValue = Kind::RefNode;
   static bool classof(const InMemoryObject *O) {
@@ -118,18 +103,18 @@ public:
   ArrayRef<char> getDataImpl() const { return Data; }
   ArrayRef<char> getData() const { return Data; }
 
-  static InMemoryRefNode &create(function_ref<void *(size_t Size)> Allocate,
-                                 const InMemoryIndexValueT &I,
-                                 ArrayRef<const InMemoryObject *> Refs,
-                                 ArrayRef<char> Data) {
-    void *Mem = Allocate(sizeof(InMemoryRefNode));
-    return *new (Mem) InMemoryRefNode(I, Refs, Data);
+  static InMemoryRefObject &create(function_ref<void *(size_t Size)> Allocate,
+                                   const InMemoryIndexValueT &I,
+                                   ArrayRef<const InMemoryObject *> Refs,
+                                   ArrayRef<char> Data) {
+    void *Mem = Allocate(sizeof(InMemoryRefObject));
+    return *new (Mem) InMemoryRefObject(I, Refs, Data);
   }
 
 private:
-  InMemoryRefNode(const InMemoryIndexValueT &I,
-                  ArrayRef<const InMemoryObject *> Refs, ArrayRef<char> Data)
-      : InMemoryNode(KindValue, I), Refs(Refs), Data(Data) {
+  InMemoryRefObject(const InMemoryIndexValueT &I,
+                    ArrayRef<const InMemoryObject *> Refs, ArrayRef<char> Data)
+      : InMemoryObject(KindValue, I), Refs(Refs), Data(Data) {
     assert(isAddrAligned(Align(8), this) && "Expected 8-byte alignment");
     assert(isAddrAligned(Align(8), Data.data()) && "Expected 8-byte alignment");
     assert(*Data.end() == 0 && "Expected null-termination");
@@ -139,7 +124,7 @@ private:
   ArrayRef<char> Data;
 };
 
-class InMemoryInlineNode : public InMemoryNode {
+class InMemoryInlineObject : public InMemoryObject {
 public:
   static constexpr Kind KindValue = Kind::InlineNode;
   static bool classof(const InMemoryObject *O) {
@@ -159,19 +144,20 @@ public:
         reinterpret_cast<const char *>(Refs.data() + Refs.size()), DataSize);
   }
 
-  static InMemoryInlineNode &create(function_ref<void *(size_t Size)> Allocate,
-                                    const InMemoryIndexValueT &I,
-                                    ArrayRef<const InMemoryObject *> Refs,
-                                    ArrayRef<char> Data) {
-    void *Mem = Allocate(sizeof(InMemoryInlineNode) +
+  static InMemoryInlineObject &
+  create(function_ref<void *(size_t Size)> Allocate,
+         const InMemoryIndexValueT &I, ArrayRef<const InMemoryObject *> Refs,
+         ArrayRef<char> Data) {
+    void *Mem = Allocate(sizeof(InMemoryInlineObject) +
                          sizeof(uintptr_t) * Refs.size() + Data.size() + 1);
-    return *new (Mem) InMemoryInlineNode(I, Refs, Data);
+    return *new (Mem) InMemoryInlineObject(I, Refs, Data);
   }
 
 private:
-  InMemoryInlineNode(const InMemoryIndexValueT &I,
-                     ArrayRef<const InMemoryObject *> Refs, ArrayRef<char> Data)
-      : InMemoryNode(KindValue, I), NumRefs(Refs.size()),
+  InMemoryInlineObject(const InMemoryIndexValueT &I,
+                       ArrayRef<const InMemoryObject *> Refs,
+                       ArrayRef<char> Data)
+      : InMemoryObject(KindValue, I), NumRefs(Refs.size()),
         DataSize(Data.size()) {
     auto *BeginRefs = reinterpret_cast<const InMemoryObject **>(this + 1);
     llvm::copy(Refs, BeginRefs);
@@ -181,55 +167,6 @@ private:
   }
   uint32_t NumRefs;
   uint32_t DataSize;
-};
-
-class InMemoryTree : public InMemoryObject {
-public:
-  static constexpr Kind KindValue = Kind::Tree;
-  static bool classof(const InMemoryObject *O) {
-    return O->getKind() == KindValue;
-  }
-
-  struct NamedRef {
-    const InMemoryObject *Ref;
-    const InMemoryString *Name;
-  };
-
-  struct NamedEntry {
-    const InMemoryObject *Ref;
-    const InMemoryString *Name;
-    TreeEntry::EntryKind Kind;
-  };
-
-  ArrayRef<NamedRef> getNamedRefs() const {
-    return makeArrayRef(reinterpret_cast<const NamedRef *>(this + 1), Size);
-  }
-
-  ArrayRef<TreeEntry::EntryKind> getKinds() const {
-    ArrayRef<NamedRef> Refs = getNamedRefs();
-    return makeArrayRef(reinterpret_cast<const TreeEntry::EntryKind *>(
-                            Refs.data() + Refs.size()),
-                        Size);
-  }
-
-  const NamedRef *find(StringRef Name) const;
-
-  bool empty() const { return !Size; }
-  size_t size() const { return Size; }
-
-  NamedEntry operator[](ptrdiff_t I) const {
-    assert((size_t)I < size());
-    NamedRef NR = getNamedRefs()[I];
-    return NamedEntry{NR.Ref, NR.Name, getKinds()[I]};
-  }
-
-  static InMemoryTree &create(function_ref<void *(size_t Size)> Allocate,
-                              const InMemoryIndexValueT &I,
-                              ArrayRef<NamedEntry> Entries);
-
-private:
-  InMemoryTree(const InMemoryIndexValueT &I, ArrayRef<NamedEntry> Entries);
-  size_t Size;
 };
 
 /// Internal string type.
@@ -262,16 +199,13 @@ public:
     return getID(indexHash(Hash));
   }
 
-  Expected<TreeHandle>
-  storeTreeImpl(ArrayRef<uint8_t> ComputedHash,
-                ArrayRef<NamedTreeEntry> SortedEntries) final;
-  Expected<NodeHandle> storeNodeImpl(ArrayRef<uint8_t> ComputedHash,
-                                     ArrayRef<ObjectRef> Refs,
-                                     ArrayRef<char> Data) final;
+  Expected<ObjectHandle> storeImpl(ArrayRef<uint8_t> ComputedHash,
+                                   ArrayRef<ObjectRef> Refs,
+                                   ArrayRef<char> Data) final;
 
-  Expected<NodeHandle>
-  storeNodeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
-                                    sys::fs::mapped_file_region Map) override;
+  Expected<ObjectHandle>
+  storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
+                                sys::fs::mapped_file_region Map) override;
 
   CASID getID(const InMemoryIndexValueT &I) const {
     return CASID::getFromInternalID(*this, reinterpret_cast<uintptr_t>(&I));
@@ -291,22 +225,12 @@ public:
     return extractIndexFromID(ID).Hash;
   }
 
-  AnyObjectHandle getObjectHandle(const InMemoryObject &O) const {
-    if (auto *T = dyn_cast<InMemoryTree>(&O))
-      return getTreeHandle(*T);
-    return getNodeHandle(cast<InMemoryNode>(O));
-  }
-
-  TreeHandle getTreeHandle(const InMemoryTree &Tree) const {
-    assert(!(reinterpret_cast<uintptr_t>(&Tree) & 0x1ULL));
-    return makeTreeHandle(reinterpret_cast<uintptr_t>(&Tree));
-  }
-  NodeHandle getNodeHandle(const InMemoryNode &Node) const {
+  ObjectHandle getObjectHandle(const InMemoryObject &Node) const {
     assert(!(reinterpret_cast<uintptr_t>(&Node) & 0x1ULL));
-    return makeNodeHandle(reinterpret_cast<uintptr_t>(&Node));
+    return makeObjectHandle(reinterpret_cast<uintptr_t>(&Node));
   }
 
-  Expected<AnyObjectHandle> loadObject(ObjectRef Ref) override {
+  Expected<ObjectHandle> load(ObjectRef Ref) override {
     return getObjectHandle(asInMemoryObject(Ref));
   }
 
@@ -340,18 +264,10 @@ public:
   ObjectRef toReference(const InMemoryObject &O) const {
     return makeObjectRef(reinterpret_cast<uintptr_t>(&O));
   }
-  const InMemoryNode &getInMemoryNode(NodeHandle Node) const {
-    return cast<InMemoryNode>(getInMemoryObject(Node));
-  }
-  const InMemoryTree &getInMemoryTree(TreeHandle Tree) const {
-    return cast<InMemoryTree>(getInMemoryObject(Tree));
-  }
 
-  CASID getObjectID(ObjectRef Ref) const final { return getObjectIDImpl(Ref); }
-  CASID getObjectID(ObjectHandle Ref) const final {
-    return getObjectIDImpl(Ref);
-  }
-  CASID getObjectIDImpl(ReferenceBase Ref) const {
+  CASID getID(ObjectRef Ref) const final { return getIDImpl(Ref); }
+  CASID getID(ObjectHandle Ref) const final { return getIDImpl(Ref); }
+  CASID getIDImpl(ReferenceBase Ref) const {
     return getID(asInMemoryObject(Ref));
   }
 
@@ -365,8 +281,8 @@ public:
     return toReference(asInMemoryObject(Handle));
   }
 
-  ArrayRef<char> getDataConst(NodeHandle Node) const final {
-    return cast<InMemoryNode>(asInMemoryObject(Node)).getData();
+  ArrayRef<char> getDataConst(ObjectHandle Node) const final {
+    return cast<InMemoryObject>(asInMemoryObject(Node)).getData();
   }
 
   void print(raw_ostream &OS) const final;
@@ -377,30 +293,13 @@ public:
   InMemoryCAS() = default;
 
 private:
-  // TreeAPI.
-  NamedTreeEntry makeTreeEntry(const InMemoryTree::NamedEntry &Entry) const {
-    return NamedTreeEntry(toReference(*Entry.Ref), Entry.Kind,
-                          Entry.Name->get());
+  size_t getNumRefs(ObjectHandle Node) const final {
+    return getInMemoryObject(Node).getRefs().size();
   }
-  NamedTreeEntry loadTreeEntry(TreeHandle Tree, size_t I) const final {
-    return makeTreeEntry(getInMemoryTree(Tree)[I]);
+  ObjectRef readRef(ObjectHandle Node, size_t I) const final {
+    return toReference(*getInMemoryObject(Node).getRefs()[I]);
   }
-  size_t getNumTreeEntries(TreeHandle Tree) const final {
-    return getInMemoryTree(Tree).size();
-  }
-  Optional<size_t> lookupTreeEntry(TreeHandle Tree, StringRef Name) const final;
-  Error forEachTreeEntry(
-      TreeHandle Tree,
-      function_ref<Error(const NamedTreeEntry &)> Callback) const final;
-
-  // NodeAPI.
-  size_t getNumRefs(NodeHandle Node) const final {
-    return getInMemoryNode(Node).getRefs().size();
-  }
-  ObjectRef readRef(NodeHandle Node, size_t I) const final {
-    return toReference(*getInMemoryNode(Node).getRefs()[I]);
-  }
-  Error forEachRef(NodeHandle Node,
+  Error forEachRef(ObjectHandle Node,
                    function_ref<Error(ObjectRef)> Callback) const final;
 
   /// Index of referenced IDs (map: Hash -> InMemoryObject*). Mapped to nullptr
@@ -424,16 +323,16 @@ private:
 
 } // end anonymous namespace
 
-ArrayRef<char> InMemoryNode::getData() const {
-  if (auto *Derived = dyn_cast<InMemoryRefNode>(this))
+ArrayRef<char> InMemoryObject::getData() const {
+  if (auto *Derived = dyn_cast<InMemoryRefObject>(this))
     return Derived->getDataImpl();
-  return cast<InMemoryInlineNode>(this)->getDataImpl();
+  return cast<InMemoryInlineObject>(this)->getDataImpl();
 }
 
-ArrayRef<const InMemoryObject *> InMemoryNode::getRefs() const {
-  if (auto *Derived = dyn_cast<InMemoryRefNode>(this))
+ArrayRef<const InMemoryObject *> InMemoryObject::getRefs() const {
+  if (auto *Derived = dyn_cast<InMemoryRefObject>(this))
     return Derived->getRefsImpl();
-  return cast<InMemoryInlineNode>(this)->getRefsImpl();
+  return cast<InMemoryInlineObject>(this)->getRefsImpl();
 }
 
 void InMemoryCAS::print(raw_ostream &OS) const {
@@ -445,48 +344,9 @@ void InMemoryCAS::print(raw_ostream &OS) const {
   ActionCache.print(OS);
 }
 
-InMemoryTree &InMemoryTree::create(function_ref<void *(size_t Size)> Allocate,
-                                   const InMemoryIndexValueT &I,
-                                   ArrayRef<NamedEntry> Entries) {
-  void *Mem =
-      Allocate(sizeof(InMemoryTree) + sizeof(NamedRef) * Entries.size() +
-               sizeof(TreeEntry::EntryKind) * Entries.size());
-  return *new (Mem) InMemoryTree(I, Entries);
-}
-
-InMemoryTree::InMemoryTree(const InMemoryIndexValueT &I,
-                           ArrayRef<NamedEntry> Entries)
-    : InMemoryObject(KindValue, I), Size(Entries.size()) {
-  const InMemoryString *LastName = nullptr;
-  auto *Ref = reinterpret_cast<NamedRef *>(this + 1);
-  for (const NamedEntry &E : Entries) {
-    assert(E.Ref);
-    assert(E.Name);
-    new (Ref++) NamedRef{E.Ref, E.Name};
-
-    (void)(LastName);
-    assert((!LastName || LastName->get() < E.Name->get()) &&
-           "Expected names to be unique and sorted");
-  }
-  auto *Entry = reinterpret_cast<TreeEntry::EntryKind *>(Ref);
-  for (const NamedEntry &E : Entries)
-    new (Entry++) TreeEntry::EntryKind(E.Kind);
-}
-
-const InMemoryTree::NamedRef *InMemoryTree::find(StringRef Name) const {
-  auto Compare = [](const NamedRef &LHS, StringRef RHS) {
-    return LHS.Name->get().compare(RHS) < 0;
-  };
-
-  ArrayRef<NamedRef> Refs = getNamedRefs();
-  const NamedRef *I = std::lower_bound(Refs.begin(), Refs.end(), Name, Compare);
-  if (I == Refs.end() || I->Name->get() != Name)
-    return nullptr;
-  return I;
-}
-
-Expected<NodeHandle> InMemoryCAS::storeNodeFromNullTerminatedRegion(
-    ArrayRef<uint8_t> ComputedHash, sys::fs::mapped_file_region Map) {
+Expected<ObjectHandle>
+InMemoryCAS::storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
+                                           sys::fs::mapped_file_region Map) {
   // Look up the hash in the index, initializing to nullptr if it's new.
   ArrayRef<char> Data(Map.data(), Map.size());
   auto &I = indexHash(ComputedHash);
@@ -496,22 +356,22 @@ Expected<NodeHandle> InMemoryCAS::storeNodeFromNullTerminatedRegion(
     return Objects.Allocate(Size, alignof(InMemoryObject));
   };
   auto Generator = [&]() -> const InMemoryObject * {
-    return &InMemoryRefNode::create(Allocator, I, None, Data);
+    return &InMemoryRefObject::create(Allocator, I, None, Data);
   };
-  const InMemoryNode &Node =
-      cast<InMemoryNode>(I.Data.loadOrGenerate(Generator));
+  const InMemoryObject &Node =
+      cast<InMemoryObject>(I.Data.loadOrGenerate(Generator));
 
   // Save Map if the winning node uses it.
-  if (auto *RefNode = dyn_cast<InMemoryRefNode>(&Node))
+  if (auto *RefNode = dyn_cast<InMemoryRefObject>(&Node))
     if (RefNode->getData().data() == Map.data())
       new (MemoryMaps.Allocate()) sys::fs::mapped_file_region(std::move(Map));
 
-  return getNodeHandle(Node);
+  return getObjectHandle(Node);
 }
 
-Expected<NodeHandle> InMemoryCAS::storeNodeImpl(ArrayRef<uint8_t> ComputedHash,
-                                                ArrayRef<ObjectRef> Refs,
-                                                ArrayRef<char> Data) {
+Expected<ObjectHandle> InMemoryCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
+                                              ArrayRef<ObjectRef> Refs,
+                                              ArrayRef<char> Data) {
   // Look up the hash in the index, initializing to nullptr if it's new.
   auto &I = indexHash(ComputedHash);
 
@@ -523,9 +383,10 @@ Expected<NodeHandle> InMemoryCAS::storeNodeImpl(ArrayRef<uint8_t> ComputedHash,
     return Objects.Allocate(Size, alignof(InMemoryObject));
   };
   auto Generator = [&]() -> const InMemoryObject * {
-    return &InMemoryInlineNode::create(Allocator, I, InternalRefs, Data);
+    return &InMemoryInlineObject::create(Allocator, I, InternalRefs, Data);
   };
-  return getNodeHandle(cast<InMemoryNode>(I.Data.loadOrGenerate(Generator)));
+  return getObjectHandle(
+      cast<InMemoryObject>(I.Data.loadOrGenerate(Generator)));
 }
 
 const InMemoryString &InMemoryCAS::getOrCreateString(StringRef String) {
@@ -540,29 +401,6 @@ const InMemoryString &InMemoryCAS::getOrCreateString(StringRef String) {
     return &InMemoryString::create(Allocator, String);
   };
   return S.Data.loadOrGenerate(Generator);
-}
-
-Expected<TreeHandle>
-InMemoryCAS::storeTreeImpl(ArrayRef<uint8_t> ComputedHash,
-                           ArrayRef<NamedTreeEntry> SortedEntries) {
-  // Look up the hash in the index, initializing to nullptr if it's new.
-  auto &I = indexHash(ComputedHash);
-  if (const InMemoryObject *Tree = I.Data.load())
-    return getTreeHandle(cast<InMemoryTree>(*Tree));
-
-  // Create the tree.
-  SmallVector<InMemoryTree::NamedEntry> InternalEntries;
-  for (const NamedTreeEntry &E : SortedEntries) {
-    InternalEntries.push_back({&asInMemoryObject(E.getRef()),
-                               &getOrCreateString(E.getName()), E.getKind()});
-  }
-  auto Allocator = [&](size_t Size) -> void * {
-    return Objects.Allocate(Size, alignof(InMemoryObject));
-  };
-  auto Generator = [&]() -> const InMemoryObject * {
-    return &InMemoryTree::create(Allocator, I, InternalEntries);
-  };
-  return getTreeHandle(cast<InMemoryTree>(I.Data.loadOrGenerate(Generator)));
 }
 
 Expected<CASID> InMemoryCAS::getCachedResult(CASID InputID) {
@@ -593,27 +431,9 @@ Error InMemoryCAS::putCachedResult(CASID InputID, CASID OutputID) {
   return createResultCachePoisonedError(InputID, OutputID, getID(Observed));
 }
 
-Optional<size_t> InMemoryCAS::lookupTreeEntry(TreeHandle Handle,
-                                              StringRef Name) const {
-  const auto &Tree = getInMemoryTree(Handle);
-  if (const InMemoryTree::NamedRef *Ref = Tree.find(Name))
-    return Ref - Tree.getNamedRefs().begin();
-  return None;
-}
-
-Error InMemoryCAS::forEachTreeEntry(
-    TreeHandle Handle,
-    function_ref<Error(const NamedTreeEntry &)> Callback) const {
-  auto &Tree = getInMemoryTree(Handle);
-  for (size_t I = 0, E = Tree.size(); I != E; ++I)
-    if (Error E = Callback(makeTreeEntry(Tree[I])))
-      return E;
-  return Error::success();
-}
-
-Error InMemoryCAS::forEachRef(NodeHandle Handle,
+Error InMemoryCAS::forEachRef(ObjectHandle Handle,
                               function_ref<Error(ObjectRef)> Callback) const {
-  auto &Node = getInMemoryNode(Handle);
+  auto &Node = getInMemoryObject(Handle);
   for (const InMemoryObject *Ref : Node.getRefs())
     if (Error E = Callback(toReference(*Ref)))
       return E;

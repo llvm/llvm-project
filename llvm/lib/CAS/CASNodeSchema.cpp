@@ -14,7 +14,7 @@ using namespace llvm::cas;
 char NodeSchema::ID = 0;
 void NodeSchema::anchor() {}
 
-NodeSchema *SchemaPool::getSchemaForRoot(cas::NodeHandle Node) const {
+NodeSchema *SchemaPool::getSchemaForRoot(cas::ObjectHandle Node) const {
   for (auto &Schema : Schemas)
     if (Schema->isRootNode(Node))
       return Schema.get();
