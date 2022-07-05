@@ -94,6 +94,7 @@ set(files
   __algorithm/ranges_lower_bound.h
   __algorithm/ranges_max.h
   __algorithm/ranges_max_element.h
+  __algorithm/ranges_merge.h
   __algorithm/ranges_min.h
   __algorithm/ranges_min_element.h
   __algorithm/ranges_minmax.h

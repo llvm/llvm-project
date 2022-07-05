@@ -493,6 +493,23 @@ namespace ranges {
     constexpr ranges::move_result<borrowed_iterator_t<R>, O>
       ranges::move(R&& r, O result);                                                                // since C++20
 
+  template<class I1, class I2, class O>
+    using merge_result = in_in_out_result<I1, I2, O>;                                               // since C++20
+
+  template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
+           weakly_incrementable O, class Comp = ranges::less, class Proj1 = identity,
+           class Proj2 = identity>
+    requires mergeable<I1, I2, O, Comp, Proj1, Proj2>
+    constexpr merge_result<I1, I2, O>
+      merge(I1 first1, S1 last1, I2 first2, S2 last2, O result,
+            Comp comp = {}, Proj1 proj1 = {}, Proj2 proj2 = {});                                    // since C++20
+
+  template<input_range R1, input_range R2, weakly_incrementable O, class Comp = ranges::less,
+           class Proj1 = identity, class Proj2 = identity>
+    requires mergeable<iterator_t<R1>, iterator_t<R2>, O, Comp, Proj1, Proj2>
+    constexpr merge_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>, O>
+      merge(R1&& r1, R2&& r2, O result,
+            Comp comp = {}, Proj1 proj1 = {}, Proj2 proj2 = {});                                    // since C++20
 
 }
 
@@ -1249,6 +1266,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_lower_bound.h>
 #include <__algorithm/ranges_max.h>
 #include <__algorithm/ranges_max_element.h>
+#include <__algorithm/ranges_merge.h>
 #include <__algorithm/ranges_min.h>
 #include <__algorithm/ranges_min_element.h>
 #include <__algorithm/ranges_minmax.h>

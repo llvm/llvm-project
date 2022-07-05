@@ -79,7 +79,7 @@ constexpr bool all_the_algorithms()
 {
     void *a[10] = {};
     void *b[10] = {};
-    //void *half[5] = {};
+    void *half[5] = {};
     void **first = a;
     void **mid = a+5;
     void **last = a+10;
@@ -151,8 +151,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::max(a, Less(&copies)); assert(copies == 0);
     (void)std::ranges::max_element(first, last, Less(&copies)); assert(copies == 0);
     (void)std::ranges::max_element(a, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::merge(first, mid, mid, last, first2, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::merge(half, half, b, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::merge(first, mid, mid, last, first2, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::merge(half, half, b, Less(&copies)); assert(copies == 0);
     (void)std::ranges::min(value, value, Less(&copies)); assert(copies == 0);
     (void)std::ranges::min({ value, value }, Less(&copies)); assert(copies == 0);
     (void)std::ranges::min(a, Less(&copies)); assert(copies == 0);
