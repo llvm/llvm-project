@@ -258,6 +258,7 @@ Syntax of affine constraints:
 
 ```
 affine-constraint ::= affine-expr `>=` `affine-expr`
+                    | affine-expr `<=` `affine-expr`
                     | affine-expr `==` `affine-expr`
 affine-constraint-conjunction ::= affine-constraint (`,` affine-constraint)*
 ```
