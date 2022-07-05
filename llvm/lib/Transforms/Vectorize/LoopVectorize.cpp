@@ -1559,13 +1559,13 @@ public:
     Scalars.clear();
   }
 
-private:
-  unsigned NumPredStores = 0;
-
   /// Convenience function that returns the value of vscale_range iff
   /// vscale_range.min == vscale_range.max or otherwise returns the value
   /// returned by the corresponding TLI method.
   Optional<unsigned> getVScaleForTuning() const;
+
+private:
+  unsigned NumPredStores = 0;
 
   /// \return An upper bound for the vectorization factors for both
   /// fixed and scalable vectorization, where the minimum-known number of
@@ -10243,7 +10243,8 @@ static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
 }
 
 static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
-                                       VectorizationFactor &VF, Loop *L,
+                                       VectorizationFactor &VF,
+                                       Optional<unsigned> VScale, Loop *L,
                                        ScalarEvolution &SE) {
   InstructionCost CheckCost = Checks.getCost();
   if (!CheckCost.isValid())
@@ -10295,6 +10296,12 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
   unsigned IntVF = VF.Width.getKnownMinValue();
+  if (VF.Width.isScalable()) {
+    unsigned AssumedMinimumVscale = 1;
+    if (VScale)
+      AssumedMinimumVscale = *VScale;
+    IntVF *= AssumedMinimumVscale;
+  }
   double VecCOverVF = double(*VF.Cost.getValue()) / IntVF;
   double RtC = *CheckCost.getValue();
   double MinTC1 = RtC / (ScalarC - VecCOverVF);
@@ -10308,6 +10315,7 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   //   RtC < ScalarC * TC * (1 / X)  ==>  RtC * X / ScalarC < TC
   double MinTC2 = RtC * 10 / ScalarC;
 
+  dbgs() << ScalarC << " " << RtC << " " << VecCOverVF << "\n";
   // Now pick the larger minimum. If it is not a multiple of VF, choose the
   // next closest multiple of VF. This should partly compensate for ignoring
   // the epilogue cost.
@@ -10520,7 +10528,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     if (!ForceVectorization &&
-        !areRuntimeChecksProfitable(Checks, VF, L, *PSE.getSE())) {
+        !areRuntimeChecksProfitable(Checks, VF, CM.getVScaleForTuning(), L,
+                                    *PSE.getSE())) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
                    DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),
