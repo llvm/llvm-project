@@ -295,7 +295,6 @@ class LoadUnloadTestCase(TestBase):
         self.runCmd("process continue")
 
     @expectedFailureAll(oslist=["windows"]) # breakpoint not hit
-    @expectedFailureAll(oslist=["linux"], archs=["arm"]) # Fails on ubuntu jammy
     def test_load_unload(self):
         self.setSvr4Support(False)
         self.run_load_unload()
