@@ -381,6 +381,41 @@ private:
   ParsingCallbacks &Callbacks;
 };
 
+// An attempt to acquire resources for a task using PreambleThrottler.
+// Initially it is unsatisfied, it (hopefully) becomes satisfied later but may
+// be destroyed before then. Destruction releases all resources.
+class PreambleThrottlerRequest {
+public:
+  // The condition variable is signalled when the request is satisfied.
+  PreambleThrottlerRequest(llvm::StringRef Filename,
+                           PreambleThrottler *Throttler,
+                           std::condition_variable &CV)
+      : Throttler(Throttler), Satisfied(Throttler == nullptr) {
+    // If there is no throttler, this dummy request is always satisfied.
+    if (!Throttler)
+      return;
+    ID = Throttler->acquire(Filename, [&] {
+      Satisfied.store(true, std::memory_order_release);
+      CV.notify_all();
+    });
+  }
+
+  bool satisfied() const { return Satisfied.load(std::memory_order_acquire); }
+
+  // When the request is destroyed:
+  //  - if resources are not yet obtained, stop trying to get them.
+  //  - if resources were obtained, release them.
+  ~PreambleThrottlerRequest() {
+    if (Throttler)
+      Throttler->release(ID);
+  }
+
+private:
+  PreambleThrottler::RequestID ID;
+  PreambleThrottler *Throttler;
+  std::atomic<bool> Satisfied = {false};
+};
+
 /// Responsible for building preambles. Whenever the thread is idle and the
 /// preamble is outdated, it starts to build a fresh preamble from the latest
 /// inputs. If RunSync is true, preambles are built synchronously in update()
@@ -389,12 +424,13 @@ class PreambleThread {
 public:
   PreambleThread(llvm::StringRef FileName, ParsingCallbacks &Callbacks,
                  bool StorePreambleInMemory, bool RunSync,
-                 SynchronizedTUStatus &Status,
+                 PreambleThrottler *Throttler, SynchronizedTUStatus &Status,
                  TUScheduler::HeaderIncluderCache &HeaderIncluders,
                  ASTWorker &AW)
       : FileName(FileName), Callbacks(Callbacks),
-        StoreInMemory(StorePreambleInMemory), RunSync(RunSync), Status(Status),
-        ASTPeer(AW), HeaderIncluders(HeaderIncluders) {}
+        StoreInMemory(StorePreambleInMemory), RunSync(RunSync),
+        Throttler(Throttler), Status(Status), ASTPeer(AW),
+        HeaderIncluders(HeaderIncluders) {}
 
   /// It isn't guaranteed that each requested version will be built. If there
   /// are multiple update requests while building a preamble, only the last one
@@ -428,13 +464,27 @@ public:
 
   void run() {
     while (true) {
+      llvm::Optional<PreambleThrottlerRequest> Throttle;
       {
         std::unique_lock<std::mutex> Lock(Mutex);
         assert(!CurrentReq && "Already processing a request?");
         // Wait until stop is called or there is a request.
-        ReqCV.wait(Lock, [this] { return NextReq || Done; });
+        ReqCV.wait(Lock, [&] { return NextReq || Done; });
         if (Done)
           break;
+
+        Throttle.emplace(FileName, Throttler, ReqCV);
+        // If acquire succeeded synchronously, avoid status jitter.
+        if (!Throttle->satisfied())
+          Status.update([&](TUStatus &Status) {
+            Status.PreambleActivity = PreambleAction::Queued;
+          });
+        ReqCV.wait(Lock, [&] { return Throttle->satisfied() || Done; });
+        if (Done)
+          break;
+        // While waiting for the throttler, the request may have been updated!
+        // That's fine though, there's still guaranteed to be some request.
+
         CurrentReq = std::move(*NextReq);
         NextReq.reset();
       }
@@ -518,6 +568,7 @@ private:
   ParsingCallbacks &Callbacks;
   const bool StoreInMemory;
   const bool RunSync;
+  PreambleThrottler *Throttler;
 
   SynchronizedTUStatus &Status;
   ASTWorker &ASTPeer;
@@ -778,7 +829,7 @@ ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
       ContextProvider(Opts.ContextProvider), CDB(CDB), Callbacks(Callbacks),
       Barrier(Barrier), Done(false), Status(FileName, Callbacks),
       PreamblePeer(FileName, Callbacks, Opts.StorePreamblesInMemory, RunSync,
-                   Status, HeaderIncluders, *this) {
+                   Opts.PreambleThrottler, Status, HeaderIncluders, *this) {
   // Set a fallback command because compile command can be accessed before
   // `Inputs` is initialized. Other fields are only used after initialization
   // from client inputs.
@@ -1498,6 +1549,9 @@ std::string renderTUAction(const PreambleAction PA, const ASTAction &AA) {
   switch (PA) {
   case PreambleAction::Building:
     Result.push_back("parsing includes");
+    break;
+  case PreambleAction::Queued:
+    Result.push_back("includes are queued");
     break;
   case PreambleAction::Idle:
     // We handle idle specially below.

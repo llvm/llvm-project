@@ -104,6 +104,9 @@ public:
     /// Cached preambles are potentially large. If false, store them on disk.
     bool StorePreamblesInMemory = true;
 
+    /// This throttler controls which preambles may be built at a given time.
+    clangd::PreambleThrottler *PreambleThrottler = nullptr;
+
     /// If true, ClangdServer builds a dynamic in-memory index for symbols in
     /// opened files and uses the index to augment code completion results.
     bool BuildDynamicSymbolIndex = false;
