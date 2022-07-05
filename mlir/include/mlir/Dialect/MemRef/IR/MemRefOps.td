@@ -1645,12 +1645,20 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
                                 ArrayRef<OpFoldResult> staticOffsets,
                                 ArrayRef<OpFoldResult> staticSizes,
                                 ArrayRef<OpFoldResult> staticStrides);
-    static Type inferRankReducedResultType(unsigned resultRank,
+
+    /// A rank-reducing result type can be inferred from the desired result
+    /// shape. Only the layout map is inferred.
+    ///
+    /// Note: The result shape cannot be inferred with just the result rank and
+    /// and the desired sizes. In case there are more "ones" among the sizes
+    /// than the difference in source/result rank, it is not clear which dims of
+    /// size one should be dropped.
+    static Type inferRankReducedResultType(ArrayRef<int64_t> resultShape,
                                            MemRefType sourceMemRefType,
                                            ArrayRef<int64_t> staticOffsets,
                                            ArrayRef<int64_t> staticSizes,
                                            ArrayRef<int64_t> staticStrides);
-    static Type inferRankReducedResultType(unsigned resultRank,
+    static Type inferRankReducedResultType(ArrayRef<int64_t> resultShape,
                                            MemRefType sourceMemRefType,
                                            ArrayRef<OpFoldResult> staticOffsets,
                                            ArrayRef<OpFoldResult> staticSizes,

@@ -44,7 +44,7 @@ static void replaceUsesAndPropagateType(Operation *oldOp, Value val,
     }
     builder.setInsertionPoint(subviewUse);
     Type newType = memref::SubViewOp::inferRankReducedResultType(
-        subviewUse.getType().getRank(), val.getType().cast<MemRefType>(),
+        subviewUse.getType().getShape(), val.getType().cast<MemRefType>(),
         extractFromI64ArrayAttr(subviewUse.static_offsets()),
         extractFromI64ArrayAttr(subviewUse.static_sizes()),
         extractFromI64ArrayAttr(subviewUse.static_strides()));
@@ -136,7 +136,7 @@ LogicalResult mlir::memref::multiBuffer(memref::AllocOp allocOp,
     sizes.push_back(builder.getIndexAttr(size));
   auto dstMemref =
       memref::SubViewOp::inferRankReducedResultType(
-          allocOp.getType().getRank(), newMemref, offsets, sizes, strides)
+          allocOp.getType().getShape(), newMemref, offsets, sizes, strides)
           .cast<MemRefType>();
   Value subview = builder.create<memref::SubViewOp>(loc, dstMemref, newAlloc,
                                                     offsets, sizes, strides);
