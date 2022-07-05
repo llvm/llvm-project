@@ -1249,14 +1249,20 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   if (!Op0 || !Op1 || Op0 == Op1 || !Op0->isBinaryOp() || !Op1->isBinaryOp() ||
       VT != Op0->getType())
     return false;
-  auto *SVI0A = dyn_cast<ShuffleVectorInst>(Op0->getOperand(0));
-  auto *SVI0B = dyn_cast<ShuffleVectorInst>(Op0->getOperand(1));
-  auto *SVI1A = dyn_cast<ShuffleVectorInst>(Op1->getOperand(0));
-  auto *SVI1B = dyn_cast<ShuffleVectorInst>(Op1->getOperand(1));
+  auto *SVI0A = dyn_cast<Instruction>(Op0->getOperand(0));
+  auto *SVI0B = dyn_cast<Instruction>(Op0->getOperand(1));
+  auto *SVI1A = dyn_cast<Instruction>(Op1->getOperand(0));
+  auto *SVI1B = dyn_cast<Instruction>(Op1->getOperand(1));
+  SmallPtrSet<Instruction *, 4> InputShuffles({SVI0A, SVI0B, SVI1A, SVI1B});
   auto checkSVNonOpUses = [&](Instruction *I) {
     if (!I || I->getOperand(0)->getType() != VT)
       return true;
-    return any_of(I->users(), [&](User *U) { return U != Op0 && U != Op1; });
+    return any_of(I->users(), [&](User *U) {
+      return U != Op0 && U != Op1 &&
+             !(isa<ShuffleVectorInst>(U) &&
+               (InputShuffles.contains(cast<Instruction>(U)) ||
+                isInstructionTriviallyDead(cast<Instruction>(U))));
+    });
   };
   if (checkSVNonOpUses(SVI0A) || checkSVNonOpUses(SVI0B) ||
       checkSVNonOpUses(SVI1A) || checkSVNonOpUses(SVI1B))
@@ -1271,6 +1277,9 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       auto *SV = dyn_cast<ShuffleVectorInst>(U);
       if (!SV || SV->getType() != VT)
         return false;
+      if ((SV->getOperand(0) != Op0 && SV->getOperand(0) != Op1) ||
+          (SV->getOperand(1) != Op0 && SV->getOperand(1) != Op1))
+        return false;
       if (!llvm::is_contained(Shuffles, SV))
         Shuffles.push_back(SV);
     }
@@ -1283,13 +1292,25 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   if (FromReduction && Shuffles.size() > 1)
     return false;
 
+  // Add any shuffle uses for the shuffles we have found, to include them in our
+  // cost calculations.
+  if (!FromReduction) {
+    for (ShuffleVectorInst *SV : Shuffles) {
+      for (auto U : SV->users()) {
+        ShuffleVectorInst *SSV = dyn_cast<ShuffleVectorInst>(U);
+        if (SSV && isa<UndefValue>(SSV->getOperand(1)))
+          Shuffles.push_back(SSV);
+      }
+    }
+  }
+
   // For each of the output shuffles, we try to sort all the first vector
   // elements to the beginning, followed by the second array elements at the
   // end. If the binops are legalized to smaller vectors, this may reduce total
   // number of binops. We compute the ReconstructMask mask needed to convert
   // back to the original lane order.
-  SmallVector<int> V1, V2;
-  SmallVector<SmallVector<int>> ReconstructMasks;
+  SmallVector<std::pair<int, int>> V1, V2;
+  SmallVector<SmallVector<int>> OrigReconstructMasks;
   int MaxV1Elt = 0, MaxV2Elt = 0;
   unsigned NumElts = VT->getNumElements();
   for (ShuffleVectorInst *SVN : Shuffles) {
@@ -1300,6 +1321,16 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
     // case we need to commute the mask).
     Value *SVOp0 = SVN->getOperand(0);
     Value *SVOp1 = SVN->getOperand(1);
+    if (isa<UndefValue>(SVOp1)) {
+      auto *SSV = cast<ShuffleVectorInst>(SVOp0);
+      SVOp0 = SSV->getOperand(0);
+      SVOp1 = SSV->getOperand(1);
+      for (unsigned I = 0, E = Mask.size(); I != E; I++) {
+        if (Mask[I] >= static_cast<int>(SSV->getShuffleMask().size()))
+          return false;
+        Mask[I] = Mask[I] < 0 ? Mask[I] : SSV->getMaskValue(Mask[I]);
+      }
+    }
     if (SVOp0 == Op1 && SVOp1 == Op0) {
       std::swap(SVOp0, SVOp1);
       ShuffleVectorInst::commuteShuffleMask(Mask, NumElts);
@@ -1316,21 +1347,25 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
         ReconstructMask.push_back(-1);
       } else if (Mask[I] < static_cast<int>(NumElts)) {
         MaxV1Elt = std::max(MaxV1Elt, Mask[I]);
-        auto It = find(V1, Mask[I]);
+        auto It = find_if(V1, [&](const std::pair<int, int> &A) {
+          return Mask[I] == A.first;
+        });
         if (It != V1.end())
           ReconstructMask.push_back(It - V1.begin());
         else {
           ReconstructMask.push_back(V1.size());
-          V1.push_back(Mask[I]);
+          V1.emplace_back(Mask[I], V1.size());
         }
       } else {
         MaxV2Elt = std::max<int>(MaxV2Elt, Mask[I] - NumElts);
-        auto It = find(V2, Mask[I] - NumElts);
+        auto It = find_if(V2, [&](const std::pair<int, int> &A) {
+          return Mask[I] - static_cast<int>(NumElts) == A.first;
+        });
         if (It != V2.end())
           ReconstructMask.push_back(NumElts + It - V2.begin());
         else {
           ReconstructMask.push_back(NumElts + V2.size());
-          V2.push_back(Mask[I] - NumElts);
+          V2.emplace_back(Mask[I] - NumElts, NumElts + V2.size());
         }
       }
     }
@@ -1339,7 +1374,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
     // result. In-order can help simplify the shuffle away.
     if (FromReduction)
       sort(ReconstructMask);
-    ReconstructMasks.push_back(ReconstructMask);
+    OrigReconstructMasks.push_back(std::move(ReconstructMask));
   }
 
   // If the Maximum element used from V1 and V2 are not larger than the new
@@ -1351,16 +1386,68 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
        MaxV2Elt == static_cast<int>(V2.size()) - 1))
     return false;
 
+  // GetBaseMaskValue takes one of the inputs, which may either be a shuffle, a
+  // shuffle of another shuffle, or not a shuffle (that is treated like a
+  // identity shuffle).
+  auto GetBaseMaskValue = [&](Instruction *I, int M) {
+    auto *SV = dyn_cast<ShuffleVectorInst>(I);
+    if (!SV)
+      return M;
+    if (isa<UndefValue>(SV->getOperand(1)))
+      if (auto *SSV = dyn_cast<ShuffleVectorInst>(SV->getOperand(0)))
+        if (InputShuffles.contains(SSV))
+          return SSV->getMaskValue(SV->getMaskValue(M));
+    return SV->getMaskValue(M);
+  };
+
+  // Attempt to sort the inputs my ascending mask values to make simpler input
+  // shuffles and push complex shuffles down to the uses. We sort on the first
+  // of the two input shuffle orders, to try and get at least one input into a
+  // nice order.
+  auto SortBase = [&](Instruction *A, std::pair<int, int> X,
+                      std::pair<int, int> Y) {
+    int MXA = GetBaseMaskValue(A, X.first);
+    int MYA = GetBaseMaskValue(A, Y.first);
+    return MXA < MYA;
+  };
+  stable_sort(V1, [&](std::pair<int, int> A, std::pair<int, int> B) {
+    return SortBase(SVI0A, A, B);
+  });
+  stable_sort(V2, [&](std::pair<int, int> A, std::pair<int, int> B) {
+    return SortBase(SVI1A, A, B);
+  });
+  // Calculate our ReconstructMasks from the OrigReconstructMasks and the
+  // modified order of the input shuffles.
+  SmallVector<SmallVector<int>> ReconstructMasks;
+  for (auto Mask : OrigReconstructMasks) {
+    SmallVector<int> ReconstructMask;
+    for (int M : Mask) {
+      auto FindIndex = [](const SmallVector<std::pair<int, int>> &V, int M) {
+        auto It = find_if(V, [M](auto A) { return A.second == M; });
+        assert(It != V.end() && "Expected all entries in Mask");
+        return std::distance(V.begin(), It);
+      };
+      if (M < 0)
+        ReconstructMask.push_back(-1);
+      else if (M < static_cast<int>(NumElts)) {
+        ReconstructMask.push_back(FindIndex(V1, M));
+      } else {
+        ReconstructMask.push_back(NumElts + FindIndex(V2, M));
+      }
+    }
+    ReconstructMasks.push_back(std::move(ReconstructMask));
+  }
+
   // Calculate the masks needed for the new input shuffles, which get padded
   // with undef
   SmallVector<int> V1A, V1B, V2A, V2B;
   for (unsigned I = 0; I < V1.size(); I++) {
-    V1A.push_back(SVI0A->getMaskValue(V1[I]));
-    V1B.push_back(SVI0B->getMaskValue(V1[I]));
+    V1A.push_back(GetBaseMaskValue(SVI0A, V1[I].first));
+    V1B.push_back(GetBaseMaskValue(SVI0B, V1[I].first));
   }
   for (unsigned I = 0; I < V2.size(); I++) {
-    V2A.push_back(SVI1A->getMaskValue(V2[I]));
-    V2B.push_back(SVI1B->getMaskValue(V2[I]));
+    V2A.push_back(GetBaseMaskValue(SVI1A, V2[I].first));
+    V2B.push_back(GetBaseMaskValue(SVI1B, V2[I].first));
   }
   while (V1A.size() < NumElts) {
     V1A.push_back(UndefMaskElem);
@@ -1371,9 +1458,14 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
     V2B.push_back(UndefMaskElem);
   }
 
-  auto AddShuffleCost = [&](InstructionCost C, ShuffleVectorInst *SV) {
-    return C +
-           TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, SV->getShuffleMask());
+  auto AddShuffleCost = [&](InstructionCost C, Instruction *I) {
+    auto *SV = dyn_cast<ShuffleVectorInst>(I);
+    if (!SV)
+      return C;
+    return C + TTI.getShuffleCost(isa<UndefValue>(SV->getOperand(1))
+                                      ? TTI::SK_PermuteSingleSrc
+                                      : TTI::SK_PermuteTwoSrc,
+                                  VT, SV->getShuffleMask());
   };
   auto AddShuffleMaskCost = [&](InstructionCost C, ArrayRef<int> Mask) {
     return C + TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, Mask);
@@ -1386,9 +1478,6 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       TTI.getArithmeticInstrCost(Op1->getOpcode(), VT);
   CostBefore += std::accumulate(Shuffles.begin(), Shuffles.end(),
                                 InstructionCost(0), AddShuffleCost);
-  // This set helps us only cost each unique shuffle once.
-  SmallPtrSet<ShuffleVectorInst *, 4> InputShuffles(
-      {SVI0A, SVI0B, SVI1A, SVI1B});
   CostBefore += std::accumulate(InputShuffles.begin(), InputShuffles.end(),
                                 InstructionCost(0), AddShuffleCost);
 
@@ -1408,22 +1497,35 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       std::accumulate(OutputShuffleMasks.begin(), OutputShuffleMasks.end(),
                       InstructionCost(0), AddShuffleMaskCost);
 
+  LLVM_DEBUG(dbgs() << "Found a binop select shuffle pattern: " << I << "\n");
+  LLVM_DEBUG(dbgs() << "  CostBefore: " << CostBefore
+                    << " vs CostAfter: " << CostAfter << "\n");
   if (CostBefore <= CostAfter)
     return false;
 
   // The cost model has passed, create the new instructions.
-  Builder.SetInsertPoint(SVI0A);
-  Value *NSV0A = Builder.CreateShuffleVector(SVI0A->getOperand(0),
-                                             SVI0A->getOperand(1), V1A);
-  Builder.SetInsertPoint(SVI0B);
-  Value *NSV0B = Builder.CreateShuffleVector(SVI0B->getOperand(0),
-                                             SVI0B->getOperand(1), V1B);
-  Builder.SetInsertPoint(SVI1A);
-  Value *NSV1A = Builder.CreateShuffleVector(SVI1A->getOperand(0),
-                                             SVI1A->getOperand(1), V2A);
-  Builder.SetInsertPoint(SVI1B);
-  Value *NSV1B = Builder.CreateShuffleVector(SVI1B->getOperand(0),
-                                             SVI1B->getOperand(1), V2B);
+  auto GetShuffleOperand = [&](Instruction *I, unsigned Op) -> Value * {
+    auto *SV = dyn_cast<ShuffleVectorInst>(I);
+    if (!SV)
+      return I;
+    if (isa<UndefValue>(SV->getOperand(1)))
+      if (auto *SSV = dyn_cast<ShuffleVectorInst>(SV->getOperand(0)))
+        if (InputShuffles.contains(SSV))
+          return SSV->getOperand(Op);
+    return SV->getOperand(Op);
+  };
+  Builder.SetInsertPoint(SVI0A->getNextNode());
+  Value *NSV0A = Builder.CreateShuffleVector(GetShuffleOperand(SVI0A, 0),
+                                             GetShuffleOperand(SVI0A, 1), V1A);
+  Builder.SetInsertPoint(SVI0B->getNextNode());
+  Value *NSV0B = Builder.CreateShuffleVector(GetShuffleOperand(SVI0B, 0),
+                                             GetShuffleOperand(SVI0B, 1), V1B);
+  Builder.SetInsertPoint(SVI1A->getNextNode());
+  Value *NSV1A = Builder.CreateShuffleVector(GetShuffleOperand(SVI1A, 0),
+                                             GetShuffleOperand(SVI1A, 1), V2A);
+  Builder.SetInsertPoint(SVI1B->getNextNode());
+  Value *NSV1B = Builder.CreateShuffleVector(GetShuffleOperand(SVI1B, 0),
+                                             GetShuffleOperand(SVI1B, 1), V2B);
   Builder.SetInsertPoint(Op0);
   Value *NOp0 = Builder.CreateBinOp((Instruction::BinaryOps)Op0->getOpcode(),
                                     NSV0A, NSV0B);
