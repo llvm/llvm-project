@@ -3,7 +3,7 @@
 
 define float @test1(float %x) nounwind readnone ssp {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #3
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[SQRTF]]
 ;
   %conv = fpext float %x to double
@@ -16,7 +16,7 @@ define float @test1(float %x) nounwind readnone ssp {
 
 define float @test2(float %x) nounwind readnone ssp {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #3
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[SQRTF]]
 ;
   %conv = fpext float %x to double
@@ -31,8 +31,8 @@ define float @test2(float %x) nounwind readnone ssp {
 
 define float @test3(float* %v) nounwind uwtable ssp {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double 0x7FF8000000000000) #3
-; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #4
+; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double 0x7FF8000000000000) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[CONV38:%.*]] = fptrunc double [[CALL34]] to float
 ; CHECK-NEXT:    ret float [[CONV38]]
 ;
@@ -51,7 +51,7 @@ define float @test3(float* %v) nounwind uwtable ssp {
 
 define void @0(float %f) {
 ; CHECK-LABEL: @0(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]]) #2
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %d = fpext float %f to double
@@ -59,5 +59,36 @@ define void @0(float %f) {
   ret void
 }
 
+define float @sqrt_call_nnan_f32(float %x) {
+; CHECK-LABEL: @sqrt_call_nnan_f32(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @sqrtf(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @sqrtf(float %x)
+  ret float %sqrt
+}
+
+define double @sqrt_call_nnan_f64(double %x) {
+; CHECK-LABEL: @sqrt_call_nnan_f64(
+; CHECK-NEXT:    [[SQRT:%.*]] = tail call nnan ninf double @sqrt(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[SQRT]]
+;
+  %sqrt = tail call nnan ninf double @sqrt(double %x)
+  ret double %sqrt
+}
+
+define float @sqrt_call_fabs_f32(float %x) {
+; CHECK-LABEL: @sqrt_call_fabs_f32(
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[SQRT:%.*]] = tail call float @sqrtf(float [[A]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %a = call float @llvm.fabs.f32(float %x)
+  %sqrt = tail call float @sqrtf(float %a)
+  ret float %sqrt
+}
+
 declare i32 @foo(double)
 declare double @sqrt(double) readnone
+declare float @sqrtf(float)
+declare float @llvm.fabs.f32(float)
