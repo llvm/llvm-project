@@ -458,6 +458,10 @@ global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off glc
 global_atomic_cmpswap_b64 v[1:2], v[3:4], v[5:8], off glc slc
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
+global_atomic_cmpswap_x2 v[1:4], v3, v[5:8], off offset:2047 glc
+// GFX11-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// VI-GFX9_10-ERR: error:
+
 global_load_d16_u8 v1, v[3:4], off
 // VI-GFX9_10-ERR: error: instruction not supported on this GPU
 
