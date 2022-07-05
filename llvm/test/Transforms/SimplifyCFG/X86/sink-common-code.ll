@@ -885,9 +885,9 @@ define void @test_pr30292(i1 %cond, i1 %cond2, i32 %a, i32 %b) {
 ; CHECK:       two:
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[A]], 1
-; CHECK-NEXT:    br label [[TWO:%.*]]
+; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       succ:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD1]], [[SUCC]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD1]], [[SUCC]] ], [ [[ADD2]], [[TWO:%.*]] ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[TWO]], label [[SUCC]]
 ;
 entry:

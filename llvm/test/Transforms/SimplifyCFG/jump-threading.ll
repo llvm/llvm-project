@@ -145,10 +145,16 @@ define void @test_same_cond_simple(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[JOIN2:%.*]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    br i1 [[C]], label [[IF2:%.*]], label [[ELSE2:%.*]]
+; CHECK:       if2:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[JOIN2:%.*]]
+; CHECK:       else2:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[JOIN2]]
 ; CHECK:       join2:
@@ -184,12 +190,17 @@ define void @test_same_cond_extra_use(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @use.i1(i1 true)
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[JOIN2:%.*]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @use.i1(i1 false)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    call void @use.i1(i1 [[C]])
+; CHECK-NEXT:    br i1 [[C]], label [[IF2:%.*]], label [[ELSE2:%.*]]
+; CHECK:       if2:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[JOIN2:%.*]]
+; CHECK:       else2:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[JOIN2]]
 ; CHECK:       join2:
@@ -226,11 +237,17 @@ define void @test_same_cond_extra_use_different_block(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    br i1 [[C]], label [[IF2:%.*]], label [[ELSE2:%.*]]
+; CHECK:       if2:
 ; CHECK-NEXT:    call void @use.i1(i1 [[C]])
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[JOIN2:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    call void @bar()
+; CHECK:       else2:
 ; CHECK-NEXT:    call void @use.i1(i1 [[C]])
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[JOIN2]]
@@ -320,7 +337,7 @@ define void @infloop(i1 %cmp.a, i1 %cmp.b, i1 %cmp.c) {
 ; CHECK:       while.body:
 ; CHECK-NEXT:    br i1 [[CMP_C:%.*]], label [[C_EXIT:%.*]], label [[LAND:%.*]]
 ; CHECK:       while.body.thread:
-; CHECK-NEXT:    br i1 [[CMP_C]], label [[WHILE_BODY_THREAD]], label [[LAND]]
+; CHECK-NEXT:    br i1 [[CMP_C]], label [[WHILE_COND]], label [[LAND]]
 ; CHECK:       land:
 ; CHECK-NEXT:    tail call void @bar()
 ; CHECK-NEXT:    br label [[WHILE_COND]]
@@ -356,5 +373,50 @@ c.exit:                                           ; preds = %while.body
   br i1 %cmp.a, label %for.d, label %while.cond
 
 for.d:                                            ; preds = %c.exit
+  ret void
+}
+
+; A combination of "branch to common dest" and jump threading kept peeling
+; off loop iterations here.
+
+define void @infloop_pr56203(i1 %c1, i1 %c2) {
+; CHECK-LABEL: @infloop_pr56203(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[EXIT:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    [[C3:%.*]] = icmp eq i64 0, 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C2:%.*]], [[C3]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT]], label [[LOOP_SPLIT:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i64 0, 0
+; CHECK-NEXT:    br i1 [[C3_OLD]], label [[EXIT]], label [[LOOP_SPLIT]]
+; CHECK:       loop.split:
+; CHECK-NEXT:    br i1 [[C1]], label [[LOOP_LATCH:%.*]], label [[LOOP:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c1, label %exit, label %if
+
+if:
+  call void @foo()
+  br i1 %c2, label %exit, label %loop
+
+loop:
+  %c3 = icmp eq i64 0, 0
+  br i1 %c3, label %exit, label %loop.split
+
+loop.split:
+  br i1 %c1, label %loop.latch, label %loop
+
+loop.latch:
+  call void @foo()
+  br label %loop
+
+exit:
   ret void
 }
