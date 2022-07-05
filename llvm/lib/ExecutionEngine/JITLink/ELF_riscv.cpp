@@ -494,6 +494,30 @@ private:
                             Block &BlockToFix) {
     using Base = ELFLinkGraphBuilder<ELFT>;
 
+    uint32_t Type = Rel.getType(false);
+    // We do not implement linker relaxation, except what is required for
+    // alignment (see below).
+    if (Type == llvm::ELF::R_RISCV_RELAX)
+      return Error::success();
+
+    int64_t Addend = Rel.r_addend;
+    if (Type == llvm::ELF::R_RISCV_ALIGN) {
+      uint64_t Alignment = PowerOf2Ceil(Addend);
+      // FIXME: Implement support for ensuring alignment together with linker
+      // relaxation; 2 bytes are guaranteed by the length of compressed
+      // instructions, so this does not need any action from our side.
+      if (Alignment > 2)
+        return make_error<JITLinkError>(
+            formatv("Unsupported relocation R_RISCV_ALIGN with alignment {0} "
+                    "larger than 2 (addend: {1})",
+                    Alignment, Addend));
+      return Error::success();
+    }
+
+    Expected<riscv::EdgeKind_riscv> Kind = getRelocationKind(Type);
+    if (!Kind)
+      return Kind.takeError();
+
     uint32_t SymbolIndex = Rel.getSymbol(false);
     auto ObjSymbol = Base::Obj.getRelocationSymbol(Rel, Base::SymTabSec);
     if (!ObjSymbol)
@@ -508,12 +532,6 @@ private:
                   Base::GraphSymbols.size()),
           inconvertibleErrorCode());
 
-    uint32_t Type = Rel.getType(false);
-    Expected<riscv::EdgeKind_riscv> Kind = getRelocationKind(Type);
-    if (!Kind)
-      return Kind.takeError();
-
-    int64_t Addend = Rel.r_addend;
     auto FixupAddress = orc::ExecutorAddr(FixupSect.sh_addr) + Rel.r_offset;
     Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
     Edge GE(*Kind, Offset, *GraphSymbol, Addend);
