@@ -1,4 +1,5 @@
 llvm_canonicalize_cmake_booleans(
+  ENABLE_BACKTRACES
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_LIBXML2
   LLD_DEFAULT_LD_LLD_IS_MINGW
