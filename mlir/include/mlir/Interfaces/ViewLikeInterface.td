@@ -457,20 +457,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         ::mlir::OffsetSizeAndStrideOpInterface::getStaticStridesAttrName(),
         ::mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr()};
       return names;
-   }
-   /// Assume target is a shaped type and offsets/sizes/strides are vectors of
-   /// the same length and lower than target's rank.
-   /// Complete missing dims `i` with offset=0, size=dim(target, i), stride=1
-   /// until all vectors have size rank. The commpletion occurs for the most
-   /// minor dimensions (i.e. fastest varying).
-   /// Take a `createDim` lambda that knows how to build the size of a
-   /// particular dimension of `target` (to avoid dialect dependencies).
-   static void expandToRank(
-     Value target,
-     SmallVector<OpFoldResult> &offsets,
-     SmallVector<OpFoldResult> &sizes,
-     SmallVector<OpFoldResult> &strides,
-     llvm::function_ref<OpFoldResult(Value, int64_t)> createDim);
+    }
   }];
 
   let verify = [{
