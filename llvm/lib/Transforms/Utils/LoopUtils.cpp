@@ -1297,6 +1297,53 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         if (!L->contains(Inst))
           continue;
 
+        // Find exit values which are induction variables in the loop, and are
+        // unused in the loop, with the only use being the exit block PhiNode,
+        // and the induction variable update binary operator.
+        // The exit value can be replaced with the final value when it is cheap
+        // to do so.
+        if (ReplaceExitValue == UnusedIndVarInLoop) {
+          InductionDescriptor ID;
+          PHINode *IndPhi = dyn_cast<PHINode>(Inst);
+          if (IndPhi) {
+            if (IndPhi->getParent() != L->getHeader())
+              continue;
+            // Do not consider non induction phis.
+            if (!InductionDescriptor::isInductionPHI(IndPhi, L, SE, ID))
+              continue;
+            // This is an induction PHI. Check that the only users are PHI
+            // nodes, and induction variable update binary operators.
+            if (llvm::any_of(Inst->users(), [&](User *U) {
+                  if (!isa<PHINode>(U) && !isa<BinaryOperator>(U))
+                    return true;
+                  BinaryOperator *B = dyn_cast<BinaryOperator>(U);
+                  if (B && B != ID.getInductionBinOp())
+                    return true;
+                  return false;
+                }))
+              continue;
+          } else {
+            // If it is not an induction phi, it must be an induction update
+            // binary operator with an induction phi user.
+            BinaryOperator *B = dyn_cast<BinaryOperator>(Inst);
+            if (!B)
+              continue;
+            if (llvm::any_of(Inst->users(), [&](User *U) {
+                  PHINode *Phi = dyn_cast<PHINode>(U);
+                  if (!Phi)
+                    return true;
+                  if (Phi->getParent() == L->getHeader()) {
+                    if (!InductionDescriptor::isInductionPHI(Phi, L, SE, ID))
+                      return true;
+                  }
+                  return false;
+                }))
+              continue;
+            if (B != ID.getInductionBinOp())
+              continue;
+          }
+        }
+
         // Okay, this instruction has a user outside of the current loop
         // and varies predictably *inside* the loop.  Evaluate the value it
         // contains when the loop exits, if possible.  We prefer to start with
@@ -1362,7 +1409,9 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
     // Only do the rewrite when the ExitValue can be expanded cheaply.
     // If LoopCanBeDel is true, rewrite exit value aggressively.
-    if (ReplaceExitValue == OnlyCheapRepl && !LoopCanBeDel && Phi.HighCost)
+    if ((ReplaceExitValue == OnlyCheapRepl ||
+         ReplaceExitValue == UnusedIndVarInLoop) &&
+        !LoopCanBeDel && Phi.HighCost)
       continue;
 
     Value *ExitVal = Rewriter.expandCodeFor(
