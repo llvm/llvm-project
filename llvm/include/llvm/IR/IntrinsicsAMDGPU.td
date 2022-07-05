@@ -1338,7 +1338,7 @@ def int_amdgcn_exp : Intrinsic <[], [
   LLVMMatchType<0>,  // src2
   LLVMMatchType<0>,  // src3
   llvm_i1_ty,        // done
-  llvm_i1_ty         // vm
+  llvm_i1_ty         // vm (ignored on GFX11+)
   ],
   [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrWriteMem, IntrInaccessibleMemOnly,

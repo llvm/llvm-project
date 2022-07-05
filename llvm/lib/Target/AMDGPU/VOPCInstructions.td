@@ -1108,7 +1108,6 @@ class VOPC64_DPP_Base<bits<10> op, string OpName, VOPProfile P>
   // Inst{87-84} ignored by hw
   let Inst{91-88} = bank_mask;
   let Inst{95-92} = row_mask;
-
 }
 
 class VOPC64_DPP16<bits<10> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
@@ -1148,7 +1147,6 @@ class VOPC64_DPP8_Base<bits<10> op, string OpName, VOPProfile P>
   let Inst{40-32} = fi;
   let Inst{71-64} = !if(P.HasSrc0, src0{7-0}, 0);
   let Inst{95-72} = dpp8{23-0};
-
 }
 
 class VOPC64_DPP8<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
