@@ -1071,7 +1071,7 @@ void OpEmitter::genAttrGetters() {
           body << "    {" << name << "AttrName(),\n"
                << tgfmt(tmpl, &fctx.withSelf(name + "()")
                                    .withBuilder("odsBuilder")
-                                   .addSubst("_ctx", "ctx"))
+                                   .addSubst("_ctxt", "ctx"))
                << "}";
         },
         ",\n");
