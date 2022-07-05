@@ -384,7 +384,6 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 // Necessary because a frameindex can't be matched directly in a pattern.
 def FrameAddrRegImm : ComplexPattern<iPTR, 2, "SelectFrameAddrRegImm",
                                      [frameindex, or, add]>;
-def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
 // Return the negation of an immediate value.

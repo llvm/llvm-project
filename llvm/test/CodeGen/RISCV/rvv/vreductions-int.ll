@@ -1478,8 +1478,8 @@ define i64 @vreduce_smax_nxv1i64(<vscale x 1 x i64> %v) {
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    sw zero, 8(sp)
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; RV32-NEXT:    vredmax.vs v8, v8, v9
@@ -1545,8 +1545,8 @@ define i64 @vreduce_smin_nxv1i64(<vscale x 1 x i64> %v) {
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    sw a0, 12(sp)
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; RV32-NEXT:    vredmin.vs v8, v8, v9
@@ -1780,8 +1780,8 @@ define i64 @vreduce_smax_nxv2i64(<vscale x 2 x i64> %v) {
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    sw zero, 8(sp)
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; RV32-NEXT:    vredmax.vs v8, v8, v10
@@ -1847,8 +1847,8 @@ define i64 @vreduce_smin_nxv2i64(<vscale x 2 x i64> %v) {
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    sw a0, 12(sp)
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; RV32-NEXT:    vredmin.vs v8, v8, v10
@@ -2082,8 +2082,8 @@ define i64 @vreduce_smax_nxv4i64(<vscale x 4 x i64> %v) {
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    sw zero, 8(sp)
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vredmax.vs v8, v8, v12
@@ -2149,8 +2149,8 @@ define i64 @vreduce_smin_nxv4i64(<vscale x 4 x i64> %v) {
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    sw a0, 12(sp)
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vredmin.vs v8, v8, v12

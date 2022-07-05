@@ -933,8 +933,8 @@ define <vscale x 1 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv1i1_nxv1i64_i64(<vsca
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlse64.v v10, (a0), zero
 ; CHECK-NEXT:    vmsbc.vvm v9, v8, v10, v0
 ; CHECK-NEXT:    vmv.v.v v0, v9
@@ -962,8 +962,8 @@ define <vscale x 2 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv2i1_nxv2i64_i64(<vsca
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    vlse64.v v12, (a0), zero
 ; CHECK-NEXT:    vmsbc.vvm v10, v8, v12, v0
 ; CHECK-NEXT:    vmv1r.v v0, v10
@@ -991,8 +991,8 @@ define <vscale x 4 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv4i1_nxv4i64_i64(<vsca
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    vlse64.v v16, (a0), zero
 ; CHECK-NEXT:    vmsbc.vvm v12, v8, v16, v0
 ; CHECK-NEXT:    vmv1r.v v0, v12
@@ -1020,8 +1020,8 @@ define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i64_i64(<vsca
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
 ; CHECK-NEXT:    vlse64.v v24, (a0), zero
 ; CHECK-NEXT:    vmsbc.vvm v16, v8, v24, v0
 ; CHECK-NEXT:    vmv1r.v v0, v16

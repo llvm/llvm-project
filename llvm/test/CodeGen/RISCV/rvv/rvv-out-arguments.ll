@@ -5,34 +5,34 @@
 define dso_local void @lots_args(i32 signext %x0, i32 signext %x1, <vscale x 16 x i32> %v0, i32 signext %x2, i32 signext %x3, i32 signext %x4, i32 signext %x5, i32 signext %x6, i32 %x7, i32 %x8, i32 %x9) #0 {
 ; CHECK-LABEL: lots_args:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, sp, 64
 ; CHECK-NEXT:    csrr t0, vlenb
 ; CHECK-NEXT:    slli t0, t0, 3
 ; CHECK-NEXT:    sub sp, sp, t0
 ; CHECK-NEXT:    ld t0, 8(s0)
 ; CHECK-NEXT:    ld t1, 0(s0)
-; CHECK-NEXT:    sw a0, -36(s0)
-; CHECK-NEXT:    sw a1, -40(s0)
+; CHECK-NEXT:    sw a0, -28(s0)
+; CHECK-NEXT:    sw a1, -32(s0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub a0, s0, a0
-; CHECK-NEXT:    addi a0, a0, -80
+; CHECK-NEXT:    addi a0, a0, -64
 ; CHECK-NEXT:    vs8r.v v8, (a0)
-; CHECK-NEXT:    sw a2, -44(s0)
-; CHECK-NEXT:    sw a3, -48(s0)
-; CHECK-NEXT:    sw a4, -52(s0)
-; CHECK-NEXT:    sw a5, -56(s0)
-; CHECK-NEXT:    sw a6, -60(s0)
-; CHECK-NEXT:    sw a7, -64(s0)
-; CHECK-NEXT:    sw t1, -68(s0)
-; CHECK-NEXT:    sw t0, -72(s0)
-; CHECK-NEXT:    addi sp, s0, -80
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    sw a2, -36(s0)
+; CHECK-NEXT:    sw a3, -40(s0)
+; CHECK-NEXT:    sw a4, -44(s0)
+; CHECK-NEXT:    sw a5, -48(s0)
+; CHECK-NEXT:    sw a6, -52(s0)
+; CHECK-NEXT:    sw a7, -56(s0)
+; CHECK-NEXT:    sw t1, -60(s0)
+; CHECK-NEXT:    sw t0, -64(s0)
+; CHECK-NEXT:    addi sp, s0, -64
+; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
 entry:
   %x0.addr = alloca i32, align 4
@@ -66,6 +66,7 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    addi sp, sp, -112
 ; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi s0, sp, 112
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -76,14 +77,14 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    vsetivli a0, 4, e32, m8, ta, mu
 ; CHECK-NEXT:    sd a0, -64(s0)
 ; CHECK-NEXT:    ld a0, -64(s0)
+; CHECK-NEXT:    addi a1, s0, -56
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
-; CHECK-NEXT:    addi a0, s0, -56
-; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub a0, s0, a0
-; CHECK-NEXT:    addi a0, a0, -112
-; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    addi s1, a0, -112
+; CHECK-NEXT:    vs8r.v v8, (s1)
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    sw a0, -68(s0)
 ; CHECK-NEXT:    sw a0, -72(s0)
@@ -97,11 +98,7 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    sw a0, -104(s0)
 ; CHECK-NEXT:    lw a0, -68(s0)
 ; CHECK-NEXT:    lw a1, -72(s0)
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    sub a2, s0, a2
-; CHECK-NEXT:    addi a2, a2, -112
-; CHECK-NEXT:    vl8re32.v v8, (a2)
+; CHECK-NEXT:    vl8re32.v v8, (s1)
 ; CHECK-NEXT:    lw a2, -76(s0)
 ; CHECK-NEXT:    lw a3, -80(s0)
 ; CHECK-NEXT:    lw a4, -84(s0)
@@ -117,11 +114,7 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    lw a0, -68(s0)
 ; CHECK-NEXT:    lw a1, -72(s0)
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    sub a2, s0, a2
-; CHECK-NEXT:    addi a2, a2, -112
-; CHECK-NEXT:    vl8re32.v v8, (a2)
+; CHECK-NEXT:    vl8re32.v v8, (s1)
 ; CHECK-NEXT:    lw a2, -76(s0)
 ; CHECK-NEXT:    lw a3, -80(s0)
 ; CHECK-NEXT:    lw a4, -84(s0)
@@ -139,6 +132,7 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    addi sp, s0, -112
 ; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
 entry:

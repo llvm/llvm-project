@@ -1599,8 +1599,8 @@ define <vscale x 1 x i64>  @intrinsic_vmacc_vx_nxv1i64_i64_nxv1i64(<vscale x 1 x
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlse64.v v10, (a0), zero
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; CHECK-NEXT:    vmacc.vv v8, v10, v9
@@ -1629,8 +1629,8 @@ define <vscale x 1 x i64> @intrinsic_vmacc_mask_vx_nxv1i64_i64_nxv1i64(<vscale x
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlse64.v v10, (a0), zero
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; CHECK-NEXT:    vmacc.vv v8, v10, v9, v0.t
@@ -1661,8 +1661,8 @@ define <vscale x 2 x i64>  @intrinsic_vmacc_vx_nxv2i64_i64_nxv2i64(<vscale x 2 x
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    vlse64.v v12, (a0), zero
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, tu, mu
 ; CHECK-NEXT:    vmacc.vv v8, v12, v10
@@ -1691,8 +1691,8 @@ define <vscale x 2 x i64> @intrinsic_vmacc_mask_vx_nxv2i64_i64_nxv2i64(<vscale x
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    vlse64.v v12, (a0), zero
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, tu, mu
 ; CHECK-NEXT:    vmacc.vv v8, v12, v10, v0.t
@@ -1723,8 +1723,8 @@ define <vscale x 4 x i64>  @intrinsic_vmacc_vx_nxv4i64_i64_nxv4i64(<vscale x 4 x
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    vlse64.v v16, (a0), zero
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, mu
 ; CHECK-NEXT:    vmacc.vv v8, v16, v12
@@ -1753,8 +1753,8 @@ define <vscale x 4 x i64> @intrinsic_vmacc_mask_vx_nxv4i64_i64_nxv4i64(<vscale x
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    vlse64.v v16, (a0), zero
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, mu
 ; CHECK-NEXT:    vmacc.vv v8, v16, v12, v0.t
