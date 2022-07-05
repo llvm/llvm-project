@@ -368,3 +368,37 @@ backedge:
 return:		; preds = %bb
   ret void
 }
+
+define void @pr55505_remove_redundant_fptosi_for_float_iv(i32 %index, ptr %dst) {
+; CHECK-LABEL: @pr55505_remove_redundant_fptosi_for_float_iv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[FLOAT_IV_INT:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[FLOAT_IV_NEXT_INT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[FLOAT_IV_INT]] to float
+; CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[INDVAR_CONV]] to i32
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CONV]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    store float [[INDVAR_CONV]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[FLOAT_IV_NEXT_INT]] = add nsw i32 [[FLOAT_IV_INT]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[FLOAT_IV_NEXT_INT]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %float.iv = phi float [ 1.000000e+03, %entry ], [ %float.iv.next, %loop ]
+  %conv = fptosi float %float.iv to i32
+  %idxprom = sext i32 %conv to i64
+  %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %idxprom
+  store float %float.iv, ptr %arrayidx, align 4
+  %float.iv.next = fadd float %float.iv, -1.000000e+00
+  %cmp = fcmp ogt float %float.iv.next, 0.000000e+00
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
