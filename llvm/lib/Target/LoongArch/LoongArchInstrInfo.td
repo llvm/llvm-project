@@ -663,6 +663,46 @@ let Predicates = [IsLA64] in
 def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
           (BSTRPICK_D GPR:$rj, uimm6:$msbd, uimm6:$lsbd)>;
 
+/// Loads
+
+multiclass LdPat<PatFrag LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
+  def : Pat<(vt (LoadOp GPR:$rj)), (Inst GPR:$rj, 0)>;
+  def : Pat<(vt (LoadOp (add GPR:$rj, simm12:$imm12))),
+            (Inst GPR:$rj, simm12:$imm12)>;
+}
+
+defm : LdPat<sextloadi8, LD_B>;
+defm : LdPat<extloadi8, LD_B>;
+defm : LdPat<sextloadi16, LD_H>;
+defm : LdPat<extloadi16, LD_H>;
+defm : LdPat<load, LD_W>, Requires<[IsLA32]>;
+defm : LdPat<zextloadi8, LD_BU>;
+defm : LdPat<zextloadi16, LD_HU>;
+let Predicates = [IsLA64] in {
+defm : LdPat<sextloadi32, LD_W, i64>;
+defm : LdPat<extloadi32, LD_W, i64>;
+defm : LdPat<zextloadi32, LD_WU, i64>;
+defm : LdPat<load, LD_D, i64>;
+} // Predicates = [IsLA64]
+
+/// Stores
+
+multiclass StPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
+                 ValueType vt> {
+  def : Pat<(StoreOp (vt StTy:$rd), GPR:$rj),
+            (Inst StTy:$rd, GPR:$rj, 0)>;
+  def : Pat<(StoreOp (vt StTy:$rd), (add GPR:$rj, simm12:$imm12)),
+            (Inst StTy:$rd, GPR:$rj, simm12:$imm12)>;
+}
+
+defm : StPat<truncstorei8, ST_B, GPR, GRLenVT>;
+defm : StPat<truncstorei16, ST_H, GPR, GRLenVT>;
+defm : StPat<store, ST_W, GPR, i32>, Requires<[IsLA32]>;
+let Predicates = [IsLA64] in {
+defm : StPat<truncstorei32, ST_W, GPR, i64>;
+defm : StPat<store, ST_D, GPR, i64>;
+} // Predicates = [IsLA64]
+
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
 //===----------------------------------------------------------------------===//
