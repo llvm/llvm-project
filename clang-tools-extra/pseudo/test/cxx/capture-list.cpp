@@ -1,4 +1,4 @@
-// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest | FileCheck %s
+// RUN: clang-pseudo -grammar=cxx -source=%s --print-forest | FileCheck %s
 // We loosely allow capture defaults in any position/multiple times.
 auto lambda = [&, &foo, bar(x), =]{};
 // CHECK:      lambda-introducer := [ capture-list ]
