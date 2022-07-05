@@ -143,6 +143,15 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
 /// or vectorize.
 GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
 
+/// Get the reassociation maps to fold the result of a extract_slice (or source
+/// of a insert_slice) operation with given offsets, and sizes to its
+/// rank-reduced version. This is only done for the cases where the size is 1
+/// and offset is 0. Strictly speaking the offset 0 is not required in general,
+/// but non-zero offsets are not handled by SPIR-V backend at this point (and
+/// potentially cannot be handled).
+Optional<SmallVector<ReassociationIndices>>
+getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
+
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
 //===----------------------------------------------------------------------===//

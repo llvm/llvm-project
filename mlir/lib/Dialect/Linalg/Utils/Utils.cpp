@@ -1008,5 +1008,33 @@ void addTileLoopIvsToIndexOpResults(OpBuilder &b, LinalgOp tiledOp,
   }
 }
 
+/// Get the reassociation maps to fold the result of a extract_slice (or source
+/// of a insert_slice) operation with given offsets, and sizes to its
+/// rank-reduced version. This is only done for the cases where the size is 1
+/// and offset is 0. Strictly speaking the offset 0 is not required in general,
+/// but non-zero offsets are not handled by SPIR-V backend at this point (and
+/// potentially cannot be handled).
+Optional<SmallVector<ReassociationIndices>>
+getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
+  SmallVector<ReassociationIndices> reassociation;
+  ReassociationIndices curr;
+  for (const auto &it : llvm::enumerate(mixedSizes)) {
+    auto dim = it.index();
+    auto size = it.value();
+    curr.push_back(dim);
+    auto attr = size.dyn_cast<Attribute>();
+    if (attr && attr.cast<IntegerAttr>().getInt() == 1)
+      continue;
+    reassociation.emplace_back(ReassociationIndices{});
+    std::swap(reassociation.back(), curr);
+  }
+  // When the reassociations are not empty, then fold the remaining
+  // unit-dimensions into the last dimension.  If the reassociations so far is
+  // empty, then leave it emtpy. This will fold everything to a rank-0 tensor.
+  if (!curr.empty() && !reassociation.empty())
+    reassociation.back().append(curr.begin(), curr.end());
+  return reassociation;
+}
+
 } // namespace linalg
 } // namespace mlir
