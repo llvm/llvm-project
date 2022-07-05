@@ -40,8 +40,12 @@ const Language &getLanguageFromFlags() {
     for (const auto &Diag : Diags)
       llvm::errs() << Diag << "\n";
     auto Table = LRTable::buildSLR(G);
-    return new Language{std::move(G), std::move(Table),
-                        llvm::DenseMap<ExtensionID, RuleGuard>()};
+    return new Language{
+        std::move(G),
+        std::move(Table),
+        llvm::DenseMap<ExtensionID, RuleGuard>(),
+        llvm::DenseMap<ExtensionID, RecoveryStrategy>(),
+    };
   }();
   return *Lang;
 }

@@ -62,7 +62,7 @@ std::string Grammar::dumpRule(RuleID RID) const {
   for (unsigned I = 0; I < R.Size; ++I) {
     OS << " " << symbolName(R.Sequence[I]);
     if (R.RecoveryIndex == I)
-      OS << " [recover=" << static_cast<unsigned>(R.Recovery) << "]";
+      OS << " [recover=" << T->AttributeValues[R.Recovery] << "]";
   }
   if (R.Guard)
     OS << " [guard=" << T->AttributeValues[R.Guard] << "]";
