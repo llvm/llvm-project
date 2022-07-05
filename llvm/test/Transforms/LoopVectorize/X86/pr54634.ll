@@ -22,7 +22,7 @@ define {} addrspace(10)* @japi1_vect_42283({} addrspace(10)** nocapture readonly
 ; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds { {} addrspace(10)*, i64 }, { {} addrspace(10)*, i64 } addrspace(10)* [[TMP6]], i64 0, i32 1
 ; CHECK-NEXT:    [[DOTUNPACK2:%.*]] = load i64, i64 addrspace(10)* [[DOTELT1]], align 8, !tbaa [[TBAA8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP11]], 16
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP11]], 28
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP2]])

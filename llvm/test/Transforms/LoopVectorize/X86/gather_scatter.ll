@@ -863,7 +863,7 @@ define void @test_gather_not_profitable_pr48429(i32 %d, float* readonly noalias 
 ; AVX512-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -4
 ; AVX512-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; AVX512-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16
+; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 32
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; AVX512:       vector.memcheck:
 ; AVX512-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[IDX_EXT]], 2
