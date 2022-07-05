@@ -1779,7 +1779,7 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
 
     // Restrict this fold only for single-use 'and' (PR10267).
     // ((%x & C) == 0) --> %x u< (-C)  iff (-C) is power of two.
-    if ((~(*C2) + 1).isPowerOf2()) {
+    if (C2->isNegatedPowerOf2()) {
       Constant *NegBOC =
           ConstantExpr::getNeg(cast<Constant>(And->getOperand(1)));
       auto NewPred = isICMP_NE ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
