@@ -14,7 +14,14 @@
 // LoongArch specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+// Target-independent type requirements, but with target-specific formats.
+def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
+                                       SDTCisVT<1, i32>]>;
+def SDT_CallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i32>,
+                                   SDTCisVT<1, i32>]>;
+
 // Target-dependent type requirements.
+def SDT_LoongArchCall : SDTypeProfile<0, -1, [SDTCisVT<0, GRLenVT>]>;
 def SDT_LoongArchIntBinOpW : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
 ]>;
@@ -24,7 +31,16 @@ def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
 ]>;
 
 // TODO: Add LoongArch specific DAG Nodes
+// Target-independent nodes, but with target-specific formats.
+def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
+                           [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
+                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
 // Target-dependent nodes.
+def loongarch_call : SDNode<"LoongArchISD::CALL", SDT_LoongArchCall,
+                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                             SDNPVariadic]>;
 def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
@@ -147,6 +163,17 @@ def NegImm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
                                    N->getValueType(0));
 }]>;
+
+def CallSymbol: AsmOperandClass {
+  let Name = "CallSymbol";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isImm";
+}
+
+// A bare symbol used in call only.
+def call_symbol : Operand<iPTR> {
+  let ParserMatchClass = CallSymbol;
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction Formats
@@ -694,6 +721,19 @@ def : Pat<(brind GPR:$rj), (PseudoBRIND GPR:$rj, 0)>;
 def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
           (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
 
+let isCall = 1, Defs = [R1] in
+def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), []> {
+  let AsmString = "bl\t$func";
+}
+
+def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
+def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+
+let isCall = 1, Defs = [R1] in
+def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rj),
+                                [(loongarch_call GPR:$rj)]>,
+                         PseudoInstExpansion<(JIRL R1, GPR:$rj, 0)>;
+
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
@@ -747,6 +787,16 @@ let Predicates = [IsLA64] in {
 defm : StPat<truncstorei32, ST_W, GPR, i64>;
 defm : StPat<store, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
+
+/// Other pseudo-instructions
+
+// Pessimistically assume the stack pointer will be clobbered
+let Defs = [R3], Uses = [R3] in {
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(callseq_start timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(callseq_end timm:$amt1, timm:$amt2)]>;
+} // Defs = [R3], Uses = [R3]
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
