@@ -1,4 +1,6 @@
 // RUN: %clang_extdef_map %s -- | FileCheck --implicit-check-not "c:@y" --implicit-check-not "c:@z" %s
+// RUN: %clang -emit-ast %s -o %t.ast
+// RUN: %clang_extdef_map %t.ast -- | FileCheck --implicit-check-not "c:@y" --implicit-check-not "c:@z" %s
 
 int f(int) {
   return 0;
