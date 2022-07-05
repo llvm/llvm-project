@@ -189,9 +189,7 @@ public:
 
   Constant Reshape(ConstantSubscripts &&) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
-  static constexpr DynamicType GetType() {
-    return {TypeCategory::Character, KIND};
-  }
+  DynamicType GetType() const { return {KIND, length_}; }
   std::size_t CopyFrom(const Constant &source, std::size_t count,
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 

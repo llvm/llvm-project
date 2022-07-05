@@ -541,8 +541,8 @@ static void PopulateWithComponentDefaults(SymbolDataInitialization &init,
             if (auto dyType{evaluate::DynamicType::From(component)}) {
               if (auto extents{evaluate::GetConstantExtents(
                       foldingContext, component)}) {
-                if (auto extant{init.image.AsConstant(
-                        foldingContext, *dyType, *extents, componentOffset)}) {
+                if (auto extant{init.image.AsConstant(foldingContext, *dyType,
+                        *extents, false /*don't pad*/, componentOffset)}) {
                   initialized = !(*extant == *object->init());
                 }
               }
