@@ -43,9 +43,9 @@ private:
 };
 } // namespace
 
-/// Parse the body of a pretty dialect symbol, which starts and ends with <>'s,
-/// and may be recursive.  Return with the 'prettyName' StringRef encompassing
-/// the entire pretty name.
+/// Parse the body of a dialect symbol, which starts and ends with <>'s, and may
+/// be recursive. Return with the 'body' StringRef encompassing the entire
+/// body.
 ///
 ///   pretty-dialect-sym-body ::= '<' pretty-dialect-sym-contents+ '>'
 ///   pretty-dialect-sym-contents ::= pretty-dialect-sym-body
@@ -54,24 +54,26 @@ private:
 ///                                  | '{' pretty-dialect-sym-contents+ '}'
 ///                                  | '[^[<({>\])}\0]+'
 ///
-ParseResult Parser::parsePrettyDialectSymbolName(StringRef &prettyName) {
-  // Pretty symbol names are a relatively unstructured format that contains a
-  // series of properly nested punctuation, with anything else in the middle.
-  // Scan ahead to find it and consume it if successful, otherwise emit an
-  // error.
-  auto *curPtr = getTokenSpelling().data();
-
-  SmallVector<char, 8> nestedPunctuation;
+ParseResult Parser::parseDialectSymbolBody(StringRef &body) {
+  // Symbol bodies are a relatively unstructured format that contains a series
+  // of properly nested punctuation, with anything else in the middle. Scan
+  // ahead to find it and consume it if successful, otherwise emit an error.
+  const char *curPtr = getTokenSpelling().data();
 
   // Scan over the nested punctuation, bailing out on error and consuming until
-  // we find the end.  We know that we're currently looking at the '<', so we
-  // can go until we find the matching '>' character.
+  // we find the end. We know that we're currently looking at the '<', so we can
+  // go until we find the matching '>' character.
   assert(*curPtr == '<');
+  SmallVector<char, 8> nestedPunctuation;
   do {
     char c = *curPtr++;
     switch (c) {
     case '\0':
       // This also handles the EOF case.
+      if (!nestedPunctuation.empty()) {
+        return emitError() << "unbalanced '" << nestedPunctuation.back()
+                           << "' character in pretty dialect name";
+      }
       return emitError("unexpected nul or EOF in pretty dialect name");
     case '<':
     case '[':
@@ -102,6 +104,14 @@ ParseResult Parser::parsePrettyDialectSymbolName(StringRef &prettyName) {
       if (nestedPunctuation.pop_back_val() != '{')
         return emitError("unbalanced '}' character in pretty dialect name");
       break;
+    case '"': {
+      // Dispatch to the lexer to lex past strings.
+      resetToken(curPtr - 1);
+      if (state.curToken.isNot(Token::string))
+        return failure();
+      curPtr = state.curToken.getEndLoc().getPointer();
+      break;
+    }
 
     default:
       continue;
@@ -110,11 +120,10 @@ ParseResult Parser::parsePrettyDialectSymbolName(StringRef &prettyName) {
 
   // Ok, we succeeded, remember where we stopped, reset the lexer to know it is
   // consuming all this stuff, and return.
-  state.lex.resetPointer(curPtr);
+  resetToken(curPtr);
 
-  unsigned length = curPtr - prettyName.begin();
-  prettyName = StringRef(prettyName.begin(), length);
-  consumeToken();
+  unsigned length = curPtr - body.begin();
+  body = StringRef(body.data(), length);
   return success();
 }
 
@@ -125,12 +134,24 @@ static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
                                   CreateFn &&createSymbol) {
   // Parse the dialect namespace.
   StringRef identifier = p.getTokenSpelling().drop_front();
-  auto loc = p.getToken().getLoc();
+  SMLoc loc = p.getToken().getLoc();
   p.consumeToken(identifierTok);
+
+  // Check to see if this is a pretty name.
+  StringRef dialectName;
+  StringRef symbolData;
+  std::tie(dialectName, symbolData) = identifier.split('.');
+  bool isPrettyName = !symbolData.empty();
+
+  // Check to see if the symbol has trailing data, i.e. has an immediately
+  // following '<'.
+  bool hasTrailingData =
+      p.getToken().is(Token::less) &&
+      identifier.bytes_end() == p.getTokenSpelling().bytes_begin();
 
   // If there is no '<' token following this, and if the typename contains no
   // dot, then we are parsing a symbol alias.
-  if (p.getToken().isNot(Token::less) && !identifier.contains('.')) {
+  if (!hasTrailingData && !isPrettyName) {
     // Check for an alias for this type.
     auto aliasIt = aliases.find(identifier);
     if (aliasIt == aliases.end())
@@ -140,94 +161,25 @@ static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
     return aliasIt->second;
   }
 
-  // Otherwise, we are parsing a dialect-specific symbol.  If the name contains
-  // a dot, then this is the "pretty" form.  If not, it is the verbose form that
-  // looks like <"...">.
-  std::string symbolData;
-  auto dialectName = identifier;
-
-  // Handle the verbose form, where "identifier" is a simple dialect name.
-  if (!identifier.contains('.')) {
-    // Consume the '<'.
-    if (p.parseToken(Token::less, "expected '<' in dialect type"))
+  // If this isn't an alias, we are parsing a dialect-specific symbol. If the
+  // name contains a dot, then this is the "pretty" form. If not, it is the
+  // verbose form that looks like <...>.
+  if (!isPrettyName) {
+    // Point the symbol data to the end of the dialect name to start.
+    symbolData = StringRef(dialectName.end(), 0);
+    if (p.parseDialectSymbolBody(symbolData))
       return nullptr;
-
-    // Parse the symbol specific data.
-    if (p.getToken().isNot(Token::string))
-      return (p.emitWrongTokenError(
-                  "expected string literal data in dialect symbol"),
-              nullptr);
-    symbolData = p.getToken().getStringValue();
-    loc = SMLoc::getFromPointer(p.getToken().getLoc().getPointer() + 1);
-    p.consumeToken(Token::string);
-
-    // Consume the '>'.
-    if (p.parseToken(Token::greater, "expected '>' in dialect symbol"))
-      return nullptr;
+    symbolData = symbolData.drop_front().drop_back();
   } else {
-    // Ok, the dialect name is the part of the identifier before the dot, the
-    // part after the dot is the dialect's symbol, or the start thereof.
-    auto dotHalves = identifier.split('.');
-    dialectName = dotHalves.first;
-    auto prettyName = dotHalves.second;
-    loc = SMLoc::getFromPointer(prettyName.data());
+    loc = SMLoc::getFromPointer(symbolData.data());
 
     // If the dialect's symbol is followed immediately by a <, then lex the body
     // of it into prettyName.
-    if (p.getToken().is(Token::less) &&
-        prettyName.bytes_end() == p.getTokenSpelling().bytes_begin()) {
-      if (p.parsePrettyDialectSymbolName(prettyName))
-        return nullptr;
-    }
-
-    symbolData = prettyName.str();
+    if (hasTrailingData && p.parseDialectSymbolBody(symbolData))
+      return nullptr;
   }
 
-  // Record the name location of the type remapped to the top level buffer.
-  SMLoc locInTopLevelBuffer = p.remapLocationToTopLevelBuffer(loc);
-  p.getState().symbols.nestedParserLocs.push_back(locInTopLevelBuffer);
-
-  // Call into the provided symbol construction function.
-  Symbol sym = createSymbol(dialectName, symbolData, loc);
-
-  // Pop the last parser location.
-  p.getState().symbols.nestedParserLocs.pop_back();
-  return sym;
-}
-
-/// Parses a symbol, of type 'T', and returns it if parsing was successful. If
-/// parsing failed, nullptr is returned. The number of bytes read from the input
-/// string is returned in 'numRead'.
-template <typename T, typename ParserFn>
-static T parseSymbol(StringRef inputStr, MLIRContext *context,
-                     SymbolState &symbolState, ParserFn &&parserFn,
-                     size_t *numRead = nullptr) {
-  SourceMgr sourceMgr;
-  auto memBuffer = MemoryBuffer::getMemBuffer(
-      inputStr, /*BufferName=*/"<mlir_parser_buffer>",
-      /*RequiresNullTerminator=*/false);
-  sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  ParserConfig config(context);
-  ParserState state(sourceMgr, config, symbolState, /*asmState=*/nullptr);
-  Parser parser(state);
-
-  Token startTok = parser.getToken();
-  T symbol = parserFn(parser);
-  if (!symbol)
-    return T();
-
-  // If 'numRead' is valid, then provide the number of bytes that were read.
-  Token endTok = parser.getToken();
-  if (numRead) {
-    *numRead = static_cast<size_t>(endTok.getLoc().getPointer() -
-                                   startTok.getLoc().getPointer());
-
-    // Otherwise, ensure that all of the tokens were parsed.
-  } else if (startTok.getLoc() != endTok.getLoc() && endTok.isNot(Token::eof)) {
-    parser.emitError(endTok.getLoc(), "encountered unexpected token");
-    return T();
-  }
-  return symbol;
+  return createSymbol(dialectName, symbolData, loc);
 }
 
 /// Parse an extended attribute.
@@ -241,8 +193,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
   MLIRContext *ctx = getContext();
   Attribute attr = parseExtendedSymbol<Attribute>(
       *this, Token::hash_identifier, state.symbols.attributeAliasDefinitions,
-      [&](StringRef dialectName, StringRef symbolData,
-          SMLoc loc) -> Attribute {
+      [&](StringRef dialectName, StringRef symbolData, SMLoc loc) -> Attribute {
         // Parse an optional trailing colon type.
         Type attrType = type;
         if (consumeIf(Token::colon) && !(attrType = parseType()))
@@ -251,11 +202,15 @@ Attribute Parser::parseExtendedAttr(Type type) {
         // If we found a registered dialect, then ask it to parse the attribute.
         if (Dialect *dialect =
                 builder.getContext()->getOrLoadDialect(dialectName)) {
-          return parseSymbol<Attribute>(
-              symbolData, ctx, state.symbols, [&](Parser &parser) {
-                CustomDialectAsmParser customParser(symbolData, parser);
-                return dialect->parseAttribute(customParser, attrType);
-              });
+          // Temporarily reset the lexer to let the dialect parse the attribute.
+          const char *curLexerPos = getToken().getLoc().getPointer();
+          resetToken(symbolData.data());
+
+          // Parse the attribute.
+          CustomDialectAsmParser customParser(symbolData, *this);
+          Attribute attr = dialect->parseAttribute(customParser, attrType);
+          resetToken(curLexerPos);
+          return attr;
         }
 
         // Otherwise, form a new opaque attribute.
@@ -287,11 +242,15 @@ Type Parser::parseExtendedType() {
       [&](StringRef dialectName, StringRef symbolData, SMLoc loc) -> Type {
         // If we found a registered dialect, then ask it to parse the type.
         if (auto *dialect = ctx->getOrLoadDialect(dialectName)) {
-          return parseSymbol<Type>(
-              symbolData, ctx, state.symbols, [&](Parser &parser) {
-                CustomDialectAsmParser customParser(symbolData, parser);
-                return dialect->parseType(customParser);
-              });
+          // Temporarily reset the lexer to let the dialect parse the type.
+          const char *curLexerPos = getToken().getLoc().getPointer();
+          resetToken(symbolData.data());
+
+          // Parse the type.
+          CustomDialectAsmParser customParser(symbolData, *this);
+          Type type = dialect->parseType(customParser);
+          resetToken(curLexerPos);
+          return type;
         }
 
         // Otherwise, form a new opaque type.
@@ -311,16 +270,29 @@ Type Parser::parseExtendedType() {
 template <typename T, typename ParserFn>
 static T parseSymbol(StringRef inputStr, MLIRContext *context, size_t &numRead,
                      ParserFn &&parserFn) {
+  SourceMgr sourceMgr;
+  auto memBuffer = MemoryBuffer::getMemBuffer(
+      inputStr, /*BufferName=*/"<mlir_parser_buffer>",
+      /*RequiresNullTerminator=*/false);
+  sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
   SymbolState aliasState;
-  return parseSymbol<T>(
-      inputStr, context, aliasState,
-      [&](Parser &parser) {
-        SourceMgrDiagnosticHandler handler(
-            const_cast<llvm::SourceMgr &>(parser.getSourceMgr()),
-            parser.getContext());
-        return parserFn(parser);
-      },
-      &numRead);
+  ParserConfig config(context);
+  ParserState state(sourceMgr, config, aliasState, /*asmState=*/nullptr);
+  Parser parser(state);
+
+  SourceMgrDiagnosticHandler handler(
+      const_cast<llvm::SourceMgr &>(parser.getSourceMgr()),
+      parser.getContext());
+  Token startTok = parser.getToken();
+  T symbol = parserFn(parser);
+  if (!symbol)
+    return T();
+
+  // Provide the number of bytes that were read.
+  Token endTok = parser.getToken();
+  numRead = static_cast<size_t>(endTok.getLoc().getPointer() -
+                                startTok.getLoc().getPointer());
+  return symbol;
 }
 
 Attribute mlir::parseAttribute(StringRef attrStr, MLIRContext *context) {
