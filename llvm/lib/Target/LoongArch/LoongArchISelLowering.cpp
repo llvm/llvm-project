@@ -17,6 +17,7 @@
 #include "LoongArchRegisterInfo.h"
 #include "LoongArchSubtarget.h"
 #include "LoongArchTargetMachine.h"
+#include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/Support/Debug.h"
@@ -37,10 +38,15 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasBasicD())
     addRegisterClass(MVT::f64, &LoongArch::FPR64RegClass);
 
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, GRLenVT,
+                   MVT::i1, Promote);
+
   // TODO: add necessary setOperationAction calls later.
   setOperationAction(ISD::SHL_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRA_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRL_PARTS, GRLenVT, Custom);
+
+  setOperationAction(ISD::GlobalAddress, GRLenVT, Custom);
 
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::SHL, MVT::i32, Custom);
@@ -83,6 +89,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   switch (Op.getOpcode()) {
   default:
     report_fatal_error("unimplemented operand");
+  case ISD::GlobalAddress:
+    return lowerGlobalAddress(Op, DAG);
   case ISD::SHL_PARTS:
     return lowerShiftLeftParts(Op, DAG);
   case ISD::SRA_PARTS:
@@ -97,6 +105,24 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
            "Unexpected custom legalisation");
     return SDValue();
   }
+}
+
+SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
+  unsigned ADDIOp = Subtarget.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+
+  // FIXME: Only support PC-relative addressing to access the symbol.
+  // TODO: Add target flags.
+  if (!isPositionIndependent()) {
+    SDValue GA = DAG.getTargetGlobalAddress(GV, DL, Ty);
+    SDValue AddrHi(DAG.getMachineNode(LoongArch::PCALAU12I, DL, Ty, GA), 0);
+    SDValue Addr(DAG.getMachineNode(ADDIOp, DL, Ty, AddrHi, GA), 0);
+    return Addr;
+  }
+  report_fatal_error("Unable to lowerGlobalAddress");
 }
 
 SDValue LoongArchTargetLowering::lowerShiftLeftParts(SDValue Op,
