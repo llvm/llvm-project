@@ -1416,7 +1416,7 @@ multiclass VOP3_Realtriple_with_name_gfx11<bits<10> op, string opName,
   VOP3_Real_dpp8_with_name_gfx11<op, opName, asmName>;
 
 multiclass VOP3Only_Realtriple_with_name_gfx11<bits<10> op, string opName,
-                                           string asmName> :
+                                               string asmName> :
   VOP3_Realtriple_with_name_gfx11<op, opName, asmName, 1>;
 
 multiclass VOP3be_Realtriple_gfx11<
