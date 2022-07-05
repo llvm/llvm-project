@@ -854,10 +854,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     auto *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
     if (!C)
       break;
-    uint64_t C2 = C->getZExtValue();
+    unsigned C2 = C->getZExtValue();
     unsigned XLen = Subtarget->getXLen();
-    if (!C2 || C2 >= XLen)
-      break;
+    assert((C2 > 0 && C2 < XLen) && "Unexpected shift amount!");
 
     uint64_t C1 = N1C->getZExtValue();
 
