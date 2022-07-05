@@ -17,8 +17,6 @@
 
 using namespace clang;
 
-char HLSLExternalSemaSource::ID;
-
 HLSLExternalSemaSource::~HLSLExternalSemaSource() {}
 
 void HLSLExternalSemaSource::InitializeSema(Sema &S) {

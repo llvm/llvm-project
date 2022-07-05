@@ -19,8 +19,6 @@ class NamespaceDecl;
 class Sema;
 
 class HLSLExternalSemaSource : public ExternalSemaSource {
-  static char ID;
-
   Sema *SemaPtr = nullptr;
   NamespaceDecl *HLSLNamespace;
 
