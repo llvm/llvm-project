@@ -1442,3 +1442,73 @@ define i64 @srliw_4_sh3add(i64* %0, i32 signext %1) {
   %6 = load i64, i64* %5, align 8
   ret i64 %6
 }
+
+define signext i32 @srli_1_sh2add(i32* %0, i64 %1) {
+; CHECK-LABEL: srli_1_sh2add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    andi a1, a1, -4
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    ret
+  %3 = lshr i64 %1, 1
+  %4 = getelementptr inbounds i32, i32* %0, i64 %3
+  %5 = load i32, i32* %4, align 4
+  ret i32 %5
+}
+
+define i64 @srli_2_sh3add(i64* %0, i64 %1) {
+; CHECK-LABEL: srli_2_sh3add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    andi a1, a1, -8
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ret
+  %3 = lshr i64 %1, 2
+  %4 = getelementptr inbounds i64, i64* %0, i64 %3
+  %5 = load i64, i64* %4, align 8
+  ret i64 %5
+}
+
+define signext i16 @srli_2_sh1add(i16* %0, i64 %1) {
+; CHECK-LABEL: srli_2_sh1add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    andi a1, a1, -2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    lh a0, 0(a0)
+; CHECK-NEXT:    ret
+  %3 = lshr i64 %1, 2
+  %4 = getelementptr inbounds i16, i16* %0, i64 %3
+  %5 = load i16, i16* %4, align 2
+  ret i16 %5
+}
+
+define signext i32 @srli_3_sh2add(i32* %0, i64 %1) {
+; CHECK-LABEL: srli_3_sh2add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    andi a1, a1, -4
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    ret
+  %3 = lshr i64 %1, 3
+  %4 = getelementptr inbounds i32, i32* %0, i64 %3
+  %5 = load i32, i32* %4, align 4
+  ret i32 %5
+}
+
+define i64 @srli_4_sh3add(i64* %0, i64 %1) {
+; CHECK-LABEL: srli_4_sh3add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    andi a1, a1, -8
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ret
+  %3 = lshr i64 %1, 4
+  %4 = getelementptr inbounds i64, i64* %0, i64 %3
+  %5 = load i64, i64* %4, align 8
+  ret i64 %5
+}
