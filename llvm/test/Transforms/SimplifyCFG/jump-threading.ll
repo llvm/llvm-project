@@ -4,6 +4,7 @@
 declare void @foo()
 declare void @bar()
 declare void @use.i1(i1)
+declare void @use.i32(i32)
 
 define void @test_phi_simple(i1 %c) {
 ; CHECK-LABEL: @test_phi_simple(
@@ -260,5 +261,49 @@ else2:
   br label %join2
 
 join2:
+  ret void
+}
+
+define void @test_multiple_threadable_preds_with_phi(i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @test_multiple_threadable_preds_with_phi(
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[IF1:%.*]], label [[IF2:%.*]]
+; CHECK:       if1:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF3_CRITEDGE1:%.*]], label [[EXIT:%.*]]
+; CHECK:       if2:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br i1 [[COND2]], label [[IF3_CRITEDGE:%.*]], label [[EXIT]]
+; CHECK:       if3.critedge:
+; CHECK-NEXT:    call void @use.i32(i32 2)
+; CHECK-NEXT:    br label [[IF3:%.*]]
+; CHECK:       if3.critedge1:
+; CHECK-NEXT:    call void @use.i32(i32 1)
+; CHECK-NEXT:    br label [[IF3]]
+; CHECK:       if3:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br i1 %cond1, label %if1, label %if2
+
+if1:
+  call void @foo()
+  br i1 %cond2, label %join, label %exit
+
+if2:
+  call void @bar()
+  br i1 %cond2, label %join, label %exit
+
+join:
+  %phi = phi i32 [ 1, %if1 ], [ 2, %if2 ]
+  call void @use.i32(i32 %phi)
+  br i1 %cond2, label %if3, label %exit
+
+if3:
+  call void @foo()
+  br label %exit
+
+exit:
   ret void
 }
