@@ -1260,6 +1260,9 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   // The current basic block is split into four basic blocks. After outlining,
   // they will be mapped as follows:
   // ```
@@ -1285,7 +1288,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   OI.EntryBB = TaskAllocaBB;
   OI.OuterAllocaBB = AllocaIP.getBlock();
   OI.ExitBB = TaskExitBB;
-  OI.PostOutlineCB = [this, &Loc, Tied, Final](Function &OutlinedFn) {
+  OI.PostOutlineCB = [this, Ident, Tied, Final](Function &OutlinedFn) {
     // The input IR here looks like the following-
     // ```
     // func @current_fn() {
@@ -1324,9 +1327,6 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
 
     // Arguments - `loc_ref` (Ident) and `gtid` (ThreadID)
     // call.
-    uint32_t SrcLocStrSize;
-    Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-    Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
     Value *ThreadID = getOrCreateThreadID(Ident);
 
     // Argument - `flags`
