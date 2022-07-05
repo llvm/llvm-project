@@ -875,7 +875,7 @@ func.func @contraction(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: ve
 // -----
 
 func.func @contract_with_dim_unused_by_lhs_and_rhs(%arg0 : vector<1x2xi32>, %arg1 : vector<2xi32>, %arg2 : vector<1xi32>) -> vector<1xi32> {
-// expected-error@+1 {{'vector.contract' op expected all input dimensions to be used by either the LHS or the RHS}}
+// expected-error@+1 {{'vector.contract' op expected all dimensions to be either a LHS or a RHS dimension}}
   %result = vector.contract {
     indexing_maps = [
       affine_map<(d0, d1, d2) -> (d0, d2)>,

@@ -687,6 +687,9 @@ static LogicalResult verifyOutputShape(
     MLIRContext *ctx = op.getContext();
     AffineMap lhsMap = op.getIndexingMaps()[0];
     AffineMap rhsMap = op.getIndexingMaps()[1];
+    if (getUnusedDimsBitVector({lhsMap, rhsMap}).any())
+      return op.emitOpError(
+          "expected all dimensions to be either a LHS or a RHS dimension");
     SmallVector<AffineExpr, 4> extents(lhsMap.getNumInputs());
     for (auto pair :
          {std::make_pair(lhsType, lhsMap), std::make_pair(rhsType, rhsMap)}) {
@@ -699,8 +702,8 @@ static LogicalResult verifyOutputShape(
       }
     }
     if (!llvm::all_of(extents, [](AffineExpr e) { return e; }))
-      return op.emitOpError("expected all input dimensions to be used by "
-                            "either the LHS or the RHS");
+      return op.emitOpError("expected all dimensions to get an extent as "
+                            "either a LHS or a RHS dimension");
 
     AffineMap resMap = op.getIndexingMaps()[2];
     auto extentsMap = AffineMap::get(/*dimCount=*/extents.size(),
