@@ -18,6 +18,7 @@ static_library("bugprone") {
   sources = [
     "ArgumentCommentCheck.cpp",
     "AssertSideEffectCheck.cpp",
+    "AssignmentInIfConditionCheck.cpp",
     "BadSignalToKillThreadCheck.cpp",
     "BoolPointerImplicitConversionCheck.cpp",
     "BranchCloneCheck.cpp",
