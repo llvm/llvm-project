@@ -215,25 +215,10 @@ mlir::bufferization::insertSliceAnchoredAllocTensorEliminationStep(
       /*rewriteFunc=*/
       [](OpBuilder &b, Location loc, OpOperand &operand) {
         auto insertOp = cast<tensor::InsertSliceOp>(operand.getOwner());
-        // Expand offsets, sizes and strides to the full rank to handle the
-        // rank-reducing case.
-        SmallVector<OpFoldResult> mixedOffsets = insertOp.getMixedOffsets();
-        SmallVector<OpFoldResult> mixedSizes = insertOp.getMixedSizes();
-        SmallVector<OpFoldResult> mixedStrides = insertOp.getMixedStrides();
-        OffsetSizeAndStrideOpInterface::expandToRank(
-            insertOp.getDest(), mixedOffsets, mixedSizes, mixedStrides,
-            [&](Value target, int64_t dim) -> OpFoldResult {
-              auto shapedType = target.getType().cast<ShapedType>();
-              if (shapedType.isDynamicDim(dim))
-                return b.create<tensor::DimOp>(loc, target, dim).getResult();
-              return b.getIndexAttr(shapedType.getDimSize(dim));
-            });
-        auto t = tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
-            insertOp.getSourceType().getRank(),
-            insertOp.getDest().getType().cast<RankedTensorType>(), mixedOffsets,
-            mixedSizes, mixedStrides);
         auto extractOp = b.create<tensor::ExtractSliceOp>(
-            loc, t, insertOp.getDest(), mixedOffsets, mixedSizes, mixedStrides);
+            loc, insertOp.getSourceType(), insertOp.getDest(),
+            insertOp.getMixedOffsets(), insertOp.getMixedSizes(),
+            insertOp.getMixedStrides());
         return extractOp.getResult();
       });
 }
