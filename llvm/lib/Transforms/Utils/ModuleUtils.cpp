@@ -281,6 +281,7 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
                         MDString::get(Ctx, SectionName)};
 
   MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
+  GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
 
   appendToCompilerUsed(M, GV);
 }
