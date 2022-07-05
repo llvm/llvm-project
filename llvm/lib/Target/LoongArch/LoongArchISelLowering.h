@@ -86,6 +86,7 @@ private:
                          const SmallVectorImpl<ISD::OutputArg> &Outs,
                          LoongArchCCAssignFn Fn) const;
 
+  SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
 };
