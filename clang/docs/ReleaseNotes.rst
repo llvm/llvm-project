@@ -537,6 +537,10 @@ DWARF Support in Clang
 Arm and AArch64 Support in Clang
 --------------------------------
 
+- clang now supports the Cortex-M85 CPU, which can be chosen with
+  `-mcpu=cortex-m85`. By default, this has PACBTI turned on, but it can be
+  disabled with `-mcpu=cortex-m85+nopacbti`.
+
 Floating Point Support in Clang
 -------------------------------
 
