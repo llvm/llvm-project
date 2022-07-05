@@ -397,6 +397,13 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_end_scope                    287
 %endif
 
+%ifndef stub
+        __kmpc_copyprivate_light            288
+        __kmpc_sections_init                289
+        __kmpc_next_section                 290
+        __kmpc_end_sections                 291
+%endif
+
 # User API entry points that have both lower- and upper- case versions for Fortran.
 # Number for lowercase version is indicated.  Number for uppercase is obtained by adding 1000.
 # User API entry points are entry points that start with 'kmp_' or 'omp_'.

@@ -2285,6 +2285,219 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
   return status;
 }
 
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information
+@param global_tid  global thread number
+@return Zero if the parallel region is not active and this thread should execute
+all sections, non-zero otherwise.
+
+Beginning of sections construct.
+There are no implicit barriers in the "sections" calls, rather the compiler
+should introduce an explicit barrier if it is required.
+
+This implementation is based on __kmp_dispatch_init, using same constructs for
+shared data (we can't have sections nested directly in omp for loop, there
+should be a parallel region in between)
+*/
+kmp_int32 __kmpc_sections_init(ident_t *loc, kmp_int32 gtid) {
+
+  int active;
+  kmp_info_t *th;
+  kmp_team_t *team;
+  kmp_uint32 my_buffer_index;
+  dispatch_shared_info_template<kmp_int32> volatile *sh;
+
+  KMP_DEBUG_ASSERT(__kmp_init_serial);
+
+  if (!TCR_4(__kmp_init_parallel))
+    __kmp_parallel_initialize();
+  __kmp_resume_if_soft_paused();
+
+  /* setup data */
+  th = __kmp_threads[gtid];
+  team = th->th.th_team;
+  active = !team->t.t_serialized;
+  th->th.th_ident = loc;
+
+  KMP_COUNT_BLOCK(OMP_SECTIONS);
+  KD_TRACE(10, ("__kmpc_sections: called by T#%d\n", gtid));
+
+  if (active) {
+    // Setup sections in the same way as dynamic scheduled loops.
+    // We need one shared data: which section is to execute next.
+    // (in case parallel is not active, all sections will be executed on the
+    // same thread)
+    KMP_DEBUG_ASSERT(th->th.th_dispatch ==
+                     &th->th.th_team->t.t_dispatch[th->th.th_info.ds.ds_tid]);
+
+    my_buffer_index = th->th.th_dispatch->th_disp_index++;
+
+    // reuse shared data structures from dynamic sched loops:
+    sh = reinterpret_cast<dispatch_shared_info_template<kmp_int32> volatile *>(
+        &team->t.t_disp_buffer[my_buffer_index % __kmp_dispatch_num_buffers]);
+    KD_TRACE(10, ("__kmpc_sections_init: T#%d my_buffer_index:%d\n", gtid,
+                  my_buffer_index));
+
+    th->th.th_dispatch->th_deo_fcn = __kmp_dispatch_deo_error;
+    th->th.th_dispatch->th_dxo_fcn = __kmp_dispatch_dxo_error;
+
+    KD_TRACE(100, ("__kmpc_sections_init: T#%d before wait: my_buffer_index:%d "
+                   "sh->buffer_index:%d\n",
+                   gtid, my_buffer_index, sh->buffer_index));
+    __kmp_wait<kmp_uint32>(&sh->buffer_index, my_buffer_index,
+                           __kmp_eq<kmp_uint32> USE_ITT_BUILD_ARG(NULL));
+    // Note: KMP_WAIT() cannot be used there: buffer index and
+    // my_buffer_index are *always* 32-bit integers.
+    KMP_MB();
+    KD_TRACE(100, ("__kmpc_sections_init: T#%d after wait: my_buffer_index:%d "
+                   "sh->buffer_index:%d\n",
+                   gtid, my_buffer_index, sh->buffer_index));
+
+    th->th.th_dispatch->th_dispatch_pr_current =
+        nullptr; // sections construct doesn't need private data
+    th->th.th_dispatch->th_dispatch_sh_current =
+        CCAST(dispatch_shared_info_t *, (volatile dispatch_shared_info_t *)sh);
+  }
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.ompt_callback_work) {
+    ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
+    ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
+    ompt_callbacks.ompt_callback(ompt_callback_work)(
+        ompt_work_sections, ompt_scope_begin, &(team_info->parallel_data),
+        &(task_info->task_data), 0, OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif
+  KMP_PUSH_PARTITIONED_TIMER(OMP_sections);
+
+  return active;
+}
+
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information
+@param global_tid  global thread number
+@param numberOfSections  number of sections in the 'sections' construct
+@return unsigned [from 0 to n) - number (id) of the section to execute next on
+this thread. n (or any other number not in range) - nothing to execute on this
+thread
+*/
+
+kmp_int32 __kmpc_next_section(ident_t *loc, kmp_int32 gtid,
+                              kmp_int32 numberOfSections) {
+
+  KMP_TIME_PARTITIONED_BLOCK(OMP_sections);
+
+  kmp_info_t *th = __kmp_threads[gtid];
+#ifdef KMP_DEBUG
+  kmp_team_t *team = th->th.th_team;
+#endif
+
+  KD_TRACE(1000, ("__kmp_dispatch_next: T#%d; number of sections:%d\n", gtid,
+                  numberOfSections));
+
+  // For serialized case we should not call this function:
+  KMP_DEBUG_ASSERT(!team->t.t_serialized);
+
+  dispatch_shared_info_template<kmp_int32> volatile *sh;
+
+  KMP_DEBUG_ASSERT(th->th.th_dispatch ==
+                   &th->th.th_team->t.t_dispatch[th->th.th_info.ds.ds_tid]);
+
+  KMP_DEBUG_ASSERT(!(th->th.th_dispatch->th_dispatch_pr_current));
+  sh = reinterpret_cast<dispatch_shared_info_template<kmp_int32> volatile *>(
+      th->th.th_dispatch->th_dispatch_sh_current);
+  KMP_DEBUG_ASSERT(sh);
+
+  kmp_int32 sectionIndex = 0;
+  bool moreSectionsToExecute = true;
+
+  // Find section to execute:
+  sectionIndex = test_then_inc<kmp_int32>((kmp_int32 *)&sh->u.s.iteration);
+  if (sectionIndex >= numberOfSections) {
+    moreSectionsToExecute = false;
+  }
+
+  // status == 0: no more sections to execute;
+  // OMPTODO: __kmpc_end_sections could be bypassed?
+  if (!moreSectionsToExecute) {
+    kmp_int32 num_done;
+
+    num_done = test_then_inc<kmp_int32>((kmp_int32 *)(&sh->u.s.num_done));
+
+    if (num_done == th->th.th_team_nproc - 1) {
+      /* NOTE: release this buffer to be reused */
+
+      KMP_MB(); /* Flush all pending memory write invalidates.  */
+
+      sh->u.s.num_done = 0;
+      sh->u.s.iteration = 0;
+
+      KMP_MB(); /* Flush all pending memory write invalidates.  */
+
+      sh->buffer_index += __kmp_dispatch_num_buffers;
+      KD_TRACE(100, ("__kmpc_next_section: T#%d change buffer_index:%d\n", gtid,
+                     sh->buffer_index));
+
+      KMP_MB(); /* Flush all pending memory write invalidates.  */
+
+    } // if
+
+    th->th.th_dispatch->th_deo_fcn = NULL;
+    th->th.th_dispatch->th_dxo_fcn = NULL;
+    th->th.th_dispatch->th_dispatch_sh_current = NULL;
+    th->th.th_dispatch->th_dispatch_pr_current = NULL;
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+    if (ompt_enabled.ompt_callback_dispatch) {
+      ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
+      ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
+      ompt_data_t instance = ompt_data_none;
+      instance.ptr = OMPT_GET_RETURN_ADDRESS(0);
+      ompt_callbacks.ompt_callback(ompt_callback_dispatch)(
+          &(team_info->parallel_data), &(task_info->task_data),
+          ompt_dispatch_section, instance);
+    }
+#endif
+    KMP_POP_PARTITIONED_TIMER();
+  }
+
+  return sectionIndex;
+}
+
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information
+@param global_tid  global thread number
+
+End of "sections" construct.
+Don't need to wait here: barrier is added separately when needed.
+*/
+void __kmpc_end_sections(ident_t *loc, kmp_int32 gtid) {
+
+  kmp_info_t *th = __kmp_threads[gtid];
+  int active = !th->th.th_team->t.t_serialized;
+
+  KD_TRACE(100, ("__kmpc_end_sections: T#%d called\n", gtid));
+
+  if (!active) {
+    // In active case call finalization is done in __kmpc_next_section
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+    if (ompt_enabled.ompt_callback_work) {
+      ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
+      ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
+      ompt_callbacks.ompt_callback(ompt_callback_work)(
+          ompt_work_sections, ompt_scope_end, &(team_info->parallel_data),
+          &(task_info->task_data), 0, OMPT_GET_RETURN_ADDRESS(0));
+    }
+#endif
+    KMP_POP_PARTITIONED_TIMER();
+  }
+
+  KD_TRACE(100, ("__kmpc_end_sections: T#%d returned\n", gtid));
+}
+
 template <typename T>
 static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
                                   kmp_int32 *plastiter, T *plower, T *pupper,
