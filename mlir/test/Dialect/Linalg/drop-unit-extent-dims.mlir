@@ -827,3 +827,23 @@ func.func @sparse_case(%arg0: tensor<8x8xf32, #CSR>, %arg1: tensor<8xf32>) -> te
 // CHECK-LABEL: func @sparse_case
 //  CHECK-NEXT:   linalg.init_tensor
 //  CHECK-NEXT:   linalg.generic
+
+// -----
+
+func.func @reduce_dispatch_0() -> tensor<4x2xf32> {
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = linalg.init_tensor [4, 2] : tensor<4x2xf32>
+  %res = scf.foreach_thread (%arg0, %arg1) in (%c4, %c2) -> (tensor<4x2xf32>) {
+    %1 = linalg.init_tensor [1, 1] : tensor<1x1xf32>
+    %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<1x1xf32>) -> tensor<1x1xf32>
+    scf.foreach_thread.perform_concurrently {
+      //      CHECK: tensor.parallel_insert_slice %{{[0-9a-z]*}} into %{{[0-9a-z]*}}
+      // CHECK-SAME: [%{{.*}}, %{{.*}}] [1, 1] [1, 1] : tensor<f32> into tensor<4x2xf32>
+      tensor.parallel_insert_slice %2 into %0[%arg0, %arg1] [1, 1] [1, 1] :
+        tensor<1x1xf32> into tensor<4x2xf32>
+    }
+  }  
+  return %res: tensor<4x2xf32>
+}
