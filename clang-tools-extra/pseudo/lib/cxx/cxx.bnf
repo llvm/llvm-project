@@ -287,7 +287,7 @@ labeled-statement := IDENTIFIER : statement
 labeled-statement := CASE constant-expression : statement
 labeled-statement := DEFAULT : statement
 expression-statement := expression_opt ;
-compound-statement := { statement-seq_opt }
+compound-statement := { statement-seq_opt [recover=Brackets] }
 statement-seq := statement
 statement-seq := statement-seq statement
 selection-statement := IF CONSTEXPR_opt ( init-statement_opt condition ) statement
@@ -458,7 +458,9 @@ initializer-clause := assignment-expression
 initializer-clause := braced-init-list
 #! Allow mixed designated/non-designated init-list.
 # This is standard C, and accepted by clang and others as an extension.
-braced-init-list := { initializer-list ,_opt }
+# FIXME: Decouple recovery from is-there-a-trailing-comma!
+braced-init-list := { initializer-list [recover=Brackets] }
+braced-init-list := { initializer-list , }
 braced-init-list := { }
 initializer-list := initializer-list-item
 initializer-list := initializer-list , initializer-list-item
@@ -533,7 +535,7 @@ global-module-fragment := module-keyword ; declaration-seq_opt
 private-module-fragment := module-keyword : PRIVATE ; declaration-seq_opt
 
 # gram.class
-class-specifier := class-head { member-specification_opt }
+class-specifier := class-head { member-specification_opt [recover=Brackets] }
 class-head := class-key class-head-name class-virt-specifier_opt base-clause_opt
 class-head := class-key base-clause_opt
 class-head-name := nested-name-specifier_opt class-name

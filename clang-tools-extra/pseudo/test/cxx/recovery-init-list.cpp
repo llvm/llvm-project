@@ -1,4 +1,4 @@
-// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest | FileCheck %s
+// RUN: clang-pseudo -grammar=cxx -source=%s --print-forest | FileCheck %s
 auto x = { complete garbage };
 // CHECK:      translation-unit~simple-declaration
 // CHECK-NEXT: ├─decl-specifier-seq~AUTO := tok[0]
