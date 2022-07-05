@@ -2153,8 +2153,9 @@ Type SubViewOp::inferRankReducedResultType(ArrayRef<int64_t> resultShape,
   auto inferredType =
       inferResultType(sourceRankedTensorType, offsets, sizes, strides)
           .cast<MemRefType>();
-  assert(inferredType.getRank() >= resultShape.size() && "expected ");
-  if (inferredType.getRank() == resultShape.size())
+  assert(inferredType.getRank() >= static_cast<int64_t>(resultShape.size()) &&
+         "expected ");
+  if (inferredType.getRank() == static_cast<int64_t>(resultShape.size()))
     return inferredType;
 
   // Compute which dimensions are dropped.
