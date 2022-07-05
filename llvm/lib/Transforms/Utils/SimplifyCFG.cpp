@@ -1505,6 +1505,10 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
     if (I1->isTerminator())
       goto HoistTerminator;
 
+    // Hoisting token-returning instructions would obscure the origin.
+    if (I1->getType()->isTokenTy())
+      return Changed;
+
     // If we're going to hoist a call, make sure that the two instructions we're
     // commoning/hoisting are both marked with musttail, or neither of them is
     // marked as such. Otherwise, we might end up in a situation where we hoist
