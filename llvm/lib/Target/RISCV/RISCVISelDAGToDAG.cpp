@@ -43,10 +43,13 @@ namespace RISCV {
 } // namespace llvm
 
 void RISCVDAGToDAGISel::PreprocessISelDAG() {
-  for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
-                                       E = CurDAG->allnodes_end();
-       I != E;) {
-    SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
+  SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
+
+  bool MadeChange = false;
+  while (Position != CurDAG->allnodes_begin()) {
+    SDNode *N = &*--Position;
+    if (N->use_empty())
+      continue;
 
     // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
     // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
@@ -59,10 +62,8 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
       SDValue Result = CurDAG->getNode(Opc, DL, VT, CurDAG->getUNDEF(VT),
                                        N->getOperand(0), VL);
 
-      --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
-      ++I;
-      CurDAG->DeleteNode(N);
+      MadeChange = true;
       continue;
     }
 
@@ -117,18 +118,12 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
         ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MVT::i64, MPI, Align(8),
         MachineMemOperand::MOLoad);
 
-    // We're about to replace all uses of the SPLAT_VECTOR_SPLIT_I64 with the
-    // vlse we created.  This will cause general havok on the dag because
-    // anything below the conversion could be folded into other existing nodes.
-    // To avoid invalidating 'I', back it up to the convert node.
-    --I;
     CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
-
-    // Now that we did that, the node is dead.  Increment the iterator to the
-    // next node to process, then delete N.
-    ++I;
-    CurDAG->DeleteNode(N);
+    MadeChange = true;
   }
+
+  if (MadeChange)
+    CurDAG->RemoveDeadNodes();
 }
 
 void RISCVDAGToDAGISel::PostprocessISelDAG() {
