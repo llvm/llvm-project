@@ -559,6 +559,9 @@
 // RUN: %clang -target arm -mcpu=cortex-m55 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M55 %s
 // CHECK-CORTEX-M55:  "-cc1"{{.*}} "-triple" "thumbv8.1m.main-{{.*}} "-target-cpu" "cortex-m55"
 
+// RUN: %clang -target arm -mcpu=cortex-m85 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M85 %s
+// CHECK-CORTEX-M85:  "-cc1"{{.*}} "-triple" "thumbv8.1m.main-{{.*}} "-target-cpu" "cortex-m85"
+
 // RUN: %clang -target arm -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEOVERSE-N2 %s
 // CHECK-NEOVERSE-N2: "-cc1"{{.*}} "-triple" "armv8.5a-{{.*}}" "-target-cpu" "neoverse-n2"
 

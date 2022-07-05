@@ -111,6 +111,7 @@ Changes to the ARM Backend
   Erratum 1655431. This is enabled by default when targeting either CPU.
 * Implemented generation of Windows SEH unwind information.
 * Switched the MinGW target to use SEH instead of DWARF for unwind information.
+* Added support for the Cortex-M85 CPU.
 
 Changes to the AVR Backend
 --------------------------

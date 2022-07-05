@@ -1450,6 +1450,13 @@ def : ProcessorModel<"cortex-m55", CortexM4Model,      [ARMv81mMainline,
                                                          HasMVEFloatOps,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
+def : ProcessorModel<"cortex-m85", CortexM7Model,       [ARMv81mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16,
+                                                         FeaturePACBTI,
+                                                         FeatureUseMISched,
+                                                         HasMVEFloatOps]>;
+
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
