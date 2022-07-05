@@ -51,75 +51,83 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
     if (N->use_empty())
       continue;
 
-    // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
-    // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
-    if (N->getOpcode() == ISD::SPLAT_VECTOR) {
+    SDValue Result;
+    switch (N->getOpcode()) {
+    case ISD::SPLAT_VECTOR: {
+      // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
+      // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
       MVT VT = N->getSimpleValueType(0);
       unsigned Opc =
           VT.isInteger() ? RISCVISD::VMV_V_X_VL : RISCVISD::VFMV_V_F_VL;
       SDLoc DL(N);
       SDValue VL = CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT());
-      SDValue Result = CurDAG->getNode(Opc, DL, VT, CurDAG->getUNDEF(VT),
-                                       N->getOperand(0), VL);
+      Result = CurDAG->getNode(Opc, DL, VT, CurDAG->getUNDEF(VT),
+                               N->getOperand(0), VL);
+      break;
+    }
+    case RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL: {
+      // Lower SPLAT_VECTOR_SPLIT_I64 to two scalar stores and a stride 0 vector
+      // load. Done after lowering and combining so that we have a chance to
+      // optimize this to VMV_V_X_VL when the upper bits aren't needed.
+      assert(N->getNumOperands() == 4 && "Unexpected number of operands");
+      MVT VT = N->getSimpleValueType(0);
+      SDValue Passthru = N->getOperand(0);
+      SDValue Lo = N->getOperand(1);
+      SDValue Hi = N->getOperand(2);
+      SDValue VL = N->getOperand(3);
+      assert(VT.getVectorElementType() == MVT::i64 && VT.isScalableVector() &&
+             Lo.getValueType() == MVT::i32 && Hi.getValueType() == MVT::i32 &&
+             "Unexpected VTs!");
+      MachineFunction &MF = CurDAG->getMachineFunction();
+      RISCVMachineFunctionInfo *FuncInfo =
+          MF.getInfo<RISCVMachineFunctionInfo>();
+      SDLoc DL(N);
+
+      // We use the same frame index we use for moving two i32s into 64-bit FPR.
+      // This is an analogous operation.
+      int FI = FuncInfo->getMoveF64FrameIndex(MF);
+      MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
+      const TargetLowering &TLI = CurDAG->getTargetLoweringInfo();
+      SDValue StackSlot =
+          CurDAG->getFrameIndex(FI, TLI.getPointerTy(CurDAG->getDataLayout()));
+
+      SDValue Chain = CurDAG->getEntryNode();
+      Lo = CurDAG->getStore(Chain, DL, Lo, StackSlot, MPI, Align(8));
+
+      SDValue OffsetSlot =
+          CurDAG->getMemBasePlusOffset(StackSlot, TypeSize::Fixed(4), DL);
+      Hi = CurDAG->getStore(Chain, DL, Hi, OffsetSlot, MPI.getWithOffset(4),
+                            Align(8));
+
+      Chain = CurDAG->getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
+
+      SDVTList VTs = CurDAG->getVTList({VT, MVT::Other});
+      SDValue IntID =
+          CurDAG->getTargetConstant(Intrinsic::riscv_vlse, DL, MVT::i64);
+      SDValue Ops[] = {Chain,
+                       IntID,
+                       Passthru,
+                       StackSlot,
+                       CurDAG->getRegister(RISCV::X0, MVT::i64),
+                       VL};
+
+      Result = CurDAG->getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
+                                           MVT::i64, MPI, Align(8),
+                                           MachineMemOperand::MOLoad);
+      break;
+    }
+    }
+
+    if (Result) {
+      LLVM_DEBUG(dbgs() << "RISCV DAG preprocessing replacing:\nOld:    ");
+      LLVM_DEBUG(N->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "\nNew: ");
+      LLVM_DEBUG(Result->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "\n");
 
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
       MadeChange = true;
-      continue;
     }
-
-    // Lower SPLAT_VECTOR_SPLIT_I64 to two scalar stores and a stride 0 vector
-    // load. Done after lowering and combining so that we have a chance to
-    // optimize this to VMV_V_X_VL when the upper bits aren't needed.
-    if (N->getOpcode() != RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL)
-      continue;
-
-    assert(N->getNumOperands() == 4 && "Unexpected number of operands");
-    MVT VT = N->getSimpleValueType(0);
-    SDValue Passthru = N->getOperand(0);
-    SDValue Lo = N->getOperand(1);
-    SDValue Hi = N->getOperand(2);
-    SDValue VL = N->getOperand(3);
-    assert(VT.getVectorElementType() == MVT::i64 && VT.isScalableVector() &&
-           Lo.getValueType() == MVT::i32 && Hi.getValueType() == MVT::i32 &&
-           "Unexpected VTs!");
-    MachineFunction &MF = CurDAG->getMachineFunction();
-    RISCVMachineFunctionInfo *FuncInfo = MF.getInfo<RISCVMachineFunctionInfo>();
-    SDLoc DL(N);
-
-    // We use the same frame index we use for moving two i32s into 64-bit FPR.
-    // This is an analogous operation.
-    int FI = FuncInfo->getMoveF64FrameIndex(MF);
-    MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
-    const TargetLowering &TLI = CurDAG->getTargetLoweringInfo();
-    SDValue StackSlot =
-        CurDAG->getFrameIndex(FI, TLI.getPointerTy(CurDAG->getDataLayout()));
-
-    SDValue Chain = CurDAG->getEntryNode();
-    Lo = CurDAG->getStore(Chain, DL, Lo, StackSlot, MPI, Align(8));
-
-    SDValue OffsetSlot =
-        CurDAG->getMemBasePlusOffset(StackSlot, TypeSize::Fixed(4), DL);
-    Hi = CurDAG->getStore(Chain, DL, Hi, OffsetSlot, MPI.getWithOffset(4),
-                          Align(8));
-
-    Chain = CurDAG->getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
-
-    SDVTList VTs = CurDAG->getVTList({VT, MVT::Other});
-    SDValue IntID =
-        CurDAG->getTargetConstant(Intrinsic::riscv_vlse, DL, MVT::i64);
-    SDValue Ops[] = {Chain,
-                     IntID,
-                     Passthru,
-                     StackSlot,
-                     CurDAG->getRegister(RISCV::X0, MVT::i64),
-                     VL};
-
-    SDValue Result = CurDAG->getMemIntrinsicNode(
-        ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MVT::i64, MPI, Align(8),
-        MachineMemOperand::MOLoad);
-
-    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
-    MadeChange = true;
   }
 
   if (MadeChange)
