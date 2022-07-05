@@ -5394,6 +5394,39 @@ static bool evaluateTypeTrait(Sema &S, TypeTrait Kind, SourceLocation KWLoc,
   return false;
 }
 
+namespace {
+void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
+                                SourceLocation KWLoc) {
+  TypeTrait Replacement;
+  switch (Kind) {
+    case UTT_HasNothrowAssign:
+    case UTT_HasNothrowMoveAssign:
+      Replacement = BTT_IsNothrowAssignable;
+      break;
+    case UTT_HasNothrowCopy:
+    case UTT_HasNothrowConstructor:
+      Replacement = TT_IsNothrowConstructible;
+      break;
+    case UTT_HasTrivialAssign:
+    case UTT_HasTrivialMoveAssign:
+      Replacement = BTT_IsTriviallyAssignable;
+      break;
+    case UTT_HasTrivialCopy:
+    case UTT_HasTrivialDefaultConstructor:
+    case UTT_HasTrivialMoveConstructor:
+      Replacement = TT_IsTriviallyConstructible;
+      break;
+    case UTT_HasTrivialDestructor:
+      Replacement = UTT_IsTriviallyDestructible;
+      break;
+    default:
+      return;
+  }
+  S.Diag(KWLoc, diag::warn_deprecated_builtin)
+    << getTraitSpelling(Kind) << getTraitSpelling(Replacement);
+}
+}
+
 ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
                                 ArrayRef<TypeSourceInfo *> Args,
                                 SourceLocation RParenLoc) {
@@ -5402,6 +5435,8 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
   if (Kind <= UTT_Last && !CheckUnaryTypeTraitTypeCompleteness(
                                *this, Kind, KWLoc, Args[0]->getType()))
     return ExprError();
+
+  DiagnoseBuiltinDeprecation(*this, Kind, KWLoc);
 
   bool Dependent = false;
   for (unsigned I = 0, N = Args.size(); I != N; ++I) {
