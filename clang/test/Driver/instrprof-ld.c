@@ -154,7 +154,7 @@
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-pc-win32 -fprofile-instr-generate \
-// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -resource-dir=%S/Inputs/resource_dir -fuse-ld=link \
 // RUN:   | FileCheck --check-prefix=CHECK-WINDOWS-I386 %s
 //
 // CHECK-WINDOWS-I386: "{{.*}}link{{(.exe)?}}"
@@ -162,7 +162,7 @@
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-pc-win32 -fprofile-instr-generate \
-// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -resource-dir=%S/Inputs/resource_dir -fuse-ld=link \
 // RUN:   | FileCheck --check-prefix=CHECK-WINDOWS-X86-64 %s
 //
 // CHECK-WINDOWS-X86-64: "{{.*}}link{{(.exe)?}}"
