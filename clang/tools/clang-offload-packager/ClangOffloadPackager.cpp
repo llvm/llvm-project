@@ -99,9 +99,14 @@ int main(int argc, const char **argv) {
             llvm::MemoryBuffer::getFileOrSTDIN(KeyAndValue.getValue());
         if (std::error_code EC = ObjectOrErr.getError())
           return reportError(errorCodeToError(EC));
+
+        // Clang uses the '.o' suffix for LTO bitcode.
+        if (identify_magic((*ObjectOrErr)->getBuffer()) == file_magic::bitcode)
+          ImageBinary.TheImageKind = object::IMG_Bitcode;
+        else
+          ImageBinary.TheImageKind = getImageKind(
+              sys::path::extension(KeyAndValue.getValue()).drop_front());
         ImageBinary.Image = std::move(*ObjectOrErr);
-        ImageBinary.TheImageKind = getImageKind(
-            sys::path::extension(KeyAndValue.getValue()).drop_front());
       } else if (Key == "kind") {
         ImageBinary.TheOffloadKind = getOffloadKind(KeyAndValue.getValue());
       } else {
