@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/CASReference.h"
 #include "llvm/CAS/TreeEntry.h"
+#include "llvm/CAS/TreeSchema.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h" // FIXME: Split out sys::fs::file_status.
 #include "llvm/Support/MemoryBuffer.h"
@@ -22,7 +23,6 @@ namespace llvm {
 namespace cas {
 
 class CASDB;
-class TreeProxy;
 
 /// Structure to facilitating building full tree hierarchies.
 class HierarchicalTreeBuilder {
@@ -80,7 +80,7 @@ public:
 
   /// Recursively create the trees implied by calls to \a push(), return the
   /// top-level \a CASID.
-  Expected<TreeHandle> create(CASDB &CAS);
+  Expected<ObjectHandle> create(CASDB &CAS);
 };
 
 } // namespace cas

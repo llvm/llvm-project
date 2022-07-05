@@ -14,7 +14,7 @@ CHECK-EMPTY-NOT: {{.}}
 RUN: llvm-cas --cas %t/cas --print-kind @%t/empty.casid |\
 RUN:   FileCheck %s -check-prefix CHECK-NO-KIND
 ### FIXME: Node ObjectKind with no reference is Blob kind in BuiltinCAS.
-CHECK-NO-KIND: node
+CHECK-NO-KIND: object
 
 # Make a complex object, which references existing ones. Reference a blob and
 # other objects, and reference one of them twice to be sure they don't get
@@ -33,8 +33,8 @@ RUN: llvm-cas --cas %t/cas --cat-node-data \
 RUN:   @%t/complex.casid | FileCheck %s -check-prefix COMPLEX-DATA
 RUN: llvm-cas --cas %t/cas --ls-node-refs @%t/complex.casid |\
 RUN:   FileCheck %t/complex.check
-COMPLEX-KIND: node
+COMPLEX-KIND: object
 COMPLEX-DATA: content
 
 RUN: not llvm-cas --cas  %t/cas --ls-tree @%t/complex.casid 2>&1 | FileCheck %s --check-prefix=CHECK-WRONG-TYPE
-CHECK-WRONG-TYPE: llvm-cas: ls-tree: wrong object kind
+CHECK-WRONG-TYPE: llvm-cas: ls-tree: not a tree object

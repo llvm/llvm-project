@@ -113,10 +113,10 @@ public:
                                                 SmallVectorImpl<char> &Storage);
 
   void trackNewAccesses() final;
-  Expected<TreeProxy> createTreeFromNewAccesses(
+  Expected<ObjectProxy> createTreeFromNewAccesses(
       llvm::function_ref<StringRef(const vfs::CachedDirectoryEntry &)>
           RemapPath) final;
-  Expected<TreeProxy> createTreeFromAllAccesses() final;
+  Expected<ObjectProxy> createTreeFromAllAccesses() final;
   std::unique_ptr<CachingOnDiskFileSystem::TreeBuilder>
   createTreeBuilder() final;
   Error pushCachedPath(const Twine &Path, TreeBuilder &State);
@@ -199,13 +199,12 @@ public:
   /// Get the contents of the file as a \p MemoryBuffer.
   ErrorOr<std::unique_ptr<MemoryBuffer>> getBuffer(const Twine &RequestedName,
                                                    int64_t, bool, bool) final {
-    Expected<AnyObjectHandle> Object = DB.loadObject(*Entry->getRef());
+    Expected<ObjectHandle> Object = DB.load(*Entry->getRef());
     if (!Object)
       return errorToErrorCode(Object.takeError());
-    NodeHandle Node = Object->get<NodeHandle>();
-    assert(DB.getNumRefs(Node) == 0 && "Expected a leaf node");
+    assert(DB.getNumRefs(*Object) == 0 && "Expected a leaf node");
     SmallString<256> Storage;
-    return MemoryBuffer::getMemBuffer(DB.getDataString(Node),
+    return MemoryBuffer::getMemBuffer(DB.getDataString(*Object),
                                       RequestedName.toStringRef(Storage));
   }
 
@@ -301,7 +300,6 @@ CachingOnDiskFileSystemImpl::makeDirectory(DirectoryEntry &Parent,
   return &Cache->makeDirectory(Parent, TreePath);
 }
 
-
 #if defined(HAVE_UNISTD_H)
 // FIXME: sink into llvm::sys::fs?
 #include <unistd.h>
@@ -336,7 +334,7 @@ Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeSymlinkTo(DirectoryEntry &Parent,
                                            StringRef TreePath,
                                            StringRef Target) {
-  Expected<NodeHandle> Node = DB.storeNodeFromString(None, Target);
+  Expected<ObjectHandle> Node = DB.storeFromString(None, Target);
   if (!Node)
     return Node.takeError();
   return &Cache->makeSymlink(Parent, TreePath, DB.getReference(*Node),
@@ -347,7 +345,7 @@ Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeFile(DirectoryEntry &Parent,
                                       StringRef TreePath, sys::fs::file_t F,
                                       sys::fs::file_status Status) {
-  Expected<NodeHandle> Node = DB.storeNodeFromOpenFile(F, Status);
+  Expected<ObjectHandle> Node = DB.storeFromOpenFile(F, Status);
   if (!Node)
     return Node.takeError();
 
@@ -408,7 +406,7 @@ CachingOnDiskFileSystemImpl::statusAndFileID(const Twine &Path,
   if (!StatusOrErr)
     return StatusOrErr.getError();
   if (Entry->isFile())
-    FileID = DB.getObjectID(*Entry->getRef());
+    FileID = DB.getID(*Entry->getRef());
   return StatusOrErr;
 }
 
@@ -645,13 +643,13 @@ void CachingOnDiskFileSystemImpl::trackNewAccesses() {
   TrackedAccesses->reserve(128); // Seed with a bit of runway.
 }
 
-static Expected<TreeProxy> toProxy(CASDB &CAS, Expected<TreeHandle> Tree) {
-  if (Tree)
-    return TreeProxy::load(CAS, *Tree);
-  return Tree.takeError();
+static Expected<ObjectProxy> toProxy(CASDB &CAS, Expected<ObjectHandle> Node) {
+  if (Node)
+    return ObjectProxy::load(CAS, *Node);
+  return Node.takeError();
 }
 
-Expected<TreeProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
+Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
     llvm::function_ref<StringRef(const vfs::CachedDirectoryEntry &)>
         RemapPath) {
   Optional<DenseSet<const DirectoryEntry *>> MaybeTrackedAccesses;
@@ -661,8 +659,9 @@ Expected<TreeProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
     TrackedAccesses = None;
   }
 
+  TreeSchema Schema(DB);
   if (!MaybeTrackedAccesses || MaybeTrackedAccesses->empty())
-    return toProxy(DB, DB.createTree());
+    return Schema.create();
 
   HierarchicalTreeBuilder Builder;
   for (const DirectoryEntry *Entry : *MaybeTrackedAccesses) {
@@ -679,7 +678,7 @@ Expected<TreeProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
   return toProxy(DB, Builder.create(DB));
 }
 
-Expected<TreeProxy> CachingOnDiskFileSystemImpl::createTreeFromAllAccesses() {
+Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromAllAccesses() {
   std::unique_ptr<CachingOnDiskFileSystem::TreeBuilder> Builder =
       createTreeBuilder();
 
@@ -688,7 +687,7 @@ Expected<TreeProxy> CachingOnDiskFileSystemImpl::createTreeFromAllAccesses() {
   // FIXME: don't know if we want this push to be recursive...
   if (Error E = Builder->push("/"))
     return std::move(E);
-  return toProxy(DB, Builder->create());
+  return Builder->create();
 }
 
 DiscoveryInstanceImpl::DiscoveryInstanceImpl(
@@ -792,7 +791,7 @@ public:
   /// error; the symlink will be added without the target.
   Error push(const Twine &Path) final;
 
-  Expected<TreeProxy> create() final {
+  Expected<ObjectProxy> create() final {
     return toProxy(FS.getCAS(), Builder.create(FS.getCAS()));
   }
 

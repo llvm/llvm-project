@@ -51,9 +51,9 @@ static size_t getPageSize() {
   return PageSize;
 }
 
-Expected<NodeHandle>
-BuiltinCAS::storeNodeFromOpenFileImpl(sys::fs::file_t FD,
-                                      Optional<sys::fs::file_status> Status) {
+Expected<ObjectHandle>
+BuiltinCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
+                                  Optional<sys::fs::file_status> Status) {
   int PageSize = getPageSize();
 
   if (!Status) {
@@ -63,12 +63,12 @@ BuiltinCAS::storeNodeFromOpenFileImpl(sys::fs::file_t FD,
   }
 
   constexpr size_t MinMappedSize = 4 * 4096;
-  auto readWithStream = [&]() -> Expected<NodeHandle> {
+  auto readWithStream = [&]() -> Expected<ObjectHandle> {
     // FIXME: MSVC: SmallString<MinMappedSize * 2>
     SmallString<4 * 4096 * 2> Data;
     if (Error E = sys::fs::readNativeFileToEOF(FD, Data, MinMappedSize))
       return std::move(E);
-    return storeNode(None, makeArrayRef(Data.data(), Data.size()));
+    return store(None, makeArrayRef(Data.data(), Data.size()));
   };
 
   // Check whether we can trust the size from stat.
@@ -91,29 +91,19 @@ BuiltinCAS::storeNodeFromOpenFileImpl(sys::fs::file_t FD,
   // so we need to check for an actual null character at the end.
   ArrayRef<char> Data(Map.data(), Map.size());
   HashType ComputedHash =
-      BuiltinObjectHasher<HasherT>::hashNode(*this, None, Data);
+      BuiltinObjectHasher<HasherT>::hashObject(*this, None, Data);
   if (!isAligned(Align(PageSize), Data.size()) && Data.end()[0] == 0)
-    return storeNodeFromNullTerminatedRegion(ComputedHash, std::move(Map));
-  return storeNodeImpl(ComputedHash, None, Data);
+    return storeFromNullTerminatedRegion(ComputedHash, std::move(Map));
+  return storeImpl(ComputedHash, None, Data);
 }
 
-Expected<TreeHandle> BuiltinCAS::storeTree(ArrayRef<NamedTreeEntry> Entries) {
-  // Ensure a stable order for tree entries and ignore name collisions.
-  SmallVector<NamedTreeEntry> Sorted(Entries.begin(), Entries.end());
-  std::stable_sort(Sorted.begin(), Sorted.end());
-  Sorted.erase(std::unique(Sorted.begin(), Sorted.end()), Sorted.end());
-
-  return storeTreeImpl(BuiltinObjectHasher<HasherT>::hashTree(*this, Sorted),
-                       Sorted);
+Expected<ObjectHandle> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,
+                                         ArrayRef<char> Data) {
+  return storeImpl(BuiltinObjectHasher<HasherT>::hashObject(*this, Refs, Data),
+                   Refs, Data);
 }
 
-Expected<NodeHandle> BuiltinCAS::storeNode(ArrayRef<ObjectRef> Refs,
-                                           ArrayRef<char> Data) {
-  return storeNodeImpl(
-      BuiltinObjectHasher<HasherT>::hashNode(*this, Refs, Data), Refs, Data);
-}
-
-uint64_t BuiltinCAS::readDataImpl(NodeHandle Node, raw_ostream &OS,
+uint64_t BuiltinCAS::readDataImpl(ObjectHandle Node, raw_ostream &OS,
                                   uint64_t Offset, uint64_t MaxBytes) const {
   ArrayRef<char> Data = getDataConst(Node);
   assert(Offset < Data.size() && "Expected valid offset");
@@ -122,40 +112,26 @@ uint64_t BuiltinCAS::readDataImpl(NodeHandle Node, raw_ostream &OS,
   return Data.size();
 }
 
-Error BuiltinCAS::validateObject(const CASID &ID) {
-  auto Handle = loadObject(ID);
+Error BuiltinCAS::validate(const CASID &ID) {
+  auto Handle = load(ID);
   if (!Handle)
     return Handle.takeError();
 
   if (!*Handle)
     return createUnknownObjectError(ID);
 
-  if (auto Node = (*Handle)->dyn_cast<NodeHandle>()) {
-    auto Proxy = NodeProxy::load(*this, *Node);
-    SmallVector<ObjectRef> Refs;
-    if (auto E = Proxy.forEachReference([&](ObjectRef Ref) -> Error {
-          Refs.push_back(Ref);
-          return Error::success();
-        }))
-      return E;
+  auto Proxy = ObjectProxy::load(*this, **Handle);
+  SmallVector<ObjectRef> Refs;
+  if (auto E = Proxy.forEachReference([&](ObjectRef Ref) -> Error {
+        Refs.push_back(Ref);
+        return Error::success();
+      }))
+    return E;
 
-    ArrayRef<char> Data(Proxy.getData().data(), Proxy.getData().size());
-    auto Hash = BuiltinObjectHasher<HasherT>::hashNode(*this, Refs, Data);
-    if (!ID.getHash().equals(Hash))
-      return createCorruptObjectError(ID);
-  } else if (auto Tree = (*Handle)->dyn_cast<TreeHandle>()) {
-    auto Proxy = TreeProxy::load(*this, *Tree);
-    SmallVector<NamedTreeEntry> Entries;
-    if (auto E = Proxy.forEachEntry([&](NamedTreeEntry Entry) -> Error {
-          Entries.push_back(Entry);
-          return Error::success();
-        }))
-      return E;
-    auto Hash = BuiltinObjectHasher<HasherT>::hashTree(*this, Entries);
-    if (!ID.getHash().equals(Hash))
-      return createCorruptObjectError(ID);
-  } else
-    return createWrongKindError(ID);
+  ArrayRef<char> Data(Proxy.getData().data(), Proxy.getData().size());
+  auto Hash = BuiltinObjectHasher<HasherT>::hashObject(*this, Refs, Data);
+  if (!ID.getHash().equals(Hash))
+    return createCorruptObjectError(ID);
 
   return Error::success();
 }
