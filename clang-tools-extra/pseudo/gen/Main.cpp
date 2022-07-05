@@ -79,6 +79,14 @@ int main(int argc, char *argv[]) {
 
   switch (Emit) {
   case EmitSymbolList:
+    Out.os() << R"cpp(
+#ifndef NONTERMINAL
+#define NONTERMINAL(X, Y)
+#endif
+#ifndef EXTENSION
+#define EXTENSION(X, Y)
+#endif
+    )cpp";
     for (clang::pseudo::SymbolID ID = 0; ID < G.table().Nonterminals.size();
          ++ID) {
       std::string Name = G.symbolName(ID).str();
@@ -86,6 +94,16 @@ int main(int argc, char *argv[]) {
       std::replace(Name.begin(), Name.end(), '-', '_');
       Out.os() << llvm::formatv("NONTERMINAL({0}, {1})\n", Name, ID);
     }
+    for (clang::pseudo::ExtensionID EID = 1 /*skip the sentinel 0 value*/;
+         EID < G.table().AttributeValues.size(); ++EID) {
+      llvm::StringRef Name = G.table().AttributeValues[EID];
+      assert(!Name.empty());
+      Out.os() << llvm::formatv("EXTENSION({0}, {1})\n", Name, EID);
+    }
+    Out.os() << R"cpp(
+#undef NONTERMINAL
+#undef EXTENSION
+    )cpp";
     break;
   case EmitGrammarContent:
     for (llvm::StringRef Line : llvm::split(GrammarText, '\n')) {

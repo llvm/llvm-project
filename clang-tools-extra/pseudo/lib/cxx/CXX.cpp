@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-pseudo/cxx/CXX.h"
+#include "clang-pseudo/Forest.h"
 #include "clang-pseudo/Language.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/grammar/LRTable.h"
@@ -19,6 +20,26 @@ namespace {
 static const char *CXXBNF =
 #include "CXXBNF.inc"
     ;
+
+bool guardOverride(llvm::ArrayRef<const ForestNode *> RHS,
+                   const TokenStream &Tokens) {
+  assert(RHS.size() == 1 &&
+         RHS.front()->symbol() == tokenSymbol(clang::tok::identifier));
+  return Tokens.tokens()[RHS.front()->startTokenIndex()].text() == "override";
+}
+bool guardFinal(llvm::ArrayRef<const ForestNode *> RHS,
+                const TokenStream &Tokens) {
+  assert(RHS.size() == 1 &&
+         RHS.front()->symbol() == tokenSymbol(clang::tok::identifier));
+  return Tokens.tokens()[RHS.front()->startTokenIndex()].text() == "final";
+}
+
+llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
+  return llvm::DenseMap<ExtensionID, RuleGuard>(
+      {{(ExtensionID)Extension::Override, guardOverride},
+       {(ExtensionID)Extension::Final, guardFinal}});
+}
+
 } // namespace
 
 const Language &getLanguage() {
@@ -27,10 +48,8 @@ const Language &getLanguage() {
     auto G = Grammar::parseBNF(CXXBNF, Diags);
     assert(Diags.empty());
     LRTable Table = LRTable::buildSLR(G);
-    const Language *PL = new Language{
-        std::move(G),
-        std::move(Table),
-    };
+    const Language *PL =
+        new Language{std::move(G), std::move(Table), buildGuards()};
     return *PL;
   }();
   return CXXLanguage;
