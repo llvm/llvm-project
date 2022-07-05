@@ -269,17 +269,13 @@ define void @test_multiple_threadable_preds_with_phi(i1 %cond1, i1 %cond2) {
 ; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[IF1:%.*]], label [[IF2:%.*]]
 ; CHECK:       if1:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF3_CRITEDGE1:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF3_CRITEDGE:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if2:
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 [[COND2]], label [[IF3_CRITEDGE:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[IF3_CRITEDGE]], label [[EXIT]]
 ; CHECK:       if3.critedge:
-; CHECK-NEXT:    call void @use.i32(i32 2)
-; CHECK-NEXT:    br label [[IF3:%.*]]
-; CHECK:       if3.critedge1:
-; CHECK-NEXT:    call void @use.i32(i32 1)
-; CHECK-NEXT:    br label [[IF3]]
-; CHECK:       if3:
+; CHECK-NEXT:    [[PHI_PH:%.*]] = phi i32 [ 2, [[IF2]] ], [ 1, [[IF1]] ]
+; CHECK-NEXT:    call void @use.i32(i32 [[PHI_PH]])
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -305,5 +301,60 @@ if3:
   br label %exit
 
 exit:
+  ret void
+}
+
+; This test case used to infinite loop.
+
+define void @infloop(i1 %cmp.a, i1 %cmp.b, i1 %cmp.c) {
+; CHECK-LABEL: @infloop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
+; CHECK:       while.cond:
+; CHECK-NEXT:    br i1 [[CMP_A:%.*]], label [[FOR:%.*]], label [[WHILE_BODY_THREAD:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 [[CMP_B:%.*]], label [[WHILE_BODY:%.*]], label [[FOR_BODY:%.*]]
+; CHECK:       for:
+; CHECK-NEXT:    tail call void @foo()
+; CHECK-NEXT:    br label [[FOR_BODY]]
+; CHECK:       while.body:
+; CHECK-NEXT:    br i1 [[CMP_C:%.*]], label [[C_EXIT:%.*]], label [[LAND:%.*]]
+; CHECK:       while.body.thread:
+; CHECK-NEXT:    br i1 [[CMP_C]], label [[WHILE_BODY_THREAD]], label [[LAND]]
+; CHECK:       land:
+; CHECK-NEXT:    tail call void @bar()
+; CHECK-NEXT:    br label [[WHILE_COND]]
+; CHECK:       c.exit:
+; CHECK-NEXT:    br i1 [[CMP_A]], label [[FOR_D:%.*]], label [[WHILE_BODY_THREAD]]
+; CHECK:       for.d:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %while.cond
+
+while.cond:                                       ; preds = %land, %while.body.thread, %entry
+  br i1 %cmp.a, label %for, label %while.body.thread
+
+for.body:                                         ; preds = %for, %for.body
+  br i1 %cmp.b, label %while.body, label %for.body
+
+for:                                              ; preds = %while.cond
+  tail call void @foo()
+  br label %for.body
+
+while.body:                                       ; preds = %for.body
+  br i1 %cmp.c, label %c.exit, label %land
+
+while.body.thread:                                ; preds = %c.exit, %while.cond
+  br i1 %cmp.c, label %while.cond, label %land
+
+land:                                             ; preds = %while.body.thread, %while.body
+  tail call void @bar()
+  br label %while.cond
+
+c.exit:                                           ; preds = %while.body
+  br i1 %cmp.a, label %for.d, label %while.cond
+
+for.d:                                            ; preds = %c.exit
   ret void
 }
