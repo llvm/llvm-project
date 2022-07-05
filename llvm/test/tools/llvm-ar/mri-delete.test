@@ -1,20 +1,168 @@
-RUN: yaml2obj %S/Inputs/elf.yaml -o %t.o
-RUN: rm -f %t.ar
+# RUN: rm -rf %t && split-file %s %t
+# RUN: cd %t
 
-RUN: echo "create %t.ar;comment" > %t.mri
-RUN: echo "addmod %t.o * comment" >> %t.mri
-RUN: echo "; comment" >> %t.mri
-RUN: echo " ;comment" >> %t.mri
-RUN: echo "* comment" >> %t.mri
-RUN: echo " *comment" >> %t.mri
-RUN: echo "" >> %t.mri
-RUN: echo " " >> %t.mri
-RUN: echo "addmod %S/Inputs/elf.yaml" >> %t.mri
-RUN: echo "delete %t.o" >> %t.mri
-RUN: echo " save" >> %t.mri
-RUN: echo "end" >> %t.mri
+# RUN: yaml2obj %S/Inputs/elf.yaml -o elf.o
+# RUN: llvm-ar -rc elf.a elf.o text.txt
+# RUN: llvm-ar -rc --thin thin-elf.a elf.o text.txt
 
-RUN: llvm-ar -M < %t.mri
-RUN: llvm-ar tv %t.ar | FileCheck %s
+## Basic delete.
+# RUN: llvm-ar -M < delete.mri
+# RUN: llvm-ar tv delete.ar | FileCheck %s --check-prefixes=DELETE --implicit-check-not=elf.o
 
-CHECK-NOT: mri-delete.test{{.*}}.o
+# DELETE: text.txt
+
+## Delete so the archive is empty.
+# RUN: llvm-ar -M < empty.mri
+# RUN: llvm-ar tv empty.ar | FileCheck %s --check-prefixes=EMPTY --allow-empty
+
+# EMPTY-NOT: elf.o
+
+## Attempt to delete a file that is not in the archive.
+# RUN: llvm-ar -M < bad.mri
+# RUN: llvm-ar tv bad.ar | FileCheck %s --check-prefixes=BOTH
+
+## Delete operation in a script with comments.
+# RUN: llvm-ar -M < comment.mri
+# RUN: llvm-ar tv comment.ar | FileCheck %s --check-prefixes=DELETE --implicit-check-not=elf.o
+
+## Add a file that has been deleted.
+# RUN: llvm-ar -M < re-add.mri
+# RUN: llvm-ar tv re-add.ar | FileCheck %s --check-prefixes=BOTH
+
+# BOTH-DAG: text.txt
+# BOTH-DAG: elf.o
+
+## Add the same file twice and delete them. It is expected behaviour
+## that one delete command deletes all matching members.
+# RUN: llvm-ar -M < duplicate.mri
+# RUN: llvm-ar tv duplicate.ar | FileCheck %s --check-prefixes=DELETE --implicit-check-not=elf.o
+
+## Add and delete the same file twice.
+# RUN: llvm-ar -M < duplicate-re-add.mri
+# RUN: llvm-ar tv duplicate-re-add.ar | FileCheck %s --check-prefixes=DELETE --implicit-check-not=elf.o
+
+## Attempt to delete the same file twice.
+# RUN: llvm-ar -M < extra-delete.mri
+# RUN: llvm-ar tv extra-delete.ar | FileCheck %s --check-prefixes=DELETE --implicit-check-not=elf.o
+
+## Add the same file to a thin archive twice.
+# RUN: llvm-ar -M < thin-duplicate.mri
+# RUN: llvm-ar tv thin-duplicate.ar | FileCheck %s --check-prefixes=DELETE --implicit-check-not=elf.o
+
+## Delete a file after it was added via ADDLIB.
+# RUN: llvm-ar -M < addlib.mri
+# RUN: llvm-ar tv addlib.ar | FileCheck %s --check-prefixes=DELETE --implicit-check-not=elf.o
+
+## Attempt to delete an archive after it was added via ADDLIB.
+# RUN: llvm-ar -M < addlib-deletelib.mri
+# RUN: llvm-ar tv addlib-deletelib.ar | FileCheck %s --check-prefixes=BOTH
+
+## Add the same archive twice to a thin archive and then delete some members.
+# RUN: llvm-ar -M < addlib-thin-duplicate.mri
+# RUN: llvm-ar tv addlib-thin-duplicate.ar | FileCheck %s --check-prefixes=DELETE --implicit-check-not=elf.o
+
+#--- text.txt
+I AM A TEXT FILE
+
+#--- delete.mri
+create delete.ar
+addmod text.txt
+addmod elf.o
+delete elf.o
+save
+end
+
+#--- empty.mri
+create empty.ar
+addmod elf.o
+delete elf.o
+save
+end
+
+#--- bad.mri
+create bad.ar
+addmod text.txt
+addmod elf.o
+delete bad.o
+save
+end
+
+#--- comment.mri
+create comment.ar
+addmod elf.o
+; comment
+addmod text.txt
+ ;comment
+delete elf.o
+* comment
+save
+ *comment
+end
+
+#--- re-add.mri
+create re-add.ar
+addmod elf.o
+addmod text.txt
+delete elf.o
+addmod elf.o
+save
+end
+
+#--- duplicate.mri
+create duplicate.ar
+addmod elf.o
+addmod elf.o
+addmod text.txt
+delete elf.o
+save
+end
+
+#--- duplicate-re-add.mri
+create duplicate-re-add.ar
+addmod elf.o
+delete elf.o
+addmod text.txt
+addmod elf.o
+delete elf.o
+save
+end
+
+#--- extra-delete.mri
+create extra-delete.ar
+addmod elf.o
+addmod text.txt
+delete elf.o
+delete elf.o
+save
+end
+
+#--- thin-duplicate.mri
+createthin thin-duplicate.ar
+addmod elf.o
+addmod elf.o
+addmod text.txt
+delete elf.o
+save
+end
+
+#--- addlib.mri
+create addlib.ar
+addlib elf.a
+delete elf.o
+save
+end
+
+#--- addlib-deletelib.mri
+create addlib-deletelib.ar
+addlib elf.a
+delete elf.a
+save
+end
+
+#--- addlib-thin-duplicate.mri
+createthin addlib-thin-duplicate.ar
+addlib thin-elf.a
+addlib thin-elf.a
+delete elf.o
+save
+end
