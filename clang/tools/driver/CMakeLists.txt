@@ -64,12 +64,14 @@ endif()
 add_dependencies(clang clang-resource-headers)
 
 if(NOT CLANG_LINKS_TO_CREATE)
-  set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp clang-cache)
+  set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp)
 endif()
 
 foreach(link ${CLANG_LINKS_TO_CREATE})
   add_clang_symlink(${link} clang)
 endforeach()
+# Adding `clang-cache` tool as a symlink to clang.
+add_clang_symlink(clang-cache clang)
 
 # Configure plist creation for OS X.
 set (TOOL_INFO_PLIST "Info.plist" CACHE STRING "Plist name")
