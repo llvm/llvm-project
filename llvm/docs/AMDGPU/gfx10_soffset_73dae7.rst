@@ -5,15 +5,17 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx10_soffset_c40a5a:
+.. _amdgpu_synid_gfx10_soffset_73dae7:
 
 soffset
 =======
 
-An offset added to the base address to get memory address.
+An offset from the base address.
 
 * If offset is specified as a register, it supplies an unsigned byte offset.
 * If offset is specified as a 21-bit immediate, it supplies a signed byte offset.
+
+Note that an *immediate* offset may be specified using either :ref:`simm21<amdgpu_synid_simm21>` operand or :ref:`offset21s<amdgpu_synid_smem_offset21s>` modifier, but not both.
 
 *Size:* 1 dword.
 

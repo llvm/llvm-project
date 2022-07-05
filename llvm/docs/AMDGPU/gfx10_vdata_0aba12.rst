@@ -5,13 +5,17 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx10_vdst_5d50a1:
+.. _amdgpu_synid_gfx10_vdata_0aba12:
 
-vdst
-====
+vdata
+=====
 
-Instruction output: data read from a memory buffer.
+Input data for an atomic instruction.
 
-*Size:* 1 dword by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
+Optionally may serve as an output data:
+
+* If :ref:`glc<amdgpu_synid_glc>` is specified, gets the memory value before the operation.
+
+*Size:* 1 dword.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`
