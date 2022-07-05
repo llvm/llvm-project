@@ -495,9 +495,9 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], 0, /*EnableClamp=*
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins FI:$fi));
   let InsDPP8 = (ins DstRCDPP:$old,
-                    Src0DPP:$src0,
-                    Src1DPP:$src1,
-                   dpp8:$dpp8, FI:$fi);
+                     Src0DPP:$src0,
+                     Src1DPP:$src1,
+                     dpp8:$dpp8, FI:$fi);
 
   let HasExt = 1;
   let HasExtDPP = 1;
