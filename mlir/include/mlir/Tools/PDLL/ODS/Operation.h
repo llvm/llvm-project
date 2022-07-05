@@ -22,6 +22,7 @@ namespace pdll {
 namespace ods {
 class AttributeConstraint;
 class TypeConstraint;
+class Dialect;
 
 //===----------------------------------------------------------------------===//
 // VariableLengthKind
