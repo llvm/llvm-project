@@ -214,6 +214,12 @@ int main(int argc, const char **argv) {
   InitLLVM x(argc, argv);
   sys::Process::UseANSIEscapeCodes(true);
 
+  if (::getenv("FORCE_LLD_DIAGNOSTICS_CRASH")) {
+    llvm::errs()
+        << "crashing due to environment variable FORCE_LLD_DIAGNOSTICS_CRASH\n";
+    LLVM_BUILTIN_TRAP;
+  }
+
   // Not running in lit tests, just take the shortest codepath with global
   // exception handling and no memory cleanup on exit.
   if (!inTestVerbosity())
