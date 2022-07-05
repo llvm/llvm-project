@@ -6592,6 +6592,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     InlineArg->render(Args, CmdArgs);
   }
 
+  Args.AddLastArg(CmdArgs, options::OPT_finline_max_stacksize_EQ);
+
   // FIXME: Find a better way to determine whether the language has modules
   // support by default, or just assume that all languages do.
   bool HaveModules =
