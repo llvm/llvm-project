@@ -83,10 +83,10 @@ unsigned PresburgerSpace::insertVar(VarKind kind, unsigned pos, unsigned num) {
   else
     numLocals += num;
 
-  // Insert NULL attachments if `usingAttachments` and variables inserted are
+  // Insert NULL identifiers if `usingIds` and variables inserted are
   // not locals.
-  if (usingAttachments && kind != VarKind::Local)
-    attachments.insert(attachments.begin() + absolutePos, num, nullptr);
+  if (usingIds && kind != VarKind::Local)
+    identifiers.insert(identifiers.begin() + absolutePos, num, nullptr);
 
   return absolutePos;
 }
@@ -108,33 +108,33 @@ void PresburgerSpace::removeVarRange(VarKind kind, unsigned varStart,
   else
     numLocals -= numVarsEliminated;
 
-  // Remove attachments if `usingAttachments` and variables removed are not
+  // Remove identifiers if `usingIds` and variables removed are not
   // locals.
-  if (usingAttachments && kind != VarKind::Local)
-    attachments.erase(attachments.begin() + getVarKindOffset(kind) + varStart,
-                      attachments.begin() + getVarKindOffset(kind) + varLimit);
+  if (usingIds && kind != VarKind::Local)
+    identifiers.erase(identifiers.begin() + getVarKindOffset(kind) + varStart,
+                      identifiers.begin() + getVarKindOffset(kind) + varLimit);
 }
 
 void PresburgerSpace::swapVar(VarKind kindA, VarKind kindB, unsigned posA,
                               unsigned posB) {
 
-  if (!usingAttachments)
+  if (!usingIds)
     return;
 
   if (kindA == VarKind::Local && kindB == VarKind::Local)
     return;
 
   if (kindA == VarKind::Local) {
-    atAttachment(kindB, posB) = nullptr;
+    atId(kindB, posB) = nullptr;
     return;
   }
 
   if (kindB == VarKind::Local) {
-    atAttachment(kindA, posA) = nullptr;
+    atId(kindA, posA) = nullptr;
     return;
   }
 
-  std::swap(atAttachment(kindA, posA), atAttachment(kindB, posB));
+  std::swap(atId(kindA, posA), atId(kindB, posB));
 }
 
 bool PresburgerSpace::isCompatible(const PresburgerSpace &other) const {
@@ -148,23 +148,23 @@ bool PresburgerSpace::isEqual(const PresburgerSpace &other) const {
 }
 
 bool PresburgerSpace::isAligned(const PresburgerSpace &other) const {
-  assert(isUsingAttachments() && other.isUsingAttachments() &&
-         "Both spaces should be using attachments to check for "
+  assert(isUsingIds() && other.isUsingIds() &&
+         "Both spaces should be using identifiers to check for "
          "alignment.");
-  return isCompatible(other) && attachments == other.attachments;
+  return isCompatible(other) && identifiers == other.identifiers;
 }
 
 bool PresburgerSpace::isAligned(const PresburgerSpace &other,
                                 VarKind kind) const {
-  assert(isUsingAttachments() && other.isUsingAttachments() &&
-         "Both spaces should be using attachments to check for "
+  assert(isUsingIds() && other.isUsingIds() &&
+         "Both spaces should be using identifiers to check for "
          "alignment.");
 
   ArrayRef<void *> kindAttachments =
-      makeArrayRef(attachments)
+      makeArrayRef(identifiers)
           .slice(getVarKindOffset(kind), getNumVarKind(kind));
   ArrayRef<void *> otherKindAttachments =
-      makeArrayRef(other.attachments)
+      makeArrayRef(other.identifiers)
           .slice(other.getVarKindOffset(kind), other.getNumVarKind(kind));
   return kindAttachments == otherKindAttachments;
 }
@@ -174,8 +174,8 @@ void PresburgerSpace::setVarSymbolSeperation(unsigned newSymbolCount) {
          "invalid separation position");
   numRange = numRange + numSymbols - newSymbolCount;
   numSymbols = newSymbolCount;
-  // We do not need to change `attachments` since the ordering of
-  // `attachments` remains same.
+  // We do not need to change `identifiers` since the ordering of
+  // `identifiers` remains same.
 }
 
 void PresburgerSpace::print(llvm::raw_ostream &os) const {
@@ -184,15 +184,14 @@ void PresburgerSpace::print(llvm::raw_ostream &os) const {
      << "Symbols: " << getNumSymbolVars() << ", "
      << "Locals: " << getNumLocalVars() << "\n";
 
-  if (usingAttachments) {
+  if (usingIds) {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    os << "TypeID of attachments: " << attachmentType.getAsOpaquePointer()
-       << "\n";
+    os << "TypeID of identifiers: " << idType.getAsOpaquePointer() << "\n";
 #endif
 
     os << "(";
-    for (void *attachment : attachments)
-      os << attachment << " ";
+    for (void *identifier : identifiers)
+      os << identifier << " ";
     os << ")\n";
   }
 }
