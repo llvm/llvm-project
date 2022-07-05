@@ -2041,15 +2041,62 @@ bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
 /// SHXADD we are trying to match.
 bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
                                        SDValue &Val) {
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1))) {
+    SDValue N0 = N.getOperand(0);
+
+    bool LeftShift = N0.getOpcode() == ISD::SHL;
+    if ((LeftShift || N0.getOpcode() == ISD::SRL) &&
+        isa<ConstantSDNode>(N0.getOperand(1))) {
+      uint64_t Mask = N.getConstantOperandVal(1);
+      unsigned C2 = N0.getConstantOperandVal(1);
+
+      unsigned XLen = Subtarget->getXLen();
+      if (LeftShift)
+        Mask &= maskTrailingZeros<uint64_t>(C2);
+      else
+        Mask &= maskTrailingOnes<uint64_t>(XLen - C2);
+
+      // Look for (and (shl y, c2), c1) where c1 is a shifted mask with no
+      // leading zeros and c3 trailing zeros. We can use an SRLI by c2+c3
+      // followed by a SHXADD with c3 for the X amount.
+      if (isShiftedMask_64(Mask)) {
+        unsigned Leading = XLen - (64 - countLeadingZeros(Mask));
+        unsigned Trailing = countTrailingZeros(Mask);
+        if (LeftShift && Leading == 0 && C2 < Trailing && Trailing == ShAmt) {
+          SDLoc DL(N);
+          EVT VT = N.getValueType();
+          Val = SDValue(CurDAG->getMachineNode(
+                            RISCV::SRLI, DL, VT, N0.getOperand(0),
+                            CurDAG->getTargetConstant(Trailing - C2, DL, VT)),
+                        0);
+          return true;
+        }
+        // Look for (and (shr y, c2), c1) where c1 is a shifted mask with c2
+        // leading zeros and c3 trailing zeros. We can use an SRLI by C3
+        // followed by a SHXADD using c3 for the X amount.
+        if (!LeftShift && Leading == C2 && Trailing == ShAmt) {
+          SDLoc DL(N);
+          EVT VT = N.getValueType();
+          Val = SDValue(
+              CurDAG->getMachineNode(
+                  RISCV::SRLI, DL, VT, N0.getOperand(0),
+                  CurDAG->getTargetConstant(Leading + Trailing, DL, VT)),
+              0);
+          return true;
+        }
+      }
+    }
+  }
+
   bool LeftShift = N.getOpcode() == ISD::SHL;
   if ((LeftShift || N.getOpcode() == ISD::SRL) &&
       isa<ConstantSDNode>(N.getOperand(1))) {
-    unsigned C1 = N.getConstantOperandVal(1);
     SDValue N0 = N.getOperand(0);
     if (N0.getOpcode() == ISD::AND && N0.hasOneUse() &&
         isa<ConstantSDNode>(N0.getOperand(1))) {
       uint64_t Mask = N0.getConstantOperandVal(1);
       if (isShiftedMask_64(Mask)) {
+        unsigned C1 = N.getConstantOperandVal(1);
         unsigned XLen = Subtarget->getXLen();
         unsigned Leading = XLen - (64 - countLeadingZeros(Mask));
         unsigned Trailing = countTrailingZeros(Mask);
