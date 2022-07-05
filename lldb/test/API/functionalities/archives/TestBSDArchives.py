@@ -58,3 +58,10 @@ class BSDArchivesTestCase(TestBase):
         self.expect("frame variable", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=['(int) arg = 2'])
         self.expect_var_path("__b_global", type="int", value="2")
+
+        # Test loading thin archives
+        archive_path = self.getBuildArtifact("libbar.a")
+        module_specs = lldb.SBModuleSpecList.GetModuleSpecifications(archive_path)
+        num_specs = module_specs.GetSize()
+        self.assertEqual(num_specs, 1)
+        self.assertEqual(module_specs.GetSpecAtIndex(0).GetObjectName(), "c.o")

@@ -162,6 +162,10 @@ if is_configured('dotest_args_str'):
 if is_configured('llvm_libs_dir'):
   dotest_cmd += ['--env', 'LLVM_LIBS_DIR=' + config.llvm_libs_dir]
 
+# This path may be needed to locate required llvm tools
+if is_configured('llvm_tools_dir'):
+  dotest_cmd += ['--env', 'LLVM_TOOLS_DIR=' + config.llvm_tools_dir]
+
 # Forward ASan-specific environment variables to tests, as a test may load an
 # ASan-ified dylib.
 for env_var in ('ASAN_OPTIONS', 'DYLD_INSERT_LIBRARIES'):
