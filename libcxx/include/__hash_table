@@ -178,16 +178,14 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
 
   template <class _Up>
   _LIBCPP_INLINE_VISIBILITY
-  static typename enable_if<__is_same_uncvref<_Up, __node_value_type>::value,
-      __container_value_type const&>::type
+  static __enable_if_t<__is_same_uncvref<_Up, __node_value_type>::value, __container_value_type const&>
   __get_value(_Up& __t) {
     return __t.__get_value();
   }
 
   template <class _Up>
   _LIBCPP_INLINE_VISIBILITY
-  static typename enable_if<__is_same_uncvref<_Up, __container_value_type>::value,
-      __container_value_type const&>::type
+  static __enable_if_t<__is_same_uncvref<_Up, __container_value_type>::value, __container_value_type const&>
   __get_value(_Up& __t) {
     return __t;
   }
@@ -1049,10 +1047,8 @@ public:
 
     template <class _First, class _Second>
     _LIBCPP_INLINE_VISIBILITY
-    typename enable_if<
-        __can_extract_map_key<_First, key_type, __container_value_type>::value,
-        pair<iterator, bool>
-    >::type __emplace_unique(_First&& __f, _Second&& __s) {
+    __enable_if_t<__can_extract_map_key<_First, key_type, __container_value_type>::value, pair<iterator, bool> >
+    __emplace_unique(_First&& __f, _Second&& __s) {
         return __emplace_unique_key_args(__f, _VSTD::forward<_First>(__f),
                                               _VSTD::forward<_Second>(__s));
     }
@@ -1096,9 +1092,7 @@ public:
       return __emplace_unique_key_args(_NodeTypes::__get_key(__x), _VSTD::move(__x));
     }
 
-    template <class _Pp, class = typename enable_if<
-            !__is_same_uncvref<_Pp, __container_value_type>::value
-        >::type>
+    template <class _Pp, class = __enable_if_t<!__is_same_uncvref<_Pp, __container_value_type>::value> >
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> __insert_unique(_Pp&& __x) {
       return __emplace_unique(_VSTD::forward<_Pp>(__x));

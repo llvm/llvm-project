@@ -310,7 +310,7 @@ template <class _Ep>
 inline _LIBCPP_INLINE_VISIBILITY
 void
 rethrow_if_nested(const _Ep& __e,
-                  typename enable_if< __can_dynamic_cast<_Ep, nested_exception>::value>::type* = 0)
+                  __enable_if_t< __can_dynamic_cast<_Ep, nested_exception>::value>* = 0)
 {
     const nested_exception* __nep = dynamic_cast<const nested_exception*>(_VSTD::addressof(__e));
     if (__nep)
@@ -321,7 +321,7 @@ template <class _Ep>
 inline _LIBCPP_INLINE_VISIBILITY
 void
 rethrow_if_nested(const _Ep&,
-                  typename enable_if<!__can_dynamic_cast<_Ep, nested_exception>::value>::type* = 0)
+                  __enable_if_t<!__can_dynamic_cast<_Ep, nested_exception>::value>* = 0)
 {
 }
 

@@ -438,12 +438,7 @@ operator>=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-typename enable_if
-<
-    _Size == 0 ||
-    __is_swappable<_Tp>::value,
-    void
->::type
+__enable_if_t<_Size == 0 || __is_swappable<_Tp>::value, void>
 swap(array<_Tp, _Size>& __x, array<_Tp, _Size>& __y)
                                   _NOEXCEPT_(noexcept(__x.swap(__y)))
 {
