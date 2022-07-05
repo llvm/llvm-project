@@ -42,7 +42,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <vector>
 
@@ -67,6 +66,11 @@ public:
   // StateID is only 13 bits wide.
   using StateID = uint16_t;
   static constexpr unsigned StateBits = 13;
+
+  struct Recovery {
+    RecoveryStrategy Strategy;
+    SymbolID Result;
+  };
 
   // Returns the state after we reduce a nonterminal.
   // Expected to be called by LR parsers.
@@ -103,6 +107,12 @@ public:
     assert(isNonterminal(Nonterminal));
     return FollowSets.test(tok::NUM_TOKENS * Nonterminal +
                            symbolToToken(Terminal));
+  }
+
+  // Looks up available recovery actions if we stopped parsing in this state.
+  llvm::ArrayRef<Recovery> getRecovery(StateID State) const {
+    return llvm::makeArrayRef(Recoveries.data() + RecoveryOffset[State],
+                              Recoveries.data() + RecoveryOffset[State + 1]);
   }
 
   // Returns the state from which the LR parser should start to parse the input
@@ -147,6 +157,8 @@ public:
     llvm::DenseMap<StateID, llvm::SmallSet<RuleID, 4>> Reduce;
     // FollowSets[NT] is the set of terminals that can follow the nonterminal.
     std::vector<llvm::DenseSet<SymbolID>> FollowSets;
+    // Recovery options available at each state.
+    std::vector<std::pair<StateID, Recovery>> Recoveries;
 
     LRTable build() &&;
   };
@@ -251,6 +263,11 @@ private:
   // This is flattened by encoding the (SymbolID Nonterminal, tok::Kind Token)
   // as an index: Nonterminal * NUM_TOKENS + Token.
   llvm::BitVector FollowSets;
+
+  // Recovery stores all recovery actions from all states.
+  // A given state has [RecoveryOffset[S], RecoveryOffset[S+1]).
+  std::vector<uint32_t> RecoveryOffset;
+  std::vector<Recovery> Recoveries;
 };
 
 } // namespace pseudo

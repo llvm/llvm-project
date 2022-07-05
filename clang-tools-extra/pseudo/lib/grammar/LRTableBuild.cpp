@@ -65,6 +65,25 @@ LRTable LRTable::Builder::build() && {
   }
   Table.ReduceOffset.push_back(Table.Reduces.size());
 
+  // Error recovery entries: sort (no dups already), and build offset lookup.
+  llvm::sort(Recoveries, [&](const auto &L, const auto &R) {
+    return std::tie(L.first, L.second.Result, L.second.Strategy) <
+           std::tie(R.first, R.second.Result, R.second.Strategy);
+  });
+  Table.Recoveries.reserve(Recoveries.size());
+  for (const auto &R : Recoveries)
+    Table.Recoveries.push_back({R.second.Strategy, R.second.Result});
+  Table.RecoveryOffset = std::vector<uint32_t>(NumStates + 1, 0);
+  unsigned SortedIndex = 0;
+  for (StateID State = 0; State < NumStates; ++State) {
+    Table.RecoveryOffset[State] = SortedIndex;
+    while (SortedIndex < Recoveries.size() &&
+           Recoveries[SortedIndex].first == State)
+      SortedIndex++;
+  }
+  Table.RecoveryOffset[NumStates] = SortedIndex;
+  assert(SortedIndex == Recoveries.size());
+
   return Table;
 }
 
@@ -74,6 +93,10 @@ LRTable LRTable::buildSLR(const Grammar &G) {
   Build.StartStates = Graph.startStates();
   for (const auto &T : Graph.edges())
     Build.Transition.try_emplace({T.Src, T.Label}, T.Dst);
+  for (const auto &Entry : Graph.recoveries())
+    Build.Recoveries.push_back(
+        {Entry.Src, Recovery{Entry.Strategy, Entry.Result}});
+  Build.FollowSets = followSets(G);
   assert(Graph.states().size() <= (1 << StateBits) &&
          "Graph states execceds the maximum limit!");
   // Add reduce actions.
