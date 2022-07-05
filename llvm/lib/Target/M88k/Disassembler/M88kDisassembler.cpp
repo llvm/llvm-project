@@ -167,10 +167,12 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   return MCDisassembler::Success;
 }
 
+#if 0 // Not yet used.
 static DecodeStatus decodeU5ImmOOperand(MCInst &Inst, uint64_t Imm,
                                         uint64_t Address, const void *Decoder) {
   return decodeUImmOperand<5>(Inst, Imm);
 }
+#endif
 
 static DecodeStatus decodeU5ImmOperand(MCInst &Inst, uint64_t Imm,
                                        uint64_t Address, const void *Decoder) {
@@ -193,11 +195,13 @@ static DecodeStatus decodeBitFieldOperand(MCInst &Inst, uint64_t Imm,
   return decodeUImmOperand<10>(Inst, Imm);
 }
 
+#if 0 // Not yet used.
 static DecodeStatus decodeBFWidthOperand(MCInst &Inst, uint64_t Imm,
                                          uint64_t Address,
                                          const void *Decoder) {
   return decodeUImmOperand<5>(Inst, Imm);
 }
+#endif
 
 static DecodeStatus decodeBFOffsetOperand(MCInst &Inst, uint64_t Imm,
                                           uint64_t Address,

@@ -34,7 +34,7 @@ public:
 };
 
 class M88kTargetELFStreamer : public M88kTargetStreamer {
-  const MCSubtargetInfo &STI;
+  //const MCSubtargetInfo &STI;
   MCStreamer &Streamer;
   bool Requires88110;
 

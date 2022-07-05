@@ -152,8 +152,8 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     Register FVal = MI.getOperand(3).getReg();
     LLT DstTy = MRI.getType(Dst);
     LLT TstTy = MRI.getType(Tst);
-    LLT TValTy = MRI.getType(TVal);
-    LLT FValy = MRI.getType(FVal);
+    //LLT TValTy = MRI.getType(TVal);
+    //LLT FValy = MRI.getType(FVal);
     if (TstTy != S1)
       return false;
     if (DstTy != S32 && DstTy != S64)

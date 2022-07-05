@@ -76,7 +76,7 @@ private:
   bool selectIntrinsic(MachineInstr &I, MachineBasicBlock &MBB,
                        MachineRegisterInfo &MRI);
 
-  const M88kTargetMachine &TM;
+  //const M88kTargetMachine &TM;
   const M88kInstrInfo &TII;
   const M88kRegisterInfo &TRI;
   const M88kRegisterBankInfo &RBI;
@@ -104,7 +104,7 @@ private:
 M88kInstructionSelector::M88kInstructionSelector(
     const M88kTargetMachine &TM, const M88kSubtarget &STI,
     const M88kRegisterBankInfo &RBI)
-    : InstructionSelector(), TM(TM), TII(*STI.getInstrInfo()),
+    : InstructionSelector(), /*TM(TM),*/ TII(*STI.getInstrInfo()),
       TRI(*STI.getRegisterInfo()), RBI(RBI),
 
 #define GET_GLOBALISEL_PREDICATES_INIT
@@ -338,11 +338,11 @@ bool M88kInstructionSelector::selectICmp(MachineInstr &I,
   if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
     return false;
 
-    int64_t WO = 1 << 5 | int64_t(CCCode);
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::EXTUrwo))
-             .add(I.getOperand(0))
-             .addReg(Temp, RegState::Kill)
-             .addImm(WO);
+  int64_t WO = 1 << 5 | int64_t(CCCode);
+  MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::EXTUrwo))
+           .add(I.getOperand(0))
+           .addReg(Temp, RegState::Kill)
+           .addImm(WO);
 
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);

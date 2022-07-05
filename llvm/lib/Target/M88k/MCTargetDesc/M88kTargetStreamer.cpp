@@ -36,7 +36,7 @@ void M88kTargetAsmStreamer::emitDirectiveRequires881100() {
 
 M88kTargetELFStreamer::M88kTargetELFStreamer(MCStreamer &S,
                                              const MCSubtargetInfo &STI)
-    : M88kTargetStreamer(S), STI(STI), Streamer(S),
+    : M88kTargetStreamer(S), /*STI(STI),*/ Streamer(S),
       Requires88110(STI.getCPU() == "mc88110") {}
 
 MCELFStreamer &M88kTargetELFStreamer::getStreamer() {

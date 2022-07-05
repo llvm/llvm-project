@@ -711,9 +711,19 @@ bool M88kAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
     Inst.setLoc(IdLoc);
     Out.emitInstruction(Inst, getSTI());
     return false;
-  case Match_MissingFeature:
-    // Currently no features are implemented.
-    return Error(IdLoc, "Instruction use requires option to be enabled");
+  case Match_MissingFeature: {
+    assert(MissingFeatures.any() && "Unknown missing features!");
+    bool FirstFeature = true;
+    std::string Msg = "instruction requires the following:";
+    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
+      if (MissingFeatures[i]) {
+        Msg += FirstFeature ? " " : ", ";
+        Msg += getSubtargetFeatureName(i);
+        FirstFeature = false;
+      }
+    }
+    return Error(IdLoc, Msg);
+  }
   case Match_InvalidOperand: {
     SMLoc ErrorLoc = IdLoc;
     if (ErrorInfo != ~0U) {
