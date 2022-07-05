@@ -10315,7 +10315,6 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   //   RtC < ScalarC * TC * (1 / X)  ==>  RtC * X / ScalarC < TC
   double MinTC2 = RtC * 10 / ScalarC;
 
-  dbgs() << ScalarC << " " << RtC << " " << VecCOverVF << "\n";
   // Now pick the larger minimum. If it is not a multiple of VF, choose the
   // next closest multiple of VF. This should partly compensate for ignoring
   // the epilogue cost.
