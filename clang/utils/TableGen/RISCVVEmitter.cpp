@@ -105,6 +105,16 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
     return;
   }
 
+  // Cast pointer operand of vector load intrinsic.
+  for (const auto &I : enumerate(RVVI->getInputTypes())) {
+    if (I.value()->isPointer()) {
+      assert(RVVI->getIntrinsicTypes().front() == -1 &&
+             "RVVI should be vector load intrinsic.");
+      OS << "  Ops[" << I.index() << "] = Builder.CreateBitCast(Ops[";
+      OS << I.index() << "], ResultType->getPointerTo());\n";
+    }
+  }
+
   if (RVVI->isMasked()) {
     if (RVVI->hasVL()) {
       OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);\n";
