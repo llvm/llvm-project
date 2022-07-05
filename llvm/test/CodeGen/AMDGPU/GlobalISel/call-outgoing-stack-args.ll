@@ -251,10 +251,10 @@ define void @func_caller_stack() {
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 11
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:12
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 12
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_v16i32_v16i32_v4i32@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_v16i32_v16i32_v4i32@rel32@hi+12
-; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
 ; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
@@ -284,10 +284,10 @@ define void @func_caller_stack() {
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 11
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:12
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 12
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:16
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_v16i32_v16i32_v4i32@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_v16i32_v16i32_v4i32@rel32@hi+12
-; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:16
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1

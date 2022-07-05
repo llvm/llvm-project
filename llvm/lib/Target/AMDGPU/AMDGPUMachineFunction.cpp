@@ -11,6 +11,7 @@
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -99,6 +100,21 @@ void AMDGPUMachineFunction::allocateModuleLDSGlobal(const Function &F) {
              "Module LDS expected to be allocated before other LDS");
     }
   }
+}
+
+Optional<uint32_t>
+AMDGPUMachineFunction::getLDSKernelIdMetadata(const Function &F) {
+  auto MD = F.getMetadata("llvm.amdgcn.lds.kernel.id");
+  if (MD && MD->getNumOperands() == 1) {
+    ConstantInt *KnownSize = mdconst::extract<ConstantInt>(MD->getOperand(0));
+    if (KnownSize) {
+      uint64_t V = KnownSize->getZExtValue();
+      if (V <= UINT32_MAX) {
+        return V;
+      }
+    }
+  }
+  return {};
 }
 
 void AMDGPUMachineFunction::setDynLDSAlign(const DataLayout &DL,

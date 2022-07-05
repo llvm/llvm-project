@@ -119,6 +119,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 ; CHECK-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 ; CHECK-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+; CHECK-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 ; CHECK-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 ; CHECK-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
@@ -164,6 +165,7 @@ define void @function() {
 ; CHECK-NEXT: workGroupIDX:    { reg: '$sgpr12' }
 ; CHECK-NEXT: workGroupIDY:    { reg: '$sgpr13' }
 ; CHECK-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+; CHECK-NEXT: LDSKernelId:     { reg: '$sgpr15' }
 ; CHECK-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 ; CHECK-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }

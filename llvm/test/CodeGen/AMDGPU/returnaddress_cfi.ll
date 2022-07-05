@@ -80,22 +80,22 @@ define hidden void @_ZL3barv_spill_RA_to_memory() #0 {
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
 ; CHECK:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s33
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:376 ; 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 65, 24064
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:380 ; 4-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 65, 24320
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    .cfi_def_cfa_register 65
-; CHECK-NEXT:    s_add_i32 s32, s32, 0x6000
+; CHECK-NEXT:    s_add_i32 s32, s32, 0x6400
 
 ; CHECK:    s_waitcnt vmcnt(0)
 ; CHECK:    s_mov_b64 exec, s[16:17]
 ; CHECK:    s_mov_b64 s[16:17], exec
 ; CHECK:    s_mov_b64 exec, 3
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:380
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:384
 ; CHECK-NEXT:    v_writelane_b32 v0, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v0, s31, 1
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:368 ; 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 16, 23552
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:380
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:372 ; 4-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 16, 23808
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:384
 
 ; CHECK:    ;;#ASMSTART
 ; CHECK-NEXT:    ; clobber nonpreserved and 32 CSR SGPRs
@@ -114,17 +114,17 @@ define hidden void @_ZL3barv_spill_RA_to_memory() #0 {
 
 ; CHECK-NEXT:    s_mov_b64 s[4:5], exec
 ; CHECK-NEXT:    s_mov_b64 exec, 3
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:380
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:368 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:384
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:372 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_readlane_b32 s30, v0, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v0, 1
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:380
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:384
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 
-; CHECK:    s_add_i32 s32, s32, 0xffffa000
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:376 ; 4-byte Folded Reload
+; CHECK:    s_add_i32 s32, s32, 0xffff9c00
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:380 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_readfirstlane_b32 s33, v0
 ; CHECK-NEXT:    .cfi_def_cfa_register 64

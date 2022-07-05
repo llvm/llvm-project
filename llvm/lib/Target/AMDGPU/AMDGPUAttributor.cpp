@@ -72,6 +72,8 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
   case Intrinsic::amdgcn_workgroup_id_z:
   case Intrinsic::r600_read_tgid_z:
     return WORKGROUP_ID_Z;
+  case Intrinsic::amdgcn_lds_kernel_id:
+    return LDS_KERNEL_ID;
   case Intrinsic::amdgcn_dispatch_ptr:
     return DISPATCH_PTR;
   case Intrinsic::amdgcn_dispatch_id:
@@ -457,6 +459,10 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       removeAssumedBits(QUEUE_PTR);
     }
 
+    if (isAssumed(LDS_KERNEL_ID) && funcRetrievesLDSKernelId(A)) {
+      removeAssumedBits(LDS_KERNEL_ID);
+    }
+
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
                                        : ChangeStatus::UNCHANGED;
   }
@@ -589,6 +595,16 @@ private:
 
     bool UsedAssumedInformation = false;
     return !A.checkForAllCallLikeInstructions(DoesNotLeadToKernelArgLoc, *this,
+                                              UsedAssumedInformation);
+  }
+
+  bool funcRetrievesLDSKernelId(Attributor &A) {
+    auto DoesNotRetrieve = [&](Instruction &I) {
+      auto &Call = cast<CallBase>(I);
+      return Call.getIntrinsicID() != Intrinsic::amdgcn_lds_kernel_id;
+    };
+    bool UsedAssumedInformation = false;
+    return !A.checkForAllCallLikeInstructions(DoesNotRetrieve, *this,
                                               UsedAssumedInformation);
   }
 };

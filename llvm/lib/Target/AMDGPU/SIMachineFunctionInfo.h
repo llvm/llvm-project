@@ -193,6 +193,7 @@ struct SIArgumentInfo {
   Optional<SIArgument> WorkGroupIDY;
   Optional<SIArgument> WorkGroupIDZ;
   Optional<SIArgument> WorkGroupInfo;
+  Optional<SIArgument> LDSKernelId;
   Optional<SIArgument> PrivateSegmentWaveByteOffset;
 
   Optional<SIArgument> ImplicitArgPtr;
@@ -217,6 +218,7 @@ template <> struct MappingTraits<SIArgumentInfo> {
     YamlIO.mapOptional("workGroupIDY", AI.WorkGroupIDY);
     YamlIO.mapOptional("workGroupIDZ", AI.WorkGroupIDZ);
     YamlIO.mapOptional("workGroupInfo", AI.WorkGroupInfo);
+    YamlIO.mapOptional("LDSKernelId", AI.LDSKernelId);
     YamlIO.mapOptional("privateSegmentWaveByteOffset",
                        AI.PrivateSegmentWaveByteOffset);
 
@@ -420,6 +422,7 @@ private:
   bool WorkGroupIDY : 1;
   bool WorkGroupIDZ : 1;
   bool WorkGroupInfo : 1;
+  bool LDSKernelId : 1;
   bool PrivateSegmentWaveByteOffset : 1;
 
   bool WorkItemIDX : 1; // Always initialized.
@@ -612,6 +615,7 @@ public:
   Register addDispatchID(const SIRegisterInfo &TRI);
   Register addFlatScratchInit(const SIRegisterInfo &TRI);
   Register addImplicitBufferPtr(const SIRegisterInfo &TRI);
+  Register addLDSKernelId();
 
   /// Increment user SGPRs used for padding the argument list only.
   Register addReservedUserSGPR() {
@@ -708,6 +712,8 @@ public:
   bool hasWorkGroupInfo() const {
     return WorkGroupInfo;
   }
+
+  bool hasLDSKernelId() const { return LDSKernelId; }
 
   bool hasPrivateSegmentWaveByteOffset() const {
     return PrivateSegmentWaveByteOffset;
