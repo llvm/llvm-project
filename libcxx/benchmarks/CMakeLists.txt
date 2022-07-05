@@ -202,6 +202,7 @@ if (LIBCXX_ENABLE_INCOMPLETE_FEATURES)
       format.bench.cpp
       formatted_size.bench.cpp
       formatter_float.bench.cpp
+      formatter_int.bench.cpp
       std_format_spec_string_unicode.bench.cpp)
 endif()
 
