@@ -67,6 +67,7 @@ define amdgpu_kernel void @zero_init_kernel() {
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], off offset:48
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], off offset:32
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], off offset:16
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: zero_init_kernel:
@@ -183,6 +184,7 @@ define amdgpu_kernel void @zero_init_kernel() {
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], off offset:48
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], off offset:32
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], off offset:16
+; GFX11-PAL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PAL-NEXT:    s_endpgm
   %alloca = alloca [32 x i16], align 2, addrspace(5)
   %cast = bitcast [32 x i16] addrspace(5)* %alloca to i8 addrspace(5)*
@@ -1042,6 +1044,7 @@ define amdgpu_kernel void @zero_init_small_offset_kernel() {
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], off offset:288
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], off offset:304
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], off offset:320
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: zero_init_small_offset_kernel:
@@ -1170,6 +1173,7 @@ define amdgpu_kernel void @zero_init_small_offset_kernel() {
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], off offset:288
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], off offset:304
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], off offset:320
+; GFX11-PAL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PAL-NEXT:    s_endpgm
   %padding = alloca [64 x i32], align 4, addrspace(5)
   %alloca = alloca [32 x i16], align 2, addrspace(5)
@@ -2102,6 +2106,7 @@ define amdgpu_kernel void @zero_init_large_offset_kernel() {
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], vcc_lo offset:32
 ; GFX11-NEXT:    s_movk_i32 vcc_lo, 0x4010
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], vcc_lo offset:48
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: zero_init_large_offset_kernel:
@@ -2240,6 +2245,7 @@ define amdgpu_kernel void @zero_init_large_offset_kernel() {
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], vcc_lo offset:32
 ; GFX11-PAL-NEXT:    s_movk_i32 vcc_lo, 0x4010
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], vcc_lo offset:48
+; GFX11-PAL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PAL-NEXT:    s_endpgm
   %padding = alloca [4096 x i32], align 4, addrspace(5)
   %alloca = alloca [32 x i16], align 2, addrspace(5)

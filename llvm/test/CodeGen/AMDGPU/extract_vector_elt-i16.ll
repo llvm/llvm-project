@@ -215,6 +215,55 @@ define amdgpu_kernel void @v_extractelement_v8i16_dynamic_sgpr(i16 addrspace(1)*
   ret void
 }
 
+; GCN-LABEL: {{^}}v_extractelement_v16i16_2:
+; SI: buffer_load_dword [[RES:v[0-9]+]], v[{{[0-9:]+}}], s[{{[0-9:]+}}], 0 addr64 offset:4
+; SI: buffer_store_short [[RES]]
+; VI: flat_load_dword [[RES:v[0-9]+]]
+; VI: flat_store_short v[{{[0-9:]+}}], [[RES]]
+; GFX9: global_load_dword [[RES:v[0-9]+]], v{{[0-9]+}}, s[{{[0-9:]+}}] offset:4
+; GFX9: global_store_short v{{[0-9]+}}, [[RES]]
+define amdgpu_kernel void @v_extractelement_v16i16_2(i16 addrspace(1)* %out, <16 x i16> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <16 x i16>, <16 x i16> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
+  %vec = load <16 x i16>, <16 x i16> addrspace(1)* %in.gep
+  %vec.extract = extractelement <16 x i16> %vec, i32 2
+  store i16 %vec.extract, i16 addrspace(1)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_extractelement_v16i16_6:
+; SI: buffer_load_dword [[RES:v[0-9]+]], v[{{[0-9:]+}}], s[{{[0-9:]+}}], 0 addr64 offset:12
+; SI: buffer_store_short [[RES]]
+; VI: flat_load_dword [[RES:v[0-9]+]]
+; VI: flat_store_short v[{{[0-9:]+}}], [[RES]]
+; GFX9: global_load_dword [[RES:v[0-9]+]], v{{[0-9]+}}, s[{{[0-9:]+}}] offset:12
+; GFX9: global_store_short v{{[0-9]+}}, [[RES]]
+define amdgpu_kernel void @v_extractelement_v16i16_6(i16 addrspace(1)* %out, <16 x i16> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <16 x i16>, <16 x i16> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
+  %vec = load <16 x i16>, <16 x i16> addrspace(1)* %in.gep
+  %vec.extract = extractelement <16 x i16> %vec, i32 6
+  store i16 %vec.extract, i16 addrspace(1)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_extractelement_v16i16_dynamic_sgpr:
+; GCN-COUNT-15: v_cndmask_b32_e32
+define amdgpu_kernel void @v_extractelement_v16i16_dynamic_sgpr(i16 addrspace(1)* %out, <16 x i16> addrspace(1)* %in, i32 %n) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <16 x i16>, <16 x i16> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
+  %vec = load <16 x i16>, <16 x i16> addrspace(1)* %in.gep
+  %vec.extract = extractelement <16 x i16> %vec, i32 %n
+  store i16 %vec.extract, i16 addrspace(1)* %out.gep
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }

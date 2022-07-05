@@ -71,6 +71,7 @@ Changes to the LLVM IR
 * The constant expression variants of the following instructions have been
   removed:
   * ``extractvalue``
+  * ``insertvalue``
 
 Changes to building LLVM
 ------------------------
@@ -110,6 +111,7 @@ Changes to the ARM Backend
   Erratum 1655431. This is enabled by default when targeting either CPU.
 * Implemented generation of Windows SEH unwind information.
 * Switched the MinGW target to use SEH instead of DWARF for unwind information.
+* Added support for the Cortex-M85 CPU.
 
 Changes to the AVR Backend
 --------------------------
@@ -179,6 +181,7 @@ Changes to the C API
   an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
   constant fold the operands if possible and create an instruction otherwise:
   * ``LLVMConstExtractValue``
+  * ``LLVMConstInsertValue``
 
 Changes to the Go bindings
 --------------------------

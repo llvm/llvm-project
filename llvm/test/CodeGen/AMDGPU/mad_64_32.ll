@@ -706,6 +706,7 @@ define amdgpu_kernel void @mad_i64_i32_uniform(i64 addrspace(1)* %out, i32 %arg0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ext0 = zext i32 %arg0 to i64
   %ext1 = zext i32 %arg1 to i64

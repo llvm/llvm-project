@@ -173,13 +173,13 @@ class CheckRunner:
     print('Running ' + repr(args) + '...')
     clang_tidy_output = try_run(args)
     print('------------------------ clang-tidy output -----------------------')
-    print(clang_tidy_output.encode())
-    print('\n------------------------------------------------------------------')
+    print(clang_tidy_output.encode(sys.stdout.encoding, errors="replace").decode(sys.stdout.encoding))
+    print('------------------------------------------------------------------')
 
     diff_output = try_run(['diff', '-u', self.original_file_name, self.temp_file_name], False)
-    print('------------------------------ Fixes -----------------------------\n' +
-          diff_output +
-          '\n------------------------------------------------------------------')
+    print('------------------------------ Fixes -----------------------------')
+    print(diff_output)
+    print('------------------------------------------------------------------')
     return clang_tidy_output
 
   def check_fixes(self):

@@ -84,11 +84,19 @@ program test_co_min
   ! 'stat' argument shall be an integer scalar
   !ERROR: 'stat=' argument has unacceptable rank 1
   call co_min(i, stat=integer_array)
- 
+
+  ! 'errmsg' argument shall be intent(inout)
+  !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'errmsg=' must be definable
+  call co_min(a=i, result_image=1, stat=status, errmsg='c')
+
   ! 'errmsg' argument shall be noncoindexed
   !ERROR: to be determined
   call co_min(c, errmsg=coindexed_character[1])
- 
+
+  ! 'errmsg' argument shall be a character
+  !ERROR: to be determined
+  call co_min(c, errmsg=i)
+
   ! 'errmsg' argument shall be character scalar
   !ERROR: 'errmsg=' argument has unacceptable rank 1
   call co_min(d, errmsg=character_array)

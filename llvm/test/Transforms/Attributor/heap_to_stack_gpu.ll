@@ -704,6 +704,35 @@ define void @test17b() {
   ret void
 }
 
+define void @move_alloca() {
+; IS________OPM-LABEL: define {{[^@]+}}@move_alloca() {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    br label [[NOT_ENTRY:%.*]]
+; IS________OPM:       not_entry:
+; IS________OPM-NEXT:    [[TMP0:%.*]] = tail call noalias i8* @__kmpc_alloc_shared(i64 noundef 4)
+; IS________OPM-NEXT:    tail call void @usei8(i8* noalias nocapture nofree [[TMP0]]) #[[ATTR6]]
+; IS________OPM-NEXT:    tail call void @__kmpc_free_shared(i8* noalias nocapture [[TMP0]], i64 noundef 4)
+; IS________OPM-NEXT:    ret void
+;
+; IS________NPM-LABEL: define {{[^@]+}}@move_alloca() {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1, addrspace(5)
+; IS________NPM-NEXT:    br label [[NOT_ENTRY:%.*]]
+; IS________NPM:       not_entry:
+; IS________NPM-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[TMP0]] to i8*
+; IS________NPM-NEXT:    tail call void @usei8(i8* noalias nocapture nofree [[MALLOC_CAST]]) #[[ATTR6]]
+; IS________NPM-NEXT:    ret void
+;
+entry:
+  br label %not_entry
+
+not_entry:
+  %0 = tail call noalias i8* @__kmpc_alloc_shared(i64 4)
+  tail call void @usei8(i8* nocapture nofree %0) willreturn nounwind nosync
+  tail call void @__kmpc_free_shared(i8* %0, i64 4)
+  ret void
+}
+
 
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind willreturn }

@@ -2641,8 +2641,12 @@ enum CXCursorKind {
   /** OpenMP parallel masked taskloop directive.
    */
   CXCursor_OMPParallelMaskedTaskLoopDirective = 303,
-  
-  CXCursor_LastStmt = CXCursor_OMPParallelMaskedTaskLoopDirective,
+
+  /** OpenMP parallel masked taskloop simd directive.
+   */
+  CXCursor_OMPParallelMaskedTaskLoopSimdDirective = 304,
+
+  CXCursor_LastStmt = CXCursor_OMPParallelMaskedTaskLoopSimdDirective,
 
   /**
    * Cursor that represents the translation unit itself.

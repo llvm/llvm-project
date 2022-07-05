@@ -16,6 +16,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dot2_f16_f16 v1, s2, s3, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     half addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,

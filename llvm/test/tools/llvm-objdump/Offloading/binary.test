@@ -1,0 +1,41 @@
+## Check that we can dump an offloading binary directly.
+# RUN: yaml2obj %S/Inputs/binary.yaml -o %t.bin
+# RUN: llvm-objdump --offloading %t.bin | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+## Check that we can dump an offloading binary inside of an ELF section.
+# RUN: yaml2obj %s -o %t.elf
+# RUN: llvm-objcopy --add-section .llvm.offloading=%t.bin %t.elf
+# RUN: llvm-objcopy --set-section-alignment .llvm.offloading=8 %t.elf
+# RUN: llvm-objdump --offloading %t.elf | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+
+#        ELF:{{.*}}file format elf64-unknown
+#  ELF-EMPTY:
+#      CHECK:OFFLOADING IMAGE [0]:
+# CHECK-NEXT:kind            llvm ir
+# CHECK-NEXT:arch            gfx908
+# CHECK-NEXT:triple          amdgcn-amd-amdhsa
+# CHECK-NEXT:producer        openmp
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [1]:
+# CHECK-NEXT:kind            llvm ir
+# CHECK-NEXT:arch            gfx90a
+# CHECK-NEXT:triple          amdgcn-amd-amdhsa
+# CHECK-NEXT:producer        openmp
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [2]:
+# CHECK-NEXT:kind            cubin
+# CHECK-NEXT:arch            sm_52
+# CHECK-NEXT:triple          nvptx64-nvidia-cuda
+# CHECK-NEXT:producer        openmp
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [3]:
+# CHECK-NEXT:kind            <none>
+# CHECK-NEXT:arch            sm_70
+# CHECK-NEXT:triple          nvptx64-nvidia-cuda
+# CHECK-NEXT:producer        none

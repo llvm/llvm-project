@@ -93,22 +93,70 @@ std::string ConfusableIdentifierCheck::skeleton(StringRef Name) {
   return Skeleton;
 }
 
+static bool mayShadowImpl(const NamedDecl *ND0, const NamedDecl *ND1) {
+  const DeclContext *DC0 = ND0->getDeclContext()->getPrimaryContext();
+  const DeclContext *DC1 = ND1->getDeclContext()->getPrimaryContext();
+
+  if (isa<TemplateTypeParmDecl>(ND0) || isa<TemplateTypeParmDecl>(ND0))
+    return true;
+
+  while (DC0->isTransparentContext())
+    DC0 = DC0->getParent();
+  while (DC1->isTransparentContext())
+    DC1 = DC1->getParent();
+
+  if (DC0->Equals(DC1))
+    return true;
+
+  return false;
+}
+
+static bool isMemberOf(const NamedDecl *ND, const CXXRecordDecl *RD) {
+  const DeclContext *NDParent = ND->getDeclContext();
+  if (!NDParent || !isa<CXXRecordDecl>(NDParent))
+    return false;
+  if (NDParent == RD)
+    return true;
+  return !RD->forallBases(
+      [NDParent](const CXXRecordDecl *Base) { return NDParent != Base; });
+}
+
+static bool mayShadow(const NamedDecl *ND0, const NamedDecl *ND1) {
+
+  const DeclContext *DC0 = ND0->getDeclContext()->getPrimaryContext();
+  const DeclContext *DC1 = ND1->getDeclContext()->getPrimaryContext();
+
+  if (const CXXRecordDecl *RD0 = dyn_cast<CXXRecordDecl>(DC0)) {
+    if (ND1->getAccess() != AS_private && isMemberOf(ND1, RD0))
+      return true;
+  }
+  if (const CXXRecordDecl *RD1 = dyn_cast<CXXRecordDecl>(DC1)) {
+    if (ND0->getAccess() != AS_private && isMemberOf(ND0, RD1))
+      return true;
+  }
+
+  if (DC0->Encloses(DC1))
+    return mayShadowImpl(ND0, ND1);
+  if (DC1->Encloses(DC0))
+    return mayShadowImpl(ND1, ND0);
+  return false;
+}
+
 void ConfusableIdentifierCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   if (const auto *ND = Result.Nodes.getNodeAs<NamedDecl>("nameddecl")) {
-    if (IdentifierInfo *II = ND->getIdentifier()) {
-      StringRef NDName = II->getName();
+    if (IdentifierInfo *NDII = ND->getIdentifier()) {
+      StringRef NDName = NDII->getName();
       llvm::SmallVector<const NamedDecl *> &Mapped = Mapper[skeleton(NDName)];
-      const DeclContext *NDDecl = ND->getDeclContext();
       for (const NamedDecl *OND : Mapped) {
-        if (!NDDecl->isDeclInLexicalTraversal(OND) &&
-            !OND->getDeclContext()->isDeclInLexicalTraversal(ND))
-          continue;
-        if (OND->getIdentifier()->getName() != NDName) {
-          diag(OND->getLocation(), "%0 is confusable with %1")
-              << OND->getName() << NDName;
-          diag(ND->getLocation(), "other declaration found here",
-               DiagnosticIDs::Note);
+        const IdentifierInfo *ONDII = OND->getIdentifier();
+        if (mayShadow(ND, OND)) {
+          StringRef ONDName = ONDII->getName();
+          if (ONDName != NDName) {
+            diag(ND->getLocation(), "%0 is confusable with %1") << ND << OND;
+            diag(OND->getLocation(), "other declaration found here",
+                 DiagnosticIDs::Note);
+          }
         }
       }
       Mapped.push_back(ND);

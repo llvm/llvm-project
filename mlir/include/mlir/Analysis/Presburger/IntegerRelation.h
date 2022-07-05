@@ -28,6 +28,7 @@ class IntegerRelation;
 class IntegerPolyhedron;
 class PresburgerSet;
 class PresburgerRelation;
+struct SymbolicLexMin;
 
 /// An IntegerRelation represents the set of points from a PresburgerSpace that
 /// satisfy a list of affine constraints. Affine constraints can be inequalities
@@ -583,6 +584,30 @@ public:
   /// union of convex disjuncts.
   PresburgerRelation computeReprWithOnlyDivLocals() const;
 
+  /// Compute the symbolic integer lexmin of the relation.
+  ///
+  /// This finds, for every assignment to the symbols and domain,
+  /// the lexicographically minimum value attained by the range.
+  ///
+  /// For example, the symbolic lexmin of the set
+  ///
+  /// (x, y)[a, b, c] : (a <= x, b <= x, x <= c)
+  ///
+  /// can be written as
+  ///
+  /// x = a if b <= a, a <= c
+  /// x = b if a <  b, b <= c
+  ///
+  /// This function is stored in the `lexmin` function in the result.
+  /// Some assignments to the symbols might make the set empty.
+  /// Such points are not part of the function's domain.
+  /// In the above example, this happens when max(a, b) > c.
+  ///
+  /// For some values of the symbols, the lexmin may be unbounded.
+  /// `SymbolicLexMin` stores these parts of the symbolic domain in a separate
+  /// `PresburgerSet`, `unboundedDomain`.
+  SymbolicLexMin findSymbolicIntegerLexMin() const;
+
   void print(raw_ostream &os) const;
   void dump() const;
 
@@ -692,8 +717,6 @@ protected:
   Matrix inequalities;
 };
 
-struct SymbolicLexMin;
-
 /// An IntegerPolyhedron represents the set of points from a PresburgerSpace
 /// that satisfy a list of affine constraints. Affine constraints can be
 /// inequalities or equalities in the form:
@@ -767,28 +790,6 @@ public:
   /// column position (i.e., not relative to the kind of variable) of the
   /// first added variable.
   unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1) override;
-
-  /// Compute the symbolic integer lexmin of the polyhedron.
-  /// This finds, for every assignment to the symbols, the lexicographically
-  /// minimum value attained by the dimensions. For example, the symbolic lexmin
-  /// of the set
-  ///
-  /// (x, y)[a, b, c] : (a <= x, b <= x, x <= c)
-  ///
-  /// can be written as
-  ///
-  /// x = a if b <= a, a <= c
-  /// x = b if a <  b, b <= c
-  ///
-  /// This function is stored in the `lexmin` function in the result.
-  /// Some assignments to the symbols might make the set empty.
-  /// Such points are not part of the function's domain.
-  /// In the above example, this happens when max(a, b) > c.
-  ///
-  /// For some values of the symbols, the lexmin may be unbounded.
-  /// `SymbolicLexMin` stores these parts of the symbolic domain in a separate
-  /// `PresburgerSet`, `unboundedDomain`.
-  SymbolicLexMin findSymbolicIntegerLexMin() const;
 };
 
 } // namespace presburger

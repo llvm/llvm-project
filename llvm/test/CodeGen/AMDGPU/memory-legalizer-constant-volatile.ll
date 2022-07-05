@@ -62,6 +62,7 @@ define amdgpu_kernel void @private_volatile_load_0(i32 addrspace(4)* %in, i32 ad
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %val = load volatile i32, i32 addrspace(4)* %in
@@ -129,6 +130,7 @@ define amdgpu_kernel void @private_volatile_load_1(i32 addrspace(4)* %in, i32 ad
 ; GFX11-NEXT:    global_load_b32 v0, v0, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

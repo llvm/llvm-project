@@ -85,8 +85,8 @@ define <2 x i1> @buildvec_mask_optsize_nonconst_v2i1(i1 %x, i1 %y) optsize {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sb a1, 15(sp)
 ; CHECK-NEXT:    sb a0, 14(sp)
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 14
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -99,8 +99,8 @@ define <2 x i1> @buildvec_mask_optsize_nonconst_v2i1(i1 %x, i1 %y) optsize {
 ; ZVE32F-NEXT:    .cfi_def_cfa_offset 16
 ; ZVE32F-NEXT:    sb a1, 15(sp)
 ; ZVE32F-NEXT:    sb a0, 14(sp)
-; ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
 ; ZVE32F-NEXT:    addi a0, sp, 14
+; ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
 ; ZVE32F-NEXT:    vle8.v v8, (a0)
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -203,8 +203,8 @@ define <4 x i1> @buildvec_mask_optsize_nonconst_v4i1(i1 %x, i1 %y) optsize {
 ; CHECK-NEXT:    sb a1, 14(sp)
 ; CHECK-NEXT:    sb a0, 13(sp)
 ; CHECK-NEXT:    sb a0, 12(sp)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 12
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -219,8 +219,8 @@ define <4 x i1> @buildvec_mask_optsize_nonconst_v4i1(i1 %x, i1 %y) optsize {
 ; ZVE32F-NEXT:    sb a1, 14(sp)
 ; ZVE32F-NEXT:    sb a0, 13(sp)
 ; ZVE32F-NEXT:    sb a0, 12(sp)
-; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; ZVE32F-NEXT:    addi a0, sp, 12
+; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; ZVE32F-NEXT:    vle8.v v8, (a0)
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -243,8 +243,8 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1_2(i1 %x, i1 %y) {
 ; CHECK-NEXT:    sb a1, 14(sp)
 ; CHECK-NEXT:    sb a0, 13(sp)
 ; CHECK-NEXT:    sb zero, 12(sp)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 12
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -260,8 +260,8 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1_2(i1 %x, i1 %y) {
 ; ZVE32F-NEXT:    sb a1, 14(sp)
 ; ZVE32F-NEXT:    sb a0, 13(sp)
 ; ZVE32F-NEXT:    sb zero, 12(sp)
-; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; ZVE32F-NEXT:    addi a0, sp, 12
+; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; ZVE32F-NEXT:    vle8.v v8, (a0)
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -340,8 +340,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; CHECK-NEXT:    sb a1, 10(sp)
 ; CHECK-NEXT:    sb a0, 9(sp)
 ; CHECK-NEXT:    sb a0, 8(sp)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -361,8 +361,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; ZVE32F-NEXT:    sb a1, 10(sp)
 ; ZVE32F-NEXT:    sb a0, 9(sp)
 ; ZVE32F-NEXT:    sb a0, 8(sp)
-; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    addi a0, sp, 8
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    vle8.v v8, (a0)
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -393,8 +393,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; CHECK-NEXT:    sb a1, 10(sp)
 ; CHECK-NEXT:    sb a0, 9(sp)
 ; CHECK-NEXT:    sb a0, 8(sp)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -414,8 +414,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; ZVE32F-NEXT:    sb a1, 10(sp)
 ; ZVE32F-NEXT:    sb a0, 9(sp)
 ; ZVE32F-NEXT:    sb a0, 8(sp)
-; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    addi a0, sp, 8
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    vle8.v v8, (a0)
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -445,8 +445,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; CHECK-NEXT:    sb a1, 10(sp)
 ; CHECK-NEXT:    sb a0, 9(sp)
 ; CHECK-NEXT:    sb a0, 8(sp)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -465,8 +465,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; ZVE32F-NEXT:    sb a1, 10(sp)
 ; ZVE32F-NEXT:    sb a0, 9(sp)
 ; ZVE32F-NEXT:    sb a0, 8(sp)
-; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    addi a0, sp, 8
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; ZVE32F-NEXT:    vle8.v v8, (a0)
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0

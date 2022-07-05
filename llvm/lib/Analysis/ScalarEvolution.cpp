@@ -7365,6 +7365,8 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
         Ops.push_back(II->getArgOperand(1));
         return nullptr;
       case Intrinsic::start_loop_iterations:
+      case Intrinsic::annotation:
+      case Intrinsic::ptr_annotation:
         Ops.push_back(II->getArgOperand(0));
         return nullptr;
       default:
@@ -7816,8 +7818,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         return getAddExpr(ClampedX, Y, SCEV::FlagNUW);
       }
       case Intrinsic::start_loop_iterations:
-        // A start_loop_iterations is just equivalent to the first operand for
-        // SCEV purposes.
+      case Intrinsic::annotation:
+      case Intrinsic::ptr_annotation:
+        // A start_loop_iterations or llvm.annotation or llvm.prt.annotation is
+        // just eqivalent to the first operand for SCEV purposes.
         return getSCEV(II->getArgOperand(0));
       default:
         break;
@@ -9480,58 +9484,42 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
   }
   case scAddExpr: {
     const SCEVAddExpr *SA = cast<SCEVAddExpr>(V);
-    if (Constant *C = BuildConstantFromSCEV(SA->getOperand(0))) {
-      if (PointerType *PTy = dyn_cast<PointerType>(C->getType())) {
-        unsigned AS = PTy->getAddressSpace();
-        Type *DestPtrTy = Type::getInt8PtrTy(C->getContext(), AS);
-        C = ConstantExpr::getBitCast(C, DestPtrTy);
+    Constant *C = nullptr;
+    for (const SCEV *Op : SA->operands()) {
+      Constant *OpC = BuildConstantFromSCEV(Op);
+      if (!OpC)
+        return nullptr;
+      if (!C) {
+        C = OpC;
+        continue;
       }
-      for (unsigned i = 1, e = SA->getNumOperands(); i != e; ++i) {
-        Constant *C2 = BuildConstantFromSCEV(SA->getOperand(i));
-        if (!C2)
-          return nullptr;
-
-        // First pointer!
-        if (!C->getType()->isPointerTy() && C2->getType()->isPointerTy()) {
-          unsigned AS = C2->getType()->getPointerAddressSpace();
-          std::swap(C, C2);
-          Type *DestPtrTy = Type::getInt8PtrTy(C->getContext(), AS);
-          // The offsets have been converted to bytes.  We can add bytes to an
-          // i8* by GEP with the byte count in the first index.
-          C = ConstantExpr::getBitCast(C, DestPtrTy);
-        }
-
-        // Don't bother trying to sum two pointers. We probably can't
-        // statically compute a load that results from it anyway.
-        if (C2->getType()->isPointerTy())
-          return nullptr;
-
-        if (C->getType()->isPointerTy()) {
-          C = ConstantExpr::getGetElementPtr(Type::getInt8Ty(C->getContext()),
-                                             C, C2);
-        } else {
-          C = ConstantExpr::getAdd(C, C2);
-        }
+      assert(!C->getType()->isPointerTy() &&
+             "Can only have one pointer, and it must be last");
+      if (auto *PT = dyn_cast<PointerType>(OpC->getType())) {
+        // The offsets have been converted to bytes.  We can add bytes to an
+        // i8* by GEP with the byte count in the first index.
+        Type *DestPtrTy =
+            Type::getInt8PtrTy(PT->getContext(), PT->getAddressSpace());
+        OpC = ConstantExpr::getBitCast(OpC, DestPtrTy);
+        C = ConstantExpr::getGetElementPtr(Type::getInt8Ty(C->getContext()),
+                                           OpC, C);
+      } else {
+        C = ConstantExpr::getAdd(C, OpC);
       }
-      return C;
     }
-    return nullptr;
+    return C;
   }
   case scMulExpr: {
     const SCEVMulExpr *SM = cast<SCEVMulExpr>(V);
-    if (Constant *C = BuildConstantFromSCEV(SM->getOperand(0))) {
-      // Don't bother with pointers at all.
-      if (C->getType()->isPointerTy())
+    Constant *C = nullptr;
+    for (const SCEV *Op : SM->operands()) {
+      assert(!Op->getType()->isPointerTy() && "Can't multiply pointers");
+      Constant *OpC = BuildConstantFromSCEV(Op);
+      if (!OpC)
         return nullptr;
-      for (unsigned i = 1, e = SM->getNumOperands(); i != e; ++i) {
-        Constant *C2 = BuildConstantFromSCEV(SM->getOperand(i));
-        if (!C2 || C2->getType()->isPointerTy())
-          return nullptr;
-        C = ConstantExpr::getMul(C, C2);
-      }
-      return C;
+      C = C ? ConstantExpr::getMul(C, OpC) : OpC;
     }
-    return nullptr;
+    return C;
   }
   case scUDivExpr: {
     const SCEVUDivExpr *SU = cast<SCEVUDivExpr>(V);

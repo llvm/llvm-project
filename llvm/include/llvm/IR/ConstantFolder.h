@@ -123,7 +123,7 @@ public:
     auto *CAgg = dyn_cast<Constant>(Agg);
     auto *CVal = dyn_cast<Constant>(Val);
     if (CAgg && CVal)
-      return ConstantExpr::getInsertValue(CAgg, CVal, IdxList);
+      return ConstantFoldInsertValueInstruction(CAgg, CVal, IdxList);
     return nullptr;
   }
 
@@ -158,17 +158,8 @@ public:
   // Unary Operators
   //===--------------------------------------------------------------------===//
 
-  Constant *CreateNeg(Constant *C,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getNeg(C, HasNUW, HasNSW);
-  }
-
   Constant *CreateFNeg(Constant *C) const override {
     return ConstantExpr::getFNeg(C);
-  }
-
-  Constant *CreateNot(Constant *C) const override {
-    return ConstantExpr::getNot(C);
   }
 
   Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {

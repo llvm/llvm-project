@@ -1684,7 +1684,7 @@ deleteDeadBlocksFromLoop(Loop &L,
     // uses in other blocks.
     for (auto &I : *BB)
       if (!I.use_empty())
-        I.replaceAllUsesWith(UndefValue::get(I.getType()));
+        I.replaceAllUsesWith(PoisonValue::get(I.getType()));
     BB->dropAllReferences();
   }
 

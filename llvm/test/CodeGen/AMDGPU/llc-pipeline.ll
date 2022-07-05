@@ -992,6 +992,7 @@
 ; GCN-O2-NEXT:        SI Final Branch Preparation
 ; GCN-O2-NEXT:        SI peephole optimizations
 ; GCN-O2-NEXT:        Post RA hazard recognizer
+; GCN-O2-NEXT:        Release VGPRs
 ; GCN-O2-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O2-NEXT:        Branch relaxation pass
 ; GCN-O2-NEXT:        Register Usage Information Collector Pass
@@ -1302,6 +1303,7 @@
 ; GCN-O3-NEXT:        SI Final Branch Preparation
 ; GCN-O3-NEXT:        SI peephole optimizations
 ; GCN-O3-NEXT:        Post RA hazard recognizer
+; GCN-O3-NEXT:        Release VGPRs
 ; GCN-O3-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O3-NEXT:        Branch relaxation pass
 ; GCN-O3-NEXT:        Register Usage Information Collector Pass

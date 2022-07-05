@@ -41,6 +41,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -201,8 +202,8 @@ struct VPTransformState {
   VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                    DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan)
-      : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan) {
-  }
+      : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
+        LVer(nullptr) {}
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
@@ -298,6 +299,27 @@ struct VPTransformState {
     Iter->second[Instance.Part][CacheIdx] = V;
   }
 
+  /// Add additional metadata to \p To that was not present on \p Orig.
+  ///
+  /// Currently this is used to add the noalias annotations based on the
+  /// inserted memchecks.  Use this for instructions that are *cloned* into the
+  /// vector loop.
+  void addNewMetadata(Instruction *To, const Instruction *Orig);
+
+  /// Add metadata from one instruction to another.
+  ///
+  /// This includes both the original MDs from \p From and additional ones (\see
+  /// addNewMetadata).  Use this for *newly created* instructions in the vector
+  /// loop.
+  void addMetadata(Instruction *To, Instruction *From);
+
+  /// Similar to the previous function but it adds the metadata to a
+  /// vector of instructions.
+  void addMetadata(ArrayRef<Value *> To, Instruction *From);
+
+  /// Set the debug location in the builder using the debug location in \p V.
+  void setDebugLocFromInst(const Value *V);
+
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
   struct CFGState {
@@ -349,6 +371,13 @@ struct VPTransformState {
 
   /// The loop object for the current parent region, or nullptr.
   Loop *CurrentVectorLoop = nullptr;
+
+  /// LoopVersioning.  It's only set up (non-null) if memchecks were
+  /// used.
+  ///
+  /// This is currently only used to add no-alias metadata based on the
+  /// memchecks.  The actually versioning is performed manually.
+  std::unique_ptr<LoopVersioning> LVer;
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
@@ -2485,7 +2514,8 @@ public:
 
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
-                        Value *CanonicalIVStartValue, VPTransformState &State);
+                        Value *CanonicalIVStartValue, VPTransformState &State,
+                        bool IsEpilogueVectorization);
 
   /// Generate the IR code for this VPlan.
   void execute(struct VPTransformState *State);

@@ -83,13 +83,13 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 
 def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.
-  return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingOnes(),
+  return CurDAG->getTargetConstant(countTrailingOnes(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
 def BSETINVXForm : SDNodeXForm<imm, [{
   // Find the lowest 1.
-  return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingZeros(),
+  return CurDAG->getTargetConstant(countTrailingZeros(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
@@ -238,6 +238,10 @@ def non_imm12 : PatLeaf<(XLenVT GPR:$a), [{
   auto *C = dyn_cast<ConstantSDNode>(N);
   return !C || !isInt<12>(C->getSExtValue());
 }]>;
+
+def sh1add_op : ComplexPattern<XLenVT, 1, "selectSH1ADDOp", [], [], 6>;
+def sh2add_op : ComplexPattern<XLenVT, 1, "selectSH2ADDOp", [], [], 6>;
+def sh3add_op : ComplexPattern<XLenVT, 1, "selectSH3ADDOp", [], [], 6>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -1095,6 +1099,14 @@ def : Pat<(add (shl GPR:$rs1, (XLenVT 2)), non_imm12:$rs2),
 def : Pat<(add (shl GPR:$rs1, (XLenVT 3)), non_imm12:$rs2),
           (SH3ADD GPR:$rs1, GPR:$rs2)>;
 
+// More complex cases use a ComplexPattern.
+def : Pat<(add sh1add_op:$rs1, non_imm12:$rs2),
+          (SH1ADD sh1add_op:$rs1, GPR:$rs2)>;
+def : Pat<(add sh2add_op:$rs1, non_imm12:$rs2),
+          (SH2ADD sh2add_op:$rs1, GPR:$rs2)>;
+def : Pat<(add sh3add_op:$rs1, non_imm12:$rs2),
+          (SH3ADD sh3add_op:$rs1, GPR:$rs2)>;
+
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
           (SH1ADD (SH1ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
@@ -1175,6 +1187,13 @@ def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 2)), 0x3FFFFFFFF), non_imm12:$rs2))
           (SH2ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 3)), 0x7FFFFFFFF), non_imm12:$rs2)),
           (SH3ADD_UW GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFE), non_imm12:$rs2)),
+          (SH1ADD (SRLIW GPR:$rs1, 1), GPR:$rs2)>;
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFC), non_imm12:$rs2)),
+          (SH2ADD (SRLIW GPR:$rs1, 2), GPR:$rs2)>;
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFF8), non_imm12:$rs2)),
+          (SH3ADD (SRLIW GPR:$rs1, 3), GPR:$rs2)>;
 
 // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
 def : Pat<(i64 (add (and GPR:$rs1, 0x1FFFFFFFE), non_imm12:$rs2)),

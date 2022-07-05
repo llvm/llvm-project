@@ -1263,15 +1263,15 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (PTO.MergeFunctions)
     MPM.addPass(MergeFunctionsPass());
 
-  if (PTO.CallGraphProfile)
-    MPM.addPass(CGProfilePass());
-
   // Now we need to do some global optimization transforms.
   // FIXME: It would seem like these should come first in the optimization
   // pipeline and maybe be the bottom of the canonicalization pipeline? Weird
   // ordering here.
   MPM.addPass(GlobalDCEPass());
   MPM.addPass(ConstantMergePass());
+
+  if (PTO.CallGraphProfile && !LTOPreLink)
+    MPM.addPass(CGProfilePass());
 
   // TODO: Relative look table converter pass caused an issue when full lto is
   // enabled. See https://reviews.llvm.org/D94355 for more details.
@@ -1731,6 +1731,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   if (PTO.MergeFunctions)
     MPM.addPass(MergeFunctionsPass());
+
+  if (PTO.CallGraphProfile)
+    MPM.addPass(CGProfilePass());
 
   for (auto &C : FullLinkTimeOptimizationLastEPCallbacks)
     C(MPM, Level);

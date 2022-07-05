@@ -876,9 +876,7 @@ public:
     }
 
     template <class _ValueTp,
-              class = typename enable_if<
-                    __is_same_uncvref<_ValueTp, value_type>::value
-                 >::type
+              class = __enable_if_t<__is_same_uncvref<_ValueTp, value_type>::value>
              >
     _LIBCPP_INLINE_VISIBILITY
     __hash_value_type& operator=(_ValueTp&& __v)
@@ -1237,13 +1235,13 @@ public:
     }
 
     template <class _Pp,
-              class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
+              class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> insert(_Pp&& __x)
             {return __table_.__insert_unique(_VSTD::forward<_Pp>(__x));}
 
     template <class _Pp,
-              class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
+              class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
         _LIBCPP_INLINE_VISIBILITY
         iterator insert(const_iterator __p, _Pp&& __x)
         {
@@ -2114,13 +2112,13 @@ public:
         {return __table_.__insert_multi(__p.__i_, _VSTD::move(__x));}
 
     template <class _Pp,
-              class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
+              class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(_Pp&& __x)
         {return __table_.__insert_multi(_VSTD::forward<_Pp>(__x));}
 
     template <class _Pp,
-              class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
+              class = __enable_if_t<is_constructible<value_type, _Pp>::value> >
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __p, _Pp&& __x)
         {return __table_.__insert_multi(__p.__i_, _VSTD::forward<_Pp>(__x));}

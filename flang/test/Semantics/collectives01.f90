@@ -33,6 +33,7 @@ program test_co_sum
 
   ! all arguments present
   call co_sum(a=i, result_image=1, stat=status, errmsg=message) 
+  call co_sum(result_image=1, a=i, errmsg=message, stat=status)
 
   ! one optional argument not present
   call co_sum(a=i,                 stat=status, errmsg=message) 
@@ -95,6 +96,10 @@ program test_co_sum
   ! 'errmsg' argument shall be noncoindexed
   !ERROR: to be determined
   call co_sum(c, errmsg=coindexed_character[1])
+
+  ! 'errmsg' argument shall be a character
+  !ERROR: to be determined
+  call co_sum(c, errmsg=i)
  
   ! 'errmsg' argument shall be character scalar
   !ERROR: 'errmsg=' argument has unacceptable rank 1

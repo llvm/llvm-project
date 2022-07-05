@@ -227,6 +227,40 @@ class sme_add_vector_to_tile_u64<bit V, string mnemonic>
   let Inst{2-0} = ZAda;
 }
 
+class sme_add_vector_to_tile_pseudo<ZPRRegOp zpr_ty>
+    : Pseudo<(outs),
+             (ins i64imm:$tile, PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn), []>,
+      Sched<[]> {
+  // Translated to the actual instructions in AArch64ISelLowering.cpp
+  let usesCustomInserter = 1;
+}
+
+def ADDHA_MPPZ_PSEUDO_S : sme_add_vector_to_tile_pseudo<ZPR32>;
+def ADDVA_MPPZ_PSEUDO_S : sme_add_vector_to_tile_pseudo<ZPR32>;
+
+def : Pat<(int_aarch64_sme_addha
+            imm0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
+            (nxv4i32 ZPR32:$zn)),
+          (ADDHA_MPPZ_PSEUDO_S imm0_3:$tile, $pn, $pm, $zn)>;
+def : Pat<(int_aarch64_sme_addva
+            imm0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
+            (nxv4i32 ZPR32:$zn)),
+          (ADDVA_MPPZ_PSEUDO_S imm0_3:$tile, $pn, $pm, $zn)>;
+
+let Predicates = [HasSMEI64] in {
+def ADDHA_MPPZ_PSEUDO_D : sme_add_vector_to_tile_pseudo<ZPR64>;
+def ADDVA_MPPZ_PSEUDO_D : sme_add_vector_to_tile_pseudo<ZPR64>;
+
+def : Pat<(int_aarch64_sme_addha
+            imm0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
+            (nxv2i64 ZPR64:$zn)),
+          (ADDHA_MPPZ_PSEUDO_D imm0_7:$tile, $pn, $pm, $zn)>;
+def : Pat<(int_aarch64_sme_addva
+            imm0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
+            (nxv2i64 ZPR64:$zn)),
+          (ADDVA_MPPZ_PSEUDO_D imm0_7:$tile, $pn, $pm, $zn)>;
+}
+
 //===----------------------------------------------------------------------===//
 // SME Contiguous Loads
 //===----------------------------------------------------------------------===//

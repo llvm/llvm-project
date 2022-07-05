@@ -22,6 +22,22 @@
 
 using namespace llvm;
 
+static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
+                                    const AsmPrinter &AP) {
+  MCContext &Ctx = AP.OutContext;
+
+  // TODO: Processing target flags.
+
+  const MCExpr *ME =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+
+  if (!MO.isJTI() && !MO.isMBB() && MO.getOffset())
+    ME = MCBinaryExpr::createAdd(
+        ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+
+  return MCOperand::createExpr(ME);
+}
+
 bool llvm::lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
                                                    MCOperand &MCOp,
                                                    const AsmPrinter &AP) {
@@ -41,9 +57,13 @@ bool llvm::lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
   case MachineOperand::MO_Immediate:
     MCOp = MCOperand::createImm(MO.getImm());
     break;
-  // TODO: lower special operands
-  case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
+    MCOp = lowerSymbolOperand(MO, AP.getSymbolPreferLocal(*MO.getGlobal()), AP);
+    break;
+  case MachineOperand::MO_MachineBasicBlock:
+    MCOp = lowerSymbolOperand(MO, MO.getMBB()->getSymbol(), AP);
+    break;
+  // TODO: lower special operands
   case MachineOperand::MO_BlockAddress:
   case MachineOperand::MO_ExternalSymbol:
   case MachineOperand::MO_ConstantPoolIndex:

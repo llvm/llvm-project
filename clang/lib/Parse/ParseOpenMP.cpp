@@ -186,7 +186,9 @@ static OpenMPDirectiveKindExWrapper parseOpenMPDirectiveKind(Parser &P) {
       {OMPD_parallel_master, OMPD_taskloop, OMPD_parallel_master_taskloop},
       {OMPD_parallel_masked, OMPD_taskloop, OMPD_parallel_masked_taskloop},
       {OMPD_parallel_master_taskloop, OMPD_simd,
-       OMPD_parallel_master_taskloop_simd}};
+       OMPD_parallel_master_taskloop_simd},
+      {OMPD_parallel_masked_taskloop, OMPD_simd,
+       OMPD_parallel_masked_taskloop_simd}};
   enum { CancellationPoint = 0, DeclareReduction = 1, TargetData = 2 };
   Token Tok = P.getCurToken();
   OpenMPDirectiveKindExWrapper DKind =
@@ -2395,6 +2397,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_masked_taskloop:
   case OMPD_masked_taskloop_simd:
   case OMPD_parallel_masked_taskloop:
+  case OMPD_parallel_masked_taskloop_simd:
   case OMPD_distribute:
   case OMPD_target_update:
   case OMPD_distribute_parallel_for:
@@ -2798,6 +2801,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_parallel_master_taskloop:
   case OMPD_parallel_masked_taskloop:
   case OMPD_parallel_master_taskloop_simd:
+  case OMPD_parallel_masked_taskloop_simd:
   case OMPD_distribute:
   case OMPD_distribute_parallel_for:
   case OMPD_distribute_parallel_for_simd:

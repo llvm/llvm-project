@@ -2238,9 +2238,6 @@ LLVMValueRef LLVMConstInsertElement(LLVMValueRef VectorConstant,
 LLVMValueRef LLVMConstShuffleVector(LLVMValueRef VectorAConstant,
                                     LLVMValueRef VectorBConstant,
                                     LLVMValueRef MaskConstant);
-LLVMValueRef LLVMConstInsertValue(LLVMValueRef AggConstant,
-                                  LLVMValueRef ElementValueConstant,
-                                  unsigned *IdxList, unsigned NumIdx);
 LLVMValueRef LLVMBlockAddress(LLVMValueRef F, LLVMBasicBlockRef BB);
 
 /** Deprecated: Use LLVMGetInlineAsm instead. */
