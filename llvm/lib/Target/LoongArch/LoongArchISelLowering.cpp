@@ -396,6 +396,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "LoongArchISD::" #node;
 
     // TODO: Add more target-dependent nodes later.
+    NODE_NAME_CASE(CALL)
     NODE_NAME_CASE(RET)
     NODE_NAME_CASE(SLL_W)
     NODE_NAME_CASE(SRA_W)
@@ -506,6 +507,132 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i)
     InVals.push_back(unpackFromRegLoc(DAG, Chain, ArgLocs[i], DL, *this));
+
+  return Chain;
+}
+
+// Lower a call to a callseq_start + CALL + callseq_end chain, and add input
+// and output parameter nodes.
+SDValue
+LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
+                                   SmallVectorImpl<SDValue> &InVals) const {
+  SelectionDAG &DAG = CLI.DAG;
+  SDLoc &DL = CLI.DL;
+  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  SDValue Chain = CLI.Chain;
+  SDValue Callee = CLI.Callee;
+  CallingConv::ID CallConv = CLI.CallConv;
+  bool IsVarArg = CLI.IsVarArg;
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  CLI.IsTailCall = false;
+
+  if (IsVarArg)
+    report_fatal_error("LowerCall with varargs not implemented");
+
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  // Analyze the operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign> ArgLocs;
+  CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+
+  analyzeOutputArgs(ArgCCInfo, Outs, CC_LoongArch);
+
+  // Get a count of how many bytes are to be pushed on the stack.
+  unsigned NumBytes = ArgCCInfo.getNextStackOffset();
+
+  for (auto &Arg : Outs) {
+    if (!Arg.Flags.isByVal())
+      continue;
+    report_fatal_error("Passing arguments byval not implemented");
+  }
+
+  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
+
+  // Copy argument values to their designated locations.
+  SmallVector<std::pair<Register, SDValue>> RegsToPass;
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+    CCValAssign &VA = ArgLocs[i];
+    SDValue ArgValue = OutVals[i];
+
+    // Promote the value if needed.
+    // For now, only handle fully promoted arguments.
+    if (VA.getLocInfo() != CCValAssign::Full)
+      report_fatal_error("Unknown loc info");
+
+    if (VA.isRegLoc()) {
+      // Queue up the argument copies and emit them at the end.
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
+    } else {
+      report_fatal_error("Passing arguments via the stack not implemented");
+    }
+  }
+
+  SDValue Glue;
+
+  // Build a sequence of copy-to-reg nodes, chained and glued together.
+  for (auto &Reg : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg.first, Reg.second, Glue);
+    Glue = Chain.getValue(1);
+  }
+
+  // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
+  // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
+  // split it and then direct call can be matched by PseudoCALL.
+  // FIXME: Add target flags for relocation.
+  if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee))
+    Callee = DAG.getTargetGlobalAddress(S->getGlobal(), DL, PtrVT);
+  else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee))
+    Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT);
+
+  // The first call operand is the chain and the second is the target address.
+  SmallVector<SDValue> Ops;
+  Ops.push_back(Chain);
+  Ops.push_back(Callee);
+
+  // Add argument registers to the end of the list so that they are
+  // known live into the call.
+  for (auto &Reg : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
+
+  // Add a register mask operand representing the call-preserved registers.
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  Ops.push_back(DAG.getRegisterMask(Mask));
+
+  // Glue the call to the argument copies, if any.
+  if (Glue.getNode())
+    Ops.push_back(Glue);
+
+  // Emit the call.
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+
+  Chain = DAG.getNode(LoongArchISD::CALL, DL, NodeTys, Ops);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  Glue = Chain.getValue(1);
+
+  // Mark the end of the call, which is glued to the call itself.
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getConstant(NumBytes, DL, PtrVT, true),
+                             DAG.getConstant(0, DL, PtrVT, true), Glue, DL);
+  Glue = Chain.getValue(1);
+
+  // Assign locations to each value returned by this call.
+  SmallVector<CCValAssign> RVLocs;
+  CCState RetCCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
+  analyzeInputArgs(RetCCInfo, Ins, CC_LoongArch);
+
+  // Copy all of the result registers out of their specified physreg.
+  for (auto &VA : RVLocs) {
+    // Copy the value out.
+    SDValue RetValue =
+        DAG.getCopyFromReg(Chain, DL, VA.getLocReg(), VA.getLocVT(), Glue);
+    Chain = RetValue.getValue(1);
+    Glue = RetValue.getValue(2);
+
+    InVals.push_back(Chain.getValue(0));
+  }
 
   return Chain;
 }
