@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++98 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++11 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++17 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=gnu++17 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++98 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++17 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=gnu++17 %s
 
 namespace std {
 struct type_info;

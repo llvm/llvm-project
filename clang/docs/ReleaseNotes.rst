@@ -312,6 +312,10 @@ Non-comprehensive list of changes in this release
   - ASAN_OPTIONS=detect_stack_use_after_return=1 (only on Linux).
   - MSAN_OPTIONS=poison_in_dtor=1.
 
+- Some type-trait builtins, such as ``__has_trivial_assign``, have been documented
+  as deprecated for a while because their semantics don't mix well with post-C++11 type-traits.
+  Clang now emits deprecation warnings for them under the flag ``-Wdeprecated-builtins``.
+
 New Compiler Flags
 ------------------
 - Added the ``-fno-knr-functions`` flag to allow users to opt into the C2x
