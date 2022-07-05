@@ -1103,6 +1103,10 @@ nonloc::SymbolVal SValBuilder::simplifySymbolCast(nonloc::SymbolVal V,
   SymbolRef RootSym = cast<SymbolCast>(SE)->getOperand();
   QualType RT = RootSym->getType().getCanonicalType();
 
+  // FIXME support simplification from non-integers.
+  if (!RT->isIntegralOrEnumerationType())
+    return makeNonLoc(SE, T, CastTy);
+
   BasicValueFactory &BVF = getBasicValueFactory();
   APSIntType CTy = BVF.getAPSIntType(CastTy);
   APSIntType TTy = BVF.getAPSIntType(T);
