@@ -242,27 +242,36 @@ define i25 @max_masked_input(i25 %A) {
   ret i25 %C
 }
 
-define i25 @overflow_masked_input(i25 %A) {
-; CHECK-LABEL: @overflow_masked_input(
-; CHECK-NEXT:    [[M:%.*]] = and i25 [[A:%.*]], -16777216
-; CHECK-NEXT:    [[B:%.*]] = uitofp i25 [[M]] to float
-; CHECK-NEXT:    [[C:%.*]] = fptoui float [[B]] to i25
-; CHECK-NEXT:    ret i25 [[C]]
+define i25 @consider_lowbits_masked_input(i25 %A) {
+; CHECK-LABEL: @consider_lowbits_masked_input(
+; CHECK-NEXT:    [[M:%.*]] = and i25 [[A:%.*]], -16777214
+; CHECK-NEXT:    ret i25 [[M]]
 ;
-  %m = and i25 %A, 16777216  ; Negative test - intermediate 16777216 (= 1 << 24)
+  %m = and i25 %A, 16777218  ; Make use of the low zero bits - intermediate 16777218 (= 1 << 24 + 2)
   %B = uitofp i25 %m to float
   %C = fptoui float %B to i25
   ret i25 %C
 }
 
-; TODO: Clear the low bit - guarantees that the input is converted to FP without rounding.
+define i32 @overflow_masked_input(i32 %A) {
+; CHECK-LABEL: @overflow_masked_input(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[A:%.*]], 16777217
+; CHECK-NEXT:    [[B:%.*]] = uitofp i32 [[M]] to float
+; CHECK-NEXT:    [[C:%.*]] = fptoui float [[B]] to i32
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %m = and i32 %A, 16777217  ; Negative test - intermediate 16777217 (= 1 << 24 + 1)
+  %B = uitofp i32 %m to float
+  %C = fptoui float %B to i32
+  ret i32 %C
+}
+
+; Clear the low bit - guarantees that the input is converted to FP without rounding.
 
 define i25 @low_masked_input(i25 %A) {
 ; CHECK-LABEL: @low_masked_input(
 ; CHECK-NEXT:    [[M:%.*]] = and i25 [[A:%.*]], -2
-; CHECK-NEXT:    [[B:%.*]] = uitofp i25 [[M]] to float
-; CHECK-NEXT:    [[C:%.*]] = fptoui float [[B]] to i25
-; CHECK-NEXT:    ret i25 [[C]]
+; CHECK-NEXT:    ret i25 [[M]]
 ;
   %m = and i25 %A, -2
   %B = uitofp i25 %m to float
