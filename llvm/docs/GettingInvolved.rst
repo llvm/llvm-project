@@ -289,6 +289,11 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 2nd Thursday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 1 hour slot.
     - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
     - English, Russian, German (not fluently)
+  * - Alexey Bader
+    - SYCL compiler, offload tools, OpenCL and SPIR-V, how to contribute.
+    - Monthly, 2nd Monday of the month at 9:30am PT, for 30 minutes.
+    - `GoogleMeet <https://meet.google.com/pdz-xhns-uus>`__
+    - English, Russian
 
 
 Guidance for office hours hosts
