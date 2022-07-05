@@ -1064,6 +1064,15 @@ getFree(fir::FreeMemOp op, mlir::ConversionPatternRewriter &rewriter) {
                                         /*isVarArg=*/false));
 }
 
+static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {
+  unsigned result = 1;
+  for (auto eleTy = ty.getElementType().dyn_cast<mlir::LLVM::LLVMArrayType>();
+       eleTy;
+       eleTy = eleTy.getElementType().dyn_cast<mlir::LLVM::LLVMArrayType>())
+    ++result;
+  return result;
+}
+
 namespace {
 /// Lower a `fir.freemem` instruction into `llvm.call @free`
 struct FreeMemOpConversion : public FIROpConversion<fir::FreeMemOp> {
@@ -1383,9 +1392,15 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     llvm::SmallVector<mlir::Value> gepOperands;
     auto baseType =
         base.getType().cast<mlir::LLVM::LLVMPointerType>().getElementType();
-    if (baseType.isa<mlir::LLVM::LLVMArrayType>()) {
+    if (auto arrayType = baseType.dyn_cast<mlir::LLVM::LLVMArrayType>()) {
+      // FIXME: The baseType should be the array element type here, meaning
+      // there should at most be one dimension (constant length characters are
+      // lowered to LLVM as an array of length one characters.). However, using
+      // the character type in the GEP does not lead to correct GEPs when llvm
+      // opaque pointers are enabled.
       auto idxTy = this->lowerTy().indexType();
-      gepOperands.push_back(genConstantIndex(loc, idxTy, rewriter, 0));
+      gepOperands.append(getDimension(arrayType),
+                         genConstantIndex(loc, idxTy, rewriter, 0));
       gepOperands.push_back(lowerBound);
     } else {
       gepOperands.push_back(lowerBound);
@@ -1927,15 +1942,6 @@ struct ValueOpCommon {
   }
 
 private:
-  static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {
-    unsigned result = 1;
-    for (auto eleTy = ty.getElementType().dyn_cast<mlir::LLVM::LLVMArrayType>();
-         eleTy;
-         eleTy = eleTy.getElementType().dyn_cast<mlir::LLVM::LLVMArrayType>())
-      ++result;
-    return result;
-  }
-
   static mlir::Type getArrayElementType(mlir::LLVM::LLVMArrayType ty) {
     auto eleTy = ty.getElementType();
     while (auto arrTy = eleTy.dyn_cast<mlir::LLVM::LLVMArrayType>())
