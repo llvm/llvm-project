@@ -220,7 +220,8 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   // Fold a binop with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(LHS))
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      return ConstantExpr::get(Opcode, CLHS, CRHS);
+      if (Constant *Res = ConstantFoldBinaryOpOperands(Opcode, CLHS, CRHS, DL))
+        return Res;
 
   // Do a quick scan to see if we have this binop nearby.  If so, reuse it.
   unsigned ScanLimit = 6;
