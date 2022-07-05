@@ -50,9 +50,9 @@
 ; RUN: cat %t.yaml | FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE
 
 ; REMARKS: remark: {{.*}} 'foo' inlined into 'main'
-; REMARKS: remark: {{.*}} loop not vectorized: cannot prove it is safe to reorder memory operations
+; REMARKS: remark: {{.*}} the cost-model indicates that interleaving is not beneficial
 ; REMARKS_DH: llvm-lto: remark: {{.*}} 'foo' inlined into 'main'
-; REMARKS_DH: llvm-lto: remark: {{.*}} loop not vectorized: cannot prove it is safe to reorder memory operations
+; REMARKS_DH: llvm-lto: remark: {{.*}} the cost-model indicates that interleaving is not beneficial
 ; CHECK-NOT: remark:
 ; CHECK-NOT: llvm-lto:
 ; NM-NOT: foo
