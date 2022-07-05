@@ -106,7 +106,14 @@ def simm16 : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<16>";
 }
 
-def simm16_lsl2 : Operand<GRLenVT> {
+def simm16_lsl2 : Operand<GRLenVT>,
+    ImmLeaf<GRLenVT, [{return isInt<16>(Imm>>2);}]> {
+  let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
+  let EncoderMethod = "getImmOpValueAsr2";
+  let DecoderMethod = "decodeSImmOperand<16, 2>";
+}
+
+def simm16_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<16, 2>";
@@ -117,13 +124,13 @@ def simm20 : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<20>";
 }
 
-def simm21_lsl2 : Operand<GRLenVT> {
+def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<21, 2>";
 }
 
-def simm26_lsl2 : Operand<GRLenVT> {
+def simm26_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<26, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
@@ -185,7 +192,7 @@ class RDTIME_2R<bits<22> op, string opstr>
     : Fmt2R<op, (outs GPR:$rd, GPR:$rj), (ins), opstr, "$rd, $rj">;
 
 class BrCC_2RI16<bits<6> op, string opstr>
-    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2:$imm16), opstr,
+    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2_br:$imm16), opstr,
                "$rj, $rd, $imm16"> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -648,6 +655,44 @@ def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
           (OR (MASKEQZ GPR:$t, GPR:$cond), (MASKNEZ GPR:$f, GPR:$cond))>;
 
 /// Branches and jumps
+
+class BccPat<PatFrag CondOp, LAInst Inst>
+    : Pat<(brcond (GRLenVT (CondOp GPR:$rj, GPR:$rd)), bb:$imm16),
+          (Inst GPR:$rj, GPR:$rd, bb:$imm16)>;
+
+def : BccPat<seteq, BEQ>;
+def : BccPat<setne, BNE>;
+def : BccPat<setlt, BLT>;
+def : BccPat<setge, BGE>;
+def : BccPat<setult, BLTU>;
+def : BccPat<setuge, BGEU>;
+
+class BccSwapPat<PatFrag CondOp, LAInst InstBcc>
+    : Pat<(brcond (GRLenVT (CondOp GPR:$rd, GPR:$rj)), bb:$imm16),
+          (InstBcc GPR:$rj, GPR:$rd, bb:$imm16)>;
+
+// Condition codes that don't have matching LoongArch branch instructions, but
+// are trivially supported by swapping the two input operands.
+def : BccSwapPat<setgt, BLT>;
+def : BccSwapPat<setle, BGE>;
+def : BccSwapPat<setugt, BLTU>;
+def : BccSwapPat<setule, BGEU>;
+
+// An extra pattern is needed for a brcond without a setcc (i.e. where the
+// condition was calculated elsewhere).
+def : Pat<(brcond GPR:$rj, bb:$imm21), (BNEZ GPR:$rj, bb:$imm21)>;
+
+let isBarrier = 1, isBranch = 1, isTerminator = 1 in
+def PseudoBR : Pseudo<(outs), (ins simm26_lsl2:$imm26), [(br bb:$imm26)]>,
+               PseudoInstExpansion<(B simm26_lsl2:$imm26)>;
+
+let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
+def PseudoBRIND : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16), []>,
+                  PseudoInstExpansion<(JIRL R0, GPR:$rj, simm16_lsl2:$imm16)>;
+
+def : Pat<(brind GPR:$rj), (PseudoBRIND GPR:$rj, 0)>;
+def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
+          (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,

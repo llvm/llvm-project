@@ -60,8 +60,10 @@ bool llvm::lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
   case MachineOperand::MO_GlobalAddress:
     MCOp = lowerSymbolOperand(MO, AP.getSymbolPreferLocal(*MO.getGlobal()), AP);
     break;
-  // TODO: lower special operands
   case MachineOperand::MO_MachineBasicBlock:
+    MCOp = lowerSymbolOperand(MO, MO.getMBB()->getSymbol(), AP);
+    break;
+  // TODO: lower special operands
   case MachineOperand::MO_BlockAddress:
   case MachineOperand::MO_ExternalSymbol:
   case MachineOperand::MO_ConstantPoolIndex:
