@@ -8,24 +8,15 @@ declare void @dummy()
 
 define i32 @main(i1 %c1, i1 %c2, i32 %y) {
 ; CHECK-LABEL: @main(
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[EXIT:%.*]], label [[LOOP_PRE_PREHEADER:%.*]]
-; CHECK:       loop.pre.preheader:
+; CHECK-NEXT:    [[C1_NOT:%.*]] = xor i1 [[C1:%.*]], true
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Y:%.*]], -1
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_PREHEADER:%.*]], label [[EXIT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C1_NOT]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    br i1 [[C1]], label [[LOOP2:%.*]], label [[LOOP]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
-; CHECK:       loop2:
-; CHECK-NEXT:    br i1 [[CMP2]], label [[JOIN:%.*]], label [[IF:%.*]]
-; CHECK:       if:
-; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
-; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP2]], label [[LOOP_LATCH:%.*]]
+; CHECK-NEXT:    br label [[LOOP_CRITEDGE:%.*]]
+; CHECK:       loop.critedge:
+; CHECK-NEXT:    br label [[LOOP_CRITEDGE]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
 ;
