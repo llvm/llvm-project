@@ -673,10 +673,10 @@ Which will look like:
 ```
 
 For optional `Attribute` or `Type` parameters, the current MLIR context is
-available through `$_ctx`. E.g.
+available through `$_ctxt`. E.g.
 
 ```tablegen
-DefaultValuedParameter<"IntegerType", "IntegerType::get($_ctx, 32)">
+DefaultValuedParameter<"IntegerType", "IntegerType::get($_ctxt, 32)">
 ```
 
 ##### Assembly Format Directives

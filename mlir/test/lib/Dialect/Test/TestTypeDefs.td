@@ -312,7 +312,7 @@ def TestTypeAPFloat : Test_Type<"TestTypeAPFloat"> {
 def TestTypeDefaultValuedType : Test_Type<"TestTypeDefaultValuedType"> {
   let parameters = (ins
     DefaultValuedParameter<"mlir::IntegerType",
-                           "mlir::IntegerType::get($_ctx, 32)">:$type
+                           "mlir::IntegerType::get($_ctxt, 32)">:$type
   );
   let mnemonic = "default_valued_type";
   let assemblyFormat = "`<` (`(` $type^ `)`)? `>`";
