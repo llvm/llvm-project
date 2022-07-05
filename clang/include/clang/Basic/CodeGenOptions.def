@@ -399,6 +399,9 @@ CODEGENOPT(CodeViewGHash, 1, 0)
 /// The kind of inlining to perform.
 ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 
+/// The maximum stack size a function can have to be considered for inlining.
+VALUE_CODEGENOPT(InlineMaxStackSize, 32, UINT_MAX)
+
 // Vector functions library to use.
 ENUM_CODEGENOPT(VecLib, VectorLibrary, 3, NoLibrary)
 
