@@ -1429,23 +1429,25 @@ func.func @cast_extract_slice_rank_reduce(%arg0 : tensor<128x512xf32>, %s : inde
 // -----
 
 // CHECK-LABEL: func.func @canonicalize_parallel_insert_slice_indices(
-//  CHECK-SAME:     %[[arg0:[0-9a-z]*]]: tensor<?x?xf32>, 
+//  CHECK-SAME:     %[[arg0:[0-9a-z]*]]: tensor<1x5xf32>, 
 //  CHECK-SAME:     %[[arg1:[0-9a-z]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:     %[[num_threads:[0-9a-z]*]]: index
 func.func @canonicalize_parallel_insert_slice_indices(
-    %arg0 : tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
+    %arg0 : tensor<1x5xf32>, %arg1: tensor<?x?xf32>,
     %num_threads : index) -> tensor<?x?xf32>
 {
   %cst = arith.constant 4.200000e+01 : f32
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
 
+  //  CHECK-NOT: tensor.cast
   //      CHECK: scf.foreach_thread (%[[tidx:[0-9a-z]*]]) in (%[[num_threads]]) -> (tensor<?x?xf32>) {
   // CHECK-NEXT:   scf.foreach_thread.perform_concurrently {
   // CHECK-NEXT:     tensor.parallel_insert_slice %[[arg0]] into %[[arg1]][%[[tidx]], 0] [1, 5] [1, 1]
   %2 = scf.foreach_thread (%tidx) in (%num_threads)  -> (tensor<?x?xf32>) {
+    %3 = tensor.cast %arg0 : tensor<1x5xf32> to tensor<?x5xf32>
     scf.foreach_thread.perform_concurrently {
-      tensor.parallel_insert_slice %arg0 into %arg1[%tidx, %c0] [%c1, 5] [%c1, %c1] : tensor<?x?xf32> into tensor<?x?xf32>
+      tensor.parallel_insert_slice %3 into %arg1[%tidx, %c0] [%c1, 5] [%c1, %c1] : tensor<?x5xf32> into tensor<?x?xf32>
     }
   }
   return %2 : tensor<?x?xf32>
