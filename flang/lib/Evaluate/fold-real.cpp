@@ -315,7 +315,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   }
-  // TODO: dot_product, fraction, matmul, norm2, set_exponent, transfer
+  // TODO: dot_product, fraction, matmul, norm2, set_exponent
   return Expr<T>{std::move(funcRef)};
 }
 
