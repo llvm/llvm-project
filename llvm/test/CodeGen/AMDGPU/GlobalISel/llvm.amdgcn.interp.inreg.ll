@@ -42,9 +42,8 @@ define amdgpu_ps void @v_interp_f32_many(float inreg %i, float inreg %j, i32 inr
 ; GCN-NEXT:    lds_param_load v2, attr2.x wait_vdst:15
 ; GCN-NEXT:    lds_param_load v3, attr3.x wait_vdst:15
 ; GCN-NEXT:    s_mov_b32 exec_lo, s3
-; GCN-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_4)
+; GCN-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s1
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_4)
 ; GCN-NEXT:    v_interp_p10_f32 v6, v0, v4, v0 wait_exp:3
 ; GCN-NEXT:    v_interp_p10_f32 v7, v1, v4, v1 wait_exp:2
 ; GCN-NEXT:    v_interp_p10_f32 v8, v2, v4, v2 wait_exp:1

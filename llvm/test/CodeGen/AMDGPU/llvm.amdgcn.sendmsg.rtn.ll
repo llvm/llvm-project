@@ -7,9 +7,8 @@ define amdgpu_kernel void @test_get_doorbell(i32 addrspace(1)* %out) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DOORBELL)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -18,9 +17,8 @@ define amdgpu_kernel void @test_get_doorbell(i32 addrspace(1)* %out) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DOORBELL)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -34,9 +32,8 @@ define amdgpu_kernel void @test_get_ddid(i32 addrspace(1)* %out) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DDID)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -45,9 +42,8 @@ define amdgpu_kernel void @test_get_ddid(i32 addrspace(1)* %out) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DDID)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -63,8 +59,7 @@ define amdgpu_kernel void @test_get_tma(i64 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_TMA)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11-NEXT:    v_mov_b32_e32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
@@ -80,8 +75,7 @@ define amdgpu_kernel void @test_get_realtime(i64 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_REALTIME)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11-NEXT:    v_mov_b32_e32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
@@ -95,9 +89,8 @@ define amdgpu_kernel void @test_savewave(i32 addrspace(1)* %out) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_SAVE_WAVE)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -106,9 +99,8 @@ define amdgpu_kernel void @test_savewave(i32 addrspace(1)* %out) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_SAVE_WAVE)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -124,8 +116,7 @@ define amdgpu_kernel void @test_get_tba(i64 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_TBA)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11-NEXT:    v_mov_b32_e32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
@@ -139,9 +130,8 @@ define amdgpu_kernel void @test_get_0_i32(i32 addrspace(1)* %out) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(0, 0, 0)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -150,9 +140,8 @@ define amdgpu_kernel void @test_get_0_i32(i32 addrspace(1)* %out) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(0, 0, 0)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX11-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -168,8 +157,7 @@ define amdgpu_kernel void @test_get_99999_i64(i64 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_sendmsg_rtn_b64 s[2:3], 99999
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11-NEXT:    v_mov_b32_e32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm

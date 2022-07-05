@@ -1,7 +1,7 @@
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10PLUS %s
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10PLUS %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10PLUS %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10PLUS %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10PLUS %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10PLUS %s
 
 ; GFX10PLUS-LABEL: {{^}}dpp8_test:
 ; GFX10PLUS: v_mov_b32_e32 [[SRC:v[0-9]+]], s{{[0-9]+}}
