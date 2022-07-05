@@ -22,8 +22,8 @@
 
 // -----
 // Unrecognized token: missing closing angle bracket
-// expected-error@+1 {{expected '>'}}
-!qalias = !quant<"uniform<i8<-4:3:f32, 0.99872:127>">
+// expected-error@+1 {{unbalanced '<' character in pretty dialect name}}
+!qalias = !quant<uniform<i8<-4:3:f32, 0.99872:127>>
 
 // -----
 // Unrecognized token: missing type colon

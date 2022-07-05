@@ -1650,7 +1650,8 @@ void AsmPrinter::Impl::printLocation(LocationAttr loc, bool allowAlias) {
 }
 
 /// Returns true if the given dialect symbol data is simple enough to print in
-/// the pretty form, i.e. without the enclosing "".
+/// the pretty form. This is essentially when the symbol takes the form:
+///   identifier (`<` body `>`)?
 static bool isDialectSymbolSimpleEnoughForPrettyForm(StringRef symName) {
   // The name must start with an identifier.
   if (symName.empty() || !isalpha(symName.front()))
@@ -1663,64 +1664,9 @@ static bool isDialectSymbolSimpleEnoughForPrettyForm(StringRef symName) {
   if (symName.empty())
     return true;
 
-  // If we got to an unexpected character, then it must be a <>.  Check those
-  // recursively.
-  if (symName.front() != '<' || symName.back() != '>')
-    return false;
-
-  SmallVector<char, 8> nestedPunctuation;
-  do {
-    // If we ran out of characters, then we had a punctuation mismatch.
-    if (symName.empty())
-      return false;
-
-    auto c = symName.front();
-    symName = symName.drop_front();
-
-    switch (c) {
-    // We never allow null characters. This is an EOF indicator for the lexer
-    // which we could handle, but isn't important for any known dialect.
-    case '\0':
-      return false;
-    case '<':
-    case '[':
-    case '(':
-    case '{':
-      nestedPunctuation.push_back(c);
-      continue;
-    case '-':
-      // Treat `->` as a special token.
-      if (!symName.empty() && symName.front() == '>') {
-        symName = symName.drop_front();
-        continue;
-      }
-      break;
-    // Reject types with mismatched brackets.
-    case '>':
-      if (nestedPunctuation.pop_back_val() != '<')
-        return false;
-      break;
-    case ']':
-      if (nestedPunctuation.pop_back_val() != '[')
-        return false;
-      break;
-    case ')':
-      if (nestedPunctuation.pop_back_val() != '(')
-        return false;
-      break;
-    case '}':
-      if (nestedPunctuation.pop_back_val() != '{')
-        return false;
-      break;
-    default:
-      continue;
-    }
-
-    // We're done when the punctuation is fully matched.
-  } while (!nestedPunctuation.empty());
-
-  // If there were extra characters, then we failed.
-  return symName.empty();
+  // If we got to an unexpected character, then it must be a <>. Check that the
+  // rest of the symbol is wrapped within <>.
+  return symName.front() == '<' && symName.back() == '>';
 }
 
 /// Print the given dialect symbol to the stream.
@@ -1735,9 +1681,7 @@ static void printDialectSymbol(raw_ostream &os, StringRef symPrefix,
     return;
   }
 
-  os << "<\"";
-  llvm::printEscapedString(symString, os);
-  os << "\">";
+  os << '<' << symString << '>';
 }
 
 /// Returns true if the given string can be represented as a bare identifier.

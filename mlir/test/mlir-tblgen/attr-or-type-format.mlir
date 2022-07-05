@@ -1,22 +1,22 @@
 // RUN: mlir-opt --split-input-file %s --verify-diagnostics
 
 func.func private @test_ugly_attr_cannot_be_pretty() -> () attributes {
-  // expected-error@+1 {{expected 'begin'}}
-  attr = #test.attr_ugly
+  // expected-error@below {{expected 'begin'}}
+  attr = #test.attr_ugly,
 }
 
 // -----
 
 func.func private @test_ugly_attr_no_mnemonic() -> () attributes {
   // expected-error@+1 {{expected valid keyword}}
-  attr = #test<"">
+  attr = #test<>
 }
 
 // -----
 
 func.func private @test_ugly_attr_parser_dispatch() -> () attributes {
   // expected-error@+1 {{expected 'begin'}}
-  attr = #test<"attr_ugly">
+  attr = #test<attr_ugly>
 }
 
 // -----
@@ -24,21 +24,21 @@ func.func private @test_ugly_attr_parser_dispatch() -> () attributes {
 func.func private @test_ugly_attr_missing_parameter() -> () attributes {
   // expected-error@+2 {{failed to parse TestAttrUgly parameter 'attr'}}
   // expected-error@+1 {{expected attribute value}}
-  attr = #test<"attr_ugly begin">
+  attr = #test<attr_ugly begin>
 }
 
 // -----
 
 func.func private @test_ugly_attr_missing_literal() -> () attributes {
   // expected-error@+1 {{expected 'end'}}
-  attr = #test<"attr_ugly begin \"string_attr\"">
+  attr = #test<attr_ugly begin "string_attr">
 }
 
 // -----
 
 func.func private @test_pretty_attr_expects_less() -> () attributes {
   // expected-error@+1 {{expected '<'}}
-  attr = #test.attr_with_format
+  attr = #test.attr_with_format,
 }
 
 // -----
@@ -55,7 +55,7 @@ func.func private @test_parse_invalid_param() -> () attributes {
   // Test parameter parser failure is propagated
   // expected-error@+2 {{expected integer value}}
   // expected-error@+1 {{failed to parse TestAttrWithFormat parameter 'one'}}
-  attr = #test.attr_with_format<"hi">
+  attr = #test.attr_with_format<hi>
 }
 
 // -----
@@ -105,7 +105,7 @@ func.func private @test_parse_param_after_struct() -> () attributes {
 // -----
 
 // expected-error@+1 {{expected '<'}}
-func.func private @test_invalid_type() -> !test.type_with_format
+func.func private @test_invalid_type() -> !test.type_with_format,
 
 // -----
 

@@ -33,17 +33,6 @@ struct SymbolState {
   DenseMap<const OpAsmDialectInterface *,
            llvm::StringMap<std::pair<std::string, AsmDialectResourceHandle>>>
       dialectResources;
-
-  /// A set of locations into the main parser memory buffer for each of the
-  /// active nested parsers. Given that some nested parsers, i.e. custom dialect
-  /// parsers, operate on a temporary memory buffer, this provides an anchor
-  /// point for emitting diagnostics.
-  SmallVector<SMLoc, 1> nestedParserLocs;
-
-  /// The top-level lexer that contains the original memory buffer provided by
-  /// the user. This is used by nested parsers to get a properly encoded source
-  /// location.
-  Lexer *topLevelLexer = nullptr;
 };
 
 //===----------------------------------------------------------------------===//
@@ -56,17 +45,7 @@ struct ParserState {
   ParserState(const llvm::SourceMgr &sourceMgr, const ParserConfig &config,
               SymbolState &symbols, AsmParserState *asmState)
       : config(config), lex(sourceMgr, config.getContext()),
-        curToken(lex.lexToken()), symbols(symbols),
-        parserDepth(symbols.nestedParserLocs.size()), asmState(asmState) {
-    // Set the top level lexer for the symbol state if one doesn't exist.
-    if (!symbols.topLevelLexer)
-      symbols.topLevelLexer = &lex;
-  }
-  ~ParserState() {
-    // Reset the top level lexer if it refers the lexer in our state.
-    if (symbols.topLevelLexer == &lex)
-      symbols.topLevelLexer = nullptr;
-  }
+        curToken(lex.lexToken()), symbols(symbols), asmState(asmState) {}
   ParserState(const ParserState &) = delete;
   void operator=(const ParserState &) = delete;
 
@@ -81,9 +60,6 @@ struct ParserState {
 
   /// The current state for symbol parsing.
   SymbolState &symbols;
-
-  /// The depth of this parser in the nested parsing stack.
-  size_t parserDepth;
 
   /// An optional pointer to a struct containing high level parser state to be
   /// populated during parsing.
