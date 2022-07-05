@@ -292,7 +292,7 @@ func.func @tensor.extract_slice_rank_reducing(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x?xf32>, %[[t2:.*]]: tensor<?x10xf32>,
 //  CHECK-SAME:     %[[idx1:.*]]: index, %[[idx2:.*]]: index
 func.func @tensor.insert_slice(%t1: tensor<?x?xf32>, %t2: tensor<?x10xf32>,
-                          %idx1: index, %idx2: index) -> tensor<?x?xf32> {
+                               %idx1: index, %idx2: index) -> tensor<?x?xf32> {
   // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
   // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
   // CHECK-DAG: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x?xf32>
@@ -309,6 +309,40 @@ func.func @tensor.insert_slice(%t1: tensor<?x?xf32>, %t2: tensor<?x10xf32>,
   //     CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
   //     CHECK: return %[[r]]
   return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK: #[[$MAP11:.*]] = affine_map<()[s0] -> (s0)>
+
+// CHECK-LABEL: func @tensor.insert_slice_rank_reducing_1(
+func.func @tensor.insert_slice_rank_reducing_1(
+    %t1: tensor<?x?xf32>, %f: tensor<f32>, %idx1: index, %idx2: index)
+  -> tensor<?x?xf32>
+{
+  // CHECK: %[[alloc:.*]] = memref.alloc{{.*}} : memref<?x?xf32>
+  // CHECK: memref.subview %[[alloc]][%{{.*}}, %{{.*}}] [1, 1] [1, 1] : memref<?x?xf32> to memref<f32, #[[$MAP11]]>
+  // CHECK: memref.copy {{.*}} : memref<f32> to memref<f32, #[[$MAP11]]>
+  %0 = tensor.insert_slice %f into %t1[%idx1, %idx2][1, 1][1, 1]
+      : tensor<f32> into tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK: #[[$MAP12:.*]] = affine_map<(d0, d1, d2, d3, d4)[s0, s1, s2, s3, s4, s5] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4 + d4 * s5)>
+
+// CHECK-LABEL: func @tensor.insert_slice_rank_reducing_2(
+func.func @tensor.insert_slice_rank_reducing_2(
+    %t1: tensor<?x?x?x?x?x?x?xf32>, %t2: tensor<2x1x4x1x1xf32>, %i: index)
+  -> tensor<?x?x?x?x?x?x?xf32>
+{
+  // CHECK: %[[alloc:.*]] = memref.alloc{{.*}} : memref<?x?x?x?x?x?x?xf32>
+  // CHECK: memref.subview %[[alloc]][{{.*}}] [1, 2, 1, 4, 1, 1, 1] [1, 1, 1, 1, 1, 1, 1] : memref<?x?x?x?x?x?x?xf32> to memref<2x1x4x1x1xf32, #[[$MAP12]]>
+  // CHECK: memref.copy {{.*}} : memref<2x1x4x1x1xf32> to memref<2x1x4x1x1xf32, #[[$MAP12]]>
+  %0 = tensor.insert_slice %t2 into %t1[%i, %i, %i, %i, %i, %i, %i][1, 2, 1, 4, 1, 1, 1][1, 1, 1, 1, 1, 1, 1]
+      : tensor<2x1x4x1x1xf32> into tensor<?x?x?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?x?x?xf32>
 }
 
 // -----
