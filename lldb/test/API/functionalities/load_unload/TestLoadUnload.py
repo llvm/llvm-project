@@ -201,7 +201,6 @@ class LoadUnloadTestCase(TestBase):
         hostoslist=["windows"],
         triple='.*-android')
     @expectedFailureAll(oslist=["windows"]) # process load not implemented
-    @expectedFailureAll(oslist=["linux"], archs=["arm"]) # Fails on ubuntu jammy
     def test_lldb_process_load_and_unload_commands(self):
         self.setSvr4Support(False)
         self.run_lldb_process_load_and_unload_commands()
