@@ -193,11 +193,11 @@ private:
   bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
                            SDValue &SAddr, SDValue &Offset) const;
 
-  bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue &Offset,
-                        bool &Imm) const;
+  bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue &Offset, bool Imm,
+                        bool Imm32Only) const;
   SDValue Expand32BitAddress(SDValue Addr) const;
-  bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue &Offset,
-                  bool &Imm) const;
+  bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue &Offset, bool Imm,
+                  bool Imm32Only = false) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDImm32(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDSgpr(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
