@@ -666,8 +666,9 @@ Error LLJITBuilderState::prepareForConstruction() {
   // JIT linker.
   if (!CreateObjectLinkingLayer) {
     auto &TT = JTMB->getTargetTriple();
-    if (TT.isOSBinFormatMachO() &&
-        (TT.getArch() == Triple::aarch64 || TT.getArch() == Triple::x86_64)) {
+    if (TT.getArch() == Triple::riscv64 ||
+        (TT.isOSBinFormatMachO() &&
+         (TT.getArch() == Triple::aarch64 || TT.getArch() == Triple::x86_64))) {
 
       JTMB->setRelocationModel(Reloc::PIC_);
       JTMB->setCodeModel(CodeModel::Small);
