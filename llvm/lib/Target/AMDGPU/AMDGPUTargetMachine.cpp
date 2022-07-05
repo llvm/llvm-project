@@ -332,6 +332,11 @@ static cl::opt<bool> EnableImageIntrinsicOptimizer(
     cl::desc("Enable image intrinsic optimizer pass"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool> EnableLoopPrefetch(
+    "amdgpu-loop-prefetch",
+    cl::desc("Enable loop data prefetch on AMDGPU"),
+    cl::Hidden, cl::init(false));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -994,6 +999,8 @@ void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
 
 void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
   addPass(createLICMPass());
+  if (isPassEnabled(EnableLoopPrefetch, CodeGenOpt::Aggressive))
+    addPass(createLoopDataPrefetchPass());
   addPass(createSeparateConstOffsetFromGEPPass());
   addPass(createSpeculativeExecutionPass());
   // ReassociateGEPs exposes more opportunities for SLSR. See
