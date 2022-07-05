@@ -133,7 +133,7 @@ New checks
   Detects confusable Unicode identifiers.
 
 - New :doc:`bugprone-assignment-in-if-condition
-  <clang-tidy/checks/bugprone-assignment-in-if-condition>` check.
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check.
 
   Warns when there is an assignment within an if statement condition expression.
 
