@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy %s misc-confusable-identifiers %t
 
-int fo;
-int 𝐟o;
-// CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: '𝐟o' is confusable with 'fo' [misc-confusable-identifiers]
+int l0;
+int lO;
+// CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: 'lO' is confusable with 'l0' [misc-confusable-identifiers]
 // CHECK-MESSAGES: :[[#@LINE-3]]:5: note: other declaration found here
 
 void no() {
@@ -12,9 +12,9 @@ void no() {
 void worry() {
   int foo;
 }
-int 𝐟i;
-int fi;
-// CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: 'fi' is confusable with '𝐟i' [misc-confusable-identifiers]
+int l1;
+int ll;
+// CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: 'll' is confusable with 'l1' [misc-confusable-identifiers]
 // CHECK-MESSAGES: :[[#@LINE-3]]:5: note: other declaration found here
 
 bool f0(const char *q1, const char *ql) {
@@ -54,14 +54,6 @@ void f5(int il) {
   // CHECK-MESSAGES: :[[#@LINE-1]]:13: warning: 'il' is confusable with 'i1' [misc-confusable-identifiers]
   // CHECK-MESSAGES: :[[#@LINE-3]]:20: note: other declaration found here
 }
-
-template <typename O0>
-void f6() {
-  int OO = 0;
-  // CHECK-MESSAGES: :[[#@LINE-1]]:7: warning: 'OO' is confusable with 'O0' [misc-confusable-identifiers]
-  // CHECK-MESSAGES: :[[#@LINE-4]]:20: note: other declaration found here
-}
-int OO = 0; // no warning, not same scope as f6
 
 namespace f7 {
 int i1;
