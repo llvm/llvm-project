@@ -1738,7 +1738,7 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// induction variable. AffineForOp only has one region, so zero is the only
 /// valid value for `index`.
 OperandRange AffineForOp::getSuccessorEntryOperands(Optional<unsigned> index) {
-  assert(!index || *index == 0 && "invalid region index");
+  assert((!index || *index == 0) && "invalid region index");
 
   // The initial operands map to the loop arguments after the induction
   // variable or are forwarded to the results when the trip count is zero.
