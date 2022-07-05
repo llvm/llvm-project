@@ -113,6 +113,8 @@ nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *operand,
                                           QualType fromTy, QualType toTy) {
   assert(operand);
   assert(!Loc::isLocType(toTy));
+  if (fromTy == toTy)
+    return operand;
   return nonloc::SymbolVal(SymMgr.getCastSymbol(operand, fromTy, toTy));
 }
 
