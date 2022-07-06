@@ -113,8 +113,6 @@ def warn_four_char_character_literal : Warning<
 // Unicode and UCNs
 def err_invalid_utf8 : Error<
   "source file is not valid UTF-8">;
-def warn_invalid_utf8_in_comment : Extension<
-  "invalid UTF-8 in comment">, InGroup<DiagGroup<"invalid-utf8">>;
 def err_character_not_allowed : Error<
   "unexpected character <U+%0>">;
 def err_character_not_allowed_identifier : Error<
