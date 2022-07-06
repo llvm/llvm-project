@@ -1741,6 +1741,7 @@ static void fixSymbolsAfterShrinking() {
 // option is used.
 template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   assert(config->optimizeBBJumps);
+  SmallVector<InputSection *, 0> storage;
 
   script->assignAddresses();
   // For every output section that has executable input sections, this
@@ -1752,7 +1753,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   for (OutputSection *osec : outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
-    SmallVector<InputSection *, 0> sections = getInputSections(*osec);
+    ArrayRef<InputSection *> sections = getInputSections(*osec, storage);
     size_t numDeleted = 0;
     // Delete all fall through jump instructions.  Also, check if two
     // consecutive jump instructions can be flipped so that a fall
@@ -1772,7 +1773,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   fixSymbolsAfterShrinking();
 
   for (OutputSection *osec : outputSections)
-    for (InputSection *is : getInputSections(*osec))
+    for (InputSection *is : getInputSections(*osec, storage))
       is->trim();
 }
 
@@ -2165,9 +2166,10 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
   if (!config->executeOnly)
     return;
 
+  SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : outputSections)
     if (osec->flags & SHF_EXECINSTR)
-      for (InputSection *isec : getInputSections(*osec))
+      for (InputSection *isec : getInputSections(*osec, storage))
         if (!(isec->flags & SHF_EXECINSTR))
           error("cannot place " + toString(isec) + " into " +
                 toString(osec->name) +
