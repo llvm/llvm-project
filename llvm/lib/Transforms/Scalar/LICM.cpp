@@ -1508,8 +1508,7 @@ static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
   if (!SafetyInfo->getBlockColors().empty() && BB->getFirstNonPHI()->isEHPad())
     return false;
   for (BasicBlock *BBPred : predecessors(BB)) {
-    if (isa<IndirectBrInst>(BBPred->getTerminator()) ||
-        isa<CallBrInst>(BBPred->getTerminator()))
+    if (isa<IndirectBrInst>(BBPred->getTerminator()))
       return false;
   }
   return true;

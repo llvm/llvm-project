@@ -1132,9 +1132,7 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     // all BlockAddress uses would need to be updated.
     assert(!isa<IndirectBrInst>(Preds[i]->getTerminator()) &&
            "Cannot split an edge from an IndirectBrInst");
-    assert(!isa<CallBrInst>(Preds[i]->getTerminator()) &&
-           "Cannot split an edge from a CallBrInst");
-    Preds[i]->getTerminator()->replaceUsesOfWith(BB, NewBB);
+    Preds[i]->getTerminator()->replaceSuccessorWith(BB, NewBB);
   }
 
   // Insert a new PHI node into NewBB for every PHI node in BB and that new PHI

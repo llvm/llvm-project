@@ -6,21 +6,22 @@
 define i1 @func(i1 %arg, i32 %arg1, i1 %arg2) {
 ; CHECK-LABEL: @func(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
-; CHECK:       bb3:
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[ARG1:%.*]], 0
-; CHECK-NEXT:    br label [[BB7:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB7:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    callbr void asm sideeffect "", "i"(i8* blockaddress(@func, [[BB7]]))
-; CHECK-NEXT:    to label [[BB5:%.*]] [label %bb7]
+; CHECK-NEXT:    callbr void asm sideeffect "", "i"(i8* blockaddress(@func, [[BB7_THR_COMM:%.*]]))
+; CHECK-NEXT:    to label [[BB5:%.*]] [label %bb7.thr_comm]
 ; CHECK:       bb5:
-; CHECK-NEXT:    br label [[BB7]]
+; CHECK-NEXT:    br label [[BB7_THR_COMM]]
+; CHECK:       bb7.thr_comm:
+; CHECK-NEXT:    [[I91:%.*]] = xor i1 [[ARG2:%.*]], [[ARG]]
+; CHECK-NEXT:    br i1 [[I91]], label [[BB11:%.*]], label [[BB11]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[I8:%.*]] = phi i1 [ [[I]], [[BB3]] ], [ [[ARG2:%.*]], [[BB5]] ], [ [[ARG2]], [[BB4]] ]
-; CHECK-NEXT:    [[I9:%.*]] = xor i1 [[I8]], [[ARG]]
-; CHECK-NEXT:    br i1 [[I9]], label [[BB11:%.*]], label [[BB11]]
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[ARG1:%.*]], 0
+; CHECK-NEXT:    [[I9:%.*]] = xor i1 [[I]], [[ARG]]
+; CHECK-NEXT:    br i1 [[I9]], label [[BB11]], label [[BB11]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    ret i1 [[I9]]
+; CHECK-NEXT:    [[I93:%.*]] = phi i1 [ [[I91]], [[BB7_THR_COMM]] ], [ [[I9]], [[BB7]] ], [ [[I91]], [[BB7_THR_COMM]] ], [ [[I9]], [[BB7]] ]
+; CHECK-NEXT:    ret i1 [[I93]]
 ;
 bb:
   br i1 %arg, label %bb3, label %bb4
