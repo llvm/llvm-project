@@ -252,6 +252,11 @@ SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
   return result;
 }
 
+PresburgerRelation
+IntegerRelation::subtract(const PresburgerRelation &set) const {
+  return PresburgerRelation(*this).subtract(set);
+}
+
 unsigned IntegerRelation::insertVar(VarKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumVarKind(kind));
 
@@ -2283,4 +2288,12 @@ unsigned IntegerPolyhedron::insertVar(VarKind kind, unsigned pos,
   assert((kind != VarKind::Domain || num == 0) &&
          "Domain has to be zero in a set");
   return IntegerRelation::insertVar(kind, pos, num);
+}
+IntegerPolyhedron
+IntegerPolyhedron::intersect(const IntegerPolyhedron &other) const {
+  return IntegerPolyhedron(IntegerRelation::intersect(other));
+}
+
+PresburgerSet IntegerPolyhedron::subtract(const PresburgerSet &other) const {
+  return PresburgerSet(IntegerRelation::subtract(other));
 }
