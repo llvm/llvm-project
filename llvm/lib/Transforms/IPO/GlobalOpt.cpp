@@ -1584,11 +1584,6 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
   }
   Value *StoredOnceValue = GS.getStoredOnceValue();
   if (GS.StoredType == GlobalStatus::StoredOnce && StoredOnceValue) {
-    // Avoid speculating constant expressions that might trap (div/rem).
-    auto *SOVConstant = dyn_cast<Constant>(StoredOnceValue);
-    if (SOVConstant && SOVConstant->canTrap())
-      return Changed;
-
     Function &StoreFn =
         const_cast<Function &>(*GS.StoredOnceStore->getFunction());
     bool CanHaveNonUndefGlobalInitializer =
@@ -1601,6 +1596,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // This is restricted to address spaces that allow globals to have
     // initializers. NVPTX, for example, does not support initializers for
     // shared memory (AS 3).
+    auto *SOVConstant = dyn_cast<Constant>(StoredOnceValue);
     if (SOVConstant && isa<UndefValue>(GV->getInitializer()) &&
         DL.getTypeAllocSize(SOVConstant->getType()) ==
             DL.getTypeAllocSize(GV->getValueType()) &&

@@ -4715,11 +4715,6 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(unsigned Opcode,
   }
 #endif
 
-  for (unsigned i = 0, e = Inst->getNumOperands(); i != e; ++i)
-    if (Constant *C = dyn_cast<Constant>(Inst->getOperand(i)))
-      if (C->canTrap())
-        return false;
-
   switch (Opcode) {
   default:
     return true;
