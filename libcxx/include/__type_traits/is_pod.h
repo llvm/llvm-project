@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_feature(is_pod) || defined(_LIBCPP_COMPILER_GCC)
+#if __has_builtin(__is_pod)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_pod
     : public integral_constant<bool, __is_pod(_Tp)> {};
@@ -31,7 +31,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_pod
                                      is_trivially_copy_assignable<_Tp>::value    &&
                                      is_trivially_destructible<_Tp>::value> {};
 
-#endif
+#endif // __has_builtin(__is_pod)
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>

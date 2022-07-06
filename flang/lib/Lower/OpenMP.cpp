@@ -507,6 +507,19 @@ static omp::ClauseProcBindKindAttr genProcBindKindAttr(
   return omp::ClauseProcBindKindAttr::get(firOpBuilder.getContext(), pbKind);
 }
 
+static mlir::Value
+getIfClauseOperand(Fortran::lower::AbstractConverter &converter,
+                   Fortran::lower::StatementContext &stmtCtx,
+                   const Fortran::parser::OmpClause::If *ifClause) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+  auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
+  mlir::Value ifVal = fir::getBase(
+      converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
+  return firOpBuilder.createConvert(currentLocation, firOpBuilder.getI1Type(),
+                                    ifVal);
+}
+
 /* When parallel is used in a combined construct, then use this function to
  * create the parallel operation. It handles the parallel specific clauses
  * and leaves the rest for handling at the inner operations.
@@ -532,11 +545,7 @@ createCombinedParallelOp(Fortran::lower::AbstractConverter &converter,
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
     if (const auto &ifClause =
             std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
-      auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
-      mlir::Value ifVal = fir::getBase(
-          converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
-      ifClauseOperand = firOpBuilder.createConvert(
-          currentLocation, firOpBuilder.getI1Type(), ifVal);
+      ifClauseOperand = getIfClauseOperand(converter, stmtCtx, ifClause);
     } else if (const auto &numThreadsClause =
                    std::get_if<Fortran::parser::OmpClause::NumThreads>(
                        &clause.u)) {
@@ -585,11 +594,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   for (const auto &clause : opClauseList.v) {
     if (const auto &ifClause =
             std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
-      auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
-      mlir::Value ifVal = fir::getBase(
-          converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
-      ifClauseOperand = firOpBuilder.createConvert(
-          currentLocation, firOpBuilder.getI1Type(), ifVal);
+      ifClauseOperand = getIfClauseOperand(converter, stmtCtx, ifClause);
     } else if (const auto &numThreadsClause =
                    std::get_if<Fortran::parser::OmpClause::NumThreads>(
                        &clause.u)) {
@@ -760,9 +765,10 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation = converter.getCurrentLocation();
   llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, linearVars,
       linearStepVars, reductionVars;
-  mlir::Value scheduleChunkClauseOperand;
+  mlir::Value scheduleChunkClauseOperand, ifClauseOperand;
   mlir::Attribute scheduleClauseOperand, noWaitClauseOperand,
       orderedClauseOperand, orderClauseOperand;
+  Fortran::lower::StatementContext stmtCtx;
   const auto &loopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t);
 
@@ -823,11 +829,13 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
               std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
                   scheduleClause->v.t)) {
         if (const auto *expr = Fortran::semantics::GetExpr(*chunkExpr)) {
-          Fortran::lower::StatementContext stmtCtx;
           scheduleChunkClauseOperand =
               fir::getBase(converter.genExprValue(*expr, stmtCtx));
         }
       }
+    } else if (const auto &ifClause =
+                   std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
+      ifClauseOperand = getIfClauseOperand(converter, stmtCtx, ifClause);
     }
   }
 
@@ -848,7 +856,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   if (llvm::omp::OMPD_simd == ompDirective) {
     TypeRange resultType;
     auto SimdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
-        currentLocation, resultType, lowerBound, upperBound, step);
+        currentLocation, resultType, lowerBound, upperBound, step,
+        ifClauseOperand, /*inclusive=*/firOpBuilder.getUnitAttr());
     createBodyOfOp<omp::SimdLoopOp>(SimdLoopOp, converter, currentLocation,
                                     eval, &loopOpClauseList, iv);
     return;
