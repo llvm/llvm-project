@@ -226,4 +226,112 @@ define i8 @sdiv_minusone_divisor() {
   ret i8 %v
 }
 
+@g = external global i64
+@g2 = external global i64
+
+define i64 @const_sdiv_one() {
+; CHECK-LABEL: @const_sdiv_one(
+; CHECK-NEXT:    ret i64 ptrtoint (ptr @g to i64)
+;
+  %div = sdiv i64 ptrtoint (ptr @g to i64), 1
+  ret i64 %div
+}
+
+define i64 @const_srem_one() {
+; CHECK-LABEL: @const_srem_one(
+; CHECK-NEXT:    ret i64 0
+;
+  %rem = srem i64 ptrtoint (ptr @g to i64), 1
+  ret i64 %rem
+}
+
+define i64 @const_udiv_one() {
+; CHECK-LABEL: @const_udiv_one(
+; CHECK-NEXT:    ret i64 ptrtoint (ptr @g to i64)
+;
+  %div = udiv i64 ptrtoint (ptr @g to i64), 1
+  ret i64 %div
+}
+
+define i64 @const_urem_one() {
+; CHECK-LABEL: @const_urem_one(
+; CHECK-NEXT:    ret i64 0
+;
+  %rem = urem i64 ptrtoint (ptr @g to i64), 1
+  ret i64 %rem
+}
+
+define i64 @const_sdiv_zero() {
+; CHECK-LABEL: @const_sdiv_zero(
+; CHECK-NEXT:    ret i64 0
+;
+  %div = sdiv i64 0, ptrtoint (ptr @g to i64)
+  ret i64 %div
+}
+
+define i64 @const_srem_zero() {
+; CHECK-LABEL: @const_srem_zero(
+; CHECK-NEXT:    ret i64 0
+;
+  %rem = srem i64 0, ptrtoint (ptr @g to i64)
+  ret i64 %rem
+}
+
+define i64 @const_udiv_zero() {
+; CHECK-LABEL: @const_udiv_zero(
+; CHECK-NEXT:    ret i64 0
+;
+  %div = udiv i64 0, ptrtoint (ptr @g to i64)
+  ret i64 %div
+}
+
+define i64 @const_urem_zero() {
+; CHECK-LABEL: @const_urem_zero(
+; CHECK-NEXT:    ret i64 0
+;
+  %rem = urem i64 0, ptrtoint (ptr @g to i64)
+  ret i64 %rem
+}
+
+define i64 @const_sdiv_zero_negone() {
+; CHECK-LABEL: @const_sdiv_zero_negone(
+; CHECK-NEXT:    ret i64 0
+;
+  %div = sdiv i64 0, -1
+  ret i64 %div
+}
+
+define i1 @const_sdiv_i1() {
+; CHECK-LABEL: @const_sdiv_i1(
+; CHECK-NEXT:    ret i1 ptrtoint (ptr @g to i1)
+;
+  %div = sdiv i1 ptrtoint (ptr @g to i1), ptrtoint (ptr @g2 to i1)
+  ret i1 %div
+}
+
+define i1 @const_srem_1() {
+; CHECK-LABEL: @const_srem_1(
+; CHECK-NEXT:    ret i1 false
+;
+  %rem = srem i1 ptrtoint (ptr @g to i1), ptrtoint (ptr @g2 to i1)
+  ret i1 %rem
+}
+
+define i1 @const_udiv_i1() {
+; CHECK-LABEL: @const_udiv_i1(
+; CHECK-NEXT:    ret i1 ptrtoint (ptr @g to i1)
+;
+  %div = udiv i1 ptrtoint (ptr @g to i1), ptrtoint (ptr @g2 to i1)
+  ret i1 %div
+}
+
+define i1 @const_urem_1() {
+; CHECK-LABEL: @const_urem_1(
+; CHECK-NEXT:    ret i1 false
+;
+  %rem = urem i1 ptrtoint (ptr @g to i1), ptrtoint (ptr @g2 to i1)
+  ret i1 %rem
+}
+
+
 !0 = !{i32 0, i32 3}
