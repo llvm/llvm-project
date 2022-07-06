@@ -21,6 +21,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
+include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td"
 
 def OpenMP_Dialect : Dialect {
   let name = "omp";
@@ -38,26 +39,8 @@ class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
 // Type which can be constraint accepting standard integers and indices.
 def IntLikeType : AnyTypeOf<[AnyInteger, Index]>;
 
-def OpenMP_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
-  let cppNamespace = "::mlir::omp";
-
-  let description = [{
-    An interface for pointer-like types suitable to contain a value that OpenMP
-    specification refers to as variable.
-  }];
-
-  let methods = [
-    InterfaceMethod<
-      /*description=*/"Returns the pointee type.",
-      /*retTy=*/"::mlir::Type",
-      /*methodName=*/"getElementType"
-    >,
-  ];
-}
-
-def OpenMP_PointerLikeType : Type<
-  CPred<"$_self.isa<::mlir::omp::PointerLikeType>()">,
-  "OpenMP-compatible variable type", "::mlir::omp::PointerLikeType">;
+def OpenMP_PointerLikeType : TypeAlias<OpenMP_PointerLikeTypeInterface,
+	"OpenMP-compatible variable type">;
 
 //===----------------------------------------------------------------------===//
 // 2.6 parallel Construct
