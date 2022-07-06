@@ -1293,6 +1293,7 @@ namespace llvm {
                                     SelectionDAG &DAG) const;
     bool isLowringToMASSFiniteSafe(SDValue Op) const;
     bool isLowringToMASSSafe(SDValue Op) const;
+    bool isScalarMASSConversionEnabled() const;
     SDValue lowerLibCallBase(const char *LibCallDoubleName,
                              const char *LibCallFloatName,
                              const char *LibCallDoubleNameFinite,
