@@ -5998,18 +5998,26 @@ static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
     RMWOp = llvm::AtomicRMWInst::Xor;
     break;
   case BO_LT:
-    RMWOp = X.getType()->hasSignedIntegerRepresentation()
-                ? (IsXLHSInRHSPart ? llvm::AtomicRMWInst::Min
-                                   : llvm::AtomicRMWInst::Max)
-                : (IsXLHSInRHSPart ? llvm::AtomicRMWInst::UMin
-                                   : llvm::AtomicRMWInst::UMax);
+    if (IsInteger)
+      RMWOp = X.getType()->hasSignedIntegerRepresentation()
+                  ? (IsXLHSInRHSPart ? llvm::AtomicRMWInst::Min
+                                     : llvm::AtomicRMWInst::Max)
+                  : (IsXLHSInRHSPart ? llvm::AtomicRMWInst::UMin
+                                     : llvm::AtomicRMWInst::UMax);
+    else
+      RMWOp = IsXLHSInRHSPart ? llvm::AtomicRMWInst::FMin
+                              : llvm::AtomicRMWInst::FMax;
     break;
   case BO_GT:
-    RMWOp = X.getType()->hasSignedIntegerRepresentation()
-                ? (IsXLHSInRHSPart ? llvm::AtomicRMWInst::Max
-                                   : llvm::AtomicRMWInst::Min)
-                : (IsXLHSInRHSPart ? llvm::AtomicRMWInst::UMax
-                                   : llvm::AtomicRMWInst::UMin);
+    if (IsInteger)
+      RMWOp = X.getType()->hasSignedIntegerRepresentation()
+                  ? (IsXLHSInRHSPart ? llvm::AtomicRMWInst::Max
+                                     : llvm::AtomicRMWInst::Min)
+                  : (IsXLHSInRHSPart ? llvm::AtomicRMWInst::UMax
+                                     : llvm::AtomicRMWInst::UMin);
+    else
+      RMWOp = IsXLHSInRHSPart ? llvm::AtomicRMWInst::FMax
+                              : llvm::AtomicRMWInst::FMin;
     break;
   case BO_Assign:
     RMWOp = llvm::AtomicRMWInst::Xchg;

@@ -207,7 +207,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fir::fromDefaultKinds(defKinds)});
   auto burnside = Fortran::lower::LoweringBridge::create(
-      ctx, defKinds, semanticsContext.intrinsics(), parsing.allCooked(), "",
+      ctx, defKinds, semanticsContext.intrinsics(),
+      semanticsContext.targetCharacteristics(), parsing.allCooked(), "",
       kindMap);
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
