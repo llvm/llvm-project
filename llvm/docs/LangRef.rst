@@ -17395,7 +17395,7 @@ the runtime scaling factor of ``subvec``. The elements of ``vec`` starting at
 ``idx`` are overwritten with ``subvec``. Elements ``idx`` through (``idx`` +
 num_elements(``subvec``) - 1) must be valid ``vec`` indices. If this condition
 cannot be determined statically but is false at runtime, then the result vector
-is undefined.
+is a :ref:`poison value <poisonvalues>`.
 
 
 '``llvm.vector.extract``' Intrinsic
@@ -17439,9 +17439,9 @@ vector length of the result type. If the result type is a scalable vector,
 ``idx`` is first scaled by the result type's runtime scaling factor. Elements
 ``idx`` through (``idx`` + num_elements(result_type) - 1) must be valid vector
 indices. If this condition cannot be determined statically but is false at
-runtime, then the result vector is undefined. The ``idx`` parameter must be a
-vector index constant type (for most targets this will be an integer pointer
-type).
+runtime, then the result vector is a :ref:`poison value <poisonvalues>`. The
+``idx`` parameter must be a vector index constant type (for most targets this
+will be an integer pointer type).
 
 '``llvm.experimental.vector.reverse``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
