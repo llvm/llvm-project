@@ -72,6 +72,10 @@ Changes to the LLVM IR
   removed:
   * ``extractvalue``
   * ``insertvalue``
+  * ``udiv``
+  * ``sdiv``
+  * ``urem``
+  * ``srem``
 
 Changes to building LLVM
 ------------------------
@@ -112,6 +116,8 @@ Changes to the ARM Backend
 * Implemented generation of Windows SEH unwind information.
 * Switched the MinGW target to use SEH instead of DWARF for unwind information.
 * Added support for the Cortex-M85 CPU.
+* Added support for a new -mframe-chain=(none|aapcs|aapcs+leaf) command-line
+  option, which controls the generation of AAPCS-compliant Frame Records.
 
 Changes to the AVR Backend
 --------------------------
@@ -182,6 +188,12 @@ Changes to the C API
   constant fold the operands if possible and create an instruction otherwise:
   * ``LLVMConstExtractValue``
   * ``LLVMConstInsertValue``
+  * ``LLVMConstUDiv``
+  * ``LLVMConstExactUDiv``
+  * ``LLVMConstSDiv``
+  * ``LLVMConstExactSDiv``
+  * ``LLVMConstURem``
+  * ``LLVMConstSRem``
 
 Changes to the Go bindings
 --------------------------

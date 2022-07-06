@@ -5526,8 +5526,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     if (SimpleV.getValue())
       EffectiveV = SimpleV.getValue();
     if (auto *C = dyn_cast<Constant>(EffectiveV))
-      if (!C->canTrap())
-        return C;
+      return C;
     if (CtxI && AA::isValidAtPosition(AA::ValueAndContext(*EffectiveV, *CtxI),
                                       A.getInfoCache()))
       return ensureType(A, *EffectiveV, Ty, CtxI, Check);

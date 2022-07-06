@@ -143,6 +143,25 @@ void glrShift(llvm::ArrayRef<const GSS::Node *> OldHeads,
 void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
                const ParseParams &Params, const Language &Lang);
 
+// Heuristically recover from a state where no further parsing is possible.
+//
+// OldHeads is the parse state at TokenIndex.
+// This function consumes zero or more tokens by advancing TokenIndex,
+// and places any recovery states created in NewHeads.
+//
+// On failure, NewHeads is empty and TokenIndex is unchanged.
+//
+// WARNING: glrRecover acts as a "fallback shift". If it consumes no tokens,
+// there is a risk of the parser falling into an infinite loop, creating an
+// endless sequence of recovery nodes.
+// Generally it is safe for recovery to match 0 tokens against sequence symbols
+// like `statement-seq`, as the grammar won't permit another statement-seq
+// immediately afterwards. However recovery strategies for `statement` should
+// consume at least one token, as statements may be adjacent in the input.
+void glrRecover(llvm::ArrayRef<const GSS::Node *> OldHeads,
+                unsigned &TokenIndex, const ParseParams &Params,
+                const Language &Lang, std::vector<const GSS::Node *> &NewHeads);
+
 } // namespace pseudo
 } // namespace clang
 

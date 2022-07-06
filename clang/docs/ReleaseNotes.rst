@@ -385,6 +385,10 @@ Attribute Changes in Clang
 
 - Added half float to types that can be represented by ``__attribute__((mode(XX)))``.
 
+- The ``format`` attribute can now be applied to non-variadic functions. The
+  format string must correctly format the fixed parameter types of the function.
+  Using the attribute this way emits a GCC compatibility diagnostic.
+
 Windows Support
 ---------------
 
