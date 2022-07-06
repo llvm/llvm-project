@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // Make sure we get compile-time availability errors when trying to use aligned
-// allocation/deallocation on deployment targets that don't support it (before macosx10.14).
+// allocation/deallocation on deployment targets that don't support it (before macosx10.13).
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Aligned allocation was not provided before macosx10.14.
-// REQUIRES: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
+// Aligned allocation was not provided before macosx10.13.
+// REQUIRES: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 #include <new>
 #include <cstddef>
