@@ -582,7 +582,7 @@ llvm_target_intrinsics_list = [
     },
     {
         "name": "DirectX",
-        "intrinsic_prefix": "dxil",
+        "intrinsic_prefix": "dx",
     },
     {
         "name": "Hexagon",
