@@ -72,6 +72,12 @@ let TargetPrefix = "x86" in {
                                      [ImmArg<ArgIndex<1>>]>;
 }
 
+// Read Processor Register.
+let TargetPrefix = "x86" in {
+  def int_x86_rdpru : ClangBuiltin<"__builtin_ia32_rdpru">,
+              Intrinsic<[llvm_i64_ty], [llvm_i32_ty], []>;
+}
+
 //===----------------------------------------------------------------------===//
 // CET SS
 let TargetPrefix = "x86" in {

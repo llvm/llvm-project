@@ -1691,6 +1691,9 @@ multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op,
                                !cast<Instruction>(NAME), PTRUE_S>;
   def : SVE_2_Op_AllActive_Pat<nxv2i1, op_nopred, nxv2i1, nxv2i1,
                                !cast<Instruction>(NAME), PTRUE_D>;
+  // Emulate .Q operation using a PTRUE_D when the other lanes don't matter.
+  def : SVE_2_Op_AllActive_Pat<nxv1i1, op_nopred, nxv1i1, nxv1i1,
+                               !cast<Instruction>(NAME), PTRUE_D>;
 }
 
 // An instance of sve_int_pred_log_and but uses op_nopred's first operand as the
@@ -1705,6 +1708,9 @@ multiclass sve_int_pred_log_v2<bits<4> opc, string asm, SDPatternOperator op,
   def : Pat<(nxv4i1 (op_nopred nxv4i1:$Op1, nxv4i1:$Op2)),
             (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
   def : Pat<(nxv2i1 (op_nopred nxv2i1:$Op1, nxv2i1:$Op2)),
+            (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
+  // Emulate .Q operation using a PTRUE_D when the other lanes don't matter.
+  def : Pat<(nxv1i1 (op_nopred nxv1i1:$Op1, nxv1i1:$Op2)),
             (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
 }
 

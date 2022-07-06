@@ -9,6 +9,8 @@
 #ifndef FORTRAN_EVALUATE_ROUNDING_BITS_H_
 #define FORTRAN_EVALUATE_ROUNDING_BITS_H_
 
+#include "flang/Evaluate/target.h"
+
 // A helper class used by Real<> to determine rounding of rational results
 // to floating-point values.  Bits lost from intermediate computations by
 // being shifted rightward are accumulated in instances of this class.

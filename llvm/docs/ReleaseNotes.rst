@@ -76,6 +76,9 @@ Changes to the LLVM IR
   * ``sdiv``
   * ``urem``
   * ``srem``
+* Added the support for ``fmax`` and ``fmin`` in ``atomicrmw`` instruction. The
+  comparison is expected to match the behavior of ``llvm.maxnum.*`` and
+  ``llvm.minnum.*`` respectively.
 
 Changes to building LLVM
 ------------------------
@@ -163,6 +166,7 @@ Changes to the X86 Backend
 --------------------------
 
 * Support ``half`` type on SSE2 and above targets.
+* Support ``rdpru`` instruction on Zen2 and above targets.
 
 Changes to the OCaml bindings
 -----------------------------
