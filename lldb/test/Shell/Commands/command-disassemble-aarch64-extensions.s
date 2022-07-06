@@ -3,11 +3,7 @@
 # This checks that lldb's disassembler enables every extension that an AArch64
 # target could have.
 
-# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnueabihf %s -o %t \
-# RUN: --mattr=+tme,+mte,+crc,+lse,+rdm,+sm4,+sha3,+aes,+dotprod,+fullfp16 \
-# RUN: --mattr=+fp16fml,+sve,+sve2,+sve2-aes,+sve2-sm4,+sve2-sha3,+sve2-bitperm \
-# RUN: --mattr=+spe,+rcpc,+ssbs,+sb,+predres,+bf16,+mops,+hbc,+sme,+sme-i64 \
-# RUN: --mattr=+sme-f64,+flagm,+pauth,+brbe,+ls64,+f64mm,+f32mm,+i8mm,+rand
+# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnueabihf %s -o %t --mattr=+all
 # RUN: %lldb %t -o "disassemble -n fn" -o exit 2>&1 | FileCheck %s
 
 .globl  fn
