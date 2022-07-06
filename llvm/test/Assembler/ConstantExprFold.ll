@@ -11,8 +11,6 @@
 @add = global i64* inttoptr (i64 add (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X + 0 == X
 @sub = global i64* inttoptr (i64 sub (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X - 0 == X
 @mul = global i64* inttoptr (i64 mul (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X * 0 == 0
-@sdiv = global i64* inttoptr (i64 sdiv (i64 ptrtoint (i64* @A to i64), i64 1) to i64*) ; X / 1 == X
-@srem = global i64* inttoptr (i64 srem (i64 ptrtoint (i64* @A to i64), i64 1) to i64*) ; X % 1 == 0
 @and1 = global i64* inttoptr (i64 and (i64 ptrtoint (i64* @A to i64), i64 0) to i64*) ; X & 0 == 0
 @and2 = global i64* inttoptr (i64 and (i64 ptrtoint (i64* @A to i64), i64 -1) to i64*) ; X & -1 == X
 @or = global i64 or (i64 ptrtoint (i64* @A to i64), i64 -1)  ; X | -1 == -1
@@ -44,8 +42,6 @@
 ; CHECK: @[[ADD:[a-zA-Z0-9_$"\\.-]+]] = global i64* @A
 ; CHECK: @[[SUB:[a-zA-Z0-9_$"\\.-]+]] = global i64* @A
 ; CHECK: @[[MUL:[a-zA-Z0-9_$"\\.-]+]] = global i64* null
-; CHECK: @[[SDIV:[a-zA-Z0-9_$"\\.-]+]] = global i64* @A
-; CHECK: @[[SREM:[a-zA-Z0-9_$"\\.-]+]] = global i64* null
 ; CHECK: @[[AND1:[a-zA-Z0-9_$"\\.-]+]] = global i64* null
 ; CHECK: @[[AND2:[a-zA-Z0-9_$"\\.-]+]] = global i64* @A
 ; CHECK: @[[OR:[a-zA-Z0-9_$"\\.-]+]] = global i64 -1
