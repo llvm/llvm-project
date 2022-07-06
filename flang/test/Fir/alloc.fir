@@ -277,9 +277,9 @@ func.func @allocmem_dynarray_of_dynchar2(%l: i32, %e : index) -> !fir.heap<!fir.
 
 // CHECK-LABEL: define ptr @alloca_array_with_holes_nonchar(
 // CHECK-SAME: i64 %[[a:.*]], i64 %[[b:.*]])
-// CHECK: %[[prod1:.*]] = mul i64 60, %[[a]]
+// CHECK: %[[prod1:.*]] = mul i64 15, %[[a]]
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[b]]
-// CHECK: alloca i32, i64 %[[prod2]]
+// CHECK: alloca [4 x i32], i64 %[[prod2]]
 func.func @alloca_array_with_holes_nonchar(%0 : index, %1 : index) -> !fir.ref<!fir.array<4x?x3x?x5xi32>> {
   %a = fir.alloca !fir.array<4x?x3x?x5xi32>, %0, %1
   return %a : !fir.ref<!fir.array<4x?x3x?x5xi32>>
@@ -287,8 +287,8 @@ func.func @alloca_array_with_holes_nonchar(%0 : index, %1 : index) -> !fir.ref<!
 
 // CHECK-LABEL: define ptr @alloca_array_with_holes_char(
 // CHECK-SAME: i64 %[[e:.*]])
-// CHECK: %[[mul:.*]] = mul i64 12, %[[e]]
-// CHECK: alloca [10 x i16], i64 %[[mul]]
+// CHECK: %[[mul:.*]] = mul i64 4, %[[e]]
+// CHECK: alloca [3 x [10 x i16]], i64 %[[mul]]
 func.func @alloca_array_with_holes_char(%e: index) -> !fir.ref<!fir.array<3x?x4x!fir.char<2,10>>> {
   %1 = fir.alloca !fir.array<3x?x4x!fir.char<2,10>>, %e
   return %1 : !fir.ref<!fir.array<3x?x4x!fir.char<2,10>>>
@@ -306,7 +306,7 @@ func.func @alloca_array_with_holes_dynchar(%arg0: index, %arg1: index) -> !fir.r
 
 // CHECK-LABEL: define ptr @allocmem_array_with_holes_nonchar(
 // CHECK-SAME: i64 %[[e1:.*]], i64 %[[e2:.*]])
-// CHECK: %[[a:.*]] = mul i64 240, %[[e1]]
+// CHECK: %[[a:.*]] = mul i64 mul (i64 ptrtoint{{.*}} 15), %[[e1]]
 // CHECK: %[[b:.*]] = mul i64 %3, %[[e2]]
 // CHECK: call ptr @malloc(i64 %[[b]])
 func.func @allocmem_array_with_holes_nonchar(%0 : index, %1 : index) -> !fir.heap<!fir.array<4x?x3x?x5xi32>> {
@@ -316,7 +316,7 @@ func.func @allocmem_array_with_holes_nonchar(%0 : index, %1 : index) -> !fir.hea
 
 // CHECK-LABEL: define ptr @allocmem_array_with_holes_char(
 // CHECK-SAME: i64 %[[e:.*]])
-// CHECK: %[[mul:.*]] = mul i64 mul (i64 ptrtoint (ptr getelementptr ([10 x i16], ptr null, i64 1) to i64), i64 12), %[[e]]
+// CHECK: %[[mul:.*]] = mul i64 mul (i64 ptrtoint (ptr getelementptr ([3 x [10 x i16]], ptr null, i64 1) to i64), i64 4), %[[e]]
 // CHECK: call ptr @malloc(i64 %[[mul]])
 func.func @allocmem_array_with_holes_char(%e: index) -> !fir.heap<!fir.array<3x?x4x!fir.char<2,10>>> {
   %1 = fir.allocmem !fir.array<3x?x4x!fir.char<2,10>>, %e
