@@ -4727,7 +4727,7 @@ private:
         fir::isRecordWithAllocatableMember(eleTy))
       TODO(loc, "creating an array temp where the element type has "
                 "allocatable members");
-    mlir::Value temp = seqTy.hasConstantShape()
+    mlir::Value temp = !seqTy.hasDynamicExtents()
                            ? builder.create<fir::AllocMemOp>(loc, type)
                            : builder.create<fir::AllocMemOp>(
                                  loc, type, ".array.expr", llvm::None, shape);
