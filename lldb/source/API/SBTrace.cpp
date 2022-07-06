@@ -43,6 +43,24 @@ SBTrace SBTrace::LoadTraceFromFile(SBError &error, SBDebugger &debugger,
   return SBTrace(trace_or_err.get());
 }
 
+SBFileSpec SBTrace::SaveToDisk(SBError &error, const SBFileSpec &bundle_dir,
+                               bool compact) {
+  LLDB_INSTRUMENT_VA(this, error, bundle_dir, compact);
+
+  error.Clear();
+  SBFileSpec file_spec;
+
+  if (!m_opaque_sp)
+    error.SetErrorString("error: invalid trace");
+  else if (Expected<FileSpec> desc_file =
+               m_opaque_sp->SaveToDisk(bundle_dir.ref(), compact))
+    file_spec.SetFileSpec(*desc_file);
+  else
+    error.SetErrorString(llvm::toString(desc_file.takeError()).c_str());
+
+  return file_spec;
+}
+
 const char *SBTrace::GetStartConfigurationHelp() {
   LLDB_INSTRUMENT_VA(this);
   return m_opaque_sp ? m_opaque_sp->GetStartConfigurationHelp() : nullptr;

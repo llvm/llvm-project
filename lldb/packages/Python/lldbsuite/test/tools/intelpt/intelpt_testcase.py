@@ -134,12 +134,24 @@ class TraceIntelPTTestCaseBase(TestBase):
                 command += " " + str(thread.GetIndexID())
             self.expect(command, error=error, substrs=substrs)
 
-    def traceLoad(self, traceDescriptionFilePath="trace.json", error=False, substrs=None):
+    def traceLoad(self, traceDescriptionFilePath, error=False, substrs=None):
         if self.USE_SB_API:
             traceDescriptionFile = lldb.SBFileSpec(traceDescriptionFilePath, True)
             loadTraceError = lldb.SBError()
-            _trace = self.dbg.LoadTraceFromFile(loadTraceError, traceDescriptionFile)
+            self.dbg.LoadTraceFromFile(loadTraceError, traceDescriptionFile)
             self.assertSBError(loadTraceError, error)
         else:
             command = f"trace load -v {traceDescriptionFilePath}"
+            self.expect(command, error=error, substrs=substrs)
+
+    def traceSave(self, traceBundleDir, compact=False, error=False, substrs=None):
+        if self.USE_SB_API:
+            save_error = lldb.SBError()
+            self.target().GetTrace().SaveToDisk(
+                save_error, lldb.SBFileSpec(traceBundleDir), compact)
+            self.assertSBError(save_error, error)
+        else:
+            command = f"trace save {traceBundleDir}"
+            if compact:
+                command += " -c"
             self.expect(command, error=error, substrs=substrs)

@@ -14,6 +14,7 @@
 
 #include "llvm/Support/Error.h"
 
+#include <set>
 #include <vector>
 
 namespace lldb_private {
@@ -138,6 +139,10 @@ llvm::Expected<std::vector<ThreadContinuousExecution>>
 DecodePerfContextSwitchTrace(llvm::ArrayRef<uint8_t> data,
                              lldb::cpu_id_t cpu_id,
                              const LinuxPerfZeroTscConversion &tsc_conversion);
+
+llvm::Expected<std::vector<uint8_t>>
+FilterProcessesFromContextSwitchTrace(llvm::ArrayRef<uint8_t> data,
+                                      const std::set<lldb::pid_t> &pids);
 
 } // namespace trace_intel_pt
 } // namespace lldb_private

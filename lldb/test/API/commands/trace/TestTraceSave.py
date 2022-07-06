@@ -14,7 +14,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
 
     def testErrorMessages(self):
         # We first check the output when there are no targets
-        self.expect("process trace save",
+        self.expect("trace save",
             substrs=["error: invalid target, create a target using the 'target create' command"],
             error=True)
 
@@ -22,7 +22,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         self.expect("target create " +
             os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
 
-        self.expect("process trace save",
+        self.expect("trace save",
             substrs=["error: Command requires a current process."],
             error=True)
 
@@ -30,7 +30,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         self.expect("b main")
         self.expect("run")
 
-        self.expect("process trace save",
+        self.expect("trace save",
             substrs=["error: Process is not being traced"],
             error=True)
 
@@ -43,12 +43,12 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         self.expect("n")
 
         # Check the output when saving without providing the directory argument
-        self.expect("process trace save -d",
-            substrs=["error: last option requires an argument"],
+        self.expect("trace save ",
+            substrs=["error: a single path to a directory where the trace bundle will be created is required"],
             error=True)
 
         # Check the output when saving to an invalid directory
-        self.expect("process trace save -d /",
+        self.expect("trace save /",
             substrs=["error: couldn't write to the file"],
             error=True)
 
@@ -58,7 +58,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
             substrs=["intel-pt"])
 
         # Check the output when not doing live tracing
-        self.expect("process trace save -d " +
+        self.expect("trace save " +
             os.path.join(self.getBuildDir(), "intelpt-trace", "trace_not_live_dir"))
 
     def testSaveMultiCpuTrace(self):
@@ -76,7 +76,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         self.expect("b 7")
 
         output_dir = os.path.join(self.getBuildDir(), "intelpt-trace", "trace_save")
-        self.expect("process trace save -d " + output_dir)
+        self.expect("trace save " + output_dir)
 
         def checkSessionBundle(session_file_path):
             with open(session_file_path) as session_file:
@@ -107,7 +107,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         output_dir = os.path.join(self.getBuildDir(), "intelpt-trace", "trace_save")
         self.expect("trace load " + os.path.join(output_dir, "trace.json"))
         output_copy_dir = os.path.join(self.getBuildDir(), "intelpt-trace", "copy_trace_save")
-        self.expect("process trace save -d " + output_copy_dir)
+        self.expect("trace save " + output_copy_dir)
 
         # We now check that the new bundle is correct on its own
         copied_trace_session_file = os.path.join(output_copy_dir, "trace.json")
@@ -153,7 +153,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         last_ten_instructions = res.GetOutput()
 
         # Now, save the trace to <trace_copy_dir>
-        self.expect("process trace save -d " +
+        self.expect("trace save " +
             os.path.join(self.getBuildDir(), "intelpt-trace", "trace_copy_dir"))
 
         # Load the trace just saved

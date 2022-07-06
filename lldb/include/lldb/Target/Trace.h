@@ -56,21 +56,24 @@ public:
   ///     A stream object to dump the information to.
   virtual void Dump(Stream *s) const = 0;
 
-  /// Save the trace of a live process to the specified directory, which
-  /// will be created if needed.
-  /// This will also create a a file \a <directory>/trace.json with the main
-  /// properties of the trace session, along with others files which contain
-  /// the actual trace data. The trace.json file can be used later as input
-  /// for the "trace load" command to load the trace in LLDB.
-  /// The process being trace is not a live process, return an error.
+  /// Save the trace to the specified directory, which will be created if
+  /// needed. This will also create a a file \a <directory>/trace.json with the
+  /// main properties of the trace session, along with others files which
+  /// contain the actual trace data. The trace.json file can be used later as
+  /// input for the "trace load" command to load the trace in LLDB.
   ///
   /// \param[in] directory
   ///   The directory where the trace files will be saved.
   ///
+  /// \param[in] compact
+  ///   Try not to save to disk information irrelevant to the traced processes.
+  ///   Each trace plug-in implements this in a different fashion.
+  ///
   /// \return
-  ///   \a llvm::success if the operation was successful, or an \a llvm::Error
-  ///   otherwise.
-  virtual llvm::Error SaveLiveTraceToDisk(FileSpec directory) = 0;
+  ///   A \a FileSpec pointing to the bundle description file, or an \a
+  ///   llvm::Error otherwise.
+  virtual llvm::Expected<FileSpec> SaveToDisk(FileSpec directory,
+                                              bool compact) = 0;
 
   /// Find a trace plug-in using JSON data.
   ///

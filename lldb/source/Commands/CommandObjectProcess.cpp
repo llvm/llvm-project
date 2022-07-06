@@ -579,14 +579,14 @@ protected:
           }
         }
       }
-      
+
       Target *target = m_exe_ctx.GetTargetPtr();
       BreakpointIDList run_to_bkpt_ids;
       // Don't pass an empty run_to_breakpoint list, as Verify will look for the
       // default breakpoint.
       if (m_options.m_run_to_bkpt_args.GetArgumentCount() > 0)
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            m_options.m_run_to_bkpt_args, target, result, &run_to_bkpt_ids, 
+            m_options.m_run_to_bkpt_args, target, result, &run_to_bkpt_ids,
             BreakpointName::Permissions::disablePerm);
       if (!result.Succeeded()) {
         return false;
@@ -604,7 +604,7 @@ protected:
       std::vector<break_id_t> bkpts_disabled;
       std::vector<BreakpointID> locs_disabled;
       if (num_run_to_bkpt_ids != 0) {
-        // Go through the ID's specified, and separate the breakpoints from are 
+        // Go through the ID's specified, and separate the breakpoints from are
         // the breakpoint.location specifications since the latter require
         // special handling.  We also figure out whether there's at least one
         // specifier in the set that is enabled.
@@ -613,22 +613,22 @@ protected:
         std::unordered_set<break_id_t> bkpts_with_locs_seen;
         BreakpointIDList with_locs;
         bool any_enabled = false;
-  
+
         for (size_t idx = 0; idx < num_run_to_bkpt_ids; idx++) {
           BreakpointID bkpt_id = run_to_bkpt_ids.GetBreakpointIDAtIndex(idx);
           break_id_t bp_id = bkpt_id.GetBreakpointID();
           break_id_t loc_id = bkpt_id.GetLocationID();
-          BreakpointSP bp_sp 
+          BreakpointSP bp_sp
               = bkpt_list.FindBreakpointByID(bp_id);
-          // Note, VerifyBreakpointOrLocationIDs checks for existence, so we 
+          // Note, VerifyBreakpointOrLocationIDs checks for existence, so we
           // don't need to do it again here.
           if (bp_sp->IsEnabled()) {
             if (loc_id == LLDB_INVALID_BREAK_ID) {
-              // A breakpoint (without location) was specified.  Make sure that 
+              // A breakpoint (without location) was specified.  Make sure that
               // at least one of the locations is enabled.
               size_t num_locations = bp_sp->GetNumLocations();
               for (size_t loc_idx = 0; loc_idx < num_locations; loc_idx++) {
-                BreakpointLocationSP loc_sp 
+                BreakpointLocationSP loc_sp
                     = bp_sp->GetLocationAtIndex(loc_idx);
                 if (loc_sp->IsEnabled()) {
                   any_enabled = true;
@@ -641,7 +641,7 @@ protected:
               if (loc_sp->IsEnabled())
                 any_enabled = true;
             }
-          
+
             // Then sort the bp & bp.loc entries for later use:
             if (bkpt_id.GetLocationID() == LLDB_INVALID_BREAK_ID)
               bkpts_seen.insert(bkpt_id.GetBreakpointID());
@@ -653,14 +653,14 @@ protected:
         }
         // Do all the error checking here so once we start disabling we don't
         // have to back out half-way through.
-        
+
         // Make sure at least one of the specified breakpoints is enabled.
         if (!any_enabled) {
           result.AppendError("at least one of the continue-to breakpoints must "
                              "be enabled.");
           return false;
         }
-        
+
         // Also, if you specify BOTH a breakpoint and one of it's locations,
         // we flag that as an error, since it won't do what you expect, the
         // breakpoint directive will mean "run to all locations", which is not
@@ -671,7 +671,7 @@ protected:
                                "one of its locations: {0}", bp_id);
           }
         }
-        
+
         // Now go through the breakpoints in the target, disabling all the ones
         // that the user didn't mention:
         for (BreakpointSP bp_sp : bkpt_list.Breakpoints()) {
@@ -695,7 +695,7 @@ protected:
             BreakpointLocationSP loc_sp = bp_sp->GetLocationAtIndex(loc_idx);
             tmp_id.SetBreakpointLocationID(loc_idx);
             size_t position = 0;
-            if (!with_locs.FindBreakpointID(tmp_id, &position) 
+            if (!with_locs.FindBreakpointID(tmp_id, &position)
                 && loc_sp->IsEnabled()) {
               locs_disabled.push_back(tmp_id);
               loc_sp->SetEnabled(false);
@@ -723,20 +723,20 @@ protected:
       Status error;
       // For now we can only do -b with synchronous:
       bool old_sync = GetDebugger().GetAsyncExecution();
-      
+
       if (run_to_bkpt_ids.GetSize() != 0) {
         GetDebugger().SetAsyncExecution(false);
         synchronous_execution = true;
-      } 
+      }
       if (synchronous_execution)
         error = process->ResumeSynchronous(&stream);
       else
         error = process->Resume();
-      
+
       if (run_to_bkpt_ids.GetSize() != 0) {
         GetDebugger().SetAsyncExecution(old_sync);
-      } 
-       
+      }
+
       // Now re-enable the breakpoints we disabled:
       BreakpointList &bkpt_list = target->GetBreakpointList();
       for (break_id_t bp_id : bkpts_disabled) {
@@ -745,10 +745,10 @@ protected:
           bp_sp->SetEnabled(true);
       }
       for (const BreakpointID &bkpt_id : locs_disabled) {
-        BreakpointSP bp_sp 
+        BreakpointSP bp_sp
             = bkpt_list.FindBreakpointByID(bkpt_id.GetBreakpointID());
         if (bp_sp) {
-          BreakpointLocationSP loc_sp 
+          BreakpointLocationSP loc_sp
               = bp_sp->FindLocationByID(bkpt_id.GetLocationID());
           if (loc_sp)
             loc_sp->SetEnabled(true);
@@ -1731,7 +1731,7 @@ protected:
   bool DoExecute(Args &signal_args, CommandReturnObject &result) override {
     Target &target = GetSelectedOrDummyTarget();
 
-    // Any signals that are being set should be added to the Target's 
+    // Any signals that are being set should be added to the Target's
     // DummySignals so they will get applied on rerun, etc.
     // If we have a process, however, we can do a more accurate job of vetting
     // the user's options.
@@ -1761,8 +1761,8 @@ protected:
                          "true or false.\n");
       return false;
     }
-    
-    bool no_actions = (stop_action == -1 && pass_action == -1 
+
+    bool no_actions = (stop_action == -1 && pass_action == -1
         && notify_action == -1);
     if (m_options.only_target_values && !no_actions) {
       result.AppendError("-t is for reporting, not setting, target values.");
@@ -1832,9 +1832,9 @@ protected:
         }
         auto set_lazy_bool = [] (int action) -> LazyBool {
           LazyBool lazy;
-          if (action == -1) 
+          if (action == -1)
             lazy = eLazyBoolCalculate;
-          else if (action) 
+          else if (action)
             lazy = eLazyBoolYes;
           else
             lazy = eLazyBoolNo;
@@ -1876,7 +1876,7 @@ protected:
       PrintSignalInformation(result.GetOutputStream(), signal_args,
                              num_signals_set, signals_sp);
     else
-      target.PrintDummySignals(result.GetOutputStream(), 
+      target.PrintDummySignals(result.GetOutputStream(),
           signal_args);
 
     if (num_signals_set > 0)
@@ -1907,80 +1907,6 @@ protected:
   lldb::CommandObjectSP GetDelegateCommand(Trace &trace) override {
     return trace.GetProcessTraceStartCommand(m_interpreter);
   }
-};
-
-// CommandObjectProcessTraceSave
-#define LLDB_OPTIONS_process_trace_save
-#include "CommandOptions.inc"
-
-#pragma mark CommandObjectProcessTraceSave
-
-class CommandObjectProcessTraceSave : public CommandObjectParsed {
-public:
-  class CommandOptions : public Options {
-  public:
-    CommandOptions() { OptionParsingStarting(nullptr); }
-
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
-      const int short_option = m_getopt_table[option_idx].val;
-
-      switch (short_option) {
-
-      case 'd': {
-        m_directory.SetFile(option_arg, FileSpec::Style::native);
-        FileSystem::Instance().Resolve(m_directory);
-        break;
-      }
-      default:
-        llvm_unreachable("Unimplemented option");
-      }
-      return error;
-    }
-
-    void OptionParsingStarting(ExecutionContext *execution_context) override{};
-
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_trace_save_options);
-    };
-
-    FileSpec m_directory;
-  };
-
-  Options *GetOptions() override { return &m_options; }
-  CommandObjectProcessTraceSave(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "process trace save",
-            "Save the trace of the current process in the specified directory. "
-            "The directory will be created if needed. "
-            "This will also create a file <directory>/trace.json with the main "
-            "properties of the trace session, along with others files which "
-            "contain the actual trace data. The trace.json file can be used "
-            "later as input for the \"trace load\" command to load the trace "
-            "in LLDB",
-            "process trace save [<cmd-options>]",
-            eCommandRequiresProcess | eCommandTryTargetAPILock |
-                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
-                eCommandProcessMustBeTraced) {}
-
-  ~CommandObjectProcessTraceSave() override = default;
-
-protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
-    ProcessSP process_sp = m_exe_ctx.GetProcessSP();
-
-    TraceSP trace_sp = process_sp->GetTarget().GetTrace();
-
-    if (llvm::Error err = trace_sp->SaveLiveTraceToDisk(m_options.m_directory))
-      result.AppendError(toString(std::move(err)));
-    else
-      result.SetStatus(eReturnStatusSuccessFinishResult);
-
-    return result.Succeeded();
-  }
-
-  CommandOptions m_options;
 };
 
 // CommandObjectProcessTraceStop
@@ -2020,8 +1946,6 @@ public:
       : CommandObjectMultiword(
             interpreter, "trace", "Commands for tracing the current process.",
             "process trace <subcommand> [<subcommand objects>]") {
-    LoadSubCommand("save", CommandObjectSP(
-                               new CommandObjectProcessTraceSave(interpreter)));
     LoadSubCommand("start", CommandObjectSP(new CommandObjectProcessTraceStart(
                                 interpreter)));
     LoadSubCommand("stop", CommandObjectSP(

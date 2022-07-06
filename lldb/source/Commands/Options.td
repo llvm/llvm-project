@@ -788,14 +788,6 @@ let Command = "process save_core" in {
     "This allows core files to be saved in different formats.">;
 }
 
-let Command = "process trace save" in {
-  def process_trace_save_directory: Option<"directory", "d">,
-    Group<1>,
-    Arg<"Value">, Required,
-    Desc<"The directory where the trace will be saved."
-        "It will be created if it does not exist.">;
-}
-
 let Command = "script import" in {
   def script_import_allow_reload : Option<"allow-reload", "r">, Group<1>,
     Desc<"Allow the script to be loaded even if it was already loaded before. "
@@ -1357,6 +1349,14 @@ let Command = "trace load" in {
   def trace_load_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose trace load logging for debugging the plug-in "
     "implementation.">;
+}
+
+let Command = "trace save" in {
+  def trace_save_compact: Option<"compact", "c">,
+    Group<1>,
+    Desc<"Try not to save to disk information irrelevant to the traced "
+        "processes. Each trace plug-in implements this in a different "
+        "fashion.">;
 }
 
 let Command = "trace dump" in {

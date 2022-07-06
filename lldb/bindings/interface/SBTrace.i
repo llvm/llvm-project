@@ -17,6 +17,8 @@ public:
 
   const char *GetStartConfigurationHelp();
 
+  SBFileSpec SaveToDisk(SBError &error, const SBFileSpec &bundle_dir, bool compact = false);
+
   SBError Start(const SBStructuredData &configuration);
 
   SBError Start(const SBThread &thread, const SBStructuredData &configuration);
