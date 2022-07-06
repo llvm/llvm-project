@@ -76,6 +76,9 @@ Changes to the LLVM IR
   * ``sdiv``
   * ``urem``
   * ``srem``
+* Added the support for ``fmax`` and ``fmin`` in ``atomicrmw`` instruction. The
+  comparison is expected to match the behavior of ``llvm.maxnum.*`` and
+  ``llvm.minnum.*`` respectively.
 
 Changes to building LLVM
 ------------------------

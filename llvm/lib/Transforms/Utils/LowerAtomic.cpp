@@ -74,6 +74,10 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
     return Builder.CreateFAdd(Loaded, Inc, "new");
   case AtomicRMWInst::FSub:
     return Builder.CreateFSub(Loaded, Inc, "new");
+  case AtomicRMWInst::FMax:
+    return Builder.CreateMaxNum(Loaded, Inc);
+  case AtomicRMWInst::FMin:
+    return Builder.CreateMinNum(Loaded, Inc);
   default:
     llvm_unreachable("Unknown atomic op");
   }

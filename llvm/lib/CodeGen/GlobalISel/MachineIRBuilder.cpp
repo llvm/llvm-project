@@ -938,6 +938,20 @@ MachineIRBuilder::buildAtomicRMWFSub(const DstOp &OldValRes, const SrcOp &Addr, 
 }
 
 MachineInstrBuilder
+MachineIRBuilder::buildAtomicRMWFMax(const DstOp &OldValRes, const SrcOp &Addr,
+                                     const SrcOp &Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FMAX, OldValRes, Addr, Val,
+                        MMO);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildAtomicRMWFMin(const DstOp &OldValRes, const SrcOp &Addr,
+                                     const SrcOp &Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FMIN, OldValRes, Addr, Val,
+                        MMO);
+}
+
+MachineInstrBuilder
 MachineIRBuilder::buildFence(unsigned Ordering, unsigned Scope) {
   return buildInstr(TargetOpcode::G_FENCE)
     .addImm(Ordering)

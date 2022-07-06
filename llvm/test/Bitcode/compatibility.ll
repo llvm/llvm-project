@@ -863,6 +863,12 @@ define void @fp_atomics(float* %word) {
 ; CHECK: %atomicrmw.fsub = atomicrmw fsub float* %word, float 1.000000e+00 monotonic
   %atomicrmw.fsub = atomicrmw fsub float* %word, float 1.0 monotonic
 
+; CHECK: %atomicrmw.fmax = atomicrmw fmax float* %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmax = atomicrmw fmax float* %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fmin = atomicrmw fmin float* %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmin = atomicrmw fmin float* %word, float 1.0 monotonic
+
   ret void
 }
 
