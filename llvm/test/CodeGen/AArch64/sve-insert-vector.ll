@@ -608,7 +608,7 @@ define <vscale x 16 x i1> @insert_nxv16i1_nxv8i1_0(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv8i1(<vscale x 16 x i1> %vec, <vscale x 8 x i1> %sv, i64 0)
+  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv8i1(<vscale x 16 x i1> %vec, <vscale x 8 x i1> %sv, i64 0)
   ret <vscale x 16 x i1> %v0
 }
 
@@ -618,7 +618,7 @@ define <vscale x 16 x i1> @insert_nxv16i1_nxv8i1_8(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv8i1(<vscale x 16 x i1> %vec, <vscale x 8 x i1> %sv, i64 8)
+  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv8i1(<vscale x 16 x i1> %vec, <vscale x 8 x i1> %sv, i64 8)
   ret <vscale x 16 x i1> %v0
 }
 
@@ -632,7 +632,7 @@ define <vscale x 16 x i1> @insert_nxv16i1_nxv4i1_0(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
 ; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv4i1(<vscale x 16 x i1> %vec, <vscale x 4 x i1> %sv, i64 0)
+  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> %vec, <vscale x 4 x i1> %sv, i64 0)
   ret <vscale x 16 x i1> %v0
 }
 
@@ -645,7 +645,7 @@ define <vscale x 16 x i1> @insert_nxv16i1_nxv4i1_12(<vscale x 16 x i1> %vec, <vs
 ; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv4i1(<vscale x 16 x i1> %vec, <vscale x 4 x i1> %sv, i64 12)
+  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> %vec, <vscale x 4 x i1> %sv, i64 12)
   ret <vscale x 16 x i1> %v0
 }
 
@@ -657,7 +657,7 @@ define <vscale x 16 x i1> @insert_nxv16i1_nxv4i1_into_zero(<vscale x 4 x i1> %sv
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv4i1(<vscale x 16 x i1> zeroinitializer, <vscale x 4 x i1> %sv, i64 0)
+  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> zeroinitializer, <vscale x 4 x i1> %sv, i64 0)
   ret <vscale x 16 x i1> %v0
 }
 
@@ -667,7 +667,7 @@ define <vscale x 16 x i1> @insert_nxv16i1_nxv4i1_into_poison(<vscale x 4 x i1> %
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p0.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p0.b
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv4i1(<vscale x 16 x i1> poison, <vscale x 4 x i1> %sv, i64 0)
+  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> poison, <vscale x 4 x i1> %sv, i64 0)
   ret <vscale x 16 x i1> %v0
 }
 
@@ -1415,6 +1415,6 @@ declare <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1>
 declare <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1>, <vscale x 1 x i1>, i64)
 declare <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.nxv1i1(<vscale x 4 x i1>, <vscale x 1 x i1>, i64)
 declare <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.nxv1i1(<vscale x 2 x i1>, <vscale x 1 x i1>, i64)
-declare <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv4i1(<vscale x 16 x i1>, <vscale x 4 x i1>, i64)
-declare <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv8i1(<vscale x 16 x i1>, <vscale x 8 x i1>, i64)
+declare <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1>, <vscale x 4 x i1>, i64)
+declare <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv8i1(<vscale x 16 x i1>, <vscale x 8 x i1>, i64)
 declare <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.v64i1(<vscale x 16 x i1>, <64 x i1>, i64)
