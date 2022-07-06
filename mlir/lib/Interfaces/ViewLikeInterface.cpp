@@ -179,25 +179,6 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
   return true;
 }
 
-void OffsetSizeAndStrideOpInterface::expandToRank(
-    Value target, SmallVector<OpFoldResult> &offsets,
-    SmallVector<OpFoldResult> &sizes, SmallVector<OpFoldResult> &strides,
-    llvm::function_ref<OpFoldResult(Value, int64_t)> createOrFoldDim) {
-  auto shapedType = target.getType().cast<ShapedType>();
-  unsigned rank = shapedType.getRank();
-  assert(offsets.size() == sizes.size() && "mismatched lengths");
-  assert(offsets.size() == strides.size() && "mismatched lengths");
-  assert(offsets.size() <= rank && "rank overflow");
-  MLIRContext *ctx = target.getContext();
-  Attribute zero = IntegerAttr::get(IndexType::get(ctx), APInt(64, 0));
-  Attribute one = IntegerAttr::get(IndexType::get(ctx), APInt(64, 1));
-  for (unsigned i = offsets.size(); i < rank; ++i) {
-    offsets.push_back(zero);
-    sizes.push_back(createOrFoldDim(target, i));
-    strides.push_back(one);
-  }
-}
-
 SmallVector<OpFoldResult, 4>
 mlir::getMixedOffsets(OffsetSizeAndStrideOpInterface op,
                       ArrayAttr staticOffsets, ValueRange offsets) {

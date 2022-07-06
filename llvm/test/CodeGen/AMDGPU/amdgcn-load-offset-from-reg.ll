@@ -2,9 +2,13 @@
 ; from a register.
 
 ; RUN: llc -march=amdgcn -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -global-isel -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GISEL %s
 
 ; GCN: %[[OFFSET:[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @DescriptorBuffer
 ; GCN: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR killed %{{[0-9]+}}, killed %[[OFFSET]], 0 :: (invariant load (s128) from %ir.13, addrspace 4)
+
+; GISEL: $[[OFFSET:.*]] = S_MOV_B32 target-flags(amdgpu-abs32-lo) @DescriptorBuffer
+; GISEL: S_LOAD_DWORDX4_SGPR killed renamable {{.*}}, killed renamable $[[OFFSET]], 0 :: (invariant load (<4 x s32>) from {{.*}}, addrspace 4)
 
 define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %resNode0, i32 inreg %resNode1, <3 x i32> inreg %2, i32 inreg %3, <3 x i32> %4) local_unnamed_addr #2 {
 .entry:

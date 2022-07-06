@@ -3112,6 +3112,35 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 
 def : FPMed3Pat<f32, V_MED3_F32_e64>;
 
+class
+IntMinMaxPat<Instruction minmaxInst, SDPatternOperator min_or_max,
+             SDPatternOperator max_or_min_oneuse> : AMDGPUPat <
+  (DivergentBinFrag<min_or_max> (max_or_min_oneuse i32:$src0, i32:$src1),
+                                i32:$src2),
+  (minmaxInst VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2)
+>;
+
+class
+FPMinMaxPat<Instruction minmaxInst, ValueType vt, SDPatternOperator min_or_max,
+            SDPatternOperator max_or_min_oneuse> : GCNPat <
+  (min_or_max (max_or_min_oneuse (VOP3Mods vt:$src0, i32:$src0_mods),
+                                 (VOP3Mods vt:$src1, i32:$src1_mods)),
+               (vt (VOP3Mods vt:$src2, i32:$src2_mods))),
+  (minmaxInst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+let OtherPredicates = [isGFX11Plus] in {
+def : IntMinMaxPat<V_MAXMIN_I32_e64, smin, smax_oneuse>;
+def : IntMinMaxPat<V_MINMAX_I32_e64, smax, smin_oneuse>;
+def : IntMinMaxPat<V_MAXMIN_U32_e64, umin, umax_oneuse>;
+def : IntMinMaxPat<V_MINMAX_U32_e64, umax, umin_oneuse>;
+def : FPMinMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+}
+
 let OtherPredicates = [isGFX9Plus] in {
 def : FP16Med3Pat<f16, V_MED3_F16_e64>;
 defm : Int16Med3Pat<V_MED3_I16_e64, smin, smax, smax_oneuse, smin_oneuse>;

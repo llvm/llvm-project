@@ -468,17 +468,12 @@ void assert(bool Assertion, const char *Msg) {
   reportError(Buf, Ptr - Buf);
 }
 
-/// 1B mutex accessed by lock xchg
 class Mutex {
   volatile bool InUse{false};
 
 public:
-  bool acquire() {
-    bool Result = true;
-    asm volatile("lock; xchg %0, %1" : "+m"(InUse), "=r"(Result) : : "cc");
-    return !Result;
-  }
-  void release() { InUse = false; }
+  bool acquire() { return !__atomic_test_and_set(&InUse, __ATOMIC_ACQUIRE); }
+  void release() { __atomic_clear(&InUse, __ATOMIC_RELEASE); }
 };
 
 /// RAII wrapper for Mutex

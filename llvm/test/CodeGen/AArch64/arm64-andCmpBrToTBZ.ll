@@ -36,7 +36,7 @@ if.then3:                                         ; preds = %_ZNK7WebCore4Node10
 if.end5:                                          ; preds = %_ZNK7WebCore4Node10hasTagNameERKNS_13QualifiedNameE.exit, %lor.rhs.i.i.i
 ; CHECK: %if.end5
 ; CHECK: tbz
-  br i1 %IsEditable, label %if.end12, label %land.rhs.i19, !prof !1
+  br i1 %tobool.i.i.i, label %if.end12, label %land.rhs.i19, !prof !1
 
 land.rhs.i19:                                     ; preds = %if.end5
   %cmp.i.i.i18 = icmp eq i8* %str6, %str7

@@ -18,7 +18,7 @@
 // RUN: clang-linker-wrapper --host-triple x86_64-unknown-linux-gnu --dry-run -linker-path \
 // RUN:   /usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMDGPU_LINK
 
-// AMDGPU_LINK: lld{{.*}}-flavor gnu --no-undefined -shared -o {{.*}}.out {{.*}}.o {{.*}}.o
+// AMDGPU_LINK: lld{{.*}}-flavor gnu --no-undefined -shared -plugin-opt=-amdgpu-internalize-symbols -plugin-opt=mcpu=gfx908 -o {{.*}}.out {{.*}}.o {{.*}}.o
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
@@ -90,7 +90,7 @@
 // RUN:   /usr/bin/ld --device-linker=a --device-linker=nvptx64-nvidia-cuda=b -- \
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=LINKER_ARGS
 
-// LINKER_ARGS: lld{{.*}}-flavor gnu --no-undefined -shared -o {{.*}}.out {{.*}}.o a
+// LINKER_ARGS: lld{{.*}}-flavor gnu --no-undefined -shared -plugin-opt=-amdgpu-internalize-symbols -plugin-opt=mcpu=gfx908 -o {{.*}}.out {{.*}}.o a
 // LINKER_ARGS: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_70 {{.*}}.o a b
 
 // RUN: clang-offload-packager -o %t-lib.out \
