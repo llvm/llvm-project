@@ -1168,7 +1168,6 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   }
 
   // Collect the blocks that need predication.
-  BasicBlock *Header = TheLoop->getHeader();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // We don't support switch statements inside loops.
     if (!isa<BranchInst>(BB->getTerminator())) {
