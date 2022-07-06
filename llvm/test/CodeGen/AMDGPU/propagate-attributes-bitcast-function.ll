@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN: foo1:
 ; v_cndmask_b32_e64 v0, 0, 1, vcc_lo{{$}}
