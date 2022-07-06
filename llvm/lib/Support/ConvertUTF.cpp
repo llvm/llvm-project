@@ -423,7 +423,7 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd) {
  */
 unsigned getUTF8SequenceSize(const UTF8 *source, const UTF8 *sourceEnd) {
   int length = trailingBytesForUTF8[*source] + 1;
-  return (length > sourceEnd - source && isLegalUTF8(source, length)) ? length
+  return (length < sourceEnd - source && isLegalUTF8(source, length)) ? length
                                                                       : 0;
 }
 
