@@ -1,16 +1,16 @@
-; RUN: opt < %s -deadargelim -enable-new-pm=false \
+; RUN: opt < %s -deadargelim \
 ; RUN:     -verify-each-debuginfo-preserve \
 ; RUN:     -debugify-level=locations -S 2>&1 | FileCheck %s
 
-; RUN: opt < %s -deadargelim -enable-new-pm=false \
+; RUN: opt < %s -deadargelim \
 ; RUN:     -verify-each-debuginfo-preserve \
 ; RUN:     -debugify-level=location+variables -S 2>&1 | FileCheck %s --check-prefix=CHECK-DROP
 
-; RUN: opt < %s -deadargelim -enable-new-pm=false \
+; RUN: opt < %s -deadargelim \
 ; RUN:     -verify-each-debuginfo-preserve \
 ; RUN:     -debugify-func-limit=0 -S 2>&1 | FileCheck %s
 
-; RUN: opt < %s -deadargelim -enable-new-pm=false \
+; RUN: opt < %s -deadargelim \
 ; RUN:     -verify-each-debuginfo-preserve \
 ; RUN:     -debugify-func-limit=2 -S 2>&1 | FileCheck %s --check-prefix=CHECK-DROP
 
