@@ -1799,17 +1799,30 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(VL, RegState::Kill)
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
-  } else if ((NumOfVReg == 3 || NumOfVReg == 5 || NumOfVReg == 9) &&
-             STI.hasStdExtZba()) {
-    // We can use Zba SHXADD instructions for multiply in some cases.
-    // TODO: Generalize to SHXADD+SLLI.
+  } else if (STI.hasStdExtZba() &&
+             ((NumOfVReg % 3 == 0 && isPowerOf2_64(NumOfVReg / 3)) ||
+              (NumOfVReg % 5 == 0 && isPowerOf2_64(NumOfVReg / 5)) ||
+              (NumOfVReg % 9 == 0 && isPowerOf2_64(NumOfVReg / 9)))) {
+    // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
     unsigned Opc;
-    switch (NumOfVReg) {
-    default: llvm_unreachable("Unexpected number of vregs");
-    case 3: Opc = RISCV::SH1ADD; break;
-    case 5: Opc = RISCV::SH2ADD; break;
-    case 9: Opc = RISCV::SH3ADD; break;
+    uint32_t ShiftAmount;
+    if (NumOfVReg % 9 == 0) {
+      Opc = RISCV::SH3ADD;
+      ShiftAmount = Log2_64(NumOfVReg / 9);
+    } else if (NumOfVReg % 5 == 0) {
+      Opc = RISCV::SH2ADD;
+      ShiftAmount = Log2_64(NumOfVReg / 5);
+    } else if (NumOfVReg % 3 == 0) {
+      Opc = RISCV::SH1ADD;
+      ShiftAmount = Log2_64(NumOfVReg / 3);
+    } else {
+      llvm_unreachable("Unexpected number of vregs");
     }
+    if (ShiftAmount)
+      BuildMI(MBB, II, DL, get(RISCV::SLLI), VL)
+          .addReg(VL, RegState::Kill)
+          .addImm(ShiftAmount)
+          .setMIFlag(Flag);
     BuildMI(MBB, II, DL, get(Opc), VL)
         .addReg(VL, RegState::Kill)
         .addReg(VL)
