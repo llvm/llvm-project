@@ -497,6 +497,81 @@ bool ODRDiagsEmitter::diagnoseSubMismatchObjCMethod(
   return false;
 }
 
+bool ODRDiagsEmitter::diagnoseSubMismatchObjCProperty(
+    const NamedDecl *FirstObjCContainer, StringRef FirstModule,
+    StringRef SecondModule, const ObjCPropertyDecl *FirstProp,
+    const ObjCPropertyDecl *SecondProp) const {
+  enum ODRPropertyDifference {
+    Name,
+    Type,
+    ControlLevel, // optional/required
+    Attribute,
+  };
+
+  auto DiagError = [FirstObjCContainer, FirstModule, FirstProp,
+                    this](SourceLocation Loc, ODRPropertyDifference DiffType) {
+    return Diag(Loc, diag::err_module_odr_violation_objc_property)
+           << FirstObjCContainer << FirstModule.empty() << FirstModule
+           << FirstProp->getSourceRange() << DiffType;
+  };
+  auto DiagNote = [SecondModule, SecondProp,
+                   this](SourceLocation Loc, ODRPropertyDifference DiffType) {
+    return Diag(Loc, diag::note_module_odr_violation_objc_property)
+           << SecondModule << SecondProp->getSourceRange() << DiffType;
+  };
+
+  IdentifierInfo *FirstII = FirstProp->getIdentifier();
+  IdentifierInfo *SecondII = SecondProp->getIdentifier();
+  if (FirstII->getName() != SecondII->getName()) {
+    DiagError(FirstProp->getLocation(), Name) << FirstII;
+    DiagNote(SecondProp->getLocation(), Name) << SecondII;
+    return true;
+  }
+  if (computeODRHash(FirstProp->getType()) !=
+      computeODRHash(SecondProp->getType())) {
+    DiagError(FirstProp->getLocation(), Type)
+        << FirstII << FirstProp->getType();
+    DiagNote(SecondProp->getLocation(), Type)
+        << SecondII << SecondProp->getType();
+    return true;
+  }
+  if (FirstProp->getPropertyImplementation() !=
+      SecondProp->getPropertyImplementation()) {
+    DiagError(FirstProp->getLocation(), ControlLevel)
+        << FirstProp->getPropertyImplementation();
+    DiagNote(SecondProp->getLocation(), ControlLevel)
+        << SecondProp->getPropertyImplementation();
+    return true;
+  }
+
+  // Go over the property attributes and stop at the first mismatch.
+  unsigned FirstAttrs = (unsigned)FirstProp->getPropertyAttributes();
+  unsigned SecondAttrs = (unsigned)SecondProp->getPropertyAttributes();
+  if (FirstAttrs != SecondAttrs) {
+    for (unsigned I = 0; I < NumObjCPropertyAttrsBits; ++I) {
+      unsigned CheckedAttr = (1 << I);
+      if ((FirstAttrs & CheckedAttr) == (SecondAttrs & CheckedAttr))
+        continue;
+
+      bool IsFirstWritten =
+          (unsigned)FirstProp->getPropertyAttributesAsWritten() & CheckedAttr;
+      bool IsSecondWritten =
+          (unsigned)SecondProp->getPropertyAttributesAsWritten() & CheckedAttr;
+      DiagError(IsFirstWritten ? FirstProp->getLParenLoc()
+                               : FirstProp->getLocation(),
+                Attribute)
+          << FirstII << (I + 1) << IsFirstWritten;
+      DiagNote(IsSecondWritten ? SecondProp->getLParenLoc()
+                               : SecondProp->getLocation(),
+               Attribute)
+          << SecondII << (I + 1);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 ODRDiagsEmitter::DiffResult
 ODRDiagsEmitter::FindTypeDiffs(DeclHashes &FirstHashes,
                                DeclHashes &SecondHashes) {
@@ -537,6 +612,8 @@ ODRDiagsEmitter::FindTypeDiffs(DeclHashes &FirstHashes,
       return FunctionTemplate;
     case Decl::ObjCMethod:
       return ObjCMethod;
+    case Decl::ObjCProperty:
+      return ObjCProperty;
     }
   };
 
@@ -889,6 +966,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
   case PrivateSpecifer:
   case ProtectedSpecifer:
   case ObjCMethod:
+  case ObjCProperty:
     llvm_unreachable("Invalid diff type");
 
   case StaticAssert: {
@@ -1811,6 +1889,14 @@ bool ODRDiagsEmitter::diagnoseMismatch(
     if (diagnoseSubMismatchObjCMethod(FirstProtocol, FirstModule, SecondModule,
                                       cast<ObjCMethodDecl>(FirstDecl),
                                       cast<ObjCMethodDecl>(SecondDecl)))
+      return true;
+    break;
+  }
+  case ObjCProperty: {
+    if (diagnoseSubMismatchObjCProperty(FirstProtocol, FirstModule,
+                                        SecondModule,
+                                        cast<ObjCPropertyDecl>(FirstDecl),
+                                        cast<ObjCPropertyDecl>(SecondDecl)))
       return true;
     break;
   }
