@@ -1585,6 +1585,16 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
       return false;
     }
+    // Parse directional local label references.
+    if (Identifier.equals_insensitive("@b") ||
+        Identifier.equals_insensitive("@f")) {
+      bool Before = Identifier.equals_insensitive("@b");
+      MCSymbol *Sym = getContext().getDirectionalLocalSymbol(0, Before);
+      if (Before && Sym->isUndefined())
+        return Error(FirstTokenLoc, "Expected @@ label before @B reference");
+      Res = MCSymbolRefExpr::create(Sym, getContext());
+      return false;
+    }
     // Parse symbol variant.
     std::pair<StringRef, StringRef> Split;
     if (!MAI.useParensForSymbolVariant()) {
@@ -1714,34 +1724,10 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
   case AsmToken::BigNum:
     return TokError("literal value out of range for directive");
   case AsmToken::Integer: {
-    SMLoc Loc = getTok().getLoc();
     int64_t IntVal = getTok().getIntVal();
     Res = MCConstantExpr::create(IntVal, getContext());
     EndLoc = Lexer.getTok().getEndLoc();
     Lex(); // Eat token.
-    // Look for 'b' or 'f' following an Integer as a directional label.
-    if (Lexer.getKind() == AsmToken::Identifier) {
-      StringRef IDVal = getTok().getString();
-      // Look up the symbol variant if used.
-      std::pair<StringRef, StringRef> Split = IDVal.split('@');
-      MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-      if (Split.first.size() != IDVal.size()) {
-        Variant = MCSymbolRefExpr::getVariantKindForName(Split.second);
-        if (Variant == MCSymbolRefExpr::VK_Invalid)
-          return TokError("invalid variant '" + Split.second + "'");
-        IDVal = Split.first;
-      }
-      if (IDVal == "f" || IDVal == "b") {
-        MCSymbol *Sym =
-            Ctx.getDirectionalLocalSymbol(IntVal, IDVal == "b");
-        Res = MCSymbolRefExpr::create(Sym, Variant, getContext());
-        if (IDVal == "b" && Sym->isUndefined())
-          return Error(Loc, "directional label undefined");
-        DirLabels.push_back(std::make_tuple(Loc, CppHashInfo, Sym));
-        EndLoc = Lexer.getTok().getEndLoc();
-        Lex(); // Eat identifier.
-      }
-    }
     return false;
   }
   case AsmToken::String: {
@@ -2110,29 +2096,9 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
   AsmToken ID = getTok();
   SMLoc IDLoc = ID.getLoc();
   StringRef IDVal;
-  int64_t LocalLabelVal = -1;
   if (Lexer.is(AsmToken::HashDirective))
     return parseCppHashLineFilenameComment(IDLoc);
-  // Allow an integer followed by a ':' as a directional local label.
-  if (Lexer.is(AsmToken::Integer)) {
-    LocalLabelVal = getTok().getIntVal();
-    if (LocalLabelVal < 0) {
-      if (!TheCondState.Ignore) {
-        Lex(); // always eat a token
-        return Error(IDLoc, "unexpected token at start of statement");
-      }
-      IDVal = "";
-    } else {
-      IDVal = getTok().getString();
-      Lex(); // Consume the integer token to be used as an identifier token.
-      if (Lexer.getKind() != AsmToken::Colon) {
-        if (!TheCondState.Ignore) {
-          Lex(); // always eat a token
-          return Error(IDLoc, "unexpected token at start of statement");
-        }
-      }
-    }
-  } else if (Lexer.is(AsmToken::Dot)) {
+  if (Lexer.is(AsmToken::Dot)) {
     // Treat '.' as a valid identifier in this context.
     Lex();
     IDVal = ".";
@@ -2257,19 +2223,22 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     // FIXME: This doesn't diagnose assignment to a symbol which has been
     // implicitly marked as external.
     MCSymbol *Sym;
-    if (LocalLabelVal == -1) {
-      if (ParsingMSInlineAsm && SI) {
-        StringRef RewrittenLabel =
-            SI->LookupInlineAsmLabel(IDVal, getSourceManager(), IDLoc, true);
-        assert(!RewrittenLabel.empty() &&
-               "We should have an internal name here.");
-        Info.AsmRewrites->emplace_back(AOK_Label, IDLoc, IDVal.size(),
-                                       RewrittenLabel);
-        IDVal = RewrittenLabel;
-      }
+    if (ParsingMSInlineAsm && SI) {
+      StringRef RewrittenLabel =
+          SI->LookupInlineAsmLabel(IDVal, getSourceManager(), IDLoc, true);
+      assert(!RewrittenLabel.empty() &&
+             "We should have an internal name here.");
+      Info.AsmRewrites->emplace_back(AOK_Label, IDLoc, IDVal.size(),
+                                     RewrittenLabel);
+      IDVal = RewrittenLabel;
+    }
+    // Handle directional local labels
+    if (IDVal == "@@") {
+      Sym = Ctx.createDirectionalLocalSymbol(0);
+    } else {
       Sym = getContext().getOrCreateSymbol(IDVal);
-    } else
-      Sym = Ctx.createDirectionalLocalSymbol(LocalLabelVal);
+    }
+
     // End of Labels should be treated as end of line for lexing
     // purposes but that information is not available to the Lexer who
     // does not understand Labels. This may cause us to see a Hash
