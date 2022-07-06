@@ -420,3 +420,38 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @callbr() {
+; CHECK-LABEL: @callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@callbr, [[TARGET:%.*]]))
+; CHECK-NEXT:    to label [[JOIN:%.*]] [label %target]
+; CHECK:       target:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[TARGET]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[PHI]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@callbr, %target))
+  to label %join [label %target]
+
+target:
+  br label %join
+
+join:
+  %phi = phi i1 [ false, %target ], [ false, %entry ]
+  br i1 %phi, label %if.then, label %if.end
+
+if.then:
+  call void @foo()
+  br label %if.end
+
+if.end:
+  ret void
+}

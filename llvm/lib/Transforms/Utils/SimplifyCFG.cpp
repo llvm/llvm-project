@@ -3033,7 +3033,8 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
 
     // Skip if the predecessor's terminator is an indirect branch.
     if (any_of(PredBBs, [](BasicBlock *PredBB) {
-          return isa<IndirectBrInst>(PredBB->getTerminator());
+          return isa<IndirectBrInst>(PredBB->getTerminator()) ||
+                 isa<CallBrInst>(PredBB->getTerminator());
         }))
       continue;
 
