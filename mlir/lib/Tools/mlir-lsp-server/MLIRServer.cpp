@@ -690,6 +690,16 @@ public:
     completionList.items.emplace_back(item);
   }
 
+  /// Signal a completion for the given expected token.
+  void completeExpectedTokens(ArrayRef<StringRef> tokens, bool optional) final {
+    for (StringRef token : tokens) {
+      lsp::CompletionItem item(token, lsp::CompletionItemKind::Keyword);
+      item.sortText = "0";
+      item.detail = optional ? "optional" : "";
+      completionList.items.emplace_back(item);
+    }
+  }
+
 private:
   lsp::CompletionList &completionList;
   MLIRContext *ctx;

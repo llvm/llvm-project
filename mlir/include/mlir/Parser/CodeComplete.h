@@ -43,6 +43,11 @@ public:
   /// completions.
   virtual void appendBlockCompletion(StringRef name) = 0;
 
+  /// Signal a completion for the given expected tokens, which are optional if
+  /// `optional` is set.
+  virtual void completeExpectedTokens(ArrayRef<StringRef> tokens,
+                                      bool optional) = 0;
+
 protected:
   /// Create a new code completion context with the given code complete
   /// location.

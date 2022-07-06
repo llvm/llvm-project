@@ -395,6 +395,15 @@ ParseResult Parser::codeCompleteStringDialectOrOperationName(StringRef name) {
   return failure();
 }
 
+ParseResult Parser::codeCompleteExpectedTokens(ArrayRef<StringRef> tokens) {
+  state.codeCompleteContext->completeExpectedTokens(tokens, /*optional=*/false);
+  return failure();
+}
+ParseResult Parser::codeCompleteOptionalTokens(ArrayRef<StringRef> tokens) {
+  state.codeCompleteContext->completeExpectedTokens(tokens, /*optional=*/true);
+  return failure();
+}
+
 //===----------------------------------------------------------------------===//
 // OperationParser
 //===----------------------------------------------------------------------===//
