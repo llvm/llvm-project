@@ -167,6 +167,7 @@ set(BENCHMARK_TESTS
     algorithms/pop_heap.bench.cpp
     algorithms/push_heap.bench.cpp
     algorithms/ranges_sort.bench.cpp
+    algorithms/ranges_stable_sort.bench.cpp
     algorithms/sort.bench.cpp
     algorithms/sort_heap.bench.cpp
     algorithms/stable_sort.bench.cpp

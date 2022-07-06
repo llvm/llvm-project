@@ -337,9 +337,6 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     spec.SetTriple("i386-pc-windows");
     spec.GetTriple().setEnvironment(env);
     specs.Append(module_spec);
-    spec.SetTriple("i686-pc-windows");
-    spec.GetTriple().setEnvironment(env);
-    specs.Append(module_spec);
     break;
   case MachineArmNt:
     spec.SetTriple("armv7-pc-windows");

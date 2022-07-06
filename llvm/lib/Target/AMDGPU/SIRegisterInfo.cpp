@@ -2975,6 +2975,10 @@ MCRegister SIRegisterInfo::getVCC() const {
   return isWave32 ? AMDGPU::VCC_LO : AMDGPU::VCC;
 }
 
+MCRegister SIRegisterInfo::getExec() const {
+  return isWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+}
+
 const TargetRegisterClass *SIRegisterInfo::getVGPR64Class() const {
   // VGPR tuples have an alignment requirement on gfx90a variants.
   return ST.needsAlignedVGPRs() ? &AMDGPU::VReg_64_Align2RegClass

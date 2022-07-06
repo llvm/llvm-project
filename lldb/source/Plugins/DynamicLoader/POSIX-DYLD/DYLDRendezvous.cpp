@@ -210,14 +210,7 @@ DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
 
   case eAdd:
   case eDelete:
-    // Some versions of the android dynamic linker might send two
-    // notifications with state == eAdd back to back. Ignore them until we
-    // get an eConsistent notification.
-    if (!(m_previous.state == eConsistent ||
-          (m_previous.state == eAdd && m_current.state == eDelete)))
-      return eNoAction;
-
-    return eTakeSnapshot;
+    return eNoAction;
   }
 
   return eNoAction;
@@ -229,9 +222,9 @@ bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
   if (action == eNoAction)
     return false;
 
+  m_added_soentries.clear();
+  m_removed_soentries.clear();
   if (action == eTakeSnapshot) {
-    m_added_soentries.clear();
-    m_removed_soentries.clear();
     // We already have the loaded list from the previous update so no need to
     // find all the modules again.
     if (!m_loaded_modules.m_list.empty())
@@ -260,11 +253,11 @@ bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
 }
 
 bool DYLDRendezvous::UpdateSOEntries() {
+  m_added_soentries.clear();
+  m_removed_soentries.clear();
   switch (GetAction()) {
   case eTakeSnapshot:
     m_soentries.clear();
-    m_added_soentries.clear();
-    m_removed_soentries.clear();
     return TakeSnapshot(m_soentries);
   case eAddModules:
     return AddSOEntries();

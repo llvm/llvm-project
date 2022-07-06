@@ -482,10 +482,7 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp.
             {}
 
     template <class _Tuple,
-              class = typename enable_if
-                      <
-                         __tuple_constructible<_Tuple, tuple<_Tp...> >::value
-                      >::type
+              class = __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value>
              >
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
         __tuple_impl(_Tuple&& __t) _NOEXCEPT_((__all<is_nothrow_constructible<_Tp, typename tuple_element<_Indx,
@@ -495,10 +492,7 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp.
             {}
 
     template <class _Alloc, class _Tuple,
-              class = typename enable_if
-                      <
-                         __tuple_constructible<_Tuple, tuple<_Tp...> >::value
-                      >::type
+              class = __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value>
              >
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
         __tuple_impl(allocator_arg_t, const _Alloc& __a, _Tuple&& __t)
@@ -1336,11 +1330,7 @@ tuple(allocator_arg_t, _Alloc, tuple<_Tp...>) -> tuple<_Tp...>;
 
 template <class ..._Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-typename enable_if
-<
-    __all<__is_swappable<_Tp>::value...>::value,
-    void
->::type
+__enable_if_t<__all<__is_swappable<_Tp>::value...>::value, void>
 swap(tuple<_Tp...>& __t, tuple<_Tp...>& __u)
                  _NOEXCEPT_(__all<__is_nothrow_swappable<_Tp>::value...>::value)
     {__t.swap(__u);}

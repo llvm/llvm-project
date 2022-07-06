@@ -19,8 +19,8 @@
 #include "SIInstrInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MacroFusion.h"
@@ -34,8 +34,8 @@ using namespace llvm;
 #define DEBUG_TYPE "gcn-vopd-utils"
 
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
-                                       const MachineInstr &FirstMI,
-                                       const MachineInstr &SecondMI) {
+                                   const MachineInstr &FirstMI,
+                                   const MachineInstr &SecondMI) {
   const MachineFunction *MF = FirstMI.getMF();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());
@@ -58,15 +58,14 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
         return true;
     }
     return false;
-    }() && "Expected FirstMI to precede SecondMI");
+  }() && "Expected FirstMI to precede SecondMI");
   // Cannot pair dependent instructions
   for (const auto &Use : SecondMI.uses())
     if (Use.isReg() && FirstMI.modifiesRegister(Use.getReg()))
-        return false;
+      return false;
 
   struct ComponentInfo {
-    ComponentInfo(const MachineInstr &MI)
-        : MI(MI) {}
+    ComponentInfo(const MachineInstr &MI) : MI(MI) {}
     Register Dst, Reg0, Reg1, Reg2;
     const MachineInstr &MI;
   };
@@ -136,8 +135,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if (!((CInfo[0].Dst ^ CInfo[1].Dst) & 0x1))
     return false;
 
-  LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: "; FirstMI.dump();
-             dbgs() << "\n\tY: "; SecondMI.dump(); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI
+                    << "\n\tY: " << SecondMI << "\n");
   return true;
 }
 
@@ -180,7 +179,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
   void apply(ScheduleDAGInstrs *DAG) override {
     const TargetInstrInfo &TII = *DAG->TII;
     const GCNSubtarget &ST = DAG->MF.getSubtarget<GCNSubtarget>();
-    if (!AMDGPU::hasVOPD(ST) || !ST.isWave32()){
+    if (!AMDGPU::hasVOPD(ST) || !ST.isWave32()) {
       LLVM_DEBUG(dbgs() << "Target does not support VOPDPairingMutation\n");
       return;
     }
@@ -190,7 +189,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       const MachineInstr *IMI = ISUI->getInstr();
       if (!shouldScheduleAdjacent(TII, ST, nullptr, *IMI))
         continue;
-      if(!hasLessThanNumFused(*ISUI, 2))
+      if (!hasLessThanNumFused(*ISUI, 2))
         continue;
 
       for (JSUI = ISUI + 1; JSUI != DAG->SUnits.end(); ++JSUI) {
@@ -208,8 +207,6 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
   }
 };
 
-
-std::unique_ptr<ScheduleDAGMutation>
-llvm::createVOPDPairingMutation() {
+std::unique_ptr<ScheduleDAGMutation> llvm::createVOPDPairingMutation() {
   return std::make_unique<VOPDPairingMutation>(shouldScheduleVOPDAdjacent);
 }

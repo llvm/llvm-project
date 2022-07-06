@@ -32,7 +32,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1155,21 +1154,14 @@ struct CombineContractBroadcast
 
     // Determine which dims are usused, now that the maps have been composed
     // with the broadcast maps.
-    unsigned numDims = maps[0].getNumDims();
-    llvm::SmallBitVector unusedDims(numDims, true);
-    for (const auto &m : maps) {
-      for (unsigned i = 0; i < numDims; ++i) {
-        if (m.isFunctionOfDim(i))
-          unusedDims.reset(i);
-      }
-    }
+    llvm::SmallBitVector unusedDimsBitVector = getUnusedDimsBitVector(maps);
     // Compress unused dims.
     for (auto &m : maps)
-      m = compressDims(m, unusedDims);
+      m = compressDims(m, unusedDimsBitVector);
     // Compute the combined iterators.
     SmallVector<Attribute, 4> iterators;
-    for (unsigned i = 0; i < numDims; ++i) {
-      if (!unusedDims.test(i))
+    for (unsigned i = 0; i < unusedDimsBitVector.size(); ++i) {
+      if (!unusedDimsBitVector.test(i))
         iterators.push_back(contractOp.getIteratorTypes().getValue()[i]);
     }
     // Check that compressing unused dims isn't removing all reduction
@@ -1179,7 +1171,10 @@ struct CombineContractBroadcast
     // a reduction iterator.
     if (!llvm::any_of(iterators, isReductionIterator))
       return failure();
-
+    // If the compressed maps have a dimension that is not used by either LHS or
+    // RHS then the ContractionOp verifier would fail.
+    if (getUnusedDimsBitVector({maps[0], maps[1]}).any())
+      return failure();
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhs, rhs, contractOp.getAcc(),
         rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators));

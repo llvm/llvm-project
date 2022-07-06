@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_void)
+#if __has_builtin(__is_void)
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_void : _BoolConstant<__is_void(_Tp)> { };
@@ -38,7 +38,7 @@ template <class _Tp>
 inline constexpr bool is_void_v = is_void<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_void)
+#endif // __has_builtin(__is_void)
 
 _LIBCPP_END_NAMESPACE_STD
 

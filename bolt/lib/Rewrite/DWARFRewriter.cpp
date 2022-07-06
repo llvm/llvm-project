@@ -180,12 +180,14 @@ void DWARFRewriter::updateDebugInfo() {
 
   if (BC.isDWARF5Used()) {
     AddrWriter = std::make_unique<DebugAddrWriterDwarf5>(&BC);
-    RangesSectionWriter = std::make_unique<DebugRangeListsSectionWriter>();
+    RangeListsSectionWriter = std::make_unique<DebugRangeListsSectionWriter>();
     DebugRangeListsSectionWriter::setAddressWriter(AddrWriter.get());
   } else {
     AddrWriter = std::make_unique<DebugAddrWriter>(&BC);
-    RangesSectionWriter = std::make_unique<DebugRangesSectionWriter>();
   }
+
+  if (BC.isDWARFLegacyUsed())
+    LegacyRangesSectionWriter = std::make_unique<DebugRangesSectionWriter>();
 
   DebugLoclistWriter::setAddressWriter(AddrWriter.get());
 
@@ -263,6 +265,9 @@ void DWARFRewriter::updateDebugInfo() {
       SplitCU = BC.getDWOCU(*DWOId);
 
     DebugLocWriter *DebugLocWriter = nullptr;
+    DebugRangesSectionWriter *RangesSectionWriter =
+        Unit->getVersion() >= 5 ? RangeListsSectionWriter.get()
+                                : LegacyRangesSectionWriter.get();
     // Skipping CUs that failed to load.
     if (SplitCU) {
       updateDWONameCompDir(*Unit);
@@ -279,8 +284,7 @@ void DWARFRewriter::updateDebugInfo() {
         std::lock_guard<std::mutex> Lock(AccessMutex);
         DebugLocWriter = LocListWritersByCU[*DWOId].get();
       }
-      DebugRangesSectionWriter *TempRangesSectionWriter =
-          RangesSectionWriter.get();
+      DebugRangesSectionWriter *TempRangesSectionWriter = RangesSectionWriter;
       if (Unit->getVersion() >= 5) {
         TempRangesSectionWriter = RangeListsWritersByCU[*DWOId].get();
       } else {
@@ -312,7 +316,7 @@ void DWARFRewriter::updateDebugInfo() {
     if (Unit->getVersion() >= 5) {
       RangesBase = RangesSectionWriter->getSectionOffset() +
                    getDWARF5RngListLocListHeaderSize();
-      RangesSectionWriter.get()->initSection(*Unit);
+      RangesSectionWriter->initSection(*Unit);
       StrOffstsWriter->finalizeSection();
     }
 
@@ -321,16 +325,13 @@ void DWARFRewriter::updateDebugInfo() {
                         *DebugLocWriter, *RangesSectionWriter, RangesBase);
     DebugLocWriter->finalize(*DebugInfoPatcher, *AbbrevWriter);
     if (Unit->getVersion() >= 5)
-      RangesSectionWriter.get()->finalizeSection();
+      RangesSectionWriter->finalizeSection();
   };
 
   CUIndex = 0;
   if (opts::NoThreads || opts::DeterministicDebugInfo) {
-    for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units()) {
-      processUnitDIE(CUIndex, CU.get());
-      if (CU->getVersion() >= 5)
-        ++CUIndex;
-    }
+    for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units())
+      processUnitDIE(CUIndex++, CU.get());
   } else {
     // Update unit debug info in parallel
     ThreadPool &ThreadPool = ParallelUtilities::getThreadPool();
@@ -967,13 +968,21 @@ DWARFRewriter::finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher) {
         DebugStrOffsetsSectionContents->size());
   }
 
-  std::unique_ptr<DebugBufferVector> RangesSectionContents =
-      RangesSectionWriter->releaseBuffer();
-  BC.registerOrUpdateNoteSection(
-      llvm::isa<DebugRangeListsSectionWriter>(*RangesSectionWriter)
-          ? ".debug_rnglists"
-          : ".debug_ranges",
-      copyByteArray(*RangesSectionContents), RangesSectionContents->size());
+  if (BC.isDWARFLegacyUsed()) {
+    std::unique_ptr<DebugBufferVector> RangesSectionContents =
+        LegacyRangesSectionWriter->releaseBuffer();
+    BC.registerOrUpdateNoteSection(".debug_ranges",
+                                   copyByteArray(*RangesSectionContents),
+                                   RangesSectionContents->size());
+  }
+
+  if (BC.isDWARF5Used()) {
+    std::unique_ptr<DebugBufferVector> RangesSectionContents =
+        RangeListsSectionWriter->releaseBuffer();
+    BC.registerOrUpdateNoteSection(".debug_rnglists",
+                                   copyByteArray(*RangesSectionContents),
+                                   RangesSectionContents->size());
+  }
 
   if (BC.isDWARF5Used()) {
     std::unique_ptr<DebugBufferVector> LocationListSectionContents =

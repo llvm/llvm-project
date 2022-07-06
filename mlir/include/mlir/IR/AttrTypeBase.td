@@ -319,7 +319,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // will be set to the default value. Parameters equal to their default values
   // are elided when printing. Equality is checked using the `comparator` field,
   // which by default is the C++ equality operator. The current MLIR context is
-  // made available through `$_ctx`, e.g., for constructing default values for
+  // made available through `$_ctxt`, e.g., for constructing default values for
   // attributes and types.
   string defaultValue = ?;
 }

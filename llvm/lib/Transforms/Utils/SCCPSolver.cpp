@@ -1456,7 +1456,7 @@ void SCCPInstVisitor::solve() {
 /// However, if the operand remains undef when the solver returns, we do need
 /// to assign some result to the instruction (otherwise we would treat it as
 /// unreachable). For simplicity, we mark any instructions that are still
-/// unknown/undef as overdefined.
+/// unknown as overdefined.
 bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
@@ -1485,7 +1485,7 @@ bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
         // more precise than this but it isn't worth bothering.
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           ValueLatticeElement &LV = getStructValueState(&I, i);
-          if (LV.isUnknownOrUndef()) {
+          if (LV.isUnknown()) {
             markOverdefined(LV, &I);
             MadeChange = true;
           }
@@ -1494,7 +1494,7 @@ bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
       }
 
       ValueLatticeElement &LV = getValueState(&I);
-      if (!LV.isUnknownOrUndef())
+      if (!LV.isUnknown())
         continue;
 
       // There are two reasons a call can have an undef result

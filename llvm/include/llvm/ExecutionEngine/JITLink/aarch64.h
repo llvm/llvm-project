@@ -33,6 +33,8 @@ enum EdgeKind_aarch64 : Edge::Kind {
   GOTPageOffset12,
   TLVPage21,
   TLVPageOffset12,
+  TLSDescPage21,
+  TLSDescPageOffset12,
   PointerToGOT,
   PairedAddend,
   LDRLiteral19,
@@ -223,8 +225,10 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     break;
   }
   case TLVPage21:
-  case GOTPage21:
   case TLVPageOffset12:
+  case TLSDescPage21:
+  case TLSDescPageOffset12:
+  case GOTPage21:
   case GOTPageOffset12:
   case PointerToGOT: {
     return make_error<JITLinkError>(

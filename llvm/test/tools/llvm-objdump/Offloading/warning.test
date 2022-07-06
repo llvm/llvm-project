@@ -1,0 +1,17 @@
+## Ensure we give a warning on bad input following good input.
+# RUN: yaml2obj %S/Inputs/binary.yaml -o %t-good.bin
+# RUN: yaml2obj %S/Inputs/malformed.yaml -o %t-bad.bin
+# RUN: cat %t-bad.bin >> %t-good.bin
+# RUN: yaml2obj %s -o %t.elf
+# RUN: llvm-objcopy --add-section .llvm.offloading=%t-good.bin %t.elf
+# RUN: llvm-objcopy --set-section-alignment .llvm.offloading=8 %t.elf
+# RUN: llvm-objdump --offloading %t.elf 2>&1 | FileCheck %s -DFILENAME=%t.elf
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+
+# CHECK: OFFLOADING IMAGE [0]:
+# CHECK: warning: '[[FILENAME]]': while parsing offloading files: The end of the file was unexpectedly encountered

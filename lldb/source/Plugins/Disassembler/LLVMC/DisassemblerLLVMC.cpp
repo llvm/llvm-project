@@ -1181,11 +1181,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
 
   // If any AArch64 variant, enable latest ISA with all extensions.
   if (triple.isAArch64()) {
-    features_str += "+v9.3a,";
-    std::vector<llvm::StringRef> features;
-    // Get all possible features
-    llvm::AArch64::getExtensionFeatures(-1, features);
-    features_str += llvm::join(features, ",");
+    features_str += "+all,";
 
     if (triple.getVendor() == llvm::Triple::Apple)
       cpu = "apple-latest";

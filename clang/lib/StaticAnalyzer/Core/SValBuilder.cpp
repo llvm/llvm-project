@@ -113,6 +113,8 @@ nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *operand,
                                           QualType fromTy, QualType toTy) {
   assert(operand);
   assert(!Loc::isLocType(toTy));
+  if (fromTy == toTy)
+    return operand;
   return nonloc::SymbolVal(SymMgr.getCastSymbol(operand, fromTy, toTy));
 }
 
@@ -1100,6 +1102,10 @@ nonloc::SymbolVal SValBuilder::simplifySymbolCast(nonloc::SymbolVal V,
 
   SymbolRef RootSym = cast<SymbolCast>(SE)->getOperand();
   QualType RT = RootSym->getType().getCanonicalType();
+
+  // FIXME support simplification from non-integers.
+  if (!RT->isIntegralOrEnumerationType())
+    return makeNonLoc(SE, T, CastTy);
 
   BasicValueFactory &BVF = getBasicValueFactory();
   APSIntType CTy = BVF.getAPSIntType(CastTy);

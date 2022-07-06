@@ -6653,7 +6653,7 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
   EVT InVT = InOp.getValueType();
   assert(InVT.getVectorElementType() == NVT.getVectorElementType() &&
          "input and widen element type must match");
-  assert(!InVT.isScalableVector() && !NVT.isScalableVector() &&
+  assert(InVT.isScalableVector() == NVT.isScalableVector() &&
          "cannot modify scalable vectors in this way");
   SDLoc dl(InOp);
 
@@ -6661,10 +6661,10 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
   if (InVT == NVT)
     return InOp;
 
-  unsigned InNumElts = InVT.getVectorNumElements();
-  unsigned WidenNumElts = NVT.getVectorNumElements();
-  if (WidenNumElts > InNumElts && WidenNumElts % InNumElts == 0) {
-    unsigned NumConcat = WidenNumElts / InNumElts;
+  ElementCount InEC = InVT.getVectorElementCount();
+  ElementCount WidenEC = NVT.getVectorElementCount();
+  if (WidenEC.hasKnownScalarFactor(InEC)) {
+    unsigned NumConcat = WidenEC.getKnownScalarFactor(InEC);
     SmallVector<SDValue, 16> Ops(NumConcat);
     SDValue FillVal = FillWithZeroes ? DAG.getConstant(0, dl, InVT) :
       DAG.getUNDEF(InVT);
@@ -6675,9 +6675,15 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, NVT, Ops);
   }
 
-  if (WidenNumElts < InNumElts && InNumElts % WidenNumElts)
+  if (InEC.hasKnownScalarFactor(WidenEC))
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, NVT, InOp,
                        DAG.getVectorIdxConstant(0, dl));
+
+  assert(!InVT.isScalableVector() && !NVT.isScalableVector() &&
+         "Scalable vectors should have been handled already.");
+
+  unsigned InNumElts = InEC.getFixedValue();
+  unsigned WidenNumElts = WidenEC.getFixedValue();
 
   // Fall back to extract and build.
   SmallVector<SDValue, 16> Ops(WidenNumElts);

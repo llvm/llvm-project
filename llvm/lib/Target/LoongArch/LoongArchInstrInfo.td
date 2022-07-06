@@ -14,7 +14,14 @@
 // LoongArch specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+// Target-independent type requirements, but with target-specific formats.
+def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
+                                       SDTCisVT<1, i32>]>;
+def SDT_CallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i32>,
+                                   SDTCisVT<1, i32>]>;
+
 // Target-dependent type requirements.
+def SDT_LoongArchCall : SDTypeProfile<0, -1, [SDTCisVT<0, GRLenVT>]>;
 def SDT_LoongArchIntBinOpW : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
 ]>;
@@ -24,7 +31,16 @@ def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
 ]>;
 
 // TODO: Add LoongArch specific DAG Nodes
+// Target-independent nodes, but with target-specific formats.
+def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
+                           [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
+                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
 // Target-dependent nodes.
+def loongarch_call : SDNode<"LoongArchISD::CALL", SDT_LoongArchCall,
+                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                             SDNPVariadic]>;
 def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
@@ -106,7 +122,14 @@ def simm16 : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<16>";
 }
 
-def simm16_lsl2 : Operand<GRLenVT> {
+def simm16_lsl2 : Operand<GRLenVT>,
+    ImmLeaf<GRLenVT, [{return isInt<16>(Imm>>2);}]> {
+  let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
+  let EncoderMethod = "getImmOpValueAsr2";
+  let DecoderMethod = "decodeSImmOperand<16, 2>";
+}
+
+def simm16_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<16, 2>";
@@ -117,13 +140,13 @@ def simm20 : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<20>";
 }
 
-def simm21_lsl2 : Operand<GRLenVT> {
+def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<21, 2>";
 }
 
-def simm26_lsl2 : Operand<GRLenVT> {
+def simm26_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<26, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
@@ -140,6 +163,19 @@ def NegImm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
                                    N->getValueType(0));
 }]>;
+
+def CallSymbol: AsmOperandClass {
+  let Name = "CallSymbol";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isImm";
+}
+
+// A bare symbol used in call only.
+def call_symbol : Operand<iPTR> {
+  let ParserMatchClass = CallSymbol;
+}
+
+def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 
 //===----------------------------------------------------------------------===//
 // Instruction Formats
@@ -185,7 +221,7 @@ class RDTIME_2R<bits<22> op, string opstr>
     : Fmt2R<op, (outs GPR:$rd, GPR:$rj), (ins), opstr, "$rd, $rj">;
 
 class BrCC_2RI16<bits<6> op, string opstr>
-    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2:$imm16), opstr,
+    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2_br:$imm16), opstr,
                "$rj, $rd, $imm16"> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -274,10 +310,12 @@ def XORI : ALU_2RI12<0b0000001111, "xori", uimm12>;
 def MUL_W   : ALU_3R<0b00000000000111000, "mul.w">;
 def MULH_W  : ALU_3R<0b00000000000111001, "mulh.w">;
 def MULH_WU : ALU_3R<0b00000000000111010, "mulh.wu">;
+let usesCustomInserter = true in {
 def DIV_W   : ALU_3R<0b00000000001000000, "div.w">;
 def MOD_W   : ALU_3R<0b00000000001000001, "mod.w">;
 def DIV_WU  : ALU_3R<0b00000000001000010, "div.wu">;
 def MOD_WU  : ALU_3R<0b00000000001000011, "mod.wu">;
+} // usesCustomInserter = true
 
 // Bit-shift Instructions
 def SLL_W  : ALU_3R<0b00000000000101110, "sll.w">;
@@ -379,10 +417,12 @@ def MULH_D    : ALU_3R<0b00000000000111100, "mulh.d">;
 def MULH_DU   : ALU_3R<0b00000000000111101, "mulh.du">;
 def MULW_D_W  : ALU_3R<0b00000000000111110, "mulw.d.w">;
 def MULW_D_WU : ALU_3R<0b00000000000111111, "mulw.d.wu">;
+let usesCustomInserter = true in {
 def DIV_D     : ALU_3R<0b00000000001000100, "div.d">;
 def MOD_D     : ALU_3R<0b00000000001000101, "mod.d">;
 def DIV_DU    : ALU_3R<0b00000000001000110, "div.du">;
 def MOD_DU    : ALU_3R<0b00000000001000111, "mod.du">;
+} // usesCustomInserter = true
 
 // Bit-shift Instructions for 64-bits
 def SLL_D  : ALU_3R<0b00000000000110001, "sll.d">;
@@ -556,6 +596,10 @@ let Predicates = [IsLA32] in {
 def : PatGprGpr<add, ADD_W>;
 def : PatGprImm<add, ADDI_W, simm12>;
 def : PatGprGpr<sub, SUB_W>;
+def : PatGprGpr<sdiv, DIV_W>;
+def : PatGprGpr<udiv, DIV_WU>;
+def : PatGprGpr<srem, MOD_W>;
+def : PatGprGpr<urem, MOD_WU>;
 } // Predicates = [IsLA32]
 
 let Predicates = [IsLA64] in {
@@ -565,6 +609,10 @@ def : PatGprImm<add, ADDI_D, simm12>;
 def : PatGprImm_32<add, ADDI_W, simm12>;
 def : PatGprGpr<sub, SUB_D>;
 def : PatGprGpr_32<sub, SUB_W>;
+def : PatGprGpr<sdiv, DIV_D>;
+def : PatGprGpr<udiv, DIV_DU>;
+def : PatGprGpr<srem, MOD_D>;
+def : PatGprGpr<urem, MOD_DU>;
 } // Predicates = [IsLA64]
 
 def : PatGprGpr<and, AND>;
@@ -649,6 +697,57 @@ def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
 
 /// Branches and jumps
 
+class BccPat<PatFrag CondOp, LAInst Inst>
+    : Pat<(brcond (GRLenVT (CondOp GPR:$rj, GPR:$rd)), bb:$imm16),
+          (Inst GPR:$rj, GPR:$rd, bb:$imm16)>;
+
+def : BccPat<seteq, BEQ>;
+def : BccPat<setne, BNE>;
+def : BccPat<setlt, BLT>;
+def : BccPat<setge, BGE>;
+def : BccPat<setult, BLTU>;
+def : BccPat<setuge, BGEU>;
+
+class BccSwapPat<PatFrag CondOp, LAInst InstBcc>
+    : Pat<(brcond (GRLenVT (CondOp GPR:$rd, GPR:$rj)), bb:$imm16),
+          (InstBcc GPR:$rj, GPR:$rd, bb:$imm16)>;
+
+// Condition codes that don't have matching LoongArch branch instructions, but
+// are trivially supported by swapping the two input operands.
+def : BccSwapPat<setgt, BLT>;
+def : BccSwapPat<setle, BGE>;
+def : BccSwapPat<setugt, BLTU>;
+def : BccSwapPat<setule, BGEU>;
+
+// An extra pattern is needed for a brcond without a setcc (i.e. where the
+// condition was calculated elsewhere).
+def : Pat<(brcond GPR:$rj, bb:$imm21), (BNEZ GPR:$rj, bb:$imm21)>;
+
+let isBarrier = 1, isBranch = 1, isTerminator = 1 in
+def PseudoBR : Pseudo<(outs), (ins simm26_lsl2:$imm26), [(br bb:$imm26)]>,
+               PseudoInstExpansion<(B simm26_lsl2:$imm26)>;
+
+let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
+def PseudoBRIND : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16), []>,
+                  PseudoInstExpansion<(JIRL R0, GPR:$rj, simm16_lsl2:$imm16)>;
+
+def : Pat<(brind GPR:$rj), (PseudoBRIND GPR:$rj, 0)>;
+def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
+          (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
+
+let isCall = 1, Defs = [R1] in
+def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), []> {
+  let AsmString = "bl\t$func";
+}
+
+def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
+def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+
+let isCall = 1, Defs = [R1] in
+def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rj),
+                                [(loongarch_call GPR:$rj)]>,
+                         PseudoInstExpansion<(JIRL R1, GPR:$rj, 0)>;
+
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
@@ -662,6 +761,56 @@ def : Pat<(loongarch_bstrpick GPR:$rj, uimm5:$msbd, uimm5:$lsbd),
 let Predicates = [IsLA64] in
 def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
           (BSTRPICK_D GPR:$rj, uimm6:$msbd, uimm6:$lsbd)>;
+
+/// Loads
+
+multiclass LdPat<PatFrag LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
+  def : Pat<(vt (LoadOp BaseAddr:$rj)), (Inst BaseAddr:$rj, 0)>;
+  def : Pat<(vt (LoadOp (add BaseAddr:$rj, simm12:$imm12))),
+            (Inst BaseAddr:$rj, simm12:$imm12)>;
+}
+
+defm : LdPat<sextloadi8, LD_B>;
+defm : LdPat<extloadi8, LD_B>;
+defm : LdPat<sextloadi16, LD_H>;
+defm : LdPat<extloadi16, LD_H>;
+defm : LdPat<load, LD_W>, Requires<[IsLA32]>;
+defm : LdPat<zextloadi8, LD_BU>;
+defm : LdPat<zextloadi16, LD_HU>;
+let Predicates = [IsLA64] in {
+defm : LdPat<sextloadi32, LD_W, i64>;
+defm : LdPat<extloadi32, LD_W, i64>;
+defm : LdPat<zextloadi32, LD_WU, i64>;
+defm : LdPat<load, LD_D, i64>;
+} // Predicates = [IsLA64]
+
+/// Stores
+
+multiclass StPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
+                 ValueType vt> {
+  def : Pat<(StoreOp (vt StTy:$rd), BaseAddr:$rj),
+            (Inst StTy:$rd, BaseAddr:$rj, 0)>;
+  def : Pat<(StoreOp (vt StTy:$rd), (add BaseAddr:$rj, simm12:$imm12)),
+            (Inst StTy:$rd, BaseAddr:$rj, simm12:$imm12)>;
+}
+
+defm : StPat<truncstorei8, ST_B, GPR, GRLenVT>;
+defm : StPat<truncstorei16, ST_H, GPR, GRLenVT>;
+defm : StPat<store, ST_W, GPR, i32>, Requires<[IsLA32]>;
+let Predicates = [IsLA64] in {
+defm : StPat<truncstorei32, ST_W, GPR, i64>;
+defm : StPat<store, ST_D, GPR, i64>;
+} // Predicates = [IsLA64]
+
+/// Other pseudo-instructions
+
+// Pessimistically assume the stack pointer will be clobbered
+let Defs = [R3], Uses = [R3] in {
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(callseq_start timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(callseq_end timm:$amt1, timm:$amt2)]>;
+} // Defs = [R3], Uses = [R3]
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions

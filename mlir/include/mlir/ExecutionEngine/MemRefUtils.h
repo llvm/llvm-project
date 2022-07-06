@@ -101,7 +101,7 @@ template <typename T>
 std::pair<T *, T *>
 allocAligned(size_t nElements, AllocFunType allocFun = &::malloc,
              llvm::Optional<uint64_t> alignment = llvm::Optional<uint64_t>()) {
-  assert(sizeof(T) < (1ul << 32) && "Elemental type overflows");
+  assert(sizeof(T) <= UINT_MAX && "Elemental type overflows");
   auto size = nElements * sizeof(T);
   auto desiredAlignment = alignment.value_or(nextPowerOf2(sizeof(T)));
   assert((desiredAlignment & (desiredAlignment - 1)) == 0);

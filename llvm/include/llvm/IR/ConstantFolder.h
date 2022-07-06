@@ -44,8 +44,11 @@ public:
                    Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::get(Opc, LC, RC);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc))
+        return ConstantExpr::get(Opc, LC, RC);
+      return ConstantFoldBinaryInstruction(Opc, LC, RC);
+    }
     return nullptr;
   }
 
@@ -53,9 +56,12 @@ public:
                         bool IsExact) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::get(Opc, LC, RC,
-                               IsExact ? PossiblyExactOperator::IsExact : 0);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc))
+        return ConstantExpr::get(Opc, LC, RC,
+                                 IsExact ? PossiblyExactOperator::IsExact : 0);
+      return ConstantFoldBinaryInstruction(Opc, LC, RC);
+    }
     return nullptr;
   }
 
@@ -64,12 +70,15 @@ public:
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC) {
-      unsigned Flags = 0;
-      if (HasNUW)
-        Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
-      if (HasNSW)
-        Flags |= OverflowingBinaryOperator::NoSignedWrap;
-      return ConstantExpr::get(Opc, LC, RC, Flags);
+      if (ConstantExpr::isDesirableBinOp(Opc)) {
+        unsigned Flags = 0;
+        if (HasNUW)
+          Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
+        if (HasNSW)
+          Flags |= OverflowingBinaryOperator::NoSignedWrap;
+        return ConstantExpr::get(Opc, LC, RC, Flags);
+      }
+      return ConstantFoldBinaryInstruction(Opc, LC, RC);
     }
     return nullptr;
   }
@@ -123,7 +132,7 @@ public:
     auto *CAgg = dyn_cast<Constant>(Agg);
     auto *CVal = dyn_cast<Constant>(Val);
     if (CAgg && CVal)
-      return ConstantExpr::getInsertValue(CAgg, CVal, IdxList);
+      return ConstantFoldInsertValueInstruction(CAgg, CVal, IdxList);
     return nullptr;
   }
 
@@ -158,17 +167,8 @@ public:
   // Unary Operators
   //===--------------------------------------------------------------------===//
 
-  Constant *CreateNeg(Constant *C,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getNeg(C, HasNUW, HasNSW);
-  }
-
   Constant *CreateFNeg(Constant *C) const override {
     return ConstantExpr::getFNeg(C);
-  }
-
-  Constant *CreateNot(Constant *C) const override {
-    return ConstantExpr::getNot(C);
   }
 
   Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {

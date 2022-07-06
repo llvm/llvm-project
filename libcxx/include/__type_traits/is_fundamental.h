@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_fundamental)
+#if __has_builtin(__is_fundamental)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_fundamental : _BoolConstant<__is_fundamental(_Tp)> { };
@@ -30,7 +30,7 @@ template <class _Tp>
 inline constexpr bool is_fundamental_v = __is_fundamental(_Tp);
 #endif
 
-#else // __has_keyword(__is_fundamental)
+#else // __has_builtin(__is_fundamental)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_fundamental
     : public integral_constant<bool, is_void<_Tp>::value        ||
@@ -42,7 +42,7 @@ template <class _Tp>
 inline constexpr bool is_fundamental_v = is_fundamental<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_fundamental)
+#endif // __has_builtin(__is_fundamental)
 
 _LIBCPP_END_NAMESPACE_STD
 

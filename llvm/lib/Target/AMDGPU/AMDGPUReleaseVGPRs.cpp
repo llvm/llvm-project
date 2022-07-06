@@ -35,12 +35,13 @@ public:
   AMDGPUReleaseVGPRs() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
+    AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   // Used to cache the result of isLastInstructionVMEMStore for each block
-  DenseMap<MachineBasicBlock *, bool> BlockVMEMStore;
+  using BlockVMEMStoreType = DenseMap<MachineBasicBlock *, bool>;
+  BlockVMEMStoreType BlockVMEMStore;
 
   // Return true if the last instruction referencing a vgpr in this MBB
   // is a VMEM store, otherwise return false.
@@ -52,42 +53,33 @@ public:
   // This is why we are just testing the type of instructions rather
   // than the operands.
   bool isLastVGPRUseVMEMStore(MachineBasicBlock &MBB) {
-
-    // Use the cache to break infinite loop and save some time
-    if (BlockVMEMStore.count(&MBB) != 0)
-      return BlockVMEMStore[&MBB];
+    // Use the cache to break infinite loop and save some time. Initialize to
+    // false in case we have a cycle.
+    BlockVMEMStoreType::iterator It;
+    bool Inserted;
+    std::tie(It, Inserted) = BlockVMEMStore.insert({&MBB, false});
+    bool &CacheEntry = It->second;
+    if (!Inserted)
+      return CacheEntry;
 
     for (auto &MI : reverse(MBB.instrs())) {
-      // If it's a VMEM store, a vgpr will be used, return true
-      if ((SIInstrInfo::isVMEM(MI) || SIInstrInfo::isFLAT(MI)) &&
-          MI.mayStore()) {
-        BlockVMEMStore[&MBB] = true;
-        return true;
-      } else {
-        // If it's referencing a VGPR but is not a VMEM store, return false
-        if (SIInstrInfo::isDS(MI) || SIInstrInfo::isEXP(MI) ||
-            SIInstrInfo::isVMEM(MI) || SIInstrInfo::isFLAT(MI) ||
-            SIInstrInfo::isVALU(MI)) {
-          BlockVMEMStore[&MBB] = false;
-          return false;
-        }
-      }
+      // If it's a VMEM store, a vgpr will be used, return true.
+      if ((SIInstrInfo::isVMEM(MI) || SIInstrInfo::isFLAT(MI)) && MI.mayStore())
+        return CacheEntry = true;
+
+      // If it's referencing a VGPR but is not a VMEM store, return false.
+      if (SIInstrInfo::isDS(MI) || SIInstrInfo::isEXP(MI) ||
+          SIInstrInfo::isVMEM(MI) || SIInstrInfo::isFLAT(MI) ||
+          SIInstrInfo::isVALU(MI))
+        return CacheEntry = false;
     }
 
-    // In case we have a cycle, initialize to false for this block
-    bool Res = false;
-    BlockVMEMStore[&MBB] = Res;
-
-    // Recursive call into parent blocks
-    // Look into predecessors if there is no vgpr used in this block
-    if (llvm::any_of(MBB.predecessors(), [this](MachineBasicBlock *Parent) {
-          return isLastVGPRUseVMEMStore(*Parent);
-        })) {
-      Res = true;
-    }
-
-    BlockVMEMStore[&MBB] = Res;
-    return Res;
+    // Recursive call into parent blocks. Look into predecessors if there is no
+    // vgpr used in this block.
+    return CacheEntry = llvm::any_of(MBB.predecessors(),
+                                     [this](MachineBasicBlock *Parent) {
+                                       return isLastVGPRUseVMEMStore(*Parent);
+                                     });
   }
 
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB) {
@@ -113,7 +105,8 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
+    Function &F = MF.getFunction();
+    if (skipFunction(F) || !AMDGPU::isEntryFunctionCC(F.getCallingConv()))
       return false;
 
     // This pass only runs on GFX11+

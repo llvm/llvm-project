@@ -491,9 +491,11 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   if (SE)
     SE->forgetLoop(L);
 
-  auto *OldBr = dyn_cast<BranchInst>(Preheader->getTerminator());
-  assert(OldBr && "Preheader must end with a branch");
-  assert(OldBr->isUnconditional() && "Preheader must have a single successor");
+  Instruction *OldTerm = Preheader->getTerminator();
+  assert(!OldTerm->mayHaveSideEffects() &&
+         "Preheader must end with a side-effect-free terminator");
+  assert(OldTerm->getNumSuccessors() == 1 &&
+         "Preheader must have a single successor");
   // Connect the preheader to the exit block. Keep the old edge to the header
   // around to perform the dominator tree update in two separate steps
   // -- #1 insertion of the edge preheader -> exit and #2 deletion of the edge
@@ -519,7 +521,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   // coming to this inner loop, this will break the outer loop structure (by
   // deleting the backedge of the outer loop). If the outer loop is indeed a
   // non-loop, it will be deleted in a future iteration of loop deletion pass.
-  IRBuilder<> Builder(OldBr);
+  IRBuilder<> Builder(OldTerm);
 
   auto *ExitBlock = L->getUniqueExitBlock();
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
@@ -529,7 +531,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
 
     Builder.CreateCondBr(Builder.getFalse(), L->getHeader(), ExitBlock);
     // Remove the old branch. The conditional branch becomes a new terminator.
-    OldBr->eraseFromParent();
+    OldTerm->eraseFromParent();
 
     // Rewrite phis in the exit block to get their inputs from the Preheader
     // instead of the exiting block.
@@ -573,7 +575,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     assert(L->hasNoExitBlocks() &&
            "Loop should have either zero or one exit blocks.");
 
-    Builder.SetInsertPoint(OldBr);
+    Builder.SetInsertPoint(OldTerm);
     Builder.CreateUnreachable();
     Preheader->getTerminator()->eraseFromParent();
   }
@@ -1295,6 +1297,53 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         if (!L->contains(Inst))
           continue;
 
+        // Find exit values which are induction variables in the loop, and are
+        // unused in the loop, with the only use being the exit block PhiNode,
+        // and the induction variable update binary operator.
+        // The exit value can be replaced with the final value when it is cheap
+        // to do so.
+        if (ReplaceExitValue == UnusedIndVarInLoop) {
+          InductionDescriptor ID;
+          PHINode *IndPhi = dyn_cast<PHINode>(Inst);
+          if (IndPhi) {
+            if (IndPhi->getParent() != L->getHeader())
+              continue;
+            // Do not consider non induction phis.
+            if (!InductionDescriptor::isInductionPHI(IndPhi, L, SE, ID))
+              continue;
+            // This is an induction PHI. Check that the only users are PHI
+            // nodes, and induction variable update binary operators.
+            if (llvm::any_of(Inst->users(), [&](User *U) {
+                  if (!isa<PHINode>(U) && !isa<BinaryOperator>(U))
+                    return true;
+                  BinaryOperator *B = dyn_cast<BinaryOperator>(U);
+                  if (B && B != ID.getInductionBinOp())
+                    return true;
+                  return false;
+                }))
+              continue;
+          } else {
+            // If it is not an induction phi, it must be an induction update
+            // binary operator with an induction phi user.
+            BinaryOperator *B = dyn_cast<BinaryOperator>(Inst);
+            if (!B)
+              continue;
+            if (llvm::any_of(Inst->users(), [&](User *U) {
+                  PHINode *Phi = dyn_cast<PHINode>(U);
+                  if (!Phi)
+                    return true;
+                  if (Phi->getParent() == L->getHeader()) {
+                    if (!InductionDescriptor::isInductionPHI(Phi, L, SE, ID))
+                      return true;
+                  }
+                  return false;
+                }))
+              continue;
+            if (B != ID.getInductionBinOp())
+              continue;
+          }
+        }
+
         // Okay, this instruction has a user outside of the current loop
         // and varies predictably *inside* the loop.  Evaluate the value it
         // contains when the loop exits, if possible.  We prefer to start with
@@ -1360,7 +1409,9 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
     // Only do the rewrite when the ExitValue can be expanded cheaply.
     // If LoopCanBeDel is true, rewrite exit value aggressively.
-    if (ReplaceExitValue == OnlyCheapRepl && !LoopCanBeDel && Phi.HighCost)
+    if ((ReplaceExitValue == OnlyCheapRepl ||
+         ReplaceExitValue == UnusedIndVarInLoop) &&
+        !LoopCanBeDel && Phi.HighCost)
       continue;
 
     Value *ExitVal = Rewriter.expandCodeFor(

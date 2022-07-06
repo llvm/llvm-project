@@ -43,7 +43,7 @@ static Optional<OptimizationLevel> mapToLevel(unsigned optLevel,
     case 2:
       return OptimizationLevel::Oz;
     }
-
+    break;
   case 3:
     return OptimizationLevel::O3;
   }

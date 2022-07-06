@@ -38,6 +38,8 @@ public:
 
   void Select(SDNode *Node) override;
 
+  bool SelectBaseAddr(SDValue Addr, SDValue &Base);
+
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);
   bool selectShiftMaskGRLen(SDValue N, SDValue &ShAmt) {
     return selectShiftMask(N, Subtarget->getGRLen(), ShAmt);

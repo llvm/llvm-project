@@ -33,7 +33,6 @@ class LoopInfo;
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
-class LoopVectorizationRequirements;
 class LoopVectorizeHints;
 class OptimizationRemarkEmitter;
 class TargetTransformInfo;
@@ -191,6 +190,10 @@ struct VectorizationFactor {
   /// Cost of the scalar loop.
   InstructionCost ScalarCost;
 
+  /// The minimum trip count required to make vectorization profitable, e.g. due
+  /// to runtime checks.
+  ElementCount MinProfitableTripCount;
+
   VectorizationFactor(ElementCount Width, InstructionCost Cost,
                       InstructionCost ScalarCost)
       : Width(Width), Cost(Cost), ScalarCost(ScalarCost) {}
@@ -268,8 +271,6 @@ class LoopVectorizationPlanner {
 
   const LoopVectorizeHints &Hints;
 
-  LoopVectorizationRequirements &Requirements;
-
   OptimizationRemarkEmitter *ORE;
 
   SmallVector<VPlanPtr, 4> VPlans;
@@ -285,10 +286,9 @@ public:
                            InterleavedAccessInfo &IAI,
                            PredicatedScalarEvolution &PSE,
                            const LoopVectorizeHints &Hints,
-                           LoopVectorizationRequirements &Requirements,
                            OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM), IAI(IAI),
-        PSE(PSE), Hints(Hints), Requirements(Requirements), ORE(ORE) {}
+        PSE(PSE), Hints(Hints), ORE(ORE) {}
 
   /// Plan how to best vectorize, return the best VF and its cost, or None if
   /// vectorization and interleaving should be avoided up front.
@@ -303,8 +303,12 @@ public:
 
   /// Generate the IR code for the body of the vectorized loop according to the
   /// best selected \p VF, \p UF and VPlan \p BestPlan.
+  /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
+  /// vectorization re-using plans for both the main and epilogue vector loops.
+  /// It should be removed once the re-use issue has been fixed.
   void executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-                   InnerLoopVectorizer &LB, DominatorTree *DT);
+                   InnerLoopVectorizer &LB, DominatorTree *DT,
+                   bool IsEpilogueVectorization);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);

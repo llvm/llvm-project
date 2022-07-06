@@ -23,6 +23,7 @@
 #include "GCNIterativeScheduler.h"
 #include "GCNVOPDUtils.h"
 #include "GCNSchedStrategy.h"
+#include "GCNVOPDUtils.h"
 #include "R600.h"
 #include "R600TargetMachine.h"
 #include "SIMachineFunctionInfo.h"
@@ -281,11 +282,10 @@ static cl::opt<bool>
                          cl::init(true), cl::Hidden);
 
 // Enable GFX11+ VOPD
-static cl::opt<bool> EnableVOPD(
-  "amdgpu-enable-vopd",
-  cl::desc("Enable VOPD, dual issue of VALU in wave32"),
-  cl::init(true),
-  cl::Hidden);
+static cl::opt<bool>
+    EnableVOPD("amdgpu-enable-vopd",
+               cl::desc("Enable VOPD, dual issue of VALU in wave32"),
+               cl::init(true), cl::Hidden);
 
 // Option is used in lit tests to prevent deadcoding of patterns inspected.
 static cl::opt<bool>
@@ -932,7 +932,7 @@ public:
     DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
     DAG->addMutation(createIGroupLPDAGMutation());
     DAG->addMutation(createSchedBarrierDAGMutation());
-    if (EnableVOPD)
+    if (isPassEnabled(EnableVOPD, CodeGenOpt::Less))
       DAG->addMutation(createVOPDPairingMutation());
     return DAG;
   }

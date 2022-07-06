@@ -651,12 +651,7 @@ external const_mul : llvalue -> llvalue -> llvalue = "LLVMConstMul"
 external const_nsw_mul : llvalue -> llvalue -> llvalue = "LLVMConstNSWMul"
 external const_nuw_mul : llvalue -> llvalue -> llvalue = "LLVMConstNUWMul"
 external const_fmul : llvalue -> llvalue -> llvalue = "LLVMConstFMul"
-external const_udiv : llvalue -> llvalue -> llvalue = "LLVMConstUDiv"
-external const_sdiv : llvalue -> llvalue -> llvalue = "LLVMConstSDiv"
-external const_exact_sdiv : llvalue -> llvalue -> llvalue = "LLVMConstExactSDiv"
 external const_fdiv : llvalue -> llvalue -> llvalue = "LLVMConstFDiv"
-external const_urem : llvalue -> llvalue -> llvalue = "LLVMConstURem"
-external const_srem : llvalue -> llvalue -> llvalue = "LLVMConstSRem"
 external const_frem : llvalue -> llvalue -> llvalue = "LLVMConstFRem"
 external const_and : llvalue -> llvalue -> llvalue = "LLVMConstAnd"
 external const_or : llvalue -> llvalue -> llvalue = "LLVMConstOr"
@@ -704,8 +699,6 @@ external const_insertelement : llvalue -> llvalue -> llvalue -> llvalue
                              = "LLVMConstInsertElement"
 external const_shufflevector : llvalue -> llvalue -> llvalue -> llvalue
                              = "LLVMConstShuffleVector"
-external const_insertvalue : llvalue -> llvalue -> int array -> llvalue
-                           = "llvm_const_insertvalue"
 external const_inline_asm : lltype -> string -> string -> bool -> bool ->
                             llvalue
                           = "llvm_const_inline_asm"

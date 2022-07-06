@@ -248,7 +248,7 @@ def testOpaqueAttr():
     print("oattr value:", oattr.data)
 
     # Test factory methods.
-    # CHECK: default_get: #foobar<"123">
+    # CHECK: default_get: #foobar<123>
     print(
         "default_get:",
         OpaqueAttr.get("foobar", bytes("123", "utf-8"), NoneType.get()))

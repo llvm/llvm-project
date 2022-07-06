@@ -79,9 +79,6 @@ public:
     case AMDGPU::V_MOV_B32_e32:
       break;
     case AMDGPU::V_FMAMK_F32:
-      VOPDInst.add(FirstMI->getOperand(2));
-      VOPDInst.add(FirstMI->getOperand(3));
-      break;
     case AMDGPU::V_FMAAK_F32:
       VOPDInst.add(FirstMI->getOperand(2));
       VOPDInst.add(FirstMI->getOperand(3));
@@ -97,9 +94,6 @@ public:
     case AMDGPU::V_MOV_B32_e32:
       break;
     case AMDGPU::V_FMAMK_F32:
-      VOPDInst.add(SecondMI->getOperand(2));
-      VOPDInst.add(SecondMI->getOperand(3));
-      break;
     case AMDGPU::V_FMAAK_F32:
       VOPDInst.add(SecondMI->getOperand(2));
       VOPDInst.add(SecondMI->getOperand(3));
@@ -112,9 +106,8 @@ public:
     VOPDInst.copyImplicitOps(*FirstMI);
     VOPDInst.copyImplicitOps(*SecondMI);
 
-    LLVM_DEBUG(dbgs() << "VOPD Fused: "; VOPDInst->dump();
-               dbgs() << " from\tX: "; Pair.first->dump();
-               dbgs() << "\tY: "; Pair.second->dump(); dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "VOPD Fused: " << *VOPDInst << " from\tX: "
+                      << *Pair.first << "\tY: " << *Pair.second << "\n");
     FirstMI->eraseFromParent();
     SecondMI->eraseFromParent();
     ++NumVOPDCreated;
@@ -146,8 +139,8 @@ public:
         auto *SecondMI = &*MII;
         unsigned Opc = FirstMI->getOpcode();
         unsigned Opc2 = SecondMI->getOpcode();
-        auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc);
-        auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
+        llvm::AMDGPU::CanBeVOPD FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc);
+        llvm::AMDGPU::CanBeVOPD SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
         std::pair<MachineInstr *, MachineInstr *> Pair;
 
         if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y)
@@ -178,5 +171,5 @@ char GCNCreateVOPD::ID = 0;
 
 char &llvm::GCNCreateVOPDID = GCNCreateVOPD::ID;
 
-INITIALIZE_PASS(GCNCreateVOPD, DEBUG_TYPE, "GCN Create VOPD Instructions", false,
-                false)
+INITIALIZE_PASS(GCNCreateVOPD, DEBUG_TYPE, "GCN Create VOPD Instructions",
+                false, false)

@@ -134,7 +134,9 @@ struct OutputDesc final : SectionCommand {
 int getPriority(StringRef s);
 
 InputSection *getFirstInputSection(const OutputSection *os);
-SmallVector<InputSection *, 0> getInputSections(const OutputSection &os);
+llvm::ArrayRef<InputSection *>
+getInputSections(const OutputSection &os,
+                 SmallVector<InputSection *, 0> &storage);
 
 // All output sections that are handled by the linker specially are
 // globally accessible. Writer initializes them, so don't use them
