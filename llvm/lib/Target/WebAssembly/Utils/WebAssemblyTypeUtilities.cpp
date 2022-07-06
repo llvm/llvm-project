@@ -179,19 +179,14 @@ void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
   bool IsTable = false;
   if (GlobalVT->isArrayTy() &&
       WebAssembly::isRefType(GlobalVT->getArrayElementType())) {
-    MVT VT;
     IsTable = true;
-    switch (GlobalVT->getArrayElementType()->getPointerAddressSpace()) {
-    case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF:
-      VT = MVT::funcref;
-      break;
-    case WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF:
-      VT = MVT::externref;
-      break;
-    default:
-      report_fatal_error("unhandled address space type");
-    }
-    Type = WebAssembly::toValType(VT);
+    const Type *ElTy = GlobalVT->getArrayElementType();
+    if (WebAssembly::isExternRefType(ElTy))
+      Type = wasm::ValType::EXTERNREF;
+    else if (WebAssembly::isFuncRefType(ElTy))
+      Type = wasm::ValType::FUNCREF;
+    else
+      report_fatal_error("unhandled reference type");
   } else if (VTs.size() == 1) {
     Type = WebAssembly::toValType(VTs[0]);
   } else
