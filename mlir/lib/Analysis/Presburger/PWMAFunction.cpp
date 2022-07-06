@@ -211,6 +211,11 @@ void PWMAFunction::addPiece(const IntegerPolyhedron &domain,
   addPiece(MultiAffineFunction(domain, output));
 }
 
+void PWMAFunction::addPiece(const PresburgerSet &domain, const Matrix &output) {
+  for (const IntegerRelation &newDom : domain.getAllDisjuncts())
+    addPiece(IntegerPolyhedron(newDom), output);
+}
+
 void PWMAFunction::print(raw_ostream &os) const {
   os << pieces.size() << " pieces:\n";
   for (const MultiAffineFunction &piece : pieces)
@@ -218,3 +223,138 @@ void PWMAFunction::print(raw_ostream &os) const {
 }
 
 void PWMAFunction::dump() const { print(llvm::errs()); }
+
+PWMAFunction PWMAFunction::unionFunction(
+    const PWMAFunction &func,
+    llvm::function_ref<PresburgerSet(MultiAffineFunction maf1,
+                                     MultiAffineFunction maf2)>
+        tiebreak) const {
+  assert(getNumOutputs() == func.getNumOutputs() &&
+         "Number of outputs of functions should be same.");
+  assert(getSpace().isCompatible(func.getSpace()) &&
+         "Space is not compatible.");
+
+  // The algorithm used here is as follows:
+  // - Add the output of funcB for the part of the domain where both funcA and
+  //   funcB are defined, and `tiebreak` chooses the output of funcB.
+  // - Add the output of funcA, where funcB is not defined or `tiebreak` chooses
+  //   funcA over funcB.
+  // - Add the output of funcB, where funcA is not defined.
+
+  // Add parts of the common domain where funcB's output is used. Also
+  // add all the parts where funcA's output is used, both common and non-common.
+  PWMAFunction result(getSpace(), getNumOutputs());
+  for (const MultiAffineFunction &funcA : pieces) {
+    PresburgerSet dom(funcA.getDomain());
+    for (const MultiAffineFunction &funcB : func.pieces) {
+      PresburgerSet better = tiebreak(funcB, funcA);
+      // Add the output of funcB, where it is better than output of funcA.
+      // The disjuncts in "better" will be disjoint as tiebreak should gurantee
+      // that.
+      result.addPiece(better, funcB.getOutputMatrix());
+      dom = dom.subtract(better);
+    }
+    // Add output of funcA, where it is better than funcB, or funcB is not
+    // defined.
+    //
+    // `dom` here is guranteed to be disjoint from already added pieces
+    // because because the pieces added before are either:
+    // - Subsets of the domain of other MAFs in `this`, which are guranteed
+    //   to be disjoint from `dom`, or
+    // - They are one of the pieces added for `funcB`, and we have been
+    //   subtracting all such pieces from `dom`, so `dom` is disjoint from those
+    //   pieces as well.
+    result.addPiece(dom, funcA.getOutputMatrix());
+  }
+
+  // Add parts of funcB which are not shared with funcA.
+  PresburgerSet dom = getDomain();
+  for (const MultiAffineFunction &funcB : func.pieces)
+    result.addPiece(funcB.getDomain().subtract(dom), funcB.getOutputMatrix());
+
+  return result;
+}
+
+/// A tiebreak function which breaks ties by comparing the outputs
+/// lexicographically. If `lexMin` is true, then the ties are broken by
+/// taking the lexicographically smaller output and otherwise, by taking the
+/// lexicographically larger output.
+template <bool lexMin>
+static PresburgerSet tiebreakLex(const MultiAffineFunction &mafA,
+                                 const MultiAffineFunction &mafB) {
+  // TODO: Support local variables here.
+  assert(mafA.getDomainSpace().isCompatible(mafB.getDomainSpace()) &&
+         "Domain spaces should be compatible.");
+  assert(mafA.getNumOutputs() == mafB.getNumOutputs() &&
+         "Number of outputs of both functions should be same.");
+  assert(mafA.getDomain().getNumLocalVars() == 0 &&
+         "Local variables are not supported yet.");
+
+  PresburgerSpace compatibleSpace = mafA.getDomain().getSpaceWithoutLocals();
+  const PresburgerSpace &space = mafA.getDomain().getSpace();
+
+  // We first create the set `result`, corresponding to the set where output
+  // of mafA is lexicographically larger/smaller than mafB. This is done by
+  // creating a PresburgerSet with the following constraints:
+  //
+  //    (outA[0] > outB[0]) U
+  //    (outA[0] = outB[0], outA[1] > outA[1]) U
+  //    (outA[0] = outB[0], outA[1] = outA[1], outA[2] > outA[2]) U
+  //    ...
+  //    (outA[0] = outB[0], ..., outA[n-2] = outB[n-2], outA[n-1] > outB[n-1])
+  //
+  // where `n` is the number of outputs.
+  // If `lexMin` is set, the complement inequality is used:
+  //
+  //    (outA[0] < outB[0]) U
+  //    (outA[0] = outB[0], outA[1] < outA[1]) U
+  //    (outA[0] = outB[0], outA[1] = outA[1], outA[2] < outA[2]) U
+  //    ...
+  //    (outA[0] = outB[0], ..., outA[n-2] = outB[n-2], outA[n-1] < outB[n-1])
+  PresburgerSet result = PresburgerSet::getEmpty(compatibleSpace);
+  IntegerPolyhedron levelSet(/*numReservedInequalities=*/1,
+                             /*numReservedEqualities=*/mafA.getNumOutputs(),
+                             /*numReservedCols=*/space.getNumVars() + 1, space);
+  for (unsigned level = 0; level < mafA.getNumOutputs(); ++level) {
+
+    // Create the expression `outA - outB` for this level.
+    SmallVector<int64_t, 8> subExpr =
+        subtract(mafA.getOutputExpr(level), mafB.getOutputExpr(level));
+
+    if (lexMin) {
+      // For lexMin, we add an upper bound of -1:
+      //        outA - outB <= -1
+      //        outA <= outB - 1
+      //        outA < outB
+      levelSet.addBound(IntegerPolyhedron::BoundType::UB, subExpr, -1);
+    } else {
+      // For lexMax, we add a lower bound of 1:
+      //        outA - outB >= 1
+      //        outA > outB + 1
+      //        outA > outB
+      levelSet.addBound(IntegerPolyhedron::BoundType::LB, subExpr, 1);
+    }
+
+    // Union the set with the result.
+    result.unionInPlace(levelSet);
+    // There is only 1 inequality in `levelSet`, so the index is always 0.
+    levelSet.removeInequality(0);
+    // Add equality `outA - outB == 0` for this level for next iteration.
+    levelSet.addEquality(subExpr);
+  }
+
+  // We then intersect `result` with the domain of mafA and mafB, to only
+  // tiebreak on the domain where both are defined.
+  result = result.intersect(PresburgerSet(mafA.getDomain()))
+               .intersect(PresburgerSet(mafB.getDomain()));
+
+  return result;
+}
+
+PWMAFunction PWMAFunction::unionLexMin(const PWMAFunction &func) {
+  return unionFunction(func, tiebreakLex</*lexMin=*/true>);
+}
+
+PWMAFunction PWMAFunction::unionLexMax(const PWMAFunction &func) {
+  return unionFunction(func, tiebreakLex</*lexMin=*/false>);
+}
