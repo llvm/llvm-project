@@ -1,10 +1,14 @@
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -enable-var-scope -check-prefix=GFX6ERR-SDAG %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -enable-var-scope -check-prefix=GFX6ERR-GISEL %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-SDAG %s
+; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-GISEL %s
 
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
 
 ; GFX6ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.gws.sema.release.all
 ; GFX6ERR-GISEL: LLVM ERROR: cannot select: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.release.all), %{{[0-9]+}}:sgpr(s32) :: (store (s32) into custom "GWSResource") (in function: gws_sema_release_all_offset0)
