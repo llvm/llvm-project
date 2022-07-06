@@ -179,3 +179,25 @@ MachineInstr *WebAssembly::findCatch(MachineBasicBlock *EHPad) {
     return &*Pos;
   return nullptr;
 }
+
+unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
+  assert(RC != nullptr);
+  switch (RC->getID()) {
+  case WebAssembly::I32RegClassID:
+    return WebAssembly::COPY_I32;
+  case WebAssembly::I64RegClassID:
+    return WebAssembly::COPY_I64;
+  case WebAssembly::F32RegClassID:
+    return WebAssembly::COPY_F32;
+  case WebAssembly::F64RegClassID:
+    return WebAssembly::COPY_F64;
+  case WebAssembly::V128RegClassID:
+    return WebAssembly::COPY_V128;
+  case WebAssembly::FUNCREFRegClassID:
+    return WebAssembly::COPY_FUNCREF;
+  case WebAssembly::EXTERNREFRegClassID:
+    return WebAssembly::COPY_EXTERNREF;
+  default:
+    llvm_unreachable("Unexpected register class");
+  }
+}
