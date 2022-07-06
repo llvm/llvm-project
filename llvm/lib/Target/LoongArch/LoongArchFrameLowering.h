@@ -37,6 +37,9 @@ public:
     return MBB.erase(MI);
   }
 
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
+
   bool hasFP(const MachineFunction &MF) const override;
   bool hasBP(const MachineFunction &MF) const;
 };
