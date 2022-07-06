@@ -223,10 +223,10 @@ const mach_header *get_dyld_hdr() {
     if (GetMacosAlignedVersion() >= MacosVersion(13, 0)) {
       dyld_hdr = GetDyldImageHeaderViaSharedCache();
       if (!dyld_hdr) {
-        Printf(
-            "Failed to lookup the dyld image header in the shared cache on "
-            "macOS 13+ (or no shared cache in use).  Falling back to lookup via"
-            "vm_region_recurse_64().\n");
+        VReport(1,
+                "Failed to lookup the dyld image header in the shared cache on "
+                "macOS 13+ (or no shared cache in use).  Falling back to "
+                "lookup via vm_region_recurse_64().\n");
         dyld_hdr = GetDyldImageHeaderViaVMRegion();
       }
     } else {
