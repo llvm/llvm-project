@@ -189,8 +189,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::push_heap(a, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::remove_copy_if(first, last, first2, UnaryTrue(&copies)); assert(copies == 0);
     //(void)std::ranges::remove_copy_if(a, first2, UnaryTrue(&copies)); assert(copies == 0);
-    //(void)std::ranges::remove_if(first, last, UnaryTrue(&copies)); assert(copies == 0);
-    //(void)std::ranges::remove_if(a, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::remove_if(first, last, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::remove_if(a, UnaryTrue(&copies)); assert(copies == 0);
     //(void)std::ranges::replace_copy_if(first, last, first2, UnaryTrue(&copies), value); assert(copies == 0);
     //(void)std::ranges::replace_copy_if(a, first2, UnaryTrue(&copies), value); assert(copies == 0);
     (void)std::ranges::replace_if(first, last, UnaryTrue(&copies), value); assert(copies == 0);
