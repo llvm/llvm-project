@@ -621,11 +621,11 @@ def err_module_odr_violation_mismatch_decl : Error<
   "%select{definition in module '%2'|defined here}1 found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration|function template|method}3">;
+  "data member|friend declaration|function template|method|property}3">;
 def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration|function template|method}1">;
+  "data member|friend declaration|function template|method|property}1">;
 
 def err_module_odr_violation_record : Error<
   "%q0 has different definitions in different modules; first difference is "
@@ -891,18 +891,40 @@ def note_module_odr_violation_method_params : Note<"but in '%0' found "
     "with %ordinal4 parameter named %5"
   "}1">;
 
+def err_module_odr_violation_objc_property : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "property %4|"
+  "property %4 with type %5|"
+  "%select{no|'required'|'optional'}4 property control|"
+  "property %4 with %select{default |}6'%select{none|readonly|getter|assign|"
+    "readwrite|retain|copy|nonatomic|setter|atomic|weak|strong|"
+    "unsafe_unretained|nullability|null_resettable|class|direct}5' attribute"
+  "}3">;
+def note_module_odr_violation_objc_property : Note<
+  "but in '%0' found "
+  "%select{"
+  "property %2|"
+  "property %2 with type %3|"
+  "%select{no|'required'|'optional'}2 property control|"
+  "property %2 with different '%select{none|readonly|getter|assign|"
+    "readwrite|retain|copy|nonatomic|setter|atomic|weak|strong|"
+    "unsafe_unretained|nullability|null_resettable|class|direct}3' attribute"
+  "}1">;
+
 def err_module_odr_violation_mismatch_decl_unknown : Error<
   "%q0 %select{with definition in module '%2'|defined here}1 has different "
   "definitions in different modules; first difference is this "
   "%select{||||static assert|field|method|type alias|typedef|data member|"
   "friend declaration|function template|method|"
-  "unexpected decl}3">;
+  "property|unexpected decl}3">;
 def note_module_odr_violation_mismatch_decl_unknown : Note<
   "but in '%0' found "
   "%select{||||different static assert|different field|different method|"
   "different type alias|different typedef|different data member|"
   "different friend declaration|different function template|different method|"
-  "another unexpected decl}1">;
+  "different property|another unexpected decl}1">;
 
 
 def remark_sanitize_address_insert_extra_padding_accepted : Remark<
