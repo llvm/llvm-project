@@ -199,6 +199,18 @@ bool hasUnstableLinkage(const Decl *D);
 /// reasonable.
 bool isDeeplyNested(const Decl *D, unsigned MaxDepth = 10);
 
+/// Recursively resolves the parameters of a FunctionDecl that forwards its
+/// parameters to another function via variadic template parameters. This can
+/// for example be used to retrieve the constructor parameter ParmVarDecl for a
+/// make_unique or emplace_back call.
+llvm::SmallVector<const ParmVarDecl *>
+resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
+
+/// Checks whether D is instantiated from a function parameter pack
+/// whose type is a bare type parameter pack (e.g. `Args...`), or a
+/// reference to one (e.g. `Args&...` or `Args&&...`).
+bool isExpandedFromParameterPack(const ParmVarDecl *D);
+
 } // namespace clangd
 } // namespace clang
 
