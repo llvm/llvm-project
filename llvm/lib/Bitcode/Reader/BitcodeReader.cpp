@@ -1243,6 +1243,8 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
   case bitc::RMW_UMIN: return AtomicRMWInst::UMin;
   case bitc::RMW_FADD: return AtomicRMWInst::FAdd;
   case bitc::RMW_FSUB: return AtomicRMWInst::FSub;
+  case bitc::RMW_FMAX: return AtomicRMWInst::FMax;
+  case bitc::RMW_FMIN: return AtomicRMWInst::FMin;
   }
 }
 

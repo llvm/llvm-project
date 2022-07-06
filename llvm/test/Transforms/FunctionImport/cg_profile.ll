@@ -9,7 +9,7 @@
 
 ; CHECK:      !0 = !{i32 1, !"EnableSplitLTOUnit", i32 0}
 ; CHECK-NEXT: !1 = !{i32 5, !"CG Profile", !2}
-; CHECK-NEXT: !2 = !{!3}
+; CHECK-NEXT: !2 = distinct !{!3}
 ; CHECK-NEXT: !3 = !{void ()* @foo, void (%class.A*)* bitcast (void (%class.A.0*)* @bar to void (%class.A*)*), i64 2753}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

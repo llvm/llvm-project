@@ -1646,6 +1646,8 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::Min:
   case AtomicRMWInst::UMax:
   case AtomicRMWInst::UMin:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
     // No atomic libcalls are available for max/min/umax/umin.

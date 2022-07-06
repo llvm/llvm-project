@@ -3962,6 +3962,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   case AtomicRMWInst::Min:
   case AtomicRMWInst::UMax:
   case AtomicRMWInst::UMin:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
     llvm_unreachable("Unsupported atomic update operation");
   }
   llvm_unreachable("Unsupported atomic update operation");
@@ -4126,20 +4128,37 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
   assert(X.Var->getType()->isPointerTy() &&
          "OMP atomic expects a pointer to target memory");
-  assert((X.ElemTy->isIntegerTy() || X.ElemTy->isPointerTy()) &&
-         "OMP atomic compare expected a integer scalar type");
   // compare capture
   if (V.Var) {
     assert(V.Var->getType()->isPointerTy() && "v.var must be of pointer type");
     assert(V.ElemTy == X.ElemTy && "x and v must be of same type");
   }
 
+  bool IsInteger = E->getType()->isIntegerTy();
+
   if (Op == OMPAtomicCompareOp::EQ) {
     AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
-    AtomicCmpXchgInst *Result =
-        Builder.CreateAtomicCmpXchg(X.Var, E, D, MaybeAlign(), AO, Failure);
+    AtomicCmpXchgInst *Result = nullptr;
+    if (!IsInteger) {
+      unsigned Addrspace =
+          cast<PointerType>(X.Var->getType())->getAddressSpace();
+      IntegerType *IntCastTy =
+          IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
+      Value *XBCast =
+          Builder.CreateBitCast(X.Var, IntCastTy->getPointerTo(Addrspace));
+      Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
+      Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
+      Result = Builder.CreateAtomicCmpXchg(XBCast, EBCast, DBCast, MaybeAlign(),
+                                           AO, Failure);
+    } else {
+      Result =
+          Builder.CreateAtomicCmpXchg(X.Var, E, D, MaybeAlign(), AO, Failure);
+    }
+
     if (V.Var) {
       Value *OldValue = Builder.CreateExtractValue(Result, /*Idxs=*/0);
+      if (!IsInteger)
+        OldValue = Builder.CreateBitCast(OldValue, X.ElemTy);
       assert(OldValue->getType() == V.ElemTy &&
              "OldValue and V must be of same type");
       if (IsPostfixUpdate) {
@@ -4213,19 +4232,29 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     // x = x <= expr ? x : expr;
     AtomicRMWInst::BinOp NewOp;
     if (IsXBinopExpr) {
-      if (X.IsSigned)
-        NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::Min
-                                              : AtomicRMWInst::Max;
-      else
-        NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::UMin
-                                              : AtomicRMWInst::UMax;
+      if (IsInteger) {
+        if (X.IsSigned)
+          NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::Min
+                                                : AtomicRMWInst::Max;
+        else
+          NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::UMin
+                                                : AtomicRMWInst::UMax;
+      } else {
+        NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::FMin
+                                              : AtomicRMWInst::FMax;
+      }
     } else {
-      if (X.IsSigned)
-        NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::Max
-                                              : AtomicRMWInst::Min;
-      else
-        NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::UMax
-                                              : AtomicRMWInst::UMin;
+      if (IsInteger) {
+        if (X.IsSigned)
+          NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::Max
+                                                : AtomicRMWInst::Min;
+        else
+          NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::UMax
+                                                : AtomicRMWInst::UMin;
+      } else {
+        NewOp = Op == OMPAtomicCompareOp::MAX ? AtomicRMWInst::FMax
+                                              : AtomicRMWInst::FMin;
+      }
     }
 
     AtomicRMWInst *OldValue =
@@ -4243,11 +4272,17 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         case AtomicRMWInst::UMax:
           Pred = CmpInst::ICMP_UGT;
           break;
+        case AtomicRMWInst::FMax:
+          Pred = CmpInst::FCMP_OGT;
+          break;
         case AtomicRMWInst::Min:
           Pred = CmpInst::ICMP_SLT;
           break;
         case AtomicRMWInst::UMin:
           Pred = CmpInst::ICMP_ULT;
+          break;
+        case AtomicRMWInst::FMin:
+          Pred = CmpInst::FCMP_OLT;
           break;
         default:
           llvm_unreachable("unexpected comparison op");

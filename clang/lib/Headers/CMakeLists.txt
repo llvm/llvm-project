@@ -170,6 +170,7 @@ set(x86_files
   popcntintrin.h
   prfchwintrin.h
   ptwriteintrin.h
+  rdpruintrin.h
   rdseedintrin.h
   rtmintrin.h
   serializeintrin.h

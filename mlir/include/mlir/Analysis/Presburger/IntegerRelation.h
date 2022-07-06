@@ -118,7 +118,7 @@ public:
   /// intersection with no simplification of any sort attempted.
   void append(const IntegerRelation &other);
 
-  /// Return the intersection of the two sets.
+  /// Return the intersection of the two relations.
   /// If there are locals, they will be merged.
   IntegerRelation intersect(IntegerRelation other) const;
 
@@ -608,6 +608,10 @@ public:
   /// `PresburgerSet`, `unboundedDomain`.
   SymbolicLexMin findSymbolicIntegerLexMin() const;
 
+  /// Return the set difference of this set and the given set, i.e.,
+  /// return `this \ set`.
+  PresburgerRelation subtract(const PresburgerRelation &set) const;
+
   void print(raw_ostream &os) const;
   void dump() const;
 
@@ -790,6 +794,14 @@ public:
   /// column position (i.e., not relative to the kind of variable) of the
   /// first added variable.
   unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1) override;
+
+  /// Return the intersection of the two relations.
+  /// If there are locals, they will be merged.
+  IntegerPolyhedron intersect(const IntegerPolyhedron &other) const;
+
+  /// Return the set difference of this set and the given set, i.e.,
+  /// return `this \ set`.
+  PresburgerSet subtract(const PresburgerSet &other) const;
 };
 
 } // namespace presburger
