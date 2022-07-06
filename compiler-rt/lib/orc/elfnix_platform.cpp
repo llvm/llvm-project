@@ -63,9 +63,15 @@ Error runInitArray(const std::vector<ExecutorAddrRange> &InitArraySections,
 
   return Error::success();
 }
+
 struct TLSInfoEntry {
   unsigned long Key = 0;
   unsigned long DataAddress = 0;
+};
+
+struct TLSDescriptor {
+  void (*Resolver)(void *);
+  TLSInfoEntry *InfoEntry;
 };
 
 class ELFNixPlatformRuntimeState {
@@ -499,6 +505,13 @@ ORC_RT_INTERFACE void *__orc_rt_elfnix_tls_get_addr_impl(TLSInfoEntry *D) {
 
   return TLVMgr->getInstance(
       reinterpret_cast<char *>(static_cast<uintptr_t>(D->DataAddress)));
+}
+
+ORC_RT_INTERFACE ptrdiff_t ___orc_rt_elfnix_tlsdesc_resolver_impl(
+    TLSDescriptor *D, const char *ThreadPointer) {
+  const char *TLVPtr = reinterpret_cast<const char *>(
+      __orc_rt_elfnix_tls_get_addr_impl(D->InfoEntry));
+  return TLVPtr - ThreadPointer;
 }
 
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
