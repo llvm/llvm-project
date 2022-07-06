@@ -88,7 +88,15 @@ program test_co_broadcast
   ! 'errmsg' argument shall be noncoindexed
   !ERROR: to be determined
   call co_broadcast(c, errmsg=coindexed_character[1], source_image=1)
- 
+
+  ! 'errmsg' argument shall be a character
+  !ERROR: to be determined
+  call co_broadcast(c, 1, status, i)
+
+  ! 'errmsg' argument shall be a character
+  !ERROR: to be determined
+  call co_broadcast(c, errmsg=i, source_image=1)
+
   ! 'errmsg' argument shall be character scalar
   !ERROR: 'errmsg=' argument has unacceptable rank 1
   call co_broadcast(d, errmsg=character_array, source_image=1)

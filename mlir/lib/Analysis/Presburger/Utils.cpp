@@ -253,6 +253,14 @@ MaybeLocalRepr presburger::computeSingleVarRepr(
   return repr;
 }
 
+llvm::SmallBitVector presburger::getSubrangeBitVector(unsigned len,
+                                                      unsigned setOffset,
+                                                      unsigned numSet) {
+  llvm::SmallBitVector vec(len, false);
+  vec.set(setOffset, setOffset + numSet);
+  return vec;
+}
+
 void presburger::removeDuplicateDivs(
     std::vector<SmallVector<int64_t, 8>> &divs,
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,

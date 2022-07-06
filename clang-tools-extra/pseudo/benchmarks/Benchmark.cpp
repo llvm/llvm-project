@@ -25,6 +25,7 @@
 #include "clang-pseudo/Forest.h"
 #include "clang-pseudo/GLR.h"
 #include "clang-pseudo/Token.h"
+#include "clang-pseudo/cli/CLI.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/grammar/LRTable.h"
 #include "clang/Basic/LangOptions.h"
@@ -39,9 +40,6 @@ using llvm::cl::desc;
 using llvm::cl::opt;
 using llvm::cl::Required;
 
-static opt<std::string> GrammarFile("grammar",
-                                    desc("Parse and check a BNF grammar file."),
-                                    Required);
 static opt<std::string> Source("source", desc("Source file"), Required);
 
 namespace clang {
@@ -49,11 +47,10 @@ namespace pseudo {
 namespace bench {
 namespace {
 
-const std::string *GrammarText = nullptr;
 const std::string *SourceText = nullptr;
-const Grammar *G = nullptr;
+const Language *Lang = nullptr;
 
-void setupGrammarAndSource() {
+void setup() {
   auto ReadFile = [](llvm::StringRef FilePath) -> std::string {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> GrammarText =
         llvm::MemoryBuffer::getFile(FilePath);
@@ -64,22 +61,13 @@ void setupGrammarAndSource() {
     }
     return GrammarText.get()->getBuffer().str();
   };
-  GrammarText = new std::string(ReadFile(GrammarFile));
   SourceText = new std::string(ReadFile(Source));
-  std::vector<std::string> Diags;
-  G = new Grammar(Grammar::parseBNF(*GrammarText, Diags));
+  Lang = &getLanguageFromFlags();
 }
-
-static void parseBNF(benchmark::State &State) {
-  std::vector<std::string> Diags;
-  for (auto _ : State)
-    Grammar::parseBNF(*GrammarText, Diags);
-}
-BENCHMARK(parseBNF);
 
 static void buildSLR(benchmark::State &State) {
   for (auto _ : State)
-    LRTable::buildSLR(*G);
+    LRTable::buildSLR(Lang->G);
 }
 BENCHMARK(buildSLR);
 
@@ -129,13 +117,12 @@ static void preprocess(benchmark::State &State) {
 BENCHMARK(preprocess);
 
 static void glrParse(benchmark::State &State) {
-  LRTable Table = clang::pseudo::LRTable::buildSLR(*G);
-  SymbolID StartSymbol = *G->findNonterminal("translation-unit");
+  SymbolID StartSymbol = *Lang->G.findNonterminal("translation-unit");
   TokenStream Stream = lexAndPreprocess();
   for (auto _ : State) {
     pseudo::ForestArena Forest;
     pseudo::GSS GSS;
-    pseudo::glrParse(Stream, ParseParams{*G, Table, Forest, GSS}, StartSymbol);
+    pseudo::glrParse(ParseParams{Stream, Forest, GSS}, StartSymbol, *Lang);
   }
   State.SetBytesProcessed(static_cast<uint64_t>(State.iterations()) *
                           SourceText->size());
@@ -143,14 +130,12 @@ static void glrParse(benchmark::State &State) {
 BENCHMARK(glrParse);
 
 static void full(benchmark::State &State) {
-  LRTable Table = clang::pseudo::LRTable::buildSLR(*G);
-  SymbolID StartSymbol = *G->findNonterminal("translation-unit");
+  SymbolID StartSymbol = *Lang->G.findNonterminal("translation-unit");
   for (auto _ : State) {
     TokenStream Stream = lexAndPreprocess();
     pseudo::ForestArena Forest;
     pseudo::GSS GSS;
-    pseudo::glrParse(lexAndPreprocess(), ParseParams{*G, Table, Forest, GSS},
-                     StartSymbol);
+    pseudo::glrParse(ParseParams{Stream, Forest, GSS}, StartSymbol, *Lang);
   }
   State.SetBytesProcessed(static_cast<uint64_t>(State.iterations()) *
                           SourceText->size());
@@ -165,7 +150,7 @@ BENCHMARK(full);
 int main(int argc, char *argv[]) {
   benchmark::Initialize(&argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv);
-  clang::pseudo::bench::setupGrammarAndSource();
+  clang::pseudo::bench::setup();
   benchmark::RunSpecifiedBenchmarks();
   return 0;
 }

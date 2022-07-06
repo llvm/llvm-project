@@ -33,8 +33,12 @@ public:
     typedef typename std::iterator_traits<It>::reference       reference;
 
     TEST_CONSTEXPR explicit cpp17_output_iterator(It it) : it_(std::move(it)) {}
+
     template <class U>
-        TEST_CONSTEXPR cpp17_output_iterator(const cpp17_output_iterator<U>& u) :it_(u.it_) {}
+    TEST_CONSTEXPR cpp17_output_iterator(const cpp17_output_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 cpp17_output_iterator(cpp17_output_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -67,8 +71,12 @@ public:
     typedef typename Traits::reference                         reference;
 
     TEST_CONSTEXPR explicit cpp17_input_iterator(It it) : it_(it) {}
+
     template <class U, class T>
-        TEST_CONSTEXPR cpp17_input_iterator(const cpp17_input_iterator<U, T>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR cpp17_input_iterator(const cpp17_input_iterator<U, T>& u) : it_(u.it_) {}
+
+    template <class U, class T, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 cpp17_input_iterator(cpp17_input_iterator<U, T>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -102,8 +110,12 @@ public:
 
     TEST_CONSTEXPR forward_iterator() : it_() {}
     TEST_CONSTEXPR explicit forward_iterator(It it) : it_(it) {}
+
     template <class U>
-        TEST_CONSTEXPR forward_iterator(const forward_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR forward_iterator(const forward_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 forward_iterator(forward_iterator<U>&& other) : it_(other.it_) { other.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -134,8 +146,12 @@ public:
 
     TEST_CONSTEXPR bidirectional_iterator() : it_() {}
     TEST_CONSTEXPR explicit bidirectional_iterator(It it) : it_(it) {}
+
     template <class U>
-        TEST_CONSTEXPR bidirectional_iterator(const bidirectional_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR bidirectional_iterator(const bidirectional_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 bidirectional_iterator(bidirectional_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
@@ -168,8 +184,12 @@ public:
 
     TEST_CONSTEXPR random_access_iterator() : it_() {}
     TEST_CONSTEXPR explicit random_access_iterator(It it) : it_(it) {}
+
     template <class U>
-        TEST_CONSTEXPR random_access_iterator(const random_access_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR random_access_iterator(const random_access_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    TEST_CONSTEXPR_CXX14 random_access_iterator(random_access_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
     TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const {return it_[n];}
@@ -220,8 +240,12 @@ public:
 
     TEST_CONSTEXPR_CXX14 contiguous_iterator() : it_() {}
     TEST_CONSTEXPR_CXX14 explicit contiguous_iterator(It it) : it_(it) {}
+
     template <class U>
-        TEST_CONSTEXPR_CXX14 contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
+    TEST_CONSTEXPR_CXX14 contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    constexpr contiguous_iterator(contiguous_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
     TEST_CONSTEXPR pointer operator->() const {return it_;}
@@ -272,8 +296,12 @@ public:
 
     constexpr three_way_contiguous_iterator() : it_() {}
     constexpr explicit three_way_contiguous_iterator(It it) : it_(it) {}
+
     template <class U>
     constexpr three_way_contiguous_iterator(const three_way_contiguous_iterator<U>& u) : it_(u.it_) {}
+
+    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+    constexpr three_way_contiguous_iterator(three_way_contiguous_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
 
     constexpr reference operator*() const {return *it_;}
     constexpr pointer operator->() const {return it_;}

@@ -1756,11 +1756,12 @@ static bool isKnownExactCastIntToFP(CastInst &I, InstCombinerImpl &IC) {
 
   // TODO:
   // Try harder to find if the source integer type has less significant bits.
-  // For example, compute number of sign bits or compute low bit mask.
+  // For example, compute number of sign bits.
   KnownBits SrcKnown = IC.computeKnownBits(Src, 0, &I);
-  int LowBits =
-      (int)SrcTy->getScalarSizeInBits() - SrcKnown.countMinLeadingZeros();
-  if (LowBits <= DestNumSigBits)
+  int SigBits = (int)SrcTy->getScalarSizeInBits() -
+                SrcKnown.countMinLeadingZeros() -
+                SrcKnown.countMinTrailingZeros();
+  if (SigBits <= DestNumSigBits)
     return true;
 
   return false;

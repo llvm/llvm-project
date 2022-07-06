@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
 func.func @omp_barrier() -> () {
   // CHECK: omp.barrier
@@ -77,7 +77,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     }) {operand_segment_sizes = dense<[1,1,0,0,0]> : vector<5xi32>} : (i1, i32) -> ()
 
     omp.terminator
-  }) {operand_segment_sizes = dense<[1,1,1,1,0]> : vector<5xi32>, proc_bind_val = #omp<"procbindkind spread">} : (i1, i32, memref<i32>, memref<i32>) -> ()
+  }) {operand_segment_sizes = dense<[1,1,1,1,0]> : vector<5xi32>, proc_bind_val = #omp<procbindkind spread>} : (i1, i32, memref<i32>, memref<i32>) -> ()
 
   // test with multiple parameters for single variadic argument
   // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
@@ -149,7 +149,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   "omp.wsloop" (%lb, %ub, %step, %data_var, %linear_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1,1,1,0,0]> : vector<7xi32>, schedule_val = #omp<"schedulekind static">} :
+  }) {operand_segment_sizes = dense<[1,1,1,1,1,0,0]> : vector<7xi32>, schedule_val = #omp<schedulekind static>} :
     (index, index, index, memref<i32>, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>, %{{.*}} = %{{.*}} : memref<i32>) schedule(static)
@@ -157,7 +157,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   "omp.wsloop" (%lb, %ub, %step, %data_var, %data_var, %linear_var, %linear_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1,2,2,0,0]> : vector<7xi32>, schedule_val = #omp<"schedulekind static">} :
+  }) {operand_segment_sizes = dense<[1,1,1,2,2,0,0]> : vector<7xi32>, schedule_val = #omp<schedulekind static>} :
     (index, index, index, memref<i32>, memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(dynamic = %{{.*}}) ordered(2)
@@ -165,7 +165,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   "omp.wsloop" (%lb, %ub, %step, %data_var, %linear_var, %chunk_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1,1,1,0,1]> : vector<7xi32>, schedule_val = #omp<"schedulekind dynamic">, ordered_val = 2} :
+  }) {operand_segment_sizes = dense<[1,1,1,1,1,0,1]> : vector<7xi32>, schedule_val = #omp<schedulekind dynamic>, ordered_val = 2} :
     (index, index, index, memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop schedule(auto) nowait
@@ -173,7 +173,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   "omp.wsloop" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1,0,0,0,0]> : vector<7xi32>, nowait, schedule_val = #omp<"schedulekind auto">} :
+  }) {operand_segment_sizes = dense<[1,1,1,0,0,0,0]> : vector<7xi32>, nowait, schedule_val = #omp<schedulekind auto>} :
     (index, index, index) -> ()
 
   return
@@ -329,21 +329,29 @@ func.func @omp_wsloop_pretty_multiple(%lb1 : i32, %ub1 : i32, %step1 : i32, %lb2
 
 // CHECK-LABEL: omp_simdloop
 func.func @omp_simdloop(%lb : index, %ub : index, %step : index) -> () {
-  // CHECK: omp.simdloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+  // CHECK: omp.simdloop for (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
   "omp.simdloop" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1]> : vector<3xi32>} :
+  }) {operand_segment_sizes = dense<[1,1,1,0]> : vector<4xi32>} :
     (index, index, index) -> () 
 
   return
 }
 
-
 // CHECK-LABEL: omp_simdloop_pretty
 func.func @omp_simdloop_pretty(%lb : index, %ub : index, %step : index) -> () {
-  // CHECK: omp.simdloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
-  omp.simdloop (%iv) : index = (%lb) to (%ub) step (%step) {
+  // CHECK: omp.simdloop for (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+  omp.simdloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+  return
+}
+
+// CHECK-LABEL: omp_simdloop_pretty_if
+func.func @omp_simdloop_pretty_if(%lb : index, %ub : index, %step : index, %if_cond : i1) -> () {
+  // CHECK: omp.simdloop if(%{{.*}}) for (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+  omp.simdloop if(%if_cond) for (%iv): index = (%lb) to (%ub) step (%step) {
     omp.yield
   }
   return
@@ -351,8 +359,8 @@ func.func @omp_simdloop_pretty(%lb : index, %ub : index, %step : index) -> () {
 
 // CHECK-LABEL: omp_simdloop_pretty_multiple
 func.func @omp_simdloop_pretty_multiple(%lb1 : index, %ub1 : index, %step1 : index, %lb2 : index, %ub2 : index, %step2 : index) -> () {
-  // CHECK: omp.simdloop (%{{.*}}, %{{.*}}) : index = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}})
-  omp.simdloop (%iv1, %iv2) : index = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+  // CHECK: omp.simdloop for (%{{.*}}, %{{.*}}) : index = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}})
+  omp.simdloop for (%iv1, %iv2) : index = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
     omp.yield
   }
   return
@@ -1394,8 +1402,6 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
   return
 }
 
-// -----
-
 func.func @omp_threadprivate() {
   %0 = arith.constant 1 : i32
   %1 = arith.constant 2 : i32
@@ -1526,5 +1532,143 @@ func.func @omp_taskgroup_multiple_tasks() -> () {
     // CHECK: omp.terminator
     omp.terminator
   }
+  return
+}
+
+// CHECK-LABEL: @omp_taskloop
+func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
+
+  // CHECK: omp.taskloop for (%{{.+}}) : i32 = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
+  omp.taskloop for (%i) : i32 = (%lb) to (%ub) step (%step)  {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop for (%{{.+}}) : i32 = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
+  omp.taskloop for (%i) : i32 = (%lb) to (%ub) step (%step)  {
+    // CHECK: test.op1
+    "test.op1"(%lb) : (i32) -> ()
+    // CHECK: test.op2
+    "test.op2"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) inclusive step (%{{.+}}, %{{.+}}) {
+  omp.taskloop for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) inclusive step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testbool = "test.bool"() : () -> (i1)
+
+  // CHECK: omp.taskloop if(%{{[^)]+}})
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop if(%testbool)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop final(%{{[^)]+}})
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop final(%testbool)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop untied
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop untied
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop mergeable
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop mergeable
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testf32 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  %testf32_2 = "test.f32"() : () -> (!llvm.ptr<f32>)
+  // CHECK: omp.taskloop in_reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>, @add_f32 -> %{{.+}} : !llvm.ptr<f32>)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop in_reduction(@add_f32 -> %testf32 : !llvm.ptr<f32>, @add_f32 -> %testf32_2 : !llvm.ptr<f32>)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>, @add_f32 -> %{{.+}} : !llvm.ptr<f32>)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr<f32>, @add_f32 -> %testf32_2 : !llvm.ptr<f32>)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop in_reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>) reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop in_reduction(@add_f32 -> %testf32 : !llvm.ptr<f32>) reduction(@add_f32 -> %testf32_2 : !llvm.ptr<f32>)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testi32 = "test.i32"() : () -> (i32)
+  // CHECK: omp.taskloop priority(%{{[^:]+}}: i32)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop priority(%testi32: i32)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testmemref = "test.memref"() : () -> (memref<i32>)
+  // CHECK: omp.taskloop allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
+  omp.taskloop allocate(%testmemref : memref<i32> -> %testmemref : memref<i32>)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  %testi64 = "test.i64"() : () -> (i64)
+  // CHECK: omp.taskloop grain_size(%{{[^:]+}}: i64)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop grain_size(%testi64: i64)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop num_tasks(%{{[^:]+}}: i64)
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop num_tasks(%testi64: i64)
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.taskloop nogroup
+  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
+  omp.taskloop nogroup
+  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: return
   return
 }

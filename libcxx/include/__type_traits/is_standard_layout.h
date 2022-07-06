@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_standard_layout
-#if __has_feature(is_standard_layout) || defined(_LIBCPP_COMPILER_GCC)
+#if __has_builtin(__is_standard_layout)
     : public integral_constant<bool, __is_standard_layout(_Tp)>
 #else
     : integral_constant<bool, is_scalar<typename remove_all_extents<_Tp>::type>::value>

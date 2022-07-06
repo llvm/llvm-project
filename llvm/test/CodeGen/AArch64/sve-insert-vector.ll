@@ -708,6 +708,670 @@ define <vscale x 16 x i1> @insert_nxv16i1_v64i1_const_true_into_undef() vscale_r
   ret <vscale x 16 x i1> %v0
 }
 
+;
+; Insert nxv1i1 type into: nxv2i1
+;
+
+define <vscale x 2 x i1> @insert_nxv1i1_nxv2i1_0(<vscale x 2 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv2i1_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uzp1 p0.d, p1.d, p0.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.nxv1i1(<vscale x 2 x i1> %vec, <vscale x 1 x i1> %sv, i64 0)
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @insert_nxv1i1_nxv2i1_1(<vscale x 2 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv2i1_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.nxv1i1(<vscale x 2 x i1> %vec, <vscale x 1 x i1> %sv, i64 1)
+  ret <vscale x 2 x i1> %res
+}
+
+;
+; Insert nxv1i1 type into: nxv4i1
+;
+
+define <vscale x 4 x i1> @insert_nxv1i1_nxv4i1_0(<vscale x 4 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv4i1_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p2.d
+; CHECK-NEXT:    uzp1 p0.s, p1.s, p0.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.nxv1i1(<vscale x 4 x i1> %vec, <vscale x 1 x i1> %sv, i64 0)
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @insert_nxv1i1_nxv4i1_1(<vscale x 4 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv4i1_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    uzp1 p1.d, p2.d, p1.d
+; CHECK-NEXT:    uzp1 p0.s, p1.s, p0.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.nxv1i1(<vscale x 4 x i1> %vec, <vscale x 1 x i1> %sv, i64 1)
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @insert_nxv1i1_nxv4i1_2(<vscale x 4 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv4i1_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p2.d
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.nxv1i1(<vscale x 4 x i1> %vec, <vscale x 1 x i1> %sv, i64 2)
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @insert_nxv1i1_nxv4i1_3(<vscale x 4 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv4i1_3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    uzp1 p1.d, p2.d, p1.d
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.nxv1i1(<vscale x 4 x i1> %vec, <vscale x 1 x i1> %sv, i64 3)
+  ret <vscale x 4 x i1> %res
+}
+
+;
+; Insert nxv1i1 type into: nxv8i1
+;
+
+define <vscale x 8 x i1> @insert_nxv1i1_nxv8i1_0(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv8i1_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p3.d
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p2.s
+; CHECK-NEXT:    uzp1 p0.h, p1.h, p0.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv, i64 0)
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @insert_nxv1i1_nxv8i1_1(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv8i1_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    uzp1 p1.d, p3.d, p1.d
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p2.s
+; CHECK-NEXT:    uzp1 p0.h, p1.h, p0.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv, i64 1)
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @insert_nxv1i1_nxv8i1_2(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv8i1_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p3.d
+; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-NEXT:    uzp1 p0.h, p1.h, p0.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv, i64 2)
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @insert_nxv1i1_nxv8i1_3(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv8i1_3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    uzp1 p1.d, p3.d, p1.d
+; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-NEXT:    uzp1 p0.h, p1.h, p0.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv, i64 3)
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @insert_nxv1i1_nxv8i1_4(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv8i1_4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p3.d
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p2.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv, i64 4)
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @insert_nxv1i1_nxv8i1_5(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv8i1_5:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    uzp1 p1.d, p3.d, p1.d
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p2.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv, i64 5)
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @insert_nxv1i1_nxv8i1_6(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv8i1_6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p3.d
+; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv, i64 6)
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @insert_nxv1i1_nxv8i1_7(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv8i1_7:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    uzp1 p1.d, p3.d, p1.d
+; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1> %vec, <vscale x 1 x i1> %sv, i64 7)
+  ret <vscale x 8 x i1> %res
+}
+
+;
+; Insert nxv1i1 type into: nxv16i1
+;
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_0(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpklo p4.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpkhi p4.h, p4.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 0)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpklo p4.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p4.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 1)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_2(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpkhi p4.h, p3.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    punpkhi p4.h, p4.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 2)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_3(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpkhi p4.h, p3.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p4.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 3)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_4(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpklo p4.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpkhi p4.h, p4.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 4)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_5(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_5:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpklo p4.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p4.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 5)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_6(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpkhi p4.h, p3.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    punpkhi p4.h, p4.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 6)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_7(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_7:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpkhi p4.h, p3.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p4.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 7)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_8(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpklo p4.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpkhi p4.h, p4.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 8)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_9(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_9:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpklo p4.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p4.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 9)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_10(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_10:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpkhi p4.h, p3.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    punpkhi p4.h, p4.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 10)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_11(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_11:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpklo p3.h, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p2.b
+; CHECK-NEXT:    punpkhi p4.h, p3.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p4.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 11)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_12(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_12:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpklo p4.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpkhi p4.h, p4.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 12)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_13(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_13:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpklo p4.h, p3.b
+; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p4.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 13)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_14(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_14:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpkhi p4.h, p3.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    punpkhi p4.h, p4.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 14)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_15(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv) {
+; CHECK-LABEL: insert_nxv1i1_nxv16i1_15:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpkhi p3.h, p2.b
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpkhi p4.h, p3.b
+; CHECK-NEXT:    punpklo p3.h, p3.b
+; CHECK-NEXT:    punpklo p4.h, p4.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
+; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1> %vec, <vscale x 1 x i1> %sv, i64 15)
+  ret <vscale x 16 x i1> %res
+}
+
 attributes #0 = { vscale_range(2,2) }
 
 declare <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8>, <16 x i8>, i64)
@@ -747,6 +1411,10 @@ declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x f
 declare <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.v8i1(<vscale x 2 x i1>, <8 x i1>, i64)
 declare <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.v16i1(<vscale x 4 x i1>, <16 x i1>, i64)
 declare <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.v32i1(<vscale x 8 x i1>, <32 x i1>, i64)
+declare <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv1i1(<vscale x 16 x i1>, <vscale x 1 x i1>, i64)
+declare <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv1i1(<vscale x 8 x i1>, <vscale x 1 x i1>, i64)
+declare <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.nxv1i1(<vscale x 4 x i1>, <vscale x 1 x i1>, i64)
+declare <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.nxv1i1(<vscale x 2 x i1>, <vscale x 1 x i1>, i64)
 declare <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv4i1(<vscale x 16 x i1>, <vscale x 4 x i1>, i64)
 declare <vscale x 16 x i1> @llvm.vector.insert.nx16i1.nxv8i1(<vscale x 16 x i1>, <vscale x 8 x i1>, i64)
 declare <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.v64i1(<vscale x 16 x i1>, <64 x i1>, i64)

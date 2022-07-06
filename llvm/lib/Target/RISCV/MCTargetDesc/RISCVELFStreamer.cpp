@@ -208,7 +208,11 @@ class RISCVELFStreamer : public MCELFStreamer {
   static bool requiresFixups(MCContext &C, const MCExpr *Value,
                              const MCExpr *&LHS, const MCExpr *&RHS) {
     auto IsMetadataOrEHFrameSection = [](const MCSection &S) -> bool {
-      return S.getKind().isMetadata() || S.getName() == ".eh_frame";
+      // Additionally check .apple_names/.apple_types. They are fixed-size and
+      // do not need fixups. llvm-dwarfdump --apple-names does not process
+      // R_RISCV_{ADD,SUB}32 in them.
+      return S.getKind().isMetadata() || S.getName() == ".eh_frame" ||
+             S.getName() == ".apple_names" || S.getName() == ".apple_types";
     };
 
     const auto *MBE = dyn_cast<MCBinaryExpr>(Value);

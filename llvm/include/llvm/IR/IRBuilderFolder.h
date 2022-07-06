@@ -71,10 +71,7 @@ public:
   // Unary Operators
   //===--------------------------------------------------------------------===//
 
-  virtual Value *CreateNeg(Constant *C,
-                           bool HasNUW = false, bool HasNSW = false) const = 0;
   virtual Value *CreateFNeg(Constant *C) const = 0;
-  virtual Value *CreateNot(Constant *C) const = 0;
   virtual Value *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const = 0;
 
   //===--------------------------------------------------------------------===//

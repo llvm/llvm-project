@@ -11,8 +11,7 @@ define void @fn2(i32* %P) {
 ; CHECK:       for.cond1:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* undef, align 4
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 undef)
 ; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ;
@@ -34,8 +33,8 @@ define internal i32 @fn1(i32 %p1) {
 ; CHECK-LABEL: define {{[^@]+}}@fn1
 ; CHECK-SAME: (i32 [[P1:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[P1]], 0
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[P1]], i32 [[P1]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 undef, 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 undef, i32 undef
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
@@ -52,8 +51,7 @@ define void @fn_no_null_opt(i32* %P) #0 {
 ; CHECK:       for.cond1:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* undef, align 4
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 undef)
 ; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ;
@@ -75,8 +73,8 @@ define internal i32 @fn0(i32 %p1) {
 ; CHECK-LABEL: define {{[^@]+}}@fn0
 ; CHECK-SAME: (i32 [[P1:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[P1]], 0
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[P1]], i32 [[P1]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 undef, 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 undef, i32 undef
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:

@@ -121,12 +121,10 @@ struct TestLinalgTransforms
       llvm::cl::init(false)};
   ListOption<int64_t> peeledLoops{
       *this, "peeled-loops",
-      llvm::cl::desc("Loops to be peeled when test-tile-pattern"),
-      llvm::cl::ZeroOrMore};
+      llvm::cl::desc("Loops to be peeled when test-tile-pattern")};
   ListOption<int64_t> tileSizes{
       *this, "tile-sizes",
-      llvm::cl::desc("Linalg tile sizes for test-tile-pattern"),
-      llvm::cl::ZeroOrMore};
+      llvm::cl::desc("Linalg tile sizes for test-tile-pattern")};
   Option<bool> skipPartial{
       *this, "skip-partial",
       llvm::cl::desc("Skip loops inside partial iterations during peeling"),

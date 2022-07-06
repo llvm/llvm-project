@@ -74,7 +74,7 @@ def SCFParallelLoopTiling : Pass<"scf-parallel-loop-tiling"> {
   let constructor = "mlir::createParallelLoopTilingPass()";
   let options = [
     ListOption<"tileSizes", "parallel-loop-tile-sizes", "int64_t",
-               "Factors to tile parallel loops by", "llvm::cl::ZeroOrMore">,
+               "Factors to tile parallel loops by">,
     Option<"noMinMaxBounds", "no-min-max-bounds", "bool",
            /*default=*/"false",
            "Perform tiling with fixed upper bound with inbound check "

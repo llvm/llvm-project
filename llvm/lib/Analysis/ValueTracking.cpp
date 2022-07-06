@@ -4679,27 +4679,22 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
     F.hasFnAttribute(Attribute::SanitizeHWAddress);
 }
 
-
-bool llvm::isSafeToSpeculativelyExecute(const Value *V,
+bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
                                         const Instruction *CtxI,
                                         const DominatorTree *DT,
                                         const TargetLibraryInfo *TLI) {
-  const Operator *Inst = dyn_cast<Operator>(V);
-  if (!Inst)
-    return false;
-  return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI, DT, TLI);
+  return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
+                                                DT, TLI);
 }
 
-bool llvm::isSafeToSpeculativelyExecuteWithOpcode(unsigned Opcode,
-                                        const Operator *Inst,
-                                        const Instruction *CtxI,
-                                        const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI) {
+bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
+    unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
+    const DominatorTree *DT, const TargetLibraryInfo *TLI) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
     auto hasEqualReturnAndLeadingOperandTypes =
-        [](const Operator *Inst, unsigned NumLeadingOperands) {
+        [](const Instruction *Inst, unsigned NumLeadingOperands) {
           if (Inst->getNumOperands() < NumLeadingOperands)
             return false;
           const Type *ExpectedType = Inst->getType();
@@ -4714,11 +4709,6 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(unsigned Opcode,
            hasEqualReturnAndLeadingOperandTypes(Inst, 1));
   }
 #endif
-
-  for (unsigned i = 0, e = Inst->getNumOperands(); i != e; ++i)
-    if (Constant *C = dyn_cast<Constant>(Inst->getOperand(i)))
-      if (C->canTrap())
-        return false;
 
   switch (Opcode) {
   default:

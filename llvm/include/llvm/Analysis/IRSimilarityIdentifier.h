@@ -547,7 +547,7 @@ struct IRInstructionMapper {
       // an outlined function. Also, assume-like intrinsics could be removed
       // from the region, removing arguments, causing discrepencies in the
       // number of inputs between different regions.
-      if (II.isLifetimeStartOrEnd() || II.isAssumeLikeIntrinsic())
+      if (II.isAssumeLikeIntrinsic())
         return Illegal;
       return EnableIntrinsics ? Legal : Illegal;
     }

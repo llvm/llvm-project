@@ -87,7 +87,10 @@ if (APPLE)
     LINK_LIBS ${ORC_LINK_LIBS}
     PARENT_TARGET orc)
 else() # not Apple
-  add_asm_sources(ORC_ASM_SOURCES elfnix_tls.x86-64.S)
+  add_asm_sources(ORC_ASM_SOURCES 
+    elfnix_tls.x86-64.S
+    elfnix_tls.aarch64.S
+    )
 
   foreach(arch ${ORC_SUPPORTED_ARCH})
     if(NOT CAN_TARGET_${arch})

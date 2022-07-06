@@ -15,6 +15,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 namespace mlir {
 namespace presburger {
@@ -119,6 +120,9 @@ SmallVector<int64_t, 8> getDivUpperBound(ArrayRef<int64_t> dividend,
                                          int64_t divisor, unsigned localVarIdx);
 SmallVector<int64_t, 8> getDivLowerBound(ArrayRef<int64_t> dividend,
                                          int64_t divisor, unsigned localVarIdx);
+
+llvm::SmallBitVector getSubrangeBitVector(unsigned len, unsigned setOffset,
+                                          unsigned numSet);
 
 /// Check if the pos^th variable can be expressed as a floordiv of an affine
 /// function of other variables (where the divisor is a positive constant).

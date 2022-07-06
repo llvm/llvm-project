@@ -20,7 +20,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<typename, typename _Tp> struct __select_2nd { typedef _LIBCPP_NODEBUG _Tp type; };
 
-#if __has_keyword(__is_assignable)
+#if __has_builtin(__is_assignable)
 
 template<class _Tp, class _Up>
 struct _LIBCPP_TEMPLATE_VIS is_assignable : _BoolConstant<__is_assignable(_Tp, _Up)> { };
@@ -30,7 +30,7 @@ template <class _Tp, class _Arg>
 inline constexpr bool is_assignable_v = __is_assignable(_Tp, _Arg);
 #endif
 
-#else // __has_keyword(__is_assignable)
+#else // __has_builtin(__is_assignable)
 
 template <class _Tp, class _Arg>
 typename __select_2nd<decltype((declval<_Tp>() = declval<_Arg>())), true_type>::type
@@ -59,7 +59,7 @@ template <class _Tp, class _Arg>
 inline constexpr bool is_assignable_v = is_assignable<_Tp, _Arg>::value;
 #endif
 
-#endif // __has_keyword(__is_assignable)
+#endif // __has_builtin(__is_assignable)
 
 _LIBCPP_END_NAMESPACE_STD
 

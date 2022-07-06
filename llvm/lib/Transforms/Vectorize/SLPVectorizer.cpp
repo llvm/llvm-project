@@ -4592,7 +4592,19 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   };
 
   InstructionsState S = getSameOpcode(VL);
-  if (Depth == RecursionMaxDepth) {
+
+  // Gather if we hit the RecursionMaxDepth, unless this is a load (or z/sext of
+  // a load), in which case peek through to include it in the tree, without
+  // ballooning over-budget.
+  if (Depth >= RecursionMaxDepth &&
+      !(S.MainOp && isa<Instruction>(S.MainOp) && S.MainOp == S.AltOp &&
+        VL.size() >= 4 &&
+        (match(S.MainOp, m_Load(m_Value())) || all_of(VL, [&S](const Value *I) {
+           return match(I,
+                        m_OneUse(m_ZExtOrSExt(m_OneUse(m_Load(m_Value()))))) &&
+                  cast<Instruction>(I)->getOpcode() ==
+                      cast<Instruction>(S.MainOp)->getOpcode();
+         })))) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to max recursion depth.\n");
     if (TryToFindDuplicates(S))
       newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
@@ -8827,6 +8839,8 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
     }
     LastInsert->replaceAllUsesWith(NewInst);
     for (InsertElementInst *IE : reverse(ShuffledInserts[I].InsertElements)) {
+      IE->replaceUsesOfWith(IE->getOperand(0),
+                            PoisonValue::get(IE->getOperand(0)->getType()));
       IE->replaceUsesOfWith(IE->getOperand(1),
                             PoisonValue::get(IE->getOperand(1)->getType()));
       eraseInstruction(IE);

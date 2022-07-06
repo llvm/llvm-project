@@ -3474,32 +3474,16 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
   case lltok::kw_extractvalue:
     return error(ID.Loc, "extractvalue constexprs are no longer supported");
-  case lltok::kw_insertvalue: {
-    Lex.Lex();
-    Constant *Val0, *Val1;
-    SmallVector<unsigned, 4> Indices;
-    if (parseToken(lltok::lparen, "expected '(' in insertvalue constantexpr") ||
-        parseGlobalTypeAndValue(Val0) ||
-        parseToken(lltok::comma,
-                   "expected comma in insertvalue constantexpr") ||
-        parseGlobalTypeAndValue(Val1) || parseIndexList(Indices) ||
-        parseToken(lltok::rparen, "expected ')' in insertvalue constantexpr"))
-      return true;
-    if (!Val0->getType()->isAggregateType())
-      return error(ID.Loc, "insertvalue operand must be aggregate type");
-    Type *IndexedType =
-        ExtractValueInst::getIndexedType(Val0->getType(), Indices);
-    if (!IndexedType)
-      return error(ID.Loc, "invalid indices for insertvalue");
-    if (IndexedType != Val1->getType())
-      return error(ID.Loc, "insertvalue operand and field disagree in type: '" +
-                               getTypeString(Val1->getType()) +
-                               "' instead of '" + getTypeString(IndexedType) +
-                               "'");
-    ID.ConstantVal = ConstantExpr::getInsertValue(Val0, Val1, Indices);
-    ID.Kind = ValID::t_Constant;
-    return false;
-  }
+  case lltok::kw_insertvalue:
+    return error(ID.Loc, "insertvalue constexprs are no longer supported");
+  case lltok::kw_udiv:
+    return error(ID.Loc, "udiv constexprs are no longer supported");
+  case lltok::kw_sdiv:
+    return error(ID.Loc, "sdiv constexprs are no longer supported");
+  case lltok::kw_urem:
+    return error(ID.Loc, "urem constexprs are no longer supported");
+  case lltok::kw_srem:
+    return error(ID.Loc, "srem constexprs are no longer supported");
   case lltok::kw_icmp:
   case lltok::kw_fcmp: {
     unsigned PredVal, Opc = Lex.getUIntVal();
@@ -3564,11 +3548,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_fsub:
   case lltok::kw_mul:
   case lltok::kw_fmul:
-  case lltok::kw_udiv:
-  case lltok::kw_sdiv:
   case lltok::kw_fdiv:
-  case lltok::kw_urem:
-  case lltok::kw_srem:
   case lltok::kw_frem:
   case lltok::kw_shl:
   case lltok::kw_lshr:

@@ -2,6 +2,27 @@
 
 # RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=release-vgprs -verify-machineinstrs -o - %s | FileCheck %s
 
+--- |
+  define amdgpu_ps void @tbuffer_store1() { ret void }
+  define amdgpu_ps void @tbuffer_store2() { ret void }
+  define amdgpu_ps void @flat_store() { ret void }
+  define amdgpu_ps void @global_store() { ret void }
+  define amdgpu_ps void @buffer_store_format() { ret void }
+  define amdgpu_ps void @ds_write_b32() { ret void }
+  define amdgpu_ps void @global_store_dword() { ret void }
+  define amdgpu_ps void @multiple_basic_blocks1() { ret void }
+  define amdgpu_ps void @multiple_basic_blocks2() { ret void }
+  define amdgpu_ps void @multiple_basic_blocks3() { ret void }
+  define amdgpu_ps void @recursive_loop() { ret void }
+  define amdgpu_ps void @recursive_loop_vmem() { ret void }
+  define amdgpu_ps void @image_store() { ret void }
+  define amdgpu_ps void @scratch_store() { ret void }
+  define amdgpu_ps void @buffer_atomic() { ret void }
+  define amdgpu_ps void @flat_atomic() { ret void }
+  define amdgpu_ps void @global_atomic() { ret void }
+  define amdgpu_ps void @image_atomic() { ret void }
+...
+
 ---
 name:            tbuffer_store1
 body:             |
@@ -69,12 +90,12 @@ name:            ds_write_b32
 body:             |
   bb.0:
     ; CHECK-LABEL: name: ds_write_b32
-    ; CHECK: renamable $vgpr1, renamable $vgpr0 = V_DUAL_MOV_B32_e32_X_LSHLREV_B32_e32 123, 2, killed $vgpr0, implicit $exec, implicit $exec, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr0 = V_SUB_U32_e32 0, killed $vgpr0, implicit $exec
+    ; CHECK: renamable $vgpr0 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $vgpr1 = IMPLICIT_DEF
     ; CHECK-NEXT: DS_WRITE_B32_gfx9 killed renamable $vgpr0, killed renamable $vgpr1, 12, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
-    renamable $vgpr1, renamable $vgpr0 = V_DUAL_MOV_B32_e32_X_LSHLREV_B32_e32 123, 2, killed $vgpr0, implicit $exec, implicit $exec, implicit $exec
-    renamable $vgpr0 = V_SUB_U32_e32 0, killed $vgpr0, implicit $exec
+    renamable $vgpr0 = IMPLICIT_DEF
+    renamable $vgpr1 = IMPLICIT_DEF
     DS_WRITE_B32_gfx9 killed renamable $vgpr0, killed renamable $vgpr1, 12, 0, implicit $exec
     S_ENDPGM 0
 
@@ -86,7 +107,9 @@ body:             |
     liveins: $vgpr0, $sgpr0_sgpr1
 
     ; CHECK-LABEL: name: global_store_dword
-    ; CHECK: renamable $vgpr0 = V_MAD_I32_I24_e64 killed $vgpr1, killed $vgpr0, killed $sgpr2, 0, implicit $exec
+    ; CHECK: liveins: $vgpr0, $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $vgpr0 = V_MAD_I32_I24_e64 killed $vgpr1, killed $vgpr0, killed $sgpr2, 0, implicit $exec
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr2, killed renamable $vgpr0, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec
     ; CHECK-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
     ; CHECK-NEXT: S_ENDPGM 0

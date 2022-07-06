@@ -393,16 +393,14 @@ public:
 
     template <class _InputIterator>
         vector(_InputIterator __first,
-               typename enable_if<__is_cpp17_input_iterator  <_InputIterator>::value &&
-                                 !__is_cpp17_forward_iterator<_InputIterator>::value &&
+               typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
                                  is_constructible<
                                     value_type,
                                     typename iterator_traits<_InputIterator>::reference>::value,
                                  _InputIterator>::type __last);
     template <class _InputIterator>
         vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a,
-               typename enable_if<__is_cpp17_input_iterator  <_InputIterator>::value &&
-                                 !__is_cpp17_forward_iterator<_InputIterator>::value &&
+               typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
                                  is_constructible<
                                     value_type,
                                     typename iterator_traits<_InputIterator>::reference>::value>::type* = 0);
@@ -465,10 +463,7 @@ public:
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
 
     template <class _InputIterator>
-        typename enable_if
-        <
-             __is_cpp17_input_iterator  <_InputIterator>::value &&
-            !__is_cpp17_forward_iterator<_InputIterator>::value &&
+        typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
             is_constructible<
                  value_type,
                  typename iterator_traits<_InputIterator>::reference>::value,
@@ -598,10 +593,7 @@ public:
 
     iterator insert(const_iterator __position, size_type __n, const_reference __x);
     template <class _InputIterator>
-        typename enable_if
-        <
-             __is_cpp17_input_iterator  <_InputIterator>::value &&
-            !__is_cpp17_forward_iterator<_InputIterator>::value &&
+        typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
             is_constructible<
                  value_type,
                  typename iterator_traits<_InputIterator>::reference>::value,
@@ -1090,8 +1082,7 @@ vector<_Tp, _Allocator>::vector(size_type __n, const value_type& __x)
 template <class _Tp, class _Allocator>
 template <class _InputIterator>
 vector<_Tp, _Allocator>::vector(_InputIterator __first,
-       typename enable_if<__is_cpp17_input_iterator  <_InputIterator>::value &&
-                         !__is_cpp17_forward_iterator<_InputIterator>::value &&
+       typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
                          is_constructible<
                             value_type,
                             typename iterator_traits<_InputIterator>::reference>::value,
@@ -1105,8 +1096,7 @@ vector<_Tp, _Allocator>::vector(_InputIterator __first,
 template <class _Tp, class _Allocator>
 template <class _InputIterator>
 vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a,
-       typename enable_if<__is_cpp17_input_iterator  <_InputIterator>::value &&
-                         !__is_cpp17_forward_iterator<_InputIterator>::value &&
+       typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
                          is_constructible<
                             value_type,
                             typename iterator_traits<_InputIterator>::reference>::value>::type*)
@@ -1301,10 +1291,7 @@ vector<_Tp, _Allocator>::operator=(const vector& __x)
 
 template <class _Tp, class _Allocator>
 template <class _InputIterator>
-typename enable_if
-<
-     __is_cpp17_input_iterator  <_InputIterator>::value &&
-    !__is_cpp17_forward_iterator<_InputIterator>::value &&
+typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
     is_constructible<
        _Tp,
        typename iterator_traits<_InputIterator>::reference>::value,
@@ -1751,10 +1738,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_
 
 template <class _Tp, class _Allocator>
 template <class _InputIterator>
-typename enable_if
-<
-     __is_cpp17_input_iterator  <_InputIterator>::value &&
-    !__is_cpp17_forward_iterator<_InputIterator>::value &&
+typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
     is_constructible<
        _Tp,
        typename iterator_traits<_InputIterator>::reference>::value,
@@ -2057,12 +2041,10 @@ public:
     vector(size_type __n, const value_type& __v, const allocator_type& __a);
     template <class _InputIterator>
         vector(_InputIterator __first, _InputIterator __last,
-               typename enable_if<__is_cpp17_input_iterator  <_InputIterator>::value &&
-                                 !__is_cpp17_forward_iterator<_InputIterator>::value>::type* = 0);
+               typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value>::type* = 0);
     template <class _InputIterator>
         vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a,
-               typename enable_if<__is_cpp17_input_iterator  <_InputIterator>::value &&
-                                 !__is_cpp17_forward_iterator<_InputIterator>::value>::type* = 0);
+               typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value>::type* = 0);
     template <class _ForwardIterator>
         vector(_ForwardIterator __first, _ForwardIterator __last,
                typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value>::type* = 0);
@@ -2097,10 +2079,7 @@ public:
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
 
     template <class _InputIterator>
-        typename enable_if
-        <
-            __is_cpp17_input_iterator<_InputIterator>::value &&
-           !__is_cpp17_forward_iterator<_InputIterator>::value,
+        typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value,
            void
         >::type
         assign(_InputIterator __first, _InputIterator __last);
@@ -2212,10 +2191,7 @@ public:
     iterator insert(const_iterator __position, const value_type& __x);
     iterator insert(const_iterator __position, size_type __n, const value_type& __x);
     template <class _InputIterator>
-        typename enable_if
-        <
-             __is_cpp17_input_iterator  <_InputIterator>::value &&
-            !__is_cpp17_forward_iterator<_InputIterator>::value,
+        typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value,
             iterator
         >::type
         insert(const_iterator __position, _InputIterator __first, _InputIterator __last);
@@ -2522,8 +2498,7 @@ vector<bool, _Allocator>::vector(size_type __n, const value_type& __x, const all
 template <class _Allocator>
 template <class _InputIterator>
 vector<bool, _Allocator>::vector(_InputIterator __first, _InputIterator __last,
-       typename enable_if<__is_cpp17_input_iterator  <_InputIterator>::value &&
-                         !__is_cpp17_forward_iterator<_InputIterator>::value>::type*)
+       typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value>::type*)
     : __begin_(nullptr),
       __size_(0),
       __cap_alloc_(0, __default_init_tag())
@@ -2549,8 +2524,7 @@ vector<bool, _Allocator>::vector(_InputIterator __first, _InputIterator __last,
 template <class _Allocator>
 template <class _InputIterator>
 vector<bool, _Allocator>::vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a,
-       typename enable_if<__is_cpp17_input_iterator  <_InputIterator>::value &&
-                         !__is_cpp17_forward_iterator<_InputIterator>::value>::type*)
+       typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value>::type*)
     : __begin_(nullptr),
       __size_(0),
       __cap_alloc_(0, static_cast<__storage_allocator>(__a))
@@ -2787,10 +2761,7 @@ vector<bool, _Allocator>::assign(size_type __n, const value_type& __x)
 
 template <class _Allocator>
 template <class _InputIterator>
-typename enable_if
-<
-    __is_cpp17_input_iterator<_InputIterator>::value &&
-   !__is_cpp17_forward_iterator<_InputIterator>::value,
+typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value,
    void
 >::type
 vector<bool, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
@@ -2941,10 +2912,7 @@ vector<bool, _Allocator>::insert(const_iterator __position, size_type __n, const
 
 template <class _Allocator>
 template <class _InputIterator>
-typename enable_if
-<
-     __is_cpp17_input_iterator  <_InputIterator>::value &&
-    !__is_cpp17_forward_iterator<_InputIterator>::value,
+typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value,
     typename vector<bool, _Allocator>::iterator
 >::type
 vector<bool, _Allocator>::insert(const_iterator __position, _InputIterator __first, _InputIterator __last)

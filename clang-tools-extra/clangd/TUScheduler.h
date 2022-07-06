@@ -87,9 +87,38 @@ struct DebouncePolicy {
   static DebouncePolicy fixed(clock::duration);
 };
 
+/// PreambleThrottler controls which preambles can build at any given time.
+/// This can be used to limit overall concurrency, and to prioritize some
+/// preambles over others.
+/// In a distributed environment, a throttler may be able to coordinate resource
+/// use across several clangd instances.
+///
+/// This class is threadsafe.
+class PreambleThrottler {
+public:
+  virtual ~PreambleThrottler() = default;
+
+  using RequestID = unsigned;
+  using Callback = llvm::unique_function<void()>;
+  /// Attempt to acquire resources to build a file's preamble.
+  ///
+  /// Does not block, may eventually invoke the callback to satisfy the request.
+  /// If the callback is invoked, release() must be called afterwards.
+  virtual RequestID acquire(llvm::StringRef Filename, Callback);
+  /// Abandons the request/releases any resources that have been acquired.
+  ///
+  /// Must be called exactly once after acquire().
+  /// acquire()'s callback will not be invoked after release() returns.
+  virtual void release(RequestID) = 0;
+
+  // FIXME: we may want to be able attach signals to filenames.
+  //        this would allow the throttler to make better scheduling decisions.
+};
+
 enum class PreambleAction {
-  Idle,
+  Queued,
   Building,
+  Idle,
 };
 
 struct ASTAction {
@@ -199,6 +228,9 @@ public:
 
     /// Determines when to keep idle ASTs in memory for future use.
     ASTRetentionPolicy RetentionPolicy;
+
+    /// This throttler controls which preambles may be built at a given time.
+    clangd::PreambleThrottler *PreambleThrottler = nullptr;
 
     /// Used to create a context that wraps each single operation.
     /// Typically to inject per-file configuration.

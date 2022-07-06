@@ -717,15 +717,15 @@ static void buildConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 }
 
 /// Handles tosa.transpose_conv2d which has outpad and output shape attributes.
-static void
-buildTransConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                              Type outputType, Value input, Value weight,
-                              Value bias, ArrayAttr outpad, ArrayAttr stride,
-                              ArrayAttr dilation, ArrayAttr outputShape) {
+static void buildTransConvOpWithQuantInfo(OpBuilder &builder,
+                                          OperationState &result,
+                                          Type outputType, Value input,
+                                          Value weight, Value bias,
+                                          ArrayAttr outpad, ArrayAttr stride,
+                                          ArrayAttr outputShape) {
   result.addOperands({input, weight, bias});
   result.addAttribute("out_pad", outpad);
   result.addAttribute("stride", stride);
-  result.addAttribute("dilation", dilation);
   result.addAttribute("out_shape", outputShape);
   auto quantAttr = ::buildConvOpQuantizationAttr(builder, input, weight);
 
@@ -1817,26 +1817,23 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
                          : outputShape[3];
   }
 
-  llvm::SmallVector<int64_t> dilation;
   llvm::SmallVector<int64_t> padding;
   llvm::SmallVector<int64_t> stride;
 
-  getI64Values(adaptor.dilation(), dilation);
   getI64Values(adaptor.out_pad(), padding);
   getI64Values(adaptor.stride(), stride);
 
   if (!ShapedType::isDynamic(inputHeight) &&
       !ShapedType::isDynamic(weightHeight)) {
-    int32_t dilated = (weightHeight - 1) * dilation[0] + 1;
     int32_t calculateSize =
-        (inputHeight - 1) * stride[0] - padding[0] + dilated;
+        (inputHeight - 1) * stride[0] - padding[0] - padding[1] + weightHeight;
     outputShape[1] = outputShape[1] == -1 ? calculateSize : outputShape[1];
   }
 
   if (!ShapedType::isDynamic(inputWidth) &&
       !ShapedType::isDynamic(weightWidth)) {
-    int32_t dilated = (weightWidth - 1) * dilation[1] + 1;
-    int32_t calculateSize = (inputWidth - 1) * stride[1] - padding[1] + dilated;
+    int32_t calculateSize =
+        (inputWidth - 1) * stride[1] - padding[2] - padding[3] + weightWidth;
     outputShape[2] = outputShape[2] == -1 ? calculateSize : outputShape[2];
   }
 

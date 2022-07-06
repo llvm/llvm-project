@@ -132,6 +132,11 @@ New checks
 
   Detects confusable Unicode identifiers.
 
+- New :doc:`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check.
+
+  Warns when there is an assignment within an if statement condition expression.
+
 - New :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize/macro-to-enum>` check.
 
@@ -157,6 +162,10 @@ Changes in existing checks
 
 - Fixed nonsensical suggestion of :doc:`altera-struct-pack-align
   <clang-tidy/checks/altera/struct-pack-align>` check for empty structs.
+
+- Fixed a false positive in :doc:`bugprone-branch-clone
+  <clang-tidy/checks/bugprone/branch-clone>` when the branches
+  involve unknown expressions.
 
 - Fixed some false positives in :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` involving dependent expressions.
