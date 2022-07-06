@@ -2145,7 +2145,7 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
                                     staticSizes, staticStrides);
 }
 
-Type SubViewOp::inferRankReducedResultType(unsigned resultRank,
+Type SubViewOp::inferRankReducedResultType(ArrayRef<int64_t> resultShape,
                                            MemRefType sourceRankedTensorType,
                                            ArrayRef<int64_t> offsets,
                                            ArrayRef<int64_t> sizes,
@@ -2153,27 +2153,27 @@ Type SubViewOp::inferRankReducedResultType(unsigned resultRank,
   auto inferredType =
       inferResultType(sourceRankedTensorType, offsets, sizes, strides)
           .cast<MemRefType>();
-  assert(inferredType.getRank() >= resultRank && "expected ");
-  int rankDiff = inferredType.getRank() - resultRank;
-  if (rankDiff > 0) {
-    auto shape = inferredType.getShape();
-    llvm::SmallBitVector dimsToProject =
-        getPositionsOfShapeOne(rankDiff, shape);
-    SmallVector<int64_t> projectedShape;
-    for (unsigned pos = 0, e = shape.size(); pos < e; ++pos)
-      if (!dimsToProject.test(pos))
-        projectedShape.push_back(shape[pos]);
+  assert(inferredType.getRank() >= static_cast<int64_t>(resultShape.size()) &&
+         "expected ");
+  if (inferredType.getRank() == static_cast<int64_t>(resultShape.size()))
+    return inferredType;
 
-    AffineMap map =
-        getProjectedMap(inferredType.getLayout().getAffineMap(), dimsToProject);
-    inferredType =
-        MemRefType::get(projectedShape, inferredType.getElementType(), map,
-                        inferredType.getMemorySpace());
-  }
-  return inferredType;
+  // Compute which dimensions are dropped.
+  Optional<llvm::SmallDenseSet<unsigned>> dimsToProject =
+      computeRankReductionMask(inferredType.getShape(), resultShape);
+  assert(dimsToProject.hasValue() && "invalid rank reduction");
+  llvm::SmallBitVector dimsToProjectVector(inferredType.getRank());
+  for (unsigned dim : *dimsToProject)
+    dimsToProjectVector.set(dim);
+
+  // Compute layout map and result type.
+  AffineMap map = getProjectedMap(inferredType.getLayout().getAffineMap(),
+                                  dimsToProjectVector);
+  return MemRefType::get(resultShape, inferredType.getElementType(), map,
+                         inferredType.getMemorySpace());
 }
 
-Type SubViewOp::inferRankReducedResultType(unsigned resultRank,
+Type SubViewOp::inferRankReducedResultType(ArrayRef<int64_t> resultShape,
                                            MemRefType sourceRankedTensorType,
                                            ArrayRef<OpFoldResult> offsets,
                                            ArrayRef<OpFoldResult> sizes,
@@ -2187,9 +2187,10 @@ Type SubViewOp::inferRankReducedResultType(unsigned resultRank,
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides,
                              ShapedType::kDynamicStrideOrOffset);
   return SubViewOp::inferRankReducedResultType(
-      resultRank, sourceRankedTensorType, staticOffsets, staticSizes,
+      resultShape, sourceRankedTensorType, staticOffsets, staticSizes,
       staticStrides);
 }
+
 // Build a SubViewOp with mixed static and dynamic entries and custom result
 // type. If the type passed is nullptr, it is inferred.
 void SubViewOp::build(OpBuilder &b, OperationState &result,
