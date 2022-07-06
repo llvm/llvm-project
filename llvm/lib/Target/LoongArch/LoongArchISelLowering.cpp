@@ -26,6 +26,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loongarch-isel-lowering"
 
+static cl::opt<bool> ZeroDivCheck(
+    "loongarch-check-zero-division", cl::Hidden,
+    cl::desc("Trap on integer division by zero."),
+    cl::init(false));
+
 LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                                                  const LoongArchSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -384,6 +389,54 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performSRLCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
+}
+
+static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
+                                              MachineBasicBlock &MBB,
+                                              const TargetInstrInfo &TII) {
+  if (!ZeroDivCheck)
+    return &MBB;
+
+  // Build instructions:
+  //   div(or mod)   $dst, $dividend, $divisor
+  //   bnez          $divisor, 8
+  //   break         7
+  //   fallthrough
+  MachineOperand &Divisor = MI.getOperand(2);
+  auto FallThrough = std::next(MI.getIterator());
+
+  BuildMI(MBB, FallThrough, MI.getDebugLoc(), TII.get(LoongArch::BNEZ))
+      .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
+      .addImm(8);
+
+  // See linux header file arch/loongarch/include/uapi/asm/break.h for the
+  // definition of BRK_DIVZERO.
+  BuildMI(MBB, FallThrough, MI.getDebugLoc(), TII.get(LoongArch::BREAK))
+      .addImm(7/*BRK_DIVZERO*/);
+
+  // Clear Divisor's kill flag.
+  Divisor.setIsKill(false);
+
+  return &MBB;
+}
+
+MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
+
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected instr type to insert");
+  case LoongArch::DIV_W:
+  case LoongArch::DIV_WU:
+  case LoongArch::MOD_W:
+  case LoongArch::MOD_WU:
+  case LoongArch::DIV_D:
+  case LoongArch::DIV_DU:
+  case LoongArch::MOD_D:
+  case LoongArch::MOD_DU:
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo());
+    break;
+  }
 }
 
 const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
