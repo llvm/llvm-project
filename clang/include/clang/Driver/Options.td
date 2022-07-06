@@ -3354,10 +3354,10 @@ def mmlir : Separate<["-"], "mmlir">, Flags<[CoreOption,FC1Option,FlangOption]>,
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   Group<m_Group>, Flags<[CC1Option]>, HelpText<"Set Fuchsia API level">,
   MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
-def mmacosx_version_min_EQ : Joined<["-"], "mmacosx-version-min=">,
-  Group<m_Group>, HelpText<"Set Mac OS X deployment target">;
 def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
-  Group<m_Group>, Alias<mmacosx_version_min_EQ>;
+  Group<m_Group>, HelpText<"Set macOS deployment target">;
+def : Joined<["-"], "mmacosx-version-min=">,
+  Group<m_Group>, Alias<mmacos_version_min_EQ>;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">,
   MarshallingInfoFlag<LangOpts<"MSBitfields">>;

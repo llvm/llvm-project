@@ -1551,7 +1551,7 @@ struct DarwinPlatform {
     options::ID Opt;
     switch (Platform) {
     case DarwinPlatformKind::MacOS:
-      Opt = options::OPT_mmacosx_version_min_EQ;
+      Opt = options::OPT_mmacos_version_min_EQ;
       break;
     case DarwinPlatformKind::IPhoneOS:
       Opt = options::OPT_miphoneos_version_min_EQ;
@@ -1727,7 +1727,7 @@ private:
 Optional<DarwinPlatform>
 getDeploymentTargetFromOSVersionArg(DerivedArgList &Args,
                                     const Driver &TheDriver) {
-  Arg *OSXVersion = Args.getLastArg(options::OPT_mmacosx_version_min_EQ);
+  Arg *macOSVersion = Args.getLastArg(options::OPT_mmacos_version_min_EQ);
   Arg *iOSVersion = Args.getLastArg(options::OPT_miphoneos_version_min_EQ,
                                     options::OPT_mios_simulator_version_min_EQ);
   Arg *TvOSVersion =
@@ -1736,15 +1736,15 @@ getDeploymentTargetFromOSVersionArg(DerivedArgList &Args,
   Arg *WatchOSVersion =
       Args.getLastArg(options::OPT_mwatchos_version_min_EQ,
                       options::OPT_mwatchos_simulator_version_min_EQ);
-  if (OSXVersion) {
+  if (macOSVersion) {
     if (iOSVersion || TvOSVersion || WatchOSVersion) {
       TheDriver.Diag(diag::err_drv_argument_not_allowed_with)
-          << OSXVersion->getAsString(Args)
+          << macOSVersion->getAsString(Args)
           << (iOSVersion ? iOSVersion
                          : TvOSVersion ? TvOSVersion : WatchOSVersion)
                  ->getAsString(Args);
     }
-    return DarwinPlatform::createOSVersionArg(Darwin::MacOS, OSXVersion);
+    return DarwinPlatform::createOSVersionArg(Darwin::MacOS, macOSVersion);
   } else if (iOSVersion) {
     if (TvOSVersion || WatchOSVersion) {
       TheDriver.Diag(diag::err_drv_argument_not_allowed_with)
