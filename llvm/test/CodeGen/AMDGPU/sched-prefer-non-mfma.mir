@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass post-RA-sched -amdgpu-disable-power-sched -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass post-RA-sched -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: unrelated_mfma
 # GCN: V_MFMA_F32_32X32X1F32
