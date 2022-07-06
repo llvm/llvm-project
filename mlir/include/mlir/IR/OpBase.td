@@ -274,7 +274,7 @@ class Type<Pred condition, string descr = "",
 
 // Allows providing an alternative name and summary to an existing type def.
 class TypeAlias<Type t, string summary = t.summary> :
-    Type<t.predicate, summary> {
+    Type<t.predicate, summary, t.cppClassName> {
   let description = t.description;
   let builderCall = t.builderCall;
 }
