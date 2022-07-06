@@ -458,7 +458,7 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   ///
   /// This method can return true for instructions that read memory;
   /// for such instructions, moving them may change the resulting value.
-  bool isSafeToSpeculativelyExecute(const Value *V,
+  bool isSafeToSpeculativelyExecute(const Instruction *I,
                                     const Instruction *CtxI = nullptr,
                                     const DominatorTree *DT = nullptr,
                                     const TargetLibraryInfo *TLI = nullptr);
@@ -481,8 +481,8 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   ///   This behavior is a shortcoming in the current implementation and not
   ///   intentional.
   bool isSafeToSpeculativelyExecuteWithOpcode(
-      unsigned Opcode, const Operator *Inst, const Instruction *CtxI = nullptr,
-      const DominatorTree *DT = nullptr,
+      unsigned Opcode, const Instruction *Inst,
+      const Instruction *CtxI = nullptr, const DominatorTree *DT = nullptr,
       const TargetLibraryInfo *TLI = nullptr);
 
   /// Returns true if the result or effects of the given instructions \p I
