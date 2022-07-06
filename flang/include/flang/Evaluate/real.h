@@ -13,7 +13,7 @@
 #include "integer.h"
 #include "rounding-bits.h"
 #include "flang/Common/real.h"
-#include "flang/Evaluate/common.h"
+#include "flang/Evaluate/target.h"
 #include <cinttypes>
 #include <limits>
 #include <string>
@@ -107,33 +107,34 @@ public:
   constexpr Real Negate() const { return {word_.IEOR(word_.MASKL(1))}; }
 
   Relation Compare(const Real &) const;
-  ValueWithRealFlags<Real> Add(
-      const Real &, Rounding rounding = defaultRounding) const;
-  ValueWithRealFlags<Real> Subtract(
-      const Real &y, Rounding rounding = defaultRounding) const {
+  ValueWithRealFlags<Real> Add(const Real &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Real> Subtract(const Real &y,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const {
     return Add(y.Negate(), rounding);
   }
-  ValueWithRealFlags<Real> Multiply(
-      const Real &, Rounding rounding = defaultRounding) const;
-  ValueWithRealFlags<Real> Divide(
-      const Real &, Rounding rounding = defaultRounding) const;
+  ValueWithRealFlags<Real> Multiply(const Real &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Real> Divide(const Real &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
-  ValueWithRealFlags<Real> SQRT(Rounding rounding = defaultRounding) const;
+  ValueWithRealFlags<Real> SQRT(
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
   // NEAREST(), IEEE_NEXT_AFTER(), IEEE_NEXT_UP(), and IEEE_NEXT_DOWN()
   ValueWithRealFlags<Real> NEAREST(bool upward) const;
   // HYPOT(x,y)=SQRT(x**2 + y**2) computed so as to avoid spurious
   // intermediate overflows.
-  ValueWithRealFlags<Real> HYPOT(
-      const Real &, Rounding rounding = defaultRounding) const;
+  ValueWithRealFlags<Real> HYPOT(const Real &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
   // DIM(X,Y) = MAX(X-Y, 0)
-  ValueWithRealFlags<Real> DIM(
-      const Real &, Rounding rounding = defaultRounding) const;
+  ValueWithRealFlags<Real> DIM(const Real &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
   // MOD(x,y) = x - AINT(x/y)*y
   // MODULO(x,y) = x - FLOOR(x/y)*y
-  ValueWithRealFlags<Real> MOD(
-      const Real &, Rounding rounding = defaultRounding) const;
-  ValueWithRealFlags<Real> MODULO(
-      const Real &, Rounding rounding = defaultRounding) const;
+  ValueWithRealFlags<Real> MOD(const Real &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Real> MODULO(const Real &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
   template <typename INT> constexpr INT EXPONENT() const {
     if (Exponent() == maxExponent) {
@@ -172,8 +173,8 @@ public:
 
   // SCALE(); also known as IEEE_SCALB and (in IEEE-754 '08) ScaleB.
   template <typename INT>
-  ValueWithRealFlags<Real> SCALE(
-      const INT &by, Rounding rounding = defaultRounding) const {
+  ValueWithRealFlags<Real> SCALE(const INT &by,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const {
     auto expo{exponentBias + by.ToInt64()};
     if (IsZero()) {
       expo = exponentBias; // ignore by, don't overflow
@@ -219,8 +220,8 @@ public:
   }
 
   template <typename INT>
-  static ValueWithRealFlags<Real> FromInteger(
-      const INT &n, Rounding rounding = defaultRounding) {
+  static ValueWithRealFlags<Real> FromInteger(const INT &n,
+      Rounding rounding = TargetCharacteristics::defaultRounding) {
     bool isNegative{n.IsNegative()};
     INT absN{n};
     if (isNegative) {
@@ -294,7 +295,7 @@ public:
 
   template <typename A>
   static ValueWithRealFlags<Real> Convert(
-      const A &x, Rounding rounding = defaultRounding) {
+      const A &x, Rounding rounding = TargetCharacteristics::defaultRounding) {
     ValueWithRealFlags<Real> result;
     if (x.IsNotANumber()) {
       result.flags.set(RealFlag::InvalidArgument);
@@ -361,8 +362,8 @@ public:
     return exponent;
   }
 
-  static ValueWithRealFlags<Real> Read(
-      const char *&, Rounding rounding = defaultRounding);
+  static ValueWithRealFlags<Real> Read(const char *&,
+      Rounding rounding = TargetCharacteristics::defaultRounding);
   std::string DumpHexadecimal() const;
 
   // Emits a character representation for an equivalent Fortran constant
@@ -407,7 +408,7 @@ private:
   // a maximal exponent and zero fraction doesn't signify infinity, although
   // this member function will detect overflow and encode infinities).
   RealFlags Normalize(bool negative, int exponent, const Fraction &fraction,
-      Rounding rounding = defaultRounding,
+      Rounding rounding = TargetCharacteristics::defaultRounding,
       RoundingBits *roundingBits = nullptr);
 
   // Rounds a result, if necessary, in place.

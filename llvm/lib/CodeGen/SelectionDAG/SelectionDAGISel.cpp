@@ -50,6 +50,7 @@
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -2192,6 +2193,52 @@ void SelectionDAGISel::Select_ARITH_FENCE(SDNode *N) {
                        N->getOperand(0));
 }
 
+void SelectionDAGISel::Select_STACKMAP(SDNode *N) {
+  std::vector<SDValue> Ops;
+  auto *It = N->op_begin();
+  SDLoc DL(N);
+
+  // Stash the chain and glue operands so we can move them to the end.
+  SDValue Chain = *It++;
+  SDValue InFlag = *It++;
+
+  // <id> operand.
+  SDValue ID = *It++;
+  assert(ID.getValueType() == MVT::i64);
+  Ops.push_back(ID);
+
+  // <numShadowBytes> operand.
+  SDValue Shad = *It++;
+  assert(Shad.getValueType() == MVT::i32);
+  Ops.push_back(Shad);
+
+  // Live variable operands.
+  for (; It != N->op_end(); It++) {
+    SDNode *OpNode = It->getNode();
+    SDValue O;
+
+    // FrameIndex nodes should have been directly emitted to TargetFrameIndex
+    // nodes at DAG-construction time.
+    assert(OpNode->getOpcode() != ISD::FrameIndex);
+
+    if (OpNode->getOpcode() == ISD::Constant) {
+      Ops.push_back(
+          CurDAG->getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
+      O = CurDAG->getTargetConstant(
+          cast<ConstantSDNode>(OpNode)->getZExtValue(), DL, It->getValueType());
+    } else {
+      O = *It;
+    }
+    Ops.push_back(O);
+  }
+
+  Ops.push_back(Chain);
+  Ops.push_back(InFlag);
+
+  SDVTList NodeTys = CurDAG->getVTList(MVT::Other, MVT::Glue);
+  CurDAG->SelectNodeTo(N, TargetOpcode::STACKMAP, NodeTys, Ops);
+}
+
 /// GetVBR - decode a vbr encoding whose top bit is set.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static uint64_t
 GetVBR(uint64_t Val, const unsigned char *MatcherTable, unsigned &Idx) {
@@ -2745,6 +2792,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::ARITH_FENCE:
     Select_ARITH_FENCE(NodeToMatch);
+    return;
+  case ISD::STACKMAP:
+    Select_STACKMAP(NodeToMatch);
     return;
   }
 

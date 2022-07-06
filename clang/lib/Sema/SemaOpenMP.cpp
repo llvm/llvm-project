@@ -11570,7 +11570,7 @@ protected:
   bool checkType(ErrorInfoTy &ErrorInfo) const;
 
   static bool CheckValue(const Expr *E, ErrorInfoTy &ErrorInfo,
-                         bool ShouldBeLValue) {
+                         bool ShouldBeLValue, bool ShouldBeInteger = false) {
     if (ShouldBeLValue && !E->isLValue()) {
       ErrorInfo.Error = ErrorTy::XNotLValue;
       ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = E->getExprLoc();
@@ -11586,8 +11586,7 @@ protected:
         ErrorInfo.ErrorRange = ErrorInfo.NoteRange = E->getSourceRange();
         return false;
       }
-
-      if (!QTy->isIntegerType()) {
+      if (ShouldBeInteger && !QTy->isIntegerType()) {
         ErrorInfo.Error = ErrorTy::NotInteger;
         ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = E->getExprLoc();
         ErrorInfo.ErrorRange = ErrorInfo.NoteRange = E->getSourceRange();
@@ -11890,7 +11889,7 @@ bool OpenMPAtomicCompareCaptureChecker::checkType(ErrorInfoTy &ErrorInfo) {
   if (V && !CheckValue(V, ErrorInfo, true))
     return false;
 
-  if (R && !CheckValue(R, ErrorInfo, true))
+  if (R && !CheckValue(R, ErrorInfo, true, true))
     return false;
 
   return true;

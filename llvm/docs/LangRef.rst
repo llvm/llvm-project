@@ -10330,12 +10330,14 @@ operation. The operation must be one of the following keywords:
 -  umin
 -  fadd
 -  fsub
+-  fmax
+-  fmin
 
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub, this must be a floating point type.  The
+as integers.  For fadd/fsub/fmax/fmin, this must be a floating point type.  The
 type of the '``<pointer>``' operand must be a pointer to that type. If
 the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
 allowed to modify the number or order of execution of this
@@ -10372,6 +10374,8 @@ operation argument:
 -  umin: ``*ptr = *ptr < val ? *ptr : val`` (using an unsigned comparison)
 - fadd: ``*ptr = *ptr + val`` (using floating point arithmetic)
 - fsub: ``*ptr = *ptr - val`` (using floating point arithmetic)
+-  fmax: ``*ptr = maxnum(*ptr, val)`` (match the `llvm.maxnum.*`` intrinsic)
+-  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*`` intrinsic)
 
 Example:
 """"""""

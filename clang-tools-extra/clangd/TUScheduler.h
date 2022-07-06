@@ -104,7 +104,7 @@ public:
   ///
   /// Does not block, may eventually invoke the callback to satisfy the request.
   /// If the callback is invoked, release() must be called afterwards.
-  virtual RequestID acquire(llvm::StringRef Filename, Callback);
+  virtual RequestID acquire(llvm::StringRef Filename, Callback) = 0;
   /// Abandons the request/releases any resources that have been acquired.
   ///
   /// Must be called exactly once after acquire().
