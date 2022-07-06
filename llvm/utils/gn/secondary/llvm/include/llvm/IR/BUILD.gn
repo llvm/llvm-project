@@ -62,7 +62,7 @@ tablegen("IntrinsicsDirectX") {
   output_name = "IntrinsicsDirectX.h"
   args = [
     "-gen-intrinsic-enums",
-    "-intrinsic-prefix=dxil",
+    "-intrinsic-prefix=dx",
   ]
   td_file = "Intrinsics.td"
 }
