@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_function)
+#if __has_builtin(__is_function)
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_function : integral_constant<bool, __is_function(_Tp)> {};
@@ -31,7 +31,7 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_function
     : public integral_constant<bool, !(is_reference<_Tp>::value || is_const<const _Tp>::value)> {};
 
-#endif // __has_keyword(__is_function)
+#endif // __has_builtin(__is_function)
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>

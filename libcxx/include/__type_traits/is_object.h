@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_object)
+#if __has_builtin(__is_object)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_object : _BoolConstant<__is_object(_Tp)> { };
@@ -32,7 +32,7 @@ template <class _Tp>
 inline constexpr bool is_object_v = __is_object(_Tp);
 #endif
 
-#else // __has_keyword(__is_object)
+#else // __has_builtin(__is_object)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_object
     : public integral_constant<bool, is_scalar<_Tp>::value ||
@@ -45,7 +45,7 @@ template <class _Tp>
 inline constexpr bool is_object_v = is_object<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_object)
+#endif // __has_builtin(__is_object)
 
 _LIBCPP_END_NAMESPACE_STD
 

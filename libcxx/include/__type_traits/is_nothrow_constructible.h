@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_nothrow_constructible)
+#if __has_builtin(__is_nothrow_constructible)
 
 template <class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
@@ -62,7 +62,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp[_Ns]>
 {
 };
 
-#endif // _LIBCPP_HAS_NO_NOEXCEPT
+#endif // __has_builtin(__is_nothrow_constructible)
 
 
 #if _LIBCPP_STD_VER > 14

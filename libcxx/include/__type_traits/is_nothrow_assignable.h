@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_nothrow_assignable)
+#if __has_builtin(__is_nothrow_assignable)
 
 template <class _Tp, class _Arg>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
@@ -47,7 +47,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
 {
 };
 
-#endif // _LIBCPP_HAS_NO_NOEXCEPT
+#endif // __has_builtin(__is_nothrow_assignable)
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp, class _Arg>

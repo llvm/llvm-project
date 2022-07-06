@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_pointer)
+#if __has_builtin(__is_pointer)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_pointer : _BoolConstant<__is_pointer(_Tp)> { };
@@ -29,7 +29,7 @@ template <class _Tp>
 inline constexpr bool is_pointer_v = __is_pointer(_Tp);
 #endif
 
-#else // __has_keyword(__is_pointer)
+#else // __has_builtin(__is_pointer)
 
 template <class _Tp> struct __libcpp_is_pointer       : public false_type {};
 template <class _Tp> struct __libcpp_is_pointer<_Tp*> : public true_type {};
@@ -50,7 +50,7 @@ template <class _Tp>
 inline constexpr bool is_pointer_v = is_pointer<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_pointer)
+#endif // __has_builtin(__is_pointer)
 
 _LIBCPP_END_NAMESPACE_STD
 
