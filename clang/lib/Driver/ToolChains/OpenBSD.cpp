@@ -331,6 +331,8 @@ void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
   bool Profiling = Args.hasArg(options::OPT_pg);
 
   CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
+  if (Args.hasArg(options::OPT_fexperimental_library))
+    CmdArgs.push_back("-lc++experimental");
   CmdArgs.push_back(Profiling ? "-lc++abi_p" : "-lc++abi");
   CmdArgs.push_back(Profiling ? "-lpthread_p" : "-lpthread");
 }

@@ -179,7 +179,6 @@ FEATURE(cxx_thread_local,
 FEATURE(cxx_trailing_return, LangOpts.CPlusPlus11)
 FEATURE(cxx_unicode_literals, LangOpts.CPlusPlus11)
 FEATURE(cxx_unrestricted_unions, LangOpts.CPlusPlus11)
-FEATURE(cxx_unstable, LangOpts.Unstable)
 FEATURE(cxx_user_literals, LangOpts.CPlusPlus11)
 FEATURE(cxx_variadic_templates, LangOpts.CPlusPlus11)
 // C++14 features
@@ -235,6 +234,7 @@ FEATURE(shadow_call_stack,
         LangOpts.Sanitize.has(SanitizerKind::ShadowCallStack))
 FEATURE(tls, PP.getTargetInfo().isTLSSupported())
 FEATURE(underlying_type, LangOpts.CPlusPlus)
+FEATURE(experimental_library, LangOpts.ExperimentalLibrary)
 
 // C11 features supported by other languages as extensions.
 EXTENSION(c_alignas, true)
