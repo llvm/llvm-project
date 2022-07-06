@@ -51,6 +51,25 @@ public:
    uint32_t f32_2;
 };
 
+class StructT {
+public:
+  uint32_t f32_2;
+  void foo();
+};
+class StructM1 : public StructS, public StructT {
+public:
+  uint16_t f16_2;
+};
+class StructDyn {
+public:
+  uint32_t f32_2;
+  virtual void foo();
+};
+class StructM2 : public StructS, public StructDyn {
+public:
+  uint16_t f16_2;
+};
+
 uint32_t g(uint32_t *s, StructA *A, uint64_t count) {
 // CHECK-LABEL: define{{.*}} i32 @_Z1g
 // CHECK: store i32 1, i32* %{{.*}}, align 4, !tbaa [[TAG_i32:!.*]]
@@ -199,6 +218,30 @@ uint32_t g12(StructC *C, StructD *D, uint64_t count) {
   return b1->a.f32;
 }
 
+uint32_t g13(StructM1 *M, StructS *S) {
+  // CHECK-LABEL: define{{.*}} i32 @_Z3g13
+  // CHECK: store i16 1, i16* %{{.*}}, align 4, !tbaa [[TAG_i16]]
+  // CHECK: store i16 4, i16* %{{.*}}, align 4, !tbaa [[TAG_i16]]
+  // PATH-LABEL: define{{.*}} i32 @_Z3g13
+  // PATH: store i16 1, i16* %{{.*}}, align 4, !tbaa [[TAG_S_f16]]
+  // PATH: store i16 4, i16* %{{.*}}, align 4, !tbaa [[TAG_M1_f16_2:!.*]]
+  S->f16 = 1;
+  M->f16_2 = 4;
+  return S->f16;
+}
+
+uint32_t g14(StructM2 *M, StructS *S) {
+  // CHECK-LABEL: define{{.*}} i32 @_Z3g14
+  // CHECK: store i16 1, i16* %{{.*}}, align 4, !tbaa [[TAG_i16]]
+  // CHECK: store i16 4, i16* %{{.*}}, align 4, !tbaa [[TAG_i16]]
+  // PATH-LABEL: define{{.*}} i32 @_Z3g14
+  // PATH: store i16 1, i16* %{{.*}}, align 4, !tbaa [[TAG_S_f16]]
+  // PATH: store i16 4, i16* %{{.*}}, align 4, !tbaa [[TAG_M2_f16_2:!.*]]
+  S->f16 = 1;
+  M->f16_2 = 4;
+  return S->f16;
+}
+
 // CHECK: [[TYPE_char:!.*]] = !{!"omnipotent char", [[TAG_cxx_tbaa:!.*]],
 // CHECK: [[TAG_cxx_tbaa]] = !{!"Simple C++ TBAA"}
 // CHECK: [[TAG_i32]] = !{[[TYPE_i32:!.*]], [[TYPE_i32]], i64 0}
@@ -222,11 +265,17 @@ uint32_t g12(StructC *C, StructD *D, uint64_t count) {
 // OLD-PATH: [[TYPE_S]] = !{!"_ZTS7StructS", [[TYPE_SHORT]], i64 0, [[TYPE_INT]], i64 4}
 // OLD-PATH: [[TAG_S_f16]] = !{[[TYPE_S]], [[TYPE_SHORT]], i64 0}
 // OLD-PATH: [[TAG_S2_f32_2]] = !{[[TYPE_S2:!.*]], [[TYPE_INT]], i64 12}
-// OLD-PATH: [[TYPE_S2]] = !{!"_ZTS8StructS2", [[TYPE_SHORT]], i64 8, [[TYPE_INT]], i64 12}
+// OLD-PATH: [[TYPE_S2]] = !{!"_ZTS8StructS2", [[TYPE_S]], i64 0, [[TYPE_SHORT]], i64 8, [[TYPE_INT]], i64 12}
 // OLD-PATH: [[TAG_C_b_a_f32]] = !{[[TYPE_C:!.*]], [[TYPE_INT]], i64 12}
 // OLD-PATH: [[TYPE_C]] = !{!"_ZTS7StructC", [[TYPE_SHORT]], i64 0, [[TYPE_B]], i64 4, [[TYPE_INT]], i64 28}
 // OLD-PATH: [[TAG_D_b_a_f32]] = !{[[TYPE_D:!.*]], [[TYPE_INT]], i64 12}
 // OLD-PATH: [[TYPE_D]] = !{!"_ZTS7StructD", [[TYPE_SHORT]], i64 0, [[TYPE_B]], i64 4, [[TYPE_INT]], i64 28, [[TYPE_CHAR]], i64 32}
+// OLD-PATH: [[TAG_M1_f16_2]] = !{[[TYPE_M1:!.*]], [[TYPE_SHORT]], i64 12}
+// OLD-PATH: [[TYPE_M1]] = !{!"_ZTS8StructM1", [[TYPE_S]], i64 0, [[TYPE_T:!.*]], i64 8, [[TYPE_SHORT]], i64 12}
+// OLD_PATH: [[TYPE_T]] = !{!"_ZTS7StructT", [[TYPE_INT]], i64 0}
+// OLD-PATH: [[TAG_M2_f16_2]] = !{[[TYPE_M2:!.*]], [[TYPE_SHORT]], i64 20}
+// OLD-PATH: [[TYPE_M2]] = !{!"_ZTS8StructM2", [[TYPE_DYN:!.*]], i64 0, [[TYPE_S]], i64 12, [[TYPE_SHORT]], i64 20}
+// OLD_PATH: [[TYPE_DYN]] = !{!"_ZTS9StructDyn", [[TYPE_INT]], i64 8}
 
 // NEW-PATH: [[TYPE_CHAR:!.*]] = !{!{{.*}}, i64 1, !"omnipotent char"}
 // NEW-PATH: [[TAG_i32]] = !{[[TYPE_INT:!.*]], [[TYPE_INT]], i64 0, i64 4}
@@ -244,8 +293,14 @@ uint32_t g12(StructC *C, StructD *D, uint64_t count) {
 // NEW-PATH: [[TYPE_S]] = !{[[TYPE_CHAR]], i64 8, !"_ZTS7StructS", [[TYPE_SHORT]], i64 0, i64 2, [[TYPE_INT]], i64 4, i64 4}
 // NEW-PATH: [[TAG_S_f16]] = !{[[TYPE_S]], [[TYPE_SHORT]], i64 0, i64 2}
 // NEW-PATH: [[TAG_S2_f32_2]] = !{[[TYPE_S2:!.*]], [[TYPE_INT]], i64 12, i64 4}
-// NEW-PATH: [[TYPE_S2]] = !{[[TYPE_CHAR]], i64 16, !"_ZTS8StructS2", [[TYPE_SHORT]], i64 8, i64 2, [[TYPE_INT]], i64 12, i64 4}
+// NEW-PATH: [[TYPE_S2]] = !{[[TYPE_CHAR]], i64 16, !"_ZTS8StructS2", [[TYPE_S]], i64 0, i64 8, [[TYPE_SHORT]], i64 8, i64 2, [[TYPE_INT]], i64 12, i64 4}
 // NEW-PATH: [[TAG_C_b_a_f32]] = !{[[TYPE_C:!.*]], [[TYPE_INT]], i64 12, i64 4}
 // NEW-PATH: [[TYPE_C]] = !{[[TYPE_CHAR]], i64 32, !"_ZTS7StructC", [[TYPE_SHORT]], i64 0, i64 2, [[TYPE_B]], i64 4, i64 24, [[TYPE_INT]], i64 28, i64 4}
 // NEW-PATH: [[TAG_D_b_a_f32]] = !{[[TYPE_D:!.*]], [[TYPE_INT]], i64 12, i64 4}
 // NEW-PATH: [[TYPE_D]] = !{[[TYPE_CHAR]], i64 36, !"_ZTS7StructD", [[TYPE_SHORT]], i64 0, i64 2, [[TYPE_B]], i64 4, i64 24, [[TYPE_INT]], i64 28, i64 4, [[TYPE_CHAR]], i64 32, i64 1}
+// NEW-PATH: [[TAG_M1_f16_2]] = !{[[TYPE_M1:!.*]], [[TYPE_SHORT]], i64 12, i64 2}
+// NEW-PATH: [[TYPE_M1]] = !{[[TYPE_CHAR]], i64 16, !"_ZTS8StructM1", [[TYPE_S]], i64 0, i64 8, [[TYPE_T:!.*]], i64 8, i64 4, [[TYPE_SHORT]], i64 12, i64 2}
+// NEW_PATH: [[TYPE_T]] = !{[[TYPE_CHAR]], i64 4, !"_ZTS7StructT", [[TYPE_INT]], i64 0, i64 4}
+// NEW-PATH: [[TAG_M2_f16_2]] = !{[[TYPE_M2:!.*]], [[TYPE_SHORT]], i64 20, i64 2}
+// NEW-PATH: [[TYPE_M2]] = !{[[TYPE_CHAR]], i64 24, !"_ZTS8StructM2", [[TYPE_DYN:!.*]], i64 0, i64 12, [[TYPE_S]], i64 12, i64 8, [[TYPE_SHORT]], i64 20, i64 2}
+// NEW_PATH: [[TYPE_DYN]] = !{[[TYPE_CHAR]], i64 12, !"_ZTS9StructDyn", [[TYPE_INT]], i64 8, i64 4}
