@@ -30800,6 +30800,8 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
     // These always require a non-trivial set of data operations on x86. We must
     // use a cmpxchg loop.
     return AtomicExpansionKind::CmpXChg;
