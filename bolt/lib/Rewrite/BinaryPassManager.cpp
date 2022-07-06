@@ -313,6 +313,10 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<AsmDumpPass>(),
                        opts::AsmDump.getNumOccurrences());
 
+  if (BC.isAArch64())
+    Manager.registerPass(
+        std::make_unique<VeneerElimination>(PrintVeneerElimination));
+
   if (opts::Instrument)
     Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
 
@@ -338,10 +342,6 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
                        opts::ICF);
-
-  if (BC.isAArch64())
-    Manager.registerPass(
-        std::make_unique<VeneerElimination>(PrintVeneerElimination));
 
   Manager.registerPass(
       std::make_unique<SpecializeMemcpy1>(NeverPrint, opts::SpecializeMemcpy1),
