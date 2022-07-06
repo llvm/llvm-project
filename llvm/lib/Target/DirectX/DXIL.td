@@ -116,7 +116,7 @@ def ThreadId :dxil_op< "ThreadId", 93,  ThreadIdClass, ComputeID, "reads the thr
     dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
     dxil_param<2,  "i32",  "component",  "component to read (x,y,z)">
   ]>,
-  dxil_map_intrinsic<int_dxil_thread_id>;
+  dxil_map_intrinsic<int_dx_thread_id>;
 
 def GroupId :dxil_op< "GroupId", 94,  GroupIdClass, ComputeID, "reads the group ID (SV_GroupID)", "i32;",  "rn",
   [
@@ -124,7 +124,7 @@ def GroupId :dxil_op< "GroupId", 94,  GroupIdClass, ComputeID, "reads the group 
     dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
     dxil_param<2,  "i32",  "component",  "component to read">
   ]>,
-  dxil_map_intrinsic<int_dxil_group_id>;
+  dxil_map_intrinsic<int_dx_group_id>;
 
 def ThreadIdInGroup :dxil_op< "ThreadIdInGroup", 95,  ThreadIdInGroupClass, ComputeID,
   "reads the thread ID within the group (SV_GroupThreadID)", "i32;",  "rn",
@@ -133,7 +133,7 @@ def ThreadIdInGroup :dxil_op< "ThreadIdInGroup", 95,  ThreadIdInGroupClass, Comp
     dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
     dxil_param<2,  "i32",  "component",  "component to read (x,y,z)">
   ]>,
-  dxil_map_intrinsic<int_dxil_thread_id_in_group>;
+  dxil_map_intrinsic<int_dx_thread_id_in_group>;
 
 def FlattenedThreadIdInGroup :dxil_op< "FlattenedThreadIdInGroup", 96,  FlattenedThreadIdInGroupClass, ComputeID,
    "provides a flattened index for a given thread within a given group (SV_GroupIndex)", "i32;",  "rn",
@@ -141,4 +141,4 @@ def FlattenedThreadIdInGroup :dxil_op< "FlattenedThreadIdInGroup", 96,  Flattene
     dxil_param<0,  "i32",  "",  "result">,
     dxil_param<1,  "i32",  "opcode",  "DXIL opcode">
   ]>,
-  dxil_map_intrinsic<int_dxil_flattened_thread_id_in_group>;
+  dxil_map_intrinsic<int_dx_flattened_thread_id_in_group>;
