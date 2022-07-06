@@ -319,6 +319,8 @@ public:
   ParseResult codeCompleteOperationName(StringRef dialectName);
   ParseResult codeCompleteDialectOrElidedOpName(SMLoc loc);
   ParseResult codeCompleteStringDialectOrOperationName(StringRef name);
+  ParseResult codeCompleteExpectedTokens(ArrayRef<StringRef> tokens);
+  ParseResult codeCompleteOptionalTokens(ArrayRef<StringRef> tokens);
 
 protected:
   /// The Parser is subclassed and reinstantiated.  Do not add additional

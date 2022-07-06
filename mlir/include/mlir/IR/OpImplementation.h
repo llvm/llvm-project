@@ -572,12 +572,10 @@ public:
   virtual ParseResult parseOptionalString(std::string *string) = 0;
 
   /// Parse a given keyword.
-  ParseResult parseKeyword(StringRef keyword, const Twine &msg = "") {
-    auto loc = getCurrentLocation();
-    if (parseOptionalKeyword(keyword))
-      return emitError(loc, "expected '") << keyword << "'" << msg;
-    return success();
+  ParseResult parseKeyword(StringRef keyword) {
+    return parseKeyword(keyword, "");
   }
+  virtual ParseResult parseKeyword(StringRef keyword, const Twine &msg) = 0;
 
   /// Parse a keyword into 'keyword'.
   ParseResult parseKeyword(StringRef *keyword) {
