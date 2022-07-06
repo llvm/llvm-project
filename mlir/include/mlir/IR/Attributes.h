@@ -266,7 +266,8 @@ template <> struct DenseMapInfo<mlir::Attribute> {
 };
 template <typename T>
 struct DenseMapInfo<
-    T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value>>
+    T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value &&
+                        !mlir::detail::IsInterface<T>::value>>
     : public DenseMapInfo<mlir::Attribute> {
   static T getEmptyKey() {
     const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
