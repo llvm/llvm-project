@@ -59,7 +59,7 @@ static void hugify_for_old_kernel(uint8_t *from, uint8_t *to) {
 #endif
 
   // Copy the hot code to a temproary location.
-  memCpy(mem, from, size);
+  memcpy(mem, from, size);
 
   // Maps out the existing hot code.
   if (__mmap(reinterpret_cast<uint64_t>(from), size,
@@ -77,7 +77,7 @@ static void hugify_for_old_kernel(uint8_t *from, uint8_t *to) {
   }
 
   // Copy the hot code back.
-  memCpy(from, mem, size);
+  memcpy(from, mem, size);
 
   // Change permission back to read-only, ignore failure
   __mprotect(from, size, PROT_READ | PROT_EXEC);
