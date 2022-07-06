@@ -843,6 +843,7 @@ void test_block(void) {
           __attribute__((__format__(__printf__, 2, 3))) {
     va_list ap;
     va_start(ap, fmt);
+    vprintf(fmt, ap);
     vprintf(not_fmt, ap); // expected-warning{{format string is not a string literal}}
     va_end(ap);
   };
