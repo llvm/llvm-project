@@ -41,12 +41,10 @@ define i8 @extractelement_bitcast_to_trunc(<vscale x 2 x i32> %a, i32 %x) {
   ret i8 %r
 }
 
-; TODO: Instcombine could remove the insert.
-define i8 @extractelement_bitcast_wrong_insert(<vscale x 2 x i32> %a, i32 %x) {
-; CHECK-LABEL: @extractelement_bitcast_wrong_insert(
-; CHECK-NEXT:    [[VEC:%.*]] = insertelement <vscale x 2 x i32> [[A:%.*]], i32 [[X:%.*]], i64 1
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <vscale x 2 x i32> [[VEC]] to <vscale x 8 x i8>
-; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 8 x i8> [[VEC_CAST]], i64 2
+define i8 @extractelement_bitcast_useless_insert(<vscale x 2 x i32> %a, i32 %x) {
+; CHECK-LABEL: @extractelement_bitcast_useless_insert(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i32> [[A:%.*]] to <vscale x 8 x i8>
+; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 8 x i8> [[TMP1]], i64 2
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %vec = insertelement <vscale x 2 x i32> %a, i32 %x, i32 1 ; <- This insert could be removed.
