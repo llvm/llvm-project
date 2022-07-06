@@ -1035,6 +1035,16 @@ define <vscale x 2 x i1> @cmpne_ir_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
   ret <vscale x 2 x i1> %out
 }
 
+define <vscale x 1 x i1> @cmpne_ir_q(<vscale x 1 x i64> %a, <vscale x 1 x i64> %b) {
+; CHECK-LABEL: cmpne_ir_q:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmpne p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT: punpklo p0.h, p0.b
+; CHECK-NEXT: ret
+  %out = icmp ne <vscale x 1 x i64> %a, %b
+  ret <vscale x 1 x i1> %out
+}
+
 
 define <vscale x 16 x i1> @cmpgt_wide_splat_b(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, i64 %b) {
 ; CHECK-LABEL: cmpgt_wide_splat_b:
