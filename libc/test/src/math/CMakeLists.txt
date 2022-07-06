@@ -1302,6 +1302,18 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fputil
 )
 
+add_fp_unittest(
+  expxf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    expxf_test.cpp
+  DEPENDS
+    libc.src.math.generic.common_constants
+    libc.src.__support.FPUtil.fputil
+)
+
 add_subdirectory(generic)
 add_subdirectory(exhaustive)
 add_subdirectory(differential_testing)
