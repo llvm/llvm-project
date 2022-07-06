@@ -44,8 +44,11 @@ public:
                    Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::get(Opc, LC, RC);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc))
+        return ConstantExpr::get(Opc, LC, RC);
+      return ConstantFoldBinaryInstruction(Opc, LC, RC);
+    }
     return nullptr;
   }
 
@@ -53,9 +56,12 @@ public:
                         bool IsExact) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
-    if (LC && RC)
-      return ConstantExpr::get(Opc, LC, RC,
-                               IsExact ? PossiblyExactOperator::IsExact : 0);
+    if (LC && RC) {
+      if (ConstantExpr::isDesirableBinOp(Opc))
+        return ConstantExpr::get(Opc, LC, RC,
+                                 IsExact ? PossiblyExactOperator::IsExact : 0);
+      return ConstantFoldBinaryInstruction(Opc, LC, RC);
+    }
     return nullptr;
   }
 
@@ -64,12 +70,15 @@ public:
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC) {
-      unsigned Flags = 0;
-      if (HasNUW)
-        Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
-      if (HasNSW)
-        Flags |= OverflowingBinaryOperator::NoSignedWrap;
-      return ConstantExpr::get(Opc, LC, RC, Flags);
+      if (ConstantExpr::isDesirableBinOp(Opc)) {
+        unsigned Flags = 0;
+        if (HasNUW)
+          Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
+        if (HasNSW)
+          Flags |= OverflowingBinaryOperator::NoSignedWrap;
+        return ConstantExpr::get(Opc, LC, RC, Flags);
+      }
+      return ConstantFoldBinaryInstruction(Opc, LC, RC);
     }
     return nullptr;
   }

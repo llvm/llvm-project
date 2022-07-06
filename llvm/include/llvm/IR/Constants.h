@@ -1341,6 +1341,10 @@ public:
   /// would make it harder to remove ConstantExprs altogether.
   Instruction *getAsInstruction(Instruction *InsertBefore = nullptr) const;
 
+  /// Whether creating a constant expression for this binary operator is
+  /// desirable.
+  static bool isDesirableBinOp(unsigned Opcode);
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == ConstantExprVal;

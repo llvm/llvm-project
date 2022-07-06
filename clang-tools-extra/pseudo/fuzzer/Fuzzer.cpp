@@ -43,9 +43,8 @@ public:
     clang::pseudo::GSS GSS;
     const Language &Lang = getLanguageFromFlags();
     auto &Root =
-        glrParse(ParseableStream,
-                 clang::pseudo::ParseParams{Lang.G, Lang.Table, Arena, GSS},
-                 *Lang.G.findNonterminal("translation-unit"));
+        glrParse(clang::pseudo::ParseParams{ParseableStream, Arena, GSS},
+                 *Lang.G.findNonterminal("translation-unit"), Lang);
     if (Print)
       llvm::outs() << Root.dumpRecursive(Lang.G);
   }

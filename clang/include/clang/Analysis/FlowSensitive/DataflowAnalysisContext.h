@@ -155,6 +155,7 @@ public:
 
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
+  /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
@@ -251,6 +252,17 @@ public:
   bool equivalentBoolValues(BoolValue &Val1, BoolValue &Val2);
 
 private:
+  struct NullableQualTypeDenseMapInfo : private llvm::DenseMapInfo<QualType> {
+    static QualType getEmptyKey() {
+      // Allow a NULL `QualType` by using a different value as the empty key.
+      return QualType::getFromOpaquePtr(reinterpret_cast<Type *>(1));
+    }
+
+    using DenseMapInfo::getHashValue;
+    using DenseMapInfo::getTombstoneKey;
+    using DenseMapInfo::isEqual;
+  };
+
   /// Adds all constraints of the flow condition identified by `Token` and all
   /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
   /// to track tokens of flow conditions that were already visited by recursive
@@ -311,7 +323,8 @@ private:
   // required to initialize the `PointeeLoc` field in `PointerValue`. Consider
   // creating a type-independent `NullPointerValue` without a `PointeeLoc`
   // field.
-  llvm::DenseMap<QualType, PointerValue *> NullPointerVals;
+  llvm::DenseMap<QualType, PointerValue *, NullableQualTypeDenseMapInfo>
+      NullPointerVals;
 
   AtomicBoolValue &TrueVal;
   AtomicBoolValue &FalseVal;

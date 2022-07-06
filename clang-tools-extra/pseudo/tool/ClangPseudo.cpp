@@ -145,9 +145,8 @@ int main(int argc, char *argv[]) {
       return 2;
     }
     auto &Root =
-        glrParse(*ParseableStream,
-                 clang::pseudo::ParseParams{Lang.G, Lang.Table, Arena, GSS},
-                 *StartSymID);
+        glrParse(clang::pseudo::ParseParams{*ParseableStream, Arena, GSS},
+                 *StartSymID, Lang);
     if (PrintForest)
       llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/true);
 
