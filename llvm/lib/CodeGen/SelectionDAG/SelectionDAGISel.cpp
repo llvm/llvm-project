@@ -27,7 +27,6 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -345,47 +344,6 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-/// SplitCriticalSideEffectEdges - Look for critical edges with a PHI value that
-/// may trap on it.  In this case we have to split the edge so that the path
-/// through the predecessor block that doesn't go to the phi block doesn't
-/// execute the possibly trapping instruction. If available, we pass domtree
-/// and loop info to be updated when we split critical edges. This is because
-/// SelectionDAGISel preserves these analyses.
-/// This is required for correctness, so it must be done at -O0.
-///
-static void SplitCriticalSideEffectEdges(Function &Fn, DominatorTree *DT,
-                                         LoopInfo *LI) {
-  // Loop for blocks with phi nodes.
-  for (BasicBlock &BB : Fn) {
-    PHINode *PN = dyn_cast<PHINode>(BB.begin());
-    if (!PN) continue;
-
-  ReprocessBlock:
-    // For each block with a PHI node, check to see if any of the input values
-    // are potentially trapping constant expressions.  Constant expressions are
-    // the only potentially trapping value that can occur as the argument to a
-    // PHI.
-    for (BasicBlock::iterator I = BB.begin(); (PN = dyn_cast<PHINode>(I)); ++I)
-      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-        Constant *C = dyn_cast<Constant>(PN->getIncomingValue(i));
-        if (!C || !C->canTrap()) continue;
-
-        // The only case we have to worry about is when the edge is critical.
-        // Since this block has a PHI Node, we assume it has multiple input
-        // edges: check to see if the pred has multiple successors.
-        BasicBlock *Pred = PN->getIncomingBlock(i);
-        if (Pred->getTerminator()->getNumSuccessors() == 1)
-          continue;
-
-        // Okay, we have to split this edge.
-        SplitCriticalEdge(
-            Pred->getTerminator(), GetSuccessorNumber(Pred, &BB),
-            CriticalEdgeSplittingOptions(DT, LI).setMergeIdenticalEdges());
-        goto ReprocessBlock;
-      }
-  }
-}
-
 static void computeUsesMSVCFloatingPoint(const Triple &TT, const Function &F,
                                          MachineModuleInfo &MMI) {
   // Only needed for MSVC
@@ -447,16 +405,12 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn);
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
-  LoopInfo *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI = nullptr;
   if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOpt::None)
     BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
 
   LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
-
-  SplitCriticalSideEffectEdges(const_cast<Function &>(Fn), DT, LI);
 
   CurDAG->init(*MF, *ORE, this, LibInfo,
                getAnalysisIfAvailable<LegacyDivergenceAnalysis>(), PSI, BFI);
