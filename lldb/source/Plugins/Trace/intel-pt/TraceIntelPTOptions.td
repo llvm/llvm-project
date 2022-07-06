@@ -90,13 +90,3 @@ let Command = "process trace start intel pt" in {
          "packets as: 2 ^ (value + 11), e.g. value 3 means 16KiB between PSB "
          "packets. Defaults to 0 if supported.">;
 }
-
-let Command = "process trace save intel pt" in {
-  def process_trace_save_intel_directory: Option<"directory", "d">,
-    Group<1>,
-    Arg<"Value">, Required,
-    Desc<"This value defines the directory where the trace will be saved."
-        "It will be created if it does not exist. It will also create a "
-        "trace files with the trace data and a trace.json with the main "
-        "properties of the trace session.">;
-}
