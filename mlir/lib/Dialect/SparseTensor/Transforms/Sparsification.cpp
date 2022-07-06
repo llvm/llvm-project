@@ -26,6 +26,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TensorEncoding.h"
@@ -1831,6 +1832,79 @@ private:
   SparsificationOptions options;
 };
 
+/// Sparse rewriting rule for expand shape operator.
+struct ExpandShapeRewriter : public OpRewritePattern<tensor::ExpandShapeOp> {
+public:
+  using OpRewritePattern<tensor::ExpandShapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExpandShapeOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto encDst = getSparseTensorEncoding(op.result().getType());
+    auto encSrc = getSparseTensorEncoding(op.src().getType());
+    // Since a pure dense expansion is very cheap (change of view), for
+    // sparse2dense or dense2sparse, we can simply unfuse a sparse
+    // conversion from the actual expansion operation itself.
+    if (encDst && encSrc) {
+      return failure(); // TODO: implement sparse2sparse
+    } else if (encSrc) {
+      RankedTensorType rtp = op.src().getType().cast<RankedTensorType>();
+      auto denseTp =
+          RankedTensorType::get(rtp.getShape(), rtp.getElementType());
+      auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.src());
+      op->setOperand(0, convert);
+      return success();
+    } else if (encDst) {
+      RankedTensorType rtp = op.result().getType().cast<RankedTensorType>();
+      auto denseTp =
+          RankedTensorType::get(rtp.getShape(), rtp.getElementType());
+      auto reshape = rewriter.create<tensor::ExpandShapeOp>(
+          loc, denseTp, op.src(), op.getReassociation());
+      Value convert = rewriter.create<ConvertOp>(loc, rtp, reshape);
+      rewriter.replaceOp(op, convert);
+      return success();
+    }
+    return failure();
+  }
+};
+
+/// Sparse rewriting rule for collapse shape operator.
+struct CollapseShapeRewriter
+    : public OpRewritePattern<tensor::CollapseShapeOp> {
+public:
+  using OpRewritePattern<tensor::CollapseShapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::CollapseShapeOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto encDst = getSparseTensorEncoding(op.result().getType());
+    auto encSrc = getSparseTensorEncoding(op.src().getType());
+    // Since a pure dense collapse is very cheap (change of view), for
+    // sparse2dense or dense2sparse, we can simply unfuse a sparse
+    // conversion from the actual collapse operation itself.
+    if (encDst && encSrc) {
+      return failure(); // TODO: implement sparse2sparse
+    } else if (encSrc) {
+      RankedTensorType rtp = op.src().getType().cast<RankedTensorType>();
+      auto denseTp =
+          RankedTensorType::get(rtp.getShape(), rtp.getElementType());
+      auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.src());
+      op->setOperand(0, convert);
+      return success();
+    } else if (encDst) {
+      RankedTensorType rtp = op.result().getType().cast<RankedTensorType>();
+      auto denseTp =
+          RankedTensorType::get(rtp.getShape(), rtp.getElementType());
+      auto reshape = rewriter.create<tensor::CollapseShapeOp>(
+          loc, denseTp, op.src(), op.getReassociation());
+      Value convert = rewriter.create<ConvertOp>(loc, rtp, reshape);
+      rewriter.replaceOp(op, convert);
+      return success();
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 /// Populates the given patterns list with rewriting rules required for
@@ -1838,4 +1912,6 @@ private:
 void mlir::populateSparsificationPatterns(
     RewritePatternSet &patterns, const SparsificationOptions &options) {
   patterns.add<GenericOpSparsifier>(patterns.getContext(), options);
+  patterns.add<ExpandShapeRewriter, CollapseShapeRewriter>(
+      patterns.getContext());
 }
