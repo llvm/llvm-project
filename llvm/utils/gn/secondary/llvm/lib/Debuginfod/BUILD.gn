@@ -9,5 +9,6 @@ static_library("Debuginfod") {
     "DIFetcher.cpp",
     "Debuginfod.cpp",
     "HTTPClient.cpp",
+    "HTTPServer.cpp",
   ]
 }
