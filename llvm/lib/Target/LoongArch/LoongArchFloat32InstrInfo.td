@@ -182,4 +182,9 @@ defm : LdPat<load, FLD_S, f32>;
 
 defm : StPat<store, FST_S, FPR32, f32>;
 
+/// Floating point constants
+
+def : Pat<(f32 fpimm0), (MOVGR2FR_W R0)>;
+def : Pat<(f32 fpimm0neg), (FNEG_S (MOVGR2FR_W R0))>;
+def : Pat<(f32 fpimm1), (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1)))>;
 } // Predicates = [HasBasicF]
