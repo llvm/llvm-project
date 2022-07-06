@@ -327,6 +327,8 @@ Optional<ArrayRef<uint8_t>> getBuildID(const ELFFile<ELFT> &Obj) {
   return {};
 }
 
+} // end anonymous namespace
+
 Optional<ArrayRef<uint8_t>> getBuildID(const ELFObjectFileBase *Obj) {
   Optional<ArrayRef<uint8_t>> BuildID;
   if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(Obj))
@@ -341,8 +343,6 @@ Optional<ArrayRef<uint8_t>> getBuildID(const ELFObjectFileBase *Obj) {
     llvm_unreachable("unsupported file format");
   return BuildID;
 }
-
-} // end anonymous namespace
 
 ObjectFile *LLVMSymbolizer::lookUpDsymFile(const std::string &ExePath,
                                            const MachOObjectFile *MachExeObj,
