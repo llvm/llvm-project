@@ -26,4 +26,6 @@ add_llvm_library(LLVMDebuginfod
   Support
   Symbolize
   DebugInfoDWARF
+  BinaryFormat
+  Object
   )
