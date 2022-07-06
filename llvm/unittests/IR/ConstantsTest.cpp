@@ -9,6 +9,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -75,31 +76,29 @@ TEST(ConstantsTest, Integer_i1) {
 
   // @o = constant i1 sdiv(i1 -1, i1 1) ; overflow
   // @o = constant i1 true
-  EXPECT_EQ(One, ConstantExpr::getSDiv(NegOne, One));
+  EXPECT_EQ(One, ConstantFoldBinaryInstruction(Instruction::SDiv, NegOne, One));
 
   // @p = constant i1 sdiv(i1 1 , i1 -1); overflow
   // @p = constant i1 true
-  EXPECT_EQ(One, ConstantExpr::getSDiv(One, NegOne));
+  EXPECT_EQ(One, ConstantFoldBinaryInstruction(Instruction::SDiv, One, NegOne));
 
   // @q = constant i1 udiv(i1 -1, i1 1)
   // @q = constant i1 true
-  EXPECT_EQ(One, ConstantExpr::getUDiv(NegOne, One));
+  EXPECT_EQ(One, ConstantFoldBinaryInstruction(Instruction::UDiv, NegOne, One));
 
   // @r = constant i1 udiv(i1 1, i1 -1)
   // @r = constant i1 true
-  EXPECT_EQ(One, ConstantExpr::getUDiv(One, NegOne));
+  EXPECT_EQ(One, ConstantFoldBinaryInstruction(Instruction::UDiv, One, NegOne));
 
   // @s = constant i1 srem(i1 -1, i1 1) ; overflow
   // @s = constant i1 false
-  EXPECT_EQ(Zero, ConstantExpr::getSRem(NegOne, One));
-
-  // @t = constant i1 urem(i1 -1, i1 1)
-  // @t = constant i1 false
-  EXPECT_EQ(Zero, ConstantExpr::getURem(NegOne, One));
+  EXPECT_EQ(Zero,
+            ConstantFoldBinaryInstruction(Instruction::SRem, NegOne, One));
 
   // @u = constant i1 srem(i1  1, i1 -1) ; overflow
   // @u = constant i1 false
-  EXPECT_EQ(Zero, ConstantExpr::getSRem(One, NegOne));
+  EXPECT_EQ(Zero,
+            ConstantFoldBinaryInstruction(Instruction::SRem, One, NegOne));
 }
 
 TEST(ConstantsTest, IntSigns) {
@@ -254,11 +253,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getFSub(P1, P1), "fsub float " P1STR ", " P1STR);
   CHECK(ConstantExpr::getMul(P0, P0), "mul i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getFMul(P1, P1), "fmul float " P1STR ", " P1STR);
-  CHECK(ConstantExpr::getUDiv(P0, P0), "udiv i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getSDiv(P0, P0), "sdiv i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getFDiv(P1, P1), "fdiv float " P1STR ", " P1STR);
-  CHECK(ConstantExpr::getURem(P0, P0), "urem i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getSRem(P0, P0), "srem i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getFRem(P1, P1), "frem float " P1STR ", " P1STR);
   CHECK(ConstantExpr::getAnd(P0, P0), "and i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getOr(P0, P0), "or i32 " P0STR ", " P0STR);
@@ -280,8 +275,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
         "fptrunc double " P2STR " to float");
   CHECK(ConstantExpr::getFPExtend(P1, DoubleTy),
         "fpext float " P1STR " to double");
-
-  CHECK(ConstantExpr::getExactUDiv(P0, P0), "udiv exact i32 " P0STR ", " P0STR);
 
   CHECK(ConstantExpr::getSelect(P3, P0, P4),
         "select i1 " P3STR ", i32 " P0STR ", i32 " P4STR);

@@ -72,6 +72,10 @@ Changes to the LLVM IR
   removed:
   * ``extractvalue``
   * ``insertvalue``
+  * ``udiv``
+  * ``sdiv``
+  * ``urem``
+  * ``srem``
 
 Changes to building LLVM
 ------------------------
@@ -182,6 +186,12 @@ Changes to the C API
   constant fold the operands if possible and create an instruction otherwise:
   * ``LLVMConstExtractValue``
   * ``LLVMConstInsertValue``
+  * ``LLVMConstUDiv``
+  * ``LLVMConstExactUDiv``
+  * ``LLVMConstSDiv``
+  * ``LLVMConstExactSDiv``
+  * ``LLVMConstURem``
+  * ``LLVMConstSRem``
 
 Changes to the Go bindings
 --------------------------

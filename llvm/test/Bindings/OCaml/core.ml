@@ -253,12 +253,7 @@ let test_constants () =
    * CHECK: @const_nsw_mul = global i64 mul nsw
    * CHECK: @const_nuw_mul = global i64 mul nuw
    * CHECK: @const_fmul = global double fmul
-   * CHECK: @const_udiv = global i64 udiv
-   * CHECK: @const_sdiv = global i64 sdiv
-   * CHECK: @const_exact_sdiv = global i64 sdiv exact
    * CHECK: @const_fdiv = global double fdiv
-   * CHECK: @const_urem = global i64 urem
-   * CHECK: @const_srem = global i64 srem
    * CHECK: @const_frem = global double frem
    * CHECK: @const_and = global i64 and
    * CHECK: @const_or = global i64 or
@@ -289,12 +284,7 @@ let test_constants () =
   ignore (define_global "const_nsw_mul" (const_nsw_mul foldbomb five) m);
   ignore (define_global "const_nuw_mul" (const_nuw_mul foldbomb five) m);
   ignore (define_global "const_fmul" (const_fmul ffoldbomb ffive) m);
-  ignore (define_global "const_udiv" (const_udiv foldbomb five) m);
-  ignore (define_global "const_sdiv" (const_sdiv foldbomb five) m);
-  ignore (define_global "const_exact_sdiv" (const_exact_sdiv foldbomb five) m);
   ignore (define_global "const_fdiv" (const_fdiv ffoldbomb ffive) m);
-  ignore (define_global "const_urem" (const_urem foldbomb five) m);
-  ignore (define_global "const_srem" (const_srem foldbomb five) m);
   ignore (define_global "const_frem" (const_frem ffoldbomb ffive) m);
   ignore (define_global "const_and" (const_and foldbomb five) m);
   ignore (define_global "const_or" (const_or foldbomb five) m);

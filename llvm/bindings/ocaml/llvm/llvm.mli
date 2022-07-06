@@ -1139,35 +1139,10 @@ val const_nuw_mul : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getFMul]. *)
 val const_fmul : llvalue -> llvalue -> llvalue
 
-(** [const_udiv c1 c2] returns the constant quotient [c1 / c2] of two unsigned
-    integer constants.
-    See the method [llvm::ConstantExpr::getUDiv]. *)
-val const_udiv : llvalue -> llvalue -> llvalue
-
-(** [const_sdiv c1 c2] returns the constant quotient [c1 / c2] of two signed
-    integer constants.
-    See the method [llvm::ConstantExpr::getSDiv]. *)
-val const_sdiv : llvalue -> llvalue -> llvalue
-
-(** [const_exact_sdiv c1 c2] returns the constant quotient [c1 / c2] of two
-    signed integer constants. The result is undefined if the result is rounded
-    or overflows. See the method [llvm::ConstantExpr::getExactSDiv]. *)
-val const_exact_sdiv : llvalue -> llvalue -> llvalue
-
 (** [const_fdiv c1 c2] returns the constant quotient [c1 / c2] of two floating
     point constants.
     See the method [llvm::ConstantExpr::getFDiv]. *)
 val const_fdiv : llvalue -> llvalue -> llvalue
-
-(** [const_urem c1 c2] returns the constant remainder [c1 MOD c2] of two
-    unsigned integer constants.
-    See the method [llvm::ConstantExpr::getURem]. *)
-val const_urem : llvalue -> llvalue -> llvalue
-
-(** [const_srem c1 c2] returns the constant remainder [c1 MOD c2] of two
-    signed integer constants.
-    See the method [llvm::ConstantExpr::getSRem]. *)
-val const_srem : llvalue -> llvalue -> llvalue
 
 (** [const_frem c1 c2] returns the constant remainder [c1 MOD c2] of two
     signed floating point constants.
