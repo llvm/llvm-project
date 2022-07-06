@@ -3424,6 +3424,7 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":CallOpInterfaces",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
         ":IR",
@@ -3676,6 +3677,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
