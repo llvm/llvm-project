@@ -1413,7 +1413,7 @@ TEST_F(TUSchedulerTests, PreambleThrottle) {
       Callback SatisfyNext;
       {
         std::lock_guard<std::mutex> Lock(Mu);
-        if (ID > 0)
+        if (ID > 0 && Acquires.size() == NumRequests)
           SatisfyNext = std::move(Callbacks[ID - 1]);
       }
       if (SatisfyNext)
