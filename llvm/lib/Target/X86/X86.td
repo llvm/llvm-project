@@ -266,6 +266,8 @@ def FeatureWBNOINVD    : SubtargetFeature<"wbnoinvd", "HasWBNOINVD", "true",
                                       "Write Back No Invalidate">;
 def FeatureRDPID : SubtargetFeature<"rdpid", "HasRDPID", "true",
                                     "Support RDPID instructions">;
+def FeatureRDPRU : SubtargetFeature<"rdpru", "HasRDPRU", "true",
+                                    "Support RDPRU instructions">;
 def FeatureWAITPKG  : SubtargetFeature<"waitpkg", "HasWAITPKG", "true",
                                       "Wait and pause enhancements">;
 def FeatureENQCMD : SubtargetFeature<"enqcmd", "HasENQCMD", "true",
@@ -1238,6 +1240,7 @@ def ProcessorFeatures {
                                      TuningInsertVZEROUPPER];
   list<SubtargetFeature> ZN2AdditionalFeatures = [FeatureCLWB,
                                                   FeatureRDPID,
+                                                  FeatureRDPRU,
                                                   FeatureWBNOINVD];
   list<SubtargetFeature> ZN2Tuning = ZNTuning;
   list<SubtargetFeature> ZN2Features =

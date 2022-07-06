@@ -171,6 +171,7 @@ set(x86_files
   prfchwintrin.h
   ptrauth.h
   ptwriteintrin.h
+  rdpruintrin.h
   rdseedintrin.h
   rtmintrin.h
   serializeintrin.h
