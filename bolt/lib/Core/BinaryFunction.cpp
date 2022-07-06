@@ -1061,27 +1061,12 @@ bool BinaryFunction::disassemble() {
                                    Instruction, Expr, *BC.Ctx, 0)));
   };
 
-  // Used to fix the target of linker-generated AArch64 stubs with no relocation
-  // info
-  auto fixStubTarget = [&](MCInst &LoadLowBits, MCInst &LoadHiBits,
-                           uint64_t Target) {
-    const MCSymbol *TargetSymbol;
-    uint64_t Addend = 0;
-    std::tie(TargetSymbol, Addend) = BC.handleAddressRef(Target, *this, true);
-
-    int64_t Val;
-    MIB->replaceImmWithSymbolRef(LoadHiBits, TargetSymbol, Addend, Ctx.get(),
-                                 Val, ELF::R_AARCH64_ADR_PREL_PG_HI21);
-    MIB->replaceImmWithSymbolRef(LoadLowBits, TargetSymbol, Addend, Ctx.get(),
-                                 Val, ELF::R_AARCH64_ADD_ABS_LO12_NC);
-  };
-
   auto handleExternalReference = [&](MCInst &Instruction, uint64_t Size,
                                      uint64_t Offset, uint64_t TargetAddress,
                                      bool &IsCall) -> MCSymbol * {
     const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
     MCSymbol *TargetSymbol = nullptr;
-    InterproceduralReferences.insert(TargetAddress);
+    BC.addInterproceduralReference(this, TargetAddress);
     if (opts::Verbosity >= 2 && !IsCall && Size == 2 && !BC.HasRelocations) {
       errs() << "BOLT-WARNING: relaxed tail call detected at 0x"
              << Twine::utohexstr(AbsoluteInstrAddr) << " in function " << *this
@@ -1147,7 +1132,7 @@ bool BinaryFunction::disassemble() {
         HasFixedIndirectBranch = true;
       } else {
         MIB->convertJmpToTailCall(Instruction);
-        InterproceduralReferences.insert(IndirectTarget);
+        BC.addInterproceduralReference(this, IndirectTarget);
       }
       break;
     }
@@ -1164,19 +1149,20 @@ bool BinaryFunction::disassemble() {
   auto handleAArch64IndirectCall = [&](MCInst &Instruction, uint64_t Offset) {
     const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
     MCInst *TargetHiBits, *TargetLowBits;
-    uint64_t TargetAddress;
-    if (MIB->matchLinkerVeneer(Instructions.begin(), Instructions.end(),
-                               AbsoluteInstrAddr, Instruction, TargetHiBits,
-                               TargetLowBits, TargetAddress)) {
+    uint64_t TargetAddress, Count;
+    Count = MIB->matchLinkerVeneer(Instructions.begin(), Instructions.end(),
+                                   AbsoluteInstrAddr, Instruction, TargetHiBits,
+                                   TargetLowBits, TargetAddress);
+    if (Count) {
       MIB->addAnnotation(Instruction, "AArch64Veneer", true);
-
-      uint8_t Counter = 0;
-      for (auto It = std::prev(Instructions.end()); Counter != 2;
-           --It, ++Counter) {
+      --Count;
+      for (auto It = std::prev(Instructions.end()); Count != 0;
+           It = std::prev(It), --Count) {
         MIB->addAnnotation(It->second, "AArch64Veneer", true);
       }
 
-      fixStubTarget(*TargetLowBits, *TargetHiBits, TargetAddress);
+      BC.addAdrpAddRelocAArch64(*this, *TargetLowBits, *TargetHiBits,
+                                TargetAddress);
     }
   };
 
@@ -1295,7 +1281,9 @@ bool BinaryFunction::disassemble() {
             TargetSymbol = getOrCreateLocalLabel(TargetAddress);
           } else {
             if (TargetAddress == getAddress() + getSize() &&
-                TargetAddress < getAddress() + getMaxSize()) {
+                TargetAddress < getAddress() + getMaxSize() &&
+                !(BC.isAArch64() &&
+                  BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
               // Result of __builtin_unreachable().
               LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump past end detected at 0x"
                                 << Twine::utohexstr(AbsoluteInstrAddr)
@@ -2842,7 +2830,6 @@ void BinaryFunction::clearDisasmState() {
   clearList(Instructions);
   clearList(IgnoredBranches);
   clearList(TakenBranches);
-  clearList(InterproceduralReferences);
 
   if (BC.HasRelocations) {
     for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
@@ -4423,16 +4410,19 @@ void BinaryFunction::printLoopInfo(raw_ostream &OS) const {
 }
 
 bool BinaryFunction::isAArch64Veneer() const {
-  if (BasicBlocks.size() != 1)
+  if (empty())
     return false;
 
   BinaryBasicBlock &BB = **BasicBlocks.begin();
-  if (BB.size() != 3)
-    return false;
-
   for (MCInst &Inst : BB)
     if (!BC.MIB->hasAnnotation(Inst, "AArch64Veneer"))
       return false;
+
+  for (auto I = BasicBlocks.begin() + 1, E = BasicBlocks.end(); I != E; ++I) {
+    for (MCInst &Inst : **I)
+      if (!BC.MIB->isNoop(Inst))
+        return false;
+  }
 
   return true;
 }
