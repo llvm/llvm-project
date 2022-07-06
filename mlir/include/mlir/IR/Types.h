@@ -282,7 +282,8 @@ template <> struct DenseMapInfo<mlir::Type> {
   static bool isEqual(mlir::Type LHS, mlir::Type RHS) { return LHS == RHS; }
 };
 template <typename T>
-struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value>>
+struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value &&
+                                        !mlir::detail::IsInterface<T>::value>>
     : public DenseMapInfo<mlir::Type> {
   static T getEmptyKey() {
     const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
