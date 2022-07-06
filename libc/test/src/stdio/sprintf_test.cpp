@@ -8,7 +8,14 @@
 
 #include "src/stdio/sprintf.h"
 
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PlatformDefs.h"
 #include "utils/UnitTest/Test.h"
+
+// Subtract 1 from sizeof(expected_str) to account for the null byte.
+#define ASSERT_STREQ_LEN(actual_written, actual_str, expected_str)             \
+  EXPECT_EQ(actual_written, static_cast<int>(sizeof(expected_str) - 1));       \
+  EXPECT_STREQ(actual_str, expected_str);
 
 TEST(LlvmLibcSPrintfTest, SimpleNoConv) {
   char buff[64];
@@ -482,6 +489,251 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
   EXPECT_EQ(written, 26);
   ASSERT_STREQ(buff, "0077 01000000000000 002   ");
 }
+
+#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
+TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
+  char buff[64];
+  int written;
+  double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
+  double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
+
+  written = __llvm_libc::sprintf(buff, "%a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%A", -1.0);
+  ASSERT_STREQ_LEN(written, buff, "-0X1P+0");
+
+  written = __llvm_libc::sprintf(buff, "%a", -0x1.abcdef12345p0);
+  ASSERT_STREQ_LEN(written, buff, "-0x1.abcdef12345p+0");
+
+  written = __llvm_libc::sprintf(buff, "%A", 0x1.abcdef12345p0);
+  ASSERT_STREQ_LEN(written, buff, "0X1.ABCDEF12345P+0");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "0x0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%a", 1.0e100);
+  ASSERT_STREQ_LEN(written, buff, "0x1.249ad2594c37dp+332");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0.1);
+  ASSERT_STREQ_LEN(written, buff, "0x1.999999999999ap-4");
+
+  // Subnormal Tests.
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1027);
+  ASSERT_STREQ_LEN(written, buff, "0x0.08p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1025);
+  ASSERT_STREQ_LEN(written, buff, "0x0.2p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x0.8p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1022);
+  ASSERT_STREQ_LEN(written, buff, "0x1p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%a", 0x1.0p-1074);
+  ASSERT_STREQ_LEN(written, buff, "0x0.0000000000001p-1022");
+
+  // Inf/Nan Tests.
+
+  written = __llvm_libc::sprintf(buff, "%a", inf);
+  ASSERT_STREQ_LEN(written, buff, "inf");
+
+  written = __llvm_libc::sprintf(buff, "%A", -inf);
+  ASSERT_STREQ_LEN(written, buff, "-INF");
+
+  written = __llvm_libc::sprintf(buff, "%a", nan);
+  ASSERT_STREQ_LEN(written, buff, "nan");
+
+  written = __llvm_libc::sprintf(buff, "%A", -nan);
+  ASSERT_STREQ_LEN(written, buff, "-NAN");
+
+  // Length Modifier Tests.
+
+  written = __llvm_libc::sprintf(buff, "%La", 0.1L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0xc.ccccccccccccccdp-7");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x1.999999999999ap-4");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x1.999999999999999999999999999ap-4");
+#endif
+
+  written = __llvm_libc::sprintf(buff, "%La", 1.0e1000L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0xf.38db1f9dd3dac05p+3318");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "inf");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x1.e71b63f3ba7b580af1a52d2a7379p+3321");
+#endif
+
+  written = __llvm_libc::sprintf(buff, "%La", 1.0e-1000L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x8.68a9188a89e1467p-3325");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x0p+0");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x1.0d152311513c28ce202627c06ec2p-3322");
+#endif
+
+  // Min Width Tests.
+
+  written = __llvm_libc::sprintf(buff, "%15a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "         0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%15a", -1.0);
+  ASSERT_STREQ_LEN(written, buff, "        -0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%15a", 1.0e10);
+  ASSERT_STREQ_LEN(written, buff, " 0x1.2a05f2p+33");
+
+  written = __llvm_libc::sprintf(buff, "%15a", -1.0e10);
+  ASSERT_STREQ_LEN(written, buff, "-0x1.2a05f2p+33");
+
+  written = __llvm_libc::sprintf(buff, "%10a", 1.0e10);
+  ASSERT_STREQ_LEN(written, buff, "0x1.2a05f2p+33");
+
+  written = __llvm_libc::sprintf(buff, "%5a", inf);
+  ASSERT_STREQ_LEN(written, buff, "  inf");
+
+  written = __llvm_libc::sprintf(buff, "%5a", -nan);
+  ASSERT_STREQ_LEN(written, buff, " -nan");
+
+  // Precision Tests.
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "0x0.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0.1);
+  ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.0fp0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.07p0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.18p0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.2p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.ffp0);
+  ASSERT_STREQ_LEN(written, buff, "0x2.0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", 1.25);
+  ASSERT_STREQ_LEN(written, buff, "0x1.40000p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 1.25);
+  ASSERT_STREQ_LEN(written, buff, "0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 1.75);
+  ASSERT_STREQ_LEN(written, buff, "0x2p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.0p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x0.8p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.8p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x0.cp-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.0p-1024);
+  ASSERT_STREQ_LEN(written, buff, "0x0.4p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 0x1.0p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x0p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 0x1.8p-1023);
+  ASSERT_STREQ_LEN(written, buff, "0x1p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.0a", 0x1.0p-1024);
+  ASSERT_STREQ_LEN(written, buff, "0x0p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.2a", 0x1.0p-1027);
+  ASSERT_STREQ_LEN(written, buff, "0x0.08p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.1a", 0x1.0p-1027);
+  ASSERT_STREQ_LEN(written, buff, "0x0.0p-1022");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "0x0.00000p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", 0x1.008p0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.00800p+0");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", 0x1.008p10);
+  ASSERT_STREQ_LEN(written, buff, "0x1.00800p+10");
+
+  written = __llvm_libc::sprintf(buff, "%.5a", nan);
+  ASSERT_STREQ_LEN(written, buff, "nan");
+
+  written = __llvm_libc::sprintf(buff, "%.1La", 0.1L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0xc.dp-7");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
+#endif
+
+  written = __llvm_libc::sprintf(buff, "%.1La", 0xf.fffffffffffffffp16380L);
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
+#elif defined(LONG_DOUBLE_IS_DOUBLE)
+  ASSERT_STREQ_LEN(written, buff, "inf");
+#else // 128 bit long double
+  ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
+#endif
+
+  // Flag Tests.
+
+  written = __llvm_libc::sprintf(buff, "%+a", nan);
+  ASSERT_STREQ_LEN(written, buff, "+nan");
+
+  written = __llvm_libc::sprintf(buff, "% A", inf);
+  ASSERT_STREQ_LEN(written, buff, " INF");
+
+  written = __llvm_libc::sprintf(buff, "%-5a", inf);
+  ASSERT_STREQ_LEN(written, buff, "inf  ");
+
+  written = __llvm_libc::sprintf(buff, "%+-5A", nan);
+  ASSERT_STREQ_LEN(written, buff, "+NAN ");
+
+  written = __llvm_libc::sprintf(buff, "%+a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "+0x1p+0");
+
+  written = __llvm_libc::sprintf(buff, "% a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, " 0x0p+0");
+
+  written = __llvm_libc::sprintf(buff, "%-10a", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "0x1.8p+0  ");
+
+  written = __llvm_libc::sprintf(buff, "%#a", 1.0);
+  ASSERT_STREQ_LEN(written, buff, "0x1.p+0");
+
+  written = __llvm_libc::sprintf(buff, "%#.0a", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "0x2.p+0");
+
+  written = __llvm_libc::sprintf(buff, "%010a", 1.5);
+  ASSERT_STREQ_LEN(written, buff, "0x001.8p+0");
+
+  written = __llvm_libc::sprintf(buff, "%+- #0a", 0.0);
+  ASSERT_STREQ_LEN(written, buff, "+0x0.p+0");
+
+  // Combined Tests.
+
+  written = __llvm_libc::sprintf(buff, "%12.3a %-12.3A", 0.1, 256.0);
+  ASSERT_STREQ_LEN(written, buff, "  0x1.99ap-4 0X1.000P+8  ");
+
+  written = __llvm_libc::sprintf(buff, "%+-#12.3a % 012.3a", 0.1256, 1256.0);
+  ASSERT_STREQ_LEN(written, buff, "+0x1.014p-3   0x1.3a0p+10");
+}
+#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
 
 #ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
 TEST(LlvmLibcSPrintfTest, WriteIntConv) {
