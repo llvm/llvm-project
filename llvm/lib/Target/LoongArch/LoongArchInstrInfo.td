@@ -164,6 +164,11 @@ def NegImm : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
+// FP immediate patterns.
+def fpimm0    : PatLeaf<(fpimm), [{return N->isExactlyValue(+0.0);}]>;
+def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+def fpimm1    : PatLeaf<(fpimm), [{return N->isExactlyValue(+1.0);}]>;
+
 def CallSymbol: AsmOperandClass {
   let Name = "CallSymbol";
   let RenderMethod = "addImmOperands";
