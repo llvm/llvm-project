@@ -269,7 +269,7 @@ bool isPrintable(int UCS) {
 }
 
 /// Unicode code points of the Cf category are considered
-/// fornatting characters.
+/// formatting characters.
 bool isFormatting(int UCS) {
 
   // https://unicode.org/Public/14.0.0/ucdxml/
