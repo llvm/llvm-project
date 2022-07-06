@@ -25,9 +25,14 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
       BB.getOutputAddressRange().first - FuncAddress;
   const uint32_t BBInputOffset = BB.getInputOffset();
 
-  assert(BBInputOffset != BinaryBasicBlock::INVALID_OFFSET &&
-         "Every output BB must track back to an input BB for profile "
-         "collection in bolted binaries");
+  // Every output BB must track back to an input BB for profile collection
+  // in bolted binaries. If we are missing an offset, it means this block was
+  // created by a pass. We will skip writing any entries for it, and this means
+  // any traffic happening in this block will map to the previous block in the
+  // layout. This covers the case where an input basic block is split into two,
+  // and the second one lacks any offset.
+  if (BBInputOffset == BinaryBasicBlock::INVALID_OFFSET)
+    return;
 
   LLVM_DEBUG(dbgs() << "BB " << BB.getName() << "\n");
   LLVM_DEBUG(dbgs() << "  Key: " << Twine::utohexstr(BBOutputOffset)
@@ -56,13 +61,13 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
   }
 }
 
-void BoltAddressTranslation::write(raw_ostream &OS) {
+void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Writing BOLT Address Translation Tables\n");
   for (auto &BFI : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = BFI.second;
+    const BinaryFunction &Function = BFI.second;
     // We don't need a translation table if the body of the function hasn't
     // changed
-    if (!BC.HasRelocations && !Function.isSimple())
+    if (Function.isIgnored() || (!BC.HasRelocations && !Function.isSimple()))
       continue;
 
     LLVM_DEBUG(dbgs() << "Function name: " << Function.getPrintName() << "\n");
@@ -70,7 +75,7 @@ void BoltAddressTranslation::write(raw_ostream &OS) {
                       << Twine::utohexstr(Function.getOutputAddress()) << "\n");
     MapTy Map;
     const bool IsSplit = Function.isSplit();
-    for (const BinaryBasicBlock *BB : Function.getLayout().blocks()) {
+    for (const BinaryBasicBlock *const BB : Function.getLayout().blocks()) {
       if (IsSplit && BB->isCold())
         break;
       writeEntriesForBB(Map, *BB, Function.getOutputAddress());
@@ -83,7 +88,7 @@ void BoltAddressTranslation::write(raw_ostream &OS) {
     // Cold map
     Map.clear();
     LLVM_DEBUG(dbgs() << " Cold part\n");
-    for (const BinaryBasicBlock *BB : Function.getLayout().blocks()) {
+    for (const BinaryBasicBlock *const BB : Function.getLayout().blocks()) {
       if (!BB->isCold())
         continue;
       writeEntriesForBB(Map, *BB, Function.cold().getAddress());
@@ -193,10 +198,39 @@ std::error_code BoltAddressTranslation::parse(StringRef Buf) {
   return std::error_code();
 }
 
-uint64_t BoltAddressTranslation::translate(const BinaryFunction &Func,
+void BoltAddressTranslation::dump(raw_ostream &OS) {
+  const size_t NumTables = Maps.size();
+  OS << "BAT tables for " << NumTables << " functions:\n";
+  for (const auto &MapEntry : Maps) {
+    OS << "Function Address: 0x" << Twine::utohexstr(MapEntry.first) << "\n";
+    OS << "BB mappings:\n";
+    for (const auto &Entry : MapEntry.second) {
+      const bool IsBranch = Entry.second & BRANCHENTRY;
+      const uint32_t Val = Entry.second & ~BRANCHENTRY;
+      OS << "0x" << Twine::utohexstr(Entry.first) << " -> "
+         << "0x" << Twine::utohexstr(Val);
+      if (IsBranch)
+        OS << " (branch)";
+      OS << "\n";
+    }
+    OS << "\n";
+  }
+  const size_t NumColdParts = ColdPartSource.size();
+  if (!NumColdParts)
+    return;
+
+  OS << NumColdParts << " cold mappings:\n";
+  for (const auto &Entry : ColdPartSource) {
+    OS << "0x" << Twine::utohexstr(Entry.first) << " -> "
+       << Twine::utohexstr(Entry.second) << "\n";
+  }
+  OS << "\n";
+}
+
+uint64_t BoltAddressTranslation::translate(uint64_t FuncAddress,
                                            uint64_t Offset,
                                            bool IsBranchSrc) const {
-  auto Iter = Maps.find(Func.getAddress());
+  auto Iter = Maps.find(FuncAddress);
   if (Iter == Maps.end())
     return Offset;
 
@@ -217,7 +251,7 @@ uint64_t BoltAddressTranslation::translate(const BinaryFunction &Func,
 }
 
 Optional<BoltAddressTranslation::FallthroughListTy>
-BoltAddressTranslation::getFallthroughsInTrace(const BinaryFunction &Func,
+BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
                                                uint64_t From,
                                                uint64_t To) const {
   SmallVector<std::pair<uint64_t, uint64_t>, 16> Res;
@@ -226,10 +260,10 @@ BoltAddressTranslation::getFallthroughsInTrace(const BinaryFunction &Func,
   if (From >= To)
     return Res;
 
-  From -= Func.getAddress();
-  To -= Func.getAddress();
+  From -= FuncAddress;
+  To -= FuncAddress;
 
-  auto Iter = Maps.find(Func.getAddress());
+  auto Iter = Maps.find(FuncAddress);
   if (Iter == Maps.end())
     return NoneType();
 
