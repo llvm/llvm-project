@@ -685,54 +685,45 @@ system.
 ```
 dialect-namespace ::= bare-id
 
-opaque-dialect-item ::= dialect-namespace '<' string-literal '>'
+dialect-type ::= '!' (opaque-dialect-type | pretty-dialect-type)
+opaque-dialect-type ::= dialect-namespace dialect-type-body
+pretty-dialect-type ::= dialect-namespace '.' pretty-dialect-type-lead-ident
+                                              dialect-type-body?
+pretty-dialect-type-lead-ident ::= '[A-Za-z][A-Za-z0-9._]*'
 
-pretty-dialect-item ::= dialect-namespace '.' pretty-dialect-item-lead-ident
-                                              pretty-dialect-item-body?
-
-pretty-dialect-item-lead-ident ::= '[A-Za-z][A-Za-z0-9._]*'
-pretty-dialect-item-body ::= '<' pretty-dialect-item-contents+ '>'
-pretty-dialect-item-contents ::= pretty-dialect-item-body
-                              | '(' pretty-dialect-item-contents+ ')'
-                              | '[' pretty-dialect-item-contents+ ']'
-                              | '{' pretty-dialect-item-contents+ '}'
-                              | '[^\[<({\]>)}\0]+'
-
-dialect-type ::= '!' (opaque-dialect-item | pretty-dialect-item)
+dialect-type-body ::= '<' dialect-type-contents+ '>'
+dialect-type-contents ::= dialect-type-body
+                            | '(' dialect-type-contents+ ')'
+                            | '[' dialect-type-contents+ ']'
+                            | '{' dialect-type-contents+ '}'
+                            | '[^\[<({\]>)}\0]+'
 ```
 
-Dialect types can be specified in a verbose form, e.g. like this:
+Dialect types are generally specified in an opaque form, where the contents
+of the type are defined within a body wrapped with the dialect namespace
+and `<>`. Consider the following examples:
 
 ```mlir
-// LLVM type that wraps around llvm IR types.
-!llvm<"i32*">
+// A tensorflow string type.
+!tf<string>
 
-// Tensor flow string type.
-!tf.string
+// A type with complex components.
+!foo<something<abcd>>
 
-// Complex type
-!foo<"something<abcd>">
-
-// Even more complex type
-!foo<"something<a%%123^^^>>>">
+// An even more complex type.
+!foo<"a123^^^" + bar>
 ```
 
-Dialect types that are simple enough can use the pretty format, which is a
-lighter weight syntax that is equivalent to the above forms:
+Dialect types that are simple enough may use a prettier format, which unwraps
+part of the syntax into an equivalent, but lighter weight form:
 
 ```mlir
-// Tensor flow string type.
+// A tensorflow string type.
 !tf.string
 
-// Complex type
+// A type with complex components.
 !foo.something<abcd>
 ```
-
-Sufficiently complex dialect types are required to use the verbose form for
-generality. For example, the more complex type shown above wouldn't be valid in
-the lighter syntax: `!foo.something<a%%123^^^>>>` because it contains characters
-that are not allowed in the lighter syntax, as well as unbalanced `<>`
-characters.
 
 See [here](AttributesAndTypes.md) to learn how to define dialect types.
 
@@ -807,39 +798,44 @@ Example:
 
 ### Dialect Attribute Values
 
-Similarly to operations, dialects may define custom attribute values. The
-syntactic structure of these values is identical to custom dialect type values,
-except that dialect attribute values are distinguished with a leading '#', while
-dialect types are distinguished with a leading '!'.
+Similarly to operations, dialects may define custom attribute values.
 
 ```
-dialect-attribute-value ::= '#' opaque-dialect-item
-dialect-attribute-value ::= '#' pretty-dialect-item
+dialect-namespace ::= bare-id
+
+dialect-attribute ::= '#' (opaque-dialect-attribute | pretty-dialect-attribute)
+opaque-dialect-attribute ::= dialect-namespace dialect-attribute-body
+pretty-dialect-attribute ::= dialect-namespace '.' pretty-dialect-attribute-lead-ident
+                                              dialect-attribute-body?
+pretty-dialect-attribute-lead-ident ::= '[A-Za-z][A-Za-z0-9._]*'
+
+dialect-attribute-body ::= '<' dialect-attribute-contents+ '>'
+dialect-attribute-contents ::= dialect-attribute-body
+                            | '(' dialect-attribute-contents+ ')'
+                            | '[' dialect-attribute-contents+ ']'
+                            | '{' dialect-attribute-contents+ '}'
+                            | '[^\[<({\]>)}\0]+'
 ```
 
-Dialect attribute values can be specified in a verbose form, e.g. like this:
+Dialect attributes are generally specified in an opaque form, where the contents
+of the attribute are defined within a body wrapped with the dialect namespace
+and `<>`. Consider the following examples:
 
 ```mlir
-// Complex attribute value.
-#foo<"something<abcd>">
+// A string attribute.
+#foo<string<"">>
 
-// Even more complex attribute value.
-#foo<"something<a%%123^^^>>>">
+// A complex attribute.
+#foo<"a123^^^" + bar>
 ```
 
-Dialect attribute values that are simple enough can use the pretty format, which
-is a lighter weight syntax that is equivalent to the above forms:
+Dialect attributes that are simple enough may use a prettier format, which unwraps
+part of the syntax into an equivalent, but lighter weight form:
 
 ```mlir
-// Complex attribute
-#foo.something<abcd>
+// A string attribute.
+#foo.string<"">
 ```
-
-Sufficiently complex dialect attribute values are required to use the verbose
-form for generality. For example, the more complex type shown above would not be
-valid in the lighter syntax: `#foo.something<a%%123^^^>>>` because it contains
-characters that are not allowed in the lighter syntax, as well as unbalanced
-`<>` characters.
 
 See [here](AttributesAndTypes.md) on how to define dialect attribute values.
 

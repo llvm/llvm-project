@@ -842,15 +842,8 @@ func.func @dialect_type_empty_namespace(!<"">) -> () { // expected-error {{inval
 
 // -----
 
-func.func @dialect_type_no_string_type_data(!foo<>) -> () { // expected-error {{expected string literal data in dialect symbol}}
+func.func @dialect_type_missing_greater(!foo<) -> () { // expected-error {{unbalanced ')' character in pretty dialect name}}
   return
-}
-
-// -----
-
-func.func @dialect_type_missing_greater(!foo<"") -> () { // expected-error {{expected '>' in dialect symbol}}
-  return
-}
 
 // -----
 
