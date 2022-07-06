@@ -559,10 +559,6 @@ void llvm::deleteConstant(Constant *C) {
   }
 }
 
-bool Constant::canTrap() const {
-  return false;
-}
-
 /// Check if C contains a GlobalValue for which Predicate is true.
 static bool
 ConstHasGlobalValuePredicate(const Constant *C,
