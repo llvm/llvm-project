@@ -33,6 +33,9 @@ class TargetLibraryInfoImpl;
 extern cl::opt<bool> DebugifyEach;
 extern cl::opt<std::string> DebugifyExport;
 
+extern cl::opt<bool> VerifyEachDebugInfoPreserve;
+extern cl::opt<std::string> VerifyDIPreserveExport;
+
 namespace opt_tool {
 enum OutputKind {
   OK_NoOutput,
@@ -74,7 +77,7 @@ bool runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                      bool ShouldPreserveAssemblyUseListOrder,
                      bool ShouldPreserveBitcodeUseListOrder,
                      bool EmitSummaryIndex, bool EmitModuleHash,
-                     bool EnableDebugify);
+                     bool EnableDebugify, bool VerifyDIPreserve);
 } // namespace llvm
 
 #endif

@@ -294,5 +294,34 @@ define i32 @undef_operand_used(i32* %addr) {
   ret i32 %res
 }
 
+; CHECK-LABEL: sat_fmax_inf
+; CHECK-NEXT: %res = atomicrmw xchg double* %addr, double 0x7FF0000000000000 monotonic
+; CHECK-NEXT: ret double %res
+define double @sat_fmax_inf(double* %addr) {
+  %res = atomicrmw fmax double* %addr, double 0x7FF0000000000000 monotonic
+  ret double %res
+}
 
+; CHECK-LABEL: no_sat_fmax_inf
+; CHECK-NEXT: %res = atomicrmw fmax double* %addr, double 1.000000e-01 monotonic
+; CHECK-NEXT: ret double %res
+define double @no_sat_fmax_inf(double* %addr) {
+  %res = atomicrmw fmax double* %addr, double 1.000000e-01 monotonic
+  ret double %res
+}
 
+; CHECK-LABEL: sat_fmin_inf
+; CHECK-NEXT: %res = atomicrmw xchg double* %addr, double 0xFFF0000000000000 monotonic
+; CHECK-NEXT: ret double %res
+define double @sat_fmin_inf(double* %addr) {
+  %res = atomicrmw fmin double* %addr, double 0xFFF0000000000000 monotonic
+  ret double %res
+}
+
+; CHECK-LABEL: no_sat_fmin_inf
+; CHECK-NEXT: %res = atomicrmw fmin double* %addr, double 1.000000e-01 monotonic
+; CHECK-NEXT: ret double %res
+define double @no_sat_fmin_inf(double* %addr) {
+  %res = atomicrmw fmin double* %addr, double 1.000000e-01 monotonic
+  ret double %res
+}

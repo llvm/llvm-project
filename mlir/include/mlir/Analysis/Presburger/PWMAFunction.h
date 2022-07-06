@@ -54,8 +54,15 @@ public:
   bool isConsistent() const {
     return output.getNumColumns() == domainSet.getNumVars() + 1;
   }
-  const IntegerPolyhedron &getDomain() const { return domainSet; }
+
+  /// Get the space of the input domain of this function.
   const PresburgerSpace &getDomainSpace() const { return domainSet.getSpace(); }
+  /// Get the input domain of this function.
+  const IntegerPolyhedron &getDomain() const { return domainSet; }
+  /// Get a matrix with each row representing row^th output expression.
+  const Matrix &getOutputMatrix() const { return output; }
+  /// Get the `i^th` output expression.
+  ArrayRef<int64_t> getOutputExpr(unsigned i) const { return output.getRow(i); }
 
   /// Insert `num` variables of the specified kind at position `pos`.
   /// Positions are relative to the kind of variable. The coefficient columns
@@ -138,6 +145,7 @@ public:
 
   void addPiece(const MultiAffineFunction &piece);
   void addPiece(const IntegerPolyhedron &domain, const Matrix &output);
+  void addPiece(const PresburgerSet &domain, const Matrix &output);
 
   const MultiAffineFunction &getPiece(unsigned i) const { return pieces[i]; }
   unsigned getNumPieces() const { return pieces.size(); }
@@ -163,10 +171,41 @@ public:
   /// TODO: refactor so that this can be accomplished through removeVarRange.
   void truncateOutput(unsigned count);
 
+  /// Return a function defined on the union of the domains of this and func,
+  /// such that when only one of the functions is defined, it outputs the same
+  /// as that function, and if both are defined, it outputs the lexmax/lexmin of
+  /// the two outputs. On points where neither function is defined, the returned
+  /// function is not defined either.
+  ///
+  /// Currently this does not support PWMAFunctions which have pieces containing
+  /// local variables.
+  /// TODO: Support local variables in peices.
+  PWMAFunction unionLexMin(const PWMAFunction &func);
+  PWMAFunction unionLexMax(const PWMAFunction &func);
+
   void print(raw_ostream &os) const;
   void dump() const;
 
 private:
+  /// Return a function defined on the union of the domains of `this` and
+  /// `func`, such that when only one of the functions is defined, it outputs
+  /// the same as that function, and if neither is defined, the returned
+  /// function is not defined either.
+  ///
+  /// The provided `tiebreak` function determines which of the two functions'
+  /// output should be used on inputs where both the functions are defined. More
+  /// precisely, given two `MultiAffineFunction`s `mafA` and `mafB`, `tiebreak`
+  /// returns the subset of the intersection of the two functions' domains where
+  /// the output of `mafA` should be used.
+  ///
+  /// The PresburgerSet returned by `tiebreak` should be disjoint.
+  /// TODO: Remove this constraint of returning disjoint set.
+  PWMAFunction
+  unionFunction(const PWMAFunction &func,
+                llvm::function_ref<PresburgerSet(MultiAffineFunction mafA,
+                                                 MultiAffineFunction mafB)>
+                    tiebreak) const;
+
   PresburgerSpace space;
 
   /// The list of pieces in this piece-wise MultiAffineFunction.
