@@ -175,6 +175,8 @@ def call_symbol : Operand<iPTR> {
   let ParserMatchClass = CallSymbol;
 }
 
+def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -751,9 +753,9 @@ def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
 /// Loads
 
 multiclass LdPat<PatFrag LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
-  def : Pat<(vt (LoadOp GPR:$rj)), (Inst GPR:$rj, 0)>;
-  def : Pat<(vt (LoadOp (add GPR:$rj, simm12:$imm12))),
-            (Inst GPR:$rj, simm12:$imm12)>;
+  def : Pat<(vt (LoadOp BaseAddr:$rj)), (Inst BaseAddr:$rj, 0)>;
+  def : Pat<(vt (LoadOp (add BaseAddr:$rj, simm12:$imm12))),
+            (Inst BaseAddr:$rj, simm12:$imm12)>;
 }
 
 defm : LdPat<sextloadi8, LD_B>;
@@ -774,10 +776,10 @@ defm : LdPat<load, LD_D, i64>;
 
 multiclass StPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
                  ValueType vt> {
-  def : Pat<(StoreOp (vt StTy:$rd), GPR:$rj),
-            (Inst StTy:$rd, GPR:$rj, 0)>;
-  def : Pat<(StoreOp (vt StTy:$rd), (add GPR:$rj, simm12:$imm12)),
-            (Inst StTy:$rd, GPR:$rj, simm12:$imm12)>;
+  def : Pat<(StoreOp (vt StTy:$rd), BaseAddr:$rj),
+            (Inst StTy:$rd, BaseAddr:$rj, 0)>;
+  def : Pat<(StoreOp (vt StTy:$rd), (add BaseAddr:$rj, simm12:$imm12)),
+            (Inst StTy:$rd, BaseAddr:$rj, simm12:$imm12)>;
 }
 
 defm : StPat<truncstorei8, ST_B, GPR, GRLenVT>;
