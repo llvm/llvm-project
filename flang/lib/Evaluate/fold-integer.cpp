@@ -947,14 +947,15 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "selected_int_kind") {
     if (auto p{GetInt64Arg(args[0])}) {
-      return Expr<T>{SelectedIntKind(*p)};
+      return Expr<T>{context.targetCharacteristics().SelectedIntKind(*p)};
     }
   } else if (name == "selected_real_kind" ||
       name == "__builtin_ieee_selected_real_kind") {
     if (auto p{GetInt64ArgOr(args[0], 0)}) {
       if (auto r{GetInt64ArgOr(args[1], 0)}) {
         if (auto radix{GetInt64ArgOr(args[2], 2)}) {
-          return Expr<T>{SelectedRealKind(*p, *r, *radix)};
+          return Expr<T>{
+              context.targetCharacteristics().SelectedRealKind(*p, *r, *radix)};
         }
       }
     }

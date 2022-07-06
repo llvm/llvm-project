@@ -149,7 +149,7 @@ static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
   Scalar<TR> result{};
   std::tuple<Scalar<TA>...> scalarArgs{
       GetScalarConstantValue<TA>(args[I]).value()...};
-  if (context.flushSubnormalsToZero() &&
+  if (context.targetCharacteristics().areSubnormalsFlushedToZero() &&
       !hostFPE.hasSubnormalFlushingHardwareControl()) {
     hostResult = func(host::CastFortranToHost<TA>(
         FlushSubnormals<TA>(std::move(std::get<I>(scalarArgs))))...);

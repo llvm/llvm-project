@@ -3174,7 +3174,7 @@ private:
 
 Fortran::evaluate::FoldingContext
 Fortran::lower::LoweringBridge::createFoldingContext() const {
-  return {getDefaultKinds(), getIntrinsicTable()};
+  return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics()};
 }
 
 void Fortran::lower::LoweringBridge::lower(
@@ -3199,9 +3199,11 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     mlir::MLIRContext &context,
     const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
     const Fortran::evaluate::IntrinsicProcTable &intrinsics,
+    const Fortran::evaluate::TargetCharacteristics &targetCharacteristics,
     const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
     fir::KindMapping &kindMap)
-    : defaultKinds{defaultKinds}, intrinsics{intrinsics}, cooked{&cooked},
+    : defaultKinds{defaultKinds}, intrinsics{intrinsics},
+      targetCharacteristics{targetCharacteristics}, cooked{&cooked},
       context{context}, kindMap{kindMap} {
   // Register the diagnostic handler.
   context.getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {

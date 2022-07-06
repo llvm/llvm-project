@@ -8,9 +8,9 @@
 
 #include "flang/Evaluate/type.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/template.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/target.h"
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
@@ -127,32 +127,14 @@ std::optional<Expr<SubscriptInteger>> DynamicType::GetCharLength() const {
   return std::nullopt;
 }
 
-static constexpr std::size_t RealKindBytes(int kind) {
-  switch (kind) {
-  case 3: // non-IEEE 16-bit format (truncated 32-bit)
-    return 2;
-  case 10: // 80387 80-bit extended precision
-  case 12: // possible variant spelling
-    return 16;
-  default:
-    return kind;
-  }
-}
-
-std::size_t DynamicType::GetAlignment(const FoldingContext &context) const {
-  switch (category_) {
-  case TypeCategory::Integer:
-  case TypeCategory::Character:
-  case TypeCategory::Logical:
-    return std::min<std::size_t>(kind_, context.maxAlignment());
-  case TypeCategory::Real:
-  case TypeCategory::Complex:
-    return std::min(RealKindBytes(kind_), context.maxAlignment());
-  case TypeCategory::Derived:
+std::size_t DynamicType::GetAlignment(
+    const TargetCharacteristics &targetCharacteristics) const {
+  if (category_ == TypeCategory::Derived) {
     if (derived_ && derived_->scope()) {
       return derived_->scope()->alignment().value_or(1);
     }
-    break;
+  } else {
+    return targetCharacteristics.GetAlignment(category_, kind_);
   }
   return 1; // needs to be after switch to dodge a bogus gcc warning
 }
@@ -161,18 +143,19 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     FoldingContext &context, bool aligned) const {
   switch (category_) {
   case TypeCategory::Integer:
-    return Expr<SubscriptInteger>{kind_};
   case TypeCategory::Real:
-    return Expr<SubscriptInteger>{RealKindBytes(kind_)};
   case TypeCategory::Complex:
-    return Expr<SubscriptInteger>{2 * RealKindBytes(kind_)};
+  case TypeCategory::Logical:
+    return Expr<SubscriptInteger>{
+        context.targetCharacteristics().GetByteSize(category_, kind_)};
   case TypeCategory::Character:
     if (auto len{GetCharLength()}) {
-      return Fold(context, Expr<SubscriptInteger>{kind_} * std::move(*len));
+      return Fold(context,
+          Expr<SubscriptInteger>{
+              context.targetCharacteristics().GetByteSize(category_, kind_)} *
+              std::move(*len));
     }
     break;
-  case TypeCategory::Logical:
-    return Expr<SubscriptInteger>{kind_};
   case TypeCategory::Derived:
     if (derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};
@@ -506,78 +489,6 @@ int SelectedCharKind(const std::string &s, int defaultKind) { // 16.9.168
     return defaultKind;
   } else {
     return -1;
-  }
-}
-
-class SelectedIntKindVisitor {
-public:
-  explicit SelectedIntKindVisitor(std::int64_t p) : precision_{p} {}
-  using Result = std::optional<int>;
-  using Types = IntegerTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::RANGE >= precision_) {
-      return T::kind;
-    } else {
-      return std::nullopt;
-    }
-  }
-
-private:
-  std::int64_t precision_;
-};
-
-int SelectedIntKind(std::int64_t precision) {
-  if (auto kind{common::SearchTypes(SelectedIntKindVisitor{precision})}) {
-    return *kind;
-  } else {
-    return -1;
-  }
-}
-
-class SelectedRealKindVisitor {
-public:
-  explicit SelectedRealKindVisitor(std::int64_t p, std::int64_t r)
-      : precision_{p}, range_{r} {}
-  using Result = std::optional<int>;
-  using Types = RealTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::PRECISION >= precision_ && Scalar<T>::RANGE >= range_) {
-      return {T::kind};
-    } else {
-      return std::nullopt;
-    }
-  }
-
-private:
-  std::int64_t precision_, range_;
-};
-
-int SelectedRealKind(
-    std::int64_t precision, std::int64_t range, std::int64_t radix) {
-  if (radix != 2) {
-    return -5;
-  }
-  if (auto kind{
-          common::SearchTypes(SelectedRealKindVisitor{precision, range})}) {
-    return *kind;
-  }
-  // No kind has both sufficient precision and sufficient range.
-  // The negative return value encodes whether any kinds exist that
-  // could satisfy either constraint independently.
-  bool pOK{common::SearchTypes(SelectedRealKindVisitor{precision, 0})};
-  bool rOK{common::SearchTypes(SelectedRealKindVisitor{0, range})};
-  if (pOK) {
-    if (rOK) {
-      return -4;
-    } else {
-      return -2;
-    }
-  } else {
-    if (rOK) {
-      return -1;
-    } else {
-      return -3;
-    }
   }
 }
 

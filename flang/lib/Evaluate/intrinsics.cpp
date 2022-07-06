@@ -1679,7 +1679,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         if (auto *expr{kindArg->UnwrapExpr()}) {
           CHECK(expr->Rank() == 0);
           if (auto code{ToInt64(*expr)}) {
-            if (IsValidKindOfIntrinsicType(*category, *code)) {
+            if (context.targetCharacteristics().IsTypeEnabled(
+                    *category, *code)) {
               if (*category == TypeCategory::Character) { // ACHAR & CHAR
                 resultType = DynamicType{static_cast<int>(*code), 1};
               } else {
