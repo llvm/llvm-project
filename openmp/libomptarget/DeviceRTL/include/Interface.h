@@ -153,9 +153,13 @@ int omp_test_lock(omp_lock_t *Lock);
 /// Tasking
 ///
 ///{
+extern "C" {
 int omp_in_final(void);
 
 int omp_get_max_task_priority(void);
+
+void omp_fulfill_event(uint64_t);
+}
 ///}
 
 /// Misc
@@ -304,9 +308,10 @@ uint16_t __kmpc_parallel_level(IdentTy *Loc, uint32_t);
 /// Tasking
 ///
 ///{
+extern "C" {
 TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, uint32_t, int32_t,
-                                        uint32_t TaskSizeInclPrivateValues,
-                                        uint32_t SharedValuesSize,
+                                        uint64_t TaskSizeInclPrivateValues,
+                                        uint64_t SharedValuesSize,
                                         TaskFnTy TaskFn);
 
 int32_t __kmpc_omp_task(IdentTy *Loc, uint32_t TId,
@@ -337,6 +342,12 @@ void __kmpc_taskloop(IdentTy *Loc, uint32_t TId,
                      TaskDescriptorTy *TaskDescriptor, int,
                      uint64_t *LowerBound, uint64_t *UpperBound, int64_t, int,
                      int32_t, uint64_t, void *);
+
+void *__kmpc_task_allow_completion_event(IdentTy *loc_ref,
+                                                uint32_t gtid,
+                                                TaskDescriptorTy *task);
+
+}
 ///}
 
 /// Misc

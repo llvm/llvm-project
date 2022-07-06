@@ -22,6 +22,7 @@ using namespace _OMP;
 
 #pragma omp begin declare target device_type(nohost)
 
+extern "C" {
 TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, uint32_t, int32_t,
                                         uint64_t TaskSizeInclPrivateValues,
                                         uint64_t SharedValuesSize,
@@ -105,6 +106,16 @@ void __kmpc_taskloop(IdentTy *Loc, uint32_t TId,
   __kmpc_omp_task_with_deps(Loc, TId, TaskDescriptor, 0, 0, 0, 0);
 }
 
+// All tasks on GPU devices are immediately executed. This makes the
+// omp_fulfill_event routine an empty routine and we don't need to
+// register completion events on detachable tasks
+void *__kmpc_task_allow_completion_event(IdentTy *loc_ref,
+                                                uint32_t gtid,
+                                                TaskDescriptorTy *task) {
+  FunctionTracingRAII();
+  return nullptr;
+}
+
 int omp_in_final(void) {
   // treat all tasks as final... Specs may expect runtime to keep
   // track more precisely if a task was actively set by users... This
@@ -114,5 +125,12 @@ int omp_in_final(void) {
 }
 
 int omp_get_max_task_priority(void) { return 0; }
+
+// no need to fulfill an event: all tasks
+// are immediately executed by the encountering thread.
+void omp_fulfill_event(uint64_t event) {
+  FunctionTracingRAII();
+}
+} // end extern "C" for tasking
 
 #pragma omp end declare target
