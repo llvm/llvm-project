@@ -53,3 +53,32 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
                                           MachineBasicBlock &MBB) const {
   // TODO: Implement this when we have function calls
 }
+
+StackOffset LoongArchFrameLowering::getFrameIndexReference(
+    const MachineFunction &MF, int FI, Register &FrameReg) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
+
+  // Callee-saved registers should be referenced relative to the stack
+  // pointer (positive offset), otherwise use the frame pointer (negative
+  // offset).
+  const auto &CSI = MFI.getCalleeSavedInfo();
+  int MinCSFI = 0;
+  int MaxCSFI = -1;
+  StackOffset Offset =
+      StackOffset::getFixed(MFI.getObjectOffset(FI) - getOffsetOfLocalArea() +
+                            MFI.getOffsetAdjustment());
+
+  if (CSI.size()) {
+    MinCSFI = CSI[0].getFrameIdx();
+    MaxCSFI = CSI[CSI.size() - 1].getFrameIdx();
+  }
+
+  FrameReg = RI->getFrameRegister(MF);
+  if ((FI >= MinCSFI && FI <= MaxCSFI) || !hasFP(MF)) {
+    FrameReg = LoongArch::R3;
+    Offset += StackOffset::getFixed(MFI.getStackSize());
+  }
+
+  return Offset;
+}
