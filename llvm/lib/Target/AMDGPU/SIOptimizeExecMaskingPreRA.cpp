@@ -159,6 +159,9 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
     return false;
 
   Register SelReg = Op1->getReg();
+  if (SelReg.isPhysical())
+    return false;
+
   auto *Sel = TRI->findReachingDef(SelReg, Op1->getSubReg(), *Cmp, *MRI, LIS);
   if (!Sel || Sel->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
     return false;
@@ -264,13 +267,11 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 
     // Try to remove v_cndmask_b32.
     if (SelLI) {
-      bool CanRemoveSel = SelLI->Query(CmpIdx.getRegSlot()).isKill();
-      if (!CanRemoveSel) {
-        // Try to shrink the live interval and check for dead def instead.
-        LIS->shrinkToUses(SelLI, nullptr);
-        CanRemoveSel = SelLI->Query(SelIdx.getRegSlot()).isDeadDef();
-      }
-      if (CanRemoveSel) {
+      // Kill status must be checked before shrinking the live range.
+      bool IsKill = SelLI->Query(CmpIdx.getRegSlot()).isKill();
+      LIS->shrinkToUses(SelLI);
+      bool IsDead = SelLI->Query(SelIdx.getRegSlot()).isDeadDef();
+      if (MRI->use_nodbg_empty(SelReg) && (IsKill || IsDead)) {
         LLVM_DEBUG(dbgs() << "Erasing: " << *Sel << '\n');
 
         LIS->removeVRegDefAt(*SelLI, SelIdx.getRegSlot());
