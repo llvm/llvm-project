@@ -18,8 +18,7 @@ define i32 @testDiv(i8* %p, i64* %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 60392, [[TMP0]]
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[TMP1]], [[LOOP2_PREHEADER]] ], [ [[INDVARS_IV_NEXT2:%.*]], [[LOOP2]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw nsw i64 [[INDVARS_IV1]], -1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT2:%.*]] = add nuw nsw i64 [[TMP1]], -1
 ; CHECK-NEXT:    [[I4:%.*]] = load atomic i64, i64* [[P1:%.*]] unordered, align 8
 ; CHECK-NEXT:    [[I6:%.*]] = sub i64 [[I4]], [[INDVARS_IV_NEXT2]]
 ; CHECK-NEXT:    store atomic i64 [[I6]], i64* [[P1]] unordered, align 8
@@ -89,8 +88,7 @@ define i32 @testRem(i8* %p, i64* %p1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], 60392
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP5]], [[LOOP2_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP2]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nsw i64 [[TMP5]], -1
 ; CHECK-NEXT:    [[I4:%.*]] = load atomic i64, i64* [[P1:%.*]] unordered, align 8
 ; CHECK-NEXT:    [[I6:%.*]] = sub i64 [[I4]], [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    store atomic i64 [[I6]], i64* [[P1]] unordered, align 8

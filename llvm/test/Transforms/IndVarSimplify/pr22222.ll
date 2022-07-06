@@ -14,18 +14,13 @@ define i32 @main() {
 ; CHECK-NEXT:    [[A_PROMOTED13:%.*]] = load i32, i32* @a, align 4
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
-; CHECK-NEXT:    [[OR_LCSSA14:%.*]] = phi i32 [ [[A_PROMOTED13]], [[ENTRY:%.*]] ], [ [[OR_LCSSA:%.*]], [[FOR_END:%.*]] ]
-; CHECK-NEXT:    [[D_010:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ 0, [[FOR_END]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    [[INC12:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INC:%.*]], [[FOR_BODY3]] ]
-; CHECK-NEXT:    [[OR11:%.*]] = phi i32 [ [[OR_LCSSA14]], [[FOR_COND1_PREHEADER]] ], [ [[OR:%.*]], [[FOR_BODY3]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[INC12]], [[D_010]]
-; CHECK-NEXT:    [[OR]] = or i32 [[OR11]], [[ADD]]
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[INC12]], 1
-; CHECK-NEXT:    br i1 false, label [[FOR_BODY3]], label [[FOR_END]]
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 0, 1
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A_PROMOTED13]], [[ADD]]
+; CHECK-NEXT:    br i1 false, label [[FOR_BODY3]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[OR_LCSSA]] = phi i32 [ [[OR]], [[FOR_BODY3]] ]
+; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND1_PREHEADER]], label [[FOR_END6:%.*]]
 ; CHECK:       for.end6:
 ; CHECK-NEXT:    [[OR_LCSSA_LCSSA:%.*]] = phi i32 [ [[OR_LCSSA]], [[FOR_END]] ]

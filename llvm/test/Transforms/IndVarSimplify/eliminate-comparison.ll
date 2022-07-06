@@ -143,9 +143,7 @@ define void @func_10() nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store i64 [[INDVARS_IV]], i64* null, align 8
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    store i64 0, i64* null, align 8
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void

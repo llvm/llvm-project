@@ -10,13 +10,11 @@ define void @test() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 11, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 112, -1
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP3]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw i32 [[TMP2]], -6
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw i32 11, -6
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw i32 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i32 [[TMP7]], [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i32 [[TMP7]], 11
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i32 undef, 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[BB33_LOOPEXIT1:%.*]], label [[BB34_PREHEADER:%.*]]
@@ -45,7 +43,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP2_LCSSA9:%.*]] = phi i32 [ [[TMP2_LCSSA12]], [[BB11:%.*]] ]
 ; CHECK-NEXT:    br label [[BB33:%.*]]
 ; CHECK:       bb33.loopexit1:
-; CHECK-NEXT:    [[TMP2_LCSSA:%.*]] = phi i32 [ [[TMP2]], [[BB1]] ]
+; CHECK-NEXT:    [[TMP2_LCSSA:%.*]] = phi i32 [ 11, [[BB1]] ]
 ; CHECK-NEXT:    br label [[BB33]]
 ; CHECK:       bb33:
 ; CHECK-NEXT:    [[TMP210:%.*]] = phi i32 [ [[TMP2_LCSSA]], [[BB33_LOOPEXIT1]] ], [ [[TMP2_LCSSA9]], [[BB33_LOOPEXIT]] ]
