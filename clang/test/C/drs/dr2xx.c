@@ -32,6 +32,18 @@
  *
  * WG14 DR234: yes
  * Miscellaneous Typos
+ *
+ * WG14 DR245: yes
+ * Missing paragraph numbers
+ *
+ * WG14 DR247: yes
+ * Are values a form of behaviour?
+ *
+ * WG14 DR248: yes
+ * Limits are required for optional types
+ *
+ * WG14 DR255: yes
+ * Non-prototyped function calls and argument mismatches
  */
 
 
@@ -144,3 +156,99 @@ void dr230(void) {
 /* expected-error@-1 {{invalid preprocessing directive}} \
    expected-warning@-1 {{missing terminating ' character}}
 */
+
+/* WG14 DR237: no
+ * Declarations using [static]
+ */
+void dr237_f(int array[static 10]); /* c89only-warning {{static array size is a C99 feature}}
+                                       expected-note {{callee declares array parameter as static here}}
+                                     */
+void dr237_1(void) {
+  int array[4];
+  dr237_f(array); /* expected-warning {{array argument is too small; contains 4 elements, callee requires at least 10}} */
+}
+
+/* FIXME: the composite type for this declaration should retain the static
+ * array extent instead of losing it.
+ */
+void dr237_f(int array[]);
+
+void dr237_2(void) {
+  int array[4];
+  /* FIXME: this should diagnose the same as above. */
+  dr237_f(array);
+}
+
+/* WG14 DR246: yes
+ * Completion of declarators
+ */
+void dr246(void) {
+  int i[i]; /* expected-error {{use of undeclared identifier 'i'}} */
+}
+
+/* WG14 DR250: yes
+ * Non-directives within macro arguments
+ */
+void dr250(void) {
+#define dr250_nothing(x)
+
+  /* FIXME: See DR231 regarding the error about an invalid preprocessing
+   * directive.
+   */
+
+  dr250_nothing(
+#nondirective    /* expected-error {{invalid preprocessing directive}}
+                    expected-warning {{embedding a directive within macro arguments has undefined behavior}}
+                  */
+  )
+
+#undef dr250_nothing
+}
+
+/* WG14 DR251: yes
+ * Are struct fred and union fred the same type?
+ */
+union dr251_fred { int a; }; /* expected-note {{previous use is here}} */
+void dr251(void) {
+  struct dr251_fred *ptr; /* expected-error {{use of 'dr251_fred' with tag type that does not match previous declaration}} */
+}
+
+#if __STDC_VERSION__ < 202000L
+/* WG14 DR252: yes
+ * Incomplete argument types when calling non-prototyped functions
+ */
+void dr252_no_proto();  /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C}} */
+void dr252_proto(void); /* expected-note {{'dr252_proto' declared here}} */
+void dr252(void) {
+  /* It's a constraint violation to pass an argument to a function with a
+   * prototype that specifies a void parameter.
+   */
+  dr252_proto(dr252_no_proto()); /* expected-error {{too many arguments to function call, expected 0, have 1}} */
+
+  /* It's technically UB to pass an incomplete type to a function without a
+   * prototype, but Clang treats it as an error.
+   */
+  dr252_no_proto(dr252_proto()); /* expected-error {{argument type 'void' is incomplete}}
+                                    expected-warning {{passing arguments to 'dr252_no_proto' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                                  */
+}
+#endif /* __STDC_VERSION__ < 202000L */
+
+/* WG14 DR258: yes
+ * Ordering of "defined" and macro replacement
+ */
+void dr258(void) {
+  /* We get the diagnostic twice because the argument is used twice in the
+   * expansion. */
+#define repeat(x) x && x
+#if repeat(defined fred) /* expected-warning 2 {{macro expansion producing 'defined' has undefined behavior}} */
+#endif
+
+  /* We get no diagnostic because the argument is unused. */
+#define forget(x) 0
+#if forget(defined fred)
+#endif
+
+#undef repeat
+#undef forget
+}
