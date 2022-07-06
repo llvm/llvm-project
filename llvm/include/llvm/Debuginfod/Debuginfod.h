@@ -31,6 +31,7 @@
 #include "llvm/Support/Timer.h"
 
 #include <chrono>
+#include <condition_variable>
 #include <queue>
 
 namespace llvm {
