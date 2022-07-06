@@ -3,6 +3,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=fiji < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX10 %s
 
 define float @v_fma_f32(float %x, float %y, float %z) {
 ; GFX6-LABEL: v_fma_f32:

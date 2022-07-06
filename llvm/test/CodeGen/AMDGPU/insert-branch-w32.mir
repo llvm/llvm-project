@@ -1,4 +1,5 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
 
 # Designed to provoke calling SIInstrInfo::insertBranch in wave32 mode
 # The implicit $vcc operand should be $vcc_lo in this case

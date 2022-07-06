@@ -3,6 +3,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=tonga -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GFX789 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GFX789 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GFX10 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GFX11 %s
 
 ; FIXME: This test has a DAG duplicate
 
@@ -33,6 +34,13 @@ define amdgpu_kernel void @test_setreg_f32_round_mode_rtz() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_f32_round_mode_rtz:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 2), 3 ; encoding: [0x01,0x08,0x80,0xb9,0x03,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 2049, i32 3)
   call void asm sideeffect "", ""()
   ret void
@@ -60,6 +68,13 @@ define amdgpu_kernel void @test_setreg_f64_round_mode_rtz() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_f64_round_mode_rtz:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3 ; encoding: [0x81,0x08,0x80,0xb9,0x03,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 2177, i32 3)
   call void asm sideeffect "", ""()
   ret void
@@ -87,6 +102,13 @@ define amdgpu_kernel void @test_setreg_all_round_mode_rtz() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_all_round_mode_rtz:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 4), 7 ; encoding: [0x81,0x18,0x80,0xb9,0x07,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6273, i32 7)
   call void asm sideeffect "", ""()
   ret void
@@ -114,6 +136,13 @@ define amdgpu_cs void @test_setreg_roundingmode_var(i32 inreg %var.mode) {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_roundingmode_var:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 2), s0 ; encoding: [0x01,0x08,0x00,0xb9]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 2049, i32 %var.mode)
   call void asm sideeffect "", ""()
   ret void
@@ -140,6 +169,13 @@ define amdgpu_kernel void @test_setreg_ieee_mode_off() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_ieee_mode_off:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 9, 1), 0 ; encoding: [0x41,0x02,0x80,0xb9,0x00,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 577, i32 0)
   call void asm sideeffect "", ""()
   ret void
@@ -166,6 +202,13 @@ define amdgpu_kernel void @test_setreg_ieee_mode_on() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_ieee_mode_on:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 9, 1), 1 ; encoding: [0x41,0x02,0x80,0xb9,0x01,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 577, i32 1)
   call void asm sideeffect "", ""()
   ret void
@@ -192,6 +235,13 @@ define amdgpu_kernel void @test_setreg_dx10_clamp_off() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_dx10_clamp_off:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 8, 1), 0 ; encoding: [0x01,0x02,0x80,0xb9,0x00,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 513, i32 0)
   call void asm sideeffect "", ""()
   ret void
@@ -218,6 +268,13 @@ define amdgpu_kernel void @test_setreg_dx10_clamp_on() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_dx10_clamp_on:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 8, 1), 1 ; encoding: [0x01,0x02,0x80,0xb9,0x01,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 513, i32 1)
   call void asm sideeffect "", ""()
   ret void
@@ -245,6 +302,13 @@ define amdgpu_cs void @test_setreg_full_both_round_mode_and_denorm_mode(i32 inre
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 8), s0 ; encoding: [0x01,0x38,0x00,0xb9]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 inreg %mode)
   call void asm sideeffect "", ""()
   ret void
@@ -272,6 +336,13 @@ define amdgpu_cs void @test_setreg_most_both_round_mode_and_denorm_mode() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_most_both_round_mode_and_denorm_mode:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 7), 6 ; encoding: [0x01,0x30,0x80,0xb9,0x06,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 12289, i32 6)
   call void asm sideeffect "", ""()
   ret void
@@ -299,6 +370,13 @@ define amdgpu_cs void @test_setreg_most_both_round_mode_and_denorm_mode_6() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_most_both_round_mode_and_denorm_mode_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 1, 3), 6 ; encoding: [0x41,0x10,0x80,0xb9,0x06,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 4161, i32 6)
   call void asm sideeffect "", ""()
   ret void
@@ -325,6 +403,13 @@ define amdgpu_cs void @test_setreg_f32_denorm_mode(i32 inreg %val) {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_f32_denorm_mode:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0 ; encoding: [0x01,0x09,0x00,0xb9]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 2305, i32 %val)
   call void asm sideeffect "", ""()
   ret void
@@ -351,6 +436,13 @@ define amdgpu_cs void @test_setreg_f64_denorm_mode(i32 inreg %val) {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_f64_denorm_mode:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 6, 2), s0 ; encoding: [0x81,0x09,0x00,0xb9]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 2433, i32 %val)
   call void asm sideeffect "", ""()
   ret void
@@ -377,6 +469,13 @@ define amdgpu_cs void @test_setreg_full_denorm_mode(i32 inreg %val) {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_denorm_mode:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s0 ; encoding: [0x01,0x18,0x00,0xb9]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6145, i32 %val)
   call void asm sideeffect "", ""()
   ret void
@@ -403,6 +502,13 @@ define amdgpu_kernel void @test_setreg_full_round_mode_0() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_round_mode_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x0 ; encoding: [0x00,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6145, i32 0)
   call void asm sideeffect "", ""()
   ret void
@@ -429,6 +535,13 @@ define amdgpu_kernel void @test_setreg_full_round_mode_1() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_round_mode_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x1 ; encoding: [0x01,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6145, i32 1)
   call void asm sideeffect "", ""()
   ret void
@@ -455,6 +568,13 @@ define amdgpu_kernel void @test_setreg_full_round_mode_2() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_round_mode_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x2 ; encoding: [0x02,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6145, i32 2)
   call void asm sideeffect "", ""()
   ret void
@@ -481,6 +601,13 @@ define amdgpu_kernel void @test_setreg_full_round_mode_4() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_round_mode_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x4 ; encoding: [0x04,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6145, i32 4)
   call void asm sideeffect "", ""()
   ret void
@@ -507,6 +634,13 @@ define amdgpu_kernel void @test_setreg_full_round_mode_8() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_round_mode_8:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x8 ; encoding: [0x08,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6145, i32 8)
   call void asm sideeffect "", ""()
   ret void
@@ -533,6 +667,13 @@ define amdgpu_kernel void @test_setreg_full_round_mode_15() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_round_mode_15:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0xf ; encoding: [0x0f,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6145, i32 15)
   call void asm sideeffect "", ""()
   ret void
@@ -560,6 +701,13 @@ define amdgpu_kernel void @test_setreg_full_round_mode_42() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_round_mode_42:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0xa ; encoding: [0x0a,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6145, i32 42)
   call void asm sideeffect "", ""()
   ret void
@@ -586,6 +734,13 @@ define amdgpu_kernel void @test_setreg_full_denorm_mode_0() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_denorm_mode_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0x92,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6401, i32 0)
   call void asm sideeffect "", ""()
   ret void
@@ -612,6 +767,13 @@ define amdgpu_kernel void @test_setreg_full_denorm_mode_1() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_denorm_mode_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_denorm_mode 1 ; encoding: [0x01,0x00,0x92,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6401, i32 1)
   call void asm sideeffect "", ""()
   ret void
@@ -639,6 +801,13 @@ define amdgpu_kernel void @test_setreg_full_denorm_mode_2() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_denorm_mode_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_denorm_mode 2 ; encoding: [0x02,0x00,0x92,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6401, i32 2)
   call void asm sideeffect "", ""()
   ret void
@@ -665,6 +834,13 @@ define amdgpu_kernel void @test_setreg_full_denorm_mode_4() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_denorm_mode_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_denorm_mode 4 ; encoding: [0x04,0x00,0x92,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6401, i32 4)
   call void asm sideeffect "", ""()
   ret void
@@ -691,6 +867,13 @@ define amdgpu_kernel void @test_setreg_full_denorm_mode_8() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_denorm_mode_8:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_denorm_mode 8 ; encoding: [0x08,0x00,0x92,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6401, i32 8)
   call void asm sideeffect "", ""()
   ret void
@@ -717,6 +900,13 @@ define amdgpu_kernel void @test_setreg_full_denorm_mode_15() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_denorm_mode_15:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_denorm_mode 15 ; encoding: [0x0f,0x00,0x92,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6401, i32 15)
   call void asm sideeffect "", ""()
   ret void
@@ -743,6 +933,13 @@ define amdgpu_kernel void @test_setreg_full_denorm_mode_42() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_denorm_mode_42:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_denorm_mode 10 ; encoding: [0x0a,0x00,0x92,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6401, i32 42)
   call void asm sideeffect "", ""()
   ret void
@@ -771,6 +968,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_0() 
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x0 ; encoding: [0x00,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 0)
   call void asm sideeffect "", ""()
   ret void
@@ -798,6 +1003,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_1() 
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x1 ; encoding: [0x01,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 1)
   call void asm sideeffect "", ""()
   ret void
@@ -825,6 +1038,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_2() 
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x2 ; encoding: [0x02,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 2)
   call void asm sideeffect "", ""()
   ret void
@@ -852,6 +1073,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_4() 
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x4 ; encoding: [0x04,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 4)
   call void asm sideeffect "", ""()
   ret void
@@ -879,6 +1108,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_8() 
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_8:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x8 ; encoding: [0x08,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 8)
   call void asm sideeffect "", ""()
   ret void
@@ -906,6 +1143,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_16()
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 1 ; encoding: [0x01,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x0 ; encoding: [0x00,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 1 ; encoding: [0x01,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 16)
   call void asm sideeffect "", ""()
   ret void
@@ -933,6 +1178,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_32()
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 2 ; encoding: [0x02,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x0 ; encoding: [0x00,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 2 ; encoding: [0x02,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 32)
   call void asm sideeffect "", ""()
   ret void
@@ -960,6 +1213,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_64()
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 4 ; encoding: [0x04,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x0 ; encoding: [0x00,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 4 ; encoding: [0x04,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 64)
   call void asm sideeffect "", ""()
   ret void
@@ -987,6 +1248,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_128(
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 8 ; encoding: [0x08,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_128:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x0 ; encoding: [0x00,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 8 ; encoding: [0x08,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 128)
   call void asm sideeffect "", ""()
   ret void
@@ -1014,6 +1283,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_15()
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_15:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0xf ; encoding: [0x0f,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 0 ; encoding: [0x00,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 15)
   call void asm sideeffect "", ""()
   ret void
@@ -1041,6 +1318,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_255(
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 15 ; encoding: [0x0f,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_255:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0xf ; encoding: [0x0f,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 15 ; encoding: [0x0f,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 255)
   call void asm sideeffect "", ""()
   ret void
@@ -1069,6 +1354,14 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_597(
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_denorm_mode 5 ; encoding: [0x05,0x00,0xa5,0xbf]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_full_both_round_mode_and_denorm_mode_597:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x5 ; encoding: [0x05,0x00,0x91,0xbf]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_denorm_mode 5 ; encoding: [0x05,0x00,0x92,0xbf]
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 597)
   call void asm sideeffect "", ""()
   ret void
@@ -1095,6 +1388,13 @@ define amdgpu_kernel void @test_setreg_set_8_bits_straddles_round_and_denorm() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_set_8_bits_straddles_round_and_denorm:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 8), 0xff ; encoding: [0x81,0x38,0x80,0xb9,0xff,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 14465, i32 255)
   call void asm sideeffect "", ""()
   ret void
@@ -1121,6 +1421,13 @@ define amdgpu_kernel void @test_setreg_set_4_bits_straddles_round_and_denorm() {
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_setreg_set_4_bits_straddles_round_and_denorm:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 4), 15 ; encoding: [0x81,0x18,0x80,0xb9,0x0f,0x00,0x00,0x00]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
   call void @llvm.amdgcn.s.setreg(i32 6273, i32 15)
   call void asm sideeffect "", ""()
   ret void
@@ -1155,6 +1462,17 @@ define void @test_setreg_roundingmode_var_vgpr(i32 %var.mode) {
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 3), s4 ; encoding: [0x01,0x10,0x84,0xb9]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
+;
+; GFX11-LABEL: test_setreg_roundingmode_var_vgpr:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0x7c,0xbc]
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0 ; encoding: [0x00,0x05,0x00,0x7e]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) ; encoding: [0x01,0x00,0x87,0xbf]
+; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 3), s0 ; encoding: [0x01,0x10,0x00,0xb9]
+; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
   call void @llvm.amdgcn.s.setreg(i32 4097, i32 %var.mode)
   call void asm sideeffect "", ""()
   ret void
