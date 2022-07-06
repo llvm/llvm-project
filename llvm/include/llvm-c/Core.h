@@ -381,8 +381,14 @@ typedef enum {
                               the old one */
     LLVMAtomicRMWBinOpFAdd, /**< Add a floating point value and return the
                               old one */
-    LLVMAtomicRMWBinOpFSub /**< Subtract a floating point value and return the
-                             old one */
+    LLVMAtomicRMWBinOpFSub, /**< Subtract a floating point value and return the
+                            old one */
+    LLVMAtomicRMWBinOpFMax, /**< Sets the value if it's greater than the
+                             original using an floating point comparison and
+                             return the old one */
+    LLVMAtomicRMWBinOpFMin, /**< Sets the value if it's smaller than the
+                             original using an floating point comparison and
+                             return the old one */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {

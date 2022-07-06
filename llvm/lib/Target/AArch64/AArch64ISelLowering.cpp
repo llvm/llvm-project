@@ -1086,8 +1086,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // SVE and SME.
   if (Subtarget->hasSVE() || Subtarget->hasSME()) {
     for (auto VT :
-         {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1})
+         {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1}) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+    }
   }
 
   if (Subtarget->hasSVE()) {
@@ -1176,7 +1178,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
 
       setOperationAction(ISD::SELECT_CC, VT, Expand);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
 
@@ -4361,6 +4362,8 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
 
 static inline SDValue getPTrue(SelectionDAG &DAG, SDLoc DL, EVT VT,
                                int Pattern) {
+  if (VT == MVT::nxv1i1 && Pattern == AArch64SVEPredPattern::all)
+    return DAG.getConstant(1, DL, MVT::nxv1i1);
   return DAG.getNode(AArch64ISD::PTRUE, DL, VT,
                      DAG.getTargetConstant(Pattern, DL, MVT::i32));
 }
@@ -21091,7 +21094,7 @@ SDValue AArch64TargetLowering::LowerPredReductionToSVE(SDValue ReduceOp,
   default:
     return SDValue();
   case ISD::VECREDUCE_OR:
-    if (isAllActivePredicate(DAG, Pg))
+    if (isAllActivePredicate(DAG, Pg) && OpVT == MVT::nxv16i1)
       // The predicate can be 'Op' because
       // vecreduce_or(Op & <all true>) <=> vecreduce_or(Op).
       return getPTest(DAG, VT, Op, Op, AArch64CC::ANY_ACTIVE);
@@ -21104,6 +21107,11 @@ SDValue AArch64TargetLowering::LowerPredReductionToSVE(SDValue ReduceOp,
   case ISD::VECREDUCE_XOR: {
     SDValue ID =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64);
+    if (OpVT == MVT::nxv1i1) {
+      // Emulate a CNTP on .Q using .D and a different governing predicate.
+      Pg = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv2i1, Pg);
+      Op = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv2i1, Op);
+    }
     SDValue Cntp =
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64, ID, Pg, Op);
     return DAG.getAnyExtOrTrunc(Cntp, DL, VT);

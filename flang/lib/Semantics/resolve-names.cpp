@@ -4325,7 +4325,7 @@ void DeclarationVisitor::Post(const parser::CharSelector::LengthAndKind &x) {
   charInfo_.kind = EvaluateSubscriptIntExpr(x.kind);
   std::optional<std::int64_t> intKind{ToInt64(charInfo_.kind)};
   if (intKind &&
-      !evaluate::IsValidKindOfIntrinsicType(
+      !context().targetCharacteristics().IsTypeEnabled(
           TypeCategory::Character, *intKind)) { // C715, C719
     Say(currStmtSource().value(),
         "KIND value (%jd) not valid for CHARACTER"_err_en_US, *intKind);

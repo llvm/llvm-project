@@ -518,7 +518,8 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
   KindExpr copy{Fold(common::Clone(intrinsic.kind()))};
   int kind{context().GetDefaultKind(intrinsic.category())};
   if (auto value{evaluate::ToInt64(copy)}) {
-    if (evaluate::IsValidKindOfIntrinsicType(intrinsic.category(), *value)) {
+    if (foldingContext().targetCharacteristics().IsTypeEnabled(
+            intrinsic.category(), *value)) {
       kind = *value;
     } else {
       foldingContext().messages().Say(symbolName,

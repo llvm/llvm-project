@@ -76,6 +76,49 @@ typedef int int32_t;
   "pop %%rbx\n"                                                                \
   "pop %%rax\n"
 
+// Functions that are required by freestanding environment. Compiler may
+// generate calls to these implicitly.
+extern "C" {
+void *memcpy(void *Dest, const void *Src, size_t Len) {
+  uint8_t *d = static_cast<uint8_t *>(Dest);
+  const uint8_t *s = static_cast<const uint8_t *>(Src);
+  while (Len--)
+    *d++ = *s++;
+  return Dest;
+}
+
+void *memmove(void *Dest, const void *Src, size_t Len) {
+  uint8_t *d = static_cast<uint8_t *>(Dest);
+  const uint8_t *s = static_cast<const uint8_t *>(Src);
+  if (d < s) {
+    while (Len--)
+      *d++ = *s++;
+  } else {
+    s += Len - 1;
+    d += Len - 1;
+    while (Len--)
+      *d-- = *s--;
+  }
+
+  return Dest;
+}
+
+void memset(char *Buf, char C, uint32_t Size) {
+  for (int I = 0; I < Size; ++I)
+    *Buf++ = C;
+}
+
+int memcmp(const void *s1, const void *s2, size_t n) {
+  const uint8_t *c1 = static_cast<const uint8_t *>(s1);
+  const uint8_t *c2 = static_cast<const uint8_t *>(s2);
+  for (; n--; c1++, c2++) {
+    if (*c1 != *c2)
+      return *c1 < *c2 ? -1 : 1;
+  }
+  return 0;
+}
+} // extern "C"
+
 // Anonymous namespace covering everything but our library entry point
 namespace {
 
@@ -187,7 +230,7 @@ uint64_t __exit(uint64_t code) {
 }
 
 // Helper functions for writing strings to the .fdata file. We intentionally
-// avoid using libc names (lowercase memset) to make it clear it is our impl.
+// avoid using libc names to make it clear it is our impl.
 
 /// Write number Num using Base to the buffer in OutBuf, returns a pointer to
 /// the end of the string.
@@ -229,19 +272,6 @@ int strnCmp(const char *Str1, const char *Str2, size_t Num) {
   if (Num == 0)
     return 0;
   return *(unsigned char *)Str1 - *(unsigned char *)Str2;
-}
-
-void memSet(char *Buf, char C, uint32_t Size) {
-  for (int I = 0; I < Size; ++I)
-    *Buf++ = C;
-}
-
-void *memCpy(void *Dest, const void *Src, size_t Len) {
-  char *d = static_cast<char *>(Dest);
-  const char *s = static_cast<const char *>(Src);
-  while (Len--)
-    *d++ = *s++;
-  return Dest;
 }
 
 uint32_t strLen(const char *Str) {

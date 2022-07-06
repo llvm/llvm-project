@@ -651,6 +651,10 @@ def atomic_load_fadd : SDNode<"ISD::ATOMIC_LOAD_FADD" , SDTFPAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_fsub : SDNode<"ISD::ATOMIC_LOAD_FSUB" , SDTFPAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_fmax : SDNode<"ISD::ATOMIC_LOAD_FMAX", SDTFPAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_fmin : SDNode<"ISD::ATOMIC_LOAD_FMIN", SDTFPAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def atomic_load      : SDNode<"ISD::ATOMIC_LOAD", SDTAtomicLoad,
                     [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;

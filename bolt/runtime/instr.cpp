@@ -224,7 +224,7 @@ BumpPtrAllocator GlobalAlloc;
 void *operator new(size_t Sz, BumpPtrAllocator &A) { return A.allocate(Sz); }
 void *operator new(size_t Sz, BumpPtrAllocator &A, char C) {
   auto *Ptr = reinterpret_cast<char *>(A.allocate(Sz));
-  memSet(Ptr, C, Sz);
+  memset(Ptr, C, Sz);
   return Ptr;
 }
 void *operator new[](size_t Sz, BumpPtrAllocator &A) {
@@ -232,7 +232,7 @@ void *operator new[](size_t Sz, BumpPtrAllocator &A) {
 }
 void *operator new[](size_t Sz, BumpPtrAllocator &A, char C) {
   auto *Ptr = reinterpret_cast<char *>(A.allocate(Sz));
-  memSet(Ptr, C, Sz);
+  memset(Ptr, C, Sz);
   return Ptr;
 }
 // Only called during exception unwinding (useless). We must manually dealloc.
@@ -1438,7 +1438,7 @@ int openProfile() {
 /// Where 0xdeadbeef is this function address and PROCESSNAME your binary file
 /// name.
 extern "C" void __bolt_instr_clear_counters() {
-  memSet(reinterpret_cast<char *>(__bolt_instr_locations), 0,
+  memset(reinterpret_cast<char *>(__bolt_instr_locations), 0,
          __bolt_num_counters * 8);
   for (int I = 0; I < __bolt_instr_num_ind_calls; ++I)
     GlobalIndCallCounters[I].resetCounters();
