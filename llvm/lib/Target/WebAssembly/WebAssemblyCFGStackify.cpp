@@ -781,25 +781,6 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
   }
 }
 
-// Get the appropriate copy opcode for the given register class.
-static unsigned getCopyOpcode(const TargetRegisterClass *RC) {
-  if (RC == &WebAssembly::I32RegClass)
-    return WebAssembly::COPY_I32;
-  if (RC == &WebAssembly::I64RegClass)
-    return WebAssembly::COPY_I64;
-  if (RC == &WebAssembly::F32RegClass)
-    return WebAssembly::COPY_F32;
-  if (RC == &WebAssembly::F64RegClass)
-    return WebAssembly::COPY_F64;
-  if (RC == &WebAssembly::V128RegClass)
-    return WebAssembly::COPY_V128;
-  if (RC == &WebAssembly::FUNCREFRegClass)
-    return WebAssembly::COPY_FUNCREF;
-  if (RC == &WebAssembly::EXTERNREFRegClass)
-    return WebAssembly::COPY_EXTERNREF;
-  llvm_unreachable("Unexpected register class");
-}
-
 // When MBB is split into MBB and Split, we should unstackify defs in MBB that
 // have their uses in Split.
 static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
@@ -851,7 +832,8 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
     if (!MFI.isVRegStackified(TeeReg)) {
       // Now we are not using TEE anymore, so unstackify DefReg too
       MFI.unstackifyVReg(DefReg);
-      unsigned CopyOpc = getCopyOpcode(MRI.getRegClass(DefReg));
+      unsigned CopyOpc =
+          WebAssembly::getCopyOpcodeForRegClass(MRI.getRegClass(DefReg));
       BuildMI(MBB, &MI, MI.getDebugLoc(), TII.get(CopyOpc), TeeReg)
           .addReg(DefReg);
       BuildMI(MBB, &MI, MI.getDebugLoc(), TII.get(CopyOpc), Reg).addReg(DefReg);

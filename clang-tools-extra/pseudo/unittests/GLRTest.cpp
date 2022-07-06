@@ -48,6 +48,17 @@ parents(llvm::ArrayRef<const GSS::Node *> Parents) {
                            testing::UnorderedElementsAreArray(Parents));
 }
 
+Token::Index recoverBraces(Token::Index Begin, const TokenStream &Code) {
+  EXPECT_GT(Begin, 0u);
+  const Token &Left = Code.tokens()[Begin - 1];
+  EXPECT_EQ(Left.Kind, tok::l_brace);
+  if (const auto* Right = Left.pair()) {
+    EXPECT_EQ(Right->Kind, tok::r_brace);
+    return Code.index(*Right);
+  }
+  return Token::Invalid;
+}
+
 class GLRTest : public ::testing::Test {
 public:
   void build(llvm::StringRef GrammarBNF) {
@@ -375,11 +386,12 @@ TEST_F(GLRTest, Recover) {
   //    0--1({)--2(?)
   //  After recovering a `word` at state 1:
   //    0--3(word)  // 3 is goto(1, word)
-  buildGrammar({"word"}, {});
+  buildGrammar({"word", "top"}, {"top := { word [recover=Braces] }"});
   LRTable::Builder B(TestLang.G);
   B.Transition[{StateID{1}, id("word")}] = StateID{3};
-  B.Recoveries.push_back({StateID{1}, {RecoveryStrategy::Braces, id("word")}});
+  B.Recoveries.push_back({StateID{1}, {extensionID("Braces"), id("word")}});
   TestLang.Table = std::move(B).build();
+  TestLang.RecoveryStrategies.try_emplace(extensionID("Braces"), recoverBraces);
 
   auto *LBrace = &Arena.createTerminal(tok::l_brace, 0);
   auto *Question1 = &Arena.createTerminal(tok::question, 1);
@@ -418,11 +430,12 @@ TEST_F(GLRTest, RecoverRightmost) {
   //    0--1({)--1({)--1({)
   //  After recovering a `block` at inside the second braces:
   //    0--1({)--2(body)  // 2 is goto(1, body)
-  buildGrammar({"body"}, {});
+  buildGrammar({"body", "top"}, {"top := { body [recover=Braces] }"});
   LRTable::Builder B(TestLang.G);
   B.Transition[{StateID{1}, id("body")}] = StateID{2};
-  B.Recoveries.push_back({StateID{1}, {RecoveryStrategy::Braces, id("body")}});
+  B.Recoveries.push_back({StateID{1}, {extensionID("Braces"), id("body")}});
   TestLang.Table = std::move(B).build();
+  TestLang.RecoveryStrategies.try_emplace(extensionID("Braces"), recoverBraces);
 
   clang::LangOptions LOptions;
   // Innermost brace is unmatched, to test fallback to next brace.
@@ -455,13 +468,17 @@ TEST_F(GLRTest, RecoverAlternatives) {
   //  After recovering either `word` or `number` inside the braces:
   //    0--1({)--2(word)   // 2 is goto(1, word)
   //          └--3(number) // 3 is goto(1, number)
-  buildGrammar({"number", "word"}, {});
+  buildGrammar({"number", "word", "top"},
+               {
+                   "top := { number [recover=Braces] }",
+                   "top := { word [recover=Braces] }",
+               });
   LRTable::Builder B(TestLang.G);
   B.Transition[{StateID{1}, id("number")}] = StateID{2};
   B.Transition[{StateID{1}, id("word")}] = StateID{3};
-  B.Recoveries.push_back(
-      {StateID{1}, {RecoveryStrategy::Braces, id("number")}});
-  B.Recoveries.push_back({StateID{1}, {RecoveryStrategy::Braces, id("word")}});
+  B.Recoveries.push_back({StateID{1}, {extensionID("Braces"), id("number")}});
+  B.Recoveries.push_back({StateID{1}, {extensionID("Braces"), id("word")}});
+  TestLang.RecoveryStrategies.try_emplace(extensionID("Braces"), recoverBraces);
   TestLang.Table = std::move(B).build();
   auto *LBrace = &Arena.createTerminal(tok::l_brace, 0);
   const auto *Root = GSStack.addNode(0, nullptr, {});
@@ -560,11 +577,12 @@ TEST_F(GLRTest, RecoveryEndToEnd) {
   build(R"bnf(
     _ := block
 
-    block := { block }
-    block := { numbers }
+    block := { block [recover=Braces] }
+    block := { numbers [recover=Braces] }
     numbers := NUMERIC_CONSTANT NUMERIC_CONSTANT
   )bnf");
   TestLang.Table = LRTable::buildSLR(TestLang.G);
+  TestLang.RecoveryStrategies.try_emplace(extensionID("Braces"), recoverBraces);
   clang::LangOptions LOptions;
   TokenStream Tokens = cook(lex("{ { 42 ? } }", LOptions), LOptions);
   pairBrackets(Tokens);
@@ -572,14 +590,14 @@ TEST_F(GLRTest, RecoveryEndToEnd) {
   const ForestNode &Parsed =
       glrParse({Tokens, Arena, GSStack}, id("block"), TestLang);
   EXPECT_EQ(Parsed.dumpRecursive(TestLang.G),
-            "[  0, end) block := { block [recover=1] }\n"
+            "[  0, end) block := { block [recover=Braces] }\n"
             "[  0,   1) ├─{ := tok[0]\n"
             "[  1,   5) ├─block := <ambiguous>\n"
-            "[  1,   5) │ ├─block := { block [recover=1] }\n"
+            "[  1,   5) │ ├─block := { block [recover=Braces] }\n"
             "[  1,   2) │ │ ├─{ := tok[1]\n"
             "[  2,   4) │ │ ├─block := <opaque>\n"
             "[  4,   5) │ │ └─} := tok[4]\n"
-            "[  1,   5) │ └─block := { numbers [recover=1] }\n"
+            "[  1,   5) │ └─block := { numbers [recover=Braces] }\n"
             "[  1,   2) │   ├─{ := tok[1]\n"
             "[  2,   4) │   ├─numbers := <opaque>\n"
             "[  4,   5) │   └─} := tok[4]\n"

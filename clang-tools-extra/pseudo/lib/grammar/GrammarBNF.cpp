@@ -106,17 +106,6 @@ public:
 
     assert(T->Rules.size() < (1 << RuleBits) &&
            "Too many rules to fit in RuleID bits!");
-    // Wherever RHS contains { foo }, mark foo for brace-recovery.
-    // FIXME: this should be grammar annotations instead.
-    for (auto &Rule : T->Rules) {
-      for (unsigned I = 2; I < Rule.Size; ++I)
-        if (Rule.Sequence[I] == tokenSymbol(tok::r_brace) &&
-            Rule.Sequence[I - 2] == tokenSymbol(tok::l_brace) &&
-            !isToken(Rule.Sequence[I - 1])) {
-          Rule.Recovery = RecoveryStrategy::Braces;
-          Rule.RecoveryIndex = I - 1;
-        }
-    }
     const auto &SymbolOrder = getTopologicalOrder(T.get());
     llvm::stable_sort(
         T->Rules, [&SymbolOrder](const Rule &Left, const Rule &Right) {
@@ -266,13 +255,18 @@ private:
              "Didn't find the attribute in AttrValues!");
       return It - T.AttributeValues.begin();
     };
-    for (const auto &KV : Spec.Sequence.back().Attributes) {
-      if (KV.first == "guard") {
-        R.Guard = LookupExtensionID(KV.second);
-        continue;
+    for (unsigned I = 0; I < Spec.Sequence.size(); ++I) {
+      for (const auto &KV : Spec.Sequence[I].Attributes) {
+        if (KV.first == "guard") {
+          R.Guard = LookupExtensionID(KV.second);
+        } else if (KV.first == "recover") {
+          R.Recovery = LookupExtensionID(KV.second);
+          R.RecoveryIndex = I;
+        } else {
+          Diagnostics.push_back(
+              llvm::formatv("Unknown attribute '{0}'", KV.first).str());
+        }
       }
-      Diagnostics.push_back(
-          llvm::formatv("Unknown attribute '{0}'", KV.first).str());
     }
   }
 

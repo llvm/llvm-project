@@ -27,15 +27,13 @@ namespace clang {
 namespace pseudo {
 namespace {
 
-Token::Index findRecoveryEndpoint(RecoveryStrategy Strategy,
-                                  const GSS::Node *RecoveryNode,
-                                  const TokenStream &Tokens) {
-  assert(Strategy == RecoveryStrategy::Braces);
-  const ForestNode *LBrace = RecoveryNode->Payload;
-  assert(LBrace->kind() == ForestNode::Terminal &&
-         LBrace->symbol() == tokenSymbol(tok::l_brace));
-  if (const Token *RBrace = Tokens.tokens()[LBrace->startTokenIndex()].pair())
-    return Tokens.index(*RBrace);
+Token::Index findRecoveryEndpoint(ExtensionID Strategy, Token::Index Begin,
+                                  const TokenStream &Tokens,
+                                  const Language &Lang) {
+  assert(Strategy != 0);
+  assert(Begin > 0);
+  if (auto S = Lang.RecoveryStrategies.lookup(Strategy))
+    return S(Begin, Tokens);
   return Token::Invalid;
 }
 
@@ -55,7 +53,7 @@ void glrRecover(llvm::ArrayRef<const GSS::Node *> OldHeads,
     // The nonterminal which will be created in order to recover.
     SymbolID Symbol;
     // The heuristic used to choose the bounds of the nonterminal to recover.
-    RecoveryStrategy Strategy;
+    ExtensionID Strategy;
 
     // The GSS head where we are expecting the recovered nonterminal.
     const GSS::Node *RecoveryNode;
@@ -142,8 +140,8 @@ void glrRecover(llvm::ArrayRef<const GSS::Node *> OldHeads,
     if (RecoveryRange && Option.Position < RecoveryRange->Begin)
       break;
 
-    auto End =
-        findRecoveryEndpoint(Option.Strategy, Option.RecoveryNode, Params.Code);
+    auto End = findRecoveryEndpoint(Option.Strategy, Option.Position,
+                                    Params.Code, Lang);
     // Recovery may not take the parse backwards.
     if (End == Token::Invalid || End < TokenIndex)
       continue;
