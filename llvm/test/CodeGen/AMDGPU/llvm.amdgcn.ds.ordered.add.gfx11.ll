@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
 
 ; FUNC-LABEL: {{^}}ds_ordered_add:
 ; GCN-DAG: v_{{(dual_)?}}mov_b32{{(_e32)?}} v[[INCR:[0-9]+]], 31

@@ -537,7 +537,7 @@ func.func @parallel_insert_slice_no_conflict(
       // CHECK-NOT: scf.foreach_thread.perform_concurrently
       // CHECK-NOT: parallel_insert_slice
       scf.foreach_thread.perform_concurrently {
-        scf.foreach_thread.parallel_insert_slice %8 into %arg2[5] [%idx] [%c1] : 
+        tensor.parallel_insert_slice %8 into %arg2[5] [%idx] [%c1] : 
           tensor<?xf32> into tensor<?xf32>
       }
   }
@@ -589,7 +589,7 @@ func.func @parallel_insert_slice_with_conflict(
       // CHECK-NOT: scf.foreach_thread.perform_concurrently
       // CHECK-NOT: parallel_insert_slice
       scf.foreach_thread.perform_concurrently {
-        scf.foreach_thread.parallel_insert_slice %8 into %arg2[5] [%idx] [%c1] :
+        tensor.parallel_insert_slice %8 into %arg2[5] [%idx] [%c1] :
           tensor<?xf32> into tensor<?xf32>
       }
   }
@@ -627,7 +627,7 @@ func.func @matmul(%arg0: tensor<8x8xf32>, %arg1: tensor<8x8xf32>, %arg2: tensor<
     //      CHECK: linalg.matmul ins({{.*}}memref<4x8xf32, #[[$DYN_LAYOUT_MAP]]>, memref<8x4xf32, #[[$DYN_LAYOUT_MAP]]>) outs({{.*}} : memref<4x4xf32, #[[$DYN_LAYOUT_MAP]]>)
     %8 = linalg.matmul ins(%3, %6 : tensor<4x8xf32>, tensor<8x4xf32>) outs(%7 : tensor<4x4xf32>) -> tensor<4x4xf32>
     scf.foreach_thread.perform_concurrently {
-      scf.foreach_thread.parallel_insert_slice %8 into %arg2[%1, %4] [4, 4] [1, 1] : tensor<4x4xf32> into tensor<8x8xf32>
+      tensor.parallel_insert_slice %8 into %arg2[%1, %4] [4, 4] [1, 1] : tensor<4x4xf32> into tensor<8x8xf32>
     }
   }
   return %0 : tensor<8x8xf32>

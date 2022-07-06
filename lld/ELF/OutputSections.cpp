@@ -419,7 +419,8 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
   }
 
   // Write leading padding.
-  SmallVector<InputSection *, 0> sections = getInputSections(*this);
+  SmallVector<InputSection *, 0> storage;
+  ArrayRef<InputSection *> sections = getInputSections(*this, storage);
   std::array<uint8_t, 4> filler = getFiller();
   bool nonZeroFiller = read32(filler.data()) != 0;
   if (nonZeroFiller)
@@ -592,12 +593,24 @@ InputSection *elf::getFirstInputSection(const OutputSection *os) {
   return nullptr;
 }
 
-SmallVector<InputSection *, 0> elf::getInputSections(const OutputSection &os) {
-  SmallVector<InputSection *, 0> ret;
-  for (SectionCommand *cmd : os.commands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
-      ret.insert(ret.end(), isd->sections.begin(), isd->sections.end());
-  return ret;
+ArrayRef<InputSection *>
+elf::getInputSections(const OutputSection &os,
+                      SmallVector<InputSection *, 0> &storage) {
+  ArrayRef<InputSection *> ret;
+  storage.clear();
+  for (SectionCommand *cmd : os.commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    if (ret.empty()) {
+      ret = isd->sections;
+    } else {
+      if (storage.empty())
+        storage.assign(ret.begin(), ret.end());
+      storage.insert(storage.end(), isd->sections.begin(), isd->sections.end());
+    }
+  }
+  return storage.empty() ? ret : makeArrayRef(storage);
 }
 
 // Sorts input sections by section name suffixes, so that .foo.N comes
@@ -622,7 +635,8 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
 void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
   assert(config->writeAddends && config->checkDynamicRelocs);
   assert(type == SHT_REL || type == SHT_RELA);
-  SmallVector<InputSection *, 0> sections = getInputSections(*this);
+  SmallVector<InputSection *, 0> storage;
+  ArrayRef<InputSection *> sections = getInputSections(*this, storage);
   parallelFor(0, sections.size(), [&](size_t i) {
     // When linking with -r or --emit-relocs we might also call this function
     // for input .rel[a].<sec> sections which we simply pass through to the

@@ -11,34 +11,20 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace pseudo {
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LRTable::Action &A) {
-  switch (A.kind()) {
-  case LRTable::Action::Shift:
-    return OS << llvm::formatv("shift state {0}", A.getShiftState());
-  case LRTable::Action::GoTo:
-    return OS << llvm::formatv("go to state {0}", A.getGoToState());
-  case LRTable::Action::Sentinel:
-    llvm_unreachable("unexpected Sentinel action kind!");
-  }
-  llvm_unreachable("unexpected action kind!");
-}
-
 std::string LRTable::dumpStatistics() const {
   return llvm::formatv(R"(
 Statistics of the LR parsing table:
     number of states: {0}
-    number of actions: {1}
-    number of reduces: {2}
-    size of the table (bytes): {3}
+    number of actions: shift={1} goto={2} reduce={3}
+    size of the table (bytes): {4}
 )",
-                       StateOffset.size() - 1, Actions.size(), Reduces.size(),
+                       numStates(), Shifts.size(), Gotos.size(), Reduces.size(),
                        bytes())
       .str();
 }
@@ -47,15 +33,13 @@ std::string LRTable::dumpForTests(const Grammar &G) const {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << "LRTable:\n";
-  for (StateID S = 0; S < StateOffset.size() - 1; ++S) {
+  for (StateID S = 0; S < numStates(); ++S) {
     OS << llvm::formatv("State {0}\n", S);
     for (uint16_t Terminal = 0; Terminal < NumTerminals; ++Terminal) {
       SymbolID TokID = tokenSymbol(static_cast<tok::TokenKind>(Terminal));
-      for (auto A : find(S, TokID)) {
-        if (A.kind() == LRTable::Action::Shift)
-          OS.indent(4) << llvm::formatv("{0}: shift state {1}\n",
-                                        G.symbolName(TokID), A.getShiftState());
-      }
+      if (auto SS = getShiftState(S, TokID))
+        OS.indent(4) << llvm::formatv("{0}: shift state {1}\n",
+                                      G.symbolName(TokID), SS);
     }
     for (RuleID R : getReduceRules(S)) {
       SymbolID Target = G.lookupRule(R).Target;
@@ -71,53 +55,13 @@ std::string LRTable::dumpForTests(const Grammar &G) const {
     }
     for (SymbolID NontermID = 0; NontermID < G.table().Nonterminals.size();
          ++NontermID) {
-      if (find(S, NontermID).empty())
-        continue;
-      OS.indent(4) << llvm::formatv("{0}: go to state {1}\n",
-                                    G.symbolName(NontermID),
-                                    getGoToState(S, NontermID));
+      if (auto GS = getGoToState(S, NontermID)) {
+        OS.indent(4) << llvm::formatv("{0}: go to state {1}\n",
+                                      G.symbolName(NontermID), *GS);
+      }
     }
   }
   return OS.str();
-}
-
-llvm::Optional<LRTable::StateID>
-LRTable::getShiftState(StateID State, SymbolID Terminal) const {
-  // FIXME: we spend a significant amount of time on misses here.
-  // We could consider storing a std::bitset for a cheaper test?
-  assert(pseudo::isToken(Terminal) && "expected terminal symbol!");
-  for (const auto &Result : find(State, Terminal))
-    if (Result.kind() == Action::Shift)
-      return Result.getShiftState(); // unique: no shift/shift conflicts.
-  return llvm::None;
-}
-
-LRTable::StateID LRTable::getGoToState(StateID State,
-                                       SymbolID Nonterminal) const {
-  assert(pseudo::isNonterminal(Nonterminal) && "expected nonterminal symbol!");
-  auto Result = find(State, Nonterminal);
-  assert(Result.size() == 1 && Result.front().kind() == Action::GoTo);
-  return Result.front().getGoToState();
-}
-
-llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
-  assert(Src + 1u < StateOffset.size());
-  std::pair<size_t, size_t> Range =
-      std::make_pair(StateOffset[Src], StateOffset[Src + 1]);
-  auto SymbolRange = llvm::makeArrayRef(Symbols.data() + Range.first,
-                                        Symbols.data() + Range.second);
-
-  assert(llvm::is_sorted(SymbolRange) &&
-         "subrange of the Symbols should be sorted!");
-  const LRTable::StateID *Start =
-      llvm::partition_point(SymbolRange, [&ID](SymbolID S) { return S < ID; });
-  if (Start == SymbolRange.end())
-    return {};
-  const LRTable::StateID *End = Start;
-  while (End != SymbolRange.end() && *End == ID)
-    ++End;
-  return llvm::makeArrayRef(&Actions[Start - Symbols.data()],
-                            /*length=*/End - Start);
 }
 
 LRTable::StateID LRTable::getStartState(SymbolID Target) const {

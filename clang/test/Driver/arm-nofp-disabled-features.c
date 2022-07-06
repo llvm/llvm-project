@@ -9,8 +9,10 @@
 // RUN: %clang -target arm-arm-none-eabi -mfpu=none %s -### 2>&1 | FileCheck %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8-a+nofp %s -### 2>&1 | FileCheck %s
 // RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a35+nofp %s -### 2>&1 | FileCheck %s
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-m85+nofp %s -### 2>&1 | FileCheck %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8-a+nofp+nomve %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-NOMVE
 // RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a35+nofp+nomve %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-NOMVE
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-m85+nofp+nomve %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-NOMVE
 // CHECK: "-target-feature" "-dotprod"
 // CHECK: "-target-feature" "-fp16fml"
 // CHECK: "-target-feature" "-bf16"

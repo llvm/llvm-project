@@ -57,6 +57,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <vector>
 
@@ -81,7 +82,7 @@ inline tok::TokenKind symbolToToken(SymbolID SID) {
   assert(SID < NumTerminals);
   return static_cast<tok::TokenKind>(SID);
 }
-inline SymbolID tokenSymbol(tok::TokenKind TK) {
+inline constexpr SymbolID tokenSymbol(tok::TokenKind TK) {
   return TokenFlag | static_cast<SymbolID>(TK);
 }
 
@@ -107,7 +108,7 @@ struct Rule {
   // length to 9 (this is the longest sequence in cxx grammar).
   static constexpr unsigned SizeBits = 4;
   static constexpr unsigned MaxElements = 9;
-  static_assert(MaxElements <= (1 << SizeBits), "Exceeds the maximum limit");
+  static_assert(MaxElements < (1 << SizeBits), "Exceeds the maximum limit");
   static_assert(SizeBits + SymbolBits <= 16,
                 "Must be able to store symbol ID + size efficiently");
 
@@ -122,6 +123,14 @@ struct Rule {
   // 0 is sentinel unset extension ID, indicating there is no guard extension
   // being set for this rule.
   ExtensionID Guard = 0;
+
+  // Specifies the index within Sequence eligible for error recovery.
+  // Given stmt := { stmt-seq_opt }, if we fail to parse the stmt-seq then we
+  // should recover by finding the matching brace, and forcing stmt-seq to match
+  // everything between braces.
+  // For now, only a single strategy at a single point is possible.
+  uint8_t RecoveryIndex = -1;
+  ExtensionID Recovery = 0;
 
   llvm::ArrayRef<SymbolID> seq() const {
     return llvm::ArrayRef<SymbolID>(Sequence, Size);

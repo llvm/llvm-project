@@ -286,7 +286,7 @@ func.func @non_operation() {
 
 func.func @invalid_if_conditional2() {
   affine.for %i = 1 to 10 {
-    affine.if affine_set<(i)[N] : (i >= )>  // expected-error {{expected '== 0' or '>= 0' at end of affine constraint}}
+    affine.if affine_set<(i)[N] : (i >= )>  // expected-error {{expected affine expression}}
   }
 }
 
@@ -294,23 +294,7 @@ func.func @invalid_if_conditional2() {
 
 func.func @invalid_if_conditional3() {
   affine.for %i = 1 to 10 {
-    affine.if affine_set<(i)[N] : (i == 1)> // expected-error {{expected '0' after '=='}}
-  }
-}
-
-// -----
-
-func.func @invalid_if_conditional4() {
-  affine.for %i = 1 to 10 {
-    affine.if affine_set<(i)[N] : (i >= 2)> // expected-error {{expected '0' after '>='}}
-  }
-}
-
-// -----
-
-func.func @invalid_if_conditional5() {
-  affine.for %i = 1 to 10 {
-    affine.if affine_set<(i)[N] : (i <= 0)> // expected-error {{expected '== 0' or '>= 0' at end of affine constraint}}
+    affine.if affine_set<(i)[N] : (i == )>  // expected-error {{expected affine expression}}
   }
 }
 
@@ -318,7 +302,7 @@ func.func @invalid_if_conditional5() {
 
 func.func @invalid_if_conditional6() {
   affine.for %i = 1 to 10 {
-    affine.if affine_set<(i) : (i)> // expected-error {{expected '== 0' or '>= 0' at end of affine constraint}}
+    affine.if affine_set<(i) : (i)> // expected-error {{expected '== affine-expr' or '>= affine-expr' at end of affine constraint}}
   }
 }
 
@@ -326,7 +310,7 @@ func.func @invalid_if_conditional6() {
 // TODO: support affine.if (1)?
 func.func @invalid_if_conditional7() {
   affine.for %i = 1 to 10 {
-    affine.if affine_set<(i) : (1)> // expected-error {{expected '== 0' or '>= 0' at end of affine constraint}}
+    affine.if affine_set<(i) : (1)> // expected-error {{expected '== affine-expr' or '>= affine-expr' at end of affine constraint}}
   }
 }
 
@@ -858,15 +842,8 @@ func.func @dialect_type_empty_namespace(!<"">) -> () { // expected-error {{inval
 
 // -----
 
-func.func @dialect_type_no_string_type_data(!foo<>) -> () { // expected-error {{expected string literal data in dialect symbol}}
+func.func @dialect_type_missing_greater(!foo<) -> () { // expected-error {{unbalanced ')' character in pretty dialect name}}
   return
-}
-
-// -----
-
-func.func @dialect_type_missing_greater(!foo<"") -> () { // expected-error {{expected '>' in dialect symbol}}
-  return
-}
 
 // -----
 

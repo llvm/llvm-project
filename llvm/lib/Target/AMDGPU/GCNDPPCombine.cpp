@@ -98,7 +98,7 @@ public:
   }
 
 private:
-  int getDPPOp(unsigned Op, bool HasVOP3DPP, bool IsShrinkable) const;
+  int getDPPOp(unsigned Op, bool IsShrinkable) const;
   bool isShrinkable(MachineInstr &MI) const;
 };
 
@@ -142,21 +142,20 @@ bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
   return true;
 }
 
-int GCNDPPCombine::getDPPOp(unsigned Op, bool HasVOP3DPP,
-                            bool IsShrinkable) const {
-  auto DPP32 = AMDGPU::getDPPOp32(Op);
-  auto DPP64 = AMDGPU::getDPPOp64(Op);
+int GCNDPPCombine::getDPPOp(unsigned Op, bool IsShrinkable) const {
+  int DPP32 = AMDGPU::getDPPOp32(Op);
   if (IsShrinkable) {
     assert(DPP32 == -1);
-    auto E32 = AMDGPU::getVOPe32(Op);
+    int E32 = AMDGPU::getVOPe32(Op);
     DPP32 = (E32 == -1) ? -1 : AMDGPU::getDPPOp32(E32);
   }
-  if (DPP32 != -1 && TII->pseudoToMCOpcode(DPP32) != -1) {
+  if (DPP32 != -1 && TII->pseudoToMCOpcode(DPP32) != -1)
     return DPP32;
-  }
-  if (HasVOP3DPP && DPP64 != -1 && TII->pseudoToMCOpcode(DPP64) != -1) {
+  int DPP64 = -1;
+  if (ST->hasVOP3DPP())
+    DPP64 = AMDGPU::getDPPOp64(Op);
+  if (DPP64 != -1 && TII->pseudoToMCOpcode(DPP64) != -1)
     return DPP64;
-  }
   return -1;
 }
 
@@ -198,7 +197,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
 
   bool HasVOP3DPP = ST->hasVOP3DPP();
   auto OrigOp = OrigMI.getOpcode();
-  auto DPPOp = getDPPOp(OrigOp, HasVOP3DPP, IsShrinkable);
+  auto DPPOp = getDPPOp(OrigOp, IsShrinkable);
   if (DPPOp == -1) {
     LLVM_DEBUG(dbgs() << "  failed: no DPP opcode\n");
     return nullptr;
@@ -290,10 +289,10 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.add(*Src1);
       ++NumOperands;
     }
-    if (auto *Mod2 = TII->getNamedOperand(OrigMI,
-                                          AMDGPU::OpName::src2_modifiers)) {
-      assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
-                                          AMDGPU::OpName::src2_modifiers));
+    if (auto *Mod2 =
+            TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2_modifiers)) {
+      assert(NumOperands ==
+             AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::src2_modifiers));
       assert(HasVOP3DPP ||
              (0LL == (Mod2->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
       DPPInst.addImm(Mod2->getImm());

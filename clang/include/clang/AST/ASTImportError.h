@@ -19,7 +19,6 @@
 namespace clang {
 
 class ASTImportError : public llvm::ErrorInfo<ASTImportError> {
-
 public:
   /// \brief Kind of error when importing an AST component.
   enum ErrorKind {

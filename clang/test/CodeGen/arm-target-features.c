@@ -110,4 +110,7 @@
 // RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m55 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV81M-MAIN-LINUX
 // CHECK-ARMV81M-MAIN-LINUX: "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+ras,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp"
 
+// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m85 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV81M-CORTEX-M85-LINUX
+// CHECK-ARMV81M-CORTEX-M85-LINUX: "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+pacbti,+ras,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp"
+
 void foo() {}

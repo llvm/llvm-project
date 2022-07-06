@@ -1835,9 +1835,20 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // going to show the progress.
   const uint64_t id = data->GetID();
   if (m_current_event_id) {
+    Log *log = GetLog(LLDBLog::Events);
+    if (log && log->GetVerbose()) {
+      StreamString log_stream;
+      log_stream.AsRawOstream()
+          << static_cast<void *>(this) << " Debugger(" << GetID()
+          << ")::HandleProgressEvent( m_current_event_id = "
+          << *m_current_event_id << ", data = { ";
+      data->Dump(&log_stream);
+      log_stream << " } )";
+      log->PutString(log_stream.GetString());
+    }
     if (id != *m_current_event_id)
       return;
-    if (data->GetCompleted())
+    if (data->GetCompleted() == data->GetTotal())
       m_current_event_id.reset();
   } else {
     m_current_event_id = id;
@@ -1860,7 +1871,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // Print over previous line, if any.
   output->Printf("\r");
 
-  if (data->GetCompleted()) {
+  if (data->GetCompleted() == data->GetTotal()) {
     // Clear the current line.
     output->Printf("\x1B[2K");
     output->Flush();

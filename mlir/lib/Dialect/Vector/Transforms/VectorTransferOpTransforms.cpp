@@ -216,8 +216,10 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
 static MemRefType dropUnitDims(MemRefType inputType, ArrayRef<int64_t> offsets,
                                ArrayRef<int64_t> sizes,
                                ArrayRef<int64_t> strides) {
+  SmallVector<int64_t> targetShape = llvm::to_vector(
+      llvm::make_filter_range(sizes, [](int64_t sz) { return sz != 1; }));
   Type rankReducedType = memref::SubViewOp::inferRankReducedResultType(
-      0, inputType, offsets, sizes, strides);
+      targetShape, inputType, offsets, sizes, strides);
   return canonicalizeStridedLayout(rankReducedType.cast<MemRefType>());
 }
 

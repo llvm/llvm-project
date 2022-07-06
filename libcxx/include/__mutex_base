@@ -338,11 +338,7 @@ private:
 
 template <class _Rep, class _Period>
 inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_floating_point<_Rep>::value,
-    chrono::nanoseconds
->::type
+__enable_if_t<is_floating_point<_Rep>::value, chrono::nanoseconds>
 __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d)
 {
     using namespace chrono;
@@ -365,11 +361,7 @@ __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d)
 
 template <class _Rep, class _Period>
 inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    !is_floating_point<_Rep>::value,
-    chrono::nanoseconds
->::type
+__enable_if_t<!is_floating_point<_Rep>::value, chrono::nanoseconds>
 __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d)
 {
     using namespace chrono;

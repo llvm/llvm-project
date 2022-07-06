@@ -16861,6 +16861,69 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                   RayInverseDir, TextureDescr});
   }
 
+  case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w64:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w64:
+  case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu4_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu4_w64:
+  case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w64: {
+
+    // These operations perform a matrix multiplication and accumulation of
+    // the form:
+    //             D = A * B + C
+    // The return type always matches the type of matrix C.
+    unsigned ArgForMatchingRetType;
+    unsigned BuiltinWMMAOp;
+
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w64:
+      ArgForMatchingRetType = 2;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_f16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w64:
+      ArgForMatchingRetType = 2;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_bf16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
+      ArgForMatchingRetType = 2;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x16_f16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
+      ArgForMatchingRetType = 2;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w64:
+      ArgForMatchingRetType = 4;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_i32_16x16x16_iu8;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu4_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu4_w64:
+      ArgForMatchingRetType = 4;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_i32_16x16x16_iu4;
+      break;
+    }
+
+    SmallVector<Value *, 6> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+
+    Function *F = CGM.getIntrinsic(BuiltinWMMAOp,
+                                   {Args[ArgForMatchingRetType]->getType()});
+
+    return Builder.CreateCall(F, Args);
+  }
+
   // amdgcn workitem
   case AMDGPU::BI__builtin_amdgcn_workitem_id_x:
     return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_x, 0, 1024);

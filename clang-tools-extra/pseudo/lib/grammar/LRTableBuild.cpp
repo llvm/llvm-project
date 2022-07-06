@@ -13,132 +13,89 @@
 #include "llvm/ADT/SmallSet.h"
 #include <cstdint>
 
-namespace llvm {
-template <> struct DenseMapInfo<clang::pseudo::LRTable::Entry> {
-  using Entry = clang::pseudo::LRTable::Entry;
-  static inline Entry getEmptyKey() {
-    static Entry E{static_cast<clang::pseudo::SymbolID>(-1), 0,
-                   clang::pseudo::LRTable::Action::sentinel()};
-    return E;
-  }
-  static inline Entry getTombstoneKey() {
-    static Entry E{static_cast<clang::pseudo::SymbolID>(-2), 0,
-                   clang::pseudo::LRTable::Action::sentinel()};
-    return E;
-  }
-  static unsigned getHashValue(const Entry &I) {
-    return llvm::hash_combine(I.State, I.Symbol, I.Act.opaque());
-  }
-  static bool isEqual(const Entry &LHS, const Entry &RHS) {
-    return LHS.State == RHS.State && LHS.Symbol == RHS.Symbol &&
-           LHS.Act == RHS.Act;
-  }
-};
-} // namespace llvm
-
 namespace clang {
 namespace pseudo {
 
-struct LRTable::Builder {
-  std::vector<std::pair<SymbolID, StateID>> StartStates;
-  llvm::DenseSet<Entry> Entries;
-  llvm::DenseMap<StateID, llvm::SmallSet<RuleID, 4>> Reduces;
-  std::vector<llvm::DenseSet<SymbolID>> FollowSets;
+LRTable LRTable::Builder::build() && {
+  assert(NumNonterminals != 0 && "Set NumNonterminals or init with grammar");
+  LRTable Table;
 
-  LRTable build(unsigned NumStates) && {
-    // E.g. given the following parsing table with 3 states and 3 terminals:
-    //
-    //            a    b     c
-    // +-------+----+-------+-+
-    // |state0 |    | s0,r0 | |
-    // |state1 | acc|       | |
-    // |state2 |    |  r1   | |
-    // +-------+----+-------+-+
-    //
-    // The final LRTable:
-    //  - StateOffset: [s0] = 0, [s1] = 2, [s2] = 3, [sentinel] = 4
-    //  - Symbols:     [ b,   b,   a,  b]
-    //    Actions:     [ s0, r0, acc, r1]
-    //                   ~~~~~~ range for state 0
-    //                           ~~~~ range for state 1
-    //                                ~~ range for state 2
-    // First step, we sort all entries by (State, Symbol, Action).
-    std::vector<Entry> Sorted(Entries.begin(), Entries.end());
-    llvm::sort(Sorted, [](const Entry &L, const Entry &R) {
-      return std::forward_as_tuple(L.State, L.Symbol, L.Act.opaque()) <
-             std::forward_as_tuple(R.State, R.Symbol, R.Act.opaque());
-    });
-
-    LRTable Table;
-    Table.Actions.reserve(Sorted.size());
-    Table.Symbols.reserve(Sorted.size());
-    // We are good to finalize the States and Actions.
-    for (const auto &E : Sorted) {
-      Table.Actions.push_back(E.Act);
-      Table.Symbols.push_back(E.Symbol);
-    }
-    // Initialize the terminal and nonterminal offset, all ranges are empty by
-    // default.
-    Table.StateOffset = std::vector<uint32_t>(NumStates + 1, 0);
-    size_t SortedIndex = 0;
-    for (StateID State = 0; State < Table.StateOffset.size(); ++State) {
-      Table.StateOffset[State] = SortedIndex;
-      while (SortedIndex < Sorted.size() && Sorted[SortedIndex].State == State)
-        ++SortedIndex;
-    }
-    Table.StartStates = std::move(StartStates);
-
-    // Compile the follow sets into a bitmap.
-    Table.FollowSets.resize(tok::NUM_TOKENS * FollowSets.size());
-    for (SymbolID NT = 0; NT < FollowSets.size(); ++NT)
-      for (SymbolID Follow : FollowSets[NT])
-        Table.FollowSets.set(NT * tok::NUM_TOKENS + symbolToToken(Follow));
-
-    // Store the reduce actions in a vector partitioned by state.
-    Table.ReduceOffset.reserve(NumStates + 1);
-    std::vector<RuleID> StateRules;
-    for (StateID S = 0; S < NumStates; ++S) {
-      Table.ReduceOffset.push_back(Table.Reduces.size());
-      auto It = Reduces.find(S);
-      if (It == Reduces.end())
-        continue;
-      Table.Reduces.insert(Table.Reduces.end(), It->second.begin(),
-                           It->second.end());
-      std::sort(Table.Reduces.begin() + Table.ReduceOffset.back(),
-                Table.Reduces.end());
-    }
-    Table.ReduceOffset.push_back(Table.Reduces.size());
-
-    return Table;
-  }
-};
-
-LRTable LRTable::buildForTests(const Grammar &G, llvm::ArrayRef<Entry> Entries,
-                               llvm::ArrayRef<ReduceEntry> Reduces) {
+  // Count number of states: every state has to be reachable somehow.
   StateID MaxState = 0;
-  for (const auto &Entry : Entries) {
-    MaxState = std::max(MaxState, Entry.State);
-    if (Entry.Act.kind() == LRTable::Action::Shift)
-      MaxState = std::max(MaxState, Entry.Act.getShiftState());
-    if (Entry.Act.kind() == LRTable::Action::GoTo)
-      MaxState = std::max(MaxState, Entry.Act.getGoToState());
+  for (const auto &Entry : StartStates)
+    MaxState = std::max(MaxState, Entry.second);
+  for (const auto &Entry : Transition)
+    MaxState = std::max(MaxState, Entry.second);
+  unsigned NumStates = MaxState + 1;
+
+  Table.StartStates = std::move(StartStates);
+
+  // Compile the goto and shift actions into transition tables.
+  llvm::DenseMap<unsigned, SymbolID> Gotos;
+  llvm::DenseMap<unsigned, SymbolID> Shifts;
+  for (const auto &E : Transition) {
+    if (isToken(E.first.second))
+      Shifts.try_emplace(shiftIndex(E.first.first, E.first.second, NumStates),
+                         E.second);
+    else
+      Gotos.try_emplace(gotoIndex(E.first.first, E.first.second, NumStates),
+                        E.second);
   }
-  Builder Build;
-  Build.Entries.insert(Entries.begin(), Entries.end());
-  for (const ReduceEntry &E : Reduces)
-    Build.Reduces[E.State].insert(E.Rule);
-  Build.FollowSets = followSets(G);
-  return std::move(Build).build(/*NumStates=*/MaxState + 1);
+  Table.Shifts = TransitionTable(Shifts, NumStates * NumTerminals);
+  Table.Gotos = TransitionTable(Gotos, NumStates * NumNonterminals);
+
+  // Compile the follow sets into a bitmap.
+  Table.FollowSets.resize(tok::NUM_TOKENS * FollowSets.size());
+  for (SymbolID NT = 0; NT < FollowSets.size(); ++NT)
+    for (SymbolID Follow : FollowSets[NT])
+      Table.FollowSets.set(NT * tok::NUM_TOKENS + symbolToToken(Follow));
+
+  // Store the reduce actions in a vector partitioned by state.
+  Table.ReduceOffset.reserve(NumStates + 1);
+  std::vector<RuleID> StateRules;
+  for (StateID S = 0; S < NumStates; ++S) {
+    Table.ReduceOffset.push_back(Table.Reduces.size());
+    auto It = Reduce.find(S);
+    if (It == Reduce.end())
+      continue;
+    Table.Reduces.insert(Table.Reduces.end(), It->second.begin(),
+                         It->second.end());
+    std::sort(Table.Reduces.begin() + Table.ReduceOffset.back(),
+              Table.Reduces.end());
+  }
+  Table.ReduceOffset.push_back(Table.Reduces.size());
+
+  // Error recovery entries: sort (no dups already), and build offset lookup.
+  llvm::sort(Recoveries, [&](const auto &L, const auto &R) {
+    return std::tie(L.first, L.second.Result, L.second.Strategy) <
+           std::tie(R.first, R.second.Result, R.second.Strategy);
+  });
+  Table.Recoveries.reserve(Recoveries.size());
+  for (const auto &R : Recoveries)
+    Table.Recoveries.push_back({R.second.Strategy, R.second.Result});
+  Table.RecoveryOffset = std::vector<uint32_t>(NumStates + 1, 0);
+  unsigned SortedIndex = 0;
+  for (StateID State = 0; State < NumStates; ++State) {
+    Table.RecoveryOffset[State] = SortedIndex;
+    while (SortedIndex < Recoveries.size() &&
+           Recoveries[SortedIndex].first == State)
+      SortedIndex++;
+  }
+  Table.RecoveryOffset[NumStates] = SortedIndex;
+  assert(SortedIndex == Recoveries.size());
+
+  return Table;
 }
 
 LRTable LRTable::buildSLR(const Grammar &G) {
   auto Graph = LRGraph::buildLR0(G);
-  Builder Build;
+  Builder Build(G);
   Build.StartStates = Graph.startStates();
-  for (const auto &T : Graph.edges()) {
-    Action Act = isToken(T.Label) ? Action::shift(T.Dst) : Action::goTo(T.Dst);
-    Build.Entries.insert({T.Src, T.Label, Act});
-  }
+  for (const auto &T : Graph.edges())
+    Build.Transition.try_emplace({T.Src, T.Label}, T.Dst);
+  for (const auto &Entry : Graph.recoveries())
+    Build.Recoveries.push_back(
+        {Entry.Src, Recovery{Entry.Strategy, Entry.Result}});
   Build.FollowSets = followSets(G);
   assert(Graph.states().size() <= (1 << StateBits) &&
          "Graph states execceds the maximum limit!");
@@ -153,10 +110,10 @@ LRTable LRTable::buildSLR(const Grammar &G) {
       if (!I.hasNext())
         // If we've reached the end of a rule A := ..., then we can reduce if
         // the next token is in the follow set of A.
-        Build.Reduces[SID].insert(I.rule());
+        Build.Reduce[SID].insert(I.rule());
     }
   }
-  return std::move(Build).build(Graph.states().size());
+  return std::move(Build).build();
 }
 
 } // namespace pseudo

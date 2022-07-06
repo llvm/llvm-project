@@ -111,6 +111,7 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
 ///  and start lexing tokens from it instead of the current buffer.
 void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
                                             ConstSearchDirIterator CurDir) {
+  PreprocessorLexer *PrevPPLexer = CurPPLexer;
 
   // Add the current lexer to the include stack.
   if (CurPPLexer || CurTokenLexer)
@@ -130,8 +131,17 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
     SrcMgr::CharacteristicKind FileType =
        SourceMgr.getFileCharacteristic(CurLexer->getFileLoc());
 
-    Callbacks->FileChanged(CurLexer->getFileLoc(),
-                           PPCallbacks::EnterFile, FileType);
+    FileID PrevFID;
+    SourceLocation EnterLoc;
+    if (PrevPPLexer) {
+      PrevFID = PrevPPLexer->getFileID();
+      EnterLoc = PrevPPLexer->getSourceLocation();
+    }
+    Callbacks->FileChanged(CurLexer->getFileLoc(), PPCallbacks::EnterFile,
+                           FileType, PrevFID);
+    Callbacks->LexedFileChanged(CurLexer->getFileID(),
+                                PPCallbacks::LexedFileChangeReason::EnterFile,
+                                FileType, PrevFID, EnterLoc);
   }
 }
 
@@ -486,10 +496,13 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
 
     // Notify the client, if desired, that we are in a new source file.
     if (Callbacks && !isEndOfMacro && CurPPLexer) {
+      SourceLocation Loc = CurPPLexer->getSourceLocation();
       SrcMgr::CharacteristicKind FileType =
-        SourceMgr.getFileCharacteristic(CurPPLexer->getSourceLocation());
-      Callbacks->FileChanged(CurPPLexer->getSourceLocation(),
-                             PPCallbacks::ExitFile, FileType, ExitedFID);
+          SourceMgr.getFileCharacteristic(Loc);
+      Callbacks->FileChanged(Loc, PPCallbacks::ExitFile, FileType, ExitedFID);
+      Callbacks->LexedFileChanged(CurPPLexer->getFileID(),
+                                  PPCallbacks::LexedFileChangeReason::ExitFile,
+                                  FileType, ExitedFID, Loc);
     }
 
     // Restore conditional stack as well as the recorded

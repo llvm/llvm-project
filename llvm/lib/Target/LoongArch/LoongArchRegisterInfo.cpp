@@ -110,6 +110,28 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                                 int SPAdj,
                                                 unsigned FIOperandNum,
                                                 RegScavenger *RS) const {
+  // TODO: this implementation is a temporary placeholder which does just
+  // enough to allow other aspects of code generation to be tested.
+
   assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
-  // TODO: Implement this when we have function calls
+
+  MachineInstr &MI = *II;
+  MachineFunction &MF = *MI.getParent()->getParent();
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  DebugLoc DL = MI.getDebugLoc();
+
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+  Register FrameReg;
+  StackOffset Offset =
+      TFI->getFrameIndexReference(MF, FrameIndex, FrameReg) +
+      StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
+
+  // Offsets must be encodable with a 12-bit immediate field.
+  if (!isInt<12>(Offset.getFixed())) {
+    report_fatal_error("Frame offsets outside of the signed 12-bit range is "
+                       "not supported currently");
+  }
+
+  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
+  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
 }

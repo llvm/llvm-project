@@ -6888,20 +6888,20 @@ define <8 x i64> @mgather_baseidx_v8i64(i64* %base, <8 x i64> %idxs, <8 x i1> %m
 ;
 ; RV32ZVE32F-LABEL: mgather_baseidx_v8i64:
 ; RV32ZVE32F:       # %bb.0:
-; RV32ZVE32F-NEXT:    addi sp, sp, -128
-; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 128
-; RV32ZVE32F-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s2, 116(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s3, 112(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s4, 108(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s5, 104(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s6, 100(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s7, 96(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s8, 92(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s9, 88(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s10, 84(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s11, 80(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    addi sp, sp, -96
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 96
+; RV32ZVE32F-NEXT:    sw ra, 92(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s0, 88(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s2, 84(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s3, 80(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s4, 76(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s5, 72(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s6, 68(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s7, 64(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s8, 60(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s9, 56(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s10, 52(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s11, 48(sp) # 4-byte Folded Spill
 ; RV32ZVE32F-NEXT:    .cfi_offset ra, -4
 ; RV32ZVE32F-NEXT:    .cfi_offset s0, -8
 ; RV32ZVE32F-NEXT:    .cfi_offset s2, -12
@@ -6914,7 +6914,7 @@ define <8 x i64> @mgather_baseidx_v8i64(i64* %base, <8 x i64> %idxs, <8 x i1> %m
 ; RV32ZVE32F-NEXT:    .cfi_offset s9, -40
 ; RV32ZVE32F-NEXT:    .cfi_offset s10, -44
 ; RV32ZVE32F-NEXT:    .cfi_offset s11, -48
-; RV32ZVE32F-NEXT:    addi s0, sp, 128
+; RV32ZVE32F-NEXT:    addi s0, sp, 96
 ; RV32ZVE32F-NEXT:    .cfi_def_cfa s0, 0
 ; RV32ZVE32F-NEXT:    andi sp, sp, -32
 ; RV32ZVE32F-NEXT:    lw a4, 60(a3)
@@ -6941,16 +6941,16 @@ define <8 x i64> @mgather_baseidx_v8i64(i64* %base, <8 x i64> %idxs, <8 x i1> %m
 ; RV32ZVE32F-NEXT:    lw s11, 48(a2)
 ; RV32ZVE32F-NEXT:    lw ra, 40(a2)
 ; RV32ZVE32F-NEXT:    lw a2, 32(a2)
-; RV32ZVE32F-NEXT:    sw s10, 60(sp)
-; RV32ZVE32F-NEXT:    sw s11, 56(sp)
-; RV32ZVE32F-NEXT:    sw ra, 52(sp)
-; RV32ZVE32F-NEXT:    sw a2, 48(sp)
-; RV32ZVE32F-NEXT:    sw s9, 44(sp)
-; RV32ZVE32F-NEXT:    sw s8, 40(sp)
-; RV32ZVE32F-NEXT:    sw s7, 36(sp)
-; RV32ZVE32F-NEXT:    sw s6, 32(sp)
+; RV32ZVE32F-NEXT:    sw s10, 28(sp)
+; RV32ZVE32F-NEXT:    sw s11, 24(sp)
+; RV32ZVE32F-NEXT:    sw ra, 20(sp)
+; RV32ZVE32F-NEXT:    sw a2, 16(sp)
+; RV32ZVE32F-NEXT:    sw s9, 12(sp)
+; RV32ZVE32F-NEXT:    sw s8, 8(sp)
+; RV32ZVE32F-NEXT:    sw s7, 4(sp)
+; RV32ZVE32F-NEXT:    sw s6, 0(sp)
+; RV32ZVE32F-NEXT:    mv a2, sp
 ; RV32ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32ZVE32F-NEXT:    addi a2, sp, 32
 ; RV32ZVE32F-NEXT:    vle32.v v8, (a2)
 ; RV32ZVE32F-NEXT:    vsll.vi v8, v8, 3
 ; RV32ZVE32F-NEXT:    vadd.vx v8, v8, a1
@@ -7002,20 +7002,20 @@ define <8 x i64> @mgather_baseidx_v8i64(i64* %base, <8 x i64> %idxs, <8 x i1> %m
 ; RV32ZVE32F-NEXT:    sw a6, 52(a0)
 ; RV32ZVE32F-NEXT:    sw a5, 56(a0)
 ; RV32ZVE32F-NEXT:    sw a4, 60(a0)
-; RV32ZVE32F-NEXT:    addi sp, s0, -128
-; RV32ZVE32F-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s2, 116(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s3, 112(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s4, 108(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s5, 104(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s6, 100(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s7, 96(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s8, 92(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s9, 88(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s10, 84(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s11, 80(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    addi sp, sp, 128
+; RV32ZVE32F-NEXT:    addi sp, s0, -96
+; RV32ZVE32F-NEXT:    lw ra, 92(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s0, 88(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s2, 84(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s3, 80(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s4, 76(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s5, 72(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s6, 68(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s7, 64(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s8, 60(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s9, 56(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s10, 52(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s11, 48(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    addi sp, sp, 96
 ; RV32ZVE32F-NEXT:    ret
 ; RV32ZVE32F-NEXT:  .LBB57_10: # %cond.load
 ; RV32ZVE32F-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
@@ -12175,13 +12175,13 @@ define <8 x double> @mgather_baseidx_v8f64(double* %base, <8 x i64> %idxs, <8 x 
 ;
 ; RV32ZVE32F-LABEL: mgather_baseidx_v8f64:
 ; RV32ZVE32F:       # %bb.0:
-; RV32ZVE32F-NEXT:    addi sp, sp, -96
-; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 96
-; RV32ZVE32F-NEXT:    sw ra, 92(sp) # 4-byte Folded Spill
-; RV32ZVE32F-NEXT:    sw s0, 88(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    addi sp, sp, -64
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 64
+; RV32ZVE32F-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
 ; RV32ZVE32F-NEXT:    .cfi_offset ra, -4
 ; RV32ZVE32F-NEXT:    .cfi_offset s0, -8
-; RV32ZVE32F-NEXT:    addi s0, sp, 96
+; RV32ZVE32F-NEXT:    addi s0, sp, 64
 ; RV32ZVE32F-NEXT:    .cfi_def_cfa s0, 0
 ; RV32ZVE32F-NEXT:    andi sp, sp, -32
 ; RV32ZVE32F-NEXT:    lw a3, 0(a2)
@@ -12192,16 +12192,16 @@ define <8 x double> @mgather_baseidx_v8f64(double* %base, <8 x i64> %idxs, <8 x 
 ; RV32ZVE32F-NEXT:    lw t0, 48(a2)
 ; RV32ZVE32F-NEXT:    lw t1, 40(a2)
 ; RV32ZVE32F-NEXT:    lw a2, 32(a2)
-; RV32ZVE32F-NEXT:    sw a7, 60(sp)
-; RV32ZVE32F-NEXT:    sw t0, 56(sp)
-; RV32ZVE32F-NEXT:    sw t1, 52(sp)
-; RV32ZVE32F-NEXT:    sw a2, 48(sp)
-; RV32ZVE32F-NEXT:    sw a6, 44(sp)
-; RV32ZVE32F-NEXT:    sw a5, 40(sp)
-; RV32ZVE32F-NEXT:    sw a4, 36(sp)
-; RV32ZVE32F-NEXT:    sw a3, 32(sp)
+; RV32ZVE32F-NEXT:    sw a7, 28(sp)
+; RV32ZVE32F-NEXT:    sw t0, 24(sp)
+; RV32ZVE32F-NEXT:    sw t1, 20(sp)
+; RV32ZVE32F-NEXT:    sw a2, 16(sp)
+; RV32ZVE32F-NEXT:    sw a6, 12(sp)
+; RV32ZVE32F-NEXT:    sw a5, 8(sp)
+; RV32ZVE32F-NEXT:    sw a4, 4(sp)
+; RV32ZVE32F-NEXT:    sw a3, 0(sp)
+; RV32ZVE32F-NEXT:    mv a2, sp
 ; RV32ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; RV32ZVE32F-NEXT:    addi a2, sp, 32
 ; RV32ZVE32F-NEXT:    vle32.v v8, (a2)
 ; RV32ZVE32F-NEXT:    vsll.vi v8, v8, 3
 ; RV32ZVE32F-NEXT:    vadd.vx v8, v8, a1
@@ -12244,10 +12244,10 @@ define <8 x double> @mgather_baseidx_v8f64(double* %base, <8 x i64> %idxs, <8 x 
 ; RV32ZVE32F-NEXT:    fsd fa5, 40(a0)
 ; RV32ZVE32F-NEXT:    fsd fa6, 48(a0)
 ; RV32ZVE32F-NEXT:    fsd fa7, 56(a0)
-; RV32ZVE32F-NEXT:    addi sp, s0, -96
-; RV32ZVE32F-NEXT:    lw ra, 92(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    lw s0, 88(sp) # 4-byte Folded Reload
-; RV32ZVE32F-NEXT:    addi sp, sp, 96
+; RV32ZVE32F-NEXT:    addi sp, s0, -64
+; RV32ZVE32F-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    addi sp, sp, 64
 ; RV32ZVE32F-NEXT:    ret
 ; RV32ZVE32F-NEXT:  .LBB96_10: # %cond.load
 ; RV32ZVE32F-NEXT:    vsetivli zero, 0, e32, m2, ta, mu

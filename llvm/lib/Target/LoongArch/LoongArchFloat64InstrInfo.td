@@ -185,4 +185,12 @@ def : PatFPSelectcc<SETULE, FCMP_CULE_D, FSEL_D, FPR64>;
 def : PatFPSelectcc<SETUNE, FCMP_CUNE_D, FSEL_D, FPR64>;
 def : PatFPSelectcc<SETUO,  FCMP_CUN_D,  FSEL_D, FPR64>;
 
+/// Loads
+
+defm : LdPat<load, FLD_D, f64>;
+
+/// Stores
+
+defm : StPat<store, FST_D, FPR64, f64>;
+
 } // Predicates = [HasBasicD]

@@ -18,7 +18,7 @@
 # RUN:   FileCheck -DABI=gnu -DFILENAME=%basename_t.tmp %s
 
 # CHECK-LABEL: image list --triple --basename
-# CHECK-NEXT: i686-pc-windows-[[ABI]] [[FILENAME]]
+# CHECK-NEXT: i386-pc-windows-[[ABI]] [[FILENAME]]
 
 --- !COFF
 OptionalHeader:

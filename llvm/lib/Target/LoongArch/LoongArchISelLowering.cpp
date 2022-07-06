@@ -17,6 +17,7 @@
 #include "LoongArchRegisterInfo.h"
 #include "LoongArchSubtarget.h"
 #include "LoongArchTargetMachine.h"
+#include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/Support/Debug.h"
@@ -24,6 +25,11 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "loongarch-isel-lowering"
+
+static cl::opt<bool> ZeroDivCheck(
+    "loongarch-check-zero-division", cl::Hidden,
+    cl::desc("Trap on integer division by zero."),
+    cl::init(false));
 
 LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                                                  const LoongArchSubtarget &STI)
@@ -37,10 +43,15 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasBasicD())
     addRegisterClass(MVT::f64, &LoongArch::FPR64RegClass);
 
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, GRLenVT,
+                   MVT::i1, Promote);
+
   // TODO: add necessary setOperationAction calls later.
   setOperationAction(ISD::SHL_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRA_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRL_PARTS, GRLenVT, Custom);
+
+  setOperationAction(ISD::GlobalAddress, GRLenVT, Custom);
 
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::SHL, MVT::i32, Custom);
@@ -60,6 +71,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
   }
 
+  setOperationAction(ISD::BR_CC, GRLenVT, Expand);
   setOperationAction(ISD::SELECT_CC, GRLenVT, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
@@ -83,6 +95,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   switch (Op.getOpcode()) {
   default:
     report_fatal_error("unimplemented operand");
+  case ISD::GlobalAddress:
+    return lowerGlobalAddress(Op, DAG);
   case ISD::SHL_PARTS:
     return lowerShiftLeftParts(Op, DAG);
   case ISD::SRA_PARTS:
@@ -97,6 +111,24 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
            "Unexpected custom legalisation");
     return SDValue();
   }
+}
+
+SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
+  unsigned ADDIOp = Subtarget.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+
+  // FIXME: Only support PC-relative addressing to access the symbol.
+  // TODO: Add target flags.
+  if (!isPositionIndependent()) {
+    SDValue GA = DAG.getTargetGlobalAddress(GV, DL, Ty);
+    SDValue AddrHi(DAG.getMachineNode(LoongArch::PCALAU12I, DL, Ty, GA), 0);
+    SDValue Addr(DAG.getMachineNode(ADDIOp, DL, Ty, AddrHi, GA), 0);
+    return Addr;
+  }
+  report_fatal_error("Unable to lowerGlobalAddress");
 }
 
 SDValue LoongArchTargetLowering::lowerShiftLeftParts(SDValue Op,
@@ -359,6 +391,54 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
+static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
+                                              MachineBasicBlock &MBB,
+                                              const TargetInstrInfo &TII) {
+  if (!ZeroDivCheck)
+    return &MBB;
+
+  // Build instructions:
+  //   div(or mod)   $dst, $dividend, $divisor
+  //   bnez          $divisor, 8
+  //   break         7
+  //   fallthrough
+  MachineOperand &Divisor = MI.getOperand(2);
+  auto FallThrough = std::next(MI.getIterator());
+
+  BuildMI(MBB, FallThrough, MI.getDebugLoc(), TII.get(LoongArch::BNEZ))
+      .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
+      .addImm(8);
+
+  // See linux header file arch/loongarch/include/uapi/asm/break.h for the
+  // definition of BRK_DIVZERO.
+  BuildMI(MBB, FallThrough, MI.getDebugLoc(), TII.get(LoongArch::BREAK))
+      .addImm(7/*BRK_DIVZERO*/);
+
+  // Clear Divisor's kill flag.
+  Divisor.setIsKill(false);
+
+  return &MBB;
+}
+
+MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
+
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected instr type to insert");
+  case LoongArch::DIV_W:
+  case LoongArch::DIV_WU:
+  case LoongArch::MOD_W:
+  case LoongArch::MOD_WU:
+  case LoongArch::DIV_D:
+  case LoongArch::DIV_DU:
+  case LoongArch::MOD_D:
+  case LoongArch::MOD_DU:
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo());
+    break;
+  }
+}
+
 const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((LoongArchISD::NodeType)Opcode) {
   case LoongArchISD::FIRST_NUMBER:
@@ -369,6 +449,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "LoongArchISD::" #node;
 
     // TODO: Add more target-dependent nodes later.
+    NODE_NAME_CASE(CALL)
     NODE_NAME_CASE(RET)
     NODE_NAME_CASE(SLL_W)
     NODE_NAME_CASE(SRA_W)
@@ -479,6 +560,132 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i)
     InVals.push_back(unpackFromRegLoc(DAG, Chain, ArgLocs[i], DL, *this));
+
+  return Chain;
+}
+
+// Lower a call to a callseq_start + CALL + callseq_end chain, and add input
+// and output parameter nodes.
+SDValue
+LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
+                                   SmallVectorImpl<SDValue> &InVals) const {
+  SelectionDAG &DAG = CLI.DAG;
+  SDLoc &DL = CLI.DL;
+  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  SDValue Chain = CLI.Chain;
+  SDValue Callee = CLI.Callee;
+  CallingConv::ID CallConv = CLI.CallConv;
+  bool IsVarArg = CLI.IsVarArg;
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  CLI.IsTailCall = false;
+
+  if (IsVarArg)
+    report_fatal_error("LowerCall with varargs not implemented");
+
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  // Analyze the operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign> ArgLocs;
+  CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+
+  analyzeOutputArgs(ArgCCInfo, Outs, CC_LoongArch);
+
+  // Get a count of how many bytes are to be pushed on the stack.
+  unsigned NumBytes = ArgCCInfo.getNextStackOffset();
+
+  for (auto &Arg : Outs) {
+    if (!Arg.Flags.isByVal())
+      continue;
+    report_fatal_error("Passing arguments byval not implemented");
+  }
+
+  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
+
+  // Copy argument values to their designated locations.
+  SmallVector<std::pair<Register, SDValue>> RegsToPass;
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+    CCValAssign &VA = ArgLocs[i];
+    SDValue ArgValue = OutVals[i];
+
+    // Promote the value if needed.
+    // For now, only handle fully promoted arguments.
+    if (VA.getLocInfo() != CCValAssign::Full)
+      report_fatal_error("Unknown loc info");
+
+    if (VA.isRegLoc()) {
+      // Queue up the argument copies and emit them at the end.
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
+    } else {
+      report_fatal_error("Passing arguments via the stack not implemented");
+    }
+  }
+
+  SDValue Glue;
+
+  // Build a sequence of copy-to-reg nodes, chained and glued together.
+  for (auto &Reg : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg.first, Reg.second, Glue);
+    Glue = Chain.getValue(1);
+  }
+
+  // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
+  // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
+  // split it and then direct call can be matched by PseudoCALL.
+  // FIXME: Add target flags for relocation.
+  if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee))
+    Callee = DAG.getTargetGlobalAddress(S->getGlobal(), DL, PtrVT);
+  else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee))
+    Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT);
+
+  // The first call operand is the chain and the second is the target address.
+  SmallVector<SDValue> Ops;
+  Ops.push_back(Chain);
+  Ops.push_back(Callee);
+
+  // Add argument registers to the end of the list so that they are
+  // known live into the call.
+  for (auto &Reg : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
+
+  // Add a register mask operand representing the call-preserved registers.
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  Ops.push_back(DAG.getRegisterMask(Mask));
+
+  // Glue the call to the argument copies, if any.
+  if (Glue.getNode())
+    Ops.push_back(Glue);
+
+  // Emit the call.
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+
+  Chain = DAG.getNode(LoongArchISD::CALL, DL, NodeTys, Ops);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  Glue = Chain.getValue(1);
+
+  // Mark the end of the call, which is glued to the call itself.
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getConstant(NumBytes, DL, PtrVT, true),
+                             DAG.getConstant(0, DL, PtrVT, true), Glue, DL);
+  Glue = Chain.getValue(1);
+
+  // Assign locations to each value returned by this call.
+  SmallVector<CCValAssign> RVLocs;
+  CCState RetCCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
+  analyzeInputArgs(RetCCInfo, Ins, CC_LoongArch);
+
+  // Copy all of the result registers out of their specified physreg.
+  for (auto &VA : RVLocs) {
+    // Copy the value out.
+    SDValue RetValue =
+        DAG.getCopyFromReg(Chain, DL, VA.getLocReg(), VA.getLocVT(), Glue);
+    Chain = RetValue.getValue(1);
+    Glue = RetValue.getValue(2);
+
+    InVals.push_back(Chain.getValue(0));
+  }
 
   return Chain;
 }

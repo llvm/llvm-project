@@ -6,6 +6,7 @@
   define amdgpu_kernel void @smrd_imm(i32 addrspace(4)* %const0) { ret void }
   define amdgpu_kernel void @smrd_wide() { ret void }
   define amdgpu_kernel void @constant_address_positive() { ret void }
+  define amdgpu_kernel void @smrd_sgpr() { ret void }
 ...
 ---
 
@@ -209,4 +210,25 @@ body: |
     %2:sgpr(p4) = G_PTR_ADD %0, %1
     %3:sgpr(s32) = G_LOAD %2 :: (dereferenceable invariant load (s32), align 4, addrspace 4)
     S_ENDPGM 0, implicit %3
+...
+
+---
+
+# Test a load with a register offset.
+# GCN-LABEL: name: smrd_sgpr{{$}}
+# GCN: S_LOAD_DWORD_SGPR %0, %1, 0
+
+name:            smrd_sgpr
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2
+    %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr(s32) = COPY $sgpr2
+    %2:sgpr(s64) = G_ZEXT %1:sgpr(s32)
+    %4:sgpr(p4) = G_PTR_ADD %0, %2
+    %5:sgpr(s32) = G_LOAD %4 :: (dereferenceable invariant load (s32), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %5
 ...

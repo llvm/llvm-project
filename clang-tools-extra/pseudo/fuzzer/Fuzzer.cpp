@@ -10,6 +10,7 @@
 #include "clang-pseudo/Forest.h"
 #include "clang-pseudo/GLR.h"
 #include "clang-pseudo/Token.h"
+#include "clang-pseudo/cli/CLI.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/grammar/LRTable.h"
 #include "clang/Basic/LangOptions.h"
@@ -24,28 +25,10 @@ namespace {
 
 class Fuzzer {
   clang::LangOptions LangOpts = clang::pseudo::genericLangOpts();
-  Grammar G;
-  LRTable T;
   bool Print;
 
 public:
-  Fuzzer(llvm::StringRef GrammarPath, bool Print) : Print(Print) {
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> GrammarText =
-        llvm::MemoryBuffer::getFile(GrammarPath);
-    if (std::error_code EC = GrammarText.getError()) {
-      llvm::errs() << "Error: can't read grammar file '" << GrammarPath
-                   << "': " << EC.message() << "\n";
-      std::exit(1);
-    }
-    std::vector<std::string> Diags;
-    G = Grammar::parseBNF(GrammarText->get()->getBuffer(), Diags);
-    if (!Diags.empty()) {
-      for (const auto &Diag : Diags)
-        llvm::errs() << Diag << "\n";
-      std::exit(1);
-    }
-    T = LRTable::buildSLR(G);
-  }
+  Fuzzer(bool Print) : Print(Print) {}
 
   void operator()(llvm::StringRef Code) {
     std::string CodeStr = Code.str(); // Must be null-terminated.
@@ -58,11 +41,12 @@ public:
 
     clang::pseudo::ForestArena Arena;
     clang::pseudo::GSS GSS;
+    const Language &Lang = getLanguageFromFlags();
     auto &Root =
-        glrParse(ParseableStream, clang::pseudo::ParseParams{G, T, Arena, GSS},
-                 *G.findNonterminal("translation-unit"));
+        glrParse(clang::pseudo::ParseParams{ParseableStream, Arena, GSS},
+                 *Lang.G.findNonterminal("translation-unit"), Lang);
     if (Print)
-      llvm::outs() << Root.dumpRecursive(G);
+      llvm::outs() << Root.dumpRecursive(Lang.G);
   }
 };
 
@@ -75,16 +59,11 @@ Fuzzer *Fuzz = nullptr;
 extern "C" {
 
 // Set up the fuzzer from command line flags:
-//  -grammar=<file> (required) - path to cxx.bnf
 //  -print                     - used for testing the fuzzer
 int LLVMFuzzerInitialize(int *Argc, char ***Argv) {
-  llvm::StringRef GrammarFile;
   bool PrintForest = false;
   auto ConsumeArg = [&](llvm::StringRef Arg) -> bool {
-    if (Arg.consume_front("-grammar=")) {
-      GrammarFile = Arg;
-      return true;
-    } else if (Arg == "-print") {
+    if (Arg == "-print") {
       PrintForest = true;
       return true;
     }
@@ -92,11 +71,7 @@ int LLVMFuzzerInitialize(int *Argc, char ***Argv) {
   };
   *Argc = std::remove_if(*Argv + 1, *Argv + *Argc, ConsumeArg) - *Argv;
 
-  if (GrammarFile.empty()) {
-    fprintf(stderr, "Fuzzer needs -grammar=/path/to/cxx.bnf\n");
-    exit(1);
-  }
-  clang::pseudo::Fuzz = new clang::pseudo::Fuzzer(GrammarFile, PrintForest);
+  clang::pseudo::Fuzz = new clang::pseudo::Fuzzer(PrintForest);
   return 0;
 }
 

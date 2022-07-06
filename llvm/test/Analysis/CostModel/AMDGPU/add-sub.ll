@@ -76,7 +76,7 @@ define amdgpu_kernel void @add_i16() #0 {
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5i16 = add <5 x i16> undef, undef
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v6i16 = add <6 x i16> undef, undef
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i16 = add <16 x i16> undef, undef
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v17i16 = add <17 x i16> undef, undef
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v17i16 = add <17 x i16> undef, undef
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW16-LABEL: 'add_i16'
@@ -98,7 +98,7 @@ define amdgpu_kernel void @add_i16() #0 {
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5i16 = add <5 x i16> undef, undef
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v6i16 = add <6 x i16> undef, undef
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i16 = add <16 x i16> undef, undef
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v17i16 = add <17 x i16> undef, undef
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v17i16 = add <17 x i16> undef, undef
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW16-SIZE-LABEL: 'add_i16'

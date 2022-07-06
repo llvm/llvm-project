@@ -16,7 +16,7 @@ define i32 @main(i1 %c1, i1 %c2, i32 %y) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 [[C1]], label [[LOOP2:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 [[C1]], label [[LOOP2:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       loop2:
@@ -25,7 +25,7 @@ define i32 @main(i1 %c1, i1 %c2, i32 %y) {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP2]], label [[LOOP_LATCH:%.*]]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP2]], label [[LOOP_LATCH]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
 ;

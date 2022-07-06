@@ -226,12 +226,23 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   return result;
 }
 
-SymbolicLexMin IntegerPolyhedron::findSymbolicIntegerLexMin() const {
+SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
+  // Symbol and Domain vars will be used as symbols for symbolic lexmin.
+  // In other words, for every value of the symbols and domain, return the
+  // lexmin value of the (range, locals).
+  llvm::SmallBitVector isSymbol(getNumVars(), false);
+  isSymbol.set(getVarKindOffset(VarKind::Symbol),
+               getVarKindEnd(VarKind::Symbol));
+  isSymbol.set(getVarKindOffset(VarKind::Domain),
+               getVarKindEnd(VarKind::Domain));
   // Compute the symbolic lexmin of the dims and locals, with the symbols being
   // the actual symbols of this set.
   SymbolicLexMin result =
-      SymbolicLexSimplex(*this, IntegerPolyhedron(PresburgerSpace::getSetSpace(
-                                    /*numDims=*/getNumSymbolVars())))
+      SymbolicLexSimplex(*this,
+                         IntegerPolyhedron(PresburgerSpace::getSetSpace(
+                             /*numDims=*/getNumDomainVars(),
+                             /*numSymbols=*/getNumSymbolVars())),
+                         isSymbol)
           .computeSymbolicIntegerLexMin();
 
   // We want to return only the lexmin over the dims, so strip the locals from
