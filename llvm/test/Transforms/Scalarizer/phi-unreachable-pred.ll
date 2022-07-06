@@ -11,8 +11,8 @@ define i16 @f1() {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_BODY:%.*]], label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[EXTRACT:%.*]] = phi i16 [ 1, [[ENTRY:%.*]] ], [ undef, [[FOR_COND]] ]
-; CHECK-NEXT:    ret i16 [[EXTRACT]]
+; CHECK-NEXT:    [[PHI_I0:%.*]] = phi i16 [ 1, [[ENTRY:%.*]] ], [ poison, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i16 [[PHI_I0]]
 ;
 entry:
   br label %for.end
@@ -53,8 +53,8 @@ define void @f2() {
 ; CHECK:       for.cond1.for.end7_crit_edge:
 ; CHECK-NEXT:    br label [[IF_END8]]
 ; CHECK:       if.end8:
-; CHECK-NEXT:    [[E_SROA_3_4_I0:%.*]] = phi i64 [ undef, [[FOR_BODY]] ], [ undef, [[FOR_COND1_FOR_END7_CRIT_EDGE]] ], [ undef, [[IF_THEN]] ]
-; CHECK-NEXT:    [[E_SROA_3_4_I1:%.*]] = phi i64 [ undef, [[FOR_BODY]] ], [ undef, [[FOR_COND1_FOR_END7_CRIT_EDGE]] ], [ undef, [[IF_THEN]] ]
+; CHECK-NEXT:    [[E_SROA_3_4_I0:%.*]] = phi i64 [ undef, [[FOR_BODY]] ], [ poison, [[FOR_COND1_FOR_END7_CRIT_EDGE]] ], [ undef, [[IF_THEN]] ]
+; CHECK-NEXT:    [[E_SROA_3_4_I1:%.*]] = phi i64 [ undef, [[FOR_BODY]] ], [ poison, [[FOR_COND1_FOR_END7_CRIT_EDGE]] ], [ undef, [[IF_THEN]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ;
 entry:

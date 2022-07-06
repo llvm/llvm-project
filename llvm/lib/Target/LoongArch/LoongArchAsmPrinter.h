@@ -39,6 +39,10 @@ public:
   // tblgen'erated function.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
+  // Wrapper needed for tblgenned pseudo lowering.
+  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
+    return lowerLoongArchMachineOperandToMCOperand(MO, MCOp, *this);
+  }
 };
 
 } // end namespace llvm

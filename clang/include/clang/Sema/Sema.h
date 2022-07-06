@@ -10725,6 +10725,13 @@ public:
   /// constructs.
   VarDecl *isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo = false,
                                 unsigned StopAt = 0);
+
+  /// The member expression(this->fd) needs to be rebuilt in the template
+  /// instantiation to generate private copy for OpenMP when default
+  /// clause is used. The function will return true if default
+  /// cluse is used.
+  bool isOpenMPRebuildMemberExpr(ValueDecl *D);
+
   ExprResult getOpenMPCapturedExpr(VarDecl *Capture, ExprValueKind VK,
                                    ExprObjectKind OK, SourceLocation Loc);
 
@@ -11182,6 +11189,11 @@ public:
   /// Called on well-formed '\#pragma omp parallel masked taskloop' after
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPParallelMaskedTaskLoopDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp parallel masked taskloop simd' after
+  /// parsing of the associated statement.
+  StmtResult ActOnOpenMPParallelMaskedTaskLoopSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
   /// Called on well-formed '\#pragma omp distribute' after parsing

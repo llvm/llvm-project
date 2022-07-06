@@ -243,7 +243,7 @@ static void DeleteBasicBlock(BasicBlock *BB, CallGraphUpdater &CGU) {
     }
 
     if (!I->use_empty())
-      I->replaceAllUsesWith(UndefValue::get(I->getType()));
+      I->replaceAllUsesWith(PoisonValue::get(I->getType()));
   }
 
   if (TokenInst) {

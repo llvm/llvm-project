@@ -103,7 +103,6 @@ public:
 
   static bool classof(const Binary *V) { return V->isOffloadFile(); }
 
-private:
   struct Header {
     uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
     uint32_t Version = OffloadBinary::Version;   // Version identifier.
@@ -127,6 +126,7 @@ private:
     uint64_t ValueOffset;
   };
 
+private:
   OffloadBinary(MemoryBufferRef Source, const Header *TheHeader,
                 const Entry *TheEntry)
       : Binary(Binary::ID_Offload, Source), Buffer(Source.getBufferStart()),

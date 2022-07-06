@@ -1,3 +1,4 @@
+add_subdirectory(cli)
 add_subdirectory(cxx)
 add_subdirectory(grammar)
 

@@ -38,20 +38,19 @@ static constexpr uint32_t STOP = 0x7f80'0000U;
 // Range: [-1, 0];
 // static constexpr uint32_t START = 0x8000'0000U;
 // static constexpr uint32_t STOP  = 0xbf80'0000U;
-static constexpr int NUM_THREADS = 16;
 
 TEST_F(LlvmLibclog1pfExhaustiveTest, RoundNearestTieToEven) {
-  test_full_range(START, STOP, NUM_THREADS, mpfr::RoundingMode::Nearest);
+  test_full_range(START, STOP, mpfr::RoundingMode::Nearest);
 }
 
 TEST_F(LlvmLibclog1pfExhaustiveTest, RoundUp) {
-  test_full_range(START, STOP, NUM_THREADS, mpfr::RoundingMode::Upward);
+  test_full_range(START, STOP, mpfr::RoundingMode::Upward);
 }
 
 TEST_F(LlvmLibclog1pfExhaustiveTest, RoundDown) {
-  test_full_range(START, STOP, NUM_THREADS, mpfr::RoundingMode::Downward);
+  test_full_range(START, STOP, mpfr::RoundingMode::Downward);
 }
 
 TEST_F(LlvmLibclog1pfExhaustiveTest, RoundTowardZero) {
-  test_full_range(START, STOP, NUM_THREADS, mpfr::RoundingMode::TowardZero);
+  test_full_range(START, STOP, mpfr::RoundingMode::TowardZero);
 }

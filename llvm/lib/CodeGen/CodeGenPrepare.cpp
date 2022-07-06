@@ -3440,7 +3440,7 @@ public:
 
   void destroyNewNodes(Type *CommonType) {
     // For safe erasing, replace the uses with dummy value first.
-    auto *Dummy = UndefValue::get(CommonType);
+    auto *Dummy = PoisonValue::get(CommonType);
     for (auto *I : AllPhiNodes) {
       I->replaceAllUsesWith(Dummy);
       I->eraseFromParent();
@@ -3809,7 +3809,7 @@ private:
     SmallVector<Value *, 32> Worklist;
     assert((isa<PHINode>(Original) || isa<SelectInst>(Original)) &&
            "Address must be a Phi or Select node");
-    auto *Dummy = UndefValue::get(CommonType);
+    auto *Dummy = PoisonValue::get(CommonType);
     Worklist.push_back(Original);
     while (!Worklist.empty()) {
       Value *Current = Worklist.pop_back_val();
@@ -6138,7 +6138,7 @@ bool CodeGenPrepare::optimizePhiTypes(Function &F) {
 
   // Remove any old phi's that have been converted.
   for (auto *I : DeletedInstrs) {
-    I->replaceAllUsesWith(UndefValue::get(I->getType()));
+    I->replaceAllUsesWith(PoisonValue::get(I->getType()));
     I->eraseFromParent();
   }
 

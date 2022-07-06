@@ -211,7 +211,7 @@ function(add_mlir_python_modules name)
 
     if(_source_type STREQUAL "pure")
       # Pure python sources to link into the tree.
-      set(_pure_sources_target "${sources_target}.sources")
+      set(_pure_sources_target "${modules_target}.sources.${sources_target}")
       add_mlir_python_sources_target(${_pure_sources_target}
         INSTALL_COMPONENT ${modules_target}
         INSTALL_DIR ${ARG_INSTALL_PREFIX}

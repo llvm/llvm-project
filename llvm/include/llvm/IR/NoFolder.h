@@ -106,21 +106,8 @@ public:
   // Unary Operators
   //===--------------------------------------------------------------------===//
 
-  Instruction *CreateNeg(Constant *C,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateNeg(C);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
-  }
-
   Instruction *CreateFNeg(Constant *C) const override {
     return UnaryOperator::CreateFNeg(C);
-  }
-
-  Instruction *CreateNot(Constant *C) const override {
-    return BinaryOperator::CreateNot(C);
   }
 
   Instruction *CreateUnOp(Instruction::UnaryOps Opc,

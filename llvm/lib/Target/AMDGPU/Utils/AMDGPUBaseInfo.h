@@ -471,8 +471,8 @@ LLVM_READONLY
 bool getMAIIsGFX940XDL(unsigned Opc);
 
 struct CanBeVOPD {
-    bool X;
-    bool Y;
+  bool X;
+  bool Y;
 };
 
 LLVM_READONLY
@@ -494,13 +494,13 @@ LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc);
 
 LLVM_READONLY
+int getVOPDFull(unsigned OpX, unsigned OpY);
+
+LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
 LLVM_READONLY
 unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
-
-LLVM_READONLY
-int getVOPDFull(unsigned OpX, unsigned OpY);
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const MCSubtargetInfo *STI);

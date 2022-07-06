@@ -333,6 +333,7 @@ module std [system] {
       module ranges_lower_bound              { private header "__algorithm/ranges_lower_bound.h" }
       module ranges_max                      { private header "__algorithm/ranges_max.h" }
       module ranges_max_element              { private header "__algorithm/ranges_max_element.h" }
+      module ranges_merge                    { private header "__algorithm/ranges_merge.h" }
       module ranges_min                      { private header "__algorithm/ranges_min.h" }
       module ranges_min_element              { private header "__algorithm/ranges_min_element.h" }
       module ranges_minmax                   { private header "__algorithm/ranges_minmax.h" }
@@ -345,6 +346,7 @@ module std [system] {
       module ranges_replace_if               { private header "__algorithm/ranges_replace_if.h" }
       module ranges_reverse                  { private header "__algorithm/ranges_reverse.h" }
       module ranges_sort                     { private header "__algorithm/ranges_sort.h" }
+      module ranges_stable_sort              { private header "__algorithm/ranges_stable_sort.h" }
       module ranges_swap_ranges              { private header "__algorithm/ranges_swap_ranges.h" }
       module ranges_transform                { private header "__algorithm/ranges_transform.h" }
       module ranges_upper_bound              { private header "__algorithm/ranges_upper_bound.h" }
@@ -746,6 +748,11 @@ module std [system] {
     header "latch"
     export *
   }
+
+  module __debug_utils {
+    module randomize_range { private header "__debug_utils/randomize_range.h" }
+  }
+
   module limits {
     header "limits"
     export *

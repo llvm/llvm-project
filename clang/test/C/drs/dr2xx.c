@@ -17,6 +17,21 @@
  *
  * WG14 DR215: yes
  * Equality operators
+ *
+ * WG14 DR218: yes
+ * Signs of non-numeric floating point values
+ *
+ * WG14 DR219: yes
+ * Effective types
+ *
+ * WG14 DR221: yes
+ * Lacuna in pointer arithmetic
+ *
+ * WG14 DR222: yes
+ * Partially initialized structures
+ *
+ * WG14 DR234: yes
+ * Miscellaneous Typos
  */
 
 
@@ -31,16 +46,23 @@ void dr204(void) {
   /* If the implementation supports a standard integer type larger than signed
    * long, it's okay for size_t and ptrdiff_t to have a greater integer
    * conversion rank than signed long.
+   *
+   * Note, it's not required that the implementation use that larger conversion
+   * rank; it's acceptable to use an unsigned long or unsigned int for the size
+   * type (those ranks are not greater than that of signed long).
    */
-   (void)_Generic(s + sl, __typeof__(s) : 1);
-   (void)_Generic(p + sl, __typeof__(p) : 1);
+   (void)_Generic(s + sl, unsigned long long : 1, unsigned long : 1, unsigned int : 1); /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
+   (void)_Generic(p + sl, signed long long : 1, signed long : 1, signed int : 1);       /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
 #elif __LLONG_WIDTH__ == __LONG_WIDTH__
   /* But if the implementation doesn't support a larger standard integer type
    * than signed long, the conversion rank should prefer signed long if the type
    * is signed (ptrdiff_t) or unsigned long if the type is unsigned (size_t).
+   *
+   * Note, as above, unsigned/signed int is also acceptable due to having a
+   * lesser integer conversion rank.
    */
-   (void)_Generic(s + sl, unsigned long : 1);
-   (void)_Generic(p + sl, signed long : 1);
+   (void)_Generic(s + sl, unsigned long : 1, unsigned int : 1);
+   (void)_Generic(p + sl, signed long : 1, signed int : 1);
 #else
 #error "Something has gone off the rails"
 #endif
@@ -80,3 +102,45 @@ void dr216(void) {
   A('}'); A('~');
 #undef A
 }
+
+/* WG14 DR230: yes
+ * Enumerated type rank
+ */
+void dr230(void) {
+  enum E {
+    Value = __INT_MAX__
+  } e;
+  /* The enumeration type has a compatible type that is a signed or unsigned
+   * integer type, or char. But it has to be large enough to hold all of the
+   * values of the enumerators. So it needs to be at least int or unsigned int.
+   *
+   * The integer conversion rank for an enumeration is the same as its
+   * compatible type (C99 6.3.1.1p1), so it's eligible for integer promotions
+   * to either int or unsigned int, depending on the compatible type
+   * (C99 6.3.1.1p2).
+   */
+  (void)_Generic(e, int : 1, unsigned int : 1);
+  (void)_Generic((enum E)Value, int : 1, unsigned int : 1);
+  /* The enumerators themselves have type int (C99 6.7.2.2p3). */
+  (void)_Generic(Value, int : 1);
+}
+
+/* WG14 DR231: no
+ * Semantics of text-line and non-directive
+ *
+ * One of the preprocessing groups to support is # non-directive (C99 6.10p1),
+ * which is defined as pp-tokens followed by a newline. However, we fail to
+ * translate the program if we don't recognize the directive, and we don't take
+ * note when what follows the # is not a valid preprocessing token.
+ */
+
+/* FIXME: this should not fail. */
+# nope /* expected-error {{invalid preprocessing directive}} */
+
+/* FIXME: this should fail, but not because of the unknown directive; it should
+ * fail because of the invalid preprocessing-token.
+ */
+# 'a
+/* expected-error@-1 {{invalid preprocessing directive}} \
+   expected-warning@-1 {{missing terminating ' character}}
+*/

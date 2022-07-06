@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   DropUnitDims.cpp
   ElementwiseOpFusion.cpp
   ElementwiseToLinalg.cpp
+  FusePadOpWithLinalgProducer.cpp
   Fusion.cpp
   FusionOnTensors.cpp
   Generalization.cpp
@@ -19,7 +20,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Loops.cpp
   LinalgStrategyPasses.cpp
   NamedOpConversions.cpp
-  PadOpInterchange.cpp
   Promotion.cpp
   SparseTensorRewriting.cpp
   SplitReduction.cpp

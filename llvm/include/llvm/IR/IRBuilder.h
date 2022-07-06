@@ -1572,14 +1572,10 @@ public:
       Optional<RoundingMode> Rounding = None,
       Optional<fp::ExceptionBehavior> Except = None);
 
-  Value *CreateNeg(Value *V, const Twine &Name = "",
-                   bool HasNUW = false, bool HasNSW = false) {
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateNeg(VC, HasNUW, HasNSW), Name);
-    BinaryOperator *BO = Insert(BinaryOperator::CreateNeg(V), Name);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
+  Value *CreateNeg(Value *V, const Twine &Name = "", bool HasNUW = false,
+                   bool HasNSW = false) {
+    return CreateSub(Constant::getNullValue(V->getType()), V, Name, HasNUW,
+                     HasNSW);
   }
 
   Value *CreateNSWNeg(Value *V, const Twine &Name = "") {
@@ -1610,9 +1606,7 @@ public:
   }
 
   Value *CreateNot(Value *V, const Twine &Name = "") {
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateNot(VC), Name);
-    return Insert(BinaryOperator::CreateNot(V), Name);
+    return CreateXor(V, Constant::getAllOnesValue(V->getType()), Name);
   }
 
   Value *CreateUnOp(Instruction::UnaryOps Opc,

@@ -10,9 +10,9 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 ; CHECK-LABEL: @simple_memset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -63,9 +63,9 @@ define void @simple_memcpy(i32* noalias %dst, i32* noalias %src, i64 %n) #0 {
 ; CHECK-LABEL: @simple_memcpy(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -123,9 +123,9 @@ define void @copy_stride4(i32* noalias %dst, i32* noalias %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 -1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 -1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -193,9 +193,9 @@ define void @simple_gather_scatter(i32* noalias %dst, i32* noalias %src, i32* no
 ; CHECK-LABEL: @simple_gather_scatter(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -253,9 +253,9 @@ while.end.loopexit:                               ; preds = %while.body
 define void @uniform_load(i32* noalias %dst, i32* noalias readonly %src, i64 %n) #0 {
 ; CHECK-LABEL: @uniform_load(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[N:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[N:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -312,9 +312,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @cond_uniform_load(i32* noalias %dst, i32* noalias readonly %src, i32* noalias readonly %cond, i64 %n) #0 {
 ; CHECK-LABEL: @cond_uniform_load(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[N:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[N:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -389,9 +389,9 @@ for.end:                                          ; preds = %for.inc, %entry
 define void @uniform_store(i32* noalias %dst, i32* noalias readonly %src, i64 %n) #0 {
 ; CHECK-LABEL: @uniform_store(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[N:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[N:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -445,9 +445,9 @@ define void @simple_fdiv(float* noalias %dst, float* noalias %src, i64 %n) #0 {
 ; CHECK-LABEL: @simple_fdiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -507,9 +507,9 @@ define i32 @add_reduction_i32(i32* %ptr, i64 %n) #0 {
 ; CHECK-LABEL: @add_reduction_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -563,9 +563,9 @@ define float @add_reduction_f32(float* %ptr, i64 %n) #0 {
 ; CHECK-LABEL: @add_reduction_f32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[UMAX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -617,9 +617,9 @@ while.end.loopexit:                               ; preds = %while.body
 define i32 @cond_xor_reduction(i32* noalias %a, i32* noalias %cond, i64 %N) #0 {
 ; CHECK-LABEL: @cond_xor_reduction(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[N:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 -1, [[N:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

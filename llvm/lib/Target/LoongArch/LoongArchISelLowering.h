@@ -27,6 +27,7 @@ enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
   // TODO: add more LoongArchISDs
+  CALL,
   RET,
   // 32-bit shifts, directly matching the semantics of the named LoongArch
   // instructions.
@@ -72,6 +73,8 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
+  SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
@@ -86,6 +89,7 @@ private:
                          const SmallVectorImpl<ISD::OutputArg> &Outs,
                          LoongArchCCAssignFn Fn) const;
 
+  SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
 };

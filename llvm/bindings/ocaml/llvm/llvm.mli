@@ -1347,11 +1347,6 @@ val const_insertelement : llvalue -> llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getShuffleVector]. *)
 val const_shufflevector : llvalue -> llvalue -> llvalue -> llvalue
 
-(** [const_insertvalue agg val idxs] inserts the value [val] in the specified
-    indexs [idxs] in the aggregate [agg]. Each [idxs] must be less than the size
-    of the aggregate. See the method [llvm::ConstantExpr::getInsertValue]. *)
-val const_insertvalue : llvalue -> llvalue -> int array -> llvalue
-
 (** [const_inline_asm ty asm con side align] inserts a inline assembly string.
     See the method [llvm::InlineAsm::get]. *)
 val const_inline_asm : lltype -> string -> string -> bool -> bool -> llvalue

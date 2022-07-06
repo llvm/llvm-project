@@ -3265,7 +3265,7 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
   // Match legalized form %zext = G_MERGE_VALUES (s32 %x), (s32 0)
   const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (Def->getOpcode() != AMDGPU::G_MERGE_VALUES)
-    return false;
+    return Register();
 
   if (mi_match(Def->getOperand(2).getReg(), MRI, m_ZeroInt())) {
     return Def->getOperand(1).getReg();
@@ -3881,27 +3881,36 @@ AMDGPUInstructionSelector::selectSmrdSgpr(MachineOperand &Root) const {
   getAddrModeInfo(*MI, *MRI, AddrInfo);
 
   // FIXME: We should shrink the GEP if the offset is known to be <= 32-bits,
-  // then we can select all ptr + 32-bit offsets not just immediate offsets.
-  if (AddrInfo.empty() || AddrInfo[0].SgprParts.size() != 1)
+  // then we can select all ptr + 32-bit offsets.
+  if (AddrInfo.empty())
     return None;
 
   const GEPInfo &GEPInfo = AddrInfo[0];
-  // SGPR offset is unsigned.
-  if (!GEPInfo.Imm || GEPInfo.Imm < 0 || !isUInt<32>(GEPInfo.Imm))
-    return None;
-
-  // If we make it this far we have a load with an 32-bit immediate offset.
-  // It is OK to select this using a sgpr offset, because we have already
-  // failed trying to select this load into one of the _IMM variants since
-  // the _IMM Patterns are considered before the _SGPR patterns.
   Register PtrReg = GEPInfo.SgprParts[0];
-  Register OffsetReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), OffsetReg)
-          .addImm(GEPInfo.Imm);
-  return {{
-    [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
-    [=](MachineInstrBuilder &MIB) { MIB.addReg(OffsetReg); }
-  }};
+
+  // SGPR offset is unsigned.
+  if (AddrInfo[0].SgprParts.size() == 1 && isUInt<32>(GEPInfo.Imm) &&
+      GEPInfo.Imm != 0) {
+    // If we make it this far we have a load with an 32-bit immediate offset.
+    // It is OK to select this using a sgpr offset, because we have already
+    // failed trying to select this load into one of the _IMM variants since
+    // the _IMM Patterns are considered before the _SGPR patterns.
+    Register OffsetReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), OffsetReg)
+        .addImm(GEPInfo.Imm);
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
+             [=](MachineInstrBuilder &MIB) { MIB.addReg(OffsetReg); }}};
+  }
+
+  if (AddrInfo[0].SgprParts.size() == 2 && GEPInfo.Imm == 0) {
+    if (Register OffsetReg =
+            matchZeroExtendFromS32(*MRI, GEPInfo.SgprParts[1])) {
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
+               [=](MachineInstrBuilder &MIB) { MIB.addReg(OffsetReg); }}};
+    }
+  }
+
+  return None;
 }
 
 std::pair<Register, int>

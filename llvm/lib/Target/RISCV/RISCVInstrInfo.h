@@ -184,9 +184,8 @@ protected:
 namespace RISCV {
 
 // Returns true if the given MI is an RVV instruction opcode for which we may
-// expect to see a FrameIndex operand. When CheckFIs is true, the instruction
-// must contain at least one FrameIndex operand.
-bool isRVVSpill(const MachineInstr &MI, bool CheckFIs);
+// expect to see a FrameIndex operand.
+bool isRVVSpill(const MachineInstr &MI);
 
 Optional<std::pair<unsigned, unsigned>> isRVVSpillForZvlsseg(unsigned Opcode);
 

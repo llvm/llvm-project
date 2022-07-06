@@ -1383,8 +1383,8 @@ define <vscale x 1 x i1> @intrinsic_vmseq_mask_vx_nxv1i64_i64(<vscale x 1 x i64>
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vmseq.vv v0, v8, v9, v0.t
@@ -1420,8 +1420,8 @@ define <vscale x 1 x i1> @intrinsic_vmsge_mask_vx_nxv1i64_i64(<vscale x 1 x i64>
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vmsle.vv v0, v9, v8, v0.t
