@@ -513,6 +513,14 @@ C++20 Feature Support
   that can be used for such compatibility. The demangler now demangles
   symbols with named module attachment.
 
+- Enhanced the support for C++20 Modules, including: Partitions,
+  Reachability, Header Unit and ``extern "C++"`` semantics.
+
+- Implemented `P1103R3: Merging Modules <https://wg21.link/P1103R3>`_.
+- Implemented `P1779R3: ABI isolation for member functions <https://wg21.link/P1779R3>`_.
+- Implemented `P1874R1: Dynamic Initialization Order of Non-Local Variables in Modules <https://wg21.link/P1874R1>`_.
+- Partially implemented `P1815R2: Translation-unit-local entities <https://wg21.link/P1815R2>`_.
+
 - As per "Conditionally Trivial Special Member Functions" (P0848), it is
   now possible to overload destructors using concepts. Note that the rest
   of the paper about other special member functions is not yet implemented.
