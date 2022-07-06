@@ -43,9 +43,12 @@ struct SymbolState {
 /// such as the current lexer position etc.
 struct ParserState {
   ParserState(const llvm::SourceMgr &sourceMgr, const ParserConfig &config,
-              SymbolState &symbols, AsmParserState *asmState)
-      : config(config), lex(sourceMgr, config.getContext()),
-        curToken(lex.lexToken()), symbols(symbols), asmState(asmState) {}
+              SymbolState &symbols, AsmParserState *asmState,
+              AsmParserCodeCompleteContext *codeCompleteContext)
+      : config(config),
+        lex(sourceMgr, config.getContext(), codeCompleteContext),
+        curToken(lex.lexToken()), symbols(symbols), asmState(asmState),
+        codeCompleteContext(codeCompleteContext) {}
   ParserState(const ParserState &) = delete;
   void operator=(const ParserState &) = delete;
 
@@ -64,6 +67,9 @@ struct ParserState {
   /// An optional pointer to a struct containing high level parser state to be
   /// populated during parsing.
   AsmParserState *asmState;
+
+  /// An optional code completion context.
+  AsmParserCodeCompleteContext *codeCompleteContext;
 
   // Contains the stack of default dialect to use when parsing regions.
   // A new dialect get pushed to the stack before parsing regions nested

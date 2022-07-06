@@ -18,6 +18,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/AsmParserState.h"
+#include "mlir/Parser/CodeComplete.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -31,6 +32,12 @@ using namespace mlir;
 using namespace mlir::detail;
 using llvm::MemoryBuffer;
 using llvm::SourceMgr;
+
+//===----------------------------------------------------------------------===//
+// CodeComplete
+//===----------------------------------------------------------------------===//
+
+AsmParserCodeCompleteContext::~AsmParserCodeCompleteContext() = default;
 
 //===----------------------------------------------------------------------===//
 // Parser
@@ -335,6 +342,60 @@ Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
 }
 
 //===----------------------------------------------------------------------===//
+// Code Completion
+
+ParseResult Parser::codeCompleteDialectName() {
+  state.codeCompleteContext->completeDialectName();
+  return failure();
+}
+
+ParseResult Parser::codeCompleteOperationName(StringRef dialectName) {
+  // Perform some simple validation on the dialect name. This doesn't need to be
+  // extensive, it's more of an optimization (to avoid checking completion
+  // results when we know they will fail).
+  if (dialectName.empty() || dialectName.contains('.'))
+    return failure();
+  state.codeCompleteContext->completeOperationName(dialectName);
+  return failure();
+}
+
+ParseResult Parser::codeCompleteDialectOrElidedOpName(SMLoc loc) {
+  // Check to see if there is anything else on the current line. This check
+  // isn't strictly necessary, but it does avoid unnecessarily triggering
+  // completions for operations and dialects in situations where we don't want
+  // them (e.g. at the end of an operation).
+  auto shouldIgnoreOpCompletion = [&]() {
+    const char *bufBegin = state.lex.getBufferBegin();
+    const char *it = loc.getPointer() - 1;
+    for (; it > bufBegin && *it != '\n'; --it)
+      if (!llvm::is_contained(StringRef(" \t\r"), *it))
+        return true;
+    return false;
+  };
+  if (shouldIgnoreOpCompletion())
+    return failure();
+
+  // The completion here is either for a dialect name, or an operation name
+  // whose dialect prefix was elided. For this we simply invoke both of the
+  // individual completion methods.
+  (void)codeCompleteDialectName();
+  return codeCompleteOperationName(state.defaultDialectStack.back());
+}
+
+ParseResult Parser::codeCompleteStringDialectOrOperationName(StringRef name) {
+  // If the name is empty, this is the start of the string and contains the
+  // dialect.
+  if (name.empty())
+    return codeCompleteDialectName();
+
+  // Otherwise, we treat this as completing an operation name. The current name
+  // is used as the dialect namespace.
+  if (name.consume_back("."))
+    return codeCompleteOperationName(name);
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
 // OperationParser
 //===----------------------------------------------------------------------===//
 
@@ -496,6 +557,17 @@ public:
   /// already exist.  The location specified is the point of use, which allows
   /// us to diagnose references to blocks that are not defined precisely.
   Block *getBlockNamed(StringRef name, SMLoc loc);
+
+  //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  /// The set of various code completion methods. Every completion method
+  /// returns `failure` to stop the parsing process after providing completion
+  /// results.
+
+  ParseResult codeCompleteSSAUse();
+  ParseResult codeCompleteBlock();
 
 private:
   /// This class represents a definition of a Block.
@@ -790,7 +862,7 @@ ParseResult OperationParser::addDefinition(UnresolvedOperand useInfo,
 ///
 ParseResult OperationParser::parseOptionalSSAUseList(
     SmallVectorImpl<UnresolvedOperand> &results) {
-  if (getToken().isNot(Token::percent_identifier))
+  if (!getToken().isOrIsCodeCompletionFor(Token::percent_identifier))
     return success();
   return parseCommaSeparatedList([&]() -> ParseResult {
     UnresolvedOperand result;
@@ -807,6 +879,9 @@ ParseResult OperationParser::parseOptionalSSAUseList(
 ///
 ParseResult OperationParser::parseSSAUse(UnresolvedOperand &result,
                                          bool allowResultNumber) {
+  if (getToken().isCodeCompletion())
+    return codeCompleteSSAUse();
+
   result.name = getTokenSpelling();
   result.number = 0;
   result.location = getToken().getLoc();
@@ -1017,6 +1092,10 @@ ParseResult OperationParser::parseOperation() {
     op = parseCustomOperation(resultIDs);
   else if (nameTok.is(Token::string))
     op = parseGenericOperation();
+  else if (nameTok.isCodeCompletionFor(Token::string))
+    return codeCompleteStringDialectOrOperationName(nameTok.getStringValue());
+  else if (nameTok.isCodeCompletion())
+    return codeCompleteDialectOrElidedOpName(loc);
   else
     return emitWrongTokenError("expected operation name in quotes");
 
@@ -1071,6 +1150,9 @@ ParseResult OperationParser::parseOperation() {
 ///   successor ::= block-id
 ///
 ParseResult OperationParser::parseSuccessor(Block *&dest) {
+  if (getToken().isCodeCompletion())
+    return codeCompleteBlock();
+
   // Verify branch is identifier and get the matching block.
   if (!getToken().is(Token::caret_identifier))
     return emitWrongTokenError("expected block name");
@@ -1391,7 +1473,7 @@ public:
   OptionalParseResult
   parseOptionalOperand(UnresolvedOperand &result,
                        bool allowResultNumber = true) override {
-    if (parser.getToken().is(Token::percent_identifier))
+    if (parser.getToken().isOrIsCodeCompletionFor(Token::percent_identifier))
       return parseOperand(result, allowResultNumber);
     return llvm::None;
   }
@@ -1406,14 +1488,15 @@ public:
     if (delimiter == Delimiter::None) {
       // parseCommaSeparatedList doesn't handle the missing case for "none",
       // so we handle it custom here.
-      if (parser.getToken().isNot(Token::percent_identifier)) {
+      Token tok = parser.getToken();
+      if (!tok.isOrIsCodeCompletionFor(Token::percent_identifier)) {
         // If we didn't require any operands or required exactly zero (weird)
         // then this is success.
         if (requiredOperandCount == -1 || requiredOperandCount == 0)
           return success();
 
         // Otherwise, try to produce a nice error message.
-        if (parser.getToken().isAny(Token::l_paren, Token::l_square))
+        if (tok.isAny(Token::l_paren, Token::l_square))
           return parser.emitError("unexpected delimiter");
         return parser.emitWrongTokenError("expected operand");
       }
@@ -1597,7 +1680,7 @@ public:
 
   /// Parse an optional operation successor and its operand list.
   OptionalParseResult parseOptionalSuccessor(Block *&dest) override {
-    if (parser.getToken().isNot(Token::caret_identifier))
+    if (!parser.getToken().isOrIsCodeCompletionFor(Token::caret_identifier))
       return llvm::None;
     return parseSuccessor(dest);
   }
@@ -1681,7 +1764,8 @@ private:
 } // namespace
 
 FailureOr<OperationName> OperationParser::parseCustomOperationName() {
-  std::string opName = getTokenSpelling().str();
+  Token nameTok = getToken();
+  StringRef opName = nameTok.getSpelling();
   if (opName.empty())
     return (emitError("empty operation name is invalid"), failure());
   consumeToken();
@@ -1694,11 +1778,17 @@ FailureOr<OperationName> OperationParser::parseCustomOperationName() {
 
   // If the operation doesn't have a dialect prefix try using the default
   // dialect.
-  auto opNameSplit = StringRef(opName).split('.');
+  auto opNameSplit = opName.split('.');
   StringRef dialectName = opNameSplit.first;
+  std::string opNameStorage;
   if (opNameSplit.second.empty()) {
+    // If the name didn't have a prefix, check for a code completion request.
+    if (getToken().isCodeCompletion() && opName.back() == '.')
+      return codeCompleteOperationName(dialectName);
+
     dialectName = getState().defaultDialectStack.back();
-    opName = (dialectName + "." + opName).str();
+    opNameStorage = (dialectName + "." + opName).str();
+    opName = opNameStorage;
   }
 
   // Try to load the dialect before returning the operation name to make sure
@@ -2092,6 +2182,58 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
 }
 
 //===----------------------------------------------------------------------===//
+// Code Completion
+//===----------------------------------------------------------------------===//
+
+ParseResult OperationParser::codeCompleteSSAUse() {
+  std::string detailData;
+  llvm::raw_string_ostream detailOS(detailData);
+  for (IsolatedSSANameScope &scope : isolatedNameScopes) {
+    for (auto &it : scope.values) {
+      if (it.second.empty())
+        continue;
+      Value frontValue = it.second.front().value;
+
+      // If the value isn't a forward reference, we also add the name of the op
+      // to the detail.
+      if (auto result = frontValue.dyn_cast<OpResult>()) {
+        if (!forwardRefPlaceholders.count(result))
+          detailOS << result.getOwner()->getName() << ": ";
+      } else {
+        detailOS << "arg #" << frontValue.cast<BlockArgument>().getArgNumber()
+                 << ": ";
+      }
+
+      // Emit the type of the values to aid with completion selection.
+      detailOS << frontValue.getType();
+
+      // FIXME: We should define a policy for packed values, e.g. with a limit
+      // on the detail size, but it isn't clear what would be useful right now.
+      // For now we just only emit the first type.
+      if (it.second.size() > 1)
+        detailOS << ", ...";
+
+      state.codeCompleteContext->appendSSAValueCompletion(
+          it.getKey(), std::move(detailOS.str()));
+    }
+  }
+
+  return failure();
+}
+
+ParseResult OperationParser::codeCompleteBlock() {
+  // Don't provide completions if the token isn't empty, e.g. this avoids
+  // weirdness when we encounter a `.` within the identifier.
+  StringRef spelling = getTokenSpelling();
+  if (!(spelling.empty() || spelling == "^"))
+    return failure();
+
+  for (const auto &it : blocksByName.back())
+    state.codeCompleteContext->appendBlockCompletion(it.getFirst());
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
 // Top-level entity parsing.
 //===----------------------------------------------------------------------===//
 
@@ -2418,10 +2560,11 @@ ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
 
 //===----------------------------------------------------------------------===//
 
-LogicalResult mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr,
-                                    Block *block, const ParserConfig &config,
-                                    LocationAttr *sourceFileLoc,
-                                    AsmParserState *asmState) {
+LogicalResult
+mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr, Block *block,
+                      const ParserConfig &config, LocationAttr *sourceFileLoc,
+                      AsmParserState *asmState,
+                      AsmParserCodeCompleteContext *codeCompleteContext) {
   const auto *sourceBuf = sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID());
 
   Location parserLoc =
@@ -2431,7 +2574,8 @@ LogicalResult mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr,
     *sourceFileLoc = parserLoc;
 
   SymbolState aliasState;
-  ParserState state(sourceMgr, config, aliasState, asmState);
+  ParserState state(sourceMgr, config, aliasState, asmState,
+                    codeCompleteContext);
   return TopLevelOperationParser(state).parse(block, parserLoc);
 }
 

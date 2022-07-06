@@ -743,7 +743,8 @@ IntegerSet mlir::parseIntegerSet(StringRef inputStr, MLIRContext *context,
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
   SymbolState symbolState;
   ParserConfig config(context);
-  ParserState state(sourceMgr, config, symbolState, /*asmState=*/nullptr);
+  ParserState state(sourceMgr, config, symbolState, /*asmState=*/nullptr,
+                    /*codeCompleteContext=*/nullptr);
   Parser parser(state);
 
   raw_ostream &os = printDiagnosticInfo ? llvm::errs() : llvm::nulls();

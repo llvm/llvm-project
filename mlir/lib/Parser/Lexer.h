@@ -22,7 +22,8 @@ class Location;
 /// This class breaks up the current file into a token stream.
 class Lexer {
 public:
-  explicit Lexer(const llvm::SourceMgr &sourceMgr, MLIRContext *context);
+  explicit Lexer(const llvm::SourceMgr &sourceMgr, MLIRContext *context,
+                 AsmParserCodeCompleteContext *codeCompleteContext);
 
   const llvm::SourceMgr &getSourceMgr() { return sourceMgr; }
 
@@ -63,6 +64,10 @@ private:
 
   StringRef curBuffer;
   const char *curPtr;
+
+  /// An optional code completion point within the input file, used to indicate
+  /// the position of a code completion token.
+  const char *codeCompleteLoc;
 
   Lexer(const Lexer &) = delete;
   void operator=(const Lexer &) = delete;

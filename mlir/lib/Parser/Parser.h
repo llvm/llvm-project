@@ -306,6 +306,20 @@ public:
   parseAffineExprOfSSAIds(AffineExpr &expr,
                           function_ref<ParseResult(bool)> parseElement);
 
+  //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  /// The set of various code completion methods. Every completion method
+  /// returns `failure` to signal that parsing should abort after any desired
+  /// completions have been enqueued. Note that `failure` is does not mean
+  /// completion failed, it's just a signal to the parser to stop.
+
+  ParseResult codeCompleteDialectName();
+  ParseResult codeCompleteOperationName(StringRef dialectName);
+  ParseResult codeCompleteDialectOrElidedOpName(SMLoc loc);
+  ParseResult codeCompleteStringDialectOrOperationName(StringRef name);
+
 protected:
   /// The Parser is subclassed and reinstantiated.  Do not add additional
   /// non-trivial state here, add it to the ParserState class.
