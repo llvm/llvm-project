@@ -500,6 +500,10 @@ static void checkZOptions(opt::InputArgList &args) {
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
+constexpr const char *saveTempsValues[] = {
+    "resolution", "preopt",     "promote", "internalize",  "import",
+    "opt",        "precodegen", "prelink", "combinedindex"};
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -1151,7 +1155,21 @@ static void readConfigs(opt::InputArgList &args) {
   config->relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
   config->rpath = getRpath(args);
   config->relocatable = args.hasArg(OPT_relocatable);
-  config->saveTemps = args.hasArg(OPT_save_temps);
+
+  if (args.hasArg(OPT_save_temps)) {
+    // --save-temps implies saving all temps.
+    for (const char *s : saveTempsValues)
+      config->saveTempsArgs.insert(s);
+  } else {
+    for (auto *arg : args.filtered(OPT_save_temps_eq)) {
+      StringRef s = arg->getValue();
+      if (llvm::is_contained(saveTempsValues, s))
+        config->saveTempsArgs.insert(s);
+      else
+        error("unknown --save-temps value: " + s);
+    }
+  }
+
   config->searchPaths = args::getStrings(args, OPT_library_path);
   config->sectionStartMap = getSectionStartMap(args);
   config->shared = args.hasArg(OPT_shared);

@@ -11,6 +11,7 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -215,7 +216,7 @@ struct Configuration {
   bool relocatable;
   bool relrGlibc = false;
   bool relrPackDynRelocs = false;
-  bool saveTemps;
+  llvm::DenseSet<llvm::StringRef> saveTempsArgs;
   std::vector<std::pair<llvm::GlobPattern, uint32_t>> shuffleSections;
   bool singleRoRx;
   bool shared;
