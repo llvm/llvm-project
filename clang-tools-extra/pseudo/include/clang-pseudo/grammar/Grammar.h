@@ -85,9 +85,6 @@ inline tok::TokenKind symbolToToken(SymbolID SID) {
 inline constexpr SymbolID tokenSymbol(tok::TokenKind TK) {
   return TokenFlag | static_cast<SymbolID>(TK);
 }
-// Error recovery strategies.
-// FIXME: these should be provided as extensions instead.
-enum class RecoveryStrategy : uint8_t { None, Braces };
 
 // An extension is a piece of native code specific to a grammar that modifies
 // the behavior of annotated rules. One ExtensionID is assigned for each unique
@@ -133,7 +130,7 @@ struct Rule {
   // everything between braces.
   // For now, only a single strategy at a single point is possible.
   uint8_t RecoveryIndex = -1;
-  RecoveryStrategy Recovery = RecoveryStrategy::None;
+  ExtensionID Recovery = 0;
 
   llvm::ArrayRef<SymbolID> seq() const {
     return llvm::ArrayRef<SymbolID>(Sequence, Size);

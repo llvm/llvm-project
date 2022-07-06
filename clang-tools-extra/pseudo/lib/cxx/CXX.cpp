@@ -35,9 +35,28 @@ bool guardFinal(llvm::ArrayRef<const ForestNode *> RHS,
 }
 
 llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
-  return llvm::DenseMap<ExtensionID, RuleGuard>(
-      {{(ExtensionID)Extension::Override, guardOverride},
-       {(ExtensionID)Extension::Final, guardFinal}});
+  return {
+      {(ExtensionID)Extension::Override, guardOverride},
+      {(ExtensionID)Extension::Final, guardFinal},
+  };
+}
+
+Token::Index recoverBrackets(Token::Index Begin, const TokenStream &Tokens) {
+  assert(Begin > 0);
+  const Token &Left = Tokens.tokens()[Begin - 1];
+  assert(Left.Kind == tok::l_brace || Left.Kind == tok::l_paren ||
+         Left.Kind == tok::l_square);
+  if (const Token *Right = Left.pair()) {
+    assert(Tokens.index(*Right) > Begin);
+    return Tokens.index(*Right);
+  }
+  return Token::Invalid;
+}
+
+llvm::DenseMap<ExtensionID, RecoveryStrategy> buildRecoveryStrategies() {
+  return {
+      {(ExtensionID)Extension::Brackets, recoverBrackets},
+  };
 }
 
 } // namespace
@@ -48,8 +67,12 @@ const Language &getLanguage() {
     auto G = Grammar::parseBNF(CXXBNF, Diags);
     assert(Diags.empty());
     LRTable Table = LRTable::buildSLR(G);
-    const Language *PL =
-        new Language{std::move(G), std::move(Table), buildGuards()};
+    const Language *PL = new Language{
+        std::move(G),
+        std::move(Table),
+        buildGuards(),
+        buildRecoveryStrategies(),
+    };
     return *PL;
   }();
   return CXXLanguage;

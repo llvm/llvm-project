@@ -9,6 +9,7 @@
 #ifndef CLANG_PSEUDO_GRAMMAR_LANGUAGE_H
 #define CLANG_PSEUDO_GRAMMAR_LANGUAGE_H
 
+#include "clang-pseudo/Token.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/grammar/LRTable.h"
 
@@ -28,13 +29,25 @@ class LRTable;
 using RuleGuard = llvm::function_ref<bool(
     llvm::ArrayRef<const ForestNode *> RHS, const TokenStream &)>;
 
+// A recovery strategy determines a region of code to skip when parsing fails.
+//
+// For example, given `class-def := CLASS IDENT { body [recover=Brackets] }`,
+// if parsing fails while attempting to parse `body`, we may skip up to the
+// matching `}` and assume everything between was a `body`.
+//
+// The provided index is the token where the skipped region begins.
+// Returns the (excluded) end of the range, or Token::Invalid for no recovery.
+using RecoveryStrategy =
+    llvm::function_ref<Token::Index(Token::Index Start, const TokenStream &)>;
+
 // Specify a language that can be parsed by the pseduoparser.
 struct Language {
   Grammar G;
   LRTable Table;
 
-  // Binding "guard" extension id to a piece of C++ code.
+  // Binding extension ids to corresponding implementations.
   llvm::DenseMap<ExtensionID, RuleGuard> Guards;
+  llvm::DenseMap<ExtensionID, RecoveryStrategy> RecoveryStrategies;
 
   // FIXME: add clang::LangOptions.
   // FIXME: add default start symbols.

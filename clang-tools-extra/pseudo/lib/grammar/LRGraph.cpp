@@ -120,9 +120,9 @@ nextAvailableKernelItems(const State &S, const Grammar &G) {
   return Results;
 }
 
-std::vector<std::pair<RecoveryStrategy, SymbolID>>
+std::vector<std::pair<ExtensionID, SymbolID>>
 availableRecovery(const State &S, const Grammar &G) {
-  std::vector<std::pair<RecoveryStrategy, SymbolID>> Result;
+  std::vector<std::pair<ExtensionID, SymbolID>> Result;
   for (const Item &I : S.Items) {
     const auto &Rule = G.lookupRule(I.rule());
     if (I.dot() != Rule.RecoveryIndex)
@@ -196,8 +196,7 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
       Edges.push_back({Src, Dst, Label});
     }
 
-    void insertRecovery(StateID Src, RecoveryStrategy Strategy,
-                        SymbolID Result) {
+    void insertRecovery(StateID Src, ExtensionID Strategy, SymbolID Result) {
       Recoveries.push_back({Src, Strategy, Result});
     }
 

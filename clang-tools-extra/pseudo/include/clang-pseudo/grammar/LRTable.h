@@ -68,7 +68,7 @@ public:
   static constexpr unsigned StateBits = 13;
 
   struct Recovery {
-    RecoveryStrategy Strategy;
+    ExtensionID Strategy;
     SymbolID Result;
   };
 

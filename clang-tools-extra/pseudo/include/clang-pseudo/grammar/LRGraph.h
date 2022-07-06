@@ -144,7 +144,7 @@ public:
   // has a Recovery { Src = S, Strategy=braces, Result=stmt-seq }.
   struct Recovery {
     StateID Src; // The state we are in when encountering the error.
-    RecoveryStrategy Strategy; // Heuristic choosing the tokens to match.
+    ExtensionID Strategy;      // Heuristic choosing the tokens to match.
     SymbolID Result;           // The symbol that is produced.
   };
 
