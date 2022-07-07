@@ -15,6 +15,12 @@ IntOrAttrList = Sequence[Union[IntegerAttr, int]]
 OptionalIntList = Optional[Union[ArrayAttr, IntOrAttrList]]
 
 
+def _get_int64_attr(value: Union[int, Attribute]) -> IntegerAttr:
+  if isinstance(value, int):
+    return IntegerAttr.get(IntegerType.get_signless(64), value)
+  return value
+
+
 def _get_array_attr(
     values: Optional[Union[ArrayAttr, Sequence[Attribute]]]) -> ArrayAttr:
   """Creates an array attribute from its operand."""
@@ -41,13 +47,7 @@ def _get_int_array_attr(
   if isinstance(values, ArrayAttr):
     return values
 
-  attributes = []
-  for value in values:
-    if isinstance(value, IntegerAttr):
-      attributes.append(value)
-    else:
-      attributes.append(IntegerAttr.get(IntegerType.get_signless(64), value))
-  return ArrayAttr.get(attributes)
+  return ArrayAttr.get([_get_int64_attr(v) for v in values])
 
 
 def _get_int_int_array_attr(
@@ -150,6 +150,39 @@ class ScalarizeOp:
     pdl_operation_type = pdl.OperationType.get()
     super().__init__(
         pdl_operation_type, _get_op_result_or_value(target), loc=loc, ip=ip)
+
+
+class SplitOp:
+  """Specialization for SplitOp class."""
+
+  def __init__(self,
+               target: Union[Operation, Value],
+               dimension: Union[int, Attribute],
+               split_point: Union[int, Operation, Value, Attribute],
+               *,
+               loc=None,
+               ip=None):
+    dimension = _get_int64_attr(dimension)
+    if isinstance(split_point, int):
+      split_point = _get_int64_attr(split_point)
+
+    if isinstance(split_point, Attribute):
+      static_split_point = split_point
+      dynamic_split_point = None
+    else:
+      static_split_point = _get_int64_attr(ShapedType._get_dynamic_size())
+      dynamic_split_point = _get_op_result_or_value(split_point)
+
+    pdl_operation_type = pdl.OperationType.get()
+    super().__init__(
+        pdl_operation_type,
+        pdl_operation_type,
+        _get_op_result_or_value(target),
+        dimension=dimension,
+        static_split_point=static_split_point,
+        dynamic_split_point=dynamic_split_point,
+        loc=loc,
+        ip=ip)
 
 
 class TileOp:

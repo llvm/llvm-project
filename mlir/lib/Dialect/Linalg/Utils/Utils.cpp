@@ -913,6 +913,21 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
   return sliceOp->getResult(0);
 }
 
+Value createSlice(OpBuilder &builder, Location loc, Value value,
+                  ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+                  ArrayRef<OpFoldResult> strides) {
+  if (value.getType().isa<MemRefType>()) {
+    return builder.create<memref::SubViewOp>(loc, value, offsets, sizes,
+                                             strides);
+  }
+
+  // This intentionally does not attempt to compose the extractslice operations.
+  assert(value.getType().isa<RankedTensorType>() &&
+         "expected a ranked tensor type");
+  return builder.create<tensor::ExtractSliceOp>(loc, value, offsets, sizes,
+                                                strides);
+}
+
 SmallVector<Value> computeTileOffsets(OpBuilder &b, Location loc,
                                       ValueRange ivs, ValueRange tileSizes) {
   SmallVector<Value> offsets;
@@ -941,6 +956,41 @@ SmallVector<Value> computeTileSizes(OpBuilder &b, Location loc,
     LLVM_DEBUG(llvm::dbgs() << "computeTileSizes: " << sizes.back() << "\n");
   }
   return sizes;
+}
+
+SmallVector<Type> getTensorOutputTypes(LinalgOp op, ValueRange operands) {
+  // TODO: use an interface/adaptor to avoid leaking position in
+  // `tiledOperands`.
+  return llvm::to_vector(
+      llvm::map_range(op.getOutputTensorOperands(), [&](OpOperand *opOperand) {
+        return operands[opOperand->getOperandNumber()].getType();
+      }));
+}
+
+SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
+                                    LinalgOp op, ValueRange operands,
+                                    ValueRange results) {
+  SmallVector<Value> tensorResults;
+  tensorResults.reserve(results.size());
+  // Insert a insert_slice for each output tensor.
+  unsigned resultIdx = 0;
+  for (OpOperand *opOperand : op.getOutputTensorOperands()) {
+    // TODO: use an interface/adaptor to avoid leaking position in
+    // `tiledOperands`.
+    Value outputTensor = operands[opOperand->getOperandNumber()];
+    if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
+      Value inserted = builder.create<tensor::InsertSliceOp>(
+          loc, sliceOp.source().getType(), results[resultIdx], sliceOp.source(),
+          sliceOp.offsets(), sliceOp.sizes(), sliceOp.strides(),
+          sliceOp.static_offsets(), sliceOp.static_sizes(),
+          sliceOp.static_strides());
+      tensorResults.push_back(inserted);
+    } else {
+      tensorResults.push_back(results[resultIdx]);
+    }
+    ++resultIdx;
+  }
+  return tensorResults;
 }
 
 SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,

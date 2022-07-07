@@ -106,6 +106,34 @@ void populateInlineConstantOperandsPatterns(RewritePatternSet &patterns);
 /// Patterns that are used to bubble up extract slice op above linalg op.
 void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
 
+/// Split the given `op` into two parts along the given iteration space
+/// `dimension` at the specified `splitPoint`, and return the two parts.
+///
+/// For example, the following op:
+///
+///   linalg.matmul ins(%0, %1 : tensor<128x32xf32>, tensor<32x64xf32>)
+///                 outs(%2 : tensor<128x64xf32>)
+///
+/// split along the first dimension at position 42 will result in:
+///
+///   %3 = tensor.extract_slice %0[0, 0][42, 32][1, 1]
+///   %4 = tensor.extract_slice %2[0, 0][42, 64][1, 1]
+///   %5 = linalg.matmul ins(%3, %1 : tensor<42x32xf32>, tensor<32x64xf32>)
+///                      outs(%5 : tensor<42x64xf32>)
+///   %6 = tensor.insert_slice %5 into %2[0, 0][42, 64][1, 1]
+///
+///   %7 = tensor.extract_slice %0[42, 0][86, 32][1, 1]
+///   %8 = tensor.extract_slice %6[42, 0][86, 64][1, 1]
+///   %9 = linalg.matmul ins(%7, %1 : tensor<86x32xf32>, tensor<32x64xf32>)
+///                      outs(%8 : tensor<86x64xf32>)
+///   tensor.insert_slice %5 into %6[42, 0][86, 64][1, 1]
+///
+/// Note that there is no simplification other than constant propagation applied
+/// to slice extraction and insertion.
+std::pair<LinalgOp, LinalgOp> splitOp(RewriterBase &rewriter, LinalgOp op,
+                                      unsigned dimension,
+                                      OpFoldResult splitPoint);
+
 /// Perform standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
 /// The permutation is expressed as a list of integers that specify

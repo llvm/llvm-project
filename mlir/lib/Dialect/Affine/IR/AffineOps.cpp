@@ -748,6 +748,76 @@ SmallVector<Value, 4> mlir::applyMapToValues(OpBuilder &b, Location loc,
   return res;
 }
 
+SmallVector<OpFoldResult>
+mlir::applyMapToValues(IRRewriter &b, Location loc, AffineMap map,
+                       ArrayRef<OpFoldResult> values) {
+  // Materialize constants and keep track of produced operations so we can clean
+  // them up later.
+  SmallVector<Operation *> constants;
+  SmallVector<Value> actualValues;
+  actualValues.reserve(values.size());
+  auto *dialect = b.getContext()->getLoadedDialect<AffineDialect>();
+  for (OpFoldResult ofr : values) {
+    if (auto value = ofr.dyn_cast<Value>()) {
+      actualValues.push_back(value);
+      continue;
+    }
+    constants.push_back(dialect->materializeConstant(b, ofr.get<Attribute>(),
+                                                     b.getIndexType(), loc));
+    actualValues.push_back(constants.back()->getResult(0));
+  }
+
+  // Compose, fold and construct maps for each result independently because they
+  // may simplify more effectively.
+  SmallVector<OpFoldResult> results;
+  results.reserve(map.getNumResults());
+  bool foldedAll = true;
+  for (auto i : llvm::seq<unsigned>(0, map.getNumResults())) {
+    AffineMap submap = map.getSubMap({i});
+    SmallVector<Value> operands = actualValues;
+    fullyComposeAffineMapAndOperands(&submap, &operands);
+    canonicalizeMapAndOperands(&submap, &operands);
+
+    // Identify the constant operands and extract their values as attributes.
+    // Note that we cannot use the original values directly because the list of
+    // operands may have changed due to canonicalization and composition.
+    SmallVector<Attribute> constantOperands;
+    constantOperands.reserve(operands.size());
+    for (Value operand : operands) {
+      IntegerAttr attr;
+      if (matchPattern(operand, m_Constant(&attr)))
+        constantOperands.push_back(attr);
+      else
+        constantOperands.push_back(nullptr);
+    }
+
+    // Create an apply operation and immediately attempt to fold it. On sucess,
+    // delete the operation and prepare the (unmaterialized) value for being
+    // returned. On failure, return the function result.
+    // TODO: arguably, the main folder (createOrFold) API should support this
+    // use case instead of indiscriminately materializing constants.
+    auto apply = b.create<AffineApplyOp>(loc, submap, operands);
+    SmallVector<OpFoldResult, 1> foldResult;
+    if (succeeded(apply->fold(constantOperands, foldResult))) {
+      assert(foldResult.size() == 1 && "expected single-result map");
+      b.eraseOp(apply);
+      results.push_back(foldResult.front());
+    } else {
+      results.push_back(apply.getResult());
+      foldedAll = false;
+    }
+  }
+
+  // If the entire map could be folded, remove the constants that were used in
+  // the initial ops.
+  if (foldedAll) {
+    for (Operation *constant : constants)
+      b.eraseOp(constant);
+  }
+
+  return results;
+}
+
 // A symbol may appear as a dim in affine.apply operations. This function
 // canonicalizes dims that are valid symbols into actual symbols.
 template <class MapOrSet>

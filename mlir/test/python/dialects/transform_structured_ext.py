@@ -85,6 +85,19 @@ def testScalarize():
 
 
 @run
+def testSplit():
+  sequence = transform.SequenceOp()
+  with InsertionPoint(sequence.body):
+    split = structured.SplitOp(sequence.bodyTarget, dimension=1, split_point=42)
+    structured.SplitOp(
+        split.results[0], dimension=3, split_point=split.results[1])
+    transform.YieldOp()
+  # CHECK-LABEL: TEST: testSplit
+  # CHECK: %[[F:.+]], %[[S:.+]] = transform.structured.split %{{.*}} after 42 {dimension = 1
+  # CHECK: transform.structured.split %[[F]] after %[[S]] {dimension = 3
+
+
+@run
 def testTileCompact():
   sequence = transform.SequenceOp()
   with InsertionPoint(sequence.body):
