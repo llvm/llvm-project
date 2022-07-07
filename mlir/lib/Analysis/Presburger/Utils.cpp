@@ -21,7 +21,7 @@ using namespace presburger;
 /// Normalize a division's `dividend` and the `divisor` by their GCD. For
 /// example: if the dividend and divisor are [2,0,4] and 4 respectively,
 /// they get normalized to [1,0,2] and 2.
-static void normalizeDivisionByGCD(SmallVectorImpl<int64_t> &dividend,
+static void normalizeDivisionByGCD(MutableArrayRef<int64_t> dividend,
                                    unsigned &divisor) {
   if (divisor == 0 || dividend.empty())
     return;
@@ -89,7 +89,7 @@ static void normalizeDivisionByGCD(SmallVectorImpl<int64_t> &dividend,
 /// normalized by GCD.
 static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
                                 unsigned ubIneq, unsigned lbIneq,
-                                SmallVector<int64_t, 8> &expr,
+                                MutableArrayRef<int64_t> expr,
                                 unsigned &divisor) {
 
   assert(pos <= cst.getNumVars() && "Invalid variable position");
@@ -97,6 +97,7 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
          "Invalid upper bound inequality position");
   assert(lbIneq <= cst.getNumInequalities() &&
          "Invalid upper bound inequality position");
+  assert(expr.size() == cst.getNumCols() && "Invalid expression size");
 
   // Extract divisor from the lower bound.
   divisor = cst.atIneq(lbIneq, pos);
@@ -126,7 +127,6 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
   // The inequality pair can be used to extract the division.
   // Set `expr` to the dividend of the division except the constant term, which
   // is set below.
-  expr.resize(cst.getNumCols(), 0);
   for (i = 0, e = cst.getNumVars(); i < e; ++i)
     if (i != pos)
       expr[i] = cst.atIneq(ubIneq, i);
@@ -152,11 +152,12 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
 /// set to the denominator of the division. The final division expression is
 /// normalized by GCD.
 static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
-                                unsigned eqInd, SmallVector<int64_t, 8> &expr,
+                                unsigned eqInd, MutableArrayRef<int64_t> expr,
                                 unsigned &divisor) {
 
   assert(pos <= cst.getNumVars() && "Invalid variable position");
   assert(eqInd <= cst.getNumEqualities() && "Invalid equality position");
+  assert(expr.size() == cst.getNumCols() && "Invalid expression size");
 
   // Extract divisor, the divisor can be negative and hence its sign information
   // is stored in `signDiv` to reverse the sign of dividend's coefficients.
@@ -169,7 +170,6 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
   // The divisor is always a positive integer.
   divisor = tempDiv * signDiv;
 
-  expr.resize(cst.getNumCols(), 0);
   for (unsigned i = 0, e = cst.getNumVars(); i < e; ++i)
     if (i != pos)
       expr[i] = -signDiv * cst.atEq(eqInd, i);
@@ -215,10 +215,11 @@ static bool checkExplicitRepresentation(const IntegerRelation &cst,
 /// `MaybeLocalRepr` is set to None.
 MaybeLocalRepr presburger::computeSingleVarRepr(
     const IntegerRelation &cst, ArrayRef<bool> foundRepr, unsigned pos,
-    SmallVector<int64_t, 8> &dividend, unsigned &divisor) {
+    MutableArrayRef<int64_t> dividend, unsigned &divisor) {
   assert(pos < cst.getNumVars() && "invalid position");
   assert(foundRepr.size() == cst.getNumVars() &&
          "Size of foundRepr does not match total number of variables");
+  assert(dividend.size() == cst.getNumCols() && "Invalid dividend size");
 
   SmallVector<unsigned, 4> lbIndices, ubIndices, eqIndices;
   cst.getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices, &eqIndices);
@@ -261,57 +262,6 @@ llvm::SmallBitVector presburger::getSubrangeBitVector(unsigned len,
   return vec;
 }
 
-void presburger::removeDuplicateDivs(
-    std::vector<SmallVector<int64_t, 8>> &divs,
-    SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
-    llvm::function_ref<bool(unsigned i, unsigned j)> merge) {
-
-  // Find and merge duplicate divisions.
-  // TODO: Add division normalization to support divisions that differ by
-  // a constant.
-  // TODO: Add division ordering such that a division representation for local
-  // variable at position `i` only depends on local variables at position <
-  // `i`. This would make sure that all divisions depending on other local
-  // variables that can be merged, are merged.
-  for (unsigned i = 0; i < divs.size(); ++i) {
-    // Check if a division representation exists for the `i^th` local var.
-    if (denoms[i] == 0)
-      continue;
-    // Check if a division exists which is a duplicate of the division at `i`.
-    for (unsigned j = i + 1; j < divs.size(); ++j) {
-      // Check if a division representation exists for the `j^th` local var.
-      if (denoms[j] == 0)
-        continue;
-      // Check if the denominators match.
-      if (denoms[i] != denoms[j])
-        continue;
-      // Check if the representations are equal.
-      if (divs[i] != divs[j])
-        continue;
-
-      // Merge divisions at position `j` into division at position `i`. If
-      // merge fails, do not merge these divs.
-      bool mergeResult = merge(i, j);
-      if (!mergeResult)
-        continue;
-
-      // Update division information to reflect merging.
-      for (unsigned k = 0, g = divs.size(); k < g; ++k) {
-        SmallVector<int64_t, 8> &div = divs[k];
-        if (denoms[k] != 0) {
-          div[localOffset + i] += div[localOffset + j];
-          div.erase(div.begin() + localOffset + j);
-        }
-      }
-
-      divs.erase(divs.begin() + j);
-      denoms.erase(denoms.begin() + j);
-      // Since `j` can never be zero, we do not need to worry about overflows.
-      --j;
-    }
-  }
-}
-
 void presburger::mergeLocalVars(
     IntegerRelation &relA, IntegerRelation &relB,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge) {
@@ -327,23 +277,17 @@ void presburger::mergeLocalVars(
   relB.insertVar(VarKind::Local, 0, initLocals);
 
   // Get division representations from each rel.
-  std::vector<SmallVector<int64_t, 8>> divsA, divsB;
-  SmallVector<unsigned, 4> denomsA, denomsB;
-  relA.getLocalReprs(divsA, denomsA);
-  relB.getLocalReprs(divsB, denomsB);
+  DivisionRepr divsA = relA.getLocalReprs();
+  DivisionRepr divsB = relB.getLocalReprs();
 
-  // Copy division information for relB into `divsA` and `denomsA`, so that
-  // these have the combined division information of both rels. Since newly
-  // added local variables in relA and relB have no constraints, they will not
-  // have any division representation.
-  std::copy(divsB.begin() + initLocals, divsB.end(),
-            divsA.begin() + initLocals);
-  std::copy(denomsB.begin() + initLocals, denomsB.end(),
-            denomsA.begin() + initLocals);
+  for (unsigned i = initLocals, e = divsB.getNumDivs(); i < e; ++i) {
+    divsA.setDividend(i, divsB.getDividend(i));
+    divsA.getDenom(i) = divsB.getDenom(i);
+  }
 
-  // Merge all divisions by removing duplicate divisions.
-  unsigned localOffset = relA.getVarKindOffset(VarKind::Local);
-  presburger::removeDuplicateDivs(divsA, denomsA, localOffset, merge);
+  // Remove duplicate divisions from divsA. The removing duplicate divisions
+  // call, calls `merge` to effectively merge divisions in relA and relB.
+  divsA.removeDuplicateDivs(merge);
 }
 
 SmallVector<int64_t, 8> presburger::getDivUpperBound(ArrayRef<int64_t> dividend,
@@ -412,3 +356,59 @@ SmallVector<int64_t, 8> presburger::getComplementIneq(ArrayRef<int64_t> ineq) {
   --coeffs.back();
   return coeffs;
 }
+
+void DivisionRepr::removeDuplicateDivs(
+    llvm::function_ref<bool(unsigned i, unsigned j)> merge) {
+
+  // Find and merge duplicate divisions.
+  // TODO: Add division normalization to support divisions that differ by
+  // a constant.
+  // TODO: Add division ordering such that a division representation for local
+  // variable at position `i` only depends on local variables at position <
+  // `i`. This would make sure that all divisions depending on other local
+  // variables that can be merged, are merged.
+  for (unsigned i = 0; i < getNumDivs(); ++i) {
+    // Check if a division representation exists for the `i^th` local var.
+    if (denoms[i] == 0)
+      continue;
+    // Check if a division exists which is a duplicate of the division at `i`.
+    for (unsigned j = i + 1; j < getNumDivs(); ++j) {
+      // Check if a division representation exists for the `j^th` local var.
+      if (denoms[j] == 0)
+        continue;
+      // Check if the denominators match.
+      if (denoms[i] != denoms[j])
+        continue;
+      // Check if the representations are equal.
+      if (dividends.getRow(i) != dividends.getRow(j))
+        continue;
+
+      // Merge divisions at position `j` into division at position `i`. If
+      // merge fails, do not merge these divs.
+      bool mergeResult = merge(i, j);
+      if (!mergeResult)
+        continue;
+
+      // Update division information to reflect merging.
+      unsigned divOffset = getDivOffset();
+      dividends.addToColumn(divOffset + j, divOffset + i, /*scale=*/1);
+      dividends.removeColumn(divOffset + j);
+      dividends.removeRow(j);
+      denoms.erase(denoms.begin() + j);
+
+      // Since `j` can never be zero, we do not need to worry about overflows.
+      --j;
+    }
+  }
+}
+
+void DivisionRepr::print(raw_ostream &os) const {
+  os << "Dividends:\n";
+  dividends.print(os);
+  os << "Denominators\n";
+  for (unsigned i = 0, e = denoms.size(); i < e; ++i)
+    os << denoms[i] << " ";
+  os << "\n";
+}
+
+void DivisionRepr::dump() const { print(llvm::errs()); }

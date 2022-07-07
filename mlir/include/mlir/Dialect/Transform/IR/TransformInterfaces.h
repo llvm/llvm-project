@@ -12,13 +12,14 @@
 #include "mlir/IR/OpDefinition.h"
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/ADT/ScopeExit.h"
 
 namespace mlir {
 
 /// The result of a transform IR operation application. This can have one of the
 /// three states:
 ///   - success;
-///   - silencable (recoverable) failure with yet-unreported diagnostic;
+///   - silenceable (recoverable) failure with yet-unreported diagnostic;
 ///   - definite failure.
 /// Silenceable failure is intended to communicate information about
 /// transformations that did not apply but in a way that supports recovery,
@@ -26,10 +27,10 @@ namespace mlir {
 /// predictable way. They are associated with a Diagnostic that provides more
 /// details on the failure. Silenceable failure can be discarded, turning the
 /// result into success, or "reported", emitting the diagnostic and turning the
-/// result into definite failure. Transform IR operations containing other
-/// operations are allowed to do either with the results of the nested
-/// transformations, but must propagate definite failures as their diagnostics
-/// have been already reported to the user.
+/// result into definite failure.
+/// Transform IR operations containing other operations are allowed to do either
+/// with the results of the nested transformations, but must propagate definite
+/// failures as their diagnostics have been already reported to the user.
 class LLVM_NODISCARD DiagnosedSilenceableFailure {
 public:
   explicit DiagnosedSilenceableFailure(LogicalResult result) : result(result) {}
@@ -51,11 +52,16 @@ public:
     return DiagnosedSilenceableFailure(::mlir::failure());
   }
 
-  /// Constructs a DiagnosedSilenceableFailure in the silencable failure state,
+  /// Constructs a DiagnosedSilenceableFailure in the silenceable failure state,
   /// ready to emit the given diagnostic. This is considered a failure
   /// regardless of the diagnostic severity.
-  static DiagnosedSilenceableFailure silencableFailure(Diagnostic &&diag) {
+  static DiagnosedSilenceableFailure silenceableFailure(Diagnostic &&diag) {
     return DiagnosedSilenceableFailure(std::forward<Diagnostic>(diag));
+  }
+  static DiagnosedSilenceableFailure
+  silenceableFailure(SmallVector<Diagnostic> &&diag) {
+    return DiagnosedSilenceableFailure(
+        std::forward<SmallVector<Diagnostic>>(diag));
   }
 
   /// Converts all kinds of failure into a LogicalResult failure, emitting the
@@ -65,44 +71,72 @@ public:
     assert(!reported && "attempting to report a diagnostic more than once");
     reported = true;
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (diagnostic) {
-      diagnostic->getLocation().getContext()->getDiagEngine().emit(
-          std::move(*diagnostic));
-      diagnostic.reset();
+    if (!diagnostics.empty()) {
+      for (auto &&diagnostic : diagnostics) {
+        diagnostic.getLocation().getContext()->getDiagEngine().emit(
+            std::move(diagnostic));
+      }
+      diagnostics.clear();
       result = ::mlir::failure();
     }
     return result;
   }
 
-  /// Returns `true` if this is a silencable failure.
-  bool isSilenceableFailure() const { return diagnostic.hasValue(); }
+  /// Returns `true` if this is a silenceable failure.
+  bool isDefiniteFailure() const { return result.failed(); }
+
+  /// Returns `true` if this is a silenceable failure.
+  bool isSilenceableFailure() const { return !diagnostics.empty(); }
 
   /// Returns `true` if this is a success.
   bool succeeded() const {
-    return !diagnostic.hasValue() && ::mlir::succeeded(result);
+    return diagnostics.empty() && ::mlir::succeeded(result);
   }
 
   /// Returns the diagnostic message without emitting it. Expects this object
-  /// to be a silencable failure.
-  std::string getMessage() const { return diagnostic->str(); }
+  /// to be a silenceable failure.
+  std::string getMessage() const {
+    std::string res;
+    for (auto &diagnostic : diagnostics) {
+      res.append(diagnostic.str());
+      res.append("\n");
+    }
+    return res;
+  }
 
-  /// Converts silencable failure into LogicalResult success without reporting
+  /// Returns a string representation of the failure mode (for error reporting).
+  std::string getStatusString() const {
+    if (succeeded())
+      return "success";
+    if (isSilenceableFailure())
+      return "silenceable failure";
+    return "definite failure";
+  }
+
+  /// Converts silenceable failure into LogicalResult success without reporting
   /// the diagnostic, preserves the other states.
   LogicalResult silence() {
-    if (diagnostic) {
-      diagnostic.reset();
+    if (!diagnostics.empty()) {
+      diagnostics.clear();
       result = ::mlir::success();
     }
     return result;
   }
 
-  /// Streams the given values into the diagnotic. Expects this object to be a
-  /// silencable failure.
+  /// Take the diagnostic and silence.
+  SmallVector<Diagnostic> &&takeDiagnostics() {
+    assert(!diagnostics.empty() && "expected a diagnostic to be present");
+    auto guard = llvm::make_scope_exit([&]() { diagnostics.clear(); });
+    return std::move(diagnostics);
+  }
+
+  /// Streams the given values into the last diagnotic.
+  /// Expects this object to be a silenceable failure.
   template <typename T>
   DiagnosedSilenceableFailure &operator<<(T &&value) & {
     assert(isSilenceableFailure() &&
-           "can only append output in silencable failure state");
-    *diagnostic << std::forward<T>(value);
+           "can only append output in silenceable failure state");
+    diagnostics.back() << std::forward<T>(value);
     return *this;
   }
   template <typename T>
@@ -110,31 +144,36 @@ public:
     return std::move(this->operator<<(std::forward<T>(value)));
   }
 
-  /// Attaches a note to the diagnostic. Expects this object to be a silencable
-  /// failure.
+  /// Attaches a note to the last diagnostic.
+  /// Expects this object to be a silenceable failure.
   Diagnostic &attachNote(Optional<Location> loc = llvm::None) {
     assert(isSilenceableFailure() &&
-           "can only attach notes to silencable failures");
-    return diagnostic->attachNote(loc);
+           "can only attach notes to silenceable failures");
+    return diagnostics.back().attachNote(loc);
   }
 
 private:
   explicit DiagnosedSilenceableFailure(Diagnostic &&diagnostic)
-      : diagnostic(std::move(diagnostic)), result(failure()) {}
+      : diagnostics(), result(failure()) {
+    diagnostics.emplace_back(std::move(diagnostic));
+  }
+  explicit DiagnosedSilenceableFailure(SmallVector<Diagnostic> &&diagnostics)
+      : diagnostics(std::move(diagnostics)), result(failure()) {}
 
-  /// The diagnostic associated with this object. If present, the object is
-  /// considered to be in the silencable failure state regardless of the
+  /// The diagnostics associated with this object. If non-empty, the object is
+  /// considered to be in the silenceable failure state regardless of the
   /// `result` field.
-  Optional<Diagnostic> diagnostic;
+  SmallVector<Diagnostic, 1> diagnostics;
 
-  /// The "definite" logical state, either success or failure. Ignored if the
-  /// diagnostic message is present.
+  /// The "definite" logical state, either success or failure.
+  /// Ignored if the diagnostics message is present.
   LogicalResult result;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  /// Whther the associated diagnostic have been reported. Diagnostic reporting
-  /// consumes the diagnostic, so we need a mechanism to differentiate a
-  /// reported diagnostic from a state where it was never created.
+  /// Whether the associated diagnostics have been reported.
+  /// Diagnostics reporting consumes the diagnostics, so we need a mechanism to
+  /// differentiate reported diagnostics from a state where it was never
+  /// created.
   bool reported = false;
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 };
@@ -579,24 +618,45 @@ public:
 };
 
 /// Trait implementing the TransformOpInterface for operations applying a
-/// transformation to a single operation handle and producing one or multiple
-/// operation handles.
-/// The op must implement a method with one of the following signatures:
-///   - FailureOr<convertible-to-Operation*> applyToOne(OpTy, state)
-///   - FailureOr<SmallVector<convertible-to-Operation*>>applyToOne(OpTy, state)
-///   - LogicalResult applyToOne(OpTy, state)
+/// transformation to a single operation handle and producing zero, one or
+/// multiple operation handles.
+/// The op must implement a method with the following signature:
+///   - DiagnosedSilenceableFailure applyToOne(OpTy,
+///       SmallVector<Operation*> &results, state)
 /// to perform a transformation that is applied in turn to all payload IR
 /// operations that correspond to the handle of the transform IR operation.
-/// In the functions above, OpTy is either Operation * or a concrete payload IR
-/// Op class that the transformation is applied to (NOT the class of the
-/// transform IR op). The op is expected to have a single operand.
+/// In `applyToOne`, OpTy is either Operation* or a concrete payload IR Op class
+/// that the transformation is applied to (and NOT the class of the transform IR
+/// op).
+/// The `applyToOne` method takes an empty `results` vector that it fills with
+/// zero, one or multiple operations depending on the number of resultd expected
+/// by the transform op.
+/// The number of results must match the number of results of the transform op.
+/// `applyToOne` is allowed to fill the `results` with all null elements to
+/// signify that the transformation did not apply to the payload IR operations.
+/// Such null elements are filtered out from results before return.
+///
+/// The transform op having this trait is expected to have a single operand.
 template <typename OpTy>
 class TransformEachOpTrait
     : public OpTrait::TraitBase<OpTy, TransformEachOpTrait> {
 public:
   /// Calls `applyToOne` for every payload operation associated with the operand
-  /// of this transform IR op. If `applyToOne` returns ops, associates them with
-  /// the result of this transform op.
+  /// of this transform IR op, the following case disjunction happens:
+  ///   1. If not target payload ops are associated to the operand then fill the
+  ///      results vector with the expected number of null elements and return
+  ///      success. This is the corner case handling that allows propagating
+  ///      the "no-op" case gracefully to improve usability.
+  ///   2. If any `applyToOne` returns definiteFailure, the transformation is
+  ///      immediately considered definitely failed and we return.
+  ///   3. All applications of `applyToOne` are checked to return a number of
+  ///      results expected by the transform IR op. If not, this is a definite
+  ///      failure and we return early.
+  ///   4. If `applyToOne` produces ops, associate them with the result of this
+  ///      transform op.
+  ///   5. If any `applyToOne` return silenceableFailure, the transformation is
+  ///      considered silenceable.
+  ///   6. Otherwise the transformation is considered successful.
   DiagnosedSilenceableFailure apply(TransformResults &transformResults,
                                     TransformState &state);
 
@@ -714,88 +774,58 @@ public:
 namespace mlir {
 namespace transform {
 namespace detail {
-/// Appends `result` to the vector assuming it corresponds to the success state
-/// in `FailureOr<convertible-to-Operation*>`. If `result` is just a
-/// `LogicalResult`, appends an empy vector.
-template <typename Ty>
-std::enable_if_t<std::is_same<Ty, LogicalResult>::value, LogicalResult>
-appendTransformResultToVector(
-    Ty result, SmallVectorImpl<SmallVector<Operation *>> &results) {
-  results.push_back(SmallVector<Operation *>());
-  return result;
-}
-
-template <typename Ty>
-std::enable_if_t<
-    llvm::conjunction<
-        llvm::negation<std::is_same<Ty, LogicalResult>>,
-        std::is_convertible<typename Ty::value_type, Operation *>>::value,
-    LogicalResult>
-appendTransformResultToVector(
-    Ty result, SmallVectorImpl<SmallVector<Operation *>> &results) {
-  if (failed(result))
-    return failure();
-  results.push_back(SmallVector<Operation *>{*result});
-  return success();
-}
-
-template <typename ContainerTy>
-std::enable_if_t<
-    llvm::conjunction<
-        llvm::negation<std::is_same<ContainerTy, LogicalResult>>,
-        llvm::negation<std::is_convertible<typename ContainerTy::value_type,
-                                           Operation *>>>::value,
-    LogicalResult>
-appendTransformResultToVector(
-    ContainerTy resultContainer,
-    SmallVectorImpl<SmallVector<Operation *>> &results) {
-  if (failed(resultContainer))
-    return failure();
-  results.push_back(*resultContainer);
-  return success();
-}
 /// Applies a one-to-one or a one-to-many transform to each of the given
 /// targets. Puts the results of transforms, if any, in `results` in the same
 /// order. Fails if any of the application fails. Individual transforms must be
-/// callable with one of the following signatures:
-///   - FailureOr<convertible-to-Operation*>(OpTy)
-///   - LogicalResult(OpTy)
-///   - FailureOr<SmallVectorImpl<convertible-to-Operation*>>(
-///       SmallVectorImpl<OpTy>)
-///   - LogicalResult(SmallVectorImpl<OpTy>)
+/// callable with the following signature:
+///   - DiagnosedSilenceableFailure(OpTy,
+///       SmallVector<Operation*> &results, state)
 /// where OpTy is either
 ///   - Operation *, in which case the transform is always applied;
 ///   - a concrete Op class, in which case a check is performed whether
-///   `targets` contains operations of the same class and a silencable failure
+///   `targets` contains operations of the same class and a silenceable failure
 ///   is reported if it does not.
 template <typename FnTy>
-DiagnosedSilenceableFailure
-applyTransformToEach(ArrayRef<Operation *> targets,
-                     SmallVectorImpl<SmallVector<Operation *>> &results,
-                     FnTy transform) {
+DiagnosedSilenceableFailure applyTransformToEach(
+    Location loc, int expectedNumResults, ArrayRef<Operation *> targets,
+    SmallVectorImpl<SmallVector<Operation *>> &results, FnTy transform) {
+  SmallVector<Diagnostic> silenceableStack;
   using OpTy = typename llvm::function_traits<FnTy>::template arg_t<0>;
   static_assert(std::is_convertible<OpTy, Operation *>::value,
                 "expected transform function to take an operation");
-  using RetTy = typename llvm::function_traits<FnTy>::result_t;
-  static_assert(std::is_convertible<RetTy, LogicalResult>::value,
-                "expected transform function to return LogicalResult or "
-                "FailureOr<convertible-to-Operation*>");
   for (Operation *target : targets) {
+    // Emplace back a placeholder for the returned new ops.
+    // This is filled with `expectedNumResults` if the op fails to apply.
+    results.push_back(SmallVector<Operation *>());
+
     auto specificOp = dyn_cast<OpTy>(target);
     if (!specificOp) {
-      Diagnostic diag(target->getLoc(), DiagnosticSeverity::Error);
-      diag << "attempted to apply transform to the wrong op kind";
-      return DiagnosedSilenceableFailure::silencableFailure(std::move(diag));
+      Diagnostic diag(loc, DiagnosticSeverity::Error);
+      diag << "transform applied to the wrong op kind";
+      diag.attachNote(target->getLoc()) << "when applied to this op";
+      // Producing `expectedNumResults` nullptr is a silenceableFailure mode.
+      // TODO: encode this implicit `expectedNumResults` nullptr ==
+      // silenceableFailure with a proper trait.
+      results.back().assign(expectedNumResults, nullptr);
+      silenceableStack.push_back(std::move(diag));
+      continue;
     }
 
-    auto result = transform(specificOp);
-    if (failed(appendTransformResultToVector(result, results)))
-      return DiagnosedSilenceableFailure::definiteFailure();
+    DiagnosedSilenceableFailure result = transform(specificOp, results.back());
+    if (result.isDefiniteFailure())
+      return result;
+    if (result.isSilenceableFailure())
+      for (auto &&diag : result.takeDiagnostics())
+        silenceableStack.push_back(std::move(diag));
+  }
+  if (!silenceableStack.empty()) {
+    return DiagnosedSilenceableFailure::silenceableFailure(
+        std::move(silenceableStack));
   }
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Helper function to transform M ops with N results into N results of M ops.
+/// Helper function: transpose MxN into NxM; assumes that the input is a valid.
 static inline SmallVector<SmallVector<Operation *, 1>>
 transposeResults(const SmallVector<SmallVector<Operation *>, 1> &m) {
   SmallVector<SmallVector<Operation *, 1>> res;
@@ -824,74 +854,95 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
       decltype(&OpTy::applyToOne)>::template arg_t<0>;
   ArrayRef<Operation *> targets =
       state.getPayloadOps(this->getOperation()->getOperand(0));
-  // Handle the corner case where no target is specified.
+
+  // Step 1. Handle the corner case where no target is specified.
   // This is typically the case when the matcher fails to apply and we need to
   // propagate gracefully.
   // In this case, we fill all results with an empty vector.
   if (targets.empty()) {
-    SmallVector<Operation *> emptyResult;
+    SmallVector<Operation *> empty;
     for (auto r : this->getOperation()->getResults())
-      transformResults.set(r.template cast<OpResult>(), emptyResult);
+      transformResults.set(r.template cast<OpResult>(), empty);
     return DiagnosedSilenceableFailure::success();
   }
 
+  // Step 2. Call applyToOne on each target and record newly produced ops in its
+  // corresponding results entry.
+  int expectedNumResults = this->getOperation()->getNumResults();
   SmallVector<SmallVector<Operation *>, 1> results;
-  // In the multi-result case, collect the number of results each transform
-  // produced.
   DiagnosedSilenceableFailure result = detail::applyTransformToEach(
-      targets, results, [&](TransformOpType specificOp) {
-        return static_cast<OpTy *>(this)->applyToOne(specificOp, state);
+      this->getOperation()->getLoc(), expectedNumResults, targets, results,
+      [&](TransformOpType specificOp, SmallVector<Operation *> &partialResult) {
+        auto res = static_cast<OpTy *>(this)->applyToOne(specificOp,
+                                                         partialResult, state);
+        if (res.isDefiniteFailure())
+          return res;
+
+        // TODO: encode this implicit must always produce `expectedNumResults`
+        // and nullptr is fine with a proper trait.
+        if (static_cast<int>(partialResult.size()) != expectedNumResults) {
+          auto loc = this->getOperation()->getLoc();
+          auto diag = mlir::emitError(loc, "applications of ")
+                      << OpTy::getOperationName() << " expected to produce "
+                      << expectedNumResults << " results (actually produced "
+                      << partialResult.size() << ").";
+          diag.attachNote(loc)
+              << "If you need variadic results, consider a generic `apply` "
+              << "instead of the specialized `applyToOne`.";
+          diag.attachNote(loc)
+              << "Producing " << expectedNumResults << " null results is "
+              << "allowed if the use case warrants it.";
+          diag.attachNote(specificOp->getLoc()) << "when applied to this op";
+          return DiagnosedSilenceableFailure::definiteFailure();
+        }
+        // Check that all is null or none is null
+        // TODO: relax this behavior and encode with a proper trait.
+        if (llvm::any_of(partialResult, [](Operation *op) { return op; }) &&
+            llvm::any_of(partialResult, [](Operation *op) { return !op; })) {
+          auto loc = this->getOperation()->getLoc();
+          auto diag = mlir::emitError(loc, "unexpected application of ")
+                      << OpTy::getOperationName()
+                      << " produces both null and non null results.";
+          diag.attachNote(specificOp->getLoc()) << "when applied to this op";
+          return DiagnosedSilenceableFailure::definiteFailure();
+        }
+        return res;
       });
-  // Propagate the failure (definite or silencable) if any.
-  if (!result.succeeded())
+
+  // Step 3. Propagate the definite failure if any and bail out.
+  if (result.isDefiniteFailure())
     return result;
 
-  // Legitimately no results, bail early.
-  if (results.empty() && OpTy::template hasTrait<OpTrait::ZeroResults>())
-    return DiagnosedSilenceableFailure::success();
+  // Step 4. If there are no results, return early.
+  if (OpTy::template hasTrait<OpTrait::ZeroResults>())
+    return result;
 
-  // Ensure all applications return the same number of results.
-  // Variadic cases are much trickier to handle in a generic fashion.
-  int64_t nRes = results.empty() ? 0 : results[0].size();
-  if (llvm::any_of(results, [&](const auto &r) {
-        return static_cast<int64_t>(r.size()) != nRes;
-      })) {
-    return static_cast<OpTy *>(this)->emitSilenceableError()
-           << "expected all applications of " << OpTy::getOperationName()
-           << " to produce " << nRes
-           << " results.\n If you need variadic results, consider using a "
-              "generic `apply` instead of the specialized `applyToOne`";
-  }
-  // Ensure the number of results agrees with what the transform op expects.
-  // Unless we see empty results, in which case we just want to propagate the
-  // emptiness.
-  if (this->getOperation()->getNumResults() != nRes) {
-    InFlightDiagnostic diag = static_cast<OpTy *>(this)->emitError()
-                              << "unexpected number of results (got " << nRes
-                              << " expected "
-                              << this->getOperation()->getNumResults() << ")";
-    return DiagnosedSilenceableFailure::definiteFailure();
-  }
-
-  // Perform transposition of M applications producing N results each into N
-  // results for each of the M applications.
+  // Step 5. Perform transposition of M applications producing N results each
+  // into N results for each of the M applications.
   SmallVector<SmallVector<Operation *, 1>> transposedResults =
       detail::transposeResults(results);
-  // Single result applies to M ops produces one single M-result.
+
+  // Step 6. Single result applies to M ops produces one single M-result.
   if (OpTy::template hasTrait<OpTrait::OneResult>()) {
     assert(transposedResults.size() == 1 && "Expected single result");
     transformResults.set(
         this->getOperation()->getResult(0).template cast<OpResult>(),
         transposedResults[0]);
-    return DiagnosedSilenceableFailure::success();
+    // ApplyToOne may have returned silenceableFailure, propagate it.
+    return result;
   }
-  // M ops, N results each.
+
+  // Step 7. Filter out empty results and set the transformResults.
   for (const auto &it :
        llvm::zip(this->getOperation()->getResults(), transposedResults)) {
-    transformResults.set(std::get<0>(it).template cast<OpResult>(),
-                         std::get<1>(it));
+    SmallVector<Operation *, 1> filtered;
+    llvm::copy_if(std::get<1>(it), std::back_inserter(filtered),
+                  [](Operation *op) { return op; });
+    transformResults.set(std::get<0>(it).template cast<OpResult>(), filtered);
   }
-  return DiagnosedSilenceableFailure::success();
+
+  // Step 8. ApplyToOne may have returned silenceableFailure, propagate it.
+  return result;
 }
 
 template <typename OpTy>
