@@ -17,34 +17,50 @@
 ; CHECK-DAG: ![[RAMP:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov",
 ; CHECK-DAG: ![[RAMP_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[RAMP]], file: ![[FILE]], line: 23
 ; CHECK-DAG: ![[CORO_FRAME]] = !DILocalVariable(name: "__coro_frame", scope: ![[RAMP_SCOPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE:[0-9]+]], type: ![[FRAME_TYPE:[0-9]+]], flags: DIFlagArtificial)
-; CHECK-DAG: ![[FRAME_TYPE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "__coro_frame_ty", scope: ![[RAMP]], {{.*}}elements: ![[ELEMENTS:[0-9]+]]
-; CHECK-DAG: ![[ELEMENTS]] = !{![[RESUME_FN:[0-9]+]], ![[DESTROY_FN:[0-9]+]], ![[PROMISE:[0-9]+]], ![[INT64_0:[0-9]+]], ![[DOUBLE_1:[0-9]+]], ![[INT32_2:[0-9]+]], ![[INT32_3:[0-9]+]], ![[STRUCT_4:[0-9]+]], ![[CORO_INDEX:[0-9]+]]
-; CHECK-DAG: ![[RESUME_FN]] = !DIDerivedType(tag: DW_TAG_member, name: "__resume_fn"{{.*}}, flags: DIFlagArtificial
-; CHECK-DAG: ![[DESTROY_FN]] = !DIDerivedType(tag: DW_TAG_member, name: "__destroy_fn"{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[FRAME_TYPE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "f.coro_frame_ty", {{.*}}elements: ![[ELEMENTS:[0-9]+]]
+; CHECK-DAG: ![[ELEMENTS]] = !{![[RESUME_FN:[0-9]+]], ![[DESTROY_FN:[0-9]+]], ![[PROMISE:[0-9]+]], ![[VECTOR_TYPE:[0-9]+]], ![[INT64_0:[0-9]+]], ![[DOUBLE_1:[0-9]+]], ![[INT64_PTR:[0-9]+]], ![[INT32_2:[0-9]+]], ![[INT32_3:[0-9]+]], ![[UNALIGNED_UNKNOWN:[0-9]+]], ![[STRUCT:[0-9]+]], ![[CORO_INDEX:[0-9]+]], ![[SMALL_UNKNOWN:[0-9]+]]
+; CHECK-DAG: ![[RESUME_FN]] = !DIDerivedType(tag: DW_TAG_member, name: "__resume_fn"{{.*}}, baseType: ![[RESUME_FN_TYPE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[RESUME_FN_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+; CHECK-DAG: ![[DESTROY_FN]] = !DIDerivedType(tag: DW_TAG_member, name: "__destroy_fn"{{.*}}, baseType: ![[RESUME_FN_TYPE]]{{.*}}, flags: DIFlagArtificial
 ; CHECK-DAG: ![[PROMISE]] = !DIDerivedType(tag: DW_TAG_member, name: "__promise",{{.*}}baseType: ![[PROMISE_BASE:[0-9]+]]
 ; CHECK-DAG: ![[PROMISE_BASE]] = !DIDerivedType(tag: DW_TAG_typedef, name: "promise_type"
-; CHECK-DAG: ![[INT64_0]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_0", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I64_BASE:[0-9]+]],{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[VECTOR_TYPE]] = !DIDerivedType(tag: DW_TAG_member, name: "_0",{{.*}}baseType: ![[VECTOR_TYPE_BASE:[0-9]+]], size: 128
+; CHECK-DAG: ![[VECTOR_TYPE_BASE]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[UNKNOWN_TYPE_BASE:[0-9]+]], size: 128, align: 16, elements: ![[VECTOR_TYPE_BASE_ELEMENTS:[0-9]+]])
+; CHECK-DAG: ![[UNKNOWN_TYPE_BASE]] = !DIBasicType(name: "UnknownType", size: 8, encoding: DW_ATE_unsigned_char, flags: DIFlagArtificial)
+; CHECK-DAG: ![[VECTOR_TYPE_BASE_ELEMENTS]] = !{![[VECTOR_TYPE_BASE_SUBRANGE:[0-9]+]]}
+; CHECK-DAG: ![[VECTOR_TYPE_BASE_SUBRANGE]] = !DISubrange(count: 16, lowerBound: 0)
+; CHECK-DAG: ![[INT64_0]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_1", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I64_BASE:[0-9]+]],{{.*}}, flags: DIFlagArtificial
 ; CHECK-DAG: ![[I64_BASE]] = !DIBasicType(name: "__int_64", size: 64, encoding: DW_ATE_signed, flags: DIFlagArtificial)
-; CHECK-DAG: ![[DOUBLE_1]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__1", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[DOUBLE_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[DOUBLE_1]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__2", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[DOUBLE_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
 ; CHECK-DAG: ![[DOUBLE_BASE]] = !DIBasicType(name: "__double_", size: 64, encoding: DW_ATE_float, flags: DIFlagArtificial)
-; CHECK-DAG: ![[INT32_2]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_2", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
+; CHECK-DAG: ![[INT64_PTR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_Ptr_3",{{.*}} baseType: ![[INT64_PTR_BASE:[0-9]+]]
+; CHECK-DAG: ![[INT64_PTR_BASE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__int_64_Ptr", baseType: null, size: 64
+; CHECK-DAG: ![[INT32_2]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_4", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
 ; CHECK-DAG: ![[I32_BASE]] = !DIBasicType(name: "__int_32", size: 32, encoding: DW_ATE_signed, flags: DIFlagArtificial)
-; CHECK-DAG: ![[INT32_3]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_3", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE]]
-; CHECK-DAG: ![[STRUCT_4]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_4", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[STRUCT_BASE:[0-9]+]]
+; CHECK-DAG: ![[INT32_3]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_5", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE]]
+; CHECK-DAG: ![[UNALIGNED_UNKNOWN]] = !DIDerivedType(tag: DW_TAG_member, name: "_6",{{.*}}baseType: ![[UNALIGNED_UNKNOWN_BASE:[0-9]+]], size: 9
+; CHECK-DAG: ![[UNALIGNED_UNKNOWN_BASE]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[UNKNOWN_TYPE_BASE]], size: 16,{{.*}} elements: ![[UNALIGNED_UNKNOWN_ELEMENTS:[0-9]+]])
+; CHECK-DAG: ![[UNALIGNED_UNKNOWN_ELEMENTS]] = !{![[UNALIGNED_UNKNOWN_SUBRANGE:[0-9]+]]}
+; CHECk-DAG: ![[UNALIGNED_UNKNOWN_SUBRANGE]] = !DISubrange(count: 2, lowerBound: 0)
+; CHECK-DAG: ![[STRUCT]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_7", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[STRUCT_BASE:[0-9]+]]
 ; CHECK-DAG: ![[STRUCT_BASE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure"{{.*}}elements: ![[STRUCT_ELEMENTS:[0-9]+]]
 ; CHECK-DAG: ![[STRUCT_ELEMENTS]] = !{![[MEM_TYPE:[0-9]+]]}
-; CHECK-DAG: ![[MEM_TYPE]] = !DIDerivedType(tag: DW_TAG_member, name: "UnknownType_4000"
+; CHECK-DAG: ![[MEM_TYPE]] = !DIDerivedType(tag: DW_TAG_member,{{.*}} baseType: ![[MEM_TYPE_BASE:[0-9]+]], size: 4000
+; CHECK-DAG: ![[MEM_TYPE_BASE]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[UNKNOWN_TYPE_BASE]], size: 4000,
 ; CHECK-DAG: ![[CORO_INDEX]] = !DIDerivedType(tag: DW_TAG_member, name: "__coro_index"
+; CHECK-DAG: ![[SMALL_UNKNOWN]] = !DIDerivedType(tag: DW_TAG_member, name: "UnknownType_8",{{.*}} baseType: ![[UNKNOWN_TYPE_BASE]], size: 5
 ; CHECK-DAG: ![[PROMISE_VAR:[0-9]+]] = !DILocalVariable(name: "__promise", scope: ![[RAMP_SCOPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]]
 ; CHECK-DAG: ![[BAR_FUNC:[0-9]+]] = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv",
 ; CHECK-DAG: ![[BAR_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[BAR_FUNC]], file: !1
-; CHECK-DAG: ![[FRAME_TYPE_IN_BAR:[0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "__coro_frame_ty", scope: ![[BAR_FUNC]], file: ![[FILE]], line: [[BAR_LINE:[0-9]+]]{{.*}}elements: ![[ELEMENTS_IN_BAR:[0-9]+]]
-; CHECK-DAG: ![[ELEMENTS_IN_BAR]] = !{![[RESUME_FN_IN_BAR:[0-9]+]], ![[DESTROY_FN_IN_BAR:[0-9]+]], ![[PROMISE_IN_BAR:[0-9]+]], ![[INT64_0_IN_BAR:[0-9]+]], ![[DOUBLE_1_IN_BAR:[0-9]+]], ![[INT32_2_IN_BAR:[0-9]+]], ![[STRUCT_3_IN_BAR:[0-9]+]], ![[CORO_INDEX_IN_BAR:[0-9]+]]
+; CHECK-DAG: ![[FRAME_TYPE_IN_BAR:[0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "bar.coro_frame_ty", file: ![[FILE]], line: [[BAR_LINE:[0-9]+]]{{.*}}elements: ![[ELEMENTS_IN_BAR:[0-9]+]]
+; CHECK-DAG: ![[ELEMENTS_IN_BAR]] = !{![[RESUME_FN_IN_BAR:[0-9]+]], ![[DESTROY_FN_IN_BAR:[0-9]+]], ![[PROMISE_IN_BAR:[0-9]+]], ![[VECTOR_TYPE_IN_BAR:[0-9]+]], ![[INT64_IN_BAR:[0-9]+]], ![[DOUBLE_IN_BAR:[0-9]+]], ![[INT64_PTR_IN_BAR:[0-9]+]], ![[INT32_IN_BAR:[0-9]+]], ![[STRUCT_IN_BAR:[0-9]+]], ![[CORO_INDEX_IN_BAR:[0-9]+]]
 ; CHECK-DAG: ![[PROMISE_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__promise",{{.*}}baseType: ![[PROMISE_BASE]]
-; CHECK-DAG: ![[INT64_0_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_0", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I64_BASE]]
-; CHECK-DAG: ![[DOUBLE_1_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__1", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[DOUBLE_BASE]]
-; CHECK-DAG: ![[INT32_2_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_2", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I32_BASE]]
-; CHECK-DAG: ![[STRUCT_3_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_3", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[STRUCT_BASE_IN_BAR:[0-9]+]]
+; CHECK-DAG: ![[VECTOR_TYPE_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "_0", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[VECTOR_TYPE_BASE]]
+; CHECK-DAG: ![[INT64_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_1", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I64_BASE]]
+; CHECK-DAG: ![[DOUBLE_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__2", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[DOUBLE_BASE]]
+; CHECK-DAG: ![[INT64_PTR_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_Ptr_3", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[INT64_PTR_BASE]]
+; CHECK-DAG: ![[INT32_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_4", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I32_BASE]]
+; CHECK-DAG: ![[STRUCT_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_5", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[STRUCT_BASE_IN_BAR:[0-9]+]]
 ; CHECK-DAG: ![[STRUCT_BASE_IN_BAR]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]],{{.*}}
 ; CHECK-DAG: ![[CORO_FRAME_IN_RESUME]] = !DILocalVariable(name: "__coro_frame",{{.*}}type: ![[FRAME_TYPE]]
 
@@ -53,11 +69,18 @@
 %struct.big_structure = type { [500 x i8] }
 declare void @produce(%struct.big_structure*)
 declare void @consume(%struct.big_structure*)
+declare void @produce_vector(<4 x i32> *)
+declare void @consume_vector(<4 x i32> *)
+declare void @produce_vectori5(<5 x i1> *)
+declare void @consume_vectori5(<5 x i1> *)
+declare void @produce_vectori9(<9 x i1> *)
+declare void @consume_vectori9(<9 x i1> *)
 declare void @pi32(i32*)
 declare void @pi64(i64*)
 declare void @pdouble(double*)
+declare void @pi64p(i64**)
 
-define void @f(i32 %a, i32 %b, i64 %c, double %d) presplitcoroutine !dbg !8 {
+define void @f(i32 %a, i32 %b, i64 %c, double %d, i64* %e) presplitcoroutine !dbg !8 {
 entry:
     %__promise = alloca %promise_type, align 8
     %0 = bitcast %promise_type* %__promise to i8*
@@ -65,12 +88,21 @@ entry:
     %b.alloc = alloca i32, align 4
     %c.alloc = alloca i64, align 4
     %d.alloc = alloca double, align 4
+    %e.alloc = alloca i64*, align 4
     store i32 %a, i32* %a.alloc
     store i32 %b, i32* %b.alloc
     store i64 %c, i64* %c.alloc
     store double %d, double* %d.alloc
+    store i64* %e, i64** %e.alloc
     %struct.data = alloca %struct.big_structure, align 1
     call void @produce(%struct.big_structure* %struct.data)
+    ; We treat vector type as unresolved type now for test coverage.
+    %unresolved_data = alloca <4 x i32>
+    call void @produce_vector(<4 x i32> *%unresolved_data)
+    %unresolved_data2 = alloca <5 x i1>
+    call void @produce_vectori5(<5 x i1> *%unresolved_data2)
+    %unresolved_data3 = alloca <9 x i1>
+    call void @produce_vectori9(<9 x i1> *%unresolved_data3)
     %id = call token @llvm.coro.id(i32 16, i8* %0, i8* null, i8* null)
     %alloc = call i1 @llvm.coro.alloc(token %id)
     br i1 %alloc, label %coro.alloc, label %coro.init
@@ -126,10 +158,14 @@ await.ready:                                      ; preds = %await.suspend, %ini
     %k.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 2
     store double 3.000000e+00, double* %k.i, align 8
     call void @consume(%struct.big_structure* %struct.data)
+    call void @consume_vector(<4 x i32> *%unresolved_data)
+    call void @consume_vectori5(<5 x i1> *%unresolved_data2)
+    call void @consume_vectori9(<9 x i1> *%unresolved_data3)
     call void @pi32(i32* %a.alloc)
     call void @pi32(i32* %b.alloc)
     call void @pi64(i64* %c.alloc)
     call void @pdouble(double* %d.alloc)
+    call void @pi64p(i64** %e.alloc)
     call void @return_void()
     br label %coro.final
 
@@ -183,18 +219,24 @@ unreachable:                                      ; preds = %after.coro.free
 
 }
 
-define void @bar(i32 %a, i64 %c, double %d) presplitcoroutine !dbg !19 {
+; bar is used to check that we wouldn't create duplicate DIType
+define void @bar(i32 %a, i64 %c, double %d, i64* %e) presplitcoroutine !dbg !19 {
 entry:
     %__promise = alloca %promise_type, align 8
     %0 = bitcast %promise_type* %__promise to i8*
     %a.alloc = alloca i32, align 4
     %c.alloc = alloca i64, align 4
     %d.alloc = alloca double, align 4
+    %e.alloc = alloca i64*, align 4
     store i32 %a, i32* %a.alloc
     store i64 %c, i64* %c.alloc
     store double %d, double* %d.alloc
+    store i64* %e, i64** %e.alloc
     %struct.data = alloca %struct.big_structure, align 1
     call void @produce(%struct.big_structure* %struct.data)
+    ; We treat vector type as unresolved type now for test coverage.
+    %unresolved_data = alloca <4 x i32>
+    call void @produce_vector(<4 x i32> *%unresolved_data)
     %id = call token @llvm.coro.id(i32 16, i8* %0, i8* null, i8* null)
     %alloc = call i1 @llvm.coro.alloc(token %id)
     br i1 %alloc, label %coro.alloc, label %coro.init
@@ -243,16 +285,18 @@ await.cleanup:                                    ; preds = %await.suspend
 
 await.ready:                                      ; preds = %await.suspend, %init.ready
     call void @await_resume()
-     %i.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 0
+    %i.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 0
     store i32 1, i32* %i.i, align 8
     %j.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 1
     store i32 2, i32* %j.i, align 4
     %k.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 2
     store double 3.000000e+00, double* %k.i, align 8
     call void @consume(%struct.big_structure* %struct.data)
+    call void @consume_vector(<4 x i32> *%unresolved_data)
     call void @pi32(i32* %a.alloc)
     call void @pi64(i64* %c.alloc)
     call void @pdouble(double* %d.alloc)
+    call void @pi64p(i64** %e.alloc)
     call void @return_void()
     br label %coro.final
 
@@ -354,9 +398,3 @@ declare void @final_suspend()
 !20 = distinct !DILexicalBlock(scope: !19, file: !1, line: 23, column: 12)
 !21 = !DILocalVariable(name: "__promise", scope: !20, file: !1, line: 55, type: !10)
 !22 = !DILocation(line: 10, scope: !20)
-
-
-
-
-
-

@@ -150,9 +150,18 @@ MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDimSize(MlirType type,
 /// in shaped types.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicSize(int64_t size);
 
+/// Returns the value indicating a dynamic size in a shaped type. Prefer
+/// mlirShapedTypeIsDynamicSize to direct comparisons with this value.
+MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicSize();
+
 /// Checks whether the given value is used as a placeholder for dynamic strides
 /// and offsets in shaped types.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicStrideOrOffset(int64_t val);
+
+/// Returns the value indicating a dynamic stride or offset in a shaped type.
+/// Prefer mlirShapedTypeGetDynamicStrideOrOffset to direct comparisons with
+/// this value.
+MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicStrideOrOffset();
 
 //===----------------------------------------------------------------------===//
 // Vector type.

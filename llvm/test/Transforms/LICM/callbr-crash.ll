@@ -6,12 +6,18 @@ define i32 @j() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@j, [[FOR_END:%.*]]))
-; CHECK-NEXT:    to label [[COND_TRUE_I:%.*]] [label %for.end]
+; CHECK-NEXT:    callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@j, [[FOR_END_SPLIT_LOOP_EXIT1:%.*]]))
+; CHECK-NEXT:    to label [[COND_TRUE_I:%.*]] [label %for.end.split.loop.exit1]
 ; CHECK:       cond.true.i:
-; CHECK-NEXT:    br i1 true, label [[FOR_END]], label [[FOR_COND]]
+; CHECK-NEXT:    br i1 true, label [[FOR_END_SPLIT_LOOP_EXIT:%.*]], label [[FOR_COND]]
+; CHECK:       for.end.split.loop.exit:
+; CHECK-NEXT:    [[ASMRESULT1_I_I_LE:%.*]] = extractvalue { i8, i32 } zeroinitializer, 1
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
+; CHECK:       for.end.split.loop.exit1:
+; CHECK-NEXT:    [[PHI_PH2:%.*]] = phi i32 [ undef, [[FOR_COND]] ]
+; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[COND_TRUE_I]] ], [ undef, [[FOR_COND]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ASMRESULT1_I_I_LE]], [[FOR_END_SPLIT_LOOP_EXIT]] ], [ [[PHI_PH2]], [[FOR_END_SPLIT_LOOP_EXIT1]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:

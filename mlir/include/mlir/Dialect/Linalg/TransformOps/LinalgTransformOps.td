@@ -22,9 +22,15 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
   let description = [{
     Decomposes named complex operations, such as higher-dimensional
     (depthwise) convolutions, into combinations of lower-dimensional equivalents
-    when possible. The operand handle must point to a list of such operations.
-    The returning handle points to the main produced computational operation,
-    such as the lower-dimensional convolution.
+    when possible.
+
+    Return modes:
+    =============
+    This operation ignores non-Linalg ops and drops them in the return.
+    If all the operations referred to by the `target` PDLOperation decompose
+    properly, the transform succeeds. Otherwise the transform silently fails.
+    The return handle points to only the subset of successfully produced 
+    computational operations, which can be empty.
   }];
 
   let arguments = (ins PDL_Operation:$target);
@@ -32,8 +38,10 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target, TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 
@@ -61,11 +69,16 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
      TransformOpInterface, TransformEachOpTrait]> {
   let description = [{
     Transforms a named structued operation into the generic form with the
-    explicit attached region. The operand handle must point to a list of
-    structured operations, it is consumed by the transformation and is not
-    expected to be used afterwards. The resulting handle points to the list
-    of equivalent generic operations, in the same order as the original named
-    operations.
+    explicit attached region. 
+    
+    Return modes:
+    =============
+    This operation ignores non-Linalg ops and drops them in the return.
+    If all the operations referred to by the `target` PDLOperation generalize
+    properly, the transform succeeds. Otherwise the transform silently fails.
+    The return handle points to only the subset of successfully produced 
+    equivalent generic operations, which can be empty or contain the original
+    ops if they were already in generic form.
   }];
 
   let arguments = (ins PDL_Operation:$target);
@@ -73,8 +86,10 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target, TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 
@@ -84,6 +99,16 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
   let description = [{
     Interchanges the iterators of the operations pointed to by the target handle
     using the iterator interchange attribute.
+
+    Return modes:
+    =============
+    This operation ignores non-linalg::Generic ops and drops them in the return.
+    This operation fails if the interchange attribute is invalid.
+    If all the operations referred to by the `target` PDLOperation interchange
+    properly, the transform succeeds. 
+    If any interchange fails, the transform definitely fails.
+    The return handle points to only the subset of successfully produced 
+    interchanged operations, which can be empty.
   }];
 
   let arguments =
@@ -95,8 +120,10 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target, TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::GenericOp target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 
@@ -106,6 +133,16 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
   let description = [{
     Pads the operations pointed to by the target handle using the options
     provides as operation attributes.
+
+    Return modes:
+    =============
+    This operation ignores non-Linalg ops and drops them in the return.
+    This operation may produce a definiteFailure if the padding fails for any
+    reason.
+    If all the operations referred to by the `target` PDLOperation pad
+    properly, the transform succeeds. Otherwise the transform silently fails.
+    The return handle points to only the subset of successfully produced 
+    padded operations, which can be empty.
   }];
 
   let arguments =
@@ -123,8 +160,10 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target, TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 
@@ -135,11 +174,23 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
     Indicates that ops of a specific kind in the given function should be
     scalarized (i.e. their dynamic dimensions tiled by 1).
 
-    This operation returns the tiled op but not the loops.
+    Return modes:
+    =============
+    This operation ignores non-Linalg ops and drops them in the return.
+    This operation produces `definiteFailure` if the scalarization fails for any
+    reason.
+    If all the operations referred to by the `target` PDLOperation scalarize
+    properly, the transform succeeds. Otherwise the transform silently fails.
 
+    The return handle points to only the subset of successfully produced 
+    tiled-by-1 operations, which can be empty.
+
+    This operation does not return handles to the tiled loop.
     We make this design choice because it is hard to know ahead of time the
     number of loops that will be produced (it depends on the number of dynamic
     dimensions after multiple transformations have been applied).
+    Loops can always be recovered by navigating from the tiled operations if
+    needed.
   }];
 
   let arguments = (ins PDL_Operation:$target);
@@ -148,9 +199,43 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
-        ::mlir::linalg::LinalgOp target, TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
+}
+
+def SplitOp : Op<Transform_Dialect, "structured.split",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Indicates that the given `target` op should be split into two complementary
+    parts, which combined cover the entire iteration domain of the original op.
+    The split is performed along the iteration space dimension provided as
+    attribute. In case of dimension overflow, the transformation fails. The
+    split is performed at the dimension iterator value specified as either the
+    static split point attribute when it is known at transform IR construction
+    time or as the handle to an operation producing a single index-typed value
+    when it is computed by payload IR. In the latter case, the static split
+    point must be set to `ShapedType::kDynamicSize` and the dynamic size handle
+    must point to as many value-producing operations as there are structured
+    operations pointed to by the target handle.
+
+    The operation consumes the target handle, but preserves the split point
+    handle if provided. It produces two new handles pointing to the two parts
+    of the structured op after splitting, in the same order as the target
+    operand, with the first handle corresponding to the part with lower
+    iteration space indices.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       I64Attr:$dimension,
+                       Optional<PDL_Operation>:$dynamic_split_point,
+                       I64Attr:$static_split_point);
+  let results = (outs PDL_Operation:$first, PDL_Operation:$second);
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
@@ -174,7 +259,17 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       - use_alloc: whether to use an alloc op to allocate the temporary 
         tensor (default: do not use alloc op)
 
-    This op returns 4 handles to:
+    Return modes:
+    =============
+    This operation ignores non-Linalg ops and drops them in the return.
+    This operation produces `definiteFailure` if the splitting fails for any
+    reason.
+
+    If all the operations referred to by the `target` PDLOperation split
+    properly, the transform succeeds. Otherwise the transform silently fails.
+    The 4 returned handles points to only the subset of successfully produced 
+    computational operations, which can all be empty.
+    This 4 returned handles point to:
       - the init op (or tensor_alloc op if use_alloc = true), 
       - the fill op used to initialize the neutral element, 
       - the split op and 
@@ -284,15 +379,18 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
                    DefaultValuedAttr<I64Attr, "{}">:$insert_split_dimension,
                    UnitAttr:$use_scaling_algorithm,
                    UnitAttr:$use_alloc);
-  let results = (outs PDL_Operation:$fill_op,
+  let results = (outs PDL_Operation:$init_or_alloc_op,
+                      PDL_Operation:$fill_op,
                       PDL_Operation:$split_linalg_op,
                       PDL_Operation:$combining_linalg_op);
 
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::llvm::SmallVector<::mlir::Operation *>> applyToOne(
-        ::mlir::linalg::LinalgOp target, TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 
@@ -340,6 +438,13 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
 
     Note that this transformation is invalidating the handles to any payload IR
     operation that is contained inside the vectorization target.
+
+    Return modes:
+    =============
+    This operation produces `definiteFailure` if vectorization fails for any
+    reason.
+    The operation always returns the handle to the target op that is expected 
+    to be isolated from above.
   }];
 
   let arguments = (ins PDL_Operation:$target,
@@ -349,8 +454,10 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<Operation *> applyToOne(
-      ::mlir::Operation *target, TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 

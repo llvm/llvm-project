@@ -23,12 +23,12 @@
 namespace mlir {
 /// Performs constant folding `calculate` with element-wise behavior on the two
 /// attributes in `operands` and returns the result if possible.
-template <class AttrElementT,
-          class ElementValueT = typename AttrElementT::ValueType,
-          class CalculationT =
-              function_ref<ElementValueT(ElementValueT, ElementValueT)>>
-Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
-                            const CalculationT &calculate) {
+template <
+    class AttrElementT, class ElementValueT = typename AttrElementT::ValueType,
+    class CalculationT =
+        function_ref<Optional<ElementValueT>(ElementValueT, ElementValueT)>>
+Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
+                                       const CalculationT &calculate) {
   assert(operands.size() == 2 && "binary op takes two operands");
   if (!operands[0] || !operands[1])
     return {};
@@ -39,9 +39,14 @@ Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
     auto lhs = operands[0].cast<AttrElementT>();
     auto rhs = operands[1].cast<AttrElementT>();
 
-    return AttrElementT::get(lhs.getType(),
-                             calculate(lhs.getValue(), rhs.getValue()));
+    auto calRes = calculate(lhs.getValue(), rhs.getValue());
+
+    if (!calRes)
+      return {};
+
+    return AttrElementT::get(lhs.getType(), *calRes);
   }
+
   if (operands[0].isa<SplatElementsAttr>() &&
       operands[1].isa<SplatElementsAttr>()) {
     // Both operands are splats so we can avoid expanding the values out and
@@ -51,7 +56,10 @@ Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
 
     auto elementResult = calculate(lhs.getSplatValue<ElementValueT>(),
                                    rhs.getSplatValue<ElementValueT>());
-    return DenseElementsAttr::get(lhs.getType(), elementResult);
+    if (!elementResult)
+      return {};
+
+    return DenseElementsAttr::get(lhs.getType(), *elementResult);
   } else if (operands[0].isa<ElementsAttr>() &&
              operands[1].isa<ElementsAttr>()) {
     // Operands are ElementsAttr-derived; perform an element-wise fold by
@@ -63,11 +71,29 @@ Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
     auto rhsIt = rhs.value_begin<ElementValueT>();
     SmallVector<ElementValueT, 4> elementResults;
     elementResults.reserve(lhs.getNumElements());
-    for (size_t i = 0, e = lhs.getNumElements(); i < e; ++i, ++lhsIt, ++rhsIt)
-      elementResults.push_back(calculate(*lhsIt, *rhsIt));
+    for (size_t i = 0, e = lhs.getNumElements(); i < e; ++i, ++lhsIt, ++rhsIt) {
+      auto elementResult = calculate(*lhsIt, *rhsIt);
+      if (!elementResult)
+        return {};
+      elementResults.push_back(*elementResult);
+    }
+
     return DenseElementsAttr::get(lhs.getType(), elementResults);
   }
   return {};
+}
+
+template <class AttrElementT,
+          class ElementValueT = typename AttrElementT::ValueType,
+          class CalculationT =
+              function_ref<ElementValueT(ElementValueT, ElementValueT)>>
+Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
+                            const CalculationT &calculate) {
+  return constFoldBinaryOpConditional<AttrElementT>(
+      operands,
+      [&](ElementValueT a, ElementValueT b) -> Optional<ElementValueT> {
+        return calculate(a, b);
+      });
 }
 
 /// Performs constant folding `calculate` with element-wise behavior on the one

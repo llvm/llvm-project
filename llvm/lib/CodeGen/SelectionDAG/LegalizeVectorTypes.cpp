@@ -5627,7 +5627,6 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
   SDLoc dl(N);
-  unsigned NumElts = VT.getVectorNumElements();
   SDValue InOp = N->getOperand(N->isStrictFPOpcode() ? 1 : 0);
   assert(getTypeAction(InOp.getValueType()) ==
              TargetLowering::TypeWidenVector &&
@@ -5639,7 +5638,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
   // See if a widened result type would be legal, if so widen the node.
   // FIXME: This isn't safe for StrictFP. Other optimization here is needed.
   EVT WideVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
-                                InVT.getVectorNumElements());
+                                InVT.getVectorElementCount());
   if (TLI.isTypeLegal(WideVT) && !N->isStrictFPOpcode()) {
     SDValue Res;
     if (N->isStrictFPOpcode()) {
@@ -5665,6 +5664,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
   EVT InEltVT = InVT.getVectorElementType();
 
   // Unroll the convert into some scalar code and create a nasty build vector.
+  unsigned NumElts = VT.getVectorNumElements();
   SmallVector<SDValue, 16> Ops(NumElts);
   if (N->isStrictFPOpcode()) {
     SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
@@ -6055,7 +6055,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
   // The result type is legal, if its vXi1, keep vXi1 for the new SETCC.
   if (VT.getScalarType() == MVT::i1)
     SVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
-                           SVT.getVectorNumElements());
+                           SVT.getVectorElementCount());
 
   SDValue WideSETCC = DAG.getNode(ISD::SETCC, SDLoc(N),
                                   SVT, InOp0, InOp1, N->getOperand(2));
@@ -6063,7 +6063,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
   // Extract the needed results from the result vector.
   EVT ResVT = EVT::getVectorVT(*DAG.getContext(),
                                SVT.getVectorElementType(),
-                               VT.getVectorNumElements());
+                               VT.getVectorElementCount());
   SDValue CC = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResVT, WideSETCC,
                            DAG.getVectorIdxConstant(0, dl));
 
