@@ -441,7 +441,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   // AllocationBase is defined for MEM_COMMIT and MEM_RESERVE but not MEM_FREE.
   if (mem_info.State != MEM_FREE) {
     info.GetRange().SetRangeBase(
-        reinterpret_cast<addr_t>(mem_info.AllocationBase));
+        reinterpret_cast<addr_t>(mem_info.BaseAddress));
     info.GetRange().SetRangeEnd(reinterpret_cast<addr_t>(mem_info.BaseAddress) +
                                 mem_info.RegionSize);
     info.SetMapped(MemoryRegionInfo::eYes);
