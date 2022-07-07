@@ -195,7 +195,7 @@ cc_library(
             "lib/Support/BLAKE3/blake3_avx512_x86-64_unix.S",
         ],
         "//conditions:default": [
-        ]
+        ],
     }),
     hdrs = glob([
         "include/llvm/Support/**/*.h",
@@ -221,7 +221,7 @@ cc_library(
         ],
         "//conditions:default": [
             "BLAKE3_USE_NEON=0",
-        ]
+        ],
     }) + select({
         "@platforms//cpu:x86_64": [
         ],
@@ -230,7 +230,7 @@ cc_library(
             "BLAKE3_NO_AVX512",
             "BLAKE3_NO_SSE2",
             "BLAKE3_NO_SSE41",
-        ]
+        ],
     }),
     includes = ["include"],
     linkopts = select({
@@ -435,6 +435,9 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
+        ":DebugInfoDWARF",
+        ":Object",
         ":Support",
         ":Symbolize",
     ],
@@ -2594,7 +2597,7 @@ template_rule(
     src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "dsymutil-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "dsymutil"
+        "@TOOL_NAME@": "dsymutil",
     },
 )
 
@@ -2698,7 +2701,7 @@ template_rule(
     src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-ar-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "llvm_ar"
+        "@TOOL_NAME@": "llvm_ar",
     },
 )
 
@@ -2900,7 +2903,7 @@ template_rule(
     src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-cxxfilt-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "llvm_cxxfilt"
+        "@TOOL_NAME@": "llvm_cxxfilt",
     },
 )
 
@@ -2929,11 +2932,11 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
-        ":Symbolize",
         ":BitReader",
         ":Core",
-        ":Support",
         ":Debuginfod",
+        ":Support",
+        ":Symbolize",
     ],
 )
 
@@ -3443,10 +3446,9 @@ template_rule(
     src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-objcopy-driver.cpp",
     substitutions = {
-        "@TOOL_NAME@": "llvm_objcopy"
+        "@TOOL_NAME@": "llvm_objcopy",
     },
 )
-
 
 cc_binary(
     name = "llvm-objcopy",
