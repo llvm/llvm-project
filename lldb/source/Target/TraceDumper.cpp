@@ -202,11 +202,8 @@ public:
 
   void DumpEvent(const TraceDumper::TraceItem &item) {
     m_j.attribute("event", TraceCursor::EventKindToString(*item.event));
-<<<<<<< HEAD
-=======
     if (item.event == eTraceEventCPUChanged)
       m_j.attribute("cpuId", item.cpu_id);
->>>>>>> ccb96b741a18 ([trace][intel pt] Create a CPU change event and expose it in the dumper)
   }
 
   void DumpInstruction(const TraceDumper::TraceItem &item) {
@@ -216,18 +213,12 @@ public:
       m_j.attribute(
           "symbol",
           ToOptionalString(item.symbol_info->sc.GetFunctionName().AsCString()));
-<<<<<<< HEAD
 
       if (item.symbol_info->instruction) {
         m_j.attribute("mnemonic",
                       ToOptionalString(item.symbol_info->instruction->GetMnemonic(
                           &item.symbol_info->exe_ctx)));
       }
-=======
-      m_j.attribute("mnemonic",
-                    ToOptionalString(item.symbol_info->instruction->GetMnemonic(
-                        &item.symbol_info->exe_ctx)));
->>>>>>> ccb96b741a18 ([trace][intel pt] Create a CPU change event and expose it in the dumper)
 
       if (IsLineEntryValid(item.symbol_info->sc.line_entry)) {
         m_j.attribute(
@@ -250,24 +241,11 @@ public:
 
       if (item.event) {
         DumpEvent(item);
-<<<<<<< HEAD
-        return;
-      }
-
-      if (item.error) {
-        m_j.attribute("error", *item.error);
-        return;
-      }
-
-      // we know we are seeing an actual instruction
-      DumpInstruction(item);
-=======
       } else if (item.error) {
         m_j.attribute("error", *item.error);
       } else {
         DumpInstruction(item);
       }
->>>>>>> ccb96b741a18 ([trace][intel pt] Create a CPU change event and expose it in the dumper)
     });
   }
 

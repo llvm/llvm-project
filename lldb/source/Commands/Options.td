@@ -1169,6 +1169,8 @@ let Command = "thread trace dump instructions" in {
 let Command = "thread trace dump info" in {
   def thread_trace_dump_info_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"show verbose thread trace dump info">;
+  def thread_trace_dump_info_json: Option<"json", "j">, Group<1>,
+    Desc<"Dump in JSON format.">;
 }
 
 let Command = "type summary add" in {

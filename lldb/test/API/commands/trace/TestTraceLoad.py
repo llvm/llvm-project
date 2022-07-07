@@ -30,7 +30,9 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
       "totalInBytes": "0",
       "avgPerItemInBytes": null
     },
-    "timingInSeconds": {},
+    "timingInSeconds": {
+      "Decoding instructions": ''', '''
+    },
     "events": {
       "totalCount": 0,
       "individualCounts": {}
@@ -61,8 +63,10 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
     "traceItemsCount": 19524,
     "memoryUsage": {
       "totalInBytes": "175760",
-      "avgPerItemInBytes": 9.00''', '''},
-    "timingInSeconds": {},
+      "avgPerItemInBytes": 9.''', '''},
+    "timingInSeconds": {
+      "Decoding instructions": ''', '''
+    },
     "events": {
       "totalCount": 2,
       "individualCounts": {
@@ -106,11 +110,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         # we'll load the compact trace and make sure it works
         self.traceLoad(os.path.join(compact_trace_bundle_dir, "trace.json"), substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19522: [tsc=40450075478109270] (error) expected tracing enabled event",
+          substrs=["19523: [tsc=40450075478109270] (error) expected tracing enabled event",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19520: [tsc=40450075477657246] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19521: [tsc=40450075477657246] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["67911: [tsc=40450075477799536] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["67912: [tsc=40450075477799536] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
         # This reduced the number of continuous executions to look at
@@ -170,9 +174,10 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         # check that the Process and Thread objects were created correctly
         self.expect("thread info", substrs=["tid = 3842849"])
         self.expect("thread list", substrs=["Process 1234 stopped", "tid = 3842849"])
-        self.expect("thread trace dump info", substrs=['''Trace technology: intel-pt
+        self.expect("thread trace dump info", substrs=['''thread #1: tid = 3842849
 
-thread #1: tid = 3842849
+  Trace technology: intel-pt
+
   Total number of trace items: 23
 
   Memory usage:
