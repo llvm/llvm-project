@@ -127,11 +127,13 @@ static bool mayShadow(const NamedDecl *ND0, const NamedDecl *ND1) {
   const DeclContext *DC1 = ND1->getDeclContext()->getPrimaryContext();
 
   if (const CXXRecordDecl *RD0 = dyn_cast<CXXRecordDecl>(DC0)) {
-    if (ND1->getAccess() != AS_private && isMemberOf(ND1, RD0))
+    RD0 = RD0->getDefinition();
+    if (RD0 && ND1->getAccess() != AS_private && isMemberOf(ND1, RD0))
       return true;
   }
   if (const CXXRecordDecl *RD1 = dyn_cast<CXXRecordDecl>(DC1)) {
-    if (ND0->getAccess() != AS_private && isMemberOf(ND0, RD1))
+    RD1 = RD1->getDefinition();
+    if (RD1 && ND0->getAccess() != AS_private && isMemberOf(ND0, RD1))
       return true;
   }
 
