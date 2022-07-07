@@ -2546,7 +2546,7 @@ INTERCEPTOR(int, DN_EXPAND_INTERCEPTOR_NAME, unsigned char const *base,
   // TODO: add read check if __dn_comp intercept added
   int res = REAL(DN_EXPAND_INTERCEPTOR_NAME)(base, end, src, dest, space);
   if (res >= 0)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res + 1);
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, internal_strlen(dest) + 1);
   return res;
 }
 #  define INIT___DN_EXPAND \

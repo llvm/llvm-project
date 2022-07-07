@@ -34,12 +34,52 @@ void testWriteZeroLength() {
   assert(res >= 0);
   assert(strlen(output) == 0);
   __msan_check_mem_is_initialized(output, strlen(output) + 1);
-  __msan_check_mem_is_initialized(output, res);
+}
+
+void testComp() {
+  char unsigned msg[1024];
+  char unsigned *mb = msg;
+  char unsigned *me = msg + sizeof(msg);
+  char unsigned **pb = (char unsigned **)mb;
+  pb[0] = msg;
+  pb[1] = nullptr;
+  mb += 64;
+  char unsigned **pe = (char unsigned **)mb;
+
+  char unsigned *n1 = mb;
+  int res = dn_comp("llvm.org", mb, me - mb, pb, pe);
+  assert(res == 10);
+  mb += res;
+
+  char unsigned *n2 = mb;
+  res = dn_comp("lab.llvm.org", mb, me - mb, pb, pe);
+  assert(res == 6);
+  mb += res;
+
+  {
+    char output[1024];
+    res = dn_expand(msg, msg + sizeof(msg), n1, output, sizeof(output));
+
+    fprintf(stderr, "%d\n", res);
+    assert(res == 10);
+    assert(strlen(output) == 8);
+    __msan_check_mem_is_initialized(output, strlen(output) + 1);
+  }
+
+  {
+    char output[1024];
+    res = dn_expand(msg, msg + sizeof(msg), n2, output, sizeof(output));
+
+    assert(res == 6);
+    assert(strlen(output) == 12);
+    __msan_check_mem_is_initialized(output, strlen(output) + 1);
+  }
 }
 
 int main(int iArgc, const char *szArgv[]) {
   testWrite();
   testWriteZeroLength();
+  testComp();
 
   return 0;
 }
