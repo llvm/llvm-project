@@ -1,0 +1,16 @@
+digraph "CFG for 'init' function" {
+	label="CFG for 'init' function";
+
+	Node0x558a60718b60 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#b9d0f970",label="{entry:\l  %smax = call i32 @llvm.smax.i32(i32 %n, i32 0)\l  %wide.trip.count = zext i32 %smax to i64\l  br label %for.cond\l}"];
+	Node0x558a60718b60 -> Node0x558a607194d0;
+	Node0x558a607194d0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870",label="{for.cond:                                         \l  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]\l  %exitcond = icmp ne i64 %indvars.iv, %wide.trip.count\l  br i1 %exitcond, label %for.body, label %for.end16\l|{<s0>T|<s1>F}}"];
+	Node0x558a607194d0:s0 -> Node0x558a60719900;
+	Node0x558a607194d0:s1 -> Node0x558a607199e0;
+	Node0x558a60719900 [shape=record,color="#b70d28ff", style=filled, fillcolor="#bb1b2c70",label="{for.body:                                         \l  %0 = shl nuw nsw i64 %indvars.iv, 1\l  %arrayidx = getelementptr inbounds i32, i32* %c, i64 %indvars.iv\l  %1 = trunc i64 %0 to i32\l  store i32 %1, i32* %arrayidx, align 4\l  %2 = trunc i64 %indvars.iv to i32\l  %mul = mul nsw i32 %2, %2\l  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv\l  store i32 %mul, i32* %arrayidx2, align 4\l  br label %for.body6\l}"];
+	Node0x558a60719900 -> Node0x558a6071a270;
+	Node0x558a60719680 [shape=record,color="#b70d28ff", style=filled, fillcolor="#bb1b2c70",label="{for.inc:                                          \l  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1\l  br label %for.cond, !llvm.loop !4\l}"];
+	Node0x558a60719680 -> Node0x558a607194d0;
+	Node0x558a6071a270 [shape=record,color="#b70d28ff", style=filled, fillcolor="#bb1b2c70",label="{for.body6:                                        \l  %arrayidx8 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv\l  %i = load i32, i32* %arrayidx8, align 4\l  %arrayidx10 = getelementptr inbounds i32, i32* %c, i64 %indvars.iv\l  %i1 = load i32, i32* %arrayidx10, align 4\l  %add11 = add nsw i32 %i, %i1\l  %arrayidx13 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv\l  store i32 %add11, i32* %arrayidx13, align 4\l  br label %for.inc\l}"];
+	Node0x558a6071a270 -> Node0x558a60719680;
+	Node0x558a607199e0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#b9d0f970",label="{for.end16:                                        \l  ret void\l}"];
+}
