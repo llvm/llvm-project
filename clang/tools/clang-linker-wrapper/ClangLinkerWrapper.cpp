@@ -28,6 +28,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
@@ -339,9 +340,8 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
 // Extract offloading binaries from an Object file \p Obj.
 Error extractFromBinary(const ObjectFile &Obj,
                         SmallVectorImpl<OffloadFile> &DeviceFiles) {
-  for (const SectionRef &Sec : Obj.sections()) {
-    Expected<StringRef> Name = Sec.getName();
-    if (!Name || !Name->equals(OFFLOAD_SECTION_MAGIC_STR))
+  for (ELFSectionRef Sec : Obj.sections()) {
+    if (Sec.getType() != ELF::SHT_LLVM_OFFLOADING)
       continue;
 
     Expected<StringRef> Buffer = Sec.getContents();
@@ -433,9 +433,7 @@ Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
   switch (Type) {
   case file_magic::bitcode:
     return extractFromBitcode(std::move(Buffer), DeviceFiles);
-  case file_magic::elf_relocatable:
-  case file_magic::macho_object:
-  case file_magic::coff_object: {
+  case file_magic::elf_relocatable: {
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(*Buffer, Type);
     if (!ObjFile)
