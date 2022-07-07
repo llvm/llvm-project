@@ -57,6 +57,7 @@ if config.host_os in ['Linux']:
   extra_link_flags += ["-ldl"]
 
 clang_cflags = config.debug_info_flags + tool_cflags + [config.target_cflags]
+clang_cflags += ["-I%s" % os.path.dirname(os.path.dirname(__file__))]
 clang_cflags += extra_link_flags
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
 
