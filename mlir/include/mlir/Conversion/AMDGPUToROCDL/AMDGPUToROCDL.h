@@ -8,6 +8,7 @@
 #ifndef MLIR_CONVERSION_AMDGPUTOROCDL_AMDGPUTOROCDL_H_
 #define MLIR_CONVERSION_AMDGPUTOROCDL_AMDGPUTOROCDL_H_
 
+#include "mlir/Conversion/AMDGPUToROCDL/Chipset.h"
 #include <memory>
 
 namespace mlir {
@@ -17,7 +18,8 @@ class RewritePatternSet;
 class Pass;
 
 void populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
-                                             RewritePatternSet &patterns);
+                                             RewritePatternSet &patterns,
+                                             amdgpu::Chipset chipset);
 
 std::unique_ptr<Pass> createConvertAMDGPUToROCDLPass();
 
