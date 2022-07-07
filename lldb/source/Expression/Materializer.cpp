@@ -27,6 +27,14 @@
 
 using namespace lldb_private;
 
+// FIXME: these should be retrieved from the target
+//        instead of being hard-coded. Currently we
+//        assume that persistent vars are materialized
+//        as references, and thus pick the size of a
+//        64-bit pointer.
+static constexpr uint32_t g_default_var_alignment = 8;
+static constexpr uint32_t g_default_var_byte_size = 8;
+
 uint32_t Materializer::AddStructMember(Entity &entity) {
   uint32_t size = entity.GetSize();
   uint32_t alignment = entity.GetAlignment();
@@ -54,8 +62,8 @@ public:
         m_delegate(delegate) {
     // Hard-coding to maximum size of a pointer since persistent variables are
     // materialized by reference
-    m_size = 8;
-    m_alignment = 8;
+    m_size = g_default_var_byte_size;
+    m_alignment = g_default_var_alignment;
   }
 
   void MakeAllocation(IRMemoryMap &map, Status &err) {
@@ -418,8 +426,8 @@ public:
       : Entity(), m_variable_sp(variable_sp) {
     // Hard-coding to maximum size of a pointer since all variables are
     // materialized by reference
-    m_size = 8;
-    m_alignment = 8;
+    m_size = g_default_var_byte_size;
+    m_alignment = g_default_var_alignment;
     m_is_reference =
         m_variable_sp->GetType()->GetForwardCompilerType().IsReferenceType();
   }
@@ -772,8 +780,8 @@ public:
         m_keep_in_memory(keep_in_memory), m_delegate(delegate) {
     // Hard-coding to maximum size of a pointer since all results are
     // materialized by reference
-    m_size = 8;
-    m_alignment = 8;
+    m_size = g_default_var_byte_size;
+    m_alignment = g_default_var_alignment;
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
@@ -1050,8 +1058,8 @@ class EntitySymbol : public Materializer::Entity {
 public:
   EntitySymbol(const Symbol &symbol) : Entity(), m_symbol(symbol) {
     // Hard-coding to maximum size of a symbol
-    m_size = 8;
-    m_alignment = 8;
+    m_size = g_default_var_byte_size;
+    m_alignment = g_default_var_alignment;
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
