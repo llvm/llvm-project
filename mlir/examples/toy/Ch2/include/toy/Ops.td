@@ -246,4 +246,23 @@ def TransposeOp : Toy_Op<"transpose"> {
   let verifier = [{ return ::verify(*this); }];
 }
 
+def MatmulOp : Toy_Op<"matmul"> {
+  let summary = "matmul operation";
+
+  let arguments = (ins F64Tensor:$a , F64Tensor:$b );
+  let results = (outs F64Tensor);
+
+  let assemblyFormat = [{
+    `(` $a `:` type($a) `,` $b `:` type($b) `)` attr-dict `to` type(results)
+  }];
+
+  // Allow building a MatmulOp with from the input operand.
+  let builders = [
+    OpBuilder<(ins "Value":$a, "Value":$b )>
+  ];
+
+  // Invoke a static verify method to verify this matmul operation.
+  let verifier = [{ return ::verify(*this); }];
+}
+
 #endif // TOY_OPS
