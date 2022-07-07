@@ -8,12 +8,14 @@
 
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -274,6 +276,55 @@ LogicalResult transform::InterchangeOp::verify() {
            << getIteratorInterchange();
   }
   return success();
+}
+
+//===---------------------------------------------------------------------===//
+// MultiTileSizesOp
+//===---------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::MultiTileSizesOp::applyToOne(
+    LinalgOp target, SmallVector<Operation *> &results, TransformState &state) {
+  OpBuilder builder(target.getContext());
+  builder.setInsertionPoint(target);
+  OpFoldResult targetSize = builder.getIndexAttr(getTargetSize());
+  OpFoldResult divisor = builder.getIndexAttr(getDivisor());
+  FailureOr<MultiSizeSpecification> spec = computeMultiTileSizes(
+      builder, target, getDimension(), targetSize, divisor);
+  if (failed(spec)) {
+    return emitSilenceableError() << "could not generate tile size computation";
+  }
+
+  Operation *splitPoint =
+      builder
+          .createOrFold<arith::MulIOp>(target.getLoc(), spec->lowTileSize,
+                                       spec->lowTripCount)
+          .getDefiningOp();
+  Operation *lowTileSize = spec->lowTileSize.getDefiningOp();
+  Operation *highTileSize = spec->highTileSize.getDefiningOp();
+  assert(lowTileSize && highTileSize && splitPoint &&
+         "tile sizes are not produced by operations");
+  results.reserve(results.size() + 3);
+  results.push_back(lowTileSize);
+  results.push_back(highTileSize);
+  results.push_back(splitPoint);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::MultiTileSizesOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
+                       transform::TransformMappingResource::get());
+  for (Value result : getResults()) {
+    effects.emplace_back(MemoryEffects::Allocate::get(), result,
+                         transform::TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(), result,
+                         transform::TransformMappingResource::get());
+  }
+
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       transform::PayloadIRResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       transform::PayloadIRResource::get());
 }
 
 //===---------------------------------------------------------------------===//
@@ -782,6 +833,7 @@ class LinalgTransformDialectExtension
           LinalgTransformDialectExtension> {
 public:
   LinalgTransformDialectExtension() {
+    declareDependentDialect<AffineDialect>();
     declareDependentDialect<arith::ArithmeticDialect>();
     declareDependentDialect<pdl::PDLDialect>();
     declareDependentDialect<scf::SCFDialect>();

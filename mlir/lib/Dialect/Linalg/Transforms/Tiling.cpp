@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "PassDetail.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -80,6 +81,92 @@ void mlir::linalg::transformIndexOps(
     en.value() = ivs[rangeIndex->second];
   }
   addTileLoopIvsToIndexOpResults(b, op, allIvs);
+}
+
+/// Asserts that the given index-typed value is strictly positive. If the value
+/// is an attribute, asserts at compile time, otherwise emits an assertion
+/// checked at runtime.
+static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
+                                         OpFoldResult value) {
+  if (auto attr = value.dyn_cast<Attribute>()) {
+    assert(attr.cast<IntegerAttr>().getValue().isStrictlyPositive() &&
+           "expected strictly positive tile size and divisor");
+    return;
+  }
+
+  Value zero = b.create<arith::ConstantIndexOp>(0);
+  Value condition = b.create<arith::CmpIOp>(arith::CmpIPredicate::sgt,
+                                            value.get<Value>(), zero);
+  b.create<cf::AssertOp>(
+      condition,
+      b.getStringAttr("expected strictly positive tile size and divisor"));
+}
+
+FailureOr<MultiSizeSpecification>
+mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
+                                    unsigned dimension, OpFoldResult targetSize,
+                                    OpFoldResult divisor, bool emitAssertions) {
+  // Bail out on dimension overflow.
+  if (dimension >= op.getNumLoops())
+    return failure();
+
+  // The code below works only on values.
+  ImplicitLocOpBuilder b(op.getLoc(), builder);
+  if (emitAssertions) {
+    emitIsPositiveIndexAssertion(b, targetSize);
+    emitIsPositiveIndexAssertion(b, divisor);
+  }
+  Value targetSizeValue = materializeOpFoldResult(b, targetSize);
+  Value divisorValue = materializeOpFoldResult(b, divisor);
+
+  // Find the trip count of the iteration space dimension for which the tile
+  // sizes are computed.
+  // TODO: update createFlatListOfOperandDims to return OpFoldResults and avoid
+  // littering by useless constant materialization.
+  SmallVector<Value, 4> allShapes =
+      op.createFlatListOfOperandDims(b, b.getLoc());
+  AffineMap shapesToLoops = op.getShapesToLoopsMap();
+  SmallVector<Value, 4> loopRanges =
+      applyMapToValues(b, op.getLoc(), shapesToLoops, allShapes);
+  Value tripCount = loopRanges[dimension];
+
+  // Compute the tile sizes and the respective numbers of tiles.
+  AffineExpr s0 = b.getAffineSymbolExpr(0);
+  AffineExpr s1 = b.getAffineSymbolExpr(1);
+  AffineExpr s2 = b.getAffineSymbolExpr(2);
+  auto apply = [&](AffineExpr expr, ValueRange values) -> Value {
+    return makeComposedAffineApply(b, b.getLoc(), expr, values);
+  };
+  Value a = apply(s0.floorDiv(s1), {tripCount, divisorValue});
+  Value t = apply((s0 + s1 - 1).floorDiv(s1), {targetSizeValue, divisorValue});
+  Value d = apply((s0 + s1 - 1).floorDiv(s1), {a, t});
+  Value s = apply(s0.floorDiv(s1) * s2, {a, d, divisorValue});
+  Value v = apply(s0 % s1, {a, d});
+  Value u = apply(s0 - s1, {d, v});
+
+  MultiSizeSpecification spec;
+  spec.lowTileSize = s;
+  spec.highTileSize = apply(s0 + s1, {s, divisorValue});
+  spec.lowTripCount = u;
+  spec.highTripCount = v;
+
+  // If requested, emit the check that the tile sizes are computed correctly.
+  // For example, for iteration dimension size of 15 and the target size 8 it is
+  // impossible to find two tile sizes both divisible by 8 that fully cover the
+  // original space dimension.
+  if (emitAssertions) {
+    AffineExpr s3 = builder.getAffineSymbolExpr(3);
+    Value coveredSize =
+        apply(s0 * s1 + s2 * s3, {spec.lowTileSize, spec.lowTripCount,
+                                  spec.highTileSize, spec.highTripCount});
+    Value equals = b.create<arith::CmpIOp>(arith::CmpIPredicate::eq,
+                                           coveredSize, tripCount);
+    b.create<cf::AssertOp>(
+        equals, builder.getStringAttr(
+                    "could not compute dynamic multi-size tile shapes"));
+  }
+
+  return spec;
 }
 
 // Insert a tile `source` into the destination tensor `dest`. The position at

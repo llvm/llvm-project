@@ -127,6 +127,71 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
   }];
 }
 
+def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Emits the IR computing the tile sizes `s1` and `s2` such that:
+
+      - there exists a combination of `n` tiles of size `s1` and `m` tiles of
+        size `s2` that covers the entirety of the iteration space `dimension` of
+        the target structured op;
+      - `s1`, `s2` is less than or equal to `target_size`;
+      - `s1` and `s2` are divisible by `divisor.
+
+    For example, for a dimension of size 54 with target size 12 and divisor 2,
+    this can emit the IR computing the tile size 10, used for 3 tiles, and 12,
+    used for 2 tiles, totally 10*3 + 12*2 = 54. Note that when the divisor does
+    not divide the original dimension size, it is impossible to compute such
+    tile sizes. An assertion is emitted to guard against this in the dynamic
+    case.
+
+    Expects the target size and the divisor to be strictly positive. Folds the
+    IR as much as possible, normally obtaining constant sizes and numbers of
+    tiles for a statically known dimension.
+
+    This does *not* consume the target handle and produces three handles each
+    pointing to single-result index-typed operations (which may be arithmetic
+    constant operations) defining the two respective tile sizes and the product
+    of the first tile size with the number of tiles of that size (useful for
+    splitting the iteration space).
+
+    This operation composes with the regular tiling when applied per-dimension:
+
+    ```mlir
+    %sz1, %sz2, %split = structured.multitile_sizes %target
+                         { target_size = 10, dimension = 1 }
+    %low, %high = structured.split %target after %split { dimension = 1 }
+    %tiled_low = structured.tile %low [0, %sz1]
+    %tiled_high = structured.tile %high [0, %sz2]
+    %common = merge_handles %tiled_low, %tiled_high
+
+    %sz3, %sz4, %split = structured.multitile_size %target
+                         { target_size = 42, dimension = 0 }
+    %sz3r, %sz4r, %splitr = replicate num(%common) %sz3, %sz4, %splitr
+    structured.split %common after %splitr { dimension = 0 }
+    // ...
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       I64Attr:$dimension,
+                       I64Attr:$target_size,
+                       DefaultValuedAttr<I64Attr, "1">:$divisor);
+  let results = (outs PDL_Operation:$low_size,
+                      PDL_Operation:$high_size,
+                      PDL_Operation:$split_point);
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVector<::mlir::Operation *> &results,
+        TransformState &state);
+  }];
+}
+
+
 def PadOp : Op<Transform_Dialect, "structured.pad",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
