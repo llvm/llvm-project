@@ -253,10 +253,8 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       //
       // Careful! This has to be done after the merge above; otherwise, the
       // dividends won't contain the new ids inserted during the merge.
-      std::vector<MaybeLocalRepr> repr;
-      std::vector<SmallVector<int64_t, 8>> dividends;
-      SmallVector<unsigned, 4> divisors;
-      sI.getLocalReprs(dividends, divisors, repr);
+      std::vector<MaybeLocalRepr> repr(sI.getNumLocalVars());
+      DivisionRepr divs = sI.getLocalReprs(&repr);
 
       // Mark which inequalities of sI are division inequalities and add all
       // such inequalities to b.
@@ -301,10 +299,10 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
           // not be because they were never a part of sI; we just infer them
           // from the equality and add them only to b.
           b.addInequality(
-              getDivLowerBound(dividends[i], divisors[i],
+              getDivLowerBound(divs.getDividend(i), divs.getDenom(i),
                                sI.getVarKindOffset(VarKind::Local) + i));
           b.addInequality(
-              getDivUpperBound(dividends[i], divisors[i],
+              getDivUpperBound(divs.getDividend(i), divs.getDenom(i),
                                sI.getVarKindOffset(VarKind::Local) + i));
         }
       }

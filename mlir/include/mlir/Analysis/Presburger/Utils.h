@@ -17,6 +17,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 
+#include "mlir/Analysis/Presburger/Matrix.h"
+
 namespace mlir {
 namespace presburger {
 
@@ -102,6 +104,80 @@ struct MaybeLocalRepr {
   } repr;
 };
 
+/// Class storing division representation of local variables of a constraint
+/// system. The coefficients of the dividends are stored in order:
+/// [nonLocalVars, localVars, constant]. Each local variable may or may not have
+/// a representation. If the local does not have a representation, the dividend
+/// of the division has no meaning and the denominator is zero.
+///
+/// The i^th division here, represents the division representation of the
+/// variable at position `divOffset + i` in the constraint system.
+class DivisionRepr {
+public:
+  DivisionRepr(unsigned numVars, unsigned numDivs)
+      : dividends(numDivs, numVars + 1), denoms(numDivs, 0) {}
+
+  DivisionRepr(unsigned numVars) : dividends(numVars + 1, 0) {}
+
+  unsigned getNumVars() const { return dividends.getNumColumns() - 1; }
+  unsigned getNumDivs() const { return dividends.getNumRows(); }
+  unsigned getNumNonDivs() const { return getNumVars() - getNumDivs(); }
+  // Get the offset from where division variables start.
+  unsigned getDivOffset() const { return getNumVars() - getNumDivs(); }
+
+  // Check whether the `i^th` division has a division representation or not.
+  bool hasRepr(unsigned i) const { return denoms[i] != 0; }
+  // Check whether all the divisions have a division representation or not.
+  bool hasAllReprs() const {
+    return all_of(denoms, [](unsigned denom) { return denom != 0; });
+  }
+
+  // Clear the division representation of the i^th local variable.
+  void clearRepr(unsigned i) { denoms[i] = 0; }
+
+  // Get the dividend of the `i^th` division.
+  MutableArrayRef<int64_t> getDividend(unsigned i) {
+    return dividends.getRow(i);
+  }
+  ArrayRef<int64_t> getDividend(unsigned i) const {
+    return dividends.getRow(i);
+  }
+
+  // Get the `i^th` denominator.
+  unsigned &getDenom(unsigned i) { return denoms[i]; }
+  unsigned getDenom(unsigned i) const { return denoms[i]; }
+
+  ArrayRef<unsigned> getDenoms() const { return denoms; }
+
+  void setDividend(unsigned i, ArrayRef<int64_t> dividend) {
+    dividends.setRow(i, dividend);
+  }
+
+  /// Removes duplicate divisions. On every possible duplicate division found,
+  /// `merge(i, j)`, where `i`, `j` are current index of the duplicate
+  /// divisions, is called and division at index `j` is merged into division at
+  /// index `i`. If `merge(i, j)` returns `true`, the divisions are merged i.e.
+  /// `j^th` division gets eliminated and it's each instance is replaced by
+  /// `i^th` division. If it returns `false`, the divisions are not merged.
+  /// `merge` can also do side effects, For example it can merge the local
+  /// variables in IntegerRelation.
+  void
+  removeDuplicateDivs(llvm::function_ref<bool(unsigned i, unsigned j)> merge);
+
+  void print(raw_ostream &os) const;
+  void dump() const;
+
+private:
+  /// Each row of the Matrix represents a single division dividend. The
+  /// `i^th` row represents the dividend of the variable at `divOffset + i`
+  /// in the constraint system (and the `i^th` local variable).
+  Matrix dividends;
+
+  /// Denominators of each division. If a denominator of a division is `0`, the
+  /// division variable is considered to not have a division representation.
+  SmallVector<unsigned, 4> denoms;
+};
+
 /// If `q` is defined to be equal to `expr floordiv d`, this equivalent to
 /// saying that `q` is an integer and `q` is subject to the inequalities
 /// `0 <= expr - d*q <= c - 1` (quotient remainder theorem).
@@ -135,24 +211,8 @@ llvm::SmallBitVector getSubrangeBitVector(unsigned len, unsigned setOffset,
 /// `MaybeLocalRepr` is set to None.
 MaybeLocalRepr computeSingleVarRepr(const IntegerRelation &cst,
                                     ArrayRef<bool> foundRepr, unsigned pos,
-                                    SmallVector<int64_t, 8> &dividend,
+                                    MutableArrayRef<int64_t> dividend,
                                     unsigned &divisor);
-
-/// Given dividends of divisions `divs` and denominators `denoms`, detects and
-/// removes duplicate divisions. `localOffset` is the offset in dividend of a
-/// division from where local variables start.
-///
-/// On every possible duplicate division found, `merge(i, j)`, where `i`, `j`
-/// are current index of the duplicate divisions, is called and division at
-/// index `j` is merged into division at index `i`. If `merge(i, j)` returns
-/// `true`, the divisions are merged i.e. `j^th` division gets eliminated and
-/// it's each instance is replaced by `i^th` division. If it returns `false`,
-/// the divisions are not merged. `merge` can also do side effects, For example
-/// it can merge the local variables in IntegerRelation.
-void removeDuplicateDivs(
-    std::vector<SmallVector<int64_t, 8>> &divs,
-    SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
-    llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 
 /// Given two relations, A and B, add additional local vars to the sets such
 /// that both have the union of the local vars in each set, without changing
