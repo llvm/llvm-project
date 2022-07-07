@@ -287,6 +287,52 @@ DiagnosedSilenceableFailure transform::GetClosestIsolatedParentOp::apply(
 }
 
 //===----------------------------------------------------------------------===//
+// MergeHandlesOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MergeHandlesOp::apply(transform::TransformResults &results,
+                                 transform::TransformState &state) {
+  SmallVector<Operation *> operations;
+  for (Value operand : getHandles())
+    llvm::append_range(operations, state.getPayloadOps(operand));
+  if (!getDeduplicate()) {
+    results.set(getResult().cast<OpResult>(), operations);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  SetVector<Operation *> uniqued(operations.begin(), operations.end());
+  results.set(getResult().cast<OpResult>(), uniqued.getArrayRef());
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::MergeHandlesOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  for (Value operand : getHandles()) {
+    effects.emplace_back(MemoryEffects::Read::get(), operand,
+                         transform::TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Free::get(), operand,
+                         transform::TransformMappingResource::get());
+  }
+  effects.emplace_back(MemoryEffects::Allocate::get(), getResult(),
+                       transform::TransformMappingResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), getResult(),
+                       transform::TransformMappingResource::get());
+
+  // There are no effects on the Payload IR as this is only a handle
+  // manipulation.
+}
+
+OpFoldResult transform::MergeHandlesOp::fold(ArrayRef<Attribute> operands) {
+  if (getDeduplicate() || getHandles().size() != 1)
+    return {};
+
+  // If deduplication is not required and there is only one operand, it can be
+  // used directly instead of merging.
+  return getHandles().front();
+}
+
+//===----------------------------------------------------------------------===//
 // PDLMatchOp
 //===----------------------------------------------------------------------===//
 

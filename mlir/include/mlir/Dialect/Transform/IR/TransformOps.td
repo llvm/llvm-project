@@ -121,6 +121,28 @@ def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent
   let assemblyFormat = "$target attr-dict";
 }
 
+def MergeHandlesOp : TransformDialectOp<"merge_handles",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Merges handles into one pointing to the union of payload ops";
+  let description = [{
+    Creates a new Transform IR handle value that points to the same Payload IR
+    operations as the operand handles. The Payload IR operations are listed
+    in the same order as they are in the operand handles, grouped by operand
+    handle, e.g., all Payload IR operations associated with the first handle
+    come first, then all Payload IR operations associated with the second handle
+    and so on. If `deduplicate` is set, do not add the given Payload IR
+    operation more than once to the final list regardless of it coming from the
+    same or different handles. Consumes the operands and produces a new handle.
+  }];
+
+  let arguments = (ins Variadic<PDL_Operation>:$handles,
+                       UnitAttr:$deduplicate);
+  let results = (outs PDL_Operation:$result);
+  let assemblyFormat = "($deduplicate^)? $handles attr-dict";
+  let hasFolder = 1;
+}
+
 def PDLMatchOp : TransformDialectOp<"pdl_match",
     [DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let summary = "Finds ops that match the named PDL pattern";
