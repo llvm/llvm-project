@@ -8393,7 +8393,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
     for (StringRef LibName : BCLibs)
       CmdArgs.push_back(Args.MakeArgString(
-          "-target-library=" + Action::GetOffloadKindName(Action::OFK_OpenMP) +
+          "--target-library=" + Action::GetOffloadKindName(Action::OFK_OpenMP) +
           "-" + TC->getTripleString() + "-" + Arch + "=" + LibName));
   }
 
@@ -8413,41 +8413,35 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       } else if (A->getOption().matches(options::OPT_O0))
         OOpt = "0";
       if (!OOpt.empty())
-        CmdArgs.push_back(Args.MakeArgString(Twine("-opt-level=O") + OOpt));
+        CmdArgs.push_back(Args.MakeArgString(Twine("--opt-level=O") + OOpt));
     }
   }
 
-  CmdArgs.push_back("-host-triple");
-  CmdArgs.push_back(Args.MakeArgString(TheTriple.getTriple()));
+  CmdArgs.push_back(
+      Args.MakeArgString("--host-triple=" + TheTriple.getTriple()));
   if (Args.hasArg(options::OPT_v))
-    CmdArgs.push_back("-v");
+    CmdArgs.push_back("--verbose");
 
-  // Add debug information if present.
   if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
-    const Option &Opt = A->getOption();
-    if (Opt.matches(options::OPT_gN_Group)) {
-      if (Opt.matches(options::OPT_gline_directives_only) ||
-          Opt.matches(options::OPT_gline_tables_only))
-        CmdArgs.push_back("-gline-directives-only");
-    } else
-      CmdArgs.push_back("-g");
+    if (!A->getOption().matches(options::OPT_g0))
+      CmdArgs.push_back("--device-debug");
   }
 
   for (const auto &A : Args.getAllArgValues(options::OPT_Xcuda_ptxas))
-    CmdArgs.push_back(Args.MakeArgString("-ptxas-args=" + A));
+    CmdArgs.push_back(Args.MakeArgString("--ptxas-args=" + A));
 
   // Forward remarks passes to the LLVM backend in the wrapper.
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
     CmdArgs.push_back(
-        Args.MakeArgString(Twine("-pass-remarks=") + A->getValue()));
+        Args.MakeArgString(Twine("--pass-remarks=") + A->getValue()));
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ))
     CmdArgs.push_back(
-        Args.MakeArgString(Twine("-pass-remarks-missed=") + A->getValue()));
+        Args.MakeArgString(Twine("--pass-remarks-missed=") + A->getValue()));
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
     CmdArgs.push_back(
-        Args.MakeArgString(Twine("-pass-remarks-analysis=") + A->getValue()));
+        Args.MakeArgString(Twine("--pass-remarks-analysis=") + A->getValue()));
   if (Args.getLastArg(options::OPT_save_temps_EQ))
-    CmdArgs.push_back("-save-temps");
+    CmdArgs.push_back("--save-temps");
 
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
@@ -8458,18 +8452,18 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef Val = Arg->getValue(0);
     if (Val.empty())
       CmdArgs.push_back(
-          Args.MakeArgString(Twine("-device-linker=") + Arg->getValue(1)));
+          Args.MakeArgString(Twine("--device-linker=") + Arg->getValue(1)));
     else
       CmdArgs.push_back(Args.MakeArgString(
-          "-device-linker=" +
+          "--device-linker=" +
           ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
           Arg->getValue(1)));
   }
   Args.ClaimAllArgs(options::OPT_Xoffload_linker);
 
   // Add the linker arguments to be forwarded by the wrapper.
-  CmdArgs.push_back("-linker-path");
-  CmdArgs.push_back(LinkCommand->getExecutable());
+  CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +
+                                       LinkCommand->getExecutable()));
   CmdArgs.push_back("--");
   for (const char *LinkArg : LinkCommand->getArguments())
     CmdArgs.push_back(LinkArg);
