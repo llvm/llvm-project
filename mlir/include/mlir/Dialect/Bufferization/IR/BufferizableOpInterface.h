@@ -179,6 +179,10 @@ struct BufferizationOptions {
   /// Initializer function for dialect-specific analysis state.
   using DialectStateInitFn =
       std::function<std::unique_ptr<DialectAnalysisState>()>;
+  /// Tensor -> MemRef type converter.
+  /// Parameters: Value, memory space, bufferization options
+  using UnknownTypeConverterFn = std::function<BaseMemRefType(
+      Value, unsigned, const BufferizationOptions &)>;
 
   enum class LayoutMapOption : int8_t {
     InferLayoutMap = 0,
@@ -266,21 +270,11 @@ struct BufferizationOptions {
   LayoutMapOption functionBoundaryTypeConversion =
       LayoutMapOption::InferLayoutMap;
 
-  /// This flag controls buffer types on unknown ops (to_memref wrappers) and in
-  /// other cases where a precise memref type cannot be inferred (e.g., the
-  /// bufferization of "tensor.cast").
-  ///
-  /// * InferLayoutMap: This option is invalid and cannot be used.
-  /// * FullyDynamicLayoutMap: Assume that unknown ops have results with fully
-  ///   dynamic layout maps after bufferization. This option is most efficient
-  ///   because any layout map can be casted to a fully dynamic one.
-  /// * IdentityLayoutMap: Assume that unknown ops have results with static
-  ///   identity layout (i.e., no layout map) after bufferization. This option
-  ///   introduces additional buffer allocs and copies if the unknown op is
-  ///   eventually bufferized to an op that returns a buffer with non-identity
-  ///   layout.
-  LayoutMapOption unknownTypeConversion =
-      LayoutMapOption::FullyDynamicLayoutMap;
+  /// Type converter from tensors to memrefs. This type converter is used if no
+  /// memref type could be inferred during bufferization. By default, a type
+  /// converter that returns a memref type with a fully dynamic layout map is
+  /// used.
+  UnknownTypeConverterFn unknownTypeConverterFn = nullptr;
 
   /// Specifies whether dealloc ops should be generated along with alloc ops. If
   /// not, new memory allocations will leak.
@@ -505,20 +499,19 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
   return newOp;
 }
 
-/// Return a MemRefType to which the `tensorType` can be bufferized.
+/// Return a MemRefType to which the type of the given value can be bufferized.
 ///
 /// If possible, op bufferization implementations should not use this function
 /// and instead infer precise memref types for tensor results by themselves.
 ///
-/// Unless a layout map was specified, `options.unknownTypeConverter` determines
-/// what kind of layout map will be used. For best composability (without
-/// copies), the fully dynamic layout map is used by default.
+/// Unless a layout map was specified, `options.unknownTypeConverterFn`
+/// determines what kind of layout map will be used. For best composability
+/// (without copies), the fully dynamic layout map is used by default.
 ///
 /// Note: Canonicalization patterns could clean up layout maps and infer more
 /// precise layout maps after bufferization. However, many possible
 /// canonicalizations are currently not implemented.
-BaseMemRefType getMemRefType(TensorType tensorType,
-                             const BufferizationOptions &options,
+BaseMemRefType getMemRefType(Value value, const BufferizationOptions &options,
                              MemRefLayoutAttrInterface layout = {},
                              unsigned memorySpace = 0);
 

@@ -222,8 +222,17 @@ bool OpFilter::isOpAllowed(Operation *op) const {
 // BufferizationOptions
 //===----------------------------------------------------------------------===//
 
+/// Default unknown type converter: Use a fully dynamic layout map.
+static BaseMemRefType
+defaultUnknownTypeConverter(Value value, unsigned memorySpace,
+                            const BufferizationOptions &options) {
+  return getMemRefTypeWithFullyDynamicLayout(value.getType().cast<TensorType>(),
+                                             memorySpace);
+}
+
 // Default constructor for BufferizationOptions.
-BufferizationOptions::BufferizationOptions() = default;
+BufferizationOptions::BufferizationOptions()
+    : unknownTypeConverterFn(defaultUnknownTypeConverter) {}
 
 bool BufferizationOptions::isOpAllowed(Operation *op) const {
   // Special case: If function boundary bufferization is deactivated, do not
@@ -528,8 +537,7 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
 /// Return the buffer type for a given Value (tensor) after bufferization.
 FailureOr<BaseMemRefType>
 bufferization::getBufferType(Value value, const BufferizationOptions &options) {
-  auto tensorType = value.getType().dyn_cast<TensorType>();
-  assert(tensorType && "unexpected non-tensor type");
+  assert(value.getType().isa<TensorType>() && "unexpected non-tensor type");
   Operation *op = getOwnerOfValue(value);
 
   // ToTensorOp: Take buffer type directly from the op.
@@ -566,7 +574,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options) {
   if (!memorySpace.hasValue())
     return op->emitError("could not infer memory space");
 
-  return getMemRefType(tensorType, options, /*layout=*/{}, *memorySpace);
+  return getMemRefType(value, options, /*layout=*/{}, *memorySpace);
 }
 
 void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
@@ -652,10 +660,11 @@ bool bufferization::isFunctionArgument(Value value) {
   return isa<func::FuncOp>(bbArg.getOwner()->getParentOp());
 }
 
-BaseMemRefType bufferization::getMemRefType(TensorType tensorType,
+BaseMemRefType bufferization::getMemRefType(Value value,
                                             const BufferizationOptions &options,
                                             MemRefLayoutAttrInterface layout,
                                             unsigned memorySpace) {
+  auto tensorType = value.getType().cast<TensorType>();
   auto memorySpaceAttr = IntegerAttr::get(
       IntegerType::get(tensorType.getContext(), 64), memorySpace);
 
@@ -674,17 +683,7 @@ BaseMemRefType bufferization::getMemRefType(TensorType tensorType,
                            memorySpaceAttr);
   }
 
-  // Case 3: Configured with "fully dynamic layout maps".
-  if (options.unknownTypeConversion ==
-      BufferizationOptions::LayoutMapOption::FullyDynamicLayoutMap)
-    return getMemRefTypeWithFullyDynamicLayout(tensorType, memorySpace);
-
-  // Case 4: Configured with "static identity layout maps".
-  if (options.unknownTypeConversion ==
-      BufferizationOptions::LayoutMapOption::IdentityLayoutMap)
-    return getMemRefTypeWithStaticIdentityLayout(tensorType, memorySpace);
-
-  llvm_unreachable("InferLayoutMap is an invalid option");
+  return options.unknownTypeConverterFn(value, memorySpace, options);
 }
 
 BaseMemRefType
