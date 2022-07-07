@@ -503,6 +503,14 @@ ABI Changes in Clang
   (e.g. ``int : 0``) no longer prevents the structure from being considered a
   homogeneous floating-point or vector aggregate. The new behavior agrees with
   the AAPCS specification, and matches the similar bug fix in GCC 12.1.
+- Targeting AArch64, since D127209 LLVM now only preserves the z8-z23
+  and p4-p15 registers across a call if the registers z0-z7 or p0-p3 are
+  used to pass data into or out of a subroutine. The new behavior
+  matches the AAPCS. Previously LLVM preserved z8-z23 and p4-p15 across
+  a call if the callee had an SVE type anywhere in its signature. This
+  would cause an incorrect use of the caller-preserved z8-z23 and p4-p15
+  ABI for example if the 9th argument or greater were the first SVE type
+  in the signature of a function.
 - All copy constructors can now be trivial if they are not user-provided,
   regardless of the type qualifiers of the argument of the defaulted constructor,
   fixing dr2171.

@@ -873,38 +873,43 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
                           addTypeConstraint(result));
     }
   }
+
+  auto shouldBeSkipped = [this](llvm::Record *def) {
+    return def->isAnonymous() || curDeclScope->lookup(def->getName()) ||
+           def->isSubClassOf("DeclareInterfaceMethods");
+  };
+
   /// Attr constraints.
   for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Attr")) {
-    if (!def->isAnonymous() && !curDeclScope->lookup(def->getName())) {
-      tblgen::Attribute constraint(def);
-      decls.push_back(
-          createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
-              constraint, convertLocToRange(def->getLoc().front()), attrTy,
-              constraint.getStorageType()));
-    }
+    if (shouldBeSkipped(def))
+      continue;
+
+    tblgen::Attribute constraint(def);
+    decls.push_back(createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
+        constraint, convertLocToRange(def->getLoc().front()), attrTy,
+        constraint.getStorageType()));
   }
   /// Type constraints.
   for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Type")) {
-    if (!def->isAnonymous() && !curDeclScope->lookup(def->getName())) {
-      tblgen::TypeConstraint constraint(def);
-      decls.push_back(
-          createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
-              constraint, convertLocToRange(def->getLoc().front()), typeTy,
-              constraint.getCPPClassName()));
-    }
-  }
-  /// Interfaces.
-  ast::Type opTy = ast::OperationType::get(ctx);
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Interface")) {
-    StringRef name = def->getName();
-    if (def->isAnonymous() || curDeclScope->lookup(name) ||
-        def->isSubClassOf("DeclareInterfaceMethods"))
+    if (shouldBeSkipped(def))
       continue;
+
+    tblgen::TypeConstraint constraint(def);
+    decls.push_back(createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
+        constraint, convertLocToRange(def->getLoc().front()), typeTy,
+        constraint.getCPPClassName()));
+  }
+  /// OpInterfaces.
+  ast::Type opTy = ast::OperationType::get(ctx);
+  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("OpInterface")) {
+    if (shouldBeSkipped(def))
+      continue;
+
     SMRange loc = convertLocToRange(def->getLoc().front());
 
     std::string cppClassName =
         llvm::formatv("{0}::{1}", def->getValueAsString("cppNamespace"),
-                      def->getValueAsString("cppClassName"))
+                      def->getValueAsString("cppInterfaceName"))
             .str();
     std::string codeBlock =
         llvm::formatv("return ::mlir::success(llvm::isa<{0}>(self));",
@@ -913,18 +918,8 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
 
     std::string desc =
         processAndFormatDoc(def->getValueAsString("description"));
-    if (def->isSubClassOf("OpInterface")) {
-      decls.push_back(createODSNativePDLLConstraintDecl<ast::OpConstraintDecl>(
-          name, codeBlock, loc, opTy, cppClassName, desc));
-    } else if (def->isSubClassOf("AttrInterface")) {
-      decls.push_back(
-          createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
-              name, codeBlock, loc, attrTy, cppClassName, desc));
-    } else if (def->isSubClassOf("TypeInterface")) {
-      decls.push_back(
-          createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
-              name, codeBlock, loc, typeTy, cppClassName, desc));
-    }
+    decls.push_back(createODSNativePDLLConstraintDecl<ast::OpConstraintDecl>(
+        def->getName(), codeBlock, loc, opTy, cppClassName, desc));
   }
 }
 
