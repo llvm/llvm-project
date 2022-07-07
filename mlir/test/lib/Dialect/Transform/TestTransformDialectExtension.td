@@ -212,4 +212,13 @@ def TestMixedSuccessAndSilenceableOp
   }];
 }
 
+def TestPrintNumberOfAssociatedPayloadIROps
+  : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_ops",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let arguments = (ins PDL_Operation:$handle);
+  let assemblyFormat = "$handle attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

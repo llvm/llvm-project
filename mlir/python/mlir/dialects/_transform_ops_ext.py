@@ -59,6 +59,22 @@ class PDLMatchOp:
         ip=ip)
 
 
+class ReplicateOp:
+
+  def __init__(self,
+               pattern: Union[Operation, Value],
+               handles: Sequence[Union[Operation, Value]],
+               *,
+               loc=None,
+               ip=None):
+    super().__init__(
+        [pdl.OperationType.get()] * len(handles),
+        _get_op_result_or_value(pattern),
+        [_get_op_result_or_value(h) for h in handles],
+        loc=loc,
+        ip=ip)
+
+
 class SequenceOp:
 
   @overload
