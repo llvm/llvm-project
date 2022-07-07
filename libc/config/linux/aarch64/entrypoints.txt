@@ -206,6 +206,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.roundf
     libc.src.math.roundl
     libc.src.math.sincosf
+    libc.src.math.sinhf
     libc.src.math.sinf
     libc.src.math.sqrt
     libc.src.math.sqrtf
