@@ -1497,9 +1497,6 @@ def VOP3OpSelMods  : ComplexPattern<untyped, 2, "SelectVOP3OpSelMods">;
 
 def VOP3PMadMixMods  : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
 
-def VOP3BMods0 : ComplexPattern<untyped, 4, "SelectVOP3BMods0">;
-def VOP3BMods  : ComplexPattern<untyped, 2, "SelectVOP3BMods">;
-
 def VINTERPMods  : ComplexPattern<untyped, 2, "SelectVINTERPMods">;
 def VINTERPModsHi  : ComplexPattern<untyped, 2, "SelectVINTERPModsHi">;
 
