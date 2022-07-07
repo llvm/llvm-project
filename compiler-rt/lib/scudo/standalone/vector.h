@@ -95,7 +95,7 @@ private:
   T LocalData[256 / sizeof(T)] = {};
   uptr CapacityBytes = 0;
   uptr Size = 0;
-  MapPlatformData MapData = {};
+  [[no_unique_address]] MapPlatformData MapData = {};
 };
 
 template <typename T> class Vector : public VectorNoCtor<T> {
