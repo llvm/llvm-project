@@ -213,6 +213,12 @@ Attribute Parser::parseAttribute(Type type) {
     consumeToken(Token::kw_unit);
     return builder.getUnitAttr();
 
+    // Handle completion of an attribute.
+  case Token::code_complete:
+    if (getToken().isCodeCompletionFor(Token::hash_identifier))
+      return parseExtendedAttr(type);
+    return codeCompleteAttribute();
+
   default:
     // Parse a type attribute. We parse `Optional` here to allow for providing a
     // better error message.

@@ -27,11 +27,9 @@ def AttrA : TestAttr<"AttrA"> {
 // ATTR:                                               ::mlir::Type type) const {
 // ATTR:   ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
 // ATTR:   ::llvm::StringRef attrTag;
-// ATTR:   if (::mlir::failed(parser.parseKeyword(&attrTag)))
-// ATTR:     return {};
 // ATTR:   {
 // ATTR:     ::mlir::Attribute attr;
-// ATTR:     auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
+// ATTR:     auto parseResult = generatedAttributeParser(parser, &attrTag, type, attr);
 // ATTR:     if (parseResult.hasValue())
 // ATTR:       return attr;
 // ATTR:   }
@@ -57,10 +55,8 @@ def TypeA : TestType<"TypeA"> {
 // TYPE: ::mlir::Type TestDialect::parseType(::mlir::DialectAsmParser &parser) const {
 // TYPE:   ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
 // TYPE:   ::llvm::StringRef mnemonic;
-// TYPE:   if (parser.parseKeyword(&mnemonic))
-// TYPE:     return ::mlir::Type();
 // TYPE:   ::mlir::Type genType;
-// TYPE:   auto parseResult = generatedTypeParser(parser, mnemonic, genType);
+// TYPE:   auto parseResult = generatedTypeParser(parser, &mnemonic, genType);
 // TYPE:   if (parseResult.hasValue())
 // TYPE:     return genType;
 // TYPE:   parser.emitError(typeLoc) << "unknown  type `"

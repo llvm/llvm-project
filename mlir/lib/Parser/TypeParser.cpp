@@ -358,6 +358,12 @@ Type Parser::parseNonFunctionType() {
   // extended type
   case Token::exclamation_identifier:
     return parseExtendedType();
+
+  // Handle completion of a dialect type.
+  case Token::code_complete:
+    if (getToken().isCodeCompletionFor(Token::exclamation_identifier))
+      return parseExtendedType();
+    return codeCompleteType();
   }
 }
 
