@@ -1406,6 +1406,13 @@ inline constexpr __fields __fields_integral{
     .__zero_padding_         = true,
     .__locale_specific_form_ = true,
     .__type_                 = true};
+inline constexpr __fields __fields_floating_point{
+    .__sign_                 = true,
+    .__alternate_form_       = true,
+    .__zero_padding_         = true,
+    .__precision_            = true,
+    .__locale_specific_form_ = true,
+    .__type_                 = true};
 inline constexpr __fields __fields_string{.__precision_ = true, .__type_ = true};
 inline constexpr __fields __fields_pointer{.__type_ = true};
 
@@ -1946,6 +1953,37 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_integer(__parser<_CharT>& 
 
   default:
     std::__throw_format_error("The format-spec type has a type not supported for an integer argument");
+  }
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_floating_point(__parser<_CharT>& __parser) {
+  __format_spec::__process_display_type_integer(__parser);
+
+  switch (__parser.__type_) {
+  case __format_spec::__type::__default:
+    // When no precision specified then it keeps default since that
+    // formatting differs from the other types.
+    if (__parser.__precision_as_arg_ || __parser.__precision_ != -1)
+      __parser.__type_ = __format_spec::__type::__general_lower_case;
+    break;
+  case __format_spec::__type::__hexfloat_lower_case:
+  case __format_spec::__type::__hexfloat_upper_case:
+    // Precision specific behavior will be handled later.
+    break;
+  case __format_spec::__type::__scientific_lower_case:
+  case __format_spec::__type::__scientific_upper_case:
+  case __format_spec::__type::__fixed_lower_case:
+  case __format_spec::__type::__fixed_upper_case:
+  case __format_spec::__type::__general_lower_case:
+  case __format_spec::__type::__general_upper_case:
+    if (!__parser.__precision_as_arg_ && __parser.__precision_ == -1)
+      // Set the default precision for the call to to_chars.
+      __parser.__precision_ = 6;
+    break;
+
+  default:
+    std::__throw_format_error("The format-spec type has a type not supported for a floating-point argument");
   }
 }
 
