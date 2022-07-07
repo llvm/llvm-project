@@ -129,7 +129,9 @@ static MatchContractionResult isContractionInterfaceImpl(Operation *op) {
   // TODO: more fields than add/mul.
   if (!isAddMul<arith::AddFOp, arith::MulFOp>(linalgOp->getRegion(0).front()) &&
       !isAddMul<arith::AddIOp, arith::MulIOp>(linalgOp->getRegion(0).front()) &&
-      !isAddMul<complex::AddOp, complex::MulOp>(linalgOp->getRegion(0).front()))
+      !isAddMul<complex::AddOp, complex::MulOp>(
+          linalgOp->getRegion(0).front()) &&
+      !isAddMul<arith::OrIOp, arith::AndIOp>(linalgOp->getRegion(0).front()))
     return MatchContractionResult::NotAddMul;
   return MatchContractionResult::Success;
 }
