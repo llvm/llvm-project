@@ -1085,22 +1085,6 @@ define void @merge_with_dead_gep_between_regions(i32 %n, i32* noalias %src, i32*
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<%n>, ir<-1>
 ; CHECK-NEXT:     EMIT vp<[[WIDE_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:     EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_IV]]> vp<[[BTC]]>
-; CHECK-NEXT:   Successor(s): pred.load
-; CHECK-EMPTY:
-; CHECK-NEXT:   <xVFxUF> pred.load: {
-; CHECK-NEXT:     pred.load.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[MASK]]>
-; CHECK-NEXT:     Successor(s): pred.load.if, pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.load.if:
-; CHECK-NEXT:       REPLICATE ir<%gep.src> = getelementptr ir<%src>, vp<[[SCALAR_STEPS]]>
-; CHECK-NEXT:       REPLICATE ir<%l> = load ir<%gep.src>
-; CHECK-NEXT:     Successor(s): pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.load.continue:
-; CHECK-NEXT:       PHI-PREDICATED-INSTRUCTION vp<[[P_LOAD:%.+]]> = ir<%l>
-; CHECK-NEXT:     No successors
-; CHECK-NEXT:   }
 ; CHECK-NEXT:   Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   loop.0:
@@ -1112,11 +1096,14 @@ define void @merge_with_dead_gep_between_regions(i32 %n, i32* noalias %src, i32*
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
+; CHECK-NEXT:       REPLICATE ir<%gep.src> = getelementptr ir<%src>, vp<[[SCALAR_STEPS]]>
+; CHECK-NEXT:       REPLICATE ir<%l> = load ir<%gep.src>
 ; CHECK-NEXT:       REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[SCALAR_STEPS]]>
-; CHECK-NEXT:       REPLICATE store vp<[[P_LOAD]]>, ir<%gep.dst>
+; CHECK-NEXT:       REPLICATE store ir<%l>, ir<%gep.dst>
 ; CHECK-NEXT:     Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.continue:
+; CHECK-NEXT:       PHI-PREDICATED-INSTRUCTION vp<[[P_LOAD:%.+]]> = ir<%l>
 ; CHECK-NEXT:     No successors
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Successor(s): loop.1
