@@ -56,8 +56,8 @@ define <2 x <vscale x 2 x i64>*> @fixed_of_scalable_2(<2 x <vscale x 2 x i64>*> 
 define <vscale x 2 x i8*> @scalable_of_fixed_1(i8* %base) {
 ; CHECK-LABEL: scalable_of_fixed_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, x0
-; CHECK-NEXT:    add z0.d, z0.d, #1 // =0x1
+; CHECK-NEXT:    add x8, x0, #1
+; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    ret
   %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
   %d = getelementptr i8, i8* %base, <vscale x 2 x i64> %idx
@@ -202,8 +202,8 @@ define <vscale x 2 x i64*> @scalable_of_fixed_5_i64(i64* %base, <vscale x 2 x i3
 define <vscale x 2 x <vscale x 2 x i64>*> @scalable_of_scalable_1(<vscale x 2 x i64>* %base) {
 ; CHECK-LABEL: scalable_of_scalable_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, x0
-; CHECK-NEXT:    incd z0.d, all, mul #8
+; CHECK-NEXT:    addvl x8, x0, #1
+; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    ret
   %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
   %d = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %base, <vscale x 2 x i64> %idx
