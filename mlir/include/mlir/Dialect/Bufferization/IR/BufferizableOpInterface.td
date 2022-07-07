@@ -351,8 +351,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           assert(bbArg.getOwner()->getParentOp() == $_op &&
                  "bbArg must belong to this op");
-          auto tensorType = bbArg.getType().cast<TensorType>();
-          return bufferization::getMemRefType(tensorType, options);
+          assert(bbArg.getType().isa<TensorType>() &&
+                 "expected tensor type");
+          return bufferization::getMemRefType(bbArg, options);
         }]
       >,
       InterfaceMethod<
