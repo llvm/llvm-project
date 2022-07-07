@@ -9021,8 +9021,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
   VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
   VPlanTransforms::sinkScalarOperands(*Plan);
-  VPlanTransforms::mergeReplicateRegions(*Plan);
   VPlanTransforms::removeDeadRecipes(*Plan);
+  VPlanTransforms::mergeReplicateRegions(*Plan);
   VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
 
   // Fold Exit block into its predecessor if possible.
