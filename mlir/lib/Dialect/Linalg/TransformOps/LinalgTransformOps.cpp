@@ -76,19 +76,24 @@ static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
 // DecomposeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<LinalgOp> transform::DecomposeOp::applyToOne(LinalgOp target,
-                                                       TransformState &state) {
+DiagnosedSilenceableFailure
+transform::DecomposeOp::applyToOne(linalg::LinalgOp target,
+                                   SmallVectorImpl<Operation *> &results,
+                                   transform::TransformState &state) {
   FailureOr<LinalgOp> windowed =
       tryApply<DownscaleSizeOneWindowed2DConvolution>(target);
-  if (succeeded(windowed))
-    return windowed;
-
+  if (succeeded(windowed)) {
+    results.push_back(*windowed);
+    return DiagnosedSilenceableFailure(success());
+  }
   FailureOr<LinalgOp> depthwise =
       tryApply<DownscaleDepthwiseConv2DNhwcHwcOp>(target);
-  if (succeeded(depthwise))
-    return depthwise;
-
-  return reportUnknownTransformError(target);
+  if (succeeded(depthwise)) {
+    results.push_back(*depthwise);
+    return DiagnosedSilenceableFailure(success());
+  }
+  results.assign(1, nullptr);
+  return emitDefaultSilenceableFailure(target);
 }
 
 //===----------------------------------------------------------------------===//
@@ -221,41 +226,46 @@ LogicalResult transform::FuseOp::verify() {
 // GeneralizeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<LinalgOp> transform::GeneralizeOp::applyToOne(LinalgOp target,
-                                                        TransformState &state) {
+DiagnosedSilenceableFailure
+transform::GeneralizeOp::applyToOne(linalg::LinalgOp target,
+                                    SmallVectorImpl<Operation *> &results,
+                                    transform::TransformState &state) {
   // Exit early if no transformation is needed.
-  if (isa<GenericOp>(target))
-    return target;
-
+  if (isa<GenericOp>(target)) {
+    results.push_back(target);
+    return DiagnosedSilenceableFailure(success());
+  }
   FailureOr<LinalgOp> generic = tryApply<LinalgGeneralizationPattern>(target);
-  if (succeeded(generic))
-    return generic;
-
-  return reportUnknownTransformError(target);
+  if (succeeded(generic)) {
+    results.push_back(generic->getOperation());
+    return DiagnosedSilenceableFailure(success());
+  }
+  results.assign(1, nullptr);
+  return emitDefaultSilenceableFailure(target);
 }
 
 //===----------------------------------------------------------------------===//
 // InterchangeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<LinalgOp>
-transform::InterchangeOp::applyToOne(LinalgOp target, TransformState &state) {
+DiagnosedSilenceableFailure
+transform::InterchangeOp::applyToOne(linalg::GenericOp target,
+                                     SmallVectorImpl<Operation *> &results,
+                                     transform::TransformState &state) {
   SmallVector<unsigned> interchangeVector =
       extractUIntArray(getIteratorInterchange());
   // Exit early if no transformation is needed.
-  if (interchangeVector.empty())
-    return target;
-
-  auto genericTarget = dyn_cast<GenericOp>(target.getOperation());
-  if (!genericTarget) {
-    InFlightDiagnostic diag = emitOpError()
-                              << "applies to " << GenericOp::getOperationName()
-                              << " ops";
-    diag.attachNote(target.getLoc()) << "attempted to apply to this op";
-    return diag;
+  if (interchangeVector.empty()) {
+    results.push_back(target);
+    return DiagnosedSilenceableFailure(success());
   }
-
-  return tryApply<GenericOpInterchangePattern>(target, interchangeVector);
+  SimpleRewriter rewriter(target->getContext());
+  FailureOr<GenericOp> res =
+      interchangeGenericOp(rewriter, target, interchangeVector);
+  if (failed(res))
+    return DiagnosedSilenceableFailure::definiteFailure();
+  results.push_back(res->getOperation());
+  return DiagnosedSilenceableFailure(success());
 }
 
 LogicalResult transform::InterchangeOp::verify() {
@@ -275,8 +285,10 @@ LogicalResult transform::InterchangeOp::verify() {
 // PadOp
 //===---------------------------------------------------------------------===//
 
-FailureOr<LinalgOp> transform::PadOp::applyToOne(LinalgOp target,
-                                                 TransformState &state) {
+DiagnosedSilenceableFailure
+transform::PadOp::applyToOne(linalg::LinalgOp target,
+                             SmallVectorImpl<Operation *> &results,
+                             transform::TransformState &state) {
   // Convert the integer packing flags to booleans.
   SmallVector<bool> packPaddings;
   for (int64_t packPadding : extractI64Array(getPackPaddings()))
@@ -293,21 +305,19 @@ FailureOr<LinalgOp> transform::PadOp::applyToOne(LinalgOp target,
       paddingValues.push_back(
           parseAttribute(attr.cast<StringAttr>(), elementType));
       if (!paddingValues.back()) {
-        InFlightDiagnostic diag = emitOpError()
-                                  << "expects a padding value that parses to "
-                                  << elementType << ", got " << std::get<0>(it);
+        auto diag = this->emitOpError("expects a padding that parses to ")
+                    << elementType << ", got " << std::get<0>(it);
         diag.attachNote(target.getLoc()) << "when applied to this op";
-        return diag;
+        return DiagnosedSilenceableFailure::definiteFailure();
       }
       continue;
     }
     // Otherwise, add the attribute directly.
     if (attr.getType() != elementType) {
-      InFlightDiagnostic diag = emitOpError()
-                                << "expects a padding value of type "
-                                << elementType << ", got " << attr;
+      auto diag = this->emitOpError("expects a padding value of type ")
+                  << elementType << ", got " << attr;
       diag.attachNote(target.getLoc()) << "when applied to this op";
-      return diag;
+      return DiagnosedSilenceableFailure::definiteFailure();
     }
     paddingValues.push_back(attr);
   }
@@ -327,13 +337,13 @@ FailureOr<LinalgOp> transform::PadOp::applyToOne(LinalgOp target,
 
   FailureOr<LinalgOp> result =
       tryApply<LinalgPaddingPattern>(target, paddingOptions);
-  if (succeeded(result))
-    return result;
+  if (succeeded(result)) {
+    results.push_back(result->getOperation());
+    return DiagnosedSilenceableFailure(success());
+  }
 
-  InFlightDiagnostic diag = emitError()
-                            << "failed to apply pattern to target op";
-  diag.attachNote(target.getLoc()) << "target op";
-  return diag;
+  results.assign(1, nullptr);
+  return emitDefaultSilenceableFailure(target);
 }
 
 LogicalResult transform::PadOp::verify() {
@@ -381,8 +391,10 @@ LogicalResult transform::PadOp::verify() {
 // ScalarizeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<LinalgOp> transform::ScalarizeOp::applyToOne(LinalgOp target,
-                                                       TransformState &state) {
+DiagnosedSilenceableFailure
+transform::ScalarizeOp::applyToOne(linalg::LinalgOp target,
+                                   SmallVectorImpl<Operation *> &results,
+                                   transform::TransformState &state) {
   LinalgTilingOptions tilingOptions;
   tilingOptions.scalarizeDynamicDims();
   // Tiling with "scalarize_dyn_dims" actually sets the same lambda as the tile
@@ -394,18 +406,175 @@ FailureOr<LinalgOp> transform::ScalarizeOp::applyToOne(LinalgOp target,
   FailureOr<TiledLinalgOp> result =
       pattern.returningMatchAndRewrite(target, rewriter);
   if (failed(result))
+    return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
+
+  results.push_back(result->op);
+  return DiagnosedSilenceableFailure(success());
+}
+
+//===----------------------------------------------------------------------===//
+// SplitOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
+                                           TransformState &state) {
+  // Collect the dynamic split points if provided.
+  ArrayRef<Operation *> payload = state.getPayloadOps(getTarget());
+  SimpleRewriter rewriter(getContext());
+  SmallVector<OpFoldResult> splitPoints;
+  splitPoints.reserve(payload.size());
+  if (getDynamicSplitPoint()) {
+    auto diag = DiagnosedSilenceableFailure::success();
+    splitPoints = llvm::to_vector(llvm::map_range(
+        state.getPayloadOps(getDynamicSplitPoint()), [&](Operation *op) {
+          if (op->getNumResults() != 1 ||
+              !op->getResult(0).getType().isIndex()) {
+            diag = emitSilenceableError()
+                   << "expected dynamic split point handle to point to a "
+                      "single-result index-typed op";
+            diag.attachNote(op->getLoc()) << "dynamic split point";
+          }
+          return OpFoldResult(op->getResult(0));
+        }));
+    if (!diag.succeeded())
+      return diag;
+
+    if (splitPoints.size() != payload.size()) {
+      emitError() << "expected the dynamic split point handle to point to as "
+                     "many operations ("
+                  << splitPoints.size() << ") as the target handle ("
+                  << payload.size() << ")";
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+  } else {
+    splitPoints.resize(payload.size(),
+                       rewriter.getIndexAttr(getStaticSplitPoint()));
+  }
+
+  // Split each target operation.
+  SmallVector<Operation *> first, second;
+  for (const auto &pair : llvm::zip(payload, splitPoints)) {
+    Operation *target = std::get<0>(pair);
+    auto linalgOp = dyn_cast<LinalgOp>(target);
+    if (!linalgOp) {
+      auto diag = emitSilenceableError() << "only applies to structured ops";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+
+    if (getDimension() >= linalgOp.getNumLoops()) {
+      auto diag = emitSilenceableError() << "dimension " << getDimension()
+                                         << " does not exist in target op";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+
+    rewriter.setInsertionPoint(linalgOp);
+    std::tie(first.emplace_back(), second.emplace_back()) =
+        linalg::splitOp(rewriter, linalgOp, getDimension(), std::get<1>(pair));
+  }
+
+  results.set(getFirst().cast<OpResult>(), first);
+  results.set(getSecond().cast<OpResult>(), second);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void SplitOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  // The target handle is consumed.
+  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
+                       TransformMappingResource::get());
+  effects.emplace_back(MemoryEffects::Free::get(), getTarget(),
+                       TransformMappingResource::get());
+
+  // The dynamic split point handle is not consumed.
+  if (getDynamicSplitPoint()) {
+    effects.emplace_back(MemoryEffects::Read::get(), getDynamicSplitPoint(),
+                         TransformMappingResource::get());
+  }
+
+  // The resulting handles are produced.
+  for (Value result : getResults()) {
+    effects.emplace_back(MemoryEffects::Allocate::get(), result,
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(), result,
+                         TransformMappingResource::get());
+  }
+
+  effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
+}
+
+ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::UnresolvedOperand target, dynamicSplitPoint;
+  IntegerAttr staticSplitPoint;
+  auto pdlOperationType =
+      pdl::OperationType::get(parser.getBuilder().getContext());
+  if (parser.parseOperand(target) ||
+      parser.resolveOperand(target, pdlOperationType, result.operands) ||
+      parser.parseKeyword("after"))
     return failure();
 
-  return result->op;
+  OptionalParseResult dynamicPointParseResult =
+      parser.parseOptionalOperand(dynamicSplitPoint);
+  if (!dynamicPointParseResult.hasValue()) {
+    int64_t staticSplitPointValue;
+    if (failed(parser.parseInteger(staticSplitPointValue)))
+      return failure();
+
+    staticSplitPoint =
+        parser.getBuilder().getI64IntegerAttr(staticSplitPointValue);
+  } else {
+    if (failed(*dynamicPointParseResult) ||
+        parser.resolveOperand(dynamicSplitPoint, pdlOperationType,
+                              result.operands)) {
+      return failure();
+    }
+
+    staticSplitPoint =
+        parser.getBuilder().getI64IntegerAttr(ShapedType::kDynamicSize);
+  }
+
+  result.addAttribute(
+      SplitOp::getStaticSplitPointAttrName(result.name).getValue(),
+      staticSplitPoint);
+  if (failed(parser.parseOptionalAttrDict(result.attributes)))
+    return failure();
+
+  result.addTypes({pdlOperationType, pdlOperationType});
+  return success();
+}
+
+void SplitOp::print(OpAsmPrinter &printer) {
+  printer << " " << getTarget() << " after ";
+  int64_t staticSplitSize = static_cast<int64_t>(getStaticSplitPoint());
+  if (staticSplitSize != ShapedType::kDynamicSize)
+    printer << staticSplitSize;
+  else
+    printer << getDynamicSplitPoint();
+  printer << " ";
+  printer.printOptionalAttrDict(getOperation()->getAttrs(),
+                                {getStaticSplitPointAttrName()});
+}
+
+LogicalResult SplitOp::verify() {
+  if ((static_cast<int64_t>(getStaticSplitPoint()) !=
+       ShapedType::kDynamicSize) ^
+      (getDynamicSplitPoint() == nullptr)) {
+    return emitOpError()
+           << "expects either a dynamic or a static split point to be provided";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // SplitReductionOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<SmallVector<Operation *>>
-transform::SplitReductionOp::applyToOne(LinalgOp target,
-                                        TransformState &state) {
+DiagnosedSilenceableFailure
+transform::SplitReductionOp::applyToOne(linalg::LinalgOp target,
+                                        SmallVectorImpl<Operation *> &results,
+                                        transform::TransformState &state) {
   ControlSplitReductionFn splitFn = [&](LinalgOp) {
     return std::pair<int64_t, unsigned>(getSplitFactor(),
                                         getInsertSplitDimension());
@@ -417,10 +586,13 @@ transform::SplitReductionOp::applyToOne(LinalgOp target,
           ? splitReductionByScaling(rewriter, target, splitFn, getUseAlloc())
           : splitReduction(rewriter, target, splitFn, getUseAlloc());
   if (failed(splitResult))
-    return getOperation()->emitError("failed to apply");
-  return SmallVector<Operation *>{splitResult->fillOp,
-                                  splitResult->splitLinalgOp,
-                                  splitResult->resultCombiningLinalgOp};
+    return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
+
+  results.push_back(splitResult->initOrAlloc);
+  results.push_back(splitResult->fillOp);
+  results.push_back(splitResult->splitLinalgOp);
+  results.push_back(splitResult->resultCombiningLinalgOp);
+  return DiagnosedSilenceableFailure(success());
 }
 
 //===----------------------------------------------------------------------===//
@@ -463,13 +635,14 @@ void TileOp::print(OpAsmPrinter &p) {
 // VectorizeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<Operation *> VectorizeOp::applyToOne(Operation *target,
-                                               TransformState &state) {
+DiagnosedSilenceableFailure
+transform::VectorizeOp::applyToOne(Operation *target,
+                                   SmallVectorImpl<Operation *> &results,
+                                   transform::TransformState &state) {
   if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-    InFlightDiagnostic diag = emitOpError()
-                              << "applies only to isolated-from-above targets";
+    auto diag = this->emitOpError("requires isolated-from-above targets");
     diag.attachNote(target->getLoc()) << "non-isolated target";
-    return diag;
+    return DiagnosedSilenceableFailure::definiteFailure();
   }
 
   MLIRContext *ctx = getContext();
@@ -487,8 +660,10 @@ FailureOr<Operation *> VectorizeOp::applyToOne(Operation *target,
     linalg::populatePadOpVectorizationPatterns(patterns);
 
   if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
-    return reportUnknownTransformError(target);
-  return target;
+    return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
+
+  results.push_back(target);
+  return DiagnosedSilenceableFailure(success());
 }
 
 //===----------------------------------------------------------------------===//

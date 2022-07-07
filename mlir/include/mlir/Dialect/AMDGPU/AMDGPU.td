@@ -37,7 +37,6 @@ def AMDGPU_RawBufferLoadOp :
     AMDGPU_Op<"raw_buffer_load", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to load from", [MemRead]>:$memref,
-                   BoolAttr:$targetIsRDNA,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
@@ -71,11 +70,9 @@ def AMDGPU_RawBufferLoadOp :
       as max_d (size(d) * stride(d)) * sizeof(elementType(memref))
     - The offset enable bit is 1, the index enable bit is 0.
     - The thread ID addition bit is off
-    - If `boundsCheck` is false and the target is RDNA, OOB_SELECT is set to 2
-      to disable bounds checks, otherwise it is 0
+    - If `boundsCheck` is false and the target chipset is RDNA, OOB_SELECT is set
+      to 2 to disable bounds checks, otherwise it is 0
     - The cache coherency bits are off
-    - `targetIsRDNA` controls the setting of some reserved values that differ
-       between RDNA and CDNA cores
   }];
   let assemblyFormat = [{
     attr-dict $memref `[` $indices `]`
@@ -94,7 +91,6 @@ def AMDGPU_RawBufferStoreOp :
                               VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
                               VectorOfLengthAndType<[2, 4, 8, 16], [I8]>]>:$value,
                    Arg<AnyMemRef, "buffer to store to", [MemWrite]>:$memref,
-                   BoolAttr:$targetIsRDNA,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
@@ -132,7 +128,6 @@ def AMDGPU_RawBufferAtomicFaddOp :
       AttrSizedOperandSegments]>,
     Arguments<(ins F32:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
-                   BoolAttr:$targetIsRDNA,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,

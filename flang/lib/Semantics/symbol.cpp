@@ -641,7 +641,7 @@ const Symbol *DerivedTypeDetails::GetFinalForRank(int rank) const {
         if (const Symbol * arg{details->dummyArgs().at(0)}) {
           if (const auto *object{arg->detailsIf<ObjectEntityDetails>()}) {
             if (rank == object->shape().Rank() || object->IsAssumedRank() ||
-                symbol.attrs().test(Attr::ELEMENTAL)) {
+                IsElementalProcedure(symbol)) {
               return &symbol;
             }
           }
