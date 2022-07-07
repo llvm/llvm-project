@@ -316,6 +316,19 @@ define <2 x i32> @sadd_v2i32_vx(<2 x i32> %va, i32 %b) {
   ret <2 x i32> %v
 }
 
+define <2 x i32> @sadd_v2i32_vx_commute(<2 x i32> %va, i32 %b) {
+; CHECK-LABEL: sadd_v2i32_vx_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vsadd.vv v8, v9, v8
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <2 x i32> poison, i32 %b, i32 0
+  %vb = shufflevector <2 x i32> %elt.head, <2 x i32> poison, <2 x i32> zeroinitializer
+  %v = call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> %vb, <2 x i32> %va)
+  ret <2 x i32> %v
+}
+
 define <2 x i32> @sadd_v2i32_vi(<2 x i32> %va) {
 ; CHECK-LABEL: sadd_v2i32_vi:
 ; CHECK:       # %bb.0:
