@@ -17,6 +17,7 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "SPIRVDuplicatesTracker.h"
 #include "SPIRVInstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
@@ -30,7 +31,10 @@ class SPIRVGlobalRegistry {
   // where Reg = OpType...
   // while VRegToTypeMap tracks SPIR-V type assigned to other regs (i.e. not
   // type-declaring ones)
-  DenseMap<MachineFunction *, DenseMap<Register, SPIRVType *>> VRegToTypeMap;
+  DenseMap<const MachineFunction *, DenseMap<Register, SPIRVType *>>
+      VRegToTypeMap;
+
+  SPIRVGeneralDuplicatesTracker DT;
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
 
@@ -47,6 +51,39 @@ public:
   SPIRVGlobalRegistry(unsigned PointerSize);
 
   MachineFunction *CurMF;
+
+  void add(const Constant *C, MachineFunction *MF, Register R) {
+    DT.add(C, MF, R);
+  }
+
+  void add(const GlobalVariable *GV, MachineFunction *MF, Register R) {
+    DT.add(GV, MF, R);
+  }
+
+  void add(const Function *F, MachineFunction *MF, Register R) {
+    DT.add(F, MF, R);
+  }
+
+  void add(const Argument *Arg, MachineFunction *MF, Register R) {
+    DT.add(Arg, MF, R);
+  }
+
+  Register find(const Constant *C, MachineFunction *MF) {
+    return DT.find(C, MF);
+  }
+
+  Register find(const GlobalVariable *GV, MachineFunction *MF) {
+    return DT.find(GV, MF);
+  }
+
+  Register find(const Function *F, MachineFunction *MF) {
+    return DT.find(F, MF);
+  }
+
+  void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
+                      MachineModuleInfo *MMI = nullptr) {
+    DT.buildDepsGraph(Graph, MMI);
+  }
 
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
   // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
@@ -136,7 +173,7 @@ private:
   SPIRVType *getOpTypeFunction(SPIRVType *RetType,
                                const SmallVectorImpl<SPIRVType *> &ArgTypes,
                                MachineIRBuilder &MIRBuilder);
-  SPIRVType *restOfCreateSPIRVType(Type *LLVMTy, MachineInstrBuilder MIB);
+  SPIRVType *restOfCreateSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,

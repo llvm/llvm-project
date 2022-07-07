@@ -68,6 +68,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                              ArrayRef<ArrayRef<Register>> VRegs,
                                              FunctionLoweringInfo &FLI) const {
   assert(GR && "Must initialize the SPIRV type registry before lowering args.");
+  GR->setCurrentFunc(MIRBuilder.getMF());
 
   // Assign types and names to all args, and store their types for later.
   SmallVector<Register, 4> ArgTypeVRegs;
@@ -114,6 +115,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto MRI = MIRBuilder.getMRI();
   Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
   MRI->setRegClass(FuncVReg, &SPIRV::IDRegClass);
+  if (F.isDeclaration())
+    GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
 
   auto *FTy = F.getFunctionType();
   auto FuncTy = GR->assignTypeToVReg(FTy, FuncVReg, MIRBuilder);
@@ -136,6 +139,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
         .addDef(VRegs[i][0])
         .addUse(ArgTypeVRegs[i]);
+    if (F.isDeclaration())
+      GR->add(F.getArg(i), &MIRBuilder.getMF(), VRegs[i][0]);
   }
   // Name the function.
   if (F.hasName())
@@ -165,6 +170,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (Info.OrigRet.Regs.size() > 1)
     return false;
 
+  GR->setCurrentFunc(MIRBuilder.getMF());
   Register ResVReg =
       Info.OrigRet.Regs.empty() ? Register(0) : Info.OrigRet.Regs[0];
   // Emit a regular OpFunctionCall. If it's an externally declared function,

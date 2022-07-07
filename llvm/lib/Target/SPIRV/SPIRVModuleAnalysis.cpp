@@ -28,6 +28,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spirv-module-analysis"
 
+static cl::opt<bool>
+    SPVDumpDeps("spv-dump-deps",
+                cl::desc("Dump MIR with SPIR-V dependencies info"),
+                cl::Optional, cl::init(false));
+
 char llvm::SPIRVModuleAnalysis::ID = 0;
 
 namespace llvm {
@@ -113,6 +118,83 @@ static bool findSameInstrInMS(const MachineInstr &A,
   return false;
 }
 
+// Collect MI which defines the register in the given machine function.
+static void collectDefInstr(Register Reg, const MachineFunction *MF,
+                            SPIRV::ModuleAnalysisInfo *MAI,
+                            SPIRV::ModuleSectionType MSType,
+                            bool DoInsert = true) {
+  assert(MAI->hasRegisterAlias(MF, Reg) && "Cannot find register alias");
+  MachineInstr *MI = MF->getRegInfo().getUniqueVRegDef(Reg);
+  assert(MI && "There should be an instruction that defines the register");
+  MAI->setSkipEmission(MI);
+  if (DoInsert)
+    MAI->MS[MSType].push_back(MI);
+}
+
+void SPIRVModuleAnalysis::collectGlobalEntities(
+    const std::vector<SPIRV::DTSortableEntry *> &DepsGraph,
+    SPIRV::ModuleSectionType MSType,
+    std::function<bool(const SPIRV::DTSortableEntry *)> Pred,
+    bool UsePreOrder) {
+  DenseSet<const SPIRV::DTSortableEntry *> Visited;
+  for (const auto *E : DepsGraph) {
+    std::function<void(const SPIRV::DTSortableEntry *)> RecHoistUtil;
+    // NOTE: here we prefer recursive approach over iterative because
+    // we don't expect depchains long enough to cause SO.
+    RecHoistUtil = [MSType, UsePreOrder, &Visited, &Pred,
+                    &RecHoistUtil](const SPIRV::DTSortableEntry *E) {
+      if (Visited.count(E) || !Pred(E))
+        return;
+      Visited.insert(E);
+
+      // Traversing deps graph in post-order allows us to get rid of
+      // register aliases preprocessing.
+      // But pre-order is required for correct processing of function
+      // declaration and arguments processing.
+      if (!UsePreOrder)
+        for (auto *S : E->getDeps())
+          RecHoistUtil(S);
+
+      Register GlobalReg = Register::index2VirtReg(MAI.getNextID());
+      bool IsFirst = true;
+      for (auto &U : *E) {
+        const MachineFunction *MF = U.first;
+        Register Reg = U.second;
+        MAI.setRegisterAlias(MF, Reg, GlobalReg);
+        if (!MF->getRegInfo().getUniqueVRegDef(Reg))
+          continue;
+        collectDefInstr(Reg, MF, &MAI, MSType, IsFirst);
+        IsFirst = false;
+        if (E->getIsGV())
+          MAI.GlobalVarList.push_back(MF->getRegInfo().getUniqueVRegDef(Reg));
+      }
+
+      if (UsePreOrder)
+        for (auto *S : E->getDeps())
+          RecHoistUtil(S);
+    };
+    RecHoistUtil(E);
+  }
+}
+
+// The function initializes global register alias table for types, consts,
+// global vars and func decls and collects these instruction for output
+// at module level. Also it collects explicit OpExtension/OpCapability
+// instructions.
+void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
+  std::vector<SPIRV::DTSortableEntry *> DepsGraph;
+
+  GR->buildDepsGraph(DepsGraph, SPVDumpDeps ? MMI : nullptr);
+
+  collectGlobalEntities(
+      DepsGraph, SPIRV::MB_TypeConstVars,
+      [](const SPIRV::DTSortableEntry *E) { return !E->getIsFunc(); }, false);
+
+  collectGlobalEntities(
+      DepsGraph, SPIRV::MB_ExtFuncDecls,
+      [](const SPIRV::DTSortableEntry *E) { return E->getIsFunc(); }, true);
+}
+
 // Look for IDs declared with Import linkage, and map the imported name string
 // to the register defining that variable (which will usually be the result of
 // an OpFunction). This lets us call externally imported functions using
@@ -146,10 +228,9 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
 // numbering has already occurred by this point. We can directly compare reg
 // arguments when detecting duplicates.
 static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
-                              SPIRV::ModuleSectionType MSType,
-                              bool IsConstOrType = false) {
+                              SPIRV::ModuleSectionType MSType) {
   MAI.setSkipEmission(&MI);
-  if (findSameInstrInMS(MI, MSType, MAI, IsConstOrType, IsConstOrType ? 1 : 0))
+  if (findSameInstrInMS(MI, MSType, MAI, false))
     return; // Found a duplicate, so don't add it.
   // No duplicates, so add it.
   MAI.MS[MSType].push_back(&MI);
@@ -163,18 +244,11 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*F);
     assert(MF);
-    unsigned FCounter = 0;
     for (MachineBasicBlock &MBB : *MF)
       for (MachineInstr &MI : MBB) {
-        if (MI.getOpcode() == SPIRV::OpFunction)
-          FCounter++;
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
-        const bool IsFuncOrParm =
-            OpCode == SPIRV::OpFunction || OpCode == SPIRV::OpFunctionParameter;
-        const bool IsConstOrType =
-            TII->isConstantInstr(MI) || TII->isTypeDeclInstr(MI);
         if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames);
         } else if (OpCode == SPIRV::OpEntryPoint) {
@@ -182,12 +256,6 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations);
           collectFuncNames(MI, *F);
-        } else if (IsConstOrType || (FCounter > 1 && IsFuncOrParm)) {
-          // Now OpSpecConstant*s are not in DT,
-          // but they need to be collected anyway.
-          enum SPIRV::ModuleSectionType Type =
-              IsFuncOrParm ? SPIRV::MB_ExtFuncDecls : SPIRV::MB_TypeConstVars;
-          collectOtherInstr(MI, MAI, Type, IsConstOrType);
         } else if (OpCode == SPIRV::OpFunction) {
           collectFuncNames(MI, *F);
         }
@@ -239,6 +307,7 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // TODO: Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
+  processDefInstrs(M);
 
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);

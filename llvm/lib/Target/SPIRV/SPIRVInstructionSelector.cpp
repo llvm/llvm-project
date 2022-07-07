@@ -807,23 +807,29 @@ void SPIRVInstructionSelector::renderImm32(MachineInstrBuilder &MIB,
 Register
 SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
                                            const SPIRVType *ResType) const {
+  Type *LLVMTy = IntegerType::get(GR.CurMF->getFunction().getContext(), 32);
   const SPIRVType *SpvI32Ty =
       ResType ? ResType : GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  Register NewReg;
-  NewReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
-  MachineInstr *MI;
-  MachineBasicBlock &BB = *I.getParent();
-  if (Val == 0) {
-    MI = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
-             .addDef(NewReg)
-             .addUse(GR.getSPIRVTypeID(SpvI32Ty));
-  } else {
-    MI = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantI))
-             .addDef(NewReg)
-             .addUse(GR.getSPIRVTypeID(SpvI32Ty))
-             .addImm(APInt(32, Val).getZExtValue());
+  // Find a constant in DT or build a new one.
+  auto ConstInt = ConstantInt::get(LLVMTy, Val);
+  Register NewReg = GR.find(ConstInt, GR.CurMF);
+  if (!NewReg.isValid()) {
+    NewReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
+    GR.add(ConstInt, GR.CurMF, NewReg);
+    MachineInstr *MI;
+    MachineBasicBlock &BB = *I.getParent();
+    if (Val == 0) {
+      MI = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+               .addDef(NewReg)
+               .addUse(GR.getSPIRVTypeID(SpvI32Ty));
+    } else {
+      MI = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantI))
+               .addDef(NewReg)
+               .addUse(GR.getSPIRVTypeID(SpvI32Ty))
+               .addImm(APInt(32, Val).getZExtValue());
+    }
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
   }
-  constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
   return NewReg;
 }
 
