@@ -76,6 +76,7 @@ add_math_entrypoint_object(copysignl)
 
 add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
+add_math_entrypoint_object(coshf)
 
 add_math_entrypoint_object(expf)
 
