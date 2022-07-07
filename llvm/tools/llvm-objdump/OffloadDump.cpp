@@ -12,12 +12,11 @@
 //===----------------------------------------------------------------------===//
 #include "OffloadDump.h"
 #include "llvm-objdump.h"
+#include "llvm/Object/ELFObjectFile.h"
 
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::objdump;
-
-constexpr const char OffloadSectionString[] = ".llvm.offloading";
 
 /// Get the printable name of the image kind.
 static StringRef getImageName(const OffloadBinary &OB) {
@@ -66,9 +65,14 @@ static Error visitAllBinaries(const OffloadBinary &OB) {
 
 /// Print the embedded offloading contents of an ObjectFile \p O.
 void llvm::dumpOffloadBinary(const ObjectFile &O) {
-  for (SectionRef Sec : O.sections()) {
-    Expected<StringRef> Name = Sec.getName();
-    if (!Name || !Name->startswith(OffloadSectionString))
+  if (!O.isELF()) {
+    reportWarning("--offloading is currently only supported for ELF targets",
+                  O.getFileName());
+    return;
+  }
+
+  for (ELFSectionRef Sec : O.sections()) {
+    if (Sec.getType() != ELF::SHT_LLVM_OFFLOADING)
       continue;
 
     Expected<StringRef> Contents = Sec.getContents();

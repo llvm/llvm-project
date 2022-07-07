@@ -4,8 +4,7 @@
 
 ## Check that we can dump an offloading binary inside of an ELF section.
 # RUN: yaml2obj %s -o %t.elf
-# RUN: llvm-objcopy --add-section .llvm.offloading=%t.bin %t.elf
-# RUN: llvm-objcopy --set-section-alignment .llvm.offloading=8 %t.elf
+# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t.elf
 # RUN: llvm-objdump --offloading %t.elf | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 
 !ELF
@@ -13,6 +12,11 @@ FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
+Sections:
+  - Name:            .llvm.offloading
+    Type:            SHT_LLVM_OFFLOADING
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x0000000000000008
 
 #        ELF:{{.*}}file format elf64-unknown
 #  ELF-EMPTY:
