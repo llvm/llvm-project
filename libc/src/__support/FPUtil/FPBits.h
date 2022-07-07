@@ -153,8 +153,8 @@ template <typename T> struct FPBits {
 
   static constexpr FPBits<T> neg_zero() { return zero(true); }
 
-  static constexpr FPBits<T> inf() {
-    FPBits<T> bits;
+  static constexpr FPBits<T> inf(bool sign = false) {
+    FPBits<T> bits(sign ? FloatProp::SIGN_MASK : UIntType(0));
     bits.set_unbiased_exponent(MAX_EXPONENT);
     return bits;
   }
