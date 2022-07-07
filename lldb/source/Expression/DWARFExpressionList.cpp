@@ -204,8 +204,11 @@ bool DWARFExpressionList::Evaluate(ExecutionContext *exe_ctx,
     }
     addr_t addr = pc.GetFileAddress();
     const auto *entry = m_exprs.FindEntryThatContains(addr);
-    if (!entry)
+    if (!entry) {
+      if (error_ptr)
+        error_ptr->SetErrorString("variable not available");
       return false;
+    }
     expr = entry->data;
   }
   expr.GetExpressionData(data);
