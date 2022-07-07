@@ -325,45 +325,6 @@ void __tgt_target_data_update_nowait_mapper(
 // same action as data_end above. The following types are used; this
 // function returns 0 if it was able to transfer the execution to a
 // target and an int different from zero otherwise.
-int __tgt_target(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-                 void **ArgsBase, void **Args, int64_t *ArgSizes,
-                 int64_t *ArgTypes);
-int __tgt_target_nowait(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-                        void **ArgsBase, void **Args, int64_t *ArgSizes,
-                        int64_t *ArgTypes, int32_t DepNum, void *DepList,
-                        int32_t NoAliasDepNum, void *NoAliasDepList);
-int __tgt_target_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
-                        int32_t ArgNum, void **ArgsBase, void **Args,
-                        int64_t *ArgSizes, int64_t *ArgTypes,
-                        map_var_info_t *ArgNames, void **ArgMappers);
-int __tgt_target_nowait_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
-                               int32_t ArgNum, void **ArgsBase, void **Args,
-                               int64_t *ArgSizes, int64_t *ArgTypes,
-                               map_var_info_t *ArgNames, void **ArgMappers,
-                               int32_t DepNum, void *DepList,
-                               int32_t NoAliasDepNum, void *NoAliasDepList);
-
-int __tgt_target_teams(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-                       void **ArgsBase, void **Args, int64_t *ArgSizes,
-                       int64_t *ArgTypes, int32_t NumTeams,
-                       int32_t ThreadLimit);
-int __tgt_target_teams_nowait(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-                              void **ArgsBase, void **Args, int64_t *ArgSizes,
-                              int64_t *ArgTypes, int32_t NumTeams,
-                              int32_t ThreadLimit, int32_t DepNum,
-                              void *DepList, int32_t NoAliasDepNum,
-                              void *NoAliasDepList);
-int __tgt_target_teams_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
-                              int32_t ArgNum, void **ArgsBase, void **Args,
-                              int64_t *ArgSizes, int64_t *ArgTypes,
-                              map_var_info_t *ArgNames, void **ArgMappers,
-                              int32_t NumTeams, int32_t ThreadLimit);
-int __tgt_target_teams_nowait_mapper(
-    ident_t *loc, int64_t device_id, void *host_ptr, int32_t arg_num,
-    void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types,
-    map_var_info_t *arg_names, void **arg_mappers, int32_t num_teams,
-    int32_t thread_limit, int32_t depNum, void *depList, int32_t noAliasDepNum,
-    void *noAliasDepList);
 int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                         int32_t ThreadLimit, void *HostPtr,
                         __tgt_kernel_arguments *Args);
@@ -372,11 +333,6 @@ int __tgt_target_kernel_nowait(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                __tgt_kernel_arguments *Args, int32_t DepNum,
                                void *DepList, int32_t NoAliasDepNum,
                                void *NoAliasDepList);
-
-void __kmpc_push_target_tripcount(int64_t DeviceId, uint64_t LoopTripcount);
-
-void __kmpc_push_target_tripcount_mapper(ident_t *Loc, int64_t DeviceId,
-                                         uint64_t LoopTripcount);
 
 void __tgt_set_info_flag(uint32_t);
 
