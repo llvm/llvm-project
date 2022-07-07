@@ -271,17 +271,18 @@ private:
       AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
       llvm::DenseSet<AtomicBoolValue *> &VisitedTokens);
 
-  /// Returns the result of satisfiability checking on `Constraints`.
-  /// Possible return values are:
-  /// - `Satisfiable`: There exists a satisfying assignment for `Constraints`.
-  /// - `Unsatisfiable`: There is no satisfying assignment for `Constraints`.
-  /// - `TimedOut`: The solver gives up on finding a satisfying assignment.
+  /// Returns the outcome of satisfiability checking on `Constraints`.
+  /// Possible outcomes are:
+  /// - `Satisfiable`: A satisfying assignment exists and is returned.
+  /// - `Unsatisfiable`: A satisfying assignment does not exist.
+  /// - `TimedOut`: The search for a satisfying assignment was not completed.
   Solver::Result querySolver(llvm::DenseSet<BoolValue *> Constraints);
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
   bool isUnsatisfiable(llvm::DenseSet<BoolValue *> Constraints) {
-    return querySolver(std::move(Constraints)) == Solver::Result::Unsatisfiable;
+    return querySolver(std::move(Constraints)).getStatus() ==
+           Solver::Result::Status::Unsatisfiable;
   }
 
   /// Returns a boolean value as a result of substituting `Val` and its sub

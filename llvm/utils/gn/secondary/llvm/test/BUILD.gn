@@ -60,6 +60,7 @@ write_lit_config("lit_site_cfg") {
     "HOST_LDFLAGS=",
 
     "LLVM_ENABLE_FFI=0",
+    "LLVM_ENABLE_HTTPLIB=0",
     "LLVM_HAVE_OPT_VIEWER_MODULES=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_DXIL_TESTS=0",
@@ -256,6 +257,7 @@ group("test") {
     "//llvm/tools/llvm-cxxdump",
     "//llvm/tools/llvm-cxxfilt",
     "//llvm/tools/llvm-cxxmap",
+    "//llvm/tools/llvm-debuginfod:symlinks",
     "//llvm/tools/llvm-debuginfod-find:symlinks",
     "//llvm/tools/llvm-diff",
     "//llvm/tools/llvm-dis",

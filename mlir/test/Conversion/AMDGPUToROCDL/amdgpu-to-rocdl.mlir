@@ -6,7 +6,7 @@ func.func @gpu_gcn_raw_buffer_load_i32(%buf: memref<64xi32>, %idx: i32) -> i32 {
   // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(256 : i32)
   // CHECK: llvm.insertelement{{.*}}%[[numRecords]]
   // CHECK: %[[word3:.*]] = llvm.mlir.constant(159744 : i32)
-  // RDNA: %[[word3:.*]] = llvm.mlir.constant(285372416 : i32)
+  // RDNA: %[[word3:.*]] = llvm.mlir.constant(822243328 : i32)
   // CHECK: %[[resource:.*]] = llvm.insertelement{{.*}}%[[word3]]
   // CHECK: %[[ret:.*]] = rocdl.raw.buffer.load %[[resource]], %{{.*}}, %{{.*}}, %{{.*}} : i32
   // CHECK: return %[[ret]]
