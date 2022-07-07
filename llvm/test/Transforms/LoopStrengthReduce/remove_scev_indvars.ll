@@ -91,3 +91,24 @@ for.end6730:                                      ; preds = %for.cond6418
 dead:                                             ; No predecessors!
   br label %for.cond6403
 }
+
+
+; Check that this doesn't crash
+define void @kernfs_path_from_node() {
+entry:
+  callbr void asm sideeffect "", "i"(i8* blockaddress(@kernfs_path_from_node, %while.body))
+          to label %asm.fallthrough [label %while.body]
+
+asm.fallthrough:                                  ; preds = %entry
+  br label %while.body
+
+while.body:                                       ; preds = %while.body, %asm.fallthrough, %entry
+  %depth.04 = phi i32 [ %inc, %while.body ], [ 0, %asm.fallthrough ], [ 0, %entry ]
+  %inc = add i32 %depth.04, 1
+  br i1 false, label %while.end, label %while.body
+
+while.end:                                        ; preds = %while.body
+  %inc.lcssa = phi i32 [ %depth.04, %while.body ]
+  store i32 %inc.lcssa, i32* null, align 4
+  ret void
+}
