@@ -153,6 +153,38 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
   }];
 }
 
+def SplitOp : Op<Transform_Dialect, "structured.split",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Indicates that the given `target` op should be split into two complementary
+    parts, which combined cover the entire iteration domain of the original op.
+    The split is performed along the iteration space dimension provided as
+    attribute. In case of dimension overflow, the transformation fails. The
+    split is performed at the dimension iterator value specified as either the
+    static split point attribute when it is known at transform IR construction
+    time or as the handle to an operation producing a single index-typed value
+    when it is computed by payload IR. In the latter case, the static split
+    point must be set to `ShapedType::kDynamicSize` and the dynamic size handle
+    must point to as many value-producing operations as there are structured
+    operations pointed to by the target handle.
+
+    The operation consumes the target handle, but preserves the split point
+    handle if provided. It produces two new handles pointing to the two parts
+    of the structured op after splitting, in the same order as the target
+    operand, with the first handle corresponding to the part with lower
+    iteration space indices.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       I64Attr:$dimension,
+                       Optional<PDL_Operation>:$dynamic_split_point,
+                       I64Attr:$static_split_point);
+  let results = (outs PDL_Operation:$first, PDL_Operation:$second);
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
 def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
        [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
         TransformEachOpTrait, TransformOpInterface]> {
