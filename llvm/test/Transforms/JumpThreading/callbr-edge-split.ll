@@ -12,10 +12,10 @@ define i32 @c() {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    callbr void asm sideeffect "", "i"(i8* blockaddress(@c, [[IF_THEN2:%.*]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "!i"()
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] [label %if.then2]
 ; CHECK:       normal:
-; CHECK-NEXT:    br label [[IF_THEN2]]
+; CHECK-NEXT:    br label [[IF_THEN2:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @b()
 ; CHECK-NEXT:    [[PHITMP:%.*]] = icmp ne i32 [[CALL]], 0
@@ -37,7 +37,7 @@ if.then:                                          ; preds = %entry
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  callbr void asm sideeffect "", "i"(i8* blockaddress(@c, %if.end)) #2
+  callbr void asm sideeffect "", "!i"() #2
   to label %normal [label %if.end]
 
 normal:                                           ; preds = %if.else

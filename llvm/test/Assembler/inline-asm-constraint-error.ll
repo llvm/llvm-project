@@ -6,6 +6,8 @@
 ; RUN: not llvm-as < %t/cannot-be-struct.ll 2>&1 | FileCheck %s --check-prefix=CHECK-CANNOT-BE-STRUCT
 ; RUN: not llvm-as < %t/incorrect-struct-elements.ll 2>&1 | FileCheck %s --check-prefix=CHECK-INCORRECT-STRUCT-ELEMENTS
 ; RUN: not llvm-as < %t/incorrect-arg-num.ll 2>&1 | FileCheck %s --check-prefix=CHECK-INCORRECT-ARG-NUM
+; RUN: not llvm-as < %t/label-after-clobber.ll 2>&1 | FileCheck %s --check-prefix=CHECK-LABEL-AFTER-CLOBBER
+; RUN: not llvm-as < %t/output-after-label.ll 2>&1 | FileCheck %s --check-prefix=CHECK-OUTPUT-AFTER-LABEL
 
 ;--- parse-fail.ll
 ; CHECK-PARSE-FAIL: failed to parse constraints
@@ -16,7 +18,7 @@ define void @foo() {
 }
 
 ;--- input-before-output.ll
-; CHECK-INPUT-BEFORE-OUTPUT: output constraint occurs after input or clobber constraint
+; CHECK-INPUT-BEFORE-OUTPUT: output constraint occurs after input, clobber or label constraint
 define void @foo() {
   call void asm sideeffect "mov x0, #42", "r,=r"()
   ret void
@@ -54,5 +56,27 @@ define void @foo() {
 ; CHECK-INCORRECT-ARG-NUM: number of input constraints does not match number of parameters
 define void @foo() {
   call void asm sideeffect "mov x0, #42", "r"()
+  ret void
+}
+
+;--- label-after-clobber.ll
+; CHECK-LABEL-AFTER-CLOBBER: label constraint occurs after clobber constraint
+define void @foo() {
+  callbr void asm sideeffect "", "~{flags},!i"()
+  to label %1 [label %2]
+1:
+  ret void
+2:
+  ret void
+}
+
+;--- output-after-label.ll
+; CHECK-OUTPUT-AFTER-LABEL: output constraint occurs after input, clobber or label constraint
+define void @foo() {
+  %res = callbr i32 asm sideeffect "", "!i,=r,~{flags}"()
+  to label %1 [label %2]
+1:
+  ret void
+2:
   ret void
 }

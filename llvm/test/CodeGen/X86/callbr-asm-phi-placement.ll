@@ -36,7 +36,7 @@ loop:
   %a = phi ptr [ %arg, %entry ], [ %b, %loop ]
   %b = load ptr, ptr %mem, align 8
   call void @foo(ptr %a)
-  callbr void asm sideeffect "", "*m,i"(ptr elementtype(i8) %b, ptr blockaddress(@test1, %loop))
+  callbr void asm sideeffect "", "*m,!i"(ptr elementtype(i8) %b)
           to label %end [label %loop]
 
 end:

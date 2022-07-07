@@ -332,6 +332,8 @@ bool InlineAsmLowering::lowerInlineAsm(
       }
       ++ResNo;
     } else {
+      assert(OpInfo.Type != InlineAsm::isLabel &&
+             "GlobalISel currently doesn't support callbr");
       OpInfo.ConstraintVT = MVT::Other;
     }
 
@@ -427,7 +429,8 @@ bool InlineAsmLowering::lowerInlineAsm(
       }
 
       break;
-    case InlineAsm::isInput: {
+    case InlineAsm::isInput:
+    case InlineAsm::isLabel: {
       if (OpInfo.isMatchingInputConstraint()) {
         unsigned DefIdx = OpInfo.getMatchedOperand();
         // Find operand with register def that corresponds to DefIdx.

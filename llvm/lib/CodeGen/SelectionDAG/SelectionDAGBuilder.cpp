@@ -2990,14 +2990,20 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   CopyToExportRegsIfNeeded(&I);
 
   // Retrieve successors.
+  SmallPtrSet<BasicBlock *, 8> Dests;
+  Dests.insert(I.getDefaultDest());
   MachineBasicBlock *Return = FuncInfo.MBBMap[I.getDefaultDest()];
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
   for (unsigned i = 0, e = I.getNumIndirectDests(); i < e; ++i) {
-    MachineBasicBlock *Target = FuncInfo.MBBMap[I.getIndirectDest(i)];
-    addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
+    BasicBlock *Dest = I.getIndirectDest(i);
+    MachineBasicBlock *Target = FuncInfo.MBBMap[Dest];
     Target->setIsInlineAsmBrIndirectTarget();
+    Target->setHasAddressTaken();
+    // Don't add duplicate machine successors.
+    if (Dests.insert(Dest).second)
+      addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
   }
   CallBrMBB->normalizeSuccProbs();
 
@@ -8855,7 +8861,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
       }
       break;
 
-    case InlineAsm::isInput: {
+    case InlineAsm::isInput:
+    case InlineAsm::isLabel: {
       SDValue InOperandVal = OpInfo.CallOperand;
 
       if (OpInfo.isMatchingInputConstraint()) {

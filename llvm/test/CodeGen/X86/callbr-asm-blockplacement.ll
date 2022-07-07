@@ -85,7 +85,7 @@ bb8:                                              ; preds = %bb8, %bb5
 bb15:                                             ; preds = %bb8
   %tmp16 = getelementptr [0 x %struct.wibble], ptr @global, i64 0, i64 %tmp4, i32 2
   store ptr %tmp9, ptr %tmp16
-  callbr void asm sideeffect "", "i"(ptr blockaddress(@foo, %bb18))
+  callbr void asm sideeffect "", "!i"()
           to label %bb17 [label %bb18]
 
 bb17:                                             ; preds = %bb15

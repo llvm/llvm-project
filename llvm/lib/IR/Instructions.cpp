@@ -960,15 +960,10 @@ void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
   setName(NameStr);
 }
 
-void CallBrInst::updateArgBlockAddresses(unsigned i, BasicBlock *B) {
-  assert(getNumIndirectDests() > i && "IndirectDest # out of range for callbr");
-  if (BasicBlock *OldBB = getIndirectDest(i)) {
-    BlockAddress *Old = BlockAddress::get(OldBB);
-    BlockAddress *New = BlockAddress::get(B);
-    for (unsigned ArgNo = 0, e = arg_size(); ArgNo != e; ++ArgNo)
-      if (dyn_cast<BlockAddress>(getArgOperand(ArgNo)) == Old)
-        setArgOperand(ArgNo, New);
-  }
+BlockAddress *
+CallBrInst::getBlockAddressForIndirectDest(unsigned DestNo) const {
+  return BlockAddress::get(const_cast<Function *>(getFunction()),
+                           getIndirectDest(DestNo));
 }
 
 CallBrInst::CallBrInst(const CallBrInst &CBI)

@@ -16,15 +16,14 @@ define i32 @function1(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[B]])
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       fail1:
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[B]], 1
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[B]])
 ; CHECK-NEXT:    ret i32 0
 ;
 bb0:
   %0 = add i32 %a, 4
   %1 = add i32 %b, 1
   %2 = add i32 %b, 1
-  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,i,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@function1, %fail1)) to label %normal [label %fail1]
+  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,!i,~{dirflag},~{fpsr},~{flags}"(i32 %0) to label %normal [label %fail1]
 normal:
   %3 = add i32 %b, 1
   %4 = add i32 %b, 1
@@ -46,15 +45,14 @@ define i32 @function2(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[B]])
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       fail1:
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[B]], 1
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[B]])
 ; CHECK-NEXT:    ret i32 0
 ;
 bb0:
   %0 = add i32 %a, 4
   %1 = add i32 %b, 1
   %2 = add i32 %b, 1
-  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,i,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@function2, %fail1)) to label %normal [label %fail1]
+  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,!i,~{dirflag},~{fpsr},~{flags}"(i32 %0) to label %normal [label %fail1]
 normal:
   %3 = add i32 %b, 1
   %4 = add i32 %b, 1

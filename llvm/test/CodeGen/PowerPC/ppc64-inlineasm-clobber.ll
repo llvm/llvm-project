@@ -111,7 +111,7 @@ define dso_local signext i32 @ClobberLR_BR(i32 signext %in) #0 {
 ; PPC64BE-NEXT:    li r3, 0
 ; PPC64BE-NEXT:    b .LBB3_1
 entry:
-  callbr void asm sideeffect "nop", "i,~{lr}"(i8* blockaddress(@ClobberLR_BR, %return_early))
+  callbr void asm sideeffect "nop", "!i,~{lr}"()
           to label %return [label %return_early]
 
 return_early:
@@ -151,7 +151,7 @@ define dso_local signext i32 @ClobberR5_BR(i32 signext %in) #0 {
 ; PPC64BE-NEXT:    extsw r3, r3
 ; PPC64BE-NEXT:    blr
 entry:
-  callbr void asm sideeffect "nop", "i,~{r5}"(i8* blockaddress(@ClobberR5_BR, %return_early))
+  callbr void asm sideeffect "nop", "!i,~{r5}"()
           to label %return [label %return_early]
 
 return_early:

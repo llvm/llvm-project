@@ -89,7 +89,7 @@ return:                                           ; preds = %entry, %l2
 define i32 @asmgoto() {
 entry:
 ; CHECK-LABEL: asmgoto:
-  callbr void asm sideeffect "B $0", "i"(i8* blockaddress(@asmgoto, %d))
+  callbr void asm sideeffect "B $0", "!i"()
             to label %asm.fallthrough [label %d]
      ; The asm goto above produces a direct branch:
 ; CHECK:           @APP

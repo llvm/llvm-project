@@ -93,6 +93,9 @@ bool InlineAsm::ConstraintInfo::Parse(StringRef Str,
   } else if (*I == '=') {
     ++I;
     Type = isOutput;
+  } else if (*I == '!') {
+    ++I;
+    Type = isLabel;
   }
 
   if (*I == '*') {
@@ -265,14 +268,14 @@ Error InlineAsm::verify(FunctionType *Ty, StringRef ConstStr) {
     return makeStringError("failed to parse constraints");
 
   unsigned NumOutputs = 0, NumInputs = 0, NumClobbers = 0;
-  unsigned NumIndirect = 0;
+  unsigned NumIndirect = 0, NumLabels = 0;
 
   for (const ConstraintInfo &Constraint : Constraints) {
     switch (Constraint.Type) {
     case InlineAsm::isOutput:
-      if ((NumInputs-NumIndirect) != 0 || NumClobbers != 0)
-        return makeStringError("output constraint occurs after input "
-                               "or clobber constraint");
+      if ((NumInputs-NumIndirect) != 0 || NumClobbers != 0 || NumLabels != 0)
+        return makeStringError("output constraint occurs after input, "
+                               "clobber or label constraint");
 
       if (!Constraint.isIndirect) {
         ++NumOutputs;
@@ -288,6 +291,13 @@ Error InlineAsm::verify(FunctionType *Ty, StringRef ConstStr) {
       break;
     case InlineAsm::isClobber:
       ++NumClobbers;
+      break;
+    case InlineAsm::isLabel:
+      if (NumClobbers)
+        return makeStringError("label constraint occurs after clobber "
+                               "constraint");
+
+      ++NumLabels;
       break;
     }
   }
@@ -312,5 +322,7 @@ Error InlineAsm::verify(FunctionType *Ty, StringRef ConstStr) {
   if (Ty->getNumParams() != NumInputs)
     return makeStringError("number of input constraints does not match number "
                            "of parameters");
+
+  // We don't have access to labels here, NumLabels will be checked separately.
   return Error::success();
 }

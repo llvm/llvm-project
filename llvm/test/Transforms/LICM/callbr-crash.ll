@@ -6,7 +6,7 @@ define i32 @j() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@j, [[FOR_END_SPLIT_LOOP_EXIT1:%.*]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"()
 ; CHECK-NEXT:    to label [[COND_TRUE_I:%.*]] [label %for.end.split.loop.exit1]
 ; CHECK:       cond.true.i:
 ; CHECK-NEXT:    br i1 true, label [[FOR_END_SPLIT_LOOP_EXIT:%.*]], label [[FOR_COND]]
@@ -17,14 +17,14 @@ define i32 @j() {
 ; CHECK-NEXT:    [[PHI_PH2:%.*]] = phi i32 [ undef, [[FOR_COND]] ]
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ASMRESULT1_I_I_LE]], [[FOR_END_SPLIT_LOOP_EXIT]] ], [ [[PHI_PH2]], [[FOR_END_SPLIT_LOOP_EXIT1]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ASMRESULT1_I_I_LE]], [[FOR_END_SPLIT_LOOP_EXIT]] ], [ [[PHI_PH2]], [[FOR_END_SPLIT_LOOP_EXIT1:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %cond.true.i, %entry
-  callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@j, %for.end))
+  callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"()
   to label %cond.true.i [label %for.end]
 
 cond.true.i:                                      ; preds = %for.cond

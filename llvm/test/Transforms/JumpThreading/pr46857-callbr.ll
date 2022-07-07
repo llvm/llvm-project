@@ -8,10 +8,10 @@ define i1 @func(i1 %arg, i32 %arg1, i1 %arg2) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB7:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    callbr void asm sideeffect "", "i"(i8* blockaddress(@func, [[BB7_THR_COMM:%.*]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "!i"()
 ; CHECK-NEXT:    to label [[BB5:%.*]] [label %bb7.thr_comm]
 ; CHECK:       bb5:
-; CHECK-NEXT:    br label [[BB7_THR_COMM]]
+; CHECK-NEXT:    br label [[BB7_THR_COMM:%.*]]
 ; CHECK:       bb7.thr_comm:
 ; CHECK-NEXT:    [[I91:%.*]] = xor i1 [[ARG2:%.*]], [[ARG]]
 ; CHECK-NEXT:    br i1 [[I91]], label [[BB11:%.*]], label [[BB11]]
@@ -31,7 +31,7 @@ bb3:
   br label %bb7
 
 bb4:
-  callbr void asm sideeffect "", "i"(i8* blockaddress(@func, %bb6))
+  callbr void asm sideeffect "", "!i"()
   to label %bb5 [label %bb6]
 
 bb5:
