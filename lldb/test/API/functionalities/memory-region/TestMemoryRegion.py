@@ -88,7 +88,7 @@ class MemoryCommandRegion(TestBase):
         self.assertTrue(result.Succeeded())
         self.assertEqual(result.GetOutput(), all_regions)
 
-    def test_unique_base_addresses(self):
+    def test_no_overlapping_regions(self):
         # In the past on Windows we were recording AllocationBase as the base address
         # of the current region, not BaseAddress. So if a range of pages was split
         # into regions you would see several regions with the same base address.
@@ -114,10 +114,9 @@ class MemoryCommandRegion(TestBase):
                 region_base = region.GetRegionBase()
                 region_end = region.GetRegionEnd()
 
-                if (region_base >= previous_base and region_base < previous_end) \
-                    or (region_end > previous_base and region_end <= previous_end):
-                    self.assertFalse(base_address in base_addresses,
-                        "Unexpected overlapping memory region found.")
+                self.assertFalse(
+                    (region_base < previous_end) and (previous_base < region_end),
+                    "Unexpected overlapping memory region found.")
 
                 previous_base = region_base
                 previous_end = region_end
