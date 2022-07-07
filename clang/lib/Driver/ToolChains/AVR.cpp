@@ -437,7 +437,6 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                          : getToolChain().GetProgramPath(getShortName());
 
   ArgStringList CmdArgs;
-  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
@@ -503,6 +502,7 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Add the link library specific to the MCU.
     CmdArgs.push_back(Args.MakeArgString(std::string("-l") + CPU));
 
+    AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
     CmdArgs.push_back("--end-group");
 
     // Add user specified linker script.
@@ -514,6 +514,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // than the bare minimum supports.
     if (Linker.find("avr-ld") != std::string::npos)
       CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
+  } else {
+    AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   }
 
   C.addCommand(std::make_unique<Command>(
