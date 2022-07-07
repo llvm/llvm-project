@@ -20,12 +20,6 @@ namespace {
 using namespace clang;
 using namespace dataflow;
 
-using testing::_;
-using testing::AnyOf;
-using testing::Optional;
-using testing::Pair;
-using testing::UnorderedElementsAre;
-
 class SolverTest : public ::testing::Test {
 protected:
   // Checks if the conjunction of `Vals` is satisfiable and returns the
@@ -70,17 +64,6 @@ protected:
     return conj(impl(LeftSubVal, RightSubVal), impl(RightSubVal, LeftSubVal));
   }
 
-  void expectUnsatisfiable(Solver::Result Result) {
-    EXPECT_EQ(Result.getStatus(), Solver::Result::Status::Unsatisfiable);
-    EXPECT_FALSE(Result.getSolution().has_value());
-  }
-
-  template <typename Matcher>
-  void expectSatisfiable(Solver::Result Result, Matcher Solution) {
-    EXPECT_EQ(Result.getStatus(), Solver::Result::Status::Satisfiable);
-    EXPECT_THAT(Result.getSolution(), Optional(Solution));
-  }
-
 private:
   std::vector<std::unique_ptr<BoolValue>> Vals;
 };
@@ -89,9 +72,7 @@ TEST_F(SolverTest, Var) {
   auto X = atom();
 
   // X
-  expectSatisfiable(
-      solve({X}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue)));
+  EXPECT_EQ(solve({X}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, NegatedVar) {
@@ -99,9 +80,7 @@ TEST_F(SolverTest, NegatedVar) {
   auto NotX = neg(X);
 
   // !X
-  expectSatisfiable(
-      solve({NotX}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedFalse)));
+  EXPECT_EQ(solve({NotX}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, UnitConflict) {
@@ -109,7 +88,7 @@ TEST_F(SolverTest, UnitConflict) {
   auto NotX = neg(X);
 
   // X ^ !X
-  expectUnsatisfiable(solve({X, NotX}));
+  EXPECT_EQ(solve({X, NotX}), Solver::Result::Unsatisfiable);
 }
 
 TEST_F(SolverTest, DistinctVars) {
@@ -118,10 +97,7 @@ TEST_F(SolverTest, DistinctVars) {
   auto NotY = neg(Y);
 
   // X ^ !Y
-  expectSatisfiable(
-      solve({X, NotY}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue),
-                           Pair(Y, Solver::Result::Assignment::AssignedFalse)));
+  EXPECT_EQ(solve({X, NotY}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, DoubleNegation) {
@@ -130,7 +106,7 @@ TEST_F(SolverTest, DoubleNegation) {
   auto NotNotX = neg(NotX);
 
   // !!X ^ !X
-  expectUnsatisfiable(solve({NotNotX, NotX}));
+  EXPECT_EQ(solve({NotNotX, NotX}), Solver::Result::Unsatisfiable);
 }
 
 TEST_F(SolverTest, NegatedDisjunction) {
@@ -140,7 +116,7 @@ TEST_F(SolverTest, NegatedDisjunction) {
   auto NotXOrY = neg(XOrY);
 
   // !(X v Y) ^ (X v Y)
-  expectUnsatisfiable(solve({NotXOrY, XOrY}));
+  EXPECT_EQ(solve({NotXOrY, XOrY}), Solver::Result::Unsatisfiable);
 }
 
 TEST_F(SolverTest, NegatedConjunction) {
@@ -150,7 +126,7 @@ TEST_F(SolverTest, NegatedConjunction) {
   auto NotXAndY = neg(XAndY);
 
   // !(X ^ Y) ^ (X ^ Y)
-  expectUnsatisfiable(solve({NotXAndY, XAndY}));
+  EXPECT_EQ(solve({NotXAndY, XAndY}), Solver::Result::Unsatisfiable);
 }
 
 TEST_F(SolverTest, DisjunctionSameVars) {
@@ -159,7 +135,7 @@ TEST_F(SolverTest, DisjunctionSameVars) {
   auto XOrNotX = disj(X, NotX);
 
   // X v !X
-  expectSatisfiable(solve({XOrNotX}), _);
+  EXPECT_EQ(solve({XOrNotX}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, ConjunctionSameVarsConflict) {
@@ -168,7 +144,7 @@ TEST_F(SolverTest, ConjunctionSameVarsConflict) {
   auto XAndNotX = conj(X, NotX);
 
   // X ^ !X
-  expectUnsatisfiable(solve({XAndNotX}));
+  EXPECT_EQ(solve({XAndNotX}), Solver::Result::Unsatisfiable);
 }
 
 TEST_F(SolverTest, PureVar) {
@@ -180,10 +156,7 @@ TEST_F(SolverTest, PureVar) {
   auto NotXOrNotY = disj(NotX, NotY);
 
   // (!X v Y) ^ (!X v !Y)
-  expectSatisfiable(
-      solve({NotXOrY, NotXOrNotY}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedFalse),
-                           Pair(Y, _)));
+  EXPECT_EQ(solve({NotXOrY, NotXOrNotY}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, MustAssumeVarIsFalse) {
@@ -196,10 +169,7 @@ TEST_F(SolverTest, MustAssumeVarIsFalse) {
   auto NotXOrNotY = disj(NotX, NotY);
 
   // (X v Y) ^ (!X v Y) ^ (!X v !Y)
-  expectSatisfiable(
-      solve({XOrY, NotXOrY, NotXOrNotY}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedFalse),
-                           Pair(Y, Solver::Result::Assignment::AssignedTrue)));
+  EXPECT_EQ(solve({XOrY, NotXOrY, NotXOrNotY}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, DeepConflict) {
@@ -213,7 +183,8 @@ TEST_F(SolverTest, DeepConflict) {
   auto XOrNotY = disj(X, NotY);
 
   // (X v Y) ^ (!X v Y) ^ (!X v !Y) ^ (X v !Y)
-  expectUnsatisfiable(solve({XOrY, NotXOrY, NotXOrNotY, XOrNotY}));
+  EXPECT_EQ(solve({XOrY, NotXOrY, NotXOrNotY, XOrNotY}),
+            Solver::Result::Unsatisfiable);
 }
 
 TEST_F(SolverTest, IffSameVars) {
@@ -221,7 +192,7 @@ TEST_F(SolverTest, IffSameVars) {
   auto XEqX = iff(X, X);
 
   // X <=> X
-  expectSatisfiable(solve({XEqX}), _);
+  EXPECT_EQ(solve({XEqX}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, IffDistinctVars) {
@@ -230,14 +201,7 @@ TEST_F(SolverTest, IffDistinctVars) {
   auto XEqY = iff(X, Y);
 
   // X <=> Y
-  expectSatisfiable(
-      solve({XEqY}),
-      AnyOf(UnorderedElementsAre(
-                Pair(X, Solver::Result::Assignment::AssignedTrue),
-                Pair(Y, Solver::Result::Assignment::AssignedTrue)),
-            UnorderedElementsAre(
-                Pair(X, Solver::Result::Assignment::AssignedFalse),
-                Pair(Y, Solver::Result::Assignment::AssignedFalse))));
+  EXPECT_EQ(solve({XEqY}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, IffWithUnits) {
@@ -246,10 +210,7 @@ TEST_F(SolverTest, IffWithUnits) {
   auto XEqY = iff(X, Y);
 
   // (X <=> Y) ^ X ^ Y
-  expectSatisfiable(
-      solve({XEqY, X, Y}),
-      UnorderedElementsAre(Pair(X, Solver::Result::Assignment::AssignedTrue),
-                           Pair(Y, Solver::Result::Assignment::AssignedTrue)));
+  EXPECT_EQ(solve({XEqY, X, Y}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, IffWithUnitsConflict) {
@@ -259,7 +220,7 @@ TEST_F(SolverTest, IffWithUnitsConflict) {
   auto NotY = neg(Y);
 
   // (X <=> Y) ^ X  !Y
-  expectUnsatisfiable(solve({XEqY, X, NotY}));
+  EXPECT_EQ(solve({XEqY, X, NotY}), Solver::Result::Unsatisfiable);
 }
 
 TEST_F(SolverTest, IffTransitiveConflict) {
@@ -271,7 +232,7 @@ TEST_F(SolverTest, IffTransitiveConflict) {
   auto NotX = neg(X);
 
   // (X <=> Y) ^ (Y <=> Z) ^ Z ^ !X
-  expectUnsatisfiable(solve({XEqY, YEqZ, Z, NotX}));
+  EXPECT_EQ(solve({XEqY, YEqZ, Z, NotX}), Solver::Result::Unsatisfiable);
 }
 
 TEST_F(SolverTest, DeMorgan) {
@@ -287,7 +248,7 @@ TEST_F(SolverTest, DeMorgan) {
   auto B = iff(neg(conj(Z, W)), disj(neg(Z), neg(W)));
 
   // A ^ B
-  expectSatisfiable(solve({A, B}), _);
+  EXPECT_EQ(solve({A, B}), Solver::Result::Satisfiable);
 }
 
 TEST_F(SolverTest, RespectsAdditionalConstraints) {
@@ -297,7 +258,7 @@ TEST_F(SolverTest, RespectsAdditionalConstraints) {
   auto NotY = neg(Y);
 
   // (X <=> Y) ^ X ^ !Y
-  expectUnsatisfiable(solve({XEqY, X, NotY}));
+  EXPECT_EQ(solve({XEqY, X, NotY}), Solver::Result::Unsatisfiable);
 }
 
 TEST_F(SolverTest, ImplicationConflict) {
@@ -307,7 +268,7 @@ TEST_F(SolverTest, ImplicationConflict) {
   auto *XAndNotY = conj(X, neg(Y));
 
   // X => Y ^ X ^ !Y
-  expectUnsatisfiable(solve({XImplY, XAndNotY}));
+  EXPECT_EQ(solve({XImplY, XAndNotY}), Solver::Result::Unsatisfiable);
 }
 
 } // namespace

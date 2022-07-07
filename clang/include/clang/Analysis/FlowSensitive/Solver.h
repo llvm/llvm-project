@@ -15,9 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_SOLVER_H
 
 #include "clang/Analysis/FlowSensitive/Value.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 
 namespace clang {
 namespace dataflow {
@@ -25,58 +23,17 @@ namespace dataflow {
 /// An interface for a SAT solver that can be used by dataflow analyses.
 class Solver {
 public:
-  struct Result {
-    enum class Status {
-      /// Indicates that there exists a satisfying assignment for a boolean
-      /// formula.
-      Satisfiable,
-
-      /// Indicates that there is no satisfying assignment for a boolean
-      /// formula.
-      Unsatisfiable,
-
-      /// Indicates that the solver gave up trying to find a satisfying
-      /// assignment for a boolean formula.
-      TimedOut,
-    };
-
-    /// A boolean value is set to true or false in a truth assignment.
-    enum class Assignment : uint8_t { AssignedFalse = 0, AssignedTrue = 1 };
-
-    /// Constructs a result indicating that the queried boolean formula is
-    /// satisfiable. The result will hold a solution found by the solver.
-    static Result
-    Satisfiable(llvm::DenseMap<AtomicBoolValue *, Assignment> Solution) {
-      return Result(Status::Satisfiable, std::move(Solution));
-    }
-
-    /// Constructs a result indicating that the queried boolean formula is
-    /// unsatisfiable.
-    static Result Unsatisfiable() { return Result(Status::Unsatisfiable, {}); }
-
-    /// Constructs a result indicating that satisfiability checking on the
-    /// queried boolean formula was not completed.
-    static Result TimedOut() { return Result(Status::TimedOut, {}); }
-
-    /// Returns the status of satisfiability checking on the queried boolean
+  enum class Result {
+    /// Indicates that there exists a satisfying assignment for a boolean
     /// formula.
-    Status getStatus() const { return Status; }
+    Satisfiable,
 
-    /// Returns a truth assignment to boolean values that satisfies the queried
-    /// boolean formula if available. Otherwise, an empty optional is returned.
-    llvm::Optional<llvm::DenseMap<AtomicBoolValue *, Assignment>>
-    getSolution() const {
-      return Solution;
-    }
+    /// Indicates that there is no satisfying assignment for a boolean formula.
+    Unsatisfiable,
 
-  private:
-    Result(
-        enum Status Status,
-        llvm::Optional<llvm::DenseMap<AtomicBoolValue *, Assignment>> Solution)
-        : Status(Status), Solution(std::move(Solution)) {}
-
-    Status Status;
-    llvm::Optional<llvm::DenseMap<AtomicBoolValue *, Assignment>> Solution;
+    /// Indicates that the solver gave up trying to find a satisfying assignment
+    /// for a boolean formula.
+    TimedOut,
   };
 
   virtual ~Solver() = default;
@@ -87,6 +44,9 @@ public:
   /// Requirements:
   ///
   ///  All elements in `Vals` must not be null.
+  ///
+  /// FIXME: Consider returning a model in case the conjunction of `Vals` is
+  /// satisfiable so that it can be used to generate warning messages.
   virtual Result solve(llvm::DenseSet<BoolValue *> Vals) = 0;
 };
 
