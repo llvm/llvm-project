@@ -12,7 +12,7 @@
 ; FMA:      <_foo>:
 ; FMA-NEXT: vrcpss       %xmm0, %xmm0, %xmm1
 ; FMA-NEXT: vfmsub213ss  [[#]](%rip), %xmm1, %xmm0 ## xmm0 = (xmm1 * xmm0) - mem
-; FMA-NEXT:                                        ## 0x2f4
+; FMA-NEXT:                                        ## 0x
 ; FMA-NEXT: vfnmadd132ss %xmm1, %xmm1, %xmm0
 ; FMA-NEXT: retq
 
