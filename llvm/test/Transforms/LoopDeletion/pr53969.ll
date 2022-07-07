@@ -10,11 +10,6 @@ define void @test() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 112, -1
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP3]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw i32 11, -6
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw i32 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i32 [[TMP7]], 11
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i32 undef, 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[BB33_LOOPEXIT1:%.*]], label [[BB34_PREHEADER:%.*]]
@@ -24,14 +19,10 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP2_LCSSA12:%.*]] = phi i32 [ 11, [[BB34]] ]
 ; CHECK-NEXT:    br label [[BB33_LOOPEXIT:%.*]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP40:%.*]], 0
 ; CHECK-NEXT:    br label [[BB14:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    br i1 true, label [[BB32:%.*]], label [[BB22:%.*]]
 ; CHECK:       bb22:
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 4 to i32
-; CHECK-NEXT:    [[TMP23:%.*]] = or i32 [[TMP1]], undef
-; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP23]], undef
 ; CHECK-NEXT:    br i1 false, label [[BB42:%.*]], label [[BB25:%.*]]
 ; CHECK:       bb25:
 ; CHECK-NEXT:    br label [[BB31:%.*]]
@@ -50,14 +41,10 @@ define void @test() {
 ; CHECK-NEXT:    call void @use(i32 [[TMP210]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb34:
-; CHECK-NEXT:    [[TMP36:%.*]] = xor i32 0, [[TMP8]]
-; CHECK-NEXT:    [[TMP38:%.*]] = add i32 [[TMP36]], undef
-; CHECK-NEXT:    [[TMP39:%.*]] = add i32 [[TMP38]], undef
-; CHECK-NEXT:    [[TMP40]] = sext i32 [[TMP39]] to i64
 ; CHECK-NEXT:    br i1 false, label [[BB11]], label [[BB12:%.*]]
 ; CHECK:       bb42:
-; CHECK-NEXT:    [[TMP24_LCSSA:%.*]] = phi i32 [ [[TMP24]], [[BB22]] ]
-; CHECK-NEXT:    [[TMP18_LCSSA4:%.*]] = phi i64 [ [[TMP0]], [[BB22]] ]
+; CHECK-NEXT:    [[TMP24_LCSSA:%.*]] = phi i32 [ undef, [[BB22]] ]
+; CHECK-NEXT:    [[TMP18_LCSSA4:%.*]] = phi i64 [ 0, [[BB22]] ]
 ; CHECK-NEXT:    store atomic i64 [[TMP18_LCSSA4]], i64 addrspace(1)* undef unordered, align 8
 ; CHECK-NEXT:    call void @use(i32 [[TMP24_LCSSA]])
 ; CHECK-NEXT:    ret void
