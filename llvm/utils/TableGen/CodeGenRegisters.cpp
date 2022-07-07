@@ -861,6 +861,26 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
         Orders[i].push_back(Super.Orders[i][j]);
 }
 
+bool CodeGenRegisterClass::hasType(const ValueTypeByHwMode &VT) const {
+  if (llvm::is_contained(VTs, VT))
+    return true;
+
+  // If VT is not identical to any of this class's types, but is a simple
+  // type, check if any of the types for this class contain it under some
+  // mode.
+  // The motivating example came from RISCV, where (likely because of being
+  // guarded by "64-bit" predicate), the type of X5 was {*:[i64]}, but the
+  // type in GRC was {*:[i32], m1:[i64]}.
+  if (VT.isSimple()) {
+    MVT T = VT.getSimple();
+    for (const ValueTypeByHwMode &OurVT : VTs) {
+      if (llvm::count_if(OurVT, [T](auto &&P) { return P.second == T; }))
+        return true;
+    }
+  }
+  return false;
+}
+
 bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {
   return std::binary_search(Members.begin(), Members.end(), Reg,
                             deref<std::less<>>());
