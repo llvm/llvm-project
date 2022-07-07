@@ -31,7 +31,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @pdl_target in %arg1
-    %1:3 = transform.structured.split_reduction %0 
+    %1:4 = transform.structured.split_reduction %0 
       { split_factor = 4, insert_split_dimension = 2, use_scaling_algorithm, use_alloc}
   }
 }
