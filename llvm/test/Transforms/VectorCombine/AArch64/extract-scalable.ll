@@ -20,3 +20,20 @@ define i1 @extract_cmp_binop(<vscale x 4 x i32> %a) {
   %r = xor i1 %cmp1, %cmp2
   ret i1 %r
 }
+
+; Test that VectorCombine doesn't try to create a shufflevector for
+; an extract-extract pattern on a scalable vector type.
+define i32 @extract_extract(<vscale x 4 x i32> %vec) {
+; CHECK-LABEL: @extract_extract(
+; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <vscale x 4 x i32> [[VEC:%.*]], i32 0
+; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <vscale x 4 x i32> [[VEC]], i32 1
+; CHECK-NEXT:    [[IDX:%.*]] = add i32 [[ELT0]], [[ELT1]]
+; CHECK-NEXT:    [[ELTIDX:%.*]] = extractelement <vscale x 4 x i32> [[VEC]], i32 [[IDX]]
+; CHECK-NEXT:    ret i32 [[ELTIDX]]
+;
+  %elt0 = extractelement <vscale x 4 x i32> %vec, i32 0
+  %elt1 = extractelement <vscale x 4 x i32> %vec, i32 1
+  %idx = add i32 %elt0, %elt1
+  %eltidx = extractelement <vscale x 4 x i32> %vec, i32 %idx
+  ret i32 %eltidx;
+}
