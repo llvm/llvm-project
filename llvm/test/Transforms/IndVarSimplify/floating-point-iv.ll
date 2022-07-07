@@ -369,6 +369,11 @@ return:		; preds = %bb
   ret void
 }
 
+declare void @use.i16(i16)
+declare void @use.i32(i32)
+declare void @use.i64(i64)
+declare void @use.float(float)
+
 define void @pr55505_remove_redundant_fptosi_for_float_iv(i32 %index, ptr %dst) {
 ; CHECK-LABEL: @pr55505_remove_redundant_fptosi_for_float_iv(
 ; CHECK-NEXT:  entry:
@@ -376,10 +381,17 @@ define void @pr55505_remove_redundant_fptosi_for_float_iv(i32 %index, ptr %dst) 
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[FLOAT_IV_INT:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[FLOAT_IV_NEXT_INT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[FLOAT_IV_INT]] to float
-; CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[INDVAR_CONV]] to i32
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CONV]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    store float [[INDVAR_CONV]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    call void @use.float(float [[INDVAR_CONV]])
+; CHECK-NEXT:    [[CONV_I32:%.*]] = fptosi float [[INDVAR_CONV]] to i32
+; CHECK-NEXT:    call void @use.i32(i32 [[CONV_I32]])
+; CHECK-NEXT:    [[CONV_I16:%.*]] = fptosi float [[INDVAR_CONV]] to i16
+; CHECK-NEXT:    [[CONV_I64:%.*]] = fptosi float [[INDVAR_CONV]] to i64
+; CHECK-NEXT:    call void @use.i16(i16 [[CONV_I16]])
+; CHECK-NEXT:    call void @use.i64(i64 [[CONV_I64]])
+; CHECK-NEXT:    [[UCONV_I16:%.*]] = fptoui float [[INDVAR_CONV]] to i16
+; CHECK-NEXT:    [[UCONV_I64:%.*]] = fptoui float [[INDVAR_CONV]] to i64
+; CHECK-NEXT:    call void @use.i16(i16 [[UCONV_I16]])
+; CHECK-NEXT:    call void @use.i64(i64 [[UCONV_I64]])
 ; CHECK-NEXT:    [[FLOAT_IV_NEXT_INT]] = add nsw i32 [[FLOAT_IV_INT]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[FLOAT_IV_NEXT_INT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
@@ -391,10 +403,17 @@ entry:
 
 loop:
   %float.iv = phi float [ 1.000000e+03, %entry ], [ %float.iv.next, %loop ]
-  %conv = fptosi float %float.iv to i32
-  %idxprom = sext i32 %conv to i64
-  %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %idxprom
-  store float %float.iv, ptr %arrayidx, align 4
+  call void @use.float(float %float.iv)
+  %conv.i32 = fptosi float %float.iv to i32
+  call void @use.i32(i32 %conv.i32)
+  %conv.i16 = fptosi float %float.iv to i16
+  %conv.i64 = fptosi float %float.iv to i64
+  call void @use.i16(i16 %conv.i16)
+  call void @use.i64(i64 %conv.i64)
+  %uconv.i16 = fptoui float %float.iv to i16
+  %uconv.i64 = fptoui float %float.iv to i64
+  call void @use.i16(i16 %uconv.i16)
+  call void @use.i64(i64 %uconv.i64)
   %float.iv.next = fadd float %float.iv, -1.000000e+00
   %cmp = fcmp ogt float %float.iv.next, 0.000000e+00
   br i1 %cmp, label %loop, label %exit
