@@ -1153,8 +1153,8 @@ private:
 
   // Used in cases where we want to record the name of a global, but
   // don't have the string owned elsewhere (e.g. the Strtab on a module).
-  StringSaver Saver;
   BumpPtrAllocator Alloc;
+  StringSaver Saver;
 
   // The total number of basic blocks in the module in the per-module summary or
   // the total number of basic blocks in the LTO unit in the combined index.
