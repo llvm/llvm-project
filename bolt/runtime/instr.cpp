@@ -289,6 +289,7 @@ public:
   /// Traverses all elements in the table
   template <typename... Args>
   void forEachElement(void (*Callback)(MapEntry &, Args...), Args... args) {
+    Lock L(M);
     if (!TableRoot)
       return;
     return forEachElement(Callback, InitialSize, TableRoot, args...);
@@ -378,7 +379,6 @@ template <typename T> void resetIndCallCounter(T &Entry) {
 
 template <typename T, uint32_t X, uint32_t Y>
 void SimpleHashTable<T, X, Y>::resetCounters() {
-  Lock L(M);
   forEachElement(resetIndCallCounter);
 }
 
