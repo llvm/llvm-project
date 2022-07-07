@@ -36,8 +36,7 @@ define void @a(i8* readnone %b) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP9]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[NEXT_GEP]], i64 -1
-; CHECK-NEXT:    store i8 95, i8* [[TMP11]], align 1
+; CHECK-NEXT:    store i8 95, i8* [[TMP4]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP9]], i32 1

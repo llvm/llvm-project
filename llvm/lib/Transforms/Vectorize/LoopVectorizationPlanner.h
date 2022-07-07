@@ -332,11 +332,6 @@ public:
   bool requiresTooManyRuntimeChecks() const;
 
 protected:
-  /// Collect the instructions from the original loop that would be trivially
-  /// dead in the vectorized loop if generated.
-  void collectTriviallyDeadInstructions(
-      SmallPtrSetImpl<Instruction *> &DeadInstructions);
-
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop.
