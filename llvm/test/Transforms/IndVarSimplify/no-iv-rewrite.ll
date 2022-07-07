@@ -474,7 +474,6 @@ define void @phiUsesTrunc() nounwind {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 1 to i32
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN33:%.*]], label [[FOR_INC:%.*]]
@@ -486,7 +485,7 @@ define void @phiUsesTrunc() nounwind {
 ; CHECK-NEXT:    call void @use64(i64 1)
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[KMIN_1:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN33]] ], [ 0, [[IF_THEN]] ], [ [[TMP0]], [[IF_THEN97]] ], [ 0, [[IF_ELSE]] ]
+; CHECK-NEXT:    [[KMIN_1:%.*]] = phi i32 [ 1, [[IF_THEN33]] ], [ 0, [[IF_THEN]] ], [ 1, [[IF_THEN97]] ], [ 0, [[IF_ELSE]] ]
 ; CHECK-NEXT:    call void @use32(i32 [[KMIN_1]])
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:

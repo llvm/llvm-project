@@ -9,8 +9,6 @@ define void @PR18642(i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 0, i32 undef)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SMAX]], 1
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    br i1 false, label [[INNER_LATCH:%.*]], label [[OUTER_LATCH:%.*]]
@@ -19,7 +17,7 @@ define void @PR18642(i32 %x) {
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    br i1 false, label [[OUTER_HEADER]], label [[EXIT_LOOPEXIT1:%.*]]
 ; CHECK:       exit.loopexit:
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP0]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ -2147483648, [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit.loopexit1:
 ; CHECK-NEXT:    br label [[EXIT]]
