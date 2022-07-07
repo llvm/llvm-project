@@ -18065,6 +18065,54 @@ static SDValue performCSELCombine(SDNode *N,
   return performCONDCombine(N, DCI, DAG, 2, 3);
 }
 
+// Try to re-use an already extended operand of a vector SetCC feeding a
+// extended select. Doing so avoids requiring another full extension of the
+// SET_CC result when lowering the select.
+static SDValue tryToWidenSetCCOperands(SDNode *Op, SelectionDAG &DAG) {
+  EVT Op0MVT = Op->getOperand(0).getValueType();
+  if (!Op0MVT.isVector() || Op->use_empty())
+    return SDValue();
+
+  // Make sure that all uses of Op are VSELECTs with result matching types where
+  // the result type has a larger element type than the SetCC operand.
+  SDNode *FirstUse = *Op->use_begin();
+  if (FirstUse->getOpcode() != ISD::VSELECT)
+    return SDValue();
+  EVT UseMVT = FirstUse->getValueType(0);
+  if (UseMVT.getScalarSizeInBits() <= Op0MVT.getScalarSizeInBits())
+    return SDValue();
+  if (any_of(Op->uses(), [&UseMVT](const SDNode *N) {
+        return N->getOpcode() != ISD::VSELECT || N->getValueType(0) != UseMVT;
+      }))
+    return SDValue();
+
+  APInt V;
+  if (!ISD::isConstantSplatVector(Op->getOperand(1).getNode(), V))
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Op0ExtV;
+  SDValue Op1ExtV;
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op->getOperand(2))->get();
+  // Check if the first operand of the SET_CC is already extended. If it is,
+  // split the SET_CC and re-use the extended version of the operand.
+  SDNode *Op0SExt = DAG.getNodeIfExists(ISD::SIGN_EXTEND, DAG.getVTList(UseMVT),
+                                        Op->getOperand(0));
+  SDNode *Op0ZExt = DAG.getNodeIfExists(ISD::ZERO_EXTEND, DAG.getVTList(UseMVT),
+                                        Op->getOperand(0));
+  if (Op0SExt && (isSignedIntSetCC(CC) || isIntEqualitySetCC(CC))) {
+    Op0ExtV = SDValue(Op0SExt, 0);
+    Op1ExtV = DAG.getNode(ISD::SIGN_EXTEND, DL, UseMVT, Op->getOperand(1));
+  } else if (Op0ZExt && (isUnsignedIntSetCC(CC) || isIntEqualitySetCC(CC))) {
+    Op0ExtV = SDValue(Op0ZExt, 0);
+    Op1ExtV = DAG.getNode(ISD::ZERO_EXTEND, DL, UseMVT, Op->getOperand(1));
+  } else
+    return SDValue();
+
+  return DAG.getNode(ISD::SETCC, DL, UseMVT.changeVectorElementType(MVT::i1),
+                     Op0ExtV, Op1ExtV, Op->getOperand(2));
+}
+
 static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::SETCC && "Unexpected opcode!");
   SDValue LHS = N->getOperand(0);
@@ -18072,6 +18120,9 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+
+  if (SDValue V = tryToWidenSetCCOperands(N, DAG))
+    return V;
 
   // setcc (csel 0, 1, cond, X), 1, ne ==> csel 0, 1, !cond, X
   if (Cond == ISD::SETNE && isOneConstant(RHS) &&
