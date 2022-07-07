@@ -89,6 +89,9 @@ private:
 /// the predecessor to its entry block, and the exiting terminator or a callable
 /// operation can be the predecessor of the call operation.
 ///
+/// The state can optionally contain information about which values are
+/// propagated from each predecessor to the successor point.
+///
 /// The state can indicate that it is underdefined, meaning that not all live
 /// control-flow predecessors can be known.
 class PredecessorState : public AnalysisState {
@@ -118,11 +121,16 @@ public:
     return knownPredecessors.getArrayRef();
   }
 
-  /// Add a known predecessor.
-  ChangeResult join(Operation *predecessor) {
-    return knownPredecessors.insert(predecessor) ? ChangeResult::Change
-                                                 : ChangeResult::NoChange;
+  /// Get the successor inputs from a predecessor.
+  ValueRange getSuccessorInputs(Operation *predecessor) const {
+    return successorInputs.lookup(predecessor);
   }
+
+  /// Add a known predecessor.
+  ChangeResult join(Operation *predecessor);
+
+  /// Add a known predecessor with successor inputs.
+  ChangeResult join(Operation *predecessor, ValueRange inputs);
 
 private:
   /// Whether all predecessors are known. Optimistically assume that we know
@@ -133,6 +141,9 @@ private:
   SetVector<Operation *, SmallVector<Operation *, 4>,
             SmallPtrSet<Operation *, 4>>
       knownPredecessors;
+
+  /// The successor inputs when branching from a given predecessor.
+  DenseMap<Operation *, ValueRange> successorInputs;
 };
 
 //===----------------------------------------------------------------------===//
