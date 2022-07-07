@@ -1409,10 +1409,10 @@ TEST_F(TUSchedulerTests, PreambleThrottle) {
     }
 
     void release(RequestID ID) override {
-      Releases.push_back(ID);
       Callback SatisfyNext;
       {
         std::lock_guard<std::mutex> Lock(Mu);
+        Releases.push_back(ID);
         if (ID > 0 && Acquires.size() == NumRequests)
           SatisfyNext = std::move(Callbacks[ID - 1]);
       }
@@ -1497,6 +1497,9 @@ TEST_F(TUSchedulerTests, PreambleThrottle) {
     // We haven't released anything yet, we're still waiting.
     EXPECT_THAT(Throttler.Releases, testing::IsEmpty());
 
+    // FIXME: This is flaky, becaues the request can be destroyed after shutdown
+    // if it hasn't been dequeued yet (stop() resets NextRequest).
+#if 0
     // Now close file A, which will shut down its AST worker.
     S.remove(A);
     // Request is destroyed after the queue shutdown, so release() has happened.
@@ -1505,6 +1508,7 @@ TEST_F(TUSchedulerTests, PreambleThrottle) {
     EXPECT_THAT(BuiltFilenames, testing::IsEmpty());
     // But we've cancelled the request to build A (not sure which its ID is).
     EXPECT_THAT(Throttler.Releases, ElementsAre(AnyOf(1, 0)));
+#endif
 
     // Now shut down the TU Scheduler.
   }

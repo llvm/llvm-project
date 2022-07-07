@@ -715,7 +715,7 @@ fir::factory::getNonDefaultLowerBounds(fir::FirOpBuilder &builder,
 }
 
 llvm::SmallVector<mlir::Value>
-fir::factory::getNonDeferredLengthParams(const fir::ExtendedValue &exv) {
+fir::factory::getNonDeferredLenParams(const fir::ExtendedValue &exv) {
   return exv.match(
       [&](const fir::CharArrayBoxValue &character)
           -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },

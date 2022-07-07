@@ -325,22 +325,22 @@ def VEMEMziiAsmOperand : AsmOperandClass {
 // ASX format uses single assembly instruction format.
 def MEMrri : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops ptr_rc, ptr_rc, i32imm);
+  let MIOperandInfo = (ops ptr_rc, ptr_rc, i64imm);
   let ParserMatchClass = VEMEMrriAsmOperand;
 }
 def MEMrii : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops ptr_rc, i32imm, i32imm);
+  let MIOperandInfo = (ops ptr_rc, i32imm, i64imm);
   let ParserMatchClass = VEMEMriiAsmOperand;
 }
 def MEMzri : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops i32imm /* = 0 */, ptr_rc, i32imm);
+  let MIOperandInfo = (ops i32imm /* = 0 */, ptr_rc, i64imm);
   let ParserMatchClass = VEMEMzriAsmOperand;
 }
 def MEMzii : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops i32imm /* = 0 */, i32imm, i32imm);
+  let MIOperandInfo = (ops i32imm /* = 0 */, i32imm, i64imm);
   let ParserMatchClass = VEMEMziiAsmOperand;
 }
 
