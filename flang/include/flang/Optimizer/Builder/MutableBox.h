@@ -98,7 +98,7 @@ MutableBoxReallocation genReallocIfNeeded(fir::FirOpBuilder &builder,
                                           mlir::Location loc,
                                           const fir::MutableBoxValue &box,
                                           mlir::ValueRange shape,
-                                          mlir::ValueRange lengthParams);
+                                          mlir::ValueRange lenParams);
 
 void finalizeRealloc(fir::FirOpBuilder &builder, mlir::Location loc,
                      const fir::MutableBoxValue &box, mlir::ValueRange lbounds,

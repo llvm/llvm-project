@@ -2192,7 +2192,6 @@ struct XArrayCoorOpConversion
                                     operands[coor.lenParamsOffset()]);
           offset =
               rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, offset, length);
-
         } else {
           TODO(loc, "compute size of derived type with type parameters");
         }
