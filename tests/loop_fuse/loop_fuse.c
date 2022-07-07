@@ -4,6 +4,14 @@ void init(int *a, int *b, int *c, int n) {
     b[i] = i * i;
   }
 
+  for (int i = 0; i < 10; i++) {
+    a[i] = b[i] + c[i];
+  }
+
+  for (int i = 0; i < 10; i++) {
+    a[i] = b[i] + c[i];
+  }
+
   for (int i = 0; i < n; i++) {
     a[i] = b[i] + c[i];
   }

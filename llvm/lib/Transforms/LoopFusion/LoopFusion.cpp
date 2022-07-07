@@ -52,26 +52,39 @@ struct LoopFusion : public FunctionPass {
       LoopVector.push_back(L);
     }
 
-    // Function to perform basic checks on the two loops
-    if (fuseCheck(LoopVector[1], LoopVector[0]))
-      // Function to perform fusing on the two loops
-      fuseBody(LoopVector[1], LoopVector[0], F);
+    int LoopCount = LoopVector.size();
+    if (LoopCount < 2) {
+      llvm::errs() << "The program contains less no of loops to fuse\n";
+      return false;
+    }
+
+    // Check for each combinations of loops are fusable
+    for (int i = 0; i < LoopCount; i++) {
+      for (int j = i + 1; j < LoopCount; j++) {
+        // Function to perform basic checks on the two loops
+        if (fuseCheck(LoopVector[j], LoopVector[i]))
+          // Function to perform fusing on the two loops
+          fuseBody(LoopVector[j], LoopVector[i], F);
+        break;
+      }
+    }
 
     return false;
   }
 
   void fuseBody(Loop *Loop1, Loop *Loop2, Function &F) {
-    BasicBlock *Body1 = nullptr;
-    BasicBlock *Body2 = nullptr;
     BasicBlock *Header1 = nullptr;
     BasicBlock *Latch1 = nullptr;
     BasicBlock *Exit2 = nullptr;
 
-    Body1 = getBody(Loop1);
-    Body2 = getBody(Loop2);
-    Header1 = getHeader(Loop1);
-    Latch1 = getLoopLatch(Loop1);
-    Exit2 = getLoopExit(Loop2);
+    BasicBlock *Body1 = getBody(Loop1);
+    BasicBlock *Body2 = getBody(Loop2);
+    Header1 = Loop1->getHeader();
+    Latch1 = Loop1->getLoopLatch();
+    Exit2 = Loop2->getExitBlock();
+
+    assert(Body1 && Body2 && Header1 && Latch1 && Exit2 &&
+           "NULL Pointer encountered\n");
 
     PHINode *Phi1 = Loop1->getCanonicalInductionVariable();
     PHINode *Phi2 = Loop2->getCanonicalInductionVariable();
@@ -80,15 +93,21 @@ struct LoopFusion : public FunctionPass {
     Phi2->replaceAllUsesWith(Phi1);
 
     for (BasicBlock &BB : F) {
+
+      if (isa<ReturnInst>(BB.getTerminator()))
+        continue;
+      // Get the branch Instruction every block.
       BranchInst *BI = dyn_cast<BranchInst>(BB.getTerminator());
+      // Set the successor of first Body block to Body of the second block.
       if (&BB == Body1) {
         BI->setSuccessor(0, Body2);
       }
-
+      // Set the successor of second body block to Latch of the first block.
       if (&BB == Body2) {
         BI->setSuccessor(0, Latch1);
       }
-
+      // Set the successor of first header block to exit of the second as its
+      // contains return insn.
       if (&BB == Header1) {
         BI->setSuccessor(1, Exit2);
       }
@@ -99,30 +118,15 @@ struct LoopFusion : public FunctionPass {
 
   // Function to get Loop Body Blocks.
   BasicBlock *getBody(Loop *L) {
+    BasicBlock *NullBB = nullptr;
     for (BasicBlock *BB : L->getBlocks()) {
       BasicBlock *HeaderBlock = L->getHeader();
       if ((HeaderBlock != BB) && !(L->isLoopLatch(BB))) {
         return BB;
       }
     }
-    return {};
+    return NullBB;
   }
-
-  // Function to get Loop Header Blocks.
-  BasicBlock *getHeader(Loop *L) { return L->getHeader(); }
-
-  // Function to get Loop Latch Blocks.
-  BasicBlock *getLoopLatch(Loop *L) {
-    for (BasicBlock *BB : L->getBlocks()) {
-      if (L->isLoopLatch(BB)) {
-        return BB;
-      }
-    }
-    return {};
-  }
-
-  // Function to get Loop exit blocks.
-  BasicBlock *getLoopExit(Loop *L) { return L->getExitBlock(); }
 
   bool adjacent(Loop *Loop1, Loop *Loop2) {
 
@@ -131,14 +135,6 @@ struct LoopFusion : public FunctionPass {
 
     //  If exit block and preHeader are not same.
     if (Bb1 != Bb2) {
-      if (Bb1->size() != 1)
-        return false;
-      if (Bb1->getTerminator()->getSuccessor(0) != Bb2)
-        return false;
-      if (Bb1 == nullptr || Bb2 == nullptr) {
-        llvm::errs() << "NULL Pointer encountered\n";
-        return false;
-      }
       return false;
     }
     return true;
@@ -147,48 +143,68 @@ struct LoopFusion : public FunctionPass {
   // Helper function to check and fuse two loops.
   bool fuseCheck(Loop *L1, Loop *L2) {
 
-    ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     // Check if the two loops are adjacent.
     if (!adjacent(L1, L2)) {
-      llvm::errs() << "The two loops are not adjacent.CANNOT fuse\n";
+      llvm::errs() << "The two loops  " << L1->getName() << " and "
+                   << L2->getName() << "  are not adjacent. CANNOT fuse.\n";
       return false;
     }
 
     // Check if the start integer is same.
-    if (startValue(*L1, *SE) != startValue(*L2, *SE)) {
-      llvm::errs() << "The loop check starting value is not same.CANNOT fuse\n";
+    if (startValue(*L1) != startValue(*L2)) {
+      llvm::errs() << "The loop check starting values of 2 loops "
+                   << L1->getName() << " and " << L2->getName()
+                   << "  are not same. CANNOT fuse.\n";
       return false;
     }
 
     // Check if the limit integer is same.
     if (limitValue(L1) != limitValue(L2)) {
-      llvm::errs() << "The loop check limiting value is not same.CANNOT fuse\n";
+      llvm::errs() << "The loop check limiting value of 2 loops "
+                   << L1->getName() << " and " << L2->getName()
+                   << "  are not same. CANNOT fuse.\n";
       return false;
     }
+    llvm::errs() << "The two loops " << *L1 << " and  " << *L2
+                 << " are being fused.\n";
     return true;
   }
 
   // Check if the start value is same.
-  int startValue(Loop &LoopV, ScalarEvolution &SE) {
+  Value *startValue(Loop &LoopV) {
     for (auto &IndVar : LoopV.getHeader()->phis()) {
       Value *V = IndVar.getOperand(1);
-      auto startValue = dyn_cast<ConstantInt>(V);
-      return startValue->getSExtValue();
+      return V;
     }
-    return {};
+    return nullptr;
   }
 
   // Check if the limit value is same.
   Value *limitValue(Loop *LoopV) {
-    Value *end;
-    for (Use &U : LoopV->getHeader()->getFirstNonPHI()->operands()) {
-      if (!dyn_cast<PHINode>(U.get())) {
-        Instruction *I = dyn_cast<Instruction>(U.get());
-        for (Use &U : I->operands())
-          end = U.get();
+    Value *End, *ContEnd;
+
+    BasicBlock *BB = LoopV->getHeader();
+    for (auto I = BB->begin(), E = BB->end(); I != E; ++I) {
+      // Check instruction is compare
+      if (isa<ICmpInst>(I)) {
+        ContEnd = I->getOperand(1);
+        // Check end value is constant
+        if (dyn_cast<Constant>(ContEnd)) {
+          return ContEnd;
+        } else {
+          for (Use &U : LoopV->getHeader()->getFirstNonPHI()->operands()) {
+            if (!dyn_cast<PHINode>(U.get())) {
+              Instruction *I = dyn_cast<Instruction>(U.get());
+              for (Use &U : I->operands())
+                End = U.get();
+              return End;
+            }
+          }
+        }
       }
     }
-    return end;
+
+    return nullptr;
   }
 
   // We don't modify the program, so we preserve all analyses.
