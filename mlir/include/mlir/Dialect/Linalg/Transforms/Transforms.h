@@ -479,6 +479,48 @@ std::tuple<SmallVector<Range, 4>, LoopIndexToRangeIndexMap>
 makeTiledLoopRanges(RewriterBase &b, Location loc, AffineMap map,
                     ValueRange allShapeSizes, ValueRange allTileSizes);
 
+/// A description of a multi-size tiling comprising tile sizes and numbers of
+/// tiles, expressed as Values which may or may not be constant. Multi-size
+/// currently means two-size.
+struct MultiSizeSpecification {
+  /// Tile sizes.
+  Value lowTileSize, highTileSize;
+  /// Number of tiles associated with each size.
+  Value lowTripCount, highTripCount;
+};
+
+/// Emits the IR computing the multi-sized tiling specification with two tile
+/// sizes not exceeding `targetSize`, each divisible by `sizeDivisor`, such that
+/// there exist numbers of tiles with these sizes that fully cover the given
+/// iteration space `dimension` of the structured `op`.
+///
+/// The computation is as follows:
+///
+///   b = originalTripCount floordiv sizeDivisor
+///   t = (targetSize + sizeDivisor - 1) floordiv sizeDivisor
+///   d = (b + t - 1) floordiv t
+///   s = (b floordiv d) * sizeDivisor
+///   v = b % d
+///   u = d - v
+///
+/// where the tile sizes are `s` and `s` + `sizeDivisor`, and the numbers of
+/// the corresponding tiles are `u` and `v`, respectively.  Alternatively,
+///
+///   s * u + (s + sizeDivisor) * v == original size,
+///   where s mod sizeDivisor = 0.
+///
+/// Expects all values to be positive. In some cases with the target tile size
+/// sufficiently close to the dimension shape and non-unit divisor, it is
+/// impossible to compute such sizes. If `emitAssertion` is set, also emit the
+/// assertion that size computation succeeded.
+///
+/// Returns the specification consisting of both tile values and the number of
+/// tiles of each size.
+FailureOr<MultiSizeSpecification>
+computeMultiTileSizes(OpBuilder &builder, LinalgOp op, unsigned dimension,
+                      OpFoldResult targetSize, OpFoldResult divisor,
+                      bool emitAssertions = true);
+
 /// All indices returned by IndexOp should be invariant with respect to tiling.
 /// Therefore, if an operation is tiled, we have to transform the indices
 /// accordingly, i.e. offset them by the values of the corresponding induction

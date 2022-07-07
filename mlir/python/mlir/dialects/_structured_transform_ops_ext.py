@@ -110,6 +110,29 @@ class InterchangeOp:
         ip=ip)
 
 
+class MultiTileSizesOp:
+  """Specialization for MultitileSizesOp class."""
+
+  def __init__(self,
+               target: Union[Operation, Value],
+               *,
+               dimension: Union[int, IntegerAttr],
+               target_size: Union[int, IntegerAttr],
+               divisor: Optional[Union[int, IntegerAttr]] = None,
+               loc=None,
+               ip=None):
+    super().__init__(
+        pdl.OperationType.get(),
+        pdl.OperationType.get(),
+        pdl.OperationType.get(),
+        _get_op_result_or_value(target),
+        dimension=_get_int64_attr(dimension),
+        target_size=_get_int64_attr(target_size),
+        divisor=_get_int64_attr(divisor if divisor else 1),
+        loc=loc,
+        ip=ip)
+
+
 class PadOp:
   """Specialization for PadOp class."""
 

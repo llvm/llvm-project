@@ -55,6 +55,20 @@ def testInterchange():
 
 
 @run
+def testMultitileSizes():
+  sequence = transform.SequenceOp()
+  with InsertionPoint(sequence.body):
+    structured.MultiTileSizesOp(
+        sequence.bodyTarget, dimension=1, target_size=42)
+    transform.YieldOp()
+  # CHECK-LABEL: TEST: testMultitileSizes
+  # CHECK: transform.sequence
+  # CHECK: transform.structured.multitile_sizes
+  # CHECK-DAG: dimension = 1
+  # CHECK-DAG: target_size = 42
+
+
+@run
 def testPad():
   sequence = transform.SequenceOp()
   with InsertionPoint(sequence.body):
