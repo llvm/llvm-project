@@ -136,11 +136,9 @@ entry:
 define <vscale x 4 x float> @splat_fdiv_nxv4f32(float %D, <vscale x 4 x float> %a) #1 {
 ; CHECK-LABEL: splat_fdiv_nxv4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-NEXT:    fmov z2.s, #1.00000000
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmov s2, #1.00000000
+; CHECK-NEXT:    fdiv s0, s2, s0
 ; CHECK-NEXT:    mov z0.s, s0
-; CHECK-NEXT:    fdivr z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    fmul z0.s, z1.s, z0.s
 ; CHECK-NEXT:    ret
 entry:
@@ -153,11 +151,9 @@ entry:
 define void @splat_three_fdiv_nxv4f32(float %D, <vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) #1 {
 ; CHECK-LABEL: splat_three_fdiv_nxv4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-NEXT:    fmov z4.s, #1.00000000
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z0.s, s0
-; CHECK-NEXT:    fdiv z4.s, p0/m, z4.s, z0.s
+; CHECK-NEXT:    fmov s4, #1.00000000
+; CHECK-NEXT:    fdiv s0, s4, s0
+; CHECK-NEXT:    mov z4.s, s0
 ; CHECK-NEXT:    fmul z0.s, z1.s, z4.s
 ; CHECK-NEXT:    fmul z1.s, z2.s, z4.s
 ; CHECK-NEXT:    fmul z2.s, z3.s, z4.s
@@ -190,11 +186,9 @@ entry:
 define void @splat_two_fdiv_nxv2f64(double %D, <vscale x 2 x double> %a, <vscale x 2 x double> %b) #1 {
 ; CHECK-LABEL: splat_two_fdiv_nxv2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fmov z3.d, #1.00000000
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z0.d, d0
-; CHECK-NEXT:    fdiv z3.d, p0/m, z3.d, z0.d
+; CHECK-NEXT:    fmov d3, #1.00000000
+; CHECK-NEXT:    fdiv d0, d3, d0
+; CHECK-NEXT:    mov z3.d, d0
 ; CHECK-NEXT:    fmul z0.d, z1.d, z3.d
 ; CHECK-NEXT:    fmul z1.d, z2.d, z3.d
 ; CHECK-NEXT:    b foo_2_nxv2f64
