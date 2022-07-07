@@ -35,13 +35,14 @@ using namespace clang;
 using namespace clang::syntax;
 
 namespace {
-ArrayRef<syntax::Token> tokens(syntax::Node *N) {
+ArrayRef<syntax::Token> tokens(syntax::Node *N,
+                               const TokenBufferTokenManager &STM) {
   assert(N->isOriginal() && "tokens of modified nodes are not well-defined");
   if (auto *L = dyn_cast<syntax::Leaf>(N))
-    return llvm::makeArrayRef(L->getToken(), 1);
+    return llvm::makeArrayRef(STM.getToken(L->getTokenKey()), 1);
   auto *T = cast<syntax::Tree>(N);
-  return llvm::makeArrayRef(T->findFirstLeaf()->getToken(),
-                            T->findLastLeaf()->getToken() + 1);
+  return llvm::makeArrayRef(STM.getToken(T->findFirstLeaf()->getTokenKey()),
+                            STM.getToken(T->findLastLeaf()->getTokenKey()) + 1);
 }
 } // namespace
 
@@ -70,23 +71,26 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   public:
     BuildSyntaxTree(syntax::TranslationUnit *&Root,
                     std::unique_ptr<syntax::TokenBuffer> &TB,
+                    std::unique_ptr<syntax::TokenBufferTokenManager> &TM,
                     std::unique_ptr<syntax::Arena> &Arena,
                     std::unique_ptr<syntax::TokenCollector> Tokens)
-        : Root(Root), TB(TB), Arena(Arena), Tokens(std::move(Tokens)) {
+        : Root(Root), TB(TB), TM(TM), Arena(Arena), Tokens(std::move(Tokens)) {
       assert(this->Tokens);
     }
 
     void HandleTranslationUnit(ASTContext &Ctx) override {
       TB = std::make_unique<syntax::TokenBuffer>(std::move(*Tokens).consume());
       Tokens = nullptr; // make sure we fail if this gets called twice.
-      Arena = std::make_unique<syntax::Arena>(Ctx.getSourceManager(),
-                                              Ctx.getLangOpts(), *TB);
-      Root = syntax::buildSyntaxTree(*Arena, Ctx);
+      TM = std::make_unique<syntax::TokenBufferTokenManager>(
+          *TB, Ctx.getLangOpts(), Ctx.getSourceManager());
+      Arena = std::make_unique<syntax::Arena>();
+      Root = syntax::buildSyntaxTree(*Arena, *TM, Ctx);
     }
 
   private:
     syntax::TranslationUnit *&Root;
     std::unique_ptr<syntax::TokenBuffer> &TB;
+    std::unique_ptr<syntax::TokenBufferTokenManager> &TM;
     std::unique_ptr<syntax::Arena> &Arena;
     std::unique_ptr<syntax::TokenCollector> Tokens;
   };
@@ -94,21 +98,23 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   class BuildSyntaxTreeAction : public ASTFrontendAction {
   public:
     BuildSyntaxTreeAction(syntax::TranslationUnit *&Root,
+                          std::unique_ptr<syntax::TokenBufferTokenManager> &TM,
                           std::unique_ptr<syntax::TokenBuffer> &TB,
                           std::unique_ptr<syntax::Arena> &Arena)
-        : Root(Root), TB(TB), Arena(Arena) {}
+        : Root(Root), TM(TM), TB(TB), Arena(Arena) {}
 
     std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                    StringRef InFile) override {
       // We start recording the tokens, ast consumer will take on the result.
       auto Tokens =
           std::make_unique<syntax::TokenCollector>(CI.getPreprocessor());
-      return std::make_unique<BuildSyntaxTree>(Root, TB, Arena,
+      return std::make_unique<BuildSyntaxTree>(Root, TB, TM, Arena,
                                                std::move(Tokens));
     }
 
   private:
     syntax::TranslationUnit *&Root;
+    std::unique_ptr<syntax::TokenBufferTokenManager> &TM;
     std::unique_ptr<syntax::TokenBuffer> &TB;
     std::unique_ptr<syntax::Arena> &Arena;
   };
@@ -149,7 +155,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   Compiler.setSourceManager(SourceMgr.get());
 
   syntax::TranslationUnit *Root = nullptr;
-  BuildSyntaxTreeAction Recorder(Root, this->TB, this->Arena);
+  BuildSyntaxTreeAction Recorder(Root, this->TM, this->TB, this->Arena);
 
   // Action could not be executed but the frontend didn't identify any errors
   // in the code ==> problem in setting up the action.
@@ -163,7 +169,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
 
 syntax::Node *SyntaxTreeTest::nodeByRange(llvm::Annotations::Range R,
                                           syntax::Node *Root) {
-  ArrayRef<syntax::Token> Toks = tokens(Root);
+  ArrayRef<syntax::Token> Toks = tokens(Root, *TM);
 
   if (Toks.front().location().isFileID() && Toks.back().location().isFileID() &&
       syntax::Token::range(*SourceMgr, Toks.front(), Toks.back()) ==

@@ -33,25 +33,7 @@ static void traverse(syntax::Node *N,
 }
 } // namespace
 
-syntax::Arena::Arena(SourceManager &SourceMgr, const LangOptions &LangOpts,
-                     const TokenBuffer &Tokens)
-    : SourceMgr(SourceMgr), LangOpts(LangOpts), Tokens(Tokens) {}
-
-const syntax::TokenBuffer &syntax::Arena::getTokenBuffer() const {
-  return Tokens;
-}
-
-std::pair<FileID, ArrayRef<syntax::Token>>
-syntax::Arena::lexBuffer(std::unique_ptr<llvm::MemoryBuffer> Input) {
-  auto FID = SourceMgr.createFileID(std::move(Input));
-  auto It = ExtraTokens.try_emplace(FID, tokenize(FID, SourceMgr, LangOpts));
-  assert(It.second && "duplicate FileID");
-  return {FID, It.first->second};
-}
-
-syntax::Leaf::Leaf(const syntax::Token *Tok) : Node(NodeKind::Leaf), Tok(Tok) {
-  assert(Tok != nullptr);
-}
+syntax::Leaf::Leaf(syntax::TokenManager::Key K) : Node(NodeKind::Leaf), K(K) {}
 
 syntax::Node::Node(NodeKind Kind)
     : Parent(nullptr), NextSibling(nullptr), PreviousSibling(nullptr),
@@ -190,20 +172,8 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *Begin, Node *End,
 }
 
 namespace {
-static void dumpLeaf(raw_ostream &OS, const syntax::Leaf *L,
-                     const SourceManager &SM) {
-  assert(L);
-  const auto *Token = L->getToken();
-  assert(Token);
-  // Handle 'eof' separately, calling text() on it produces an empty string.
-  if (Token->kind() == tok::eof)
-    OS << "<eof>";
-  else
-    OS << Token->text(SM);
-}
-
 static void dumpNode(raw_ostream &OS, const syntax::Node *N,
-                     const SourceManager &SM, llvm::BitVector IndentMask) {
+                     const syntax::TokenManager &TM, llvm::BitVector IndentMask) {
   auto DumpExtraInfo = [&OS](const syntax::Node *N) {
     if (N->getRole() != syntax::NodeRole::Unknown)
       OS << " " << N->getRole();
@@ -216,7 +186,7 @@ static void dumpNode(raw_ostream &OS, const syntax::Node *N,
   assert(N);
   if (const auto *L = dyn_cast<syntax::Leaf>(N)) {
     OS << "'";
-    dumpLeaf(OS, L, SM);
+    OS << TM.getText(L->getTokenKey());
     OS << "'";
     DumpExtraInfo(N);
     OS << "\n";
@@ -242,25 +212,25 @@ static void dumpNode(raw_ostream &OS, const syntax::Node *N,
       OS << "|-";
       IndentMask.push_back(true);
     }
-    dumpNode(OS, &It, SM, IndentMask);
+    dumpNode(OS, &It, TM, IndentMask);
     IndentMask.pop_back();
   }
 }
 } // namespace
 
-std::string syntax::Node::dump(const SourceManager &SM) const {
+std::string syntax::Node::dump(const TokenManager &TM) const {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
-  dumpNode(OS, this, SM, /*IndentMask=*/{});
+  dumpNode(OS, this, TM, /*IndentMask=*/{});
   return std::move(OS.str());
 }
 
-std::string syntax::Node::dumpTokens(const SourceManager &SM) const {
+std::string syntax::Node::dumpTokens(const TokenManager &TM) const {
   std::string Storage;
   llvm::raw_string_ostream OS(Storage);
   traverse(this, [&](const syntax::Node *N) {
     if (const auto *L = dyn_cast<syntax::Leaf>(N)) {
-      dumpLeaf(OS, L, SM);
+      OS << TM.getText(L->getTokenKey());
       OS << " ";
     }
   });
@@ -297,7 +267,8 @@ void syntax::Node::assertInvariants() const {
            C.getRole() == NodeRole::ListDelimiter);
     if (C.getRole() == NodeRole::ListDelimiter) {
       assert(isa<Leaf>(C));
-      assert(cast<Leaf>(C).getToken()->kind() == L->getDelimiterTokenKind());
+      // FIXME: re-enable it when there is way to retrieve token kind in Leaf.
+      // assert(cast<Leaf>(C).getToken()->kind() == L->getDelimiterTokenKind());
     }
   }
 
