@@ -17,7 +17,8 @@ void testWrite() {
                       sizeof(output));
 
   assert(res >= 0);
-  __msan_check_mem_is_initialized(output, res);
+  assert(strlen(output) == 11);
+  __msan_check_mem_is_initialized(output, strlen(output) + 1);
 }
 
 void testWriteZeroLength() {
@@ -31,6 +32,8 @@ void testWriteZeroLength() {
                       sizeof(output));
 
   assert(res >= 0);
+  assert(strlen(output) == 0);
+  __msan_check_mem_is_initialized(output, strlen(output) + 1);
   __msan_check_mem_is_initialized(output, res);
 }
 

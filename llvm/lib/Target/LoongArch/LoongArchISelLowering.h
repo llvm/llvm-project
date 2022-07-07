@@ -96,6 +96,10 @@ private:
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
+  SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
+
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
 };
 
 } // end namespace llvm

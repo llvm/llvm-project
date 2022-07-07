@@ -1059,8 +1059,8 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
         if (DT->dominates(cast<Instruction>(OtherAccess), cast<Instruction>(U)))
           OtherAccess = U;
         else
-          assert(DT->dominates(cast<Instruction>(U),
-                               cast<Instruction>(OtherAccess)));
+          assert(U == OtherAccess || DT->dominates(cast<Instruction>(U),
+                                                   cast<Instruction>(OtherAccess)));
       } else
         OtherAccess = U;
     }
