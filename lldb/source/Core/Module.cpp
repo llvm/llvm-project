@@ -1016,7 +1016,7 @@ void Module::FindTypes(
       FindTypes_Impl(name, CompilerDeclContext(), UINT_MAX,
                      searched_symbol_files, typesmap);
       if (exact_match) {
-        typesmap.RemoveMismatchedTypes(type_scope, name.AsCString(""),
+        typesmap.RemoveMismatchedTypes(type_scope, name.GetStringRef(),
                                        type_class, exact_match);
       }
     }
