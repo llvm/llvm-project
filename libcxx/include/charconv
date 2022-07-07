@@ -117,32 +117,22 @@ from_chars_result from_chars(const char*, const char*, bool, int = 10) = delete;
 namespace __itoa
 {
 
-
 template <typename _Tp, typename = void>
-struct _LIBCPP_HIDDEN __traits_base
-{
-    using type = uint64_t;
-
-    static _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v)
-    {
-        auto __t = (64 - std::__libcpp_clz(static_cast<type>(__v | 1))) * 1233 >> 12;
-        return __t - (__v < __table<>::__pow10_64[__t]) + 1;
-    }
-
-    static _LIBCPP_HIDE_FROM_ABI char* __convert(char* __p, _Tp __v)
-    {
-        return __itoa::__base_10_u64(__p, __v);
-    }
-
-    static _LIBCPP_HIDE_FROM_ABI decltype(__table<>::__pow10_64)& __pow() { return __table<>::__pow10_64; }
-};
+struct _LIBCPP_HIDDEN __traits_base;
 
 template <typename _Tp>
-struct _LIBCPP_HIDDEN
-    __traits_base<_Tp, decltype(void(uint32_t{declval<_Tp>()}))>
+struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) <= sizeof(uint32_t)>>
 {
     using type = uint32_t;
 
+    /// The width estimation using a log10 algorithm.
+    ///
+    /// The algorithm is based on
+    /// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
+    /// Instead of using IntegerLogBase2 it uses __libcpp_clz. Since that
+    /// function requires its input to have at least one bit set the value of
+    /// zero is set to one. This means the first element of the lookup table is
+    /// zero.
     static _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v)
     {
         auto __t = (32 - std::__libcpp_clz(static_cast<type>(__v | 1))) * 1233 >> 12;
@@ -156,6 +146,61 @@ struct _LIBCPP_HIDDEN
 
     static _LIBCPP_HIDE_FROM_ABI decltype(__table<>::__pow10_32)& __pow() { return __table<>::__pow10_32; }
 };
+
+template <typename _Tp>
+struct _LIBCPP_HIDDEN
+    __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(uint64_t)>> {
+  using type = uint64_t;
+
+  /// The width estimation using a log10 algorithm.
+  ///
+  /// The algorithm is based on
+  /// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
+  /// Instead of using IntegerLogBase2 it uses __libcpp_clz. Since that
+  /// function requires its input to have at least one bit set the value of
+  /// zero is set to one. This means the first element of the lookup table is
+  /// zero.
+  static _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
+    auto __t = (64 - std::__libcpp_clz(static_cast<type>(__v | 1))) * 1233 >> 12;
+    return __t - (__v < __table<>::__pow10_64[__t]) + 1;
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI char* __convert(char* __p, _Tp __v) { return __itoa::__base_10_u64(__p, __v); }
+
+  static _LIBCPP_HIDE_FROM_ABI decltype(__table<>::__pow10_64)& __pow() { return __table<>::__pow10_64; }
+};
+
+
+#  ifndef _LIBCPP_HAS_NO_INT128
+template <typename _Tp>
+struct _LIBCPP_HIDDEN
+    __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__uint128_t)> > {
+  using type = __uint128_t;
+
+  /// The width estimation using a log10 algorithm.
+  ///
+  /// The algorithm is based on
+  /// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
+  /// Instead of using IntegerLogBase2 it uses __libcpp_clz. Since that
+  /// function requires its input to have at least one bit set the value of
+  /// zero is set to one. This means the first element of the lookup table is
+  /// zero.
+  static _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
+    _LIBCPP_ASSERT(__v > numeric_limits<uint64_t>::max(), "The optimizations for this algorithm fail when this isn't true.");
+    // There's always a bit set in the upper 64-bits.
+    auto __t = (128 - std::__libcpp_clz(static_cast<uint64_t>(__v >> 64))) * 1233 >> 12;
+    _LIBCPP_ASSERT(__t >= __table<>::__pow10_128_offset, "Index out of bounds");
+    // __t is adjusted since the lookup table misses the lower entries.
+    return __t - (__v < __table<>::__pow10_128[__t - __table<>::__pow10_128_offset]) + 1;
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI char* __convert(char* __p, _Tp __v) { return __itoa::__base_10_u128(__p, __v); }
+
+  // TODO FMT This pow function should get an index.
+  // By moving this to its own header it can be reused by the pow function in to_chars_base_10.
+  static _LIBCPP_HIDE_FROM_ABI decltype(__table<>::__pow10_128)& __pow() { return __table<>::__pow10_128; }
+};
+#endif
 
 template <typename _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool
@@ -270,6 +315,28 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type)
     else
         return {__last, errc::value_too_large};
 }
+
+#  ifndef _LIBCPP_HAS_NO_INT128
+template <>
+inline _LIBCPP_HIDE_FROM_ABI to_chars_result
+__to_chars_itoa(char* __first, char* __last, __uint128_t __value, false_type)
+{
+    // When the value fits in 64-bits use the 64-bit code path. This reduces
+    // the number of expensive calculations on 128-bit values.
+    //
+    // NOTE the 128-bit code path requires this optimization.
+    if(__value <= numeric_limits<uint64_t>::max())
+        return __to_chars_itoa(__first, __last, static_cast<uint64_t>(__value), false_type());
+
+    using __tx = __itoa::__traits<__uint128_t>;
+    auto __diff = __last - __first;
+
+    if (__tx::digits <= __diff || __tx::__width(__value) <= __diff)
+        return {__tx::__convert(__first, __value), errc(0)};
+    else
+        return {__last, errc::value_too_large};
+}
+#endif
 
 template <typename _Tp>
 inline _LIBCPP_HIDE_FROM_ABI to_chars_result
@@ -493,7 +560,6 @@ to_chars(char* __first, char* __last, _Tp __value)
 {
   using _Type = __make_32_64_or_128_bit_t<_Tp>;
   static_assert(!is_same<_Type, void>::value, "unsupported integral type used in to_chars");
-  static_assert(sizeof(_Tp) <= sizeof(int64_t), "128-bit integral support isn't available yet in to_chars");
   return std::__to_chars_itoa(__first, __last, static_cast<_Type>(__value), is_signed<_Tp>());
 }
 
@@ -504,7 +570,6 @@ to_chars(char* __first, char* __last, _Tp __value, int __base)
   _LIBCPP_ASSERT(2 <= __base && __base <= 36, "base not in [2, 36]");
 
   using _Type = __make_32_64_or_128_bit_t<_Tp>;
-  static_assert(sizeof(_Tp) <= sizeof(int64_t), "128-bit integral support isn't available yet in to_chars");
   return std::__to_chars_integral(__first, __last, static_cast<_Type>(__value), __base, is_signed<_Tp>());
 }
 
