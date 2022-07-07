@@ -2,6 +2,33 @@
 #include <memory>
 #include <type_traits>
 
+#if REVISION == 0
+// Pre-c3d0205ee771 layout.
+#define SUBCLASS_PADDING
+#endif
+#if REVISION <= 1
+// Pre-D123580 layout.
+#define BITMASKS
+#endif
+#if REVISION <= 2
+// Pre-D125496 layout.
+#define SHORT_UNION
+#endif
+#if REVISION == 3
+// Pre-D128285 layout.
+#define PACKED_ANON_STRUCT
+#endif
+// REVISION == 4: current layout
+
+#ifdef PACKED_ANON_STRUCT
+#define BEGIN_PACKED_ANON_STRUCT struct __attribute__((packed)) {
+#define END_PACKED_ANON_STRUCT };
+#else
+#define BEGIN_PACKED_ANON_STRUCT
+#define END_PACKED_ANON_STRUCT
+#endif
+
+
 namespace std {
 namespace __lldb {
 
@@ -110,8 +137,10 @@ public:
 #ifdef BITMASKS
     size_type __cap_;
 #else
+    BEGIN_PACKED_ANON_STRUCT
     size_type __is_long_ : 1;
     size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
+    END_PACKED_ANON_STRUCT
 #endif
     size_type __size_;
     pointer __data_;
@@ -124,6 +153,7 @@ public:
   };
 
   struct __short {
+#ifdef SHORT_UNION
     union {
 #ifdef BITMASKS
       unsigned char __size_;
@@ -135,6 +165,13 @@ public:
 #endif
       value_type __lx;
     };
+#else
+    BEGIN_PACKED_ANON_STRUCT
+    unsigned char __is_long_ : 1;
+    unsigned char __size_ : 7;
+    END_PACKED_ANON_STRUCT
+    char __padding_[sizeof(value_type) - 1];
+#endif
     value_type __data_[__min_cap];
   };
 
