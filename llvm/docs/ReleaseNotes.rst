@@ -84,6 +84,18 @@ Changes to the LLVM IR
 * Added the support for ``fmax`` and ``fmin`` in ``atomicrmw`` instruction. The
   comparison is expected to match the behavior of ``llvm.maxnum.*`` and
   ``llvm.minnum.*`` respectively.
+* ``callbr`` instructions no longer use ``blockaddress`` arguments for labels.
+  Instead, label constraints starting with ``!`` refer directly to entries in
+  the ``callbr`` indirect destination list.
+
+.. code-block:: llvm
+
+    ; Old representation
+    %res = callbr i32 asm "", "=r,r,i"(i32 %x, i8 *blockaddress(@foo, %indirect))
+          to label %fallthrough [label %indirect]
+    ; New representation
+    %res = callbr i32 asm "", "=r,r,!i"(i32 %x)
+          to label %fallthrough [label %indirect]
 
 Changes to building LLVM
 ------------------------
