@@ -20,5 +20,4 @@ add_mlir_conversion_library(MLIRGPUToROCDLTransforms
   MLIRMemRefToLLVM
   MLIRROCDLDialect
   MLIRPass
-  MLIRVectorToROCDL
   )
