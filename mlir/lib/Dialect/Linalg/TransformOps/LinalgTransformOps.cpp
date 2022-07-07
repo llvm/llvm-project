@@ -400,6 +400,161 @@ FailureOr<LinalgOp> transform::ScalarizeOp::applyToOne(LinalgOp target,
 }
 
 //===----------------------------------------------------------------------===//
+// SplitOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
+                                           TransformState &state) {
+  // Collect the dynamic split points if provided.
+  ArrayRef<Operation *> payload = state.getPayloadOps(getTarget());
+  SimpleRewriter rewriter(getContext());
+  SmallVector<OpFoldResult> splitPoints;
+  splitPoints.reserve(payload.size());
+  if (getDynamicSplitPoint()) {
+    auto diag = DiagnosedSilenceableFailure::success();
+    splitPoints = llvm::to_vector(llvm::map_range(
+        state.getPayloadOps(getDynamicSplitPoint()), [&](Operation *op) {
+          if (op->getNumResults() != 1 ||
+              !op->getResult(0).getType().isIndex()) {
+            diag = emitSilenceableError()
+                   << "expected dynamic split point handle to point to a "
+                      "single-result index-typed op";
+            diag.attachNote(op->getLoc()) << "dynamic split point";
+          }
+          return OpFoldResult(op->getResult(0));
+        }));
+    if (!diag.succeeded())
+      return diag;
+
+    if (splitPoints.size() != payload.size()) {
+      emitError() << "expected the dynamic split point handle to point to as "
+                     "many operations ("
+                  << splitPoints.size() << ") as the target handle ("
+                  << payload.size() << ")";
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+  } else {
+    splitPoints.resize(payload.size(),
+                       rewriter.getIndexAttr(getStaticSplitPoint()));
+  }
+
+  // Split each target operation.
+  SmallVector<Operation *> first, second;
+  for (const auto &pair : llvm::zip(payload, splitPoints)) {
+    Operation *target = std::get<0>(pair);
+    auto linalgOp = dyn_cast<LinalgOp>(target);
+    if (!linalgOp) {
+      auto diag = emitSilenceableError() << "only applies to structured ops";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+
+    if (getDimension() >= linalgOp.getNumLoops()) {
+      auto diag = emitSilenceableError() << "dimension " << getDimension()
+                                         << " does not exist in target op";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+
+    rewriter.setInsertionPoint(linalgOp);
+    std::tie(first.emplace_back(), second.emplace_back()) =
+        linalg::splitOp(rewriter, linalgOp, getDimension(), std::get<1>(pair));
+  }
+
+  results.set(getFirst().cast<OpResult>(), first);
+  results.set(getSecond().cast<OpResult>(), second);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void SplitOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  // The target handle is consumed.
+  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
+                       TransformMappingResource::get());
+  effects.emplace_back(MemoryEffects::Free::get(), getTarget(),
+                       TransformMappingResource::get());
+
+  // The dynamic split point handle is not consumed.
+  if (getDynamicSplitPoint()) {
+    effects.emplace_back(MemoryEffects::Read::get(), getDynamicSplitPoint(),
+                         TransformMappingResource::get());
+  }
+
+  // The resulting handles are produced.
+  for (Value result : getResults()) {
+    effects.emplace_back(MemoryEffects::Allocate::get(), result,
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(), result,
+                         TransformMappingResource::get());
+  }
+
+  effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
+}
+
+ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::UnresolvedOperand target, dynamicSplitPoint;
+  IntegerAttr staticSplitPoint;
+  auto pdlOperationType =
+      pdl::OperationType::get(parser.getBuilder().getContext());
+  if (parser.parseOperand(target) ||
+      parser.resolveOperand(target, pdlOperationType, result.operands) ||
+      parser.parseKeyword("after"))
+    return failure();
+
+  OptionalParseResult dynamicPointParseResult =
+      parser.parseOptionalOperand(dynamicSplitPoint);
+  if (!dynamicPointParseResult.hasValue()) {
+    int64_t staticSplitPointValue;
+    if (failed(parser.parseInteger(staticSplitPointValue)))
+      return failure();
+
+    staticSplitPoint =
+        parser.getBuilder().getI64IntegerAttr(staticSplitPointValue);
+  } else {
+    if (failed(*dynamicPointParseResult) ||
+        parser.resolveOperand(dynamicSplitPoint, pdlOperationType,
+                              result.operands)) {
+      return failure();
+    }
+
+    staticSplitPoint =
+        parser.getBuilder().getI64IntegerAttr(ShapedType::kDynamicSize);
+  }
+
+  result.addAttribute(
+      SplitOp::getStaticSplitPointAttrName(result.name).getValue(),
+      staticSplitPoint);
+  if (failed(parser.parseOptionalAttrDict(result.attributes)))
+    return failure();
+
+  result.addTypes({pdlOperationType, pdlOperationType});
+  return success();
+}
+
+void SplitOp::print(OpAsmPrinter &printer) {
+  printer << " " << getTarget() << " after ";
+  int64_t staticSplitSize = static_cast<int64_t>(getStaticSplitPoint());
+  if (staticSplitSize != ShapedType::kDynamicSize)
+    printer << staticSplitSize;
+  else
+    printer << getDynamicSplitPoint();
+  printer << " ";
+  printer.printOptionalAttrDict(getOperation()->getAttrs(),
+                                {getStaticSplitPointAttrName()});
+}
+
+LogicalResult SplitOp::verify() {
+  if ((static_cast<int64_t>(getStaticSplitPoint()) !=
+       ShapedType::kDynamicSize) ^
+      (getDynamicSplitPoint() == nullptr)) {
+    return emitOpError()
+           << "expects either a dynamic or a static split point to be provided";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // SplitReductionOp
 //===----------------------------------------------------------------------===//
 

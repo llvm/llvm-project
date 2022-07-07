@@ -149,12 +149,18 @@ int64_t mlirShapedTypeGetDimSize(MlirType type, intptr_t dim) {
   return unwrap(type).cast<ShapedType>().getDimSize(static_cast<unsigned>(dim));
 }
 
+int64_t mlirShapedTypeGetDynamicSize() { return ShapedType::kDynamicSize; }
+
 bool mlirShapedTypeIsDynamicSize(int64_t size) {
   return ShapedType::isDynamic(size);
 }
 
 bool mlirShapedTypeIsDynamicStrideOrOffset(int64_t val) {
   return ShapedType::isDynamicStrideOrOffset(val);
+}
+
+int64_t mlirShapedTypeGetDynamicStrideOrOffset() {
+  return ShapedType::kDynamicStrideOrOffset;
 }
 
 //===----------------------------------------------------------------------===//

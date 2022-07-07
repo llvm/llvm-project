@@ -182,32 +182,11 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ValueRange tileSizes,
         makeTiledShapes(b, loc, op, valuesToTile, interchangedIvs, tileSizes,
                         sizeBounds, /*omitPartialTileCheck=*/false);
 
-    // TODO: use an interface/adaptor to avoid leaking position in
-    // `tiledOperands`.
-    SmallVector<Type, 4> resultTensorTypes;
-    for (OpOperand *opOperand : op.getOutputTensorOperands())
-      resultTensorTypes.push_back(
-          tiledOperands[opOperand->getOperandNumber()].getType());
-
+    SmallVector<Type> resultTensorTypes =
+        getTensorOutputTypes(op, tiledOperands);
     res = op.clone(b, loc, resultTensorTypes, tiledOperands);
-
-    // Insert a insert_slice for each output tensor.
-    unsigned resultIdx = 0;
-    for (OpOperand *opOperand : op.getOutputTensorOperands()) {
-      // TODO: use an interface/adaptor to avoid leaking position in
-      // `tiledOperands`.
-      Value outputTensor = tiledOperands[opOperand->getOperandNumber()];
-      // TODO: Propagate RewriterBase everywhere.
-      IRRewriter rewriter(b);
-      if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
-        tensorResults.push_back(insertSliceIntoTensor(rewriter, loc, sliceOp,
-                                                      res->getResult(resultIdx),
-                                                      sliceOp.getSource()));
-      } else {
-        tensorResults.push_back(res->getResult(resultIdx));
-      }
-      ++resultIdx;
-    }
+    tensorResults =
+        insertSlicesBack(builder, loc, op, tiledOperands, res->getResults());
     return scf::ValueVector(tensorResults.begin(), tensorResults.end());
   };
   GenerateLoopNest<LoopTy>::doit(b, op.getLoc(), loopRanges, op, iteratorTypes,

@@ -25,6 +25,7 @@ namespace mlir {
 class AffineApplyOp;
 class AffineBound;
 class AffineValueMap;
+class IRRewriter;
 
 /// TODO: These should be renamed if they are on the mlir namespace.
 ///       Ideally, they should go in a mlir::affine:: namespace.
@@ -383,6 +384,12 @@ AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
 /// Returns the values obtained by applying `map` to the list of values.
 SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
                                        AffineMap map, ValueRange values);
+
+/// Returns the values obtained by applying `map` to the list of values, which
+/// may be known constants.
+SmallVector<OpFoldResult> applyMapToValues(IRRewriter &b, Location loc,
+                                           AffineMap map,
+                                           ArrayRef<OpFoldResult> values);
 
 /// Given an affine map `map` and its input `operands`, this method composes
 /// into `map`, maps of AffineApplyOps whose results are the values in
