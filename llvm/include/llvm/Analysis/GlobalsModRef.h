@@ -102,15 +102,11 @@ public:
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);
 
+  using AAResultBase::getModRefBehavior;
   /// getModRefBehavior - Return the behavior of the specified function if
   /// called from the specified call site.  The call site may be null in which
   /// case the most generic behavior of this function should be returned.
   FunctionModRefBehavior getModRefBehavior(const Function *F);
-
-  /// getModRefBehavior - Return the behavior of the specified function if
-  /// called from the specified call site.  The call site may be null in which
-  /// case the most generic behavior of this function should be returned.
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call);
 
 private:
   FunctionInfo *getFunctionInfo(const Function *F);
