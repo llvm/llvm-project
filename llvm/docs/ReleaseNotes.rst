@@ -199,6 +199,9 @@ Changes to the C API
   * ``LLVMConstURem``
   * ``LLVMConstSRem``
 
+* Add ``LLVMDeleteInstruction`` function which allows deleting instructions that
+  are not inserted into a basic block.
+
 Changes to the Go bindings
 --------------------------
 
