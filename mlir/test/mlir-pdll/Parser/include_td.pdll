@@ -32,11 +32,17 @@
 // CHECK-NEXT:   CppClass: ::mlir::IntegerType
 // CHECK-NEXT: }
 
-// CHECK: UserConstraintDecl {{.*}} Name<TestAttrInterface> ResultType<Tuple<>> Code<return ::mlir::success(llvm::isa<::TestAttrInterface>(self));>
+// CHECK: UserConstraintDecl {{.*}} Name<TestAttrInterface> ResultType<Tuple<>> Code<return ::mlir::success((self.isa<TestAttrInterface>()));>
 // CHECK:  `Inputs`
 // CHECK:    `-VariableDecl {{.*}} Name<self> Type<Attr>
 // CHECK:      `Constraints`
 // CHECK:        `-AttrConstraintDecl
+
+// CHECK: UserConstraintDecl {{.*}} Name<TestTypeInterface> ResultType<Tuple<>> Code<return ::mlir::success((self.isa<TestTypeInterface>()));>
+// CHECK:  `Inputs`
+// CHECK:    `-VariableDecl {{.*}} Name<self> Type<Type>
+// CHECK:      `Constraints`
+// CHECK:        `-TypeConstraintDecl {{.*}}
 
 // CHECK: UserConstraintDecl {{.*}} Name<TestOpInterface> ResultType<Tuple<>> Code<return ::mlir::success(llvm::isa<::TestOpInterface>(self));>
 // CHECK:  `Inputs`
@@ -44,9 +50,3 @@
 // CHECK:      `Constraints`
 // CHECK:        `-OpConstraintDecl
 // CHECK:          `-OpNameDecl
-
-// CHECK: UserConstraintDecl {{.*}} Name<TestTypeInterface> ResultType<Tuple<>> Code<return ::mlir::success(llvm::isa<::TestTypeInterface>(self));>
-// CHECK:  `Inputs`
-// CHECK:    `-VariableDecl {{.*}} Name<self> Type<Type>
-// CHECK:      `Constraints`
-// CHECK:        `-TypeConstraintDecl {{.*}}

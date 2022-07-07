@@ -19,11 +19,11 @@
 using namespace llvm;
 using namespace llvm::object;
 
-Error objdump::getXCOFFRelocationValueString(const XCOFFObjectFile *Obj,
+Error objdump::getXCOFFRelocationValueString(const XCOFFObjectFile &Obj,
                                              const RelocationRef &Rel,
                                              SmallVectorImpl<char> &Result) {
   symbol_iterator SymI = Rel.getSymbol();
-  if (SymI == Obj->symbol_end())
+  if (SymI == Obj.symbol_end())
     return make_error<GenericBinaryError>(
         "invalid symbol reference in relocation entry",
         object_error::parse_failed);
@@ -44,9 +44,9 @@ Error objdump::getXCOFFRelocationValueString(const XCOFFObjectFile *Obj,
 }
 
 Optional<XCOFF::StorageMappingClass>
-objdump::getXCOFFSymbolCsectSMC(const XCOFFObjectFile *Obj,
+objdump::getXCOFFSymbolCsectSMC(const XCOFFObjectFile &Obj,
                                 const SymbolRef &Sym) {
-  const XCOFFSymbolRef SymRef = Obj->toSymbolRef(Sym.getRawDataRefImpl());
+  const XCOFFSymbolRef SymRef = Obj.toSymbolRef(Sym.getRawDataRefImpl());
 
   if (!SymRef.isCsectSymbol())
     return None;
@@ -59,10 +59,9 @@ objdump::getXCOFFSymbolCsectSMC(const XCOFFObjectFile *Obj,
 }
 
 Optional<object::SymbolRef>
-objdump::getXCOFFSymbolContainingSymbolRef(const XCOFFObjectFile *Obj,
+objdump::getXCOFFSymbolContainingSymbolRef(const XCOFFObjectFile &Obj,
                                            const SymbolRef &Sym) {
-
-  const XCOFFSymbolRef SymRef = Obj->toSymbolRef(Sym.getRawDataRefImpl());
+  const XCOFFSymbolRef SymRef = Obj.toSymbolRef(Sym.getRawDataRefImpl());
   if (!SymRef.isCsectSymbol())
     return None;
 
@@ -72,14 +71,12 @@ objdump::getXCOFFSymbolContainingSymbolRef(const XCOFFObjectFile *Obj,
   uint32_t Idx =
       static_cast<uint32_t>(CsectAuxEntOrErr.get().getSectionOrLength());
   DataRefImpl DRI;
-  DRI.p = Obj->getSymbolByIndex(Idx);
-  return SymbolRef(DRI, Obj);
+  DRI.p = Obj.getSymbolByIndex(Idx);
+  return SymbolRef(DRI, &Obj);
 }
 
-bool objdump::isLabel(const XCOFFObjectFile *Obj, const SymbolRef &Sym) {
-
-  const XCOFFSymbolRef SymRef = Obj->toSymbolRef(Sym.getRawDataRefImpl());
-
+bool objdump::isLabel(const XCOFFObjectFile &Obj, const SymbolRef &Sym) {
+  const XCOFFSymbolRef SymRef = Obj.toSymbolRef(Sym.getRawDataRefImpl());
   if (!SymRef.isCsectSymbol())
     return false;
 

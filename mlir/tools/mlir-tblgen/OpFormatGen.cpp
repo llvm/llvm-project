@@ -2304,7 +2304,7 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
       //    DeclareOpInterfaceMethods<InferTypeOpInterface>
       // and the like.
       // TODO: Add hasCppInterface check.
-      if (auto name = def.getValueAsOptionalString("cppClassName")) {
+      if (auto name = def.getValueAsOptionalString("cppInterfaceName")) {
         if (*name == "InferTypeOpInterface" &&
             def.getValueAsString("cppNamespace") == "::mlir")
           canInferResultTypes = true;

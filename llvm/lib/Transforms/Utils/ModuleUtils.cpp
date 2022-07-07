@@ -275,5 +275,13 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
   GV->setSection(SectionName);
   GV->setAlignment(Alignment);
 
+  LLVMContext &Ctx = M.getContext();
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("llvm.embedded.objects");
+  Metadata *MDVals[] = {ConstantAsMetadata::get(GV),
+                        MDString::get(Ctx, SectionName)};
+
+  MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
+  GV->setMetadata(LLVMContext::MD_exclude, llvm::MDNode::get(Ctx, {}));
+
   appendToCompilerUsed(M, GV);
 }

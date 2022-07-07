@@ -60,6 +60,10 @@ template <> struct FPBits<long double> {
 
   UIntType get_mantissa() const { return bits & FloatProp::MANTISSA_MASK; }
 
+  UIntType get_explicit_mantissa() const {
+    return bits & (FloatProp::MANTISSA_MASK | FloatProp::EXPLICIT_BIT_MASK);
+  }
+
   void set_unbiased_exponent(UIntType expVal) {
     expVal =
         (expVal << (FloatProp::BIT_WIDTH - 1 - FloatProp::EXPONENT_WIDTH)) &

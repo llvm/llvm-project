@@ -34,6 +34,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %11 = math.floor %arg0 : f32
   // CHECK: spv.OCL.erf %{{.*}}: f32
   %12 = math.erf %arg0 : f32
+  // CHECK: spv.OCL.round %{{.*}}: f32
+  %13 = math.round %arg0 : f32
   return
 }
 

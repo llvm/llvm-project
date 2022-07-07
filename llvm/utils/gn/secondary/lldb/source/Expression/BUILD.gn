@@ -23,6 +23,7 @@ static_library("Expression") {
   include_dirs = [ ".." ]
   sources = [
     "DWARFExpression.cpp",
+    "DWARFExpressionList.cpp",
     "DiagnosticManager.cpp",
     "Expression.cpp",
     "ExpressionVariable.cpp",

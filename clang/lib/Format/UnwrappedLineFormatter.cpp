@@ -66,7 +66,6 @@ public:
           (Style.PPIndentWidth >= 0) ? Style.PPIndentWidth : Style.IndentWidth;
       Indent = Line.Level * IndentWidth + AdditionalIndent;
     } else {
-      IndentForLevel.resize(Line.Level + 1);
       Indent = getIndent(Line.Level);
     }
     if (static_cast<int>(Indent) + Offset >= 0)
@@ -91,6 +90,7 @@ public:
     unsigned LevelIndent = Line.First->OriginalColumn;
     if (static_cast<int>(LevelIndent) - Offset >= 0)
       LevelIndent -= Offset;
+    assert(Line.Level < IndentForLevel.size());
     if ((!Line.First->is(tok::comment) || IndentForLevel[Line.Level] == -1) &&
         !Line.InPPDirective) {
       IndentForLevel[Line.Level] = LevelIndent;

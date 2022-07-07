@@ -425,14 +425,8 @@ define void @callbr() {
 ; CHECK-LABEL: @callbr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@callbr, [[TARGET:%.*]]))
-; CHECK-NEXT:    to label [[JOIN:%.*]] [label %target]
+; CHECK-NEXT:    to label [[IF_END:%.*]] [label %target]
 ; CHECK:       target:
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[TARGET]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    br i1 [[PHI]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void

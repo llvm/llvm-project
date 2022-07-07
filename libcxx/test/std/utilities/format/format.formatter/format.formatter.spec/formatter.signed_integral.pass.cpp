@@ -86,18 +86,17 @@ void test_signed_integral_type() {
     test_termination_condition(STR("2147483647"), STR("}"), A(2147483647));
   }
   if (sizeof(A) > 4) {
-    // -9223372036854775808 can't be used directly, it gives the following
-    // diagnostic:
-    // integer literal is too large to be represented in a signed integer type,
-    // interpreting as unsigned [-Werror,-Wimplicitly-unsigned-literal]
-    test_termination_condition(STR("-9223372036854775808"), STR("}"),
-                               A(-9223372036854775807 - 1));
-    test_termination_condition(STR("9223372036854775807"), STR("}"),
-                               A(9223372036854775807));
+    test_termination_condition(STR("-9223372036854775808"), STR("}"), A(std::numeric_limits<int64_t>::min()));
+    test_termination_condition(STR("9223372036854775807"), STR("}"), A(std::numeric_limits<int64_t>::max()));
   }
-
-  // TODO FMT Implement the __int128_t minimum and maximum once the formatter
-  // can handle these values.
+#ifndef TEST_HAS_NO_INT128
+  if (sizeof(A) > 8) {
+    test_termination_condition(
+        STR("-170141183460469231731687303715884105728"), STR("}"), A(std::numeric_limits<__int128_t>::min()));
+    test_termination_condition(
+        STR("170141183460469231731687303715884105727"), STR("}"), A(std::numeric_limits<__int128_t>::max()));
+  }
+#endif
 }
 
 template <class CharT>

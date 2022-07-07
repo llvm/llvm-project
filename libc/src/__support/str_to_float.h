@@ -110,7 +110,7 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   uint32_t clz = leading_zeroes<BitsType>(mantissa);
   mantissa <<= clz;
 
-  uint32_t exp2 = exp10_to_exp2(exp10) + BITS_IN_MANTISSA +
+  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) + BITS_IN_MANTISSA +
                   fputil::FloatProperties<T>::EXPONENT_BIAS - clz;
 
   // Multiplication
@@ -149,10 +149,10 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   }
 
   // Shifting to 54 bits for doubles and 25 bits for floats
-  BitsType msb = high64(final_approx) >> (BITS_IN_MANTISSA - 1);
-  BitsType final_mantissa = high64(final_approx) >>
+  BitsType msb = static_cast<BitsType>(high64(final_approx) >> (BITS_IN_MANTISSA - 1));
+  BitsType final_mantissa = static_cast<BitsType>(high64(final_approx) >>
                             (msb + BITS_IN_MANTISSA -
-                             (fputil::FloatProperties<T>::MANTISSA_WIDTH + 3));
+                             (fputil::FloatProperties<T>::MANTISSA_WIDTH + 3)));
   exp2 -= 1 ^ msb; // same as !msb
 
   // Half-way ambiguity
@@ -210,7 +210,7 @@ inline bool eisel_lemire<long double>(
   uint32_t clz = leading_zeroes<BitsType>(mantissa);
   mantissa <<= clz;
 
-  uint32_t exp2 = exp10_to_exp2(exp10) + BITS_IN_MANTISSA +
+  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) + BITS_IN_MANTISSA +
                   fputil::FloatProperties<long double>::EXPONENT_BIAS - clz;
 
   // Multiplication

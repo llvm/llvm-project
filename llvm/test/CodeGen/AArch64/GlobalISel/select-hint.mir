@@ -15,9 +15,10 @@ body:             |
 
     ; CHECK-LABEL: name: assert_zext_gpr
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %copy:gpr32all = COPY $w0
-    ; CHECK: $w1 = COPY %copy
-    ; CHECK: RET_ReallyLR implicit $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32all = COPY $w0
+    ; CHECK-NEXT: $w1 = COPY %copy
+    ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:gpr(s32) = COPY $w0
     %copy_assert_zext:gpr(s32) = G_ASSERT_ZEXT %copy, 16
     $w1 = COPY %copy_assert_zext(s32)
@@ -35,9 +36,10 @@ body:             |
 
     ; CHECK-LABEL: name: assert_zext_fpr
     ; CHECK: liveins: $s0, $s1
-    ; CHECK: %copy:fpr32 = COPY $s0
-    ; CHECK: $s1 = COPY %copy
-    ; CHECK: RET_ReallyLR implicit $s1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr32 = COPY $s0
+    ; CHECK-NEXT: $s1 = COPY %copy
+    ; CHECK-NEXT: RET_ReallyLR implicit $s1
     %copy:fpr(s32) = COPY $s0
     %copy_assert_zext:fpr(s32) = G_ASSERT_ZEXT %copy, 16
     $s1 = COPY %copy_assert_zext(s32)
@@ -55,9 +57,10 @@ body:             |
 
     ; CHECK-LABEL: name: assert_zext_in_between_cross_bank
     ; CHECK: liveins: $s0, $w1
-    ; CHECK: %copy:fpr32 = COPY $s0
-    ; CHECK: $w1 = COPY %copy
-    ; CHECK: RET_ReallyLR implicit $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr32 = COPY $s0
+    ; CHECK-NEXT: $w1 = COPY %copy
+    ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:fpr(s32) = COPY $s0
     %copy_assert_zext:fpr(s32) = G_ASSERT_ZEXT %copy, 16
     $w1 = COPY %copy_assert_zext(s32)
@@ -78,9 +81,10 @@ body:             |
 
     ; CHECK-LABEL: name: assert_zext_decided_dst_class
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %copy_with_rc:gpr32sp = COPY $w2
-    ; CHECK: $w1 = COPY %copy_with_rc
-    ; CHECK: RET_ReallyLR implicit $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy_with_rc:gpr32sp = COPY $w2
+    ; CHECK-NEXT: $w1 = COPY %copy_with_rc
+    ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:gpr(s32) = COPY $w0
     %copy_assert_zext:gpr(s32) = G_ASSERT_ZEXT %copy, 16
     %copy_with_rc:gpr32sp(s32) = COPY $w2
@@ -99,9 +103,10 @@ body:             |
 
     ; CHECK-LABEL: name: assert_sext_gpr
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %copy:gpr32all = COPY $w0
-    ; CHECK: $w1 = COPY %copy
-    ; CHECK: RET_ReallyLR implicit $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32all = COPY $w0
+    ; CHECK-NEXT: $w1 = COPY %copy
+    ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:gpr(s32) = COPY $w0
     %copy_assert_sext:gpr(s32) = G_ASSERT_SEXT %copy, 16
     $w1 = COPY %copy_assert_sext(s32)
@@ -119,9 +124,10 @@ body:             |
 
     ; CHECK-LABEL: name: assert_sext_fpr
     ; CHECK: liveins: $s0, $s1
-    ; CHECK: %copy:fpr32 = COPY $s0
-    ; CHECK: $s1 = COPY %copy
-    ; CHECK: RET_ReallyLR implicit $s1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr32 = COPY $s0
+    ; CHECK-NEXT: $s1 = COPY %copy
+    ; CHECK-NEXT: RET_ReallyLR implicit $s1
     %copy:fpr(s32) = COPY $s0
     %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
     $s1 = COPY %copy_assert_sext(s32)
@@ -139,9 +145,10 @@ body:             |
 
     ; CHECK-LABEL: name: assert_sext_in_between_cross_bank
     ; CHECK: liveins: $s0, $w1
-    ; CHECK: %copy:fpr32 = COPY $s0
-    ; CHECK: $w1 = COPY %copy
-    ; CHECK: RET_ReallyLR implicit $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr32 = COPY $s0
+    ; CHECK-NEXT: $w1 = COPY %copy
+    ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:fpr(s32) = COPY $s0
     %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
     $w1 = COPY %copy_assert_sext(s32)
@@ -162,9 +169,10 @@ body:             |
 
     ; CHECK-LABEL: name: assert_sext_decided_dst_class
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %copy_with_rc:gpr32sp = COPY $w2
-    ; CHECK: $w1 = COPY %copy_with_rc
-    ; CHECK: RET_ReallyLR implicit $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy_with_rc:gpr32sp = COPY $w2
+    ; CHECK-NEXT: $w1 = COPY %copy_with_rc
+    ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:gpr(s32) = COPY $w0
     %copy_assert_sext:gpr(s32) = G_ASSERT_SEXT %copy, 16
     %copy_with_rc:gpr32sp(s32) = COPY $w2

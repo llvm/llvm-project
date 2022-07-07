@@ -59,11 +59,6 @@ template <typename T> struct FPBits {
 
   UIntType get_mantissa() const { return bits & FloatProp::MANTISSA_MASK; }
 
-  // The function return mantissa with implicit bit set for normal values.
-  constexpr UIntType get_explicit_mantissa() {
-    return (FloatProp::MANTISSA_MASK + 1) | (FloatProp::MANTISSA_MASK & bits);
-  }
-
   void set_unbiased_exponent(UIntType expVal) {
     expVal = (expVal << (FloatProp::MANTISSA_WIDTH)) & FloatProp::EXPONENT_MASK;
     bits &= ~(FloatProp::EXPONENT_MASK);
@@ -73,6 +68,15 @@ template <typename T> struct FPBits {
   uint16_t get_unbiased_exponent() const {
     return uint16_t((bits & FloatProp::EXPONENT_MASK) >>
                     (FloatProp::MANTISSA_WIDTH));
+  }
+
+  // The function return mantissa with the implicit bit set iff the current
+  // value is a valid normal number.
+  constexpr UIntType get_explicit_mantissa() {
+    return ((get_unbiased_exponent() > 0 && !is_inf_or_nan())
+                ? (FloatProp::MANTISSA_MASK + 1)
+                : 0) |
+           (FloatProp::MANTISSA_MASK & bits);
   }
 
   void set_sign(bool signVal) {

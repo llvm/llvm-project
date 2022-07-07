@@ -26,13 +26,6 @@
 
 #  define _LIBCPP_VERSION 15000
 
-#  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y
-#  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
-
-// Valid C++ identifier that revs with every libc++ version. This can be used to
-// generate identifiers that must be unique for every released libc++ version.
-#  define _LIBCPP_VERSIONED_IDENTIFIER _LIBCPP_CONCAT(v, _LIBCPP_VERSION)
-
 #  if __STDC_HOSTED__ == 0
 #    define _LIBCPP_FREESTANDING
 #  endif
@@ -575,6 +568,12 @@ typedef __char32_t char32_t;
 
 #  endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
+#  if __has_attribute(internal_linkage)
+#    define _LIBCPP_INTERNAL_LINKAGE __attribute__((internal_linkage))
+#  else
+#    define _LIBCPP_INTERNAL_LINKAGE _LIBCPP_ALWAYS_INLINE
+#  endif
+
 #  if __has_attribute(exclude_from_explicit_instantiation)
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((__exclude_from_explicit_instantiation__))
 #  else
@@ -584,35 +583,20 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION _LIBCPP_ALWAYS_INLINE
 #  endif
 
-// This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
-// on two levels:
-// 1. The symbol is given hidden visibility, which ensures that users won't start exporting
-//    symbols from their dynamic library by means of using the libc++ headers. This ensures
-//    that those symbols stay private to the dynamic library in which it is defined.
-//
-// 2. The symbol is given an ABI tag that changes with each version of libc++. This ensures
-//    that no ODR violation can arise from mixing two TUs compiled with different versions
-//    of libc++ where we would have changed the definition of a symbol. If the symbols shared
-//    the same name, the ODR would require that their definitions be token-by-token equivalent,
-//    which basically prevents us from being able to make any change to any function in our
-//    headers. Using this ABI tag ensures that the symbol name is "bumped" artificially at
-//    each release, which lets us change the definition of these symbols at our leisure.
-//    Note that historically, this has been achieved in various ways, including force-inlining
-//    all functions or giving internal linkage to all functions. Both these (previous) solutions
-//    suffer from drawbacks that lead notably to code bloat.
-//
-// Note that we use _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION to ensure that we don't depend
-// on _LIBCPP_HIDE_FROM_ABI methods of classes explicitly instantiated in the dynamic library.
-//
-// TODO: We provide a escape hatch with _LIBCPP_NO_ABI_TAG for folks who want to avoid increasing
-//       the length of symbols with an ABI tag. In practice, we should remove the escape hatch and
-//       use compression mangling instead, see https://github.com/itanium-cxx-abi/cxx-abi/issues/70.
-#  ifndef _LIBCPP_NO_ABI_TAG
-#    define _LIBCPP_HIDE_FROM_ABI                                                                                      \
-      _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION                                                       \
-          __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_VERSIONED_IDENTIFIER))))
-#  else
-#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+#  ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU
+#    ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT
+#      define _LIBCPP_HIDE_FROM_ABI_PER_TU 0
+#    else
+#      define _LIBCPP_HIDE_FROM_ABI_PER_TU 1
+#    endif
+#  endif
+
+#  ifndef _LIBCPP_HIDE_FROM_ABI
+#    if _LIBCPP_HIDE_FROM_ABI_PER_TU
+#      define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_INTERNAL_LINKAGE
+#    else
+#      define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+#    endif
 #  endif
 
 #  ifdef _LIBCPP_BUILDING_LIBRARY

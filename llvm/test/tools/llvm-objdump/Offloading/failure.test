@@ -8,7 +8,7 @@ FileHeader:
   Type:            ET_EXEC
 Sections:
   - Name:            .llvm.offloading
-    Type:            SHT_PROGBITS
+    Type:            SHT_LLVM_OFFLOADING
     Flags:           [ SHF_EXCLUDE ]
     Address:         0x0
     AddressAlign:    0x0000000000000008
