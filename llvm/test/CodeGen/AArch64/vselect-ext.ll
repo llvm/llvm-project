@@ -85,26 +85,23 @@ entry:
 define <8 x i64> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i64(<8 x i8> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_unsigned_pred_and_select_v8i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8b v1, #10
-; CHECK-NEXT:    ushll.8h v2, v0, #0
-; CHECK-NEXT:    cmhi.8b v0, v0, v1
-; CHECK-NEXT:    ushll.4s v1, v2, #0
-; CHECK-NEXT:    sshll.8h v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v2, v2, #0
-; CHECK-NEXT:    sshll.4s v3, v0, #0
-; CHECK-NEXT:    sshll2.4s v0, v0, #0
-; CHECK-NEXT:    ushll.2d v4, v1, #0
-; CHECK-NEXT:    ushll.2d v5, v2, #0
-; CHECK-NEXT:    ushll2.2d v1, v1, #0
-; CHECK-NEXT:    ushll2.2d v2, v2, #0
-; CHECK-NEXT:    sshll.2d v6, v3, #0
-; CHECK-NEXT:    sshll.2d v7, v0, #0
-; CHECK-NEXT:    sshll2.2d v0, v0, #0
-; CHECK-NEXT:    sshll2.2d v16, v3, #0
-; CHECK-NEXT:    and.16b v3, v2, v0
-; CHECK-NEXT:    and.16b v1, v1, v16
-; CHECK-NEXT:    and.16b v2, v5, v7
-; CHECK-NEXT:    and.16b v0, v4, v6
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    ushll2.4s v2, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    dup.2d v1, x8
+; CHECK-NEXT:    ushll2.2d v3, v2, #0
+; CHECK-NEXT:    ushll2.2d v4, v0, #0
+; CHECK-NEXT:    ushll.2d v0, v0, #0
+; CHECK-NEXT:    ushll.2d v2, v2, #0
+; CHECK-NEXT:    cmhi.2d v5, v0, v1
+; CHECK-NEXT:    cmhi.2d v6, v2, v1
+; CHECK-NEXT:    cmhi.2d v7, v3, v1
+; CHECK-NEXT:    cmhi.2d v1, v4, v1
+; CHECK-NEXT:    and.16b v3, v3, v7
+; CHECK-NEXT:    and.16b v1, v4, v1
+; CHECK-NEXT:    and.16b v2, v2, v6
+; CHECK-NEXT:    and.16b v0, v0, v5
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i8> %a to <8 x i64>
   %cmp = icmp ugt <8 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
@@ -116,24 +113,21 @@ define <8 x i64> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i64(<8 x i8> 
 define <16 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v16i32(<16 x i8> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_unsigned_pred_and_select_v16i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.16b v1, #10
-; CHECK-NEXT:    ushll.8h v2, v0, #0
-; CHECK-NEXT:    ushll2.8h v3, v0, #0
-; CHECK-NEXT:    ushll.4s v4, v2, #0
-; CHECK-NEXT:    cmhi.16b v0, v0, v1
-; CHECK-NEXT:    ushll.4s v5, v3, #0
-; CHECK-NEXT:    ushll2.4s v1, v3, #0
-; CHECK-NEXT:    sshll.8h v3, v0, #0
-; CHECK-NEXT:    sshll2.8h v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v2, v2, #0
-; CHECK-NEXT:    sshll.4s v6, v3, #0
-; CHECK-NEXT:    sshll.4s v7, v0, #0
-; CHECK-NEXT:    sshll2.4s v0, v0, #0
-; CHECK-NEXT:    sshll2.4s v16, v3, #0
-; CHECK-NEXT:    and.16b v3, v1, v0
-; CHECK-NEXT:    and.16b v1, v2, v16
-; CHECK-NEXT:    and.16b v2, v5, v7
-; CHECK-NEXT:    and.16b v0, v4, v6
+; CHECK-NEXT:    movi.4s v1, #10
+; CHECK-NEXT:    ushll2.8h v2, v0, #0
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    ushll2.4s v3, v2, #0
+; CHECK-NEXT:    ushll2.4s v4, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    ushll.4s v2, v2, #0
+; CHECK-NEXT:    cmhi.4s v5, v0, v1
+; CHECK-NEXT:    cmhi.4s v6, v2, v1
+; CHECK-NEXT:    cmhi.4s v7, v3, v1
+; CHECK-NEXT:    cmhi.4s v1, v4, v1
+; CHECK-NEXT:    and.16b v3, v3, v7
+; CHECK-NEXT:    and.16b v1, v4, v1
+; CHECK-NEXT:    and.16b v2, v2, v6
+; CHECK-NEXT:    and.16b v0, v0, v5
 ; CHECK-NEXT:    ret
   %ext = zext <16 x i8> %a to <16 x i32>
   %cmp = icmp ugt <16 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
@@ -144,16 +138,14 @@ define <16 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v16i32(<16 x i
 define <8 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i32(<8 x i8> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_unsigned_pred_and_select_v8i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8b v1, #10
-; CHECK-NEXT:    ushll.8h v2, v0, #0
-; CHECK-NEXT:    ushll.4s v3, v2, #0
-; CHECK-NEXT:    cmhi.8b v0, v0, v1
-; CHECK-NEXT:    ushll2.4s v1, v2, #0
-; CHECK-NEXT:    sshll.8h v0, v0, #0
-; CHECK-NEXT:    sshll2.4s v2, v0, #0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v1, v1, v2
-; CHECK-NEXT:    and.16b v0, v3, v0
+; CHECK-NEXT:    movi.4s v1, #10
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    ushll2.4s v2, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    cmhi.4s v3, v2, v1
+; CHECK-NEXT:    cmhi.4s v4, v0, v1
+; CHECK-NEXT:    and.16b v1, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v4
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i8> %a to <8 x i32>
   %cmp = icmp ugt <8 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
@@ -164,14 +156,13 @@ define <8 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i32(<8 x i8> 
 define <8 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i32_2(<8 x i16> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_unsigned_pred_and_select_v8i32_2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8h v1, #10
-; CHECK-NEXT:    ushll.4s v2, v0, #0
-; CHECK-NEXT:    cmhi.8h v1, v0, v1
-; CHECK-NEXT:    ushll2.4s v0, v0, #0
-; CHECK-NEXT:    sshll2.4s v3, v1, #0
-; CHECK-NEXT:    sshll.4s v4, v1, #0
-; CHECK-NEXT:    and.16b v1, v0, v3
-; CHECK-NEXT:    and.16b v0, v2, v4
+; CHECK-NEXT:    movi.4s v1, #10
+; CHECK-NEXT:    ushll2.4s v2, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    cmhi.4s v3, v2, v1
+; CHECK-NEXT:    cmhi.4s v4, v0, v1
+; CHECK-NEXT:    and.16b v1, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v4
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i16> %a to <8 x i32>
   %cmp = icmp ugt <8 x i16> %a, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -183,19 +174,14 @@ define <8 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i32_2(<8 x i1
 define <8 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i32_from_v8i15(<8 x i15> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_unsigned_pred_and_select_v8i32_from_v8i15:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8h v1, #10
+; CHECK-NEXT:    movi.4s v1, #10
 ; CHECK-NEXT:    bic.8h v0, #128, lsl #8
-; CHECK-NEXT:    ushll.4s v2, v0, #0
-; CHECK-NEXT:    cmhi.8h v1, v0, v1
-; CHECK-NEXT:    ushll2.4s v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v3, v1, #0
-; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    shl.4s v3, v3, #17
-; CHECK-NEXT:    shl.4s v1, v1, #17
-; CHECK-NEXT:    sshr.4s v3, v3, #17
-; CHECK-NEXT:    sshr.4s v4, v1, #17
-; CHECK-NEXT:    and.16b v1, v0, v3
-; CHECK-NEXT:    and.16b v0, v2, v4
+; CHECK-NEXT:    ushll2.4s v2, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    cmhi.4s v3, v2, v1
+; CHECK-NEXT:    cmhi.4s v4, v0, v1
+; CHECK-NEXT:    and.16b v1, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v4
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i15> %a to <8 x i32>
   %cmp = icmp ugt <8 x i15> %a, <i15 10, i15 10, i15 10, i15 10, i15 10, i15 10, i15 10, i15 10>
@@ -256,11 +242,10 @@ define <3 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v3i16(<3 x i8> 
 define <4 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v4i32(<4 x i16> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_unsigned_pred_and_select_v4i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.4h v1, #10
-; CHECK-NEXT:    ushll.4s v2, v0, #0
-; CHECK-NEXT:    cmhi.4h v0, v0, v1
-; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v2, v0
+; CHECK-NEXT:    movi.4s v1, #10
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    cmhi.4s v1, v0, v1
+; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    ret
   %ext = zext <4 x i16> %a to <4 x i32>
   %cmp = icmp ugt <4 x i16> %a, <i16 10, i16 10, i16 10, i16 10>
@@ -286,14 +271,13 @@ define <2 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v2i32(<2 x i16>
 define <8 x i32> @same_zext_used_in_cmp_eq_and_select_v8i32(<8 x i16> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_eq_and_select_v8i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8h v1, #10
-; CHECK-NEXT:    ushll.4s v2, v0, #0
-; CHECK-NEXT:    cmeq.8h v1, v0, v1
-; CHECK-NEXT:    ushll2.4s v0, v0, #0
-; CHECK-NEXT:    sshll2.4s v3, v1, #0
-; CHECK-NEXT:    sshll.4s v4, v1, #0
-; CHECK-NEXT:    and.16b v1, v0, v3
-; CHECK-NEXT:    and.16b v0, v2, v4
+; CHECK-NEXT:    movi.4s v1, #10
+; CHECK-NEXT:    ushll2.4s v2, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    cmeq.4s v3, v2, v1
+; CHECK-NEXT:    cmeq.4s v4, v0, v1
+; CHECK-NEXT:    and.16b v1, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v4
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i16> %a to <8 x i32>
   %cmp = icmp eq <8 x i16> %a, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -304,19 +288,14 @@ define <8 x i32> @same_zext_used_in_cmp_eq_and_select_v8i32(<8 x i16> %a) {
 define <8 x i32> @same_zext_used_in_cmp_eq_and_select_v8i32_from_v8i13(<8 x i13> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_eq_and_select_v8i32_from_v8i13:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8h v1, #10
+; CHECK-NEXT:    movi.4s v1, #10
 ; CHECK-NEXT:    bic.8h v0, #224, lsl #8
-; CHECK-NEXT:    ushll.4s v2, v0, #0
-; CHECK-NEXT:    cmeq.8h v1, v0, v1
-; CHECK-NEXT:    ushll2.4s v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v3, v1, #0
-; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    shl.4s v3, v3, #19
-; CHECK-NEXT:    shl.4s v1, v1, #19
-; CHECK-NEXT:    sshr.4s v3, v3, #19
-; CHECK-NEXT:    sshr.4s v4, v1, #19
-; CHECK-NEXT:    and.16b v1, v0, v3
-; CHECK-NEXT:    and.16b v0, v2, v4
+; CHECK-NEXT:    ushll2.4s v2, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    cmeq.4s v3, v2, v1
+; CHECK-NEXT:    cmeq.4s v4, v0, v1
+; CHECK-NEXT:    and.16b v1, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v4
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i13> %a to <8 x i32>
   %cmp = icmp eq <8 x i13> %a, <i13 10, i13 10, i13 10, i13 10, i13 10, i13 10, i13 10, i13 10>
@@ -327,25 +306,21 @@ define <8 x i32> @same_zext_used_in_cmp_eq_and_select_v8i32_from_v8i13(<8 x i13>
 define <16 x i32> @same_zext_used_in_cmp_ne_and_select_v8i32(<16 x i8> %a) {
 ; CHECK-LABEL: same_zext_used_in_cmp_ne_and_select_v8i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.16b v1, #10
-; CHECK-NEXT:    ushll.8h v2, v0, #0
-; CHECK-NEXT:    ushll2.8h v3, v0, #0
-; CHECK-NEXT:    ushll.4s v4, v2, #0
-; CHECK-NEXT:    cmeq.16b v0, v0, v1
-; CHECK-NEXT:    ushll.4s v5, v3, #0
-; CHECK-NEXT:    mvn.16b v0, v0
-; CHECK-NEXT:    ushll2.4s v1, v3, #0
-; CHECK-NEXT:    sshll.8h v3, v0, #0
-; CHECK-NEXT:    sshll2.8h v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v2, v2, #0
-; CHECK-NEXT:    sshll.4s v6, v3, #0
-; CHECK-NEXT:    sshll.4s v7, v0, #0
-; CHECK-NEXT:    sshll2.4s v0, v0, #0
-; CHECK-NEXT:    sshll2.4s v16, v3, #0
-; CHECK-NEXT:    and.16b v3, v1, v0
-; CHECK-NEXT:    and.16b v1, v2, v16
-; CHECK-NEXT:    and.16b v2, v5, v7
-; CHECK-NEXT:    and.16b v0, v4, v6
+; CHECK-NEXT:    movi.4s v1, #10
+; CHECK-NEXT:    ushll2.8h v2, v0, #0
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    ushll2.4s v3, v2, #0
+; CHECK-NEXT:    ushll2.4s v4, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    ushll.4s v2, v2, #0
+; CHECK-NEXT:    cmeq.4s v5, v0, v1
+; CHECK-NEXT:    cmeq.4s v6, v2, v1
+; CHECK-NEXT:    cmeq.4s v7, v3, v1
+; CHECK-NEXT:    cmeq.4s v1, v4, v1
+; CHECK-NEXT:    bic.16b v3, v3, v7
+; CHECK-NEXT:    bic.16b v1, v4, v1
+; CHECK-NEXT:    bic.16b v2, v2, v6
+; CHECK-NEXT:    bic.16b v0, v0, v5
 ; CHECK-NEXT:    ret
   %ext = zext <16 x i8> %a to <16 x i32>
   %cmp = icmp ne <16 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
@@ -412,24 +387,21 @@ entry:
 define <16 x i32> @same_sext_used_in_cmp_signed_pred_and_select_v16i32(<16 x i8> %a) {
 ; CHECK-LABEL: same_sext_used_in_cmp_signed_pred_and_select_v16i32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    movi.16b v1, #10
-; CHECK-NEXT:    sshll.8h v3, v0, #0
+; CHECK-NEXT:    movi.4s v1, #10
 ; CHECK-NEXT:    sshll2.8h v2, v0, #0
-; CHECK-NEXT:    cmgt.16b v0, v0, v1
-; CHECK-NEXT:    ext.16b v1, v3, v3, #8
-; CHECK-NEXT:    sshll.8h v5, v0, #0
-; CHECK-NEXT:    sshll2.8h v0, v0, #0
-; CHECK-NEXT:    ext.16b v4, v2, v2, #8
-; CHECK-NEXT:    ext.16b v6, v5, v5, #8
-; CHECK-NEXT:    ext.16b v7, v0, v0, #8
-; CHECK-NEXT:    and.8b v0, v2, v0
-; CHECK-NEXT:    sshll.4s v2, v0, #0
-; CHECK-NEXT:    and.8b v0, v3, v5
-; CHECK-NEXT:    and.8b v1, v1, v6
-; CHECK-NEXT:    and.8b v3, v4, v7
+; CHECK-NEXT:    sshll.8h v0, v0, #0
+; CHECK-NEXT:    sshll2.4s v3, v2, #0
+; CHECK-NEXT:    sshll2.4s v4, v0, #0
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    sshll.4s v1, v1, #0
-; CHECK-NEXT:    sshll.4s v3, v3, #0
+; CHECK-NEXT:    sshll.4s v2, v2, #0
+; CHECK-NEXT:    cmgt.4s v5, v0, v1
+; CHECK-NEXT:    cmgt.4s v6, v2, v1
+; CHECK-NEXT:    cmgt.4s v7, v3, v1
+; CHECK-NEXT:    cmgt.4s v1, v4, v1
+; CHECK-NEXT:    and.16b v3, v3, v7
+; CHECK-NEXT:    and.16b v1, v4, v1
+; CHECK-NEXT:    and.16b v2, v2, v6
+; CHECK-NEXT:    and.16b v0, v0, v5
 ; CHECK-NEXT:    ret
 entry:
   %ext = sext <16 x i8> %a to <16 x i32>
@@ -441,14 +413,13 @@ entry:
 define <8 x i32> @same_sext_used_in_cmp_eq_and_select_v8i32(<8 x i16> %a) {
 ; CHECK-LABEL: same_sext_used_in_cmp_eq_and_select_v8i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8h v1, #10
-; CHECK-NEXT:    ext.16b v2, v0, v0, #8
-; CHECK-NEXT:    cmeq.8h v1, v0, v1
-; CHECK-NEXT:    ext.16b v3, v1, v1, #8
-; CHECK-NEXT:    and.8b v0, v0, v1
+; CHECK-NEXT:    movi.4s v1, #10
+; CHECK-NEXT:    sshll2.4s v2, v0, #0
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    and.8b v1, v2, v3
-; CHECK-NEXT:    sshll.4s v1, v1, #0
+; CHECK-NEXT:    cmeq.4s v3, v2, v1
+; CHECK-NEXT:    cmeq.4s v4, v0, v1
+; CHECK-NEXT:    and.16b v1, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v4
 ; CHECK-NEXT:    ret
   %ext = sext <8 x i16> %a to <8 x i32>
   %cmp = icmp eq <8 x i16> %a, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -459,24 +430,17 @@ define <8 x i32> @same_sext_used_in_cmp_eq_and_select_v8i32(<8 x i16> %a) {
 define <8 x i32> @same_sext_used_in_cmp_eq_and_select_v8i32_from_v8i13(<8 x i13> %a) {
 ; CHECK-LABEL: same_sext_used_in_cmp_eq_and_select_v8i32_from_v8i13:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8h v1, #10
-; CHECK-NEXT:    mov.16b v2, v0
-; CHECK-NEXT:    bic.8h v2, #224, lsl #8
-; CHECK-NEXT:    ushll2.4s v3, v0, #0
-; CHECK-NEXT:    cmeq.8h v1, v2, v1
+; CHECK-NEXT:    ushll2.4s v2, v0, #0
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    ushll.4s v2, v1, #0
-; CHECK-NEXT:    ushll2.4s v1, v1, #0
-; CHECK-NEXT:    shl.4s v3, v3, #19
-; CHECK-NEXT:    shl.4s v1, v1, #19
-; CHECK-NEXT:    shl.4s v0, v0, #19
+; CHECK-NEXT:    movi.4s v1, #10
 ; CHECK-NEXT:    shl.4s v2, v2, #19
-; CHECK-NEXT:    sshr.4s v3, v3, #19
-; CHECK-NEXT:    sshr.4s v1, v1, #19
-; CHECK-NEXT:    sshr.4s v0, v0, #19
+; CHECK-NEXT:    shl.4s v0, v0, #19
 ; CHECK-NEXT:    sshr.4s v2, v2, #19
-; CHECK-NEXT:    and.16b v1, v3, v1
-; CHECK-NEXT:    and.16b v0, v0, v2
+; CHECK-NEXT:    sshr.4s v0, v0, #19
+; CHECK-NEXT:    cmeq.4s v3, v2, v1
+; CHECK-NEXT:    cmeq.4s v4, v0, v1
+; CHECK-NEXT:    and.16b v1, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v4
 ; CHECK-NEXT:    ret
   %ext = sext <8 x i13> %a to <8 x i32>
   %cmp = icmp eq <8 x i13> %a, <i13 10, i13 10, i13 10, i13 10, i13 10, i13 10, i13 10, i13 10>
@@ -487,25 +451,21 @@ define <8 x i32> @same_sext_used_in_cmp_eq_and_select_v8i32_from_v8i13(<8 x i13>
 define <16 x i32> @same_sext_used_in_cmp_ne_and_select_v8i32(<16 x i8> %a) {
 ; CHECK-LABEL: same_sext_used_in_cmp_ne_and_select_v8i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.16b v1, #10
-; CHECK-NEXT:    sshll.8h v3, v0, #0
+; CHECK-NEXT:    movi.4s v1, #10
 ; CHECK-NEXT:    sshll2.8h v2, v0, #0
-; CHECK-NEXT:    cmeq.16b v0, v0, v1
-; CHECK-NEXT:    ext.16b v1, v3, v3, #8
-; CHECK-NEXT:    mvn.16b v0, v0
-; CHECK-NEXT:    sshll.8h v5, v0, #0
-; CHECK-NEXT:    sshll2.8h v0, v0, #0
-; CHECK-NEXT:    ext.16b v4, v2, v2, #8
-; CHECK-NEXT:    ext.16b v6, v5, v5, #8
-; CHECK-NEXT:    ext.16b v7, v0, v0, #8
-; CHECK-NEXT:    and.8b v0, v2, v0
-; CHECK-NEXT:    sshll.4s v2, v0, #0
-; CHECK-NEXT:    and.8b v0, v3, v5
-; CHECK-NEXT:    and.8b v1, v1, v6
-; CHECK-NEXT:    and.8b v3, v4, v7
+; CHECK-NEXT:    sshll.8h v0, v0, #0
+; CHECK-NEXT:    sshll2.4s v3, v2, #0
+; CHECK-NEXT:    sshll2.4s v4, v0, #0
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    sshll.4s v1, v1, #0
-; CHECK-NEXT:    sshll.4s v3, v3, #0
+; CHECK-NEXT:    sshll.4s v2, v2, #0
+; CHECK-NEXT:    cmeq.4s v5, v0, v1
+; CHECK-NEXT:    cmeq.4s v6, v2, v1
+; CHECK-NEXT:    cmeq.4s v7, v3, v1
+; CHECK-NEXT:    cmeq.4s v1, v4, v1
+; CHECK-NEXT:    bic.16b v3, v3, v7
+; CHECK-NEXT:    bic.16b v1, v4, v1
+; CHECK-NEXT:    bic.16b v2, v2, v6
+; CHECK-NEXT:    bic.16b v0, v0, v5
 ; CHECK-NEXT:    ret
   %ext = sext <16 x i8> %a to <16 x i32>
   %cmp = icmp ne <16 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
@@ -516,14 +476,13 @@ define <16 x i32> @same_sext_used_in_cmp_ne_and_select_v8i32(<16 x i8> %a) {
 define <8 x i32> @same_sext_used_in_cmp_signed_pred_and_select_v8i32(<8 x i16> %a) {
 ; CHECK-LABEL: same_sext_used_in_cmp_signed_pred_and_select_v8i32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    movi.8h v1, #10
-; CHECK-NEXT:    ext.16b v2, v0, v0, #8
-; CHECK-NEXT:    cmgt.8h v1, v0, v1
-; CHECK-NEXT:    ext.16b v3, v1, v1, #8
-; CHECK-NEXT:    and.8b v0, v0, v1
+; CHECK-NEXT:    movi.4s v1, #10
+; CHECK-NEXT:    sshll2.4s v2, v0, #0
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    and.8b v1, v2, v3
-; CHECK-NEXT:    sshll.4s v1, v1, #0
+; CHECK-NEXT:    cmgt.4s v3, v2, v1
+; CHECK-NEXT:    cmgt.4s v4, v0, v1
+; CHECK-NEXT:    and.16b v1, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v4
 ; CHECK-NEXT:    ret
 entry:
   %ext = sext <8 x i16> %a to <8 x i32>
@@ -535,24 +494,17 @@ entry:
 define <8 x i32> @same_sext_used_in_cmp_unsigned_pred_and_select_v8i32_from_v8i15(<8 x i15> %a) {
 ; CHECK-LABEL: same_sext_used_in_cmp_unsigned_pred_and_select_v8i32_from_v8i15:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.8h v1, #10
-; CHECK-NEXT:    shl.8h v2, v0, #1
-; CHECK-NEXT:    ushll2.4s v3, v0, #0
-; CHECK-NEXT:    sshr.8h v2, v2, #1
+; CHECK-NEXT:    ushll2.4s v2, v0, #0
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    shl.4s v3, v3, #17
-; CHECK-NEXT:    cmge.8h v1, v2, v1
-; CHECK-NEXT:    shl.4s v0, v0, #17
-; CHECK-NEXT:    ushll.4s v2, v1, #0
-; CHECK-NEXT:    sshr.4s v3, v3, #17
-; CHECK-NEXT:    ushll2.4s v1, v1, #0
+; CHECK-NEXT:    movi.4s v1, #10
 ; CHECK-NEXT:    shl.4s v2, v2, #17
-; CHECK-NEXT:    shl.4s v1, v1, #17
-; CHECK-NEXT:    sshr.4s v0, v0, #17
+; CHECK-NEXT:    shl.4s v0, v0, #17
 ; CHECK-NEXT:    sshr.4s v2, v2, #17
-; CHECK-NEXT:    sshr.4s v1, v1, #17
-; CHECK-NEXT:    and.16b v0, v0, v2
-; CHECK-NEXT:    and.16b v1, v3, v1
+; CHECK-NEXT:    sshr.4s v0, v0, #17
+; CHECK-NEXT:    cmge.4s v3, v2, v1
+; CHECK-NEXT:    cmge.4s v4, v0, v1
+; CHECK-NEXT:    and.16b v1, v2, v3
+; CHECK-NEXT:    and.16b v0, v0, v4
 ; CHECK-NEXT:    ret
   %ext = sext <8 x i15> %a to <8 x i32>
   %cmp = icmp sge <8 x i15> %a, <i15 10, i15 10, i15 10, i15 10, i15 10, i15 10, i15 10, i15 10>

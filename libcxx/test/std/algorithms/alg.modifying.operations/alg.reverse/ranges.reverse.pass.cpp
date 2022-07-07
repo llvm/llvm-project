@@ -24,6 +24,7 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
+#include "MoveOnly.h"
 #include "test_iterators.h"
 
 template <class Iter, class Sent = sentinel_wrapper<Iter>>
@@ -89,6 +90,10 @@ constexpr bool test() {
   test_iterators<contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>>();
   test_iterators<int*>();
 
+  test_iterators<ProxyIterator<bidirectional_iterator<int*>>>();
+  test_iterators<ProxyIterator<random_access_iterator<int*>>>();
+  test_iterators<ProxyIterator<contiguous_iterator<int*>>>();
+
   // check that std::ranges::dangling is returned
   {
     [[maybe_unused]] std::same_as<std::ranges::dangling> auto ret = std::ranges::reverse(std::array {1, 2, 3, 4});
@@ -106,6 +111,26 @@ constexpr bool test() {
       SwapCounter a[] = {&counter, &counter, &counter, &counter};
       std::ranges::reverse(a, a + 4);
       assert(counter == 2);
+    }
+  }
+
+  // Move only types work for ProxyIterator
+  {
+    {
+      MoveOnly a[] = {1, 2, 3};
+      ProxyRange proxyA{a};
+      std::ranges::reverse(proxyA.begin(), proxyA.end());
+      assert(a[0].get() == 3);
+      assert(a[1].get() == 2);
+      assert(a[2].get() == 1);
+    }
+    {
+      MoveOnly a[] = {1, 2, 3};
+      ProxyRange proxyA{a};
+      std::ranges::reverse(proxyA);
+      assert(a[0].get() == 3);
+      assert(a[1].get() == 2);
+      assert(a[2].get() == 1);
     }
   }
 

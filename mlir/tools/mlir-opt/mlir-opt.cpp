@@ -86,6 +86,7 @@ void registerTestIRVisitorsPass();
 void registerTestGenericIRVisitorsPass();
 void registerTestGenericIRVisitorsInterruptPass();
 void registerTestInterfaces();
+void registerTestLastModifiedPass();
 void registerTestLinalgCodegenStrategy();
 void registerTestLinalgElementwiseFusion();
 void registerTestLinalgFusionTransforms();
@@ -185,6 +186,7 @@ void registerTestPasses() {
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
   mlir::test::registerTestInterfaces();
+  mlir::test::registerTestLastModifiedPass();
   mlir::test::registerTestLinalgCodegenStrategy();
   mlir::test::registerTestLinalgElementwiseFusion();
   mlir::test::registerTestLinalgFusionTransforms();
