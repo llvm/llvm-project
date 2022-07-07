@@ -468,7 +468,7 @@ public:
         [&](const auto &) -> fir::ExtendedValue {
           mlir::Value temp =
               allocate(fir::factory::getExtents(loc, *builder, hexv),
-                       fir::getTypeParams(hexv));
+                       fir::factory::getTypeParams(loc, *builder, hexv));
           return fir::substBase(hexv, temp);
         });
 
@@ -494,7 +494,7 @@ public:
 
     // 3) Perform the assignment.
     builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
-    mlir::Location loc = getCurrentLocation();
+    mlir::Location loc = genLocation(sym.name());
     mlir::Type symType = genType(sym);
     if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
       Fortran::lower::StatementContext stmtCtx;
