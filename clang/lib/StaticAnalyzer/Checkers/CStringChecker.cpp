@@ -848,7 +848,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
     SValBuilder &svalBuilder = C.getSValBuilder();
     QualType sizeTy = svalBuilder.getContext().getSizeType();
     const StringLiteral *strLit = cast<StringRegion>(MR)->getStringLiteral();
-    return svalBuilder.makeIntVal(strLit->getByteLength(), sizeTy);
+    return svalBuilder.makeIntVal(strLit->getLength(), sizeTy);
   }
   case MemRegion::SymbolicRegionKind:
   case MemRegion::AllocaRegionKind:
