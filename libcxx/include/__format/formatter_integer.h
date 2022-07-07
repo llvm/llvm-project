@@ -13,22 +13,17 @@
 #include <__availability>
 #include <__concepts/arithmetic.h>
 #include <__config>
-#include <__format/format_error.h> // TODO FMT Remove after adding 128-bit support
 #include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
-#include <limits> // TODO FMT Remove after adding 128-bit support
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS // TODO FMT Remove after adding 128-bit support
-#include <__undef_macros>
 
     _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -79,18 +74,7 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<long long, _Ch
 #  ifndef _LIBCPP_HAS_NO_INT128
 template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<__int128_t, _CharT>
-    : public __formatter_integer<_CharT> {
-  using _Base = __formatter_integer<_CharT>;
-
-  _LIBCPP_HIDE_FROM_ABI auto format(__int128_t __value, auto& __ctx) const -> decltype(__ctx.out()) {
-    // TODO FMT Implement full 128 bit support.
-    using _To = long long;
-    if (__value < numeric_limits<_To>::min() || __value > numeric_limits<_To>::max())
-      std::__throw_format_error("128-bit value is outside of implemented range");
-
-    return _Base::format(static_cast<_To>(__value), __ctx);
-  }
-};
+    : public __formatter_integer<_CharT> {};
 #  endif
 
 // Unsigned integral types.
@@ -112,24 +96,11 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<unsigned long 
 #  ifndef _LIBCPP_HAS_NO_INT128
 template <__formatter::__char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<__uint128_t, _CharT>
-    : public __formatter_integer<_CharT> {
-  using _Base = __formatter_integer<_CharT>;
-
-  _LIBCPP_HIDE_FROM_ABI auto format(__uint128_t __value, auto& __ctx) const -> decltype(__ctx.out()) {
-    // TODO FMT Implement full 128 bit support.
-    using _To = unsigned long long;
-    if (__value < numeric_limits<_To>::min() || __value > numeric_limits<_To>::max())
-      std::__throw_format_error("128-bit value is outside of implemented range");
-
-    return _Base::format(static_cast<_To>(__value), __ctx);
-  }
-};
+    : public __formatter_integer<_CharT> {};
 #  endif
 
 #endif //_LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FORMAT_FORMATTER_INTEGER_H
