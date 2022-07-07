@@ -581,6 +581,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   auto FailureCleanup = llvm::make_scope_exit([&]() {
     if (HasBegunSourceFile)
       CI.getDiagnosticClient().EndSourceFile();
+    CI.setASTConsumer(nullptr);
     CI.clearOutputFiles(/*EraseFiles=*/true);
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_None);
     setCurrentInput(FrontendInputFile());
