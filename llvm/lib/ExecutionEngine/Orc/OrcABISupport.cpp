@@ -665,7 +665,7 @@ void OrcMips32_Base::writeIndirectStubsBlock(
   //
   // i..
 
-  assert(stubAndPointerRangesOk<OrcAArch64>(
+  assert(stubAndPointerRangesOk<OrcMips32_Base>(
              StubsBlockTargetAddress, PointersBlockTargetAddress, NumStubs) &&
          "PointersBlock is out of range");
 
@@ -884,7 +884,7 @@ void OrcMips64::writeIndirectStubsBlock(
   //
   // ...
 
-  assert(stubAndPointerRangesOk<OrcAArch64>(
+  assert(stubAndPointerRangesOk<OrcMips64>(
              StubsBlockTargetAddress, PointersBlockTargetAddress, NumStubs) &&
          "PointersBlock is out of range");
 
