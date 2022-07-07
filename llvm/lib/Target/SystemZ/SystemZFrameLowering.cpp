@@ -918,72 +918,74 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
   SystemZMachineFunctionInfo *MFI = MF.getInfo<SystemZMachineFunctionInfo>();
   const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
   auto &Regs = Subtarget.getSpecialRegisters<SystemZXPLINK64Registers>();
-
-  // Scan the call-saved GPRs and find the bounds of the register spill area.
-  unsigned LowGPR = 0;
-  int LowOffset = INT32_MAX;
-  unsigned HighGPR = LowGPR;
-  int HighOffset = -1;
-
-  unsigned RegSP = Regs.getStackPointerRegister();
   auto &GRRegClass = SystemZ::GR64BitRegClass;
-  const unsigned RegSize = 8;
-
-  auto ProcessCSI = [&](std::vector<CalleeSavedInfo> &CSIList) {
-    for (auto &CS : CSIList) {
-      Register Reg = CS.getReg();
-      int Offset = RegSpillOffsets[Reg];
-      if (Offset >= 0) {
-        if (GRRegClass.contains(Reg)) {
-          if (LowOffset > Offset) {
-            LowOffset = Offset;
-            LowGPR = Reg;
-          }
-
-          if (Offset > HighOffset) {
-            HighOffset = Offset;
-            HighGPR = Reg;
-          }
-        }
-        int FrameIdx = MFFrame.CreateFixedSpillStackObject(RegSize, Offset);
-        CS.setFrameIdx(FrameIdx);
-      } else
-        CS.setFrameIdx(INT32_MAX);
-    }
-  };
-
-  std::vector<CalleeSavedInfo> Spills;
 
   // For non-leaf functions:
   // - the address of callee (entry point) register R6 must be saved
-  Spills.push_back(CalleeSavedInfo(Regs.getAddressOfCalleeRegister()));
+  CSI.push_back(CalleeSavedInfo(Regs.getAddressOfCalleeRegister()));
+  CSI.back().setRestored(false);
+
+  // The return address register R7 must be saved and restored.
+  CSI.push_back(CalleeSavedInfo(Regs.getReturnFunctionAddressRegister()));
 
   // If the function needs a frame pointer, or if the backchain pointer should
   // be stored, then save the stack pointer register R4.
   if (hasFP(MF) || MF.getFunction().hasFnAttribute("backchain"))
-    Spills.push_back(CalleeSavedInfo(RegSP));
+    CSI.push_back(CalleeSavedInfo(Regs.getStackPointerRegister()));
+
+  // Scan the call-saved GPRs and find the bounds of the register spill area.
+  Register LowRestoreGPR = 0;
+  int LowRestoreOffset = INT32_MAX;
+  Register LowSpillGPR = 0;
+  int LowSpillOffset = INT32_MAX;
+  Register HighGPR = 0;
+  int HighOffset = -1;
+
+  for (auto &CS : CSI) {
+    Register Reg = CS.getReg();
+    int Offset = RegSpillOffsets[Reg];
+    if (Offset >= 0) {
+      if (GRRegClass.contains(Reg)) {
+        if (LowSpillOffset > Offset) {
+          LowSpillOffset = Offset;
+          LowSpillGPR = Reg;
+        }
+        if (CS.isRestored() && LowRestoreOffset > Offset) {
+          LowRestoreOffset = Offset;
+          LowRestoreGPR = Reg;
+        }
+
+        if (Offset > HighOffset) {
+          HighOffset = Offset;
+          HighGPR = Reg;
+        }
+        // Non-volatile GPRs are saved in the dedicated register save area at
+        // the bottom of the stack and are not truly part of the "normal" stack
+        // frame. Mark the frame index as NoAlloc to indicate it as such.
+        unsigned RegSize = 8;
+        int FrameIdx = MFFrame.CreateFixedSpillStackObject(RegSize, Offset);
+        CS.setFrameIdx(FrameIdx);
+        MFFrame.setStackID(FrameIdx, TargetStackID::NoAlloc);
+      }
+    } else {
+      Register Reg = CS.getReg();
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      Align Alignment = TRI->getSpillAlign(*RC);
+      unsigned Size = TRI->getSpillSize(*RC);
+      Alignment = std::min(Alignment, getStackAlign());
+      int FrameIdx = MFFrame.CreateStackObject(Size, Alignment, true);
+      CS.setFrameIdx(FrameIdx);
+    }
+  }
 
   // Save the range of call-saved registers, for use by the
   // prologue/epilogue inserters.
-  ProcessCSI(CSI);
-  MFI->setRestoreGPRRegs(LowGPR, HighGPR, LowOffset);
+  if (LowRestoreGPR)
+    MFI->setRestoreGPRRegs(LowRestoreGPR, HighGPR, LowRestoreOffset);
 
   // Save the range of call-saved registers, for use by the epilogue inserter.
-  ProcessCSI(Spills);
-  MFI->setSpillGPRRegs(LowGPR, HighGPR, LowOffset);
-
-  // Create spill slots for the remaining registers.
-  for (auto &CS : CSI) {
-    if (CS.getFrameIdx() != INT32_MAX)
-      continue;
-    Register Reg = CS.getReg();
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    Align Alignment = TRI->getSpillAlign(*RC);
-    unsigned Size = TRI->getSpillSize(*RC);
-    Alignment = std::min(Alignment, getStackAlign());
-    int FrameIdx = MFFrame.CreateStackObject(Size, Alignment, true);
-    CS.setFrameIdx(FrameIdx);
-  }
+  assert(LowSpillGPR && "Expected registers to spill");
+  MFI->setSpillGPRRegs(LowSpillGPR, HighGPR, LowSpillOffset);
 
   return true;
 }
@@ -1001,13 +1003,6 @@ void SystemZXPLINKFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // frame pointer will be clobbered.
   if (HasFP)
     SavedRegs.set(Regs.getFramePointerRegister());
-
-  // If the function is not an XPLeaf function, we need to save the
-  // return address register. We also always use that register for
-  // the return instruction, so it needs to be restored in the
-  // epilogue even though that register is considered to be volatile.
-  // #TODO: Implement leaf detection.
-  SavedRegs.set(Regs.getReturnFunctionAddressRegister());
 }
 
 bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
