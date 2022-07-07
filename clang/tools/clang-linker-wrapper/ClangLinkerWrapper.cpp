@@ -366,12 +366,26 @@ Error extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
     return createStringError(inconvertibleErrorCode(),
                              "Failed to create module");
 
-  // Extract offloading data from globals with the `.llvm.offloading` section.
-  for (GlobalVariable &GV : M->globals()) {
-    if (!GV.hasSection() || !GV.getSection().equals(OFFLOAD_SECTION_MAGIC_STR))
+  // Extract offloading data from globals referenced by the
+  // `llvm.embedded.object` metadata with the `.llvm.offloading` section.
+  auto MD = M->getNamedMetadata("llvm.embedded.object");
+  if (!MD)
+    return Error::success();
+
+  for (const MDNode *Op : MD->operands()) {
+    if (Op->getNumOperands() < 2)
       continue;
 
-    auto *CDS = dyn_cast<ConstantDataSequential>(GV.getInitializer());
+    MDString *SectionID = dyn_cast<MDString>(Op->getOperand(1));
+    if (!SectionID || SectionID->getString() != OFFLOAD_SECTION_MAGIC_STR)
+      continue;
+
+    GlobalVariable *GV =
+        mdconst::dyn_extract_or_null<GlobalVariable>(Op->getOperand(0));
+    if (!GV)
+      continue;
+
+    auto *CDS = dyn_cast<ConstantDataSequential>(GV->getInitializer());
     if (!CDS)
       continue;
 
