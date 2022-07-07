@@ -49,11 +49,17 @@ void testComp() {
   char unsigned *n1 = mb;
   int res = dn_comp("llvm.org", mb, me - mb, pb, pe);
   assert(res == 10);
+  check_mem_is_good(mb, res);
+  // pb is [msg, llvm.org, nullptr]
+  check_mem_is_good(pb, sizeof(*pb) * 3);
   mb += res;
 
   char unsigned *n2 = mb;
   res = dn_comp("lab.llvm.org", mb, me - mb, pb, pe);
   assert(res == 6);
+  check_mem_is_good(mb, res);
+  // pb is [msg, llvm.org, lab.llvm.org, nullptr]
+  check_mem_is_good(pb, sizeof(*pb) * 4);
   mb += res;
 
   {
