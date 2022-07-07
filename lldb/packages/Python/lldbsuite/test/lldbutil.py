@@ -236,7 +236,7 @@ def state_type_to_str(enum):
     elif enum == lldb.eStateSuspended:
         return "suspended"
     else:
-        raise Exception("Unknown StateType enum")
+        raise Exception("Unknown StateType enum: " + str(enum))
 
 
 def stop_reason_to_str(enum):
@@ -959,19 +959,22 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
     test.assertFalse(error.Fail(),
                      "Process launch failed: %s" % (error.GetCString()))
 
-    if process.GetState() == lldb.eStateRunning:
-        # If we get here with eStateRunning, it means we missed the
-        # initial breakpoint. Figure out where the process is
-        # so we can report that:
-        error = lldb.SBError()
-        error = process.Stop()
-        if not error.Success():
-            test.fail("Failed to stop: %s"%(error.GetCString()))
+    def processStateInfo(process):
+        info = "state: {}".format(state_type_to_str(process.state))
+        if process.state == lldb.eStateExited:
+            info += ", exit code: {}".format(process.GetExitStatus())
+            if process.exit_description:
+                info += ", exit description: '{}'".format(process.exit_description)
+        stdout = process.GetSTDOUT(999)
+        if stdout:
+            info += ", stdout: '{}'".format(stdout)
+        stderr = process.GetSTDERR(999)
+        if stderr:
+            info += ", stderr: '{}'".format(stderr)
+        return info
 
-        error_string = "Failed to hit initial breakpoint:\n%s\n"%(print_stacktraces(process, True))
-        test.fail(error_string)
-
-    test.assertState(process.GetState(), lldb.eStateStopped)
+    if process.state != lldb.eStateStopped:
+        test.fail("Test process is not stopped at breakpoint: {}".format(processStateInfo(process)))
 
     # Frame #0 should be at our breakpoint.
     threads = get_threads_stopped_at_breakpoint(
