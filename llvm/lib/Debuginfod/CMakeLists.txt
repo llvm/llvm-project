@@ -8,6 +8,11 @@ if (LLVM_ENABLE_HTTPLIB)
   set(imported_libs ${imported_libs} httplib::httplib)
 endif()
 
+# Make sure pthread is linked if this is a unix host
+if (CMAKE_HOST_UNIX)
+  set(imported_libs ${imported_libs} ${LLVM_PTHREAD_LIB})
+endif()
+
 # Note: This isn't a component, since that could potentially add a libcurl
 # dependency to libLLVM.
 add_llvm_library(LLVMDebuginfod
