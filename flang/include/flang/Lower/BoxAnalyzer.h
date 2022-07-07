@@ -490,7 +490,7 @@ private:
         sym.GetType()->characterTypeSpec().length();
     if (Fortran::semantics::MaybeIntExpr expr = lenParam.GetExplicit())
       return {Fortran::evaluate::AsGenericExpr(std::move(*expr))};
-    // For assumed length parameters, the length comes from the initialization
+    // For assumed LEN parameters, the length comes from the initialization
     // expression.
     if (sym.attrs().test(Fortran::semantics::Attr::PARAMETER))
       if (const auto *objectDetails =

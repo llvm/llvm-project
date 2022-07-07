@@ -222,8 +222,7 @@ public:
 };
 
 /// Is \p sym a derived type entity with length parameters ?
-static bool
-isDerivedWithLengthParameters(const Fortran::semantics::Symbol &sym) {
+static bool isDerivedWithLenParameters(const Fortran::semantics::Symbol &sym) {
   if (const auto *declTy = sym.GetType())
     if (const auto *derived = declTy->AsDerived())
       return Fortran::semantics::CountLenParameters(*derived) != 0;
@@ -301,7 +300,7 @@ public:
           nonDeferredLenParams.push_back(readLength());
         }
       }
-    } else if (isDerivedWithLengthParameters(sym)) {
+    } else if (isDerivedWithLenParameters(sym)) {
       TODO(loc, "host associated derived type allocatable or pointer with "
                 "length parameters");
     }
@@ -426,7 +425,7 @@ private:
     const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
     bool isPolymorphic = type && type->IsPolymorphic();
     return isScalarOrContiguous && !isPolymorphic &&
-           !isDerivedWithLengthParameters(sym);
+           !isDerivedWithLenParameters(sym);
   }
 };
 
@@ -438,7 +437,7 @@ template <typename T>
 typename T::Result
 walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
                       const Fortran::semantics::Symbol &sym) {
-  if (isDerivedWithLengthParameters(sym))
+  if (isDerivedWithLenParameters(sym))
     // Should be boxed.
     TODO(converter.genLocation(sym.name()),
          "host associated derived type with length parameters");

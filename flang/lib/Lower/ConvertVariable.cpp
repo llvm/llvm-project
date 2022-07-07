@@ -48,7 +48,6 @@ static mlir::Value genScalarValue(Fortran::lower::AbstractConverter &converter,
   return fir::getBase(Fortran::lower::createSomeExtendedExpression(
       loc, converter, expr, symMap, context));
 }
-
 /// Does this variable have a default initialization?
 static bool hasDefaultInitialization(const Fortran::semantics::Symbol &sym) {
   if (sym.has<Fortran::semantics::ObjectEntityDetails>() && sym.size())
@@ -103,6 +102,15 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   llvm::StringRef globalName,
                                   mlir::StringAttr linkage);
 
+static mlir::Location genLocation(Fortran::lower::AbstractConverter &converter,
+                                  const Fortran::semantics::Symbol &sym) {
+  // Compiler generated name cannot be used as source location, their name
+  // is not pointing to the source files.
+  if (!sym.test(Fortran::semantics::Symbol::Flag::CompilerCreated))
+    return converter.genLocation(sym.name());
+  return converter.getCurrentLocation();
+}
+
 /// Create the global op declaration without any initializer
 static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
                                    const Fortran::lower::pft::Variable &var,
@@ -117,7 +125,7 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       linkage == builder.createLinkOnceLinkage())
     return defineGlobal(converter, var, globalName, linkage);
   const Fortran::semantics::Symbol &sym = var.getSymbol();
-  mlir::Location loc = converter.genLocation(sym.name());
+  mlir::Location loc = genLocation(converter, sym);
   // Resolve potential host and module association before checking that this
   // symbol is an object of a function pointer.
   const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
@@ -371,7 +379,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   mlir::StringAttr linkage) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
-  mlir::Location loc = converter.genLocation(sym.name());
+  mlir::Location loc = genLocation(converter, sym);
   bool isConst = isConstant(sym);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   mlir::Type symTy = converter.genType(var);
@@ -508,7 +516,7 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   assert(!var.isAlias() && "must be handled in instantiateAlias");
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = Fortran::lower::mangle::mangleName(sym);
-  mlir::Location loc = converter.genLocation(sym.name());
+  mlir::Location loc = genLocation(converter, sym);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   mlir::StringAttr linkage = getLinkageAttribute(builder, var);
   if (var.isModuleVariable()) {
@@ -780,7 +788,7 @@ static void instantiateAlias(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   assert(var.isAlias());
   const Fortran::semantics::Symbol &sym = var.getSymbol();
-  const mlir::Location loc = converter.genLocation(sym.name());
+  const mlir::Location loc = genLocation(converter, sym);
   mlir::IndexType idxTy = builder.getIndexType();
   std::size_t aliasOffset = var.getAlias();
   mlir::Value store = getAggregateStore(storeMap, var);
@@ -1228,7 +1236,7 @@ void Fortran::lower::mapSymbolAttributes(
     mlir::Value preAlloc) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
-  const mlir::Location loc = converter.genLocation(sym.name());
+  const mlir::Location loc = genLocation(converter, sym);
   mlir::IndexType idxTy = builder.getIndexType();
   const bool isDeclaredDummy = Fortran::semantics::IsDummy(sym);
   // An active dummy from the current entry point.
