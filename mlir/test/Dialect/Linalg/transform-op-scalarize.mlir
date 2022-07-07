@@ -23,7 +23,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @pdl_target in %arg1
-    %1, %loops = transform.structured.tile %0 {sizes = [10, 0, 0]}
+    %1, %loops = transform.structured.tile %0 [10, 0, 0]
     %2 = transform.structured.scalarize %1
   }
 }

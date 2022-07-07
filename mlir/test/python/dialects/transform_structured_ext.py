@@ -105,9 +105,8 @@ def testTileCompact():
     transform.YieldOp()
   # CHECK-LABEL: TEST: testTileCompact
   # CHECK: transform.sequence
-  # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile
-  # CHECK-DAG: interchange = [0, 1]
-  # CHECK-DAG: sizes = [4, 8]
+  # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, 8]
+  # CHECK: interchange = [0, 1]
 
 
 @run
@@ -122,9 +121,8 @@ def testTileAttributes():
     transform.YieldOp()
   # CHECK-LABEL: TEST: testTileAttributes
   # CHECK: transform.sequence
-  # CHECK: structured.tile
-  # CHECK-DAG: interchange = [0, 1]
-  # CHECK-DAG: sizes = [4, 8]
+  # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, 8]
+  # CHECK: interchange = [0, 1]
 
 
 @run
@@ -136,9 +134,24 @@ def testTileZero():
     transform.YieldOp()
   # CHECK-LABEL: TEST: testTileZero
   # CHECK: transform.sequence
-  # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile
-  # CHECK-DAG: interchange = [0, 1, 2, 3]
-  # CHECK-DAG: sizes = [4, 0, 2, 0]
+  # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, 0, 2, 0]
+  # CHECK: interchange = [0, 1, 2, 3]
+
+
+@run
+def testTileDynamic():
+  with_pdl = transform.WithPDLPatternsOp()
+  with InsertionPoint(with_pdl.body):
+    sequence = transform.SequenceOp(with_pdl.bodyTarget)
+    with InsertionPoint(sequence.body):
+      m1 = transform.PDLMatchOp(sequence.bodyTarget, "first")
+      m2 = transform.PDLMatchOp(sequence.bodyTarget, "second")
+      structured.TileOp(sequence.bodyTarget, sizes=[m1, 3, m2, 0])
+      transform.YieldOp()
+  # CHECK-LABEL: TEST: testTileDynamic
+  # CHECK: %[[FIRST:.+]] = pdl_match
+  # CHECK: %[[SECOND:.+]] = pdl_match
+  # CHECK: %{{.+}}, %{{.+}}:3 = transform.structured.tile %{{.*}}[%[[FIRST]], 3, %[[SECOND]], 0]
 
 
 @run

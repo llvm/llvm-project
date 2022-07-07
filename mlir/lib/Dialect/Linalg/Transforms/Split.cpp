@@ -15,16 +15,6 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-/// Turns an OpFoldResult into a value, creating an index-typed constant if
-/// necessary.
-static Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
-                                     OpFoldResult opFoldResult) {
-  if (opFoldResult.is<Value>())
-    return opFoldResult.get<Value>();
-  auto attr = opFoldResult.get<Attribute>().cast<IntegerAttr>();
-  return builder.create<arith::ConstantIndexOp>(attr.getValue().getSExtValue());
-}
-
 /// Extract the slices of `operands` supplied to the given operation `op` such
 /// that they are sufficient to execute the op for the subset of its iteration
 /// space defined by `splitIterationSpace`. The subset is a part of the original
