@@ -61,6 +61,17 @@ static bool berase_if(MachineValueTypeSet &S, Predicate P) {
   return Erased;
 }
 
+void MachineValueTypeSet::writeToStream(raw_ostream &OS) const {
+  SmallVector<MVT, 4> Types(begin(), end());
+  array_pod_sort(Types.begin(), Types.end());
+
+  OS << '[';
+  ListSeparator LS(" ");
+  for (const MVT &T : Types)
+    OS << LS << ValueTypeByHwMode::getMVTName(T);
+  OS << ']';
+}
+
 // --- TypeSetByHwMode
 
 // This is a parameterized type-set class. For each mode there is a list
@@ -193,20 +204,9 @@ void TypeSetByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '{';
   for (unsigned M : Modes) {
     OS << ' ' << getModeName(M) << ':';
-    writeToStream(get(M), OS);
+    get(M).writeToStream(OS);
   }
   OS << " }";
-}
-
-void TypeSetByHwMode::writeToStream(const SetType &S, raw_ostream &OS) {
-  SmallVector<MVT, 4> Types(S.begin(), S.end());
-  array_pod_sort(Types.begin(), Types.end());
-
-  OS << '[';
-  ListSeparator LS(" ");
-  for (const MVT &T : Types)
-    OS << LS << ValueTypeByHwMode::getMVTName(T);
-  OS << ']';
 }
 
 bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
@@ -253,6 +253,10 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
 }
 
 namespace llvm {
+  raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
+    T.writeToStream(OS);
+    return OS;
+  }
   raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
     T.writeToStream(OS);
     return OS;
