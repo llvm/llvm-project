@@ -389,7 +389,7 @@ static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
 
     // Replace CoroSave with a store to Index:
     //    %index.addr = getelementptr %f.frame... (index field number)
-    //    store i32 0, i32* %index.addr1
+    //    store i32 %IndexVal, i32* %index.addr1
     auto *Save = S->getCoroSave();
     Builder.SetInsertPoint(Save);
     if (S->isFinal()) {
