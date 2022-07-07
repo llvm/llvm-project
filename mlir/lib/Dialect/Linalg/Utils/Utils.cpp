@@ -993,6 +993,14 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
   return tensorResults;
 }
 
+Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
+                              OpFoldResult opFoldResult) {
+  if (auto value = opFoldResult.dyn_cast<Value>())
+    return value;
+  auto attr = opFoldResult.get<Attribute>().cast<IntegerAttr>();
+  return builder.create<arith::ConstantIndexOp>(attr.getValue().getSExtValue());
+}
+
 SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
                                       LinalgOp linalgOp,
                                       ArrayRef<Value> valuesToTile,
