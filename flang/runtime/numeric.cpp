@@ -122,7 +122,7 @@ template <typename T> inline T SetExponent(T x, std::int64_t p) {
   } else if (std::isinf(x)) {
     return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
   } else if (x == 0) {
-    return 0; // 0 -> 0
+    return x; // return negative zero if x is negative zero
   } else {
     int expo{std::ilogb(x) + 1};
     auto ip{static_cast<int>(p - expo)};
