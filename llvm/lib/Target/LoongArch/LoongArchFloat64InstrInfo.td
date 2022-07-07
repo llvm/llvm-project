@@ -131,6 +131,11 @@ def MOVGR2FR_D  : FP_MOV<0b0000000100010100101010, "movgr2fr.d", FPR64, GPR>;
 def MOVFR2GR_D  : FP_MOV<0b0000000100010100101110, "movfr2gr.d", GPR, FPR64>;
 } // Predicates = [HasBasicD, IsLA64]
 
+// Instructions only available on LA32
+let Predicates = [HasBasicD, IsLA32], isCodeGenOnly = 1 in {
+def MOVGR2FR_W_64 : FP_MOV<0b0000000100010100101001, "movgr2fr.w", FPR64, GPR>;
+} // Predicates = [HasBasicD, IsLA32], isCodeGenOnly = 1
+
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
@@ -192,5 +197,18 @@ defm : LdPat<load, FLD_D, f64>;
 /// Stores
 
 defm : StPat<store, FST_D, FPR64, f64>;
-
 } // Predicates = [HasBasicD]
+
+/// Floating point constants
+
+let Predicates = [HasBasicD, IsLA64] in {
+def : Pat<(f64 fpimm0), (MOVGR2FR_D R0)>;
+def : Pat<(f64 fpimm0neg), (FNEG_D (MOVGR2FR_D R0))>;
+def : Pat<(f64 fpimm1), (FFINT_D_L (MOVGR2FR_D (ADDI_D R0, 1)))>;
+} // Predicates = [HasBasicD, IsLA64]
+
+let Predicates = [HasBasicD, IsLA32] in {
+def : Pat<(f64 fpimm0), (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0)>;
+def : Pat<(f64 fpimm0neg), (FNEG_D (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0))>;
+def : Pat<(f64 fpimm1), (FCVT_D_S (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1))))>;
+} // Predicates = [HasBasicD, IsLA32]

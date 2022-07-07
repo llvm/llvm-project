@@ -51,7 +51,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRL_PARTS, GRLenVT, Custom);
 
-  setOperationAction(ISD::GlobalAddress, GRLenVT, Custom);
+  setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, GRLenVT, Custom);
 
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::SHL, MVT::i32, Custom);
@@ -69,6 +69,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasBasicD()) {
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   }
 
   setOperationAction(ISD::BR_CC, GRLenVT, Expand);
@@ -110,7 +111,31 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     return SDValue();
+  case ISD::ConstantPool:
+    return lowerConstantPool(Op, DAG);
   }
+}
+
+SDValue LoongArchTargetLowering::lowerConstantPool(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT Ty = Op.getValueType();
+  ConstantPoolSDNode *N = cast<ConstantPoolSDNode>(Op);
+
+  // FIXME: Only support PC-relative addressing to access the symbol.
+  // Target flags will be added later.
+  if (!isPositionIndependent()) {
+    SDValue ConstantN = DAG.getTargetConstantPool(
+        N->getConstVal(), Ty, N->getAlign(), N->getOffset());
+    SDValue AddrHi(DAG.getMachineNode(LoongArch::PCALAU12I, DL, Ty, ConstantN),
+                   0);
+    SDValue Addr(DAG.getMachineNode(Subtarget.is64Bit() ? LoongArch::ADDI_D
+                                                        : LoongArch::ADDI_W,
+                                    DL, Ty, AddrHi, ConstantN),
+                 0);
+    return Addr;
+  }
+  report_fatal_error("Unable to lower ConstantPool");
 }
 
 SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
@@ -735,4 +760,15 @@ SDValue LoongArchTargetLowering::LowerReturn(
     RetOps.push_back(Glue);
 
   return DAG.getNode(LoongArchISD::RET, DL, MVT::Other, RetOps);
+}
+
+bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                           bool ForCodeSize) const {
+  assert((VT == MVT::f32 || VT == MVT::f64) && "Unexpected VT");
+
+  if (VT == MVT::f32 && !Subtarget.hasBasicF())
+    return false;
+  if (VT == MVT::f64 && !Subtarget.hasBasicD())
+    return false;
+  return (Imm.isZero() || Imm.isExactlyValue(+1.0));
 }

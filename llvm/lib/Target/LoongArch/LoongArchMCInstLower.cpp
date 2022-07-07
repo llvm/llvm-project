@@ -57,6 +57,9 @@ bool llvm::lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
   case MachineOperand::MO_Immediate:
     MCOp = MCOperand::createImm(MO.getImm());
     break;
+  case MachineOperand::MO_ConstantPoolIndex:
+    MCOp = lowerSymbolOperand(MO, AP.GetCPISymbol(MO.getIndex()), AP);
+    break;
   case MachineOperand::MO_GlobalAddress:
     MCOp = lowerSymbolOperand(MO, AP.getSymbolPreferLocal(*MO.getGlobal()), AP);
     break;
@@ -69,7 +72,6 @@ bool llvm::lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
     break;
   // TODO: lower special operands
   case MachineOperand::MO_BlockAddress:
-  case MachineOperand::MO_ConstantPoolIndex:
   case MachineOperand::MO_JumpTableIndex:
     break;
   }
