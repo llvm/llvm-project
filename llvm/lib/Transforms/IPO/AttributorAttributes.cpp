@@ -6310,8 +6310,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
       // TODO: Hoist the alloca towards the function entry.
       unsigned AS = DL.getAllocaAddrSpace();
-      Instruction *Alloca = new AllocaInst(Type::getInt8Ty(F->getContext()), AS,
-                                           Size, Alignment, "", IP);
+      Instruction *Alloca =
+          new AllocaInst(Type::getInt8Ty(F->getContext()), AS, Size, Alignment,
+                         AI.CB->getName() + ".h2s", IP);
 
       if (Alloca->getType() != AI.CB->getType())
         Alloca = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
@@ -6616,15 +6617,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         AI.Status = AllocationInfo::INVALID;
         Changed = ChangeStatus::CHANGED;
         continue;
-      } else {
-        if (APAlign->ugt(llvm::Value::MaximumAlignment) ||
-            !APAlign->isPowerOf2()) {
-          LLVM_DEBUG(dbgs() << "[H2S] Invalid allocation alignment: " << APAlign
-                            << "\n");
-          AI.Status = AllocationInfo::INVALID;
-          Changed = ChangeStatus::CHANGED;
-          continue;
-        }
+      }
+      if (APAlign->ugt(llvm::Value::MaximumAlignment) ||
+          !APAlign->isPowerOf2()) {
+        LLVM_DEBUG(dbgs() << "[H2S] Invalid allocation alignment: " << APAlign
+                          << "\n");
+        AI.Status = AllocationInfo::INVALID;
+        Changed = ChangeStatus::CHANGED;
+        continue;
       }
     }
 
