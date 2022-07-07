@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -36,6 +38,7 @@ public:
                      const uint8_t *loc) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  bool relaxOnce(int pass) const override;
 };
 
 } // end anonymous namespace
@@ -271,12 +274,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_TPREL_ADD:
     return R_NONE;
   case R_RISCV_ALIGN:
-    // Not just a hint; always padded to the worst-case number of NOPs, so may
-    // not currently be aligned, and without linker relaxation support we can't
-    // delete NOPs to realign.
-    errorOrWarn(getErrorLocation(loc) + "relocation R_RISCV_ALIGN requires "
-                "unimplemented linker relaxation; recompile with -mno-relax");
-    return R_NONE;
+    return R_RELAX_HINT;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
@@ -473,6 +471,233 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   default:
     llvm_unreachable("unknown relocation");
+  }
+}
+
+namespace {
+struct SymbolAnchor {
+  uint64_t offset;
+  Defined *d;
+  bool end; // true for the anchor of st_value+st_size
+};
+} // namespace
+
+struct elf::RISCVRelaxAux {
+  // This records symbol start and end offsets which will be adjusted according
+  // to the nearest relocDeltas element.
+  SmallVector<SymbolAnchor, 0> anchors;
+  // For relocations[i], the actual offset is r_offset - (i ? relocDeltas[i-1] :
+  // 0).
+  std::unique_ptr<uint32_t[]> relocDeltas;
+};
+
+static void initSymbolAnchors() {
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      sec->relaxAux = make<RISCVRelaxAux>();
+      if (sec->relocations.size())
+        sec->relaxAux->relocDeltas =
+            std::make_unique<uint32_t[]>(sec->relocations.size());
+    }
+  }
+  // Store anchors (st_value and st_value+st_size) for symbols relative to text
+  // sections.
+  for (InputFile *file : ctx->objectFiles)
+    for (Symbol *sym : file->getSymbols()) {
+      auto *d = dyn_cast<Defined>(sym);
+      if (!d || d->file != file)
+        continue;
+      if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
+        if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
+          // If sec is discarded, relaxAux will be nullptr.
+          sec->relaxAux->anchors.push_back({d->value, d, false});
+          sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
+        }
+    }
+  // Sort anchors by offset so that we can find the closest relocation
+  // efficiently. For a zero size symbol, ensure that its start anchor precedes
+  // its end anchor. For two symbols with anchors at the same offset, their
+  // order does not matter.
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      llvm::sort(sec->relaxAux->anchors, [](auto &a, auto &b) {
+        return std::make_pair(a.offset, a.end) <
+               std::make_pair(b.offset, b.end);
+      });
+    }
+  }
+}
+
+static bool relax(InputSection &sec) {
+  const uint64_t secAddr = sec.getVA();
+  auto &aux = *sec.relaxAux;
+  bool changed = false;
+
+  // Restore original st_value for symbols relative to this section.
+  ArrayRef<SymbolAnchor> sa = makeArrayRef(aux.anchors);
+  uint32_t delta = 0;
+  for (auto it : llvm::enumerate(sec.relocations)) {
+    for (; sa.size() && sa[0].offset <= it.value().offset; sa = sa.slice(1))
+      if (!sa[0].end)
+        sa[0].d->value += delta;
+    delta = aux.relocDeltas[it.index()];
+  }
+  for (const SymbolAnchor &sa : sa)
+    if (!sa.end)
+      sa.d->value += delta;
+  sa = makeArrayRef(aux.anchors);
+  delta = 0;
+
+  for (auto it : llvm::enumerate(sec.relocations)) {
+    Relocation &r = it.value();
+    const size_t i = it.index();
+    const uint64_t loc = secAddr + r.offset - delta;
+    uint32_t &cur = aux.relocDeltas[i], remove = 0;
+    switch (r.type) {
+    case R_RISCV_ALIGN: {
+      const uint64_t nextLoc = loc + r.addend;
+      const uint64_t align = PowerOf2Ceil(r.addend + 2);
+      // All bytes beyond the alignment boundary should be removed.
+      remove = nextLoc - ((loc + align - 1) & -align);
+      assert(static_cast<int32_t>(remove) >= 0 &&
+             "R_RISCV_ALIGN needs expanding the content");
+      break;
+    }
+    }
+
+    // For all anchors whose offsets are <= r.offset, they are preceded by
+    // the previous relocation whose `relocDeltas` value equals `delta`.
+    // Decrease their st_value and update their st_size.
+    if (remove) {
+      for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1)) {
+        if (sa[0].end)
+          sa[0].d->size = sa[0].offset - delta - sa[0].d->value;
+        else
+          sa[0].d->value -= delta;
+      }
+    }
+    delta += remove;
+    if (delta != cur) {
+      cur = delta;
+      changed = true;
+    }
+  }
+
+  for (const SymbolAnchor &a : sa) {
+    if (a.end)
+      a.d->size = a.offset - delta - a.d->value;
+    else
+      a.d->value -= delta;
+  }
+  // Inform assignAddresses that the size has changed.
+  if (!isUInt<16>(delta))
+    fatal("section size decrease is too large");
+  sec.bytesDropped = delta;
+  return changed;
+}
+
+// When relaxing just R_RISCV_ALIGN, relocDeltas is usually changed only once in
+// the absence of a linker script. For call and load/store R_RISCV_RELAX, code
+// shrinkage may reduce displacement and make more relocations eligible for
+// relaxation. Code shrinkage may increase displacement to a call/load/store
+// target at a higher fixed address, invalidating an earlier relaxation. Any
+// change in section sizes can have cascading effect and require another
+// relaxation pass.
+bool RISCV::relaxOnce(int pass) const {
+  llvm::TimeTraceScope timeScope("RISC-V relaxOnce");
+  if (config->relocatable)
+    return false;
+
+  if (pass == 0)
+    initSymbolAnchors();
+
+  SmallVector<InputSection *, 0> storage;
+  bool changed = false;
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage))
+      changed |= relax(*sec);
+  }
+  return changed;
+}
+
+void elf::riscvFinalizeRelax(int passes) {
+  llvm::TimeTraceScope timeScope("Finalize RISC-V relaxation");
+  log("relaxation passes: " + Twine(passes));
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      RISCVRelaxAux &aux = *sec->relaxAux;
+      if (!aux.relocDeltas)
+        continue;
+
+      auto &rels = sec->relocations;
+      ArrayRef<uint8_t> old = sec->rawData;
+      size_t newSize =
+          old.size() - aux.relocDeltas[sec->relocations.size() - 1];
+      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      uint64_t offset = 0;
+      int64_t delta = 0;
+      sec->rawData = makeArrayRef(p, newSize);
+      sec->bytesDropped = 0;
+
+      // Update section content: remove NOPs for R_RISCV_ALIGN and rewrite
+      // instructions for relaxed relocations.
+      for (size_t i = 0, e = rels.size(); i != e; ++i) {
+        uint32_t remove = aux.relocDeltas[i] - delta;
+        delta = aux.relocDeltas[i];
+        if (remove == 0)
+          continue;
+
+        // Copy from last location to the current relocated location.
+        const Relocation &r = rels[i];
+        uint64_t size = r.offset - offset;
+        memcpy(p, old.data() + offset, size);
+        p += size;
+
+        // For R_RISCV_ALIGN, we will place `offset` in a location (among NOPs)
+        // to satisfy the alignment requirement. If `remove` is a multiple of 4,
+        // it is as if we have skipped some NOPs. Otherwise we are in the middle
+        // of a 4-byte NOP, and we need to rewrite the NOP sequence.
+        int64_t skip = 0;
+        if (r.type == R_RISCV_ALIGN) {
+          if (remove % 4 != 0) {
+            skip = r.addend - remove;
+            int64_t j = 0;
+            for (; j + 4 <= skip; j += 4)
+              write32le(p + j, 0x00000013); // nop
+            if (j != skip) {
+              assert(j + 2 == skip);
+              write16le(p + j, 0x0001); // c.nop
+            }
+          }
+        }
+
+        p += skip;
+        offset = r.offset + skip + remove;
+      }
+      memcpy(p, old.data() + offset, old.size() - offset);
+
+      // Substract the previous relocDeltas value from the relocation offset.
+      // For a pair of R_RISCV_CALL/R_RISCV_RELAX with the same offset, decrease
+      // their r_offset by the same delta.
+      delta = 0;
+      for (size_t i = 0, e = rels.size(); i != e;) {
+        uint64_t cur = rels[i].offset;
+        do {
+          rels[i].offset -= delta;
+        } while (++i != e && rels[i].offset == cur);
+        delta = aux.relocDeltas[i - 1];
+      }
+    }
   }
 }
 
