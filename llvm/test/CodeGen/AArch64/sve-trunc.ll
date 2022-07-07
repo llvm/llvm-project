@@ -187,6 +187,19 @@ entry:
   ret <vscale x 16 x i1> %out
 }
 
+define <vscale x 1 x i1> @trunc_nxv1i32_to_nxv1i1(<vscale x 1 x i32> %in) {
+; CHECK-LABEL: trunc_nxv1i32_to_nxv1i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %out = trunc <vscale x 1 x i32> %in to <vscale x 1 x i1>
+  ret <vscale x 1 x i1> %out
+}
+
 define void @trunc_promoteIntRes(<vscale x 4 x i64> %0, i16* %ptr) {
 ; CHECK-LABEL: trunc_promoteIntRes:
 ; CHECK:       // %bb.0: // %entry
