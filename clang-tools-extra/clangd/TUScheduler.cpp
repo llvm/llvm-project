@@ -498,6 +498,8 @@ public:
         // Build the preamble and let the waiters know about it.
         build(std::move(*CurrentReq));
       }
+      // Releasing the throttle before destroying the request assists testing.
+      Throttle.reset();
       bool IsEmpty = false;
       {
         std::lock_guard<std::mutex> Lock(Mutex);
