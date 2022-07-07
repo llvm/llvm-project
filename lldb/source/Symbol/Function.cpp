@@ -197,6 +197,7 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
   Status error;
   Value callee_addr_val;
   if (!call_target.Evaluate(&exe_ctx, exe_ctx.GetRegisterContext(),
+                            /*loclist_base_load_addr=*/LLDB_INVALID_ADDRESS,
                             /*initial_value_ptr=*/nullptr,
                             /*object_address_ptr=*/nullptr, callee_addr_val,
                             &error)) {

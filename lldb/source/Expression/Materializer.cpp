@@ -520,7 +520,7 @@ public:
 
         if (data.GetByteSize() < m_variable_sp->GetType()->GetByteSize(scope)) {
           if (data.GetByteSize() == 0 &&
-              !m_variable_sp->LocationExpressionList().IsValid()) {
+              !m_variable_sp->LocationExpression().IsValid()) {
             err.SetErrorStringWithFormat("the variable '%s' has no location, "
                                          "it may have been optimized out",
                                          m_variable_sp->GetName().AsCString());

@@ -104,7 +104,7 @@ public:
       DWARFUnit *cu, const char *&name, const char *&mangled,
       DWARFRangeList &rangeList, int &decl_file, int &decl_line,
       int &decl_column, int &call_file, int &call_line, int &call_column,
-      lldb_private::DWARFExpressionList *frame_base = nullptr) const;
+      lldb_private::DWARFExpression *frame_base = nullptr) const;
 
   const DWARFAbbreviationDeclaration *
   GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const;
