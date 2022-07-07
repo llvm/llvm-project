@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_GRAMMAR_LANGUAGE_H
-#define CLANG_PSEUDO_GRAMMAR_LANGUAGE_H
+#ifndef CLANG_PSEUDO_LANGUAGE_H
+#define CLANG_PSEUDO_LANGUAGE_H
 
 #include "clang-pseudo/Token.h"
 #include "clang-pseudo/grammar/Grammar.h"
@@ -56,4 +56,4 @@ struct Language {
 } // namespace pseudo
 } // namespace clang
 
-#endif // CLANG_PSEUDO_GRAMMAR_LANGUAGE_H
+#endif // CLANG_PSEUDO_LANGUAGE_H
