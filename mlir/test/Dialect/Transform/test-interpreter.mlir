@@ -460,3 +460,42 @@ transform.with_pdl_patterns {
     %1:2 = transform.test_correct_number_of_multi_results %0
   }
 }
+
+// -----
+
+// Expecting to match all operations by merging the handles that matched addi
+// and subi separately.
+func.func @foo(%arg0: index) {
+  // expected-remark @below {{matched}}
+  %0 = arith.addi %arg0, %arg0 : index
+  // expected-remark @below {{matched}}
+  %1 = arith.subi %arg0, %arg0 : index
+  // expected-remark @below {{matched}}
+  %2 = arith.addi %0, %1 : index
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @addi : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "arith.addi"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+  pdl.pattern @subi : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "arith.subi"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @addi in %arg1
+    %1 = pdl_match @subi in %arg1
+    %2 = merge_handles %0, %1
+    test_print_remark_at_operand %2, "matched"
+  }
+}
+

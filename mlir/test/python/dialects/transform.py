@@ -82,3 +82,15 @@ def testGetClosestIsolatedParentOp():
   # CHECK: transform.sequence
   # CHECK: ^{{.*}}(%[[ARG1:.+]]: !pdl.operation):
   # CHECK:   = get_closest_isolated_parent %[[ARG1]]
+
+
+@run
+def testMergeHandlesOp():
+  sequence = transform.SequenceOp()
+  with InsertionPoint(sequence.body):
+    transform.MergeHandlesOp([sequence.bodyTarget])
+    transform.YieldOp()
+  # CHECK-LABEL: TEST: testMergeHandlesOp
+  # CHECK: transform.sequence
+  # CHECK: ^{{.*}}(%[[ARG1:.+]]: !pdl.operation):
+  # CHECK:   = merge_handles %[[ARG1]]
