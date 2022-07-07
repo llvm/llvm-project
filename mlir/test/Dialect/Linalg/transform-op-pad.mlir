@@ -99,7 +99,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @pdl_target in %arg1
-    // expected-error @below {{expects a padding value that parses to 'f32', got "foo"}}
+    // expected-error @below {{expects a padding that parses to 'f32', got "foo"}}
     %1 = transform.structured.pad %0 {padding_values=["foo", 0.0 : f32, 0.0 : f32], padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 0]}
   }
 }
@@ -109,7 +109,7 @@ transform.with_pdl_patterns {
 func.func @pad(%arg0: tensor<24x12xf32>,
                %arg1: tensor<12x25xf32>,
                %arg2: tensor<24x25xf32>) -> tensor<24x25xf32> {
-  // expected-note @below {{target op}}
+  // expected-note @below {{when applied to this op}}
   %0 = linalg.matmul ins(%arg0, %arg1 : tensor<24x12xf32>, tensor<12x25xf32>) outs(%arg2 : tensor<24x25xf32>) -> tensor<24x25xf32>
   func.return %0 : tensor<24x25xf32>
 }
@@ -127,7 +127,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @pdl_target in %arg1
-    // expected-error @below {{failed to apply pattern to target op}}
+    // expected-error @below {{transform.structured.pad failed to apply}}
     %1 = transform.structured.pad %0 {padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32], padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 0]}
   }
 }

@@ -15,6 +15,7 @@
 
 namespace mlir {
 namespace linalg {
+class GenericOp;
 class LinalgOp;
 } // namespace linalg
 } // namespace mlir

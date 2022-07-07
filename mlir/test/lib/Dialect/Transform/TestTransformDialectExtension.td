@@ -139,8 +139,10 @@ def TestWrongNumberOfResultsOp
   let assemblyFormat = "$target attr-dict";
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::llvm::SmallVector<::mlir::Operation *>> applyToOne(
-        ::mlir::Operation *target, transform::TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation * target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 
@@ -153,8 +155,10 @@ def TestWrongNumberOfMultiResultsOp
   let assemblyFormat = "$target attr-dict";
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::llvm::SmallVector<::mlir::Operation *>> applyToOne(
-        ::mlir::Operation *target, transform::TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation * target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 
@@ -168,8 +172,27 @@ def TestCorrectNumberOfMultiResultsOp
   let assemblyFormat = "$target attr-dict";
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
-    ::mlir::FailureOr<::llvm::SmallVector<::mlir::Operation *>> applyToOne(
-        ::mlir::Operation *target, transform::TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation * target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+def TestMixedNullAndNonNullResultsOp
+  : Op<Transform_Dialect, "test_mixed_null_and_non_null_results",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface, 
+     TransformEachOpTrait, TransformOpInterface]> {
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs PDL_Operation:$null,
+                      PDL_Operation:$non_null);
+  let assemblyFormat = "$target attr-dict";
+  let cppNamespace = "::mlir::test";
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation * target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
   }];
 }
 

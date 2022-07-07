@@ -176,7 +176,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @pdl_target in %arg1
-    // expected-error @below {{applies only to isolated-from-above targets}}
+    // expected-error @below {{op requires isolated-from-above targets}}
     %2 = transform.structured.vectorize %0
   }
 }
