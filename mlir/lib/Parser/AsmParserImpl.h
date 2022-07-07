@@ -242,6 +242,56 @@ public:
     return success();
   }
 
+  /// Parse a floating point value from the stream.
+  ParseResult parseFloat(double &result) override {
+    bool isNegative = parser.consumeIf(Token::minus);
+    Token curTok = parser.getToken();
+    SMLoc loc = curTok.getLoc();
+
+    // Check for a floating point value.
+    if (curTok.is(Token::floatliteral)) {
+      auto val = curTok.getFloatingPointValue();
+      if (!val)
+        return emitError(loc, "floating point value too large");
+      parser.consumeToken(Token::floatliteral);
+      result = isNegative ? -*val : *val;
+      return success();
+    }
+
+    // Check for a hexadecimal float value.
+    if (curTok.is(Token::integer)) {
+      Optional<APFloat> apResult;
+      if (failed(parser.parseFloatFromIntegerLiteral(
+              apResult, curTok, isNegative, APFloat::IEEEdouble(),
+              /*typeSizeInBits=*/64)))
+        return failure();
+
+      parser.consumeToken(Token::integer);
+      result = apResult->convertToDouble();
+      return success();
+    }
+
+    return emitError(loc, "expected floating point literal");
+  }
+
+  /// Parse an optional integer value from the stream.
+  OptionalParseResult parseOptionalInteger(APInt &result) override {
+    return parser.parseOptionalInteger(result);
+  }
+
+  /// Parse a list of comma-separated items with an optional delimiter.  If a
+  /// delimiter is provided, then an empty list is allowed.  If not, then at
+  /// least one element will be parsed.
+  ParseResult parseCommaSeparatedList(Delimiter delimiter,
+                                      function_ref<ParseResult()> parseElt,
+                                      StringRef contextMessage) override {
+    return parser.parseCommaSeparatedList(delimiter, parseElt, contextMessage);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Keyword Parsing
+  //===--------------------------------------------------------------------===//
+
   ParseResult parseKeyword(StringRef keyword, const Twine &msg) override {
     if (parser.getToken().isCodeCompletion())
       return parser.codeCompleteExpectedTokens(keyword);
@@ -251,6 +301,7 @@ public:
       return emitError(loc, "expected '") << keyword << "'" << msg;
     return success();
   }
+  using AsmParser::parseKeyword;
 
   /// Parse the given keyword if present.
   ParseResult parseOptionalKeyword(StringRef keyword) override {
@@ -306,52 +357,6 @@ public:
     }
 
     return parseOptionalString(result);
-  }
-
-  /// Parse a floating point value from the stream.
-  ParseResult parseFloat(double &result) override {
-    bool isNegative = parser.consumeIf(Token::minus);
-    Token curTok = parser.getToken();
-    SMLoc loc = curTok.getLoc();
-
-    // Check for a floating point value.
-    if (curTok.is(Token::floatliteral)) {
-      auto val = curTok.getFloatingPointValue();
-      if (!val)
-        return emitError(loc, "floating point value too large");
-      parser.consumeToken(Token::floatliteral);
-      result = isNegative ? -*val : *val;
-      return success();
-    }
-
-    // Check for a hexadecimal float value.
-    if (curTok.is(Token::integer)) {
-      Optional<APFloat> apResult;
-      if (failed(parser.parseFloatFromIntegerLiteral(
-              apResult, curTok, isNegative, APFloat::IEEEdouble(),
-              /*typeSizeInBits=*/64)))
-        return failure();
-
-      parser.consumeToken(Token::integer);
-      result = apResult->convertToDouble();
-      return success();
-    }
-
-    return emitError(loc, "expected floating point literal");
-  }
-
-  /// Parse an optional integer value from the stream.
-  OptionalParseResult parseOptionalInteger(APInt &result) override {
-    return parser.parseOptionalInteger(result);
-  }
-
-  /// Parse a list of comma-separated items with an optional delimiter.  If a
-  /// delimiter is provided, then an empty list is allowed.  If not, then at
-  /// least one element will be parsed.
-  ParseResult parseCommaSeparatedList(Delimiter delimiter,
-                                      function_ref<ParseResult()> parseElt,
-                                      StringRef contextMessage) override {
-    return parser.parseCommaSeparatedList(delimiter, parseElt, contextMessage);
   }
 
   //===--------------------------------------------------------------------===//
@@ -526,6 +531,28 @@ public:
 
   ParseResult parseXInDimensionList() override {
     return parser.parseXInDimensionList();
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  /// Parse a keyword, or an empty string if the current location signals a code
+  /// completion.
+  ParseResult parseKeywordOrCompletion(StringRef *keyword) override {
+    Token tok = parser.getToken();
+    if (tok.isCodeCompletion() && tok.getSpelling().empty()) {
+      *keyword = "";
+      return success();
+    }
+    return parseKeyword(keyword);
+  }
+
+  /// Signal the code completion of a set of expected tokens.
+  void codeCompleteExpectedTokens(ArrayRef<StringRef> tokens) override {
+    Token tok = parser.getToken();
+    if (tok.isCodeCompletion() && tok.getSpelling().empty())
+      (void)parser.codeCompleteExpectedTokens(tokens);
   }
 
 protected:
