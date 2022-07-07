@@ -414,6 +414,10 @@ static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
 static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
                                             unsigned NewIndex,
                                             IRBuilder<> &Builder) {
+  // Shufflevectors can only be created for fixed-width vectors.
+  if (!isa<FixedVectorType>(ExtElt->getOperand(0)->getType()))
+    return nullptr;
+
   // If the extract can be constant-folded, this code is unsimplified. Defer
   // to other passes to handle that.
   Value *X = ExtElt->getVectorOperand();
