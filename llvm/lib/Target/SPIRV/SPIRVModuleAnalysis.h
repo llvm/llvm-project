@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVMODULEANALYSIS_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "SPIRVDuplicatesTracker.h"
 #include "SPIRVSubtarget.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -123,6 +124,11 @@ public:
 private:
   void setBaseInfo(const Module &M);
   template <typename T> void collectTypesConstsVars();
+  void collectGlobalEntities(
+      const std::vector<SPIRV::DTSortableEntry *> &DepsGraph,
+      SPIRV::ModuleSectionType MSType,
+      std::function<bool(const SPIRV::DTSortableEntry *)> Pred,
+      bool UsePreOrder);
   void processDefInstrs(const Module &M);
   void collectFuncNames(MachineInstr &MI, const Function &F);
   void processOtherInstrs(const Module &M);

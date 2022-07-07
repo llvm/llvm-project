@@ -1459,9 +1459,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     // Add all the unavailable predecessors to the PredsToSplit list.
     for (BasicBlock *P : predecessors(LoadBB)) {
       // If the predecessor is an indirect goto, we can't split the edge.
-      // Same for CallBr.
-      if (isa<IndirectBrInst>(P->getTerminator()) ||
-          isa<CallBrInst>(P->getTerminator()))
+      if (isa<IndirectBrInst>(P->getTerminator()))
         return false;
 
       if (!AvailablePredSet.count(P))
@@ -1685,9 +1683,8 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
     }
 
     // If the predecessor ends with an indirect goto, we can't change its
-    // destination. Same for CallBr.
-    if (isa<IndirectBrInst>(Pred->getTerminator()) ||
-        isa<CallBrInst>(Pred->getTerminator()))
+    // destination.
+    if (isa<IndirectBrInst>(Pred->getTerminator()))
       continue;
 
     PredToDestList.emplace_back(Pred, DestBB);
@@ -1924,10 +1921,9 @@ bool JumpThreadingPass::processBranchOnXOR(BinaryOperator *BO) {
   }
 
   // If any of predecessors end with an indirect goto, we can't change its
-  // destination. Same for CallBr.
+  // destination.
   if (any_of(BlocksToFoldInto, [](BasicBlock *Pred) {
-        return isa<IndirectBrInst>(Pred->getTerminator()) ||
-               isa<CallBrInst>(Pred->getTerminator());
+        return isa<IndirectBrInst>(Pred->getTerminator());
       }))
     return false;
 

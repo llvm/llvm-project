@@ -445,7 +445,7 @@ getNonDefaultLowerBounds(fir::FirOpBuilder &builder, mlir::Location loc,
 /// available without having to read any fir.box values). Empty if \p exv has no
 /// LEN parameters or if they are all deferred.
 llvm::SmallVector<mlir::Value>
-getNonDeferredLengthParams(const fir::ExtendedValue &exv);
+getNonDeferredLenParams(const fir::ExtendedValue &exv);
 
 //===----------------------------------------------------------------------===//
 // String literal helper helpers

@@ -75,9 +75,6 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
         if (isa<IndirectBrInst>(PredBB->getTerminator()))
           // We cannot rewrite exiting edges from an indirectbr.
           return false;
-        if (isa<CallBrInst>(PredBB->getTerminator()))
-          // We cannot rewrite exiting edges from a callbr.
-          return false;
 
         InLoopPredecessors.push_back(PredBB);
       } else {
@@ -1246,6 +1243,20 @@ static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet)
   return true;
 }
 
+/// Checks if it is safe to call InductionDescriptor::isInductionPHI for \p Phi,
+/// and returns true if this Phi is an induction phi in the loop. When
+/// isInductionPHI returns true, \p ID will be also be set by isInductionPHI.
+static bool checkIsIndPhi(PHINode *Phi, Loop *L, ScalarEvolution *SE,
+                          InductionDescriptor &ID) {
+  if (!Phi)
+    return false;
+  if (!L->getLoopPreheader())
+    return false;
+  if (Phi->getParent() != L->getHeader())
+    return false;
+  return InductionDescriptor::isInductionPHI(Phi, L, SE, ID);
+}
+
 int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                                 ScalarEvolution *SE,
                                 const TargetTransformInfo *TTI,
@@ -1306,10 +1317,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
           InductionDescriptor ID;
           PHINode *IndPhi = dyn_cast<PHINode>(Inst);
           if (IndPhi) {
-            if (IndPhi->getParent() != L->getHeader())
-              continue;
-            // Do not consider non induction phis.
-            if (!InductionDescriptor::isInductionPHI(IndPhi, L, SE, ID))
+            if (!checkIsIndPhi(IndPhi, L, SE, ID))
               continue;
             // This is an induction PHI. Check that the only users are PHI
             // nodes, and induction variable update binary operators.
@@ -1330,12 +1338,8 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
               continue;
             if (llvm::any_of(Inst->users(), [&](User *U) {
                   PHINode *Phi = dyn_cast<PHINode>(U);
-                  if (!Phi)
+                  if (Phi != PN && !checkIsIndPhi(Phi, L, SE, ID))
                     return true;
-                  if (Phi->getParent() == L->getHeader()) {
-                    if (!InductionDescriptor::isInductionPHI(Phi, L, SE, ID))
-                      return true;
-                  }
                   return false;
                 }))
               continue;

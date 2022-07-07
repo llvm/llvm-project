@@ -83,6 +83,16 @@ func.func @powf_fold() -> f32 {
   return %r : f32
 }
 
+// CHECK-LABEL: @powf_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<[1.000000e+00, 4.000000e+00, 9.000000e+00, 1.600000e+01]> : vector<4xf32>
+// CHECK: return %[[cst]]
+func.func @powf_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
+  %v2 = arith.constant dense<[2.0, 2.0, 2.0, 2.0]> : vector<4xf32>
+  %0 = math.powf %v1, %v2 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 // CHECK-LABEL: @sqrt_fold
 // CHECK: %[[cst:.+]] = arith.constant 2.000000e+00 : f32
 // CHECK: return %[[cst]]

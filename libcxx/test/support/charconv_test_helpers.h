@@ -71,8 +71,7 @@ template <typename X, typename T>
 constexpr bool
 fits_in(T v)
 {
-    return _fits_in<X>(v, is_non_narrowing<X>(v), std::is_signed<T>(),
-                       std::is_signed<X>());
+  return _fits_in<X>(v, is_non_narrowing<X>(v), std::is_signed<T>(), std::is_signed<X>());
 }
 
 template <typename X>
@@ -115,8 +114,16 @@ struct to_chars_test_base
             assert(buf[i] == static_cast<char>(i + 1));
         *r.ptr = '\0';
 
-        auto a = fromchars(buf, r.ptr, args...);
-        assert(v == a);
+#ifndef TEST_HAS_NO_INT128
+        if (sizeof(X) == sizeof(__int128_t)) {
+            auto a = fromchars128_impl(buf, r.ptr, args...);
+            assert(v == a);
+        } else
+#endif
+        {
+            auto a = fromchars_impl(buf, r.ptr, args...);
+            assert(v == a);
+        }
 
         auto ep = r.ptr - 1;
         r = to_chars(buf, ep, v, args...);
@@ -125,7 +132,7 @@ struct to_chars_test_base
     }
 
 private:
-    static long long fromchars(char const* p, char const* ep, int base, true_type)
+    static long long fromchars_impl(char const* p, char const* ep, int base, true_type)
     {
         char* last;
         auto r = strtoll(p, &last, base);
@@ -134,7 +141,7 @@ private:
         return r;
     }
 
-    static unsigned long long fromchars(char const* p, char const* ep, int base, false_type)
+    static unsigned long long fromchars_impl(char const* p, char const* ep, int base, false_type)
     {
         char* last;
         auto r = strtoull(p, &last, base);
@@ -142,14 +149,57 @@ private:
 
         return r;
     }
-
-    static auto fromchars(char const* p, char const* ep, int base = 10)
-    -> decltype(fromchars(p, ep, base, std::is_signed<X>()))
+#ifndef TEST_HAS_NO_INT128
+    static __int128_t fromchars128_impl(char const* p, char const* ep, int base, true_type)
     {
-        return fromchars(p, ep, base, std::is_signed<X>());
+        char* last;
+        __int128_t r = strtoll(p, &last, base);
+        if(errno != ERANGE) {
+            assert(last == ep);
+            return r;
+        }
+
+        // When the value doesn't fit in a long long use from_chars. This is
+        // not ideal since it does a round-trip test instead if using an
+        // external source.
+        std::from_chars_result s = std::from_chars(p, ep, r, base);
+        assert(s.ec == std::errc{});
+        assert(s.ptr == ep);
+
+        return r;
     }
 
-    char buf[100];
+    static __uint128_t fromchars128_impl(char const* p, char const* ep, int base, false_type)
+    {
+        char* last;
+        __uint128_t r = strtoull(p, &last, base);
+        if(errno != ERANGE) {
+            assert(last == ep);
+            return r;
+        }
+
+        std::from_chars_result s = std::from_chars(p, ep, r, base);
+        assert(s.ec == std::errc{});
+        assert(s.ptr == ep);
+
+        return r;
+    }
+
+    static auto fromchars128_impl(char const* p, char const* ep, int base = 10)
+    -> decltype(fromchars128_impl(p, ep, base, std::is_signed<X>()))
+    {
+        return fromchars128_impl(p, ep, base, std::is_signed<X>());
+    }
+
+#endif
+
+    static auto fromchars_impl(char const* p, char const* ep, int base = 10)
+    -> decltype(fromchars_impl(p, ep, base, std::is_signed<X>()))
+    {
+        return fromchars_impl(p, ep, base, std::is_signed<X>());
+    }
+
+    char buf[150];
 };
 
 template <typename X>
@@ -201,7 +251,7 @@ struct roundtrip_test_base
     }
 
 private:
-    char buf[100];
+    char buf[150];
 };
 
 template <typename... T>
@@ -227,9 +277,29 @@ constexpr auto concat(L1, L2) -> concat_t<L1, L2>
     return {};
 }
 
-auto all_signed = type_list<char, signed char, short, int, long, long long>();
-auto all_unsigned = type_list<unsigned char, unsigned short, unsigned int,
-                              unsigned long, unsigned long long>();
+auto all_signed = type_list<
+    char,
+    signed char,
+    short,
+    int,
+    long,
+    long long
+#ifndef TEST_HAS_NO_INT128
+    ,
+    __int128_t
+#endif
+    >();
+auto all_unsigned = type_list<
+    unsigned char,
+    unsigned short,
+    unsigned int,
+    unsigned long,
+    unsigned long long
+#ifndef TEST_HAS_NO_INT128
+    ,
+    __uint128_t
+#endif
+    >();
 auto integrals = concat(all_signed, all_unsigned);
 
 template <template <typename> class Fn, typename... Ts>

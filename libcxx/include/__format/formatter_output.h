@@ -51,15 +51,13 @@ _LIBCPP_HIDE_FROM_ABI constexpr char __hex_to_upper(char c) {
   return c;
 }
 
-// TODO FMT remove _v2 suffix.
-struct _LIBCPP_TYPE_VIS __padding_size_result_v2 {
+struct _LIBCPP_TYPE_VIS __padding_size_result {
   size_t __before_;
   size_t __after_;
 };
 
-// TODO FMT remove _v2 suffix.
-_LIBCPP_HIDE_FROM_ABI constexpr __padding_size_result_v2 __padding_size_v2(size_t __size, size_t __width,
-                                                                           __format_spec::__alignment __align) {
+_LIBCPP_HIDE_FROM_ABI constexpr __padding_size_result
+__padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
   _LIBCPP_ASSERT(__width > __size, "don't call this function when no padding is required");
   _LIBCPP_ASSERT(__align != __format_spec::__alignment::__default,
                  "the caller should adjust the default to the value required by the type");
@@ -100,7 +98,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, c
                (__last - __first) +     // data
                (__grouping.size() - 1); // number of separator characters
 
-  __padding_size_result_v2 __padding = {0, 0};
+  __padding_size_result __padding = {0, 0};
   if (__specs.__alignment_ == __format_spec::__alignment::__zero_padding) {
     // Write [sign][prefix].
     __out_it = _VSTD::copy(__begin, __first, _VSTD::move(__out_it));
@@ -113,7 +111,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, c
   } else {
     if (__specs.__width_ > __size) {
       // Determine padding and write padding.
-      __padding = __padding_size_v2(__size, __specs.__width_, __specs.__alignment_);
+      __padding = __padding_size(__size, __specs.__width_, __specs.__alignment_);
 
       __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
     }
@@ -189,8 +187,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write(const _CharT* __first, const _CharT* __last,
   if (__size >= __specs.__width_)
     return _VSTD::copy(__first, __last, _VSTD::move(__out_it));
 
-  __padding_size_result_v2 __padding =
-      __formatter::__padding_size_v2(__size, __specs.__width_, __specs.__std_.__alignment_);
+  __padding_size_result __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__std_.__alignment_);
   __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
   __out_it = _VSTD::copy(__first, __last, _VSTD::move(__out_it));
   return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
@@ -216,9 +213,38 @@ _LIBCPP_HIDE_FROM_ABI auto __write_transformed(const _CharT* __first, const _Cha
   if (__size >= __specs.__width_)
     return _VSTD::transform(__first, __last, _VSTD::move(__out_it), __op);
 
-  __padding_size_result_v2 __padding = __padding_size_v2(__size, __specs.__width_, __specs.__alignment_);
+  __padding_size_result __padding = __padding_size(__size, __specs.__width_, __specs.__alignment_);
   __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
   __out_it = _VSTD::transform(__first, __last, _VSTD::move(__out_it), __op);
+  return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
+}
+
+/// Writes additional zero's for the precision before the exponent.
+/// This is used when the precision requested in the format string is larger
+/// than the maximum precision of the floating-point type. These precision
+/// digits are always 0.
+///
+/// \param __exponent           The location of the exponent character.
+/// \param __num_trailing_zeros The number of 0's to write before the exponent
+///                             character.
+template <class _CharT, class _ParserCharT>
+_LIBCPP_HIDE_FROM_ABI auto __write_using_trailing_zeros(
+    const _CharT* __first,
+    const _CharT* __last,
+    output_iterator<const _CharT&> auto __out_it,
+    __format_spec::__parsed_specifications<_ParserCharT> __specs,
+    size_t __size,
+    const _CharT* __exponent,
+    size_t __num_trailing_zeros) -> decltype(__out_it) {
+  _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT(__num_trailing_zeros > 0, "The overload not writing trailing zeros should have been used");
+
+  __padding_size_result __padding =
+      __padding_size(__size + __num_trailing_zeros, __specs.__width_, __specs.__alignment_);
+  __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
+  __out_it = _VSTD::copy(__first, __exponent, _VSTD::move(__out_it));
+  __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __num_trailing_zeros, _CharT('0'));
+  __out_it = _VSTD::copy(__exponent, __last, _VSTD::move(__out_it));
   return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
 }
 

@@ -106,7 +106,7 @@ struct TransferWriteOpInterface
     rewriter.create<vector::TransferWriteOp>(
         writeOp.getLoc(), writeOp.getVector(), *resultBuffer,
         writeOp.getIndices(), writeOp.getPermutationMapAttr(),
-        writeOp.getInBoundsAttr());
+        writeOp.getMask(), writeOp.getInBoundsAttr());
     replaceOpWithBufferizedValues(rewriter, op, *resultBuffer);
 
     return success();

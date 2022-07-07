@@ -226,28 +226,44 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
   return DiagnosedSilenceableFailure::success();
 }
 
-FailureOr<SmallVector<Operation *>>
-mlir::test::TestWrongNumberOfResultsOp::applyToOne(
-    Operation *, transform::TransformState &state) {
-  return SmallVector<Operation *>{};
+DiagnosedSilenceableFailure mlir::test::TestWrongNumberOfResultsOp::applyToOne(
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+  OperationState opState(target->getLoc(), "foo");
+  results.push_back(OpBuilder(target).create(opState));
+  return DiagnosedSilenceableFailure::success();
 }
 
-FailureOr<SmallVector<Operation *>>
+DiagnosedSilenceableFailure
 mlir::test::TestWrongNumberOfMultiResultsOp::applyToOne(
-    Operation *op, transform::TransformState &state) {
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
   static int count = 0;
-  if (count++ > 0)
-    return SmallVector<Operation *>{};
-  OperationState opState(op->getLoc(), "foo");
-  return SmallVector<Operation *>{OpBuilder(op).create(opState)};
+  if (count++ == 0) {
+    OperationState opState(target->getLoc(), "foo");
+    results.push_back(OpBuilder(target).create(opState));
+  }
+  return DiagnosedSilenceableFailure::success();
 }
 
-FailureOr<SmallVector<Operation *>>
+DiagnosedSilenceableFailure
 mlir::test::TestCorrectNumberOfMultiResultsOp::applyToOne(
-    Operation *op, transform::TransformState &state) {
-  OperationState opState(op->getLoc(), "foo");
-  return SmallVector<Operation *>{OpBuilder(op).create(opState),
-                                  OpBuilder(op).create(opState)};
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+  OperationState opState(target->getLoc(), "foo");
+  results.push_back(OpBuilder(target).create(opState));
+  results.push_back(OpBuilder(target).create(opState));
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestMixedNullAndNonNullResultsOp::applyToOne(
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+  OperationState opState(target->getLoc(), "foo");
+  results.push_back(nullptr);
+  results.push_back(OpBuilder(target).create(opState));
+  return DiagnosedSilenceableFailure::success();
 }
 
 namespace {

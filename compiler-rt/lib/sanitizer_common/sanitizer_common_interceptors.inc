@@ -2531,29 +2531,29 @@ INTERCEPTOR(int, __b64_pton, char const *src, char *target, SIZE_T targsize) {
 #endif  // SANITIZER_INTERCEPT___B64_TO
 
 #if SANITIZER_INTERCEPT___DN_EXPAND
-#if __GLIBC_PREREQ(2, 34)
+#  if __GLIBC_PREREQ(2, 34)
 // Changed with https://sourceware.org/git/?p=glibc.git;h=640bbdf
-#define DN_EXPAND_INTERCEPTOR_NAME dn_expand
-#else
-#define DN_EXPAND_INTERCEPTOR_NAME __dn_expand
-#endif
-  INTERCEPTOR(int, DN_EXPAND_INTERCEPTOR_NAME, unsigned char const *base,
-              unsigned char const *end, unsigned char const *src, char *dest,
-              int space) {
+#    define DN_EXPAND_INTERCEPTOR_NAME dn_expand
+#  else
+#    define DN_EXPAND_INTERCEPTOR_NAME __dn_expand
+#  endif
+INTERCEPTOR(int, DN_EXPAND_INTERCEPTOR_NAME, unsigned char const *base,
+            unsigned char const *end, unsigned char const *src, char *dest,
+            int space) {
   void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, DN_EXPAND_INTERCEPTOR_NAME, base, end, src, dest, space);
+  COMMON_INTERCEPTOR_ENTER(ctx, DN_EXPAND_INTERCEPTOR_NAME, base, end, src,
+                           dest, space);
   // TODO: add read check if __dn_comp intercept added
   int res = REAL(DN_EXPAND_INTERCEPTOR_NAME)(base, end, src, dest, space);
   if (res >= 0)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res + 1);
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, internal_strlen(dest) + 1);
   return res;
 }
-#define INIT___DN_EXPAND                    \
+#  define INIT___DN_EXPAND \
     COMMON_INTERCEPT_FUNCTION(DN_EXPAND_INTERCEPTOR_NAME);
 #else  // SANITIZER_INTERCEPT___DN_EXPAND
-#define INIT___DN_EXPAND
+#  define INIT___DN_EXPAND
 #endif  // SANITIZER_INTERCEPT___DN_EXPAND
-
 
 #if SANITIZER_INTERCEPT_POSIX_SPAWN
 
