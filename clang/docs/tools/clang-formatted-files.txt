@@ -7627,7 +7627,6 @@ mlir/include/mlir/Conversion/TosaToSCF/TosaToSCF.h
 mlir/include/mlir/Conversion/TosaToStandard/TosaToStandard.h
 mlir/include/mlir/Conversion/VectorToGPU/VectorToGPU.h
 mlir/include/mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h
-mlir/include/mlir/Conversion/VectorToROCDL/VectorToROCDL.h
 mlir/include/mlir/Conversion/VectorToSCF/VectorToSCF.h
 mlir/include/mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h
 mlir/include/mlir/Conversion/VectorToSPIRV/VectorToSPIRVPass.h
@@ -8068,7 +8067,6 @@ mlir/lib/Conversion/TosaToStandard/TosaToStandard.cpp
 mlir/lib/Conversion/TosaToStandard/TosaToStandardPass.cpp
 mlir/lib/Conversion/VectorToLLVM/ConvertVectorToLLVM.cpp
 mlir/lib/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.cpp
-mlir/lib/Conversion/VectorToROCDL/VectorToROCDL.cpp
 mlir/lib/Conversion/VectorToSCF/VectorToSCF.cpp
 mlir/lib/Conversion/VectorToSPIRV/VectorToSPIRVPass.cpp
 mlir/lib/Dialect/Traits.cpp
