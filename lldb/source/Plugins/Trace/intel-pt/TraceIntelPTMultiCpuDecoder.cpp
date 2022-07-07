@@ -1,4 +1,4 @@
-//===-- TraceIntelPTMultiCpuDecoder.cpp ----0------------------------------===//
+//===-- TraceIntelPTMultiCpuDecoder.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -202,6 +202,8 @@ TraceIntelPTMultiCpuDecoder::GePSBBlocksCountForThread(lldb::tid_t tid) const {
     return 0;
   size_t count = 0;
   auto it = m_continuous_executions_per_thread->find(tid);
+  if (it == m_continuous_executions_per_thread->end())
+    return 0;
   for (const IntelPTThreadContinousExecution &execution : it->second)
     count += execution.intelpt_subtraces.size();
   return count;

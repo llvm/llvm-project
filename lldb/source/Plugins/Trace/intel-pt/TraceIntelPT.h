@@ -73,7 +73,8 @@ public:
 
   llvm::Expected<lldb::TraceCursorUP> CreateNewCursor(Thread &thread) override;
 
-  void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) override;
+  void DumpTraceInfo(Thread &thread, Stream &s, bool verbose,
+                     bool json) override;
 
   llvm::Expected<llvm::Optional<uint64_t>> GetRawTraceSize(Thread &thread);
 
@@ -218,6 +219,9 @@ private:
   ///     errors are embedded in the instruction list. An \a llvm::Error is
   ///     returned if the decoder couldn't be properly set up.
   llvm::Expected<DecodedThreadSP> Decode(Thread &thread);
+
+  // Dump out trace info in JSON format
+  void DumpTraceInfoAsJson(Thread &thread, Stream &s, bool verbose);
 
   /// We package all the data that can change upon process stops to make sure
   /// this contract is very visible.

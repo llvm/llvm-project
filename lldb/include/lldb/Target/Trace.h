@@ -186,7 +186,8 @@ public:
   /// \param[in] verbose
   ///     If \b true, print detailed info
   ///     If \b false, print compact info
-  virtual void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) = 0;
+  virtual void DumpTraceInfo(Thread &thread, Stream &s, bool verbose,
+                             bool json) = 0;
 
   /// Check if a thread is currently traced by this object.
   ///
