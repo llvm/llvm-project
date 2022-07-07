@@ -23,6 +23,16 @@
 
 using namespace mlir;
 
+static ParseResult parsePDLOpTypedResults(
+    OpAsmParser &parser, SmallVectorImpl<Type> &types,
+    const SmallVectorImpl<OpAsmParser::UnresolvedOperand> &handles) {
+  types.resize(handles.size(), pdl::OperationType::get(parser.getContext()));
+  return success();
+}
+
+static void printPDLOpTypedResults(OpAsmPrinter &, Operation *, TypeRange,
+                                   ValueRange) {}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
 
@@ -352,6 +362,33 @@ transform::PDLMatchOp::apply(transform::TransformResults &results,
   }
   results.set(getResult().cast<OpResult>(), targets);
   return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReplicateOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ReplicateOp::apply(transform::TransformResults &results,
+                              transform::TransformState &state) {
+  unsigned numRepetitions = state.getPayloadOps(getPattern()).size();
+  for (const auto &en : llvm::enumerate(getHandles())) {
+    Value handle = en.value();
+    ArrayRef<Operation *> current = state.getPayloadOps(handle);
+    SmallVector<Operation *> payload;
+    payload.reserve(numRepetitions * current.size());
+    for (unsigned i = 0; i < numRepetitions; ++i)
+      llvm::append_range(payload, current);
+    results.set(getReplicated()[en.index()].cast<OpResult>(), payload);
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::ReplicateOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getPattern(), effects);
+  consumesHandle(getHandles(), effects);
+  producesHandle(getReplicated(), effects);
 }
 
 //===----------------------------------------------------------------------===//

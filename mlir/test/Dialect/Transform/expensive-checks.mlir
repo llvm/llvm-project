@@ -25,3 +25,37 @@ transform.with_pdl_patterns {
     test_print_remark_at_operand %0, "remark"
   }
 }
+
+// -----
+
+func.func @func1() {
+  // expected-note @below {{repeated target op}}
+  return
+}
+func.func private @func2()
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @func : benefit(1) {
+    %0 = operands
+    %1 = types
+    %2 = operation "func.func"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    rewrite %2 with "transform.dialect"
+  }
+  pdl.pattern @return : benefit(1) {
+    %0 = operands
+    %1 = types
+    %2 = operation "func.return"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    rewrite %2 with "transform.dialect"
+  }
+
+  sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = pdl_match @func in %arg1
+    %1 = pdl_match @return in %arg1
+    %2 = replicate num(%0) %1
+    // expected-error @below {{a handle passed as operand #0 and consumed by this operation points to a payload operation more than once}}
+    test_consume_operand %2
+    test_print_remark_at_operand %0, "remark"
+  }
+}

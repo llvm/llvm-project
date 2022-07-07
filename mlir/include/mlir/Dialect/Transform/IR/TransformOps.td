@@ -174,6 +174,42 @@ def PDLMatchOp : TransformDialectOp<"pdl_match",
   let assemblyFormat = "$pattern_name `in` $root attr-dict";
 }
 
+def ReplicateOp : TransformDialectOp<"replicate",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Lists payload ops multiple times in the new handle";
+  let description = [{
+    Produces a new handle associated with a list of payload IR ops that is
+    computed by repeating the list of payload IR ops associated with the
+    operand handle as many times as the "pattern" handle has associated
+    operations. For example, if pattern is associated with [op1, op2] and the
+    operand handle is associated with [op3, op4, op5], the resulting handle
+    will be associated with [op3, op4, op5, op3, op4, op5].
+
+    This transformation is useful to "align" the sizes of payload IR lists
+    before a transformation that expects, e.g., identically-sized lists. For
+    example, a transformation may be parameterized by same notional per-target 
+    size computed at runtime and supplied as another handle, the replication
+    allows this size to be computed only once and used for every target instead
+    of replicating the computation itself.
+
+    Note that it is undesirable to pass a handle with duplicate operations to
+    an operation that consumes the handle. Handle consumption often indicates
+    that the associated payload IR ops are destroyed, so having the same op
+    listed more than once will lead to double-free. Single-operand
+    MergeHandlesOp may be used to deduplicate the associated list of payload IR
+    ops when necessary. Furthermore, a combination of ReplicateOp and
+    MergeHandlesOp can be used to construct arbitrary lists with repetitions.
+  }];
+
+  let arguments = (ins PDL_Operation:$pattern,
+                       Variadic<PDL_Operation>:$handles);
+  let results = (outs Variadic<PDL_Operation>:$replicated);
+  let assemblyFormat =
+    "`num` `(` $pattern `)` $handles "
+    "custom<PDLOpTypedResults>(type($replicated), ref($handles)) attr-dict";
+}
+
 def SequenceOp : TransformDialectOp<"sequence",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getSuccessorEntryOperands", "getSuccessorRegions",
