@@ -89,6 +89,9 @@ public:
   MutableArrayRef<int64_t> getRow(unsigned row);
   ArrayRef<int64_t> getRow(unsigned row) const;
 
+  /// Set the specified row to `elems`.
+  void setRow(unsigned row, ArrayRef<int64_t> elems);
+
   /// Insert columns having positions pos, pos + 1, ... pos + count - 1.
   /// Columns that were at positions 0 to pos - 1 will stay where they are;
   /// columns that were at positions pos to nColumns - 1 will be pushed to the

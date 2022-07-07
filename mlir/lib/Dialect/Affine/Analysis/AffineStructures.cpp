@@ -865,7 +865,7 @@ static bool detectAsFloorDiv(const FlatAffineValueConstraints &cst,
     if (exprs[i])
       foundRepr[i] = true;
 
-  SmallVector<int64_t, 8> dividend;
+  SmallVector<int64_t, 8> dividend(cst.getNumCols());
   unsigned divisor;
   auto ulPair = computeSingleVarRepr(cst, foundRepr, pos, dividend, divisor);
 
