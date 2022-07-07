@@ -1000,8 +1000,7 @@ void Module::FindTypes(
     FindTypes_Impl(type_basename_const_str, CompilerDeclContext(), max_matches,
                    searched_symbol_files, typesmap);
     if (typesmap.GetSize())
-      typesmap.RemoveMismatchedTypes(std::string(type_scope),
-                                     std::string(type_basename), type_class,
+      typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                      exact_match);
   } else {
     // The type is not in a namespace/class scope, just search for it by
@@ -1011,15 +1010,13 @@ void Module::FindTypes(
       // class prefix (like "struct", "class", "union", "typedef" etc).
       FindTypes_Impl(ConstString(type_basename), CompilerDeclContext(),
                      UINT_MAX, searched_symbol_files, typesmap);
-      typesmap.RemoveMismatchedTypes(std::string(type_scope),
-                                     std::string(type_basename), type_class,
+      typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                      exact_match);
     } else {
       FindTypes_Impl(name, CompilerDeclContext(), UINT_MAX,
                      searched_symbol_files, typesmap);
       if (exact_match) {
-        std::string name_str(name.AsCString(""));
-        typesmap.RemoveMismatchedTypes(std::string(type_scope), name_str,
+        typesmap.RemoveMismatchedTypes(type_scope, name.AsCString(""),
                                        type_class, exact_match);
       }
     }
