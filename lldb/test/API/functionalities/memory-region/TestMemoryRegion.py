@@ -27,7 +27,7 @@ class MemoryCommandRegion(TestBase):
             substrs=["memory region <address-expression>",
                      "memory region -a"])
 
-    def test(self):
+    def setup_program(self):
         self.build()
 
         # Set breakpoint in main and run
@@ -36,6 +36,9 @@ class MemoryCommandRegion(TestBase):
             self, "main.cpp", self.line, num_expected_locations=-1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
+
+    def test_command(self):
+        self.setup_program()
 
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
@@ -84,3 +87,37 @@ class MemoryCommandRegion(TestBase):
         interp.HandleCommand("memory region --all", result)
         self.assertTrue(result.Succeeded())
         self.assertEqual(result.GetOutput(), all_regions)
+
+    def test_unique_base_addresses(self):
+        # In the past on Windows we were recording AllocationBase as the base address
+        # of the current region, not BaseAddress. So if a range of pages was split
+        # into regions you would see several regions with the same base address.
+        # This checks that this no longer happens (and it shouldn't happen on any
+        # other OS either).
+        self.setup_program()
+
+        regions = self.process().GetMemoryRegions()
+        num_regions = regions.GetSize()
+
+        if num_regions:
+            region = lldb.SBMemoryRegionInfo()
+            regions.GetMemoryRegionAtIndex(0, region)
+            previous_base = region.GetRegionBase()
+            previous_end = region.GetRegionEnd()
+
+            for idx in range(1, regions.GetSize()):
+                regions.GetMemoryRegionAtIndex(idx, region)
+
+                # Check that it does not overlap the previous region.
+                # This could happen if we got the base addresses or size wrong.
+                # Also catches the base addresses being the same.
+                region_base = region.GetRegionBase()
+                region_end = region.GetRegionEnd()
+
+                if (region_base >= previous_base and region_base < previous_end) \
+                    or (region_end > previous_base and region_end <= previous_end):
+                    self.assertFalse(base_address in base_addresses,
+                        "Unexpected overlapping memory region found.")
+
+                previous_base = region_base
+                previous_end = region_end
