@@ -1808,7 +1808,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
     unsigned Width = Ty->getScalarSizeInBits();
     const APInt *ShiftC;
-    if (match(Op0, m_OneUse(m_SExt(m_AShr(m_Value(X), m_APInt(ShiftC)))))) {
+    if (match(Op0, m_OneUse(m_SExt(m_AShr(m_Value(X), m_APInt(ShiftC))))) &&
+        ShiftC->ult(Width)) {
       if (*C == APInt::getLowBitsSet(Width, Width - ShiftC->getZExtValue())) {
         // We are clearing high bits that were potentially set by sext+ashr:
         // and (sext (ashr X, ShiftC)), C --> lshr (sext X), ShiftC
