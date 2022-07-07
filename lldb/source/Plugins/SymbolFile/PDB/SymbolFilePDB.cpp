@@ -1023,11 +1023,8 @@ VariableSP SymbolFilePDB::ParseVariableForPDBData(
   auto mangled_cstr = mangled.empty() ? nullptr : mangled.c_str();
 
   bool is_constant;
-  ModuleSP module_sp = GetObjectFile()->GetModule();
-  DWARFExpressionList location(module_sp,
-                               ConvertPDBLocationToDWARFExpression(
-                                   module_sp, pdb_data, ranges, is_constant),
-                               nullptr);
+  DWARFExpression location = ConvertPDBLocationToDWARFExpression(
+      GetObjectFile()->GetModule(), pdb_data, ranges, is_constant);
 
   var_sp = std::make_shared<Variable>(
       var_uid, var_name.c_str(), mangled_cstr, type_sp, scope, context_scope,

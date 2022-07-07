@@ -627,10 +627,6 @@ public:
     return (m_entries.empty() ? nullptr : &m_entries.back());
   }
 
-  using const_iterator = typename Collection::const_iterator;
-  const_iterator begin() const { return m_entries.begin(); }
-  const_iterator end() const { return m_entries.end(); }
-
 protected:
   Collection m_entries;
   Compare m_compare;
