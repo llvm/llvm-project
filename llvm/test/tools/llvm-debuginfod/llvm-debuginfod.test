@@ -1,0 +1,108 @@
+# REQUIRES: curl, httplib, thread_support
+
+#int main () {
+#  int x = 1;
+#  return x;
+#}
+#
+#Build as : clang -g main.c -o main-debug.exe
+#Then run : cp main-debug.exe main.exe && strip main.exe
+#resulting buildid: 2c39b7557c50162aaeb5a3148c9f76e6e46012e3
+
+# RUN: rm -rf %t
+# RUN: mkdir %t
+# # Query the debuginfod server for artifacts
+# RUN: DEBUGINFOD_CACHE_PATH=%t %python %s --server-cmd 'llvm-debuginfod -v -c 3 %S/Inputs' \
+# RUN:   --tool-cmd 'llvm-debuginfod-find --dump --executable 2c39b7557c50162aaeb5a3148c9f76e6e46012e3' | \
+# RUN:   diff - %S/Inputs/main.exe
+# RUN: DEBUGINFOD_CACHE_PATH=%t %python %s --server-cmd 'llvm-debuginfod -v -c 3 %S/Inputs' \
+# RUN:   --tool-cmd 'llvm-debuginfod-find --dump --debuginfo 2c39b7557c50162aaeb5a3148c9f76e6e46012e3' | \
+# RUN:   diff - %S/Inputs/main-debug.exe
+# Debuginfod server does not yet support source files
+
+# # The artifacts should still be present in the cache without needing to query
+# # the server.
+# RUN: DEBUGINFOD_CACHE_PATH=%t llvm-debuginfod-find --dump \
+# RUN:   --executable 2c39b7557c50162aaeb5a3148c9f76e6e46012e3 | \
+# RUN:   diff - %S/Inputs/main.exe
+# RUN: DEBUGINFOD_CACHE_PATH=%t llvm-debuginfod-find --dump \
+# RUN:   --debuginfo 2c39b7557c50162aaeb5a3148c9f76e6e46012e3 | \
+# RUN:   diff - %S/Inputs/main-debug.exe
+
+
+
+# This script is used to test the debuginfod client within a host tool against
+# the debuginfod server.
+# It first stands up the debuginfod server and then executes the tool.
+# This way the tool can make debuginfod HTTP requests to the debuginfod server.
+import argparse
+import threading
+import subprocess
+import sys
+import os
+import io
+
+# Starts the server and obtains the port number from the first line of stdout.
+# Waits until the server has completed one full directory scan before returning.
+def start_debuginfod_server(server_args):
+    process = subprocess.Popen(
+        server_args,
+        env=os.environ,
+        stdout=subprocess.PIPE)
+    port = -1
+    # Obtain the port.
+    stdout_reader = io.TextIOWrapper(process.stdout, encoding='ascii')
+    stdout_line = stdout_reader.readline()
+    port = int(stdout_line.split()[-1])
+    # Wait until a directory scan is completed.
+    while True:
+        stdout_line = stdout_reader.readline().strip()
+        print(stdout_line, file=sys.stderr)
+        if stdout_line == 'Updated collection':
+            break
+    return (process, port)
+
+# Starts the server with the specified args (if nonempty), then runs the tool
+# with specified args.
+# Sets the DEBUGINFOD_CACHE_PATH env var to point at the given cache_directory.
+# Sets the DEBUGINFOD_URLS env var to point at the local server.
+def test_tool(server_args, tool_args):
+    server_process = None
+    client_process = None
+    port = None
+    server_process, port = start_debuginfod_server(server_args)
+    try:
+        env = os.environ
+        if port is not None:
+            env['DEBUGINFOD_URLS'] = 'http://localhost:%s' % port
+        client_process = subprocess.Popen(
+            tool_args, env=os.environ)
+        client_code = client_process.wait()
+        if client_code != 0:
+            print('nontrivial client return code %s' % client_code, file=sys.stderr)
+            return 1
+        if server_process is not None:
+            server_process.terminate()
+            server_code = server_process.wait()
+            if server_code != -15:
+                print('nontrivial server return code %s' % server_code, file=sys.stderr)
+                return 1
+
+    finally:
+        if server_process is not None:
+            server_process.terminate()
+        if client_process is not None:
+            client_process.terminate()
+    return 0
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--server-cmd', default='', help='Command to start the server. If not present, no server is started.', type=str)
+    parser.add_argument('--tool-cmd', required=True, type=str)
+    args = parser.parse_args()
+    result = test_tool(args.server_cmd.split(),
+        args.tool_cmd.split())
+    sys.exit(result)
+
+if __name__ == '__main__':
+    main()
