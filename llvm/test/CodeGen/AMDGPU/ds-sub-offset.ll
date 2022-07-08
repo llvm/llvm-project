@@ -248,38 +248,40 @@ define amdgpu_kernel void @add_x_shl_max_offset() #1 {
   ret void
 }
 
+; this could have the offset transform, but sub became xor
+
 define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_alt() #1 {
 ; CI-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; CI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 13
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_write_b8 v0, v1 offset:65535
+; CI-NEXT:    ds_write_b8 v0, v1
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    v_sub_u32_e32 v0, 0, v0
+; GFX9-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 13
-; GFX9-NEXT:    ds_write_b8 v0, v1 offset:65535
+; GFX9-NEXT:    ds_write_b8 v0, v1
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 13
-; GFX10-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
-; GFX10-NEXT:    ds_write_b8 v0, v1 offset:65535
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    ds_write_b8 v0, v1
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1 offset:65535
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
+; GFX11-NEXT:    ds_store_b8 v0, v1
 ; GFX11-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x()
   %.neg = mul i32 %x.i, -4
@@ -290,38 +292,40 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_alt() #1 {
   ret void
 }
 
+; this could have the offset transform, but sub became xor
+
 define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_not_canonical() #1 {
 ; CI-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; CI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 13
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_write_b8 v0, v1 offset:65535
+; CI-NEXT:    ds_write_b8 v0, v1
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    v_sub_u32_e32 v0, 0, v0
+; GFX9-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 13
-; GFX9-NEXT:    ds_write_b8 v0, v1 offset:65535
+; GFX9-NEXT:    ds_write_b8 v0, v1
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 13
-; GFX10-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
-; GFX10-NEXT:    ds_write_b8 v0, v1 offset:65535
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    ds_write_b8 v0, v1
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
-; GFX11-NEXT:    ds_store_b8 v0, v1 offset:65535
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff, v0
+; GFX11-NEXT:    ds_store_b8 v0, v1
 ; GFX11-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
