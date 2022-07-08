@@ -133,7 +133,7 @@
 "`P1661R1 <https://wg21.link/P1661R1>`__","LWG","Remove dedicated precalculated hash lookup interface","Cologne","|Nothing To Do|",""
 "`P1754R1 <https://wg21.link/P1754R1>`__","LWG","Rename concepts to standard_case for C++20, while we still can","Cologne","|In Progress|",""
 "","","","","",""
-"`P0883R2 <https://wg21.link/P0883R2>`__","LWG","Fixing Atomic Initialization","Belfast","|Complete| [#note-P0883]_","14.0"
+"`P0883R2 <https://wg21.link/P0883R2>`__","LWG","Fixing Atomic Initialization","Belfast","|Complete| [#note-P0883.1]_ [#note-P0883.2]_","14.0"
 "`P1391R4 <https://wg21.link/P1391R4>`__","LWG","Range constructor for std::string_view","Belfast","|Complete|","14.0"
 "`P1394R4 <https://wg21.link/P1394R4>`__","LWG","Range constructor for std::span","Belfast","|Complete|","14.0"
 "`P1456R1 <https://wg21.link/P1456R1>`__","LWG","Move-only views","Belfast","|Complete|","15.0"

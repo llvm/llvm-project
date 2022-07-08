@@ -48,6 +48,7 @@ Implemented Papers
 - P0154R1 (Hardware inference size)
 - P0618R0 (Deprecating <codecvt>)
 - P2418R2 (Add support for ``std::generator``-like types to ``std::format``)
+- LWG3659 (Consider ``ATOMIC_FLAG_INIT`` undeprecation)
 
 - Marked the following papers as "Complete" (note that some of those might have
   been implemented in a previous release but not marked as such):
