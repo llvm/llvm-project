@@ -22,11 +22,6 @@ Workflow:
 7. Re-run this script on affected regression tests.
 8. Check the diffs to ensure the script has done something reasonable.
 9. Submit a patch including the regression test diffs for review.
-
-A common pattern is to have the script insert complete checking of every
-instruction. Then, edit it down to only check the relevant instructions.
-The script is designed to make adding checks to a test case fast, it is *not*
-designed to be authoratitive about what constitutes a good test!
 """
 
 from __future__ import print_function
