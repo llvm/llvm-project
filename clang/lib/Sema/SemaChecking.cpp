@@ -2472,7 +2472,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     bool ReturnsPointer = BuiltinID == Builtin::BIaddressof ||
                           BuiltinID == Builtin::BI__addressof;
     if (!(Param->isReferenceType() &&
-          (ReturnsPointer ? Result->isPointerType()
+          (ReturnsPointer ? Result->isAnyPointerType()
                           : Result->isReferenceType()) &&
           Context.hasSameUnqualifiedType(Param->getPointeeType(),
                                          Result->getPointeeType()))) {
