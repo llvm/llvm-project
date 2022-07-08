@@ -14,6 +14,11 @@ class TestCase(TestBase):
         self.assertTrue(found_type.IsValid())
         self.assertTrue(found_type.IsTypeComplete())
 
+    def assertIsNotPresent(self, typename):
+        """ Asserts that the type with the given name is not found. """
+        found_type = self.target().FindFirstType(typename)
+        self.assertFalse(found_type.IsValid())
+
     def assertCompleteWithVar(self, typename):
         """ Asserts that the type with the given name is complete. """
         found_type = self.target().FindFirstType(typename)
@@ -41,6 +46,7 @@ class TestCase(TestBase):
         self.assertCompleteWithVar("DefinedClass")
         self.assertCompleteWithVar("DefinedClassTypedef")
         self.assertCompleteWithVar("DefinedTemplateClass<int>")
+        self.assertIsNotPresent("DefinedTemplateClass<long>")
 
         # Record types without a defining declaration are not complete.
         self.assertPointeeIncomplete("FwdClass *", "fwd_class")
