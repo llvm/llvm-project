@@ -526,6 +526,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           {ISD::VP_FPTOSI, ISD::VP_FPTOUI, ISD::VP_TRUNCATE, ISD::VP_SETCC}, VT,
           Custom);
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
+
+      setOperationPromotedToType(
+          ISD::VECTOR_SPLICE, VT,
+          MVT::getVectorVT(MVT::i8, VT.getVectorElementCount()));
     }
 
     for (MVT VT : IntVecVTs) {
@@ -9794,109 +9798,6 @@ static MachineBasicBlock *emitQuietFCMP(MachineInstr &MI, MachineBasicBlock *BB,
   return BB;
 }
 
-static MachineBasicBlock *
-EmitLoweredCascadedSelect(MachineInstr &First, MachineInstr &Second,
-                          MachineBasicBlock *ThisMBB,
-                          const RISCVSubtarget &Subtarget) {
-  // Select_FPRX_ (rs1, rs2, imm, rs4, (Select_FPRX_ rs1, rs2, imm, rs4, rs5)
-  // Without this, custom-inserter would have generated:
-  //
-  //   A
-  //   | \
-  //   |  B
-  //   | /
-  //   C
-  //   | \
-  //   |  D
-  //   | /
-  //   E
-  //
-  // A: X = ...; Y = ...
-  // B: empty
-  // C: Z = PHI [X, A], [Y, B]
-  // D: empty
-  // E: PHI [X, C], [Z, D]
-  //
-  // If we lower both Select_FPRX_ in a single step, we can instead generate:
-  //
-  //   A
-  //   | \
-  //   |  C
-  //   | /|
-  //   |/ |
-  //   |  |
-  //   |  D
-  //   | /
-  //   E
-  //
-  // A: X = ...; Y = ...
-  // D: empty
-  // E: PHI [X, A], [X, C], [Y, D]
-
-  const RISCVInstrInfo &TII = *Subtarget.getInstrInfo();
-  const DebugLoc &DL = First.getDebugLoc();
-  const BasicBlock *LLVM_BB = ThisMBB->getBasicBlock();
-  MachineFunction *F = ThisMBB->getParent();
-  MachineBasicBlock *FirstMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *SecondMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *SinkMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineFunction::iterator It = ++ThisMBB->getIterator();
-  F->insert(It, FirstMBB);
-  F->insert(It, SecondMBB);
-  F->insert(It, SinkMBB);
-
-  // Transfer the remainder of ThisMBB and its successor edges to SinkMBB.
-  SinkMBB->splice(SinkMBB->begin(), ThisMBB,
-                  std::next(MachineBasicBlock::iterator(First)),
-                  ThisMBB->end());
-  SinkMBB->transferSuccessorsAndUpdatePHIs(ThisMBB);
-
-  // Fallthrough block for ThisMBB.
-  ThisMBB->addSuccessor(FirstMBB);
-  // Fallthrough block for FirstMBB.
-  FirstMBB->addSuccessor(SecondMBB);
-  ThisMBB->addSuccessor(SinkMBB);
-  FirstMBB->addSuccessor(SinkMBB);
-  // This is fallthrough.
-  SecondMBB->addSuccessor(SinkMBB);
-
-  auto FirstCC = static_cast<RISCVCC::CondCode>(First.getOperand(3).getImm());
-  Register FLHS = First.getOperand(1).getReg();
-  Register FRHS = First.getOperand(2).getReg();
-  // Insert appropriate branch.
-  BuildMI(ThisMBB, DL, TII.getBrCond(FirstCC))
-      .addReg(FLHS)
-      .addReg(FRHS)
-      .addMBB(SinkMBB);
-
-  Register SLHS = Second.getOperand(1).getReg();
-  Register SRHS = Second.getOperand(2).getReg();
-  Register Op1Reg4 = First.getOperand(4).getReg();
-  Register Op1Reg5 = First.getOperand(5).getReg();
-
-  auto SecondCC = static_cast<RISCVCC::CondCode>(Second.getOperand(3).getImm());
-  // Insert appropriate branch.
-  BuildMI(FirstMBB, DL, TII.getBrCond(SecondCC))
-      .addReg(SLHS)
-      .addReg(SRHS)
-      .addMBB(SinkMBB);
-
-  Register DestReg = Second.getOperand(0).getReg();
-  Register Op2Reg4 = Second.getOperand(4).getReg();
-  BuildMI(*SinkMBB, SinkMBB->begin(), DL, TII.get(RISCV::PHI), DestReg)
-      .addReg(Op1Reg4)
-      .addMBB(ThisMBB)
-      .addReg(Op2Reg4)
-      .addMBB(FirstMBB)
-      .addReg(Op1Reg5)
-      .addMBB(SecondMBB);
-
-  // Now remove the Select_FPRX_s.
-  First.eraseFromParent();
-  Second.eraseFromParent();
-  return SinkMBB;
-}
-
 static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
                                            MachineBasicBlock *BB,
                                            const RISCVSubtarget &Subtarget) {
@@ -9924,10 +9825,6 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   // previous selects in the sequence.
   // These conditions could be further relaxed. See the X86 target for a
   // related approach and more information.
-  //
-  // Select_FPRX_ (rs1, rs2, imm, rs4, (Select_FPRX_ rs1, rs2, imm, rs4, rs5))
-  // is checked here and handled by a separate function -
-  // EmitLoweredCascadedSelect.
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
   auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
@@ -9937,13 +9834,6 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   SelectDests.insert(MI.getOperand(0).getReg());
 
   MachineInstr *LastSelectPseudo = &MI;
-  auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
-  if (MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR && Next != BB->end() &&
-      Next->getOpcode() == MI.getOpcode() &&
-      Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
-      Next->getOperand(5).isKill()) {
-    return EmitLoweredCascadedSelect(MI, *Next, BB, Subtarget);
-  }
 
   for (auto E = BB->end(), SequenceMBBI = MachineBasicBlock::iterator(MI);
        SequenceMBBI != E; ++SequenceMBBI) {

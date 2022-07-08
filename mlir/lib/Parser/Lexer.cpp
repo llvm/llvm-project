@@ -14,6 +14,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Parser/CodeComplete.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/SourceMgr.h"
@@ -26,11 +27,16 @@ static bool isPunct(char c) {
   return c == '$' || c == '.' || c == '_' || c == '-';
 }
 
-Lexer::Lexer(const llvm::SourceMgr &sourceMgr, MLIRContext *context)
-    : sourceMgr(sourceMgr), context(context) {
+Lexer::Lexer(const llvm::SourceMgr &sourceMgr, MLIRContext *context,
+             AsmParserCodeCompleteContext *codeCompleteContext)
+    : sourceMgr(sourceMgr), context(context), codeCompleteLoc(nullptr) {
   auto bufferID = sourceMgr.getMainFileID();
   curBuffer = sourceMgr.getMemoryBuffer(bufferID)->getBuffer();
   curPtr = curBuffer.begin();
+
+  // Set the code completion location if it was provided.
+  if (codeCompleteContext)
+    codeCompleteLoc = codeCompleteContext->getCodeCompleteLoc().getPointer();
 }
 
 /// Encode the specified source location information into an attribute for
@@ -61,6 +67,12 @@ Token Lexer::emitError(const char *loc, const Twine &message) {
 Token Lexer::lexToken() {
   while (true) {
     const char *tokStart = curPtr;
+
+    // Check to see if the current token is at the code completion location.
+    if (tokStart == codeCompleteLoc)
+      return formToken(Token::code_complete, tokStart);
+
+    // Lex the next token.
     switch (*curPtr++) {
     default:
       // Handle bare identifiers.
@@ -357,15 +369,23 @@ Token Lexer::lexPrefixedIdentifier(const char *tokStart) {
   // Parse suffix-id.
   if (isdigit(*curPtr)) {
     // If suffix-id starts with a digit, the rest must be digits.
-    while (isdigit(*curPtr)) {
+    while (isdigit(*curPtr))
       ++curPtr;
-    }
   } else if (isalpha(*curPtr) || isPunct(*curPtr)) {
     do {
       ++curPtr;
     } while (isalpha(*curPtr) || isdigit(*curPtr) || isPunct(*curPtr));
+  } else if (curPtr == codeCompleteLoc) {
+    return formToken(Token::code_complete, tokStart);
   } else {
     return emitError(curPtr - 1, errorKind);
+  }
+
+  // Check for a code completion within the identifier.
+  if (codeCompleteLoc && codeCompleteLoc >= tokStart &&
+      codeCompleteLoc <= curPtr) {
+    return Token(Token::code_complete,
+                 StringRef(tokStart, codeCompleteLoc - tokStart));
   }
 
   return formToken(kind, tokStart);
@@ -380,6 +400,13 @@ Token Lexer::lexString(const char *tokStart) {
   assert(curPtr[-1] == '"');
 
   while (true) {
+    // Check to see if there is a code completion location within the string. In
+    // these cases we generate a completion location and place the currently
+    // lexed string within the token. This allows for the parser to use the
+    // partially lexed string when computing the completion results.
+    if (curPtr == codeCompleteLoc)
+      return formToken(Token::code_complete, tokStart);
+
     switch (*curPtr++) {
     case '"':
       return formToken(Token::string, tokStart);

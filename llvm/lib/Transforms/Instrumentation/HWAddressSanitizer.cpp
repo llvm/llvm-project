@@ -313,6 +313,7 @@ public:
 
   Value *getPC(IRBuilder<> &IRB);
   Value *getSP(IRBuilder<> &IRB);
+  Value *getFrameRecordInfo(IRBuilder<> &IRB);
 
   void instrumentPersonalityFunctions();
 
@@ -1132,6 +1133,21 @@ Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
   return CachedSP;
 }
 
+Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
+  // Prepare ring buffer data.
+  Value *PC = getPC(IRB);
+  Value *SP = getSP(IRB);
+
+  // Mix SP and PC.
+  // Assumptions:
+  // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
+  // SP is 0xsssssssssssSSSS0  (4 lower bits are zero)
+  // We only really need ~20 lower non-zero bits (SSSS), so we mix like this:
+  //       0xSSSSPPPPPPPPPPPP
+  SP = IRB.CreateShl(SP, 44);
+  return IRB.CreateOr(PC, SP);
+}
+
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   if (!Mapping.InTls)
     ShadowBase = getShadowNonTls(IRB);
@@ -1152,22 +1168,11 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   if (WithFrameRecord) {
     StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
 
-    // Prepare ring buffer data.
-    Value *PC = getPC(IRB);
-    Value *SP = getSP(IRB);
-
-    // Mix SP and PC.
-    // Assumptions:
-    // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
-    // SP is 0xsssssssssssSSSS0  (4 lower bits are zero)
-    // We only really need ~20 lower non-zero bits (SSSS), so we mix like this:
-    //       0xSSSSPPPPPPPPPPPP
-    SP = IRB.CreateShl(SP, 44);
-
     // Store data to ring buffer.
+    Value *FrameRecordInfo = getFrameRecordInfo(IRB);
     Value *RecordPtr =
         IRB.CreateIntToPtr(ThreadLongMaybeUntagged, IntptrTy->getPointerTo(0));
-    IRB.CreateStore(IRB.CreateOr(PC, SP), RecordPtr);
+    IRB.CreateStore(FrameRecordInfo, RecordPtr);
 
     // Update the ring buffer. Top byte of ThreadLong defines the size of the
     // buffer in pages, it must be a power of two, and the start of the buffer

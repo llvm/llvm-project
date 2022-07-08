@@ -1086,9 +1086,15 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
       m_flags.Set(GOT_FRAME_BASE);
       ExecutionContext exe_ctx(shared_from_this());
       Value expr_value;
+      addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
+      if (m_sc.function->GetFrameBaseExpression().IsLocationList())
+        loclist_base_addr =
+            m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
+                exe_ctx.GetTargetPtr());
+
       if (!m_sc.function->GetFrameBaseExpression().Evaluate(
-              &exe_ctx, nullptr, nullptr, nullptr, expr_value,
-              &m_frame_base_error)) {
+              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr,
+              expr_value, &m_frame_base_error)) {
         // We should really have an error if evaluate returns, but in case we
         // don't, lets set the error to something at least.
         if (m_frame_base_error.Success())
@@ -1110,7 +1116,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
   return m_frame_base_error.Success();
 }
 
-DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
+DWARFExpression *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
   if (!m_sc.function) {
     if (error_ptr) {
       error_ptr->SetErrorString("No function in symbol context.");
@@ -1194,7 +1200,7 @@ lldb::LanguageType StackFrame::GuessLanguage() {
   LanguageType lang_type = GetLanguage();
 
   if (lang_type == eLanguageTypeUnknown) {
-    SymbolContext sc = GetSymbolContext(eSymbolContextFunction
+    SymbolContext sc = GetSymbolContext(eSymbolContextFunction 
                                         | eSymbolContextSymbol);
     if (sc.function) {
       lang_type = sc.function->GetMangled().GuessLanguage();
@@ -1411,7 +1417,7 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
 
   Status error;
   ValueObjectSP pointee = base->Dereference(error);
-
+    
   if (!pointee) {
     return ValueObjectSP();
   }
@@ -1499,7 +1505,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
                    Instruction::Operand::BuildRegister(reg));
 
   for (VariableSP var_sp : variables) {
-    if (var_sp->LocationExpressionList().MatchesOperand(frame, op))
+    if (var_sp->LocationExpression().MatchesOperand(frame, op))
       return frame.GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
   }
 

@@ -809,6 +809,10 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   // They will be tested prior to the code in pred and must not be used in
   // ImmLeaf and its subclasses.
 
+  // If set to true, a predicate is added that checks for the absence of use of
+  // the first result.
+  bit HasNoUse = ?;
+
   // Is the desired pre-packaged predicate for a load?
   bit IsLoad = ?;
   // Is the desired pre-packaged predicate for a store?

@@ -162,6 +162,15 @@ constexpr void test_rval_range() {
   }
 }
 
+template <class Out>
+constexpr void test_proxy_in_iterators() {
+  test_iterators<ProxyIterator<cpp20_input_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<forward_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<random_access_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<contiguous_iterator<int*>>, Out>();
+}
+
 constexpr bool test() {
   test_range();
 
@@ -194,6 +203,12 @@ constexpr bool test() {
   test_iterators<int*, bidirectional_iterator<int*>>();
   test_iterators<int*, random_access_iterator<int*>>();
   test_iterators<int*, int*>();
+
+  test_proxy_in_iterators<ProxyIterator<cpp20_input_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<forward_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<bidirectional_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<random_access_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<contiguous_iterator<int*>>>();
 
   test_sentinel();
   test_different_lengths();

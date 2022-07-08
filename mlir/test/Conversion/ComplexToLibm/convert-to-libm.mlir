@@ -9,6 +9,7 @@
 // CHECK-DAG: @ccos(complex<f64>) -> complex<f64>
 // CHECK-DAG: @csin(complex<f64>) -> complex<f64>
 // CHECK-DAG: @conj(complex<f64>) -> complex<f64>
+// CHECK-DAG: @cabs(complex<f64>) -> f64
 
 // CHECK-LABEL: func @cpow_caller
 // CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
@@ -80,4 +81,28 @@ func.func @conj_caller(%float: complex<f32>, %double: complex<f64>) -> (complex<
   %double_result = complex.conj %double : complex<f64>
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : complex<f32>, complex<f64>
+}
+
+// CHECK-LABEL: func @cabs_caller
+// CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
+// CHECK-SAME: %[[DOUBLE:.*]]: complex<f64>
+func.func @cabs_caller(%float: complex<f32>, %double: complex<f64>) -> (f32, f64)  {
+  // CHECK: %[[FLOAT_RESULT:.*]] = call @cabsf(%[[FLOAT]])
+  %float_result = complex.abs %float : complex<f32>
+  // CHECK: %[[DOUBLE_RESULT:.*]] = call @cabs(%[[DOUBLE]])
+  %double_result = complex.abs %double : complex<f64>
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @carg_caller
+// CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
+// CHECK-SAME: %[[DOUBLE:.*]]: complex<f64>
+func.func @carg_caller(%float: complex<f32>, %double: complex<f64>) -> (f32, f64)  {
+  // CHECK: %[[FLOAT_RESULT:.*]] = call @cargf(%[[FLOAT]])
+  %float_result = complex.angle %float : complex<f32>
+  // CHECK: %[[DOUBLE_RESULT:.*]] = call @carg(%[[DOUBLE]])
+  %double_result = complex.angle %double : complex<f64>
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
 }

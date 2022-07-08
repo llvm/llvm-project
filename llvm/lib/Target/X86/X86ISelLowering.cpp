@@ -594,7 +594,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // Half type will be promoted by default.
     setOperationAction(ISD::FABS, MVT::f16, Promote);
     setOperationAction(ISD::FNEG, MVT::f16, Promote);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Promote);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
     setOperationAction(ISD::FADD, MVT::f16, Promote);
     setOperationAction(ISD::FSUB, MVT::f16, Promote);
     setOperationAction(ISD::FMUL, MVT::f16, Promote);

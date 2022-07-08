@@ -122,7 +122,7 @@ static DWARFExpression MakeLocationExpressionInternal(lldb::ModuleSP module,
   DataBufferSP buffer =
       std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
   DataExtractor extractor(buffer, byte_order, address_size, byte_size);
-  DWARFExpression result(extractor);
+  DWARFExpression result(module, extractor, nullptr);
   result.SetRegisterKind(register_kind);
 
   return result;
@@ -247,7 +247,7 @@ DWARFExpression lldb_private::npdb::MakeConstantLocationExpression(
               .take_front(size);
   buffer->CopyData(bytes.data(), size);
   DataExtractor extractor(buffer, lldb::eByteOrderLittle, address_size);
-  DWARFExpression result(extractor);
+  DWARFExpression result(nullptr, extractor, nullptr);
   return result;
 }
 
