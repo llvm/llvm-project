@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
@@ -94,7 +95,7 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .legalFor({S32, S64, S80});
 
   getActionDefinitionsBuilder(G_FCONSTANT)
-      .legalFor({S32, S64});
+      .customFor({S32, S64});
 
   // FP to int conversion instructions
   getActionDefinitionsBuilder(G_FPTOSI)
@@ -133,6 +134,16 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   const LLT S64 = LLT::scalar(64);
 
   switch (MI.getOpcode()) {
+  case G_FCONSTANT: {
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
+    // Convert to integer constants, while preserving the binary representation.
+    auto AsInteger =
+        MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
+    MIRBuilder.buildConstant(MI.getOperand(0),
+                             *ConstantInt::get(Ctx, AsInteger));
+    MI.eraseFromParent();
+    break;
+  }
   case G_SELECT: {
     using namespace MIPatternMatch;
     // The instruction

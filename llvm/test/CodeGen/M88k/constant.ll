@@ -112,3 +112,21 @@ define i64 @f14() {
 ; CHECK: jmp %r1
   ret i64 -2401053089206453570 ; 0xcafebabe
 }
+
+define float @f15() {
+; CHECK-LABEL: f15:
+; CHECK: or.u %r2, %r0, 16256
+; Alternativ instruction could also be: set %r2,%r0,7<23>
+; CHECK: jmp %r1
+  ret float 1.0
+}
+
+define double @f16() {
+; CHECK-LABEL: f16:
+; Big Endian Bug!
+; NOT: CHECK: or %r2, %r0, 0
+; NOT: CHECK: or.u %r3, %r0, 16368
+; Alternativ instruction could also be: set %r2,%r0,10<20>
+; CHECK: jmp %r1
+  ret double 1.0
+}
