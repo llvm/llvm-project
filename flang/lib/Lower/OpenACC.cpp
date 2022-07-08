@@ -151,19 +151,21 @@ static void genDeviceTypeClause(
     const Fortran::parser::AccClause::DeviceType *deviceTypeClause,
     llvm::SmallVectorImpl<mlir::Value> &operands,
     Fortran::lower::StatementContext &stmtCtx) {
-  const auto &deviceTypeValue = deviceTypeClause->v;
-  if (deviceTypeValue) {
-    for (const auto &scalarIntExpr : *deviceTypeValue) {
-      mlir::Value expr = fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(scalarIntExpr), stmtCtx));
-      operands.push_back(expr);
+  const Fortran::parser::AccDeviceTypeExprList &deviceTypeExprList =
+      deviceTypeClause->v;
+  for (const auto &deviceTypeExpr : deviceTypeExprList.v) {
+    const auto &expr = std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
+        deviceTypeExpr.t);
+    if (expr) {
+      operands.push_back(fir::getBase(
+          converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    } else {
+      // * was passed as value and will be represented as a special constant.
+      fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+      mlir::Value star = firOpBuilder.createIntegerConstant(
+          converter.getCurrentLocation(), firOpBuilder.getIndexType(), starCst);
+      operands.push_back(star);
     }
-  } else {
-    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    // * was passed as value and will be represented as a special constant.
-    mlir::Value star = firOpBuilder.createIntegerConstant(
-        converter.getCurrentLocation(), firOpBuilder.getIndexType(), starCst);
-    operands.push_back(star);
   }
 }
 

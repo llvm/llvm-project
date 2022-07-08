@@ -3915,6 +3915,17 @@ struct AccWaitArgument {
   std::tuple<std::optional<ScalarIntExpr>, std::list<ScalarIntExpr>> t;
 };
 
+struct AccDeviceTypeExpr {
+  TUPLE_CLASS_BOILERPLATE(AccDeviceTypeExpr);
+  CharBlock source;
+  std::tuple<std::optional<ScalarIntExpr>> t; // if null then *
+};
+
+struct AccDeviceTypeExprList {
+  WRAPPER_CLASS_BOILERPLATE(
+      AccDeviceTypeExprList, std::list<AccDeviceTypeExpr>);
+};
+
 struct AccTileExpr {
   TUPLE_CLASS_BOILERPLATE(AccTileExpr);
   CharBlock source;
