@@ -21,7 +21,6 @@
 #include <stdio.h>
 
 // CHECK-DL-OPEN-FAIL: ERROR: Interceptors are not working
-// CHECK-SAME-DL-OPEN-FAIL: Please launch the executable with: DYLD_INSERT_LIBRARIES={{.+}}/libclang_rt.asan_{{.+}}_dynamic.dylib
 
 int main(int argc, char **argv) {
   if (argc != 2) {
