@@ -1532,44 +1532,6 @@ def : Pat<(xor GR32:$src1, -2147483648),
 }
 
 //===----------------------------------------------------------------------===//
-// Pattern match SUB as XOR
-//===----------------------------------------------------------------------===//
-
-// An immediate in the LHS of a subtract can't be encoded in the instruction.
-// If there is no possibility of a borrow we can use an XOR instead of a SUB
-// to enable the immediate to be folded.
-// TODO: Move this to a DAG combine?
-
-def sub_is_xor : PatFrag<(ops node:$lhs, node:$rhs), (sub node:$lhs, node:$rhs),[{
-  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
-    KnownBits Known = CurDAG->computeKnownBits(N->getOperand(1));
-
-    // If all possible ones in the RHS are set in the LHS then there can't be
-    // a borrow and we can use xor.
-    return (~Known.Zero).isSubsetOf(CN->getAPIntValue());
-  }
-
-  return false;
-}]>;
-
-let AddedComplexity = 5 in {
-def : Pat<(sub_is_xor imm:$src2, GR8:$src1),
-          (XOR8ri GR8:$src1, imm:$src2)>;
-def : Pat<(sub_is_xor i16immSExt8:$src2, GR16:$src1),
-          (XOR16ri8 GR16:$src1, i16immSExt8:$src2)>;
-def : Pat<(sub_is_xor imm:$src2, GR16:$src1),
-          (XOR16ri GR16:$src1, imm:$src2)>;
-def : Pat<(sub_is_xor i32immSExt8:$src2, GR32:$src1),
-          (XOR32ri8 GR32:$src1, i32immSExt8:$src2)>;
-def : Pat<(sub_is_xor imm:$src2, GR32:$src1),
-          (XOR32ri GR32:$src1, imm:$src2)>;
-def : Pat<(sub_is_xor i64immSExt8:$src2, GR64:$src1),
-          (XOR64ri8 GR64:$src1, i64immSExt8:$src2)>;
-def : Pat<(sub_is_xor i64immSExt32:$src2, GR64:$src1),
-          (XOR64ri32 GR64:$src1, i64immSExt32:$src2)>;
-}
-
-//===----------------------------------------------------------------------===//
 // Some peepholes
 //===----------------------------------------------------------------------===//
 
