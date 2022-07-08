@@ -215,14 +215,20 @@ int8_t test_svclasta_n_s8(svbool_t pg, int8_t fallback, svint8_t data)
 // CHECK-LABEL: @test_svclasta_n_s16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.aarch64.sve.clasta.n.nxv8i16(<vscale x 8 x i1> [[TMP0]], i16 [[FALLBACK:%.*]], <vscale x 8 x i16> [[DATA:%.*]])
-// CHECK-NEXT:    ret i16 [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[FALLBACK:%.*]] to half
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 8 x i16> [[DATA:%.*]] to <vscale x 8 x half>
+// CHECK-NEXT:    [[TMP3:%.*]] = call half @llvm.aarch64.sve.clasta.n.nxv8f16(<vscale x 8 x i1> [[TMP0]], half [[TMP1]], <vscale x 8 x half> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast half [[TMP3]] to i16
+// CHECK-NEXT:    ret i16 [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svclasta_n_s16u10__SVBool_tsu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.aarch64.sve.clasta.n.nxv8i16(<vscale x 8 x i1> [[TMP0]], i16 [[FALLBACK:%.*]], <vscale x 8 x i16> [[DATA:%.*]])
-// CPP-CHECK-NEXT:    ret i16 [[TMP1]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[FALLBACK:%.*]] to half
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 8 x i16> [[DATA:%.*]] to <vscale x 8 x half>
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call half @llvm.aarch64.sve.clasta.n.nxv8f16(<vscale x 8 x i1> [[TMP0]], half [[TMP1]], <vscale x 8 x half> [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast half [[TMP3]] to i16
+// CPP-CHECK-NEXT:    ret i16 [[TMP4]]
 //
 int16_t test_svclasta_n_s16(svbool_t pg, int16_t fallback, svint16_t data)
 {
@@ -232,14 +238,20 @@ int16_t test_svclasta_n_s16(svbool_t pg, int16_t fallback, svint16_t data)
 // CHECK-LABEL: @test_svclasta_n_s32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.aarch64.sve.clasta.n.nxv4i32(<vscale x 4 x i1> [[TMP0]], i32 [[FALLBACK:%.*]], <vscale x 4 x i32> [[DATA:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[FALLBACK:%.*]] to float
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 4 x i32> [[DATA:%.*]] to <vscale x 4 x float>
+// CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.aarch64.sve.clasta.n.nxv4f32(<vscale x 4 x i1> [[TMP0]], float [[TMP1]], <vscale x 4 x float> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[TMP3]] to i32
+// CHECK-NEXT:    ret i32 [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svclasta_n_s32u10__SVBool_tiu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.aarch64.sve.clasta.n.nxv4i32(<vscale x 4 x i1> [[TMP0]], i32 [[FALLBACK:%.*]], <vscale x 4 x i32> [[DATA:%.*]])
-// CPP-CHECK-NEXT:    ret i32 [[TMP1]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[FALLBACK:%.*]] to float
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 4 x i32> [[DATA:%.*]] to <vscale x 4 x float>
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.aarch64.sve.clasta.n.nxv4f32(<vscale x 4 x i1> [[TMP0]], float [[TMP1]], <vscale x 4 x float> [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[TMP3]] to i32
+// CPP-CHECK-NEXT:    ret i32 [[TMP4]]
 //
 int32_t test_svclasta_n_s32(svbool_t pg, int32_t fallback, svint32_t data)
 {
@@ -249,14 +261,20 @@ int32_t test_svclasta_n_s32(svbool_t pg, int32_t fallback, svint32_t data)
 // CHECK-LABEL: @test_svclasta_n_s64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.aarch64.sve.clasta.n.nxv2i64(<vscale x 2 x i1> [[TMP0]], i64 [[FALLBACK:%.*]], <vscale x 2 x i64> [[DATA:%.*]])
-// CHECK-NEXT:    ret i64 [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[FALLBACK:%.*]] to double
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 2 x i64> [[DATA:%.*]] to <vscale x 2 x double>
+// CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.aarch64.sve.clasta.n.nxv2f64(<vscale x 2 x i1> [[TMP0]], double [[TMP1]], <vscale x 2 x double> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
+// CHECK-NEXT:    ret i64 [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svclasta_n_s64u10__SVBool_tlu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.aarch64.sve.clasta.n.nxv2i64(<vscale x 2 x i1> [[TMP0]], i64 [[FALLBACK:%.*]], <vscale x 2 x i64> [[DATA:%.*]])
-// CPP-CHECK-NEXT:    ret i64 [[TMP1]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[FALLBACK:%.*]] to double
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 2 x i64> [[DATA:%.*]] to <vscale x 2 x double>
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.aarch64.sve.clasta.n.nxv2f64(<vscale x 2 x i1> [[TMP0]], double [[TMP1]], <vscale x 2 x double> [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
+// CPP-CHECK-NEXT:    ret i64 [[TMP4]]
 //
 int64_t test_svclasta_n_s64(svbool_t pg, int64_t fallback, svint64_t data)
 {
@@ -281,14 +299,20 @@ uint8_t test_svclasta_n_u8(svbool_t pg, uint8_t fallback, svuint8_t data)
 // CHECK-LABEL: @test_svclasta_n_u16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.aarch64.sve.clasta.n.nxv8i16(<vscale x 8 x i1> [[TMP0]], i16 [[FALLBACK:%.*]], <vscale x 8 x i16> [[DATA:%.*]])
-// CHECK-NEXT:    ret i16 [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[FALLBACK:%.*]] to half
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 8 x i16> [[DATA:%.*]] to <vscale x 8 x half>
+// CHECK-NEXT:    [[TMP3:%.*]] = call half @llvm.aarch64.sve.clasta.n.nxv8f16(<vscale x 8 x i1> [[TMP0]], half [[TMP1]], <vscale x 8 x half> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast half [[TMP3]] to i16
+// CHECK-NEXT:    ret i16 [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svclasta_n_u16u10__SVBool_ttu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.aarch64.sve.clasta.n.nxv8i16(<vscale x 8 x i1> [[TMP0]], i16 [[FALLBACK:%.*]], <vscale x 8 x i16> [[DATA:%.*]])
-// CPP-CHECK-NEXT:    ret i16 [[TMP1]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[FALLBACK:%.*]] to half
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 8 x i16> [[DATA:%.*]] to <vscale x 8 x half>
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call half @llvm.aarch64.sve.clasta.n.nxv8f16(<vscale x 8 x i1> [[TMP0]], half [[TMP1]], <vscale x 8 x half> [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast half [[TMP3]] to i16
+// CPP-CHECK-NEXT:    ret i16 [[TMP4]]
 //
 uint16_t test_svclasta_n_u16(svbool_t pg, uint16_t fallback, svuint16_t data)
 {
@@ -298,14 +322,20 @@ uint16_t test_svclasta_n_u16(svbool_t pg, uint16_t fallback, svuint16_t data)
 // CHECK-LABEL: @test_svclasta_n_u32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.aarch64.sve.clasta.n.nxv4i32(<vscale x 4 x i1> [[TMP0]], i32 [[FALLBACK:%.*]], <vscale x 4 x i32> [[DATA:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[FALLBACK:%.*]] to float
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 4 x i32> [[DATA:%.*]] to <vscale x 4 x float>
+// CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.aarch64.sve.clasta.n.nxv4f32(<vscale x 4 x i1> [[TMP0]], float [[TMP1]], <vscale x 4 x float> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[TMP3]] to i32
+// CHECK-NEXT:    ret i32 [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svclasta_n_u32u10__SVBool_tju12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.aarch64.sve.clasta.n.nxv4i32(<vscale x 4 x i1> [[TMP0]], i32 [[FALLBACK:%.*]], <vscale x 4 x i32> [[DATA:%.*]])
-// CPP-CHECK-NEXT:    ret i32 [[TMP1]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[FALLBACK:%.*]] to float
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 4 x i32> [[DATA:%.*]] to <vscale x 4 x float>
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.aarch64.sve.clasta.n.nxv4f32(<vscale x 4 x i1> [[TMP0]], float [[TMP1]], <vscale x 4 x float> [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[TMP3]] to i32
+// CPP-CHECK-NEXT:    ret i32 [[TMP4]]
 //
 uint32_t test_svclasta_n_u32(svbool_t pg, uint32_t fallback, svuint32_t data)
 {
@@ -315,14 +345,20 @@ uint32_t test_svclasta_n_u32(svbool_t pg, uint32_t fallback, svuint32_t data)
 // CHECK-LABEL: @test_svclasta_n_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.aarch64.sve.clasta.n.nxv2i64(<vscale x 2 x i1> [[TMP0]], i64 [[FALLBACK:%.*]], <vscale x 2 x i64> [[DATA:%.*]])
-// CHECK-NEXT:    ret i64 [[TMP1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[FALLBACK:%.*]] to double
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 2 x i64> [[DATA:%.*]] to <vscale x 2 x double>
+// CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.aarch64.sve.clasta.n.nxv2f64(<vscale x 2 x i1> [[TMP0]], double [[TMP1]], <vscale x 2 x double> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
+// CHECK-NEXT:    ret i64 [[TMP4]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svclasta_n_u64u10__SVBool_tmu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.aarch64.sve.clasta.n.nxv2i64(<vscale x 2 x i1> [[TMP0]], i64 [[FALLBACK:%.*]], <vscale x 2 x i64> [[DATA:%.*]])
-// CPP-CHECK-NEXT:    ret i64 [[TMP1]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[FALLBACK:%.*]] to double
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 2 x i64> [[DATA:%.*]] to <vscale x 2 x double>
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.aarch64.sve.clasta.n.nxv2f64(<vscale x 2 x i1> [[TMP0]], double [[TMP1]], <vscale x 2 x double> [[TMP2]])
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
+// CPP-CHECK-NEXT:    ret i64 [[TMP4]]
 //
 uint64_t test_svclasta_n_u64(svbool_t pg, uint64_t fallback, svuint64_t data)
 {
