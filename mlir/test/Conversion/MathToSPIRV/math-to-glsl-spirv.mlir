@@ -145,6 +145,38 @@ func.func @powf_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) -> vector<4xf32
   return %0: vector<4xf32>
 }
 
+// CHECK-LABEL: @round_scalar
+func.func @round_scalar(%x: f32) -> f32 {
+  // CHECK: %[[ZERO:.+]] = spv.Constant 0.000000e+00
+  // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00
+  // CHECK: %[[HALF:.+]] = spv.Constant 5.000000e-01
+  // CHECK: %[[ABS:.+]] = spv.GLSL.FAbs %arg0
+  // CHECK: %[[FLOOR:.+]] = spv.GLSL.Floor %[[ABS]]
+  // CHECK: %[[SUB:.+]] = spv.FSub %[[ABS]], %[[FLOOR]]
+  // CHECK: %[[GE:.+]] = spv.FOrdGreaterThanEqual %[[SUB]], %[[HALF]]
+  // CHECK: %[[SEL:.+]] = spv.Select %[[GE]], %[[ONE]], %[[ZERO]]
+  // CHECK: %[[ADD:.+]] = spv.FAdd %[[FLOOR]], %[[SEL]]
+  // CHECK: %[[BITCAST:.+]] = spv.Bitcast %[[ADD]]
+  %0 = math.round %x : f32
+  return %0: f32
+}
+
+// CHECK-LABEL: @round_vector
+func.func @round_vector(%x: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: %[[ZERO:.+]] = spv.Constant dense<0.000000e+00>
+  // CHECK: %[[ONE:.+]] = spv.Constant dense<1.000000e+00>
+  // CHECK: %[[HALF:.+]] = spv.Constant dense<5.000000e-01>
+  // CHECK: %[[ABS:.+]] = spv.GLSL.FAbs %arg0
+  // CHECK: %[[FLOOR:.+]] = spv.GLSL.Floor %[[ABS]]
+  // CHECK: %[[SUB:.+]] = spv.FSub %[[ABS]], %[[FLOOR]]
+  // CHECK: %[[GE:.+]] = spv.FOrdGreaterThanEqual %[[SUB]], %[[HALF]]
+  // CHECK: %[[SEL:.+]] = spv.Select %[[GE]], %[[ONE]], %[[ZERO]]
+  // CHECK: %[[ADD:.+]] = spv.FAdd %[[FLOOR]], %[[SEL]]
+  // CHECK: %[[BITCAST:.+]] = spv.Bitcast %[[ADD]]
+  %0 = math.round %x : vector<4xf32>
+  return %0: vector<4xf32>
+}
+
 } // end module
 
 // -----
