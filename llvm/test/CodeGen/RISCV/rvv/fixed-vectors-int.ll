@@ -1371,8 +1371,7 @@ define void @smin_xv_v16i8(<16 x i8>* %x, i8 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmin.vv v8, v9, v8
+; CHECK-NEXT:    vmin.vx v8, v8, a1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
@@ -1388,8 +1387,7 @@ define void @smin_xv_v8i16(<8 x i16>* %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmin.vv v8, v9, v8
+; CHECK-NEXT:    vmin.vx v8, v8, a1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -1405,8 +1403,7 @@ define void @smin_xv_v4i32(<4 x i32>* %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmin.vv v8, v9, v8
+; CHECK-NEXT:    vmin.vx v8, v8, a1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
@@ -1541,8 +1538,7 @@ define void @smax_xv_v16i8(<16 x i8>* %x, i8 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmax.vv v8, v9, v8
+; CHECK-NEXT:    vmax.vx v8, v8, a1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
@@ -1558,8 +1554,7 @@ define void @smax_xv_v8i16(<8 x i16>* %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmax.vv v8, v9, v8
+; CHECK-NEXT:    vmax.vx v8, v8, a1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -1575,8 +1570,7 @@ define void @smax_xv_v4i32(<4 x i32>* %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmax.vv v8, v9, v8
+; CHECK-NEXT:    vmax.vx v8, v8, a1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
@@ -1711,8 +1705,7 @@ define void @umin_xv_v16i8(<16 x i8>* %x, i8 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vminu.vv v8, v9, v8
+; CHECK-NEXT:    vminu.vx v8, v8, a1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
@@ -1728,8 +1721,7 @@ define void @umin_xv_v8i16(<8 x i16>* %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vminu.vv v8, v9, v8
+; CHECK-NEXT:    vminu.vx v8, v8, a1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -1745,8 +1737,7 @@ define void @umin_xv_v4i32(<4 x i32>* %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vminu.vv v8, v9, v8
+; CHECK-NEXT:    vminu.vx v8, v8, a1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
@@ -1881,8 +1872,7 @@ define void @umax_xv_v16i8(<16 x i8>* %x, i8 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmaxu.vv v8, v9, v8
+; CHECK-NEXT:    vmaxu.vx v8, v8, a1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
@@ -1898,8 +1888,7 @@ define void @umax_xv_v8i16(<8 x i16>* %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmaxu.vv v8, v9, v8
+; CHECK-NEXT:    vmaxu.vx v8, v8, a1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -1915,8 +1904,7 @@ define void @umax_xv_v4i32(<4 x i32>* %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vmaxu.vv v8, v9, v8
+; CHECK-NEXT:    vmaxu.vx v8, v8, a1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
