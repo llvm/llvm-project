@@ -11,14 +11,11 @@
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = constant [[T:%.*]] { i32 0, i32 0, i32 17, i32 25 }
 ;.
 define internal i32 @test(%T* %p) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* getelementptr inbounds ([[T:%.*]], %T* @G, i64 0, i32 3), align 4
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* getelementptr inbounds ([[T]], %T* @G, i64 0, i32 2), align 8
-; CHECK-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    ret i32 [[V]]
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test
+; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    ret i32 42
 ;
 entry:
   %a.gep = getelementptr %T, %T* %p, i64 0, i32 3
@@ -32,16 +29,15 @@ entry:
 define i32 @caller() {
 ; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT____-SAME: () #[[ATTR0]] {
+; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[V:%.*]] = call i32 @test() #[[ATTR1:[0-9]+]]
-; IS__TUNIT____-NEXT:    ret i32 [[V]]
+; IS__TUNIT____-NEXT:    ret i32 42
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[V:%.*]] = call i32 @test() #[[ATTR2:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[V:%.*]] = call noundef i32 @test() #[[ATTR2:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret i32 [[V]]
 ;
 entry:
@@ -50,7 +46,6 @@ entry:
 }
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
