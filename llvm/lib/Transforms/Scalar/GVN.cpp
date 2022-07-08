@@ -1494,14 +1494,6 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
         return false;
       }
 
-      // FIXME: Can we support the fallthrough edge?
-      if (isa<CallBrInst>(Pred->getTerminator())) {
-        LLVM_DEBUG(
-            dbgs() << "COULD NOT PRE LOAD BECAUSE OF CALLBR CRITICAL EDGE '"
-                   << Pred->getName() << "': " << *Load << '\n');
-        return false;
-      }
-
       if (LoadBB->isEHPad()) {
         LLVM_DEBUG(
             dbgs() << "COULD NOT PRE LOAD BECAUSE OF AN EH PAD CRITICAL EDGE '"
@@ -2873,11 +2865,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
 
     // Don't do PRE across indirect branch.
     if (isa<IndirectBrInst>(PREPred->getTerminator()))
-      return false;
-
-    // Don't do PRE across callbr.
-    // FIXME: Can we do this across the fallthrough edge?
-    if (isa<CallBrInst>(PREPred->getTerminator()))
       return false;
 
     // We can't do PRE safely on a critical edge, so instead we schedule
