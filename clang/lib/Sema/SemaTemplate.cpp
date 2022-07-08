@@ -2643,6 +2643,46 @@ static bool DiagnoseUnexpandedParameterPacks(Sema &S,
   return false;
 }
 
+static bool hasSameDefaultTemplateArgument(NamedDecl *X, NamedDecl *Y) {
+  ASTContext &C = X->getASTContext();
+  // If the type parameter isn't the same already, we don't need to check the
+  // default argument further.
+  if (!C.isSameTemplateParameter(X, Y))
+    return false;
+
+  if (auto *TTPX = dyn_cast<TemplateTypeParmDecl>(X)) {
+    auto *TTPY = cast<TemplateTypeParmDecl>(Y);
+    if (!TTPX->hasDefaultArgument() || !TTPY->hasDefaultArgument())
+      return false;
+
+    return C.hasSameType(TTPX->getDefaultArgument(),
+                         TTPY->getDefaultArgument());
+  }
+
+  if (auto *NTTPX = dyn_cast<NonTypeTemplateParmDecl>(X)) {
+    auto *NTTPY = cast<NonTypeTemplateParmDecl>(Y);
+    if (!NTTPX->hasDefaultArgument() || !NTTPY->hasDefaultArgument())
+      return false;
+
+    Expr *DefaultArgumentX = NTTPX->getDefaultArgument()->IgnoreImpCasts();
+    Expr *DefaultArgumentY = NTTPY->getDefaultArgument()->IgnoreImpCasts();
+    llvm::FoldingSetNodeID XID, YID;
+    DefaultArgumentX->Profile(XID, C, /*Canonical=*/true);
+    DefaultArgumentY->Profile(YID, C, /*Canonical=*/true);
+    return XID == YID;
+  }
+
+  auto *TTPX = cast<TemplateTemplateParmDecl>(X);
+  auto *TTPY = cast<TemplateTemplateParmDecl>(Y);
+
+  if (!TTPX->hasDefaultArgument() || !TTPY->hasDefaultArgument())
+    return false;
+
+  const TemplateArgument &TAX = TTPX->getDefaultArgument().getArgument();
+  const TemplateArgument &TAY = TTPY->getDefaultArgument().getArgument();
+  return C.hasSameTemplateName(TAX.getAsTemplate(), TAY.getAsTemplate());
+}
+
 /// Checks the validity of a template parameter list, possibly
 /// considering the template parameter list from a previous
 /// declaration.
@@ -2695,8 +2735,15 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
   for (TemplateParameterList::iterator NewParam = NewParams->begin(),
                                     NewParamEnd = NewParams->end();
        NewParam != NewParamEnd; ++NewParam) {
-    // Variables used to diagnose redundant default arguments
+    // Whether we've seen a duplicate default argument in the same translation
+    // unit.
     bool RedundantDefaultArg = false;
+    // Whether we've found inconsis inconsitent default arguments in different
+    // translation unit.
+    bool InconsistentDefaultArg = false;
+    // The name of the module which contains the inconsistent default argument.
+    std::string PrevModuleName;
+
     SourceLocation OldDefaultLoc;
     SourceLocation NewDefaultLoc;
 
@@ -2729,7 +2776,15 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldTypeParm->getDefaultArgumentLoc();
         NewDefaultLoc = NewTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
-        RedundantDefaultArg = true;
+
+        if (!OldTypeParm->getOwningModule() ||
+            isModuleUnitOfCurrentTU(OldTypeParm->getOwningModule()))
+          RedundantDefaultArg = true;
+        else if (!hasSameDefaultTemplateArgument(OldTypeParm, NewTypeParm)) {
+          InconsistentDefaultArg = true;
+          PrevModuleName =
+              OldTypeParm->getImportedOwningModule()->getFullModuleName();
+        }
         PreviousDefaultArgLoc = NewDefaultLoc;
       } else if (OldTypeParm && OldTypeParm->hasDefaultArgument()) {
         // Merge the default argument from the old declaration to the
@@ -2774,7 +2829,15 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldNonTypeParm->getDefaultArgumentLoc();
         NewDefaultLoc = NewNonTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
-        RedundantDefaultArg = true;
+        if (!OldNonTypeParm->getOwningModule() ||
+            isModuleUnitOfCurrentTU(OldNonTypeParm->getOwningModule()))
+          RedundantDefaultArg = true;
+        else if (!hasSameDefaultTemplateArgument(OldNonTypeParm,
+                                                 NewNonTypeParm)) {
+          InconsistentDefaultArg = true;
+          PrevModuleName =
+              OldNonTypeParm->getImportedOwningModule()->getFullModuleName();
+        }
         PreviousDefaultArgLoc = NewDefaultLoc;
       } else if (OldNonTypeParm && OldNonTypeParm->hasDefaultArgument()) {
         // Merge the default argument from the old declaration to the
@@ -2818,7 +2881,15 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldTemplateParm->getDefaultArgument().getLocation();
         NewDefaultLoc = NewTemplateParm->getDefaultArgument().getLocation();
         SawDefaultArgument = true;
-        RedundantDefaultArg = true;
+        if (!OldTemplateParm->getOwningModule() ||
+            isModuleUnitOfCurrentTU(OldTemplateParm->getOwningModule()))
+          RedundantDefaultArg = true;
+        else if (!hasSameDefaultTemplateArgument(OldTemplateParm,
+                                                 NewTemplateParm)) {
+          InconsistentDefaultArg = true;
+          PrevModuleName =
+              OldTemplateParm->getImportedOwningModule()->getFullModuleName();
+        }
         PreviousDefaultArgLoc = NewDefaultLoc;
       } else if (OldTemplateParm && OldTemplateParm->hasDefaultArgument()) {
         // Merge the default argument from the old declaration to the
@@ -2845,12 +2916,31 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
       Invalid = true;
     }
 
+    // [basic.def.odr]/13:
+    //     There can be more than one definition of a
+    //     ...
+    //     default template argument
+    //     ...
+    //     in a program provided that each definition appears in a different
+    //     translation unit and the definitions satisfy the [same-meaning
+    //     criteria of the ODR].
+    //
+    // Simply, the design of modules allows the definition of template default
+    // argument to be repeated across translation unit. Note that the ODR is
+    // checked elsewhere. But it is still not allowed to repeat template default
+    // argument in the same translation unit.
     if (RedundantDefaultArg) {
-      // C++ [temp.param]p12:
-      //   A template-parameter shall not be given default arguments
-      //   by two different declarations in the same scope.
       Diag(NewDefaultLoc, diag::err_template_param_default_arg_redefinition);
       Diag(OldDefaultLoc, diag::note_template_param_prev_default_arg);
+      Invalid = true;
+    } else if (InconsistentDefaultArg) {
+      // We could only diagnose about the case that the OldParam is imported.
+      // The case NewParam is imported should be handled in ASTReader.
+      Diag(NewDefaultLoc,
+           diag::err_template_param_default_arg_inconsistent_redefinition);
+      Diag(OldDefaultLoc,
+           diag::note_template_param_prev_default_arg_in_other_module)
+          << PrevModuleName;
       Invalid = true;
     } else if (MissingDefaultArg && TPC != TPC_FunctionTemplate) {
       // C++ [temp.param]p11:
