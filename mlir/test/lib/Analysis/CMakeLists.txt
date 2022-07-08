@@ -2,7 +2,6 @@
 add_mlir_library(MLIRTestAnalysis
   TestAliasAnalysis.cpp
   TestCallGraph.cpp
-  TestDataFlow.cpp
   TestDataFlowFramework.cpp
   TestLiveness.cpp
   TestMatchReduction.cpp
@@ -12,6 +11,7 @@ add_mlir_library(MLIRTestAnalysis
   TestSlice.cpp
 
   DataFlow/TestDeadCodeAnalysis.cpp
+  DataFlow/TestDenseDataFlowAnalysis.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

@@ -378,6 +378,10 @@ MACH-O ONLY OPTIONS AND COMMANDS
 
   Display the Objective-C runtime meta data.
 
+.. option:: --offloading
+
+  Display the content of the LLVM offloading section.
+
 .. option:: --private-header
 
   Display only the first format specific file header.

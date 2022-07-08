@@ -19,8 +19,15 @@
 // template <RandomAccessIterator Iter, class Distance>
 //   constexpr void advance(Iter& i, Distance n);
 
+
+// TODO: test_iterators.h includes <ranges>, and <ranges> includes <chrono> and <atomic>.
+// Lots of implementation headers under <__chrono/> and <atomic> has signed to unsigned conversion,
+// which will trigger the -Wsign-conversion warning.
+// Once those headers are fixed, enable the -Wsign-conversion for this test by removing
+// <TODO:Remove brackets> below
+
 // Make sure we catch forced conversions to the difference_type if they happen.
-// ADDITIONAL_COMPILE_FLAGS: -Wsign-conversion
+// ADDITIONAL_COMPILE_FLAGS<TODO:Remove brackets>: -Wsign-conversion
 
 #include <iterator>
 #include <cassert>

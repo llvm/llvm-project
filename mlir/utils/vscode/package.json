@@ -2,7 +2,7 @@
   "name": "vscode-mlir",
   "displayName": "MLIR",
   "description": "MLIR Language Extension",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://mlir.llvm.org/",
   "icon": "icon.png",
@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "chokidar": "3.5.2",
-    "vscode-languageclient": "^8.0.1"
+    "vscode-languageclient": "^8.0.2-next.5"
   },
   "devDependencies": {
     "@types/mocha": "^7.0.2",

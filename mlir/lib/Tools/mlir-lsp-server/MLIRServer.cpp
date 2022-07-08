@@ -13,6 +13,7 @@
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Parser/AsmParserState.h"
+#include "mlir/Parser/CodeComplete.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/Support/SourceMgr.h"
 
@@ -275,6 +276,14 @@ struct MLIRDocument {
   void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
   void findDocumentSymbols(Operation *op,
                            std::vector<lsp::DocumentSymbol> &symbols);
+
+  //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  lsp::CompletionList getCodeCompletion(const lsp::URIForFile &uri,
+                                        const lsp::Position &completePos,
+                                        const DialectRegistry &registry);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -616,6 +625,102 @@ void MLIRDocument::findDocumentSymbols(
 }
 
 //===----------------------------------------------------------------------===//
+// MLIRDocument: Code Completion
+//===----------------------------------------------------------------------===//
+
+namespace {
+class LSPCodeCompleteContext : public AsmParserCodeCompleteContext {
+public:
+  LSPCodeCompleteContext(SMLoc completeLoc, lsp::CompletionList &completionList,
+                         MLIRContext *ctx)
+      : AsmParserCodeCompleteContext(completeLoc),
+        completionList(completionList), ctx(ctx) {}
+
+  /// Signal code completion for a dialect name.
+  void completeDialectName() final {
+    for (StringRef dialect : ctx->getAvailableDialects()) {
+      lsp::CompletionItem item(dialect, lsp::CompletionItemKind::Module);
+      item.sortText = "2";
+      item.detail = "dialect";
+      completionList.items.emplace_back(item);
+    }
+  }
+
+  /// Signal code completion for an operation name within the given dialect.
+  void completeOperationName(StringRef dialectName) final {
+    Dialect *dialect = ctx->getOrLoadDialect(dialectName);
+    if (!dialect)
+      return;
+
+    for (const auto &op : ctx->getRegisteredOperations()) {
+      if (&op.getDialect() != dialect)
+        continue;
+
+      lsp::CompletionItem item(
+          op.getStringRef().drop_front(dialectName.size() + 1),
+          lsp::CompletionItemKind::Field);
+      item.sortText = "1";
+      item.detail = "operation";
+      completionList.items.emplace_back(item);
+    }
+  }
+
+  /// Append the given SSA value as a code completion result for SSA value
+  /// completions.
+  void appendSSAValueCompletion(StringRef name, std::string typeData) final {
+    // Check if we need to insert the `%` or not.
+    bool stripPrefix = getCodeCompleteLoc().getPointer()[-1] == '%';
+
+    lsp::CompletionItem item(name, lsp::CompletionItemKind::Variable);
+    if (stripPrefix)
+      item.insertText = name.drop_front(1).str();
+    item.detail = std::move(typeData);
+    completionList.items.emplace_back(item);
+  }
+
+  /// Append the given block as a code completion result for block name
+  /// completions.
+  void appendBlockCompletion(StringRef name) final {
+    // Check if we need to insert the `^` or not.
+    bool stripPrefix = getCodeCompleteLoc().getPointer()[-1] == '^';
+
+    lsp::CompletionItem item(name, lsp::CompletionItemKind::Field);
+    if (stripPrefix)
+      item.insertText = name.drop_front(1).str();
+    completionList.items.emplace_back(item);
+  }
+
+private:
+  lsp::CompletionList &completionList;
+  MLIRContext *ctx;
+};
+} // namespace
+
+lsp::CompletionList
+MLIRDocument::getCodeCompletion(const lsp::URIForFile &uri,
+                                const lsp::Position &completePos,
+                                const DialectRegistry &registry) {
+  SMLoc posLoc = completePos.getAsSMLoc(sourceMgr);
+  if (!posLoc.isValid())
+    return lsp::CompletionList();
+
+  // To perform code completion, we run another parse of the module with the
+  // code completion context provided.
+  MLIRContext tmpContext(registry, MLIRContext::Threading::DISABLED);
+  tmpContext.allowUnregisteredDialects();
+  lsp::CompletionList completionList;
+  LSPCodeCompleteContext lspCompleteContext(posLoc, completionList,
+                                            &tmpContext);
+
+  Block tmpIR;
+  AsmParserState tmpState;
+  (void)parseSourceFile(sourceMgr, &tmpIR, &tmpContext,
+                        /*sourceFileLoc=*/nullptr, &tmpState,
+                        &lspCompleteContext);
+  return completionList;
+}
+
+//===----------------------------------------------------------------------===//
 // MLIRTextFileChunk
 //===----------------------------------------------------------------------===//
 
@@ -670,6 +775,8 @@ public:
   Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
                                  lsp::Position hoverPos);
   void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
+  lsp::CompletionList getCodeCompletion(const lsp::URIForFile &uri,
+                                        lsp::Position completePos);
 
 private:
   /// Find the MLIR document that contains the given position, and update the
@@ -813,6 +920,22 @@ void MLIRTextFile::findDocumentSymbols(
   }
 }
 
+lsp::CompletionList MLIRTextFile::getCodeCompletion(const lsp::URIForFile &uri,
+                                                    lsp::Position completePos) {
+  MLIRTextFileChunk &chunk = getChunkFor(completePos);
+  lsp::CompletionList completionList = chunk.document.getCodeCompletion(
+      uri, completePos, context.getDialectRegistry());
+
+  // Adjust any completion locations.
+  for (lsp::CompletionItem &item : completionList.items) {
+    if (item.textEdit)
+      chunk.adjustLocForChunkOffset(item.textEdit->range);
+    for (lsp::TextEdit &edit : item.additionalTextEdits)
+      chunk.adjustLocForChunkOffset(edit.range);
+  }
+  return completionList;
+}
+
 MLIRTextFileChunk &MLIRTextFile::getChunkFor(lsp::Position &pos) {
   if (chunks.size() == 1)
     return *chunks.front();
@@ -897,4 +1020,13 @@ void lsp::MLIRServer::findDocumentSymbols(
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->findDocumentSymbols(symbols);
+}
+
+lsp::CompletionList
+lsp::MLIRServer::getCodeCompletion(const URIForFile &uri,
+                                   const Position &completePos) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    return fileIt->second->getCodeCompletion(uri, completePos);
+  return CompletionList();
 }

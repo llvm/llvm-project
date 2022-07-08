@@ -120,7 +120,13 @@ struct BooleanFormula {
   /// clauses in the formula start from the element at index 1.
   std::vector<ClauseID> NextWatched;
 
-  explicit BooleanFormula(Variable LargestVar) : LargestVar(LargestVar) {
+  /// Stores the variable identifier and value location for atomic booleans in
+  /// the formula.
+  llvm::DenseMap<Variable, AtomicBoolValue *> Atomics;
+
+  explicit BooleanFormula(Variable LargestVar,
+                          llvm::DenseMap<Variable, AtomicBoolValue *> Atomics)
+      : LargestVar(LargestVar), Atomics(std::move(Atomics)) {
     Clauses.push_back(0);
     ClauseStarts.push_back(0);
     NextWatched.push_back(0);
@@ -180,28 +186,47 @@ BooleanFormula buildBooleanFormula(const llvm::DenseSet<BoolValue *> &Vals) {
 
   // Map each sub-value in `Vals` to a unique variable.
   llvm::DenseMap<BoolValue *, Variable> SubValsToVar;
+  // Store variable identifiers and value location of atomic booleans.
+  llvm::DenseMap<Variable, AtomicBoolValue *> Atomics;
   Variable NextVar = 1;
   {
     std::queue<BoolValue *> UnprocessedSubVals;
     for (BoolValue *Val : Vals)
       UnprocessedSubVals.push(Val);
     while (!UnprocessedSubVals.empty()) {
+      Variable Var = NextVar;
       BoolValue *Val = UnprocessedSubVals.front();
       UnprocessedSubVals.pop();
 
-      if (!SubValsToVar.try_emplace(Val, NextVar).second)
+      if (!SubValsToVar.try_emplace(Val, Var).second)
         continue;
       ++NextVar;
 
       // Visit the sub-values of `Val`.
-      if (auto *C = dyn_cast<ConjunctionValue>(Val)) {
+      switch (Val->getKind()) {
+      case Value::Kind::Conjunction: {
+        auto *C = cast<ConjunctionValue>(Val);
         UnprocessedSubVals.push(&C->getLeftSubValue());
         UnprocessedSubVals.push(&C->getRightSubValue());
-      } else if (auto *D = dyn_cast<DisjunctionValue>(Val)) {
+        break;
+      }
+      case Value::Kind::Disjunction: {
+        auto *D = cast<DisjunctionValue>(Val);
         UnprocessedSubVals.push(&D->getLeftSubValue());
         UnprocessedSubVals.push(&D->getRightSubValue());
-      } else if (auto *N = dyn_cast<NegationValue>(Val)) {
+        break;
+      }
+      case Value::Kind::Negation: {
+        auto *N = cast<NegationValue>(Val);
         UnprocessedSubVals.push(&N->getSubVal());
+        break;
+      }
+      case Value::Kind::AtomicBool: {
+        Atomics[Var] = cast<AtomicBoolValue>(Val);
+        break;
+      }
+      default:
+        llvm_unreachable("buildBooleanFormula: unhandled value kind");
       }
     }
   }
@@ -212,7 +237,7 @@ BooleanFormula buildBooleanFormula(const llvm::DenseSet<BoolValue *> &Vals) {
     return ValIt->second;
   };
 
-  BooleanFormula Formula(NextVar - 1);
+  BooleanFormula Formula(NextVar - 1, std::move(Atomics));
   std::vector<bool> ProcessedSubVals(NextVar, false);
 
   // Add a conjunct for each variable that represents a top-level conjunction
@@ -383,7 +408,7 @@ public:
         // If the root level is reached, then all possible assignments lead to
         // a conflict.
         if (Level == 0)
-          return WatchedLiteralsSolver::Result::Unsatisfiable;
+          return Solver::Result::Unsatisfiable();
 
         // Otherwise, take the other branch at the most recent level where a
         // decision was made.
@@ -440,12 +465,29 @@ public:
         ++I;
       }
     }
-    return WatchedLiteralsSolver::Result::Satisfiable;
+    return Solver::Result::Satisfiable(buildSolution());
   }
 
 private:
-  // Reverses forced moves until the most recent level where a decision was made
-  // on the assignment of a variable.
+  /// Returns a satisfying truth assignment to the atomic values in the boolean
+  /// formula.
+  llvm::DenseMap<AtomicBoolValue *, Solver::Result::Assignment>
+  buildSolution() {
+    llvm::DenseMap<AtomicBoolValue *, Solver::Result::Assignment> Solution;
+    for (auto &Atomic : Formula.Atomics) {
+      // A variable may have a definite true/false assignment, or it may be
+      // unassigned indicating its truth value does not affect the result of
+      // the formula. Unassigned variables are assigned to true as a default.
+      Solution[Atomic.second] =
+          VarAssignments[Atomic.first] == Assignment::AssignedFalse
+              ? Solver::Result::Assignment::AssignedFalse
+              : Solver::Result::Assignment::AssignedTrue;
+    }
+    return Solution;
+  }
+
+  /// Reverses forced moves until the most recent level where a decision was
+  /// made on the assignment of a variable.
   void reverseForcedMoves() {
     for (; LevelStates[Level] == State::Forced; --Level) {
       const Variable Var = LevelVars[Level];
@@ -459,7 +501,7 @@ private:
     }
   }
 
-  // Updates watched literals that are affected by a variable assignment.
+  /// Updates watched literals that are affected by a variable assignment.
   void updateWatchedLiterals() {
     const Variable Var = LevelVars[Level];
 
@@ -592,7 +634,7 @@ private:
 };
 
 Solver::Result WatchedLiteralsSolver::solve(llvm::DenseSet<BoolValue *> Vals) {
-  return Vals.empty() ? WatchedLiteralsSolver::Result::Satisfiable
+  return Vals.empty() ? Solver::Result::Satisfiable({{}})
                       : WatchedLiteralsSolverImpl(Vals).solve();
 }
 

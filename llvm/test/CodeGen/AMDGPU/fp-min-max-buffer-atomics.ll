@@ -76,7 +76,7 @@ define amdgpu_kernel void @raw_buffer_atomic_min_noret_f32(<4 x i32> inreg %rsrc
 ; G_SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_SI-NEXT:    v_mov_b32_e32 v0, s4
 ; G_SI-NEXT:    v_mov_b32_e32 v1, s5
-; G_SI-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen glc
+; G_SI-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen
 ; G_SI-NEXT:    s_endpgm
 ;
 ; G_GFX7-LABEL: raw_buffer_atomic_min_noret_f32:
@@ -86,7 +86,7 @@ define amdgpu_kernel void @raw_buffer_atomic_min_noret_f32(<4 x i32> inreg %rsrc
 ; G_GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; G_GFX7-NEXT:    v_mov_b32_e32 v1, s5
-; G_GFX7-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen glc
+; G_GFX7-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen
 ; G_GFX7-NEXT:    s_endpgm
 ;
 ; G_GFX10-LABEL: raw_buffer_atomic_min_noret_f32:
@@ -97,7 +97,7 @@ define amdgpu_kernel void @raw_buffer_atomic_min_noret_f32(<4 x i32> inreg %rsrc
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX10-NEXT:    v_mov_b32_e32 v0, s2
 ; G_GFX10-NEXT:    v_mov_b32_e32 v1, s3
-; G_GFX10-NEXT:    buffer_atomic_fmin v0, v1, s[4:7], 0 offen glc
+; G_GFX10-NEXT:    buffer_atomic_fmin v0, v1, s[4:7], 0 offen
 ; G_GFX10-NEXT:    s_endpgm
 ;
 ; G_GFX1030-LABEL: raw_buffer_atomic_min_noret_f32:
@@ -108,7 +108,7 @@ define amdgpu_kernel void @raw_buffer_atomic_min_noret_f32(<4 x i32> inreg %rsrc
 ; G_GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX1030-NEXT:    v_mov_b32_e32 v0, s4
 ; G_GFX1030-NEXT:    v_mov_b32_e32 v1, s5
-; G_GFX1030-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen glc
+; G_GFX1030-NEXT:    buffer_atomic_fmin v0, v1, s[0:3], 0 offen
 ; G_GFX1030-NEXT:    s_endpgm
 ;
 ; G_GFX1100-LABEL: raw_buffer_atomic_min_noret_f32:
@@ -118,7 +118,7 @@ define amdgpu_kernel void @raw_buffer_atomic_min_noret_f32(<4 x i32> inreg %rsrc
 ; G_GFX1100-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; G_GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX1100-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; G_GFX1100-NEXT:    buffer_atomic_min_f32 v0, v1, s[0:3], 0 offen glc
+; G_GFX1100-NEXT:    buffer_atomic_min_f32 v0, v1, s[0:3], 0 offen
 ; G_GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; G_GFX1100-NEXT:    s_endpgm
 main_body:
@@ -430,7 +430,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_noret_f32(<4 x i32> inreg %rsrc
 ; G_SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_SI-NEXT:    v_mov_b32_e32 v0, s4
 ; G_SI-NEXT:    v_mov_b32_e32 v1, s5
-; G_SI-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen glc
+; G_SI-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen
 ; G_SI-NEXT:    s_endpgm
 ;
 ; G_GFX7-LABEL: raw_buffer_atomic_max_noret_f32:
@@ -440,7 +440,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_noret_f32(<4 x i32> inreg %rsrc
 ; G_GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; G_GFX7-NEXT:    v_mov_b32_e32 v1, s5
-; G_GFX7-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen glc
+; G_GFX7-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen
 ; G_GFX7-NEXT:    s_endpgm
 ;
 ; G_GFX10-LABEL: raw_buffer_atomic_max_noret_f32:
@@ -451,7 +451,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_noret_f32(<4 x i32> inreg %rsrc
 ; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX10-NEXT:    v_mov_b32_e32 v0, s2
 ; G_GFX10-NEXT:    v_mov_b32_e32 v1, s3
-; G_GFX10-NEXT:    buffer_atomic_fmax v0, v1, s[4:7], 0 offen glc
+; G_GFX10-NEXT:    buffer_atomic_fmax v0, v1, s[4:7], 0 offen
 ; G_GFX10-NEXT:    s_endpgm
 ;
 ; G_GFX1030-LABEL: raw_buffer_atomic_max_noret_f32:
@@ -462,7 +462,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_noret_f32(<4 x i32> inreg %rsrc
 ; G_GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX1030-NEXT:    v_mov_b32_e32 v0, s4
 ; G_GFX1030-NEXT:    v_mov_b32_e32 v1, s5
-; G_GFX1030-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen glc
+; G_GFX1030-NEXT:    buffer_atomic_fmax v0, v1, s[0:3], 0 offen
 ; G_GFX1030-NEXT:    s_endpgm
 ;
 ; G_GFX1100-LABEL: raw_buffer_atomic_max_noret_f32:
@@ -472,7 +472,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_noret_f32(<4 x i32> inreg %rsrc
 ; G_GFX1100-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; G_GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX1100-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; G_GFX1100-NEXT:    buffer_atomic_max_f32 v0, v1, s[0:3], 0 offen glc
+; G_GFX1100-NEXT:    buffer_atomic_max_f32 v0, v1, s[0:3], 0 offen
 ; G_GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; G_GFX1100-NEXT:    s_endpgm
 main_body:
