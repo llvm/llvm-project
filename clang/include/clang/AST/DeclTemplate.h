@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_DECLTEMPLATE_H
 
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -373,11 +374,19 @@ public:
 
   /// Set that the default argument was inherited from another parameter.
   void setInherited(const ASTContext &C, ParmDecl *InheritedFrom) {
-    assert(!isInherited() && "default argument already inherited");
     InheritedFrom = getParmOwningDefaultArg(InheritedFrom);
     if (!isSet())
       ValueOrInherited = InheritedFrom;
-    else
+    else if (auto *D = ValueOrInherited.template dyn_cast<ParmDecl *>()) {
+      assert(C.isSameDefaultTemplateArgument(D, InheritedFrom));
+      ValueOrInherited =
+          new (allocateDefaultArgStorageChain(C)) Chain{InheritedFrom, get()};
+    } else if (auto *Inherited =
+                   ValueOrInherited.template dyn_cast<Chain *>()) {
+      assert(C.isSameDefaultTemplateArgument(Inherited->PrevDeclWithDefaultArg,
+                                             InheritedFrom));
+      Inherited->PrevDeclWithDefaultArg = InheritedFrom;
+    } else
       ValueOrInherited = new (allocateDefaultArgStorageChain(C))
           Chain{InheritedFrom, ValueOrInherited.template get<ArgType>()};
   }
