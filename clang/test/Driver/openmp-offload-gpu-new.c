@@ -120,3 +120,9 @@
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-FEATURES %s
 
 // CHECK-LTO-FEATURES: clang-offload-packager{{.*}}--image={{.*}}feature=+ptx{{[0-9]+}}
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=sm_52 -nogpulib \
+// RUN:     -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx64 -foffload-lto %s 2>&1 \
+// RUN:    | FileCheck --check-prefix=CHECK-SET-FEATURES %s
+
+// CHECK-SET-FEATURES: clang-offload-packager{{.*}}--image={{.*}}feature=+ptx64
