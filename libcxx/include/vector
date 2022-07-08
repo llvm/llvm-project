@@ -2184,8 +2184,8 @@ public:
 
 #if _LIBCPP_STD_VER > 11
     template <class... _Args>
-   _LIBCPP_INLINE_VISIBILITY iterator emplace(const_iterator position, _Args&&... __args)
-        { return insert ( position, value_type ( _VSTD::forward<_Args>(__args)... )); }
+   _LIBCPP_INLINE_VISIBILITY iterator emplace(const_iterator __position, _Args&&... __args)
+        { return insert ( __position, value_type ( _VSTD::forward<_Args>(__args)... )); }
 #endif
 
     iterator insert(const_iterator __position, const value_type& __x);

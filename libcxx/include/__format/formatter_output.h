@@ -33,8 +33,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __formatter {
 
-_LIBCPP_HIDE_FROM_ABI constexpr char __hex_to_upper(char c) {
-  switch (c) {
+_LIBCPP_HIDE_FROM_ABI constexpr char __hex_to_upper(char __c) {
+  switch (__c) {
   case 'a':
     return 'A';
   case 'b':
@@ -48,7 +48,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr char __hex_to_upper(char c) {
   case 'f':
     return 'F';
   }
-  return c;
+  return __c;
 }
 
 struct _LIBCPP_TYPE_VIS __padding_size_result {

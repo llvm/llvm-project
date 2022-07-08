@@ -271,7 +271,7 @@ public:
         is_copy_constructible<_Tp>::value>
     >
   _LIBCPP_INLINE_VISIBILITY
-  _Tp& emplace(_Args&&... args);
+  _Tp& emplace(_Args&&...);
 
   template <class _ValueType, class _Up, class ..._Args,
     class _Tp = decay_t<_ValueType>,
