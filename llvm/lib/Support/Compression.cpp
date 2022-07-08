@@ -83,10 +83,6 @@ Error zlib::uncompress(StringRef InputBuffer,
   return E;
 }
 
-uint32_t zlib::crc32(StringRef Buffer) {
-  return ::crc32(0, (const Bytef *)Buffer.data(), Buffer.size());
-}
-
 #else
 bool zlib::isAvailable() { return false; }
 void zlib::compress(StringRef InputBuffer,
@@ -101,8 +97,5 @@ Error zlib::uncompress(StringRef InputBuffer,
                        SmallVectorImpl<char> &UncompressedBuffer,
                        size_t UncompressedSize) {
   llvm_unreachable("zlib::uncompress is unavailable");
-}
-uint32_t zlib::crc32(StringRef Buffer) {
-  llvm_unreachable("zlib::crc32 is unavailable");
 }
 #endif

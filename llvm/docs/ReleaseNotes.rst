@@ -206,6 +206,7 @@ Changes to the C API
   introduction of alternatives to zlib compression in the llvm toolchain.
   Changes are as follows:
   * Relocate the ``llvm::zlib`` namespace to ``llvm::compression::zlib``.
+  * Remove crc32 from zlib compression namespace, people should use the ``llvm::crc32`` instead.
 
 Changes to the Go bindings
 --------------------------
