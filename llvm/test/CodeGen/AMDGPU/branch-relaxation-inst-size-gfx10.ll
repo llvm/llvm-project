@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -amdgpu-s-branch-bits=4 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -amdgpu-s-branch-bits=4 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-s-branch-bits=4 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 
 ; Make sure the code size estimate for inline asm is 12-bytes per
 ; instruction, rather than 8 in previous generations.
