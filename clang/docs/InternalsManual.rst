@@ -537,7 +537,7 @@ token.  This concept maps directly to the "spelling location" for the token.
 ``SourceRange`` and ``CharSourceRange``
 ---------------------------------------
 
-.. mostly taken from https://lists.llvm.org/pipermail/cfe-dev/2010-August/010595.html
+.. mostly taken from https://discourse.llvm.org/t/code-ranges-of-tokens-ast-elements/16893/2
 
 Clang represents most source ranges by [first, last], where "first" and "last"
 each point to the beginning of their respective tokens.  For example consider

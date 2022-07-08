@@ -675,5 +675,5 @@ this release by going into the "``clang/docs/``" directory in the Clang
 tree.
 
 If you have any questions or comments about Clang, please feel free to
-contact us via the `mailing
-list <https://lists.llvm.org/mailman/listinfo/cfe-dev>`_.
+contact us on the Discourse forums (Clang Frontend category)
+<https://discourse.llvm.org/c/clang/6>`_.
