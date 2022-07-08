@@ -1589,6 +1589,18 @@ Attribute SparseElementsAttr::getZeroAttr() const {
   if (eltType.isa<FloatType>())
     return FloatAttr::get(eltType, 0);
 
+  // Handle complex elements.
+  if (auto complexTy = eltType.dyn_cast<ComplexType>()) {
+    auto eltType = complexTy.getElementType();
+    Attribute zero;
+    if (eltType.isa<FloatType>())
+      zero = FloatAttr::get(eltType, 0);
+    else // must be integer
+      zero = IntegerAttr::get(eltType, 0);
+    return ArrayAttr::get(complexTy.getContext(),
+                          ArrayRef<Attribute>{zero, zero});
+  }
+
   // Handle string type.
   if (getValues().isa<DenseStringElementsAttr>())
     return StringAttr::get("", eltType);
