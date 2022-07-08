@@ -3674,11 +3674,6 @@ class OffloadingActionBuilder final {
       // If this is an input action replicate it for each OpenMP toolchain.
       if (auto *IA = dyn_cast<InputAction>(HostAction)) {
         OpenMPDeviceActions.clear();
-        // Only process input actions for files that have extensions
-        std::string FileName = IA->getInputArg().getAsString(Args);
-        if (!llvm::sys::path::has_extension(FileName)) {
-          return ABRT_Inactive;
-        }
         for (unsigned I = 0; I < ToolChains.size(); ++I) {
           OpenMPDeviceActions.push_back(C.MakeAction<InputAction>(
               IA->getInputArg(), IA->getType(), GpuArchList[I].ID));
