@@ -103,7 +103,6 @@ define i64 @test4(i64 %x) nounwind {
 ; CHECK-NEXT:    subx.l %d0, %d1
 ; CHECK-NEXT:    slt %d1
 ; CHECK-NEXT:    and.l #255, %d1
-; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts

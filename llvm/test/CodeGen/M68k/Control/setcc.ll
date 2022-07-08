@@ -46,7 +46,6 @@ define fastcc i64 @t3(i64 %x) nounwind readnone ssp {
 ; CHECK-NEXT:    scs %d0
 ; CHECK-NEXT:    move.l %d0, %d1
 ; CHECK-NEXT:    and.l #255, %d1
-; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    lsl.l #6, %d1
 ; CHECK-NEXT:    move.l %d2, %d0
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
