@@ -70,8 +70,12 @@ typedef struct {
   CXStringSet *ModuleDeps;
 
   /**
-   * The canonical command line to build this module, excluding arguments
-   * containing modules-related paths: "-fmodule-file=", "-o".
+   * The canonical command line to build this module.
+   *
+   * If getFileDependencies_v3 or later was used to get this dependency, it is
+   * a complete command line. When using getFileDependencies_v2, it excludes
+   * arguments containing modules-related paths:
+   * "-fmodule-file=", "-o", "-fmodule-map-file=".
    */
   CXStringSet *BuildArguments;
 } CXModuleDependency;
@@ -90,13 +94,18 @@ typedef struct {
   CXString ContextHash;
   CXStringSet *FileDeps;
   CXStringSet *ModuleDeps;
-
-  /**
-   * Full command line to build this file, excluding arguments containing
-   * modules-related paths: `-fmodule-file=`.
-   */
   CXStringSet *BuildArguments;
 } CXFileDependencies;
+
+/**
+ * An output file kind needed by module dependencies.
+ */
+typedef enum {
+  CXOutputKind_ModuleFile = 0,
+  CXOutputKind_Dependencies = 1,
+  CXOutputKind_DependenciesTarget = 2,
+  CXOutputKind_SerializedDiagnostics = 3,
+} CXOutputKind;
 
 CINDEX_LINKAGE void
 clang_experimental_ModuleDependencySet_dispose(CXModuleDependencySet *MD);
@@ -225,6 +234,69 @@ clang_experimental_DependencyScannerWorker_getDependenciesByModuleName_v0(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *ModuleName, const char *WorkingDirectory,
     CXModuleDiscoveredCallback *MDC, void *Context, CXString *error);
+
+/**
+ * A callback that is called to determine the paths of output files for each
+ * module dependency. The ModuleFile (pcm) path mapping is mandatory.
+ *
+ * \param Context the MLOContext that was passed to
+ *         \c clang_experimental_DependencyScannerWorker_getFileDependencies_vX.
+ * \param ModuleName the name of the dependent module.
+ * \param ContextHash the context hash of the dependent module.
+ *                    See \c CXModuleDependency::ContextHash.
+ & \param OutputKind the kind of module output to lookup.
+ * \param Output[out] the output path(s) or name, whose total size must be <=
+ *                    \p MaxLen. In the case of multiple outputs of the same
+ *                    kind, this can be a null-separated list.
+ * \param MaxLen the maximum size of Output.
+ *
+ * \returns the actual length of Output. If the return value is > \p MaxLen,
+ *          the callback will be repeated with a larger buffer.
+ */
+typedef size_t CXModuleLookupOutputCallback(void *Context,
+                                            const char *ModuleName,
+                                            const char *ContextHash,
+                                            CXOutputKind OutputKind,
+                                            char *Output, size_t MaxLen);
+
+/**
+ * Returns the list of file dependencies for a particular compiler invocation.
+ *
+ * \param argc the number of compiler invocation arguments (including argv[0]).
+ * \param argv the compiler driver invocation arguments (including argv[0]).
+ * \param ModuleName If non-null, the dependencies of the named module are
+ *                   returned. Otherwise, the dependencies of the whole
+ *                   translation unit are returned.
+ * \param WorkingDirectory the directory in which the invocation runs.
+ * \param MDCContext the context that will be passed to \c MDC each time it is
+ *                   called.
+ * \param MDC a callback that is called whenever a new module is discovered.
+ *            This may receive the same module on different workers. This should
+ *            be NULL if
+ *            \c clang_experimental_DependencyScannerService_create_v0 was
+ *            called with \c CXDependencyMode_Flat. This callback will be called
+ *            on the same thread that called this function.
+ * \param MLOContext the context that will be passed to \c MLO each time it is
+ *                   called.
+ * \param MLO a callback that is called to determine the paths of output files
+ *            for each module dependency. This may receive the same module on
+ *            different workers. This should be NULL if
+ *            \c clang_experimental_DependencyScannerService_create_v0 was
+ *            called with \c CXDependencyMode_Flat. This callback will be called
+ *            on the same thread that called this function.
+ * \param Options reserved for future use, always pass 0.
+ * \param [out] error the error string to pass back to client (if any).
+ *
+ * \returns A pointer to a CXFileDependencies on success, NULL otherwise. The
+ *          CXFileDependencies must be freed by calling
+ *          \c clang_experimental_FileDependencies_dispose.
+ */
+CINDEX_LINKAGE CXFileDependencies *
+clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
+    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
+    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
+    CXModuleDiscoveredCallback *MDC, void *MLOContext,
+    CXModuleLookupOutputCallback *MLO, unsigned Options, CXString *error);
 
 /**
  * @}
