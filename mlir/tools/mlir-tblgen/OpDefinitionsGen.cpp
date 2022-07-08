@@ -430,6 +430,9 @@ private:
   // Generates getters for named successors.
   void genNamedSuccessorGetters();
 
+  // Generates the method to populate default attributes.
+  void genPopulateDefaultAttributes();
+
   // Generates builder methods for the operation.
   void genBuilder();
 
@@ -823,6 +826,7 @@ OpEmitter::OpEmitter(const Operator &op,
   genAttrSetters();
   genOptionalAttrRemovers();
   genBuilder();
+  genPopulateDefaultAttributes();
   genParser();
   genPrinter();
   genVerifier();
@@ -1587,6 +1591,45 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
        << llvm::join(resultTypes, ", ") << "});\n\n";
 }
 
+void OpEmitter::genPopulateDefaultAttributes() {
+  // All done if no attributes have default values.
+  if (llvm::all_of(op.getAttributes(), [](const NamedAttribute &named) {
+        return !named.attr.hasDefaultValue();
+      }))
+    return;
+
+  SmallVector<MethodParameter> paramList;
+  paramList.emplace_back("const ::mlir::RegisteredOperationName &", "opName");
+  paramList.emplace_back("::mlir::NamedAttrList &", "attributes");
+  auto *m = opClass.addStaticMethod("void", "populateDefaultAttrs", paramList);
+  ERROR_IF_PRUNED(m, "populateDefaultAttrs", op);
+  auto &body = m->body();
+  body.indent();
+
+  // Set default attributes that are unset.
+  body << "auto attrNames = opName.getAttributeNames();\n";
+  body << "::mlir::Builder " << odsBuilder
+       << "(attrNames.front().getContext());\n";
+  StringMap<int> attrIndex;
+  for (const auto &it : llvm::enumerate(emitHelper.getAttrMetadata())) {
+    attrIndex[it.value().first] = it.index();
+  }
+  for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    auto &attr = namedAttr.attr;
+    if (!attr.hasDefaultValue())
+      continue;
+    auto index = attrIndex[namedAttr.name];
+    body << "if (!attributes.get(attrNames[" << index << "])) {\n";
+    FmtContext fctx;
+    fctx.withBuilder(odsBuilder);
+    std::string defaultValue = std::string(
+        tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+    body.indent() << formatv(" attributes.append(attrNames[{0}], {1});\n",
+                             index, defaultValue);
+    body.unindent() << "}\n";
+  }
+}
+
 void OpEmitter::genInferredTypeCollectiveParamBuilder() {
   SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpBuilder &", "odsBuilder");
@@ -1869,7 +1912,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
   auto numResults = op.getNumResults();
   resultTypeNames.reserve(numResults);
 
-  paramList.emplace_back("::mlir::OpBuilder &", "odsBuilder");
+  paramList.emplace_back("::mlir::OpBuilder &", odsBuilder);
   paramList.emplace_back("::mlir::OperationState &", builderOpState);
 
   switch (typeParamKind) {
@@ -2879,7 +2922,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
           tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
       body << "  if (!attr)\n    attr = " << defaultValue << ";\n";
     }
-    body << "  return attr;\n";
+    body << "return attr;\n";
   };
 
   {
