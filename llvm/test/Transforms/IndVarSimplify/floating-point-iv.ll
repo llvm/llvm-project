@@ -382,8 +382,7 @@ define void @pr55505_remove_redundant_fptosi_for_float_iv(i32 %index, ptr %dst) 
 ; CHECK-NEXT:    [[FLOAT_IV_INT:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[FLOAT_IV_NEXT_INT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[FLOAT_IV_INT]] to float
 ; CHECK-NEXT:    call void @use.float(float [[INDVAR_CONV]])
-; CHECK-NEXT:    [[CONV_I32:%.*]] = fptosi float [[INDVAR_CONV]] to i32
-; CHECK-NEXT:    call void @use.i32(i32 [[CONV_I32]])
+; CHECK-NEXT:    call void @use.i32(i32 [[FLOAT_IV_INT]])
 ; CHECK-NEXT:    [[CONV_I16:%.*]] = fptosi float [[INDVAR_CONV]] to i16
 ; CHECK-NEXT:    [[CONV_I64:%.*]] = fptosi float [[INDVAR_CONV]] to i64
 ; CHECK-NEXT:    call void @use.i16(i16 [[CONV_I16]])
