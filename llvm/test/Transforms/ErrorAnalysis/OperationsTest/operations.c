@@ -11,7 +11,7 @@ int main() {
     scanf("%f", &b);
     printf("Enter value of c: ");
     scanf("%lf", &c);
-    printf("Enter value of c: ");
+    printf("Enter value of d: ");
     scanf("%lf", &d);
 
     // %.2lf displays number up to 2 decimal point

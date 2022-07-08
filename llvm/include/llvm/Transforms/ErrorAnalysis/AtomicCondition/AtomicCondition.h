@@ -5,7 +5,10 @@
 #ifndef LLVM_ATOMICCONDITION_H
 #define LLVM_ATOMICCONDITION_H
 
+#include <assert.h>
+#include <ctype.h>
 #include <math.h>
+#include <regex.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>

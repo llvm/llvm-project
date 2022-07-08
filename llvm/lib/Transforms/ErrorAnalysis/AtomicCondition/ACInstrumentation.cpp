@@ -28,7 +28,7 @@ void confFunction(Function *FunctionToSave, Function **StorageLocation,
       CurrentFunction->setLinkage(GlobalValue::LinkageTypes::LinkOnceODRLinkage); \
     }
 
-
+// Searches module for functions to mark and creates pointers for them.
 ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToInstrument(InstrumentFunction),
                                                                      ACInitFunction(nullptr),
                                                                      CGInitFunction(nullptr),
@@ -36,6 +36,8 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
                                                                      ACfp64UnaryFunction(nullptr),
                                                                      ACfp32BinaryFunction(nullptr),
                                                                      ACfp64BinaryFunction(nullptr),
+                                                                     CGRecordPHIInstruction(nullptr),
+                                                                     CGRecordBasicBlock(nullptr),
                                                                      CGCreateNode(nullptr),
                                                                      ACStoreFunction(nullptr),
                                                                      CGStoreFunction(nullptr),
@@ -74,6 +76,14 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
       confFunction(CurrentFunction, &CGInitFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
+    else if (CurrentFunction->getName().str().find("fCGrecordPHIInstruction") != std::string::npos) {
+      confFunction(CurrentFunction, &CGRecordPHIInstruction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
+    else if (CurrentFunction->getName().str().find("fCGrecordCurrentBasicBlock") != std::string::npos) {
+      confFunction(CurrentFunction, &CGRecordBasicBlock,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
     else if (CurrentFunction->getName().str().find("fCGcreateNode") != std::string::npos) {
       confFunction(CurrentFunction, &CGCreateNode,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
@@ -97,8 +107,97 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
   }
 }
 
-bool ACInstrumentation::instrumentCallsForMemoryLoadOperation(
+void ACInstrumentation::instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
+                                                          long *NumInstrumentedInstructions) {
+  BasicBlock::iterator NextInst(CurrentBB->getFirstNonPHIOrDbg());
+  while(NextInst->getOpcode() == 56 &&
+         (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
+          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))
+    NextInst++;
+  IRBuilder<> InstructionBuilder( &(*NextInst) );
+  std::vector<Value *> Args;
+
+  CallInst *NewCallInstruction = nullptr;
+
+  // TODO: Handle Unnamed Basic Blocks. getName() won't work if BB is unnamed.
+  Constant *BBValue = ConstantDataArray::getString(CurrentBB->getModule()->getContext(),
+                                                            CurrentBB->getName().str().c_str(),
+                                                            true);
+
+  Value *BBValuePointer = new GlobalVariable(*CurrentBB->getModule(),
+                                             BBValue->getType(),
+                                             true,
+                                             GlobalValue::InternalLinkage,
+                                             BBValue);
+
+  Args.push_back(BBValuePointer);
+
+  NewCallInstruction = InstructionBuilder.CreateCall(CGRecordBasicBlock, Args);
+
+  *NumInstrumentedInstructions+=1;
+  assert(NewCallInstruction && "Invalid call instruction!");
+}
+
+void ACInstrumentation::instrumentCallRecordingPHIInstructions(BasicBlock* CurrentBB,
+                                                               long *NumInstrumentedInstructions) {
+  BasicBlock::iterator NextInst(CurrentBB->getFirstNonPHIOrDbg());
+  while(NextInst->getOpcode() == 56 &&
+         (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
+          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))
+    NextInst++;
+  IRBuilder<> InstructionBuilder( &(*NextInst) );
+
+  long int NumberOfCalls = 0;
+
+  for (BasicBlock::phi_iterator_impl<> CurrPhi = CurrentBB->phis().begin();
+       CurrPhi != CurrentBB->phis().end();
+       CurrPhi++) {
+    std::vector<Value *> Args;
+
+    string InstructionString;
+    raw_string_ostream RawInstructionString(InstructionString);
+    RawInstructionString << *static_cast<Instruction*>(&*CurrPhi);
+    unsigned long NonEmptyPosition= RawInstructionString.str().find_first_not_of(" \n\r\t\f\v");
+    string Initializer = (NonEmptyPosition == std::string::npos) ? "" :
+                                                          RawInstructionString.str().substr(NonEmptyPosition);
+
+    Constant *InstructionValue = ConstantDataArray::getString(CurrPhi->getModule()->getContext(),
+                                                              Initializer.c_str(),
+                                                              true);
+
+    Value *InstructionValuePointer = new GlobalVariable(*CurrPhi->getModule(),
+                                                        InstructionValue->getType(),
+                                                        true,
+                                                        GlobalValue::InternalLinkage,
+                                                        InstructionValue);
+
+    Constant *BasicBlockValue = ConstantDataArray::getString(CurrPhi->getModule()->getContext(),
+                                                              CurrentBB->getName().str().c_str(),
+                                                              true);
+
+    Value *BasicBlockValuePointer = new GlobalVariable(*CurrPhi->getModule(),
+                                                        BasicBlockValue->getType(),
+                                                        true,
+                                                        GlobalValue::InternalLinkage,
+                                                        BasicBlockValue);
+
+    Args.push_back(InstructionValuePointer);
+    Args.push_back(BasicBlockValuePointer);
+    ArrayRef<Value *> ArgsRef(Args);
+
+    InstructionBuilder.CreateCall(CGRecordPHIInstruction, ArgsRef);
+
+    NumberOfCalls+=1;
+  }
+
+  *NumInstrumentedInstructions+=NumberOfCalls;
+}
+
+// Creates a node for LLVM memory load instructions in the computation graph.
+void ACInstrumentation::instrumentCallsForMemoryLoadOperation(
     Instruction *BaseInstruction, long *NumInstrumentedInstructions) {
+  assert((CGCreateNode!=nullptr) && "Function not initialized!");
+
   BasicBlock::iterator NextInst(BaseInstruction);
   NextInst++;
   IRBuilder<> InstructionBuilder( &(*NextInst) );
@@ -136,33 +235,24 @@ bool ACInstrumentation::instrumentCallsForMemoryLoadOperation(
                                                       GlobalValue::InternalLinkage,
                                                       EmptyValue);
 
-  // TODO: Handle the case where Basic Block is unnamed
-  Constant *CurrentBBName = ConstantDataArray::getString(
-      BaseInstruction->getModule()->getContext(),
-      BaseInstruction->getParent()->getName().str()+' ', true);
-
-  Value *CurrentBBNamePointer = new GlobalVariable(*BaseInstruction->getModule(),
-                                                   CurrentBBName->getType(),
-                                                   true,
-                                                   GlobalValue::InternalLinkage,
-                                                   CurrentBBName);
-
-
   Args.push_back(InstructionValuePointer);
   Args.push_back(EmptyValuePointer);
   Args.push_back(EmptyValuePointer);
-  Args.push_back(CurrentBBNamePointer);
   Args.push_back(InstructionBuilder.getInt32(NodeKind::Register));
   ArrayRef<Value *> ArgsRef(Args);
 
   NewCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, ArgsRef);
+  *NumInstrumentedInstructions+=1;
 
   assert(NewCallInstruction && "Invalid call instruction!");
-  return true;
+  return;
 }
 
-bool ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
+// Instruments a call to calculate atomic condition for unary floating point
+// instructions and creates a node for this instruction in the computation graph.
+void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
                                             long *NumInstrumentedInstructions) {
+  assert((CGCreateNode!=nullptr) && (ACfp32BinaryFunction!=nullptr) && "Function not initialized!");
   Operation OpType;
   string FunctionName;
 
@@ -200,11 +290,11 @@ bool ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
     else if(FunctionName.find("sqrt") != std::string::npos)
       OpType = Operation::Sqrt;
     else
-      return false;
+      return;
     break;
   default:
     errs() << BaseInstruction << " is not a Binary Instruction.\n";
-    return false;
+    return;
   }
 
   BasicBlock::iterator NextInst(BaseInstruction);
@@ -309,33 +399,24 @@ bool ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
                                                 GlobalValue::InternalLinkage,
                                                 EmptyValue);
 
-  // TODO: Handle the case where Basic Block is unnamed
-  Constant *CurrentBBName = ConstantDataArray::getString(
-      BaseInstruction->getModule()->getContext(),
-      BaseInstruction->getParent()->getName().str()+' ', true);
-
-  Value *CurrentBBNamePointer = new GlobalVariable(*BaseInstruction->getModule(),
-                                                   CurrentBBName->getType(),
-                                                   true,
-                                                   GlobalValue::InternalLinkage,
-                                                   CurrentBBName);
-
   CGArgs.push_back(InstructionValuePointer);
   CGArgs.push_back(LeftOpInstructionValuePointer);
   CGArgs.push_back(EmptyValuePointer);
-  CGArgs.push_back(CurrentBBNamePointer);
   CGArgs.push_back(InstructionBuilder.getInt32(NodeKind::UnaryInstruction));
   ArrayRef<Value *> CGArgsRef(CGArgs);
 
   CGCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, CGArgsRef);
-
+  *NumInstrumentedInstructions+=1;
   assert(ACCallInstruction && CGCallInstruction && "Invalid call instruction!");
-  return true;
+  return;
 }
 
-
-bool ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstruction,
+// Instruments a call to calculate atomic condition for binary floating point
+// instructions and creates a node for this instruction in the computation graph.
+void ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstruction,
                                              long *NumInstrumentedInstructions) {
+  assert((CGCreateNode!=nullptr) && (ACfp64BinaryFunction!=nullptr) && "Function not initialized!");
+
   Operation OpType;
   switch (BaseInstruction->getOpcode()) {
   case 14:
@@ -352,7 +433,7 @@ bool ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
     break;
   default:
     errs() << BaseInstruction << " is not a Binary Instruction.\n";
-    return false;
+    return;
   }
 
   BasicBlock::iterator NextInst(BaseInstruction);
@@ -482,69 +563,59 @@ bool ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
                                                             GlobalValue::InternalLinkage,
                                                             RightOpInstructionValue);
 
-  // TODO: Handle the case where Basic Block is unnamed
-  Constant *CurrentBBName = ConstantDataArray::getString(
-        BaseInstruction->getModule()->getContext(),
-        BaseInstruction->getParent()->getName().str()+' ', true);
-
-  Value *CurrentBBNamePointer = new GlobalVariable(*BaseInstruction->getModule(),
-                                                   CurrentBBName->getType(),
-                                                      true,
-                                                      GlobalValue::InternalLinkage,
-                                                   CurrentBBName);
-
   CGArgs.push_back(InstructionValuePointer);
   CGArgs.push_back(LeftOpInstructionValuePointer);
   CGArgs.push_back(RightOpInstructionValuePointer);
-  CGArgs.push_back(CurrentBBNamePointer);
   CGArgs.push_back(InstructionBuilder.getInt32(NodeKind::BinaryInstruction));
   ArrayRef<Value *> CGArgsRef(CGArgs);
 
   CGCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, CGArgsRef);
+  *NumInstrumentedInstructions+=1;
 
   assert(NewCallInstruction && CGCallInstruction && "Invalid call instruction!");
-  return true;
+  return;
 }
 
 
-bool ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
+void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
                                              long *NumInstrumentedInstructions) {
-
 //  if (ACInstrumentation::isUnwantedFunction(BB->getParent()))
 //    return;
+  instrumentCallRecordingPHIInstructions(BB,
+                                       &*NumInstrumentedInstructions);
+  instrumentCallRecordingBasicBlock(BB,
+                                    &*NumInstrumentedInstructions);
 
-//  assert((ACfp32UnaryFunction!=nullptr) && "Function not initialized!");
-  assert((ACfp32BinaryFunction!=nullptr) && "Function not initialized!");
-  //  assert((ACfp64UnaryFunction!=nullptr) && "Function not initialized!");
-  assert((ACfp64BinaryFunction!=nullptr) && "Function not initialized!");
-
-  bool BasicBlockInstrumented = false;
   for (BasicBlock::iterator I = BB->begin();
        I != BB->end(); ++I) {
     Instruction* CurrentInstruction = &*I;
 
     // Branch based on kind of Instruction
     if(isMemoryLoadOperation(CurrentInstruction)) {
-      bool InstructionInstrumented = instrumentCallsForMemoryLoadOperation(CurrentInstruction,
-                                                                      &*NumInstrumentedInstructions);
-      BasicBlockInstrumented = InstructionInstrumented || BasicBlockInstrumented;
+      instrumentCallsForMemoryLoadOperation(CurrentInstruction,
+                                            &*NumInstrumentedInstructions);
     }
     else if(isUnaryOperation(CurrentInstruction)) {
-      bool InstructionInstrumented = instrumentCallsForUnaryOperation(CurrentInstruction,
-                                                         &*NumInstrumentedInstructions);
-      BasicBlockInstrumented = InstructionInstrumented || BasicBlockInstrumented;
+      instrumentCallsForUnaryOperation(CurrentInstruction,
+                                       &*NumInstrumentedInstructions);
     }
     else if(isBinaryOperation(CurrentInstruction)) {
-      bool InstructionInstrumented = instrumentCallsForBinaryOperation(CurrentInstruction,
-                                                   &*NumInstrumentedInstructions);
-      BasicBlockInstrumented = InstructionInstrumented || BasicBlockInstrumented;
+      instrumentCallsForBinaryOperation(CurrentInstruction,
+                                        &*NumInstrumentedInstructions);
     }
   }
 
-  return BasicBlockInstrumented;
+  return;
 }
 
-bool ACInstrumentation::instrumentMainFunction(Function *F) {
+void ACInstrumentation::instrumentMainFunction(Function *F) {
+  assert((ACInitFunction!=nullptr) &&
+         (CGInitFunction!=nullptr) &&
+         (ACStoreFunction!=nullptr) &&
+         (CGStoreFunction!=nullptr) &&
+         (CGDotGraphFunction!=nullptr) &&
+         (ACAnalysisFunction!=nullptr) &&
+         "Function not initialized!");
   BasicBlock *BB = &(*(F->begin()));
   Instruction *Inst = BB->getFirstNonPHIOrDbg();
   IRBuilder<> InstructionBuilder(Inst);
@@ -587,7 +658,7 @@ bool ACInstrumentation::instrumentMainFunction(Function *F) {
         StoreCGTableCallInstruction = InstructionBuilder.CreateCall(CGStoreFunction, CGStoreCallArgsRef);
 
         ArrayRef<Value *> DotGraphCallArgsRef(DotGraphCallArgs);
-        AnalysisCallInstruction = InstructionBuilder.CreateCall(CGDotGraphFunction, DotGraphCallArgsRef);
+        DotGraphCallInstruction = InstructionBuilder.CreateCall(CGDotGraphFunction, DotGraphCallArgsRef);
 
         ArrayRef<Value *> AnalysisCallArgsRef(AnalysisCallArgs);
         AnalysisCallInstruction = InstructionBuilder.CreateCall(ACAnalysisFunction, AnalysisCallArgsRef);
@@ -598,7 +669,7 @@ bool ACInstrumentation::instrumentMainFunction(Function *F) {
   assert(ACInitCallInstruction && CGInitCallInstruction && AnalysisCallInstruction && "Invalid call instruction!");
   assert(StoreACTableCallInstruction && StoreCGTableCallInstruction && "Invalid call instruction!");
   assert(DotGraphCallInstruction && "Invalid call instruction!");
-  return true;
+  return;
 }
 
 bool ACInstrumentation::isMemoryLoadOperation(const Instruction *Inst) {

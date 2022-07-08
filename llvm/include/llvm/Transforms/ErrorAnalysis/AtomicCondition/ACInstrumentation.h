@@ -15,7 +15,6 @@ namespace atomiccondition {
 
 class ACInstrumentation {
 private:
-//  ComputationGraph CG;
   Function *FunctionToInstrument;
 
   Function *ACInitFunction;
@@ -26,6 +25,8 @@ private:
   Function *ACfp32BinaryFunction;
   Function *ACfp64BinaryFunction;
 
+  Function *CGRecordPHIInstruction;
+  Function *CGRecordBasicBlock;
   Function *CGCreateNode;
 
   Function *ACStoreFunction;
@@ -40,16 +41,20 @@ public:
 
   ACInstrumentation(Function *F);
 
-  bool instrumentCallsForMemoryLoadOperation(Instruction* BaseInstruction,
+  void instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
+                                         long int *NumInstrumentedInstructions);
+  void instrumentCallRecordingPHIInstructions(BasicBlock* CurrentBB,
+                                              long int *NumInstrumentedInstructions);
+  void instrumentCallsForMemoryLoadOperation(Instruction* BaseInstruction,
                                              long int *NumInstrumentedInstructions);
-  bool instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
+  void instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
                            long int *NumInstrumentedInstructions);
-  bool instrumentCallsForBinaryOperation(Instruction* BaseInstruction,
+  void instrumentCallsForBinaryOperation(Instruction* BaseInstruction,
                             long int *NumInstrumentedInstructions);
 
-  bool instrumentBasicBlock(BasicBlock *BB,
+  void instrumentBasicBlock(BasicBlock *BB,
                             long int *NumInstrumentedInstructions);
-  bool instrumentMainFunction(Function *F);
+  void instrumentMainFunction(Function *F);
 
   //// Helper Functions
   /// Instruction based functions

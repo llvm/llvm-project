@@ -10,7 +10,8 @@
 enum NodeKind {
   Register,
   UnaryInstruction,
-  BinaryInstruction
+  BinaryInstruction,
+  Phi
 };
 
 typedef struct CGNode {
@@ -30,11 +31,24 @@ typedef struct InstructionNodePair {
   struct InstructionNodePair *Next;
 } InstructionNodePair;
 
+typedef struct PhiNode {
+  char *ResultRegister;
+  char *ResidentInBB;
+  int NumBranches;
+  char **IncomingVals;
+  int *IsConstant;
+  char **BasicBlocks;
+  struct PhiNode *Next;
+} PhiNode;
+
 typedef struct ComputationGraph {
   uint64_t LinkedListSize;
   CGNode *NodesLinkedListHead;
   InstructionNodePair* InstructionNodeMapHead;
-  char *PreviousBasicBlock;
+  char **BasicBlockExecutionChainTail;
+  uint64_t BasicBlockExecutionChainSize;
+  PhiNode *PhiNodesListHead;
+  uint64_t PhiNodesListSize;
 } ComputationGraph;
 
 ComputationGraph *CG;
@@ -55,6 +69,7 @@ void fCGInitialize() {
     printf("#CG: graph out of memory error!");
     exit(EXIT_FAILURE);
   }
+  CGObject->LinkedListSize=0;
 
   // Allocate memory to the Instruction Node Map
   if( (CGObject->InstructionNodeMapHead =
@@ -63,7 +78,22 @@ void fCGInitialize() {
     exit(EXIT_FAILURE);
   }
 
-  CGObject->LinkedListSize=0;
+  // Allocate memory to the Basic Block Execution Chain
+  if( (CGObject->BasicBlockExecutionChainTail =
+           (char **)malloc((size_t)((int64_t)sizeof(char*) * Size))) == NULL) {
+    printf("#CG: graph out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+  CGObject->BasicBlockExecutionChainTail--;
+  CGObject->BasicBlockExecutionChainSize=0;
+
+  // Allocate memory to the Phi Nodes List
+  if( (CGObject->PhiNodesListHead =
+           (struct PhiNode *)malloc((size_t)((int64_t)sizeof(PhiNode) * Size))) == NULL) {
+    printf("#CG: graph out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+  CGObject->PhiNodesListSize=0;
 
   CG = CGObject;
 }
@@ -75,7 +105,233 @@ int fCGnodesEqual(CGNode *Node1, CGNode *Node2)
   return 0;
 }
 
-void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char *RightOpInstructionString, char *BasicBlockName, enum NodeKind NK){
+int fCGNamedRegister(char *Register) {
+  if (isdigit(Register[0]))
+    return 1;
+  return 0;
+}
+
+int fCGisConstant(char* Value) {
+  if(Value[0] != '%')
+    return 1;
+  return 0;
+}
+
+int fCGcheckPHIInstruction(char *Register) {
+  if(CG->PhiNodesListSize == 0)
+    return 0;
+
+  PhiNode *CurrNode = CG->PhiNodesListHead;
+  while(CurrNode != NULL && strcmp(CurrNode->ResultRegister, Register)!=0) {
+    CurrNode = CurrNode->Next;
+  }
+  if(CurrNode != NULL)
+    return 1;
+  return 0;
+}
+
+void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
+  char *ResultReg;
+  int *IsConstant;
+  char **IncomingVals, **BasicBlocks;
+  char *CharFindingPointer = InstructionString;
+  int NumIncomingBranches;
+  for (NumIncomingBranches=0; CharFindingPointer[NumIncomingBranches];
+       CharFindingPointer[NumIncomingBranches]=='[' ? NumIncomingBranches++ : *CharFindingPointer++);
+  const unsigned long ResultRegLen = strstr(InstructionString, " ") - InstructionString;
+
+  // Allocating Memory
+  ResultReg = (char*)malloc ( (ResultRegLen) * sizeof (char));
+  IsConstant = (int*)malloc ( (NumIncomingBranches) * sizeof (int));
+  IncomingVals = (char**)malloc ( (NumIncomingBranches) * sizeof (char));
+  BasicBlocks = (char**)malloc ( (NumIncomingBranches) * sizeof (char));
+
+  // Copying the Register Name, ignoring the '%'
+  strncpy(ResultReg, InstructionString+1, ResultRegLen);
+  ResultReg[ResultRegLen]=0;
+
+  printf("Instruction String:%s\n", InstructionString);
+  printf("ResultReg:%s\n", ResultReg);
+
+  CharFindingPointer = InstructionString;
+  // Collecting the Registers and Basic Blocks
+  for(int CurrentBranchIndex=0;
+       CurrentBranchIndex<NumIncomingBranches; CurrentBranchIndex++) {
+    char *IncomingValueString;
+    char *BasicBlockString;
+
+    // Copying Incoming Value
+    CharFindingPointer = strstr(CharFindingPointer, "[") + 2;
+    if (fCGisConstant(CharFindingPointer))
+      *(IsConstant+CurrentBranchIndex)=1;
+    else
+      *(IsConstant+CurrentBranchIndex)=0;
+    const unsigned long IncomingValueLen = (strstr(CharFindingPointer, " ") - CharFindingPointer);
+    IncomingValueString = (char*)malloc ( IncomingValueLen * sizeof (char));
+    strncpy(IncomingValueString, CharFindingPointer, IncomingValueLen-1);
+    IncomingValueString[IncomingValueLen-1]=0;
+
+    // Copying Basic Block Name
+    CharFindingPointer = strstr(CharFindingPointer, ",") + 3;
+    const unsigned long BasicBlockLen = (strstr(CharFindingPointer, " ") - CharFindingPointer+1);
+    BasicBlockString = (char*)malloc ( BasicBlockLen * sizeof (char));
+    strncpy(BasicBlockString, CharFindingPointer, BasicBlockLen-1);
+    BasicBlockString[BasicBlockLen-1]=0;
+
+    *(IncomingVals+CurrentBranchIndex)=IncomingValueString;
+    *(BasicBlocks+CurrentBranchIndex)=BasicBlockString;
+
+    printf("IncomingValue:%s\n", *(IncomingVals+CurrentBranchIndex));
+    printf("BasicBlock:%s\n", *(BasicBlocks+CurrentBranchIndex));
+  }
+  printf("\n");
+
+  if(fCGcheckPHIInstruction(ResultReg))
+    return ;
+
+  PhiNode *Node = NULL;
+  PhiNode *CurrNode = NULL;
+  PhiNode *PrevNode = NULL;
+
+  if((Node = (PhiNode *)malloc(sizeof(PhiNode))) == NULL) {
+    printf("#fAC: PhiNodeList out of memory!");
+    exit(EXIT_FAILURE);
+  }
+
+  Node->ResultRegister = ResultReg;
+  Node->ResidentInBB = ResidentBBName;
+  Node->NumBranches = NumIncomingBranches;
+  Node->IncomingVals = IncomingVals;
+  Node->BasicBlocks = BasicBlocks;
+  Node->Next = NULL;
+
+  CurrNode = CG->PhiNodesListHead;
+  if(CG->PhiNodesListSize == 0) {
+    CG->PhiNodesListHead = Node;
+  }
+  else {
+    while (CurrNode != NULL) {
+      PrevNode = CurrNode;
+      CurrNode = CurrNode->Next;
+    }
+    CurrNode = Node;
+    PrevNode->Next = CurrNode;
+  }
+  CG->PhiNodesListSize++;
+
+  for(int CurrentBranchIndex=0;
+       CurrentBranchIndex<NumIncomingBranches; CurrentBranchIndex++) {
+    printf("NodeIncomingValue:%s\n", *(Node->IncomingVals+CurrentBranchIndex));
+    printf("NodeBasicBlock:%s\n", *(Node->BasicBlocks+CurrentBranchIndex));
+  }
+}
+
+void fCGrecordCurrentBasicBlock(char *BasicBlock) {
+  CG->BasicBlockExecutionChainTail++;
+  *CG->BasicBlockExecutionChainTail = BasicBlock;
+  CG->BasicBlockExecutionChainSize++;
+}
+
+int fCGisPHIInstruction(char *InstructionString) {
+  if(strstr(InstructionString, "phi")!=NULL)
+    return 1;
+  return 0;
+}
+
+void fCGprintStringArray(char **ArrayToPrint) {
+
+}
+
+char *fCGperformPHIResolution(char *PHIInstruction) {
+  char *ResolvedInstruction;
+
+  printf("\n");
+
+  // Copying Register Name
+  const unsigned long RegisterNameLen = (strstr(PHIInstruction, " ") - PHIInstruction);
+  char *ResolvedInstructionRegister = (char*)malloc ( RegisterNameLen * sizeof (char));
+  strncpy(ResolvedInstructionRegister, PHIInstruction+1, RegisterNameLen);
+  ResolvedInstructionRegister[RegisterNameLen]=0;
+  printf("PHIRegister Name:%s\n", ResolvedInstructionRegister);
+
+  char **PreviousBasicBlock = CG->BasicBlockExecutionChainTail-1;
+
+  // Finding Instruction in Phi Node list
+  PhiNode *CurrPhiNode = CG->PhiNodesListHead;
+  printf("PHIRegister Name2:%s\n", ResolvedInstructionRegister);
+  while(CurrPhiNode != NULL && strcmp(CurrPhiNode->ResultRegister, ResolvedInstructionRegister) != 0) {
+    printf("PHIRegister Name:%s\n", CurrPhiNode->ResultRegister);
+    CurrPhiNode = CurrPhiNode->Next;
+  }
+  printf("PhiNodeFound:%s\n", CurrPhiNode->ResultRegister);
+
+  // While loop till instruction is no longer phi
+  while (1) {
+    // Resolve Phi
+    int *IsConstant = CurrPhiNode->IsConstant;
+    char **IncomingValsUnit = CurrPhiNode->IncomingVals;
+    char **BasicBlocksUnit = CurrPhiNode->BasicBlocks;
+
+    int BranchCounter;
+    printf("PreviousBasicBlock:%s\n", *PreviousBasicBlock);
+    for(BranchCounter = 0;
+         BranchCounter<CurrPhiNode->NumBranches && strcmp(*BasicBlocksUnit, *PreviousBasicBlock) != 0;
+         BranchCounter++, IsConstant+=1, IncomingValsUnit+=1, BasicBlocksUnit+=1);
+
+    char **BBPointer = CG->BasicBlockExecutionChainTail;
+    printf("\nBasic Block Execution Chain:\n");
+    for (uint64_t I = 0; I < CG->BasicBlockExecutionChainSize; ++I, BBPointer-=1)
+      printf("%s\n", *BBPointer);
+    printf("\n");
+
+    if(BranchCounter == CurrPhiNode->NumBranches) {
+      printf("#fCG: Branch not found in phi node. Check!\n");
+      exit(EXIT_FAILURE);
+    } else {
+      ResolvedInstructionRegister = *IncomingValsUnit;
+    }
+    printf("Resolved Instruction Register:%s\n", ResolvedInstructionRegister);
+
+    // Finding Instruction in Phi Node list
+    CurrPhiNode = CG->PhiNodesListHead;
+    while(CurrPhiNode != NULL && strncmp(CurrPhiNode->ResultRegister, ResolvedInstructionRegister+1, strlen(ResolvedInstructionRegister)-1) != 0) {
+      printf("CurrPhiNode->ResultRegister:%s\n", CurrPhiNode->ResultRegister);
+      CurrPhiNode = CurrPhiNode->Next;
+    }
+
+    // If phi node not found, exit while loop
+    if(CurrPhiNode == NULL) {
+      break;
+    }
+    printf("PhiNodeFound:%s\n", CurrPhiNode->ResultRegister);
+
+    printf("CurrPhiNode->ResidentInBB:%s\n", CurrPhiNode->ResidentInBB);
+    while(strcmp(CurrPhiNode->ResidentInBB, *PreviousBasicBlock) != 0)
+      PreviousBasicBlock--;
+    PreviousBasicBlock--;
+  }
+  printf("Looking for Instruction Reg %s in Node List of len %lu \n", ResolvedInstructionRegister, strlen(ResolvedInstructionRegister));
+
+
+  // Find instruction in NodeList
+  CGNode *CurrNode = CG->NodesLinkedListHead;
+  while (CurrNode != NULL && strncmp(ResolvedInstructionRegister,
+                                     CurrNode->InstructionString,
+                                     strlen(ResolvedInstructionRegister))!=0) {
+    printf("Instruction:%s\n", CurrNode->InstructionString);
+    CurrNode = CurrNode->Next;
+  }
+  if (CurrNode != NULL)
+    ResolvedInstruction = CurrNode->InstructionString;
+  else
+    ResolvedInstruction = ResolvedInstructionRegister;
+
+  printf("Final Resolved Instruction:%s\n", ResolvedInstruction);
+
+  return ResolvedInstruction;
+}
+
+void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char *RightOpInstructionString, enum NodeKind NK){
   CGNode *Node=NULL;
   CGNode *CurrNode=NULL;
   CGNode *PrevNode=NULL;
@@ -83,6 +339,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
   InstructionNodePair *CurrPair = NULL;
   InstructionNodePair *PrevPair = NULL;
 
+  // Allocating memory for new CGNode and new InstructionNodePair
   if((Node = (CGNode *)malloc(sizeof(CGNode))) == NULL) {
     printf("#fAC: AC table out of memory error!");
     exit(EXIT_FAILURE);
@@ -106,40 +363,31 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
 
   int LeftOpNodeId=-1;
   int RightOpNodeId=-1;
-  char *ResolvedLeftInstruction;
-  char *ResolvedRightInstruction;
+  char *ResolvedLeftInstruction=LeftOpInstructionString;
+  char *ResolvedRightInstruction=RightOpInstructionString;
   // Linking Left and Right operand nodes to Node if any
   switch (NK) {
   case 0:
     break;
   case 1:
     // Setting the Left Node
-    ResolvedLeftInstruction = (char*)malloc ( strlen(LeftOpInstructionString) * sizeof (char));
-    strncpy(ResolvedLeftInstruction, LeftOpInstructionString, strlen(LeftOpInstructionString)+1);
-
     if (strstr(LeftOpInstructionString, "phi")!=NULL) {
-      const unsigned long LeftSplitLen = strstr(LeftOpInstructionString, CG->PreviousBasicBlock) - LeftOpInstructionString-3;
-      char *LeftOpLeftSplit = (char*)malloc ( (LeftSplitLen+1) * sizeof (char));
+      // Resolve Phi
+      ResolvedLeftInstruction = fCGperformPHIResolution(LeftOpInstructionString);
 
-      strncpy(LeftOpLeftSplit, LeftOpInstructionString, LeftSplitLen+1);
-      LeftOpLeftSplit[LeftSplitLen]=' ';
-      LeftOpLeftSplit[LeftSplitLen]=0;
-
-      if ((strrchr(LeftOpLeftSplit, '[')+2)[0] == '%') {
-        CurrPair = CG->InstructionNodeMapHead;
-        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
-                                          strrchr(LeftOpLeftSplit, '[') + 2) !=
-                                       CurrPair->InstructionString) {
-          CurrPair = CurrPair->Next;
-        }
-        ResolvedLeftInstruction = CurrPair->InstructionString;
-      } else {
-        ResolvedLeftInstruction[0] = 0;
-      }
-      free(LeftOpLeftSplit);
+//      if (ResolvedLeftInstruction[0] == '%') {
+//        CurrPair = CG->InstructionNodeMapHead;
+//        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
+//                                          strrchr(ResolvedLeftInstruction, '[') + 2) !=
+//                                       CurrPair->InstructionString) {
+//          CurrPair = CurrPair->Next;
+//        }
+//        ResolvedLeftInstruction = CurrPair->InstructionString;
+//      }
     }
 
-    if(strcmp(ResolvedLeftInstruction, "")!=0) {
+    // If Resolved Instruction is not empty or NULL or a constant
+    if(ResolvedLeftInstruction != NULL && strcmp(ResolvedLeftInstruction, "") != 0 && ResolvedLeftInstruction[0] == '%') {
       CurrPair = CG->InstructionNodeMapHead;
       while (CurrPair != NULL && strncmp(CurrPair->InstructionString,
                                         ResolvedLeftInstruction,
@@ -165,50 +413,44 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
     break;
   case 2:
     // Setting the Left Node
-//    printf("InstructionString: %s\n", InstructionString);
-//    printf("LeftOpInstructionString: %s\n", LeftOpInstructionString);
-//    printf("RightOpInstructionString: %s\n", RightOpInstructionString);
-//    printf("Current BasicBlockName: %s\n", BasicBlockName);
-//    printf("Previous BasicBlockName: %s\n", CG->PreviousBasicBlock);
-    ResolvedLeftInstruction = (char*)malloc ( strlen(LeftOpInstructionString) * sizeof (char));
-    strncpy(ResolvedLeftInstruction, LeftOpInstructionString, strlen(LeftOpInstructionString)+1);
+    printf("InstructionString: %s\n", InstructionString);
+    printf("LeftOpInstructionString: %s\n", LeftOpInstructionString);
+    printf("RightOpInstructionString: %s\n", RightOpInstructionString);
+    printf("Current BasicBlockName: %s\n", *CG->BasicBlockExecutionChainTail);
+    if (strcmp(*CG->BasicBlockExecutionChainTail, "entry") != 0)
+      printf("Previous BasicBlockName: %s\n", *(CG->BasicBlockExecutionChainTail-1));
 
+    // If LeftOperand's instruction is a phi node, resolve to a non-phi node
     if (strstr(LeftOpInstructionString, "phi")!=NULL) {
+      // Resolve Phi
+      ResolvedLeftInstruction = fCGperformPHIResolution(LeftOpInstructionString);
 
-      unsigned long LeftSplitLen = strstr(LeftOpInstructionString, CG->PreviousBasicBlock) - LeftOpInstructionString-3;
-      char *LeftOpLeftSplit = (char*)malloc ( (LeftSplitLen+1) * sizeof (char));
-
-      strncpy(LeftOpLeftSplit, LeftOpInstructionString, LeftSplitLen+1);
-      LeftOpLeftSplit[LeftSplitLen]=' ';
-      LeftOpLeftSplit[LeftSplitLen]=0;
-
-      if ((strrchr(LeftOpLeftSplit, '[')+2)[0] == '%') {
-        CurrPair = CG->InstructionNodeMapHead;
-        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
-                                          strrchr(LeftOpLeftSplit, '[') + 2) !=
-                                       CurrPair->InstructionString) {
-          CurrPair = CurrPair->Next;
-        }
-        ResolvedLeftInstruction = CurrPair->InstructionString;
-      } else {
-        ResolvedLeftInstruction[0] = 0;
-      }
-      free(LeftOpLeftSplit);
+//      if (ResolvedLeftInstruction[0] == '%') {
+//        CurrPair = CG->InstructionNodeMapHead;
+//        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
+//                                          strrchr(ResolvedLeftInstruction, '[') + 2) !=
+//                                       CurrPair->InstructionString) {
+//          CurrPair = CurrPair->Next;
+//        }
+//        ResolvedLeftInstruction = CurrPair->InstructionString;
+//      }
     }
 
-//    printf("ResolvedLeftInstruction: %s\n", ResolvedLeftInstruction);
+    printf("ResolvedLeftInstruction: %s\n", ResolvedLeftInstruction);
 
-    if(strcmp(ResolvedLeftInstruction, "")!=0) {
+    // If Resolved Instruction is not empty or NULL or a constant
+    if(ResolvedLeftInstruction != NULL && strcmp(ResolvedLeftInstruction, "") != 0 && ResolvedLeftInstruction[0] == '%') {
       CurrPair = CG->InstructionNodeMapHead;
       while (CurrPair != NULL &&
              strncmp(CurrPair->InstructionString,
                      ResolvedLeftInstruction,
                      strlen(ResolvedLeftInstruction)) != 0) {
+        printf("CurrPair->InstructionString: %s\n", CurrPair->InstructionString);
         CurrPair = CurrPair->Next;
       }
       LeftOpNodeId = CurrPair->NodeId;
 
-//      printf("LeftOpNodeId: %d\n", LeftOpNodeId);
+      printf("LeftOpNodeId: %d\n", LeftOpNodeId);
 
       CurrNode = CG->NodesLinkedListHead;
       while (CurrNode != NULL && CurrNode->NodeId != LeftOpNodeId) {
@@ -218,35 +460,25 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
     }
 
     // Setting the Right Node
-    ResolvedRightInstruction = (char*)malloc ( strlen(RightOpInstructionString) * sizeof (char));
-    strncpy(ResolvedRightInstruction, RightOpInstructionString, strlen(RightOpInstructionString)+1);
-
     if (strstr(RightOpInstructionString, "phi")!=NULL) {
-      unsigned long LeftSplitLen = strstr(RightOpInstructionString, CG->PreviousBasicBlock) - RightOpInstructionString-3;
-      char *RightOpLeftSplit = (char*)malloc ( (LeftSplitLen+1) * sizeof (char));
+      // Resolve Phi
+      ResolvedRightInstruction = fCGperformPHIResolution(RightOpInstructionString);
 
-      strncpy(RightOpLeftSplit, RightOpInstructionString, LeftSplitLen+1);
-      RightOpLeftSplit[LeftSplitLen]=' ';
-      RightOpLeftSplit[LeftSplitLen]=0;
-
-
-      if ((strrchr(RightOpLeftSplit, '[')+2)[0] == '%') {
-        CurrPair = CG->InstructionNodeMapHead;
-        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
-                                          strrchr(RightOpLeftSplit, '[') + 2) !=
-                                       CurrPair->InstructionString) {
-          CurrPair = CurrPair->Next;
-        }
-        ResolvedRightInstruction = CurrPair->InstructionString;
-      } else {
-        ResolvedRightInstruction[0] = 0;
-      }
-      free(RightOpLeftSplit);
+//      if (ResolvedRightInstruction[0] == '%') {
+//        CurrPair = CG->InstructionNodeMapHead;
+//        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
+//                                          strrchr(ResolvedRightInstruction, '[') + 2) !=
+//                                       CurrPair->InstructionString) {
+//          CurrPair = CurrPair->Next;
+//        }
+//        ResolvedRightInstruction = CurrPair->InstructionString;
+//      }
     }
 
-//    printf("ResolvedRightInstruction: %s\n", ResolvedRightInstruction);
+    printf("ResolvedRightInstruction: %s\n", ResolvedRightInstruction);
 
-    if(strcmp(ResolvedRightInstruction, "")!=0) {
+    // If Resolved Instruction is not empty or NULL or a constant
+    if(ResolvedRightInstruction != NULL && strcmp(ResolvedRightInstruction, "") != 0 && ResolvedRightInstruction[0] == '%') {
       CurrPair = CG->InstructionNodeMapHead;
       while (CurrPair != NULL && strncmp(CurrPair->InstructionString,
                                         ResolvedRightInstruction,
@@ -255,7 +487,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
       }
       RightOpNodeId = CurrPair->NodeId;
 
-//      printf("RightOpNodeId: %d\n", RightOpNodeId);
+      printf("RightOpNodeId: %d\n", RightOpNodeId);
 
       CurrNode = CG->NodesLinkedListHead;
       while (CurrNode != NULL && CurrNode->NodeId != RightOpNodeId) {
@@ -316,9 +548,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
   }
   CG->LinkedListSize++;
 
-  // Setting PreviousBasicBlock
-  CG->PreviousBasicBlock = BasicBlockName;
-//  printf("\n");
+  printf("\n");
   return ;
 }
 
@@ -474,9 +704,12 @@ void fCGDotGraph() {
 
 void fAFAnalysis() {
 
-
   return ;
 }
+//void fAFAnalysis(char *InstructionString, char *InstructionToAnalyse, char *BasicBlockName, enum NodeKind NK) {
+//
+//  return ;
+//}
 
 
 
