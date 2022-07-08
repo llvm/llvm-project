@@ -8,9 +8,12 @@
 ; GFX11: lds_direct_load v{{[0-9]+}}
 ; GFX11: s_mov_b32 m0
 ; GFX11: lds_direct_load v{{[0-9]+}}
+; GFX11: s_waitcnt expcnt(2)
 ; GFX11: v_add_f32
 ; GFX11: buffer_store_b32
+; GFX11: s_waitcnt expcnt(1)
 ; GFX11: buffer_store_b32
+; GFX11: s_waitcnt expcnt(0)
 ; GFX11: buffer_store_b32
 ; GFX11: buffer_store_b32
 ; GFX11: buffer_store_b32

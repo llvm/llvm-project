@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx704 < %s | FileCheck -check-prefix=GFX7 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 
 define i32 @s_add_co_select_user() {
 ; GFX7-LABEL: s_add_co_select_user:
@@ -55,6 +56,25 @@ define i32 @s_add_co_select_user() {
 ; GFX10-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_add_co_select_user:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_add_co_u32 v0, s1, s0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_cmpk_lg_u32 s1, 0x0
+; GFX11-NEXT:    s_addc_u32 s1, s0, 0
+; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX11-NEXT:    s_cmp_gt_u32 s0, 31
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, s1, s2
+; GFX11-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %i = load volatile i32, i32 addrspace(4)* null, align 8
   %i1 = add i32 %i, %i
@@ -148,6 +168,33 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_add_co_br_user:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_add_i32 s1, s0, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_cmp_lt_u32 s1, s0
+; GFX11-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s1
+; GFX11-NEXT:    s_cmpk_lg_u32 s1, 0x0
+; GFX11-NEXT:    s_addc_u32 s0, s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s0, v0
+; GFX11-NEXT:    s_cbranch_vccnz .LBB1_2
+; GFX11-NEXT:  ; %bb.1: ; %bb0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 9
+; GFX11-NEXT:    global_store_b32 v[0:1], v2, off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:  .LBB1_2: ; %bb1
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 10
+; GFX11-NEXT:    global_store_b32 v[0:1], v2, off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
 bb:
   %i1 = add i32 %i, %i
   %i2 = icmp ult i32 %i1, %i

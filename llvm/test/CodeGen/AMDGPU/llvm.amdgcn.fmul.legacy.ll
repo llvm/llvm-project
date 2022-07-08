@@ -4,9 +4,11 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX101 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOMADMACF32,GFX103 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
 ; GCN-LABEL: {{^}}test_mul_legacy_f32:
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
+; GFX11: v_mul_dx9_zero_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @test_mul_legacy_f32(float addrspace(1)* %out, float %a, float %b) #0 {
   %result = call float @llvm.amdgcn.fmul.legacy(float %a, float %b)
   store float %result, float addrspace(1)* %out, align 4
@@ -15,6 +17,7 @@ define amdgpu_kernel void @test_mul_legacy_f32(float addrspace(1)* %out, float %
 
 ; GCN-LABEL: {{^}}test_mul_legacy_undef0_f32:
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
+; GFX11: v_mul_dx9_zero_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @test_mul_legacy_undef0_f32(float addrspace(1)* %out, float %a) #0 {
   %result = call float @llvm.amdgcn.fmul.legacy(float undef, float %a)
   store float %result, float addrspace(1)* %out, align 4
@@ -23,6 +26,7 @@ define amdgpu_kernel void @test_mul_legacy_undef0_f32(float addrspace(1)* %out, 
 
 ; GCN-LABEL: {{^}}test_mul_legacy_undef1_f32:
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
+; GFX11: v_mul_dx9_zero_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @test_mul_legacy_undef1_f32(float addrspace(1)* %out, float %a) #0 {
   %result = call float @llvm.amdgcn.fmul.legacy(float %a, float undef)
   store float %result, float addrspace(1)* %out, align 4
@@ -31,6 +35,7 @@ define amdgpu_kernel void @test_mul_legacy_undef1_f32(float addrspace(1)* %out, 
 
 ; GCN-LABEL: {{^}}test_mul_legacy_fabs_f32:
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, |s{{[0-9]+}}|, |{{[sv][0-9]+}}|
+; GFX11: v_mul_dx9_zero_f32_e64 v{{[0-9]+}}, |s{{[0-9]+}}|, |s{{[0-9]+}}|
 define amdgpu_kernel void @test_mul_legacy_fabs_f32(float addrspace(1)* %out, float %a, float %b) #0 {
   %a.fabs = call float @llvm.fabs.f32(float %a)
   %b.fabs = call float @llvm.fabs.f32(float %b)
@@ -43,6 +48,8 @@ define amdgpu_kernel void @test_mul_legacy_fabs_f32(float addrspace(1)* %out, fl
 ; GCN-LABEL: {{^}}test_add_mul_legacy_f32:
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
 ; GCN: v_add_f32_e{{(32|64)}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
+; GFX11: v_mul_dx9_zero_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GFX11: v_dual_mov_b32 v{{[0-9]+}}, 0 :: v_dual_add_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @test_add_mul_legacy_f32(float addrspace(1)* %out, float %a, float %b, float %c) #0 {
   %mul = call float @llvm.amdgcn.fmul.legacy(float %a, float %b)
   %add = fadd float %mul, %c
@@ -57,6 +64,8 @@ define amdgpu_kernel void @test_add_mul_legacy_f32(float addrspace(1)* %out, flo
 ; GFX101: v_mac_legacy_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX103: v_mul_legacy_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX103: v_add_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GFX11: v_mul_dx9_zero_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GFX11: v_dual_mov_b32 v{{[0-9]+}}, 0 :: v_dual_add_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @test_mad_legacy_f32(float addrspace(1)* %out, float %a, float %b, float %c) #2 {
   %mul = call float @llvm.amdgcn.fmul.legacy(float %a, float %b)
   %add = fadd float %mul, %c
@@ -82,6 +91,8 @@ define amdgpu_kernel void @test_mad_legacy_f32_imm(float addrspace(1)* %out, flo
 ; MADMACF32: v_mad_legacy_f32 v{{[0-9]+}}, -s{{[0-9]+}}, -{{[sv][0-9]+}}, v{{[0-9]+}}
 ; NOMADMACF32: v_mul_legacy_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}, -s{{[0-9]+}}
 ; NOMADMACF32: v_add_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GFX11: v_mul_dx9_zero_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}, -s{{[0-9]+}}
+; GFX11: v_dual_mov_b32 v{{[0-9]+}}, 0 :: v_dual_add_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @test_mad_legacy_fneg_f32(float addrspace(1)* %out, float %a, float %b, float %c) #2 {
   %a.fneg = fneg float %a
   %b.fneg = fneg float %b

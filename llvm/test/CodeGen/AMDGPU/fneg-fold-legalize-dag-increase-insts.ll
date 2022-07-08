@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-no-signed-zeros-fp-math=false < %s | FileCheck %s --check-prefix=GFX9
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -enable-no-signed-zeros-fp-math=true < %s | FileCheck %s --check-prefix=GFX10
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -enable-no-signed-zeros-fp-math=false < %s | FileCheck %s --check-prefix=GFX10
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -enable-no-signed-zeros-fp-math=true < %s | FileCheck %s --check-prefix=GFX10
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -enable-no-signed-zeros-fp-math=false < %s | FileCheck %s --check-prefix=GFX10
 
 ; no-signed-zeros-fp-math should not increase the number of
 ; instructions emitted.
