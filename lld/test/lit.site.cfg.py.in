@@ -18,7 +18,6 @@ config.lld_tools_dir = lit_config.substitute("@CURRENT_TOOLS_DIR@")
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
-config.have_zstd = @LLVM_ENABLE_ZSTD@
 config.have_libxar = @LLVM_HAVE_LIBXAR@
 config.have_libxml2 = @LLVM_ENABLE_LIBXML2@
 config.sizeof_void_p = @CMAKE_SIZEOF_VOID_P@

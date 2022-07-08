@@ -17,7 +17,6 @@ config.clangd_build_xpc = @CLANGD_BUILD_XPC@
 config.clangd_enable_remote = @CLANGD_ENABLE_REMOTE@
 config.clangd_tidy_checks = @CLANGD_TIDY_CHECKS@
 config.have_zlib = @LLVM_ENABLE_ZLIB@
-config.have_zstd = @LLVM_ENABLE_ZSTD@
 
 # Delegate logic to lit.cfg.py.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

@@ -70,12 +70,6 @@ if (FLANG_STANDALONE_BUILD)
   if(LLVM_ENABLE_ZLIB)
     find_package(ZLIB REQUIRED)
   endif()
-  
-  # If LLVM links to zstd we need the imported targets so we can too.
-  if(LLVM_ENABLE_ZSTD)
-    find_package(ZSTD REQUIRED)
-  endif()
-
   option(LLVM_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
   if(CMAKE_COMPILER_IS_GNUCXX)
     set(USE_NO_MAYBE_UNINITIALIZED 1)
