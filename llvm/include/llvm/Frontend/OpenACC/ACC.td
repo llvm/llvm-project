@@ -218,6 +218,7 @@ def ACCC_Reduction : Clause<"reduction"> {
 // 2.5.6
 def ACCC_Self : Clause<"self"> {
   let flangClass = "AccSelfClause";
+  let isValueOptional = true;
 }
 
 // 2.9.5
