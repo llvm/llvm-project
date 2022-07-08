@@ -1309,7 +1309,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
     if (handleDebugValue(V, Var, Expr, DL, InstDL, SDOrder,
                          /*IsVariadic=*/false)) {
       LLVM_DEBUG(dbgs() << "Salvaged debug location info for:\n  "
-                        << DDI.getDI() << "\nBy stripping back to:\n  " << V);
+                        << *DDI.getDI() << "\nBy stripping back to:\n  " << *V);
       return;
     }
   }
@@ -1321,7 +1321,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
   auto SDV = DAG.getConstantDbgValue(Var, Expr, Undef, DL, SDNodeOrder);
   DAG.AddDbgValue(SDV, false);
 
-  LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  " << DDI.getDI()
+  LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  " << *DDI.getDI()
                     << "\n");
   LLVM_DEBUG(dbgs() << "  Last seen at:\n    " << *DDI.getDI()->getOperand(0)
                     << "\n");
