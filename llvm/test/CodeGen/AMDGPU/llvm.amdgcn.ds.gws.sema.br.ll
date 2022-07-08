@@ -3,9 +3,10 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP %s
 
 ; GCN-LABEL: {{^}}gws_sema_br_offset0:
-; NOLOOP-DAG: s_load_dword [[BAR_NUM:s[0-9]+]]
+; NOLOOP-DAG: s_load_{{dword|b32}} [[BAR_NUM:s[0-9]+]]
 ; NOLOOP-DAG: s_mov_b32 m0, 0{{$}}
 ; NOLOOP: v_mov_b32_e32 v0, [[BAR_NUM]]
 ; NOLOOP: ds_gws_sema_br v0 gds{{$}}
