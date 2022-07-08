@@ -525,17 +525,15 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
-  BumpPtrAllocator Alloc;
-  StringSaver Saver(Alloc);
-
   SmallVector<StringRef, 16> CmdArgs;
   CmdArgs.push_back(*FatBinaryPath);
   CmdArgs.push_back(Triple.isArch64Bit() ? "-64" : "-32");
   CmdArgs.push_back("--create");
   CmdArgs.push_back(*TempFileOrErr);
   for (const auto &FileAndArch : InputFiles)
-    CmdArgs.push_back(Saver.save("--image=profile=" + std::get<1>(FileAndArch) +
-                                 ",file=" + std::get<0>(FileAndArch)));
+    CmdArgs.push_back(
+        Args.MakeArgString("--image=profile=" + std::get<1>(FileAndArch) +
+                           ",file=" + std::get<0>(FileAndArch)));
 
   if (Error Err = executeCommands(*FatBinaryPath, CmdArgs))
     return std::move(Err);
@@ -808,6 +806,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   SmallVector<OffloadFile, 4> BitcodeInputFiles;
   DenseSet<StringRef> UsedInRegularObj;
   DenseSet<StringRef> UsedInSharedLib;
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
 
   // Search for bitcode files in the input and create an LTO input file. If it
   // is not a bitcode file, scan its symbol table for symbols we need to save.
@@ -844,9 +844,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
 
         // Record if we've seen these symbols in any object or shared libraries.
         if ((*ObjFile)->isRelocatableObject())
-          UsedInRegularObj.insert(*Name);
+          UsedInRegularObj.insert(Saver.save(*Name));
         else
-          UsedInSharedLib.insert(*Name);
+          UsedInSharedLib.insert(Saver.save(*Name));
       }
       continue;
     }
@@ -908,7 +908,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
       // We will use this as the prevailing symbol definition in LTO unless
       // it is undefined or another definition has already been used.
       Res.Prevailing =
-          !Sym.isUndefined() && PrevailingSymbols.insert(Sym.getName()).second;
+          !Sym.isUndefined() &&
+          PrevailingSymbols.insert(Saver.save(Sym.getName())).second;
 
       // We need LTO to preseve the following global symbols:
       // 1) Symbols used in regular objects.
@@ -1193,8 +1194,6 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
     InputsForTarget[File].emplace_back(std::move(File));
   LinkerInputFiles.clear();
 
-  BumpPtrAllocator Alloc;
-  UniqueStringSaver Saver(Alloc);
   DenseMap<OffloadKind, SmallVector<OffloadingImage, 2>> Images;
   for (auto &InputForTarget : InputsForTarget) {
     SmallVector<OffloadFile, 4> &Input = InputForTarget.getSecond();
@@ -1395,6 +1394,7 @@ int main(int Argc, char **Argv) {
     auto FileOrErr = getInputBitcodeLibrary(Library);
     if (!FileOrErr)
       reportError(FileOrErr.takeError());
+    InputFiles.push_back(std::move(*FileOrErr));
   }
 
   DenseSet<OffloadFile::TargetID> IsTargetUsed;
