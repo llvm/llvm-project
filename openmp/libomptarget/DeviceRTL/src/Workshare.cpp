@@ -446,29 +446,68 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
 
 // TODO: This is a stopgap. We probably want to expand the dispatch API to take
 //       an DST pointer which can then be allocated properly without malloc.
-static DynamicScheduleTracker *THREAD_LOCAL(ThreadDSTPtr);
+// static DynamicScheduleTracker *THREAD_LOCAL(ThreadDSTPtr);
+
+//  GPU backends dislike above static thread local mem. This is alternative.
+//  For each team, an array of global ptrs is allocated with size BlockSize,
+//  one per thread.
+//  The per team shared static global "ThreadDSTPtrPtr" is a pointer to the
+//  array of pointers.  Since it is shared, there is one ThreadDSTPtrPtr for
+//  each team. It is initalized by __init_ThreadDSTPtrPtr() which is
+//  called by __kmpc_target_init for threadid 0.
+static volatile int64_t SHARED(ThreadDSTPtrPtr);
 
 // Create a new DST, link the current one, and define the new as current.
 static DynamicScheduleTracker *pushDST() {
+  int32_t tid = mapping::getThreadIdInBlock();
+  if (ThreadDSTPtrPtr == 0) {
+    if (tid == 0)
+      ThreadDSTPtrPtr = static_cast<int64_t>((int64_t)memory::allocGlobal(
+          sizeof(int64_t) * mapping::getBlockSize(), "array of threadDSTPtr "));
+    synchronize::threads(); // so that all threads no longer see the zero
+    DynamicScheduleTracker **ThreadDSTPtrAry =
+        (DynamicScheduleTracker **)ThreadDSTPtrPtr;
+    ThreadDSTPtrAry[tid] = nullptr;
+  }
+  DynamicScheduleTracker **ThreadDSTPtrAry =
+      (DynamicScheduleTracker **)ThreadDSTPtrPtr;
+  DynamicScheduleTracker *ThreadDSTPtr =
+      (DynamicScheduleTracker *)ThreadDSTPtrAry[tid];
   DynamicScheduleTracker *NewDST = static_cast<DynamicScheduleTracker *>(
       memory::allocGlobal(sizeof(DynamicScheduleTracker), "new DST"));
   *NewDST = DynamicScheduleTracker({0});
   NewDST->NextDST = ThreadDSTPtr;
   ThreadDSTPtr = NewDST;
+  ThreadDSTPtrAry[tid] = ThreadDSTPtr;
   return ThreadDSTPtr;
 }
 
 // Return the current DST.
-static DynamicScheduleTracker *peekDST() { return ThreadDSTPtr; }
+static DynamicScheduleTracker *peekDST() {
+  int32_t tid = mapping::getThreadIdInBlock();
+  DynamicScheduleTracker **ThreadDSTPtrAry =
+      (DynamicScheduleTracker **)ThreadDSTPtrPtr;
+  DynamicScheduleTracker *ThreadDSTPtr =
+      (DynamicScheduleTracker *)ThreadDSTPtrAry[tid];
+  return ThreadDSTPtr;
+}
 
 // Pop the current DST and restore the last one.
 static void popDST() {
+  int32_t tid = mapping::getThreadIdInBlock();
+  DynamicScheduleTracker **ThreadDSTPtrAry =
+      (DynamicScheduleTracker **)ThreadDSTPtrPtr;
+  DynamicScheduleTracker *ThreadDSTPtr =
+      (DynamicScheduleTracker *)ThreadDSTPtrAry[tid];
   DynamicScheduleTracker *OldDST = ThreadDSTPtr->NextDST;
   memory::freeGlobal(ThreadDSTPtr, "remove DST");
-  ThreadDSTPtr = OldDST;
+  if (OldDST != nullptr)
+    ThreadDSTPtrAry[tid] = OldDST;
 }
 
 extern "C" {
+
+void __init_ThreadDSTPtrPtr() { ThreadDSTPtrPtr = 0; }
 
 // init
 void __kmpc_dispatch_init_4(IdentTy *loc, int32_t tid, int32_t schedule,

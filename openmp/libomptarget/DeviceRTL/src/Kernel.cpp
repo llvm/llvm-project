@@ -26,6 +26,8 @@ static void inititializeRuntime(bool IsSPMD) {
   synchronize::init(IsSPMD);
   mapping::init(IsSPMD);
   state::init(IsSPMD);
+  if (__kmpc_get_hardware_thread_id_in_block() == 0)
+    __init_ThreadDSTPtrPtr();
 }
 
 /// Simple generic state machine for worker threads.

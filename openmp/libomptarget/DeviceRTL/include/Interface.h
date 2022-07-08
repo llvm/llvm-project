@@ -364,6 +364,11 @@ int32_t __kmpc_cancel(IdentTy *Loc, int32_t TId, int32_t CancelVal);
 int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size);
 int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size);
 ///}
+
+/// __init_ThreadDSTPtrPtr is defined in Workshare.cpp to initialize
+/// the static LDS global variable ThreadDSTPtrPtr to 0.
+/// It is called in Kernel.cpp at the end of initializeRuntime().
+void __init_ThreadDSTPtrPtr();
 }
 
 /// Extra API exposed by ROCm
