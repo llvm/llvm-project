@@ -103,9 +103,11 @@ void *memmove(void *Dest, const void *Src, size_t Len) {
   return Dest;
 }
 
-void memset(char *Buf, char C, uint32_t Size) {
-  for (int I = 0; I < Size; ++I)
-    *Buf++ = C;
+void *memset(void *Buf, int C, size_t Size) {
+  char *S = (char *)Buf;
+  for (size_t I = 0; I < Size; ++I)
+    *S++ = C;
+  return Buf;
 }
 
 int memcmp(const void *s1, const void *s2, size_t n) {
