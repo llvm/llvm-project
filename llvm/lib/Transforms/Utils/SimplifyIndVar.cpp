@@ -79,6 +79,7 @@ namespace {
 
     bool eliminateIdentitySCEV(Instruction *UseInst, Instruction *IVOperand);
     bool replaceIVUserWithLoopInvariant(Instruction *UseInst);
+    bool replaceFloatIVWithIntegerIV(Instruction *UseInst);
 
     bool eliminateOverflowIntrinsic(WithOverflowInst *WO);
     bool eliminateSaturatingIntrinsic(SaturatingInst *SI);
@@ -673,6 +674,35 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
   return true;
 }
 
+/// Eliminate redundant type cast between integer and float.
+bool SimplifyIndvar::replaceFloatIVWithIntegerIV(Instruction *UseInst) {
+  if (UseInst->getOpcode() != CastInst::SIToFP)
+    return false;
+
+  Value *IVOperand = UseInst->getOperand(0);
+  // Get the symbolic expression for this instruction.
+  ConstantRange IVRange = SE->getSignedRange(SE->getSCEV(IVOperand));
+  unsigned DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
+  if (IVRange.getActiveBits() <= DestNumSigBits) {
+    for (User *U : UseInst->users()) {
+      // Match for fptosi of sitofp and with same type.
+      auto *CI = dyn_cast<FPToSIInst>(U);
+      if (!CI || IVOperand->getType() != CI->getType())
+        continue;
+
+      CI->replaceAllUsesWith(IVOperand);
+      DeadInsts.push_back(CI);
+      LLVM_DEBUG(dbgs() << "INDVARS: Replace IV user: " << *CI
+                        << " with: " << *IVOperand << '\n');
+
+      ++NumFoldedUser;
+      Changed = true;
+    }
+  }
+
+  return Changed;
+}
+
 /// Eliminate any operation that SCEV can prove is an identity function.
 bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
                                            Instruction *IVOperand) {
@@ -894,6 +924,13 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
         // through to the checks that remain.
         pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);
       }
+    }
+
+    // Try to use integer induction for FPToSI of float induction directly.
+    if (replaceFloatIVWithIntegerIV(UseInst)) {
+      // Re-queue the potentially new direct uses of IVOperand.
+      pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);
+      continue;
     }
 
     CastInst *Cast = dyn_cast<CastInst>(UseInst);
