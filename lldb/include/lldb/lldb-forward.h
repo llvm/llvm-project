@@ -66,7 +66,6 @@ class ConstStringTable;
 class DWARFCallFrameInfo;
 class DWARFDataExtractor;
 class DWARFExpression;
-class DWARFExpressionList;
 class DataBuffer;
 class WritableDataBuffer;
 class DataBufferHeap;

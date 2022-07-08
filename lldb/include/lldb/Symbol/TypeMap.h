@@ -53,14 +53,9 @@ public:
 
   bool Remove(const lldb::TypeSP &type_sp);
 
-  void RemoveMismatchedTypes(llvm::StringRef qualified_typename,
-                             bool exact_match);
-
   void RemoveMismatchedTypes(llvm::StringRef type_scope,
                              llvm::StringRef type_basename,
                              lldb::TypeClass type_class, bool exact_match);
-
-  void RemoveMismatchedTypes(lldb::TypeClass type_class);
 
 private:
   typedef collection::iterator iterator;

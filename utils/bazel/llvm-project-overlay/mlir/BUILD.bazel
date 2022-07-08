@@ -3775,6 +3775,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":Pass",
         ":ROCDLDialect",
+        ":Support",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -6811,6 +6812,7 @@ td_library(
         "include/mlir/Dialect/OpenMP/OmpCommon.td",
         "include/mlir/Dialect/OpenMP/OpenMPOps.td",
         "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td",
+        "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td",
     ],
     deps = [
         ":LLVMOpsTdFiles",
@@ -6853,14 +6855,6 @@ gentbl_cc_library(
             "include/mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc",
         ),
         (
-            ["-gen-type-interface-decls"],
-            "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.h.inc",
-        ),
-        (
-            ["-gen-type-interface-defs"],
-            "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc",
-        ),
-        (
             [
                 "-gen-attrdef-decls",
                 "-attrdefs-dialect=omp",
@@ -6881,6 +6875,24 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/OpenMP/OpenMPOps.td",
+    deps = [":OpenMPOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "OpenMPTypeInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-type-interface-decls"],
+            "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.h.inc",
+        ),
+        (
+            ["-gen-type-interface-defs"],
+            "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td",
     deps = [":OpenMPOpsTdFiles"],
 )
 
@@ -6920,6 +6932,7 @@ cc_library(
         ":LLVMDialect",
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
+        ":OpenMPTypeInterfacesIncGen",
         "//llvm:Support",
     ],
 )

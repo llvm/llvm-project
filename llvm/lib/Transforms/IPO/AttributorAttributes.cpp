@@ -6111,6 +6111,10 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     /// but which is not in the deallocation infos.
     bool HasPotentiallyFreeingUnknownUses = false;
 
+    /// Flag to indicate that we should place the new alloca in the function
+    /// entry block rather than where the call site (CB) is.
+    bool MoveAllocaIntoEntry = true;
+
     /// The set of free calls that use this allocation.
     SmallSetVector<CallBase *, 1> PotentialFreeCalls{};
   };
@@ -6241,17 +6245,6 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
-    LoopInfo *LI =
-        A.getInfoCache().getAnalysisResultForFunction<LoopAnalysis>(*F);
-    Optional<bool> MayContainIrreducibleControl;
-    auto IsInLoop = [&](BasicBlock &BB) {
-      if (!MayContainIrreducibleControl.has_value())
-        MayContainIrreducibleControl = mayContainIrreducibleControl(*F, LI);
-      if (MayContainIrreducibleControl.value())
-        return true;
-      return LI->getLoopFor(&BB) != nullptr;
-    };
-
     for (auto &It : AllocationInfos) {
       AllocationInfo &AI = *It.second;
       if (AI.Status == AllocationInfo::INVALID)
@@ -6293,9 +6286,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         Size = SizeOffsetPair.first;
       }
 
-      Instruction *IP = (!SizeAPI.has_value() || IsInLoop(*AI.CB->getParent()))
-                            ? AI.CB
-                            : &F->getEntryBlock().front();
+      Instruction *IP =
+          AI.MoveAllocaIntoEntry ? &F->getEntryBlock().front() : AI.CB;
 
       Align Alignment(1);
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
@@ -6310,8 +6302,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
       // TODO: Hoist the alloca towards the function entry.
       unsigned AS = DL.getAllocaAddrSpace();
-      Instruction *Alloca = new AllocaInst(Type::getInt8Ty(F->getContext()), AS,
-                                           Size, Alignment, "", IP);
+      Instruction *Alloca =
+          new AllocaInst(Type::getInt8Ty(F->getContext()), AS, Size, Alignment,
+                         AI.CB->getName() + ".h2s", IP);
 
       if (Alloca->getType() != AI.CB->getType())
         Alloca = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
@@ -6398,6 +6391,19 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 
   bool StackIsAccessibleByOtherThreads =
       A.getInfoCache().stackIsAccessibleByOtherThreads();
+
+  LoopInfo *LI =
+      A.getInfoCache().getAnalysisResultForFunction<LoopAnalysis>(*F);
+  Optional<bool> MayContainIrreducibleControl;
+  auto IsInLoop = [&](BasicBlock &BB) {
+    if (&F->getEntryBlock() == &BB)
+      return false;
+    if (!MayContainIrreducibleControl.has_value())
+      MayContainIrreducibleControl = mayContainIrreducibleControl(*F, LI);
+    if (MayContainIrreducibleControl.value())
+      return true;
+    return LI->getLoopFor(&BB) != nullptr;
+  };
 
   // Flag to ensure we update our deallocation information at most once per
   // updateImpl call and only if we use the free check reasoning.
@@ -6616,20 +6622,19 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         AI.Status = AllocationInfo::INVALID;
         Changed = ChangeStatus::CHANGED;
         continue;
-      } else {
-        if (APAlign->ugt(llvm::Value::MaximumAlignment) ||
-            !APAlign->isPowerOf2()) {
-          LLVM_DEBUG(dbgs() << "[H2S] Invalid allocation alignment: " << APAlign
-                            << "\n");
-          AI.Status = AllocationInfo::INVALID;
-          Changed = ChangeStatus::CHANGED;
-          continue;
-        }
+      }
+      if (APAlign->ugt(llvm::Value::MaximumAlignment) ||
+          !APAlign->isPowerOf2()) {
+        LLVM_DEBUG(dbgs() << "[H2S] Invalid allocation alignment: " << APAlign
+                          << "\n");
+        AI.Status = AllocationInfo::INVALID;
+        Changed = ChangeStatus::CHANGED;
+        continue;
       }
     }
 
+    Optional<APInt> Size = getSize(A, *this, AI);
     if (MaxHeapToStackSize != -1) {
-      Optional<APInt> Size = getSize(A, *this, AI);
       if (!Size || Size.getValue().ugt(MaxHeapToStackSize)) {
         LLVM_DEBUG({
           if (!Size)
@@ -6648,18 +6653,23 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     switch (AI.Status) {
     case AllocationInfo::STACK_DUE_TO_USE:
       if (UsesCheck(AI))
-        continue;
+        break;
       AI.Status = AllocationInfo::STACK_DUE_TO_FREE;
       LLVM_FALLTHROUGH;
     case AllocationInfo::STACK_DUE_TO_FREE:
       if (FreeCheck(AI))
-        continue;
+        break;
       AI.Status = AllocationInfo::INVALID;
       Changed = ChangeStatus::CHANGED;
-      continue;
+      break;
     case AllocationInfo::INVALID:
       llvm_unreachable("Invalid allocations should never reach this point!");
     };
+
+    // Check if we still think we can move it into the entry block.
+    if (AI.MoveAllocaIntoEntry &&
+        (!Size.has_value() || IsInLoop(*AI.CB->getParent())))
+      AI.MoveAllocaIntoEntry = false;
   }
 
   return Changed;
