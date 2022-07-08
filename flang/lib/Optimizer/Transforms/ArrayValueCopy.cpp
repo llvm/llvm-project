@@ -706,7 +706,7 @@ void ArrayCopyAnalysis::construct(mlir::Operation *topLevelOp) {
       if (callConflict || conflict || refConflict) {
         LLVM_DEBUG(llvm::dbgs()
                    << "CONFLICT: copies required for " << st << '\n'
-                   << "   adding conflicts on: " << op << " and "
+                   << "   adding conflicts on: " << *op << " and "
                    << st.getOriginal() << '\n');
         conflicts.insert(op);
         conflicts.insert(st.getOriginal().getDefiningOp());
