@@ -236,7 +236,7 @@ Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
       return createFileError(OutputFile, EC);
   }
 
-  TempFiles.push_back(OutputFile);
+  TempFiles.emplace_back(std::move(OutputFile));
   return TempFiles.back();
 }
 
@@ -771,16 +771,12 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
   if (SaveTemps) {
-    Conf.PostInternalizeModuleHook = [&, Arch](size_t, const Module &M) {
-      auto TempFileOrErr =
-          createOutputFile(sys::path::filename(ExecutableName) + "-" +
-                               Triple.getTriple() + "-" + Arch,
-                           "bc");
-      if (!TempFileOrErr)
-        reportError(TempFileOrErr.takeError());
-
+    std::string TempName = (sys::path::filename(ExecutableName) + "-" +
+                            Triple.getTriple() + "-" + Arch + ".bc")
+                               .str();
+    Conf.PostInternalizeModuleHook = [=](size_t, const Module &M) {
       std::error_code EC;
-      raw_fd_ostream LinkedBitcode(*TempFileOrErr, EC, sys::fs::OF_None);
+      raw_fd_ostream LinkedBitcode(TempName, EC, sys::fs::OF_None);
       if (EC)
         reportError(errorCodeToError(EC));
       WriteBitcodeToFile(M, LinkedBitcode);
