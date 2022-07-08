@@ -217,6 +217,9 @@ config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.have_zlib == "1":
   config.available_features.add("zlib")
+  
+if config.have_zstd == "1":
+  config.available_features.add("zstd")
 
 # Use ugly construction to explicitly prohibit "clang", "clang++" etc.
 # in RUN lines.

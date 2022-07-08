@@ -18,6 +18,10 @@ if(LLVM_ENABLE_ZLIB)
   list(APPEND LLDB_SYSTEM_LIBS ZLIB::ZLIB)
 endif()
 
+if(LLVM_ENABLE_ZSTD)
+  list(APPEND LLDB_SYSTEM_LIBS zstd)
+endif()
+
 add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
   GDBRemoteClientBase.cpp
   GDBRemoteCommunication.cpp
