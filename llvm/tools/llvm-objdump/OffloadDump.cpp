@@ -13,6 +13,7 @@
 #include "OffloadDump.h"
 #include "llvm-objdump.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/Alignment.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -79,8 +80,13 @@ void llvm::dumpOffloadBinary(const ObjectFile &O) {
     if (!Contents)
       reportError(Contents.takeError(), O.getFileName());
 
-    MemoryBufferRef Buffer = MemoryBufferRef(*Contents, O.getFileName());
-    auto BinaryOrErr = OffloadBinary::create(Buffer);
+    std::unique_ptr<MemoryBuffer> Buffer =
+        MemoryBuffer::getMemBuffer(*Contents, O.getFileName(), false);
+    if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
+                       Buffer->getBufferStart()))
+      Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
+                                              Buffer->getBufferIdentifier());
+    auto BinaryOrErr = OffloadBinary::create(*Buffer);
     if (!BinaryOrErr)
       reportError(O.getFileName(), "while extracting offloading files: " +
                                        toString(BinaryOrErr.takeError()));
