@@ -129,6 +129,7 @@ END-SCRIPT
 #include <__algorithm/ranges_is_sorted_until.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_sorted_until.h'}}
 #include <__algorithm/ranges_lexicographical_compare.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_lexicographical_compare.h'}}
 #include <__algorithm/ranges_lower_bound.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_lower_bound.h'}}
+#include <__algorithm/ranges_make_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_make_heap.h'}}
 #include <__algorithm/ranges_max.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max.h'}}
 #include <__algorithm/ranges_max_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max_element.h'}}
 #include <__algorithm/ranges_merge.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_merge.h'}}
@@ -141,6 +142,8 @@ END-SCRIPT
 #include <__algorithm/ranges_move_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move_backward.h'}}
 #include <__algorithm/ranges_none_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_none_of.h'}}
 #include <__algorithm/ranges_nth_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_nth_element.h'}}
+#include <__algorithm/ranges_pop_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_pop_heap.h'}}
+#include <__algorithm/ranges_push_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_push_heap.h'}}
 #include <__algorithm/ranges_remove.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_remove.h'}}
 #include <__algorithm/ranges_remove_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_remove_if.h'}}
 #include <__algorithm/ranges_replace.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_replace.h'}}
@@ -148,6 +151,7 @@ END-SCRIPT
 #include <__algorithm/ranges_reverse.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_reverse.h'}}
 #include <__algorithm/ranges_set_difference.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_set_difference.h'}}
 #include <__algorithm/ranges_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_sort.h'}}
+#include <__algorithm/ranges_sort_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_sort_heap.h'}}
 #include <__algorithm/ranges_stable_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_stable_sort.h'}}
 #include <__algorithm/ranges_swap_ranges.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_swap_ranges.h'}}
 #include <__algorithm/ranges_transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_transform.h'}}
