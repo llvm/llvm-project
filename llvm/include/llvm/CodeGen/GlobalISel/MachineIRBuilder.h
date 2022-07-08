@@ -683,6 +683,13 @@ public:
   MachineInstrBuilder buildBoolExt(const DstOp &Res, const SrcOp &Op,
                                    bool IsFP);
 
+  // Build and insert \p Res = G_SEXT_INREG \p Op, 1 or \p Res = G_AND \p Op, 1,
+  // or COPY depending on how the target wants to extend boolean values, using
+  // the original register size.
+  MachineInstrBuilder buildBoolExtInReg(const DstOp &Res, const SrcOp &Op,
+                                        bool IsVector,
+                                        bool IsFP);
+
   /// Build and insert \p Res = G_ZEXT \p Op
   ///
   /// G_ZEXT produces a register of the specified width, with bits 0 to

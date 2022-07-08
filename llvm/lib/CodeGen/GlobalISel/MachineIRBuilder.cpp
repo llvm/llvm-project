@@ -473,6 +473,23 @@ MachineInstrBuilder MachineIRBuilder::buildBoolExt(const DstOp &Res,
   return buildInstr(ExtOp, Res, Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildBoolExtInReg(const DstOp &Res,
+                                                        const SrcOp &Op,
+                                                        bool IsVector,
+                                                        bool IsFP) {
+  const auto *TLI = getMF().getSubtarget().getTargetLowering();
+  switch (TLI->getBooleanContents(IsVector, IsFP)) {
+  case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+    return buildSExtInReg(Res, Op, 1);
+  case TargetLoweringBase::ZeroOrOneBooleanContent:
+    return buildZExtInReg(Res, Op, 1);
+  case TargetLoweringBase::UndefinedBooleanContent:
+    return buildCopy(Res, Op);
+  }
+
+  llvm_unreachable("unexpected BooleanContent");
+}
+
 MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
                                                       const DstOp &Res,
                                                       const SrcOp &Op) {
