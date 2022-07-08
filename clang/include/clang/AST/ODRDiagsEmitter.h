@@ -55,6 +55,16 @@ public:
       const ObjCProtocolDecl *SecondProtocol,
       const struct ObjCProtocolDecl::DefinitionData *SecondDD) const;
 
+  /// Diagnose ODR mismatch between ObjCProtocolDecl with different definitions.
+  bool diagnoseMismatch(const ObjCProtocolDecl *FirstProtocol,
+                        const ObjCProtocolDecl *SecondProtocol) const {
+    assert(FirstProtocol->data().Definition !=
+               SecondProtocol->data().Definition &&
+           "Don't diagnose differences when definitions are merged already");
+    return diagnoseMismatch(FirstProtocol, SecondProtocol,
+                            &SecondProtocol->data());
+  }
+
   /// Get the best name we know for the module that owns the given
   /// declaration, or an empty string if the declaration is not from a module.
   static std::string getOwningModuleNameForDiagnostic(const Decl *D);
