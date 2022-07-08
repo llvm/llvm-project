@@ -39,10 +39,10 @@ _LIBCPP_FUNC_VIS path __canonical(const path&, error_code* __ec = nullptr);
 _LIBCPP_FUNC_VIS bool __copy_file(const path& __from, const path& __to, copy_options __opt, error_code* __ec = nullptr);
 _LIBCPP_FUNC_VIS void __copy_symlink(const path& __existing_symlink, const path& __new_symlink, error_code* __ec = nullptr);
 _LIBCPP_FUNC_VIS void __copy(const path& __from, const path& __to, copy_options __opt, error_code* __ec = nullptr);
-_LIBCPP_FUNC_VIS bool __create_directories(const path& p, error_code* ec = nullptr);
+_LIBCPP_FUNC_VIS bool __create_directories(const path&, error_code* = nullptr);
 _LIBCPP_FUNC_VIS void __create_directory_symlink(const path& __to, const path& __new_symlink, error_code* __ec = nullptr);
-_LIBCPP_FUNC_VIS bool __create_directory(const path& p, error_code* ec = nullptr);
-_LIBCPP_FUNC_VIS bool __create_directory(const path& p, const path& attributes, error_code* ec = nullptr);
+_LIBCPP_FUNC_VIS bool __create_directory(const path&, error_code* = nullptr);
+_LIBCPP_FUNC_VIS bool __create_directory(const path&, const path& __attributes, error_code* = nullptr);
 _LIBCPP_FUNC_VIS void __create_hard_link(const path& __to, const path& __new_hard_link, error_code* __ec = nullptr);
 _LIBCPP_FUNC_VIS void __create_symlink(const path& __to, const path& __new_symlink, error_code* __ec = nullptr);
 _LIBCPP_FUNC_VIS path __current_path(error_code* __ec = nullptr);
@@ -52,14 +52,14 @@ _LIBCPP_FUNC_VIS file_status __status(const path&, error_code* __ec = nullptr);
 _LIBCPP_FUNC_VIS uintmax_t __file_size(const path&, error_code* __ec = nullptr);
 _LIBCPP_FUNC_VIS uintmax_t __hard_link_count(const path&, error_code* __ec = nullptr);
 _LIBCPP_FUNC_VIS file_status __symlink_status(const path&, error_code* __ec = nullptr);
-_LIBCPP_FUNC_VIS file_time_type __last_write_time(const path& p, error_code* ec = nullptr);
-_LIBCPP_FUNC_VIS void __last_write_time(const path& p, file_time_type new_time, error_code* ec = nullptr);
+_LIBCPP_FUNC_VIS file_time_type __last_write_time(const path&, error_code* __ec = nullptr);
+_LIBCPP_FUNC_VIS void __last_write_time(const path&, file_time_type __new_time, error_code* __ec = nullptr);
 _LIBCPP_FUNC_VIS path __weakly_canonical(path const& __p, error_code* __ec = nullptr);
-_LIBCPP_FUNC_VIS path __read_symlink(const path& p, error_code* ec = nullptr);
-_LIBCPP_FUNC_VIS uintmax_t __remove_all(const path& p, error_code* ec = nullptr);
-_LIBCPP_FUNC_VIS bool __remove(const path& p, error_code* ec = nullptr);
-_LIBCPP_FUNC_VIS void __rename(const path& from, const path& to, error_code* ec = nullptr);
-_LIBCPP_FUNC_VIS void __resize_file(const path& p, uintmax_t size, error_code* ec = nullptr);
+_LIBCPP_FUNC_VIS path __read_symlink(const path&, error_code* __ec = nullptr);
+_LIBCPP_FUNC_VIS uintmax_t __remove_all(const path&, error_code* __ec = nullptr);
+_LIBCPP_FUNC_VIS bool __remove(const path&, error_code* __ec = nullptr);
+_LIBCPP_FUNC_VIS void __rename(const path& __from, const path& __to, error_code* __ec = nullptr);
+_LIBCPP_FUNC_VIS void __resize_file(const path&, uintmax_t __size, error_code* = nullptr);
 _LIBCPP_FUNC_VIS path __temp_directory_path(error_code* __ec = nullptr);
 
 inline _LIBCPP_HIDE_FROM_ABI path absolute(const path& __p) { return __absolute(__p); }
@@ -118,7 +118,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool is_character_file(const path& __p, error_code&
 inline _LIBCPP_HIDE_FROM_ABI bool is_directory(file_status __s) noexcept { return __s.type() == file_type::directory; }
 inline _LIBCPP_HIDE_FROM_ABI bool is_directory(const path& __p) { return is_directory(__status(__p)); }
 inline _LIBCPP_HIDE_FROM_ABI bool is_directory(const path& __p, error_code& __ec) noexcept { return is_directory(__status(__p, &__ec)); }
-_LIBCPP_FUNC_VIS bool __fs_is_empty(const path& p, error_code* ec = nullptr);
+_LIBCPP_FUNC_VIS bool __fs_is_empty(const path& __p, error_code* __ec = nullptr);
 inline _LIBCPP_HIDE_FROM_ABI bool is_empty(const path& __p) { return __fs_is_empty(__p); }
 inline _LIBCPP_HIDE_FROM_ABI bool is_empty(const path& __p, error_code& __ec) { return __fs_is_empty(__p, &__ec); }
 inline _LIBCPP_HIDE_FROM_ABI bool is_fifo(file_status __s) noexcept { return __s.type() == file_type::fifo; }

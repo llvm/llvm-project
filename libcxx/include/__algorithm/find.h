@@ -20,9 +20,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Tp>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 _InputIterator
-find(_InputIterator __first, _InputIterator __last, const _Tp& __value_) {
+find(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
   for (; __first != __last; ++__first)
-    if (*__first == __value_)
+    if (*__first == __value)
       break;
   return __first;
 }

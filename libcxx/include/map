@@ -582,9 +582,9 @@ public:
         _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
         : _Compare() {}
     _LIBCPP_INLINE_VISIBILITY
-    __map_value_compare(_Compare c)
+    __map_value_compare(_Compare __c)
         _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
-        : _Compare(c) {}
+        : _Compare(__c) {}
     _LIBCPP_INLINE_VISIBILITY
     const _Compare& key_comp() const _NOEXCEPT {return *this;}
     _LIBCPP_INLINE_VISIBILITY
@@ -627,9 +627,9 @@ public:
         _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
         : comp() {}
     _LIBCPP_INLINE_VISIBILITY
-    __map_value_compare(_Compare c)
+    __map_value_compare(_Compare __c)
         _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
-        : comp(c) {}
+        : comp(__c) {}
     _LIBCPP_INLINE_VISIBILITY
     const _Compare& key_comp() const _NOEXCEPT {return comp;}
 
@@ -990,7 +990,7 @@ public:
     protected:
         key_compare comp;
 
-        _LIBCPP_INLINE_VISIBILITY value_compare(key_compare c) : comp(c) {}
+        _LIBCPP_INLINE_VISIBILITY value_compare(key_compare __c) : comp(__c) {}
     public:
         _LIBCPP_INLINE_VISIBILITY
         bool operator()(const value_type& __x, const value_type& __y) const
@@ -1767,7 +1767,7 @@ public:
         key_compare comp;
 
         _LIBCPP_INLINE_VISIBILITY
-        value_compare(key_compare c) : comp(c) {}
+        value_compare(key_compare __c) : comp(__c) {}
     public:
         _LIBCPP_INLINE_VISIBILITY
         bool operator()(const value_type& __x, const value_type& __y) const

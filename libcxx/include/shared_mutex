@@ -400,9 +400,9 @@ public:
     void lock();
     bool try_lock();
     template <class Rep, class Period>
-        bool try_lock_for(const chrono::duration<Rep, Period>& rel_time);
+        bool try_lock_for(const chrono::duration<Rep, Period>& __rel_time);
     template <class Clock, class Duration>
-        bool try_lock_until(const chrono::time_point<Clock, Duration>& abs_time);
+        bool try_lock_until(const chrono::time_point<Clock, Duration>& __abs_time);
     void unlock();
 
     // Setters

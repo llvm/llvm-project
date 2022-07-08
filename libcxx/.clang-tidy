@@ -17,6 +17,7 @@ Checks: >
   modernize-redundant-void-arg,
 
   readability-duplicate-include,
+  readability-identifier-naming,
   readability-function-cognitive-complexity,
   readability-function-size,
   readability-misplaced-array-index,
@@ -31,6 +32,12 @@ CheckOptions:
     value: 143 # TODO: bring that number down
   - key:   readability-function-size.LineThreshold
     value: 194 # TODO: bring that number down
+  - key:   readability-identifier-naming.GetConfigPerFile
+    value: false
+  - key:   readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key:   readability-identifier-naming.ParameterPrefix
+    value: __
 
 # TODO: investigate these checks
 # bugprone-branch-clone,

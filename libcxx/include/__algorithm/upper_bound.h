@@ -24,7 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _ForwardIterator, class _Tp>
 _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
-__upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
+__upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value, _Compare __comp)
 {
     typedef typename iterator_traits<_ForwardIterator>::difference_type difference_type;
     difference_type __len = _VSTD::distance(__first, __last);
@@ -33,7 +33,7 @@ __upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
         difference_type __l2 = _VSTD::__half_positive(__len);
         _ForwardIterator __m = __first;
         _VSTD::advance(__m, __l2);
-        if (__comp(__value_, *__m))
+        if (__comp(__value, *__m))
             __len = __l2;
         else
         {
@@ -48,18 +48,18 @@ template <class _ForwardIterator, class _Tp, class _Compare>
 _LIBCPP_NODISCARD_EXT inline
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
-upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
+upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value, _Compare __comp)
 {
-    return _VSTD::__upper_bound<_Compare&>(__first, __last, __value_, __comp);
+    return _VSTD::__upper_bound<_Compare&>(__first, __last, __value, __comp);
 }
 
 template <class _ForwardIterator, class _Tp>
 _LIBCPP_NODISCARD_EXT inline
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
-upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_)
+upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value)
 {
-    return _VSTD::upper_bound(__first, __last, __value_,
+    return _VSTD::upper_bound(__first, __last, __value,
                              __less<_Tp, typename iterator_traits<_ForwardIterator>::value_type>());
 }
 
