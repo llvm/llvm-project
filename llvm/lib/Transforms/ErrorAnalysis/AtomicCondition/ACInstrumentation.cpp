@@ -119,10 +119,12 @@ void ACInstrumentation::instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
 
   CallInst *NewCallInstruction = nullptr;
 
-  // TODO: Handle Unnamed Basic Blocks. getName() won't work if BB is unnamed.
+  string BasicBlockString;
+  raw_string_ostream RawBasicBlockString(BasicBlockString);
+  CurrentBB->printAsOperand(RawBasicBlockString, false);
   Constant *BBValue = ConstantDataArray::getString(CurrentBB->getModule()->getContext(),
-                                                            CurrentBB->getName().str().c_str(),
-                                                            true);
+                                                   RawBasicBlockString.str().c_str(),
+                                                   true);
 
   Value *BBValuePointer = new GlobalVariable(*CurrentBB->getModule(),
                                              BBValue->getType(),
@@ -171,9 +173,12 @@ void ACInstrumentation::instrumentCallRecordingPHIInstructions(BasicBlock* Curre
                                                         GlobalValue::InternalLinkage,
                                                         InstructionValue);
 
-    Constant *BasicBlockValue = ConstantDataArray::getString(CurrPhi->getModule()->getContext(),
-                                                              CurrentBB->getName().str().c_str(),
-                                                              true);
+    string BasicBlockString;
+    raw_string_ostream RawBasicBlockString(BasicBlockString);
+    CurrentBB->printAsOperand(RawBasicBlockString, false);
+    Constant *BasicBlockValue = ConstantDataArray::getString(CurrentBB->getModule()->getContext(),
+                                                     RawBasicBlockString.str().c_str(),
+                                                     true);
 
     Value *BasicBlockValuePointer = new GlobalVariable(*CurrPhi->getModule(),
                                                         BasicBlockValue->getType(),

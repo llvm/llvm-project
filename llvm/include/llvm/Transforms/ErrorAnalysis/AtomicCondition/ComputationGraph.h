@@ -36,7 +36,6 @@ typedef struct PhiNode {
   char *ResidentInBB;
   int NumBranches;
   char **IncomingVals;
-  int *IsConstant;
   char **BasicBlocks;
   struct PhiNode *Next;
 } PhiNode;
@@ -46,12 +45,58 @@ typedef struct ComputationGraph {
   CGNode *NodesLinkedListHead;
   InstructionNodePair* InstructionNodeMapHead;
   char **BasicBlockExecutionChainTail;
-  uint64_t BasicBlockExecutionChainSize;
   PhiNode *PhiNodesListHead;
   uint64_t PhiNodesListSize;
 } ComputationGraph;
 
 ComputationGraph *CG;
+
+/*----------------------------------------------------------------------------*/
+/* Utility Functions                                                          */
+/*----------------------------------------------------------------------------*/
+
+int fCGnodesEqual(CGNode *Node1, CGNode *Node2)
+{
+  if (Node1->NodeId == Node2->NodeId)
+    return 1;
+  return 0;
+}
+
+int fCGisRegister(char* Value) {
+  if(Value[0] == '%')
+    return 1;
+  return 0;
+}
+
+int fCGNamedRegister(char *Register) {
+  assert(fCGisRegister(Register));
+  if(isdigit(Register[1]))
+    return 1;
+  return 0;
+}
+
+int fCGcheckPHIInstruction(char *Register) {
+  if(CG->PhiNodesListSize == 0)
+    return 0;
+
+  PhiNode *CurrNode = CG->PhiNodesListHead;
+  while(CurrNode != NULL && strcmp(CurrNode->ResultRegister, Register)!=0) {
+    CurrNode = CurrNode->Next;
+  }
+  if(CurrNode != NULL)
+    return 1;
+  return 0;
+}
+
+int fCGisPHIInstruction(char *InstructionString) {
+  if(strstr(InstructionString, "phi")!=NULL)
+    return 1;
+  return 0;
+}
+
+void fCGprintStringArray(char **ArrayToPrint) {
+
+}
 
 void fCGInitialize() {
   ComputationGraph *CGObject = NULL;
@@ -84,8 +129,12 @@ void fCGInitialize() {
     printf("#CG: graph out of memory error!");
     exit(EXIT_FAILURE);
   }
-  CGObject->BasicBlockExecutionChainTail--;
-  CGObject->BasicBlockExecutionChainSize=0;
+  // The first pointer will never be assigned and will remain NULL acting as a
+  // boundary/terminator for anything traversing the chain in reverse.
+  char **BasicBlockPointer = CGObject->BasicBlockExecutionChainTail;
+  for (int Index = 0; Index < Size; ++Index, BasicBlockPointer++) {
+    *BasicBlockPointer = NULL;
+  }
 
   // Allocate memory to the Phi Nodes List
   if( (CGObject->PhiNodesListHead =
@@ -98,41 +147,8 @@ void fCGInitialize() {
   CG = CGObject;
 }
 
-int fCGnodesEqual(CGNode *Node1, CGNode *Node2)
-{
-  if (Node1->NodeId == Node2->NodeId)
-    return 1;
-  return 0;
-}
-
-int fCGNamedRegister(char *Register) {
-  if (isdigit(Register[0]))
-    return 1;
-  return 0;
-}
-
-int fCGisConstant(char* Value) {
-  if(Value[0] != '%')
-    return 1;
-  return 0;
-}
-
-int fCGcheckPHIInstruction(char *Register) {
-  if(CG->PhiNodesListSize == 0)
-    return 0;
-
-  PhiNode *CurrNode = CG->PhiNodesListHead;
-  while(CurrNode != NULL && strcmp(CurrNode->ResultRegister, Register)!=0) {
-    CurrNode = CurrNode->Next;
-  }
-  if(CurrNode != NULL)
-    return 1;
-  return 0;
-}
-
 void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
   char *ResultReg;
-  int *IsConstant;
   char **IncomingVals, **BasicBlocks;
   char *CharFindingPointer = InstructionString;
   int NumIncomingBranches;
@@ -142,12 +158,11 @@ void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
 
   // Allocating Memory
   ResultReg = (char*)malloc ( (ResultRegLen) * sizeof (char));
-  IsConstant = (int*)malloc ( (NumIncomingBranches) * sizeof (int));
   IncomingVals = (char**)malloc ( (NumIncomingBranches) * sizeof (char));
   BasicBlocks = (char**)malloc ( (NumIncomingBranches) * sizeof (char));
 
   // Copying the Register Name, ignoring the '%'
-  strncpy(ResultReg, InstructionString+1, ResultRegLen);
+  strncpy(ResultReg, InstructionString, ResultRegLen);
   ResultReg[ResultRegLen]=0;
 
   printf("Instruction String:%s\n", InstructionString);
@@ -162,17 +177,13 @@ void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
 
     // Copying Incoming Value
     CharFindingPointer = strstr(CharFindingPointer, "[") + 2;
-    if (fCGisConstant(CharFindingPointer))
-      *(IsConstant+CurrentBranchIndex)=1;
-    else
-      *(IsConstant+CurrentBranchIndex)=0;
     const unsigned long IncomingValueLen = (strstr(CharFindingPointer, " ") - CharFindingPointer);
     IncomingValueString = (char*)malloc ( IncomingValueLen * sizeof (char));
     strncpy(IncomingValueString, CharFindingPointer, IncomingValueLen-1);
     IncomingValueString[IncomingValueLen-1]=0;
 
     // Copying Basic Block Name
-    CharFindingPointer = strstr(CharFindingPointer, ",") + 3;
+    CharFindingPointer = strstr(CharFindingPointer, ",") + 2;
     const unsigned long BasicBlockLen = (strstr(CharFindingPointer, " ") - CharFindingPointer+1);
     BasicBlockString = (char*)malloc ( BasicBlockLen * sizeof (char));
     strncpy(BasicBlockString, CharFindingPointer, BasicBlockLen-1);
@@ -227,75 +238,80 @@ void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
 }
 
 void fCGrecordCurrentBasicBlock(char *BasicBlock) {
+  assert(fCGisRegister(BasicBlock));
   CG->BasicBlockExecutionChainTail++;
   *CG->BasicBlockExecutionChainTail = BasicBlock;
-  CG->BasicBlockExecutionChainSize++;
 }
 
-int fCGisPHIInstruction(char *InstructionString) {
-  if(strstr(InstructionString, "phi")!=NULL)
-    return 1;
-  return 0;
-}
-
-void fCGprintStringArray(char **ArrayToPrint) {
-
-}
-
+// Backtracks the Basic Block Execution Chain to Resolve the PHI Instruction to
+// a Non-PHI Instruction OR a Constant.
 char *fCGperformPHIResolution(char *PHIInstruction) {
+  // Ensuring we start with a PHI Instruction
+  assert(fCGisPHIInstruction(PHIInstruction));
+
+  printf("\nPerforming PHI Instruction Resolution to a Non-PHI Instruction\n");
+
   char *ResolvedInstruction;
-
-  printf("\n");
-
-  // Copying Register Name
+  // Copying PHI Instruction Register Name
   const unsigned long RegisterNameLen = (strstr(PHIInstruction, " ") - PHIInstruction);
-  char *ResolvedInstructionRegister = (char*)malloc ( RegisterNameLen * sizeof (char));
-  strncpy(ResolvedInstructionRegister, PHIInstruction+1, RegisterNameLen);
-  ResolvedInstructionRegister[RegisterNameLen]=0;
-  printf("PHIRegister Name:%s\n", ResolvedInstructionRegister);
+  char *ResolvedValue = (char*)malloc ( RegisterNameLen * sizeof (char));
+  strncpy(ResolvedValue, PHIInstruction, RegisterNameLen);
+  ResolvedValue[RegisterNameLen]=0;
+  printf("\tFirst PHI Instruction Register Name:%s\n", ResolvedValue);
 
+  // Setting Basic Block Execution trace pointer to the tail of Basic Block
+  // Execution chain
   char **PreviousBasicBlock = CG->BasicBlockExecutionChainTail-1;
 
-  // Finding Instruction in Phi Node list
+  // Finding Instruction record in Phi Nodes List
+  printf("\tSearching for record of FIRST PHI Instruction in PHI Nodes List\n");
   PhiNode *CurrPhiNode = CG->PhiNodesListHead;
-  printf("PHIRegister Name2:%s\n", ResolvedInstructionRegister);
-  while(CurrPhiNode != NULL && strcmp(CurrPhiNode->ResultRegister, ResolvedInstructionRegister) != 0) {
-    printf("PHIRegister Name:%s\n", CurrPhiNode->ResultRegister);
+  while(CurrPhiNode != NULL && strcmp(CurrPhiNode->ResultRegister, ResolvedValue) != 0) {
+    printf("\t\tPHI Nodes List: Current PHI Instruction Register Name:%s\n", CurrPhiNode->ResultRegister);
     CurrPhiNode = CurrPhiNode->Next;
   }
-  printf("PhiNodeFound:%s\n", CurrPhiNode->ResultRegister);
+  // The PHI Instruction is already recorded before it is invoked.
+  assert(CurrPhiNode != NULL);
+  printf("\t\tRecord found! - %s\n", CurrPhiNode->ResultRegister);
 
-  // While loop till instruction is no longer phi
+  // Loop to traverse the PHI Chain in reverse order of execution till a Non-PHI
+  // Instruction is found
+  printf("\n\tBackTracking Non-PHI Instruction\n");
   while (1) {
-    // Resolve Phi
-    int *IsConstant = CurrPhiNode->IsConstant;
+    // Setting Pointers to traverse PHI Node's basic blocks and corresponding
+    // incoming values
     char **IncomingValsUnit = CurrPhiNode->IncomingVals;
     char **BasicBlocksUnit = CurrPhiNode->BasicBlocks;
 
+    // Finding the Basic Block in the PHI Instruction record
     int BranchCounter;
-    printf("PreviousBasicBlock:%s\n", *PreviousBasicBlock);
+    printf("\t\tPrevious Basic Block:%s\n", *PreviousBasicBlock);
     for(BranchCounter = 0;
-         BranchCounter<CurrPhiNode->NumBranches && strcmp(*BasicBlocksUnit, *PreviousBasicBlock) != 0;
-         BranchCounter++, IsConstant+=1, IncomingValsUnit+=1, BasicBlocksUnit+=1);
+         BranchCounter < CurrPhiNode->NumBranches && strcmp(*BasicBlocksUnit, *PreviousBasicBlock) != 0;
+         BranchCounter++, IncomingValsUnit++, BasicBlocksUnit++);
 
-    char **BBPointer = CG->BasicBlockExecutionChainTail;
-    printf("\nBasic Block Execution Chain:\n");
-    for (uint64_t I = 0; I < CG->BasicBlockExecutionChainSize; ++I, BBPointer-=1)
-      printf("%s\n", *BBPointer);
-    printf("\n");
+    // Debugging section printing the Basic Block Execution Chain
+//    char **BBPointer = CG->BasicBlockExecutionChainTail;
+//    printf("\n\t\tReversed Basic Block Execution Chain\n");
+//    while(*BBPointer != NULL) {
+//      printf("\t\t\tBasic Block Execution Chain: %s\n", *BBPointer);
+//      BBPointer--;
+//    }
+//    printf("\n");
 
-    if(BranchCounter == CurrPhiNode->NumBranches) {
-      printf("#fCG: Branch not found in phi node. Check!\n");
-      exit(EXIT_FAILURE);
-    } else {
-      ResolvedInstructionRegister = *IncomingValsUnit;
-    }
-    printf("Resolved Instruction Register:%s\n", ResolvedInstructionRegister);
+    // In no case can the basic block NOT be found so the branch counter remains
+    // less than the number of branches.
+    assert(BranchCounter < CurrPhiNode->NumBranches);
 
-    // Finding Instruction in Phi Node list
+    // Assuming the correct branch is chosen, saving the Incoming Register
+    ResolvedValue = *IncomingValsUnit;
+    printf("\t\tResolved Value:%s\n", ResolvedValue);
+
+    // Finding Instruction record in Phi Nodes List
+    printf("\t\tSearching for record of PHI Instruction in PHI Nodes List\n");
     CurrPhiNode = CG->PhiNodesListHead;
-    while(CurrPhiNode != NULL && strncmp(CurrPhiNode->ResultRegister, ResolvedInstructionRegister+1, strlen(ResolvedInstructionRegister)-1) != 0) {
-      printf("CurrPhiNode->ResultRegister:%s\n", CurrPhiNode->ResultRegister);
+    while(CurrPhiNode != NULL && strcmp(CurrPhiNode->ResultRegister, ResolvedValue) != 0) {
+      printf("\t\t\tPHI Nodes List: Current PHI Instruction Register Name:%s\n", CurrPhiNode->ResultRegister);
       CurrPhiNode = CurrPhiNode->Next;
     }
 
@@ -303,32 +319,36 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
     if(CurrPhiNode == NULL) {
       break;
     }
-    printf("PhiNodeFound:%s\n", CurrPhiNode->ResultRegister);
 
-    printf("CurrPhiNode->ResidentInBB:%s\n", CurrPhiNode->ResidentInBB);
+    printf("\t\t\tRecord found! - %s\n", CurrPhiNode->ResultRegister);
+
+    // Jumping one or more Basic Blocks in the Basic Block Execution Chain to
+    // reach a Basic Block where the ResolvedValue resides.
+    printf("\t\t%s resides in Basic Block %s\n", ResolvedValue, CurrPhiNode->ResidentInBB);
     while(strcmp(CurrPhiNode->ResidentInBB, *PreviousBasicBlock) != 0)
       PreviousBasicBlock--;
     PreviousBasicBlock--;
   }
-  printf("Looking for Instruction Reg %s in Node List of len %lu \n", ResolvedInstructionRegister, strlen(ResolvedInstructionRegister));
 
 
-  // Find instruction in NodeList
+  printf("\n\tLooking for Register %s in Nodes List.\n", ResolvedValue);
+
+  // Finding instruction in Nodes List
   CGNode *CurrNode = CG->NodesLinkedListHead;
-  while (CurrNode != NULL && strncmp(ResolvedInstructionRegister,
+  while (CurrNode != NULL && strncmp(ResolvedValue,
                                      CurrNode->InstructionString,
-                                     strlen(ResolvedInstructionRegister))!=0) {
-    printf("Instruction:%s\n", CurrNode->InstructionString);
+                                     strlen(ResolvedValue))!=0) {
+    printf("\t\tNodes List:%s\n", CurrNode->InstructionString);
     CurrNode = CurrNode->Next;
   }
-  if (CurrNode != NULL)
-    ResolvedInstruction = CurrNode->InstructionString;
+
+  if(CurrNode != NULL)
+    ResolvedValue = CurrNode->InstructionString;
   else
-    ResolvedInstruction = ResolvedInstructionRegister;
+    assert(!fCGisRegister(ResolvedValue));
 
-  printf("Final Resolved Instruction:%s\n", ResolvedInstruction);
-
-  return ResolvedInstruction;
+  printf("\tFinal Resolved Value:%s\n", ResolvedValue);
+  return ResolvedValue;
 }
 
 void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char *RightOpInstructionString, enum NodeKind NK){
@@ -363,35 +383,25 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
 
   int LeftOpNodeId=-1;
   int RightOpNodeId=-1;
-  char *ResolvedLeftInstruction=LeftOpInstructionString;
-  char *ResolvedRightInstruction=RightOpInstructionString;
+  char *ResolvedLeftValue=LeftOpInstructionString;
+  char *ResolvedRightValue=RightOpInstructionString;
+
   // Linking Left and Right operand nodes to Node if any
   switch (NK) {
   case 0:
     break;
   case 1:
     // Setting the Left Node
-    if (strstr(LeftOpInstructionString, "phi")!=NULL) {
-      // Resolve Phi
-      ResolvedLeftInstruction = fCGperformPHIResolution(LeftOpInstructionString);
-
-//      if (ResolvedLeftInstruction[0] == '%') {
-//        CurrPair = CG->InstructionNodeMapHead;
-//        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
-//                                          strrchr(ResolvedLeftInstruction, '[') + 2) !=
-//                                       CurrPair->InstructionString) {
-//          CurrPair = CurrPair->Next;
-//        }
-//        ResolvedLeftInstruction = CurrPair->InstructionString;
-//      }
+    if (fCGperformPHIResolution(LeftOpInstructionString)) {
+      ResolvedLeftValue = fCGperformPHIResolution(LeftOpInstructionString);
     }
 
-    // If Resolved Instruction is not empty or NULL or a constant
-    if(ResolvedLeftInstruction != NULL && strcmp(ResolvedLeftInstruction, "") != 0 && ResolvedLeftInstruction[0] == '%') {
+    // If Resolved Value is an Instruction
+    if(fCGisRegister(ResolvedLeftValue)) {
       CurrPair = CG->InstructionNodeMapHead;
       while (CurrPair != NULL && strncmp(CurrPair->InstructionString,
-                                        ResolvedLeftInstruction,
-                                        strlen(ResolvedLeftInstruction)) != 0) {
+                                        ResolvedLeftValue,
+                                        strlen(ResolvedLeftValue)) != 0) {
         CurrPair = CurrPair->Next;
       }
       LeftOpNodeId = CurrPair->NodeId;
@@ -403,13 +413,14 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
       Node->LeftNode = CurrNode;
     }
 
+    // If Left Node has been linked, update this nodes height correspondingly
+    // and mark the Left Node as NOT a Root Node.
     if(Node->LeftNode != NULL) {
       Node->Height = Node->LeftNode->Height;
       Node->LeftNode->RootNode = 0;
     }
     Node->Height = Node->Height+1;
     Node->RootNode = 1;
-
     break;
   case 2:
     // Setting the Left Node
@@ -417,34 +428,24 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
     printf("LeftOpInstructionString: %s\n", LeftOpInstructionString);
     printf("RightOpInstructionString: %s\n", RightOpInstructionString);
     printf("Current BasicBlockName: %s\n", *CG->BasicBlockExecutionChainTail);
-    if (strcmp(*CG->BasicBlockExecutionChainTail, "entry") != 0)
+    if (strcmp(*CG->BasicBlockExecutionChainTail, "%entry") != 0)
       printf("Previous BasicBlockName: %s\n", *(CG->BasicBlockExecutionChainTail-1));
 
     // If LeftOperand's instruction is a phi node, resolve to a non-phi node
-    if (strstr(LeftOpInstructionString, "phi")!=NULL) {
+    if (fCGisPHIInstruction(LeftOpInstructionString)) {
       // Resolve Phi
-      ResolvedLeftInstruction = fCGperformPHIResolution(LeftOpInstructionString);
-
-//      if (ResolvedLeftInstruction[0] == '%') {
-//        CurrPair = CG->InstructionNodeMapHead;
-//        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
-//                                          strrchr(ResolvedLeftInstruction, '[') + 2) !=
-//                                       CurrPair->InstructionString) {
-//          CurrPair = CurrPair->Next;
-//        }
-//        ResolvedLeftInstruction = CurrPair->InstructionString;
-//      }
+      ResolvedLeftValue = fCGperformPHIResolution(LeftOpInstructionString);
     }
 
-    printf("ResolvedLeftInstruction: %s\n", ResolvedLeftInstruction);
+    printf("ResolvedLeftValue: %s\n", ResolvedLeftValue);
 
-    // If Resolved Instruction is not empty or NULL or a constant
-    if(ResolvedLeftInstruction != NULL && strcmp(ResolvedLeftInstruction, "") != 0 && ResolvedLeftInstruction[0] == '%') {
+    // If Resolved Value is an Instruction
+    if(fCGisRegister(ResolvedLeftValue)) {
       CurrPair = CG->InstructionNodeMapHead;
       while (CurrPair != NULL &&
              strncmp(CurrPair->InstructionString,
-                     ResolvedLeftInstruction,
-                     strlen(ResolvedLeftInstruction)) != 0) {
+                     ResolvedLeftValue,
+                     strlen(ResolvedLeftValue)) != 0) {
         printf("CurrPair->InstructionString: %s\n", CurrPair->InstructionString);
         CurrPair = CurrPair->Next;
       }
@@ -460,29 +461,19 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
     }
 
     // Setting the Right Node
-    if (strstr(RightOpInstructionString, "phi")!=NULL) {
+    if (fCGisPHIInstruction(RightOpInstructionString)) {
       // Resolve Phi
-      ResolvedRightInstruction = fCGperformPHIResolution(RightOpInstructionString);
-
-//      if (ResolvedRightInstruction[0] == '%') {
-//        CurrPair = CG->InstructionNodeMapHead;
-//        while (CurrPair != NULL && strstr(CurrPair->InstructionString,
-//                                          strrchr(ResolvedRightInstruction, '[') + 2) !=
-//                                       CurrPair->InstructionString) {
-//          CurrPair = CurrPair->Next;
-//        }
-//        ResolvedRightInstruction = CurrPair->InstructionString;
-//      }
+      ResolvedRightValue = fCGperformPHIResolution(RightOpInstructionString);
     }
 
-    printf("ResolvedRightInstruction: %s\n", ResolvedRightInstruction);
+    printf("ResolvedRightValue: %s\n", ResolvedRightValue);
 
-    // If Resolved Instruction is not empty or NULL or a constant
-    if(ResolvedRightInstruction != NULL && strcmp(ResolvedRightInstruction, "") != 0 && ResolvedRightInstruction[0] == '%') {
+    // If Resolved Value is an Instruction
+    if(fCGisRegister(ResolvedRightValue)) {
       CurrPair = CG->InstructionNodeMapHead;
       while (CurrPair != NULL && strncmp(CurrPair->InstructionString,
-                                        ResolvedRightInstruction,
-                                         strlen(ResolvedRightInstruction)) != 0) {
+                                        ResolvedRightValue,
+                                         strlen(ResolvedRightValue)) != 0) {
         CurrPair = CurrPair->Next;
       }
       RightOpNodeId = CurrPair->NodeId;
@@ -496,6 +487,8 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
       Node->RightNode = CurrNode;
     }
 
+    // If Left Node and/or Right Node have been linked, update this nodes height
+    // correspondingly and mark the Left AND Right Nodes as NOT a Root Node.
     if(Node->LeftNode != NULL) {
       Node->Height = Node->LeftNode->Height;
       Node->LeftNode->RootNode = 0;
@@ -506,7 +499,6 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
     }
     Node->Height = Node->Height+1;
     Node->RootNode = 1;
-
     break;
   default:
     printf("#fAC: Node Kind Unknown!");
