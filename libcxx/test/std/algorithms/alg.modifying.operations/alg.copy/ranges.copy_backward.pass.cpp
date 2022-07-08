@@ -107,10 +107,21 @@ constexpr void test_in_iterators() {
   test_iterators<contiguous_iterator<int*>, Out>();
 }
 
+template <class Out>
+constexpr void test_proxy_in_iterators() {
+  test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<random_access_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<contiguous_iterator<int*>>, Out>();
+}
+
 constexpr bool test() {
   test_in_iterators<bidirectional_iterator<int*>>();
   test_in_iterators<random_access_iterator<int*>>();
   test_in_iterators<contiguous_iterator<int*>>();
+
+  test_proxy_in_iterators<ProxyIterator<bidirectional_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<random_access_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<contiguous_iterator<int*>>>();
 
   { // check that ranges::dangling is returned
     std::array<int, 4> out;

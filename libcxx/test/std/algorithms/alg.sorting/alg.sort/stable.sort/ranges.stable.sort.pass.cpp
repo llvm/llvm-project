@@ -259,6 +259,26 @@ void test() {
     [[maybe_unused]] std::same_as<std::ranges::dangling> decltype(auto) result =
         std::ranges::stable_sort(std::array{1, 2, 3});
   }
+
+  // TODO: Enable the tests once the implementation switched to use iter_move/iter_swap
+  /*
+  { // ProxyIterator
+    {
+      std::array in = {2, 1, 3};
+      ProxyRange proxy{in};
+
+      std::ranges::stable_sort(proxy.begin(), proxy.end(), [](auto i, auto j) { return i.data < j.data; });
+      assert((in == std::array{1, 2, 3}));
+    }
+
+    {
+      std::array in = {2, 1, 3};
+      ProxyRange proxy{in};
+      std::ranges::stable_sort(proxy, [](auto i, auto j) { return i.data < j.data; });
+      assert((in == std::array{1, 2, 3}));
+    }
+  }
+  */
 }
 
 int main(int, char**) {
