@@ -421,6 +421,9 @@ static void AsanInitInternal() {
 
   __sanitizer::InitializePlatformEarly();
 
+  // Re-exec ourselves if we need to set additional env or command line args.
+  MaybeReexec();
+
   // Setup internal allocator callback.
   SetLowLevelAllocateMinAlignment(ASAN_SHADOW_GRANULARITY);
   SetLowLevelAllocateCallback(OnLowLevelAllocate);
