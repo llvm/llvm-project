@@ -1660,8 +1660,9 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
     Constant *MulC;
     if (match(&I, m_c_FAdd(m_FMul(m_Value(X), m_ImmConstant(MulC)),
                            m_Deferred(X)))) {
-      MulC = ConstantExpr::getFAdd(MulC, ConstantFP::get(I.getType(), 1.0));
-      return BinaryOperator::CreateFMulFMF(X, MulC, &I);
+      if (Constant *NewMulC = ConstantFoldBinaryOpOperands(
+              Instruction::FAdd, MulC, ConstantFP::get(I.getType(), 1.0), DL))
+        return BinaryOperator::CreateFMulFMF(X, NewMulC, &I);
     }
 
     if (Value *V = FAddCombine(Builder).simplify(&I))
@@ -2453,13 +2454,15 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
 
     // (X * C) - X --> X * (C - 1.0)
     if (match(Op0, m_FMul(m_Specific(Op1), m_Constant(C)))) {
-      Constant *CSubOne = ConstantExpr::getFSub(C, ConstantFP::get(Ty, 1.0));
-      return BinaryOperator::CreateFMulFMF(Op1, CSubOne, &I);
+      if (Constant *CSubOne = ConstantFoldBinaryOpOperands(
+              Instruction::FSub, C, ConstantFP::get(Ty, 1.0), DL))
+        return BinaryOperator::CreateFMulFMF(Op1, CSubOne, &I);
     }
     // X - (X * C) --> X * (1.0 - C)
     if (match(Op1, m_FMul(m_Specific(Op0), m_Constant(C)))) {
-      Constant *OneSubC = ConstantExpr::getFSub(ConstantFP::get(Ty, 1.0), C);
-      return BinaryOperator::CreateFMulFMF(Op0, OneSubC, &I);
+      if (Constant *OneSubC = ConstantFoldBinaryOpOperands(
+              Instruction::FSub, ConstantFP::get(Ty, 1.0), C, DL))
+        return BinaryOperator::CreateFMulFMF(Op0, OneSubC, &I);
     }
 
     // Reassociate fsub/fadd sequences to create more fadd instructions and
