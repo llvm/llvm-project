@@ -182,6 +182,10 @@ public:
   static void getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {}
 
+  /// This hook populates any unset default attrs.
+  static void populateDefaultAttrs(const RegisteredOperationName &,
+                                   NamedAttrList &) {}
+
 protected:
   /// If the concrete type didn't implement a custom verifier hook, just fall
   /// back to this one which accepts everything.
@@ -1868,6 +1872,10 @@ private:
                             StringRef defaultDialect) {
     OpState::printOpName(op, p, defaultDialect);
     return cast<ConcreteType>(op).print(p);
+  }
+  /// Implementation of `PopulateDefaultAttrsFn` OperationName hook.
+  static OperationName::PopulateDefaultAttrsFn getPopulateDefaultAttrsFn() {
+    return ConcreteType::populateDefaultAttrs;
   }
   /// Implementation of `VerifyInvariantsFn` OperationName hook.
   static LogicalResult verifyInvariants(Operation *op) {

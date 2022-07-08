@@ -431,6 +431,7 @@ private:
   OperationName::PrintAssemblyFn printFn;
   OperationName::FoldHookFn foldHookFn;
   OperationName::GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
+  OperationName::PopulateDefaultAttrsFn getPopulateDefaultAttrsFn;
 
   friend ExtensibleDialect;
 };
