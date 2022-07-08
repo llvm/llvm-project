@@ -93,10 +93,21 @@ jobs:
     steps:
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
+
+    - name: Cache / Restore ABI Dumps
+      id: cache-abi
+      if: matrix.name == 'build-baseline'
+      uses: actions/cache@v3
+      with:
+        path: "*.abi"
+        key: clang-abi-%{{ matrix.ref }}
+
     - name: Install abi-compliance-checker
+      if: "!steps.cache-abi.outputs.cache-hit"
       run: |
         sudo apt-get install abi-dumper autoconf pkg-config
     - name: Install universal-ctags
+      if: "!steps.cache-abi.outputs.cache-hit"
       run: |
         git clone https://github.com/universal-ctags/ctags.git
         cd ctags
@@ -104,17 +115,21 @@ jobs:
         ./configure
         sudo make install
     - name: Download source code
+      if: "!steps.cache-abi.outputs.cache-hit"
       uses: llvm/actions/get-llvm-project-src@main
       with:
         ref: ${{ matrix.ref }}
         repo: ${{ matrix.repo }}
     - name: Configure
+      if: "!steps.cache-abi.outputs.cache-hit"
       run: |
         mkdir install
         cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX=`pwd`/install llvm
     - name: Build
+      if: "!steps.cache-abi.outputs.cache-hit"
       run: ninja -C build/ ${{ needs.abi-dump-setup.outputs.ABI_LIBS }} install-clang-headers
     - name: Dump ABI
+      if: "!steps.cache-abi.outputs.cache-hit"
       run: |
         parallel abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o {}-${{ matrix.ref }}.abi ./build/lib/{} ::: ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}
         # Remove symbol versioning from dumps, so we can compare across major
