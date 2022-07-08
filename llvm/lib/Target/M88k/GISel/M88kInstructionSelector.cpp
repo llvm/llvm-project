@@ -69,6 +69,8 @@ private:
                   MachineRegisterInfo &MRI) const;
   bool selectCondBr(MachineInstr &I, MachineBasicBlock &MBB,
                     MachineRegisterInfo &MRI) const;
+  bool selectPtrAdd(MachineInstr &I, MachineBasicBlock &MBB,
+                    MachineRegisterInfo &MRI) const;
   bool selectLoadStore(MachineInstr &I, MachineBasicBlock &MBB,
                        MachineRegisterInfo &MRI) const;
   bool selectMergeUnmerge(MachineInstr &I, MachineBasicBlock &MBB,
@@ -415,6 +417,31 @@ bool M88kInstructionSelector::selectCondBr(MachineInstr &I,
              .add(I.getOperand(1));
   }
 
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
+bool M88kInstructionSelector::selectPtrAdd(MachineInstr &I,
+                                           MachineBasicBlock &MBB,
+                                           MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_PTR_ADD && "Unexpected G code");
+
+  MachineInstr *MI = nullptr;
+  Register PtrReg = I.getOperand(1).getReg();
+  Register AddendReg = I.getOperand(2).getReg();
+
+  int64_t Offset;
+  if (mi_match(AddendReg, MRI, m_ICst(Offset)) && isUInt<16>(Offset)) {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ADDUri),
+                 I.getOperand(0).getReg())
+             .addReg(PtrReg)
+             .addImm(Offset);
+  } else {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ADDrr),
+                 I.getOperand(0).getReg())
+             .addReg(PtrReg)
+             .addReg(AddendReg);
+  }
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
@@ -817,6 +844,8 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return selectIntrinsic(I, MBB, MRI);
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(I, MBB, MRI);
+  case TargetOpcode::G_PTR_ADD:
+    return selectPtrAdd(I, MBB, MRI);
   case TargetOpcode::G_UBFX:
   case TargetOpcode::G_SBFX:
   case TargetOpcode::G_SEXT_INREG:
