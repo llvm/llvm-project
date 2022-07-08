@@ -23610,10 +23610,8 @@ Semantics:
 
 This intrinsic allows annotation of a pointer to an integer with arbitrary
 strings. This can be useful for special purpose optimizations that want to look
-for these annotations. These have no other defined use; transformations preserve
-annotations on a best-effort basis but are allowed to replace the intrinsic with
-its first argument without breaking semantics and the intrinsic is completely
-dropped during instruction selection.
+for these annotations. These have no other defined use; they are ignored by code
+generation and optimization.
 
 '``llvm.annotation.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -23648,12 +23646,10 @@ the line number. It returns the value of the first argument.
 Semantics:
 """"""""""
 
-This intrinsic allows annotations to be put on arbitrary expressions with
-arbitrary strings. This can be useful for special purpose optimizations that
-want to look for these annotations. These have no other defined use;
-transformations preserve annotations on a best-effort basis but are allowed to
-replace the intrinsic with its first argument without breaking semantics and the
-intrinsic is completely dropped during instruction selection.
+This intrinsic allows annotations to be put on arbitrary expressions
+with arbitrary strings. This can be useful for special purpose
+optimizations that want to look for these annotations. These have no
+other defined use; they are ignored by code generation and optimization.
 
 '``llvm.codeview.annotation``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
