@@ -312,19 +312,9 @@ DiagnosedSilenceableFailure transform::MultiTileSizesOp::applyToOne(
 
 void transform::MultiTileSizesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
-                       transform::TransformMappingResource::get());
-  for (Value result : getResults()) {
-    effects.emplace_back(MemoryEffects::Allocate::get(), result,
-                         transform::TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Write::get(), result,
-                         transform::TransformMappingResource::get());
-  }
-
-  effects.emplace_back(MemoryEffects::Read::get(),
-                       transform::PayloadIRResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(),
-                       transform::PayloadIRResource::get());
+  onlyReadsHandle(getTarget(), effects);
+  producesHandle(getResults(), effects);
+  modifiesPayload(effects);
 }
 
 //===---------------------------------------------------------------------===//
@@ -527,28 +517,11 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
 
 void SplitOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  // The target handle is consumed.
-  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
-                       TransformMappingResource::get());
-  effects.emplace_back(MemoryEffects::Free::get(), getTarget(),
-                       TransformMappingResource::get());
-
-  // The dynamic split point handle is not consumed.
-  if (getDynamicSplitPoint()) {
-    effects.emplace_back(MemoryEffects::Read::get(), getDynamicSplitPoint(),
-                         TransformMappingResource::get());
-  }
-
-  // The resulting handles are produced.
-  for (Value result : getResults()) {
-    effects.emplace_back(MemoryEffects::Allocate::get(), result,
-                         TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Write::get(), result,
-                         TransformMappingResource::get());
-  }
-
-  effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
+  consumesHandle(getTarget(), effects);
+  if (getDynamicSplitPoint())
+    onlyReadsHandle(getDynamicSplitPoint(), effects);
+  producesHandle(getResults(), effects);
+  modifiesPayload(effects);
 }
 
 ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
