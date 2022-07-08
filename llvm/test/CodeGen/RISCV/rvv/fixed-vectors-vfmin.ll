@@ -32,8 +32,7 @@ define <2 x half> @vfmin_v2f16_fv(<2 x half> %a, half %b) {
 ; CHECK-LABEL: vfmin_v2f16_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vfmin.vv v8, v9, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %b, i32 0
   %splat = shufflevector <2 x half> %head, <2 x half> poison, <2 x i32> zeroinitializer
@@ -69,8 +68,7 @@ define <4 x half> @vfmin_v4f16_fv(<4 x half> %a, half %b) {
 ; CHECK-LABEL: vfmin_v4f16_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vfmin.vv v8, v9, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %b, i32 0
   %splat = shufflevector <4 x half> %head, <4 x half> poison, <4 x i32> zeroinitializer
@@ -106,8 +104,7 @@ define <8 x half> @vfmin_v8f16_fv(<8 x half> %a, half %b) {
 ; CHECK-LABEL: vfmin_v8f16_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vfmin.vv v8, v9, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %b, i32 0
   %splat = shufflevector <8 x half> %head, <8 x half> poison, <8 x i32> zeroinitializer
@@ -143,8 +140,7 @@ define <16 x half> @vfmin_v16f16_fv(<16 x half> %a, half %b) {
 ; CHECK-LABEL: vfmin_v16f16_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v10, fa0
-; CHECK-NEXT:    vfmin.vv v8, v10, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x half> poison, half %b, i32 0
   %splat = shufflevector <16 x half> %head, <16 x half> poison, <16 x i32> zeroinitializer
@@ -180,8 +176,7 @@ define <2 x float> @vfmin_v2f32_fv(<2 x float> %a, float %b) {
 ; CHECK-LABEL: vfmin_v2f32_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vfmin.vv v8, v9, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %b, i32 0
   %splat = shufflevector <2 x float> %head, <2 x float> poison, <2 x i32> zeroinitializer
@@ -217,8 +212,7 @@ define <4 x float> @vfmin_v4f32_fv(<4 x float> %a, float %b) {
 ; CHECK-LABEL: vfmin_v4f32_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vfmin.vv v8, v9, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %b, i32 0
   %splat = shufflevector <4 x float> %head, <4 x float> poison, <4 x i32> zeroinitializer
@@ -254,8 +248,7 @@ define <8 x float> @vfmin_v8f32_fv(<8 x float> %a, float %b) {
 ; CHECK-LABEL: vfmin_v8f32_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v10, fa0
-; CHECK-NEXT:    vfmin.vv v8, v10, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x float> poison, float %b, i32 0
   %splat = shufflevector <8 x float> %head, <8 x float> poison, <8 x i32> zeroinitializer
@@ -291,8 +284,7 @@ define <16 x float> @vfmin_v16f32_fv(<16 x float> %a, float %b) {
 ; CHECK-LABEL: vfmin_v16f32_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v12, fa0
-; CHECK-NEXT:    vfmin.vv v8, v12, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x float> poison, float %b, i32 0
   %splat = shufflevector <16 x float> %head, <16 x float> poison, <16 x i32> zeroinitializer
@@ -328,8 +320,7 @@ define <2 x double> @vfmin_v2f64_fv(<2 x double> %a, double %b) {
 ; CHECK-LABEL: vfmin_v2f64_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vfmin.vv v8, v9, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x double> poison, double %b, i32 0
   %splat = shufflevector <2 x double> %head, <2 x double> poison, <2 x i32> zeroinitializer
@@ -365,8 +356,7 @@ define <4 x double> @vfmin_v4f64_fv(<4 x double> %a, double %b) {
 ; CHECK-LABEL: vfmin_v4f64_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v10, fa0
-; CHECK-NEXT:    vfmin.vv v8, v10, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x double> poison, double %b, i32 0
   %splat = shufflevector <4 x double> %head, <4 x double> poison, <4 x i32> zeroinitializer
@@ -402,8 +392,7 @@ define <8 x double> @vfmin_v8f64_fv(<8 x double> %a, double %b) {
 ; CHECK-LABEL: vfmin_v8f64_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; CHECK-NEXT:    vfmv.v.f v12, fa0
-; CHECK-NEXT:    vfmin.vv v8, v12, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x double> poison, double %b, i32 0
   %splat = shufflevector <8 x double> %head, <8 x double> poison, <8 x i32> zeroinitializer
@@ -439,8 +428,7 @@ define <16 x double> @vfmin_v16f64_fv(<16 x double> %a, double %b) {
 ; CHECK-LABEL: vfmin_v16f64_fv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vfmin.vv v8, v16, v8
+; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x double> poison, double %b, i32 0
   %splat = shufflevector <16 x double> %head, <16 x double> poison, <16 x i32> zeroinitializer
