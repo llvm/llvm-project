@@ -73,7 +73,7 @@ define internal void @t0_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS__TUNIT_OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS__TUNIT_OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS__TUNIT_OPM-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* nonnull align 32 [[TMP0]])
+; IS__TUNIT_OPM-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* noundef nonnull align 32 dereferenceable(4) [[TMP0]])
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@t0_callback_callee
@@ -82,7 +82,7 @@ define internal void @t0_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS__TUNIT_NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS__TUNIT_NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS__TUNIT_NPM-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* nonnull align 32 [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* noundef nonnull align 32 dereferenceable(4) [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@t0_callback_callee
@@ -192,7 +192,7 @@ define internal void @t1_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS__TUNIT_OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS__TUNIT_OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS__TUNIT_OPM-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture nonnull align 32 [[TMP0]])
+; IS__TUNIT_OPM-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM: Function Attrs: nosync
@@ -202,7 +202,7 @@ define internal void @t1_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS__TUNIT_NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS__TUNIT_NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS__TUNIT_NPM-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture nonnull align 32 [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM: Function Attrs: nosync
@@ -313,7 +313,7 @@ define internal void @t2_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS__TUNIT_OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS__TUNIT_OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS__TUNIT_OPM-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture nonnull align 32 [[TMP0]])
+; IS__TUNIT_OPM-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@t2_callback_callee
@@ -322,7 +322,7 @@ define internal void @t2_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS__TUNIT_NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS__TUNIT_NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS__TUNIT_NPM-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture nonnull align 32 [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@t2_callback_callee
@@ -436,7 +436,7 @@ define internal void @t3_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS__TUNIT_OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS__TUNIT_OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS__TUNIT_OPM-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture nonnull align 32 [[TMP0]])
+; IS__TUNIT_OPM-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@t3_callback_callee
@@ -445,7 +445,7 @@ define internal void @t3_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS__TUNIT_NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS__TUNIT_NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS__TUNIT_NPM-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture nonnull align 32 [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@t3_callback_callee
