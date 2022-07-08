@@ -136,23 +136,31 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   auto Color = HighlightColor::Enumerator;
   if (Attr == DW_AT_decl_file || Attr == DW_AT_call_file) {
     Color = HighlightColor::String;
-    if (const auto *LT = U->getContext().getLineTableForUnit(U))
-      if (LT->getFileNameByIndex(
-              *FormValue.getAsUnsignedConstant(), U->getCompilationDir(),
-              DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, File)) {
-        File = '"' + File + '"';
-        Name = File;
+    if (const auto *LT = U->getContext().getLineTableForUnit(U)) {
+      if (Optional<uint64_t> Val = FormValue.getAsUnsignedConstant()) {
+        if (LT->getFileNameByIndex(
+                *Val, U->getCompilationDir(),
+                DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                File)) {
+          File = '"' + File + '"';
+          Name = File;
+        }
       }
+    }
   } else if (Optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
     Name = AttributeValueString(Attr, *Val);
 
   if (!Name.empty())
     WithColor(OS, Color) << Name;
-  else if (Attr == DW_AT_decl_line || Attr == DW_AT_call_line)
-    OS << *FormValue.getAsUnsignedConstant();
-  else if (Attr == DW_AT_low_pc &&
-           (FormValue.getAsAddress() ==
-            dwarf::computeTombstoneAddress(U->getAddressByteSize()))) {
+  else if (Attr == DW_AT_decl_line || Attr == DW_AT_call_line) {
+    if (Optional<uint64_t> Val = FormValue.getAsUnsignedConstant()) {
+      OS << *Val;
+    } else {
+      FormValue.dump(OS, DumpOpts);
+    }
+  } else if (Attr == DW_AT_low_pc &&
+             (FormValue.getAsAddress() ==
+              dwarf::computeTombstoneAddress(U->getAddressByteSize()))) {
     if (DumpOpts.Verbose) {
       FormValue.dump(OS, DumpOpts);
       OS << " (";

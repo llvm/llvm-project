@@ -704,6 +704,14 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     }
     break;
   }
+  case DW_AT_call_line:
+  case DW_AT_decl_line: {
+    if (!AttrValue.Value.getAsUnsignedConstant()) {
+      ReportError("DIE has " + AttributeString(Attr) +
+                  " with invalid encoding");
+    }
+    break;
+  }
   default:
     break;
   }
