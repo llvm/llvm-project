@@ -1086,8 +1086,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // SVE and SME.
   if (Subtarget->hasSVE() || Subtarget->hasSME()) {
     for (auto VT :
-         {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1})
+         {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1}) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+    }
   }
 
   if (Subtarget->hasSVE()) {
@@ -1176,7 +1178,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
 
       setOperationAction(ISD::SELECT_CC, VT, Expand);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
 
@@ -2436,6 +2437,23 @@ AArch64TargetLowering::EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const {
   return BB;
 }
 
+MachineBasicBlock *
+AArch64TargetLowering::EmitAddVectorToTile(unsigned Opc, unsigned BaseReg,
+                                           MachineInstr &MI,
+                                           MachineBasicBlock *BB) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  MachineInstrBuilder MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
+
+  MIB.addReg(BaseReg + MI.getOperand(0).getImm(), RegState::Define);
+  MIB.addReg(BaseReg + MI.getOperand(0).getImm());
+  MIB.add(MI.getOperand(1)); // pn
+  MIB.add(MI.getOperand(2)); // pm
+  MIB.add(MI.getOperand(3)); // zn
+
+  MI.eraseFromParent(); // The pseudo is gone now.
+  return BB;
+}
+
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
@@ -2568,6 +2586,14 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
                                   BB);
   case AArch64::ZERO_M_PSEUDO:
     return EmitZero(MI, BB);
+  case AArch64::ADDHA_MPPZ_PSEUDO_S:
+    return EmitAddVectorToTile(AArch64::ADDHA_MPPZ_S, AArch64::ZAS0, MI, BB);
+  case AArch64::ADDVA_MPPZ_PSEUDO_S:
+    return EmitAddVectorToTile(AArch64::ADDVA_MPPZ_S, AArch64::ZAS0, MI, BB);
+  case AArch64::ADDHA_MPPZ_PSEUDO_D:
+    return EmitAddVectorToTile(AArch64::ADDHA_MPPZ_D, AArch64::ZAD0, MI, BB);
+  case AArch64::ADDVA_MPPZ_PSEUDO_D:
+    return EmitAddVectorToTile(AArch64::ADDVA_MPPZ_D, AArch64::ZAD0, MI, BB);
   }
 }
 
@@ -4336,6 +4362,8 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
 
 static inline SDValue getPTrue(SelectionDAG &DAG, SDLoc DL, EVT VT,
                                int Pattern) {
+  if (VT == MVT::nxv1i1 && Pattern == AArch64SVEPredPattern::all)
+    return DAG.getConstant(1, DL, MVT::nxv1i1);
   return DAG.getNode(AArch64ISD::PTRUE, DL, VT,
                      DAG.getTargetConstant(Pattern, DL, MVT::i32));
 }
@@ -14835,16 +14863,6 @@ static SDValue performANDCombine(SDNode *N,
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
-  // Although NEON has no EORV instruction, when only the least significant bit
-  // is required the operation is synonymous with ADDV.
-  if (LHS.getOpcode() == ISD::VECREDUCE_XOR && isOneConstant(RHS) &&
-      LHS.getOperand(0).getValueType().isFixedLengthVector() &&
-      LHS.hasOneUse()) {
-    SDLoc DL(N);
-    SDValue ADDV = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, LHS.getOperand(0));
-    return DAG.getNode(ISD::AND, DL, VT, ADDV, RHS);
-  }
-
   if (VT.isScalableVector())
     return performSVEAndCombine(N, DCI);
 
@@ -21066,7 +21084,7 @@ SDValue AArch64TargetLowering::LowerPredReductionToSVE(SDValue ReduceOp,
   default:
     return SDValue();
   case ISD::VECREDUCE_OR:
-    if (isAllActivePredicate(DAG, Pg))
+    if (isAllActivePredicate(DAG, Pg) && OpVT == MVT::nxv16i1)
       // The predicate can be 'Op' because
       // vecreduce_or(Op & <all true>) <=> vecreduce_or(Op).
       return getPTest(DAG, VT, Op, Op, AArch64CC::ANY_ACTIVE);
@@ -21079,6 +21097,11 @@ SDValue AArch64TargetLowering::LowerPredReductionToSVE(SDValue ReduceOp,
   case ISD::VECREDUCE_XOR: {
     SDValue ID =
         DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64);
+    if (OpVT == MVT::nxv1i1) {
+      // Emulate a CNTP on .Q using .D and a different governing predicate.
+      Pg = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv2i1, Pg);
+      Op = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv2i1, Op);
+    }
     SDValue Cntp =
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64, ID, Pg, Op);
     return DAG.getAnyExtOrTrunc(Cntp, DL, VT);

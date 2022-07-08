@@ -118,7 +118,7 @@ public:
   /// intersection with no simplification of any sort attempted.
   void append(const IntegerRelation &other);
 
-  /// Return the intersection of the two sets.
+  /// Return the intersection of the two relations.
   /// If there are locals, they will be merged.
   IntegerRelation intersect(IntegerRelation other) const;
 
@@ -352,22 +352,16 @@ public:
   Optional<SmallVector<int64_t, 8>>
   containsPointNoLocal(ArrayRef<int64_t> point) const;
 
-  /// Find equality and pairs of inequality constraints identified by their
-  /// position indices, using which an explicit representation for each local
-  /// variable can be computed. The indices of the constraints are stored in
-  /// `MaybeLocalRepr` struct. If no such pair can be found, the kind attribute
-  /// in `MaybeLocalRepr` is set to None.
+  /// Returns a `DivisonRepr` representing the division representation of local
+  /// variables in the constraint system.
   ///
-  /// The dividends of the explicit representations are stored in `dividends`
-  /// and the denominators in `denominators`. If no explicit representation
-  /// could be found for the `i^th` local variable, `denominators[i]` is set
-  /// to 0.
-  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
-                     SmallVector<unsigned, 4> &denominators,
-                     std::vector<MaybeLocalRepr> &repr) const;
-  void getLocalReprs(std::vector<MaybeLocalRepr> &repr) const;
-  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
-                     SmallVector<unsigned, 4> &denominators) const;
+  /// If `repr` is not `nullptr`, the equality and pairs of inequality
+  /// constraints identified by their position indices using which an explicit
+  /// representation for each local variable can be computed are set in `repr`
+  /// in the form of a `MaybeLocalRepr` struct. If no such inequality
+  /// pair/equality can be found, the kind attribute in `MaybeLocalRepr` is set
+  /// to None.
+  DivisionRepr getLocalReprs(std::vector<MaybeLocalRepr> *repr = nullptr) const;
 
   /// The type of bound: equal, lower bound or upper bound.
   enum BoundType { EQ, LB, UB };
@@ -608,6 +602,10 @@ public:
   /// `PresburgerSet`, `unboundedDomain`.
   SymbolicLexMin findSymbolicIntegerLexMin() const;
 
+  /// Return the set difference of this set and the given set, i.e.,
+  /// return `this \ set`.
+  PresburgerRelation subtract(const PresburgerRelation &set) const;
+
   void print(raw_ostream &os) const;
   void dump() const;
 
@@ -790,6 +788,14 @@ public:
   /// column position (i.e., not relative to the kind of variable) of the
   /// first added variable.
   unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1) override;
+
+  /// Return the intersection of the two relations.
+  /// If there are locals, they will be merged.
+  IntegerPolyhedron intersect(const IntegerPolyhedron &other) const;
+
+  /// Return the set difference of this set and the given set, i.e.,
+  /// return `this \ set`.
+  PresburgerSet subtract(const PresburgerSet &other) const;
 };
 
 } // namespace presburger

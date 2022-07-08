@@ -193,3 +193,27 @@ func.func @rank_reducing(
   }
   return %5: tensor<?x1x6x8xf32>
 }
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+
+// CHECK-LABEL: func.func @rank_reducing_parallel_insert_slice
+func.func @rank_reducing_parallel_insert_slice(%in: tensor<100xf32>, %out: tensor<200x100xf32>) {
+  %c1 = arith.constant 1 : index
+  %num_threads = arith.constant 100 : index
+
+  // CHECK: scf.foreach_thread {{.*}} {
+  %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> tensor<200x100xf32> {
+      %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
+      scf.foreach_thread.perform_concurrently {
+        // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<100xf32, #[[$MAP0]]> to memref<1xf32, #[[$MAP0]]>
+        // CHECK: memref.subview %{{.*}}[1, %{{.*}}] [1, 1] [1, 1] : memref<200x100xf32, #[[$MAP1]]> to memref<1xf32, #[[$MAP0]]>
+        tensor.parallel_insert_slice %1 into %out[1, %thread_idx][1, 1][1, 1] :
+          tensor<1xf32> into tensor<200x100xf32>
+      }
+  }
+  // CHECK: }
+  return
+}

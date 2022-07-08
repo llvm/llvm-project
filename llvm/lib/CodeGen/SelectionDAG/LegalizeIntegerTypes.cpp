@@ -19,6 +19,7 @@
 
 #include "LegalizeTypes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -1723,6 +1724,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
 
   case ISD::SET_ROUNDING: Res = PromoteIntOp_SET_ROUNDING(N); break;
+  case ISD::STACKMAP:
+    Res = PromoteIntOp_STACKMAP(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2255,16 +2259,40 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECREDUCE(SDNode *N) {
   SDLoc dl(N);
   SDValue Op = PromoteIntOpVectorReduction(N, N->getOperand(0));
 
-  EVT EltVT = Op.getValueType().getVectorElementType();
-  EVT VT = N->getValueType(0);
+  EVT OrigEltVT = N->getOperand(0).getValueType().getVectorElementType();
+  EVT InVT = Op.getValueType();
+  EVT EltVT = InVT.getVectorElementType();
+  EVT ResVT = N->getValueType(0);
+  unsigned Opcode = N->getOpcode();
 
-  if (VT.bitsGE(EltVT))
-    return DAG.getNode(N->getOpcode(), SDLoc(N), VT, Op);
+  // An i1 vecreduce_xor is equivalent to vecreduce_add, use that instead if
+  // vecreduce_xor is not legal
+  if (Opcode == ISD::VECREDUCE_XOR && OrigEltVT == MVT::i1 &&
+      !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_XOR, InVT) &&
+      TLI.isOperationLegalOrCustom(ISD::VECREDUCE_ADD, InVT))
+    Opcode = ISD::VECREDUCE_ADD;
+
+  // An i1 vecreduce_or is equivalent to vecreduce_umax, use that instead if
+  // vecreduce_or is not legal
+  else if (Opcode == ISD::VECREDUCE_OR && OrigEltVT == MVT::i1 &&
+      !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_OR, InVT) &&
+      TLI.isOperationLegalOrCustom(ISD::VECREDUCE_UMAX, InVT))
+    Opcode = ISD::VECREDUCE_UMAX;
+
+  // An i1 vecreduce_and is equivalent to vecreduce_umin, use that instead if
+  // vecreduce_and is not legal
+  else if (Opcode == ISD::VECREDUCE_AND && OrigEltVT == MVT::i1 &&
+      !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_AND, InVT) &&
+      TLI.isOperationLegalOrCustom(ISD::VECREDUCE_UMIN, InVT))
+    Opcode = ISD::VECREDUCE_UMIN;
+
+  if (ResVT.bitsGE(EltVT))
+    return DAG.getNode(Opcode, SDLoc(N), ResVT, Op);
 
   // Result size must be >= element size. If this is not the case after
   // promotion, also promote the result type and then truncate.
-  SDValue Reduce = DAG.getNode(N->getOpcode(), dl, EltVT, Op);
-  return DAG.getNode(ISD::TRUNCATE, dl, VT, Reduce);
+  SDValue Reduce = DAG.getNode(Opcode, dl, EltVT, Op);
+  return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Reduce);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VP_REDUCE(SDNode *N, unsigned OpNo) {
@@ -2302,6 +2330,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_REDUCE(SDNode *N, unsigned OpNo) {
 SDValue DAGTypeLegalizer::PromoteIntOp_SET_ROUNDING(SDNode *N) {
   SDValue Op = ZExtPromotedInteger(N->getOperand(1));
   return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
+  assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
+  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SDValue Operand = N->getOperand(OpNo);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
+  NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4653,6 +4690,9 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::FRAMEADDR:         Res = ExpandIntOp_RETURNADDR(N); break;
 
   case ISD::ATOMIC_STORE:      Res = ExpandIntOp_ATOMIC_STORE(N); break;
+  case ISD::STACKMAP:
+    Res = ExpandIntOp_STACKMAP(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -5480,4 +5520,45 @@ SDValue DAGTypeLegalizer::PromoteIntOp_CONCAT_VECTORS(SDNode *N) {
   }
 
   return DAG.getBuildVector(N->getValueType(0), dl, NewOps);
+}
+
+SDValue DAGTypeLegalizer::ExpandIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
+  assert(OpNo > 1);
+
+  SDValue Op = N->getOperand(OpNo);
+  SDLoc DL = SDLoc(N);
+  SmallVector<SDValue> NewOps;
+
+  // Copy operands before the one being expanded.
+  for (unsigned I = 0; I < OpNo; I++)
+    NewOps.push_back(N->getOperand(I));
+
+  if (Op->getOpcode() == ISD::Constant) {
+    ConstantSDNode *CN = cast<ConstantSDNode>(Op);
+    EVT Ty = Op.getValueType();
+    if (CN->getConstantIntValue()->getValue().getActiveBits() < 64) {
+      NewOps.push_back(
+          DAG.getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
+      NewOps.push_back(DAG.getTargetConstant(CN->getZExtValue(), DL, Ty));
+    } else {
+      // FIXME: https://github.com/llvm/llvm-project/issues/55609
+      return SDValue();
+    }
+  } else {
+    // FIXME: Non-constant operands are not yet handled:
+    //  - https://github.com/llvm/llvm-project/issues/26431
+    //  - https://github.com/llvm/llvm-project/issues/55957
+    return SDValue();
+  }
+
+  // Copy remaining operands.
+  for (unsigned I = OpNo + 1; I < N->getNumOperands(); I++)
+    NewOps.push_back(N->getOperand(I));
+
+  SDValue NewNode = DAG.getNode(N->getOpcode(), DL, N->getVTList(), NewOps);
+
+  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ResNum++)
+    ReplaceValueWith(SDValue(N, ResNum), NewNode.getValue(ResNum));
+
+  return SDValue(); // Signal that we have replaced the node already.
 }

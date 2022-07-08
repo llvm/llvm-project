@@ -6400,6 +6400,24 @@ final ``i1 true``).
     !1 = !{i64 2, i64 -1, i64 -1, i1 true}
     !0 = !{!1}
 
+'``exclude``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^
+
+``exclude`` metadata may be attached to a global variable to signify that its
+section should not be included in the final executable or shared library. This
+option is only valid for global variables with an explicit section targeting ELF
+or COFF. This is done using the ``SHF_EXCLUDE`` flag on ELF targets and the
+``IMAGE_SCN_LNK_REMOVE`` and ``IMAGE_SCN_MEM_DISCARDABLE`` flags for COFF
+targets. Additionally, this metadata is only used as a flag, so the associated
+node must be empty. The explicit section should not conflict with any other
+sections that the user does not want removed after linking.
+
+.. code-block:: text
+
+  @object = private constant [1 x i8] c"\00", section ".foo" !exclude !0
+
+  ...
+  !0 = !{}
 
 '``unpredictable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -7432,6 +7450,19 @@ LTO Post-Link Module Flags Metadata
 Some optimisations are only when the entire LTO unit is present in the current
 module. This is represented by the ``LTOPostLink`` module flags metadata, which
 will be created with a value of ``1`` when LTO linking occurs.
+
+Embedded Objects Names Metadata
+===============================
+
+Offloading compilations need to embed device code into the host section table to
+create a fat binary. This metadata node references each global that will be
+embedded in the module. The primary use for this is to make referencing these
+globals more efficient in the IR. The metadata references nodes containing
+pointers to the global to be embedded followed by the section name it will be
+stored at::
+
+    !llvm.embedded.objects = !{!0}
+    !0 = !{ptr @object, !".section"}
 
 Automatic Linker Flags Named Metadata
 =====================================
@@ -10334,12 +10365,14 @@ operation. The operation must be one of the following keywords:
 -  umin
 -  fadd
 -  fsub
+-  fmax
+-  fmin
 
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub, this must be a floating point type.  The
+as integers.  For fadd/fsub/fmax/fmin, this must be a floating point type.  The
 type of the '``<pointer>``' operand must be a pointer to that type. If
 the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
 allowed to modify the number or order of execution of this
@@ -10376,6 +10409,8 @@ operation argument:
 -  umin: ``*ptr = *ptr < val ? *ptr : val`` (using an unsigned comparison)
 - fadd: ``*ptr = *ptr + val`` (using floating point arithmetic)
 - fsub: ``*ptr = *ptr - val`` (using floating point arithmetic)
+-  fmax: ``*ptr = maxnum(*ptr, val)`` (match the `llvm.maxnum.*`` intrinsic)
+-  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*`` intrinsic)
 
 Example:
 """"""""

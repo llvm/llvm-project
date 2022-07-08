@@ -2213,12 +2213,14 @@ TEST(TransferTest, IntegralToBooleanCastFromBool) {
 
 TEST(TransferTest, NullToPointerCast) {
   std::string Code = R"(
+    using my_nullptr_t = decltype(nullptr);
     struct Baz {};
     void target() {
       int *FooX = nullptr;
       int *FooY = nullptr;
       bool **Bar = nullptr;
       Baz *Baz = nullptr;
+      my_nullptr_t Null = 0;
       // [[p]]
     }
   )";
@@ -2242,6 +2244,9 @@ TEST(TransferTest, NullToPointerCast) {
                 const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
                 ASSERT_THAT(BazDecl, NotNull());
 
+                const ValueDecl *NullDecl = findValueDecl(ASTCtx, "Null");
+                ASSERT_THAT(NullDecl, NotNull());
+
                 const auto *FooXVal =
                     cast<PointerValue>(Env.getValue(*FooXDecl, SkipPast::None));
                 const auto *FooYVal =
@@ -2250,6 +2255,8 @@ TEST(TransferTest, NullToPointerCast) {
                     cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
                 const auto *BazVal =
                     cast<PointerValue>(Env.getValue(*BazDecl, SkipPast::None));
+                const auto *NullVal =
+                    cast<PointerValue>(Env.getValue(*NullDecl, SkipPast::None));
 
                 EXPECT_EQ(FooXVal, FooYVal);
                 EXPECT_NE(FooXVal, BarVal);
@@ -2267,6 +2274,11 @@ TEST(TransferTest, NullToPointerCast) {
                 const StorageLocation &BazPointeeLoc = BazVal->getPointeeLoc();
                 EXPECT_TRUE(isa<AggregateStorageLocation>(BazPointeeLoc));
                 EXPECT_THAT(Env.getValue(BazPointeeLoc), IsNull());
+
+                const StorageLocation &NullPointeeLoc =
+                    NullVal->getPointeeLoc();
+                EXPECT_TRUE(isa<ScalarStorageLocation>(NullPointeeLoc));
+                EXPECT_THAT(Env.getValue(NullPointeeLoc), IsNull());
               });
 }
 

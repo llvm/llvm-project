@@ -9521,14 +9521,7 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
     }
     return C;
   }
-  case scUDivExpr: {
-    const SCEVUDivExpr *SU = cast<SCEVUDivExpr>(V);
-    if (Constant *LHS = BuildConstantFromSCEV(SU->getLHS()))
-      if (Constant *RHS = BuildConstantFromSCEV(SU->getRHS()))
-        if (LHS->getType() == RHS->getType())
-          return ConstantExpr::getUDiv(LHS, RHS);
-    return nullptr;
-  }
+  case scUDivExpr:
   case scSMaxExpr:
   case scUMaxExpr:
   case scSMinExpr:
@@ -11812,7 +11805,7 @@ bool ScalarEvolution::isImpliedViaMerge(ICmpInst::Predicate Pred,
       const SCEV *L = getSCEV(LPhi->getIncomingValueForBlock(IncBB));
       // Make sure L does not refer to a value from a potentially previous
       // iteration of a loop.
-      if (!properlyDominates(L, IncBB))
+      if (!properlyDominates(L, LBB))
         return false;
       if (!ProvedEasily(L, RHS))
         return false;

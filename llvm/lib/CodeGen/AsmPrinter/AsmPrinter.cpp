@@ -3023,17 +3023,42 @@ static void emitGlobalConstantArray(const DataLayout &DL,
   }
 }
 
+static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP);
+
 static void emitGlobalConstantVector(const DataLayout &DL,
                                      const ConstantVector *CV, AsmPrinter &AP,
                                      AsmPrinter::AliasMapTy *AliasList) {
-  for (unsigned I = 0, E = CV->getType()->getNumElements(); I != E; ++I) {
-    emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
-    emitGlobalConstantImpl(DL, CV->getOperand(I), AP);
+  Type *ElementType = CV->getType()->getElementType();
+  uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
+  uint64_t ElementAllocSizeInBits = DL.getTypeAllocSizeInBits(ElementType);
+  uint64_t EmittedSize;
+  if (ElementSizeInBits != ElementAllocSizeInBits) {
+    // If the allocation size of an element is different from the size in bits,
+    // printing each element separately will insert incorrect padding.
+    //
+    // The general algorithm here is complicated; instead of writing it out
+    // here, just use the existing code in ConstantFolding.
+    Type *IntT =
+        IntegerType::get(CV->getContext(), DL.getTypeSizeInBits(CV->getType()));
+    ConstantInt *CI = dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
+        ConstantExpr::getBitCast(const_cast<ConstantVector *>(CV), IntT), DL));
+    if (!CI) {
+      report_fatal_error(
+          "Cannot lower vector global with unusual element type");
+    }
+    emitGlobalAliasInline(AP, 0, AliasList);
+    emitGlobalConstantLargeInt(CI, AP);
+    EmittedSize = DL.getTypeStoreSize(CV->getType());
+  } else {
+    for (unsigned I = 0, E = CV->getType()->getNumElements(); I != E; ++I) {
+      emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
+      emitGlobalConstantImpl(DL, CV->getOperand(I), AP);
+    }
+    EmittedSize =
+        DL.getTypeAllocSize(ElementType) * CV->getType()->getNumElements();
   }
 
   unsigned Size = DL.getTypeAllocSize(CV->getType());
-  unsigned EmittedSize = DL.getTypeAllocSize(CV->getType()->getElementType()) *
-                         CV->getType()->getNumElements();
   if (unsigned Padding = Size - EmittedSize)
     AP.OutStreamer->emitZeros(Padding);
 }

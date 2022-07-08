@@ -1,4 +1,4 @@
-// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest | FileCheck %s
+// RUN: clang-pseudo -grammar=cxx -source=%s --print-forest | FileCheck %s
 // FIXME: tighten CHECK to CHECK-NEXT once numeric literals are unambiguous.
 auto x = { 1, .f = 2, [c]{3} };
 // CHECK:      initializer-clause~braced-init-list

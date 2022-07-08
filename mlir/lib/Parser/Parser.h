@@ -57,7 +57,7 @@ public:
     return parseCommaSeparatedList(Delimiter::None, parseElementFn);
   }
 
-  ParseResult parsePrettyDialectSymbolName(StringRef &prettyName);
+  ParseResult parseDialectSymbolBody(StringRef &body);
 
   // We have two forms of parsing methods - those that return a non-null
   // pointer on success, and those that return a ParseResult to indicate whether
@@ -81,32 +81,7 @@ public:
   /// Encode the specified source location information into an attribute for
   /// attachment to the IR.
   Location getEncodedSourceLocation(SMLoc loc) {
-    // If there are no active nested parsers, we can get the encoded source
-    // location directly.
-    if (state.parserDepth == 0)
-      return state.lex.getEncodedSourceLocation(loc);
-    // Otherwise, we need to re-encode it to point to the top level buffer.
-    return state.symbols.topLevelLexer->getEncodedSourceLocation(
-        remapLocationToTopLevelBuffer(loc));
-  }
-
-  /// Remaps the given SMLoc to the top level lexer of the parser. This is used
-  /// to adjust locations of potentially nested parsers to ensure that they can
-  /// be emitted properly as diagnostics.
-  SMLoc remapLocationToTopLevelBuffer(SMLoc loc) {
-    // If there are no active nested parsers, we can return location directly.
-    SymbolState &symbols = state.symbols;
-    if (state.parserDepth == 0)
-      return loc;
-    assert(symbols.topLevelLexer && "expected valid top-level lexer");
-
-    // Otherwise, we need to remap the location to the main parser. This is
-    // simply offseting the location onto the location of the last nested
-    // parser.
-    size_t offset = loc.getPointer() - state.lex.getBufferBegin();
-    auto *rawLoc =
-        symbols.nestedParserLocs[state.parserDepth - 1].getPointer() + offset;
-    return SMLoc::getFromPointer(rawLoc);
+    return state.lex.getEncodedSourceLocation(loc);
   }
 
   //===--------------------------------------------------------------------===//
@@ -139,6 +114,12 @@ public:
   void consumeToken(Token::Kind kind) {
     assert(state.curToken.is(kind) && "consumed an unexpected token");
     consumeToken();
+  }
+
+  /// Reset the parser to the given lexer position.
+  void resetToken(const char *tokPos) {
+    state.lex.resetPointer(tokPos);
+    state.curToken = state.lex.lexToken();
   }
 
   /// Consume the specified token if present and return success.  On failure,
@@ -324,6 +305,20 @@ public:
   ParseResult
   parseAffineExprOfSSAIds(AffineExpr &expr,
                           function_ref<ParseResult(bool)> parseElement);
+
+  //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  /// The set of various code completion methods. Every completion method
+  /// returns `failure` to signal that parsing should abort after any desired
+  /// completions have been enqueued. Note that `failure` is does not mean
+  /// completion failed, it's just a signal to the parser to stop.
+
+  ParseResult codeCompleteDialectName();
+  ParseResult codeCompleteOperationName(StringRef dialectName);
+  ParseResult codeCompleteDialectOrElidedOpName(SMLoc loc);
+  ParseResult codeCompleteStringDialectOrOperationName(StringRef name);
 
 protected:
   /// The Parser is subclassed and reinstantiated.  Do not add additional

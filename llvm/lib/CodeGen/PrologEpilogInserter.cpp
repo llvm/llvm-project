@@ -554,7 +554,7 @@ static void updateLiveness(MachineFunction &MF) {
   }
 }
 
-/// Insert restore code for the callee-saved registers used in the function.
+/// Insert spill code for the callee-saved registers used in the function.
 static void insertCSRSaves(MachineBasicBlock &SaveBlock,
                            ArrayRef<CalleeSavedInfo> CSI) {
   MachineFunction &MF = *SaveBlock.getParent();

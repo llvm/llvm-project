@@ -43,6 +43,12 @@ public:
     return constant == rhs.constant;
   }
 
+  /// Print the constant value.
+  void print(raw_ostream &os) const;
+
+  /// The pessimistic value state of the constant value is unknown.
+  static ConstantValue getPessimisticValueState(Value value) { return {}; }
+
   /// The union with another constant value is null if they are different, and
   /// the same if they are the same.
   static ConstantValue join(const ConstantValue &lhs,
@@ -50,14 +56,29 @@ public:
     return lhs == rhs ? lhs : ConstantValue();
   }
 
-  /// Print the constant value.
-  void print(raw_ostream &os) const;
-
 private:
   /// The constant value.
   Attribute constant;
   /// An dialect instance that can be used to materialize the constant.
   Dialect *dialect;
+};
+
+//===----------------------------------------------------------------------===//
+// SparseConstantPropagation
+//===----------------------------------------------------------------------===//
+
+/// This analysis implements sparse constant propagation, which attempts to
+/// determine constant-valued results for operations using constant-valued
+/// operands, by speculatively folding operations. When combined with dead-code
+/// analysis, this becomes sparse conditional constant propagation (SCCP).
+class SparseConstantPropagation
+    : public SparseDataFlowAnalysis<Lattice<ConstantValue>> {
+public:
+  using SparseDataFlowAnalysis::SparseDataFlowAnalysis;
+
+  void visitOperation(Operation *op,
+                      ArrayRef<const Lattice<ConstantValue> *> operands,
+                      ArrayRef<Lattice<ConstantValue> *> results) override;
 };
 
 } // end namespace dataflow

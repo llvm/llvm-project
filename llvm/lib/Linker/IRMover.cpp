@@ -1357,11 +1357,18 @@ Error IRLinker::linkModuleFlagsMetadata() {
                          DstM.getModuleIdentifier() + "'");
     }
 
-    auto replaceDstValue = [&](MDNode *New) {
+    auto ensureDistinctOp = [&](MDNode *DstValue) {
+      assert(isa<MDTuple>(DstValue) &&
+             "Expected MDTuple when appending module flags");
+      if (DstValue->isDistinct())
+        return dyn_cast<MDTuple>(DstValue);
+      MDTuple *New = MDTuple::getDistinct(
+          DstM.getContext(), SmallVector<Metadata *, 4>(DstValue->operands()));
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
-      MDNode *Flag = MDNode::get(DstM.getContext(), FlagOps);
+      MDNode *Flag = MDTuple::getDistinct(DstM.getContext(), FlagOps);
       DstModFlags->setOperand(DstIndex, Flag);
       Flags[ID].first = Flag;
+      return New;
     };
 
     // Emit a warning if the values differ and either source or destination
@@ -1438,25 +1445,20 @@ Error IRLinker::linkModuleFlagsMetadata() {
       break;
     }
     case Module::Append: {
-      MDNode *DstValue = cast<MDNode>(DstOp->getOperand(2));
+      MDTuple *DstValue = ensureDistinctOp(cast<MDNode>(DstOp->getOperand(2)));
       MDNode *SrcValue = cast<MDNode>(SrcOp->getOperand(2));
-      SmallVector<Metadata *, 8> MDs;
-      MDs.reserve(DstValue->getNumOperands() + SrcValue->getNumOperands());
-      MDs.append(DstValue->op_begin(), DstValue->op_end());
-      MDs.append(SrcValue->op_begin(), SrcValue->op_end());
-
-      replaceDstValue(MDNode::get(DstM.getContext(), MDs));
+      for (const auto &O : SrcValue->operands())
+        DstValue->push_back(O);
       break;
     }
     case Module::AppendUnique: {
       SmallSetVector<Metadata *, 16> Elts;
-      MDNode *DstValue = cast<MDNode>(DstOp->getOperand(2));
+      MDTuple *DstValue = ensureDistinctOp(cast<MDNode>(DstOp->getOperand(2)));
       MDNode *SrcValue = cast<MDNode>(SrcOp->getOperand(2));
       Elts.insert(DstValue->op_begin(), DstValue->op_end());
       Elts.insert(SrcValue->op_begin(), SrcValue->op_end());
-
-      replaceDstValue(MDNode::get(DstM.getContext(),
-                                  makeArrayRef(Elts.begin(), Elts.end())));
+      for (auto I = DstValue->getNumOperands(); I < Elts.size(); I++)
+        DstValue->push_back(Elts[I]);
       break;
     }
     }

@@ -8,9 +8,9 @@
 //
 // This tool works as a wrapper over a linking job. This tool is used to create
 // linked device images for offloading. It scans the linker's input for embedded
-// device offloading data stored in sections `.llvm.offloading.<triple>.<arch>`
-// and extracts it as a temporary file. The extracted device files will then be
-// passed to a device linking job to create a final device image.
+// device offloading data stored in sections `.llvm.offloading` and extracts it
+// as a temporary file. The extracted device files will then be passed to a
+// device linking job to create a final device image.
 //
 //===---------------------------------------------------------------------===//
 
@@ -28,6 +28,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
@@ -339,9 +340,8 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
 // Extract offloading binaries from an Object file \p Obj.
 Error extractFromBinary(const ObjectFile &Obj,
                         SmallVectorImpl<OffloadFile> &DeviceFiles) {
-  for (const SectionRef &Sec : Obj.sections()) {
-    Expected<StringRef> Name = Sec.getName();
-    if (!Name || !Name->equals(OFFLOAD_SECTION_MAGIC_STR))
+  for (ELFSectionRef Sec : Obj.sections()) {
+    if (Sec.getType() != ELF::SHT_LLVM_OFFLOADING)
       continue;
 
     Expected<StringRef> Buffer = Sec.getContents();
@@ -366,12 +366,26 @@ Error extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
     return createStringError(inconvertibleErrorCode(),
                              "Failed to create module");
 
-  // Extract offloading data from globals with the `.llvm.offloading` section.
-  for (GlobalVariable &GV : M->globals()) {
-    if (!GV.hasSection() || !GV.getSection().equals(OFFLOAD_SECTION_MAGIC_STR))
+  // Extract offloading data from globals referenced by the
+  // `llvm.embedded.object` metadata with the `.llvm.offloading` section.
+  auto MD = M->getNamedMetadata("llvm.embedded.object");
+  if (!MD)
+    return Error::success();
+
+  for (const MDNode *Op : MD->operands()) {
+    if (Op->getNumOperands() < 2)
       continue;
 
-    auto *CDS = dyn_cast<ConstantDataSequential>(GV.getInitializer());
+    MDString *SectionID = dyn_cast<MDString>(Op->getOperand(1));
+    if (!SectionID || SectionID->getString() != OFFLOAD_SECTION_MAGIC_STR)
+      continue;
+
+    GlobalVariable *GV =
+        mdconst::dyn_extract_or_null<GlobalVariable>(Op->getOperand(0));
+    if (!GV)
+      continue;
+
+    auto *CDS = dyn_cast<ConstantDataSequential>(GV->getInitializer());
     if (!CDS)
       continue;
 
@@ -419,9 +433,7 @@ Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
   switch (Type) {
   case file_magic::bitcode:
     return extractFromBitcode(std::move(Buffer), DeviceFiles);
-  case file_magic::elf_relocatable:
-  case file_magic::macho_object:
-  case file_magic::coff_object: {
+  case file_magic::elf_relocatable: {
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(*Buffer, Type);
     if (!ObjFile)
@@ -573,6 +585,7 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, Triple TheTriple,
                        "out");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
+  std::string ArchArg = ("-plugin-opt=mcpu=" + Arch).str();
 
   SmallVector<StringRef, 16> CmdArgs;
   CmdArgs.push_back(*LLDPath);
@@ -580,6 +593,8 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, Triple TheTriple,
   CmdArgs.push_back("gnu");
   CmdArgs.push_back("--no-undefined");
   CmdArgs.push_back("-shared");
+  CmdArgs.push_back("-plugin-opt=-amdgpu-internalize-symbols");
+  CmdArgs.push_back(ArchArg);
   CmdArgs.push_back("-o");
   CmdArgs.push_back(*TempFileOrErr);
 

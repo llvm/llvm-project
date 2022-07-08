@@ -35,3 +35,7 @@
 ## armv9a rme
 # CHECK: mrs x0, MFAR_EL3
 [0xa0,0x60,0x3e,0xd5]
+
+## predres (to make sure sysreg aliases work)
+# CHECK: cfp rctx, x0
+[0x80,0x73,0x0b,0xd5]

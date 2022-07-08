@@ -931,6 +931,7 @@ def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], dat
 
 }
 
+def llvm_nxv1i1_ty  : LLVMType<nxv1i1>;
 def llvm_nxv2i1_ty  : LLVMType<nxv2i1>;
 def llvm_nxv4i1_ty  : LLVMType<nxv4i1>;
 def llvm_nxv8i1_ty  : LLVMType<nxv8i1>;
@@ -2592,27 +2593,27 @@ let TargetPrefix = "aarch64" in {
 
   // Loads
   def int_aarch64_sme_ld1b_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1h_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1w_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1d_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1q_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
+  def int_aarch64_sme_ld1h_horiz : SME_Load_Store_Intrinsic<llvm_nxv8i1_ty>;
+  def int_aarch64_sme_ld1w_horiz : SME_Load_Store_Intrinsic<llvm_nxv4i1_ty>;
+  def int_aarch64_sme_ld1d_horiz : SME_Load_Store_Intrinsic<llvm_nxv2i1_ty>;
+  def int_aarch64_sme_ld1q_horiz : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
   def int_aarch64_sme_ld1b_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1h_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1w_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1d_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1q_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
+  def int_aarch64_sme_ld1h_vert  : SME_Load_Store_Intrinsic<llvm_nxv8i1_ty>;
+  def int_aarch64_sme_ld1w_vert  : SME_Load_Store_Intrinsic<llvm_nxv4i1_ty>;
+  def int_aarch64_sme_ld1d_vert  : SME_Load_Store_Intrinsic<llvm_nxv2i1_ty>;
+  def int_aarch64_sme_ld1q_vert  : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
 
   // Stores
   def int_aarch64_sme_st1b_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1h_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1w_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1d_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1q_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
+  def int_aarch64_sme_st1h_horiz : SME_Load_Store_Intrinsic<llvm_nxv8i1_ty>;
+  def int_aarch64_sme_st1w_horiz : SME_Load_Store_Intrinsic<llvm_nxv4i1_ty>;
+  def int_aarch64_sme_st1d_horiz : SME_Load_Store_Intrinsic<llvm_nxv2i1_ty>;
+  def int_aarch64_sme_st1q_horiz : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
   def int_aarch64_sme_st1b_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1h_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1w_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1d_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1q_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
+  def int_aarch64_sme_st1h_vert  : SME_Load_Store_Intrinsic<llvm_nxv8i1_ty>;
+  def int_aarch64_sme_st1w_vert  : SME_Load_Store_Intrinsic<llvm_nxv4i1_ty>;
+  def int_aarch64_sme_st1d_vert  : SME_Load_Store_Intrinsic<llvm_nxv2i1_ty>;
+  def int_aarch64_sme_st1q_vert  : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
 
   // Spill + fill
   def int_aarch64_sme_ldr : DefaultAttrsIntrinsic<
@@ -2662,6 +2663,16 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_sumops_wide : SME_OuterProduct_Intrinsic;
   def int_aarch64_sme_usmopa_wide : SME_OuterProduct_Intrinsic;
   def int_aarch64_sme_usmops_wide : SME_OuterProduct_Intrinsic;
+
+  class SME_AddVectorToTile_Intrinsic
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i64_ty,
+           LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+           LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+           llvm_anyvector_ty]>;
+
+  def int_aarch64_sme_addha : SME_AddVectorToTile_Intrinsic;
+  def int_aarch64_sme_addva : SME_AddVectorToTile_Intrinsic;
 
   //
   // Counting elements

@@ -5,6 +5,11 @@ from fork_testbase import GdbRemoteForkTestBase
 
 
 class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
+    def setUp(self):
+        GdbRemoteForkTestBase.setUp(self)
+        if self.getPlatform() == "linux" and self.getArchitecture() in ['arm', 'aarch64']:
+            self.skipTest("Unsupported for Arm/AArch64 Linux")
+
     @add_test_categories(["fork"])
     def test_vfork_nonstop(self):
         parent_pid, parent_tid = self.fork_and_detach_test("vfork",

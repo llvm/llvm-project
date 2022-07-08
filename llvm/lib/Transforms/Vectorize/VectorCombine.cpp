@@ -414,6 +414,10 @@ static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
 static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
                                             unsigned NewIndex,
                                             IRBuilder<> &Builder) {
+  // Shufflevectors can only be created for fixed-width vectors.
+  if (!isa<FixedVectorType>(ExtElt->getOperand(0)->getType()))
+    return nullptr;
+
   // If the extract can be constant-folded, this code is unsimplified. Defer
   // to other passes to handle that.
   Value *X = ExtElt->getVectorOperand();
@@ -1277,6 +1281,9 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       auto *SV = dyn_cast<ShuffleVectorInst>(U);
       if (!SV || SV->getType() != VT)
         return false;
+      if ((SV->getOperand(0) != Op0 && SV->getOperand(0) != Op1) ||
+          (SV->getOperand(1) != Op0 && SV->getOperand(1) != Op1))
+        return false;
       if (!llvm::is_contained(Shuffles, SV))
         Shuffles.push_back(SV);
     }
@@ -1322,8 +1329,11 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       auto *SSV = cast<ShuffleVectorInst>(SVOp0);
       SVOp0 = SSV->getOperand(0);
       SVOp1 = SSV->getOperand(1);
-      for (unsigned I = 0, E = Mask.size(); I != E; I++)
+      for (unsigned I = 0, E = Mask.size(); I != E; I++) {
+        if (Mask[I] >= static_cast<int>(SSV->getShuffleMask().size()))
+          return false;
         Mask[I] = Mask[I] < 0 ? Mask[I] : SSV->getMaskValue(Mask[I]);
+      }
     }
     if (SVOp0 == Op1 && SVOp1 == Op0) {
       std::swap(SVOp0, SVOp1);

@@ -378,13 +378,13 @@ def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Prefers32BitThumb", "true
 def FeaturePrefLoopAlign32 : SubtargetFeature<"loop-align", "PrefLoopLogAlignment","2",
                                               "Prefer 32-bit alignment for loops">;
 
-def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "1",
+def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "4",
                         "Model MVE instructions as a 1 beat per tick architecture">;
 
 def FeatureMVEVectorCostFactor2 : SubtargetFeature<"mve2beat", "MVEVectorCostFactor", "2",
                         "Model MVE instructions as a 2 beats per tick architecture">;
 
-def FeatureMVEVectorCostFactor4 : SubtargetFeature<"mve4beat", "MVEVectorCostFactor", "4",
+def FeatureMVEVectorCostFactor4 : SubtargetFeature<"mve4beat", "MVEVectorCostFactor", "1",
                         "Model MVE instructions as a 4 beats per tick architecture">;
 
 /// Some instructions update CPSR partially, which can add false dependency for
@@ -1449,6 +1449,13 @@ def : ProcessorModel<"cortex-m55", CortexM4Model,      [ARMv81mMainline,
                                                          FeatureHasSlowFPVMLx,
                                                          HasMVEFloatOps,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
+
+def : ProcessorModel<"cortex-m85", CortexM7Model,       [ARMv81mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16,
+                                                         FeaturePACBTI,
+                                                         FeatureUseMISched,
+                                                         HasMVEFloatOps]>;
 
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDivThumb,

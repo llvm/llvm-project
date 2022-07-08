@@ -274,7 +274,7 @@ class Type<Pred condition, string descr = "",
 
 // Allows providing an alternative name and summary to an existing type def.
 class TypeAlias<Type t, string summary = t.summary> :
-    Type<t.predicate, summary> {
+    Type<t.predicate, summary, t.cppClassName> {
   let description = t.description;
   let builderCall = t.builderCall;
 }
@@ -1513,7 +1513,7 @@ class DerivedAttr<code ret, code b, code convert = ""> :
   // Special placeholders can be used to refer to entities during conversion:
   //
   // * `$_builder` will be replaced by a mlir::Builder instance.
-  // * `$_ctx` will be replaced by the MLIRContext* instance.
+  // * `$_ctxt` will be replaced by the MLIRContext* instance.
   // * `$_self` will be replaced with the derived attribute (value produces
   //    `returnType`).
   let convertFromStorage = convert;
@@ -1949,7 +1949,7 @@ class Interface<string name> {
   string description = "";
 
   // The name given to the c++ interface class.
-  string cppClassName = name;
+  string cppInterfaceName = name;
 
   // The C++ namespace that this interface should be placed into.
   //
@@ -1970,13 +1970,25 @@ class Interface<string name> {
 }
 
 // AttrInterface represents an interface registered to an attribute.
-class AttrInterface<string name> : Interface<name>, InterfaceTrait<name>;
+class AttrInterface<string name> : Interface<name>, InterfaceTrait<name>,
+	Attr<CPred<"$_self.isa<"
+		# !if(!empty(cppNamespace),"", cppNamespace # "::") # name # ">()">,
+			name # " instance">
+{
+	let storageType = !if(!empty(cppNamespace), "", cppNamespace # "::") # name;
+	let returnType = storageType;
+	let convertFromStorage = "$_self";
+}
 
 // OpInterface represents an interface registered to an operation.
 class OpInterface<string name> : Interface<name>, OpInterfaceTrait<name>;
 
 // TypeInterface represents an interface registered to a type.
-class TypeInterface<string name> : Interface<name>, InterfaceTrait<name>;
+class TypeInterface<string name> : Interface<name>, InterfaceTrait<name>,
+	Type<CPred<"$_self.isa<"
+		# !if(!empty(cppNamespace),"", cppNamespace # "::") # name # ">()">,
+			name # " instance",
+				!if(!empty(cppNamespace),"", cppNamespace # "::") # name>;
 
 // Whether to declare the interface methods in the user entity's header. This
 // class simply wraps an Interface but is used to indicate that the method
@@ -1992,27 +2004,27 @@ class DeclareInterfaceMethods<list<string> overridenMethods = []> {
 class DeclareAttrInterfaceMethods<AttrInterface interface,
                                   list<string> overridenMethods = []>
       : DeclareInterfaceMethods<overridenMethods>,
-        AttrInterface<interface.cppClassName> {
+        AttrInterface<interface.cppInterfaceName> {
     let description = interface.description;
-    let cppClassName = interface.cppClassName;
+    let cppInterfaceName = interface.cppInterfaceName;
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
 }
 class DeclareOpInterfaceMethods<OpInterface interface,
                                 list<string> overridenMethods = []>
       : DeclareInterfaceMethods<overridenMethods>,
-        OpInterface<interface.cppClassName> {
+        OpInterface<interface.cppInterfaceName> {
     let description = interface.description;
-    let cppClassName = interface.cppClassName;
+    let cppInterfaceName = interface.cppInterfaceName;
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
 }
 class DeclareTypeInterfaceMethods<TypeInterface interface,
                                   list<string> overridenMethods = []>
       : DeclareInterfaceMethods<overridenMethods>,
-        TypeInterface<interface.cppClassName> {
+        TypeInterface<interface.cppInterfaceName> {
     let description = interface.description;
-    let cppClassName = interface.cppClassName;
+    let cppInterfaceName = interface.cppInterfaceName;
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
 }

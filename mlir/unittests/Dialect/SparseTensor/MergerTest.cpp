@@ -7,6 +7,15 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
+// Silence 'warning C4002: 'too many arguments for function-liked macro
+//                          invocation'
+// as MSVC handles ##__VA_ARGS__ differently as gcc/clang
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(push)
+#pragma warning(disable : 4002)
+#endif
+
 namespace {
 
 ///
@@ -626,3 +635,8 @@ FOREVERY_COMMON_CONJ_BINOP(IMPL_MERGER_TEST_OPTIMIZED_CONJ)
 #undef IMPL_MERGER_TEST_OPTIMIZED_CONJ
 
 // TODO: mult-dim tests
+
+// restore warning status
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(pop)
+#endif

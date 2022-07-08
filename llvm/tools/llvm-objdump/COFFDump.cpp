@@ -800,11 +800,11 @@ void objdump::printCOFFFileHeader(const COFFObjectFile &Obj) {
   printExportTable(&Obj);
 }
 
-void objdump::printCOFFSymbolTable(const object::COFFImportFile *i) {
+void objdump::printCOFFSymbolTable(const object::COFFImportFile &i) {
   unsigned Index = 0;
-  bool IsCode = i->getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
+  bool IsCode = i.getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
 
-  for (const object::BasicSymbolRef &Sym : i->symbols()) {
+  for (const object::BasicSymbolRef &Sym : i.symbols()) {
     std::string Name;
     raw_string_ostream NS(Name);
 
@@ -823,15 +823,15 @@ void objdump::printCOFFSymbolTable(const object::COFFImportFile *i) {
   }
 }
 
-void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
-  for (unsigned SI = 0, SE = coff->getNumberOfSymbols(); SI != SE; ++SI) {
-    Expected<COFFSymbolRef> Symbol = coff->getSymbol(SI);
+void objdump::printCOFFSymbolTable(const COFFObjectFile &coff) {
+  for (unsigned SI = 0, SE = coff.getNumberOfSymbols(); SI != SE; ++SI) {
+    Expected<COFFSymbolRef> Symbol = coff.getSymbol(SI);
     if (!Symbol)
-      reportError(Symbol.takeError(), coff->getFileName());
+      reportError(Symbol.takeError(), coff.getFileName());
 
-    Expected<StringRef> NameOrErr = coff->getSymbolName(*Symbol);
+    Expected<StringRef> NameOrErr = coff.getSymbolName(*Symbol);
     if (!NameOrErr)
-      reportError(NameOrErr.takeError(), coff->getFileName());
+      reportError(NameOrErr.takeError(), coff.getFileName());
     StringRef Name = *NameOrErr;
 
     outs() << "[" << format("%2d", SI) << "]"
@@ -861,8 +861,8 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
       if (Symbol->isSectionDefinition()) {
         const coff_aux_section_definition *asd;
         if (Error E =
-                coff->getAuxSymbol<coff_aux_section_definition>(SI + 1, asd))
-          reportError(std::move(E), coff->getFileName());
+                coff.getAuxSymbol<coff_aux_section_definition>(SI + 1, asd))
+          reportError(std::move(E), coff.getFileName());
 
         int32_t AuxNumber = asd->getNumber(Symbol->isBigObj());
 
@@ -877,19 +877,19 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
                          , unsigned(asd->Selection));
       } else if (Symbol->isFileRecord()) {
         const char *FileName;
-        if (Error E = coff->getAuxSymbol<char>(SI + 1, FileName))
-          reportError(std::move(E), coff->getFileName());
+        if (Error E = coff.getAuxSymbol<char>(SI + 1, FileName))
+          reportError(std::move(E), coff.getFileName());
 
         StringRef Name(FileName, Symbol->getNumberOfAuxSymbols() *
-                                     coff->getSymbolTableEntrySize());
+                                     coff.getSymbolTableEntrySize());
         outs() << "AUX " << Name.rtrim(StringRef("\0", 1))  << '\n';
 
         SI = SI + Symbol->getNumberOfAuxSymbols();
         break;
       } else if (Symbol->isWeakExternal()) {
         const coff_aux_weak_external *awe;
-        if (Error E = coff->getAuxSymbol<coff_aux_weak_external>(SI + 1, awe))
-          reportError(std::move(E), coff->getFileName());
+        if (Error E = coff.getAuxSymbol<coff_aux_weak_external>(SI + 1, awe))
+          reportError(std::move(E), coff.getFileName());
 
         outs() << "AUX " << format("indx %d srch %d\n",
                                    static_cast<uint32_t>(awe->TagIndex),

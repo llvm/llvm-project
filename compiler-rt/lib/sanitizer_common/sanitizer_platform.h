@@ -177,7 +177,7 @@
 
 #if defined(__mips__)
 #  define SANITIZER_MIPS 1
-#  if defined(__mips64)
+#  if defined(__mips64) && _MIPS_SIM == _ABI64
 #    define SANITIZER_MIPS32 0
 #    define SANITIZER_MIPS64 1
 #  else

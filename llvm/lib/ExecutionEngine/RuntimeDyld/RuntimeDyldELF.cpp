@@ -479,7 +479,7 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
 
     *TargetPtr &= 0xfff8001fU;
     // Immediate:15:2 goes in bits 18:5 of TBZ, TBNZ
-    or32le(TargetPtr, (BranchImm & 0x0FFFFFFC) << 3);
+    or32le(TargetPtr, (BranchImm & 0x0000FFFC) << 3);
     break;
   }
   case ELF::R_AARCH64_CALL26: // fallthrough

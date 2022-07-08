@@ -75,9 +75,6 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
         if (isa<IndirectBrInst>(PredBB->getTerminator()))
           // We cannot rewrite exiting edges from an indirectbr.
           return false;
-        if (isa<CallBrInst>(PredBB->getTerminator()))
-          // We cannot rewrite exiting edges from a callbr.
-          return false;
 
         InLoopPredecessors.push_back(PredBB);
       } else {
@@ -1246,6 +1243,20 @@ static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet)
   return true;
 }
 
+/// Checks if it is safe to call InductionDescriptor::isInductionPHI for \p Phi,
+/// and returns true if this Phi is an induction phi in the loop. When
+/// isInductionPHI returns true, \p ID will be also be set by isInductionPHI.
+static bool checkIsIndPhi(PHINode *Phi, Loop *L, ScalarEvolution *SE,
+                          InductionDescriptor &ID) {
+  if (!Phi)
+    return false;
+  if (!L->getLoopPreheader())
+    return false;
+  if (Phi->getParent() != L->getHeader())
+    return false;
+  return InductionDescriptor::isInductionPHI(Phi, L, SE, ID);
+}
+
 int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                                 ScalarEvolution *SE,
                                 const TargetTransformInfo *TTI,
@@ -1296,6 +1307,46 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         Instruction *Inst = cast<Instruction>(InVal);
         if (!L->contains(Inst))
           continue;
+
+        // Find exit values which are induction variables in the loop, and are
+        // unused in the loop, with the only use being the exit block PhiNode,
+        // and the induction variable update binary operator.
+        // The exit value can be replaced with the final value when it is cheap
+        // to do so.
+        if (ReplaceExitValue == UnusedIndVarInLoop) {
+          InductionDescriptor ID;
+          PHINode *IndPhi = dyn_cast<PHINode>(Inst);
+          if (IndPhi) {
+            if (!checkIsIndPhi(IndPhi, L, SE, ID))
+              continue;
+            // This is an induction PHI. Check that the only users are PHI
+            // nodes, and induction variable update binary operators.
+            if (llvm::any_of(Inst->users(), [&](User *U) {
+                  if (!isa<PHINode>(U) && !isa<BinaryOperator>(U))
+                    return true;
+                  BinaryOperator *B = dyn_cast<BinaryOperator>(U);
+                  if (B && B != ID.getInductionBinOp())
+                    return true;
+                  return false;
+                }))
+              continue;
+          } else {
+            // If it is not an induction phi, it must be an induction update
+            // binary operator with an induction phi user.
+            BinaryOperator *B = dyn_cast<BinaryOperator>(Inst);
+            if (!B)
+              continue;
+            if (llvm::any_of(Inst->users(), [&](User *U) {
+                  PHINode *Phi = dyn_cast<PHINode>(U);
+                  if (Phi != PN && !checkIsIndPhi(Phi, L, SE, ID))
+                    return true;
+                  return false;
+                }))
+              continue;
+            if (B != ID.getInductionBinOp())
+              continue;
+          }
+        }
 
         // Okay, this instruction has a user outside of the current loop
         // and varies predictably *inside* the loop.  Evaluate the value it
@@ -1362,7 +1413,9 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
     // Only do the rewrite when the ExitValue can be expanded cheaply.
     // If LoopCanBeDel is true, rewrite exit value aggressively.
-    if (ReplaceExitValue == OnlyCheapRepl && !LoopCanBeDel && Phi.HighCost)
+    if ((ReplaceExitValue == OnlyCheapRepl ||
+         ReplaceExitValue == UnusedIndVarInLoop) &&
+        !LoopCanBeDel && Phi.HighCost)
       continue;
 
     Value *ExitVal = Rewriter.expandCodeFor(

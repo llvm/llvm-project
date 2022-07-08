@@ -34,7 +34,7 @@
 // format. Struct kernel_stat is defined as 'struct stat' in asm/stat.h. To
 // access stat from asm/stat.h, without conflicting with definition in
 // sys/stat.h, we use this trick.
-#if defined(__mips64)
+#if SANITIZER_MIPS64
 #include <asm/unistd.h>
 #include <sys/types.h>
 #define stat kernel_stat
@@ -124,8 +124,9 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 // Are we using 32-bit or 64-bit Linux syscalls?
 // x32 (which defines __x86_64__) has SANITIZER_WORDSIZE == 32
 // but it still needs to use 64-bit syscalls.
-#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__powerpc64__) ||       \
-                        SANITIZER_WORDSIZE == 64)
+#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__powerpc64__) || \
+                        SANITIZER_WORDSIZE == 64 ||                      \
+                        (defined(__mips__) && _MIPS_SIM == _ABIN32))
 # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 1
 #else
 # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
@@ -289,7 +290,7 @@ static void stat64_to_stat(struct stat64 *in, struct stat *out) {
 }
 #endif
 
-#if defined(__mips64)
+#if SANITIZER_MIPS64
 // Undefine compatibility macros from <sys/stat.h>
 // so that they would not clash with the kernel_stat
 // st_[a|m|c]time fields
@@ -343,7 +344,9 @@ uptr internal_stat(const char *path, void *buf) {
 #if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf, 0);
 #    elif SANITIZER_LINUX
-#      if (SANITIZER_WORDSIZE == 64 || SANITIZER_X32) && !SANITIZER_SPARC
+#      if (SANITIZER_WORDSIZE == 64 || SANITIZER_X32 ||    \
+           (defined(__mips__) && _MIPS_SIM == _ABIN32)) && \
+          !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           0);
 #      else
@@ -366,7 +369,9 @@ uptr internal_lstat(const char *path, void *buf) {
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
 #    elif SANITIZER_LINUX
-#      if (defined(_LP64) || SANITIZER_X32) && !SANITIZER_SPARC
+#      if (defined(_LP64) || SANITIZER_X32 ||              \
+           (defined(__mips__) && _MIPS_SIM == _ABIN32)) && \
+          !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
 #      else
@@ -1057,7 +1062,7 @@ uptr GetMaxVirtualAddress() {
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
 #elif SANITIZER_RISCV64
   return (1ULL << 38) - 1;
-# elif defined(__mips64)
+# elif SANITIZER_MIPS64
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
 # elif defined(__s390x__)
   return (1ULL << 53) - 1;  // 0x001fffffffffffffUL;

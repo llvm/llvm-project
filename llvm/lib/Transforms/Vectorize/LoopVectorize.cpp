@@ -1559,13 +1559,13 @@ public:
     Scalars.clear();
   }
 
-private:
-  unsigned NumPredStores = 0;
-
   /// Convenience function that returns the value of vscale_range iff
   /// vscale_range.min == vscale_range.max or otherwise returns the value
   /// returned by the corresponding TLI method.
   Optional<unsigned> getVScaleForTuning() const;
+
+private:
+  unsigned NumPredStores = 0;
 
   /// \return An upper bound for the vectorization factors for both
   /// fixed and scalable vectorization, where the minimum-known number of
@@ -7645,51 +7645,6 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
 }
 #endif
 
-void LoopVectorizationPlanner::collectTriviallyDeadInstructions(
-    SmallPtrSetImpl<Instruction *> &DeadInstructions) {
-
-  // We create new control-flow for the vectorized loop, so the original exit
-  // conditions will be dead after vectorization if it's only used by the
-  // terminator
-  SmallVector<BasicBlock*> ExitingBlocks;
-  OrigLoop->getExitingBlocks(ExitingBlocks);
-  for (auto *BB : ExitingBlocks) {
-    auto *Cmp = dyn_cast<Instruction>(BB->getTerminator()->getOperand(0));
-    if (!Cmp || !Cmp->hasOneUse())
-      continue;
-
-    // TODO: we should introduce a getUniqueExitingBlocks on Loop
-    if (!DeadInstructions.insert(Cmp).second)
-      continue;
-
-    // The operands of the icmp is often a dead trunc, used by IndUpdate.
-    // TODO: can recurse through operands in general
-    for (Value *Op : Cmp->operands()) {
-      if (isa<TruncInst>(Op) && Op->hasOneUse())
-          DeadInstructions.insert(cast<Instruction>(Op));
-    }
-  }
-
-  // We create new "steps" for induction variable updates to which the original
-  // induction variables map. An original update instruction will be dead if
-  // all its users except the induction variable are dead.
-  auto *Latch = OrigLoop->getLoopLatch();
-  for (auto &Induction : Legal->getInductionVars()) {
-    PHINode *Ind = Induction.first;
-    auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
-
-    // If the tail is to be folded by masking, the primary induction variable,
-    // if exists, isn't dead: it will be used for masking. Don't kill it.
-    if (CM.foldTailByMasking() && IndUpdate == Legal->getPrimaryInduction())
-      continue;
-
-    if (llvm::all_of(IndUpdate->users(), [&](User *U) -> bool {
-          return U == Ind || DeadInstructions.count(cast<Instruction>(U));
-        }))
-      DeadInstructions.insert(IndUpdate);
-  }
-}
-
 Value *InnerLoopUnroller::getBroadcastInstrs(Value *V) { return V; }
 
 //===--------------------------------------------------------------------===//
@@ -8577,19 +8532,11 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                                                         ElementCount MaxVF) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
 
-  // Collect instructions from the original loop that will become trivially dead
-  // in the vectorized loop. We don't need to vectorize these instructions. For
-  // example, original induction update instructions can become dead because we
-  // separately emit induction "steps" when generating code for the new loop.
-  // Similarly, we create a new latch condition when setting up the structure
-  // of the new loop, so the old one can become dead.
-  SmallPtrSet<Instruction *, 4> DeadInstructions;
-  collectTriviallyDeadInstructions(DeadInstructions);
-
   // Add assume instructions we need to drop to DeadInstructions, to prevent
   // them from being added to the VPlan.
   // TODO: We only need to drop assumes in blocks that get flattend. If the
   // control flow is preserved, we should keep them.
+  SmallPtrSet<Instruction *, 4> DeadInstructions;
   auto &ConditionalAssumes = Legal->getConditionalAssumes();
   DeadInstructions.insert(ConditionalAssumes.begin(), ConditionalAssumes.end());
 
@@ -9021,8 +8968,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
   VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
   VPlanTransforms::sinkScalarOperands(*Plan);
-  VPlanTransforms::mergeReplicateRegions(*Plan);
   VPlanTransforms::removeDeadRecipes(*Plan);
+  VPlanTransforms::mergeReplicateRegions(*Plan);
   VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
 
   // Fold Exit block into its predecessor if possible.
@@ -10243,7 +10190,8 @@ static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
 }
 
 static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
-                                       VectorizationFactor &VF, Loop *L,
+                                       VectorizationFactor &VF,
+                                       Optional<unsigned> VScale, Loop *L,
                                        ScalarEvolution &SE) {
   InstructionCost CheckCost = Checks.getCost();
   if (!CheckCost.isValid())
@@ -10295,6 +10243,12 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
   unsigned IntVF = VF.Width.getKnownMinValue();
+  if (VF.Width.isScalable()) {
+    unsigned AssumedMinimumVscale = 1;
+    if (VScale)
+      AssumedMinimumVscale = *VScale;
+    IntVF *= AssumedMinimumVscale;
+  }
   double VecCOverVF = double(*VF.Cost.getValue()) / IntVF;
   double RtC = *CheckCost.getValue();
   double MinTC1 = RtC / (ScalarC - VecCOverVF);
@@ -10520,7 +10474,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     if (!ForceVectorization &&
-        !areRuntimeChecksProfitable(Checks, VF, L, *PSE.getSE())) {
+        !areRuntimeChecksProfitable(Checks, VF, CM.getVScaleForTuning(), L,
+                                    *PSE.getSE())) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
                    DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),

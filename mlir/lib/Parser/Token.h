@@ -58,6 +58,19 @@ public:
   /// Return true if this is one of the keyword token kinds (e.g. kw_if).
   bool isKeyword() const;
 
+  /// Returns true if the current token represents a code completion.
+  bool isCodeCompletion() const { return is(code_complete); }
+
+  /// Returns true if the current token represents a code completion for the
+  /// "normal" token type.
+  bool isCodeCompletionFor(Kind kind) const;
+
+  /// Returns true if the current token is the given type, or represents a code
+  /// completion for that type.
+  bool isOrIsCodeCompletionFor(Kind kind) const {
+    return is(kind) || isCodeCompletionFor(kind);
+  }
+
   // Helpers to decode specific sorts of tokens.
 
   /// For an integer token, return its value as an unsigned.  If it doesn't fit,

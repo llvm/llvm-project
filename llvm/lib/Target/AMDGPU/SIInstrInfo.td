@@ -2194,21 +2194,21 @@ class getAsmVOP3DPPBase <int NumSrcArgs, bit HasDst, bit HasClamp,
                        "$sdst",
                        "$vdst"),
                     ""); // use $sdst for VOPC
-  string isrc0 = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
-  string isrc1 = !if(!eq(NumSrcArgs, 1), "",
-                     !if(!eq(NumSrcArgs, 2), " $src1",
-                                             " $src1,"));
-  string isrc2 = !if(!eq(NumSrcArgs, 3), " $src2", "");
+  string src0nomods = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
+  string src1nomods = !if(!eq(NumSrcArgs, 1), "",
+                    !if(!eq(NumSrcArgs, 2), " $src1",
+                                            " $src1,"));
+  string src2nomods = !if(!eq(NumSrcArgs, 3), " $src2", "");
 
-  string fsrc0 = !if(!eq(NumSrcArgs, 1), "$src0_modifiers", "$src0_modifiers,");
-  string fsrc1 = !if(!eq(NumSrcArgs, 1), "",
-                     !if(!eq(NumSrcArgs, 2), " $src1_modifiers",
-                                             " $src1_modifiers,"));
-  string fsrc2 = !if(!eq(NumSrcArgs, 3), " $src2_modifiers", "");
+  string src0mods = !if(!eq(NumSrcArgs, 1), "$src0_modifiers", "$src0_modifiers,");
+  string src1mods = !if(!eq(NumSrcArgs, 1), "",
+                    !if(!eq(NumSrcArgs, 2), " $src1_modifiers",
+                                            " $src1_modifiers,"));
+  string src2mods = !if(!eq(NumSrcArgs, 3), " $src2_modifiers", "");
 
-  string src0 = !if(Src0HasMods, fsrc0, isrc0);
-  string src1 = !if(Src1HasMods, fsrc1, isrc1);
-  string src2 = !if(Src2HasMods, fsrc2, isrc2);
+  string src0 = !if(Src0HasMods, src0mods, src0nomods);
+  string src1 = !if(Src1HasMods, src1mods, src1nomods);
+  string src2 = !if(Src2HasMods, src2mods, src2nomods);
   string opsel = !if(HasOpSel, "$op_sel", "");
   string 3PMods = !if(IsVOP3P,
                       !if(HasOpSel, "$op_sel_hi", "")
@@ -2559,8 +2559,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   // the asm operand name via this HasModifiers flag
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3DPPBase = getAsmVOP3DPPBase<NumSrcArgs, HasDst, HasClamp,
-   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasSrc0FloatMods, HasSrc1FloatMods,
-   HasSrc2FloatMods, DstVT >.ret;
+   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
+   HasModifiers, DstVT>.ret;
   field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3DPPBase>.ret;
   field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3DPPBase>.ret;
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3DPPBase>.ret;
@@ -2800,6 +2800,14 @@ def getDPPOp32 : InstrMapping {
   let ValueCols = [["DPP"]];
 }
 
+def getDPPOp64 : InstrMapping {
+  let FilterClass = "VOP";
+  let RowFields = ["OpName"];
+  let ColFields = ["AsmVariantName"];
+  let KeyCol = ["VOP3"];
+  let ValueCols = [["VOP3_DPP"]];
+}
+
 // Maps an commuted opcode to its original version
 def getCommuteOrig : InstrMapping {
   let FilterClass = "Commutable_REV";
@@ -2959,6 +2967,27 @@ def getVCMPXOpFromVCMP : InstrMapping {
   let ColFields = ["IsVCMPX"];
   let KeyCol = ["0"];
   let ValueCols = [["1"]];
+}
+
+def VOPDComponentTable : GenericTable {
+  let FilterClass = "VOPD_Component";
+  let CppTypeName = "VOPDComponentInfo";
+  let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX"];
+  let PrimaryKey = ["BaseVOP"];
+  let PrimaryKeyName = "getVOPDComponentHelper";
+}
+
+def VOPDPairs : GenericTable {
+  let FilterClass = "VOPD_Base";
+  let CppTypeName = "VOPDInfo";
+  let Fields = ["Opcode", "OpX", "OpY"];
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getVOPDOpcodeHelper";
+}
+
+def getVOPDInfoFromComponentOpcodes : SearchIndex {
+  let Table = VOPDPairs;
+  let Key = ["OpX", "OpY"];
 }
 
 include "SIInstructions.td"

@@ -19,6 +19,9 @@
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace mlir {
+
+class RegionBranchOpInterface;
+
 namespace dataflow {
 
 //===----------------------------------------------------------------------===//
@@ -79,11 +82,10 @@ private:
 template <typename ValueT>
 class Lattice : public AbstractSparseLattice {
 public:
-  using AbstractSparseLattice::AbstractSparseLattice;
-
-  /// Get a lattice element with a known value.
-  Lattice(const ValueT &knownValue = ValueT())
-      : AbstractSparseLattice(Value()), knownValue(knownValue) {}
+  /// Construct a lattice with a known value.
+  explicit Lattice(Value value)
+      : AbstractSparseLattice(value),
+        knownValue(ValueT::getPessimisticValueState(value)) {}
 
   /// Return the value held by this lattice. This requires that the value is
   /// initialized.
@@ -177,6 +179,137 @@ private:
   /// The currently computed value that is optimistically assumed to be true,
   /// or None if the lattice element is uninitialized.
   Optional<ValueT> optimisticValue;
+};
+
+//===----------------------------------------------------------------------===//
+// AbstractSparseDataFlowAnalysis
+//===----------------------------------------------------------------------===//
+
+/// Base class for sparse (forward) data-flow analyses. A sparse analysis
+/// implements a transfer function on operations from the lattices of the
+/// operands to the lattices of the results. This analysis will propagate
+/// lattices across control-flow edges and the callgraph using liveness
+/// information.
+class AbstractSparseDataFlowAnalysis : public DataFlowAnalysis {
+public:
+  /// Initialize the analysis by visiting every owner of an SSA value: all
+  /// operations and blocks.
+  LogicalResult initialize(Operation *top) override;
+
+  /// Visit a program point. If this is a block and all control-flow
+  /// predecessors or callsites are known, then the arguments lattices are
+  /// propagated from them. If this is a call operation or an operation with
+  /// region control-flow, then its result lattices are set accordingly.
+  /// Otherwise, the operation transfer function is invoked.
+  LogicalResult visit(ProgramPoint point) override;
+
+protected:
+  explicit AbstractSparseDataFlowAnalysis(DataFlowSolver &solver);
+
+  /// The operation transfer function. Given the operand lattices, this
+  /// function is expected to set the result lattices.
+  virtual void
+  visitOperationImpl(Operation *op,
+                     ArrayRef<const AbstractSparseLattice *> operandLattices,
+                     ArrayRef<AbstractSparseLattice *> resultLattices) = 0;
+
+  /// Get the lattice element of a value.
+  virtual AbstractSparseLattice *getLatticeElement(Value value) = 0;
+
+  /// Get a read-only lattice element for a value and add it as a dependency to
+  /// a program point.
+  const AbstractSparseLattice *getLatticeElementFor(ProgramPoint point,
+                                                    Value value);
+
+  /// Mark the given lattice elements as having reached their pessimistic
+  /// fixpoints and propagate an update if any changed.
+  void markAllPessimisticFixpoint(ArrayRef<AbstractSparseLattice *> lattices);
+
+  /// Join the lattice element and propagate and update if it changed.
+  void join(AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs);
+
+private:
+  /// Recursively initialize the analysis on nested operations and blocks.
+  LogicalResult initializeRecursively(Operation *op);
+
+  /// Visit an operation. If this is a call operation or an operation with
+  /// region control-flow, then its result lattices are set accordingly.
+  /// Otherwise, the operation transfer function is invoked.
+  void visitOperation(Operation *op);
+
+  /// Visit a block to compute the lattice values of its arguments. If this is
+  /// an entry block, then the argument values are determined from the block's
+  /// "predecessors" as set by `PredecessorState`. The predecessors can be
+  /// region terminators or callable callsites. Otherwise, the values are
+  /// determined from block predecessors.
+  void visitBlock(Block *block);
+
+  /// Visit a program point `point` with predecessors within a region branch
+  /// operation `branch`, which can either be the entry block of one of the
+  /// regions or the parent operation itself, and set either the argument or
+  /// parent result lattices.
+  void visitRegionSuccessors(ProgramPoint point, RegionBranchOpInterface branch,
+                             Optional<unsigned> successorIndex,
+                             ArrayRef<AbstractSparseLattice *> lattices);
+};
+
+//===----------------------------------------------------------------------===//
+// SparseDataFlowAnalysis
+//===----------------------------------------------------------------------===//
+
+/// A sparse (forward) data-flow analysis for propagating SSA value lattices
+/// across the IR by implementing transfer functions for operations.
+///
+/// `StateT` is expected to be a subclass of `AbstractSparseLattice`.
+template <typename StateT>
+class SparseDataFlowAnalysis : public AbstractSparseDataFlowAnalysis {
+  static_assert(
+      std::is_base_of<AbstractSparseLattice, StateT>::value,
+      "analysis state class expected to subclass AbstractSparseLattice");
+
+public:
+  explicit SparseDataFlowAnalysis(DataFlowSolver &solver)
+      : AbstractSparseDataFlowAnalysis(solver) {}
+
+  /// Visit an operation with the lattices of its operands. This function is
+  /// expected to set the lattices of the operation's results.
+  virtual void visitOperation(Operation *op, ArrayRef<const StateT *> operands,
+                              ArrayRef<StateT *> results) = 0;
+
+protected:
+  /// Get the lattice element for a value.
+  StateT *getLatticeElement(Value value) override {
+    return getOrCreate<StateT>(value);
+  }
+
+  /// Get the lattice element for a value and create a dependency on the
+  /// provided program point.
+  const StateT *getLatticeElementFor(ProgramPoint point, Value value) {
+    return static_cast<const StateT *>(
+        AbstractSparseDataFlowAnalysis::getLatticeElementFor(point, value));
+  }
+
+  /// Mark the lattice elements of a range of values as having reached their
+  /// pessimistic fixpoint.
+  void markAllPessimisticFixpoint(ArrayRef<StateT *> lattices) {
+    AbstractSparseDataFlowAnalysis::markAllPessimisticFixpoint(
+        {reinterpret_cast<AbstractSparseLattice *const *>(lattices.begin()),
+         lattices.size()});
+  }
+
+private:
+  /// Type-erased wrappers that convert the abstract lattice operands to derived
+  /// lattices and invoke the virtual hooks operating on the derived lattices.
+  void visitOperationImpl(
+      Operation *op, ArrayRef<const AbstractSparseLattice *> operandLattices,
+      ArrayRef<AbstractSparseLattice *> resultLattices) override {
+    visitOperation(
+        op,
+        {reinterpret_cast<const StateT *const *>(operandLattices.begin()),
+         operandLattices.size()},
+        {reinterpret_cast<StateT *const *>(resultLattices.begin()),
+         resultLattices.size()});
+  }
 };
 
 } // end namespace dataflow

@@ -3886,12 +3886,10 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // check if the function is variadic if the 3rd argument non-zero
   if (FirstArg != 0) {
-    if (isFunctionOrMethodVariadic(D)) {
+    if (isFunctionOrMethodVariadic(D))
       ++NumArgs; // +1 for ...
-    } else {
-      S.Diag(D->getLocation(), diag::err_format_attribute_requires_variadic);
-      return;
-    }
+    else
+      S.Diag(D->getLocation(), diag::warn_gcc_requires_variadic_function) << AL;
   }
 
   // strftime requires FirstArg to be 0 because it doesn't read from any

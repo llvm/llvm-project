@@ -250,17 +250,17 @@ struct HostDataToTargetMapKeyTy {
       : KeyValue(HDTT->HstPtrBegin), HDTT(HDTT) {}
   HostDataToTargetTy *HDTT;
 };
-inline bool operator<(const HostDataToTargetMapKeyTy &lhs,
-                      const uintptr_t &rhs) {
-  return lhs.KeyValue < rhs;
+inline bool operator<(const HostDataToTargetMapKeyTy &LHS,
+                      const uintptr_t &RHS) {
+  return LHS.KeyValue < RHS;
 }
-inline bool operator<(const uintptr_t &lhs,
-                      const HostDataToTargetMapKeyTy &rhs) {
-  return lhs < rhs.KeyValue;
+inline bool operator<(const uintptr_t &LHS,
+                      const HostDataToTargetMapKeyTy &RHS) {
+  return LHS < RHS.KeyValue;
 }
-inline bool operator<(const HostDataToTargetMapKeyTy &lhs,
-                      const HostDataToTargetMapKeyTy &rhs) {
-  return lhs.KeyValue < rhs.KeyValue;
+inline bool operator<(const HostDataToTargetMapKeyTy &LHS,
+                      const HostDataToTargetMapKeyTy &RHS) {
+  return LHS.KeyValue < RHS.KeyValue;
 }
 
 struct LookupResult {
@@ -402,7 +402,7 @@ struct DeviceTy {
 
   // calls to RTL
   int32_t initOnce();
-  __tgt_target_table *load_binary(void *Img);
+  __tgt_target_table *loadBinary(void *Img);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -479,7 +479,7 @@ private:
   void deinit();
 };
 
-extern bool device_is_ready(int device_num);
+extern bool deviceIsReady(int DeviceNum);
 
 /// Struct for the data required to handle plugins
 struct PluginManager {

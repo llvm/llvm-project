@@ -48,6 +48,8 @@ interesting projects is maintained at the `LLVM's Open Projects page`_. In case
 you are interested in working on any of these projects, please post on the
 `Forum`_, so that we know the project is being worked on.
 
+.. _submit_patch:
+
 How to Submit a Patch
 =====================
 Once you have a patch ready, it is time to submit it. The patch should:
@@ -56,6 +58,7 @@ Once you have a patch ready, it is time to submit it. The patch should:
 * conform to the :doc:`CodingStandards`. You can use the `clang-format-diff.py`_ or `git-clang-format`_ tools to automatically format your patch properly.
 * not contain any unrelated changes
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
+* have a single commit (unless stacked on another Differential), up-to-date with the upstream ``origin/main`` branch, and don't have merges.
 
 .. _format patches:
 
@@ -85,11 +88,10 @@ in order to update the last commit with all pending changes.
   the git integration can be run from
   ``clang/tools/clang-format/git-clang-format``.
 
-
-To get a patch accepted, it has to be reviewed by the LLVM community. This can
-be done using `LLVM's Phabricator`_ or the llvm-commits mailing list.
-Please  follow :ref:`Phabricator#phabricator-reviews <phabricator-reviews>`
-to request a review using Phabricator.
+We don't currently accept GitHub pull requests, and you'll need to send patches
+via :ref:`Phabricator#phabricator-reviews <phabricator-reviews>`.
+(We used to allow patches on the llvm-commits mailing list, but the mailing lists
+have been deprecated.)
 
 To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review. Suitable reviewers are the
@@ -115,6 +117,52 @@ professional developers.
 
 For more information on LLVM's code-review process, please see :doc:`CodeReview`.
 
+.. _commit_from_git:
+
+For developers to commit changes from Git
+-----------------------------------------
+
+Once a patch is reviewed, you should rebase it, re-test locally, and commit the
+changes to LLVM's main branch. This is done using `git push` if you have the
+required access rights. See `committing a change
+<Phabricator.html#committing-a-change>`_ for Phabricator based commits or
+`obtaining commit access <DeveloperPolicy.html#obtaining-commit-access>`_
+for commit access.
+
+Here is an example workflow using git. This workflow assumes you have an
+accepted commit on the branch named `branch-with-change`.
+
+.. code-block:: console
+
+  # Pull changes from the upstream main branch.
+  % git checkout main && git pull
+  # Rebase your change onto main.
+  % git rebase --onto main --root branch-with-change
+  # Rerun the appropriate tests if needed.
+  % ninja check-$whatever
+  # Check that the list of commits about to be pushed is correct.
+  % git log origin/main...HEAD --oneline
+  # Push to Github.
+  % git push origin HEAD:main
+
+LLVM currently has a linear-history policy, which means that merge commits are
+not allowed. The `llvm-project` repo on github is configured to reject pushes
+that include merges, so the `git rebase` step above is required.
+
+Please ask for help if you're having trouble with your particular git workflow.
+
+.. _git_pre_push_hook:
+
+Git pre-push hook
+^^^^^^^^^^^^^^^^^
+
+We include an optional pre-push hook that run some sanity checks on the revisions
+you are about to push and ask confirmation if you push multiple commits at once.
+You can set it up (on Unix systems) by running from the repository root:
+
+.. code-block:: console
+
+  % ln -sf ../../llvm/utils/git/pre-push.py .git/hooks/pre-push
 
 Helpful Information About LLVM
 ==============================

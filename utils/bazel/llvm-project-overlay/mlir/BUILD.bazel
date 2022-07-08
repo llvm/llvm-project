@@ -3424,6 +3424,7 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":CallOpInterfaces",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
         ":IR",
@@ -3490,6 +3491,7 @@ td_library(
         ":DLTIDialectTdFiles",
         ":DataLayoutInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
+        ":InferIntRangeInterfaceTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -3581,6 +3583,7 @@ cc_library(
         ":GPUBaseIncGen",
         ":GPUOpsIncGen",
         ":IR",
+        ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":LLVMDialect",
         ":MemRefDialect",
@@ -3674,6 +3677,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",

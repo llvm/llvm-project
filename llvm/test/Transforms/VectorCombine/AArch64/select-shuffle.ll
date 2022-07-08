@@ -316,6 +316,29 @@ define <16 x i32> @testshufshufout(<16 x i32> %x, <16 x i32> %y) {
   ret <16 x i32> %r
 }
 
+define <16 x i32> @testtwoshufout(<16 x i32> %x, <16 x i32> %y) {
+; CHECK-LABEL: @testtwoshufout(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[X:%.*]], <16 x i32> [[Y:%.*]], <16 x i32> <i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[X]], <16 x i32> [[Y]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[X]], <16 x i32> [[Y]], <16 x i32> <i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i32> [[X]], <16 x i32> [[Y]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <16 x i32> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <16 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i32> [[TMP5]], <16 x i32> [[TMP6]], <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i32> [[TMP5]], <16 x i32> [[TMP6]], <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
+; CHECK-NEXT:    [[ADD:%.*]] = add <16 x i32> [[S3]], [[S4]]
+; CHECK-NEXT:    ret <16 x i32> [[ADD]]
+;
+  %s1 = shufflevector <16 x i32> %x, <16 x i32> %y, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+  %s2 = shufflevector <16 x i32> %x, <16 x i32> %y, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+  %a = add nsw <16 x i32> %s1, %s2
+  %b = sub nsw <16 x i32> %s1, %s2
+  %s3 = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+  %s4 = shufflevector <16 x i32> %b, <16 x i32> %a, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
+  %add = add <16 x i32> %s3, %s4
+  ret <16 x i32> %add
+}
+
 declare void @use(<16 x i32>)
 define <16 x i32> @test_extrashuffleuse(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: @test_extrashuffleuse(
@@ -890,6 +913,67 @@ entry:
   %add119 = add nuw nsw i32 %conv118, %shr
   %shr120 = lshr i32 %add119, 1
   ret i32 %shr120
+}
+
+define void @manyundefs()
+; CHECK-LABEL: @manyundefs(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float undef, i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> undef, float undef, i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret void
+;
+unnamed_addr #0 align 2 {
+  %1 = insertelement <2 x float> undef, float undef, i64 1
+  %2 = insertelement <2 x float> undef, float undef, i64 1
+  %3 = fadd <2 x float> %1, %2
+  %4 = fmul <2 x float> %1, %2
+  %5 = shufflevector <2 x float> %3, <2 x float> %4, <2 x i32> <i32 0, i32 3>
+  %6 = shufflevector <2 x float> %4, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  ret void
+}
+
+define void @manyundefs2()
+; CHECK-LABEL: @manyundefs2(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float undef, i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> undef, float undef, i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> [[TMP3]], <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    ret void
+;
+unnamed_addr #0 align 2 {
+  %1 = insertelement <2 x float> undef, float undef, i64 1
+  %2 = insertelement <2 x float> undef, float undef, i64 1
+  %3 = fadd <2 x float> %1, %2
+  %4 = fmul <2 x float> %1, %2
+  %5 = shufflevector <2 x float> %3, <2 x float> %4, <2 x i32> <i32 0, i32 3>
+  %6 = shufflevector <2 x float> %4, <2 x float> %3, <2 x i32> <i32 1, i32 2>
+  ret void
+}
+
+define <16 x i32> @testoutofbounds(<16 x i32> %x, <16 x i32> %y) {
+; CHECK-LABEL: @testoutofbounds(
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x i32> [[X:%.*]], <16 x i32> [[Y:%.*]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i32> [[X]], <16 x i32> [[Y]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+; CHECK-NEXT:    [[A:%.*]] = add nsw <16 x i32> [[S1]], [[S2]]
+; CHECK-NEXT:    [[B:%.*]] = sub nsw <16 x i32> [[S1]], [[S2]]
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i32> [[A]], <16 x i32> [[B]], <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i32> [[S3]], <16 x i32> poison, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
+; CHECK-NEXT:    [[ADD:%.*]] = add <16 x i32> [[S3]], [[S4]]
+; CHECK-NEXT:    ret <16 x i32> [[ADD]]
+;
+  %s1 = shufflevector <16 x i32> %x, <16 x i32> %y, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+  %s2 = shufflevector <16 x i32> %x, <16 x i32> %y, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+  %a = add nsw <16 x i32> %s1, %s2
+  %b = sub nsw <16 x i32> %s1, %s2
+  %s3 = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+  %s4 = shufflevector <16 x i32> %s3, <16 x i32> poison, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
+  %add = add <16 x i32> %s3, %s4
+  ret <16 x i32> %add
 }
 
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

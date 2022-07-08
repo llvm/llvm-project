@@ -21,6 +21,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
+include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td"
 
 def OpenMP_Dialect : Dialect {
   let name = "omp";
@@ -38,26 +39,8 @@ class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
 // Type which can be constraint accepting standard integers and indices.
 def IntLikeType : AnyTypeOf<[AnyInteger, Index]>;
 
-def OpenMP_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
-  let cppNamespace = "::mlir::omp";
-
-  let description = [{
-    An interface for pointer-like types suitable to contain a value that OpenMP
-    specification refers to as variable.
-  }];
-
-  let methods = [
-    InterfaceMethod<
-      /*description=*/"Returns the pointee type.",
-      /*retTy=*/"::mlir::Type",
-      /*methodName=*/"getElementType"
-    >,
-  ];
-}
-
-def OpenMP_PointerLikeType : Type<
-  CPred<"$_self.isa<::mlir::omp::PointerLikeType>()">,
-  "OpenMP-compatible variable type", "::mlir::omp::PointerLikeType">;
+def OpenMP_PointerLikeType : TypeAlias<OpenMP_PointerLikeTypeInterface,
+	"OpenMP-compatible variable type">;
 
 //===----------------------------------------------------------------------===//
 // 2.6 parallel Construct
@@ -420,13 +403,18 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
     transformed into a SIMD loop (that is, multiple iterations of the loop can 
     be executed concurrently using SIMD instructions).. The lower and upper 
     bounds specify a half-open range: the range includes the lower bound but 
-    does not include the upper bound.
+    does not include the upper bound. If the `inclusive` attribute is specified
+    then the upper bound is also included.
 
     The body region can contain any number of blocks. The region is terminated
     by "omp.yield" instruction without operands.
+
+    When an if clause is present and evaluates to false, the preferred number of
+    iterations to be executed concurrently is one, regardless of whether
+    a simdlen clause is speciﬁed.
     ```
-    omp.simdloop (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) 
-                                      step (%c1, %c1) {
+    omp.simdloop <clauses>
+    for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
       // block operations
       omp.yield
     }
@@ -436,9 +424,17 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
   // TODO: Add other clauses
   let arguments = (ins Variadic<IntLikeType>:$lowerBound,
              Variadic<IntLikeType>:$upperBound,
-             Variadic<IntLikeType>:$step);
+             Variadic<IntLikeType>:$step,
+             Optional<I1>:$if_expr,
+             UnitAttr:$inclusive
+     );
  
   let regions = (region AnyRegion:$region);
+  let assemblyFormat = [{
+    oilist(`if` `(` $if_expr `)`
+    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
+                                  type($step), $inclusive) attr-dict
+  }];
 
   let extraClassDeclaration = [{
     /// Returns the number of loops in the simd loop nest.

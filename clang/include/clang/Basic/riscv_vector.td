@@ -582,18 +582,8 @@ class IsFloat<string type> {
 }
 
 let HasUnMaskedOverloaded = false,
-    MaskedPolicy = NonePolicy,
-    ManualCodegen = [{
-      IntrinsicTypes = {ResultType, Ops[1]->getType()};
-      Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
-    }],
-    MaskedManualCodegen= [{
-      // Move mask to right before vl.
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-      IntrinsicTypes = {ResultType, Ops[3]->getType()};
-      Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
-    }] in {
-  class RVVVLEMaskBuiltin : RVVBuiltin<"m", "mPCUe", "c"> {
+    MaskedPolicy = NonePolicy in {
+  class RVVVLEMaskBuiltin : RVVOutBuiltin<"m", "mPCUe", "c"> {
     let Name = "vlm_v";
     let IRName = "vlm";
     let HasMasked = false;
@@ -601,26 +591,15 @@ let HasUnMaskedOverloaded = false,
 }
 
 let HasUnMaskedOverloaded = false,
-    ManualCodegen = [{
-      IntrinsicTypes = {ResultType, Ops[1]->getType()};
-      Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
-      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
-    }],
-    MaskedManualCodegen= [{
-      // Move mask to right before vl.
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-      Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
-      IntrinsicTypes = {ResultType, Ops[3]->getType()};
-      Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
-    }] in {
+    UnMaskedPolicy = HasPassthruOperand in {
   multiclass RVVVLEBuiltin<list<string> types> {
     let Name = NAME # "_v",
         IRName = "vle",
         MaskedIRName ="vle_mask" in {
       foreach type = types in {
-        def : RVVBuiltin<"v", "vPCe", type>;
+        def : RVVOutBuiltin<"v", "vPCe", type>;
         if !not(IsFloat<type>.val) then {
-          def : RVVBuiltin<"Uv", "UvPCUe", type>;
+          def : RVVOutBuiltin<"Uv", "UvPCUe", type>;
         }
       }
     }
@@ -685,61 +664,39 @@ multiclass RVVVLSEBuiltin<list<string> types> {
       IRName = "vlse",
       MaskedIRName ="vlse_mask",
       HasUnMaskedOverloaded = false,
-      ManualCodegen = [{
-        IntrinsicTypes = {ResultType, Ops[2]->getType()};
-        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
-      }],
-      MaskedManualCodegen= [{
-        // Move mask to right before vl.
-        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
-        IntrinsicTypes = {ResultType, Ops[4]->getType()};
-        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
-      }] in {
+      UnMaskedPolicy = HasPassthruOperand in {
     foreach type = types in {
-      def : RVVBuiltin<"v", "vPCet", type>;
+      def : RVVOutBuiltin<"v", "vPCet", type>;
       if !not(IsFloat<type>.val) then {
-        def : RVVBuiltin<"Uv", "UvPCUet", type>;
+        def : RVVOutBuiltin<"Uv", "UvPCUet", type>;
       }
     }
   }
 }
 
 multiclass RVVIndexedLoad<string op> {
-  let ManualCodegen = [{
-        IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType()};
-        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
-      }],
-      MaskedManualCodegen = [{
-        // Move mask to right before vl.
-        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
-        IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops[4]->getType()};
-        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
-      }] in {
-      foreach type = TypeList in {
-        foreach eew_list = EEWList[0-2] in {
-          defvar eew = eew_list[0];
-          defvar eew_type = eew_list[1];
-          let Name = op # eew # "_v", IRName = op, MaskedIRName = op # "_mask" in {
-            def: RVVBuiltin<"v", "vPCe" # eew_type # "Uv", type>;
-              if !not(IsFloat<type>.val) then {
-                def: RVVBuiltin<"Uv", "UvPCUe" # eew_type # "Uv", type>;
-              }
-          }
+  let UnMaskedPolicy = HasPassthruOperand in {
+    foreach type = TypeList in {
+      foreach eew_list = EEWList[0-2] in {
+        defvar eew = eew_list[0];
+        defvar eew_type = eew_list[1];
+        let Name = op # eew # "_v", IRName = op, MaskedIRName = op # "_mask" in {
+          def: RVVOutOp1Builtin<"v", "vPCe" # eew_type # "Uv", type>;
+            if !not(IsFloat<type>.val) then {
+              def: RVVOutOp1Builtin<"Uv", "UvPCUe" # eew_type # "Uv", type>;
+            }
         }
-        defvar eew64 = "64";
-        defvar eew64_type = "(Log2EEW:6)";
-        let Name = op # eew64 # "_v", IRName = op, MaskedIRName = op # "_mask",
-            RequiredFeatures = ["RV64"] in {
-            def: RVVBuiltin<"v", "vPCe" # eew64_type # "Uv", type>;
-              if !not(IsFloat<type>.val) then {
-                def: RVVBuiltin<"Uv", "UvPCUe" # eew64_type # "Uv", type>;
-              }
-          }
       }
+      defvar eew64 = "64";
+      defvar eew64_type = "(Log2EEW:6)";
+      let Name = op # eew64 # "_v", IRName = op, MaskedIRName = op # "_mask",
+          RequiredFeatures = ["RV64"] in {
+          def: RVVOutOp1Builtin<"v", "vPCe" # eew64_type # "Uv", type>;
+            if !not(IsFloat<type>.val) then {
+              def: RVVOutOp1Builtin<"Uv", "UvPCUe" # eew64_type # "Uv", type>;
+            }
+        }
+    }
   }
 }
 

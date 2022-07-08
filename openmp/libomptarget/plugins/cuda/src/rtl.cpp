@@ -86,8 +86,8 @@ struct KernelTy {
   /// Maximal number of threads per block for this kernel.
   int MaxThreadsPerBlock = 0;
 
-  KernelTy(CUfunction _Func, llvm::omp::OMPTgtExecModeFlags _ExecutionMode)
-      : Func(_Func), ExecutionMode(_ExecutionMode) {}
+  KernelTy(CUfunction Func, llvm::omp::OMPTgtExecModeFlags ExecutionMode)
+      : Func(Func), ExecutionMode(ExecutionMode) {}
 };
 
 namespace {
@@ -437,9 +437,9 @@ class DeviceRTLTy {
   bool UseMemoryManager = true;
 
   // Record entry point associated with device
-  void addOffloadEntry(const int DeviceId, const __tgt_offload_entry entry) {
+  void addOffloadEntry(const int DeviceId, const __tgt_offload_entry Entry) {
     FuncOrGblEntryTy &E = DeviceData[DeviceId].FuncGblEntries.back();
-    E.Entries.push_back(entry);
+    E.Entries.push_back(Entry);
   }
 
   // Return a pointer to the entry associated with the pointer
@@ -1270,19 +1270,19 @@ public:
     return (Err == CUDA_SUCCESS) ? OFFLOAD_SUCCESS : OFFLOAD_FAIL;
   }
 
-  void printDeviceInfo(int32_t device_id) {
+  void printDeviceInfo(int32_t DeviceId) {
     char TmpChar[1000];
     std::string TmpStr;
     size_t TmpSt;
     int TmpInt, TmpInt2, TmpInt3;
 
     CUdevice Device;
-    checkResult(cuDeviceGet(&Device, device_id),
+    checkResult(cuDeviceGet(&Device, DeviceId),
                 "Error returned from cuCtxGetDevice\n");
 
     cuDriverGetVersion(&TmpInt);
     printf("    CUDA Driver Version: \t\t%d \n", TmpInt);
-    printf("    CUDA Device Number: \t\t%d \n", device_id);
+    printf("    CUDA Device Number: \t\t%d \n", DeviceId);
     checkResult(cuDeviceGetName(TmpChar, 1000, Device),
                 "Error returned from cuDeviceGetName\n");
     printf("    Device Name: \t\t\t%s \n", TmpChar);
@@ -1530,8 +1530,8 @@ DeviceRTLTy DeviceRTL;
 extern "C" {
 #endif
 
-int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
-  return elf_check_machine(image, /* EM_CUDA */ 190);
+int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
+  return elf_check_machine(Image, /* EM_CUDA */ 190);
 }
 
 int32_t __tgt_rtl_number_of_devices() { return DeviceRTL.getNumOfDevices(); }
@@ -1546,211 +1546,204 @@ int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   return RequiresFlags;
 }
 
-int32_t __tgt_rtl_is_data_exchangable(int32_t src_dev_id, int dst_dev_id) {
-  if (DeviceRTL.isValidDeviceId(src_dev_id) &&
-      DeviceRTL.isValidDeviceId(dst_dev_id))
+int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDevId, int DstDevId) {
+  if (DeviceRTL.isValidDeviceId(SrcDevId) &&
+      DeviceRTL.isValidDeviceId(DstDevId))
     return 1;
 
   return 0;
 }
 
-int32_t __tgt_rtl_init_device(int32_t device_id) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+int32_t __tgt_rtl_init_device(int32_t DeviceId) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
   // Context is set when init the device.
 
-  return DeviceRTL.initDevice(device_id);
+  return DeviceRTL.initDevice(DeviceId);
 }
 
-int32_t __tgt_rtl_deinit_device(int32_t device_id) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+int32_t __tgt_rtl_deinit_device(int32_t DeviceId) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
   // Context is set when deinit the device.
 
-  return DeviceRTL.deinitDevice(device_id);
+  return DeviceRTL.deinitDevice(DeviceId);
 }
 
-__tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
-                                          __tgt_device_image *image) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+__tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
+                                          __tgt_device_image *Image) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return nullptr;
 
-  return DeviceRTL.loadBinary(device_id, image);
+  return DeviceRTL.loadBinary(DeviceId, Image);
 }
 
-void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *,
-                           int32_t kind) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *,
+                           int32_t Kind) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return nullptr;
 
-  return DeviceRTL.dataAlloc(device_id, size, (TargetAllocTy)kind);
+  return DeviceRTL.dataAlloc(DeviceId, Size, (TargetAllocTy)Kind);
 }
 
-int32_t __tgt_rtl_data_submit(int32_t device_id, void *tgt_ptr, void *hst_ptr,
-                              int64_t size) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+int32_t __tgt_rtl_data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
+                              int64_t Size) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
   // Context is set in __tgt_rtl_data_submit_async.
 
   __tgt_async_info AsyncInfo;
-  const int32_t rc = __tgt_rtl_data_submit_async(device_id, tgt_ptr, hst_ptr,
-                                                 size, &AsyncInfo);
-  if (rc != OFFLOAD_SUCCESS)
+  const int32_t Rc =
+      __tgt_rtl_data_submit_async(DeviceId, TgtPtr, HstPtr, Size, &AsyncInfo);
+  if (Rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
+  return __tgt_rtl_synchronize(DeviceId, &AsyncInfo);
 }
 
-int32_t __tgt_rtl_data_submit_async(int32_t device_id, void *tgt_ptr,
-                                    void *hst_ptr, int64_t size,
-                                    __tgt_async_info *async_info_ptr) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
-  assert(async_info_ptr && "async_info_ptr is nullptr");
+int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
+                                    void *HstPtr, int64_t Size,
+                                    __tgt_async_info *AsyncInfoPtr) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
+  assert(AsyncInfoPtr && "async_info_ptr is nullptr");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.dataSubmit(device_id, tgt_ptr, hst_ptr, size,
-                              async_info_ptr);
+  return DeviceRTL.dataSubmit(DeviceId, TgtPtr, HstPtr, Size, AsyncInfoPtr);
 }
 
-int32_t __tgt_rtl_data_retrieve(int32_t device_id, void *hst_ptr, void *tgt_ptr,
-                                int64_t size) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
+                                int64_t Size) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
   // Context is set in __tgt_rtl_data_retrieve_async.
 
   __tgt_async_info AsyncInfo;
-  const int32_t rc = __tgt_rtl_data_retrieve_async(device_id, hst_ptr, tgt_ptr,
-                                                   size, &AsyncInfo);
-  if (rc != OFFLOAD_SUCCESS)
+  const int32_t Rc =
+      __tgt_rtl_data_retrieve_async(DeviceId, HstPtr, TgtPtr, Size, &AsyncInfo);
+  if (Rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
+  return __tgt_rtl_synchronize(DeviceId, &AsyncInfo);
 }
 
-int32_t __tgt_rtl_data_retrieve_async(int32_t device_id, void *hst_ptr,
-                                      void *tgt_ptr, int64_t size,
-                                      __tgt_async_info *async_info_ptr) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
-  assert(async_info_ptr && "async_info_ptr is nullptr");
+int32_t __tgt_rtl_data_retrieve_async(int32_t DeviceId, void *HstPtr,
+                                      void *TgtPtr, int64_t Size,
+                                      __tgt_async_info *AsyncInfoPtr) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
+  assert(AsyncInfoPtr && "async_info_ptr is nullptr");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.dataRetrieve(device_id, hst_ptr, tgt_ptr, size,
-                                async_info_ptr);
+  return DeviceRTL.dataRetrieve(DeviceId, HstPtr, TgtPtr, Size, AsyncInfoPtr);
 }
 
-int32_t __tgt_rtl_data_exchange_async(int32_t src_dev_id, void *src_ptr,
-                                      int dst_dev_id, void *dst_ptr,
-                                      int64_t size,
+int32_t __tgt_rtl_data_exchange_async(int32_t SrcDevId, void *SrcPtr,
+                                      int DstDevId, void *DstPtr, int64_t Size,
                                       __tgt_async_info *AsyncInfo) {
-  assert(DeviceRTL.isValidDeviceId(src_dev_id) && "src_dev_id is invalid");
-  assert(DeviceRTL.isValidDeviceId(dst_dev_id) && "dst_dev_id is invalid");
+  assert(DeviceRTL.isValidDeviceId(SrcDevId) && "src_dev_id is invalid");
+  assert(DeviceRTL.isValidDeviceId(DstDevId) && "dst_dev_id is invalid");
   assert(AsyncInfo && "AsyncInfo is nullptr");
 
-  if (DeviceRTL.setContext(src_dev_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(SrcDevId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.dataExchange(src_dev_id, src_ptr, dst_dev_id, dst_ptr, size,
+  return DeviceRTL.dataExchange(SrcDevId, SrcPtr, DstDevId, DstPtr, Size,
                                 AsyncInfo);
 }
 
-int32_t __tgt_rtl_data_exchange(int32_t src_dev_id, void *src_ptr,
-                                int32_t dst_dev_id, void *dst_ptr,
-                                int64_t size) {
-  assert(DeviceRTL.isValidDeviceId(src_dev_id) && "src_dev_id is invalid");
-  assert(DeviceRTL.isValidDeviceId(dst_dev_id) && "dst_dev_id is invalid");
+int32_t __tgt_rtl_data_exchange(int32_t SrcDevId, void *SrcPtr,
+                                int32_t DstDevId, void *DstPtr, int64_t Size) {
+  assert(DeviceRTL.isValidDeviceId(SrcDevId) && "src_dev_id is invalid");
+  assert(DeviceRTL.isValidDeviceId(DstDevId) && "dst_dev_id is invalid");
   // Context is set in __tgt_rtl_data_exchange_async.
 
   __tgt_async_info AsyncInfo;
-  const int32_t rc = __tgt_rtl_data_exchange_async(
-      src_dev_id, src_ptr, dst_dev_id, dst_ptr, size, &AsyncInfo);
-  if (rc != OFFLOAD_SUCCESS)
+  const int32_t Rc = __tgt_rtl_data_exchange_async(SrcDevId, SrcPtr, DstDevId,
+                                                   DstPtr, Size, &AsyncInfo);
+  if (Rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(src_dev_id, &AsyncInfo);
+  return __tgt_rtl_synchronize(SrcDevId, &AsyncInfo);
 }
 
-int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.dataDelete(device_id, tgt_ptr);
+  return DeviceRTL.dataDelete(DeviceId, TgtPtr);
 }
 
-int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
-                                         void **tgt_args,
-                                         ptrdiff_t *tgt_offsets,
-                                         int32_t arg_num, int32_t team_num,
-                                         int32_t thread_limit,
-                                         uint64_t loop_tripcount) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,
+                                         void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                         int32_t ArgNum, int32_t TeamNum,
+                                         int32_t ThreadLimit,
+                                         uint64_t LoopTripcount) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
   // Context is set in __tgt_rtl_run_target_team_region_async.
 
   __tgt_async_info AsyncInfo;
-  const int32_t rc = __tgt_rtl_run_target_team_region_async(
-      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, team_num,
-      thread_limit, loop_tripcount, &AsyncInfo);
-  if (rc != OFFLOAD_SUCCESS)
+  const int32_t Rc = __tgt_rtl_run_target_team_region_async(
+      DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets, ArgNum, TeamNum, ThreadLimit,
+      LoopTripcount, &AsyncInfo);
+  if (Rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
+  return __tgt_rtl_synchronize(DeviceId, &AsyncInfo);
 }
 
 int32_t __tgt_rtl_run_target_team_region_async(
-    int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
-    ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t team_num,
-    int32_t thread_limit, uint64_t loop_tripcount,
-    __tgt_async_info *async_info_ptr) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+    int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs, ptrdiff_t *TgtOffsets,
+    int32_t ArgNum, int32_t TeamNum, int32_t ThreadLimit,
+    uint64_t LoopTripcount, __tgt_async_info *AsyncInfoPtr) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.runTargetTeamRegion(
-      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, team_num,
-      thread_limit, loop_tripcount, async_info_ptr);
+  return DeviceRTL.runTargetTeamRegion(DeviceId, TgtEntryPtr, TgtArgs,
+                                       TgtOffsets, ArgNum, TeamNum, ThreadLimit,
+                                       LoopTripcount, AsyncInfoPtr);
 }
 
-int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
-                                    void **tgt_args, ptrdiff_t *tgt_offsets,
-                                    int32_t arg_num) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+int32_t __tgt_rtl_run_target_region(int32_t DeviceId, void *TgtEntryPtr,
+                                    void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                    int32_t ArgNum) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
   // Context is set in __tgt_rtl_run_target_region_async.
 
   __tgt_async_info AsyncInfo;
-  const int32_t rc = __tgt_rtl_run_target_region_async(
-      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, &AsyncInfo);
-  if (rc != OFFLOAD_SUCCESS)
+  const int32_t Rc = __tgt_rtl_run_target_region_async(
+      DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets, ArgNum, &AsyncInfo);
+  if (Rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
+  return __tgt_rtl_synchronize(DeviceId, &AsyncInfo);
 }
 
-int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
-                                          void *tgt_entry_ptr, void **tgt_args,
-                                          ptrdiff_t *tgt_offsets,
-                                          int32_t arg_num,
-                                          __tgt_async_info *async_info_ptr) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+int32_t __tgt_rtl_run_target_region_async(int32_t DeviceId, void *TgtEntryPtr,
+                                          void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                          int32_t ArgNum,
+                                          __tgt_async_info *AsyncInfoPtr) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
   // Context is set in __tgt_rtl_run_target_team_region_async.
   return __tgt_rtl_run_target_team_region_async(
-      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num,
+      DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets, ArgNum,
       /* team num*/ 1, /* thread_limit */ 1, /* loop_tripcount */ 0,
-      async_info_ptr);
+      AsyncInfoPtr);
 }
 
-int32_t __tgt_rtl_synchronize(int32_t device_id,
-                              __tgt_async_info *async_info_ptr) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
-  assert(async_info_ptr && "async_info_ptr is nullptr");
-  assert(async_info_ptr->Queue && "async_info_ptr->Queue is nullptr");
+int32_t __tgt_rtl_synchronize(int32_t DeviceId,
+                              __tgt_async_info *AsyncInfoPtr) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
+  assert(AsyncInfoPtr && "async_info_ptr is nullptr");
+  assert(AsyncInfoPtr->Queue && "async_info_ptr->Queue is nullptr");
   // NOTE: We don't need to set context for stream sync.
-  return DeviceRTL.synchronize(device_id, async_info_ptr);
+  return DeviceRTL.synchronize(DeviceId, AsyncInfoPtr);
 }
 
 void __tgt_rtl_set_info_flag(uint32_t NewInfoLevel) {
@@ -1758,89 +1751,88 @@ void __tgt_rtl_set_info_flag(uint32_t NewInfoLevel) {
   InfoLevel.store(NewInfoLevel);
 }
 
-void __tgt_rtl_print_device_info(int32_t device_id) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+void __tgt_rtl_print_device_info(int32_t DeviceId) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
   // NOTE: We don't need to set context for print device info.
-  DeviceRTL.printDeviceInfo(device_id);
+  DeviceRTL.printDeviceInfo(DeviceId);
 }
 
-int32_t __tgt_rtl_create_event(int32_t device_id, void **event) {
-  assert(event && "event is nullptr");
+int32_t __tgt_rtl_create_event(int32_t DeviceId, void **Event) {
+  assert(Event && "event is nullptr");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.createEvent(device_id, event);
+  return DeviceRTL.createEvent(DeviceId, Event);
 }
 
-int32_t __tgt_rtl_record_event(int32_t device_id, void *event_ptr,
-                               __tgt_async_info *async_info_ptr) {
-  assert(async_info_ptr && "async_info_ptr is nullptr");
-  assert(async_info_ptr->Queue && "async_info_ptr->Queue is nullptr");
-  assert(event_ptr && "event_ptr is nullptr");
+int32_t __tgt_rtl_record_event(int32_t DeviceId, void *EventPtr,
+                               __tgt_async_info *AsyncInfoPtr) {
+  assert(AsyncInfoPtr && "async_info_ptr is nullptr");
+  assert(AsyncInfoPtr->Queue && "async_info_ptr->Queue is nullptr");
+  assert(EventPtr && "event_ptr is nullptr");
   // NOTE: We might not need to set context for event record.
-  return recordEvent(event_ptr, async_info_ptr);
+  return recordEvent(EventPtr, AsyncInfoPtr);
 }
 
-int32_t __tgt_rtl_wait_event(int32_t device_id, void *event_ptr,
-                             __tgt_async_info *async_info_ptr) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
-  assert(async_info_ptr && "async_info_ptr is nullptr");
-  assert(event_ptr && "event is nullptr");
+int32_t __tgt_rtl_wait_event(int32_t DeviceId, void *EventPtr,
+                             __tgt_async_info *AsyncInfoPtr) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
+  assert(AsyncInfoPtr && "async_info_ptr is nullptr");
+  assert(EventPtr && "event is nullptr");
   // If we don't have a queue we need to set the context.
-  if (!async_info_ptr->Queue &&
-      DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (!AsyncInfoPtr->Queue && DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
-  return DeviceRTL.waitEvent(device_id, async_info_ptr, event_ptr);
+  return DeviceRTL.waitEvent(DeviceId, AsyncInfoPtr, EventPtr);
 }
 
-int32_t __tgt_rtl_sync_event(int32_t device_id, void *event_ptr) {
-  assert(event_ptr && "event is nullptr");
+int32_t __tgt_rtl_sync_event(int32_t DeviceId, void *EventPtr) {
+  assert(EventPtr && "event is nullptr");
   // NOTE: We might not need to set context for event sync.
-  return syncEvent(event_ptr);
+  return syncEvent(EventPtr);
 }
 
-int32_t __tgt_rtl_destroy_event(int32_t device_id, void *event_ptr) {
-  assert(event_ptr && "event is nullptr");
+int32_t __tgt_rtl_destroy_event(int32_t DeviceId, void *EventPtr) {
+  assert(EventPtr && "event is nullptr");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.destroyEvent(device_id, event_ptr);
+  return DeviceRTL.destroyEvent(DeviceId, EventPtr);
 }
 
-int32_t __tgt_rtl_release_async_info(int32_t device_id,
-                                     __tgt_async_info *async_info) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
-  assert(async_info && "async_info is nullptr");
+int32_t __tgt_rtl_release_async_info(int32_t DeviceId,
+                                     __tgt_async_info *AsyncInfo) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
+  assert(AsyncInfo && "async_info is nullptr");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.releaseAsyncInfo(device_id, async_info);
+  return DeviceRTL.releaseAsyncInfo(DeviceId, AsyncInfo);
 }
 
-int32_t __tgt_rtl_init_async_info(int32_t device_id,
-                                  __tgt_async_info **async_info) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
-  assert(async_info && "async_info is nullptr");
+int32_t __tgt_rtl_init_async_info(int32_t DeviceId,
+                                  __tgt_async_info **AsyncInfo) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
+  assert(AsyncInfo && "async_info is nullptr");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.initAsyncInfo(device_id, async_info);
+  return DeviceRTL.initAsyncInfo(DeviceId, AsyncInfo);
 }
 
-int32_t __tgt_rtl_init_device_info(int32_t device_id,
-                                   __tgt_device_info *device_info_ptr,
-                                   const char **err_str) {
-  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
-  assert(device_info_ptr && "device_info_ptr is nullptr");
+int32_t __tgt_rtl_init_device_info(int32_t DeviceId,
+                                   __tgt_device_info *DeviceInfoPtr,
+                                   const char **ErrStr) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
+  assert(DeviceInfoPtr && "device_info_ptr is nullptr");
 
-  if (DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.initDeviceInfo(device_id, device_info_ptr, err_str);
+  return DeviceRTL.initDeviceInfo(DeviceId, DeviceInfoPtr, ErrStr);
 }
 
 #ifdef __cplusplus

@@ -22,11 +22,13 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNSchedStrategy.h"
+#include "GCNVOPDUtils.h"
 #include "R600.h"
 #include "R600TargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -278,6 +280,12 @@ static cl::opt<bool>
                          cl::desc("Enable s_delay_alu insertion"),
                          cl::init(true), cl::Hidden);
 
+// Enable GFX11+ VOPD
+static cl::opt<bool>
+    EnableVOPD("amdgpu-enable-vopd",
+               cl::desc("Enable VOPD, dual issue of VALU in wave32"),
+               cl::init(true), cl::Hidden);
+
 // Option is used in lit tests to prevent deadcoding of patterns inspected.
 static cl::opt<bool>
 EnableDCEInRA("amdgpu-dce-in-ra",
@@ -383,6 +391,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIPreAllocateWWMRegsPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
   initializeSIPostRABundlerPass(*PR);
+  initializeGCNCreateVOPDPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUExternalAAWrapperPass(*PR);
@@ -935,6 +944,8 @@ public:
     DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
     DAG->addMutation(createIGroupLPDAGMutation());
     DAG->addMutation(createSchedBarrierDAGMutation());
+    if (isPassEnabled(EnableVOPD, CodeGenOpt::Less))
+      DAG->addMutation(createVOPDPairingMutation());
     return DAG;
   }
 
@@ -1417,6 +1428,8 @@ void GCNPassConfig::addPreSched2() {
 }
 
 void GCNPassConfig::addPreEmitPass() {
+  if (isPassEnabled(EnableVOPD, CodeGenOpt::Less))
+    addPass(&GCNCreateVOPDID);
   addPass(createSIMemoryLegalizerPass());
   addPass(createSIInsertWaitcntsPass());
 

@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[]) {
   lldb_enable_attach();
-  execlp(argv[1], argv[1], nullptr);
+  execvp(argv[1], argv+1);
   perror("execlp");
   return 1;
 }

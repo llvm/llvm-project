@@ -1024,11 +1024,7 @@ public:
   static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
   static Constant *getFMul(Constant *C1, Constant *C2);
-  static Constant *getUDiv(Constant *C1, Constant *C2, bool isExact = false);
-  static Constant *getSDiv(Constant *C1, Constant *C2, bool isExact = false);
   static Constant *getFDiv(Constant *C1, Constant *C2);
-  static Constant *getURem(Constant *C1, Constant *C2);
-  static Constant *getSRem(Constant *C1, Constant *C2);
   static Constant *getFRem(Constant *C1, Constant *C2);
   static Constant *getAnd(Constant *C1, Constant *C2);
   static Constant *getOr(Constant *C1, Constant *C2);
@@ -1091,14 +1087,6 @@ public:
 
   static Constant *getNUWShl(Constant *C1, Constant *C2) {
     return getShl(C1, C2, true, false);
-  }
-
-  static Constant *getExactSDiv(Constant *C1, Constant *C2) {
-    return getSDiv(C1, C2, true);
-  }
-
-  static Constant *getExactUDiv(Constant *C1, Constant *C2) {
-    return getUDiv(C1, C2, true);
   }
 
   static Constant *getExactAShr(Constant *C1, Constant *C2) {
@@ -1340,6 +1328,14 @@ public:
   /// implementation details of ConstantExpr outside of Constants.cpp, which
   /// would make it harder to remove ConstantExprs altogether.
   Instruction *getAsInstruction(Instruction *InsertBefore = nullptr) const;
+
+  /// Whether creating a constant expression for this binary operator is
+  /// desirable.
+  static bool isDesirableBinOp(unsigned Opcode);
+
+  /// Whether creating a constant expression for this binary operator is
+  /// supported.
+  static bool isSupportedBinOp(unsigned Opcode);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

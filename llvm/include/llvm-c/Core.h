@@ -381,8 +381,14 @@ typedef enum {
                               the old one */
     LLVMAtomicRMWBinOpFAdd, /**< Add a floating point value and return the
                               old one */
-    LLVMAtomicRMWBinOpFSub /**< Subtract a floating point value and return the
-                             old one */
+    LLVMAtomicRMWBinOpFSub, /**< Subtract a floating point value and return the
+                            old one */
+    LLVMAtomicRMWBinOpFMax, /**< Sets the value if it's greater than the
+                             original using an floating point comparison and
+                             return the old one */
+    LLVMAtomicRMWBinOpFMin, /**< Sets the value if it's smaller than the
+                             original using an floating point comparison and
+                             return the old one */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -2170,13 +2176,7 @@ LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNSWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstFMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstUDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstExactUDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstSDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstExactSDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstFDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstURem(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstSRem(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstFRem(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstAnd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstOr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
@@ -3228,7 +3228,7 @@ LLVMValueRef LLVMGetNextInstruction(LLVMValueRef Inst);
 LLVMValueRef LLVMGetPreviousInstruction(LLVMValueRef Inst);
 
 /**
- * Remove and delete an instruction.
+ * Remove an instruction.
  *
  * The instruction specified is removed from its containing building
  * block but is kept alive.
@@ -3246,6 +3246,16 @@ void LLVMInstructionRemoveFromParent(LLVMValueRef Inst);
  * @see llvm::Instruction::eraseFromParent()
  */
 void LLVMInstructionEraseFromParent(LLVMValueRef Inst);
+
+/**
+ * Delete an instruction.
+ *
+ * The instruction specified is deleted. It must have previously been
+ * removed from its containing building block.
+ *
+ * @see llvm::Value::deleteValue()
+ */
+void LLVMDeleteInstruction(LLVMValueRef Inst);
 
 /**
  * Obtain the code opcode for an individual instruction.

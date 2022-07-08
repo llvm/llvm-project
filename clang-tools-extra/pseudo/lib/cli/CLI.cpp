@@ -8,6 +8,7 @@
 
 #include "clang-pseudo/cli/CLI.h"
 #include "clang-pseudo/cxx/CXX.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -39,7 +40,12 @@ const Language &getLanguageFromFlags() {
     for (const auto &Diag : Diags)
       llvm::errs() << Diag << "\n";
     auto Table = LRTable::buildSLR(G);
-    return new Language{std::move(G), std::move(Table)};
+    return new Language{
+        std::move(G),
+        std::move(Table),
+        llvm::DenseMap<ExtensionID, RuleGuard>(),
+        llvm::DenseMap<ExtensionID, RecoveryStrategy>(),
+    };
   }();
   return *Lang;
 }

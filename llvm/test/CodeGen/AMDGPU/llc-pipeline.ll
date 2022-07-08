@@ -380,6 +380,7 @@
 ; GCN-O1-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O1-NEXT:        Insert fentry calls
 ; GCN-O1-NEXT:        Insert XRay ops
+; GCN-O1-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-NEXT:        SI Memory Legalizer
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
@@ -670,6 +671,7 @@
 ; GCN-O1-OPTS-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O1-OPTS-NEXT:        Insert fentry calls
 ; GCN-O1-OPTS-NEXT:        Insert XRay ops
+; GCN-O1-OPTS-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-OPTS-NEXT:        SI Memory Legalizer
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
@@ -962,6 +964,7 @@
 ; GCN-O2-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O2-NEXT:        Insert fentry calls
 ; GCN-O2-NEXT:        Insert XRay ops
+; GCN-O2-NEXT:        GCN Create VOPD Instructions
 ; GCN-O2-NEXT:        SI Memory Legalizer
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
@@ -1267,6 +1270,7 @@
 ; GCN-O3-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O3-NEXT:        Insert fentry calls
 ; GCN-O3-NEXT:        Insert XRay ops
+; GCN-O3-NEXT:        GCN Create VOPD Instructions
 ; GCN-O3-NEXT:        SI Memory Legalizer
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Natural Loop Construction

@@ -17,6 +17,7 @@ write_cmake_config("lit_site_cfg") {
     "LLD_BINARY_DIR=" + rebase_path(get_label_info("//lld", "target_out_dir")),
     "CURRENT_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
+    "ENABLE_BACKTRACES=1",
     "LLD_SOURCE_DIR=" + rebase_path("//lld"),
     "LLVM_BINARY_DIR=" +
         rebase_path(get_label_info("//llvm", "target_out_dir")),

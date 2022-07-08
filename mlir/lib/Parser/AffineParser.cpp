@@ -598,6 +598,7 @@ ParseResult AffineParser::parseAffineMapRange(unsigned numDims,
 
 /// Parse an affine constraint.
 ///  affine-constraint ::= affine-expr `>=` `affine-expr`
+///                      | affine-expr `<=` `affine-expr`
 ///                      | affine-expr `==` `affine-expr`
 ///
 /// The constraint is normalized to
@@ -620,6 +621,15 @@ AffineExpr AffineParser::parseAffineConstraint(bool *isEq) {
       return nullptr;
     *isEq = false;
     return lhsExpr - rhsExpr;
+  }
+
+  // affine-constraint ::= `affine-expr` `<=` `affine-expr`
+  if (consumeIf(Token::less) && consumeIf(Token::equal)) {
+    AffineExpr rhsExpr = parseAffineExpr();
+    if (!rhsExpr)
+      return nullptr;
+    *isEq = false;
+    return rhsExpr - lhsExpr;
   }
 
   // affine-constraint ::= `affine-expr` `==` `affine-expr`
@@ -733,7 +743,8 @@ IntegerSet mlir::parseIntegerSet(StringRef inputStr, MLIRContext *context,
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
   SymbolState symbolState;
   ParserConfig config(context);
-  ParserState state(sourceMgr, config, symbolState, /*asmState=*/nullptr);
+  ParserState state(sourceMgr, config, symbolState, /*asmState=*/nullptr,
+                    /*codeCompleteContext=*/nullptr);
   Parser parser(state);
 
   raw_ostream &os = printDiagnosticInfo ? llvm::errs() : llvm::nulls();

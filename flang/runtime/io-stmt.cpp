@@ -1340,7 +1340,7 @@ bool InquireNoUnitState::Inquire(
   case HashInquiryKeyword("STREAM"):
   case HashInquiryKeyword("WRITE"):
   case HashInquiryKeyword("UNFORMATTED"):
-    ToFortranDefaultCharacter(result, length, "UNKNONN");
+    ToFortranDefaultCharacter(result, length, "UNKNOWN");
     return true;
   default:
     BadInquiryKeywordHashCrash(inquiry);

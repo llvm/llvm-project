@@ -571,6 +571,9 @@ public:
                                             MachineInstr &MI,
                                             MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitAddVectorToTile(unsigned Opc, unsigned BaseReg,
+                                         MachineInstr &MI,
+                                         MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,

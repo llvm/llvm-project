@@ -2031,11 +2031,32 @@ public:
   }
 };
 
+/// Pattern to rewrite a InsertOp(SplatOp, SplatOp) to SplatOp.
+class InsertSplatToSplat final : public OpRewritePattern<InsertOp> {
+public:
+  using OpRewritePattern<InsertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InsertOp op,
+                                PatternRewriter &rewriter) const override {
+    auto srcSplat = op.getSource().getDefiningOp<SplatOp>();
+    auto dstSplat = op.getDest().getDefiningOp<SplatOp>();
+
+    if (!srcSplat || !dstSplat)
+      return failure();
+
+    if (srcSplat.getInput() != dstSplat.getInput())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), srcSplat.getInput());
+    return success();
+  }
+};
+
 } // namespace
 
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<InsertToBroadcast, BroadcastFolder>(context);
+  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
 }
 
 // Eliminates insert operations that produce values identical to their source

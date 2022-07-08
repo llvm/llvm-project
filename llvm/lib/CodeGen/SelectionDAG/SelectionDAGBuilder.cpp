@@ -4611,6 +4611,8 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   case AtomicRMWInst::UMin: NT = ISD::ATOMIC_LOAD_UMIN; break;
   case AtomicRMWInst::FAdd: NT = ISD::ATOMIC_LOAD_FADD; break;
   case AtomicRMWInst::FSub: NT = ISD::ATOMIC_LOAD_FSUB; break;
+  case AtomicRMWInst::FMax: NT = ISD::ATOMIC_LOAD_FMAX; break;
+  case AtomicRMWInst::FMin: NT = ISD::ATOMIC_LOAD_FMIN; break;
   }
   AtomicOrdering Ordering = I.getOrdering();
   SyncScope::ID SSID = I.getSyncScopeID();
@@ -9422,9 +9424,9 @@ static void addStackMapLiveVars(const CallBase &Call, unsigned StartIdx,
   }
 }
 
-/// Lower llvm.experimental.stackmap directly to its target opcode.
+/// Lower llvm.experimental.stackmap.
 void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
-  // void @llvm.experimental.stackmap(i32 <id>, i32 <numShadowBytes>,
+  // void @llvm.experimental.stackmap(i64 <id>, i32 <numShadowBytes>,
   //                                  [live variables...])
 
   assert(CI.getType()->isVoidTy() && "Stackmap cannot return a value.");
@@ -9449,29 +9451,45 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   Chain = DAG.getCALLSEQ_START(getRoot(), 0, 0, DL);
   InFlag = Chain.getValue(1);
 
-  // Add the <id> and <numBytes> constants.
-  SDValue IDVal = getValue(CI.getOperand(PatchPointOpers::IDPos));
-  Ops.push_back(DAG.getTargetConstant(
-                  cast<ConstantSDNode>(IDVal)->getZExtValue(), DL, MVT::i64));
-  SDValue NBytesVal = getValue(CI.getOperand(PatchPointOpers::NBytesPos));
-  Ops.push_back(DAG.getTargetConstant(
-                  cast<ConstantSDNode>(NBytesVal)->getZExtValue(), DL,
-                  MVT::i32));
-
-  // Push live variables for the stack map.
-  addStackMapLiveVars(CI, 2, DL, Ops, *this);
-
-  // We are not pushing any register mask info here on the operands list,
-  // because the stackmap doesn't clobber anything.
-
-  // Push the chain and the glue flag.
+  // Add the STACKMAP operands, starting with DAG house-keeping.
   Ops.push_back(Chain);
   Ops.push_back(InFlag);
 
+  // Add the <id>, <numShadowBytes> operands.
+  //
+  // These do not require legalisation, and can be emitted directly to target
+  // constant nodes.
+  SDValue ID = getValue(CI.getArgOperand(0));
+  assert(ID.getValueType() == MVT::i64);
+  SDValue IDConst = DAG.getTargetConstant(
+      cast<ConstantSDNode>(ID)->getZExtValue(), DL, ID.getValueType());
+  Ops.push_back(IDConst);
+
+  SDValue Shad = getValue(CI.getArgOperand(1));
+  assert(Shad.getValueType() == MVT::i32);
+  SDValue ShadConst = DAG.getTargetConstant(
+      cast<ConstantSDNode>(Shad)->getZExtValue(), DL, Shad.getValueType());
+  Ops.push_back(ShadConst);
+
+  // Add the live variables.
+  for (unsigned I = 2; I < CI.arg_size(); I++) {
+    SDValue Op = getValue(CI.getArgOperand(I));
+
+    // Things on the stack are pointer-typed, meaning that they are already
+    // legal and can be emitted directly to target nodes.
+    if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Op)) {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      Ops.push_back(DAG.getTargetFrameIndex(
+          FI->getIndex(), TLI.getFrameIndexTy(DAG.getDataLayout())));
+    } else {
+      // Otherwise emit a target independent node to be legalised.
+      Ops.push_back(getValue(CI.getArgOperand(I)));
+    }
+  }
+
   // Create the STACKMAP node.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDNode *SM = DAG.getMachineNode(TargetOpcode::STACKMAP, DL, NodeTys, Ops);
-  Chain = SDValue(SM, 0);
+  Chain = DAG.getNode(ISD::STACKMAP, DL, NodeTys, Ops);
   InFlag = Chain.getValue(1);
 
   Chain = DAG.getCALLSEQ_END(Chain, NullPtr, NullPtr, InFlag, DL);

@@ -1885,6 +1885,10 @@ Enable sanitizer for AMDGPU target
 
 Specify that single precision floating-point divide and sqrt used in the program source are correctly rounded (HIP device compilation only)
 
+.. option:: -fhip-kernel-arg-name, -fno-hip-kernel-arg-name
+
+Specify that kernel argument names are preserved (HIP only)
+
 .. option:: -fhip-new-launch-api, -fno-hip-new-launch-api
 
 Use new kernel launching API for HIP
@@ -3461,6 +3465,10 @@ Work around VLLDM erratum CVE-2021-35465 (ARM only)
 
 Work around Cortex-A57 Erratum 1742098 (ARM only)
 
+.. option:: -mframe-chain=<arg>
+
+Select the frame chain model used to emit frame records (Arm only). <arg> must be 'none', 'aapcs' or 'aapcs+leaf'.
+
 .. option:: -mno-bti-at-return-twice
 
 Do not add a BTI instruction after a setjmp or other return-twice construct (Arm/AArch64 only)
@@ -3890,6 +3898,8 @@ X86
 .. option:: -mptwrite, -mno-ptwrite
 
 .. option:: -mrdpid, -mno-rdpid
+
+.. option:: -mrdpru, -mno-rdpru
 
 .. option:: -mrdrnd, -mno-rdrnd
 

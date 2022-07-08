@@ -72,7 +72,7 @@ INITIALIZE_PASS_END(SILowerSGPRSpills, DEBUG_TYPE,
 
 char &llvm::SILowerSGPRSpillsID = SILowerSGPRSpills::ID;
 
-/// Insert restore code for the callee-saved registers used in the function.
+/// Insert spill code for the callee-saved registers used in the function.
 static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
                            ArrayRef<CalleeSavedInfo> CSI,
                            LiveIntervals *LIS) {
