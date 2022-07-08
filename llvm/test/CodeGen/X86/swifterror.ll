@@ -2112,3 +2112,83 @@ a:
   %error = load %swift_error*, %swift_error** %err
   ret %swift_error* %error
 }
+
+define i32 @nofold_swifterror() {
+; CHECK-LABEL: nofold_swifterror:
+; CHECK: cmpq $0, %r12
+; CHECK-APPLE-LABEL: nofold_swifterror:
+; CHECK-APPLE:       ## %bb.0:
+; CHECK-APPLE-NEXT:    pushq %r12
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-APPLE-NEXT:    subq $16, %rsp
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-APPLE-NEXT:    .cfi_offset %r12, -16
+; CHECK-APPLE-NEXT:    callq _bar
+; CHECK-APPLE-NEXT:    testq %r12, %r12
+; CHECK-APPLE-NEXT:    leaq 16(%rsp), %rsp
+; CHECK-APPLE-NEXT:    popq %r12
+; CHECK-APPLE-NEXT:    jne LBB26_2
+; CHECK-APPLE-NEXT:  ## %bb.1: ## %good
+; CHECK-APPLE-NEXT:    xorl %eax, %eax
+; CHECK-APPLE-NEXT:    retq
+; CHECK-APPLE-NEXT:  LBB26_2: ## %bad
+; CHECK-APPLE-NEXT:    movl $42, %eax
+; CHECK-APPLE-NEXT:    retq
+;
+; CHECK-O0-LABEL: nofold_swifterror:
+; CHECK-O0:       ## %bb.0:
+; CHECK-O0-NEXT:    pushq %r12
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-O0-NEXT:    subq $16, %rsp
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-O0-NEXT:    .cfi_offset %r12, -16
+; CHECK-O0-NEXT:    ## implicit-def: $rax
+; CHECK-O0-NEXT:  ## %bb.1: ## %next
+; CHECK-O0-NEXT:    movq (%rsp), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    callq _bar
+; CHECK-O0-NEXT:    cmpq $0, %r12
+; CHECK-O0-NEXT:    jne LBB26_3
+; CHECK-O0-NEXT:  ## %bb.2: ## %good
+; CHECK-O0-NEXT:    xorl %eax, %eax
+; CHECK-O0-NEXT:    addq $16, %rsp
+; CHECK-O0-NEXT:    popq %r12
+; CHECK-O0-NEXT:    retq
+; CHECK-O0-NEXT:  LBB26_3: ## %bad
+; CHECK-O0-NEXT:    movl $42, %eax
+; CHECK-O0-NEXT:    addq $16, %rsp
+; CHECK-O0-NEXT:    popq %r12
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-i386-LABEL: nofold_swifterror:
+; CHECK-i386:       ## %bb.0:
+; CHECK-i386-NEXT:    subl $12, %esp
+; CHECK-i386-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-i386-NEXT:    leal 8(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, (%esp)
+; CHECK-i386-NEXT:    calll _bar
+; CHECK-i386-NEXT:    cmpl $0, 8(%esp)
+; CHECK-i386-NEXT:    leal 12(%esp), %esp
+; CHECK-i386-NEXT:    jne LBB26_2
+; CHECK-i386-NEXT:  ## %bb.1: ## %good
+; CHECK-i386-NEXT:    xorl %eax, %eax
+; CHECK-i386-NEXT:    retl
+; CHECK-i386-NEXT:  LBB26_2: ## %bad
+; CHECK-i386-NEXT:    movl $42, %eax
+; CHECK-i386-NEXT:    retl
+  %se = alloca swifterror i8*, align 8
+  br label %next
+
+next:
+  call void @bar(i8** swifterror %se)
+  %err = load i8*, i8** %se, align 8
+  %tst = icmp eq i8* %err, null
+  br i1 %tst, label %good, label %bad
+
+good:
+  ret i32 0
+
+bad:
+  ret i32 42
+}
+
+declare void @bar(i8** swifterror)

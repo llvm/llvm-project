@@ -154,6 +154,8 @@ private:
 
   bool isTypeLegal(Type *Ty, MVT &VT, bool AllowI1 = false);
 
+  bool isPointerSwiftError(const Value *PtrV);
+
   bool IsMemcpySmall(uint64_t Len);
 
   bool TryEmitSmallMemcpy(X86AddressMode DestAM,
@@ -1116,6 +1118,22 @@ bool X86FastISel::X86SelectCallAddress(const Value *V, X86AddressMode &AM) {
   return false;
 }
 
+// Swifterror values can come from either a function parameter with
+// swifterror attribute or an alloca with swifterror attribute.
+bool X86FastISel::isPointerSwiftError(const Value *PtrV) {
+  if (!TLI.supportSwiftError())
+    return false;
+
+  if (const Argument *Arg = dyn_cast<Argument>(PtrV))
+    if (Arg->hasSwiftErrorAttr())
+      return true;;
+
+  if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrV))
+    if (Alloca->isSwiftError())
+      return true;
+
+  return false;
+}
 
 /// X86SelectStore - Select and emit code to implement store instructions.
 bool X86FastISel::X86SelectStore(const Instruction *I) {
@@ -1125,20 +1143,8 @@ bool X86FastISel::X86SelectStore(const Instruction *I) {
   if (S->isAtomic())
     return false;
 
-  const Value *PtrV = I->getOperand(1);
-  if (TLI.supportSwiftError()) {
-    // Swifterror values can come from either a function parameter with
-    // swifterror attribute or an alloca with swifterror attribute.
-    if (const Argument *Arg = dyn_cast<Argument>(PtrV)) {
-      if (Arg->hasSwiftErrorAttr())
-        return false;
-    }
-
-    if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrV)) {
-      if (Alloca->isSwiftError())
-        return false;
-    }
-  }
+  if (isPointerSwiftError(I->getOperand(1)))
+    return false;
 
   const Value *Val = S->getValueOperand();
   const Value *Ptr = S->getPointerOperand();
@@ -1317,20 +1323,8 @@ bool X86FastISel::X86SelectLoad(const Instruction *I) {
   if (LI->isAtomic())
     return false;
 
-  const Value *SV = I->getOperand(0);
-  if (TLI.supportSwiftError()) {
-    // Swifterror values can come from either a function parameter with
-    // swifterror attribute or an alloca with swifterror attribute.
-    if (const Argument *Arg = dyn_cast<Argument>(SV)) {
-      if (Arg->hasSwiftErrorAttr())
-        return false;
-    }
-
-    if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(SV)) {
-      if (Alloca->isSwiftError())
-        return false;
-    }
-  }
+  if (isPointerSwiftError(I->getOperand(0)))
+    return false;
 
   MVT VT;
   if (!isTypeLegal(LI->getType(), VT, /*AllowI1=*/true))
@@ -3927,6 +3921,10 @@ unsigned X86FastISel::fastMaterializeFloatZero(const ConstantFP *CF) {
 bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                       const LoadInst *LI) {
   const Value *Ptr = LI->getPointerOperand();
+
+  if (isPointerSwiftError(Ptr))
+    return false;
+
   X86AddressMode AM;
   if (!X86SelectAddress(Ptr, AM))
     return false;
