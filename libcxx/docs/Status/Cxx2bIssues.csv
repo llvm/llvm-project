@@ -162,4 +162,5 @@
 "`3645 <https://wg21.link/LWG3645>`__","``resize_and_overwrite`` is overspecified to call its callback with lvalues","Not voted in","|Complete|","14.0",""
 "`3656 <https://wg21.link/LWG3656>`__","Inconsistent bit operations returning a count","Not voted in","|Complete|","15.0",""
 "`3631 <https://wg21.link/LWG3631>`__","``basic_format_arg(T&&)`` should use ``remove_cvref_t<T>`` throughout","Not voted in","|Complete|","15.0",""
+"`3659 <https://wg21.link/LWG3659>`__","Consider ``ATOMIC_FLAG_INIT`` undeprecation","Not voted in","|Complete|","15.0"
 "","","","",""
