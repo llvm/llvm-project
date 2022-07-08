@@ -209,7 +209,11 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
-    OperandsMapping = getValueMapping(PMI_GR32);
+    if (MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() == 64)
+      OperandsMapping = getOperandsMapping(
+          {getValueMapping(PMI_GR64), getValueMapping(PMI_GR32)});
+    else
+      OperandsMapping = getValueMapping(PMI_GR32);
     break;
   case TargetOpcode::G_FRAME_INDEX:
   case TargetOpcode::G_GLOBAL_VALUE:

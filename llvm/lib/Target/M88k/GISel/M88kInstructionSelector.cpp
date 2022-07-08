@@ -116,6 +116,15 @@ M88kInstructionSelector::M88kInstructionSelector(
 {
 }
 
+// Like llvm::getSrcRegIgnoringCopies() but returns the register from argument
+// list instead of None.
+static Register getRegIgnoringCopies(Register Reg,
+                                     const MachineRegisterInfo &MRI) {
+  Optional<DefinitionAndSourceRegister> DefSrcReg =
+      getDefSrcRegIgnoringCopies(Reg, MRI);
+  return DefSrcReg ? DefSrcReg->Reg : Reg;
+}
+
 static const TargetRegisterClass *guessRegClass(unsigned Reg,
                                                 MachineRegisterInfo &MRI,
                                                 const TargetRegisterInfo &TRI,
@@ -448,9 +457,8 @@ bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
   auto MMO = *I.memoperands_begin();
 
   // No unaligned memory access.
-  if (MMO->getAlign() < MMO->getSize()) {
+  if (MMO->getAlign() < MMO->getSize())
     return false;
-  }
 
   GLoadStore &LdSt = cast<GLoadStore>(I);
   uint64_t MemSizeInBytes = LdSt.getMemSize();
@@ -458,21 +466,21 @@ bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
   bool IsZExtLoad = I.getOpcode() == TargetOpcode::G_ZEXTLOAD;
 
   MachineInstr *MI = nullptr;
-  MachineOperand Ptr = I.getOperand(1);
+
+  // PtrReg contains the memory address.
+  Register PtrReg = I.getOperand(1).getReg();
 
   // ValReg is either the destination register of a load, or the source register
   // of a store. In case of a truncating store, match the G_TRUNC instruction
   // and use the source operand of that instruction.
   Register ValReg = I.getOperand(0).getReg();
   MachineInstr *TruncMI = nullptr;
-  if (!IsLoad &&
-      ((TruncMI = getOpcodeDef(TargetOpcode::G_TRUNC, ValReg, MRI))))
+  if (!IsLoad && ((TruncMI = getOpcodeDef(TargetOpcode::G_TRUNC, ValReg, MRI))))
     ValReg = TruncMI->getOperand(1).getReg();
 
-  int64_t Offset;
-  MachineInstr *Base, *Addend;
+  Register Base, Addend;
   if (MachineInstr *FrameIdxMI =
-          getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Ptr.getReg(), MRI)) {
+          getOpcodeDef(TargetOpcode::G_FRAME_INDEX, PtrReg, MRI)) {
     // Matches load/store + G_FRAME_INDEX.
     const unsigned NewOpc = getLoadStoreOp(I.getOpcode(), MemSizeInBytes,
                                            LoadStore::Imm, IsZExtLoad);
@@ -483,8 +491,8 @@ bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
              .addFrameIndex(FrameIdx)
              .addImm(0)
              .addMemOperand(MMO);
-  } else if (MachineInstr *GlobalValMI = getOpcodeDef(
-                 TargetOpcode::G_GLOBAL_VALUE, Ptr.getReg(), MRI)) {
+  } else if (MachineInstr *GlobalValMI =
+                 getOpcodeDef(TargetOpcode::G_GLOBAL_VALUE, PtrReg, MRI)) {
     // Matches load/store + G_GLOBAL_VALUE.
     const unsigned NewOpc = getLoadStoreOp(I.getOpcode(), MemSizeInBytes,
                                            LoadStore::Imm, IsZExtLoad);
@@ -494,53 +502,64 @@ bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ORriu))
              .addReg(Temp, RegState::Define)
              .addReg(M88k::R0)
-             .addGlobalAddress(GV);
-    MI->getOperand(2).setTargetFlags(M88kII::MO_ABS_HI);
+             .addGlobalAddress(GV, 0, M88kII::MO_ABS_HI);
     if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
       return false;
 
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
              .addReg(ValReg, getDefRegState(IsLoad))
              .addReg(Temp, RegState::Kill)
-             .addGlobalAddress(GV)
+             .addGlobalAddress(GV, 0, M88kII::MO_ABS_LO)
              .addMemOperand(MMO);
-    MI->getOperand(2).setTargetFlags(M88kII::MO_ABS_LO);
-  } else if (mi_match(Ptr.getReg(), MRI,
-                      m_GPtrAdd(m_MInstr(Base), m_ICst(Offset))) &&
-             isUInt<16>(Offset)) {
-    // Matches load/store + G_PTRADD + 16bit imm.
-    Register AddrReg =
-        Base->getOperand(Base->getOpcode() == TargetOpcode::COPY ? 1 : 0)
-            .getReg();
+  } else if (mi_match(PtrReg, MRI, m_GPtrAdd(m_Reg(Base), m_Reg(Addend)))) {
+    // Matches load/store + G_PTRADD.
+    Register AddrReg = getRegIgnoringCopies(Base, MRI);
+    Register IndexReg = getRegIgnoringCopies(Addend, MRI);
 
+    int64_t Offset;
+    int64_t Shift;
+    Register ShiftReg;
+    if (mi_match(IndexReg, MRI, m_ICst(Offset)) && isUInt<16>(Offset)) {
+      const unsigned NewOpc = getLoadStoreOp(I.getOpcode(), MemSizeInBytes,
+                                             LoadStore::Imm, IsZExtLoad);
+
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+               .addReg(ValReg, getDefRegState(IsLoad))
+               .addReg(AddrReg)
+               .addImm(Offset)
+               .addMemOperand(MMO);
+    } else if (mi_match(IndexReg, MRI,
+                        m_GShl(m_Reg(ShiftReg), m_ICst(Shift))) &&
+               Shift == Log2_32(MemSizeInBytes)) {
+      const unsigned NewOpc = getLoadStoreOp(I.getOpcode(), MemSizeInBytes,
+                                             LoadStore::RegScaled, IsZExtLoad);
+
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+               .addReg(ValReg, getDefRegState(IsLoad))
+               .addReg(AddrReg)
+               .addReg(ShiftReg)
+               .addMemOperand(MMO);
+    } else {
+      const unsigned NewOpc = getLoadStoreOp(
+          I.getOpcode(), MemSizeInBytes, LoadStore::RegUnscaled, IsZExtLoad);
+
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+               .addReg(ValReg, getDefRegState(IsLoad))
+               .addReg(AddrReg)
+               .addReg(IndexReg)
+               .addMemOperand(MMO);
+    }
+  } else {
+    // Simple load/store.
     const unsigned NewOpc = getLoadStoreOp(I.getOpcode(), MemSizeInBytes,
                                            LoadStore::Imm, IsZExtLoad);
 
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
              .addReg(ValReg, getDefRegState(IsLoad))
-             .addReg(AddrReg)
-             .addImm(Offset)
+             .addReg(PtrReg)
+             .addImm(0)
              .addMemOperand(MMO);
-  } else if (mi_match(Ptr.getReg(), MRI,
-                      m_GPtrAdd(m_MInstr(Base), m_MInstr(Addend)))) {
-    // Matches load/store + G_PTRADD.
-    Register AddrReg =
-        Base->getOperand(Base->getOpcode() == TargetOpcode::COPY ? 1 : 0)
-            .getReg();
-    Register IndexReg =
-        Base->getOperand(Addend->getOpcode() == TargetOpcode::COPY ? 1 : 0)
-            .getReg();
-
-    const unsigned NewOpc = getLoadStoreOp(I.getOpcode(), MemSizeInBytes,
-                                           LoadStore::RegUnscaled, IsZExtLoad);
-
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
-             .addReg(ValReg, getDefRegState(IsLoad))
-             .addReg(AddrReg)
-             .addReg(IndexReg)
-             .addMemOperand(MMO);
-  } else
-    return false;
+  }
 
   if (TruncMI)
     TruncMI->eraseFromParent();
