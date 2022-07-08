@@ -1130,11 +1130,10 @@ define dso_local void @v64i1_shuffle(<64 x i8>* %x, <64 x i8>* %y) "min-legal-ve
 ; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm0
 ; CHECK-NEXT:    vptestnmb %ymm1, %ymm1, %k0
 ; CHECK-NEXT:    kshiftrd $1, %k0, %k1
-; CHECK-NEXT:    movq $-3, %rax
-; CHECK-NEXT:    kmovq %rax, %k2
-; CHECK-NEXT:    kandq %k2, %k1, %k1
 ; CHECK-NEXT:    kshiftlq $63, %k0, %k2
 ; CHECK-NEXT:    kshiftrq $62, %k2, %k2
+; CHECK-NEXT:    kshiftlq $63, %k1, %k1
+; CHECK-NEXT:    kshiftrq $63, %k1, %k1
 ; CHECK-NEXT:    korq %k2, %k1, %k1
 ; CHECK-NEXT:    movq $-5, %rax
 ; CHECK-NEXT:    kmovq %rax, %k2
