@@ -16,11 +16,14 @@ namespace tooling {
 namespace dependencies {
 
 std::vector<std::string> FullDependencies::getCommandLine(
-    std::function<StringRef(ModuleID)> LookupPCMPath) const {
+    llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
+        LookupModuleOutput) const {
   std::vector<std::string> Ret = getCommandLineWithoutModulePaths();
 
-  for (ModuleID MID : ClangModuleDeps)
-    Ret.push_back(("-fmodule-file=" + LookupPCMPath(MID)).str());
+  for (ModuleID MID : ClangModuleDeps) {
+    auto PCM = LookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
+    Ret.push_back("-fmodule-file=" + PCM);
+  }
 
   return Ret;
 }
