@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ODRDiagsEmitter.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/TargetInfo.h"
@@ -2088,11 +2089,23 @@ Parser::ParseObjCAtProtocolDeclaration(SourceLocation AtLoc,
                                   /*consumeLastToken=*/true))
     return nullptr;
 
-  Decl *ProtoType = Actions.ActOnStartProtocolInterface(
+  Sema::SkipBodyInfo SkipBody;
+  ObjCProtocolDecl *ProtoType = Actions.ActOnStartProtocolInterface(
       AtLoc, protocolName, nameLoc, ProtocolRefs.data(), ProtocolRefs.size(),
-      ProtocolLocs.data(), EndProtoLoc, attrs);
+      ProtocolLocs.data(), EndProtoLoc, attrs, &SkipBody);
 
   ParseObjCInterfaceDeclList(tok::objc_protocol, ProtoType);
+  if (SkipBody.CheckSameAsPrevious) {
+    auto *PreviousDef = cast<ObjCProtocolDecl>(SkipBody.Previous);
+    if (Actions.ActOnDuplicateODRHashDefinition(ProtoType, PreviousDef)) {
+      ProtoType->mergeDuplicateDefinitionWithCommon(
+          PreviousDef->getDefinition());
+    } else {
+      ODRDiagsEmitter DiagsEmitter(Diags, Actions.getASTContext(),
+                                   getPreprocessor().getLangOpts());
+      DiagsEmitter.diagnoseMismatch(PreviousDef, ProtoType);
+    }
+  }
   return Actions.ConvertDeclToDeclGroup(ProtoType);
 }
 

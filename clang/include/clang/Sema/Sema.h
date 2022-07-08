@@ -3411,6 +3411,20 @@ public:
   /// in case of a structural mismatch.
   bool ActOnDuplicateDefinition(Decl *Prev, SkipBodyInfo &SkipBody);
 
+  /// Check ODR hashes for C/ObjC when merging types from modules.
+  /// Differently from C++, actually parse the body and reject in case
+  /// of a mismatch.
+  template <typename T,
+            typename = std::enable_if_t<std::is_base_of<NamedDecl, T>::value>>
+  bool ActOnDuplicateODRHashDefinition(T *Duplicate, T *Previous) {
+    if (Duplicate->getODRHash() != Previous->getODRHash())
+      return false;
+
+    // Make the previous decl visible.
+    makeMergedDefinitionVisible(Previous);
+    return true;
+  }
+
   typedef void *SkippedDefinitionContext;
 
   /// Invoked when we enter a tag definition that we're skipping.
@@ -10118,7 +10132,8 @@ public:
       SourceLocation AtProtoInterfaceLoc, IdentifierInfo *ProtocolName,
       SourceLocation ProtocolLoc, Decl *const *ProtoRefNames,
       unsigned NumProtoRefs, const SourceLocation *ProtoLocs,
-      SourceLocation EndProtoLoc, const ParsedAttributesView &AttrList);
+      SourceLocation EndProtoLoc, const ParsedAttributesView &AttrList,
+      SkipBodyInfo *SkipBody);
 
   ObjCCategoryDecl *ActOnStartCategoryInterface(
       SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
