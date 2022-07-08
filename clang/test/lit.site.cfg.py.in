@@ -21,7 +21,6 @@ config.host_cc = "@CMAKE_C_COMPILER@"
 config.host_cxx = "@CMAKE_CXX_COMPILER@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
-config.have_zstd = @LLVM_ENABLE_ZSTD@
 config.clang_arcmt = @CLANG_ENABLE_ARCMT@
 config.clang_default_pie_on_linux = @CLANG_DEFAULT_PIE_ON_LINUX@
 config.clang_enable_opaque_pointers = @CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL@
