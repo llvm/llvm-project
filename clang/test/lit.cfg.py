@@ -264,3 +264,13 @@ if 'aix' in config.target_triple:
                       '/ASTMerge/anonymous-fields', '/ASTMerge/injected-class-name-decl'):
         exclude_unsupported_files_for_aix(config.test_source_root + directory)
 
+# Some tests perform deep recursion, which requires a larger pthread stack size
+# than the relatively low default of 192 KiB for 64-bit processes on AIX. The
+# `AIXTHREAD_STK` environment variable provides a non-intrusive way to request
+# a larger pthread stack size for the tests. Various applications and runtime
+# libraries on AIX use a default pthread stack size of 4 MiB, so we will use
+# that as a default value here.
+if 'AIXTHREAD_STK' in os.environ:
+    config.environment['AIXTHREAD_STK'] = os.environ['AIXTHREAD_STK']
+elif platform.system() == 'AIX':
+    config.environment['AIXTHREAD_STK'] = '4194304'
