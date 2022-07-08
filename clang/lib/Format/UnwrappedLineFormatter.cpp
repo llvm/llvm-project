@@ -59,8 +59,7 @@ public:
     Offset = getIndentOffset(*Line.First);
     // Update the indent level cache size so that we can rely on it
     // having the right size in adjustToUnmodifiedline.
-    while (IndentForLevel.size() <= Line.Level)
-      IndentForLevel.push_back(-1);
+    skipLine(Line, /*UnknownIndent=*/true);
     if (Line.InPPDirective) {
       unsigned IndentWidth =
           (Style.PPIndentWidth >= 0) ? Style.PPIndentWidth : Style.IndentWidth;
@@ -76,9 +75,9 @@ public:
 
   /// Update the indent state given that \p Line indent should be
   /// skipped.
-  void skipLine(const AnnotatedLine &Line) {
-    while (IndentForLevel.size() <= Line.Level)
-      IndentForLevel.push_back(Indent);
+  void skipLine(const AnnotatedLine &Line, bool UnknownIndent = false) {
+    if (Line.Level >= IndentForLevel.size())
+      IndentForLevel.resize(Line.Level + 1, UnknownIndent ? -1 : Indent);
   }
 
   /// Update the level indent to adapt to the given \p Line.
@@ -159,7 +158,7 @@ private:
   const unsigned AdditionalIndent;
 
   /// The indent in characters for each level.
-  std::vector<int> IndentForLevel;
+  SmallVector<int> IndentForLevel;
 
   /// Offset of the current line relative to the indent level.
   ///
