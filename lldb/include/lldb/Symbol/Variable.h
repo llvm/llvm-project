@@ -11,7 +11,7 @@
 
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Mangled.h"
-#include "lldb/Expression/DWARFExpressionList.h"
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/UserID.h"
@@ -77,9 +77,7 @@ public:
 
   DWARFExpression &LocationExpression() { return m_location; }
 
-  const DWARFExpressionList &LocationExpressionList() const {
-    return m_location_list;
-  }
+  const DWARFExpression &LocationExpression() const { return m_location; }
 
   // When given invalid address, it dumps all locations. Otherwise it only dumps
   // the location that contains this address.
@@ -132,7 +130,7 @@ protected:
   Declaration m_declaration;
   /// The location of this variable that can be fed to
   /// DWARFExpression::Evaluate().
-  DWARFExpressionList m_location_list;
+  DWARFExpression m_location;
   /// Visible outside the containing compile unit?
   unsigned m_external : 1;
   /// Non-zero if the variable is not explicitly declared in source.

@@ -13,7 +13,7 @@
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Expression/DWARFExpressionList.h"
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -157,12 +157,14 @@ bool ValueObjectVariable::UpdateValue() {
       if (m_data.GetDataStart() && m_data.GetByteSize())
         m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
       m_value.SetContext(Value::ContextType::Variable, variable);
-    } else
+    }
+    else
       m_error.SetErrorString("empty constant data");
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
     SetAddressTypeOfChildren(eAddressTypeInvalid);
   } else {
+    lldb::addr_t loclist_base_load_addr = LLDB_INVALID_ADDRESS;
     ExecutionContext exe_ctx(GetExecutionContextRef());
 
     Target *target = exe_ctx.GetTargetPtr();
@@ -171,8 +173,17 @@ bool ValueObjectVariable::UpdateValue() {
       m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
     }
 
+    if (expr.IsLocationList()) {
+      SymbolContext sc;
+      variable->CalculateSymbolContext(&sc);
+      if (sc.function)
+        loclist_base_load_addr =
+            sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
+                target);
+    }
     Value old_value(m_value);
-    if (expr_list.Evaluate(&exe_ctx, nullptr, nullptr, nullptr, m_value, &m_error)) {
+    if (expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, nullptr,
+                      nullptr, m_value, &m_error)) {
       m_resolved_value = m_value;
       m_value.SetContext(Value::ContextType::Variable, variable);
 
@@ -279,7 +290,7 @@ bool ValueObjectVariable::UpdateValue() {
       m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
     }
   }
-
+  
   return m_error.Success();
 }
 

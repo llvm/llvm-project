@@ -823,10 +823,8 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
 
   m_ast->GetOrCreateVariableDecl(var_id);
 
-  ModuleSP module_sp = GetObjectFile()->GetModule();
-  DWARFExpressionList location(
-      module_sp, MakeGlobalLocationExpression(section, offset, module_sp),
-      nullptr);
+  DWARFExpression location = MakeGlobalLocationExpression(
+      section, offset, GetObjectFile()->GetModule());
 
   std::string global_name("::");
   global_name += name;
@@ -858,10 +856,8 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   Declaration decl;
   Variable::RangeList ranges;
   ModuleSP module = GetObjectFile()->GetModule();
-  DWARFExpressionList location(module,
-                               MakeConstantLocationExpression(
-                                   constant.Type, tpi, constant.Value, module),
-                               nullptr);
+  DWARFExpression location = MakeConstantLocationExpression(
+      constant.Type, tpi, constant.Value, module);
 
   bool external = false;
   bool artificial = false;
