@@ -98,10 +98,12 @@ struct StoreToLoadForwardingCandidate {
     Value *LoadPtr = Load->getPointerOperand();
     Value *StorePtr = Store->getPointerOperand();
     Type *LoadType = getLoadStoreType(Load);
+    auto &DL = Load->getParent()->getModule()->getDataLayout();
 
     assert(LoadPtr->getType()->getPointerAddressSpace() ==
                StorePtr->getType()->getPointerAddressSpace() &&
-           LoadType == getLoadStoreType(Store) &&
+           DL.getTypeSizeInBits(LoadType) ==
+               DL.getTypeSizeInBits(getLoadStoreType(Store)) &&
            "Should be a known dependence");
 
     // Currently we only support accesses with unit stride.  FIXME: we should be
@@ -111,7 +113,6 @@ struct StoreToLoadForwardingCandidate {
         getPtrStride(PSE, LoadType, StorePtr, L) != 1)
       return false;
 
-    auto &DL = Load->getParent()->getModule()->getDataLayout();
     unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
 
     auto *LoadPtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(LoadPtr));
@@ -211,9 +212,10 @@ public:
       if (!Load)
         continue;
 
-      // Only progagate the value if they are of the same type.
-      if (Store->getPointerOperandType() != Load->getPointerOperandType() ||
-          getLoadStoreType(Store) != getLoadStoreType(Load))
+      // Only propagate if the stored values are bit/pointer castable.
+      if (!CastInst::isBitOrNoopPointerCastable(
+              getLoadStoreType(Store), getLoadStoreType(Load),
+              Store->getParent()->getModule()->getDataLayout()))
         continue;
 
       Candidates.emplace_front(Load, Store);
@@ -438,7 +440,21 @@ public:
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded",
                                    &L->getHeader()->front());
     PHI->addIncoming(Initial, PH);
-    PHI->addIncoming(Cand.Store->getOperand(0), L->getLoopLatch());
+
+    Type *LoadType = Initial->getType();
+    Type *StoreType = Cand.Store->getValueOperand()->getType();
+    auto &DL = Cand.Load->getParent()->getModule()->getDataLayout();
+    (void)DL;
+
+    assert(DL.getTypeSizeInBits(LoadType) == DL.getTypeSizeInBits(StoreType) &&
+           "The type sizes should match!");
+
+    Value *StoreValue = Cand.Store->getValueOperand();
+    if (LoadType != StoreType)
+      StoreValue = CastInst::CreateBitOrPointerCast(
+          StoreValue, LoadType, "store_forward_cast", Cand.Store);
+
+    PHI->addIncoming(StoreValue, L->getLoopLatch());
 
     Cand.Load->replaceAllUsesWith(PHI);
   }
