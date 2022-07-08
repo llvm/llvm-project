@@ -1362,6 +1362,29 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
+    // AND(INSERT_SUBVECTOR(C,X,I),M) -> INSERT_SUBVECTOR(AND(C,M),X,I)
+    // iff 'C' is Undef/Constant and AND(X,M) == X (for DemandedBits).
+    if (Op0.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        (Op0.getOperand(0).isUndef() ||
+         ISD::isBuildVectorOfConstantSDNodes(Op0.getOperand(0).getNode())) &&
+        Op0->hasOneUse()) {
+      unsigned NumSubElts =
+          Op0.getOperand(1).getValueType().getVectorNumElements();
+      unsigned SubIdx = Op0.getConstantOperandVal(2);
+      APInt DemandedSub =
+          APInt::getBitsSet(NumElts, SubIdx, SubIdx + NumSubElts);
+      KnownBits KnownSubMask =
+          TLO.DAG.computeKnownBits(Op1, DemandedSub & DemandedElts, Depth + 1);
+      if (DemandedBits.isSubsetOf(KnownSubMask.One)) {
+        SDValue NewAnd =
+            TLO.DAG.getNode(ISD::AND, dl, VT, Op0.getOperand(0), Op1);
+        SDValue NewInsert =
+            TLO.DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VT, NewAnd,
+                            Op0.getOperand(1), Op0.getOperand(2));
+        return TLO.CombineTo(Op, NewInsert);
+      }
+    }
+
     if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
                              Depth + 1))
       return true;
