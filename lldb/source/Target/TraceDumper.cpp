@@ -129,18 +129,16 @@ public:
     m_s.Format("    {0}: ", item.id);
 
     if (m_options.show_tsc) {
-      m_s << "[tsc=";
-
-      if (item.tsc)
-        m_s.Format("{0}", *item.tsc);
-      else
-        m_s << "unavailable";
-
-      m_s << "] ";
+      m_s.Format("[tsc={0}] ",
+                 item.tsc ? std::to_string(*item.tsc) : "unavailable");
     }
 
     if (item.event) {
       m_s << "(event) " << TraceCursor::EventKindToString(*item.event);
+      if (*item.event == eTraceEventCPUChanged) {
+        m_s.Format(" [new CPU={0}]",
+                   item.cpu_id ? std::to_string(*item.cpu_id) : "unavailable");
+      }
     } else if (item.error) {
       m_s << "(error) " << *item.error;
     } else {
@@ -172,14 +170,16 @@ class OutputWriterJSON : public TraceDumper::OutputWriter {
   /* schema:
     error_message: string
     | {
+      "event": string,
       "id": decimal,
       "tsc"?: string decimal,
-      "event": string
+      "cpuId"? decimal,
     } | {
+      "error": string,
       "id": decimal,
       "tsc"?: string decimal,
-      "error": string,
     | {
+      "loadAddress": string decimal,
       "id": decimal,
       "tsc"?: string decimal,
       "module"?: string,
@@ -202,6 +202,11 @@ public:
 
   void DumpEvent(const TraceDumper::TraceItem &item) {
     m_j.attribute("event", TraceCursor::EventKindToString(*item.event));
+<<<<<<< HEAD
+=======
+    if (item.event == eTraceEventCPUChanged)
+      m_j.attribute("cpuId", item.cpu_id);
+>>>>>>> ccb96b741a18 ([trace][intel pt] Create a CPU change event and expose it in the dumper)
   }
 
   void DumpInstruction(const TraceDumper::TraceItem &item) {
@@ -211,12 +216,18 @@ public:
       m_j.attribute(
           "symbol",
           ToOptionalString(item.symbol_info->sc.GetFunctionName().AsCString()));
+<<<<<<< HEAD
 
       if (item.symbol_info->instruction) {
         m_j.attribute("mnemonic",
                       ToOptionalString(item.symbol_info->instruction->GetMnemonic(
                           &item.symbol_info->exe_ctx)));
       }
+=======
+      m_j.attribute("mnemonic",
+                    ToOptionalString(item.symbol_info->instruction->GetMnemonic(
+                        &item.symbol_info->exe_ctx)));
+>>>>>>> ccb96b741a18 ([trace][intel pt] Create a CPU change event and expose it in the dumper)
 
       if (IsLineEntryValid(item.symbol_info->sc.line_entry)) {
         m_j.attribute(
@@ -239,6 +250,7 @@ public:
 
       if (item.event) {
         DumpEvent(item);
+<<<<<<< HEAD
         return;
       }
 
@@ -249,6 +261,13 @@ public:
 
       // we know we are seeing an actual instruction
       DumpInstruction(item);
+=======
+      } else if (item.error) {
+        m_j.attribute("error", *item.error);
+      } else {
+        DumpInstruction(item);
+      }
+>>>>>>> ccb96b741a18 ([trace][intel pt] Create a CPU change event and expose it in the dumper)
     });
   }
 
@@ -369,6 +388,8 @@ Optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
       if (!m_options.show_events)
         continue;
       item.event = m_cursor_up->GetEventType();
+      if (*item.event == eTraceEventCPUChanged)
+        item.cpu_id = m_cursor_up->GetCPU();
     } else if (m_cursor_up->IsError()) {
       item.error = m_cursor_up->GetError();
     } else {
