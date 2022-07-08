@@ -6,6 +6,10 @@ if(LLVM_ENABLE_ZLIB)
   set(imported_libs ZLIB::ZLIB)
 endif()
 
+if(LLVM_ENABLE_ZSTD)
+  list(APPEND imported_libs zstd)
+endif()
+
 add_lld_library(lldELF
   AArch64ErrataFix.cpp
   Arch/AArch64.cpp
