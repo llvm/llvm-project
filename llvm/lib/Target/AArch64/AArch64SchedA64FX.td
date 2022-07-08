@@ -18,11 +18,11 @@ def A64FXModel : SchedMachineModel {
   // Determined via a mix of micro-arch details and experimentation.
   let LoopMicroOpBufferSize = 128;
   let PostRAScheduler       =   1; // Using PostRA sched.
-  let CompleteModel         =   1;
+  let CompleteModel         =   0;
 
   list<Predicate> UnsupportedFeatures =
     [HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3, HasSVE2BitPerm, HasPAuth,
-     HasSVE2orSME];
+     HasSVE2orSME, HasMTE, HasMatMulInt8, HasBF16];
 
   let FullInstRWOverlapCheck = 0;
 }

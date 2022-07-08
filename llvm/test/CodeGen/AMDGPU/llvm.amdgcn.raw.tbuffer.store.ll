@@ -1,6 +1,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefixes=GCN,PREGFX10 %s
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefixes=GCN,PREGFX10 %s
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
+;RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX11 %s
 
 ; GCN-LABEL: {{^}}tbuffer_store:
 ; PREGFX10: tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:[BUF_DATA_FORMAT_16_16_16_16,BUF_NUM_FORMAT_USCALED]
@@ -11,6 +12,10 @@
 ; GFX10: tbuffer_store_format_xyzw v[4:7], off, s[0:3], 0 format:[BUF_FMT_8_8_8_8_SINT] glc
 ; GFX10: tbuffer_store_format_xyzw v[8:11], off, s[0:3], 0 format:78 slc
 ; GFX10: tbuffer_store_format_xyzw v[8:11], off, s[0:3], 0 format:78 glc dlc
+; GFX11: tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:[BUF_FMT_8_8_8_8_USCALED]
+; GFX11: tbuffer_store_format_xyzw v[4:7], off, s[0:3], 0 format:[BUF_FMT_32_32_32_32_UINT] glc
+; GFX11: tbuffer_store_format_xyzw v[8:11], off, s[0:3], 0 format:78 slc
+; GFX11: tbuffer_store_format_xyzw v[8:11], off, s[0:3], 0 format:78 glc dlc
 define amdgpu_ps void @tbuffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 main_body:
   %in1 = bitcast <4 x float> %1 to <4 x i32>
@@ -26,6 +31,7 @@ main_body:
 ; GCN-LABEL: {{^}}tbuffer_store_immoffs:
 ; PREGFX10: tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:[BUF_DATA_FORMAT_16_16,BUF_NUM_FORMAT_FLOAT] offset:42
 ; GFX10: tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:117 offset:42
+; GFX11: tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:117 offset:42
 define amdgpu_ps void @tbuffer_store_immoffs(<4 x i32> inreg, <4 x float>) {
 main_body:
   %in1 = bitcast <4 x float> %1 to <4 x i32>
@@ -36,6 +42,7 @@ main_body:
 ; GCN-LABEL: {{^}}tbuffer_store_scalar_and_imm_offs:
 ; PREGFX10: tbuffer_store_format_xyzw v[0:3], off, s[0:3], {{s[0-9]+}} format:[BUF_DATA_FORMAT_16_16,BUF_NUM_FORMAT_FLOAT] offset:42
 ; GFX10: tbuffer_store_format_xyzw v[0:3], off, s[0:3], {{s[0-9]+}} format:117 offset:42
+; GFX11: tbuffer_store_format_xyzw v[0:3], off, s[0:3], {{s[0-9]+}} format:117 offset:42
 define amdgpu_ps void @tbuffer_store_scalar_and_imm_offs(<4 x i32> inreg, <4 x float> %vdata, i32 inreg %soffset) {
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -46,6 +53,7 @@ main_body:
 ; GCN-LABEL: {{^}}buffer_store_ofs:
 ; PREGFX10: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_8_8,BUF_NUM_FORMAT_FLOAT] offen
 ; GFX10: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:115 offen
+; GFX11: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:115 offen
 define amdgpu_ps void @buffer_store_ofs(<4 x i32> inreg, <4 x float> %vdata, i32 %voffset) {
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -56,6 +64,7 @@ main_body:
 ; GCN-LABEL: {{^}}buffer_store_x1:
 ; PREGFX10: tbuffer_store_format_x v0, off, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_FLOAT]
 ; GFX10: tbuffer_store_format_x v0, off, s[0:3], 0 format:125
+; GFX11: tbuffer_store_format_x v0, off, s[0:3], 0 format:125
 define amdgpu_ps void @buffer_store_x1(<4 x i32> inreg %rsrc, float %data) {
 main_body:
   %data.i = bitcast float %data to i32
@@ -66,6 +75,7 @@ main_body:
 ; GCN-LABEL: {{^}}buffer_store_x2:
 ; PREGFX10: tbuffer_store_format_xy v[0:1], off, s[0:3], 0 format:[BUF_NUM_FORMAT_USCALED]
 ; GFX10: tbuffer_store_format_xy v[0:1], off, s[0:3], 0 format:[BUF_FMT_10_11_11_SSCALED]
+; GFX11: tbuffer_store_format_xy v[0:1], off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
 define amdgpu_ps void @buffer_store_x2(<4 x i32> inreg %rsrc, <2 x float> %data) {
 main_body:
   %data.i = bitcast <2 x float> %data to <2 x i32>

@@ -134,17 +134,20 @@ body:             |
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32), [[C1]](s32), [[C1]](s32)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ICMP]], 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C2]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[AND]], 1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SEXT_INREG]](s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[SEXT_INREG]](s32), [[C2]](s64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY2]](s32), [[C3]](s64)
     ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[IVEC]](<4 x s32>), [[DEF]], shufflemask(0, 0, 0, 0)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C3]](s32), [[C3]](s32), [[C3]](s32), [[C3]](s32)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C4]](s32), [[C4]](s32), [[C4]](s32), [[C4]](s32)
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<4 x s32>) = G_XOR [[SHUF]], [[BUILD_VECTOR1]]
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<4 x s32>) = G_AND [[COPY1]], [[SHUF]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<4 x s32>) = G_AND [[BUILD_VECTOR]], [[XOR]]
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<4 x s32>) = G_OR [[AND]], [[AND1]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<4 x s32>) = G_AND [[COPY1]], [[SHUF]]
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(<4 x s32>) = G_AND [[BUILD_VECTOR]], [[XOR]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<4 x s32>) = G_OR [[AND1]], [[AND2]]
     ; CHECK-NEXT: $q0 = COPY [[OR]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s32) = COPY $w0
@@ -171,9 +174,10 @@ body:             |
     ; CHECK-NEXT: %a:_(s32) = COPY $w0
     ; CHECK-NEXT: %b:_(s32) = COPY $w1
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), %a(s32), %b
-    ; CHECK-NEXT: %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT %cmp(s1), [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[AND]](s32), [[DEF]], [[DEF]]
     ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s32) = COPY $w0
@@ -302,10 +306,11 @@ body:             |
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32), [[C1]](s32), [[C1]](s32)
     ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %w0(s32), [[C]]
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s1) = COPY %cmp(s1)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT %cmp(s1)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ZEXT]](s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s1>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[COPY]](s1), [[C2]](s64)
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[C2]](s64)
     ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x s1>) = G_SHUFFLE_VECTOR [[IVEC]](<4 x s1>), [[DEF]], shufflemask(0, 0, 0, 0)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s1>) = G_BUILD_VECTOR [[C3]](s1), [[C3]](s1), [[C3]](s1), [[C3]](s1)

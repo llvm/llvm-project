@@ -69,7 +69,7 @@ define <4 x i32> @test4(<4 x i32> %a) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    pslld $1, %xmm1
-; SSE2-NEXT:    shufps  {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test4:

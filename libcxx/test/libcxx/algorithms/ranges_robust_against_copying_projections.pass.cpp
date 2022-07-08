@@ -190,8 +190,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::search(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::search_n(first, last, count, value, Equal(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::search_n(a, count, value, Equal(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::set_difference(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::set_difference(a, b, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::set_difference(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::set_difference(a, b, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::set_intersection(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::set_intersection(a, b, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::set_symmetric_difference(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
