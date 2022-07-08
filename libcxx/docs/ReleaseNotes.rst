@@ -224,3 +224,8 @@ Build System Changes
   means that the same set of installed headers works for both DLL and static
   linkage. This means that distributors finally can build both library
   versions with a single CMake invocation.
+
+- The ``LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT`` configuration option has been removed. Indeed,
+  the risk of ODR violations from mixing different versions of libc++ in the same program has
+  been mitigated with a different technique that is simpler and does not have the drawbacks of
+  using internal linkage.
