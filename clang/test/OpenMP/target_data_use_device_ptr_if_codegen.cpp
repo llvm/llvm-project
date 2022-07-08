@@ -32,8 +32,8 @@ void add_one(float *b, int dm)
   // CK1-NOT: store float* [[VAL]], float** {{%.+}},
   // CK1:     store float* [[VAL]], float** [[PVT:%.+]],
   // CK1:     [[TT:%.+]] = load float*, float** [[PVT]],
-  // CK1:     call i32 @__tgt_target{{.+}}[[MTYPE01]]
-  // CK1:     call i32 @__tgt_target{{.+}}[[MTYPE02]]
+  // CK1:     call i32 @__tgt_target{{.+}}
+  // CK1:     call i32 @__tgt_target{{.+}}
   // CK1:     call void @__tgt_target_data_end{{.+}}[[MTYPE00]]
 #pragma omp target data map(tofrom:b[:1]) use_device_ptr(b) if(dm == 0)
   {

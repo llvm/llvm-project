@@ -48,28 +48,32 @@
 void implicit_maps_float_complex (int a){
   float _Complex fc = (float)a;
 
-  // CK12-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** null)
-  // CK12-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK12-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK12-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK12-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK12-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK12-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK12-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK12-DAG: [[PGEP:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK12-DAG: store i8** [[PGEP:%.+]], i8*** [[BPARG]]
+// CK12-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK12-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK12-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK12-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
 
-  // CK12-64-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[sz:64|32]]*
-  // CK12-64-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[sz]]*
-  // CK12-64-DAG: store i[[sz]] [[VAL:%[^,]+]], i[[sz]]* [[CBP1]]
-  // CK12-64-DAG: store i[[sz]] [[VAL]], i[[sz]]* [[CP1]]
-  // CK12-64-DAG: [[VAL]] = load i[[sz]], i[[sz]]* [[ADDR:%.+]],
-  // CK12-64-DAG: [[CADDR:%.+]] = bitcast i[[sz]]* [[ADDR]] to { float, float }*
-  // CK12-64-DAG: store { float, float } {{.+}}, { float, float }* [[CADDR]],
+// CK12-64-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i[[sz:64|32]]*
+// CK12-64-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i[[sz]]*
+// CK12-64-DAG: store i[[sz]] [[VAL:%[^,]+]], i[[sz]]* [[CBP1]]
+// CK12-64-DAG: store i[[sz]] [[VAL]], i[[sz]]* [[CP1]]
+// CK12-64-DAG: [[VAL]] = load i[[sz]], i[[sz]]* [[ADDR:%.+]],
+// CK12-64-DAG: [[CADDR:%.+]] = bitcast i[[sz]]* [[ADDR]] to { float, float }*
+// CK12-64-DAG: store { float, float } {{.+}}, { float, float }* [[CADDR]],
 
-  // CK12-32-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to { float, float }**
-  // CK12-32-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to { float, float }**
-  // CK12-32-DAG: store { float, float }* [[DECL:%[^,]+]], { float, float }** [[CBP1]]
-  // CK12-32-DAG: store { float, float }* [[DECL]], { float, float }** [[CP1]]
+// CK12-32-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to { float, float }**
+// CK12-32-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to { float, float }**
+// CK12-32-DAG: store { float, float }* [[DECL:%[^,]+]], { float, float }** [[CBP1]]
+// CK12-32-DAG: store { float, float }* [[DECL]], { float, float }** [[CP1]]
 
-  // CK12-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
-  // CK12-32: call void [[KERNEL:@.+]]({ float, float }* [[DECL]])
-  #pragma omp target
+// CK12-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
+// CK12-32: call void [[KERNEL:@.+]]({ float, float }* [[DECL]])
+#pragma omp target
   {
     fc *= fc;
   }
