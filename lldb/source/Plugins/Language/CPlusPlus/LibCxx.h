@@ -103,6 +103,56 @@ SyntheticChildrenFrontEnd *
 LibCxxMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                           lldb::ValueObjectSP);
 
+/// Formats libcxx's std::unordered_map iterators
+///
+/// In raw form a std::unordered_map::iterator is represented as follows:
+///
+/// (lldb) var it --raw --ptr-depth 1
+/// (std::__1::__hash_map_iterator<
+///    std::__1::__hash_iterator<
+///      std::__1::__hash_node<
+///        std::__1::__hash_value_type<
+///            std::__1::basic_string<char, std::__1::char_traits<char>,
+///            std::__1::allocator<char> >, std::__1::basic_string<char,
+///            std::__1::char_traits<char>, std::__1::allocator<char> > >,
+///        void *> *> >)
+///  it = {
+///   __i_ = {
+///     __node_ = 0x0000600001700040 {
+///       __next_ = 0x0000600001704000
+///     }
+///   }
+/// }
+class LibCxxUnorderedMapIteratorSyntheticFrontEnd
+    : public SyntheticChildrenFrontEnd {
+public:
+  LibCxxUnorderedMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
+
+  ~LibCxxUnorderedMapIteratorSyntheticFrontEnd() override = default;
+
+  size_t CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+
+  bool Update() override;
+
+  bool MightHaveChildren() override;
+
+  size_t GetIndexOfChildWithName(ConstString name) override;
+
+private:
+  ValueObject *m_iter_ptr = nullptr; ///< Held, not owned. Child of iterator
+                                     ///< ValueObject supplied at construction.
+
+  lldb::ValueObjectSP m_pair_sp; ///< ValueObject for the key/value pair
+                                 ///< that the iterator currently points
+                                 ///< to.
+};
+
+SyntheticChildrenFrontEnd *
+LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                                   lldb::ValueObjectSP);
+
 SyntheticChildrenFrontEnd *
 LibCxxVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                              lldb::ValueObjectSP);

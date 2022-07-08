@@ -27,6 +27,7 @@
 
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/lldb-enumerations.h"
 #include <tuple>
 
 using namespace lldb;
@@ -283,6 +284,22 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
             llvm::dyn_cast_or_null<TypeSystemClang>(pair_type.GetTypeSystem());
         if (!ast_ctx)
           return false;
+
+        // Mimick layout of std::__tree_iterator::__ptr_ and read it in
+        // from process memory.
+        //
+        // The following shows the contiguous block of memory:
+        //
+        //        +-----------------------------+ class __tree_end_node
+        // __ptr_ | pointer __left_;            |
+        //        +-----------------------------+ class __tree_node_base
+        //        | pointer __right_;           |
+        //        | __parent_pointer __parent_; |
+        //        | bool __is_black_;           |
+        //        +-----------------------------+ class __tree_node
+        //        | __node_value_type __value_; | <<< our key/value pair
+        //        +-----------------------------+
+        //
         CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
             ConstString(),
             {{"ptr0",
@@ -356,6 +373,156 @@ SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
   return (valobj_sp ? new LibCxxMapIteratorSyntheticFrontEnd(valobj_sp)
+                    : nullptr);
+}
+
+lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+    : SyntheticChildrenFrontEnd(*valobj_sp) {
+  if (valobj_sp)
+    Update();
+}
+
+bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+    Update() {
+  m_pair_sp.reset();
+  m_iter_ptr = nullptr;
+
+  ValueObjectSP valobj_sp = m_backend.GetSP();
+  if (!valobj_sp)
+    return false;
+
+  TargetSP target_sp(valobj_sp->GetTargetSP());
+
+  if (!target_sp)
+    return false;
+
+  if (!valobj_sp)
+    return false;
+
+  auto exprPathOptions = ValueObject::GetValueForExpressionPathOptions()
+                             .DontCheckDotVsArrowSyntax()
+                             .SetSyntheticChildrenTraversal(
+                                 ValueObject::GetValueForExpressionPathOptions::
+                                     SyntheticChildrenTraversal::None);
+
+  // This must be a ValueObject* because it is a child of the ValueObject we
+  // are producing children for it if were a ValueObjectSP, we would end up
+  // with a loop (iterator -> synthetic -> child -> parent == iterator) and
+  // that would in turn leak memory by never allowing the ValueObjects to die
+  // and free their memory.
+  m_iter_ptr =
+      valobj_sp
+          ->GetValueForExpressionPath(".__i_.__node_", nullptr, nullptr,
+                                      exprPathOptions, nullptr)
+          .get();
+
+  if (m_iter_ptr) {
+    auto iter_child(
+        valobj_sp->GetChildMemberWithName(ConstString("__i_"), true));
+    if (!iter_child) {
+      m_iter_ptr = nullptr;
+      return false;
+    }
+
+    CompilerType node_type(iter_child->GetCompilerType()
+                               .GetTypeTemplateArgument(0)
+                               .GetPointeeType());
+
+    CompilerType pair_type(node_type.GetTypeTemplateArgument(0));
+
+    std::string name;
+    uint64_t bit_offset_ptr;
+    uint32_t bitfield_bit_size_ptr;
+    bool is_bitfield_ptr;
+
+    pair_type = pair_type.GetFieldAtIndex(
+        0, name, &bit_offset_ptr, &bitfield_bit_size_ptr, &is_bitfield_ptr);
+    if (!pair_type) {
+      m_iter_ptr = nullptr;
+      return false;
+    }
+
+    uint64_t addr = m_iter_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    m_iter_ptr = nullptr;
+
+    if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
+      return false;
+
+    TypeSystemClang *ast_ctx =
+        llvm::dyn_cast_or_null<TypeSystemClang>(pair_type.GetTypeSystem());
+    if (!ast_ctx)
+      return false;
+
+    // Mimick layout of std::__hash_iterator::__node_ and read it in
+    // from process memory.
+    //
+    // The following shows the contiguous block of memory:
+    //
+    //         +-----------------------------+ class __hash_node_base
+    // __node_ | __next_pointer __next_;     |
+    //         +-----------------------------+ class __hash_node
+    //         | size_t __hash_;             |
+    //         | __node_value_type __value_; | <<< our key/value pair
+    //         +-----------------------------+
+    //
+    CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
+        ConstString(),
+        {{"__next_",
+          ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+         {"__hash_", ast_ctx->GetBasicType(lldb::eBasicTypeUnsignedLongLong)},
+         {"__value_", pair_type}});
+    llvm::Optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
+    if (!size)
+      return false;
+    WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
+    ProcessSP process_sp(target_sp->GetProcessSP());
+    Status error;
+    process_sp->ReadMemory(addr, buffer_sp->GetBytes(),
+                           buffer_sp->GetByteSize(), error);
+    if (error.Fail())
+      return false;
+    DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
+                            process_sp->GetAddressByteSize());
+    auto pair_sp = CreateValueObjectFromData(
+        "pair", extractor, valobj_sp->GetExecutionContextRef(), tree_node_type);
+    if (pair_sp)
+      m_pair_sp = pair_sp->GetChildAtIndex(2, true);
+  }
+
+  return false;
+}
+
+size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+    CalculateNumChildren() {
+  return 2;
+}
+
+lldb::ValueObjectSP lldb_private::formatters::
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+  if (m_pair_sp)
+    return m_pair_sp->GetChildAtIndex(idx, true);
+  return lldb::ValueObjectSP();
+}
+
+bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+    MightHaveChildren() {
+  return true;
+}
+
+size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+    GetIndexOfChildWithName(ConstString name) {
+  if (name == "first")
+    return 0;
+  if (name == "second")
+    return 1;
+  return UINT32_MAX;
+}
+
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  return (valobj_sp ? new LibCxxUnorderedMapIteratorSyntheticFrontEnd(valobj_sp)
                     : nullptr);
 }
 
