@@ -53,6 +53,12 @@ extern "C" const char* __tsan_default_options() {
 }
 #endif
 
+namespace __sanitizer {
+bool ReexecDisabled() {
+  return true;
+}
+}
+
 int main(int argc, char **argv) {
   argv0 = argv[0];
   return run_tests(argc, argv);
