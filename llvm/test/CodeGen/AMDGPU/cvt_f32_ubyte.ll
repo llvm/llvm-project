@@ -2817,9 +2817,7 @@ define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    buffer_store_byte v3, off, s[0:3], 0
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
-; SI-NEXT:  .LBB40_1: ; %for.body.i
-; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SI-NEXT:    s_branch .LBB40_1
+; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: cvt_f32_ubyte0_vector:
 ; VI:       ; %bb.0: ; %entry
@@ -2845,9 +2843,7 @@ define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    buffer_store_byte v3, off, s[0:3], 0
 ; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
-; VI-NEXT:  .LBB40_1: ; %for.body.i
-; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    s_branch .LBB40_1
+; VI-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: cvt_f32_ubyte0_vector:
 ; GFX10:       ; %bb.0: ; %entry
@@ -2873,14 +2869,10 @@ define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_byte v[0:1], v4, off
 ; GFX10-NEXT:    global_store_byte v[0:1], v0, off
-; GFX10-NEXT:  .LBB40_1: ; %for.body.i
-; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    s_branch .LBB40_1
+; GFX10-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: cvt_f32_ubyte0_vector:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:  .LBB40_1: ; %for.body.i
-; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_ubyte v2, v[0:1], off offset:3
@@ -2900,7 +2892,7 @@ define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    global_store_byte v[0:1], v6, off
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
-; GFX9-NEXT:    s_branch .LBB40_1
+; GFX9-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: cvt_f32_ubyte0_vector:
 ; GFX11:       ; %bb.0: ; %entry
@@ -2925,9 +2917,8 @@ define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; GFX11-NEXT:    global_store_b8 v[0:1], v3, off
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX11-NEXT:    global_store_b8 v[0:1], v1, off
-; GFX11-NEXT:  .LBB40_1: ; %for.body.i
-; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX11-NEXT:    s_branch .LBB40_1
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
 entry:
   br label %for.body.i
 
@@ -2953,5 +2944,5 @@ for.body.i:                                       ; preds = %for.body.i, %entry
   %retval.sroa.0.0.insert.ext = and i32 %retval.sroa.0.0.copyload.i, 255
   %retval.sroa.0.0.insert.insert = or i32 %retval.sroa.2.0.insert.insert, %retval.sroa.0.0.insert.ext
   store i32 %retval.sroa.0.0.insert.insert, i32 addrspace(1)* undef, align 1
-  br label %for.body.i
+  ret void
 }
