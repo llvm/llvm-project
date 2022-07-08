@@ -350,6 +350,11 @@ public:
     return m_reflection_ctx.isValueInlinedInExistentialContainer(
         existential_address);
   }
+
+  swift::remote::RemoteAbsolutePointer
+  stripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) override {
+    return m_reflection_ctx.stripSignedPointer(pointer);
+  }
 };
 
 } // namespace
@@ -406,8 +411,13 @@ const CompilerType &SwiftLanguageRuntimeImpl::GetBoxMetadataType() {
 
 std::shared_ptr<LLDBMemoryReader>
 SwiftLanguageRuntimeImpl::GetMemoryReader() {
-  if (!m_memory_reader_sp)
-    m_memory_reader_sp.reset(new LLDBMemoryReader(m_process));
+  if (!m_memory_reader_sp) {
+    m_memory_reader_sp.reset(new LLDBMemoryReader(
+        m_process, [&](swift::remote::RemoteAbsolutePointer pointer) {
+          auto *reflection_context = GetReflectionContext();
+          return reflection_context->stripSignedPointer(pointer);
+        }));
+  }
 
   return m_memory_reader_sp;
 }
