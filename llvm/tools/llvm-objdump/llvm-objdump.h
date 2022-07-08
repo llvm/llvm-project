@@ -124,12 +124,12 @@ SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O,
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
 void printRelocations(const object::ObjectFile *O);
 void printDynamicRelocations(const object::ObjectFile *O);
-void printSectionHeaders(const object::ObjectFile *O);
+void printSectionHeaders(const object::ObjectFile &O);
 void printSectionContents(const object::ObjectFile *O);
-void printSymbolTable(const object::ObjectFile *O, StringRef ArchiveName,
+void printSymbolTable(const object::ObjectFile &O, StringRef ArchiveName,
                       StringRef ArchitectureName = StringRef(),
                       bool DumpDynamic = false);
-void printSymbol(const object::ObjectFile *O, const object::SymbolRef &Symbol,
+void printSymbol(const object::ObjectFile &O, const object::SymbolRef &Symbol,
                  ArrayRef<object::VersionEntry> SymbolVersions,
                  StringRef FileName, StringRef ArchiveName,
                  StringRef ArchitectureName, bool DumpDynamic);
@@ -148,7 +148,7 @@ T unwrapOrError(Expected<T> EO, Ts &&... Args) {
 
 std::string getFileNameForError(const object::Archive::Child &C,
                                 unsigned Index);
-SymbolInfoTy createSymbolInfo(const object::ObjectFile *Obj,
+SymbolInfoTy createSymbolInfo(const object::ObjectFile &Obj,
                               const object::SymbolRef &Symbol);
 
 } // namespace objdump
