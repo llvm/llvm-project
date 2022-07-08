@@ -40,10 +40,15 @@ public:
 
   bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 
-  // In Windows_x86_64 ABI, stack will always be maintained 16-byte aligned
+  // In Windows_x86_64 ABI requires that the stack will be maintained 16-byte
+  // aligned.
+  // When ntdll invokes callbacks such as KiUserExceptionDispatcher or
+  // KiUserCallbackDispatcher, those functions won't have a properly 16-byte
+  // aligned stack - but tolerate unwinding through them by relaxing the
+  // requirement to 8 bytes.
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
-	  if (cfa & (16ull - 1ull))
-      return false; // Not 16 byte aligned
+    if (cfa & (8ull - 1ull))
+      return false; // Not 8 byte aligned
     if (cfa == 0)
       return false; // Zero is not a valid stack address
     return true;
