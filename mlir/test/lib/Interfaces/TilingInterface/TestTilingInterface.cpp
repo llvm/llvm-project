@@ -171,6 +171,9 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
     // 4. Tiling 2D conv op.
     addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
         context, {0, 0, 0, 0, 10, 20, 30}, "simple_conv", patterns);
+    // 5. Tiling a simple op with `linalg.index` inside.
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, {10, 20}, "indexed_semantics", patterns);
     return;
   }
   if (testTileConsumerAndFuseProducer) {

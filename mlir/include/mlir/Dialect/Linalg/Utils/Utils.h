@@ -243,10 +243,11 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &builder, Location loc,
                                       ArrayRef<Value> sizeBounds,
                                       bool omitPartialTileCheck);
 
-/// Add the tile loop induction variables `ivs` to the IndexOp results found in
-/// the body of the `tiledOp` to account for the tile offset.
-void addTileLoopIvsToIndexOpResults(OpBuilder &b, LinalgOp tiledOp,
-                                    ArrayRef<Value> ivs);
+/// Add the specified offsets to any `linalg.index` ops contained in the given
+/// `linalgOp`. The offsets are provided in the same order as iteration space
+/// dimensions. Null offests are assumed to be zero.
+void offsetIndices(OpBuilder &b, LinalgOp linalgOp, ArrayRef<Value> offests);
+void offsetIndices(RewriterBase &b, LinalgOp linalgOp, ArrayRef<Value> offests);
 
 using FusableOpDependencesTy = llvm::MapVector<
     Operation *,

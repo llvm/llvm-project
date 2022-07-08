@@ -170,7 +170,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   SmallVector<Value> allIvs;
   llvm::transform(loopRanges, std::back_inserter(allIvs),
                   [](Range range) { return range.offset; });
-  addTileLoopIvsToIndexOpResults(b, clonedOp, allIvs);
+  offsetIndices(b, clonedOp, allIvs);
 
   return clonedOp;
 }

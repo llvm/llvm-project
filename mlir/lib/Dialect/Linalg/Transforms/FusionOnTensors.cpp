@@ -186,7 +186,7 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
   LinalgOp clonedOp = producerOp.clone(b, loc, resultTypes, tiledOperands);
 
   // Shift all IndexOp results by the tile offset.
-  addTileLoopIvsToIndexOpResults(b, clonedOp, allIvs);
+  offsetIndices(b, clonedOp, allIvs);
 
   return clonedOp;
 }
