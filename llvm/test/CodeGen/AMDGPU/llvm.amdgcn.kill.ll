@@ -1,6 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}gs_const:
 ; GCN-NOT: v_cmpx
@@ -21,7 +22,7 @@ define amdgpu_gs void @gs_const() {
 ; GCN-LABEL: {{^}}vcc_implicit_def:
 ; GCN: v_cmp_nle_f32_e32 vcc, 0, v{{[0-9]+}}
 ; GCN: v_cmp_gt_f32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], 0, v{{[0-9]+}}
-; GCN: s_andn2_b64 exec, exec, vcc
+; GCN: s_and{{n2|_not1}}_b64 exec, exec, vcc
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1.0, [[CMP]]
 define amdgpu_ps void @vcc_implicit_def(float %arg13, float %arg14) {
   %tmp0 = fcmp olt float %arg13, 0.000000e+00
@@ -55,7 +56,7 @@ define amdgpu_gs void @false() {
 ; GCN: v_cmp_lt_i32
 ; GCN: s_or_b64 s[0:1]
 ; GCN: s_xor_b64 s[0:1], s[0:1], exec
-; GCN: s_andn2_b64 s[2:3], s[2:3], s[0:1]
+; GCN: s_and{{n2|_not1}}_b64 s[2:3], s[2:3], s[0:1]
 ; GCN: s_and_b64 exec, exec, s[2:3]
 define amdgpu_gs void @and(i32 %a, i32 %b, i32 %c, i32 %d) {
   %c1 = icmp slt i32 %a, %b
@@ -70,7 +71,7 @@ define amdgpu_gs void @and(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; GCN: v_cmp_lt_i32
 ; GCN: v_cmp_lt_i32
 ; GCN: s_xor_b64 s[0:1]
-; GCN: s_andn2_b64 s[2:3], s[2:3], s[0:1]
+; GCN: s_and{{n2|_not1}}_b64 s[2:3], s[2:3], s[0:1]
 ; GCN: s_and_b64 exec, exec, s[2:3]
 define amdgpu_gs void @andn2(i32 %a, i32 %b, i32 %c, i32 %d) {
   %c1 = icmp slt i32 %a, %b
@@ -238,7 +239,7 @@ define amdgpu_ps void @fcmp_x2(float %a) #0 {
 ; GCN-DAG: s_wqm_b64 s[2:3], vcc
 ; GCN-DAG: s_mov_b64 s[0:1], exec
 ; GCN: s_xor_b64 s[2:3], s[2:3], exec
-; GCN: s_andn2_b64 s[0:1], s[0:1], s[2:3]
+; GCN: s_and{{n2|_not1}}_b64 s[0:1], s[0:1], s[2:3]
 ; GCN: s_and_b64 exec, exec, s[0:1]
 define amdgpu_ps float @wqm(float %a) {
   %c1 = fcmp une float %a, 0.0
@@ -288,7 +289,7 @@ endloop15:                                        ; preds = %loop3
 ; If kill is marked as defining VCC then this will fail with live interval issues.
 ; GCN-LABEL: {{^}}kill_with_loop_exit:
 ; GCN: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
-; GCN: s_andn2_b64 [[LIVE]], [[LIVE]], exec
+; GCN: s_and{{n2|_not1}}_b64 [[LIVE]], [[LIVE]], exec
 ; GCN-NEXT: s_cbranch_scc0
 define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1, <4 x i32> inreg %inp2, float inreg %inp3) {
 .entry:
