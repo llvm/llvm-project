@@ -1015,31 +1015,35 @@ class FlatAtomicPatNoRtn <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt
 
 multiclass FlatAtomicPat <string inst, string node, ValueType vt,
                           ValueType data_vt = vt> {
-  defvar rtnNode = !cast<PatFrags>(node#"_ret_"#vt.Size);
+  defvar rtnNode = !cast<PatFrags>(node#"_"#vt.Size);
   defvar noRtnNode = !cast<PatFrags>(node#"_noret_"#vt.Size);
 
   def : GCNPat <(vt (rtnNode (FlatOffset i64:$vaddr, i16:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst#"_RTN") VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
 
+  let AddedComplexity = 1 in
   def : GCNPat <(vt (noRtnNode (FlatOffset i64:$vaddr, i16:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst) VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
 }
 
 multiclass FlatSignedAtomicPat <string inst, string node, ValueType vt,
-                                ValueType data_vt = vt, bit isIntr = 0> {
-  defvar rtnNode = !cast<PatFrags>(node # "_ret" # !if(isIntr, "", "_" # vt.Size));
+                                ValueType data_vt = vt, int complexity = 0,
+                                bit isIntr = 0> {
+  defvar rtnNode = !cast<SDPatternOperator>(node # !if(isIntr, "", "_" # vt.Size));
   defvar noRtnNode = !cast<PatFrags>(node # "_noret" # !if(isIntr, "", "_" # vt.Size));
 
+  let AddedComplexity = complexity in
   def : GCNPat <(vt (rtnNode (GlobalOffset i64:$vaddr, i16:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst#"_RTN") VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
 
+  let AddedComplexity = !add(complexity, 1) in
   def : GCNPat <(vt (noRtnNode (GlobalOffset i64:$vaddr, i16:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst) VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
 }
 
 multiclass FlatSignedAtomicIntrPat <string inst, string node, ValueType vt,
                                     ValueType data_vt = vt> {
-  defm : FlatSignedAtomicPat<inst, node, vt, data_vt, /* isIntr */ 1>;
+  defm : FlatSignedAtomicPat<inst, node, vt, data_vt, /* complexity */ 0, /* isIntr */ 1>;
 }
 
 class FlatSignedAtomicPatNoRtn <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1260,17 +1264,16 @@ multiclass GlobalFLATAtomicPatsRtn<string nortn_inst_name, SDPatternOperator nod
 
 multiclass GlobalFLATAtomicPats<string inst, string node, ValueType vt,
                                 ValueType data_vt = vt, bit isIntr = 0> {
-  defvar rtnNode = !cast<PatFrags>(node # "_ret" # !if(isIntr, "", "_" # vt.Size));
+  defvar rtnNode = !cast<SDPatternOperator>(node # !if(isIntr, "", "_" # vt.Size));
   defvar noRtnNode = !cast<PatFrags>(node # "_noret" # !if(isIntr, "", "_" # vt.Size));
 
-  let AddedComplexity = 10 in {
-    defm : FlatSignedAtomicPat <inst, node, vt, data_vt, isIntr>;
-  }
+  defm : FlatSignedAtomicPat <inst, node, vt, data_vt, /* complexity */ 10, isIntr>;
 
-  let AddedComplexity = 11 in {
-    def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), noRtnNode, vt, data_vt>;
-    def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, vt, data_vt>;
-  }
+  let AddedComplexity = 13 in
+  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), noRtnNode, vt, data_vt>;
+
+  let AddedComplexity = 12 in
+  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, vt, data_vt>;
 }
 
 multiclass GlobalFLATAtomicIntrPats<string inst, string node, ValueType vt,
