@@ -168,6 +168,15 @@ public:
   ///   The underlying event type for the given trace item index.
   lldb::TraceEvent GetEventByIndex(int item_index) const;
 
+  /// Get the most recent CPU id before or at the given trace item index.
+  ///
+  /// \param[in] item_index
+  ///   The trace item index to compare with.
+  ///
+  /// \return
+  ///   The requested cpu id, or \a llvm::None if not available.
+  llvm::Optional<lldb::cpu_id_t> GetCPUByIndex(uint64_t item_index) const;
+
   /// \return
   ///     The load address of the instruction at the given index.
   lldb::addr_t GetInstructionLoadAddress(size_t item_index) const;
@@ -204,7 +213,12 @@ public:
   lldb::ThreadSP GetThread();
 
   /// Notify this object that a new tsc has been seen.
+  /// If this a new TSC, an event will be created.
   void NotifyTsc(uint64_t tsc);
+
+  /// Notify this object that a CPU has been seen.
+  /// If this a new CPU, an event will be created.
+  void NotifyCPU(lldb::cpu_id_t cpu_id);
 
   /// Append a decoding error.
   void AppendError(const IntelPTError &error);
@@ -254,9 +268,16 @@ private:
   /// are sporadic and we can think of them as ranges. If TSCs are present in
   /// the trace, all instructions will have an associated TSC, including the
   /// first one. Otherwise, this map will be empty.
-  std::map<uint64_t, uint64_t> m_instruction_timestamps;
+  std::map<uint64_t, uint64_t> m_timestamps;
   /// This is the chronologically last TSC that has been added.
   llvm::Optional<uint64_t> m_last_tsc = llvm::None;
+
+  // The cpu information is stored as a map. It maps `instruction index -> CPU`
+  // A CPU is associated with the next instructions that follow until the next
+  // cpu is seen.
+  std::map<uint64_t, lldb::cpu_id_t> m_cpus;
+  /// This is the chronologically last CPU ID.
+  llvm::Optional<uint64_t> m_last_cpu = llvm::None;
 
   /// Statistics of all tracing events.
   EventsStats m_events_stats;

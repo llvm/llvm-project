@@ -63,9 +63,26 @@ DecodedThread::CreateNewTraceItem(lldb::TraceItemKind kind) {
 
 void DecodedThread::NotifyTsc(uint64_t tsc) {
   if (!m_last_tsc || *m_last_tsc != tsc) {
-    m_instruction_timestamps.emplace(m_item_kinds.size(), tsc);
+    m_timestamps.emplace(m_item_kinds.size(), tsc);
     m_last_tsc = tsc;
   }
+}
+
+void DecodedThread::NotifyCPU(lldb::cpu_id_t cpu_id) {
+  if (!m_last_cpu || *m_last_cpu != cpu_id) {
+    m_cpus.emplace(m_item_kinds.size(), cpu_id);
+    m_last_cpu = cpu_id;
+    AppendEvent(lldb::eTraceEventCPUChanged);
+  }
+}
+
+Optional<lldb::cpu_id_t>
+DecodedThread::GetCPUByIndex(uint64_t insn_index) const {
+  // Could possibly optimize the search
+  auto it = m_cpus.upper_bound(insn_index);
+  if (it == m_cpus.begin())
+    return None;
+  return prev(it)->second;
 }
 
 void DecodedThread::AppendEvent(lldb::TraceEvent event) {
@@ -136,8 +153,8 @@ Optional<DecodedThread::TscRange> DecodedThread::CalculateTscRange(
       return candidate_range;
   }
   // Now we do a more expensive lookup
-  auto it = m_instruction_timestamps.upper_bound(insn_index);
-  if (it == m_instruction_timestamps.begin())
+  auto it = m_timestamps.upper_bound(insn_index);
+  if (it == m_timestamps.begin())
     return None;
 
   return TscRange(--it, *this);
@@ -160,7 +177,8 @@ lldb::TraceCursorUP DecodedThread::CreateNewCursor() {
 size_t DecodedThread::CalculateApproximateMemoryUsage() const {
   return sizeof(TraceItemStorage) * m_item_data.size() +
          sizeof(uint8_t) * m_item_kinds.size() +
-         (sizeof(size_t) + sizeof(uint64_t)) * m_instruction_timestamps.size();
+         (sizeof(size_t) + sizeof(uint64_t)) * m_timestamps.size() +
+         (sizeof(size_t) + sizeof(lldb::cpu_id_t)) * m_cpus.size();
 }
 
 DecodedThread::TscRange::TscRange(std::map<size_t, uint64_t>::const_iterator it,
@@ -168,7 +186,7 @@ DecodedThread::TscRange::TscRange(std::map<size_t, uint64_t>::const_iterator it,
     : m_it(it), m_decoded_thread(&decoded_thread) {
   auto next_it = m_it;
   ++next_it;
-  m_end_index = (next_it == m_decoded_thread->m_instruction_timestamps.end())
+  m_end_index = (next_it == m_decoded_thread->m_timestamps.end())
                     ? std::numeric_limits<uint64_t>::max()
                     : next_it->first - 1;
 }
@@ -191,13 +209,13 @@ bool DecodedThread::TscRange::InRange(size_t insn_index) const {
 Optional<DecodedThread::TscRange> DecodedThread::TscRange::Next() const {
   auto next_it = m_it;
   ++next_it;
-  if (next_it == m_decoded_thread->m_instruction_timestamps.end())
+  if (next_it == m_decoded_thread->m_timestamps.end())
     return None;
   return TscRange(next_it, *m_decoded_thread);
 }
 
 Optional<DecodedThread::TscRange> DecodedThread::TscRange::Prev() const {
-  if (m_it == m_decoded_thread->m_instruction_timestamps.begin())
+  if (m_it == m_decoded_thread->m_timestamps.begin())
     return None;
   auto prev_it = m_it;
   --prev_it;
