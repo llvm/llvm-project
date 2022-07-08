@@ -63,11 +63,8 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
         construct<AccClause>(construct<AccClause::DeviceResident>(
             parenthesized(Parser<AccObjectList>{}))) ||
     ("DEVICE_TYPE"_tok || "DTYPE"_tok) >>
-        construct<AccClause>(construct<AccClause::DeviceType>(parenthesized(
-            "*" >> construct<std::optional<std::list<ScalarIntExpr>>>()))) ||
-    ("DEVICE_TYPE"_tok || "DTYPE"_tok) >>
         construct<AccClause>(construct<AccClause::DeviceType>(
-            parenthesized(maybe(nonemptyList(scalarIntExpr))))) ||
+            parenthesized(Parser<AccDeviceTypeExprList>{}))) ||
     "FINALIZE" >> construct<AccClause>(construct<AccClause::Finalize>()) ||
     "FIRSTPRIVATE" >> construct<AccClause>(construct<AccClause::Firstprivate>(
                           parenthesized(Parser<AccObjectList>{}))) ||
@@ -136,6 +133,12 @@ TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM:" >> scalarIntExpr / ":"),
 TYPE_PARSER(construct<AccSizeExpr>(scalarIntExpr) ||
     construct<AccSizeExpr>("*" >> construct<std::optional<ScalarIntExpr>>()))
 TYPE_PARSER(construct<AccSizeExprList>(nonemptyList(Parser<AccSizeExpr>{})))
+
+TYPE_PARSER(construct<AccDeviceTypeExpr>(scalarIntExpr) ||
+    construct<AccDeviceTypeExpr>(
+        "*" >> construct<std::optional<ScalarIntExpr>>()))
+TYPE_PARSER(
+    construct<AccDeviceTypeExprList>(nonemptyList(Parser<AccDeviceTypeExpr>{})))
 
 // tile size is one of:
 //   * (represented as an empty std::optional<ScalarIntExpr>)
