@@ -72,12 +72,8 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
 
   // If SHF_COMPRESSED is set, parse the header. The legacy .zdebug format is no
   // longer supported.
-  if (flags & SHF_COMPRESSED) {
-    if (!compression::zlib::isAvailable())
-      error(toString(file) + ": contains a compressed section, " +
-            "but zlib is not available");
+  if (flags & SHF_COMPRESSED)
     invokeELFT(parseCompressedHeader);
-  }
 }
 
 // Drop SHF_GROUP bit unless we are producing a re-linkable object file.
@@ -212,8 +208,13 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
   }
 
   auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(rawData.data());
-  if (hdr->ch_type != ELFCOMPRESS_ZLIB) {
-    error(toString(this) + ": unsupported compression type");
+  if (hdr->ch_type == ELFCOMPRESS_ZLIB) {
+    if (!compression::zlib::isAvailable())
+      error(toString(this) + " is compressed with ELFCOMPRESS_ZLIB, but lld is "
+                             "not built with zlib support");
+  } else {
+    error(toString(this) + ": unsupported compression type (" +
+          Twine(hdr->ch_type) + ")");
     return;
   }
 
