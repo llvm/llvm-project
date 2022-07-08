@@ -2643,46 +2643,6 @@ static bool DiagnoseUnexpandedParameterPacks(Sema &S,
   return false;
 }
 
-static bool hasSameDefaultTemplateArgument(NamedDecl *X, NamedDecl *Y) {
-  ASTContext &C = X->getASTContext();
-  // If the type parameter isn't the same already, we don't need to check the
-  // default argument further.
-  if (!C.isSameTemplateParameter(X, Y))
-    return false;
-
-  if (auto *TTPX = dyn_cast<TemplateTypeParmDecl>(X)) {
-    auto *TTPY = cast<TemplateTypeParmDecl>(Y);
-    if (!TTPX->hasDefaultArgument() || !TTPY->hasDefaultArgument())
-      return false;
-
-    return C.hasSameType(TTPX->getDefaultArgument(),
-                         TTPY->getDefaultArgument());
-  }
-
-  if (auto *NTTPX = dyn_cast<NonTypeTemplateParmDecl>(X)) {
-    auto *NTTPY = cast<NonTypeTemplateParmDecl>(Y);
-    if (!NTTPX->hasDefaultArgument() || !NTTPY->hasDefaultArgument())
-      return false;
-
-    Expr *DefaultArgumentX = NTTPX->getDefaultArgument()->IgnoreImpCasts();
-    Expr *DefaultArgumentY = NTTPY->getDefaultArgument()->IgnoreImpCasts();
-    llvm::FoldingSetNodeID XID, YID;
-    DefaultArgumentX->Profile(XID, C, /*Canonical=*/true);
-    DefaultArgumentY->Profile(YID, C, /*Canonical=*/true);
-    return XID == YID;
-  }
-
-  auto *TTPX = cast<TemplateTemplateParmDecl>(X);
-  auto *TTPY = cast<TemplateTemplateParmDecl>(Y);
-
-  if (!TTPX->hasDefaultArgument() || !TTPY->hasDefaultArgument())
-    return false;
-
-  const TemplateArgument &TAX = TTPX->getDefaultArgument().getArgument();
-  const TemplateArgument &TAY = TTPY->getDefaultArgument().getArgument();
-  return C.hasSameTemplateName(TAX.getAsTemplate(), TAY.getAsTemplate());
-}
-
 /// Checks the validity of a template parameter list, possibly
 /// considering the template parameter list from a previous
 /// declaration.
@@ -2780,7 +2740,8 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         if (!OldTypeParm->getOwningModule() ||
             isModuleUnitOfCurrentTU(OldTypeParm->getOwningModule()))
           RedundantDefaultArg = true;
-        else if (!hasSameDefaultTemplateArgument(OldTypeParm, NewTypeParm)) {
+        else if (!getASTContext().isSameDefaultTemplateArgument(OldTypeParm,
+                                                                NewTypeParm)) {
           InconsistentDefaultArg = true;
           PrevModuleName =
               OldTypeParm->getImportedOwningModule()->getFullModuleName();
@@ -2832,8 +2793,8 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         if (!OldNonTypeParm->getOwningModule() ||
             isModuleUnitOfCurrentTU(OldNonTypeParm->getOwningModule()))
           RedundantDefaultArg = true;
-        else if (!hasSameDefaultTemplateArgument(OldNonTypeParm,
-                                                 NewNonTypeParm)) {
+        else if (!getASTContext().isSameDefaultTemplateArgument(
+                     OldNonTypeParm, NewNonTypeParm)) {
           InconsistentDefaultArg = true;
           PrevModuleName =
               OldNonTypeParm->getImportedOwningModule()->getFullModuleName();
@@ -2884,8 +2845,8 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         if (!OldTemplateParm->getOwningModule() ||
             isModuleUnitOfCurrentTU(OldTemplateParm->getOwningModule()))
           RedundantDefaultArg = true;
-        else if (!hasSameDefaultTemplateArgument(OldTemplateParm,
-                                                 NewTemplateParm)) {
+        else if (!getASTContext().isSameDefaultTemplateArgument(
+                     OldTemplateParm, NewTemplateParm)) {
           InconsistentDefaultArg = true;
           PrevModuleName =
               OldTemplateParm->getImportedOwningModule()->getFullModuleName();

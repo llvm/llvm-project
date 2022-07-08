@@ -2664,6 +2664,11 @@ public:
   /// that they may be used in declarations of the same template.
   bool isSameTemplateParameter(const NamedDecl *X, const NamedDecl *Y) const;
 
+  /// Determine whether two default template arguments are similar enough
+  /// that they may be used in declarations of the same template.
+  bool isSameDefaultTemplateArgument(const NamedDecl *X,
+                                     const NamedDecl *Y) const;
+
   /// Retrieve the "canonical" template argument.
   ///
   /// The canonical template argument is the simplest template argument
