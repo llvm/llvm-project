@@ -2292,7 +2292,7 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   int call_file = 0;
   int call_line = 0;
   int call_column = 0;
-  DWARFExpression frame_base;
+  DWARFExpressionList frame_base;
 
   const dw_tag_t tag = die.Tag();
 
