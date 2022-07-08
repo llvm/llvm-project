@@ -698,13 +698,13 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
 
   Register SrcReg = MI.getOperand(1).getReg();
   GAnyLoad *LoadMI = getOpcodeDef<GAnyLoad>(SrcReg, MRI);
-  if (!LoadMI || !MRI.hasOneNonDBGUse(LoadMI->getDstReg()) ||
-      !LoadMI->isSimple())
+  if (!LoadMI || !MRI.hasOneNonDBGUse(LoadMI->getDstReg()))
     return false;
 
   Register LoadReg = LoadMI->getDstReg();
-  LLT LoadTy = MRI.getType(LoadReg);
+  LLT RegTy = MRI.getType(LoadReg);
   Register PtrReg = LoadMI->getPointerReg();
+  unsigned RegSize = RegTy.getSizeInBits();
   uint64_t LoadSizeBits = LoadMI->getMemSizeInBits();
   unsigned MaskSizeBits = MaskVal.countTrailingOnes();
 
@@ -715,7 +715,7 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
 
   // If the mask covers the whole destination register, there's nothing to
   // extend
-  if (MaskSizeBits >= LoadTy.getSizeInBits())
+  if (MaskSizeBits >= RegSize)
     return false;
 
   // Most targets cannot deal with loads of size < 8 and need to re-legalize to
@@ -725,17 +725,25 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
 
   const MachineMemOperand &MMO = LoadMI->getMMO();
   LegalityQuery::MemDesc MemDesc(MMO);
-  MemDesc.MemoryTy = LLT::scalar(MaskSizeBits);
+
+  // Don't modify the memory access size if this is atomic/volatile, but we can
+  // still adjust the opcode to indicate the high bit behavior.
+  if (LoadMI->isSimple())
+    MemDesc.MemoryTy = LLT::scalar(MaskSizeBits);
+  else if (LoadSizeBits > MaskSizeBits || LoadSizeBits == RegSize)
+    return false;
+
   if (!isLegalOrBeforeLegalizer(
-          {TargetOpcode::G_ZEXTLOAD, {LoadTy, MRI.getType(PtrReg)}, {MemDesc}}))
+          {TargetOpcode::G_ZEXTLOAD, {RegTy, MRI.getType(PtrReg)}, {MemDesc}}))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
     B.setInstrAndDebugLoc(*LoadMI);
     auto &MF = B.getMF();
     auto PtrInfo = MMO.getPointerInfo();
-    auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, MaskSizeBits / 8);
+    auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, MemDesc.MemoryTy);
     B.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, Dst, PtrReg, *NewMMO);
+    LoadMI->eraseFromParent();
   };
   return true;
 }
