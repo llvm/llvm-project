@@ -2258,14 +2258,15 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
               if (pointerProc) {
                 if (targetProc) {
                   // procedure pointer and procedure target
+                  std::string whyNot;
                   if (std::optional<parser::MessageFixedText> msg{
                           CheckProcCompatibility(
-                              isCall, pointerProc, &*targetProc)}) {
+                              isCall, pointerProc, &*targetProc, whyNot)}) {
                     AttachDeclaration(
                         context.messages().Say(std::move(*msg),
                             "pointer '" + pointerSymbol->name().ToString() +
                                 "'",
-                            targetName),
+                            targetName, whyNot),
                         *pointerSymbol);
                   }
                 } else {

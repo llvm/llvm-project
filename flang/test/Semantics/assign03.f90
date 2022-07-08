@@ -93,18 +93,18 @@ contains
     sp_pure => s_pure1 ! OK, same characteristics
     sp_pure => s_elemental1 ! OK, target may be elemental when pointer is not
 
-    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_impure2'
+    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_impure2': incompatible dummy argument #1: incompatible dummy data object intents
     p_impure => f_impure2
-    !ERROR: Procedure pointer 'p_pure' associated with incompatible procedure designator 'f_pure2'
+    !ERROR: Procedure pointer 'p_pure' associated with incompatible procedure designator 'f_pure2': function results have incompatible types: INTEGER(4) vs REAL(4)
     p_pure => f_pure2
-    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental2'
+    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental2': incompatible dummy argument #1: incompatible dummy data object attributes
     p_impure => f_elemental2
 
-    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_impure2'
+    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_impure2': incompatible procedure attributes
     sp_impure => s_impure2
-    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_pure2'
+    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_pure2': incompatible dummy argument #1: incompatible dummy data object intents
     sp_impure => s_pure2
-    !ERROR: Procedure pointer 'sp_pure' associated with incompatible procedure designator 's_elemental2'
+    !ERROR: Procedure pointer 'sp_pure' associated with incompatible procedure designator 's_elemental2': distinct numbers of dummy arguments
     sp_pure => s_elemental2
 
     !ERROR: Function pointer 'p_impure' may not be associated with subroutine designator 's_impure1'
@@ -188,9 +188,9 @@ contains
     procedure(real), pointer :: p_f
     p_f => f_external
     p_s => s_external
-    !ERROR: Subroutine pointer 'p_s' may not be associated with function designator 'f_external'
+    !Ok: p_s has no interface
     p_s => f_external
-    !ERROR: Function pointer 'p_f' may not be associated with subroutine designator 's_external'
+    !Ok: s_external has no interface
     p_f => s_external
   end
 

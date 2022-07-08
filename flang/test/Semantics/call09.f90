@@ -60,15 +60,15 @@ module m
     p => realfunc
     ip => intfunc
     call s01(realfunc) ! ok
-    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p='
+    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': function results have incompatible types: REAL(4) vs INTEGER(4)
     call s01(intfunc)
     call s01(p) ! ok
     call s01(procptr()) ! ok
-    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p='
+    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': function results have incompatible types: REAL(4) vs INTEGER(4)
     call s01(intprocptr())
     call s01(null()) ! ok
     call s01(null(p)) ! ok
-    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p='
+    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': function results have incompatible types: REAL(4) vs INTEGER(4)
     call s01(null(ip))
     call s01(sin) ! ok
     !ERROR: Actual argument associated with procedure dummy argument 'p=' is not a procedure
@@ -78,7 +78,7 @@ module m
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(realfunc)
     call s02(p) ! ok
-    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p='
+    !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': function results have incompatible types: REAL(4) vs INTEGER(4)
     call s02(ip)
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(procptr())

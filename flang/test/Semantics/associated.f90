@@ -135,9 +135,9 @@ subroutine assoc()
     intprocPointer1 => intVar
     !ERROR: POINTER= argument 'intprocpointer1' is a procedure pointer but the TARGET= argument 'intvar' is not a procedure or procedure pointer
     lVar = associated(intprocPointer1, intVar)
-    !ERROR: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc'
+    !ERROR: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc': incompatible dummy argument #1: incompatible dummy data object attributes
     intProcPointer1 => elementalProc
-    !ERROR: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc'
+    !ERROR: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc': incompatible dummy argument #1: incompatible dummy data object attributes
     lvar = associated(intProcPointer1, elementalProc)
     !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'intfunc' is a procedure designator
     lvar = associated (intPointerVar1, intFunc)
@@ -147,17 +147,17 @@ subroutine assoc()
     intProcPointer1 => targetIntVar1
     !ERROR: POINTER= argument 'intprocpointer1' is a procedure pointer but the TARGET= argument 'targetintvar1' is not a procedure or procedure pointer
     lvar = associated (intProcPointer1, targetIntVar1)
-    !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null' that is an incompatible procedure pointer
+    !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null' that is an incompatible procedure pointer: function results have incompatible types: INTEGER(4) vs REAL(4)
     intProcPointer1 => null(mold=realProcPointer1)
-    !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null()' that is an incompatible procedure pointer
+    !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null()' that is an incompatible procedure pointer: function results have incompatible types: INTEGER(4) vs REAL(4)
     lvar = associated(intProcPointer1, null(mold=realProcPointer1))
     !ERROR: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
     pureFuncPointer => intProc
     !ERROR: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
     lvar = associated(pureFuncPointer, intProc)
-    !ERROR: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc'
+    !ERROR: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc': function results have incompatible types: REAL(4) vs INTEGER(4)
     realProcPointer1 => intProc
-    !ERROR: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc'
+    !ERROR: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc': function results have incompatible types: REAL(4) vs INTEGER(4)
     lvar = associated(realProcPointer1, intProc)
     subProcPointer => externalProc ! OK to associate a procedure pointer  with an explicit interface to a procedure with an implicit interface
     lvar = associated(subProcPointer, externalProc) ! OK to associate a procedure pointer with an explicit interface to a procedure with an implicit interface
