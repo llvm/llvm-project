@@ -59,3 +59,10 @@ func.func @raw_buffer_atomic_fadd_f32_to_rank_4(%value : f32, %dst : memref<128x
   amdgpu.raw_buffer_atomic_fadd {boundsCheck = true, indexOffset = 1 : i32} %value -> %dst[%idx0, %idx1, %idx2, %idx3] sgprOffset %offset : f32 -> memref<128x64x32x16xf32>, i32, i32, i32, i32
   func.return
 }
+
+// CHECK-LABEL: func @lds_barrier
+func.func @lds_barrier() {
+  // CHECK: amdgpu.lds_barrier
+  amdgpu.lds_barrier
+  func.return
+}

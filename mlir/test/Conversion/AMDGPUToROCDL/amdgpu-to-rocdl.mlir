@@ -101,3 +101,10 @@ func.func @gpu_gcn_raw_buffer_atomic_fadd_f32(%value: f32, %buf: memref<64xf32>,
   amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %value -> %buf[%idx] : f32 -> memref<64xf32>, i32
   func.return
 }
+
+// CHECK-LABEL: func @lds_barrier
+func.func @lds_barrier() {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "s_waitcnt lgkmcnt(0)\0As_barrier"
+  amdgpu.lds_barrier
+  func.return
+}
