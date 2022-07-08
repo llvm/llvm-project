@@ -1625,21 +1625,19 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
   Module *NewM = New->getOwningModule();
   Module *OldM = Old->getOwningModule();
 
-  if (NewM && NewM->Kind == Module::PrivateModuleFragment)
+  if (NewM && NewM->isPrivateModule())
     NewM = NewM->Parent;
-  if (OldM && OldM->Kind == Module::PrivateModuleFragment)
+  if (OldM && OldM->isPrivateModule())
     OldM = OldM->Parent;
-
-  // If we have a decl in a module partition, it is part of the containing
-  // module (which is the only thing that can be importing it).
-  if (NewM && OldM &&
-      (OldM->Kind == Module::ModulePartitionInterface ||
-       OldM->Kind == Module::ModulePartitionImplementation)) {
-    return false;
-  }
 
   if (NewM == OldM)
     return false;
+
+  // Partitions are part of the module, but a partition could import another
+  // module, so verify that the PMIs agree.
+  if (NewM && OldM && (NewM->isModulePartition() || OldM->isModulePartition()))
+    return NewM->getPrimaryModuleInterfaceName() ==
+           OldM->getPrimaryModuleInterfaceName();
 
   bool NewIsModuleInterface = NewM && NewM->isModulePurview();
   bool OldIsModuleInterface = OldM && OldM->isModulePurview();
