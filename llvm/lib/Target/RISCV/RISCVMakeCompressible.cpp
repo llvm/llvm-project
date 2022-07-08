@@ -293,8 +293,16 @@ static void updateOperands(MachineInstr &MI, RegImmPair OldRegImm,
   assert((isCompressibleLoad(MI) || isCompressibleStore(MI)) &&
          "Unsupported instruction for this optimization.");
 
+  int SkipN = 0;
+
+  // Skip the first (value) operand to a store instruction (except if the store
+  // offset is zero) in order to avoid an incorrect transformation.
+  // e.g. sd a0, 808(a0) to addi a2, a0, 768; sd a2, 40(a2)
+  if (isCompressibleStore(MI) && OldRegImm.Imm != 0)
+    SkipN = 1;
+
   // Update registers
-  for (MachineOperand &MO : MI.operands())
+  for (MachineOperand &MO : drop_begin(MI.operands(), SkipN))
     if (MO.isReg() && MO.getReg() == OldRegImm.Reg) {
       // Do not update operands that define the old register.
       //
