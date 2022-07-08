@@ -225,6 +225,10 @@ Attribute Changes in Clang
 - The ``__declspec(naked)`` attribute can no longer be written on a member
   function in Microsoft compatibility mode, matching the behavior of cl.exe.
 
+- The ``format`` attribute can now be applied to non-variadic functions. The
+  format string must correctly format the fixed parameter types of the function.
+  Using the attribute this way emits a GCC compatibility diagnostic.
+
 Windows Support
 ---------------
 
