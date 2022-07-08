@@ -605,6 +605,9 @@ def : PatGprGpr<sdiv, DIV_W>;
 def : PatGprGpr<udiv, DIV_WU>;
 def : PatGprGpr<srem, MOD_W>;
 def : PatGprGpr<urem, MOD_WU>;
+def : PatGprGpr<mul, MUL_W>;
+def : PatGprGpr<mulhs, MULH_W>;
+def : PatGprGpr<mulhu, MULH_WU>;
 } // Predicates = [IsLA32]
 
 let Predicates = [IsLA64] in {
@@ -618,6 +621,20 @@ def : PatGprGpr<sdiv, DIV_D>;
 def : PatGprGpr<udiv, DIV_DU>;
 def : PatGprGpr<srem, MOD_D>;
 def : PatGprGpr<urem, MOD_DU>;
+// TODO: Select "_W[U]" instructions for i32xi32 if only lower 32 bits of the
+// product are used.
+def : PatGprGpr<mul, MUL_D>;
+def : PatGprGpr<mulhs, MULH_D>;
+def : PatGprGpr<mulhu, MULH_DU>;
+// Select MULW_D_W for calculating the full 64 bits product of i32xi32 signed
+// multiplication.
+def : Pat<(i64 (mul (sext_inreg GPR:$rj, i32), (sext_inreg GPR:$rk, i32))),
+          (MULW_D_W GPR:$rj, GPR:$rk)>;
+// Select MULW_D_WU for calculating the full 64 bits product of i32xi32
+// unsigned multiplication.
+def : Pat<(i64 (mul (loongarch_bstrpick GPR:$rj, (i64 31), (i64 0)),
+                    (loongarch_bstrpick GPR:$rk, (i64 31), (i64 0)))),
+          (MULW_D_WU GPR:$rj, GPR:$rk)>;
 } // Predicates = [IsLA64]
 
 def : PatGprGpr<and, AND>;
