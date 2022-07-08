@@ -152,8 +152,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::next_permutation(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::none_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::none_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::nth_element(first, mid, last, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::nth_element(a, mid, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::nth_element(first, mid, last, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::nth_element(a, mid, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::partial_sort(first, mid, last, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::partial_sort(a, mid, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::partial_sort_copy(first, last, first2, mid2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);

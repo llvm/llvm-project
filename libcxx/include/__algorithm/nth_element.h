@@ -16,6 +16,7 @@
 #include <__debug>
 #include <__debug_utils/randomize_range.h>
 #include <__iterator/iterator_traits.h>
+#include <__utility/move.h>
 #include <__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -220,25 +221,35 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-void
-nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp)
-{
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
+void __nth_element_impl(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last,
+                        _Compare& __comp) {
+  if (__nth == __last)
+    return;
+
   std::__debug_randomize_range(__first, __last);
-  typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-  _VSTD::__nth_element<_Comp_ref>(__first, __nth, __last, __comp);
+
+  using _Comp_ref = typename __comp_ref_type<_Compare>::type;
+  std::__nth_element<_Comp_ref>(__first, __nth, __last, __comp);
+
   std::__debug_randomize_range(__first, __nth);
   if (__nth != __last) {
     std::__debug_randomize_range(++__nth, __last);
   }
 }
 
+template <class _RandomAccessIterator, class _Compare>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
+void nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last,
+                 _Compare __comp) {
+  std::__nth_element_impl(std::move(__first), std::move(__nth), std::move(__last), __comp);
+}
+
 template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-void
-nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last)
-{
-    _VSTD::nth_element(__first, __nth, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
+void nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last) {
+  std::nth_element(std::move(__first), std::move(__nth), std::move(__last), __less<typename
+      iterator_traits<_RandomAccessIterator>::value_type>());
 }
 
 _LIBCPP_END_NAMESPACE_STD
