@@ -1710,11 +1710,6 @@ bool AArch64InstructionSelector::selectCompareBranch(
     MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) {
   Register CondReg = I.getOperand(0).getReg();
   MachineInstr *CCMI = MRI.getVRegDef(CondReg);
-  if (CCMI->getOpcode() == TargetOpcode::G_TRUNC) {
-    CondReg = CCMI->getOperand(1).getReg();
-    CCMI = MRI.getVRegDef(CondReg);
-  }
-
   // Try to select the G_BRCOND using whatever is feeding the condition if
   // possible.
   unsigned CCMIOpc = CCMI->getOpcode();
@@ -3346,12 +3341,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
   case TargetOpcode::G_SELECT: {
     auto &Sel = cast<GSelect>(I);
-    if (MRI.getType(Sel.getCondReg()) != LLT::scalar(1)) {
-      LLVM_DEBUG(dbgs() << "G_SELECT cond has type: " << Ty
-                        << ", expected: " << LLT::scalar(1) << '\n');
-      return false;
-    }
-
     const Register CondReg = Sel.getCondReg();
     const Register TReg = Sel.getTrueReg();
     const Register FReg = Sel.getFalseReg();
@@ -4777,12 +4766,6 @@ static bool canEmitConjunction(Register Val, bool &CanNegate, bool &MustBeFirst,
     return false;
   MachineInstr *ValDef = MRI.getVRegDef(Val);
   unsigned Opcode = ValDef->getOpcode();
-  if (Opcode == TargetOpcode::G_TRUNC) {
-    // Look through a trunc.
-    Val = ValDef->getOperand(1).getReg();
-    ValDef = MRI.getVRegDef(Val);
-    Opcode = ValDef->getOpcode();
-  }
   if (isa<GAnyCmp>(ValDef)) {
     CanNegate = true;
     MustBeFirst = false;
@@ -4870,12 +4853,6 @@ MachineInstr *AArch64InstructionSelector::emitConjunctionRec(
   auto &MRI = *MIB.getMRI();
   MachineInstr *ValDef = MRI.getVRegDef(Val);
   unsigned Opcode = ValDef->getOpcode();
-  if (Opcode == TargetOpcode::G_TRUNC) {
-    // Look through a trunc.
-    Val = ValDef->getOperand(1).getReg();
-    ValDef = MRI.getVRegDef(Val);
-    Opcode = ValDef->getOpcode();
-  }
   if (auto *Cmp = dyn_cast<GAnyCmp>(ValDef)) {
     Register LHS = Cmp->getLHSReg();
     Register RHS = Cmp->getRHSReg();
@@ -5026,31 +5003,17 @@ bool AArch64InstructionSelector::tryOptSelect(GSelect &I) {
 
   // First, check if the condition is defined by a compare.
   MachineInstr *CondDef = MRI.getVRegDef(I.getOperand(1).getReg());
-  while (CondDef) {
-    // We can only fold if all of the defs have one use.
-    Register CondDefReg = CondDef->getOperand(0).getReg();
-    if (!MRI.hasOneNonDBGUse(CondDefReg)) {
-      // Unless it's another select.
-      for (const MachineInstr &UI : MRI.use_nodbg_instructions(CondDefReg)) {
-        if (CondDef == &UI)
-          continue;
-        if (UI.getOpcode() != TargetOpcode::G_SELECT)
-          return false;
-      }
+
+  // We can only fold if all of the defs have one use.
+  Register CondDefReg = CondDef->getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(CondDefReg)) {
+    // Unless it's another select.
+    for (const MachineInstr &UI : MRI.use_nodbg_instructions(CondDefReg)) {
+      if (CondDef == &UI)
+        continue;
+      if (UI.getOpcode() != TargetOpcode::G_SELECT)
+        return false;
     }
-
-    // We can skip over G_TRUNC since the condition is 1-bit.
-    // Truncating/extending can have no impact on the value.
-    unsigned Opc = CondDef->getOpcode();
-    if (Opc != TargetOpcode::COPY && Opc != TargetOpcode::G_TRUNC)
-      break;
-
-    // Can't see past copies from physregs.
-    if (Opc == TargetOpcode::COPY &&
-        Register::isPhysicalRegister(CondDef->getOperand(1).getReg()))
-      return false;
-
-    CondDef = MRI.getVRegDef(CondDef->getOperand(1).getReg());
   }
 
   // Is the condition defined by a compare?
