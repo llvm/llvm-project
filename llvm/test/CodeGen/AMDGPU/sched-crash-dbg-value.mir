@@ -124,7 +124,10 @@
     %tmp93 = fmul float %tmp42, %tmp87
     %tmp94 = call float @llvm.fmuladd.f32(float %tmp92, float %tmp36, float %tmp93)
     %tmp95 = call float @llvm.fmuladd.f32(float %tmp48, float undef, float %tmp94)
-    %tmp96 = fsub float extractelement (<2 x float> fadd (<2 x float> fmul (<2 x float> undef, <2 x float> undef), <2 x float> undef), i64 1), %tmp95
+    %fmul = fmul <2 x float> undef, undef
+    %fadd = fadd <2 x float> %fmul, undef
+    %extractelement = extractelement <2 x float> %fadd, i64 1
+    %tmp96 = fsub float %extractelement, %tmp95
     %tmp97 = getelementptr inbounds %struct.wombat, %struct.wombat addrspace(5)* %tmp5, i32 0, i32 8, i32 1
     call void @func(float %tmp96, i64 0, i16 addrspace(5)* nonnull %tmp97) #3
     %tmp984 = bitcast [16 x i8] addrspace(3)* %17 to i8 addrspace(3)*

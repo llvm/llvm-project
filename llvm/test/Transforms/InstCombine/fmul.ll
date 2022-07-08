@@ -1057,10 +1057,11 @@ define float @fmul_fdiv_factor_extra_use(float %x, float %y) {
 
 define double @fmul_negated_constant_expression(double %x) {
 ; CHECK-LABEL: @fmul_negated_constant_expression(
-; CHECK-NEXT:    [[R:%.*]] = fmul double [[X:%.*]], fsub (double -0.000000e+00, double bitcast (i64 ptrtoint (i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i64 0, inrange i32 0, i64 2) to i64) to double))
+; CHECK-NEXT:    [[R:%.*]] = fmul double [[X:%.*]], fneg (double bitcast (i64 ptrtoint (i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i64 0, inrange i32 0, i64 2) to i64) to double))
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = fmul double %x, fsub (double -0.000000e+00, double bitcast (i64 ptrtoint (i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i64 0, inrange i32 0, i64 2) to i64) to double))
+  %fsub = fsub double -0.000000e+00, bitcast (i64 ptrtoint (i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i64 0, inrange i32 0, i64 2) to i64) to double)
+  %r = fmul double %x, %fsub
   ret double %r
 }
 
