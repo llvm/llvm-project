@@ -127,7 +127,7 @@ void TypeMap::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
   }
 }
 
-void TypeMap::RemoveMismatchedTypes(const char *qualified_typename,
+void TypeMap::RemoveMismatchedTypes(llvm::StringRef qualified_typename,
                                     bool exact_match) {
   llvm::StringRef type_scope;
   llvm::StringRef type_basename;
@@ -137,13 +137,12 @@ void TypeMap::RemoveMismatchedTypes(const char *qualified_typename,
     type_basename = qualified_typename;
     type_scope = "";
   }
-  return RemoveMismatchedTypes(std::string(type_scope),
-                               std::string(type_basename), type_class,
+  return RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                exact_match);
 }
 
-void TypeMap::RemoveMismatchedTypes(const std::string &type_scope,
-                                    const std::string &type_basename,
+void TypeMap::RemoveMismatchedTypes(llvm::StringRef type_scope,
+                                    llvm::StringRef type_basename,
                                     TypeClass type_class, bool exact_match) {
   // Our "collection" type currently is a std::map which doesn't have any good
   // way to iterate and remove items from the map so we currently just make a

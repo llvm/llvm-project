@@ -53,10 +53,11 @@ public:
 
   bool Remove(const lldb::TypeSP &type_sp);
 
-  void RemoveMismatchedTypes(const char *qualified_typename, bool exact_match);
+  void RemoveMismatchedTypes(llvm::StringRef qualified_typename,
+                             bool exact_match);
 
-  void RemoveMismatchedTypes(const std::string &type_scope,
-                             const std::string &type_basename,
+  void RemoveMismatchedTypes(llvm::StringRef type_scope,
+                             llvm::StringRef type_basename,
                              lldb::TypeClass type_class, bool exact_match);
 
   void RemoveMismatchedTypes(lldb::TypeClass type_class);
