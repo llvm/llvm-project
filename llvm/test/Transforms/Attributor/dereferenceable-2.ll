@@ -567,11 +567,10 @@ define i32 @require_cfg_analysis(i32 %c, i32* %p) {
 ; IS________NPM-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C]], 0
 ; IS________NPM-NEXT:    br i1 [[TOBOOL1]], label [[L1:%.*]], label [[L2:%.*]]
 ; IS________NPM:       l1:
-; IS________NPM-NEXT:    [[TOBOOL2:%.*]] = icmp eq i32 [[C]], 1
-; IS________NPM-NEXT:    br i1 [[TOBOOL2]], label [[L3:%.*]], label [[L4:%.*]]
+; IS________NPM-NEXT:    br label [[L4:%.*]]
 ; IS________NPM:       l2:
 ; IS________NPM-NEXT:    [[TOBOOL3:%.*]] = icmp eq i32 [[C]], 2
-; IS________NPM-NEXT:    br i1 [[TOBOOL3]], label [[L3]], label [[L4]]
+; IS________NPM-NEXT:    br i1 [[TOBOOL3]], label [[L3:%.*]], label [[L4]]
 ; IS________NPM:       l3:
 ; IS________NPM-NEXT:    br label [[L5:%.*]]
 ; IS________NPM:       l4:

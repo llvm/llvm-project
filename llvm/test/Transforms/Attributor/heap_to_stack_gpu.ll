@@ -680,8 +680,8 @@ define void @test17() {
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test17() {
-; IS________NPM-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1, addrspace(5)
-; IS________NPM-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[DOTH2S]] to i8*
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1, addrspace(5)
+; IS________NPM-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[TMP1]] to i8*
 ; IS________NPM-NEXT:    tail call void @usei8(i8* noalias nocapture nofree [[MALLOC_CAST]]) #[[ATTR6:[0-9]+]]
 ; IS________NPM-NEXT:    ret void
 ;
@@ -716,10 +716,10 @@ define void @move_alloca() {
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@move_alloca() {
 ; IS________NPM-NEXT:  entry:
-; IS________NPM-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1, addrspace(5)
+; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1, addrspace(5)
 ; IS________NPM-NEXT:    br label [[NOT_ENTRY:%.*]]
 ; IS________NPM:       not_entry:
-; IS________NPM-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[DOTH2S]] to i8*
+; IS________NPM-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast i8 addrspace(5)* [[TMP0]] to i8*
 ; IS________NPM-NEXT:    tail call void @usei8(i8* noalias nocapture nofree [[MALLOC_CAST]]) #[[ATTR6]]
 ; IS________NPM-NEXT:    ret void
 ;
