@@ -500,6 +500,12 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   LLT DstTy = MRI.getType(DstRegs[0]);
   LLT LCMTy = getCoverTy(SrcTy, PartTy);
 
+  if (PartTy.isVector() && LCMTy == PartTy) {
+    assert(DstRegs.size() == 1);
+    B.buildPadVectorWithUndefElements(DstRegs[0], SrcReg);
+    return;
+  }
+
   const unsigned DstSize = DstTy.getSizeInBits();
   const unsigned SrcSize = SrcTy.getSizeInBits();
   unsigned CoveringSize = LCMTy.getSizeInBits();
