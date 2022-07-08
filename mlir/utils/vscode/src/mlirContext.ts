@@ -251,10 +251,11 @@ export class MLIRContext implements vscode.Disposable {
     let middleware = {};
     if (!workspaceFolder) {
       middleware = {
-        didOpen : (document, next) => {
+        didOpen : (document, next) : Promise<void> => {
           if (!vscode.workspace.getWorkspaceFolder(document.uri)) {
-            next(document);
+            return next(document);
           }
+          return Promise.resolve();
         }
       };
     }
