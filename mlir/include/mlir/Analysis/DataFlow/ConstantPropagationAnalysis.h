@@ -43,15 +43,18 @@ public:
     return constant == rhs.constant;
   }
 
+  /// Print the constant value.
+  void print(raw_ostream &os) const;
+
+  /// The pessimistic value state of the constant value is unknown.
+  static ConstantValue getPessimisticValueState(Value value) { return {}; }
+
   /// The union with another constant value is null if they are different, and
   /// the same if they are the same.
   static ConstantValue join(const ConstantValue &lhs,
                             const ConstantValue &rhs) {
     return lhs == rhs ? lhs : ConstantValue();
   }
-
-  /// Print the constant value.
-  void print(raw_ostream &os) const;
 
 private:
   /// The constant value.
