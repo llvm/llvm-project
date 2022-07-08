@@ -532,6 +532,19 @@ TEST(LiveIntervalTest, TestMoveSubRegUseAcrossMainRangeHole) {
   });
 }
 
+TEST(LiveIntervalTest, TestMoveSubRegsOfOneReg) {
+  liveIntervalTest(R"MIR(
+    INLINEASM &"", 0, 1835018, def undef %4.sub0:vreg_64, 1835018, def undef %4.sub1:vreg_64
+    %1:vreg_64 = COPY %4
+    undef %2.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+    %2.sub1:vreg_64 = COPY %2.sub0
+    %3:vreg_64 = COPY %2
+)MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
+    testHandleMove(MF, LIS, 1, 4);
+    testHandleMove(MF, LIS, 0, 3);
+  });
+}
+
 TEST(LiveIntervalTest, BundleUse) {
   liveIntervalTest(R"MIR(
     %0 = IMPLICIT_DEF
