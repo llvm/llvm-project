@@ -604,6 +604,25 @@ namespace ranges {
       set_difference(R1&& r1, R2&& r2, O result,
                      Comp comp = {}, Proj1 proj1 = {}, Proj2 proj2 = {});                           // since C++20
 
+  template<class I1, class I2, class O>
+    using set_intersection_result = in_in_out_result<I1, I2, O>;                                    // since C++20
+
+  template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
+           weakly_incrementable O, class Comp = ranges::less,
+           class Proj1 = identity, class Proj2 = identity>
+    requires mergeable<I1, I2, O, Comp, Proj1, Proj2>
+    constexpr set_intersection_result<I1, I2, O>
+      set_intersection(I1 first1, S1 last1, I2 first2, S2 last2, O result,
+                       Comp comp = {}, Proj1 proj1 = {}, Proj2 proj2 = {});                         // since C++20
+
+  template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
+           weakly_incrementable O, class Comp = ranges::less,
+           class Proj1 = identity, class Proj2 = identity>
+    requires mergeable<I1, I2, O, Comp, Proj1, Proj2>
+    constexpr set_intersection_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>, O>
+      set_intersection(R1&& r1, R2&& r2, O result,
+                       Comp comp = {}, Proj1 proj1 = {}, Proj2 proj2 = {});                         // since C++20
+
 }
 
     constexpr bool     // constexpr in C++20
@@ -1378,6 +1397,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_replace_if.h>
 #include <__algorithm/ranges_reverse.h>
 #include <__algorithm/ranges_set_difference.h>
+#include <__algorithm/ranges_set_intersection.h>
 #include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_sort_heap.h>
 #include <__algorithm/ranges_stable_sort.h>
