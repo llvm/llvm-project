@@ -75,27 +75,33 @@ def sysroot_EQ : Joined<["--"], "sysroot">, HelpText<"Set the system root">;
 
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
-def output_EQ : Joined<["--"], "output=">, Alias<o>, HelpText<"Alias for -o">;
-def output : Separate<["--"], "output">, Alias<o>, HelpText<"Alias for -o">;
+def output_EQ : Joined<["--"], "output=">, Alias<o>, Flags<[HelpHidden]>,
+  HelpText<"Alias for -o">;
+def output : Separate<["--"], "output">, Alias<o>, Flags<[HelpHidden]>,
+  HelpText<"Alias for -o">;
 
 def library_path : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add <dir> to the library search path">;
-def library_path_S : Separate<["--", "-"], "library-path">, Alias<library_path>;
-def library_path_EQ : Joined<["--", "-"], "library-path=">, Alias<library_path>;
+def library_path_S : Separate<["--", "-"], "library-path">, Flags<[HelpHidden]>,
+  Alias<library_path>;
+def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
+  Alias<library_path>;
 
 def library : JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
   HelpText<"Search for library <libname>">;
-def library_S : Separate<["--", "-"], "library">, Alias<library_path>;
-def library_EQ : Joined<["--", "-"], "library=">, Alias<library_path>;
+def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
+  Alias<library_path>;
+def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
+  Alias<library_path>;
 
 def as_needed : Flag<["--", "-"], "as-needed">;
 def no_as_needed : Flag<["--", "-"], "no-as-needed">;
 
 def rpath : Separate<["--", "-"], "rpath">;
-def rpath_EQ : Joined<["--", "-"], "rpath=">, Alias<rpath>;
+def rpath_EQ : Joined<["--", "-"], "rpath=">, Flags<[HelpHidden]>, Alias<rpath>;
 
 def dynamic_linker : Separate<["--", "-"], "dynamic-linker">;
 def dynamic_linker_EQ : Joined<["--", "-"], "dynamic-linker=">, Alias<dynamic_linker>;
 
 def v : Flag<["--", "-"], "v">, HelpText<"Display the version number and exit">;
-def version : Flag<["--", "-"], "version">, Alias<v>;
+def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>, Alias<v>;
