@@ -287,6 +287,50 @@ namespace ranges {
            indirect_unary_predicate<projected<iterator_t<R>, Proj>> Pred>
     constexpr bool ranges::is_partitioned(R&& r, Pred pred, Proj proj = {});                // since C++20
 
+  template<random_access_iterator I, sentinel_for<I> S, class Comp = ranges::less,
+          class Proj = identity>
+    requires sortable<I, Comp, Proj>
+    constexpr I
+      ranges::push_heap(I first, S last, Comp comp = {}, Proj proj = {});                   // since C++20
+
+  template<random_access_range R, class Comp = ranges::less, class Proj = identity>
+    requires sortable<iterator_t<R>, Comp, Proj>
+    constexpr borrowed_iterator_t<R>
+      ranges::push_heap(R&& r, Comp comp = {}, Proj proj = {});                             // since C++20
+
+  template<random_access_iterator I, sentinel_for<I> S, class Comp = ranges::less,
+          class Proj = identity>
+    requires sortable<I, Comp, Proj>
+    constexpr I
+      ranges::pop_heap(I first, S last, Comp comp = {}, Proj proj = {});                    // since C++20
+
+  template<random_access_range R, class Comp = ranges::less, class Proj = identity>
+    requires sortable<iterator_t<R>, Comp, Proj>
+    constexpr borrowed_iterator_t<R>
+      ranges::pop_heap(R&& r, Comp comp = {}, Proj proj = {});                              // since C++20
+
+  template<random_access_iterator I, sentinel_for<I> S, class Comp = ranges::less,
+          class Proj = identity>
+    requires sortable<I, Comp, Proj>
+    constexpr I
+      ranges::make_heap(I first, S last, Comp comp = {}, Proj proj = {});                   // since C++20
+
+  template<random_access_range R, class Comp = ranges::less, class Proj = identity>
+    requires sortable<iterator_t<R>, Comp, Proj>
+    constexpr borrowed_iterator_t<R>
+      ranges::make_heap(R&& r, Comp comp = {}, Proj proj = {});                             // since C++20
+
+  template<random_access_iterator I, sentinel_for<I> S, class Comp = ranges::less,
+          class Proj = identity>
+    requires sortable<I, Comp, Proj>
+    constexpr I
+      ranges::sort_heap(I first, S last, Comp comp = {}, Proj proj = {});                   // since C++20
+
+  template<random_access_range R, class Comp = ranges::less, class Proj = identity>
+    requires sortable<iterator_t<R>, Comp, Proj>
+    constexpr borrowed_iterator_t<R>
+      ranges::sort_heap(R&& r, Comp comp = {}, Proj proj = {});                             // since C++20
+
   template<bidirectional_iterator I, sentinel_for<I> S>
     requires permutable<I>
     constexpr I ranges::reverse(I first, S last);                                           // since C++20
@@ -1313,6 +1357,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_is_sorted_until.h>
 #include <__algorithm/ranges_lexicographical_compare.h>
 #include <__algorithm/ranges_lower_bound.h>
+#include <__algorithm/ranges_make_heap.h>
 #include <__algorithm/ranges_max.h>
 #include <__algorithm/ranges_max_element.h>
 #include <__algorithm/ranges_merge.h>
@@ -1325,6 +1370,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_move_backward.h>
 #include <__algorithm/ranges_none_of.h>
 #include <__algorithm/ranges_nth_element.h>
+#include <__algorithm/ranges_pop_heap.h>
+#include <__algorithm/ranges_push_heap.h>
 #include <__algorithm/ranges_remove.h>
 #include <__algorithm/ranges_remove_if.h>
 #include <__algorithm/ranges_replace.h>
@@ -1332,6 +1379,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_reverse.h>
 #include <__algorithm/ranges_set_difference.h>
 #include <__algorithm/ranges_sort.h>
+#include <__algorithm/ranges_sort_heap.h>
 #include <__algorithm/ranges_stable_sort.h>
 #include <__algorithm/ranges_swap_ranges.h>
 #include <__algorithm/ranges_transform.h>
