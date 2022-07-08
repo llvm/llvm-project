@@ -19,7 +19,7 @@ using namespace object;
 
 Expected<Decompressor> Decompressor::create(StringRef Name, StringRef Data,
                                             bool IsLE, bool Is64Bit) {
-  if (!zlib::isAvailable())
+  if (!compression::zlib::isAvailable())
     return createError("zlib is not available");
 
   Decompressor D(Data);
@@ -94,5 +94,5 @@ bool Decompressor::isCompressedELFSection(uint64_t Flags, StringRef Name) {
 
 Error Decompressor::decompress(MutableArrayRef<char> Buffer) {
   size_t Size = Buffer.size();
-  return zlib::uncompress(SectionData, Buffer.data(), Size);
+  return compression::zlib::uncompress(SectionData, Buffer.data(), Size);
 }

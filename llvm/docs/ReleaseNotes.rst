@@ -202,6 +202,11 @@ Changes to the C API
 * Add ``LLVMDeleteInstruction`` function which allows deleting instructions that
   are not inserted into a basic block.
 
+* Refactor compression namespaces across the project, making way for a possible
+  introduction of alternatives to zlib compression in the llvm toolchain.
+  Changes are as follows:
+  * Relocate the ``llvm::zlib`` namespace to ``llvm::compression::zlib``.
+
 Changes to the Go bindings
 --------------------------
 

@@ -73,7 +73,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
   // If SHF_COMPRESSED is set, parse the header. The legacy .zdebug format is no
   // longer supported.
   if (flags & SHF_COMPRESSED) {
-    if (!zlib::isAvailable())
+    if (!compression::zlib::isAvailable())
       error(toString(file) + ": contains a compressed section, " +
             "but zlib is not available");
     invokeELFT(parseCompressedHeader);
@@ -122,7 +122,8 @@ void InputSectionBase::uncompress() const {
     uncompressedBuf = bAlloc().Allocate<char>(size);
   }
 
-  if (Error e = zlib::uncompress(toStringRef(rawData), uncompressedBuf, size))
+  if (Error e = compression::zlib::uncompress(toStringRef(rawData),
+                                              uncompressedBuf, size))
     fatal(toString(this) +
           ": uncompress failed: " + llvm::toString(std::move(e)));
   rawData = makeArrayRef((uint8_t *)uncompressedBuf, size);
@@ -1217,7 +1218,8 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // to the buffer.
   if (uncompressedSize >= 0) {
     size_t size = uncompressedSize;
-    if (Error e = zlib::uncompress(toStringRef(rawData), (char *)buf, size))
+    if (Error e = compression::zlib::uncompress(toStringRef(rawData),
+                                                (char *)buf, size))
       fatal(toString(this) +
             ": uncompress failed: " + llvm::toString(std::move(e)));
     uint8_t *bufEnd = buf + size;
