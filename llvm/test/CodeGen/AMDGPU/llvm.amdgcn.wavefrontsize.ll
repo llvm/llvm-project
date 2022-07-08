@@ -1,6 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,W64 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,W32 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,W64 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,W32 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,W64 %s
 
 ; RUN: opt -O3 -S < %s | FileCheck -check-prefixes=OPT,OPT-WXX %s
 ; RUN: opt -mtriple=amdgcn-- -O3 -S < %s | FileCheck -check-prefixes=OPT,OPT-WXX %s
@@ -10,13 +12,15 @@
 ; RUN: opt -mtriple=amdgcn-- -mcpu=tonga -O3 -S < %s | FileCheck -check-prefixes=OPT,OPT-W64 %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1010 -O3 -mattr=+wavefrontsize32,-wavefrontsize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W32 %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1010 -O3 -mattr=-wavefrontsize32,+wavefrontsize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W64 %s
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -O3 -mattr=+wavefrontsize32,-wavefrontsize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W32 %s
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -O3 -mattr=-wavefrontsize32,+wavefrontsize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W64 %s
 
 ; GCN-LABEL: {{^}}fold_wavefrontsize:
 ; OPT-LABEL: define amdgpu_kernel void @fold_wavefrontsize(
 
 ; W32:       v_mov_b32_e32 [[V:v[0-9]+]], 32
 ; W64:       v_mov_b32_e32 [[V:v[0-9]+]], 64
-; GCN:       store_dword v{{.+}}, [[V]]
+; GCN:       store_{{dword|b32}} v{{.+}}, [[V]]
 
 ; OPT-W32:   store i32 32, i32 addrspace(1)* %arg, align 4
 ; OPT-W64:   store i32 64, i32 addrspace(1)* %arg, align 4
@@ -37,7 +41,7 @@ bb:
 ; W32:       v_mov_b32_e32 [[V:v[0-9]+]], 1{{$}}
 ; W64:       v_mov_b32_e32 [[V:v[0-9]+]], 2{{$}}
 ; GCN-NOT:   cndmask
-; GCN:       store_dword v{{.+}}, [[V]]
+; GCN:       store_{{dword|b32}} v{{.+}}, [[V]]
 
 ; OPT-W32:   store i32 1, i32 addrspace(1)* %arg, align 4
 ; OPT-W64:   store i32 2, i32 addrspace(1)* %arg, align 4

@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,CIGFX9 %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx802 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,CIGFX9 %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
 
 declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #0
 
