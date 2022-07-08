@@ -855,7 +855,7 @@ bool Decoder::opcode_end_c(const uint8_t *OC, unsigned &Offset, unsigned Length,
                            bool Prologue) {
   SW.startLine() << format("0x%02x                ; end_c\n", OC[Offset]);
   ++Offset;
-  return true;
+  return false;
 }
 
 bool Decoder::opcode_save_next(const uint8_t *OC, unsigned &Offset,
