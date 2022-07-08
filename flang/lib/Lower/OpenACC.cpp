@@ -407,33 +407,36 @@ createParallelOp(Fortran::lower::AbstractConverter &converter,
       genIfClause(converter, ifClause, ifCond, stmtCtx);
     } else if (const auto *selfClause =
                    std::get_if<Fortran::parser::AccClause::Self>(&clause.u)) {
-      const Fortran::parser::AccSelfClause &accSelfClause = selfClause->v;
-      if (const auto *optCondition =
-              std::get_if<std::optional<Fortran::parser::ScalarLogicalExpr>>(
-                  &accSelfClause.u)) {
-        if (*optCondition) {
-          mlir::Value cond = fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(*optCondition), stmtCtx));
-          selfCond = firOpBuilder.createConvert(currentLocation,
-                                                firOpBuilder.getI1Type(), cond);
-        } else {
-          addSelfAttr = true;
-        }
-      } else if (const auto *accClauseList =
-                     std::get_if<Fortran::parser::AccObjectList>(
-                         &accSelfClause.u)) {
-        // TODO This would be nicer to be done in canonicalization step.
-        if (accClauseList->v.size() == 1) {
-          const auto &accObject = accClauseList->v.front();
-          if (const auto *designator =
-                  std::get_if<Fortran::parser::Designator>(&accObject.u)) {
-            if (const auto *name = getDesignatorNameIfDataRef(*designator)) {
-              auto cond = converter.getSymbolAddress(*name->symbol);
-              selfCond = firOpBuilder.createConvert(
-                  currentLocation, firOpBuilder.getI1Type(), cond);
+      const std::optional<Fortran::parser::AccSelfClause> &accSelfClause =
+          selfClause->v;
+      if (accSelfClause) {
+        if (const auto *optCondition =
+                std::get_if<std::optional<Fortran::parser::ScalarLogicalExpr>>(
+                    &(*accSelfClause).u)) {
+          if (*optCondition) {
+            mlir::Value cond = fir::getBase(converter.genExprValue(
+                *Fortran::semantics::GetExpr(*optCondition), stmtCtx));
+            selfCond = firOpBuilder.createConvert(
+                currentLocation, firOpBuilder.getI1Type(), cond);
+          }
+        } else if (const auto *accClauseList =
+                       std::get_if<Fortran::parser::AccObjectList>(
+                           &(*accSelfClause).u)) {
+          // TODO This would be nicer to be done in canonicalization step.
+          if (accClauseList->v.size() == 1) {
+            const auto &accObject = accClauseList->v.front();
+            if (const auto *designator =
+                    std::get_if<Fortran::parser::Designator>(&accObject.u)) {
+              if (const auto *name = getDesignatorNameIfDataRef(*designator)) {
+                auto cond = converter.getSymbolAddress(*name->symbol);
+                selfCond = firOpBuilder.createConvert(
+                    currentLocation, firOpBuilder.getI1Type(), cond);
+              }
             }
           }
         }
+      } else {
+        addSelfAttr = true;
       }
     } else if (const auto *copyClause =
                    std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {
