@@ -277,7 +277,8 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context, size_t &numRead,
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
   SymbolState aliasState;
   ParserConfig config(context);
-  ParserState state(sourceMgr, config, aliasState, /*asmState=*/nullptr);
+  ParserState state(sourceMgr, config, aliasState, /*asmState=*/nullptr,
+                    /*codeCompleteContext=*/nullptr);
   Parser parser(state);
 
   SourceMgrDiagnosticHandler handler(

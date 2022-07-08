@@ -780,6 +780,11 @@ enum class InsertTextFormat {
 };
 
 struct CompletionItem {
+  CompletionItem() = default;
+  CompletionItem(StringRef label, CompletionItemKind kind)
+      : label(label.str()), kind(kind),
+        insertTextFormat(InsertTextFormat::PlainText) {}
+
   /// The label of this completion item. By default also the text that is
   /// inserted when selecting this completion.
   std::string label;

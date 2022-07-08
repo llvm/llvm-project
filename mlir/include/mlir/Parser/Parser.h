@@ -26,6 +26,7 @@ class StringRef;
 
 namespace mlir {
 class AsmParserState;
+class AsmParserCodeCompleteContext;
 
 namespace detail {
 
@@ -83,11 +84,13 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
 /// source file that is being parsed. If `asmState` is non-null, it is populated
 /// with detailed information about the parsed IR (including exact locations for
 /// SSA uses and definitions). `asmState` should only be provided if this
-/// detailed information is desired.
-LogicalResult parseSourceFile(const llvm::SourceMgr &sourceMgr, Block *block,
-                              const ParserConfig &config,
-                              LocationAttr *sourceFileLoc = nullptr,
-                              AsmParserState *asmState = nullptr);
+/// detailed information is desired. If `codeCompleteContext` is non-null, it is
+/// used to signal tracking of a code completion event (generally only ever
+/// useful for LSP or other high level language tooling).
+LogicalResult parseSourceFile(
+    const llvm::SourceMgr &sourceMgr, Block *block, const ParserConfig &config,
+    LocationAttr *sourceFileLoc = nullptr, AsmParserState *asmState = nullptr,
+    AsmParserCodeCompleteContext *codeCompleteContext = nullptr);
 
 /// This parses the file specified by the indicated filename and appends parsed
 /// operations to the given block. If the block is non-empty, the operations are

@@ -36,6 +36,7 @@
 // Markers
 TOK_MARKER(eof)
 TOK_MARKER(error)
+TOK_MARKER(code_complete)
 
 // Identifiers.
 TOK_IDENTIFIER(bare_identifier)        // foo
