@@ -29,7 +29,6 @@ llvm_canonicalize_cmake_booleans(
   CLANGD_MALLOC_TRIM
   CLANGD_TIDY_CHECKS
   LLVM_ENABLE_ZLIB
-  LLVM_ENABLE_ZSTD
 )
 
 configure_file(
