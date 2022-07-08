@@ -82,16 +82,18 @@ public:
     return result;
   }
 
-  /// Returns `true` if this is a silenceable failure.
-  bool isDefiniteFailure() const { return result.failed(); }
+  /// Returns `true` if this is a success.
+  bool succeeded() const {
+    return ::mlir::succeeded(result) && diagnostics.empty();
+  }
+
+  /// Returns `true` if this is a definite failure.
+  bool isDefiniteFailure() const {
+    return ::mlir::failed(result) && diagnostics.empty();
+  }
 
   /// Returns `true` if this is a silenceable failure.
   bool isSilenceableFailure() const { return !diagnostics.empty(); }
-
-  /// Returns `true` if this is a success.
-  bool succeeded() const {
-    return diagnostics.empty() && ::mlir::succeeded(result);
-  }
 
   /// Returns the diagnostic message without emitting it. Expects this object
   /// to be a silenceable failure.
