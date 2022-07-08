@@ -1588,131 +1588,73 @@ GEN(half)
 ATTR float
 convert_float_rtn(int i)
 {
-    int s = i >> 31;
-    uint u = as_uint((i + s) ^ s);
-    uint lz = clz(u);
-    uint e = 127U + 31U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffU;
-    uint t = u & 0xffU;
-    u = (e << 23) | (u >> 8);
-    return as_float((u + ((s & t) > 0)) | (s & 0x80000000));
+    return __ocml_cvtrtn_f32_s32(i);
 }
 
 ATTR float
 convert_float_rtp(int i)
 {
-    int s = i >> 31;
-    uint u = as_uint((i + s) ^ s);
-    uint lz = clz(u);
-    uint e = 127U + 31U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffU;
-    uint t = u & 0xffU;
-    u = (e << 23) | (u >> 8);
-    return as_float((u + ((~s & t) > 0)) | (s & 0x80000000));
+    return __ocml_cvtrtp_f32_s32(i);
 }
 
 ATTR float
 convert_float_rtz(int i)
 {
-    int s = i >> 31;
-    uint u = as_uint((i + s) ^ s);
-    uint lz = clz(u);
-    uint e = 127U + 31U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffU;
-    u = (e << 23) | (u >> 8);
-    return as_float(u | (s & 0x80000000));
+    return __ocml_cvtrtz_f32_s32(i);
 }
-
-IATTR static float
-cvt1f4_zu4(uint u)
-{
-    uint lz = clz(u);
-    uint e = 127U + 31U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffU;
-    return as_float((e << 23) | (u >> 8));
-}
-extern AATTR("cvt1f4_zu4") float convert_float_rtn(uint);
-extern AATTR("cvt1f4_zu4") float convert_float_rtz(uint);
 
 ATTR float
-convert_float_rtp(uint u)
+convert_float_rtn(uint i)
 {
-    uint lz = clz(u);
-    uint e = 127U + 31U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffU;
-    uint t = u & 0xffU;
-    u = (e << 23) | (u >> 8);
-    return as_float(u + (t > 0));
+    return __ocml_cvtrtn_f32_u32(i);
+}
+
+ATTR float
+convert_float_rtp(uint i)
+{
+    return __ocml_cvtrtp_f32_u32(i);
+}
+
+ATTR float
+convert_float_rtz(uint i)
+{
+    return __ocml_cvtrtz_f32_u32(i);
 }
 
 ATTR float
 convert_float_rtn(long l)
 {
-    long s = l >> 63;
-    ulong u = as_ulong((l + s) ^ s);
-    uint lz = clz(u);
-    uint e = 127U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    ulong t = u & 0xffffffffffUL;
-    uint v = (e << 23) | (uint)(u >> 40);
-    return as_float((v + ((s & t) > 0)) | ((uint)s & 0x80000000));
+    return __ocml_cvtrtn_f32_s64(l);
 }
 
 ATTR float
 convert_float_rtp(long l)
 {
-    long s = l >> 63;
-    ulong u = as_ulong((l + s) ^ s);
-    uint lz = clz(u);
-    uint e = 127U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    ulong t = u & 0xffffffffffUL;
-    uint v = (e << 23) | (uint)(u >> 40);
-    return as_float((v + ((~s & t) > 0)) | ((uint)s & 0x80000000));
+    return __ocml_cvtrtp_f32_s64(l);
 }
 
 ATTR float
 convert_float_rtz(long l)
 {
-    long s = l >> 63;
-    ulong u = as_ulong((l + s) ^ s);
-    uint lz = clz(u);
-    uint e = 127U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    uint v = (e << 23) | (uint)(u >> 40);
-    return as_float(v | ((uint)s & 0x80000000));
+    return __ocml_cvtrtz_f32_s64(l);
 }
-
-IATTR static float
-cvt1f4_zu8(ulong u)
-{
-    uint lz = clz(u);
-    uint e = 127U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    return as_float((e << 23) | (uint)(u >> 40));
-}
-extern AATTR("cvt1f4_zu8") float convert_float_rtz(ulong);
-extern AATTR("cvt1f4_zu8") float convert_float_rtn(ulong);
 
 ATTR float
-convert_float_rtp(ulong u)
+convert_float_rtn(ulong l)
 {
-    uint lz = clz(u);
-    uint e = 127U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    ulong t = u & 0xffffffffffUL;
-    uint v = (e << 23) | (uint)(u >> 40);
-    return as_float(v + (t > 0));
+    return __ocml_cvtrtn_f32_u64(l);
+}
+
+ATTR float
+convert_float_rtp(ulong l)
+{
+    return __ocml_cvtrtp_f32_u64(l);
+}
+
+ATTR float
+convert_float_rtz(ulong l)
+{
+    return __ocml_cvtrtz_f32_u64(l);
 }
 
 ATTR float
@@ -1736,66 +1678,37 @@ convert_float_rtz(double a)
 ATTR double
 convert_double_rtn(long l)
 {
-    long s = l >> 63;
-    ulong u = as_ulong((l + s) ^ s);
-    uint lz = clz(u);
-    uint e = 1023U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    ulong t = u & 0x7ffUL;
-    u = ((ulong)e << 52) | (u >> 11);
-    return as_double((u + ((s & t) > 0)) | ((ulong)s & 0x8000000000000000UL));
+    return __ocml_cvtrtn_f64_s64(l);
 }
 
 ATTR double
 convert_double_rtp(long l)
 {
-    long s = l >> 63;
-    ulong u = as_ulong((l + s) ^ s);
-    uint lz = clz(u);
-    uint e = 1023U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    ulong t = u & 0x7ffUL;
-    u = ((ulong)e << 52) | (u >> 11);
-    return as_double((u + ((~s & t) > 0)) | ((ulong)s & 0x8000000000000000UL));
+    return __ocml_cvtrtp_f64_s64(l);
 }
 
 ATTR double
 convert_double_rtz(long l)
 {
-    long s = l >> 63;
-    ulong u = as_ulong((l + s) ^ s);
-    uint lz = clz(u);
-    uint e = 1023U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    u = ((ulong)e << 52) | (u >> 11);
-    return as_double(u | ((ulong)s & 0x8000000000000000UL));
+    return __ocml_cvtrtz_f64_s64(l);
 }
-
-IATTR static double
-cvt1f8_zu8(ulong u)
-{
-    uint lz = clz(u);
-    uint e = 1023U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    return as_double(((ulong)e << 52) | (u >> 11));
-}
-AATTR("cvt1f8_zu8") double convert_double_rtz(ulong);
-AATTR("cvt1f8_zu8") double convert_double_rtn(ulong);
 
 ATTR double
-convert_double_rtp(ulong u)
+convert_double_rtn(ulong l)
 {
-    uint lz = clz(u);
-    uint e = 1023U + 63U - lz;
-    e = u ? e : 0;
-    u = (u << lz) & 0x7fffffffffffffffUL;
-    ulong t = u & 0x7ffUL;
-    u = ((ulong)e << 52) | (u >> 11);
-    return as_double(u + (t > 0UL));
+    return __ocml_cvtrtn_f64_u64(l);
+}
+
+ATTR double
+convert_double_rtp(ulong l)
+{
+    return __ocml_cvtrtp_f64_u64(l);
+}
+
+ATTR double
+convert_double_rtz(ulong l)
+{
+    return __ocml_cvtrtz_f64_u64(l);
 }
 
 ATTR half

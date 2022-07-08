@@ -92,7 +92,7 @@ MATH_PRIVATE(trigredlarge)(float x)
     p5 = p5 ^ flip;
 
     // Find exponent and shift away leading zeroes and hidden bit
-    xe = MATH_CLZI(p7) + 1;
+    xe = BUILTIN_CLZ_U32(p7) + 1;
     shift = 32 - xe;
     p7 = BUILTIN_BITALIGN_B32(p7, p6, shift);
     p6 = BUILTIN_BITALIGN_B32(p6, p5, shift);
@@ -104,7 +104,7 @@ MATH_PRIVATE(trigredlarge)(float x)
     p7 = BUILTIN_BITALIGN_B32(p7, p6, 32-23);
 
     // Get 24 more bits of fraction in another float, there are not long strings of zeroes here
-    int xxe = MATH_CLZI(p7) + 1;
+    int xxe = BUILTIN_CLZ_U32(p7) + 1;
     p7 = BUILTIN_BITALIGN_B32(p7, p6, 32-xxe);
     float q0 = AS_FLOAT(sign | ((127 - (xe + 23 + xxe)) << 23) | (p7 >> 9));
 

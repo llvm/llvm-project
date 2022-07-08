@@ -5,13 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#define MATH_CLZI(U) ({ \
-    uint _clzi_u = U; \
-    uint _clzi_z = BUILTIN_FIRSTBIT_U32(_clzi_u); \
-    uint _clzi_ret = _clzi_u == 0u ? 32u : _clzi_z; \
-    _clzi_ret; \
-})
-
 #define MATH_MAD(A,B,C) BUILTIN_FMA_F16(A, B, C)
 #define MATH_MAD2(A,B,C) BUILTIN_FMA_2F16(A, B, C)
 

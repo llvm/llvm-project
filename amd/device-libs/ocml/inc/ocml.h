@@ -27,6 +27,11 @@
 #define OCML_MANGLE_F64(N) MANGLE3(__ocml, N, f64)
 #define OCML_MANGLE_F16(N) MANGLE3(__ocml, N, f16)
 #define OCML_MANGLE_2F16(N) MANGLE3(__ocml, N, 2f16)
+#define OCML_MANGLE_S32(N) MANGLE3(__ocml, N, s32)
+#define OCML_MANGLE_U32(N) MANGLE3(__ocml, N, u32)
+#define OCML_MANGLE_S64(N) MANGLE3(__ocml, N, s64)
+#define OCML_MANGLE_U64(N) MANGLE3(__ocml, N, u64)
+
 
 #define DECL_OCML_UNARY_F32(N) extern float OCML_MANGLE_F32(N)(float);
 #define _DECL_X_OCML_UNARY_F32(A,N) extern __attribute__((A)) float OCML_MANGLE_F32(N)(float);
@@ -742,6 +747,24 @@ extern __attribute__((const)) half OCML_MANGLE_F64(cvtrtz_f16)(double a);
 extern __attribute__((const)) float OCML_MANGLE_F64(cvtrtn_f32)(double a);
 extern __attribute__((const)) float OCML_MANGLE_F64(cvtrtp_f32)(double a);
 extern __attribute__((const)) float OCML_MANGLE_F64(cvtrtz_f32)(double a);
+extern __attribute__((const)) float OCML_MANGLE_S32(cvtrtn_f32)(int);
+extern __attribute__((const)) float OCML_MANGLE_S32(cvtrtp_f32)(int);
+extern __attribute__((const)) float OCML_MANGLE_S32(cvtrtz_f32)(int);
+extern __attribute__((const)) float OCML_MANGLE_U32(cvtrtn_f32)(uint);
+extern __attribute__((const)) float OCML_MANGLE_U32(cvtrtp_f32)(uint);
+extern __attribute__((const)) float OCML_MANGLE_U32(cvtrtz_f32)(uint);
+extern __attribute__((const)) float OCML_MANGLE_S64(cvtrtn_f32)(long);
+extern __attribute__((const)) float OCML_MANGLE_S64(cvtrtp_f32)(long);
+extern __attribute__((const)) float OCML_MANGLE_S64(cvtrtz_f32)(long);
+extern __attribute__((const)) float OCML_MANGLE_U64(cvtrtn_f32)(ulong);
+extern __attribute__((const)) float OCML_MANGLE_U64(cvtrtp_f32)(ulong);
+extern __attribute__((const)) float OCML_MANGLE_U64(cvtrtz_f32)(ulong);
+extern __attribute__((const)) double OCML_MANGLE_S64(cvtrtn_f64)(long);
+extern __attribute__((const)) double OCML_MANGLE_S64(cvtrtp_f64)(long);
+extern __attribute__((const)) double OCML_MANGLE_S64(cvtrtz_f64)(long);
+extern __attribute__((const)) double OCML_MANGLE_U64(cvtrtn_f64)(ulong);
+extern __attribute__((const)) double OCML_MANGLE_U64(cvtrtp_f64)(ulong);
+extern __attribute__((const)) double OCML_MANGLE_U64(cvtrtz_f64)(ulong);
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 

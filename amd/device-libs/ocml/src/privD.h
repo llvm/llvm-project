@@ -5,23 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#define MATH_CLZI(U) ({ \
-    uint _clzi_u = U; \
-    uint _clzi_z = BUILTIN_FIRSTBIT_U32(_clzi_u); \
-    uint _clzi_ret = _clzi_u == 0u ? 32u : _clzi_z; \
-    _clzi_ret; \
-})
-
-#define MATH_CLZL(U) ({ \
-    ulong _clzl_u = U; \
-    uint2 _clzl_u2 = AS_UINT2(_clzl_u); \
-    uint _clzl_zlo = BUILTIN_FIRSTBIT_U32(_clzl_u2.lo); \
-    uint _clzl_zhi = BUILTIN_FIRSTBIT_U32(_clzl_u2.hi); \
-    uint _clzl_clo = (_clzl_u2.lo == 0 ? 32 : _clzl_zlo) + 32; \
-    uint _clzl_ret = _clzl_u2.hi == 0 ? _clzl_clo : _clzl_zhi; \
-    _clzl_ret; \
-})
-
 #define MATH_MAD(A,B,C) BUILTIN_FMA_F64(A, B, C)
 
 #define MATH_FAST_RCP(X) ({ \
