@@ -118,8 +118,10 @@ struct __tgt_kernel_arguments {
   int64_t *ArgSizes;  // Size of the argument data in bytes.
   int64_t *ArgTypes;  // Type of the data (e.g. to / from).
   void **ArgNames;    // Name of the data for debugging, possibly null.
-  void **ArgMappers;  // User-defined mappers, possible null.
+  void **ArgMappers;  // User-defined mappers, possibly null.
+  int64_t Tripcount;  // Tripcount for the teams / distribute loop, 0 otherwise.
 };
+static_assert(sizeof(__tgt_kernel_arguments) == 64 && "Invalid struct size");
 
 /// This struct is a record of an entry point or global. For a function
 /// entry point the size is expected to be zero

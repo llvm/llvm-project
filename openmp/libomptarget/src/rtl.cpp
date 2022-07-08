@@ -444,7 +444,7 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
           AsyncInfoTy AsyncInfo(Device);
           for (auto &Dtor : Device.PendingCtorsDtors[Desc].PendingDtors) {
             int Rc = target(nullptr, Device, Dtor, 0, nullptr, nullptr, nullptr,
-                            nullptr, nullptr, nullptr, 1, 1, true /*team*/,
+                            nullptr, nullptr, nullptr, 1, 1, 0, true /*team*/,
                             AsyncInfo);
             if (Rc != OFFLOAD_SUCCESS) {
               DP("Running destructor " DPxMOD " failed.\n", DPxPTR(Dtor));
