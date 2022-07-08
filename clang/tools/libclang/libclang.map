@@ -280,6 +280,7 @@ LLVM_13 {
     clang_experimental_DependencyScannerWorker_create_v0;
     clang_experimental_DependencyScannerWorker_dispose_v0;
     clang_experimental_DependencyScannerWorker_getFileDependencies_v2;
+    clang_experimental_DependencyScannerWorker_getFileDependencies_v3;
     clang_experimental_DependencyScannerWorker_getDependenciesByModuleName_v0;
     clang_experimental_FileDependencies_dispose;
     clang_experimental_ModuleDependencySet_dispose;

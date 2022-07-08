@@ -37,6 +37,20 @@ inline ScanningOutputFormat unwrap(CXDependencyMode Format) {
   }
 }
 
+static CXOutputKind wrap(ModuleOutputKind MOK) {
+  switch (MOK) {
+  case ModuleOutputKind::ModuleFile:
+    return CXOutputKind_ModuleFile;
+  case ModuleOutputKind::DependencyFile:
+    return CXOutputKind_Dependencies;
+  case ModuleOutputKind::DependencyTargets:
+    return CXOutputKind_DependenciesTarget;
+  case ModuleOutputKind::DiagnosticSerializationFile:
+    return CXOutputKind_SerializedDiagnostics;
+  }
+  llvm::report_fatal_error("unhandled ModuleOutputKind");
+}
+
 void clang_experimental_ModuleDependencySet_dispose(
     CXModuleDependencySet *MDS) {
   for (int I = 0; I < MDS->Count; ++I) {
@@ -275,4 +289,64 @@ clang_experimental_DependencyScannerWorker_getDependenciesByModuleName_v0(
         return MD.getCanonicalCommandLineWithoutModulePaths();
       },
       StringRef(ModuleName));
+}
+
+namespace {
+class OutputLookup {
+public:
+  OutputLookup(void *MLOContext, CXModuleLookupOutputCallback *MLO)
+      : MLOContext(MLOContext), MLO(MLO) {}
+  std::string lookupModuleOutput(const ModuleID &ID, ModuleOutputKind MOK);
+
+private:
+  std::unordered_map<ModuleID, std::string, ModuleIDHasher> PCMPaths;
+  void *MLOContext;
+  CXModuleLookupOutputCallback *MLO;
+};
+} // end anonymous namespace
+
+CXFileDependencies *
+clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
+    CXDependencyScannerWorker W, int argc, const char *const *argv,
+    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
+    CXModuleDiscoveredCallback *MDC, void *MLOContext,
+    CXModuleLookupOutputCallback *MLO, unsigned, CXString *error) {
+  OutputLookup OL(MLOContext, MLO);
+  auto LookupOutputs = [&](const ModuleID &ID, ModuleOutputKind MOK) {
+    return OL.lookupModuleOutput(ID, MOK);
+  };
+  return getFileDependencies(
+      W, argc, argv, WorkingDirectory, MDC, MDCContext, error,
+      [&](const FullDependencies &FD) {
+        return FD.getCommandLine(LookupOutputs);
+      },
+      [&](const ModuleDeps &MD) {
+        return MD.getCanonicalCommandLine(LookupOutputs);
+      },
+      ModuleName ? Optional<StringRef>(ModuleName) : None);
+}
+
+static std::string lookupModuleOutput(const ModuleID &ID, ModuleOutputKind MOK,
+                                      void *MLOContext,
+                                      CXModuleLookupOutputCallback *MLO) {
+  SmallVector<char, 256> Buffer(256);
+  size_t Len = MLO(MLOContext, ID.ModuleName.c_str(), ID.ContextHash.c_str(),
+                   wrap(MOK), Buffer.data(), Buffer.size());
+  if (Len > Buffer.size()) {
+    Buffer.resize(Len);
+    Len = MLO(MLOContext, ID.ModuleName.c_str(), ID.ContextHash.c_str(),
+              wrap(MOK), Buffer.data(), Buffer.size());
+  }
+  return std::string(Buffer.begin(), Len);
+}
+
+std::string OutputLookup::lookupModuleOutput(const ModuleID &ID,
+                                             ModuleOutputKind MOK) {
+  if (MOK != ModuleOutputKind::ModuleFile)
+    return ::lookupModuleOutput(ID, MOK, MLOContext, MLO);
+  // PCM paths are looked up repeatedly, so cache them.
+  auto PCMPath = PCMPaths.insert({ID, ""});
+  if (PCMPath.second)
+    PCMPath.first->second = ::lookupModuleOutput(ID, MOK, MLOContext, MLO);
+  return PCMPath.first->second;
 }

@@ -1,10 +1,17 @@
 // Use driver arguments.
 // RUN: rm -rf %t.mcp
 // RUN: echo %S > %t.result
-// RUN: c-index-test core --scan-deps %S -- %clang -c -I %S/Inputs/module \
+// RUN: echo %S > %t_v2.result
+//
+// RUN: c-index-test core --scan-deps %S -output-dir=%t -- %clang -c -I %S/Inputs/module \
 // RUN:     -fmodules -fmodules-cache-path=%t.mcp \
 // RUN:     -o FoE.o -x objective-c %s >> %t.result
-// RUN: cat %t.result | sed 's/\\/\//g' | FileCheck %s
+// RUN: cat %t.result | sed 's/\\/\//g' | FileCheck %s -check-prefixes=CHECK,CHECK_V3 -DOUTPUTS=%/t
+//
+// RUN: c-index-test core --scan-deps -scandeps-v2 %S -- %clang -c -I %S/Inputs/module \
+// RUN:     -fmodules -fmodules-cache-path=%t.mcp \
+// RUN:     -o FoE.o -x objective-c %s >> %t_v2.result
+// RUN: cat %t_v2.result | sed 's/\\/\//g' | FileCheck %s -check-prefixes=CHECK,CHECK_V2
 
 @import ModA;
 
@@ -28,3 +35,5 @@
 // CHECK-NEXT:   file-deps:
 // CHECK-NEXT:     [[PREFIX]]/scan-deps.m
 // CHECK-NEXT:   build-args: {{.*}} -fno-implicit-modules -fno-implicit-module-maps
+// CHECK_V3:     -fmodule-file={{.*}}ModA_{{.*}}.pcm
+// CHECK_V2-NOT: -fmodule-file=
