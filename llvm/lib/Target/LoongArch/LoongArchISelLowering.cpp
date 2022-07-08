@@ -75,6 +75,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, GRLenVT, Expand);
   setOperationAction(ISD::SELECT_CC, GRLenVT, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
+  setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, GRLenVT, Expand);
+
+  if (!Subtarget.is64Bit())
+    setLibcallName(RTLIB::MUL_I128, nullptr);
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
