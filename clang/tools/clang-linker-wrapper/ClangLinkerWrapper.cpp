@@ -186,6 +186,13 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
     llvm::errs() << *IC << (std::next(IC) != IE ? " " : "\n");
 }
 
+[[noreturn]] void reportError(Error E) {
+  outs().flush();
+  logAllUnhandledErrors(std::move(E),
+                        WithColor::error(errs(), LinkerExecutable));
+  exit(EXIT_FAILURE);
+}
+
 /// Create an extra user-specified \p OffloadFile.
 /// TODO: We should find a way to wrap these as libraries instead.
 Expected<OffloadFile> getInputBitcodeLibrary(StringRef Input) {
@@ -764,23 +771,18 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
   if (SaveTemps) {
-    auto HandleError = [=](Error Err) {
-      logAllUnhandledErrors(std::move(Err),
-                            WithColor::error(errs(), LinkerExecutable));
-      exit(1);
-    };
     Conf.PostInternalizeModuleHook = [&, Arch](size_t, const Module &M) {
       auto TempFileOrErr =
           createOutputFile(sys::path::filename(ExecutableName) + "-" +
                                Triple.getTriple() + "-" + Arch,
                            "bc");
       if (!TempFileOrErr)
-        HandleError(TempFileOrErr.takeError());
+        reportError(TempFileOrErr.takeError());
 
       std::error_code EC;
       raw_fd_ostream LinkedBitcode(*TempFileOrErr, EC, sys::fs::OF_None);
       if (EC)
-        HandleError(errorCodeToError(EC));
+        reportError(errorCodeToError(EC));
       WriteBitcodeToFile(M, LinkedBitcode);
       return true;
     };
@@ -863,12 +865,6 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   // Remove all the bitcode files that we moved from the original input.
   llvm::erase_if(InputFiles, [](OffloadFile &F) { return !F.getBinary(); });
 
-  auto HandleError = [&](Error Err) {
-    logAllUnhandledErrors(std::move(Err),
-                          WithColor::error(errs(), LinkerExecutable));
-    exit(1);
-  };
-
   // LTO Module hook to output bitcode without running the backend.
   SmallVector<StringRef, 4> BitcodeOutput;
   auto OutputBitcode = [&](size_t Task, const Module &M) {
@@ -876,12 +872,12 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
                                               "-jit-" + Triple.getTriple(),
                                           "bc");
     if (!TempFileOrErr)
-      HandleError(TempFileOrErr.takeError());
+      reportError(TempFileOrErr.takeError());
 
     std::error_code EC;
     raw_fd_ostream LinkedBitcode(*TempFileOrErr, EC, sys::fs::OF_None);
     if (EC)
-      HandleError(errorCodeToError(EC));
+      reportError(errorCodeToError(EC));
     WriteBitcodeToFile(M, LinkedBitcode);
     BitcodeOutput.push_back(*TempFileOrErr);
     return false;
@@ -964,10 +960,10 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
                                               "-device-" + Triple.getTriple(),
                                           Extension);
     if (!TempFileOrErr)
-      HandleError(TempFileOrErr.takeError());
+      reportError(TempFileOrErr.takeError());
     TempFile = *TempFileOrErr;
     if (std::error_code EC = sys::fs::openFileForWrite(TempFile, FD))
-      HandleError(errorCodeToError(EC));
+      reportError(errorCodeToError(EC));
     return std::make_unique<CachedFileStream>(
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
@@ -1323,10 +1319,6 @@ int main(int Argc, char **Argv) {
 
   LinkerExecutable = Argv[0];
   sys::PrintStackTraceOnErrorSignal(Argv[0]);
-  auto reportError = [Argv](Error E) {
-    logAllUnhandledErrors(std::move(E), WithColor::error(errs(), Argv[0]));
-    return EXIT_FAILURE;
-  };
 
   const OptTable &Tbl = getOptTable();
   BumpPtrAllocator Alloc;
@@ -1380,13 +1372,13 @@ int main(int Argc, char **Argv) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(Filename);
     if (std::error_code EC = BufferOrErr.getError())
-      return reportError(createFileError(Filename, EC));
+      reportError(createFileError(Filename, EC));
 
     bool IsLazy =
         identify_magic((*BufferOrErr)->getBuffer()) == file_magic::archive;
     if (Error Err = extractFromBuffer(std::move(*BufferOrErr),
                                       IsLazy ? LazyInputFiles : InputFiles))
-      return reportError(std::move(Err));
+      reportError(std::move(Err));
   }
 
   // Try to extract input from input libraries.
@@ -1395,18 +1387,18 @@ int main(int Argc, char **Argv) {
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
           MemoryBuffer::getFileOrSTDIN(*Library);
       if (std::error_code EC = BufferOrErr.getError())
-        return reportError(createFileError(*Library, EC));
+        reportError(createFileError(*Library, EC));
 
       if (Error Err =
               extractFromBuffer(std::move(*BufferOrErr), LazyInputFiles))
-        return reportError(std::move(Err));
+        reportError(std::move(Err));
     }
   }
 
   for (StringRef Library : Args.getAllArgValues(OPT_bitcode_library_EQ)) {
     auto FileOrErr = getInputBitcodeLibrary(Library);
     if (!FileOrErr)
-      return reportError(FileOrErr.takeError());
+      reportError(FileOrErr.takeError());
   }
 
   DenseSet<OffloadFile::TargetID> IsTargetUsed;
@@ -1423,7 +1415,7 @@ int main(int Argc, char **Argv) {
   // Link and wrap the device images extracted from the linker input.
   auto FilesOrErr = linkAndWrapDeviceFiles(InputFiles, Args);
   if (!FilesOrErr)
-    return reportError(FilesOrErr.takeError());
+    reportError(FilesOrErr.takeError());
 
   // Render the linker arguments and add the newly created image. We add it
   // after the output file to ensure it is linked with the correct libraries.
@@ -1440,7 +1432,7 @@ int main(int Argc, char **Argv) {
   // Run the host linking job with the rendered arguments.
   StringRef LinkerPath = Args.getLastArgValue(OPT_linker_path_EQ);
   if (Error Err = runLinker(LinkerPath, LinkerArgs))
-    return reportError(std::move(Err));
+    reportError(std::move(Err));
 
   // Remove the temporary files created.
   if (!SaveTemps)
