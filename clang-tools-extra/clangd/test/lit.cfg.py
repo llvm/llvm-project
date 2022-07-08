@@ -36,3 +36,6 @@ if config.clangd_tidy_checks:
 
 if config.have_zlib:
   config.available_features.add('zlib')
+
+if config.have_zstd:
+  config.available_features.add('zstd')
