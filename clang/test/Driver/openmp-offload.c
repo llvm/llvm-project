@@ -661,4 +661,10 @@
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -fopenmp-new-driver %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NEW-DRIVER %s
 
-// CHK-NEW-DRIVER: clang-linker-wrapper{{.*}}"-host-triple" "powerpc64le-unknown-linux"{{.*}}--{{.*}}"-lomp"{{.*}}"-lomptarget"
+// CHK-NEW-DRIVER: clang-linker-wrapper{{.*}}"--host-triple=powerpc64le-unknown-linux"{{.*}}--{{.*}}"-lomp"{{.*}}"-lomptarget"
+
+/// Check arguments to the linker wrapper
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -g -fopenmp-new-driver %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NEW-DRIVER-DEBUG %s
+
+// CHK-NEW-DRIVER-DEBUG: clang-linker-wrapper{{.*}}"--device-debug
