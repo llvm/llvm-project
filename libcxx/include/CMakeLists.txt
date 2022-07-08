@@ -103,6 +103,7 @@ set(files
   __algorithm/ranges_move.h
   __algorithm/ranges_move_backward.h
   __algorithm/ranges_none_of.h
+  __algorithm/ranges_nth_element.h
   __algorithm/ranges_remove.h
   __algorithm/ranges_remove_if.h
   __algorithm/ranges_replace.h

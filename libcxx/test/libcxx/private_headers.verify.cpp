@@ -140,6 +140,7 @@ END-SCRIPT
 #include <__algorithm/ranges_move.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move.h'}}
 #include <__algorithm/ranges_move_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move_backward.h'}}
 #include <__algorithm/ranges_none_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_none_of.h'}}
+#include <__algorithm/ranges_nth_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_nth_element.h'}}
 #include <__algorithm/ranges_remove.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_remove.h'}}
 #include <__algorithm/ranges_remove_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_remove_if.h'}}
 #include <__algorithm/ranges_replace.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_replace.h'}}
