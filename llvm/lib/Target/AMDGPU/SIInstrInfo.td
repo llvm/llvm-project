@@ -200,8 +200,7 @@ multiclass SDBufferAtomicNoRet {
     (!cast<SDNode>(NAME) node:$vdata_in, node:$rsrc, node:$vindex,
       node:$voffset, node:$soffset, node:$offset, node:$cachepolicy,
       node:$idxen)> {
-    let PredicateCode = [{ return SDValue(N, 0).use_empty(); }];
-    let GISelPredicateCode = [{ return false; }];
+    let HasNoUse = true;
   }
 }
 
@@ -242,8 +241,7 @@ def SIbuffer_atomic_cmpswap_noret : PatFrag<
   (SIbuffer_atomic_cmpswap node:$src, node:$cmp, node:$rsrc, node:$vindex,
     node:$voffset, node:$soffset, node:$offset, node:$cachepolicy,
     node:$idxen)> {
-  let PredicateCode = [{ return SDValue(N, 0).use_empty(); }];
-  let GISelPredicateCode = [{ return false; }];
+  let HasNoUse = true;
 }
 
 class SDGlobalAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,

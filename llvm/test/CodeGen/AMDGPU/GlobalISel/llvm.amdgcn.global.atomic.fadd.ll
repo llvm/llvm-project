@@ -13,7 +13,7 @@ define void @global_atomic_fadd_f32(float addrspace(1)* %ptr, float %data) {
 ; GFX90A-LABEL: global_atomic_fadd_f32:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    global_atomic_add_f32 v0, v[0:1], v2, off glc
+; GFX90A-NEXT:    global_atomic_add_f32 v[0:1], v2, off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
   %ret = call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* %ptr, float %data)
@@ -31,7 +31,7 @@ define void @global_atomic_fadd_f32_off_2048(float addrspace(1)* %ptr, float %da
 ; GFX90A-LABEL: global_atomic_fadd_f32_off_2048:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    global_atomic_add_f32 v0, v[0:1], v2, off offset:2048 glc
+; GFX90A-NEXT:    global_atomic_add_f32 v[0:1], v2, off offset:2048
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 512
@@ -50,7 +50,7 @@ define void @global_atomic_fadd_f32_off_neg2047(float addrspace(1)* %ptr, float 
 ; GFX90A-LABEL: global_atomic_fadd_f32_off_neg2047:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    global_atomic_add_f32 v0, v[0:1], v2, off offset:-2044 glc
+; GFX90A-NEXT:    global_atomic_add_f32 v[0:1], v2, off offset:-2044
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 -511
@@ -77,7 +77,7 @@ define amdgpu_kernel void @global_atomic_fadd_f32_off_ss(float addrspace(1)* %pt
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s2
-; GFX90A-NEXT:    global_atomic_add_f32 v0, v1, v0, s[0:1] offset:2048 glc
+; GFX90A-NEXT:    global_atomic_add_f32 v1, v0, s[0:1] offset:2048
 ; GFX90A-NEXT:    s_endpgm
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 512
   %ret = call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* %gep, float %data)
@@ -95,7 +95,7 @@ define void @global_atomic_fadd_v2f16(<2 x half> addrspace(1)* %ptr, <2 x half> 
 ; GFX90A-LABEL: global_atomic_fadd_v2f16:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    global_atomic_pk_add_f16 v0, v[0:1], v2, off glc
+; GFX90A-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)* %ptr, <2 x half> %data)
@@ -113,7 +113,7 @@ define void @global_atomic_fadd_v2f16_off_neg2047(<2 x half> addrspace(1)* %ptr,
 ; GFX90A-LABEL: global_atomic_fadd_v2f16_off_neg2047:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    global_atomic_pk_add_f16 v0, v[0:1], v2, off offset:-2044 glc
+; GFX90A-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off offset:-2044
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %ptr, i64 -511
