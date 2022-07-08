@@ -9,19 +9,22 @@
 define void @widget(%struct.pluto** %tmp1) {
 ; CHECK-LABEL: @widget(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    callbr void asm sideeffect "", "i,i"(i8* blockaddress(@widget, [[BB5:%.*]]), i8* blockaddress(@widget, [[BB8:%.*]]))
-; CHECK-NEXT:    to label [[BB4:%.*]] [label [[BB5]], label %bb8]
+; CHECK-NEXT:    callbr void asm sideeffect "", "i,i"(i8* blockaddress(@widget, [[BB5:%.*]]), i8* blockaddress(@widget, [[BB_BB8_CRIT_EDGE:%.*]]))
+; CHECK-NEXT:    to label [[BB4:%.*]] [label [[BB5]], label %bb.bb8_crit_edge]
+; CHECK:       bb.bb8_crit_edge:
+; CHECK-NEXT:    [[TMP10_PRE:%.*]] = load %struct.pluto*, %struct.pluto** [[TMP1:%.*]], align 8
+; CHECK-NEXT:    br label [[BB8:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP6:%.*]] = load %struct.pluto*, %struct.pluto** [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load %struct.pluto*, %struct.pluto** [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_PLUTO:%.*]], %struct.pluto* [[TMP6]], i64 0, i32 1
 ; CHECK-NEXT:    br label [[BB8]]
 ; CHECK:       bb8:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i8* [ [[TMP7]], [[BB5]] ], [ null, [[BB:%.*]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = load %struct.pluto*, %struct.pluto** [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi %struct.pluto* [ [[TMP6]], [[BB5]] ], [ [[TMP10_PRE]], [[BB_BB8_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i8* [ [[TMP7]], [[BB5]] ], [ null, [[BB_BB8_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_PLUTO]], %struct.pluto* [[TMP10]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = load i8, i8* [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, i8* [[TMP11]], align 1
 ; CHECK-NEXT:    tail call void @spam(i8* [[TMP9]], i8 [[TMP12]])
 ; CHECK-NEXT:    ret void
 ;

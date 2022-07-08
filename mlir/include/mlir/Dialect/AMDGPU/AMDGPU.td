@@ -52,14 +52,17 @@ def AMDGPU_RawBufferLoadOp :
     available on AMD GPUs, including extensions in newer GPUs.
 
     The index into the buffer is computed as for `memref.load` with the additon
-    of `indexOffset` and `sgprOffset` (which is added after bounds checks and
-    includes any offset present on the memref type if it's non-zero).
+    of `indexOffset` and `sgprOffset` (which **may or may not** be considered
+    in bounds checks and includes any offset present on the memref type if it's
+    non-zero).
 
     All indices and offsets are in units of the memref's data type and are
     converted to bytes during lowering.
 
     When a load is out of bounds, the instruction returns zero.
-    Vector instructions bounds check each component's address.
+    Partially-out of bounds have chipset-dependent behavior: whether reading
+    2 elements starting at index 7 of a `memref<8xf32>` returns the last element
+    in the first vector component depends on the architecture.
 
     The memref struct is converted into a buffer resource (a V#) and the arguments
     are translated to intrinsic arguments as follows:
@@ -71,7 +74,7 @@ def AMDGPU_RawBufferLoadOp :
     - The offset enable bit is 1, the index enable bit is 0.
     - The thread ID addition bit is off
     - If `boundsCheck` is false and the target chipset is RDNA, OOB_SELECT is set
-      to 2 to disable bounds checks, otherwise it is 0
+      to 2 to disable bounds checks, otherwise it is 3
     - The cache coherency bits are off
   }];
   let assemblyFormat = [{
@@ -108,8 +111,9 @@ def AMDGPU_RawBufferStoreOp :
     All index components are in terms of the elements of the memref, not bytes,
     and are scaled up appropriately.
 
-    Out of bounds stores are ignored in hardware, including the out of bounds
-    components of vector writes.
+    Out of bounds stores are ignored in hardware.
+    Wthether a vector write that includes some in-bounds and soeme out-of-bounds
+    components is partically completed is chipset-dependent.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.

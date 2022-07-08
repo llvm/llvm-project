@@ -80,11 +80,10 @@ private:
 template <typename ValueT>
 class Lattice : public AbstractSparseLattice {
 public:
-  using AbstractSparseLattice::AbstractSparseLattice;
-
-  /// Get a lattice element with a known value.
-  Lattice(const ValueT &knownValue = ValueT())
-      : AbstractSparseLattice(Value()), knownValue(knownValue) {}
+  /// Construct a lattice with a known value.
+  explicit Lattice(Value value)
+      : AbstractSparseLattice(value),
+        knownValue(ValueT::getPessimisticValueState(value)) {}
 
   /// Return the value held by this lattice. This requires that the value is
   /// initialized.
@@ -212,6 +211,14 @@ protected:
                      ArrayRef<const AbstractSparseLattice *> operandLattices,
                      ArrayRef<AbstractSparseLattice *> resultLattices) = 0;
 
+  /// Given an operation with region control-flow, the lattices of the operands,
+  /// and a region successor, compute the lattice values for block arguments
+  /// that are not accounted for by the branching control flow (ex. the bounds
+  /// of loops).
+  virtual void visitNonControlFlowArgumentsImpl(
+      Operation *op, const RegionSuccessor &successor,
+      ArrayRef<AbstractSparseLattice *> argLattices, unsigned firstIndex) = 0;
+
   /// Get the lattice element of a value.
   virtual AbstractSparseLattice *getLatticeElement(Value value) = 0;
 
@@ -275,6 +282,21 @@ public:
   virtual void visitOperation(Operation *op, ArrayRef<const StateT *> operands,
                               ArrayRef<StateT *> results) = 0;
 
+  /// Given an operation with possible region control-flow, the lattices of the
+  /// operands, and a region successor, compute the lattice values for block
+  /// arguments that are not accounted for by the branching control flow (ex.
+  /// the bounds of loops). By default, this method marks all such lattice
+  /// elements as having reached a pessimistic fixpoint. `firstIndex` is the
+  /// index of the first element of `argLattices` that is set by control-flow.
+  virtual void visitNonControlFlowArguments(Operation *op,
+                                            const RegionSuccessor &successor,
+                                            ArrayRef<StateT *> argLattices,
+                                            unsigned firstIndex) {
+    markAllPessimisticFixpoint(argLattices.take_front(firstIndex));
+    markAllPessimisticFixpoint(argLattices.drop_front(
+        firstIndex + successor.getSuccessorInputs().size()));
+  }
+
 protected:
   /// Get the lattice element for a value.
   StateT *getLatticeElement(Value value) override {
@@ -308,6 +330,16 @@ private:
          operandLattices.size()},
         {reinterpret_cast<StateT *const *>(resultLattices.begin()),
          resultLattices.size()});
+  }
+  void visitNonControlFlowArgumentsImpl(
+      Operation *op, const RegionSuccessor &successor,
+      ArrayRef<AbstractSparseLattice *> argLattices,
+      unsigned firstIndex) override {
+    visitNonControlFlowArguments(
+        op, successor,
+        {reinterpret_cast<StateT *const *>(argLattices.begin()),
+         argLattices.size()},
+        firstIndex);
   }
 };
 
