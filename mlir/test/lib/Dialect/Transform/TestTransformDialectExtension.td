@@ -48,7 +48,7 @@ def TestConsumeOperandIfMatchesParamOrFail
        [DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins 
     Arg<PDL_Operation, "",
-        [TransformMappingWrite, TransformMappingFree]>:$operand,
+        [TransformMappingRead, TransformMappingFree]>:$operand,
     I64Attr:$parameter);
   let assemblyFormat = "$operand `[` $parameter `]` attr-dict";
   let cppNamespace = "::mlir::test";
