@@ -1462,13 +1462,13 @@ bool ASTReader::ReadSLocEntry(int ID) {
     unsigned RecCode = MaybeRecCode.get();
 
     if (RecCode == SM_SLOC_BUFFER_BLOB_COMPRESSED) {
-      if (!llvm::zlib::isAvailable()) {
+      if (!llvm::compression::zlib::isAvailable()) {
         Error("zlib is not available");
         return nullptr;
       }
       SmallString<0> Uncompressed;
-      if (llvm::Error E =
-              llvm::zlib::uncompress(Blob, Uncompressed, Record[0])) {
+      if (llvm::Error E = llvm::compression::zlib::uncompress(
+              Blob, Uncompressed, Record[0])) {
         Error("could not decompress embedded file contents: " +
               llvm::toString(std::move(E)));
         return nullptr;
