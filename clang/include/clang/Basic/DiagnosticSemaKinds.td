@@ -4830,8 +4830,12 @@ def warn_cxx14_compat_template_nontype_parm_auto_type : Warning<
   DefaultIgnore, InGroup<CXXPre17Compat>;
 def err_template_param_default_arg_redefinition : Error<
   "template parameter redefines default argument">;
+def err_template_param_default_arg_inconsistent_redefinition : Error<
+  "template parameter default argument is inconsistent with previous definition">;
 def note_template_param_prev_default_arg : Note<
   "previous default template argument defined here">;
+def note_template_param_prev_default_arg_in_other_module : Note<
+  "previous default template argument defined in module %0">;
 def err_template_param_default_arg_missing : Error<
   "template parameter missing a default argument">;
 def ext_template_parameter_default_in_function_template : ExtWarn<
