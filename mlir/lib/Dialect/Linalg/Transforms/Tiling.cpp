@@ -80,7 +80,7 @@ void mlir::linalg::transformIndexOps(
       continue;
     en.value() = ivs[rangeIndex->second];
   }
-  addTileLoopIvsToIndexOpResults(b, op, allIvs);
+  offsetIndices(b, op, allIvs);
 }
 
 /// Asserts that the given index-typed value is strictly positive. If the value

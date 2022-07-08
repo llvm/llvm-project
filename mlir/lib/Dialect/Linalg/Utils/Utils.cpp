@@ -1048,21 +1048,29 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
   return tiledShapes;
 }
 
-void addTileLoopIvsToIndexOpResults(OpBuilder &b, LinalgOp tiledOp,
-                                    ArrayRef<Value> ivs) {
-  if (tiledOp.hasIndexSemantics()) {
-    for (IndexOp indexOp : tiledOp.getBlock()->getOps<IndexOp>()) {
-      if (ivs[indexOp.dim()] == nullptr)
-        continue;
-      OpBuilder::InsertionGuard guard(b);
-      b.setInsertionPointAfter(indexOp);
-      AffineExpr index, offset;
-      bindDims(b.getContext(), index, offset);
-      AffineApplyOp applyOp = makeComposedAffineApply(
-          b, indexOp.getLoc(), index + offset,
-          ValueRange{indexOp.getResult(), ivs[indexOp.dim()]});
-      indexOp.getResult().replaceAllUsesExcept(applyOp, applyOp);
-    }
+void offsetIndices(OpBuilder &b, LinalgOp linalgOp, ArrayRef<Value> offsets) {
+  IRRewriter rewriter(b);
+  offsetIndices(rewriter, linalgOp, offsets);
+}
+
+void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
+                   ArrayRef<Value> offsets) {
+  if (!linalgOp.hasIndexSemantics())
+    return;
+
+  for (IndexOp indexOp : linalgOp.getBlock()->getOps<IndexOp>()) {
+    if (indexOp.dim() >= offsets.size() || offsets[indexOp.dim()] == nullptr)
+      continue;
+    OpBuilder::InsertionGuard guard(b);
+    b.setInsertionPointAfter(indexOp);
+    AffineExpr index, offset;
+    bindDims(b.getContext(), index, offset);
+    AffineApplyOp applyOp = makeComposedAffineApply(
+        b, indexOp.getLoc(), index + offset,
+        ValueRange{indexOp.getResult(), offsets[indexOp.dim()]});
+    b.replaceOpWithIf(indexOp, applyOp.getResult(), [&](OpOperand &use) {
+      return use.getOwner() != applyOp;
+    });
   }
 }
 
