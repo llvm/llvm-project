@@ -109,6 +109,8 @@ void mlir::populateComplexToLibmConversionPatterns(RewritePatternSet &patterns,
                                                     "conjf", "conj", benefit);
   patterns.add<ScalarOpToLibmCall<complex::AbsOp, FloatTypeResolver>>(
       patterns.getContext(), "cabsf", "cabs", benefit);
+  patterns.add<ScalarOpToLibmCall<complex::AngleOp, FloatTypeResolver>>(
+      patterns.getContext(), "cargf", "carg", benefit);
 }
 
 namespace {
@@ -127,7 +129,7 @@ void ConvertComplexToLibmPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<func::FuncDialect>();
   target.addIllegalOp<complex::PowOp, complex::SqrtOp, complex::TanhOp,
-                      complex::AbsOp>();
+                      complex::AbsOp, complex::AngleOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
