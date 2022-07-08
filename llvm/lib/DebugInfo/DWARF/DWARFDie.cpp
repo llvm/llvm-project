@@ -153,11 +153,10 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   if (!Name.empty())
     WithColor(OS, Color) << Name;
   else if (Attr == DW_AT_decl_line || Attr == DW_AT_call_line) {
-    if (Optional<uint64_t> Val = FormValue.getAsUnsignedConstant()) {
+    if (Optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
       OS << *Val;
-    } else {
+    else
       FormValue.dump(OS, DumpOpts);
-    }
   } else if (Attr == DW_AT_low_pc &&
              (FormValue.getAsAddress() ==
               dwarf::computeTombstoneAddress(U->getAddressByteSize()))) {
