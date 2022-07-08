@@ -92,10 +92,10 @@ public:
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf8(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf8(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
     virtual result
@@ -130,10 +130,10 @@ public:
     typedef mbstate_t state_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf8(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf8(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -168,10 +168,10 @@ public:
     typedef mbstate_t state_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf8(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf8(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -229,10 +229,10 @@ public:
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf16(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
     virtual result
@@ -268,10 +268,10 @@ public:
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf16(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
     virtual result
@@ -306,10 +306,10 @@ public:
     typedef mbstate_t state_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf16(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -344,10 +344,10 @@ public:
     typedef mbstate_t state_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf16(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -382,10 +382,10 @@ public:
     typedef mbstate_t state_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf16(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -420,10 +420,10 @@ public:
     typedef mbstate_t state_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf16(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -481,10 +481,10 @@ public:
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf8_utf16(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf8_utf16(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
     virtual result
@@ -519,10 +519,10 @@ public:
     typedef mbstate_t state_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf8_utf16(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf8_utf16(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -557,10 +557,10 @@ public:
     typedef mbstate_t state_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __codecvt_utf8_utf16(size_t __refs, unsigned long _Maxcode,
-                            codecvt_mode _Mode)
-        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(_Maxcode),
-          _Mode_(_Mode) {}
+    explicit __codecvt_utf8_utf16(size_t __refs, unsigned long __maxcode,
+                            codecvt_mode __mode)
+        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
+          _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:

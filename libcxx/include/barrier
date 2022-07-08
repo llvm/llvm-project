@@ -130,10 +130,10 @@ public:
     {
     }
     [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
-    arrival_token arrive(ptrdiff_t update)
+    arrival_token arrive(ptrdiff_t __update)
     {
         auto const __old_phase = __phase_.load(memory_order_relaxed);
-        for(; update; --update)
+        for(; __update; --__update)
             if(__arrive_barrier_algorithm_base(__base_.get(), __old_phase)) {
                 __completion_();
                 __expected_ += __expected_adjustment_.load(memory_order_relaxed);
@@ -300,9 +300,9 @@ public:
     barrier& operator=(barrier const&) = delete;
 
     [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
-    arrival_token arrive(ptrdiff_t update = 1)
+    arrival_token arrive(ptrdiff_t __update = 1)
     {
-        return __b.arrive(update);
+        return __b.arrive(__update);
     }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait(arrival_token&& __phase) const
