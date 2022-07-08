@@ -9,7 +9,6 @@
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -183,7 +182,9 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
     }
 
     // Otherwise, we can't reason about the data-flow.
-    return markAllPessimisticFixpoint(argLattices);
+    return visitNonControlFlowArgumentsImpl(block->getParentOp(),
+                                            RegionSuccessor(block->getParent()),
+                                            argLattices, /*firstIndex=*/0);
   }
 
   // Iterate over the predecessors of the non-entry block.
@@ -236,7 +237,6 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
       operands = branch.getSuccessorEntryOperands(successorIndex);
       // Otherwise, try to deduce the operands from a region return-like op.
     } else {
-      assert(op->hasTrait<OpTrait::IsTerminator>() && "expected a terminator");
       if (isRegionReturnLike(op))
         operands = getRegionBranchSuccessorOperands(op, successorIndex);
     }
@@ -250,17 +250,26 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
     assert(inputs.size() == operands->size() &&
            "expected the same number of successor inputs as operands");
 
-    // TODO: This was updated to be exposed upstream.
     unsigned firstIndex = 0;
     if (inputs.size() != lattices.size()) {
-      if (inputs.empty()) {
-        markAllPessimisticFixpoint(lattices);
-        return;
+      if (auto *op = point.dyn_cast<Operation *>()) {
+        if (!inputs.empty())
+          firstIndex = inputs.front().cast<OpResult>().getResultNumber();
+        visitNonControlFlowArgumentsImpl(
+            branch,
+            RegionSuccessor(
+                branch->getResults().slice(firstIndex, inputs.size())),
+            lattices, firstIndex);
+      } else {
+        if (!inputs.empty())
+          firstIndex = inputs.front().cast<BlockArgument>().getArgNumber();
+        Region *region = point.get<Block *>()->getParent();
+        visitNonControlFlowArgumentsImpl(
+            branch,
+            RegionSuccessor(region, region->getArguments().slice(
+                                        firstIndex, inputs.size())),
+            lattices, firstIndex);
       }
-      firstIndex = inputs.front().cast<BlockArgument>().getArgNumber();
-      markAllPessimisticFixpoint(lattices.take_front(firstIndex));
-      markAllPessimisticFixpoint(
-          lattices.drop_front(firstIndex + inputs.size()));
     }
 
     for (auto it : llvm::zip(*operands, lattices.drop_front(firstIndex)))
