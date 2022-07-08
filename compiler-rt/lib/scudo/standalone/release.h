@@ -138,7 +138,7 @@ private:
   uptr SizePerRegion;
   uptr BufferSize;
   uptr *Buffer;
-  MapPlatformData MapData = {};
+  [[no_unique_address]] MapPlatformData MapData = {};
 
   static HybridMutex Mutex;
   static uptr StaticBuffer[StaticBufferCount];
