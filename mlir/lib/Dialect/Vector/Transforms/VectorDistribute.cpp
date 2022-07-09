@@ -798,7 +798,7 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
       return rewriter.notifyMatchFailure(
           warpOp, "Only rank 1 reductions can be distributed.");
     // Only warp_size-sized vectors supported.
-    if (static_cast<uint64_t>(vectorType.getShape()[0]) != warpOp.getWarpSize())
+    if (vectorType.getShape()[0] % warpOp.getWarpSize() != 0)
       return rewriter.notifyMatchFailure(
           warpOp, "Reduction vector dimension must match was size.");
     // Only f32 and i32 element types are supported.
@@ -808,24 +808,26 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
           warpOp,
           "Reduction distribution currently only supports 32bits types.");
 
-    Location yieldLoc = yieldOperand->getOwner()->getLoc();
-
+    int64_t numElements = vectorType.getShape()[0] / warpOp.getWarpSize();
     // Return vector that will be reduced from the WarpExecuteOnLane0Op.
     unsigned operandIndex = yieldOperand->getOperandNumber();
     SmallVector<Value> yieldValues = {reductionOp.getVector()};
-    SmallVector<Type> retTypes = {VectorType::get({1}, reductionOp.getType())};
+    SmallVector<Type> retTypes = {
+        VectorType::get({numElements}, reductionOp.getType())};
     unsigned numResults = warpOp.getNumResults();
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, yieldValues, retTypes);
     rewriter.setInsertionPointAfter(newWarpOp);
 
-    // Every lane has one scalar value. These should be reduced.
     Value laneValVec = newWarpOp.getResult(numResults);
-    Value laneVal = rewriter.create<vector::ExtractOp>(yieldLoc, laneValVec, 0);
-    laneVal =
-        distributedReductionFn(reductionOp.getLoc(), rewriter, laneVal,
+    // First reduce on a single thread.
+    Value perLaneReduction = rewriter.create<vector::ReductionOp>(
+        reductionOp.getLoc(), reductionOp.getKind(), laneValVec);
+    // Then distribute across threads.
+    Value fullReduce =
+        distributedReductionFn(reductionOp.getLoc(), rewriter, perLaneReduction,
                                reductionOp.getKind(), newWarpOp.getWarpSize());
-    newWarpOp.getResult(operandIndex).replaceAllUsesWith(laneVal);
+    newWarpOp.getResult(operandIndex).replaceAllUsesWith(fullReduce);
     return success();
   }
 
