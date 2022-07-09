@@ -33,7 +33,7 @@ Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
   if (!EHFrame) {
     LLVM_DEBUG({
       dbgs() << "EHFrameEdgeFixer: No " << EHFrameSectionName
-             << " section in \"" << G.getName() << "\". Nothing to do.\n";
+             << " section. Nothing to do\n";
     });
     return Error::success();
   }
@@ -44,8 +44,7 @@ Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
         "EHFrameEdgeFixer only supports 32 and 64 bit targets");
 
   LLVM_DEBUG({
-    dbgs() << "EHFrameEdgeFixer: Processing " << EHFrameSectionName << " in \""
-           << G.getName() << "\"...\n";
+    dbgs() << "EHFrameEdgeFixer: Processing " << EHFrameSectionName << "...\n";
   });
 
   ParseContext PC(G);
