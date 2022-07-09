@@ -168,10 +168,10 @@ enum ExtendType { ZeroExtend = 1, Sign64 = 2, Sign32 = 3 };
 struct Ldr {
   uint8_t destRegister;
   uint8_t baseRegister;
-  uint8_t size;
+  uint8_t p2Size;
   bool isFloat;
   ExtendType extendType;
-  uint64_t offset;
+  int64_t offset;
 };
 
 struct PerformedReloc {
@@ -190,6 +190,7 @@ public:
   void applyAdrpAdrp(const OptimizationHint &);
   void applyAdrpLdr(const OptimizationHint &);
   void applyAdrpLdrGot(const OptimizationHint &);
+  void applyAdrpLdrGotLdr(const OptimizationHint &);
 
 private:
   uint8_t *buf;
@@ -228,34 +229,35 @@ static bool parseLdr(uint32_t insn, Ldr &ldr) {
 
   if ((insn & 0x3fc00000) == 0x39400000) {
     // LDR (immediate), LDRB (immediate), LDRH (immediate)
-    ldr.size = 1 << size;
+    ldr.p2Size = size;
     ldr.extendType = ZeroExtend;
     ldr.isFloat = false;
   } else if ((insn & 0x3f800000) == 0x39800000) {
     // LDRSB (immediate), LDRSH (immediate), LDRSW (immediate)
-    ldr.size = 1 << size;
+    ldr.p2Size = size;
     ldr.extendType = static_cast<ExtendType>(opc);
     ldr.isFloat = false;
   } else if ((insn & 0x3f400000) == 0x3d400000) {
     // LDR (immediate, SIMD&FP)
     ldr.extendType = ZeroExtend;
     ldr.isFloat = true;
-    if (size == 2 && opc == 1)
-      ldr.size = 4;
-    else if (size == 3 && opc == 1)
-      ldr.size = 8;
+    if (opc == 1)
+      ldr.p2Size = size;
     else if (size == 0 && opc == 3)
-      ldr.size = 16;
+      ldr.p2Size = 4;
     else
       return false;
   } else {
     return false;
   }
-  ldr.offset = ((insn >> 10) & 0xfff) * ldr.size;
+  ldr.offset = ((insn >> 10) & 0xfff) << ldr.p2Size;
   return true;
 }
 
+static bool isValidAdrOffset(int32_t delta) { return isInt<21>(delta); }
+
 static void writeAdr(void *loc, uint32_t dest, int32_t delta) {
+  assert(isValidAdrOffset(delta));
   uint32_t opcode = 0x10000000;
   uint32_t immHi = (delta & 0x001ffffc) << 3;
   uint32_t immLo = (delta & 0x00000003) << 29;
@@ -264,26 +266,63 @@ static void writeAdr(void *loc, uint32_t dest, int32_t delta) {
 
 static void writeNop(void *loc) { write32le(loc, 0xd503201f); }
 
-static void writeLiteralLdr(void *loc, Ldr original, int32_t delta) {
-  uint32_t imm19 = (delta & 0x001ffffc) << 3;
-  uint32_t opcode = 0;
-  switch (original.size) {
-  case 4:
-    if (original.isFloat)
+static bool isLiteralLdrEligible(const Ldr &ldr) {
+  return ldr.p2Size > 1 && isShiftedInt<19, 2>(ldr.offset);
+}
+
+static void writeLiteralLdr(void *loc, const Ldr &ldr) {
+  assert(isLiteralLdrEligible(ldr));
+  uint32_t imm19 = (ldr.offset / 4 & maskTrailingOnes<uint32_t>(19)) << 5;
+  uint32_t opcode;
+  switch (ldr.p2Size) {
+  case 2:
+    if (ldr.isFloat)
       opcode = 0x1c000000;
     else
-      opcode = original.extendType == Sign64 ? 0x98000000 : 0x18000000;
+      opcode = ldr.extendType == Sign64 ? 0x98000000 : 0x18000000;
     break;
-  case 8:
-    opcode = original.isFloat ? 0x5c000000 : 0x58000000;
+  case 3:
+    opcode = ldr.isFloat ? 0x5c000000 : 0x58000000;
     break;
-  case 16:
+  case 4:
     opcode = 0x9c000000;
     break;
   default:
-    assert(false && "Invalid size for literal ldr");
+    llvm_unreachable("Invalid literal ldr size");
   }
-  write32le(loc, opcode | imm19 | original.destRegister);
+  write32le(loc, opcode | imm19 | ldr.destRegister);
+}
+
+static bool isImmediateLdrEligible(const Ldr &ldr) {
+  // Note: We deviate from ld64's behavior, which converts to immediate loads
+  // only if ldr.offset < 4096, even though the offset is divided by the load's
+  // size in the 12-bit immediate operand. Only the unsigned offset variant is
+  // supported.
+
+  uint32_t size = 1 << ldr.p2Size;
+  return ldr.offset >= 0 && (ldr.offset % size) == 0 &&
+         isUInt<12>(ldr.offset >> ldr.p2Size);
+}
+
+static void writeImmediateLdr(void *loc, const Ldr &ldr) {
+  assert(isImmediateLdrEligible(ldr));
+  uint32_t opcode = 0x39000000;
+  if (ldr.isFloat) {
+    opcode |= 0x04000000;
+    assert(ldr.extendType == ZeroExtend);
+  }
+  opcode |= ldr.destRegister;
+  opcode |= ldr.baseRegister << 5;
+  uint8_t size, opc;
+  if (ldr.p2Size == 4) {
+    size = 0;
+    opc = 3;
+  } else {
+    opc = ldr.extendType;
+    size = ldr.p2Size;
+  }
+  uint32_t immBits = ldr.offset >> ldr.p2Size;
+  write32le(loc, opcode | (immBits << 10) | (opc << 22) | (size << 30));
 }
 
 uint64_t OptimizationHintContext::getRelocTarget(const Reloc &reloc) {
@@ -352,7 +391,7 @@ void OptimizationHintContext::applyAdrpAdd(const OptimizationHint &hint) {
   if (rel1->referentVA != rel2->referentVA)
     return;
   int64_t delta = rel1->referentVA - rel1->rel.offset - isec->getVA();
-  if (delta >= (1 << 20) || delta < -(1 << 20))
+  if (!isValidAdrOffset(delta))
     return;
 
   writeAdr(buf + hint.offset0, add.destRegister, delta);
@@ -413,16 +452,12 @@ void OptimizationHintContext::applyAdrpLdr(const OptimizationHint &hint) {
     return;
   if (ldr.offset != (rel1->referentVA & 0xfff))
     return;
-  if ((rel1->referentVA & 3) != 0)
-    return;
-  if (ldr.size == 1 || ldr.size == 2)
-    return;
-  int64_t delta = rel1->referentVA - rel2->rel.offset - isec->getVA();
-  if (delta >= (1 << 20) || delta < -(1 << 20))
+  ldr.offset = rel1->referentVA - rel2->rel.offset - isec->getVA();
+  if (!isLiteralLdrEligible(ldr))
     return;
 
   writeNop(buf + hint.offset0);
-  writeLiteralLdr(buf + hint.offset0 + hint.delta[0], ldr, delta);
+  writeLiteralLdr(buf + hint.offset0 + hint.delta[0], ldr);
 }
 
 // GOT loads are emitted by the compiler as a pair of adrp and ldr instructions,
@@ -436,6 +471,101 @@ void OptimizationHintContext::applyAdrpLdrGot(const OptimizationHint &hint) {
     applyAdrpAdd(hint);
   else if (parseLdr(ins2, ldr))
     applyAdrpLdr(hint);
+}
+
+// Relaxes a GOT-indirect load.
+// If the referenced symbol is external and its GOT entry is within +/- 1 MiB,
+// the GOT entry can be loaded with a single literal ldr instruction.
+// If the referenced symbol is local, its address may be loaded directly if it's
+// close enough, or with an adr(p) + ldr pair if it's not.
+void OptimizationHintContext::applyAdrpLdrGotLdr(const OptimizationHint &hint) {
+  uint32_t ins1 = read32le(buf + hint.offset0);
+  Adrp adrp;
+  if (!parseAdrp(ins1, adrp))
+    return;
+  uint32_t ins3 = read32le(buf + hint.offset0 + hint.delta[1]);
+  Ldr ldr3;
+  if (!parseLdr(ins3, ldr3))
+    return;
+  uint32_t ins2 = read32le(buf + hint.offset0 + hint.delta[0]);
+  Ldr ldr2;
+  Add add2;
+
+  Optional<PerformedReloc> rel1 = findPrimaryReloc(hint.offset0);
+  Optional<PerformedReloc> rel2 = findReloc(hint.offset0 + hint.delta[0]);
+  if (!rel1 || !rel2)
+    return;
+
+  if (parseAdd(ins2, add2)) {
+    // adrp x0, _foo@PAGE
+    // add  x1, x0, _foo@PAGEOFF
+    // ldr  x2, [x1, #off]
+
+    if (adrp.destRegister != add2.srcRegister)
+      return;
+    if (add2.destRegister != ldr3.baseRegister)
+      return;
+
+    // Load from the target address directly.
+    //   nop
+    //   nop
+    //   ldr x2, [_foo + #off]
+    uint64_t rel3VA = hint.offset0 + hint.delta[1] + isec->getVA();
+    Ldr literalLdr = ldr3;
+    literalLdr.offset += rel1->referentVA - rel3VA;
+    if (isLiteralLdrEligible(literalLdr)) {
+      writeNop(buf + hint.offset0);
+      writeNop(buf + hint.offset0 + hint.delta[0]);
+      writeLiteralLdr(buf + hint.offset0 + hint.delta[1], literalLdr);
+      return;
+    }
+
+    // Load the target address into a register and load from there indirectly.
+    //   adr x1, _foo
+    //   nop
+    //   ldr x2, [x1, #off]
+    int64_t adrOffset = rel1->referentVA - rel1->rel.offset - isec->getVA();
+    if (isValidAdrOffset(adrOffset)) {
+      writeAdr(buf + hint.offset0, ldr3.baseRegister, adrOffset);
+      writeNop(buf + hint.offset0 + hint.delta[0]);
+      return;
+    }
+
+    // Move the target's page offset into the ldr's immediate offset.
+    //   adrp x0, _foo@PAGE
+    //   nop
+    //   ldr x2, [x0, _foo@PAGEOFF + #off]
+    Ldr immediateLdr = ldr3;
+    immediateLdr.baseRegister = adrp.destRegister;
+    immediateLdr.offset += add2.addend;
+    if (isImmediateLdrEligible(immediateLdr)) {
+      writeNop(buf + hint.offset0 + hint.delta[0]);
+      writeImmediateLdr(buf + hint.offset0 + hint.delta[1], immediateLdr);
+      return;
+    }
+  } else if (parseLdr(ins2, ldr2)) {
+    // adrp x1, _foo@GOTPAGE
+    // ldr  x2, [x1, _foo@GOTPAGEOFF]
+    // ldr  x3, [x2, #off]
+    if (ldr2.baseRegister != adrp.destRegister)
+      return;
+    if (ldr3.baseRegister != ldr2.destRegister)
+      return;
+    // Loads from the GOT must be pointer sized.
+    if (ldr2.p2Size != 3 || ldr2.isFloat)
+      return;
+
+    // Load the GOT entry's address directly.
+    //   nop
+    //   ldr x2, _foo@GOTPAGE + _foo@GOTPAGEOFF
+    //   ldr x3, [x2, #off]
+    Ldr literalLdr = ldr2;
+    literalLdr.offset = rel1->referentVA - rel2->rel.offset - isec->getVA();
+    if (isLiteralLdrEligible(literalLdr)) {
+      writeNop(buf + hint.offset0);
+      writeLiteralLdr(buf + hint.offset0 + hint.delta[0], literalLdr);
+    }
+  }
 }
 
 void ARM64::applyOptimizationHints(uint8_t *buf, const ConcatInputSection *isec,
@@ -457,7 +587,11 @@ void ARM64::applyOptimizationHints(uint8_t *buf, const ConcatInputSection *isec,
       ctx1.applyAdrpLdr(hint);
       break;
     case LOH_ARM64_ADRP_ADD_LDR:
+      // TODO: Implement this
+      break;
     case LOH_ARM64_ADRP_LDR_GOT_LDR:
+      ctx1.applyAdrpLdrGotLdr(hint);
+      break;
     case LOH_ARM64_ADRP_ADD_STR:
     case LOH_ARM64_ADRP_LDR_GOT_STR:
       // TODO: Implement these
