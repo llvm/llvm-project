@@ -1638,31 +1638,6 @@ static Value *optimizeTrigReflections(CallInst *Call, LibFunc Func,
   return nullptr;
 }
 
-static Value *getPow(Value *InnerChain[33], unsigned Exp, IRBuilderBase &B) {
-  // Multiplications calculated using Addition Chains.
-  // Refer: http://wwwhomes.uni-bielefeld.de/achim/addition_chain.html
-
-  assert(Exp != 0 && "Incorrect exponent 0 not handled");
-
-  if (InnerChain[Exp])
-    return InnerChain[Exp];
-
-  static const unsigned AddChain[33][2] = {
-      {0, 0}, // Unused.
-      {0, 0}, // Unused (base case = pow1).
-      {1, 1}, // Unused (pre-computed).
-      {1, 2},  {2, 2},   {2, 3},  {3, 3},   {2, 5},  {4, 4},
-      {1, 8},  {5, 5},   {1, 10}, {6, 6},   {4, 9},  {7, 7},
-      {3, 12}, {8, 8},   {8, 9},  {2, 16},  {1, 18}, {10, 10},
-      {6, 15}, {11, 11}, {3, 20}, {12, 12}, {8, 17}, {13, 13},
-      {3, 24}, {14, 14}, {4, 25}, {15, 15}, {3, 28}, {16, 16},
-  };
-
-  InnerChain[Exp] = B.CreateFMul(getPow(InnerChain, AddChain[Exp][0], B),
-                                 getPow(InnerChain, AddChain[Exp][1], B));
-  return InnerChain[Exp];
-}
-
 // Return a properly extended integer (DstWidth bits wide) if the operation is
 // an itofp.
 static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B, unsigned DstWidth) {
@@ -1963,70 +1938,52 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   if (Value *Sqrt = replacePowWithSqrt(Pow, B))
     return Sqrt;
 
-  // pow(x, n) -> x * x * x * ...
+  // pow(x, n) -> powi(x, n) * sqrt(x) if n has exactly a 0.5 fraction
   const APFloat *ExpoF;
-  if (AllowApprox && match(Expo, m_APFloat(ExpoF)) &&
-      !ExpoF->isExactlyValue(0.5) && !ExpoF->isExactlyValue(-0.5)) {
-    // We limit to a max of 7 multiplications, thus the maximum exponent is 32.
-    // If the exponent is an integer+0.5 we generate a call to sqrt and an
-    // additional fmul.
-    // TODO: This whole transformation should be backend specific (e.g. some
-    //       backends might prefer libcalls or the limit for the exponent might
-    //       be different) and it should also consider optimizing for size.
-    APFloat LimF(ExpoF->getSemantics(), 33),
-            ExpoA(abs(*ExpoF));
-    if (ExpoA < LimF) {
-      // This transformation applies to integer or integer+0.5 exponents only.
-      // For integer+0.5, we create a sqrt(Base) call.
-      Value *Sqrt = nullptr;
-      if (!ExpoA.isInteger()) {
-        APFloat Expo2 = ExpoA;
-        // To check if ExpoA is an integer + 0.5, we add it to itself. If there
-        // is no floating point exception and the result is an integer, then
-        // ExpoA == integer + 0.5
-        if (Expo2.add(ExpoA, APFloat::rmNearestTiesToEven) != APFloat::opOK)
-          return nullptr;
+  if (match(Expo, m_APFloat(ExpoF)) && !ExpoF->isExactlyValue(0.5) &&
+      !ExpoF->isExactlyValue(-0.5)) {
+    APFloat ExpoA(abs(*ExpoF));
+    APFloat ExpoI(*ExpoF);
+    Value *Sqrt = nullptr;
+    if (AllowApprox && !ExpoA.isInteger()) {
+      APFloat Expo2 = ExpoA;
+      // To check if ExpoA is an integer + 0.5, we add it to itself. If there
+      // is no floating point exception and the result is an integer, then
+      // ExpoA == integer + 0.5
+      if (Expo2.add(ExpoA, APFloat::rmNearestTiesToEven) != APFloat::opOK)
+        return nullptr;
 
-        if (!Expo2.isInteger())
-          return nullptr;
+      if (!Expo2.isInteger())
+        return nullptr;
 
-        Sqrt = getSqrtCall(Base, Pow->getCalledFunction()->getAttributes(),
-                           Pow->doesNotAccessMemory(), M, B, TLI);
-        if (!Sqrt)
-          return nullptr;
-      }
+      if (ExpoI.roundToIntegral(APFloat::rmTowardNegative) !=
+          APFloat::opInexact)
+        return nullptr;
+      if (!ExpoI.isInteger())
+        return nullptr;
+      ExpoF = &ExpoI;
 
-      // We will memoize intermediate products of the Addition Chain.
-      Value *InnerChain[33] = {nullptr};
-      InnerChain[1] = Base;
-      InnerChain[2] = B.CreateFMul(Base, Base, "square");
-
-      // We cannot readily convert a non-double type (like float) to a double.
-      // So we first convert it to something which could be converted to double.
-      ExpoA.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &Ignored);
-      Value *FMul = getPow(InnerChain, ExpoA.convertToDouble(), B);
-
-      // Expand pow(x, y+0.5) to pow(x, y) * sqrt(x).
-      if (Sqrt)
-        FMul = B.CreateFMul(FMul, Sqrt);
-
-      // If the exponent is negative, then get the reciprocal.
-      if (ExpoF->isNegative())
-        FMul = B.CreateFDiv(ConstantFP::get(Ty, 1.0), FMul, "reciprocal");
-
-      return FMul;
+      Sqrt = getSqrtCall(Base, Pow->getCalledFunction()->getAttributes(),
+                         Pow->doesNotAccessMemory(), M, B, TLI);
+      if (!Sqrt)
+        return nullptr;
     }
 
+    // pow(x, n) -> powi(x, n) if n is a constant signed integer value
     APSInt IntExpo(TLI->getIntSize(), /*isUnsigned=*/false);
-    // powf(x, n) -> powi(x, n) if n is a constant signed integer value
     if (ExpoF->isInteger() &&
         ExpoF->convertToInteger(IntExpo, APFloat::rmTowardZero, &Ignored) ==
             APFloat::opOK) {
-      return copyFlags(
+      Value *PowI = copyFlags(
           *Pow,
           createPowWithIntegerExponent(
               Base, ConstantInt::get(B.getIntNTy(TLI->getIntSize()), IntExpo),
               M, B));
+
+      if (PowI && Sqrt)
+        return B.CreateFMul(PowI, Sqrt);
+
+      return PowI;
     }
   }
 

@@ -414,7 +414,7 @@ define double @pow_uitofp_double_base_no_fast(double %base, i16 %x) {
 
 define double @powf_exp_const_int_no_fast(double %base) {
 ; CHECK-LABEL: @powf_exp_const_int_no_fast(
-; CHECK-NEXT:    [[RES:%.*]] = tail call double @llvm.pow.f64(double [[BASE:%.*]], double 4.000000e+01)
+; CHECK-NEXT:    [[RES:%.*]] = tail call double @llvm.powi.f64.i16(double [[BASE:%.*]], i16 40)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = tail call double @llvm.pow.f64(double %base, double 4.000000e+01)
@@ -423,7 +423,9 @@ define double @powf_exp_const_int_no_fast(double %base) {
 
 define double @powf_exp_const_not_int_fast(double %base) {
 ; CHECK-LABEL: @powf_exp_const_not_int_fast(
-; CHECK-NEXT:    [[RES:%.*]] = tail call fast double @llvm.pow.f64(double [[BASE:%.*]], double 3.750000e+01)
+; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[BASE:%.*]])
+; CHECK-NEXT:    [[POWI:%.*]] = tail call fast double @llvm.powi.f64.i16(double [[BASE]], i16 37)
+; CHECK-NEXT:    [[RES:%.*]] = fmul fast double [[POWI]], [[SQRT]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = tail call fast double @llvm.pow.f64(double %base, double 3.750000e+01)
@@ -441,7 +443,7 @@ define double @powf_exp_const_not_int_no_fast(double %base) {
 
 define double @powf_exp_const2_int_no_fast(double %base) {
 ; CHECK-LABEL: @powf_exp_const2_int_no_fast(
-; CHECK-NEXT:    [[RES:%.*]] = tail call double @llvm.pow.f64(double [[BASE:%.*]], double -4.000000e+01)
+; CHECK-NEXT:    [[RES:%.*]] = tail call double @llvm.powi.f64.i16(double [[BASE:%.*]], i16 -40)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = tail call double @llvm.pow.f64(double %base, double -4.000000e+01)
