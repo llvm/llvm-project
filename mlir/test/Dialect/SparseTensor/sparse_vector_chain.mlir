@@ -109,7 +109,8 @@
 // CHECK:             scf.yield %[[VAL_84]] : f64
 // CHECK:           }
 // CHECK:           memref.store %[[VAL_86:.*]], %[[VAL_15]][] : memref<f64>
-// CHECK:           return %[[VAL_0]] : tensor<f64>
+// CHECK:           %[[VAL_87:.*]] = bufferization.to_tensor %[[VAL_15]] : memref<f64>
+// CHECK:           return %[[VAL_87]] : tensor<f64>
 // CHECK:         }
 func.func @sparse_matrix_sum(%argx: tensor<f64> {linalg.inplaceable = true},
                          %arga: tensor<64x32xf64, #SparseMatrix>,
