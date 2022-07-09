@@ -720,16 +720,22 @@ public:
 
   /// Signal a completion for a type.
   void completeType(const llvm::StringMap<Type> &aliases) override {
+    // Handle the various builtin types.
     appendSimpleCompletions({"memref", "tensor", "complex", "tuple", "vector",
                              "bf16", "f16", "f32", "f64", "f80", "f128",
                              "index", "none"},
                             lsp::CompletionItemKind::Field,
                             /*sortText=*/"1");
-    lsp::CompletionItem item("i<N>", lsp::CompletionItemKind::Field,
-                             /*sortText=*/"1");
-    item.insertText = "i";
-    completionList.items.emplace_back(item);
 
+    // Handle the builtin integer types.
+    for (StringRef type : {"i", "si", "ui"}) {
+      lsp::CompletionItem item(type + "<N>", lsp::CompletionItemKind::Field,
+                               /*sortText=*/"1");
+      item.insertText = type.str();
+      completionList.items.emplace_back(item);
+    }
+
+    // Insert completions for dialect types and aliases.
     completeDialectName("!");
     completeAliases(aliases, "!");
   }
