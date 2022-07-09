@@ -1819,6 +1819,8 @@ public:
 
   void printJson(raw_ostream &Out, ProgramStateRef State, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const override;
+  void printValue(raw_ostream &Out, ProgramStateRef State,
+                  SymbolRef Sym) override;
   void printConstraints(raw_ostream &Out, ProgramStateRef State,
                         const char *NL = "\n", unsigned int Space = 0,
                         bool IsDot = false) const;
@@ -3170,6 +3172,13 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
   printConstraints(Out, State, NL, Space, IsDot);
   printEquivalenceClasses(Out, State, NL, Space, IsDot);
   printDisequalities(Out, State, NL, Space, IsDot);
+}
+
+void RangeConstraintManager::printValue(raw_ostream &Out, ProgramStateRef State,
+                                        SymbolRef Sym) {
+  const RangeSet RS = getRange(State, Sym);
+  Out << RS.getBitWidth() << (RS.isUnsigned() ? "u:" : "s:");
+  RS.dump(Out);
 }
 
 static std::string toString(const SymbolRef &Sym) {
