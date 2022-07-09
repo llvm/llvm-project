@@ -250,6 +250,7 @@ private:
   void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
   void handleLDHideSymbol(StringRef name, StringRef originalName);
   void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
+  void parseExportedSymbols(uint32_t offset, uint32_t size);
 
   llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
