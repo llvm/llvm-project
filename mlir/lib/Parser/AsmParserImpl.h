@@ -242,8 +242,21 @@ public:
     return success();
   }
 
+  ParseResult parseKeyword(StringRef keyword, const Twine &msg) override {
+    if (parser.getToken().isCodeCompletion())
+      return parser.codeCompleteExpectedTokens(keyword);
+
+    auto loc = getCurrentLocation();
+    if (parseOptionalKeyword(keyword))
+      return emitError(loc, "expected '") << keyword << "'" << msg;
+    return success();
+  }
+
   /// Parse the given keyword if present.
   ParseResult parseOptionalKeyword(StringRef keyword) override {
+    if (parser.getToken().isCodeCompletion())
+      return parser.codeCompleteOptionalTokens(keyword);
+
     // Check that the current token has the same spelling.
     if (!parser.isCurrentTokenAKeyword() ||
         parser.getTokenSpelling() != keyword)
@@ -267,6 +280,9 @@ public:
   ParseResult
   parseOptionalKeyword(StringRef *keyword,
                        ArrayRef<StringRef> allowedKeywords) override {
+    if (parser.getToken().isCodeCompletion())
+      return parser.codeCompleteOptionalTokens(allowedKeywords);
+
     // Check that the current token is a keyword.
     if (!parser.isCurrentTokenAKeyword())
       return failure();

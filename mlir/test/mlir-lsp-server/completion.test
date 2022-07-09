@@ -100,6 +100,39 @@
 // CHECK:         ]
 // CHECK-NEXT:  }
 // -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":0,"character":10}
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "optional",
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "public",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "optional",
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "private",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "optional",
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "nested",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 // -----
 {"jsonrpc":"2.0","method":"exit"}
