@@ -8,7 +8,6 @@
 
 #include "src/__support/threads/mutex.h"
 #include "src/__support/threads/thread.h"
-#include "src/__support/threads/thread_attrib.h"
 #include "utils/UnitTest/Test.h"
 
 __llvm_libc::Mutex mutex(false, false, false);
@@ -21,7 +20,7 @@ int func(void *) {
 
 TEST(LlvmLibcTestThreadTest, DetachSimpleTest) {
   mutex.lock();
-  __llvm_libc::Thread<int> th;
+  __llvm_libc::Thread th;
   th.run(func, nullptr, nullptr, 0);
 
   // Since |mutex| is held by the current thread, we guarantee that
@@ -35,7 +34,7 @@ TEST(LlvmLibcTestThreadTest, DetachSimpleTest) {
 
 TEST(LlvmLibcTestThreadTest, DetachCleanupTest) {
   mutex.lock();
-  __llvm_libc::Thread<int> th;
+  __llvm_libc::Thread th;
   ASSERT_EQ(0, th.run(func, nullptr, nullptr, 0));
 
   // Since |mutex| is held by the current thread, we will release it
