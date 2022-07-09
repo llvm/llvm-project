@@ -1623,7 +1623,7 @@ static SDValue ReorganizeVector(SelectionDAG &DAG, SDValue VectorEntry,
                             NewBldVec);
 }
 
-SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[4],
+SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
                                             SelectionDAG &DAG,
                                             const SDLoc &DL) const {
   // Old -> New swizzle values
