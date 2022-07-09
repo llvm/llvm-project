@@ -127,13 +127,11 @@ struct SparseTensorConversionPass
         });
     // The following operations and dialects may be introduced by the
     // rewriting rules, and are therefore marked as legal.
-    target.addLegalOp<arith::CmpFOp, arith::CmpIOp, arith::ConstantOp,
-                      arith::IndexCastOp, complex::ConstantOp,
-                      complex::NotEqualOp, linalg::FillOp, linalg::YieldOp,
-                      tensor::ExtractOp>();
-    target
-        .addLegalDialect<bufferization::BufferizationDialect, LLVM::LLVMDialect,
-                         memref::MemRefDialect, scf::SCFDialect>();
+    target.addLegalOp<complex::ConstantOp, complex::NotEqualOp, linalg::FillOp,
+                      linalg::YieldOp, tensor::ExtractOp>();
+    target.addLegalDialect<
+        arith::ArithmeticDialect, bufferization::BufferizationDialect,
+        LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
     // Translate strategy flags to strategy options.
     SparseTensorConversionOptions options(
         sparseToSparseConversionStrategy(sparseToSparse));

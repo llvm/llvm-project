@@ -1832,71 +1832,38 @@ private:
   SparsificationOptions options;
 };
 
-/// Sparse rewriting rule for expand shape operator.
-struct ExpandShapeRewriter : public OpRewritePattern<tensor::ExpandShapeOp> {
+/// Sparse rewriting rule for reshape operator.
+template <typename ReshapeOp>
+struct ReshapeRewriter : public OpRewritePattern<ReshapeOp> {
 public:
-  using OpRewritePattern<tensor::ExpandShapeOp>::OpRewritePattern;
+  using OpRewritePattern<ReshapeOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tensor::ExpandShapeOp op,
+  LogicalResult matchAndRewrite(ReshapeOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     auto encDst = getSparseTensorEncoding(op.getResult().getType());
     auto encSrc = getSparseTensorEncoding(op.getSrc().getType());
     // Since a pure dense expansion is very cheap (change of view), for
-    // sparse2dense or dense2sparse, we can simply unfuse a sparse
-    // conversion from the actual expansion operation itself.
+    // a sparse2dense or dense2sparse, we can simply unfuse a sparse
+    // conversion from the reshape operation itself.
+    // All other cases are handled elsewhere.
     if (encDst && encSrc) {
-      return failure(); // TODO: implement sparse2sparse
+      return failure();
     } else if (encSrc) {
-      RankedTensorType rtp = op.getSrc().getType().cast<RankedTensorType>();
+      RankedTensorType rtp =
+          op.getSrc().getType().template cast<RankedTensorType>();
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
       auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.getSrc());
       op->setOperand(0, convert);
       return success();
     } else if (encDst) {
-      RankedTensorType rtp = op.getResult().getType().cast<RankedTensorType>();
+      RankedTensorType rtp =
+          op.getResult().getType().template cast<RankedTensorType>();
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
-      auto reshape = rewriter.create<tensor::ExpandShapeOp>(
-          loc, denseTp, op.getSrc(), op.getReassociation());
-      Value convert = rewriter.create<ConvertOp>(loc, rtp, reshape);
-      rewriter.replaceOp(op, convert);
-      return success();
-    }
-    return failure();
-  }
-};
-
-/// Sparse rewriting rule for collapse shape operator.
-struct CollapseShapeRewriter
-    : public OpRewritePattern<tensor::CollapseShapeOp> {
-public:
-  using OpRewritePattern<tensor::CollapseShapeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tensor::CollapseShapeOp op,
-                                PatternRewriter &rewriter) const override {
-    Location loc = op->getLoc();
-    auto encDst = getSparseTensorEncoding(op.getResult().getType());
-    auto encSrc = getSparseTensorEncoding(op.getSrc().getType());
-    // Since a pure dense collapse is very cheap (change of view), for
-    // sparse2dense or dense2sparse, we can simply unfuse a sparse
-    // conversion from the actual collapse operation itself.
-    if (encDst && encSrc) {
-      return failure(); // TODO: implement sparse2sparse
-    } else if (encSrc) {
-      RankedTensorType rtp = op.getSrc().getType().cast<RankedTensorType>();
-      auto denseTp =
-          RankedTensorType::get(rtp.getShape(), rtp.getElementType());
-      auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.getSrc());
-      op->setOperand(0, convert);
-      return success();
-    } else if (encDst) {
-      RankedTensorType rtp = op.getResult().getType().cast<RankedTensorType>();
-      auto denseTp =
-          RankedTensorType::get(rtp.getShape(), rtp.getElementType());
-      auto reshape = rewriter.create<tensor::CollapseShapeOp>(
-          loc, denseTp, op.getSrc(), op.getReassociation());
+      auto reshape = rewriter.create<ReshapeOp>(loc, denseTp, op.getSrc(),
+                                                op.getReassociation());
       Value convert = rewriter.create<ConvertOp>(loc, rtp, reshape);
       rewriter.replaceOp(op, convert);
       return success();
@@ -1912,6 +1879,6 @@ public:
 void mlir::populateSparsificationPatterns(
     RewritePatternSet &patterns, const SparsificationOptions &options) {
   patterns.add<GenericOpSparsifier>(patterns.getContext(), options);
-  patterns.add<ExpandShapeRewriter, CollapseShapeRewriter>(
-      patterns.getContext());
+  patterns.add<ReshapeRewriter<tensor::ExpandShapeOp>,
+               ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
 }
