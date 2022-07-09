@@ -419,6 +419,7 @@ if:
   unreachable
 }
 
+; The mul here is the equivalent of (neg (shl X, 32)).
 define i64 @ashr_add_neg_shl_i32(i64 %r) nounwind {
 ; X32-LABEL: ashr_add_neg_shl_i32:
 ; X32:       # %bb.0:
@@ -430,10 +431,9 @@ define i64 @ashr_add_neg_shl_i32(i64 %r) nounwind {
 ;
 ; X64-LABEL: ashr_add_neg_shl_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    shlq $32, %rdi
-; X64-NEXT:    movabsq $4294967296, %rax # imm = 0x100000000
-; X64-NEXT:    subq %rdi, %rax
-; X64-NEXT:    sarq $32, %rax
+; X64-NEXT:    movl $1, %eax
+; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    cltq
 ; X64-NEXT:    retq
   %conv = mul i64 %r, -4294967296
   %sext = add i64 %conv, 4294967296
@@ -441,6 +441,7 @@ define i64 @ashr_add_neg_shl_i32(i64 %r) nounwind {
   ret i64 %conv1
 }
 
+; The mul here is the equivalent of (neg (shl X, 56)).
 define i64 @ashr_add_neg_shl_i8(i64 %r) nounwind {
 ; X32-LABEL: ashr_add_neg_shl_i8:
 ; X32:       # %bb.0:
@@ -455,10 +456,9 @@ define i64 @ashr_add_neg_shl_i8(i64 %r) nounwind {
 ;
 ; X64-LABEL: ashr_add_neg_shl_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    shlq $56, %rdi
-; X64-NEXT:    movabsq $144115188075855872, %rax # imm = 0x200000000000000
-; X64-NEXT:    subq %rdi, %rax
-; X64-NEXT:    sarq $56, %rax
+; X64-NEXT:    movb $2, %al
+; X64-NEXT:    subb %dil, %al
+; X64-NEXT:    movsbq %al, %rax
 ; X64-NEXT:    retq
   %conv = mul i64 %r, -72057594037927936
   %sext = add i64 %conv, 144115188075855872
@@ -466,42 +466,31 @@ define i64 @ashr_add_neg_shl_i8(i64 %r) nounwind {
   ret i64 %conv1
 }
 
+; The mul here is the equivalent of (neg (shl X, 24)).
 define <4 x i32> @ashr_add_neg_shl_v4i8(<4 x i32> %r) nounwind {
 ; X32-LABEL: ashr_add_neg_shl_v4i8:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    shll $24, %edx
-; X32-NEXT:    shll $24, %esi
-; X32-NEXT:    shll $24, %ebx
-; X32-NEXT:    shll $24, %ebp
-; X32-NEXT:    movl $16777216, %ecx # imm = 0x1000000
-; X32-NEXT:    movl $16777216, %edi # imm = 0x1000000
-; X32-NEXT:    subl %ebp, %edi
-; X32-NEXT:    movl $16777216, %ebp # imm = 0x1000000
-; X32-NEXT:    subl %ebx, %ebp
-; X32-NEXT:    movl $16777216, %ebx # imm = 0x1000000
-; X32-NEXT:    subl %esi, %ebx
-; X32-NEXT:    subl %edx, %ecx
-; X32-NEXT:    sarl $24, %ecx
-; X32-NEXT:    sarl $24, %ebx
-; X32-NEXT:    sarl $24, %ebp
-; X32-NEXT:    sarl $24, %edi
-; X32-NEXT:    movl %edi, 12(%eax)
-; X32-NEXT:    movl %ebp, 8(%eax)
-; X32-NEXT:    movl %ebx, 4(%eax)
-; X32-NEXT:    movl %ecx, (%eax)
+; X32-NEXT:    movb $1, %cl
+; X32-NEXT:    movb $1, %dl
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %dl
+; X32-NEXT:    movsbl %dl, %edx
+; X32-NEXT:    movb $1, %ch
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %ch
+; X32-NEXT:    movsbl %ch, %esi
+; X32-NEXT:    movb $1, %ch
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %ch
+; X32-NEXT:    movsbl %ch, %edi
+; X32-NEXT:    subb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movsbl %cl, %ecx
+; X32-NEXT:    movl %ecx, 12(%eax)
+; X32-NEXT:    movl %edi, 8(%eax)
+; X32-NEXT:    movl %esi, 4(%eax)
+; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
-; X32-NEXT:    popl %ebx
-; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: ashr_add_neg_shl_v4i8:
