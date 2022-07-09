@@ -539,20 +539,6 @@ OpFoldResult ToTensorOp::fold(ArrayRef<Attribute>) {
 }
 
 namespace {
-/// Canonicalize bufferization.to_tensor + bufferization.to_memref.
-struct ToTensorToMemrefFolding : public OpRewritePattern<ToTensorOp> {
-  using OpRewritePattern<ToTensorOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ToTensorOp toTensorOp,
-                                PatternRewriter &rewriter) const final {
-    auto toMemrefOp = toTensorOp.getMemref().getDefiningOp<ToMemrefOp>();
-    if (!toMemrefOp)
-      return failure();
-    rewriter.replaceOp(toTensorOp, toMemrefOp.getTensor());
-    return success();
-  }
-};
-
 struct DimOfToTensorFolder : public OpRewritePattern<tensor::DimOp> {
   using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
 
@@ -571,7 +557,7 @@ struct DimOfToTensorFolder : public OpRewritePattern<tensor::DimOp> {
 
 void ToTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.add<DimOfToTensorFolder, ToTensorToMemrefFolding>(context);
+  results.add<DimOfToTensorFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
