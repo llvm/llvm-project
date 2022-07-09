@@ -247,6 +247,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/simplify-boolean-expr>` to simplify expressions
   using DeMorgan's Theorem.
 
+- Made the fix-it of :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` use ``false`` to initialize
+  boolean variables.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
