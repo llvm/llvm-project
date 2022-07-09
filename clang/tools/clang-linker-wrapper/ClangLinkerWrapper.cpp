@@ -89,6 +89,9 @@ static std::list<SmallString<128>> TempFiles;
 /// Codegen flags for LTO backend.
 static codegen::RegisterCodeGenFlags CodeGenFlags;
 
+/// Global flag to indicate that the LTO pipeline threw an error.
+static std::atomic<bool> LTOError;
+
 /// Magic section string that marks the existence of offloading data. The
 /// section will contain one or more offloading binaries stored contiguously.
 #define OFFLOAD_SECTION_MAGIC_STR ".llvm.offloading"
@@ -694,6 +697,7 @@ void diagnosticHandler(const DiagnosticInfo &DI) {
   switch (DI.getSeverity()) {
   case DS_Error:
     WithColor::error(errs(), LinkerExecutable) << ErrStorage << "\n";
+    LTOError = true;
     break;
   case DS_Warning:
     WithColor::warning(errs(), LinkerExecutable) << ErrStorage << "\n";
@@ -763,6 +767,8 @@ std::unique_ptr<lto::LTO> createLTO(
   if (Conf.OptLevel > 0)
     Conf.UseDefaultPipeline = true;
   Conf.DefaultTriple = Triple.getTriple();
+
+  LTOError = false;
   Conf.DiagHandler = diagnosticHandler;
 
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
@@ -967,6 +973,10 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
 
   if (Error Err = LTOBackend->run(AddStream))
     return Err;
+
+  if (LTOError)
+    return createStringError(inconvertibleErrorCode(),
+                             "Errors encountered inside the LTO pipeline.");
 
   // If we are embedding bitcode we only need the intermediate output.
   if (Args.hasArg(OPT_embed_bitcode)) {
