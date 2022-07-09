@@ -6610,13 +6610,16 @@ def warn_addition_in_bitshift : Warning<
   "'%1' will be evaluated first">, InGroup<ShiftOpParentheses>;
 
 def warn_self_assignment_builtin : Warning<
-  "explicitly assigning value of variable of type %0 to itself">,
+  "explicitly assigning value of variable of type %0 to itself%select{|; did "
+  "you mean to assign to member %2?}1">,
   InGroup<SelfAssignment>, DefaultIgnore;
 def warn_self_assignment_overloaded : Warning<
-  "explicitly assigning value of variable of type %0 to itself">,
+  "explicitly assigning value of variable of type %0 to itself%select{|; did "
+  "you mean to assign to member %2?}1">,
   InGroup<SelfAssignmentOverloaded>, DefaultIgnore;
 def warn_self_move : Warning<
-  "explicitly moving variable of type %0 to itself">,
+  "explicitly moving variable of type %0 to itself%select{|; did you mean to "
+  "move to member %2?}1">,
   InGroup<SelfMove>, DefaultIgnore;
 
 def err_builtin_move_forward_unsupported : Error<

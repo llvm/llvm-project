@@ -279,6 +279,9 @@ Improvements to Clang's diagnostics
   unevaluated operands of a ``typeid`` expression, as they are now
   modeled correctly in the CFG. This fixes
   `Issue 21668 <https://github.com/llvm/llvm-project/issues/21668>`_.
+- ``-Wself-assign``, ``-Wself-assign-overloaded`` and ``-Wself-move`` will 
+  suggest a fix if the decl being assigned is a parameter that shadows a data
+  member of the contained class.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
