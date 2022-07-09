@@ -181,8 +181,6 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 
 Boolean isLegalUTF8String(const UTF8 **source, const UTF8 *sourceEnd);
 
-unsigned getUTF8SequenceSize(const UTF8 *source, const UTF8 *sourceEnd);
-
 unsigned getNumBytesForUTF8(UTF8 firstByte);
 
 /*************************************************************************/
