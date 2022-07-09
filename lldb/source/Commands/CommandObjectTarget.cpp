@@ -47,12 +47,18 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -2155,6 +2161,59 @@ protected:
   }
 };
 
+class CommandObjectTargetModulesDumpClangPCMInfo : public CommandObjectParsed {
+public:
+  CommandObjectTargetModulesDumpClangPCMInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target modules dump pcm-info",
+            "Dump information about the given clang module (pcm).") {
+    // Take a single file argument.
+    CommandArgumentData arg{eArgTypeFilename, eArgRepeatPlain};
+    m_arguments.push_back({arg});
+  }
+
+  ~CommandObjectTargetModulesDumpClangPCMInfo() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument.",
+                                   m_cmd_name.c_str());
+      return false;
+    }
+
+    const char *pcm_path = command.GetArgumentAtIndex(0);
+    FileSpec pcm_file{pcm_path};
+
+    if (pcm_file.GetFileNameExtension().GetStringRef() != ".pcm") {
+      result.AppendError("file must have a .pcm extension");
+      return false;
+    }
+
+    if (!FileSystem::Instance().Exists(pcm_file)) {
+      result.AppendError("pcm file does not exist");
+      return false;
+    }
+
+    clang::CompilerInstance compiler;
+    compiler.createDiagnostics();
+
+    const char *clang_args[] = {"clang", pcm_path};
+    compiler.setInvocation(clang::createInvocation(clang_args));
+
+    clang::DumpModuleInfoAction dump_module_info;
+    dump_module_info.OutputStream = &result.GetOutputStream().AsRawOstream();
+    // DumpModuleInfoAction requires ObjectFilePCHContainerReader.
+    compiler.getPCHContainerOperations()->registerReader(
+        std::make_unique<clang::ObjectFilePCHContainerReader>());
+
+    if (compiler.ExecuteAction(dump_module_info))
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+
+    return result.Succeeded();
+  }
+};
+
 #pragma mark CommandObjectTargetModulesDumpClangAST
 
 // Clang AST dumping command
@@ -2406,10 +2465,10 @@ public:
   CommandObjectTargetModulesDump(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
             interpreter, "target modules dump",
-            "Commands for dumping information about one or "
-            "more target modules.",
+            "Commands for dumping information about one or more target "
+            "modules.",
             "target modules dump "
-            "[headers|symtab|sections|ast|symfile|line-table] "
+            "[objfile|symtab|sections|ast|symfile|line-table|pcm-info] "
             "[<file1> <file2> ...]") {
     LoadSubCommand("objfile",
                    CommandObjectSP(
@@ -2429,6 +2488,10 @@ public:
     LoadSubCommand("line-table",
                    CommandObjectSP(new CommandObjectTargetModulesDumpLineTable(
                        interpreter)));
+    LoadSubCommand(
+        "pcm-info",
+        CommandObjectSP(
+            new CommandObjectTargetModulesDumpClangPCMInfo(interpreter)));
   }
 
   ~CommandObjectTargetModulesDump() override = default;
