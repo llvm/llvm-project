@@ -33,6 +33,9 @@ include_directories(../../../include)
 set(MEMPROF_UNIT_TEST_HEADERS
   ${MEMPROF_HEADERS})
 
+set(MEMPROF_UNITTEST_LINK_FLAGS
+  ${COMPILER_RT_UNITTEST_LINK_FLAGS})
+
 if(NOT WIN32)
   list(APPEND MEMPROF_UNITTEST_LINK_FLAGS -pthread)
 endif()
