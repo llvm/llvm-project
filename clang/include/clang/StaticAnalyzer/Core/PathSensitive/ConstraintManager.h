@@ -119,6 +119,9 @@ public:
                          const char *NL, unsigned int Space,
                          bool IsDot) const = 0;
 
+  virtual void printValue(raw_ostream &Out, ProgramStateRef State,
+                          SymbolRef Sym) {}
+
   /// Convenience method to query the state to see if a symbol is null or
   /// not null, or if neither assumption can be made.
   ConditionTruthVal isNull(ProgramStateRef State, SymbolRef Sym) {

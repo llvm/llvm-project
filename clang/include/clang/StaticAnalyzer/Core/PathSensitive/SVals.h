@@ -169,6 +169,11 @@ public:
   /// should continue to the base regions if the region is not symbolic.
   SymbolRef getAsSymbol(bool IncludeBaseRegions = false) const;
 
+  /// If this SVal is loc::ConcreteInt or nonloc::ConcreteInt,
+  /// return a pointer to APSInt which is held in it.
+  /// Otherwise, return nullptr.
+  const llvm::APSInt *getAsInteger() const;
+
   const MemRegion *getAsRegion() const;
 
   /// printJson - Pretty-prints in JSON format.

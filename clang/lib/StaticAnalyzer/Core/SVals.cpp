@@ -109,6 +109,14 @@ SymbolRef SVal::getAsSymbol(bool IncludeBaseRegions) const {
   return getAsLocSymbol(IncludeBaseRegions);
 }
 
+const llvm::APSInt *SVal::getAsInteger() const {
+  if (auto CI = getAs<nonloc::ConcreteInt>())
+    return &CI->getValue();
+  if (auto CI = getAs<loc::ConcreteInt>())
+    return &CI->getValue();
+  return nullptr;
+}
+
 const MemRegion *SVal::getAsRegion() const {
   if (Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>())
     return X->getRegion();
