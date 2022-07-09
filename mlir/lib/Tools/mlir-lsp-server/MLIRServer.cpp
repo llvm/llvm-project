@@ -636,15 +636,17 @@ public:
       : AsmParserCodeCompleteContext(completeLoc),
         completionList(completionList), ctx(ctx) {}
 
-  /// Signal code completion for a dialect name.
-  void completeDialectName() final {
+  /// Signal code completion for a dialect name, with an optional prefix.
+  void completeDialectName(StringRef prefix) final {
     for (StringRef dialect : ctx->getAvailableDialects()) {
-      lsp::CompletionItem item(dialect, lsp::CompletionItemKind::Module);
-      item.sortText = "2";
+      lsp::CompletionItem item(prefix + dialect,
+                               lsp::CompletionItemKind::Module,
+                               /*sortText=*/"3");
       item.detail = "dialect";
       completionList.items.emplace_back(item);
     }
   }
+  using AsmParserCodeCompleteContext::completeDialectName;
 
   /// Signal code completion for an operation name within the given dialect.
   void completeOperationName(StringRef dialectName) final {
@@ -658,8 +660,8 @@ public:
 
       lsp::CompletionItem item(
           op.getStringRef().drop_front(dialectName.size() + 1),
-          lsp::CompletionItemKind::Field);
-      item.sortText = "1";
+          lsp::CompletionItemKind::Field,
+          /*sortText=*/"1");
       item.detail = "operation";
       completionList.items.emplace_back(item);
     }
@@ -693,11 +695,69 @@ public:
   /// Signal a completion for the given expected token.
   void completeExpectedTokens(ArrayRef<StringRef> tokens, bool optional) final {
     for (StringRef token : tokens) {
-      lsp::CompletionItem item(token, lsp::CompletionItemKind::Keyword);
-      item.sortText = "0";
+      lsp::CompletionItem item(token, lsp::CompletionItemKind::Keyword,
+                               /*sortText=*/"0");
       item.detail = optional ? "optional" : "";
       completionList.items.emplace_back(item);
     }
+  }
+
+  /// Signal a completion for an attribute.
+  void completeAttribute(const llvm::StringMap<Attribute> &aliases) override {
+    appendSimpleCompletions({"affine_set", "affine_map", "dense", "false",
+                             "loc", "opaque", "sparse", "true", "unit"},
+                            lsp::CompletionItemKind::Field,
+                            /*sortText=*/"1");
+
+    completeDialectName("#");
+    completeAliases(aliases, "#");
+  }
+  void completeDialectAttributeOrAlias(
+      const llvm::StringMap<Attribute> &aliases) override {
+    completeDialectName();
+    completeAliases(aliases);
+  }
+
+  /// Signal a completion for a type.
+  void completeType(const llvm::StringMap<Type> &aliases) override {
+    appendSimpleCompletions({"memref", "tensor", "complex", "tuple", "vector",
+                             "bf16", "f16", "f32", "f64", "f80", "f128",
+                             "index", "none"},
+                            lsp::CompletionItemKind::Field,
+                            /*sortText=*/"1");
+    lsp::CompletionItem item("i<N>", lsp::CompletionItemKind::Field,
+                             /*sortText=*/"1");
+    item.insertText = "i";
+    completionList.items.emplace_back(item);
+
+    completeDialectName("!");
+    completeAliases(aliases, "!");
+  }
+  void
+  completeDialectTypeOrAlias(const llvm::StringMap<Type> &aliases) override {
+    completeDialectName();
+    completeAliases(aliases);
+  }
+
+  /// Add completion results for the given set of aliases.
+  template <typename T>
+  void completeAliases(const llvm::StringMap<T> &aliases,
+                       StringRef prefix = "") {
+    for (const auto &alias : aliases) {
+      lsp::CompletionItem item(prefix + alias.getKey(),
+                               lsp::CompletionItemKind::Field,
+                               /*sortText=*/"2");
+      llvm::raw_string_ostream(item.detail) << "alias: " << alias.getValue();
+      completionList.items.emplace_back(item);
+    }
+  }
+
+  /// Add a set of simple completions that all have the same kind.
+  void appendSimpleCompletions(ArrayRef<StringRef> completions,
+                               lsp::CompletionItemKind kind,
+                               StringRef sortText = "") {
+    for (StringRef completion : completions)
+      completionList.items.emplace_back(completion, kind, sortText);
   }
 
 private:

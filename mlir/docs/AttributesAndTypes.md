@@ -473,10 +473,10 @@ one for printing. These static functions placed alongside the class definitions
 and have the following function signatures:
 
 ```c++
-static ParseResult generatedAttributeParser(DialectAsmParser& parser, StringRef mnemonic, Type attrType, Attribute &result);
+static ParseResult generatedAttributeParser(DialectAsmParser& parser, StringRef *mnemonic, Type attrType, Attribute &result);
 static LogicalResult generatedAttributePrinter(Attribute attr, DialectAsmPrinter& printer);
 
-static ParseResult generatedTypeParser(DialectAsmParser& parser, StringRef mnemonic, Type &result);
+static ParseResult generatedTypeParser(DialectAsmParser& parser, StringRef *mnemonic, Type &result);
 static LogicalResult generatedTypePrinter(Type type, DialectAsmPrinter& printer);
 ```
 

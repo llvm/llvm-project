@@ -22,16 +22,18 @@ include "mlir/IR/OpBase.td"
 
 // DEF-LABEL: ::mlir::OptionalParseResult generatedTypeParser(
 // DEF-SAME: ::mlir::AsmParser &parser,
-// DEF-SAME: ::llvm::StringRef mnemonic,
+// DEF-SAME: ::llvm::StringRef *mnemonic,
 // DEF-SAME: ::mlir::Type &value) {
-// DEF: if (mnemonic == ::test::CompoundAType::getMnemonic()) {
+// DEF: .Case(::test::CompoundAType::getMnemonic()
 // DEF-NEXT:   value = ::test::CompoundAType::parse(parser);
 // DEF-NEXT:   return ::mlir::success(!!value);
-// DEF-NEXT: }
-// DEF-NEXT: if (mnemonic == ::test::IndexType::getMnemonic()) {
+// DEF-NEXT: })
+// DEF-NEXT: .Case(::test::IndexType::getMnemonic()
 // DEF-NEXT:   value = ::test::IndexType::parse(parser);
 // DEF-NEXT:   return ::mlir::success(!!value);
-// DEF: return {};
+// DEF: .Default([&](llvm::StringRef keyword, 
+// DEF-NEXT:   *mnemonic = keyword;
+// DEF-NEXT:   return llvm::None; 
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect

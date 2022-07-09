@@ -404,6 +404,26 @@ ParseResult Parser::codeCompleteOptionalTokens(ArrayRef<StringRef> tokens) {
   return failure();
 }
 
+Attribute Parser::codeCompleteAttribute() {
+  state.codeCompleteContext->completeAttribute(
+      state.symbols.attributeAliasDefinitions);
+  return {};
+}
+Type Parser::codeCompleteType() {
+  state.codeCompleteContext->completeType(state.symbols.typeAliasDefinitions);
+  return {};
+}
+
+Attribute
+Parser::codeCompleteDialectSymbol(const llvm::StringMap<Attribute> &aliases) {
+  state.codeCompleteContext->completeDialectAttributeOrAlias(aliases);
+  return {};
+}
+Type Parser::codeCompleteDialectSymbol(const llvm::StringMap<Type> &aliases) {
+  state.codeCompleteContext->completeDialectTypeOrAlias(aliases);
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // OperationParser
 //===----------------------------------------------------------------------===//

@@ -116,10 +116,8 @@ RecordType verifyDerived(mlir::AsmParser &parser, RecordType derivedTy,
 mlir::Type fir::parseFirType(FIROpsDialect *dialect,
                              mlir::DialectAsmParser &parser) {
   mlir::StringRef typeTag;
-  if (parser.parseKeyword(&typeTag))
-    return {};
   mlir::Type genType;
-  auto parseResult = generatedTypeParser(parser, typeTag, genType);
+  auto parseResult = generatedTypeParser(parser, &typeTag, genType);
   if (parseResult.hasValue())
     return genType;
   parser.emitError(parser.getNameLoc(), "unknown fir type: ") << typeTag;
