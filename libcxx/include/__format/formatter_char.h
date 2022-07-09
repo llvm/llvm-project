@@ -41,7 +41,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI auto format(_CharT __value, auto& __ctx) const -> decltype(__ctx.out()) {
-    if (__parser_.__type_ == __format_spec::__type::__char)
+    if (__parser_.__type_ == __format_spec::__type::__default || __parser_.__type_ == __format_spec::__type::__char)
       return __formatter::__format_char(__value, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
 
     if constexpr (sizeof(_CharT) <= sizeof(int))

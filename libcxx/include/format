@@ -376,6 +376,7 @@ __handle_replacement_field(const _CharT* __begin, const _CharT* __end,
   __format::__parse_number_result __r =
       __format::__parse_arg_id(__begin, __end, __parse_ctx);
 
+  bool __parse = *__r.__ptr == _CharT(':');
   switch (*__r.__ptr) {
   case _CharT(':'):
     // The arg-id has a format-specifier, advance the input to the format-spec.
@@ -395,7 +396,7 @@ __handle_replacement_field(const _CharT* __begin, const _CharT* __end,
     if (__type == __arg_t::__handle)
       __ctx.__handle(__r.__value).__parse(__parse_ctx);
     else
-      __format::__compile_time_visit_format_arg(__parse_ctx, __ctx, __type);
+        __format::__compile_time_visit_format_arg(__parse_ctx, __ctx, __type);
   } else
     _VSTD::visit_format_arg(
         [&](auto __arg) {
@@ -405,7 +406,8 @@ __handle_replacement_field(const _CharT* __begin, const _CharT* __end,
             __arg.format(__parse_ctx, __ctx);
           else {
             formatter<decltype(__arg), _CharT> __formatter;
-            __parse_ctx.advance_to(__formatter.parse(__parse_ctx));
+            if (__parse)
+              __parse_ctx.advance_to(__formatter.parse(__parse_ctx));
             __ctx.advance_to(__formatter.format(__arg, __ctx));
           }
         },
