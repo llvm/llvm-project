@@ -20,7 +20,7 @@
 #include <cstring>
 
 EXTERN int ompx_get_team_procs(int device_num) {
-  if (!device_is_ready(device_num)) {
+  if (!deviceIsReady(device_num)) {
     DP("Device %d did not initialize\n", device_num);
     return 0;
   }
