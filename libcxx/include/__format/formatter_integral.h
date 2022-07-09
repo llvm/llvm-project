@@ -207,10 +207,6 @@ _LIBCPP_HIDE_FROM_ABI auto __format_integer(
     char* __end,
     const char* __prefix,
     int __base) -> decltype(__ctx.out()) {
-  _LIBCPP_ASSERT(
-      __specs.__alignment_ != __format_spec::__alignment::__default,
-      "the caller should adjust the default to the value required by the type");
-
   char* __first = __formatter::__insert_sign(__begin, __negative, __specs.__std_.__sign_);
   if (__specs.__std_.__alternate_form_ && __prefix)
     while (*__prefix)
@@ -280,6 +276,7 @@ _LIBCPP_HIDE_FROM_ABI auto __format_integer(
     return __formatter::__format_integer(
         __value, __ctx, __specs, __negative, __array.begin(), __array.end(), __value != 0 ? "0" : nullptr, 8);
   }
+  case __format_spec::__type::__default:
   case __format_spec::__type::__decimal: {
     array<char, __formatter::__buffer_size<decltype(__value), 10>()> __array;
     return __formatter::__format_integer(
