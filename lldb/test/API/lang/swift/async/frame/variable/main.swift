@@ -4,8 +4,8 @@ func randInt(_ i: Int) async -> Int {
 
 func inner() async {
   let a = await randInt(30)
-  let b = await randInt(a + 11)
-  use(a, b)
+  let b = await randInt(a + 11) // break one
+  use(a, b) // break two
 }
 
 func use<T>(_ t: T...) {}
