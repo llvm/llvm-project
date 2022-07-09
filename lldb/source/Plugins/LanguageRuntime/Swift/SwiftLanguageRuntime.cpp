@@ -2457,33 +2457,49 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
                                             eSymbolContextSymbol))
       return UnwindPlanSP();
 
+  Address func_start_addr;
+  uint32_t prologue_size;
+  ConstString mangled_name;
   if (sc.function) {
-    Address func_start_addr = sc.function->GetAddressRange().GetBaseAddress();
-    AddressRange prologue_range(func_start_addr,
-                                sc.function->GetPrologueByteSize());
-    if (prologue_range.ContainsLoadAddress(pc, &target) ||
-        func_start_addr == pc) {
-      return UnwindPlanSP();
-    }
+    func_start_addr = sc.function->GetAddressRange().GetBaseAddress();
+    prologue_size = sc.function->GetPrologueByteSize();
+    mangled_name = sc.function->GetMangled().GetMangledName();
   } else if (sc.symbol) {
-    Address func_start_addr = sc.symbol->GetAddress();
-    AddressRange prologue_range(func_start_addr,
-                                sc.symbol->GetPrologueByteSize());
-    if (prologue_range.ContainsLoadAddress(pc, &target) ||
-        func_start_addr == pc) {
-      return UnwindPlanSP();
-    }
+    func_start_addr = sc.symbol->GetAddress();
+    prologue_size = sc.symbol->GetPrologueByteSize();
+    mangled_name = sc.symbol->GetMangled().GetMangledName();
+  } else {
+    return UnwindPlanSP();
   }
 
-  addr_t saved_fp = LLDB_INVALID_ADDRESS;
-  Status error;
-  if (!process_sp->ReadMemory(fp, &saved_fp, 8, error))
-    return UnwindPlanSP();
+  AddressRange prologue_range(func_start_addr, prologue_size);
+  bool in_prologue = (func_start_addr == pc ||
+                      prologue_range.ContainsLoadAddress(pc, &target));
 
-  // Get the high nibble of the dreferenced fp; if the 60th bit is set,
-  // this is the transition to a swift async AsyncContext chain.
-  if ((saved_fp & (0xfULL << 60)) >> 60 != 1)
-    return UnwindPlanSP();
+  if (in_prologue) {
+    if (!IsAnySwiftAsyncFunctionSymbol(mangled_name.GetStringRef()))
+      return UnwindPlanSP();
+  } else {
+    addr_t saved_fp = LLDB_INVALID_ADDRESS;
+    Status error;
+    if (!process_sp->ReadMemory(fp, &saved_fp, 8, error))
+      return UnwindPlanSP();
+
+    // Get the high nibble of the dreferenced fp; if the 60th bit is set,
+    // this is the transition to a swift async AsyncContext chain.
+    if ((saved_fp & (0xfULL << 60)) >> 60 != 1)
+      return UnwindPlanSP();
+  }
+
+  // The coroutine funclets split from an async function have 2 different ABIs:
+  //  - Async suspend partial functions and the first funclet get their async
+  //    context directly in the async register.
+  //  - Async await resume partial functions take their context indirectly, it
+  //    needs to be dereferenced to get the actual function's context.
+  // The debug info for locals reflects this difference, so our unwinding of the
+  // context register needs to reflect it too.
+  bool indirect_context =
+      IsSwiftAsyncAwaitResumePartialFunctionSymbol(mangled_name.GetStringRef());
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
   const int32_t ptr_size = 8;
@@ -2524,30 +2540,30 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   else
     llvm_unreachable("Unsupported architecture");
 
-  row->GetCFAValue().SetIsDWARFExpression(expr, expr_size);
-  // The coroutine funclets split from an async function have 2 different ABIs:
-  //  - Async suspend partial functions and the first funclet get their async
-  //    context directly in the async register.
-  //  - Async await resume partial functions take their context indirectly, it
-  //    needs to be dereferenced to get the actual function's context.
-  // The debug info for locals reflects this difference, so our unwinding of the
-  // context register needs to reflect it too.
-  bool indirect_context =
-      sc.symbol ? IsSwiftAsyncAwaitResumePartialFunctionSymbol(
-                      sc.symbol->GetMangled().GetMangledName().GetStringRef())
-                : false;
+  if (in_prologue) {
+    if (indirect_context)
+      row->GetCFAValue().SetIsRegisterDereferenced(regnums->async_ctx_regnum);
+    else
+      row->GetCFAValue().SetIsRegisterPlusOffset(regnums->async_ctx_regnum, 0);
+  } else {
+    row->GetCFAValue().SetIsDWARFExpression(expr, expr_size);
+  }
 
   if (indirect_context) {
-    // In a "resume" coroutine, the passed context argument needs to be
-    // dereferenced once to get the context. This is reflected in the debug
-    // info so we need to account for it and report am async register value
-    // that needs to be dereferenced to get to the context.
-    // Note that the size passed for the DWARF expression is the size of the
-    // array minus one. This skips the last deref for this use.
-    assert(expr[expr_size - 1] == llvm::dwarf::DW_OP_deref &&
-           "Should skip a deref");
-    row->SetRegisterLocationToIsDWARFExpression(regnums->async_ctx_regnum, expr,
-                                                expr_size - 1, false);
+    if (in_prologue) {
+      row->SetRegisterLocationToSame(regnums->async_ctx_regnum, false);
+    } else {
+      // In a "resume" coroutine, the passed context argument needs to be
+      // dereferenced once to get the context. This is reflected in the debug
+      // info so we need to account for it and report am async register value
+      // that needs to be dereferenced to get to the context.
+      // Note that the size passed for the DWARF expression is the size of the
+      // array minus one. This skips the last deref for this use.
+      assert(expr[expr_size - 1] == llvm::dwarf::DW_OP_deref &&
+             "Should skip a deref");
+      row->SetRegisterLocationToIsDWARFExpression(regnums->async_ctx_regnum,
+                                                  expr, expr_size - 1, false);
+    }
   } else {
     // In the first part of a split async function, the context is passed
     // directly, so we can use the CFA value directly.
