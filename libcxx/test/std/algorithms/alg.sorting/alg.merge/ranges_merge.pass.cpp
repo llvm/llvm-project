@@ -11,15 +11,15 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// template<input_­iterator I1, sentinel_­for<I1> S1, input_­iterator I2, sentinel_­for<I2> S2,
-//          weakly_­incrementable O, class Comp = ranges::less, class Proj1 = identity,
+// template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
+//          weakly_incrementable O, class Comp = ranges::less, class Proj1 = identity,
 //          class Proj2 = identity>
 //   requires mergeable<I1, I2, O, Comp, Proj1, Proj2>
 //   constexpr merge_result<I1, I2, O>
 //     merge(I1 first1, S1 last1, I2 first2, S2 last2, O result,
 //           Comp comp = {}, Proj1 proj1 = {}, Proj2 proj2 = {});                                    // since C++20
 //
-// template<input_­range R1, input_­range R2, weakly_­incrementable O, class Comp = ranges::less,
+// template<input_range R1, input_range R2, weakly_incrementable O, class Comp = ranges::less,
 //          class Proj1 = identity, class Proj2 = identity>
 //   requires mergeable<iterator_t<R1>, iterator_t<R2>, O, Comp, Proj1, Proj2>
 //   constexpr merge_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>, O>
@@ -33,6 +33,7 @@
 #include "almost_satisfies_types.h"
 #include "MoveOnly.h"
 #include "test_iterators.h"
+#include "../sortable_helpers.h"
 
 // Test iterator overload's constraints:
 // =====================================
@@ -251,15 +252,15 @@ constexpr bool withAllPermutationsOfInIter1AndInIter2() {
 }
 
 constexpr void runAllIteratorPermutationsTests() {
-  withAllPermutationsOfInIter1AndInIter2<cpp17_output_iterator<int*>>();
   withAllPermutationsOfInIter1AndInIter2<cpp20_output_iterator<int*>>();
+  withAllPermutationsOfInIter1AndInIter2<cpp20_input_iterator<int*>>();
   withAllPermutationsOfInIter1AndInIter2<forward_iterator<int*>>();
   withAllPermutationsOfInIter1AndInIter2<bidirectional_iterator<int*>>();
   withAllPermutationsOfInIter1AndInIter2<random_access_iterator<int*>>();
   withAllPermutationsOfInIter1AndInIter2<contiguous_iterator<int*>>();
 
-  static_assert(withAllPermutationsOfInIter1AndInIter2<cpp17_output_iterator<int*>>());
   static_assert(withAllPermutationsOfInIter1AndInIter2<cpp20_output_iterator<int*>>());
+  static_assert(withAllPermutationsOfInIter1AndInIter2<cpp20_input_iterator<int*>>());
   static_assert(withAllPermutationsOfInIter1AndInIter2<forward_iterator<int*>>());
   static_assert(withAllPermutationsOfInIter1AndInIter2<bidirectional_iterator<int*>>());
   static_assert(withAllPermutationsOfInIter1AndInIter2<random_access_iterator<int*>>());
@@ -268,26 +269,6 @@ constexpr void runAllIteratorPermutationsTests() {
 
 constexpr bool test() {
   // check that every element is copied exactly once
-  struct TracedCopy {
-    int copy_assign = 0;
-    int data        = 0;
-
-    constexpr TracedCopy() = default;
-    constexpr TracedCopy(int i) : data(i) {}
-    constexpr TracedCopy(const TracedCopy& other) : copy_assign(other.copy_assign), data(other.data) {}
-
-    constexpr TracedCopy(TracedCopy&& other)            = delete;
-    constexpr TracedCopy& operator=(TracedCopy&& other) = delete;
-
-    constexpr TracedCopy& operator=(const TracedCopy& other) {
-      copy_assign = other.copy_assign + 1;
-      data        = other.data;
-      return *this;
-    }
-
-    constexpr bool operator==(const TracedCopy& o) const { return data == o.data; }
-    constexpr auto operator<=>(const TracedCopy& o) const { return data <=> o.data; }
-  };
   {
     std::array<TracedCopy, 3> r1{3, 5, 8};
     std::array<TracedCopy, 3> r2{1, 3, 8};
@@ -302,7 +283,7 @@ constexpr bool test() {
       assert(result.out == out.end());
       assert(std::ranges::equal(out, std::array<TracedCopy, 6>{1, 3, 3, 5, 8, 8}));
 
-      assert(std::ranges::all_of(out, [](const TracedCopy& e) { return e.copy_assign == 1; }));
+      assert(std::ranges::all_of(out, &TracedCopy::copiedOnce));
     }
 
     // range overload
@@ -315,7 +296,7 @@ constexpr bool test() {
       assert(result.out == out.end());
       assert(std::ranges::equal(out, std::array<TracedCopy, 6>{1, 3, 3, 5, 8, 8}));
 
-      assert(std::ranges::all_of(out, [](const TracedCopy& e) { return e.copy_assign == 1; }));
+      assert(std::ranges::all_of(out, &TracedCopy::copiedOnce));
     }
   }
 

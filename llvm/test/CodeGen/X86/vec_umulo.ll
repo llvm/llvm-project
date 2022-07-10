@@ -2604,10 +2604,8 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ; AVX512F-NEXT:    vmovq %rax, %xmm1
 ; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; AVX512F-NEXT:    seto %al
-; AVX512F-NEXT:    movw $-3, %cx
-; AVX512F-NEXT:    kmovw %ecx, %k0
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    kandw %k0, %k1, %k0
+; AVX512F-NEXT:    andl $1, %eax
+; AVX512F-NEXT:    kmovw %eax, %k0
 ; AVX512F-NEXT:    kmovw %r8d, %k1
 ; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512F-NEXT:    kshiftrw $14, %k1, %k1
@@ -2631,10 +2629,8 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ; AVX512BW-NEXT:    vmovq %rax, %xmm1
 ; AVX512BW-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; AVX512BW-NEXT:    seto %al
-; AVX512BW-NEXT:    movw $-3, %cx
-; AVX512BW-NEXT:    kmovd %ecx, %k0
-; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    kandw %k0, %k1, %k0
+; AVX512BW-NEXT:    andl $1, %eax
+; AVX512BW-NEXT:    kmovw %eax, %k0
 ; AVX512BW-NEXT:    kmovd %r8d, %k1
 ; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512BW-NEXT:    kshiftrw $14, %k1, %k1

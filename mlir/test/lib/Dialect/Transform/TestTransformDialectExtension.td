@@ -196,4 +196,20 @@ def TestMixedNullAndNonNullResultsOp
   }];
 }
 
+def TestMixedSuccessAndSilenceableOp
+  : Op<Transform_Dialect, "test_mixed_sucess_and_silenceable",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface, 
+     TransformEachOpTrait, TransformOpInterface]> {
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs);
+  let assemblyFormat = "$target attr-dict";
+  let cppNamespace = "::mlir::test";
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation * target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

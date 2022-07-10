@@ -30,7 +30,7 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
       since the dataflow analysis handles those case), the method should call
       `setValueRange` with that `Value` as an argument. When `setValueRange`
       is not called for some value, it will recieve a default value of the mimimum
-      and maximum values forits type (the unbounded range).
+      and maximum values for its type (the unbounded range).
 
       When called on an op that also implements the RegionBranchOpInterface
       or BranchOpInterface, this method should not attempt to infer the values

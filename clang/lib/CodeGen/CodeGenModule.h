@@ -309,6 +309,7 @@ private:
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
+  bool CXX20ModuleInits = false;
   std::unique_ptr<CodeGenTBAA> TBAA;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
@@ -1619,6 +1620,9 @@ private:
   /// Emit the function that initializes C++ thread_local variables.
   void EmitCXXThreadLocalInitFunc();
 
+  /// Emit the function that initializes global variables for a C++ Module.
+  void EmitCXXModuleInitFunc(clang::Module *Primary);
+
   /// Emit the function that initializes C++ globals.
   void EmitCXXGlobalInitFunc();
 
@@ -1685,6 +1689,9 @@ private:
 
   /// Emit the llvm.used and llvm.compiler.used metadata.
   void emitLLVMUsed();
+
+  /// For C++20 Itanium ABI, emit the initializers for the module.
+  void EmitModuleInitializers(clang::Module *Primary);
 
   /// Emit the link options introduced by imported modules.
   void EmitModuleLinkOptions();

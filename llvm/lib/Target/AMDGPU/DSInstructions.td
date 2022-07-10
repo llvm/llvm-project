@@ -950,10 +950,11 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align_less_than_4_local">;
 
 } // End AddedComplexity = 100
 
-class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
-  (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))
->;
+class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity = 0,
+  bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value),
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
+  let AddedComplexity = complexity;
+}
 
 multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
@@ -965,75 +966,88 @@ multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
                          !cast<PatFrag>(frag#"_local_"#vt.Size)>;
   }
 
-  def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt.Size), 1>;
+  def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt.Size),
+                       /* complexity */ 0, /* gds */ 1>;
 }
 
 multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
                                   ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
     def : DSAtomicRetPat<inst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_ret_"#vt.Size)>;
+                         !cast<PatFrag>(frag#"_local_m0_"#vt.Size)>;
     def : DSAtomicRetPat<noRetInst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt.Size)>;
+                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt.Size), /* complexity */ 1>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_ret_"#vt.Size)>;
+                         !cast<PatFrag>(frag#"_local_"#vt.Size)>;
     def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_noret_"#vt.Size)>;
+                         !cast<PatFrag>(frag#"_local_noret_"#vt.Size), /* complexity */ 1>;
   }
 
   def : DSAtomicRetPat<inst, vt,
-                       !cast<PatFrag>(frag#"_region_m0_ret_"#vt.Size), 1>;
+                       !cast<PatFrag>(frag#"_region_m0_"#vt.Size),
+                       /* complexity */ 0, /* gds */ 1>;
   def : DSAtomicRetPat<noRetInst, vt,
-                       !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size), 1>;
+                       !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size),
+                       /* complexity */ 1, /* gds */ 1>;
 }
 
 
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 // Caution, the order of src and cmp is the *opposite* of the BUFFER_ATOMIC_CMPSWAP opcode.
-class DSAtomicCmpXChgSwapped<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
+class DSAtomicCmpXChgSwapped<DS_Pseudo inst, ValueType vt, PatFrag frag,
+  int complexity = 0, bit gds=0> : GCNPat<
   (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$cmp, vt:$swap),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$cmp, getVregSrcForVT<vt>.ret:$swap, offset:$offset, (i1 gds))
->;
+  (inst $ptr, getVregSrcForVT<vt>.ret:$cmp, getVregSrcForVT<vt>.ret:$swap, offset:$offset, (i1 gds))> {
+  let AddedComplexity = complexity;
+}
 
 multiclass DSAtomicCmpXChgSwapped_mc<DS_Pseudo inst, DS_Pseudo noRetInst, ValueType vt,
                                      string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_local_m0_ret_"#vt.Size)>;
-    def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_local_m0_noret_"#vt.Size)>;
+    def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt.Size)>;
+    def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_local_m0_noret_"#vt.Size),
+                                 /* complexity */ 1>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicCmpXChgSwapped<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                                 !cast<PatFrag>(frag#"_local_ret_"#vt.Size)>;
+                                 !cast<PatFrag>(frag#"_local_"#vt.Size)>;
     def : DSAtomicCmpXChgSwapped<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                                 !cast<PatFrag>(frag#"_local_noret_"#vt.Size)>;
+                                 !cast<PatFrag>(frag#"_local_noret_"#vt.Size),
+                                 /* complexity */ 1>;
   }
 
-  def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_region_m0_ret_"#vt.Size), 1>;
-  def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size), 1>;
+  def : DSAtomicCmpXChgSwapped<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt.Size),
+                               /* complexity */ 0, /* gds */ 1>;
+  def : DSAtomicCmpXChgSwapped<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size),
+                               /* complexity */ 1, /* gds */ 1>;
 }
 } // End SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10
 
 let SubtargetPredicate = isGFX11Plus in {
 // The order of src and cmp agrees with the BUFFER_ATOMIC_CMPSWAP opcode.
-class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
+class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag,
+  int complexity = 0, bit gds=0> : GCNPat<
   (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$cmp, vt:$swap),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$swap, getVregSrcForVT<vt>.ret:$cmp, offset:$offset, (i1 gds))
->;
+  (inst $ptr, getVregSrcForVT<vt>.ret:$swap, getVregSrcForVT<vt>.ret:$cmp, offset:$offset, (i1 gds))> {
+  let AddedComplexity = complexity;
+}
 
 multiclass DSAtomicCmpXChg_mc<DS_Pseudo inst, DS_Pseudo noRetInst, ValueType vt, string frag> {
 
   def : DSAtomicCmpXChg<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                        !cast<PatFrag>(frag#"_local_ret_"#vt.Size)>;
+                        !cast<PatFrag>(frag#"_local_"#vt.Size)>;
   def : DSAtomicCmpXChg<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                        !cast<PatFrag>(frag#"_local_noret_"#vt.Size)>;
+                        !cast<PatFrag>(frag#"_local_noret_"#vt.Size), /* complexity */ 1>;
 
-  def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_region_m0_ret_"#vt.Size), 1>;
-  def : DSAtomicCmpXChg<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size), 1>;
+  def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt.Size),
+                        /* complexity */ 0, /* gds */ 1>;
+  def : DSAtomicCmpXChg<noRetInst, vt, !cast<PatFrag>(frag#"_region_m0_noret_"#vt.Size),
+                        /* complexity */ 1, /* gds */ 1>;
 }
 } // End SubtargetPredicate = isGFX11Plus
 
@@ -1090,17 +1104,20 @@ defm : DSAtomicCmpXChg_mc<DS_CMPSTORE_RTN_B64, DS_CMPSTORE_B64, i64, "atomic_cmp
 } // End SubtargetPredicate = isGFX11Plus
 
 let SubtargetPredicate = isGFX90APlus in {
-def : DSAtomicRetPat<DS_ADD_RTN_F64, f64, atomic_load_fadd_local_ret_64>;
+def : DSAtomicRetPat<DS_ADD_RTN_F64, f64, atomic_load_fadd_local_64>;
+let AddedComplexity = 1 in
 def : DSAtomicRetPat<DS_ADD_F64, f64, atomic_load_fadd_local_noret_64>;
 }
 
 let SubtargetPredicate = isGFX940Plus in {
-def : DSAtomicRetPat<DS_PK_ADD_RTN_F16, v2f16, atomic_load_fadd_v2f16_local_ret_32>;
+def : DSAtomicRetPat<DS_PK_ADD_RTN_F16, v2f16, atomic_load_fadd_v2f16_local_32>;
+let AddedComplexity = 1 in
 def : DSAtomicRetPat<DS_PK_ADD_F16, v2f16, atomic_load_fadd_v2f16_local_noret_32>;
 def : GCNPat <
-  (v2i16 (int_amdgcn_ds_fadd_v2bf16_ret i32:$ptr, v2i16:$src)),
+  (v2i16 (int_amdgcn_ds_fadd_v2bf16 i32:$ptr, v2i16:$src)),
   (DS_PK_ADD_RTN_BF16 VGPR_32:$ptr, VGPR_32:$src, 0, 0)
 >;
+let AddedComplexity = 1 in
 def : GCNPat <
   (v2i16 (int_amdgcn_ds_fadd_v2bf16_noret i32:$ptr, v2i16:$src)),
   (DS_PK_ADD_BF16 VGPR_32:$ptr, VGPR_32:$src, 0, 0)

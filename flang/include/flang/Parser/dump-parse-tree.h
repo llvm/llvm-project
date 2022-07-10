@@ -92,6 +92,8 @@ public:
   NODE(parser, AccSizeExprList)
   NODE(parser, AccSelfClause)
   NODE(parser, AccStandaloneDirective)
+  NODE(parser, AccDeviceTypeExpr)
+  NODE(parser, AccDeviceTypeExprList)
   NODE(parser, AccTileExpr)
   NODE(parser, AccTileExprList)
   NODE(parser, AccLoopDirective)

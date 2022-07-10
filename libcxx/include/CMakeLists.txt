@@ -92,6 +92,7 @@ set(files
   __algorithm/ranges_is_sorted_until.h
   __algorithm/ranges_lexicographical_compare.h
   __algorithm/ranges_lower_bound.h
+  __algorithm/ranges_make_heap.h
   __algorithm/ranges_max.h
   __algorithm/ranges_max_element.h
   __algorithm/ranges_merge.h
@@ -103,12 +104,17 @@ set(files
   __algorithm/ranges_move.h
   __algorithm/ranges_move_backward.h
   __algorithm/ranges_none_of.h
+  __algorithm/ranges_nth_element.h
+  __algorithm/ranges_pop_heap.h
+  __algorithm/ranges_push_heap.h
   __algorithm/ranges_remove.h
   __algorithm/ranges_remove_if.h
   __algorithm/ranges_replace.h
   __algorithm/ranges_replace_if.h
   __algorithm/ranges_reverse.h
+  __algorithm/ranges_set_difference.h
   __algorithm/ranges_sort.h
+  __algorithm/ranges_sort_heap.h
   __algorithm/ranges_stable_sort.h
   __algorithm/ranges_swap_ranges.h
   __algorithm/ranges_transform.h

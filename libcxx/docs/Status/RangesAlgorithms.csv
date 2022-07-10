@@ -61,7 +61,7 @@ Write,unique_copy,Not assigned,n/a,Not started
 Write,partition_copy,Not assigned,n/a,Not started
 Write,partial_sort_copy,Not assigned,n/a,Not started
 Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
-Merge,set_difference,Hui Xie,n/a,Not started
+Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`,✅
 Merge,set_intersection,Hui Xie,n/a,Not started
 Merge,set_symmetric_difference,Hui Xie,n/a,Not started
 Merge,set_union,Hui Xie,n/a,Not started
@@ -76,12 +76,12 @@ Permutation,stable_partition,Not assigned,n/a,Not started
 Permutation,sort,Konstantin Varlamov,`D127557 <https://llvm.org/D127557>`_,✅
 Permutation,stable_sort,Konstantin Varlamov,`D127834 <https://llvm.org/D127834>`_,✅
 Permutation,partial_sort,Konstantin Varlamov,n/a,In progress
-Permutation,nth_element,Not assigned,n/a,Not started
+Permutation,nth_element,Konstantin Varlamov,`D128149 <https://llvm.org/D128149>`_,✅
 Permutation,inplace_merge,Not assigned,n/a,Not started
-Permutation,make_heap,Not assigned,n/a,Not started
-Permutation,push_heap,Not assigned,n/a,Not started
-Permutation,pop_heap,Not assigned,n/a,Not started
-Permutation,sort_heap,Not assigned,n/a,Not started
+Permutation,make_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
+Permutation,push_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
+Permutation,pop_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
+Permutation,sort_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
 Permutation,prev_permutation,Not assigned,n/a,Not started
 Permutation,next_permutation,Not assigned,n/a,Not started
 Uninitialised memory,uninitialized_copy,Konstantin Varlamov,`D116023 <https://llvm.org/D116023>`_,✅

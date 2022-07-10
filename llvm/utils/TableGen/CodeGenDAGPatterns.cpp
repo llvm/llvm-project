@@ -932,7 +932,7 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
 }
 
 bool TreePredicateFn::hasPredCode() const {
-  return isLoad() || isStore() || isAtomic() ||
+  return isLoad() || isStore() || isAtomic() || hasNoUse() ||
          !PatFragRec->getRecord()->getValueAsString("PredicateCode").empty();
 }
 
@@ -977,12 +977,15 @@ std::string TreePredicateFn::getPredCode() const {
     if (isAnyExtLoad())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsAnyExtLoad requires IsLoad");
-    if (isSignExtLoad())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsSignExtLoad requires IsLoad");
-    if (isZeroExtLoad())
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsZeroExtLoad requires IsLoad");
+
+    if (!isAtomic()) {
+      if (isSignExtLoad())
+        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                        "IsSignExtLoad requires IsLoad or IsAtomic");
+      if (isZeroExtLoad())
+        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                        "IsZeroExtLoad requires IsLoad or IsAtomic");
+    }
   }
 
   if (isStore()) {
@@ -1003,8 +1006,9 @@ std::string TreePredicateFn::getPredCode() const {
   if (isAtomic()) {
     if (getMemoryVT() == nullptr && !isAtomicOrderingMonotonic() &&
         getAddressSpaces() == nullptr &&
-        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
-        !isAtomicOrderingAcquireRelease() &&
+        // FIXME: Should atomic loads be IsLoad, IsAtomic, or both?
+        !isZeroExtLoad() && !isSignExtLoad() && !isAtomicOrderingAcquire() &&
+        !isAtomicOrderingRelease() && !isAtomicOrderingAcquireRelease() &&
         !isAtomicOrderingSequentiallyConsistent() &&
         !isAtomicOrderingAcquireOrStronger() &&
         !isAtomicOrderingReleaseOrStronger() &&
@@ -1105,6 +1109,10 @@ std::string TreePredicateFn::getPredCode() const {
     Code += "if (isReleaseOrStronger(cast<AtomicSDNode>(N)->getMergedOrdering())) "
             "return false;\n";
 
+  // TODO: Handle atomic sextload/zextload normally when ATOMIC_LOAD is removed.
+  if (isAtomic() && (isZeroExtLoad() || isSignExtLoad()))
+    Code += "return false;\n";
+
   if (isLoad() || isStore()) {
     StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
 
@@ -1154,6 +1162,9 @@ std::string TreePredicateFn::getPredCode() const {
                   .str();
   }
 
+  if (hasNoUse())
+    Code += "if (!SDValue(N, 0).use_empty()) return false;\n";
+
   std::string PredicateCode =
       std::string(PatFragRec->getRecord()->getValueAsString("PredicateCode"));
 
@@ -1196,6 +1207,9 @@ bool TreePredicateFn::isPredefinedPredicateEqualTo(StringRef Field,
 }
 bool TreePredicateFn::usesOperands() const {
   return isPredefinedPredicateEqualTo("PredicateCodeUsesOperands", true);
+}
+bool TreePredicateFn::hasNoUse() const {
+  return isPredefinedPredicateEqualTo("HasNoUse", true);
 }
 bool TreePredicateFn::isLoad() const {
   return isPredefinedPredicateEqualTo("IsLoad", true);

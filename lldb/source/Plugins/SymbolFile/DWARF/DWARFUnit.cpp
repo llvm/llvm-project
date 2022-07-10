@@ -579,17 +579,6 @@ void DWARFUnit::SetStrOffsetsBase(dw_offset_t str_offsets_base) {
   m_str_offsets_base = str_offsets_base;
 }
 
-dw_addr_t DWARFUnit::ReadAddressFromDebugAddrSection(uint32_t index) const {
-  uint32_t index_size = GetAddressByteSize();
-  dw_offset_t addr_base = GetAddrBase();
-  dw_addr_t offset = addr_base + index * index_size;
-  const DWARFDataExtractor &data =
-      m_dwarf.GetDWARFContext().getOrLoadAddrData();
-  if (data.ValidOffsetForDataOfSize(offset, index_size))
-    return data.GetMaxU64_unchecked(&offset, index_size);
-  return LLDB_INVALID_ADDRESS;
-}
-
 // It may be called only with m_die_array_mutex held R/W.
 void DWARFUnit::ClearDIEsRWLocked() {
   m_die_array.clear();

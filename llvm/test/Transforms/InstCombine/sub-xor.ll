@@ -25,11 +25,46 @@ define <2 x i32> @test1vec(<2 x i32> %x) {
   ret <2 x i32> %sub
 }
 
+define i8 @masked_sub_i8(i8 %x) {
+; CHECK-LABEL: @masked_sub_i8(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[M:%.*]] = xor i8 [[A]], 11
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %a = and i8 %x, 10 ; 0b00001010
+  %m = sub i8 11, %a ; 0b00001011
+  ret i8 %m
+}
+
+define <2 x i5> @masked_sub_v2i5(<2 x i5> %x) {
+; CHECK-LABEL: @masked_sub_v2i5(
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i5> [[X:%.*]], <i5 -8, i5 -8>
+; CHECK-NEXT:    [[M:%.*]] = xor <2 x i5> [[A]], <i5 -6, i5 -6>
+; CHECK-NEXT:    ret <2 x i5> [[M]]
+;
+  %a = and <2 x i5> %x, <i5 24, i5 24> ; 0b11000
+  %m = sub <2 x i5> <i5 26, i5 26>, %a ; 0b11010
+  ret <2 x i5> %m
+}
+
+; negative test - sub constant isn't superset of masked bits
+
+define i8 @not_masked_sub_i8(i8 %x) {
+; CHECK-LABEL: @not_masked_sub_i8(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[M:%.*]] = sub nuw nsw i8 11, [[A]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %a = and i8 %x, 7  ; 0b00000111
+  %m = sub i8 11, %a ; 0b00001011
+  ret i8 %m
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
 
 define i32 @test2(i32 %x) nounwind {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[COUNT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true) [[ATTR2:#.*]], [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[COUNT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true) #[[ATTR2:[0-9]+]], !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[COUNT]], 31
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;

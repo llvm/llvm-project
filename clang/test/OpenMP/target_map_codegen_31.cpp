@@ -85,10 +85,16 @@ void explicit_maps_single (int ii){
 // CK31A: [[ST1_I:%.+]] = getelementptr inbounds [[ST]], [[ST]]* [[ST1]], i{{.+}} 0, i{{.+}} 0
 // CK31A: [[ST2_I:%.+]] = getelementptr inbounds [[ST]], [[ST]]* [[ST2]], i{{.+}} 0, i{{.+}} 0
 // CK31A: [[ST2_J:%.+]] = getelementptr inbounds [[ST]], [[ST]]* [[ST2]], i{{.+}} 0, i{{.+}} 1
-// CK31A-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 7, i8** [[GEPBP:%[0-9]+]], i8** [[GEPP:%[0-9]+]], i64* [[GEPS:%.+]], i64* getelementptr {{.+}}[7 x i{{.+}}]* [[MTYPE00]]{{.+}})
-// CK31A-DAG: [[GEPS]] = getelementptr inbounds [7 x i64], [7 x i64]* [[S:%.+]], i{{.+}} 0, i{{.+}} 0
-// CK31A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-// CK31A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// CK31A-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK31A-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK31A-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK31A-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK31A-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK31A-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+// CK31A-DAG: store i64* [[SIZES:%.+]], i64** [[SARG]]
+// CK31A-DAG: [[SIZES]] = getelementptr inbounds [7 x i64], [7 x i64]* [[S:%.+]], i{{.+}} 0, i{{.+}} 0
+// CK31A-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK31A-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
 // st1
 // CK31A-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
@@ -166,22 +172,27 @@ void explicit_maps_single (int ii){
 #endif
   }
 
-  // Always Close Present.
-  // Region 01
-  // CK31A-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}})
-  // CK31A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-  // CK31A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Always Close Present.
+// Region 01
+// CK31A-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK31A-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK31A-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK31A-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK31A-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK31A-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK31A-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-  // CK31A-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-  // CK31A-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK31A-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
-  // CK31A-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
-  // CK31A-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
-  // CK31A-DAG: store i32* [[VAR0]], i32** [[CP0]]
+// CK31A-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK31A-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK31A-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
+// CK31A-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+// CK31A-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
+// CK31A-DAG: store i32* [[VAR0]], i32** [[CP0]]
 
-  // CK31A-USE: call void [[CALL01:@.+]](i32* {{[^,]+}})
-  // CK31A-NOUSE: call void [[CALL01:@.+]]()
-  #pragma omp target map(always close present tofrom: a)
+// CK31A-USE: call void [[CALL01:@.+]](i32* {{[^,]+}})
+// CK31A-NOUSE: call void [[CALL01:@.+]]()
+#pragma omp target map(always close present tofrom \
+                       : a)
   {
 #ifdef USE
     a++;

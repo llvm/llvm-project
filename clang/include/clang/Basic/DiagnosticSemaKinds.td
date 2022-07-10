@@ -4821,8 +4821,12 @@ def warn_cxx14_compat_template_nontype_parm_auto_type : Warning<
   DefaultIgnore, InGroup<CXXPre17Compat>;
 def err_template_param_default_arg_redefinition : Error<
   "template parameter redefines default argument">;
+def err_template_param_default_arg_inconsistent_redefinition : Error<
+  "template parameter default argument is inconsistent with previous definition">;
 def note_template_param_prev_default_arg : Note<
   "previous default template argument defined here">;
+def note_template_param_prev_default_arg_in_other_module : Note<
+  "previous default template argument defined in module %0">;
 def err_template_param_default_arg_missing : Error<
   "template parameter missing a default argument">;
 def ext_template_parameter_default_in_function_template : ExtWarn<
@@ -6597,13 +6601,16 @@ def warn_addition_in_bitshift : Warning<
   "'%1' will be evaluated first">, InGroup<ShiftOpParentheses>;
 
 def warn_self_assignment_builtin : Warning<
-  "explicitly assigning value of variable of type %0 to itself">,
+  "explicitly assigning value of variable of type %0 to itself%select{|; did "
+  "you mean to assign to member %2?}1">,
   InGroup<SelfAssignment>, DefaultIgnore;
 def warn_self_assignment_overloaded : Warning<
-  "explicitly assigning value of variable of type %0 to itself">,
+  "explicitly assigning value of variable of type %0 to itself%select{|; did "
+  "you mean to assign to member %2?}1">,
   InGroup<SelfAssignmentOverloaded>, DefaultIgnore;
 def warn_self_move : Warning<
-  "explicitly moving variable of type %0 to itself">,
+  "explicitly moving variable of type %0 to itself%select{|; did you mean to "
+  "move to member %2?}1">,
   InGroup<SelfMove>, DefaultIgnore;
 
 def err_builtin_move_forward_unsupported : Error<
@@ -9386,6 +9393,12 @@ def warn_array_index_exceeds_max_addressable_bounds : Warning<
   InGroup<ArrayBounds>;
 def note_array_declared_here : Note<
   "array %0 declared here">;
+
+def warn_inconsistent_array_form : Warning<
+  "argument %0 of type %1 with mismatched bound">,
+  InGroup<ArrayParameter>, DefaultIgnore;
+def note_previous_declaration_as : Note<
+  "previously declared as %0 here">;
 
 def warn_printf_insufficient_data_args : Warning<
   "more '%%' conversions than data arguments">, InGroup<FormatInsufficientArgs>;

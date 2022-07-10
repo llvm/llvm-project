@@ -2272,10 +2272,18 @@ private:
 
   bool isAcceptableSlow(const NamedDecl *D, AcceptableKind Kind);
 
+  // Determine whether the module M belongs to the  current TU.
+  bool isModuleUnitOfCurrentTU(const Module *M) const;
+
 public:
   /// Get the module unit whose scope we are currently within.
   Module *getCurrentModule() const {
     return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
+  }
+
+  /// Is the module scope we are an interface?
+  bool currentModuleIsInterface() const {
+    return ModuleScopes.empty() ? false : ModuleScopes.back().ModuleInterface;
   }
 
   /// Get the module owning an entity.
@@ -5166,6 +5174,11 @@ public:
   /// Warn if a value is moved to itself.
   void DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
                         SourceLocation OpLoc);
+
+  /// Returns a field in a CXXRecordDecl that has the same name as the decl \p
+  /// SelfAssigned when inside a CXXMethodDecl.
+  const FieldDecl *
+  getSelfAssignmentClassMemberCandidate(const ValueDecl *SelfAssigned);
 
   /// Warn if we're implicitly casting from a _Nullable pointer type to a
   /// _Nonnull one.

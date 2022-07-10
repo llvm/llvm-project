@@ -331,6 +331,7 @@ module std [system] {
       module ranges_is_sorted_until          { private header "__algorithm/ranges_is_sorted_until.h" }
       module ranges_lexicographical_compare  { private header "__algorithm/ranges_lexicographical_compare.h" }
       module ranges_lower_bound              { private header "__algorithm/ranges_lower_bound.h" }
+      module ranges_make_heap                { private header "__algorithm/ranges_make_heap.h" }
       module ranges_max                      { private header "__algorithm/ranges_max.h" }
       module ranges_max_element              { private header "__algorithm/ranges_max_element.h" }
       module ranges_merge                    { private header "__algorithm/ranges_merge.h" }
@@ -342,12 +343,17 @@ module std [system] {
       module ranges_move                     { private header "__algorithm/ranges_move.h" }
       module ranges_move_backward            { private header "__algorithm/ranges_move_backward.h" }
       module ranges_none_of                  { private header "__algorithm/ranges_none_of.h" }
+      module ranges_nth_element              { private header "__algorithm/ranges_nth_element.h" }
+      module ranges_pop_heap                 { private header "__algorithm/ranges_pop_heap.h" }
+      module ranges_push_heap                { private header "__algorithm/ranges_push_heap.h" }
       module ranges_remove                   { private header "__algorithm/ranges_remove.h" }
       module ranges_remove_if                { private header "__algorithm/ranges_remove_if.h" }
       module ranges_replace                  { private header "__algorithm/ranges_replace.h" }
       module ranges_replace_if               { private header "__algorithm/ranges_replace_if.h" }
       module ranges_reverse                  { private header "__algorithm/ranges_reverse.h" }
+      module ranges_set_difference           { private header "__algorithm/ranges_set_difference.h" }
       module ranges_sort                     { private header "__algorithm/ranges_sort.h" }
+      module ranges_sort_heap                { private header "__algorithm/ranges_sort_heap.h" }
       module ranges_stable_sort              { private header "__algorithm/ranges_stable_sort.h" }
       module ranges_swap_ranges              { private header "__algorithm/ranges_swap_ranges.h" }
       module ranges_transform                { private header "__algorithm/ranges_transform.h" }

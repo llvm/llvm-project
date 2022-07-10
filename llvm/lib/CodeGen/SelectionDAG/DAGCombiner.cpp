@@ -3762,6 +3762,14 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
   }
 
+  // If there's no chance any bit will need to borrow from an adjacent bit:
+  // sub C, X --> xor X, C
+  if (ConstantSDNode *C0 = isConstOrConstSplat(N0)) {
+    if (!C0->isOpaque() &&
+        (~DAG.computeKnownBits(N1).Zero).isSubsetOf(C0->getAPIntValue()))
+      return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
+  }
+
   return SDValue();
 }
 
@@ -9289,31 +9297,44 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   // We convert trunc/ext to opposing shifts in IR, but casts may be cheaper.
   //   sra (add (shl X, N1C), AddC), N1C -->
   //   sext (add (trunc X to (width - N1C)), AddC')
-  if (N0.getOpcode() == ISD::ADD && N0.hasOneUse() && N1C &&
-      N0.getOperand(0).getOpcode() == ISD::SHL &&
-      N0.getOperand(0).getOperand(1) == N1 && N0.getOperand(0).hasOneUse()) {
-    if (ConstantSDNode *AddC = isConstOrConstSplat(N0.getOperand(1))) {
-      SDValue Shl = N0.getOperand(0);
-      // Determine what the truncate's type would be and ask the target if that
-      // is a free operation.
-      LLVMContext &Ctx = *DAG.getContext();
-      unsigned ShiftAmt = N1C->getZExtValue();
-      EVT TruncVT = EVT::getIntegerVT(Ctx, OpSizeInBits - ShiftAmt);
-      if (VT.isVector())
-        TruncVT = EVT::getVectorVT(Ctx, TruncVT, VT.getVectorElementCount());
+  //   sra (sub AddC, (shl X, N1C)), N1C -->
+  //   sext (sub AddC1',(trunc X to (width - N1C)))
+  if ((N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::SUB) && N1C &&
+      N0.hasOneUse()) {
+    bool IsAdd = N0.getOpcode() == ISD::ADD;
+    SDValue Shl = N0.getOperand(IsAdd ? 0 : 1);
+    if (Shl.getOpcode() == ISD::SHL && Shl.getOperand(1) == N1 &&
+        Shl.hasOneUse()) {
+      // TODO: AddC does not need to be a splat.
+      if (ConstantSDNode *AddC =
+              isConstOrConstSplat(N0.getOperand(IsAdd ? 1 : 0))) {
+        // Determine what the truncate's type would be and ask the target if
+        // that is a free operation.
+        LLVMContext &Ctx = *DAG.getContext();
+        unsigned ShiftAmt = N1C->getZExtValue();
+        EVT TruncVT = EVT::getIntegerVT(Ctx, OpSizeInBits - ShiftAmt);
+        if (VT.isVector())
+          TruncVT = EVT::getVectorVT(Ctx, TruncVT, VT.getVectorElementCount());
 
-      // TODO: The simple type check probably belongs in the default hook
-      //       implementation and/or target-specific overrides (because
-      //       non-simple types likely require masking when legalized), but that
-      //       restriction may conflict with other transforms.
-      if (TruncVT.isSimple() && isTypeLegal(TruncVT) &&
-          TLI.isTruncateFree(VT, TruncVT)) {
-        SDLoc DL(N);
-        SDValue Trunc = DAG.getZExtOrTrunc(Shl.getOperand(0), DL, TruncVT);
-        SDValue ShiftC = DAG.getConstant(AddC->getAPIntValue().lshr(ShiftAmt).
-                             trunc(TruncVT.getScalarSizeInBits()), DL, TruncVT);
-        SDValue Add = DAG.getNode(ISD::ADD, DL, TruncVT, Trunc, ShiftC);
-        return DAG.getSExtOrTrunc(Add, DL, VT);
+        // TODO: The simple type check probably belongs in the default hook
+        //       implementation and/or target-specific overrides (because
+        //       non-simple types likely require masking when legalized), but
+        //       that restriction may conflict with other transforms.
+        if (TruncVT.isSimple() && isTypeLegal(TruncVT) &&
+            TLI.isTruncateFree(VT, TruncVT)) {
+          SDLoc DL(N);
+          SDValue Trunc = DAG.getZExtOrTrunc(Shl.getOperand(0), DL, TruncVT);
+          SDValue ShiftC =
+              DAG.getConstant(AddC->getAPIntValue().lshr(ShiftAmt).trunc(
+                                  TruncVT.getScalarSizeInBits()),
+                              DL, TruncVT);
+          SDValue Add;
+          if (IsAdd)
+            Add = DAG.getNode(ISD::ADD, DL, TruncVT, Trunc, ShiftC);
+          else
+            Add = DAG.getNode(ISD::SUB, DL, TruncVT, ShiftC, Trunc);
+          return DAG.getSExtOrTrunc(Add, DL, VT);
+        }
       }
     }
   }

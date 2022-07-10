@@ -91,9 +91,11 @@ body: |
   bb.0.entry:
     liveins: $x0
     ; CHECK-LABEL: name: test_freeze_s1
-    ; CHECK: %x:_(s1) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %freeze:_(s1) = G_FREEZE %x
-    ; CHECK-NEXT: %ext:_(s64) = G_ZEXT %freeze(s1)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s8) = G_FREEZE [[DEF]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[FREEZE]](s8)
+    ; CHECK-NEXT: %ext:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: $x0 = COPY %ext(s64)
     %x:_(s1) = G_IMPLICIT_DEF
     %freeze:_(s1) = G_FREEZE %x

@@ -99,8 +99,7 @@ it is the simplest way to build.
           -T "ClangCL"                                    ^
           -DLLVM_ENABLE_RUNTIMES=libcxx                   ^
           -DLIBCXX_ENABLE_SHARED=YES                      ^
-          -DLIBCXX_ENABLE_STATIC=NO                       ^
-          -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO
+          -DLIBCXX_ENABLE_STATIC=NO
   > cmake --build build
 
 CMake + ninja (MSVC)
@@ -131,8 +130,7 @@ In either case, then run:
   > cmake -G Ninja -S runtimes -B build                                               ^
           -DCMAKE_C_COMPILER=clang-cl                                                 ^
           -DCMAKE_CXX_COMPILER=clang-cl                                               ^
-          -DLLVM_ENABLE_RUNTIMES=libcxx                                               ^
-          -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO
+          -DLLVM_ENABLE_RUNTIMES=libcxx
   > ninja -C build cxx
   > ninja -C build check-cxx
 
@@ -298,23 +296,6 @@ libc++ specific options
   Path where target-specific libc++ headers should be installed. If a relative
   path, relative to ``CMAKE_INSTALL_PREFIX``.
 
-.. _libc++experimental options:
-
-libc++experimental Specific Options
-------------------------------------
-
-.. option:: LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY:BOOL
-
-  **Default**: ``ON``
-
-  Build and test libc++experimental.a.
-
-.. option:: LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY:BOOL
-
-  **Default**: ``LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY AND LIBCXX_INSTALL_LIBRARY``
-
-  Install libc++experimental.a alongside libc++.
-
 
 .. _ABI Library Specific Options:
 
@@ -411,15 +392,6 @@ libc++ Feature Options
 
   Use the specified GCC toolchain and standard library when building the native
   stdlib benchmark tests.
-
-.. option:: LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT:BOOL
-
-  **Default**: ``OFF``
-
-  Pick the default for whether to constrain ABI-unstable symbols to
-  each individual translation unit. This setting controls whether
-  `_LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT` is defined by default --
-  see the documentation of that macro for details.
 
 
 libc++ ABI Feature Options

@@ -344,6 +344,16 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // statements, so imports are allowed.
   ImportState = ModuleImportState::ImportAllowed;
 
+  // For an implementation, We already made an implicit import (its interface).
+  // Make and return the import decl to be added to the current TU.
+  if (MDK == ModuleDeclKind::Implementation) {
+    // Make the import decl for the interface.
+    ImportDecl *Import =
+        ImportDecl::Create(Context, CurContext, ModuleLoc, Mod, Path[0].second);
+    // and return it to be added.
+    return ConvertDeclToDeclGroup(Import);
+  }
+
   // FIXME: Create a ModuleDecl.
   return nullptr;
 }
@@ -934,4 +944,17 @@ void Sema::PopGlobalModuleFragment() {
   assert(!ModuleScopes.empty() && getCurrentModule()->isGlobalModule() &&
          "left the wrong module scope, which is not global module fragment");
   ModuleScopes.pop_back();
+}
+
+bool Sema::isModuleUnitOfCurrentTU(const Module *M) const {
+  assert(M);
+
+  Module *CurrentModuleUnit = getCurrentModule();
+
+  // If we are not in a module currently, M must not be the module unit of
+  // current TU.
+  if (!CurrentModuleUnit)
+    return false;
+
+  return M->isSubModuleOf(CurrentModuleUnit->getTopLevelModule());
 }

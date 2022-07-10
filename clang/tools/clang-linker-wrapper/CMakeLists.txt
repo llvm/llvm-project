@@ -10,12 +10,17 @@ set(LLVM_LINK_COMPONENTS
   Passes
   IRReader
   Object
+  Option
   Support
   CodeGen
   LTO)
 
+set(LLVM_TARGET_DEFINITIONS LinkerWrapperOpts.td)
+tablegen(LLVM LinkerWrapperOpts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(LinkerWrapperOpts)
+
 if(NOT CLANG_BUILT_STANDALONE)
-  set(tablegen_deps intrinsics_gen)
+  set(tablegen_deps intrinsics_gen LinkerWrapperOpts)
 endif()
 
 add_clang_executable(clang-linker-wrapper

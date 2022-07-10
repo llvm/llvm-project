@@ -20,6 +20,8 @@ template <typename T> class SmallVectorImpl;
 class Error;
 class StringRef;
 
+namespace compression {
+
 namespace zlib {
 
 static constexpr int NoCompression = 0;
@@ -39,9 +41,9 @@ Error uncompress(StringRef InputBuffer,
                  SmallVectorImpl<char> &UncompressedBuffer,
                  size_t UncompressedSize);
 
-uint32_t crc32(StringRef Buffer);
+} // End of namespace zlib
 
-}  // End of namespace zlib
+} // End of namespace compression
 
 } // End of namespace llvm
 

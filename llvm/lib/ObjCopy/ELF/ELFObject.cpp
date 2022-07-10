@@ -468,8 +468,9 @@ Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
       Sec.OriginalData.size() - DataOffset);
 
   SmallVector<char, 128> DecompressedContent;
-  if (Error Err = zlib::uncompress(CompressedContent, DecompressedContent,
-                                   static_cast<size_t>(Sec.Size)))
+  if (Error Err =
+          compression::zlib::uncompress(CompressedContent, DecompressedContent,
+                                        static_cast<size_t>(Sec.Size)))
     return createStringError(errc::invalid_argument,
                              "'" + Sec.Name + "': " + toString(std::move(Err)));
 
@@ -544,9 +545,10 @@ CompressedSection::CompressedSection(const SectionBase &Sec,
                                      DebugCompressionType CompressionType)
     : SectionBase(Sec), CompressionType(CompressionType),
       DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
-  zlib::compress(StringRef(reinterpret_cast<const char *>(OriginalData.data()),
-                           OriginalData.size()),
-                 CompressedData);
+  compression::zlib::compress(
+      StringRef(reinterpret_cast<const char *>(OriginalData.data()),
+                OriginalData.size()),
+      CompressedData);
 
   assert(CompressionType != DebugCompressionType::None);
   Flags |= ELF::SHF_COMPRESSED;

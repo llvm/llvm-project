@@ -571,45 +571,6 @@ public:
   /// Parse a quoted string token if present.
   virtual ParseResult parseOptionalString(std::string *string) = 0;
 
-  /// Parse a given keyword.
-  ParseResult parseKeyword(StringRef keyword, const Twine &msg = "") {
-    auto loc = getCurrentLocation();
-    if (parseOptionalKeyword(keyword))
-      return emitError(loc, "expected '") << keyword << "'" << msg;
-    return success();
-  }
-
-  /// Parse a keyword into 'keyword'.
-  ParseResult parseKeyword(StringRef *keyword) {
-    auto loc = getCurrentLocation();
-    if (parseOptionalKeyword(keyword))
-      return emitError(loc, "expected valid keyword");
-    return success();
-  }
-
-  /// Parse the given keyword if present.
-  virtual ParseResult parseOptionalKeyword(StringRef keyword) = 0;
-
-  /// Parse a keyword, if present, into 'keyword'.
-  virtual ParseResult parseOptionalKeyword(StringRef *keyword) = 0;
-
-  /// Parse a keyword, if present, and if one of the 'allowedValues',
-  /// into 'keyword'
-  virtual ParseResult
-  parseOptionalKeyword(StringRef *keyword,
-                       ArrayRef<StringRef> allowedValues) = 0;
-
-  /// Parse a keyword or a quoted string.
-  ParseResult parseKeywordOrString(std::string *result) {
-    if (failed(parseOptionalKeywordOrString(result)))
-      return emitError(getCurrentLocation())
-             << "expected valid keyword or string";
-    return success();
-  }
-
-  /// Parse an optional keyword or string.
-  virtual ParseResult parseOptionalKeywordOrString(std::string *result) = 0;
-
   /// Parse a `(` token.
   virtual ParseResult parseLParen() = 0;
 
@@ -713,6 +674,115 @@ public:
   parseCommaSeparatedList(function_ref<ParseResult()> parseElementFn) {
     return parseCommaSeparatedList(Delimiter::None, parseElementFn);
   }
+
+  //===--------------------------------------------------------------------===//
+  // Keyword Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// This class represents a StringSwitch like class that is useful for parsing
+  /// expected keywords. On construction, it invokes `parseKeyword` and
+  /// processes each of the provided cases statements until a match is hit. The
+  /// provided `ResultT` must be assignable from `failure()`.
+  template <typename ResultT = ParseResult>
+  class KeywordSwitch {
+  public:
+    KeywordSwitch(AsmParser &parser)
+        : parser(parser), loc(parser.getCurrentLocation()) {
+      if (failed(parser.parseKeywordOrCompletion(&keyword)))
+        result = failure();
+    }
+
+    /// Case that uses the provided value when true.
+    KeywordSwitch &Case(StringLiteral str, ResultT value) {
+      return Case(str, [&](StringRef, SMLoc) { return std::move(value); });
+    }
+    KeywordSwitch &Default(ResultT value) {
+      return Default([&](StringRef, SMLoc) { return std::move(value); });
+    }
+    /// Case that invokes the provided functor when true. The parameters passed
+    /// to the functor are the keyword, and the location of the keyword (in case
+    /// any errors need to be emitted).
+    template <typename FnT>
+    std::enable_if_t<!std::is_convertible<FnT, ResultT>::value, KeywordSwitch &>
+    Case(StringLiteral str, FnT &&fn) {
+      if (result)
+        return *this;
+
+      // If the word was empty, record this as a completion.
+      if (keyword.empty())
+        parser.codeCompleteExpectedTokens(str);
+      else if (keyword == str)
+        result.emplace(std::move(fn(keyword, loc)));
+      return *this;
+    }
+    template <typename FnT>
+    std::enable_if_t<!std::is_convertible<FnT, ResultT>::value, KeywordSwitch &>
+    Default(FnT &&fn) {
+      if (!result)
+        result.emplace(fn(keyword, loc));
+      return *this;
+    }
+
+    /// Returns true if this switch has a value yet.
+    bool hasValue() const { return result.hasValue(); }
+
+    /// Return the result of the switch.
+    LLVM_NODISCARD operator ResultT() {
+      if (!result)
+        return parser.emitError(loc, "unexpected keyword: ") << keyword;
+      return std::move(*result);
+    }
+
+  private:
+    /// The parser used to construct this switch.
+    AsmParser &parser;
+
+    /// The location of the keyword, used to emit errors as necessary.
+    SMLoc loc;
+
+    /// The parsed keyword itself.
+    StringRef keyword;
+
+    /// The result of the switch statement or none if currently unknown.
+    Optional<ResultT> result;
+  };
+
+  /// Parse a given keyword.
+  ParseResult parseKeyword(StringRef keyword) {
+    return parseKeyword(keyword, "");
+  }
+  virtual ParseResult parseKeyword(StringRef keyword, const Twine &msg) = 0;
+
+  /// Parse a keyword into 'keyword'.
+  ParseResult parseKeyword(StringRef *keyword) {
+    auto loc = getCurrentLocation();
+    if (parseOptionalKeyword(keyword))
+      return emitError(loc, "expected valid keyword");
+    return success();
+  }
+
+  /// Parse the given keyword if present.
+  virtual ParseResult parseOptionalKeyword(StringRef keyword) = 0;
+
+  /// Parse a keyword, if present, into 'keyword'.
+  virtual ParseResult parseOptionalKeyword(StringRef *keyword) = 0;
+
+  /// Parse a keyword, if present, and if one of the 'allowedValues',
+  /// into 'keyword'
+  virtual ParseResult
+  parseOptionalKeyword(StringRef *keyword,
+                       ArrayRef<StringRef> allowedValues) = 0;
+
+  /// Parse a keyword or a quoted string.
+  ParseResult parseKeywordOrString(std::string *result) {
+    if (failed(parseOptionalKeywordOrString(result)))
+      return emitError(getCurrentLocation())
+             << "expected valid keyword or string";
+    return success();
+  }
+
+  /// Parse an optional keyword or string.
+  virtual ParseResult parseOptionalKeywordOrString(std::string *result) = 0;
 
   //===--------------------------------------------------------------------===//
   // Attribute/Type Parsing
@@ -1125,6 +1195,17 @@ protected:
   /// dialect.
   virtual FailureOr<AsmDialectResourceHandle>
   parseResourceHandle(Dialect *dialect) = 0;
+
+  //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  /// Parse a keyword, or an empty string if the current location signals a code
+  /// completion.
+  virtual ParseResult parseKeywordOrCompletion(StringRef *keyword) = 0;
+
+  /// Signal the code completion of a set of expected tokens.
+  virtual void codeCompleteExpectedTokens(ArrayRef<StringRef> tokens) = 0;
 
 private:
   AsmParser(const AsmParser &) = delete;

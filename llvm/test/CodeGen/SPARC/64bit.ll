@@ -238,8 +238,8 @@ entry:
 declare void @g(i8*)
 
 ; CHECK: expand_setcc
-; CHECK: cmp %i0, 1
-; CHECK: movl %xcc, 1,
+; CHECK: cmp %i0, 0
+; CHECK: movg %xcc, 1,
 define i32 @expand_setcc(i64 %a) {
   %cond = icmp sle i64 %a, 0
   %cast2 = zext i1 %cond to i32

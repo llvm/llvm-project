@@ -202,9 +202,9 @@ static int initLibrary(DeviceTy &Device) {
         DP("Has pending ctors... call now\n");
         for (auto &Entry : Lib.second.PendingCtors) {
           void *Ctor = Entry;
-          int Rc =
-              target(nullptr, Device, Ctor, 0, nullptr, nullptr, nullptr,
-                     nullptr, nullptr, nullptr, 1, 1, true /*team*/, AsyncInfo);
+          int Rc = target(nullptr, Device, Ctor, 0, nullptr, nullptr, nullptr,
+                          nullptr, nullptr, nullptr, 1, 1, 0, true /*team*/,
+                          AsyncInfo);
           if (Rc != OFFLOAD_SUCCESS) {
             REPORT("Running ctor " DPxMOD " failed.\n", DPxPTR(Ctor));
             return OFFLOAD_FAIL;
@@ -1237,7 +1237,6 @@ uint64_t getLoopTripCount(int64_t DeviceId) {
     if (I != Device.LoopTripCnt.end()) {
       LoopTripCount = I->second;
       Device.LoopTripCnt.erase(I);
-      DP("loop trip count is %" PRIu64 ".\n", LoopTripCount);
     }
   }
 
@@ -1585,9 +1584,9 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
 int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
            void **ArgBases, void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
            map_var_info_t *ArgNames, void **ArgMappers, int32_t TeamNum,
-           int32_t ThreadLimit, int IsTeamConstruct, AsyncInfoTy &AsyncInfo) {
+           int32_t ThreadLimit, uint64_t Tripcount, int IsTeamConstruct,
+           AsyncInfoTy &AsyncInfo) {
   int32_t DeviceId = Device.DeviceID;
-
   TableMap *TM = getTableMap(HostPtr);
   // No map for this host pointer found!
   if (!TM) {
@@ -1605,6 +1604,10 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     TargetTable = TM->Table->TargetsTable[DeviceId];
   }
   assert(TargetTable && "Global data has not been mapped\n");
+
+  // FIXME: Use legacy tripcount method if it is '-1'.
+  Tripcount = Tripcount == -1 ? getLoopTripCount(DeviceId) : Tripcount;
+  DP("loop trip count is %" PRIu64 ".\n", Tripcount);
 
   // We need to keep bases and offsets separate. Sometimes (e.g. in OpenCL) we
   // need to manifest base pointers prior to launching a kernel. Even if we have
@@ -1647,7 +1650,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     if (IsTeamConstruct)
       Ret = Device.runTeamRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
                                  TgtArgs.size(), TeamNum, ThreadLimit,
-                                 getLoopTripCount(DeviceId), AsyncInfo);
+                                 Tripcount, AsyncInfo);
     else
       Ret = Device.runRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
                              TgtArgs.size(), AsyncInfo);
