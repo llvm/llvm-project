@@ -27,6 +27,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <utility>
@@ -240,7 +241,7 @@ void LLVMContextImpl::getSyncScopeNames(
 /// singleton OptBisect if not explicitly set.
 OptPassGate &LLVMContextImpl::getOptPassGate() const {
   if (!OPG)
-    OPG = &getOptBisector();
+    OPG = &(*OptBisector);
   return *OPG;
 }
 

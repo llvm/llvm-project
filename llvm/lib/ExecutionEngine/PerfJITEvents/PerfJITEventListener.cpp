@@ -24,6 +24,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
@@ -487,14 +488,15 @@ void PerfJITEventListener::NotifyDebug(uint64_t CodeAddr,
   }
 }
 
+// There should be only a single event listener per process, otherwise perf gets
+// confused.
+llvm::ManagedStatic<PerfJITEventListener> PerfListener;
+
 } // end anonymous namespace
 
 namespace llvm {
 JITEventListener *JITEventListener::createPerfJITEventListener() {
-  // There should be only a single event listener per process, otherwise perf
-  // gets confused.
-  static PerfJITEventListener PerfListener;
-  return &PerfListener;
+  return &*PerfListener;
 }
 
 } // namespace llvm

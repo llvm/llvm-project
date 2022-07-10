@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 #include <string>
 
 using namespace llvm;
@@ -41,9 +42,9 @@ public:
 };
 } // namespace
 
+static llvm::ManagedStatic<CodeViewErrorCategory> CodeViewErrCategory;
 const std::error_category &llvm::codeview::CVErrorCategory() {
-  static CodeViewErrorCategory CodeViewErrCategory;
-  return CodeViewErrCategory;
+  return *CodeViewErrCategory;
 }
 
 char CodeViewError::ID;
