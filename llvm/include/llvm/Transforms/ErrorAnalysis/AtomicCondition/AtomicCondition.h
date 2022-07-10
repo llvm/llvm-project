@@ -71,8 +71,30 @@ typedef struct ACTable {
 
 } ACTable;
 
+/*----------------------------------------------------------------------------*/
+/* Constants                                                                    */
+/*----------------------------------------------------------------------------*/
+#define LOG_DIRECTORY_NAME ".fAF_logs"
+
+/*----------------------------------------------------------------------------*/
+/* Globals                                                                    */
+/*----------------------------------------------------------------------------*/
+
 ACTable *StorageTable;
 int NodeCounter;
+
+/*----------------------------------------------------------------------------*/
+/* File Functions                                                             */
+/*----------------------------------------------------------------------------*/
+
+// Create a directory
+void fAFcreateLogDirectory(char *DirectoryName) {
+  struct stat ST;
+  if (stat(DirectoryName, &ST) == -1) {
+    // TODO: Check the file mode and whether this one is the right one to use.
+    mkdir(DirectoryName, 0775);
+  }
+}
 
 void fACCreate() {
   ACTable *AtomicConditionsTable = NULL;
@@ -494,18 +516,16 @@ void fACGenerateExecutionID(char* ExecutionId) {
 }
 
 void fACStoreResult() {
-  // Create a directory
-  struct stat ST;
-  char DirectoryName[] = ".fAC_logs";
-  if (stat(DirectoryName, &ST) == -1) {
-    // TODO: Check the file mode and whether this one is the right one to use.
-    mkdir(DirectoryName, 0775);
-  }
+#if FAF_DEBUG
+  // Create a directory if not present
+  char *DirectoryName = (char *)malloc((strlen(LOG_DIRECTORY_NAME)+1) * sizeof(char));
+  strcpy(DirectoryName, LOG_DIRECTORY_NAME);
+  fAFcreateLogDirectory(DirectoryName);
 
   char ExecutionId[5000];
   char FileName[5000];
   FileName[0] = '\0';
-  strcpy(FileName, ".fAC_logs/fAC_");
+  strcpy(FileName, strcat(strcpy(FileName, DirectoryName), "/fAC_"));
 
   fACGenerateExecutionID(ExecutionId);
   strcat(ExecutionId, ".json");
@@ -601,7 +621,7 @@ void fACStoreResult() {
   fprintf(FP, "}\n");
 
   fclose(FP);
-
+#endif
 }
 
 
