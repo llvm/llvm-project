@@ -197,7 +197,7 @@ _LIBCPP_HIDE_FROM_ABI void __create_packed_storage(uint64_t& __types, __basic_fo
   int __shift = 0;
   (
       [&] {
-        basic_format_arg<_Context> __arg = __create_format_arg<_Context>(_VSTD::forward<_Args>(__args));
+        basic_format_arg<_Context> __arg = __create_format_arg<_Context>(__args);
         if (__shift != 0)
           __types |= static_cast<uint64_t>(__arg.__type_) << __shift;
         else
@@ -211,7 +211,7 @@ _LIBCPP_HIDE_FROM_ABI void __create_packed_storage(uint64_t& __types, __basic_fo
 
 template <class _Context, class... _Args>
 _LIBCPP_HIDE_FROM_ABI void __store_basic_format_arg(basic_format_arg<_Context>* __data, _Args&&... __args) noexcept {
-  ([&] { *__data++ = __create_format_arg<_Context>(_VSTD::forward<_Args>(__args)); }(), ...);
+  ([&] { *__data++ = __create_format_arg<_Context>(__args); }(), ...);
 }
 
 template <class _Context, size_t N>
@@ -230,12 +230,12 @@ struct __unpacked_format_arg_store {
 template <class _Context, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
   _LIBCPP_HIDE_FROM_ABI
-  __format_arg_store(_Args&&... __args) noexcept {
+  __format_arg_store(_Args&... __args) noexcept {
     if constexpr (sizeof...(_Args) != 0) {
       if constexpr (__format::__use_packed_format_arg_store(sizeof...(_Args)))
-        __format::__create_packed_storage(__storage.__types_, __storage.__values_, _VSTD::forward<_Args>(__args)...);
+        __format::__create_packed_storage(__storage.__types_, __storage.__values_, __args...);
       else
-        __format::__store_basic_format_arg<_Context>(__storage.__args_, _VSTD::forward<_Args>(__args)...);
+        __format::__store_basic_format_arg<_Context>(__storage.__args_, __args...);
     }
   }
 
