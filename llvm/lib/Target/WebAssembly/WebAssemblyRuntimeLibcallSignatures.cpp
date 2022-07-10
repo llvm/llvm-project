@@ -21,7 +21,6 @@
 #include "WebAssemblyRuntimeLibcallSignatures.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
-#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
 
@@ -482,10 +481,13 @@ struct RuntimeLibcallSignatureTable {
   }
 };
 
-ManagedStatic<RuntimeLibcallSignatureTable> RuntimeLibcallSignatures;
+RuntimeLibcallSignatureTable &getRuntimeLibcallSignatures() {
+  static RuntimeLibcallSignatureTable RuntimeLibcallSignatures;
+  return RuntimeLibcallSignatures;
+}
 
 // Maps libcall names to their RTLIB::Libcall number. Builds the map in a
-// constructor for use with ManagedStatic
+// constructor for use with a static variable
 struct StaticLibcallNameMap {
   StringMap<RTLIB::Libcall> Map;
   StaticLibcallNameMap() {
@@ -496,7 +498,8 @@ struct StaticLibcallNameMap {
     };
     for (const auto &NameLibcall : NameLibcalls) {
       if (NameLibcall.first != nullptr &&
-          RuntimeLibcallSignatures->Table[NameLibcall.second] != unsupported) {
+          getRuntimeLibcallSignatures().Table[NameLibcall.second] !=
+              unsupported) {
         assert(Map.find(NameLibcall.first) == Map.end() &&
                "duplicate libcall names in name map");
         Map[NameLibcall.first] = NameLibcall.second;
@@ -523,7 +526,7 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
   wasm::ValType PtrTy =
       Subtarget.hasAddr64() ? wasm::ValType::I64 : wasm::ValType::I32;
 
-  auto &Table = RuntimeLibcallSignatures->Table;
+  auto &Table = getRuntimeLibcallSignatures().Table;
   switch (Table[LC]) {
   case func:
     break;
@@ -885,14 +888,14 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
   }
 }
 
-static ManagedStatic<StaticLibcallNameMap> LibcallNameMap;
 // TODO: If the RTLIB::Libcall-taking flavor of GetSignature remains unsed
 // other than here, just roll its logic into this version.
 void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
                                StringRef Name,
                                SmallVectorImpl<wasm::ValType> &Rets,
                                SmallVectorImpl<wasm::ValType> &Params) {
-  auto &Map = LibcallNameMap->Map;
+  static StaticLibcallNameMap LibcallNameMap;
+  auto &Map = LibcallNameMap.Map;
   auto Val = Map.find(Name);
 #ifndef NDEBUG
   if (Val == Map.end()) {

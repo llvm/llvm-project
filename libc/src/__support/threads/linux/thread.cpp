@@ -75,7 +75,7 @@ struct Thread;
 // If different architecture in future requires higher alignment, then we
 // can add a platform specific alignment spec.
 struct alignas(STACK_ALIGNMENT) StartArgs {
-  Thread *thread;
+  ThreadAttributes *thread_attrib;
   ThreadRunner runner;
   void *arg;
 };
@@ -101,8 +101,7 @@ __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
 
 static void start_thread() __attribute__((noinline)) {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
-  auto *thread = start_args->thread;
-  auto *attrib = thread->attrib;
+  auto *attrib = start_args->thread_attrib;
   long retval;
   if (attrib->style == ThreadStyle::POSIX) {
     attrib->retval.posix_retval =
@@ -115,11 +114,11 @@ static void start_thread() __attribute__((noinline)) {
   }
 
   uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
-  if (!thread->attrib->detach_state.compare_exchange_strong(
+  if (!attrib->detach_state.compare_exchange_strong(
           joinable_state, uint32_t(DetachState::EXITING))) {
     // Thread is detached so cleanup the resources.
-    if (thread->attrib->owned_stack)
-      free_stack(thread->attrib->stack, thread->attrib->stack_size);
+    if (attrib->owned_stack)
+      free_stack(attrib->stack, attrib->stack_size);
   }
 
   __llvm_libc::syscall(SYS_exit, retval);
@@ -154,9 +153,6 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   adjusted_stack &= ~(uintptr_t(STACK_ALIGNMENT) - 1);
 
   auto *start_args = reinterpret_cast<StartArgs *>(adjusted_stack);
-  start_args->thread = this;
-  start_args->runner = runner;
-  start_args->arg = arg;
 
   attrib =
       reinterpret_cast<ThreadAttributes *>(adjusted_stack + sizeof(StartArgs));
@@ -166,6 +162,10 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   attrib->stack = stack;
   attrib->stack_size = size;
   attrib->owned_stack = owned_stack;
+
+  start_args->thread_attrib = attrib;
+  start_args->runner = runner;
+  start_args->arg = arg;
 
   auto clear_tid = reinterpret_cast<cpp::Atomic<FutexWordType> *>(
       adjusted_stack + sizeof(StartArgs) + sizeof(ThreadAttributes));

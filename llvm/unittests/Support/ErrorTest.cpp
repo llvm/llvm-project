@@ -12,7 +12,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
@@ -1039,8 +1038,10 @@ public:
   }
 };
 
-static llvm::ManagedStatic<TestErrorCategory> TestErrCategory;
-const std::error_category &TErrorCategory() { return *TestErrCategory; }
+const std::error_category &TErrorCategory() {
+  static TestErrorCategory TestErrCategory;
+  return TestErrCategory;
+}
 
 char TestDebugError::ID;
 

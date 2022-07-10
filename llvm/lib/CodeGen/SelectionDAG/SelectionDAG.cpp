@@ -60,7 +60,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -10767,19 +10766,19 @@ namespace {
 
 } // end anonymous namespace
 
-static ManagedStatic<std::set<EVT, EVT::compareRawBits>> EVTs;
-static ManagedStatic<EVTArray> SimpleVTArray;
-static ManagedStatic<sys::SmartMutex<true>> VTMutex;
-
 /// getValueTypeList - Return a pointer to the specified value type.
 ///
 const EVT *SDNode::getValueTypeList(EVT VT) {
+  static std::set<EVT, EVT::compareRawBits> EVTs;
+  static EVTArray SimpleVTArray;
+  static sys::SmartMutex<true> VTMutex;
+
   if (VT.isExtended()) {
-    sys::SmartScopedLock<true> Lock(*VTMutex);
-    return &(*EVTs->insert(VT).first);
+    sys::SmartScopedLock<true> Lock(VTMutex);
+    return &(*EVTs.insert(VT).first);
   }
   assert(VT.getSimpleVT() < MVT::VALUETYPE_SIZE && "Value type out of range!");
-  return &SimpleVTArray->VTs[VT.getSimpleVT().SimpleTy];
+  return &SimpleVTArray.VTs[VT.getSimpleVT().SimpleTy];
 }
 
 /// hasNUsesOfValue - Return true if there are exactly NUSES uses of the

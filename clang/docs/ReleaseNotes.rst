@@ -181,6 +181,8 @@ Bug Fixes
   emitted as a dynamic initializer. Previously the variable would
   incorrectly be zero-initialized. In contexts where a dynamic
   initializer is not allowed this is now diagnosed as an error.
+- Clang now correctly emits symbols for implicitly instantiated constexpr
+  template function. Fixes `Issue 55560 <https://github.com/llvm/llvm-project/issues/55560>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
