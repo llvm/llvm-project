@@ -942,9 +942,6 @@ struct AAPointerInfoImpl
   using BaseTy = StateWrapper<AA::PointerInfo::State, AAPointerInfo>;
   AAPointerInfoImpl(const IRPosition &IRP, Attributor &A) : BaseTy(IRP) {}
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override { AAPointerInfo::initialize(A); }
-
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     return std::string("PointerInfo ") +
@@ -1200,9 +1197,6 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   using AccessKind = AAPointerInfo::AccessKind;
   AAPointerInfoFloating(const IRPosition &IRP, Attributor &A)
       : AAPointerInfoImpl(IRP, A) {}
-
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override { AAPointerInfoImpl::initialize(A); }
 
   /// Deal with an access and signal if it was handled successfully.
   bool handleAccess(Attributor &A, Instruction &I, Value &Ptr,
