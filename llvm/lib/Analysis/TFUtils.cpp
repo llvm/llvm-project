@@ -18,6 +18,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -48,17 +49,19 @@ using TFStatusPtr = std::unique_ptr<TF_Status, decltype(&TF_DeleteStatus)>;
 
 struct TFInitializer {
   TFInitializer() {
+    assert(!IsInitialized && "TFInitialized should be called only once");
     int Argc = 1;
     const char *Name = "";
     const char **NamePtr = &Name;
     TF_InitMain(Name, &Argc, const_cast<char ***>(&NamePtr));
+    IsInitialized = true;
   }
+  bool IsInitialized = false;
 };
 
-bool ensureInitTF() {
-  static TFInitializer TFLibInitializer;
-  return true;
-}
+llvm::ManagedStatic<TFInitializer> TFLibInitializer;
+
+bool ensureInitTF() { return TFLibInitializer->IsInitialized; }
 
 TFGraphPtr createTFGraph() {
   return TFGraphPtr(TF_NewGraph(), &TF_DeleteGraph);

@@ -9,6 +9,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 #include <system_error>
 
 using namespace llvm;
@@ -45,10 +46,7 @@ namespace {
 
 }
 
-ErrorErrorCategory &getErrorErrorCat() {
-  static ErrorErrorCategory ErrorErrorCat;
-  return ErrorErrorCat;
-}
+static ManagedStatic<ErrorErrorCategory> ErrorErrorCat;
 
 namespace llvm {
 
@@ -73,19 +71,19 @@ void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner) {
 
 std::error_code ErrorList::convertToErrorCode() const {
   return std::error_code(static_cast<int>(ErrorErrorCode::MultipleErrors),
-                         getErrorErrorCat());
+                         *ErrorErrorCat);
 }
 
 std::error_code inconvertibleErrorCode() {
   return std::error_code(static_cast<int>(ErrorErrorCode::InconvertibleError),
-                         getErrorErrorCat());
+                         *ErrorErrorCat);
 }
 
 std::error_code FileError::convertToErrorCode() const {
   std::error_code NestedEC = Err->convertToErrorCode();
   if (NestedEC == inconvertibleErrorCode())
     return std::error_code(static_cast<int>(ErrorErrorCode::FileError),
-                           getErrorErrorCat());
+                           *ErrorErrorCat);
   return NestedEC;
 }
 

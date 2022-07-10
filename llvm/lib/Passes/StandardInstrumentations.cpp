@@ -901,11 +901,10 @@ bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
 
 void OptBisectInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  if (!getOptBisector().isEnabled())
+  if (!OptBisector->isEnabled())
     return;
   PIC.registerShouldRunOptionalPassCallback([](StringRef PassID, Any IR) {
-    return isIgnored(PassID) ||
-           getOptBisector().checkPass(PassID, getIRName(IR));
+    return isIgnored(PassID) || OptBisector->checkPass(PassID, getIRName(IR));
   });
 }
 

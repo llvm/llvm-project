@@ -1,5 +1,6 @@
 #include "llvm/DebugInfo/PDB/DIA/DIAError.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -30,9 +31,7 @@ public:
   }
 };
 
-const std::error_category &llvm::pdb::DIAErrCategory() {
-  static DIAErrorCategory DIACategory;
-  return DIACategory;
-}
+static llvm::ManagedStatic<DIAErrorCategory> DIACategory;
+const std::error_category &llvm::pdb::DIAErrCategory() { return *DIACategory; }
 
 char DIAError::ID;

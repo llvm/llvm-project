@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 #include <string>
 
 using namespace llvm;
@@ -49,9 +50,7 @@ public:
 };
 } // namespace
 
-const std::error_category &llvm::msf::MSFErrCategory() {
-  static MSFErrorCategory MSFCategory;
-  return MSFCategory;
-}
+static llvm::ManagedStatic<MSFErrorCategory> MSFCategory;
+const std::error_category &llvm::msf::MSFErrCategory() { return *MSFCategory; }
 
 char MSFError::ID;

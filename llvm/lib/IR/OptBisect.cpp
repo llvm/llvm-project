@@ -23,7 +23,7 @@ using namespace llvm;
 static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
                                    cl::init(OptBisect::Disabled), cl::Optional,
                                    cl::cb<void, int>([](int Limit) {
-                                     llvm::getOptBisector().setLimit(Limit);
+                                     llvm::OptBisector->setLimit(Limit);
                                    }),
                                    cl::desc("Maximum optimization to perform"));
 
@@ -52,7 +52,4 @@ bool OptBisect::checkPass(const StringRef PassName,
 
 const int OptBisect::Disabled;
 
-OptBisect &llvm::getOptBisector() {
-  static OptBisect OptBisector;
-  return OptBisector;
-}
+ManagedStatic<OptBisect> llvm::OptBisector;

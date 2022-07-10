@@ -12,6 +12,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
 #include <mutex>
@@ -122,10 +123,7 @@ private:
 
 /// Lock used to serialize all jit registration events, since they
 /// modify global variables.
-sys::Mutex &getJITDebugLock() {
-  static sys::Mutex JITDebugLock;
-  return JITDebugLock;
-}
+ManagedStatic<sys::Mutex> JITDebugLock;
 
 /// Do the registration.
 void NotifyDebugger(jit_code_entry* JITCodeEntry) {
@@ -145,7 +143,7 @@ void NotifyDebugger(jit_code_entry* JITCodeEntry) {
 
 GDBJITRegistrationListener::~GDBJITRegistrationListener() {
   // Free all registered object files.
-  std::lock_guard<llvm::sys::Mutex> locked(getJITDebugLock());
+  std::lock_guard<llvm::sys::Mutex> locked(*JITDebugLock);
   for (RegisteredObjectBufferMap::iterator I = ObjectBufferMap.begin(),
                                            E = ObjectBufferMap.end();
        I != E; ++I) {
@@ -169,7 +167,7 @@ void GDBJITRegistrationListener::notifyObjectLoaded(
   const char *Buffer = DebugObj.getBinary()->getMemoryBufferRef().getBufferStart();
   size_t      Size = DebugObj.getBinary()->getMemoryBufferRef().getBufferSize();
 
-  std::lock_guard<llvm::sys::Mutex> locked(getJITDebugLock());
+  std::lock_guard<llvm::sys::Mutex> locked(*JITDebugLock);
   assert(ObjectBufferMap.find(K) == ObjectBufferMap.end() &&
          "Second attempt to perform debug registration.");
   jit_code_entry* JITCodeEntry = new jit_code_entry();
@@ -188,7 +186,7 @@ void GDBJITRegistrationListener::notifyObjectLoaded(
 }
 
 void GDBJITRegistrationListener::notifyFreeingObject(ObjectKey K) {
-  std::lock_guard<llvm::sys::Mutex> locked(getJITDebugLock());
+  std::lock_guard<llvm::sys::Mutex> locked(*JITDebugLock);
   RegisteredObjectBufferMap::iterator I = ObjectBufferMap.find(K);
 
   if (I != ObjectBufferMap.end()) {
@@ -230,13 +228,14 @@ void GDBJITRegistrationListener::deregisterObjectInternal(
   JITCodeEntry = nullptr;
 }
 
+llvm::ManagedStatic<GDBJITRegistrationListener> GDBRegListener;
+
 } // end namespace
 
 namespace llvm {
 
 JITEventListener* JITEventListener::createGDBRegistrationListener() {
-  static GDBJITRegistrationListener GDBRegListener;
-  return &GDBRegListener;
+  return &*GDBRegListener;
 }
 
 } // namespace llvm
