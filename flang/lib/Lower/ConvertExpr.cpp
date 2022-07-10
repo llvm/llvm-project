@@ -4266,7 +4266,7 @@ private:
     auto [iterSpace, insPt] = genIterSpace(resultTy);
     auto exv = f(iterSpace);
     iterSpace.setElement(std::move(exv));
-    auto lambda = ccStoreToDest.hasValue()
+    auto lambda = ccStoreToDest
                       ? ccStoreToDest.getValue()
                       : defaultStoreToDestination(/*substring=*/nullptr);
     mlir::Value updVal = fir::getBase(lambda(iterSpace));
@@ -4603,7 +4603,7 @@ private:
     }
 
     // Generate the lazy mask allocation, if one was given.
-    if (ccPrelude.hasValue())
+    if (ccPrelude)
       ccPrelude.getValue()(shape);
 
     // Now handle the implicit loops.
@@ -4663,7 +4663,7 @@ private:
   fir::ArrayLoadOp
   createAndLoadSomeArrayTemp(mlir::Type type,
                              llvm::ArrayRef<mlir::Value> shape) {
-    if (ccLoadDest.hasValue())
+    if (ccLoadDest)
       return ccLoadDest.getValue()(shape);
     auto seqTy = type.dyn_cast<fir::SequenceType>();
     assert(seqTy && "must be an array");
@@ -5934,7 +5934,7 @@ private:
       // always loaded at the beginning of the statement and merged at the
       // end.
       destination = arrLoad;
-      auto lambda = ccStoreToDest.hasValue()
+      auto lambda = ccStoreToDest
                         ? ccStoreToDest.getValue()
                         : defaultStoreToDestination(components.substring);
       return [=](IterSpace iters) -> ExtValue { return lambda(iters); };
@@ -6573,7 +6573,7 @@ private:
 
     // Return the continuation.
     if (fir::isa_char(seqTy.getEleTy())) {
-      if (charLen.hasValue()) {
+      if (charLen) {
         auto len = builder.create<fir::LoadOp>(loc, charLen.getValue());
         return genarr(fir::CharArrayBoxValue{mem, len, extents});
       }
@@ -7625,7 +7625,7 @@ void Fortran::lower::createArrayLoads(
   auto genLoad = [&](const auto *x) -> fir::ArrayLoadOp {
     return genArrayLoad(loc, converter, builder, x, symMap, stmtCtx);
   };
-  if (esp.lhsBases[counter].hasValue()) {
+  if (esp.lhsBases[counter]) {
     auto &base = esp.lhsBases[counter].getValue();
     auto load = std::visit(genLoad, base);
     esp.initialArgs.push_back(load);
@@ -7650,7 +7650,7 @@ void Fortran::lower::createArrayMergeStores(
                                              load.getMemref(), load.getSlice(),
                                              load.getTypeparams());
     }
-  if (esp.loopCleanup.hasValue()) {
+  if (esp.loopCleanup) {
     esp.loopCleanup.getValue()(builder);
     esp.loopCleanup = llvm::None;
   }

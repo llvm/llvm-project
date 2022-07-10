@@ -1294,7 +1294,7 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
 }
 
 void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
-  if (getLinkName().hasValue())
+  if (getLinkName())
     p << ' ' << getLinkName().getValue();
   p << ' ';
   p.printAttributeWithoutType(getSymrefAttr());
