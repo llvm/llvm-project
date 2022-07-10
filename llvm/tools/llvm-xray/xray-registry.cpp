@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "xray-registry.h"
 
+#include "llvm/Support/ManagedStatic.h"
 #include <unordered_map>
 
 namespace llvm {
@@ -18,22 +19,19 @@ namespace xray {
 
 using HandlerType = std::function<Error()>;
 
-static std::unordered_map<cl::SubCommand *, HandlerType> &getCommands() {
-  static std::unordered_map<cl::SubCommand *, HandlerType> Commands;
-  return Commands;
-}
+ManagedStatic<std::unordered_map<cl::SubCommand *, HandlerType>> Commands;
 
 CommandRegistration::CommandRegistration(cl::SubCommand *SC,
                                          HandlerType Command) {
-  assert(getCommands().count(SC) == 0 &&
+  assert(Commands->count(SC) == 0 &&
          "Attempting to overwrite a command handler");
   assert(Command && "Attempting to register an empty std::function<Error()>");
-  getCommands()[SC] = Command;
+  (*Commands)[SC] = Command;
 }
 
 HandlerType dispatch(cl::SubCommand *SC) {
-  auto It = getCommands().find(SC);
-  assert(It != getCommands().end() &&
+  auto It = Commands->find(SC);
+  assert(It != Commands->end() &&
          "Attempting to dispatch on un-registered SubCommand.");
   return It->second;
 }

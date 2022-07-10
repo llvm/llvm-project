@@ -15,15 +15,21 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Pass.h"
 #include "llvm/PassInfo.h"
+#include "llvm/Support/ManagedStatic.h"
 #include <cassert>
 #include <memory>
 #include <utility>
 
 using namespace llvm;
 
+// FIXME: We use ManagedStatic to erase the pass registrar on shutdown.
+// Unfortunately, passes are registered with static ctors, and having
+// llvm_shutdown clear this map prevents successful resurrection after
+// llvm_shutdown is run.  Ideally we should find a solution so that we don't
+// leak the map, AND can still resurrect after shutdown.
+static ManagedStatic<PassRegistry> PassRegistryObj;
 PassRegistry *PassRegistry::getPassRegistry() {
-  static PassRegistry PassRegistryObj;
-  return &PassRegistryObj;
+  return &*PassRegistryObj;
 }
 
 //===----------------------------------------------------------------------===//

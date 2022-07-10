@@ -39,6 +39,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SwapByteOrder.h"
@@ -176,9 +177,10 @@ class InstrProfErrorCategoryType : public std::error_category {
 
 } // end anonymous namespace
 
+static ManagedStatic<InstrProfErrorCategoryType> ErrorCategory;
+
 const std::error_category &llvm::instrprof_category() {
-  static InstrProfErrorCategoryType ErrorCategory;
-  return ErrorCategory;
+  return *ErrorCategory;
 }
 
 namespace {

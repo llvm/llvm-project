@@ -47,6 +47,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -191,11 +192,7 @@ static cl::opt<std::string> RemarksFormat(
     cl::value_desc("format"), cl::init("yaml"));
 
 namespace {
-
-std::vector<std::string> &getRunPassNames() {
-  static std::vector<std::string> RunPassNames;
-  return RunPassNames;
-}
+static ManagedStatic<std::vector<std::string>> RunPassNames;
 
 struct RunPassOption {
   void operator=(const std::string &Val) const {
@@ -204,7 +201,7 @@ struct RunPassOption {
     SmallVector<StringRef, 8> PassNames;
     StringRef(Val).split(PassNames, ',', -1, false);
     for (auto PassName : PassNames)
-      getRunPassNames().push_back(std::string(PassName));
+      RunPassNames->push_back(std::string(PassName));
   }
 };
 }
@@ -679,7 +676,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     // Construct a custom pass pipeline that starts after instruction
     // selection.
-    if (!getRunPassNames().empty()) {
+    if (!RunPassNames->empty()) {
       if (!MIR) {
         WithColor::warning(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
@@ -697,7 +694,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       PM.add(&TPC);
       PM.add(MMIWP);
       TPC.printAndVerify("");
-      for (const std::string &RunPassName : getRunPassNames()) {
+      for (const std::string &RunPassName : *RunPassNames) {
         if (addPass(PM, argv0, RunPassName, TPC))
           return 1;
       }
