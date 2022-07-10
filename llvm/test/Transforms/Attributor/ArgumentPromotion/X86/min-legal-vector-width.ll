@@ -767,7 +767,7 @@ attributes #5 = { argmemonly nounwind }
 ; IS__TUNIT_OPM: attributes #[[ATTR2]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; IS__TUNIT_OPM: attributes #[[ATTR3]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
 ; IS__TUNIT_OPM: attributes #[[ATTR4]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx2" }
-; IS__TUNIT_OPM: attributes #[[ATTR5:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__TUNIT_OPM: attributes #[[ATTR5:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
 ; IS__TUNIT_OPM: attributes #[[ATTR6]] = { willreturn writeonly }
 ; IS__TUNIT_OPM: attributes #[[ATTR7]] = { nofree nosync nounwind willreturn }
 ;.
@@ -775,7 +775,7 @@ attributes #5 = { argmemonly nounwind }
 ; IS__TUNIT_NPM: attributes #[[ATTR1]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; IS__TUNIT_NPM: attributes #[[ATTR2]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; IS__TUNIT_NPM: attributes #[[ATTR3]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; IS__TUNIT_NPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__TUNIT_NPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
 ; IS__TUNIT_NPM: attributes #[[ATTR5]] = { willreturn writeonly }
 ; IS__TUNIT_NPM: attributes #[[ATTR6]] = { nofree nosync nounwind willreturn }
 ;.
@@ -784,7 +784,7 @@ attributes #5 = { argmemonly nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR2]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; IS__CGSCC_OPM: attributes #[[ATTR3]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
 ; IS__CGSCC_OPM: attributes #[[ATTR4]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx2" }
-; IS__CGSCC_OPM: attributes #[[ATTR5:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR5:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR6]] = { willreturn writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nounwind willreturn }
 ;.
@@ -792,7 +792,7 @@ attributes #5 = { argmemonly nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; IS__CGSCC_NPM: attributes #[[ATTR2]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; IS__CGSCC_NPM: attributes #[[ATTR3]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; IS__CGSCC_NPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR5]] = { willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nounwind willreturn }
 ;.

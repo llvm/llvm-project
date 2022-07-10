@@ -19,5 +19,5 @@ define void @test() {
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree nounwind willreturn }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn }
 ;.

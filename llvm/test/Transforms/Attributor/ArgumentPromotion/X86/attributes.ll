@@ -32,7 +32,7 @@ bb:
 }
 
 define void @no_promote(<4 x i64>* %arg) #1 {
-; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn uwtable
+; IS__TUNIT_OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@no_promote
 ; IS__TUNIT_OPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
@@ -45,7 +45,7 @@ define void @no_promote(<4 x i64>* %arg) #1 {
 ; IS__TUNIT_OPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn uwtable
+; IS__TUNIT_NPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@no_promote
 ; IS__TUNIT_NPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
@@ -194,14 +194,14 @@ attributes #1 = { nounwind uwtable }
 attributes #2 = { argmemonly nounwind }
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "target-features"="+avx2" }
-; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn uwtable }
-; IS__TUNIT____: attributes #[[ATTR2:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree norecurse nosync nounwind willreturn uwtable }
+; IS__TUNIT____: attributes #[[ATTR2:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR3:[0-9]+]] = { willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR4:[0-9]+]] = { nofree nosync nounwind willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "target-features"="+avx2" }
 ; IS__CGSCC____: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn uwtable }
-; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR3:[0-9]+]] = { willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR4:[0-9]+]] = { nounwind willreturn }
 ;.

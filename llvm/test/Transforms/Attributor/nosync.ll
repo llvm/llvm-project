@@ -204,21 +204,21 @@ define i32 @scc1(i32* %0) noinline nounwind uwtable {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nounwind uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@scc1
 ; IS__TUNIT____-SAME: (i32* nofree [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
-; IS__TUNIT____-NEXT:    tail call void @scc2(i32* nofree [[TMP0]]) #[[ATTR18:[0-9]+]]
-; IS__TUNIT____-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(i32* nofree align 4 [[TMP0]]) #[[ATTR18]]
+; IS__TUNIT____-NEXT:    tail call void @scc2(i32* nofree [[TMP0]]) #[[ATTR19:[0-9]+]]
+; IS__TUNIT____-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(i32* nofree align 4 [[TMP0]]) #[[ATTR19]]
 ; IS__TUNIT____-NEXT:    ret i32 [[VAL]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: argmemonly nofree noinline nounwind uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@scc1
 ; IS__CGSCC_OPM-SAME: (i32* nofree [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    tail call void @scc2(i32* nofree [[TMP0]]) #[[ATTR18:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(i32* nofree noundef align 4 [[TMP0]]) #[[ATTR19:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    tail call void @scc2(i32* nofree [[TMP0]]) #[[ATTR19:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(i32* nofree noundef align 4 [[TMP0]]) #[[ATTR20:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[VAL]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: argmemonly nofree noinline nounwind uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@scc1
 ; IS__CGSCC_NPM-SAME: (i32* nofree [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    tail call void @scc2(i32* nofree [[TMP0]]) #[[ATTR18:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    tail call void @scc2(i32* nofree [[TMP0]]) #[[ATTR19:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    [[VAL:%.*]] = tail call i32 @volatile_load(i32* nofree noundef align 4 [[TMP0]]) #[[ATTR14:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[VAL]]
 ;
@@ -231,7 +231,7 @@ define void @scc2(i32* %0) noinline nounwind uwtable {
 ; CHECK: Function Attrs: argmemonly nofree noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@scc2
 ; CHECK-SAME: (i32* nofree [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @scc1(i32* nofree [[TMP0]]) #[[ATTR18:[0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @scc1(i32* nofree [[TMP0]]) #[[ATTR19:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call i32 @scc1(i32* %0);
@@ -358,16 +358,16 @@ declare void @llvm.memset(i8* %dest, i8 %val, i32 %len, i1 %isvolatile)
 ; It is odd to add nocapture but a result of the llvm.memcpy nocapture.
 ;
 define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
-; NOT_CGSCC_OPM: Function Attrs: argmemonly nofree nounwind willreturn
+; NOT_CGSCC_OPM: Function Attrs: argmemonly nofree norecurse nounwind willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@memcpy_volatile
 ; NOT_CGSCC_OPM-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8* nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR10:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR19:[0-9]+]]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR20:[0-9]+]]
 ; NOT_CGSCC_OPM-NEXT:    ret i32 4
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nounwind willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly nofree norecurse nounwind willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@memcpy_volatile
 ; IS__CGSCC_OPM-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8* nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR10:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR20:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR21:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy(i8* %ptr1, i8* %ptr2, i32 8, i1 1)
@@ -379,16 +379,16 @@ define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
 ; It is odd to add nocapture but a result of the llvm.memset nocapture.
 ;
 define i32 @memset_non_volatile(i8* %ptr1, i8 %val) {
-; NOT_CGSCC_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
+; NOT_CGSCC_OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@memset_non_volatile
 ; NOT_CGSCC_OPM-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR11:[0-9]+]] {
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR20:[0-9]+]]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR21:[0-9]+]]
 ; NOT_CGSCC_OPM-NEXT:    ret i32 4
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
+; IS__CGSCC_OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@memset_non_volatile
 ; IS__CGSCC_OPM-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR11:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR21:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR22:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 4
 ;
   call void @llvm.memset(i8* %ptr1, i8 %val, i32 8, i1 0)
@@ -457,13 +457,13 @@ define float @cos_test2(float %x) {
 ; NOT_CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@cos_test2
 ; NOT_CGSCC_OPM-SAME: (float [[X:%.*]]) #[[ATTR15]] {
-; NOT_CGSCC_OPM-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR21:[0-9]+]]
+; NOT_CGSCC_OPM-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR22:[0-9]+]]
 ; NOT_CGSCC_OPM-NEXT:    ret float [[C]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@cos_test2
 ; IS__CGSCC_OPM-SAME: (float [[X:%.*]]) #[[ATTR15]] {
-; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR22:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR23:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret float [[C]]
 ;
   %c = call float @llvm.cos(float %x)
@@ -480,18 +480,19 @@ define float @cos_test2(float %x) {
 ; NOT_CGSCC_OPM: attributes #[[ATTR7]] = { nofree norecurse nounwind }
 ; NOT_CGSCC_OPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn }
 ; NOT_CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
-; NOT_CGSCC_OPM: attributes #[[ATTR10]] = { argmemonly nofree nounwind willreturn }
-; NOT_CGSCC_OPM: attributes #[[ATTR11]] = { argmemonly nofree nosync nounwind willreturn writeonly }
+; NOT_CGSCC_OPM: attributes #[[ATTR10]] = { argmemonly nofree norecurse nounwind willreturn }
+; NOT_CGSCC_OPM: attributes #[[ATTR11]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; NOT_CGSCC_OPM: attributes #[[ATTR12:[0-9]+]] = { convergent readnone }
 ; NOT_CGSCC_OPM: attributes #[[ATTR13]] = { readnone }
 ; NOT_CGSCC_OPM: attributes #[[ATTR14]] = { nounwind }
 ; NOT_CGSCC_OPM: attributes #[[ATTR15]] = { nofree norecurse nosync nounwind readnone willreturn }
-; NOT_CGSCC_OPM: attributes #[[ATTR16:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
-; NOT_CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
-; NOT_CGSCC_OPM: attributes #[[ATTR18]] = { nofree nounwind }
-; NOT_CGSCC_OPM: attributes #[[ATTR19]] = { willreturn }
-; NOT_CGSCC_OPM: attributes #[[ATTR20]] = { willreturn writeonly }
-; NOT_CGSCC_OPM: attributes #[[ATTR21]] = { readnone willreturn }
+; NOT_CGSCC_OPM: attributes #[[ATTR16:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn }
+; NOT_CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
+; NOT_CGSCC_OPM: attributes #[[ATTR18:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; NOT_CGSCC_OPM: attributes #[[ATTR19]] = { nofree nounwind }
+; NOT_CGSCC_OPM: attributes #[[ATTR20]] = { willreturn }
+; NOT_CGSCC_OPM: attributes #[[ATTR21]] = { willreturn writeonly }
+; NOT_CGSCC_OPM: attributes #[[ATTR22]] = { readnone willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind optsize readnone ssp willreturn uwtable }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn uwtable }
@@ -503,17 +504,18 @@ define float @cos_test2(float %x) {
 ; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nofree norecurse nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR10]] = { argmemonly nofree nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR11]] = { argmemonly nofree nosync nounwind willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR10]] = { argmemonly nofree norecurse nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR11]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR12:[0-9]+]] = { convergent readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR13]] = { readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR16:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR18]] = { nofree nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR19]] = { nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR20]] = { willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR21]] = { willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR22]] = { readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR16:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR18:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR19]] = { nofree nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR20]] = { nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR21]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR22]] = { willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR23]] = { readnone willreturn }
 ;.
