@@ -21,13 +21,12 @@ class Error;
 class StringRef;
 
 namespace compression {
-
 namespace zlib {
 
-static constexpr int NoCompression = 0;
-static constexpr int BestSpeedCompression = 1;
-static constexpr int DefaultCompression = 6;
-static constexpr int BestSizeCompression = 9;
+constexpr int NoCompression = 0;
+constexpr int BestSpeedCompression = 1;
+constexpr int DefaultCompression = 6;
+constexpr int BestSizeCompression = 9;
 
 bool isAvailable();
 
