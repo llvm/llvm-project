@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "./AffineStructuresParser.h"
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Parser/Parser.h"
 
 using namespace mlir;
 using namespace presburger;

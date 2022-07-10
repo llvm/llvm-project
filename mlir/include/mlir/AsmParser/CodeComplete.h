@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_PARSER_CODECOMPLETE_H
-#define MLIR_PARSER_CODECOMPLETE_H
+#ifndef MLIR_ASMPARSER_CODECOMPLETE_H
+#define MLIR_ASMPARSER_CODECOMPLETE_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringMap.h"
@@ -75,4 +75,4 @@ private:
 };
 } // namespace mlir
 
-#endif // MLIR_PARSER_CODECOMPLETE_H
+#endif // MLIR_ASMPARSER_CODECOMPLETE_H

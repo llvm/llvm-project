@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LIB_PARSER_LEXER_H
-#define MLIR_LIB_PARSER_LEXER_H
+#ifndef MLIR_LIB_ASMPARSER_LEXER_H
+#define MLIR_LIB_ASMPARSER_LEXER_H
 
 #include "Token.h"
-#include "mlir/Parser/Parser.h"
+#include "mlir/AsmParser/AsmParser.h"
 
 namespace mlir {
 class Location;
@@ -79,4 +79,4 @@ private:
 
 } // namespace mlir
 
-#endif // MLIR_LIB_PARSER_LEXER_H
+#endif // MLIR_LIB_ASMPARSER_LEXER_H

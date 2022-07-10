@@ -6,14 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LIB_PARSER_PARSERSTATE_H
-#define MLIR_LIB_PARSER_PARSERSTATE_H
+#ifndef MLIR_LIB_ASMPARSER_PARSERSTATE_H
+#define MLIR_LIB_ASMPARSER_PARSERSTATE_H
 
 #include "Lexer.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
+class OpAsmDialectInterface;
+
 namespace detail {
 
 //===----------------------------------------------------------------------===//
@@ -82,4 +85,4 @@ struct ParserState {
 } // namespace detail
 } // namespace mlir
 
-#endif // MLIR_LIB_PARSER_PARSERSTATE_H
+#endif // MLIR_LIB_ASMPARSER_PARSERSTATE_H

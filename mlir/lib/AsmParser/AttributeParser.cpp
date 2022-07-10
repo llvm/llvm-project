@@ -13,12 +13,12 @@
 #include "Parser.h"
 
 #include "AsmParserImpl.h"
+#include "mlir/AsmParser/AsmParserState.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Parser/AsmParserState.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
 

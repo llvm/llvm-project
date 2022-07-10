@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LIB_PARSER_PARSER_H
-#define MLIR_LIB_PARSER_PARSER_H
+#ifndef MLIR_LIB_ASMPARSER_PARSER_H
+#define MLIR_LIB_ASMPARSER_PARSER_H
 
 #include "ParserState.h"
 #include "mlir/IR/Builders.h"
@@ -345,4 +345,4 @@ protected:
 } // namespace detail
 } // namespace mlir
 
-#endif // MLIR_LIB_PARSER_PARSER_H
+#endif // MLIR_LIB_ASMPARSER_PARSER_H
