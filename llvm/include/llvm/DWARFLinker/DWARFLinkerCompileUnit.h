@@ -182,6 +182,10 @@ public:
   /// offset \p PCOffset.
   void addFunctionRange(uint64_t LowPC, uint64_t HighPC, int64_t PCOffset);
 
+  /// Check whether specified address range \p LowPC \p HighPC
+  /// overlaps with existing function ranges.
+  bool overlapsWithFunctionRanges(uint64_t LowPC, uint64_t HighPC);
+
   /// Keep track of a DW_AT_range attribute that we will need to patch up later.
   void noteRangeAttribute(const DIE &Die, PatchLocation Attr);
 
