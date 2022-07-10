@@ -286,30 +286,10 @@ define void @arm_cmplx_mag_squared_f16_cse(half* nocapture readonly %pSrc, half*
 ; CHECK-NEXT:    and r5, r2, #7
 ; CHECK-NEXT:  .LBB2_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q0, [r0], #32
+; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
+; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vmul.f16 q0, q0, q0
-; CHECK-NEXT:    vldrh.u16 q2, [r0, #-16]
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vmovx.f16 s6, s1
-; CHECK-NEXT:    vmul.f16 q2, q2, q2
-; CHECK-NEXT:    vmovx.f16 s5, s2
-; CHECK-NEXT:    vins.f16 s4, s6
-; CHECK-NEXT:    vmovx.f16 s6, s3
-; CHECK-NEXT:    vins.f16 s5, s6
-; CHECK-NEXT:    vmovx.f16 s6, s8
-; CHECK-NEXT:    vmovx.f16 s12, s9
-; CHECK-NEXT:    vmovx.f16 s7, s10
-; CHECK-NEXT:    vins.f16 s6, s12
-; CHECK-NEXT:    vmovx.f16 s12, s11
-; CHECK-NEXT:    vins.f16 s2, s3
-; CHECK-NEXT:    vins.f16 s10, s11
-; CHECK-NEXT:    vins.f16 s8, s9
-; CHECK-NEXT:    vins.f16 s0, s1
-; CHECK-NEXT:    vmov.f32 s1, s2
-; CHECK-NEXT:    vins.f16 s7, s12
-; CHECK-NEXT:    vmov.f32 s2, s8
-; CHECK-NEXT:    vmov.f32 s3, s10
-; CHECK-NEXT:    vadd.f16 q0, q1, q0
+; CHECK-NEXT:    vfma.f16 q0, q1, q1
 ; CHECK-NEXT:    vstrb.8 q0, [r1], #16
 ; CHECK-NEXT:    le lr, .LBB2_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -413,8 +393,7 @@ define void @arm_cmplx_mag_squared_f32_cse(float* nocapture readonly %pSrc, floa
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    beq .LBB3_8
+; CHECK-NEXT:    cbz r2, .LBB3_8
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-NEXT:    cmp r2, #4
 ; CHECK-NEXT:    blo .LBB3_9
@@ -435,19 +414,10 @@ define void @arm_cmplx_mag_squared_f32_cse(float* nocapture readonly %pSrc, floa
 ; CHECK-NEXT:    and r5, r2, #3
 ; CHECK-NEXT:  .LBB3_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q1, [r0], #32
+; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
+; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vmul.f32 q0, q0, q0
-; CHECK-NEXT:    vmul.f32 q1, q1, q1
-; CHECK-NEXT:    vmov.f32 s8, s4
-; CHECK-NEXT:    vmov.f32 s9, s6
-; CHECK-NEXT:    vmov.f32 s4, s5
-; CHECK-NEXT:    vmov.f32 s5, s7
-; CHECK-NEXT:    vmov.f32 s10, s0
-; CHECK-NEXT:    vmov.f32 s11, s2
-; CHECK-NEXT:    vmov.f32 s6, s1
-; CHECK-NEXT:    vmov.f32 s7, s3
-; CHECK-NEXT:    vadd.f32 q0, q1, q2
+; CHECK-NEXT:    vfma.f32 q0, q1, q1
 ; CHECK-NEXT:    vstrb.8 q0, [r1], #16
 ; CHECK-NEXT:    le lr, .LBB3_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block

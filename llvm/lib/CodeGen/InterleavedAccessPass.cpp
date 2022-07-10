@@ -310,10 +310,11 @@ bool InterleavedAccess::lowerInterleavedLoad(
       Extracts.push_back(Extract);
       continue;
     }
-    auto *BI = dyn_cast<BinaryOperator>(User);
-    if (BI && BI->hasOneUse()) {
-      if (auto *SVI = dyn_cast<ShuffleVectorInst>(*BI->user_begin())) {
-        BinOpShuffles.insert(SVI);
+    if (auto *BI = dyn_cast<BinaryOperator>(User)) {
+      if (all_of(BI->users(),
+                 [](auto *U) { return isa<ShuffleVectorInst>(U); })) {
+        for (auto *SVI : BI->users())
+          BinOpShuffles.insert(cast<ShuffleVectorInst>(SVI));
         continue;
       }
     }
