@@ -378,13 +378,13 @@ static bool getPotentialCopiesOfMemoryValue(
 
     bool NullOnly = true;
     bool NullRequired = false;
-    auto CheckForNullOnlyAndUndef = [&](Optional<Value *> V) {
+    auto CheckForNullOnlyAndUndef = [&](Optional<Value *> V, bool IsExact) {
       if (!V || *V == nullptr)
         NullOnly = false;
       else if (isa<UndefValue>(*V))
         /* No op */;
       else if (isa<Constant>(*V) && cast<Constant>(*V)->isNullValue())
-        NullRequired = true;
+        NullRequired = !IsExact;
       else
         NullOnly = false;
     };
@@ -395,7 +395,7 @@ static bool getPotentialCopiesOfMemoryValue(
         LLVM_DEBUG(dbgs() << "Failed to get initial value: " << *Obj << "\n");
         return false;
       }
-      CheckForNullOnlyAndUndef(InitialValue);
+      CheckForNullOnlyAndUndef(InitialValue, /* IsExact */ true);
       NewCopies.push_back(InitialValue);
       NewCopyOrigins.push_back(nullptr);
     }
@@ -405,7 +405,7 @@ static bool getPotentialCopiesOfMemoryValue(
         return true;
       if (IsLoad && Acc.isWrittenValueYetUndetermined())
         return true;
-      CheckForNullOnlyAndUndef(Acc.getContent());
+      CheckForNullOnlyAndUndef(Acc.getContent(), IsExact);
       if (OnlyExact && !IsExact && !NullOnly &&
           !isa_and_nonnull<UndefValue>(Acc.getWrittenValue())) {
         LLVM_DEBUG(dbgs() << "Non exact access " << *Acc.getRemoteInst()
