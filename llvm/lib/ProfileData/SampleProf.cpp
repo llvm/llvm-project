@@ -20,7 +20,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <system_error>
@@ -98,10 +97,9 @@ class SampleProfErrorCategoryType : public std::error_category {
 
 } // end anonymous namespace
 
-static ManagedStatic<SampleProfErrorCategoryType> ErrorCategory;
-
 const std::error_category &llvm::sampleprof_category() {
-  return *ErrorCategory;
+  static SampleProfErrorCategoryType ErrorCategory;
+  return ErrorCategory;
 }
 
 void LineLocation::print(raw_ostream &OS) const {

@@ -69,7 +69,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -7446,10 +7445,9 @@ class BitcodeErrorCategoryType : public std::error_category {
 
 } // end anonymous namespace
 
-static ManagedStatic<BitcodeErrorCategoryType> ErrorCategory;
-
 const std::error_category &llvm::BitcodeErrorCategory() {
-  return *ErrorCategory;
+  static BitcodeErrorCategoryType ErrorCategory;
+  return ErrorCategory;
 }
 
 static Expected<StringRef> readBlobInRecord(BitstreamCursor &Stream,
