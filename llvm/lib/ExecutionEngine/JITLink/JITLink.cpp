@@ -12,7 +12,6 @@
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -41,8 +40,6 @@ public:
   }
 };
 
-static ManagedStatic<JITLinkerErrorCategory> JITLinkerErrorCategory;
-
 } // namespace
 
 namespace llvm {
@@ -53,7 +50,8 @@ char JITLinkError::ID = 0;
 void JITLinkError::log(raw_ostream &OS) const { OS << ErrMsg; }
 
 std::error_code JITLinkError::convertToErrorCode() const {
-  return std::error_code(GenericJITLinkError, *JITLinkerErrorCategory);
+  static JITLinkerErrorCategory TheJITLinkerErrorCategory;
+  return std::error_code(GenericJITLinkError, TheJITLinkerErrorCategory);
 }
 
 const char *getGenericEdgeKindName(Edge::Kind K) {

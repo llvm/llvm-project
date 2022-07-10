@@ -25,7 +25,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -897,10 +896,9 @@ std::string CoverageMapError::message() const {
   return getCoverageMapErrString(Err);
 }
 
-static ManagedStatic<CoverageMappingErrorCategoryType> ErrorCategory;
-
 const std::error_category &llvm::coverage::coveragemap_category() {
-  return *ErrorCategory;
+  static CoverageMappingErrorCategoryType ErrorCategory;
+  return ErrorCategory;
 }
 
 char CoverageMapError::ID = 0;

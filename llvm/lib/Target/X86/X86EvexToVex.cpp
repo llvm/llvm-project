@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
+#include <atomic>
 #include <cassert>
 #include <cstdint>
 

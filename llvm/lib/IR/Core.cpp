@@ -74,13 +74,16 @@ void LLVMDisposeMessage(char *Message) {
 
 /*===-- Operations on contexts --------------------------------------------===*/
 
-static ManagedStatic<LLVMContext> GlobalContext;
+static LLVMContext &getGlobalContext() {
+  static LLVMContext GlobalContext;
+  return GlobalContext;
+}
 
 LLVMContextRef LLVMContextCreate() {
   return wrap(new LLVMContext());
 }
 
-LLVMContextRef LLVMGetGlobalContext() { return wrap(&*GlobalContext); }
+LLVMContextRef LLVMGetGlobalContext() { return wrap(&getGlobalContext()); }
 
 void LLVMContextSetDiagnosticHandler(LLVMContextRef C,
                                      LLVMDiagnosticHandler Handler,
@@ -251,7 +254,7 @@ LLVMDiagnosticSeverity LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI) {
 /*===-- Operations on modules ---------------------------------------------===*/
 
 LLVMModuleRef LLVMModuleCreateWithName(const char *ModuleID) {
-  return wrap(new Module(ModuleID, *GlobalContext));
+  return wrap(new Module(ModuleID, getGlobalContext()));
 }
 
 LLVMModuleRef LLVMModuleCreateWithNameInContext(const char *ModuleID,
