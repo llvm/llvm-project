@@ -100,6 +100,8 @@ public:
 
   MCInst getNop() const override;
 
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
+
   // Return the M88kRegisterInfo, which this class owns.
   const M88kRegisterInfo &getRegisterInfo() const { return RI; }
 };

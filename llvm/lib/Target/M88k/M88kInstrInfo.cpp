@@ -557,3 +557,32 @@ MCInst M88kInstrInfo::getNop() const {
       .addReg(M88k::R0)
       .addReg(M88k::R0);
 }
+
+bool M88kInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  // This isn't needed since LOAD_STACK_GUARD is not used.
+  case TargetOpcode::LOAD_STACK_GUARD: {
+    MachineBasicBlock &MBB = *MI.getParent();
+    const Register Reg = MI.getOperand(0).getReg();
+    auto MMO = *MI.memoperands_begin();
+    const GlobalValue *GV = cast<GlobalValue>(MMO->getValue());
+
+    // Load stack guard value.
+    BuildMI(MBB, &MI, MI.getDebugLoc(), get(M88k::ORriu))
+        .addReg(Reg, RegState::Define | RegState::Dead)
+        .addReg(M88k::R0)
+        .addGlobalAddress(GV, 0, M88kII::MO_ABS_HI);
+    BuildMI(MBB, &MI, MI.getDebugLoc(), get(M88k::LDriw))
+        .addReg(Reg, RegState::Define)
+        .addReg(Reg, RegState::Kill)
+        .addGlobalAddress(GV, 0, M88kII::MO_ABS_LO)
+        .addMemOperand(MMO);
+
+    // Erase the LOAD_STACK_GUARD instruction.
+    MBB.erase(MI);
+    return true;
+  }
+  default:
+    return false;
+  }
+}
