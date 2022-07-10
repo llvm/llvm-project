@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LIB_PARSER_ASMPARSERIMPL_H
-#define MLIR_LIB_PARSER_ASMPARSERIMPL_H
+#ifndef MLIR_LIB_ASMPARSER_ASMPARSERIMPL_H
+#define MLIR_LIB_ASMPARSER_ASMPARSERIMPL_H
 
 #include "Parser.h"
+#include "mlir/AsmParser/AsmParserState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Parser/AsmParserState.h"
 
 namespace mlir {
 namespace detail {
@@ -566,4 +566,4 @@ protected:
 } // namespace detail
 } // namespace mlir
 
-#endif // MLIR_LIB_PARSER_ASMPARSERIMPL_H
+#endif // MLIR_LIB_ASMPARSER_ASMPARSERIMPL_H

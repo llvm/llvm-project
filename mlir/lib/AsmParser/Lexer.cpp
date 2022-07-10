@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Lexer.h"
+#include "mlir/AsmParser/CodeComplete.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Parser/CodeComplete.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/SourceMgr.h"

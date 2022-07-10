@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_PARSER_ASMPARSERSTATE_H
-#define MLIR_PARSER_ASMPARSERSTATE_H
+#ifndef MLIR_ASMPARSER_ASMPARSERSTATE_H
+#define MLIR_ASMPARSER_ASMPARSERSTATE_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -179,4 +179,4 @@ private:
 
 } // namespace mlir
 
-#endif // MLIR_PARSER_ASMPARSERSTATE_H
+#endif // MLIR_ASMPARSER_ASMPARSERSTATE_H
