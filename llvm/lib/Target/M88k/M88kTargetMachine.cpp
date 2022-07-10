@@ -58,18 +58,15 @@ std::string computeDataLayout(const Triple &TT, StringRef CPU, StringRef FS) {
   Ret += DataLayout::getManglingComponent(TT);
 
   // Pointers are 32 bit.
-  Ret += "-p:32:8:32";
+  Ret += "-p:32:32:32";
 
-  // Make sure that global data has at least 16 bits of alignment by
-  // default, so that we can refer to it using LARL.  We don't have any
-  // special requirements for stack variables though.
-  Ret += "-i1:8:16-i8:8:16";
+  // All scalar types are naturally aligned.
+  Ret += "-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64";
 
-  // 64-bit integers are naturally aligned.
-  Ret += "-i64:64";
+  // Floats and doubles are also naturally aligned.
+  Ret += "-f32:32:32-f64:64:64";
 
-  // 128-bit floats are aligned only to 64 bits.
-  Ret += "-f128:64";
+  // TODO: Add f80 for mc88110.
 
   // We prefer 16 bits of aligned for all globals; see above.
   Ret += "-a:8:16";
