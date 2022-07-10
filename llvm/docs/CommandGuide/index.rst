@@ -24,6 +24,7 @@ Basic Commands
    llvm-diff
    llvm-dis
    llvm-dwarfdump
+   llvm-dwarfutil
    llvm-lib
    llvm-libtool-darwin
    llvm-link
