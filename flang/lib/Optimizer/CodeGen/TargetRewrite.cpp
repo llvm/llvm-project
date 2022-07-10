@@ -316,7 +316,7 @@ public:
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
     if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
-      if (callOp.getCallee().hasValue()) {
+      if (callOp.getCallee()) {
         newCall = rewriter->create<A>(loc, callOp.getCallee().getValue(),
                                       newResTys, newOpers);
       } else {

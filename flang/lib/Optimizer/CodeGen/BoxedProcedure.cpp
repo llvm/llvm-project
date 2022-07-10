@@ -252,10 +252,10 @@ public:
             auto toTy = typeConverter.convertType(unwrapRefType(ty));
             bool isPinned = mem.getPinned();
             llvm::StringRef uniqName;
-            if (mem.getUniqName().hasValue())
+            if (mem.getUniqName())
               uniqName = mem.getUniqName().getValue();
             llvm::StringRef bindcName;
-            if (mem.getBindcName().hasValue())
+            if (mem.getBindcName())
               bindcName = mem.getBindcName().getValue();
             rewriter.replaceOpWithNewOp<AllocaOp>(
                 mem, toTy, uniqName, bindcName, isPinned, mem.getTypeparams(),
@@ -267,10 +267,10 @@ public:
             rewriter.setInsertionPoint(mem);
             auto toTy = typeConverter.convertType(unwrapRefType(ty));
             llvm::StringRef uniqName;
-            if (mem.getUniqName().hasValue())
+            if (mem.getUniqName())
               uniqName = mem.getUniqName().getValue();
             llvm::StringRef bindcName;
-            if (mem.getBindcName().hasValue())
+            if (mem.getBindcName())
               bindcName = mem.getBindcName().getValue();
             rewriter.replaceOpWithNewOp<AllocMemOp>(
                 mem, toTy, uniqName, bindcName, mem.getTypeparams(),

@@ -465,7 +465,7 @@ public:
 
   llvm::Optional<fir::ArrayLoadOp> getLhsLoad(size_t i) {
     assert(i < lhsBases.size());
-    if (lhsBases[counter].hasValue())
+    if (lhsBases[counter])
       return findBinding(lhsBases[counter].getValue());
     return llvm::None;
   }
