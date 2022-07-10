@@ -705,12 +705,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         break;
       }
 
-      // If the memory instruction already has an offset, make sure the combined
-      // offset is foldable.
+      // If the memory instruction already has an offset, don't allow folding.
       int64_t MemOffs =
           cast<ConstantSDNode>(User->getOperand(OffsetOpIdx))->getSExtValue();
-      MemOffs += Lo12;
-      if (!isInt<12>(MemOffs)) {
+      if (MemOffs != 0) {
         AllPointerUses = false;
         break;
       }
