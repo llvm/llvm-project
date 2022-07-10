@@ -2689,7 +2689,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
   // enumeration.
   mlir::LLVM::Linkage
   convertLinkage(llvm::Optional<llvm::StringRef> optLinkage) const {
-    if (optLinkage.hasValue()) {
+    if (optLinkage) {
       auto name = optLinkage.getValue();
       if (name == "internal")
         return mlir::LLVM::Linkage::Internal;
@@ -2746,7 +2746,7 @@ static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
                         llvm::Optional<mlir::ValueRange> destOps,
                         mlir::ConversionPatternRewriter &rewriter,
                         mlir::Block *newBlock) {
-  if (destOps.hasValue())
+  if (destOps)
     rewriter.create<mlir::LLVM::CondBrOp>(loc, cmp, dest, destOps.getValue(),
                                           newBlock, mlir::ValueRange());
   else
@@ -2756,7 +2756,7 @@ static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
 template <typename A, typename B>
 static void genBrOp(A caseOp, mlir::Block *dest, llvm::Optional<B> destOps,
                     mlir::ConversionPatternRewriter &rewriter) {
-  if (destOps.hasValue())
+  if (destOps)
     rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, destOps.getValue(),
                                                   dest);
   else
@@ -2881,15 +2881,14 @@ static void selectMatchAndRewrite(fir::LLVMTypeConverter &lowering, OP select,
     const mlir::Attribute &attr = cases[t];
     if (auto intAttr = attr.template dyn_cast<mlir::IntegerAttr>()) {
       destinations.push_back(dest);
-      destinationsOperands.push_back(destOps.hasValue() ? *destOps
-                                                        : mlir::ValueRange{});
+      destinationsOperands.push_back(destOps ? *destOps : mlir::ValueRange{});
       caseValues.push_back(intAttr.getInt());
       continue;
     }
     assert(attr.template dyn_cast_or_null<mlir::UnitAttr>());
     assert((t + 1 == conds) && "unit must be last");
     defaultDestination = dest;
-    defaultOperands = destOps.hasValue() ? *destOps : mlir::ValueRange{};
+    defaultOperands = destOps ? *destOps : mlir::ValueRange{};
   }
 
   // LLVM::SwitchOp takes a i32 type for the selector.
