@@ -74,22 +74,21 @@ define void @t1(i8* nocapture %C) nounwind {
 ;
 ; RV64UNALIGNED-LABEL: t1:
 ; RV64UNALIGNED:       # %bb.0: # %entry
-; RV64UNALIGNED-NEXT:    lui a1, 4
-; RV64UNALIGNED-NEXT:    addiw a1, a1, 1870
-; RV64UNALIGNED-NEXT:    sh a1, 28(a0)
-; RV64UNALIGNED-NEXT:    lui a1, 300325
-; RV64UNALIGNED-NEXT:    addiw a1, a1, 1107
-; RV64UNALIGNED-NEXT:    sw a1, 24(a0)
-; RV64UNALIGNED-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV64UNALIGNED-NEXT:    ld a1, %lo(.LCPI1_0)(a1)
-; RV64UNALIGNED-NEXT:    lui a2, %hi(.LCPI1_1)
-; RV64UNALIGNED-NEXT:    ld a2, %lo(.LCPI1_1)(a2)
-; RV64UNALIGNED-NEXT:    lui a3, %hi(.LCPI1_2)
-; RV64UNALIGNED-NEXT:    ld a3, %lo(.LCPI1_2)(a3)
-; RV64UNALIGNED-NEXT:    sd a1, 16(a0)
-; RV64UNALIGNED-NEXT:    sd a2, 8(a0)
+; RV64UNALIGNED-NEXT:    lui a1, %hi(.L.str1)
+; RV64UNALIGNED-NEXT:    ld a2, %lo(.L.str1)(a1)
+; RV64UNALIGNED-NEXT:    sd a2, 0(a0)
+; RV64UNALIGNED-NEXT:    lui a2, 4
+; RV64UNALIGNED-NEXT:    addiw a2, a2, 1870
+; RV64UNALIGNED-NEXT:    sh a2, 28(a0)
+; RV64UNALIGNED-NEXT:    lui a2, 300325
+; RV64UNALIGNED-NEXT:    addiw a2, a2, 1107
+; RV64UNALIGNED-NEXT:    addi a1, a1, %lo(.L.str1)
+; RV64UNALIGNED-NEXT:    ld a3, 16(a1)
+; RV64UNALIGNED-NEXT:    ld a1, 8(a1)
+; RV64UNALIGNED-NEXT:    sw a2, 24(a0)
 ; RV64UNALIGNED-NEXT:    sb zero, 30(a0)
-; RV64UNALIGNED-NEXT:    sd a3, 0(a0)
+; RV64UNALIGNED-NEXT:    sd a3, 16(a0)
+; RV64UNALIGNED-NEXT:    sd a1, 8(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str1, i64 0, i64 0), i64 31, i1 false)
@@ -113,21 +112,19 @@ define void @t2(i8* nocapture %C) nounwind {
 ;
 ; RV64UNALIGNED-LABEL: t2:
 ; RV64UNALIGNED:       # %bb.0: # %entry
-; RV64UNALIGNED-NEXT:    lui a1, 1156
-; RV64UNALIGNED-NEXT:    addiw a1, a1, 332
-; RV64UNALIGNED-NEXT:    sw a1, 32(a0)
-; RV64UNALIGNED-NEXT:    lui a1, %hi(.LCPI2_0)
-; RV64UNALIGNED-NEXT:    ld a1, %lo(.LCPI2_0)(a1)
-; RV64UNALIGNED-NEXT:    lui a2, %hi(.LCPI2_1)
-; RV64UNALIGNED-NEXT:    ld a2, %lo(.LCPI2_1)(a2)
-; RV64UNALIGNED-NEXT:    lui a3, %hi(.LCPI2_2)
-; RV64UNALIGNED-NEXT:    ld a3, %lo(.LCPI2_2)(a3)
-; RV64UNALIGNED-NEXT:    lui a4, %hi(.LCPI2_3)
-; RV64UNALIGNED-NEXT:    ld a4, %lo(.LCPI2_3)(a4)
-; RV64UNALIGNED-NEXT:    sd a1, 24(a0)
-; RV64UNALIGNED-NEXT:    sd a2, 16(a0)
-; RV64UNALIGNED-NEXT:    sd a3, 8(a0)
-; RV64UNALIGNED-NEXT:    sd a4, 0(a0)
+; RV64UNALIGNED-NEXT:    lui a1, %hi(.L.str2)
+; RV64UNALIGNED-NEXT:    ld a2, %lo(.L.str2)(a1)
+; RV64UNALIGNED-NEXT:    sd a2, 0(a0)
+; RV64UNALIGNED-NEXT:    lui a2, 1156
+; RV64UNALIGNED-NEXT:    addiw a2, a2, 332
+; RV64UNALIGNED-NEXT:    addi a1, a1, %lo(.L.str2)
+; RV64UNALIGNED-NEXT:    ld a3, 24(a1)
+; RV64UNALIGNED-NEXT:    ld a4, 16(a1)
+; RV64UNALIGNED-NEXT:    ld a1, 8(a1)
+; RV64UNALIGNED-NEXT:    sw a2, 32(a0)
+; RV64UNALIGNED-NEXT:    sd a3, 24(a0)
+; RV64UNALIGNED-NEXT:    sd a4, 16(a0)
+; RV64UNALIGNED-NEXT:    sd a1, 8(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str2, i64 0, i64 0), i64 36, i1 false)
@@ -173,15 +170,14 @@ define void @t3(i8* nocapture %C) nounwind {
 ;
 ; RV64UNALIGNED-LABEL: t3:
 ; RV64UNALIGNED:       # %bb.0: # %entry
-; RV64UNALIGNED-NEXT:    lui a1, %hi(.LCPI3_0)
-; RV64UNALIGNED-NEXT:    ld a1, %lo(.LCPI3_0)(a1)
-; RV64UNALIGNED-NEXT:    lui a2, %hi(.LCPI3_1)
-; RV64UNALIGNED-NEXT:    ld a2, %lo(.LCPI3_1)(a2)
-; RV64UNALIGNED-NEXT:    lui a3, %hi(.LCPI3_2)
-; RV64UNALIGNED-NEXT:    ld a3, %lo(.LCPI3_2)(a3)
-; RV64UNALIGNED-NEXT:    sd a1, 16(a0)
-; RV64UNALIGNED-NEXT:    sd a2, 8(a0)
-; RV64UNALIGNED-NEXT:    sd a3, 0(a0)
+; RV64UNALIGNED-NEXT:    lui a1, %hi(.L.str3)
+; RV64UNALIGNED-NEXT:    ld a2, %lo(.L.str3)(a1)
+; RV64UNALIGNED-NEXT:    addi a1, a1, %lo(.L.str3)
+; RV64UNALIGNED-NEXT:    ld a3, 16(a1)
+; RV64UNALIGNED-NEXT:    ld a1, 8(a1)
+; RV64UNALIGNED-NEXT:    sd a2, 0(a0)
+; RV64UNALIGNED-NEXT:    sd a3, 16(a0)
+; RV64UNALIGNED-NEXT:    sd a1, 8(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([24 x i8], [24 x i8]* @.str3, i64 0, i64 0), i64 24, i1 false)
@@ -223,14 +219,14 @@ define void @t4(i8* nocapture %C) nounwind {
 ;
 ; RV64UNALIGNED-LABEL: t4:
 ; RV64UNALIGNED:       # %bb.0: # %entry
-; RV64UNALIGNED-NEXT:    lui a1, %hi(.LCPI4_0)
-; RV64UNALIGNED-NEXT:    ld a1, %lo(.LCPI4_0)(a1)
-; RV64UNALIGNED-NEXT:    lui a2, %hi(.LCPI4_1)
-; RV64UNALIGNED-NEXT:    ld a2, %lo(.LCPI4_1)(a2)
+; RV64UNALIGNED-NEXT:    lui a1, %hi(.L.str4)
+; RV64UNALIGNED-NEXT:    ld a2, %lo(.L.str4)(a1)
+; RV64UNALIGNED-NEXT:    addi a1, a1, %lo(.L.str4)
+; RV64UNALIGNED-NEXT:    ld a1, 8(a1)
 ; RV64UNALIGNED-NEXT:    li a3, 32
 ; RV64UNALIGNED-NEXT:    sh a3, 16(a0)
-; RV64UNALIGNED-NEXT:    sd a1, 8(a0)
 ; RV64UNALIGNED-NEXT:    sd a2, 0(a0)
+; RV64UNALIGNED-NEXT:    sd a1, 8(a0)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str4, i64 0, i64 0), i64 18, i1 false)
@@ -345,15 +341,15 @@ define void @t6() nounwind {
 ;
 ; RV64UNALIGNED-LABEL: t6:
 ; RV64UNALIGNED:       # %bb.0: # %entry
-; RV64UNALIGNED-NEXT:    lui a0, %hi(spool.splbuf)
-; RV64UNALIGNED-NEXT:    li a1, 88
-; RV64UNALIGNED-NEXT:    sh a1, %lo(spool.splbuf+12)(a0)
-; RV64UNALIGNED-NEXT:    lui a1, %hi(.LCPI6_0)
-; RV64UNALIGNED-NEXT:    ld a1, %lo(.LCPI6_0)(a1)
-; RV64UNALIGNED-NEXT:    lui a2, 361862
-; RV64UNALIGNED-NEXT:    addiw a2, a2, -1960
-; RV64UNALIGNED-NEXT:    sw a2, %lo(spool.splbuf+8)(a0)
-; RV64UNALIGNED-NEXT:    sd a1, %lo(spool.splbuf)(a0)
+; RV64UNALIGNED-NEXT:    lui a0, %hi(.L.str6)
+; RV64UNALIGNED-NEXT:    ld a0, %lo(.L.str6)(a0)
+; RV64UNALIGNED-NEXT:    lui a1, %hi(spool.splbuf)
+; RV64UNALIGNED-NEXT:    li a2, 88
+; RV64UNALIGNED-NEXT:    sh a2, %lo(spool.splbuf+12)(a1)
+; RV64UNALIGNED-NEXT:    sd a0, %lo(spool.splbuf)(a1)
+; RV64UNALIGNED-NEXT:    lui a0, 361862
+; RV64UNALIGNED-NEXT:    addiw a0, a0, -1960
+; RV64UNALIGNED-NEXT:    sw a0, %lo(spool.splbuf+8)(a1)
 ; RV64UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([512 x i8], [512 x i8]* @spool.splbuf, i64 0, i64 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str6, i64 0, i64 0), i64 14, i1 false)

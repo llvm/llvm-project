@@ -1161,6 +1161,30 @@ bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   return C && C->getAPIntValue().ule(10);
 }
 
+bool RISCVTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
+                                                            Type *Ty) const {
+  assert(Ty->isIntegerTy());
+
+  unsigned BitSize = Ty->getIntegerBitWidth();
+  if (BitSize > Subtarget.getXLen())
+    return false;
+
+  // Fast path, assume 32-bit immediates are cheap.
+  int64_t Val = Imm.getSExtValue();
+  if (isInt<32>(Val))
+    return true;
+
+  // Prefer to keep the load if it would require many instructions.
+  // This uses the same threshold we use for constant pools but doesn't
+  // check useConstantPoolForLargeInts.
+  // TODO: Should we keep the load only when we're definitely going to emit a
+  // constant pool?
+
+  RISCVMatInt::InstSeq Seq =
+      RISCVMatInt::generateInstSeq(Val, Subtarget.getFeatureBits());
+  return Seq.size() <= Subtarget.getMaxBuildIntsCost();
+}
+
 bool RISCVTargetLowering::
     shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
         SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
