@@ -104,6 +104,27 @@ struct UInt64Hash2 {
   }
 };
 
+// The sole purpose of this comparator is to be used in BM_Rehash, where
+// we need something slow enough to be easily noticable in benchmark results.
+// The default implementation of operator== for strings seems to be a little
+// too fast for that specific benchmark to reliably show a noticeable
+// improvement, but unoptimized bytewise comparison fits just right.
+// Early return is there just for convenience, since we only compare strings
+// of equal length in BM_Rehash.
+struct SlowStringEq {
+  SlowStringEq() = default;
+  inline TEST_ALWAYS_INLINE
+  bool operator()(const std::string& lhs, const std::string& rhs) const {
+      if (lhs.size() != rhs.size()) return false;
+
+      bool eq = true;
+      for (size_t i = 0; i < lhs.size(); ++i) {
+          eq &= lhs[i] == rhs[i];
+      }
+      return eq;
+  }
+};
+
 //----------------------------------------------------------------------------//
 //                               BM_Hash
 // ---------------------------------------------------------------------------//
@@ -265,6 +286,20 @@ BENCHMARK_CAPTURE(BM_FindRehash,
     unordered_set_string,
     std::unordered_set<std::string>{},
     getRandomStringInputs)->Arg(TestNumInputs);
+
+//----------------------------------------------------------------------------//
+//                         BM_Rehash
+// ---------------------------------------------------------------------------//
+
+BENCHMARK_CAPTURE(BM_Rehash,
+    unordered_set_string_arg,
+    std::unordered_set<std::string, std::hash<std::string>, SlowStringEq>{},
+    getRandomStringInputs)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_Rehash,
+    unordered_set_int_arg,
+    std::unordered_set<int>{},
+    getRandomIntegerInputs<int>)->Arg(TestNumInputs);
 
 ///////////////////////////////////////////////////////////////////////////////
 BENCHMARK_CAPTURE(BM_InsertDuplicate,
