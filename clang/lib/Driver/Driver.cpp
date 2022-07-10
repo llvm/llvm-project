@@ -4355,7 +4355,17 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
     return KnownArchs.lookup(TC);
 
   llvm::DenseSet<StringRef> Archs;
-  for (auto &Arg : Args) {
+  for (auto *Arg : Args) {
+    // Extract any '--[no-]offload-arch' arguments intended for this toolchain.
+    std::unique_ptr<llvm::opt::Arg> ExtractedArg = nullptr;
+    if (Arg->getOption().matches(options::OPT_Xopenmp_target_EQ) &&
+        ToolChain::getOpenMPTriple(Arg->getValue(0)) == TC->getTriple()) {
+      Arg->claim();
+      unsigned Index = Args.getBaseArgs().MakeIndex(Arg->getValue(1));
+      ExtractedArg = getOpts().ParseOneArg(Args, Index);
+      Arg = ExtractedArg.get();
+    }
+
     if (Arg->getOption().matches(options::OPT_offload_arch_EQ)) {
       for (StringRef Arch : llvm::split(Arg->getValue(), ","))
         Archs.insert(getCanonicalArchString(C, Args, Arch, TC->getTriple()));
@@ -4425,8 +4435,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Get the product of all bound architectures and toolchains.
     SmallVector<std::pair<const ToolChain *, StringRef>> TCAndArchs;
     for (const ToolChain *TC : ToolChains)
-      for (StringRef Arch : getOffloadArchs(
-               C, C.getArgsForToolChain(TC, "generic", Kind), Kind, TC))
+      for (StringRef Arch : getOffloadArchs(C, Args, Kind, TC))
         TCAndArchs.push_back(std::make_pair(TC, Arch));
 
     for (unsigned I = 0, E = TCAndArchs.size(); I != E; ++I)
