@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=VI %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=CI %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
 define amdgpu_kernel void @s_shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
 ; GFX9-LABEL: s_shl_v2i16:

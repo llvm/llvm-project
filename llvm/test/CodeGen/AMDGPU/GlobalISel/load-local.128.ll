@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefix=GFX7 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 ; FIXME:
 ; XUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=tahiti -verify-machineinstrs < %s | FileCheck --check-prefix=GFX6 %s
@@ -242,6 +242,7 @@ define <4 x i32> @load_lds_v4i32_align1(<4 x i32> addrspace(3)* %ptr) {
 ; GFX11-NEXT:    v_or3_b32 v0, v2, v3, v1
 ; GFX11-NEXT:    v_or3_b32 v1, v5, v6, v4
 ; GFX11-NEXT:    v_or3_b32 v2, v8, v9, v7
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-NEXT:    v_or3_b32 v3, v11, v12, v10
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load <4 x i32>, <4 x i32> addrspace(3)* %ptr, align 1

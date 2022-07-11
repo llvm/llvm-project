@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=VI %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
 declare half @llvm.maxnum.f16(half %a, half %b)
 declare <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
@@ -137,6 +137,7 @@ define amdgpu_kernel void @maxnum_f16(
 ; GFX11-NEXT:    s_mov_b32 s9, s5
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -246,6 +247,7 @@ define amdgpu_kernel void @maxnum_f16_imm_a(
 ; GFX11-NEXT:    s_mov_b32 s5, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f16_e32 v0, 0x4200, v0
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -353,6 +355,7 @@ define amdgpu_kernel void @maxnum_f16_imm_b(
 ; GFX11-NEXT:    s_mov_b32 s5, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f16_e32 v0, 4.0, v0
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -468,6 +471,7 @@ define amdgpu_kernel void @maxnum_v2f16(
 ; GFX11-NEXT:    v_pk_max_f16 v0, s4, s4
 ; GFX11-NEXT:    v_pk_max_f16 v1, s2, s2
 ; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v1, v0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -560,6 +564,7 @@ define amdgpu_kernel void @maxnum_v2f16_imm_a(
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_pk_max_f16 v0, s2, s2
 ; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v0, 0x44004200, v0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -650,6 +655,7 @@ define amdgpu_kernel void @maxnum_v2f16_imm_b(
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_pk_max_f16 v0, s2, s2
 ; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v0, 0x42004400, v0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -788,6 +794,7 @@ define amdgpu_kernel void @maxnum_v3f16(
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    v_pk_max_f16 v1, v2, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v3, v0
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_store_b16 v1, off, s[0:3], 0 offset:4
@@ -943,6 +950,7 @@ define amdgpu_kernel void @maxnum_v4f16(
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v3, v2
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1063,6 +1071,7 @@ define amdgpu_kernel void @fmax_v4f16_imm_a(
 ; GFX11-NEXT:    v_pk_max_f16 v2, s2, s2
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_pk_max_f16 v1, 0x44004200, v0
 ; GFX11-NEXT:    v_pk_max_f16 v0, 0x40004800, v2
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0

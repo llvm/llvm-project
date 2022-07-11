@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx704 < %s | FileCheck -check-prefix=GFX7 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 
 define i32 @s_add_co_select_user() {
 ; GFX7-LABEL: s_add_co_select_user:
@@ -65,12 +65,14 @@ define i32 @s_add_co_select_user() {
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, s0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_cmpk_lg_u32 s1, 0x0
 ; GFX11-NEXT:    s_addc_u32 s1, s0, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-NEXT:    s_cmp_gt_u32 s0, 31
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, s1, s2
 ; GFX11-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
@@ -172,11 +174,13 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_add_i32 s1, s0, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cmp_lt_u32 s1, s0
 ; GFX11-NEXT:    s_cselect_b32 s1, -1, 0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s1
 ; GFX11-NEXT:    s_cmpk_lg_u32 s1, 0x0
 ; GFX11-NEXT:    s_addc_u32 s0, s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s0, v0
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB1_2
 ; GFX11-NEXT:  ; %bb.1: ; %bb0

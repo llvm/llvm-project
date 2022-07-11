@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=fiji -verify-machineinstrs | FileCheck -check-prefix=VI %s
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefix=GFX11 %s
+; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
 
 ; ===================================================================================
 ; V_ADD_LSHL_U32
@@ -24,11 +24,6 @@ define amdgpu_ps float @add_shl(i32 %a, i32 %b, i32 %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_lshl_u32 v0, v0, v1, v2
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: add_shl:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_lshl_u32 v0, v0, v1, v2
-; GFX11-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = shl i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -52,11 +47,6 @@ define amdgpu_ps float @add_shl_vgpr_c(i32 inreg %a, i32 inreg %b, i32 %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_lshl_u32 v0, s2, s3, v0
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: add_shl_vgpr_c:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_lshl_u32 v0, s2, s3, v0
-; GFX11-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = shl i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -79,11 +69,6 @@ define amdgpu_ps float @add_shl_vgpr_ac(i32 %a, i32 inreg %b, i32 %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_lshl_u32 v0, v0, s2, v1
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: add_shl_vgpr_ac:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_lshl_u32 v0, v0, s2, v1
-; GFX11-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = shl i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -106,11 +91,6 @@ define amdgpu_ps float @add_shl_vgpr_const(i32 %a, i32 %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_lshl_u32 v0, v0, v1, 9
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: add_shl_vgpr_const:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_lshl_u32 v0, v0, v1, 9
-; GFX11-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = shl i32 %x, 9
   %bc = bitcast i32 %result to float
@@ -134,11 +114,6 @@ define amdgpu_ps float @add_shl_vgpr_const_inline_const(i32 %a) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 9, 0x7e800
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: add_shl_vgpr_const_inline_const:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_add_u32 v0, v0, 9, 0x7e800
-; GFX11-NEXT:    ; return to shader part epilog
   %x = add i32 %a, 1012
   %result = shl i32 %x, 9
   %bc = bitcast i32 %result to float
@@ -165,11 +140,6 @@ define amdgpu_ps float @add_shl_vgpr_inline_const_x2(i32 %a) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 9, 0x600
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: add_shl_vgpr_inline_const_x2:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_add_u32 v0, v0, 9, 0x600
-; GFX11-NEXT:    ; return to shader part epilog
   %x = add i32 %a, 3
   %result = shl i32 %x, 9
   %bc = bitcast i32 %result to float

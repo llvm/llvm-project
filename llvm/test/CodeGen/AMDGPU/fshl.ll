@@ -4,7 +4,7 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck %s --check-prefix=GFX9
 ; RUN: llc < %s -march=r600 -mcpu=redwood  -verify-machineinstrs | FileCheck %s --check-prefix=R600
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefix=GFX10
-; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck %s --check-prefix=GFX11
+; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck %s --check-prefix=GFX11
 
 declare i32 @llvm.fshl.i32(i32, i32, i32) nounwind readnone
 declare <2 x i32> @llvm.fshl.v2i32(<2 x i32>, <2 x i32>, <2 x i32>) nounwind readnone
@@ -101,6 +101,7 @@ define amdgpu_kernel void @fshl_i32(i32 addrspace(1)* %in, i32 %x, i32 %y, i32 %
 ; GFX11-NEXT:    v_alignbit_b32 v0, s2, s3, 1
 ; GFX11-NEXT:    s_lshr_b32 s2, s2, 1
 ; GFX11-NEXT:    s_not_b32 s3, s4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_alignbit_b32 v0, s2, v0, s3
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

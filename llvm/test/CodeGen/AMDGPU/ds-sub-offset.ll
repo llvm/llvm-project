@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=CI %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
@@ -37,6 +37,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global() #0 {
 ; GFX11-LABEL: write_ds_sub0_offset0_global:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0x7b :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:12
 ; GFX11-NEXT:    s_endpgm
@@ -108,6 +109,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v3, 0x7b :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v2, 0, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
@@ -188,6 +190,7 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    v_not_b32_e32 v0, v0
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v3, 0x7b :: v_dual_lshlrev_b32 v2, 2, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
@@ -274,6 +277,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_alt() #1 {
 ; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_alt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
 ; GFX11-NEXT:    ds_store_b8 v0, v1 offset:65535
 ; GFX11-NEXT:    s_endpgm
@@ -315,6 +319,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_not_canonical() #1 {
 ; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_not_canonical:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
 ; GFX11-NEXT:    ds_store_b8 v0, v1 offset:65535
 ; GFX11-NEXT:    s_endpgm
@@ -356,6 +361,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_p1() #1 {
 ; GFX11-LABEL: add_x_shl_neg_to_sub_max_offset_p1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0x10000, v0
 ; GFX11-NEXT:    ds_store_b8 v0, v1
 ; GFX11-NEXT:    s_endpgm
@@ -400,6 +406,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use() #1 {
 ; GFX11-LABEL: add_x_shl_neg_to_sub_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:123
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:456
@@ -448,6 +455,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use_same_offset() #1 {
 ; GFX11-LABEL: add_x_shl_neg_to_sub_multi_use_same_offset:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 13 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:123
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:123
@@ -496,6 +504,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0x7b :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0x3fb, v0
 ; GFX11-NEXT:    ds_store_2addr_b32 v0, v1, v2 offset1:1
 ; GFX11-NEXT:    s_endpgm
@@ -572,6 +581,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; GFX11-NEXT:    v_dual_mov_b32 v3, 0x7b :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v2, 0x3fb, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
@@ -627,6 +637,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() #
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0x7b :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, 0x3fc, v0
 ; GFX11-NEXT:    ds_store_2addr_b32 v0, v1, v2 offset1:1
 ; GFX11-NEXT:    s_endpgm
