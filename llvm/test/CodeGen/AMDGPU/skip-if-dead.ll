@@ -1896,6 +1896,7 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ;
 ; GFX11-LABEL: complex_loop:
 ; GFX11:       ; %bb.0: ; %.entry
+; GFX11-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX11-NEXT:    s_cmp_lt_i32 s0, 1
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB15_7
 ; GFX11-NEXT:  ; %bb.1: ; %.lr.ph
@@ -1929,10 +1930,7 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX11-NEXT:    s_branch .LBB15_2
 ; GFX11-NEXT:  .LBB15_6: ; %Flow
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX11-NEXT:    exp mrt0 v2, v2, v0, v0 done
-; GFX11-NEXT:    s_endpgm
-; GFX11-NEXT:  .LBB15_7:
-; GFX11-NEXT:    v_mov_b32_e32 v2, -1
+; GFX11-NEXT:  .LBB15_7: ; %._crit_edge
 ; GFX11-NEXT:    exp mrt0 v2, v2, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB15_8:
