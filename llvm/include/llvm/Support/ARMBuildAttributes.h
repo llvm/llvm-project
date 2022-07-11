@@ -263,6 +263,8 @@ enum {
   PACRETUsed = 1
 };
 
+std::string encodeAttrTagValuePair(StringRef OriginalString);
+
 } // namespace ARMBuildAttrs
 } // namespace llvm
 
