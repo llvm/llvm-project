@@ -278,6 +278,8 @@ def print_symbol_order: P<
     "/call-graph-profile-sort into the specified file">;
 def wrap : P_priv<"wrap">;
 
+def vfsoverlay : P<"vfsoverlay", "Path to a vfsoverlay yaml file to optionally look for /defaultlib's in">;
+
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;
