@@ -4001,10 +4001,6 @@ def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">, Flags<[CC
   MarshallingInfoFlag<CodeGenOpts<"InstrumentForProfiling">>;
 def pipe : Flag<["-", "--"], "pipe">,
   HelpText<"Use pipes between commands, when possible">;
-// Facebook T92898286
-def post_link_optimize : Flag<["--"], "post-link-optimize">,
-  HelpText<"Apply post-link optimizations using BOLT">;
-// End Facebook T92898286
 def prebind__all__twolevel__modules : Flag<["-"], "prebind_all_twolevel_modules">;
 def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;

@@ -1,10 +1,5 @@
 @LIT_SITE_CFG_IN_HEADER@
 
-#Facebook T92898286
-import lit.util
-#End Facebook T92898286
-
-
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
@@ -31,10 +26,6 @@ config.lldb_system_debugserver = @LLDB_USE_SYSTEM_DEBUGSERVER@
 # The shell tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-shell")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-shell")
-
-# Facebook T92898286
-config.llvm_test_bolt = lit.util.pythonize_bool("@LLVM_TEST_BOLT@")
-# End Facebook T92898286
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
