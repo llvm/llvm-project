@@ -53,9 +53,9 @@ export struct Quack {
 export Quack Duck;
 
 // CHECK-N: define internal void @__cxx_global_var_init
-// CHECK-N: call {{.*}} @_ZN4OinkC1Ev
+// CHECK-N: call void @_ZN4OinkC1Ev
 // CHECK-N: define internal void @__cxx_global_var_init
-// CHECK-N: call {{.*}} @_ZNW1N5QuackC1Ev
+// CHECK-N: call void @_ZNW1N5QuackC1Ev
 // CHECK-N: define void @_ZGIW1N
 // CHECK-N: store i8 1, ptr @_ZGIW1N__in_chrg
 // CHECK-N: call void @__cxx_global_var_init
@@ -83,9 +83,9 @@ export struct Bark {
 export Bark Dog;
 
 // CHECK-O: define internal void @__cxx_global_var_init
-// CHECK-O: call {{.*}} @_ZN4MeowC2Ev
+// CHECK-O: call void @_ZN4MeowC2Ev
 // CHECK-O: define internal void @__cxx_global_var_init
-// CHECK-O: call {{.*}} @_ZNW1O4BarkC1Ev
+// CHECK-O: call void @_ZNW1O4BarkC1Ev
 // CHECK-O: define void @_ZGIW1O
 // CHECK-O: store i8 1, ptr @_ZGIW1O__in_chrg
 // CHECK-O: call void @__cxx_global_var_init
@@ -113,9 +113,9 @@ struct Squawk {
 Squawk parrot;
 
 // CHECK-P: define internal void @__cxx_global_var_init
-// CHECK-P: call {{.*}} @_ZN5CroakC1Ev
+// CHECK-P: call void @_ZN5CroakC1Ev
 // CHECK-P: define internal void @__cxx_global_var_init
-// CHECK-P: call {{.*}} @_ZNW1M6SquawkC1Ev
+// CHECK-P: call void @_ZNW1M6SquawkC1Ev
 // CHECK-P: define void @_ZGIW1MWP4Part
 // CHECK-P: store i8 1, ptr @_ZGIW1MWP4Part__in_chrg
 // CHECK-P: call void @__cxx_global_var_init
@@ -149,9 +149,9 @@ export struct Baa {
 export Baa Sheep(10);
 
 // CHECK-M: define internal void @__cxx_global_var_init
-// CHECK-M: call {{.*}} @_ZN3MooC1Ev
+// CHECK-M: call void @_ZN3MooC1Ev
 // CHECK-M: define internal void @__cxx_global_var_init
-// CHECK-M: call {{.*}} @_ZNW1M3BaaC1Ei
+// CHECK-M: call void @_ZNW1M3BaaC1Ei
 // CHECK-M: declare void @_ZGIW1O()
 // CHECK-M: declare void @_ZGIW1N()
 // CHECK-M: declare void @_ZGIW1MWP4Part()
