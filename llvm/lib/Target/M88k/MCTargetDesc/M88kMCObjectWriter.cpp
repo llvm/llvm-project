@@ -61,6 +61,10 @@ unsigned M88kObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     Type = ELF::R_88K_NONE;
     break;
 
+  case FK_Data_4:
+    Type = ELF::R_88K_32;
+    break;
+
   default:
     llvm_unreachable("Invalid fixup kind!");
   }
