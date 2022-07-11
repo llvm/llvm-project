@@ -99,6 +99,13 @@ else()
   add_link_flags_if_supported(-nodefaultlibs)
 endif()
 
+if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
+  # If we're linking directly against the libunwind that we're building
+  # in the same invocation, don't try to link in the toolchain's
+  # default libunwind (which may be missing still).
+  add_link_flags_if_supported(--unwindlib=none)
+endif()
+
 if ( APPLE )
   if (LLVM_USE_SANITIZER)
     if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
