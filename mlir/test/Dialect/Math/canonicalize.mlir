@@ -74,6 +74,15 @@ func.func @log2_nofold2_64() -> f64 {
   return %r : f64
 }
 
+// CHECK-LABEL: @log2_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00, 1.58496249, 2.000000e+00]> : vector<4xf32>
+// CHECK: return %[[cst]]
+func.func @log2_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
+  %0 = math.log2 %v1 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 // CHECK-LABEL: @powf_fold
 // CHECK: %[[cst:.+]] = arith.constant 4.000000e+00 : f32
 // CHECK: return %[[cst]]
