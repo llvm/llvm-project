@@ -36,7 +36,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
     // produces the input of the op we're rewriting (for 'SubViewOp' the input
     // is called the "source" value). We can only combine them if both 'op' and
     // 'sourceOp' are 'SubViewOp'.
-    auto sourceOp = op.source().getDefiningOp<memref::SubViewOp>();
+    auto sourceOp = op.getSource().getDefiningOp<memref::SubViewOp>();
     if (!sourceOp)
       return failure();
 
@@ -119,7 +119,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
 
     // This replaces 'op' but leaves 'sourceOp' alone; if it no longer has any
     // uses it can be removed by a (separate) dead code elimination pass.
-    rewriter.replaceOpWithNewOp<memref::SubViewOp>(op, sourceOp.source(),
+    rewriter.replaceOpWithNewOp<memref::SubViewOp>(op, sourceOp.getSource(),
                                                    offsets, sizes, strides);
     return success();
   }

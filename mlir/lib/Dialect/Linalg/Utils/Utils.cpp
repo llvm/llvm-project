@@ -980,10 +980,10 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
     Value outputTensor = operands[opOperand->getOperandNumber()];
     if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
       Value inserted = builder.create<tensor::InsertSliceOp>(
-          loc, sliceOp.source().getType(), results[resultIdx], sliceOp.source(),
-          sliceOp.offsets(), sliceOp.sizes(), sliceOp.strides(),
-          sliceOp.static_offsets(), sliceOp.static_sizes(),
-          sliceOp.static_strides());
+          loc, sliceOp.getSource().getType(), results[resultIdx],
+          sliceOp.getSource(), sliceOp.getOffsets(), sliceOp.getSizes(),
+          sliceOp.getStrides(), sliceOp.getStaticOffsets(),
+          sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
       tensorResults.push_back(inserted);
     } else {
       tensorResults.push_back(results[resultIdx]);

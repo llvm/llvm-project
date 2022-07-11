@@ -55,7 +55,7 @@ static bool haveNoReadsAfterWriteExceptSameIndex(
     const BlockAndValueMapping &firstToSecondPloopIndices) {
   DenseMap<Value, SmallVector<ValueRange, 1>> bufferStores;
   firstPloop.getBody()->walk([&](memref::StoreOp store) {
-    bufferStores[store.getMemRef()].push_back(store.indices());
+    bufferStores[store.getMemRef()].push_back(store.getIndices());
   });
   auto walkResult = secondPloop.getBody()->walk([&](memref::LoadOp load) {
     // Stop if the memref is defined in secondPloop body. Careful alias analysis
@@ -75,7 +75,7 @@ static bool haveNoReadsAfterWriteExceptSameIndex(
     // Check that the load indices of secondPloop coincide with store indices of
     // firstPloop for the same memrefs.
     auto storeIndices = write->second.front();
-    auto loadIndices = load.indices();
+    auto loadIndices = load.getIndices();
     if (storeIndices.size() != loadIndices.size())
       return WalkResult::interrupt();
     for (int i = 0, e = storeIndices.size(); i < e; ++i) {

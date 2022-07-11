@@ -80,7 +80,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
       for (BlockArgument bbArg : funcOp.getArguments()) {
         Value val = it.value();
         while (auto castOp = val.getDefiningOp<memref::CastOp>())
-          val = castOp.source();
+          val = castOp.getSource();
 
         if (val == bbArg) {
           resultToArgs[it.index()] = bbArg.getArgNumber();

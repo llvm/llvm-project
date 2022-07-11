@@ -615,12 +615,12 @@ struct LoadOfToMemref : public OpRewritePattern<memref::LoadOp> {
 
   LogicalResult matchAndRewrite(memref::LoadOp load,
                                 PatternRewriter &rewriter) const override {
-    auto toMemref = load.memref().getDefiningOp<ToMemrefOp>();
+    auto toMemref = load.getMemref().getDefiningOp<ToMemrefOp>();
     if (!toMemref)
       return failure();
 
     rewriter.replaceOpWithNewOp<tensor::ExtractOp>(load, toMemref.getTensor(),
-                                                   load.indices());
+                                                   load.getIndices());
     return success();
   }
 };
@@ -631,11 +631,12 @@ struct DimOfCastOp : public OpRewritePattern<memref::DimOp> {
 
   LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto castOp = dimOp.source().getDefiningOp<ToMemrefOp>();
+    auto castOp = dimOp.getSource().getDefiningOp<ToMemrefOp>();
     if (!castOp)
       return failure();
     Value newSource = castOp.getOperand();
-    rewriter.replaceOpWithNewOp<tensor::DimOp>(dimOp, newSource, dimOp.index());
+    rewriter.replaceOpWithNewOp<tensor::DimOp>(dimOp, newSource,
+                                               dimOp.getIndex());
     return success();
   }
 };
