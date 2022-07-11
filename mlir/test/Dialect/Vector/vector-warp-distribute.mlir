@@ -545,3 +545,20 @@ func.func @vector_reduction_large(%laneid: index) -> (f32) {
   }
   return %r : f32
 }
+
+// -----
+
+// CHECK-PROP-LABEL:   func @warp_duplicate_yield(
+func.func @warp_duplicate_yield(%laneid: index) -> (vector<1xf32>, vector<1xf32>) {
+  //   CHECK-PROP: %{{.*}}:2 = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>, vector<1xf32>)
+  %r:2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>, vector<1xf32>) {
+    %2 = "some_def"() : () -> (vector<32xf32>)
+    %3 = "some_def"() : () -> (vector<32xf32>)
+    %4 = arith.addf %2, %3 : vector<32xf32>
+    %5 = arith.addf %2, %2 : vector<32xf32>
+// CHECK-PROP-NOT:   arith.addf
+//     CHECK-PROP:   vector.yield %{{.*}}, %{{.*}} : vector<32xf32>, vector<32xf32>
+    vector.yield %4, %5 : vector<32xf32>, vector<32xf32>
+  }
+  return %r#0, %r#1 : vector<1xf32>, vector<1xf32>
+}
