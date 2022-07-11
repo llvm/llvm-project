@@ -47,7 +47,8 @@ __attribute__((noinline, noreturn)) void LongJump(jmp_buf env) {
 // Simulate __asan_handle_no_return().
 __attribute__((noinline)) void CallNoReturn() {
   jmp_buf env;
-  if (setjmp(env) != 0) return;
+  if (setjmp(env) != 0)
+    return;
 
   LongJump(env);
   _exit(1);
@@ -59,13 +60,12 @@ void NextChild() {
 
   printf("NextChild from: %p %zu\n", from_stack, from_stacksize);
 
-  char x[32] = {0};  // Stack gets poisoned.
+  char x[32] = {0}; // Stack gets poisoned.
   printf("NextChild: %p\n", x);
 
   CallNoReturn();
 
-  __sanitizer_start_switch_fiber(nullptr,
-                                 main_thread_stack,
+  __sanitizer_start_switch_fiber(nullptr, main_thread_stack,
                                  main_thread_stacksize);
   CallNoReturn();
   if (swapcontext(&next_child_context, &orig_context) < 0) {
@@ -76,10 +76,9 @@ void NextChild() {
 
 void Child(int mode) {
   CallNoReturn();
-  __sanitizer_finish_switch_fiber(nullptr,
-                                  &main_thread_stack,
+  __sanitizer_finish_switch_fiber(nullptr, &main_thread_stack,
                                   &main_thread_stacksize);
-  char x[32] = {0};  // Stack gets poisoned.
+  char x[32] = {0}; // Stack gets poisoned.
   printf("Child: %p\n", x);
   CallNoReturn();
   // (a) Do nothing, just return to parent function.
@@ -87,13 +86,11 @@ void Child(int mode) {
   //     something.
   // (c) Jump to another function which will then jump back to the main function
   if (mode == 0) {
-    __sanitizer_start_switch_fiber(nullptr,
-                                   main_thread_stack,
+    __sanitizer_start_switch_fiber(nullptr, main_thread_stack,
                                    main_thread_stacksize);
     CallNoReturn();
   } else if (mode == 1) {
-    __sanitizer_start_switch_fiber(nullptr,
-                                   main_thread_stack,
+    __sanitizer_start_switch_fiber(nullptr, main_thread_stack,
                                    main_thread_stacksize);
     CallNoReturn();
     if (swapcontext(&child_context, &orig_context) < 0) {
@@ -107,8 +104,7 @@ void Child(int mode) {
     next_child_context.uc_stack.ss_sp = next_child_stack;
     next_child_context.uc_stack.ss_size = kStackSize / 2;
     makecontext(&next_child_context, (void (*)())NextChild, 0);
-    __sanitizer_start_switch_fiber(nullptr,
-                                   next_child_context.uc_stack.ss_sp,
+    __sanitizer_start_switch_fiber(nullptr, next_child_context.uc_stack.ss_sp,
                                    next_child_context.uc_stack.ss_size);
     CallNoReturn();
     if (swapcontext(&child_context, &next_child_context) < 0) {
@@ -129,9 +125,8 @@ int Run(int arg, int mode, char *child_stack) {
   }
   makecontext(&child_context, (void (*)())Child, 1, mode);
   CallNoReturn();
-  void* fake_stack_save;
-  __sanitizer_start_switch_fiber(&fake_stack_save,
-                                 child_context.uc_stack.ss_sp,
+  void *fake_stack_save;
+  __sanitizer_start_switch_fiber(&fake_stack_save, child_context.uc_stack.ss_sp,
                                  child_context.uc_stack.ss_size);
   CallNoReturn();
   if (swapcontext(&orig_context, &child_context) < 0) {
@@ -139,8 +134,7 @@ int Run(int arg, int mode, char *child_stack) {
     _exit(1);
   }
   CallNoReturn();
-  __sanitizer_finish_switch_fiber(fake_stack_save,
-                                  &from_stack,
+  __sanitizer_finish_switch_fiber(fake_stack_save, &from_stack,
                                   &from_stacksize);
   CallNoReturn();
   printf("Main context from: %p %zu\n", from_stack, from_stacksize);
