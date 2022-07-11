@@ -1372,15 +1372,15 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
 
   LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto index = dimOp.index().getDefiningOp<arith::ConstantIndexOp>();
+    auto index = dimOp.getIndex().getDefiningOp<arith::ConstantIndexOp>();
     if (!index)
       return failure();
 
-    auto memrefType = dimOp.source().getType().dyn_cast<MemRefType>();
+    auto memrefType = dimOp.getSource().getType().dyn_cast<MemRefType>();
     if (!memrefType || !memrefType.isDynamicDim(index.value()))
       return failure();
 
-    auto alloc = dimOp.source().getDefiningOp<AllocOp>();
+    auto alloc = dimOp.getSource().getDefiningOp<AllocOp>();
     if (!alloc)
       return failure();
 

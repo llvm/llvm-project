@@ -299,7 +299,7 @@ bool mlir::isValidDim(Value value, Region *region) {
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
   if (auto dimOp = dyn_cast<memref::DimOp>(op))
-    return isTopLevelValue(dimOp.source());
+    return isTopLevelValue(dimOp.getSource());
   if (auto dimOp = dyn_cast<tensor::DimOp>(op))
     return isTopLevelValue(dimOp.getSource());
   return false;
@@ -2534,7 +2534,7 @@ OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
   if (!symbolTableOp)
     return {};
   auto global = dyn_cast_or_null<memref::GlobalOp>(
-      SymbolTable::lookupSymbolIn(symbolTableOp, getGlobalOp.nameAttr()));
+      SymbolTable::lookupSymbolIn(symbolTableOp, getGlobalOp.getNameAttr()));
   if (!global)
     return {};
 

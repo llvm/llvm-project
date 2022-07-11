@@ -1840,26 +1840,26 @@ public:
   LogicalResult matchAndRewrite(tensor::ExpandShapeOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto encDst = getSparseTensorEncoding(op.result().getType());
-    auto encSrc = getSparseTensorEncoding(op.src().getType());
+    auto encDst = getSparseTensorEncoding(op.getResult().getType());
+    auto encSrc = getSparseTensorEncoding(op.getSrc().getType());
     // Since a pure dense expansion is very cheap (change of view), for
     // sparse2dense or dense2sparse, we can simply unfuse a sparse
     // conversion from the actual expansion operation itself.
     if (encDst && encSrc) {
       return failure(); // TODO: implement sparse2sparse
     } else if (encSrc) {
-      RankedTensorType rtp = op.src().getType().cast<RankedTensorType>();
+      RankedTensorType rtp = op.getSrc().getType().cast<RankedTensorType>();
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
-      auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.src());
+      auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.getSrc());
       op->setOperand(0, convert);
       return success();
     } else if (encDst) {
-      RankedTensorType rtp = op.result().getType().cast<RankedTensorType>();
+      RankedTensorType rtp = op.getResult().getType().cast<RankedTensorType>();
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
       auto reshape = rewriter.create<tensor::ExpandShapeOp>(
-          loc, denseTp, op.src(), op.getReassociation());
+          loc, denseTp, op.getSrc(), op.getReassociation());
       Value convert = rewriter.create<ConvertOp>(loc, rtp, reshape);
       rewriter.replaceOp(op, convert);
       return success();
@@ -1877,26 +1877,26 @@ public:
   LogicalResult matchAndRewrite(tensor::CollapseShapeOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto encDst = getSparseTensorEncoding(op.result().getType());
-    auto encSrc = getSparseTensorEncoding(op.src().getType());
+    auto encDst = getSparseTensorEncoding(op.getResult().getType());
+    auto encSrc = getSparseTensorEncoding(op.getSrc().getType());
     // Since a pure dense collapse is very cheap (change of view), for
     // sparse2dense or dense2sparse, we can simply unfuse a sparse
     // conversion from the actual collapse operation itself.
     if (encDst && encSrc) {
       return failure(); // TODO: implement sparse2sparse
     } else if (encSrc) {
-      RankedTensorType rtp = op.src().getType().cast<RankedTensorType>();
+      RankedTensorType rtp = op.getSrc().getType().cast<RankedTensorType>();
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
-      auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.src());
+      auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.getSrc());
       op->setOperand(0, convert);
       return success();
     } else if (encDst) {
-      RankedTensorType rtp = op.result().getType().cast<RankedTensorType>();
+      RankedTensorType rtp = op.getResult().getType().cast<RankedTensorType>();
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
       auto reshape = rewriter.create<tensor::CollapseShapeOp>(
-          loc, denseTp, op.src(), op.getReassociation());
+          loc, denseTp, op.getSrc(), op.getReassociation());
       Value convert = rewriter.create<ConvertOp>(loc, rtp, reshape);
       rewriter.replaceOp(op, convert);
       return success();
