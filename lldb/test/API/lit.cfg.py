@@ -207,11 +207,6 @@ if is_configured('lldb_libs_dir'):
 if is_configured('lldb_framework_dir'):
   dotest_cmd += ['--framework', config.lldb_framework_dir]
 
-# Facebook T92898286
-if is_configured("llvm_test_bolt"):
-    dotest_cmd += ['-E', '"--post-link-optimize"']
-# End Facebook T92898286
-
 if 'lldb-repro-capture' in config.available_features or \
     'lldb-repro-replay' in config.available_features:
   dotest_cmd += ['--skip-category=lldb-vscode', '--skip-category=std-module']

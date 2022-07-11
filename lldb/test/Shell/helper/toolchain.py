@@ -138,11 +138,6 @@ def use_support_substitutions(config):
     # The clang module cache is used for building inferiors.
     host_flags += ['-fmodules-cache-path={}'.format(config.clang_module_cache)]
 
-    # Facebook T92898286
-    if config.llvm_test_bolt:
-        host_flags += ['--post-link-optimize']
-    # End Facebook T92898286
-
     host_flags = ' '.join(host_flags)
     config.substitutions.append(('%clang_host', '%clang ' + host_flags))
     config.substitutions.append(('%clangxx_host', '%clangxx ' + host_flags))
