@@ -1,3 +1,4 @@
+# UNSUPPORTED: system-windows
 # RUN: echo "int main() { return 0; }" | %clang_host -x c -o %t -
 # RUN: %lldb -s %s %t | FileCheck %s
 

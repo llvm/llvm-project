@@ -1,7 +1,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,PREGFX10
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,VI,PREGFX10
-;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,GFX10PLUS
-;RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,GFX10PLUS
+;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,GFX10
+;RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,GFX10
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_{{dwordx4|b128}} v[0:3], off, s[0:3], 0{{$}}
@@ -23,9 +23,9 @@ main_body:
 ;PREGFX10: buffer_load_dwordx4 v[0:3], off, s[0:3], 0{{$}}
 ;PREGFX10: buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc{{$}}
 ;PREGFX10: buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc{{$}}
-;GFX10PLUS: buffer_load_{{dwordx4|b128}} v[0:3], off, s[0:3], 0 dlc{{$}}
-;GFX10PLUS: buffer_load_{{dwordx4|b128}} v[4:7], off, s[0:3], 0 glc dlc{{$}}
-;GFX10PLUS: buffer_load_{{dwordx4|b128}} v[8:11], off, s[0:3], 0 slc dlc{{$}}
+;GFX10: buffer_load_{{dwordx4|b128}} v[0:3], off, s[0:3], 0 dlc{{$}}
+;GFX10: buffer_load_{{dwordx4|b128}} v[4:7], off, s[0:3], 0 glc dlc{{$}}
+;GFX10: buffer_load_{{dwordx4|b128}} v[8:11], off, s[0:3], 0 slc dlc{{$}}
 ;CHECK: s_waitcnt
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load_dlc(<4 x i32> inreg) {
 main_body:
@@ -96,7 +96,7 @@ main_body:
 
 ;CHECK-LABEL: {{^}}buffer_load_negative_offset:
 ;PREGFX10: v_add_{{[iu]}}32_e32 [[VOFS:v[0-9]+]], vcc, -16, v0
-;GFX10PLUS: v_add_nc_{{[iu]}}32_e32 [[VOFS:v[0-9]+]], -16, v0
+;GFX10: v_add_nc_{{[iu]}}32_e32 [[VOFS:v[0-9]+]], -16, v0
 ;CHECK: buffer_load_{{dwordx4|b128}} v[0:3], [[VOFS]], s[0:3], 0 offen
 define amdgpu_ps <4 x float> @buffer_load_negative_offset(<4 x i32> inreg, i32 %ofs) {
 main_body:
@@ -121,7 +121,7 @@ entry:
 
 ;CHECK-LABEL: {{^}}buffer_load_x1_offen_merged_and:
 ;CHECK-NEXT: %bb.
-;GFX10PLUS-NEXT: s_clause
+;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_{{dwordx4|b128}} v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
 ;CHECK-NEXT: buffer_load_{{dwordx2|b64}} v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28
 ;CHECK: s_waitcnt
@@ -147,7 +147,7 @@ main_body:
 ;CHECK-LABEL: {{^}}buffer_load_x1_offen_merged_or:
 ;CHECK-NEXT: %bb.
 ;CHECK-NEXT: v_lshlrev_b32_e32 v{{[0-9]}}, 6, v0
-;GFX10PLUS-NEXT: s_clause
+;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_{{dwordx4|b128}} v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:4
 ;CHECK-NEXT: buffer_load_{{dwordx2|b64}} v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:28
 ;CHECK: s_waitcnt
@@ -173,7 +173,7 @@ main_body:
 
 ;CHECK-LABEL: {{^}}buffer_load_x1_offen_merged_glc_slc:
 ;CHECK-NEXT: %bb.
-;GFX10PLUS-NEXT: s_clause
+;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_{{dwordx2|b64}} v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4{{$}}
 ;CHECK-NEXT: buffer_load_{{dwordx2|b64}} v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:12 glc{{$}}
 ;CHECK-NEXT: buffer_load_{{dwordx2|b64}} v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28 glc slc{{$}}
@@ -237,7 +237,7 @@ main_body:
 
 ;CHECK-LABEL: {{^}}buffer_load_x1_offset_merged:
 ;CHECK-NEXT: %bb.
-;GFX10PLUS-NEXT: s_clause
+;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_{{dwordx4|b128}} v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:4
 ;CHECK-NEXT: buffer_load_{{dwordx2|b64}} v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:28
 ;CHECK: s_waitcnt
@@ -407,7 +407,7 @@ main_body:
 
 ;CHECK-LABEL: {{^}}raw_buffer_load_x1_offset_merged:
 ;CHECK-NEXT: %bb.
-;GFX10PLUS-NEXT: s_clause
+;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_{{dwordx4|b128}} v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:4
 ;CHECK-NEXT: buffer_load_{{dwordx2|b64}} v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:28
 ;CHECK: s_waitcnt
@@ -426,7 +426,7 @@ main_body:
 
 ;CHECK-LABEL: {{^}}raw_buffer_load_x1_offset_swizzled_not_merged:
 ;CHECK-NEXT: %bb.
-;GFX10PLUS-NEXT: s_clause
+;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_{{dword|b32}} v{{[0-9]}}, off, s[0:3], 0 offset:4
 ;CHECK-NEXT: buffer_load_{{dword|b32}} v{{[0-9]}}, off, s[0:3], 0 offset:8
 ;CHECK-NEXT: buffer_load_{{dword|b32}} v{{[0-9]}}, off, s[0:3], 0 offset:12

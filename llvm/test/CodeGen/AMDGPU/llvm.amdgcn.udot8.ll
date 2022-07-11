@@ -1,14 +1,14 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9
 ; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9
-; RUN: llc -march=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10PLUS
-; RUN: llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10PLUS
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10PLUS
+; RUN: llc -march=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 
 declare i32 @llvm.amdgcn.udot8(i32 %a, i32 %b, i32 %c, i1 %clamp)
 
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_udot8_clamp
 ; GFX9:   v_dot8_u32_u4 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
-; GFX10PLUS: v_dot8_u32_u4 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
+; GFX10:  v_dot8_u32_u4 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot8_clamp(
     i32 addrspace(1)* %r,
     <8 x i4> addrspace(1)* %a,
@@ -27,7 +27,7 @@ entry:
 
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_udot8_no_clamp
 ; GFX9:   v_dot8_u32_u4 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX10PLUS: v_dot8_u32_u4 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX10:  v_dot8_u32_u4 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot8_no_clamp(
     i32 addrspace(1)* %r,
     <8 x i4> addrspace(1)* %a,

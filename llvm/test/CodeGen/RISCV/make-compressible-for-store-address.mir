@@ -33,7 +33,7 @@ body:             |
     ; CHECK-NEXT: renamable $x11 = ADDI $x0, 1
     ; CHECK-NEXT: $x12 = ADDI $x10, 768
     ; CHECK-NEXT: SD killed renamable $x11, $x12, 32 :: (store (s64) into %ir.1)
-    ; CHECK-NEXT: SD $x12, $x12, 40 :: (store (s64) into %ir.2)
+    ; CHECK-NEXT: SD renamable $x10, $x12, 40 :: (store (s64) into %ir.2)
     ; CHECK-NEXT: renamable $x11 = ADDI $x0, 2
     ; CHECK-NEXT: SD killed renamable $x11, killed $x12, 48 :: (store (s64) into %ir.3)
     ; CHECK-NEXT: PseudoRET
