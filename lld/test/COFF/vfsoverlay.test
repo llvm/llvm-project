@@ -1,0 +1,33 @@
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: cp %p/Inputs/std64.lib %t/std64.lib
+# RUN: sed -e "s|REPLACE|%/t/std64.lib|g" %t/overlay.yaml.in > %t/overlay.yaml
+
+# RUN: lld-link %S/Inputs/hello64.obj /libpath:/noexist /out:%t.exe /entry:main /defaultlib:notstd64 /vfsoverlay:%t/overlay.yaml
+
+# RUN: not lld-link %S/Inputs/hello64.obj /libpath:/noexist /out:%t.exe /entry:main /defaultlib:notstd64 /vfsoverlay:noexist 2>&1 \
+# RUN:   | FileCheck %s
+# CHECK: error: No such file or directory
+
+# RUN: sed -e "s|{|bad|g" %t/overlay.yaml > %t/badoverlay.yaml
+# RUN: not lld-link %S/Inputs/hello64.obj /libpath:/noexist /out:%t.exe /entry:main /defaultlib:notstd64 /vfsoverlay:%t/badoverlay.yaml 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-OVERLAY
+# BAD-OVERLAY: error: Invalid vfs overlay
+
+#--- overlay.yaml.in
+{
+  'version': 0,
+  'roots' : [
+    {
+      'name': '/noexist',
+      'type': 'directory',
+      'contents': [
+        {
+          'name': 'notstd64.lib',
+          'type': 'file',
+          'external-contents': 'REPLACE'
+        }
+      ]
+    }
+  ]
+}
