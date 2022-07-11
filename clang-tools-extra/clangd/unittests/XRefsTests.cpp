@@ -1786,11 +1786,11 @@ TEST(FindImplementations, CaptureDefintion) {
 
 TEST(FindType, All) {
   Annotations HeaderA(R"cpp(
-    struct [[Target]] { operator int() const; };
+    struct $Target[[Target]] { operator int() const; };
     struct Aggregate { Target a, b; };
     Target t;
 
-    template <typename T> class smart_ptr {
+    template <typename T> class $smart_ptr[[smart_ptr]] {
       T& operator*();
       T* operator->();
       T* get();
@@ -1829,11 +1829,11 @@ TEST(FindType, All) {
     ASSERT_GT(A.points().size(), 0u) << Case;
     for (auto Pos : A.points())
       EXPECT_THAT(findType(AST, Pos),
-                  ElementsAre(sym("Target", HeaderA.range(), HeaderA.range())))
+                  ElementsAre(
+                    sym("Target", HeaderA.range("Target"), HeaderA.range("Target"))))
           << Case;
   }
 
-  // FIXME: We'd like these cases to work. Fix them and move above.
   for (const llvm::StringRef Case : {
            "smart_ptr<Target> ^tsmart;",
        }) {
@@ -1842,7 +1842,10 @@ TEST(FindType, All) {
     ParsedAST AST = TU.build();
 
     EXPECT_THAT(findType(AST, A.point()),
-                Not(Contains(sym("Target", HeaderA.range(), HeaderA.range()))))
+                UnorderedElementsAre(
+                  sym("Target", HeaderA.range("Target"), HeaderA.range("Target")),
+                  sym("smart_ptr", HeaderA.range("smart_ptr"), HeaderA.range("smart_ptr"))
+                ))
         << Case;
   }
 }
