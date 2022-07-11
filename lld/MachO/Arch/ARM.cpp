@@ -40,6 +40,9 @@ struct ARM : TargetInfo {
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
   const RelocAttrs &getRelocAttrs(uint8_t type) const override;
   uint64_t getPageSize() const override { return 4 * 1024; }
+
+  void handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                         uint8_t *loc) const override;
 };
 
 } // namespace
@@ -169,4 +172,37 @@ ARM::ARM(uint32_t cpuSubtype) : TargetInfo(ILP32()) {
 TargetInfo *macho::createARMTargetInfo(uint32_t cpuSubtype) {
   static ARM t(cpuSubtype);
   return &t;
+}
+
+void ARM::handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                            uint8_t *loc) const {
+  if (config->outputType == MH_OBJECT)
+    return;
+
+  switch (r.type) {
+  case ARM_RELOC_BR24:
+    if (sym->getName().startswith("___dtrace_probe")) {
+      // change call site to a NOP
+      write32le(loc, 0xE1A00000);
+    } else if (sym->getName().startswith("___dtrace_isenabled")) {
+      // change call site to 'eor r0, r0, r0'
+      write32le(loc, 0xE0200000);
+    } else {
+      error("Unrecognized dtrace symbol prefix: " + toString(*sym));
+    }
+    break;
+  case ARM_THUMB_RELOC_BR22:
+    if (sym->getName().startswith("___dtrace_probe")) {
+      // change 32-bit blx call site to two thumb NOPs
+      write32le(loc, 0x46C046C0);
+    } else if (sym->getName().startswith("___dtrace_isenabled")) {
+      // change 32-bit blx call site to 'nop', 'eor r0, r0'
+      write32le(loc, 0x46C04040);
+    } else {
+      error("Unrecognized dtrace symbol prefix: " + toString(*sym));
+    }
+    break;
+  default:
+    llvm_unreachable("Unsupported dtrace relocation type for ARM");
+  }
 }

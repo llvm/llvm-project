@@ -332,6 +332,10 @@ static bool recoverFromUndefinedSymbol(const Undefined &sym) {
     return true;
   }
 
+  // Leave dtrace symbols, since we will handle them when we do the relocation
+  if (name.startswith("___dtrace_"))
+    return true;
+
   // Handle -U.
   if (config->explicitDynamicLookups.count(sym.getName())) {
     symtab->addDynamicLookup(sym.getName());

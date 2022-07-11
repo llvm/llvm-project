@@ -201,6 +201,12 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
+      // For dtrace symbols, do not handle them as normal undefined symbols
+      if (referentSym->getName().startswith("___dtrace_")) {
+        // Change dtrace call site to pre-defined instructions
+        target->handleDtraceReloc(referentSym, r, loc);
+        continue;
+      }
       referentVA = resolveSymbolVA(referentSym, r.type) + r.addend;
 
       if (isThreadLocalVariables(getFlags())) {
