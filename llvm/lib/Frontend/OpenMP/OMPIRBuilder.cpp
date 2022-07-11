@@ -2866,7 +2866,8 @@ void OpenMPIRBuilder::unrollLoopHeuristic(DebugLoc, CanonicalLoopInfo *Loop) {
             });
 }
 
-void OpenMPIRBuilder::applySimd(DebugLoc, CanonicalLoopInfo *CanonicalLoop) {
+void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
+                                ConstantInt *Simdlen) {
   LLVMContext &Ctx = Builder.getContext();
 
   Function *F = CanonicalLoop->getFunction();
@@ -2911,6 +2912,11 @@ void OpenMPIRBuilder::applySimd(DebugLoc, CanonicalLoopInfo *CanonicalLoop) {
                          AccessGroup}),
        MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
                          BoolConst})});
+  if (Simdlen != nullptr)
+    addLoopMetadata(
+        CanonicalLoop,
+        MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.width"),
+                          ConstantAsMetadata::get(Simdlen)}));
 }
 
 /// Create the TargetMachine object to query the backend for optimization
