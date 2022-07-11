@@ -1,0 +1,29 @@
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-objcopy --rename-section=.foo=.bar --set-section-alignment=.foo=16 --set-section-flags=.foo=alloc %t %t.1
+# RUN: llvm-readobj -S %t.1 | FileCheck %s
+
+# CHECK:      Name: .bar
+# CHECK-NEXT: Type: SHT_PROGBITS
+# CHECK-NEXT: Flags [
+# CHECK-NEXT:   SHF_ALLOC
+# CHECK-NEXT:   SHF_WRITE
+# CHECK-NEXT: ]
+# CHECK:      AddressAlignment:
+# CHECK-SAME:   {{^}} 16
+
+# RUN: not llvm-objcopy --rename-section=.foo=.bar --set-section-flags=.bar=alloc %t %t.2 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SET-BAR
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:  .foo
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+
+# SET-BAR: --set-section-flags=.bar conflicts with --rename-section=.foo=.bar
