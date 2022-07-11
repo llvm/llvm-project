@@ -49,6 +49,12 @@ class GpuToLLVMConversionPass
 public:
   GpuToLLVMConversionPass() = default;
 
+  GpuToLLVMConversionPass(bool kernelBarePtrCallConv)
+      : GpuToLLVMConversionPass() {
+    if (this->kernelBarePtrCallConv.getNumOccurrences() == 0)
+      this->kernelBarePtrCallConv = kernelBarePtrCallConv;
+  }
+
   GpuToLLVMConversionPass(const GpuToLLVMConversionPass &other)
       : GpuToLLVMConversionPassBase(other) {}
 
@@ -60,6 +66,11 @@ private:
       *this, "gpu-binary-annotation",
       llvm::cl::desc("Annotation attribute string for GPU binary"),
       llvm::cl::init(gpu::getDefaultGpuBinaryAnnotation())};
+  Option<bool> kernelBarePtrCallConv{
+      *this, "use-bare-pointers-for-kernels",
+      llvm::cl::desc("Use bare pointers to pass memref arguments to kernels. "
+                     "The kernel must use the same setting for this option."),
+      llvm::cl::init(false)};
 };
 
 struct FunctionCallBuilder {
@@ -290,9 +301,11 @@ class ConvertLaunchFuncOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp> {
 public:
   ConvertLaunchFuncOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter,
-                                             StringRef gpuBinaryAnnotation)
+                                             StringRef gpuBinaryAnnotation,
+                                             bool kernelBarePtrCallConv)
       : ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp>(typeConverter),
-        gpuBinaryAnnotation(gpuBinaryAnnotation) {}
+        gpuBinaryAnnotation(gpuBinaryAnnotation),
+        kernelBarePtrCallConv(kernelBarePtrCallConv) {}
 
 private:
   Value generateParamsArray(gpu::LaunchFuncOp launchOp, OpAdaptor adaptor,
@@ -305,6 +318,7 @@ private:
                   ConversionPatternRewriter &rewriter) const override;
 
   llvm::SmallString<32> gpuBinaryAnnotation;
+  bool kernelBarePtrCallConv;
 };
 
 class EraseGpuModuleOpPattern : public OpRewritePattern<gpu::GPUModuleOp> {
@@ -377,7 +391,8 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateFuncToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
-  populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
+  populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation,
+                                      kernelBarePtrCallConv);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -635,9 +650,24 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
     gpu::LaunchFuncOp launchOp, OpAdaptor adaptor, OpBuilder &builder) const {
   auto loc = launchOp.getLoc();
   auto numKernelOperands = launchOp.getNumKernelOperands();
-  auto arguments = getTypeConverter()->promoteOperands(
-      loc, launchOp.getOperands().take_back(numKernelOperands),
-      adaptor.getOperands().take_back(numKernelOperands), builder);
+  SmallVector<Value, 4> arguments;
+  if (kernelBarePtrCallConv) {
+    // Hack the bare pointer value on just for the argument promotion
+    LLVMTypeConverter *converter = getTypeConverter();
+    LowerToLLVMOptions options = converter->getOptions();
+    LowerToLLVMOptions overrideToMatchKernelOpts = options;
+    overrideToMatchKernelOpts.useBarePtrCallConv = true;
+    converter->dangerousSetOptions(overrideToMatchKernelOpts);
+    arguments = converter->promoteOperands(
+        loc, launchOp.getOperands().take_back(numKernelOperands),
+        adaptor.getOperands().take_back(numKernelOperands), builder);
+    converter->dangerousSetOptions(options);
+  } else {
+    arguments = getTypeConverter()->promoteOperands(
+        loc, launchOp.getOperands().take_back(numKernelOperands),
+        adaptor.getOperands().take_back(numKernelOperands), builder);
+  }
+
   auto numArguments = arguments.size();
   SmallVector<Type, 4> argumentTypes;
   argumentTypes.reserve(numArguments);
@@ -870,13 +900,14 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
 }
 
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-mlir::createGpuToLLVMConversionPass() {
-  return std::make_unique<GpuToLLVMConversionPass>();
+mlir::createGpuToLLVMConversionPass(bool kernelBarePtrCallConv) {
+  return std::make_unique<GpuToLLVMConversionPass>(kernelBarePtrCallConv);
 }
 
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns,
-                                               StringRef gpuBinaryAnnotation) {
+                                               StringRef gpuBinaryAnnotation,
+                                               bool kernelBarePtrCallConv) {
   converter.addConversion(
       [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {
         return LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
@@ -890,7 +921,7 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertWaitAsyncOpToGpuRuntimeCallPattern,
                ConvertWaitOpToGpuRuntimeCallPattern,
                ConvertAsyncYieldToGpuRuntimeCallPattern>(converter);
-  patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(converter,
-                                                           gpuBinaryAnnotation);
+  patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
+      converter, gpuBinaryAnnotation, kernelBarePtrCallConv);
   patterns.add<EraseGpuModuleOpPattern>(&converter.getContext());
 }
