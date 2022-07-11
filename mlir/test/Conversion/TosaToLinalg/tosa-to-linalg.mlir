@@ -473,6 +473,22 @@ func.func @test_i8(%arg0: tensor<1xi8>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_clamp_f16
+func.func @test_clamp_f16(%arg0: tensor<1xf16>) -> () {
+  // CHECK: linalg.generic
+  // CHECK-DAG: %[[C0:.+]] = arith.constant 0.0
+  // CHECK-DAG: %[[C6:.+]] = arith.constant 6.0
+  // CHECK-DAG: %[[CMP1:.+]] = arith.cmpf olt, %arg1, %[[C0]]
+  // CHECK-DAG: %[[SEL1:.+]] = arith.select %[[CMP1]], %[[C0]]
+  // CHECK-DAG: %[[CMP2:.+]] = arith.cmpf olt, %[[C6]], %arg1
+  // CHECK: %[[SEL2:.+]] = arith.select %[[CMP2]], %[[C6]], %[[SEL1]]
+  %0 = "tosa.clamp"(%arg0) {min_int = 0 : i64, max_int = 0 : i64, min_fp = 0.0 : f32, max_fp = 6.0 : f32} : (tensor<1xf16>) -> tensor<1xf16>
+
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_bool
 func.func @test_bool(%arg0: tensor<1xi1>, %arg1: tensor<1xi1>) -> () {
   // CHECK: linalg.generic
