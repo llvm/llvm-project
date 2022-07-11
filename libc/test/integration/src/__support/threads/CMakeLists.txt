@@ -17,3 +17,15 @@ add_integration_test(
     libc.src.__support.threads.mutex
     libc.src.__support.threads.thread
 )
+
+add_integration_test(
+  thread_tls_test
+  SUITE
+    libc-support-threads-integration-tests
+  SRCS
+    thread_tls_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.src.__support.threads.thread
+)
