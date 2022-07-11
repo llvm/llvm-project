@@ -524,6 +524,44 @@ struct WarpOpElementwise : public OpRewritePattern<WarpExecuteOnLane0Op> {
   }
 };
 
+/// Sink out splat constant op feeding into a warp op yield.
+/// ```
+/// %0 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
+///   ...
+///   %cst = arith.constant dense<2.0> : vector<32xf32>
+///   vector.yield %cst : vector<32xf32>
+/// }
+/// ```
+/// To
+/// ```
+/// vector.warp_execute_on_lane_0(%arg0 {
+///   ...
+/// }
+/// %0 = arith.constant dense<2.0> : vector<1xf32>
+struct WarpOpConstant : public OpRewritePattern<WarpExecuteOnLane0Op> {
+  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+  LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *yieldOperand = getWarpResult(
+        warpOp, [](Operation *op) { return isa<arith::ConstantOp>(op); });
+    if (!yieldOperand)
+      return failure();
+    auto constantOp = yieldOperand->get().getDefiningOp<arith::ConstantOp>();
+    auto dense = constantOp.getValue().dyn_cast<SplatElementsAttr>();
+    if (!dense)
+      return failure();
+    unsigned operandIndex = yieldOperand->getOperandNumber();
+    Attribute scalarAttr = dense.getSplatValue<Attribute>();
+    Attribute newAttr = DenseElementsAttr::get(
+        warpOp.getResult(operandIndex).getType(), scalarAttr);
+    Location loc = warpOp.getLoc();
+    rewriter.setInsertionPointAfter(warpOp);
+    Value distConstant = rewriter.create<arith::ConstantOp>(loc, newAttr);
+    warpOp.getResult(operandIndex).replaceAllUsesWith(distConstant);
+    return success();
+  }
+};
+
 /// Sink out transfer_read op feeding into a warp op yield.
 /// ```
 /// %0 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
@@ -868,8 +906,8 @@ void mlir::vector::populateDistributeTransferWriteOpPatterns(
 void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<WarpOpElementwise, WarpOpTransferRead, WarpOpDeadResult,
-               WarpOpBroadcast, WarpOpForwardOperand, WarpOpScfForOp>(
-      patterns.getContext());
+               WarpOpBroadcast, WarpOpForwardOperand, WarpOpScfForOp,
+               WarpOpConstant>(patterns.getContext());
 }
 
 void mlir::vector::populateDistributeReduction(
