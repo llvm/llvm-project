@@ -31,6 +31,8 @@
 
 using namespace llvm;
 
+using VectorParts = SmallVector<Value *, 2>;
+
 extern cl::opt<bool> EnableVPlanNativePath;
 
 #define LV_NAME "loop-vectorize"
@@ -755,7 +757,48 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = getelementptr ";
   printOperands(O, SlotTracker);
 }
+#endif
 
+void VPBlendRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFromInst(Phi);
+  // We know that all PHIs in non-header blocks are converted into
+  // selects, so we don't have to worry about the insertion order and we
+  // can just use the builder.
+  // At this point we generate the predication tree. There may be
+  // duplications since this is a simple recursive scan, but future
+  // optimizations will clean it up.
+
+  unsigned NumIncoming = getNumIncomingValues();
+
+  // Generate a sequence of selects of the form:
+  // SELECT(Mask3, In3,
+  //        SELECT(Mask2, In2,
+  //               SELECT(Mask1, In1,
+  //                      In0)))
+  // Note that Mask0 is never used: lanes for which no path reaches this phi and
+  // are essentially undef are taken from In0.
+ VectorParts Entry(State.UF);
+  for (unsigned In = 0; In < NumIncoming; ++In) {
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      // We might have single edge PHIs (blocks) - use an identity
+      // 'select' for the first PHI operand.
+      Value *In0 = State.get(getIncomingValue(In), Part);
+      if (In == 0)
+        Entry[Part] = In0; // Initialize with the first incoming value.
+      else {
+        // Select between the current value and the previous incoming edge
+        // based on the incoming mask.
+        Value *Cond = State.get(getMask(In), Part);
+        Entry[Part] =
+            State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
+      }
+    }
+  }
+  for (unsigned Part = 0; Part < State.UF; ++Part)
+    State.set(this, Entry[Part], Part);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << "BLEND ";
