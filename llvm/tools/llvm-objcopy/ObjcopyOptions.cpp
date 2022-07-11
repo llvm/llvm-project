@@ -810,15 +810,9 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
           SFU->Name.str().c_str());
   }
   // Prohibit combinations of --set-section-flags when the section name is used
-  // by --rename-section, either as a source or a destination.
+  // as the destination of a --rename-section.
   for (const auto &E : Config.SectionsToRename) {
     const SectionRename &SR = E.second;
-    if (Config.SetSectionFlags.count(SR.OriginalName))
-      return createStringError(
-          errc::invalid_argument,
-          "--set-section-flags=%s conflicts with --rename-section=%s=%s",
-          SR.OriginalName.str().c_str(), SR.OriginalName.str().c_str(),
-          SR.NewName.str().c_str());
     if (Config.SetSectionFlags.count(SR.NewName))
       return createStringError(
           errc::invalid_argument,
