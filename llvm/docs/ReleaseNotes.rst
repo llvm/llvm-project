@@ -306,6 +306,8 @@ Changes to LLDB
     locations. This prevents us reading locations multiple times, or not
     writing out new values if the addresses have different non-address bits.
 
+* LLDB now supports reading memory tags from AArch64 Linux core files.
+
 Changes to Sanitizers
 ---------------------
 
