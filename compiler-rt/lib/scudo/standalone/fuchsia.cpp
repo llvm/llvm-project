@@ -57,7 +57,9 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   if (Flags & MAP_NOACCESS)
     return allocateVmar(Size, Data, AllowNoMem);
 
-  const zx_handle_t Vmar = (Data && Data->Vmar != ZX_HANDLE_INVALID) ? Data->Vmar : _zx_vmar_root_self();
+  const zx_handle_t Vmar = (Data && Data->Vmar != ZX_HANDLE_INVALID)
+                               ? Data->Vmar
+                               : _zx_vmar_root_self();
 
   zx_status_t Status;
   zx_handle_t Vmo;
@@ -125,7 +127,9 @@ void unmap(void *Addr, uptr Size, uptr Flags, MapPlatformData *Data) {
     CHECK_EQ(_zx_vmar_destroy(Vmar), ZX_OK);
     CHECK_EQ(_zx_handle_close(Vmar), ZX_OK);
   } else {
-    const zx_handle_t Vmar = (Data && Data->Vmar != ZX_HANDLE_INVALID) ? Data->Vmar : _zx_vmar_root_self();
+    const zx_handle_t Vmar = (Data && Data->Vmar != ZX_HANDLE_INVALID)
+                                 ? Data->Vmar
+                                 : _zx_vmar_root_self();
     const zx_status_t Status =
         _zx_vmar_unmap(Vmar, reinterpret_cast<uintptr_t>(Addr), Size);
     if (UNLIKELY(Status != ZX_OK))
