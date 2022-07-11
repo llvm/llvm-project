@@ -692,9 +692,6 @@ private:
     bool getDIENames(const DWARFDie &Die, AttributesInfo &Info,
                      OffsetsStringPool &StringPool, bool StripTemplate = false);
 
-    /// Create a copy of abbreviation Abbrev.
-    void copyAbbrev(const DWARFAbbreviationDeclaration &Abbrev, bool hasODR);
-
     uint32_t hashFullyQualifiedName(DWARFDie DIE, CompileUnit &U,
                                     const DWARFFile &File,
                                     int RecurseDepth = 0);
