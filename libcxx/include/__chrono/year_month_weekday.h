@@ -47,10 +47,10 @@ public:
             : year_month_weekday(__from_days(__sysd.time_since_epoch())) {}
     _LIBCPP_HIDE_FROM_ABI inline explicit constexpr year_month_weekday(const local_days& __locd) noexcept
             : year_month_weekday(__from_days(__locd.time_since_epoch())) {}
-    _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator+=(const months& m) noexcept;
-    _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator-=(const months& m) noexcept;
-    _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator+=(const years& y)  noexcept;
-    _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator-=(const years& y)  noexcept;
+    _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator+=(const months&) noexcept;
+    _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator-=(const months&) noexcept;
+    _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator+=(const years&)  noexcept;
+    _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator-=(const years&)  noexcept;
 
     _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::year                       year() const noexcept { return __y; }
     _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month                     month() const noexcept { return __m; }

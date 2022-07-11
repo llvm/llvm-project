@@ -9,11 +9,11 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX9 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX9 %s
 
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
 
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 
 define half @v_fdiv_f16(half %a, half %b) {
 ; GFX6-IEEE-LABEL: v_fdiv_f16:
@@ -394,19 +394,12 @@ define half @v_rcp_f16_arcp_afn(half %x) {
 ; GFX89-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_rcp_f16_arcp_afn:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_rcp_f16_arcp_afn:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_rcp_f16_arcp_afn:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rcp_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp afn half 1.0, %x
   ret half %fdiv
 }
@@ -459,19 +452,12 @@ define half @v_rcp_f16_ulp25(half %x) {
 ; GFX89-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_rcp_f16_ulp25:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_rcp_f16_ulp25:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_rcp_f16_ulp25:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rcp_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv half 1.0, %x, !fpmath !0
   ret half %fdiv
 }

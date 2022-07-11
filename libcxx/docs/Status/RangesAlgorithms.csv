@@ -61,7 +61,7 @@ Write,unique_copy,Not assigned,n/a,Not started
 Write,partition_copy,Not assigned,n/a,Not started
 Write,partial_sort_copy,Not assigned,n/a,Not started
 Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
-Merge,set_difference,Hui Xie,n/a,Not started
+Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`,✅
 Merge,set_intersection,Hui Xie,n/a,Not started
 Merge,set_symmetric_difference,Hui Xie,n/a,Not started
 Merge,set_union,Hui Xie,n/a,Not started

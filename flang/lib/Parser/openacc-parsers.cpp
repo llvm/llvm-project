@@ -63,11 +63,8 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
         construct<AccClause>(construct<AccClause::DeviceResident>(
             parenthesized(Parser<AccObjectList>{}))) ||
     ("DEVICE_TYPE"_tok || "DTYPE"_tok) >>
-        construct<AccClause>(construct<AccClause::DeviceType>(parenthesized(
-            "*" >> construct<std::optional<std::list<ScalarIntExpr>>>()))) ||
-    ("DEVICE_TYPE"_tok || "DTYPE"_tok) >>
         construct<AccClause>(construct<AccClause::DeviceType>(
-            parenthesized(maybe(nonemptyList(scalarIntExpr))))) ||
+            parenthesized(Parser<AccDeviceTypeExprList>{}))) ||
     "FINALIZE" >> construct<AccClause>(construct<AccClause::Finalize>()) ||
     "FIRSTPRIVATE" >> construct<AccClause>(construct<AccClause::Firstprivate>(
                           parenthesized(Parser<AccObjectList>{}))) ||
@@ -98,8 +95,8 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
                        parenthesized(construct<AccObjectListWithReduction>(
                            Parser<AccReductionOperator>{} / ":",
                            Parser<AccObjectList>{})))) ||
-    "SELF" >> construct<AccClause>(
-                  construct<AccClause::Self>(Parser<AccSelfClause>{})) ||
+    "SELF" >> construct<AccClause>(construct<AccClause::Self>(
+                  maybe(parenthesized(Parser<AccSelfClause>{})))) ||
     "SEQ" >> construct<AccClause>(construct<AccClause::Seq>()) ||
     "TILE" >> construct<AccClause>(construct<AccClause::Tile>(
                   parenthesized(Parser<AccTileExprList>{}))) ||
@@ -136,6 +133,12 @@ TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM:" >> scalarIntExpr / ":"),
 TYPE_PARSER(construct<AccSizeExpr>(scalarIntExpr) ||
     construct<AccSizeExpr>("*" >> construct<std::optional<ScalarIntExpr>>()))
 TYPE_PARSER(construct<AccSizeExprList>(nonemptyList(Parser<AccSizeExpr>{})))
+
+TYPE_PARSER(construct<AccDeviceTypeExpr>(scalarIntExpr) ||
+    construct<AccDeviceTypeExpr>(
+        "*" >> construct<std::optional<ScalarIntExpr>>()))
+TYPE_PARSER(
+    construct<AccDeviceTypeExprList>(nonemptyList(Parser<AccDeviceTypeExpr>{})))
 
 // tile size is one of:
 //   * (represented as an empty std::optional<ScalarIntExpr>)
@@ -178,8 +181,8 @@ TYPE_PARSER(construct<AccDefaultClause>(parenthesized(
 // SELF clause is either a simple optional condition for compute construct
 // or a synonym of the HOST clause for the update directive 2.14.4 holding
 // an object list.
-TYPE_PARSER(construct<AccSelfClause>(parenthesized(Parser<AccObjectList>{})) ||
-    construct<AccSelfClause>(maybe(parenthesized(scalarLogicalExpr))))
+TYPE_PARSER(construct<AccSelfClause>(Parser<AccObjectList>{}) ||
+    construct<AccSelfClause>(scalarLogicalExpr))
 
 // Modifier for copyin, copyout, cache and create
 TYPE_PARSER(construct<AccDataModifier>(

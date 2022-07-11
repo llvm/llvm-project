@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=CI %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
 
 ; TODO: Merge with DAG test
 
@@ -62,6 +62,7 @@ define amdgpu_kernel void @is_local_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 16, 16)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s0, v1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -128,6 +129,7 @@ define amdgpu_kernel void @is_local_sgpr(i8* %ptr) {
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 16, 16)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX11-NEXT:    s_cmp_lg_u32 s1, s0
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB1_2

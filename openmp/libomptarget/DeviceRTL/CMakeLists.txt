@@ -129,8 +129,8 @@ set(src_files
   ${source_directory}/Workshare.cpp
 )
 
-set(clang_opt_flags -O1 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
-set(link_opt_flags  -O1        -openmp-opt-disable)
+set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
+set(link_opt_flags  -O3        -openmp-opt-disable)
 
 # Prepend -I to each list element
 set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
@@ -245,7 +245,7 @@ foreach(mcpu ${amdgpu_mcpus})
 endforeach()
 
 # Set the flags to build the device runtime from clang.
-set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -mllvm -openmp-opt-disable -nocudalib -nogpulib -nostdinc -DSHARED_SCRATCHPAD_SIZE=512 -O3)
+set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -nocudalib -nogpulib -nostdinc ${clang_opt_flags})
 foreach(arch ${nvptx_sm_list})
   set(clang_lib_flags ${clang_lib_flags} --offload-arch=sm_${arch})
 endforeach()

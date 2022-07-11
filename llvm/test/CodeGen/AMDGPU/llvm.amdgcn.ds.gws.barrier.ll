@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG,GFX10PLUS %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG,GFX10PLUS %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG,GFX10 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG,GFX10 %s
 
 ; Make sure the op is emitted bundled with a waitcnt with and without the retry loop, and the bundle is not removed by ExpandPostRAPseudos.
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=postrapseudos -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=MIR %s
@@ -193,7 +193,7 @@ define amdgpu_kernel void @gws_barrier_fence_before(i32 %val, i32 addrspace(1)* 
 ; NOLOOP: s_mov_b32 m0, 0{{$}}
 ; NOLOOP: ds_gws_barrier v{{[0-9]+}} offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT: s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT: s_waitcnt_vscnt null, 0x0
 ; NOLOOP-NEXT: load_{{dword|b32}}
 
 define amdgpu_kernel void @gws_barrier_fence_after(i32 %val, i32 addrspace(1)* %ptr) #0 {
@@ -221,7 +221,7 @@ define amdgpu_kernel void @gws_init_barrier(i32 %val) #0 {
 ; NOLOOP: s_mov_b32 m0, 0
 ; NOLOOP: ds_gws_init v0 offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT: s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT: s_waitcnt_vscnt null, 0x0
 
 ; NOLOOP-NEXT: ds_gws_barrier v0 offset:7 gds
 ; NOLOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

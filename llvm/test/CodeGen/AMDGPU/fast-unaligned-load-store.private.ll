@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX9-FLASTSCR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX10-FLASTSCR %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX11 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX11-FLASTSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+unaligned-scratch-access -mattr=+enable-flat-scratch < %s | FileCheck --check-prefix=GFX11-FLASTSCR %s
 
 ; Should not merge this to a dword load
 define i32 @private_load_2xi16_align2(i16 addrspace(5)* %p) #0 {
@@ -280,6 +280,7 @@ define i32 @private_load_2xi16_align1(i16 addrspace(5)* %p) #0 {
 ; GFX11-NEXT:    scratch_load_b32 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -290,6 +291,7 @@ define i32 @private_load_2xi16_align1(i16 addrspace(5)* %p) #0 {
 ; GFX11-FLASTSCR-NEXT:    scratch_load_b32 v0, v0, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FLASTSCR-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
+; GFX11-FLASTSCR-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLASTSCR-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
@@ -457,6 +459,7 @@ define i32 @private_load_2xi16_align4(i16 addrspace(5)* %p) #0 {
 ; GFX11-NEXT:    scratch_load_b32 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -467,6 +470,7 @@ define i32 @private_load_2xi16_align4(i16 addrspace(5)* %p) #0 {
 ; GFX11-FLASTSCR-NEXT:    scratch_load_b32 v0, v0, off
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FLASTSCR-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
+; GFX11-FLASTSCR-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLASTSCR-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
