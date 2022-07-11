@@ -29,6 +29,9 @@ struct ARM64Common : TargetInfo {
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
   uint64_t getPageSize() const override { return 16 * 1024; }
+
+  void handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                         uint8_t *loc) const override;
 };
 
 inline uint64_t bitField(uint64_t value, int right, int width, int left) {

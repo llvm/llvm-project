@@ -344,16 +344,6 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // statements, so imports are allowed.
   ImportState = ModuleImportState::ImportAllowed;
 
-  // For an implementation, We already made an implicit import (its interface).
-  // Make and return the import decl to be added to the current TU.
-  if (MDK == ModuleDeclKind::Implementation) {
-    // Make the import decl for the interface.
-    ImportDecl *Import =
-        ImportDecl::Create(Context, CurContext, ModuleLoc, Mod, Path[0].second);
-    // and return it to be added.
-    return ConvertDeclToDeclGroup(Import);
-  }
-
   // FIXME: Create a ModuleDecl.
   return nullptr;
 }
