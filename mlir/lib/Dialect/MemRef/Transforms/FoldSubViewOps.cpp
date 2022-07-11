@@ -162,7 +162,7 @@ template <typename LoadOpTy>
 void LoadOpOfSubViewFolder<LoadOpTy>::replaceOp(
     LoadOpTy loadOp, memref::SubViewOp subViewOp, ArrayRef<Value> sourceIndices,
     PatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<LoadOpTy>(loadOp, subViewOp.source(),
+  rewriter.replaceOpWithNewOp<LoadOpTy>(loadOp, subViewOp.getSource(),
                                         sourceIndices);
 }
 
@@ -174,7 +174,7 @@ void LoadOpOfSubViewFolder<vector::TransferReadOp>::replaceOp(
   if (transferReadOp.getTransferRank() == 0)
     return;
   rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-      transferReadOp, transferReadOp.getVectorType(), subViewOp.source(),
+      transferReadOp, transferReadOp.getVectorType(), subViewOp.getSource(),
       sourceIndices,
       getPermutationMapAttr(rewriter.getContext(), subViewOp,
                             transferReadOp.getPermutationMap()),
@@ -187,7 +187,7 @@ void StoreOpOfSubViewFolder<StoreOpTy>::replaceOp(
     StoreOpTy storeOp, memref::SubViewOp subViewOp,
     ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<StoreOpTy>(storeOp, storeOp.getValue(),
-                                         subViewOp.source(), sourceIndices);
+                                         subViewOp.getSource(), sourceIndices);
 }
 
 template <>
@@ -198,7 +198,7 @@ void StoreOpOfSubViewFolder<vector::TransferWriteOp>::replaceOp(
   if (transferWriteOp.getTransferRank() == 0)
     return;
   rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-      transferWriteOp, transferWriteOp.getVector(), subViewOp.source(),
+      transferWriteOp, transferWriteOp.getVector(), subViewOp.getSource(),
       sourceIndices,
       getPermutationMapAttr(rewriter.getContext(), subViewOp,
                             transferWriteOp.getPermutationMap()),
