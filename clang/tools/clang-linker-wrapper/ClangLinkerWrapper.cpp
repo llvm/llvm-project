@@ -587,6 +587,51 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   return *TempFileOrErr;
 }
+
+Expected<StringRef>
+fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
+          const ArgList &Args) {
+  // AMDGPU uses the clang-offload-bundler to bundle the linked images.
+  Expected<std::string> OffloadBundlerPath = findProgram(
+      "clang-offload-bundler", {getMainExecutable("clang-offload-bundler")});
+  if (!OffloadBundlerPath)
+    return OffloadBundlerPath.takeError();
+
+  llvm::Triple Triple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
+
+  // Create a new file to write the linked device image to.
+  auto TempFileOrErr = createOutputFile(sys::path::filename(ExecutableName) +
+                                            "-device-" + Triple.getArchName(),
+                                        "hipfb");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+
+  SmallVector<StringRef, 16> CmdArgs;
+  CmdArgs.push_back(*OffloadBundlerPath);
+  CmdArgs.push_back("-type=o");
+  CmdArgs.push_back("-bundle-align=4096");
+
+  SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux"};
+  for (const auto &FileAndArch : InputFiles)
+    Targets.push_back(
+        Saver.save("hipv4-amdgcn-amd-amdhsa--" + std::get<1>(FileAndArch)));
+  CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
+
+  CmdArgs.push_back("-input=/dev/null");
+  for (const auto &FileAndArch : InputFiles)
+    CmdArgs.push_back(Saver.save("-input=" + std::get<0>(FileAndArch)));
+
+  CmdArgs.push_back(Saver.save("-output=" + *TempFileOrErr));
+
+  if (Error Err = executeCommands(*OffloadBundlerPath, CmdArgs))
+    return std::move(Err);
+
+  return *TempFileOrErr;
+}
 } // namespace amdgcn
 
 namespace generic {
@@ -1093,6 +1138,10 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
     if (Error Err = wrapCudaBinary(M, BuffersToWrap.front()))
       return std::move(Err);
     break;
+  case OFK_HIP:
+    if (Error Err = wrapHIPBinary(M, BuffersToWrap.front()))
+      return std::move(Err);
+    break;
   default:
     return createStringError(inconvertibleErrorCode(),
                              getOffloadKindName(Kind) +
@@ -1120,8 +1169,6 @@ bundleOpenMP(ArrayRef<OffloadingImage> Images) {
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleCuda(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
-  SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
-
   SmallVector<std::pair<StringRef, StringRef>, 4> InputFiles;
   for (const OffloadingImage &Image : Images)
     InputFiles.emplace_back(std::make_pair(Image.Image->getBufferIdentifier(),
@@ -1134,6 +1181,31 @@ bundleCuda(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ImageOrError =
       llvm::MemoryBuffer::getFileOrSTDIN(*FileOrErr);
+
+  SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
+  if (std::error_code EC = ImageOrError.getError())
+    return createFileError(*FileOrErr, EC);
+  Buffers.emplace_back(std::move(*ImageOrError));
+
+  return std::move(Buffers);
+}
+
+Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
+bundleHIP(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
+  SmallVector<std::pair<StringRef, StringRef>, 4> InputFiles;
+  for (const OffloadingImage &Image : Images)
+    InputFiles.emplace_back(std::make_pair(Image.Image->getBufferIdentifier(),
+                                           Image.StringData.lookup("arch")));
+
+  Triple TheTriple = Triple(Images.front().StringData.lookup("triple"));
+  auto FileOrErr = amdgcn::fatbinary(InputFiles, Args);
+  if (!FileOrErr)
+    return FileOrErr.takeError();
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ImageOrError =
+      llvm::MemoryBuffer::getFileOrSTDIN(*FileOrErr);
+
+  SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
   if (std::error_code EC = ImageOrError.getError())
     return createFileError(*FileOrErr, EC);
   Buffers.emplace_back(std::move(*ImageOrError));
@@ -1151,6 +1223,8 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
     return bundleOpenMP(Images);
   case OFK_Cuda:
     return bundleCuda(Images, Args);
+  case OFK_HIP:
+    return bundleHIP(Images, Args);
   default:
     return createStringError(inconvertibleErrorCode(),
                              getOffloadKindName(Kind) +
