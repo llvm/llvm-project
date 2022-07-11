@@ -113,6 +113,7 @@ set(files
   __algorithm/ranges_replace_if.h
   __algorithm/ranges_reverse.h
   __algorithm/ranges_set_difference.h
+  __algorithm/ranges_set_intersection.h
   __algorithm/ranges_sort.h
   __algorithm/ranges_sort_heap.h
   __algorithm/ranges_stable_sort.h
