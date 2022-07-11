@@ -127,6 +127,7 @@ if(TARGET clang)
   # dependency as it's also possible to run the libc++ tests against the libc++
   # installed on the system.
   if (TARGET cxx)
+    set(LLDB_HAS_LIBCXX ON)
     add_lldb_test_dependency(cxx)
   endif()
 
@@ -172,6 +173,7 @@ llvm_canonicalize_cmake_booleans(
   LLDB_ENABLE_LZMA
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
+  LLDB_HAS_LIBCXX
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS)
 
