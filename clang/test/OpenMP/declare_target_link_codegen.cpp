@@ -77,9 +77,9 @@ int maini1() {
 
 // HOST: [[BP0:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // HOST: [[P0:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-// HOST: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 3, i8** [[BP0]], i8** [[P0]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[SIZES]], i{{[0-9]+}} 0, i{{[0-9]+}} 0), i64* getelementptr inbounds ([3 x i64], [3 x i64]* [[MAPTYPES]], i{{[0-9]+}} 0, i{{[0-9]+}} 0), i8** null, i8** null)
+// HOST: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* %{{.+}})
 // HOST: call void @__omp_offloading_{{.*}}_{{.*}}_{{.*}}maini1{{.*}}_l42(i32* %{{[^,]+}})
-// HOST: call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @.__omp_offloading_{{.+}}_l47.region_id, i32 2, {{.+}})
+// HOST: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 0, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* %{{.+}})
 
 // HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l42(i32* noundef nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // HOST: [[C:%.*]] = load i32, i32* @c,

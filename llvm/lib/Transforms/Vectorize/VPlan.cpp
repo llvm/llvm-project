@@ -568,6 +568,24 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+VPActiveLaneMaskPHIRecipe *VPlan::getActiveLaneMaskPhi() {
+  VPBasicBlock *Header = getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &R : Header->phis()) {
+    if (isa<VPActiveLaneMaskPHIRecipe>(&R))
+      return cast<VPActiveLaneMaskPHIRecipe>(&R);
+  }
+  return nullptr;
+}
+
+static bool canSimplifyBranchOnCond(VPInstruction *Term) {
+  VPInstruction *Not = dyn_cast<VPInstruction>(Term->getOperand(0));
+  if (!Not || Not->getOpcode() != VPInstruction::Not)
+    return false;
+
+  VPInstruction *ALM = dyn_cast<VPInstruction>(Not->getOperand(0));
+  return ALM && ALM->getOpcode() == VPInstruction::ActiveLaneMask;
+}
+
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
                              VPTransformState &State,
@@ -575,11 +593,15 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   VPBasicBlock *ExitingVPBB = getVectorLoopRegion()->getExitingBasicBlock();
   auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
-  // Try to simplify BranchOnCount to 'BranchOnCond true' if TC <= VF * UF when
-  // preparing to execute the plan for the main vector loop.
-  if (!IsEpilogueVectorization && Term &&
-      Term->getOpcode() == VPInstruction::BranchOnCount &&
-      isa<ConstantInt>(TripCountV)) {
+  // Try to simplify the branch condition if TC <= VF * UF when preparing to
+  // execute the plan for the main vector loop. We only do this if the
+  // terminator is:
+  //  1. BranchOnCount, or
+  //  2. BranchOnCond where the input is Not(ActiveLaneMask).
+  if (!IsEpilogueVectorization && Term && isa<ConstantInt>(TripCountV) &&
+      (Term->getOpcode() == VPInstruction::BranchOnCount ||
+       (Term->getOpcode() == VPInstruction::BranchOnCond &&
+        canSimplifyBranchOnCond(Term)))) {
     ConstantInt *C = cast<ConstantInt>(TripCountV);
     uint64_t TCVal = C->getZExtValue();
     if (TCVal && TCVal <= State.VF.getKnownMinValue() * State.UF) {
@@ -699,7 +721,8 @@ void VPlan::execute(VPTransformState *State) {
     // generated.
     bool SinglePartNeeded = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
                             isa<VPFirstOrderRecurrencePHIRecipe>(PhiR) ||
-                            cast<VPReductionPHIRecipe>(PhiR)->isOrdered();
+                            (isa<VPReductionPHIRecipe>(PhiR) &&
+                             cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
     unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
 
     for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {

@@ -109,3 +109,21 @@ void ARM64Common::relaxGotLoad(uint8_t *loc, uint8_t type) const {
   instruction = ((instruction & 0x001fffff) | 0x91000000);
   write32le(loc, instruction);
 }
+
+void ARM64Common::handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                                    uint8_t *loc) const {
+  assert(r.type == ARM64_RELOC_BRANCH26);
+
+  if (config->outputType == MH_OBJECT)
+    return;
+
+  if (sym->getName().startswith("___dtrace_probe")) {
+    // change call site to a NOP
+    write32le(loc, 0xD503201F);
+  } else if (sym->getName().startswith("___dtrace_isenabled")) {
+    // change call site to 'MOVZ X0,0'
+    write32le(loc, 0xD2800000);
+  } else {
+    error("Unrecognized dtrace symbol prefix: " + toString(*sym));
+  }
+}

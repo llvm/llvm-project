@@ -781,8 +781,9 @@ enum class InsertTextFormat {
 
 struct CompletionItem {
   CompletionItem() = default;
-  CompletionItem(StringRef label, CompletionItemKind kind)
-      : label(label.str()), kind(kind),
+  CompletionItem(const Twine &label, CompletionItemKind kind,
+                 StringRef sortText = "")
+      : label(label.str()), kind(kind), sortText(sortText.str()),
         insertTextFormat(InsertTextFormat::PlainText) {}
 
   /// The label of this completion item. By default also the text that is

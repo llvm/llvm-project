@@ -35,9 +35,12 @@ void target_maps_parallel_integer(int a){
 // CK1: [[GEPOP:%.+]] = getelementptr inbounds {{.*}}
 // CK1: [[GEPOPBIT:%.+]] = bitcast i8** [[GEPOP]]
 // CK1: store i32* %ParamToKernel, i32** [[GEPOPBIT]]
-// CK1: [[GEPMAPPERARG:%.+]] = getelementptr inbounds {{.*}}
-// CK1: [[GEPOBPARG:%.+]] = getelementptr inbounds {{.*}}
-// CK1: [[GEPOPARG:%.+]] = getelementptr inbounds {{.*}}
-// CK1: call {{.*}}tgt_target_mapper({{.*}}i8** [[GEPOBPARG]], i8** [[GEPOPARG]]{{.*}}, i8** null)
+// CK1: [[GEPOBPARG:%.+]] = getelementptr inbounds {{.*}} %.offload_baseptrs, i32 0, i32 0
+// CK1: [[GEPOPARG:%.+]] = getelementptr inbounds {{.*}} %.offload_ptrs, i32 0, i32 0
+// CK1: [[ARGBP:%.+]] = getelementptr inbounds %struct.__tgt_kernel_arguments, %struct.__tgt_kernel_arguments* %kernel_args, i32 0, i32 2
+// CK1: store i8** [[GEPOBPARG]], i8*** [[ARGBP]], align 8
+// CK1: [[ARGP:%.+]] = getelementptr inbounds %struct.__tgt_kernel_arguments, %struct.__tgt_kernel_arguments* %kernel_args, i32 0, i32 3
+// CK1: store i8** [[GEPOPARG]], i8*** [[ARGP]], align 8
+// CK1: call {{.*}}tgt_target_kernel({{.*}})
 
 #endif

@@ -791,6 +791,38 @@ void OpenMPIRBuilder::emitOffloadingEntry(Constant *Addr, StringRef Name,
   Entry->setAlignment(Align(1));
 }
 
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
+    const LocationDescription &Loc, Value *&Return, Value *Ident,
+    Value *DeviceID, Value *NumTeams, Value *NumThreads, Value *HostPtr,
+    ArrayRef<Value *> KernelArgs, ArrayRef<Value *> NoWaitArgs) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  auto *KernelArgsPtr =
+      Builder.CreateAlloca(OpenMPIRBuilder::KernelArgs, nullptr, "kernel_args");
+  for (unsigned I = 0, Size = KernelArgs.size(); I != Size; ++I) {
+    llvm::Value *Arg =
+        Builder.CreateStructGEP(OpenMPIRBuilder::KernelArgs, KernelArgsPtr, I);
+    Builder.CreateAlignedStore(
+        KernelArgs[I], Arg,
+        M.getDataLayout().getPrefTypeAlign(KernelArgs[I]->getType()));
+  }
+
+  bool HasNoWait = !NoWaitArgs.empty();
+  SmallVector<Value *> OffloadingArgs{Ident,      DeviceID, NumTeams,
+                                      NumThreads, HostPtr,  KernelArgsPtr};
+  if (HasNoWait)
+    OffloadingArgs.append(NoWaitArgs.begin(), NoWaitArgs.end());
+
+  Return = Builder.CreateCall(
+      HasNoWait
+          ? getOrCreateRuntimeFunction(M, OMPRTL___tgt_target_kernel_nowait)
+          : getOrCreateRuntimeFunction(M, OMPRTL___tgt_target_kernel),
+      OffloadingArgs);
+
+  return Builder.saveIP();
+}
+
 void OpenMPIRBuilder::emitCancelationCheckImpl(Value *CancelFlag,
                                                omp::Directive CanceledDirective,
                                                FinalizeCallbackTy ExitCB) {
@@ -2834,7 +2866,8 @@ void OpenMPIRBuilder::unrollLoopHeuristic(DebugLoc, CanonicalLoopInfo *Loop) {
             });
 }
 
-void OpenMPIRBuilder::applySimd(DebugLoc, CanonicalLoopInfo *CanonicalLoop) {
+void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
+                                ConstantInt *Simdlen) {
   LLVMContext &Ctx = Builder.getContext();
 
   Function *F = CanonicalLoop->getFunction();
@@ -2879,6 +2912,11 @@ void OpenMPIRBuilder::applySimd(DebugLoc, CanonicalLoopInfo *CanonicalLoop) {
                          AccessGroup}),
        MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
                          BoolConst})});
+  if (Simdlen != nullptr)
+    addLoopMetadata(
+        CanonicalLoop,
+        MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.width"),
+                          ConstantAsMetadata::get(Simdlen)}));
 }
 
 /// Create the TargetMachine object to query the backend for optimization

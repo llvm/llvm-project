@@ -109,6 +109,20 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_DEFAULT
 };
 
+/// This struct contains all of the arguments to a target kernel region launch.
+struct __tgt_kernel_arguments {
+  int32_t Version;    // Version of this struct for ABI compatibility.
+  int32_t NumArgs;    // Number of arguments in each input pointer.
+  void **ArgBasePtrs; // Base pointer of each argument (e.g. a struct).
+  void **ArgPtrs;     // Pointer to the argument data.
+  int64_t *ArgSizes;  // Size of the argument data in bytes.
+  int64_t *ArgTypes;  // Type of the data (e.g. to / from).
+  void **ArgNames;    // Name of the data for debugging, possibly null.
+  void **ArgMappers;  // User-defined mappers, possibly null.
+  int64_t Tripcount;  // Tripcount for the teams / distribute loop, 0 otherwise.
+};
+static_assert(sizeof(__tgt_kernel_arguments) == 64, "Invalid struct size");
+
 /// This struct is a record of an entry point or global. For a function
 /// entry point the size is expected to be zero
 struct __tgt_offload_entry {
@@ -311,50 +325,14 @@ void __tgt_target_data_update_nowait_mapper(
 // same action as data_end above. The following types are used; this
 // function returns 0 if it was able to transfer the execution to a
 // target and an int different from zero otherwise.
-int __tgt_target(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-                 void **ArgsBase, void **Args, int64_t *ArgSizes,
-                 int64_t *ArgTypes);
-int __tgt_target_nowait(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-                        void **ArgsBase, void **Args, int64_t *ArgSizes,
-                        int64_t *ArgTypes, int32_t DepNum, void *DepList,
-                        int32_t NoAliasDepNum, void *NoAliasDepList);
-int __tgt_target_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
-                        int32_t ArgNum, void **ArgsBase, void **Args,
-                        int64_t *ArgSizes, int64_t *ArgTypes,
-                        map_var_info_t *ArgNames, void **ArgMappers);
-int __tgt_target_nowait_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
-                               int32_t ArgNum, void **ArgsBase, void **Args,
-                               int64_t *ArgSizes, int64_t *ArgTypes,
-                               map_var_info_t *ArgNames, void **ArgMappers,
-                               int32_t DepNum, void *DepList,
-                               int32_t NoAliasDepNum, void *NoAliasDepList);
-
-int __tgt_target_teams(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-                       void **ArgsBase, void **Args, int64_t *ArgSizes,
-                       int64_t *ArgTypes, int32_t NumTeams,
-                       int32_t ThreadLimit);
-int __tgt_target_teams_nowait(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-                              void **ArgsBase, void **Args, int64_t *ArgSizes,
-                              int64_t *ArgTypes, int32_t NumTeams,
-                              int32_t ThreadLimit, int32_t DepNum,
-                              void *DepList, int32_t NoAliasDepNum,
-                              void *NoAliasDepList);
-int __tgt_target_teams_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
-                              int32_t ArgNum, void **ArgsBase, void **Args,
-                              int64_t *ArgSizes, int64_t *ArgTypes,
-                              map_var_info_t *ArgNames, void **ArgMappers,
-                              int32_t NumTeams, int32_t ThreadLimit);
-int __tgt_target_teams_nowait_mapper(
-    ident_t *Loc, int64_t DeviceId, void *HostPtr, int32_t ArgNum,
-    void **ArgsBase, void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
-    map_var_info_t *ArgNames, void **ArgMappers, int32_t NumTeams,
-    int32_t ThreadLimit, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
-    void *NoAliasDepList);
-
-void __kmpc_push_target_tripcount(int64_t DeviceId, uint64_t LoopTripcount);
-
-void __kmpc_push_target_tripcount_mapper(ident_t *Loc, int64_t DeviceId,
-                                         uint64_t LoopTripcount);
+int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
+                        int32_t ThreadLimit, void *HostPtr,
+                        __tgt_kernel_arguments *Args);
+int __tgt_target_kernel_nowait(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
+                               int32_t ThreadLimit, void *HostPtr,
+                               __tgt_kernel_arguments *Args, int32_t DepNum,
+                               void *DepList, int32_t NoAliasDepNum,
+                               void *NoAliasDepList);
 
 void __tgt_set_info_flag(uint32_t);
 

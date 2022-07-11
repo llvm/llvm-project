@@ -447,7 +447,8 @@ void ExtensibleDialect::registerDynamicOp(
       std::move(op->printFn), std::move(op->verifyFn),
       std::move(op->verifyRegionFn), std::move(op->foldHookFn),
       std::move(op->getCanonicalizationPatternsFn),
-      detail::InterfaceMap::get<>(), std::move(hasTraitFn), {});
+      detail::InterfaceMap::get<>(), std::move(hasTraitFn), {},
+      std::move(op->getPopulateDefaultAttrsFn));
 }
 
 bool ExtensibleDialect::classof(const Dialect *dialect) {

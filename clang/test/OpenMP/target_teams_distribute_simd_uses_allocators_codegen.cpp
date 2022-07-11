@@ -65,7 +65,7 @@ void foo() {
   omp_alloctrait_t traits[10];
   omp_allocator_handle_t my_allocator;
 
-// CHECK: [[RES:%.+]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @.[[TGT_REGION:.+]].region_id, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[SIZES]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPTYPES]], i32 0, i32 0), i8** null, i8** null, i32 0, i32 1)
+// CHECK: [[RES:%.+]] = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 0, i32 1, i8* @.[[TGT_REGION:.+]].region_id, %struct.__tgt_kernel_arguments* %[[KERNEL_ARGS:.+]])
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[FAILED:.+]], label %[[DONE:.+]]
 // CHECK: [[FAILED]]:

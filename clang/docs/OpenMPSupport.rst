@@ -110,8 +110,9 @@ OpenMP 5.0 Implementation Details
 =================================
 
 The following table provides a quick overview over various OpenMP 5.0 features
-and their implementation status. Please contact *openmp-dev* at
-*lists.llvm.org* for more information or if you want to help with the
+and their implementation status. Please post on the
+`Discourse forums (Runtimes - OpenMP category)`_ for more 
+information or if you want to help with the
 implementation.
 
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -256,8 +257,10 @@ OpenMP 5.1 Implementation Details
 
 The following table provides a quick overview over various OpenMP 5.1 features
 and their implementation status, as defined in the technical report 8 (TR8).
-Please contact *openmp-dev* at *lists.llvm.org* for more information or if you
-want to help with the implementation.
+Please post on the 
+`Discourse forums (Runtimes - OpenMP category)`_ for more 
+information or if you want to help with the
+implementation.
 
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 |Category                      | Feature                                                      | Status                   | Reviews                                                               |
@@ -362,12 +365,12 @@ want to help with the implementation.
 OpenMP Extensions
 =================
 
-The following table provides a quick overview over various OpenMP
+The following table provides a quick overview over various OpenMP 
 extensions and their implementation status.  These extensions are not
 currently defined by any standard, so links to associated LLVM
 documentation are provided.  As these extensions mature, they will be
-considered for standardization.  Please contact *openmp-dev* at
-*lists.llvm.org* to provide feedback.
+considered for standardization. Please post on the
+`Discourse forums (Runtimes - OpenMP category)`_ to provide feedback. 
 
 +------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
 |Category                      | Feature                                                                           | Status                   | Reviews                                                |
@@ -378,3 +381,5 @@ considered for standardization.  Please contact *openmp-dev* at
 | device extension             | `'ompx_hold' map type modifier                                                    | :good:`prototyped`       | D106509, D106510                                       |
 |                              | <https://openmp.llvm.org/docs/openacc/OpenMPExtensions.html#ompx-hold>`_          |                          |                                                        |
 +------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
+
+.. _Discourse forums (Runtimes - OpenMP category): https://discourse.llvm.org/c/runtimes/openmp/35

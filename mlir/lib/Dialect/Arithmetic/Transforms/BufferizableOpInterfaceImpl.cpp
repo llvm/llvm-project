@@ -48,7 +48,7 @@ struct ConstantOpInterface
       return failure();
     memref::GlobalOp globalMemref = *globalOp;
     replaceOpWithNewBufferizedOp<memref::GetGlobalOp>(
-        rewriter, op, globalMemref.type(), globalMemref.getName());
+        rewriter, op, globalMemref.getType(), globalMemref.getName());
 
     return success();
   }

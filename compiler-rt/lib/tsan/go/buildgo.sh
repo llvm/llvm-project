@@ -59,7 +59,9 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		ARCHCFLAGS="-m64 -mcpu=power8 -fno-function-sections"
 	elif [ "`uname -a | grep x86_64`" != "" ]; then
 		SUFFIX="linux_amd64"
-		ARCHCFLAGS="-m64 -msse4.2"
+		# -msse3 used below to ensure continued support of older
+		# cpus for now, see https://github.com/golang/go/issues/53743.
+		ARCHCFLAGS="-m64 -msse3"
 		OSCFLAGS="$OSCFLAGS -ffreestanding -Wno-unused-const-variable -Wno-unknown-warning-option"
 	elif [ "`uname -a | grep aarch64`" != "" ]; then
 		SUFFIX="linux_arm64"

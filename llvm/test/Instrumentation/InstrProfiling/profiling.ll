@@ -8,11 +8,13 @@
 ; RUN: opt < %s -mtriple=x86_64-sie-ps5 -passes=instrprof -S | FileCheck %s --check-prefixes=ELF,PS
 ; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefixes=COFF
 ; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=instrprof -S | FileCheck %s --check-prefixes=XCOFF
+; RUN: opt < %s -mtriple=x86_64-pc-freebsd13 -passes=instrprof -S | FileCheck %s --check-prefixes=ELF
 
-; MACHO: @__llvm_profile_runtime = external global i32
-; ELF_GENERIC: @__llvm_profile_runtime = external global i32
+; MACHO: @__llvm_profile_runtime = external hidden global i32
+; ELF_GENERIC: @__llvm_profile_runtime = external hidden global i32
 ; ELF-NOT: @__llvm_profile_runtime = external global i32
-; XCOFF: @__llvm_profile_runtime = external global i32
+; XCOFF: @__llvm_profile_runtime = external hidden global i32
+; COFF: @__llvm_profile_runtime = external hidden global i32
 
 ; ELF: $__profc_foo = comdat nodeduplicate
 ; ELF: $__profc_foo_weak = comdat nodeduplicate
