@@ -9006,14 +9006,14 @@ Sema::BuildExprRequirement(
         cast<TemplateTypeParmDecl>(TPL->getParam(0))->getTypeConstraint()
             ->getImmediatelyDeclaredConstraint();
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
-    assert(!Constraint.isInvalid() &&
-           "Substitution cannot fail as it is simply putting a type template "
-           "argument into a concept specialization expression's parameter.");
-
-    SubstitutedConstraintExpr =
-        cast<ConceptSpecializationExpr>(Constraint.get());
-    if (!SubstitutedConstraintExpr->isSatisfied())
-      Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
+    if (Constraint.isInvalid()) {
+      Status = concepts::ExprRequirement::SS_ExprSubstitutionFailure;
+    } else {
+      SubstitutedConstraintExpr =
+          cast<ConceptSpecializationExpr>(Constraint.get());
+      if (!SubstitutedConstraintExpr->isSatisfied())
+        Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
+    }
   }
   return new (Context) concepts::ExprRequirement(E, IsSimple, NoexceptLoc,
                                                  ReturnTypeRequirement, Status,
