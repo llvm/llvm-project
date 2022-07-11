@@ -172,29 +172,6 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   for (Decl *D : S.WeakTopLevelDecls())
     Consumer->HandleTopLevelDecl(DeclGroupRef(D));
 
-  // For C++20 modules, the codegen for module initializers needs to be altered
-  // and to be able to use a name based on the module name.
-
-  // At this point, we should know if we are building a non-header C++20 module.
-  if (S.getLangOpts().CPlusPlusModules && !S.getLangOpts().IsHeaderFile &&
-      !S.getLangOpts().CurrentModule.empty()) {
-    // If we are building the module from source, then the top level module
-    // will be here.
-    Module *CodegenModule = S.getCurrentModule();
-    bool Interface = true;
-    if (CodegenModule)
-      // We only use module initializers for interfaces (including partition
-      // implementation units).
-      Interface = S.currentModuleIsInterface();
-    else
-      // If we are building the module from a PCM file, then the module can be
-      // found here.
-      CodegenModule = S.getPreprocessor().getCurrentModule();
-    // If neither. then ....
-    assert(CodegenModule && "codegen for a module, but don't know which?");
-    if (Interface)
-      S.getASTContext().setModuleForCodeGen(CodegenModule);
-  }
   Consumer->HandleTranslationUnit(S.getASTContext());
 
   // Finalize the template instantiation observer chain.

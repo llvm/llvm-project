@@ -665,18 +665,6 @@ public:
   Module *findSubmodule(StringRef Name) const;
   Module *findOrInferSubmodule(StringRef Name);
 
-  /// Get the Global Module Fragment (sub-module) for this module, it there is
-  /// one.
-  ///
-  /// \returns The GMF sub-module if found, or NULL otherwise.
-  Module *getGlobalModuleFragment() { return findSubmodule("<global>"); }
-
-  /// Get the Private Module Fragment (sub-module) for this module, it there is
-  /// one.
-  ///
-  /// \returns The PMF sub-module if found, or NULL otherwise.
-  Module *getPrivateModuleFragment() { return findSubmodule("<private>"); }
-
   /// Determine whether the specified module would be visible to
   /// a lookup at the end of this module.
   ///
