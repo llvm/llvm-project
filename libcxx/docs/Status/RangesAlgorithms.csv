@@ -63,7 +63,7 @@ Write,partial_sort_copy,Not assigned,n/a,Not started
 Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
 Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`,✅
 Merge,set_intersection,Hui Xie,`D129233 <https://llvm.org/D129233>`,✅
-Merge,set_symmetric_difference,Hui Xie,n/a,Not started
+Merge,set_symmetric_difference,Hui Xie,`D129520 <https://llvm.org/D129520>`,✅
 Merge,set_union,Hui Xie,n/a,Not started
 Permutation,remove,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,remove_if,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅

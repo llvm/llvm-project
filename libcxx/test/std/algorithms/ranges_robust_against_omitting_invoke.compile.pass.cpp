@@ -192,8 +192,8 @@ void test_all() {
   //in2_pred(std::ranges::partial_sort_copy, in, in2, &Foo::binary_pred, &Bar::val);
   in2_out_pred(std::ranges::merge, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   in2_out_pred(std::ranges::set_difference, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
-  //in2_out_pred(std::ranges::set_intersection, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
-  //in2_out_pred(std::ranges::set_symmetric_difference, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
+  in2_out_pred(std::ranges::set_intersection, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
+  in2_out_pred(std::ranges::set_symmetric_difference, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   //in2_out_pred(std::ranges::set_union, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   in_val(std::ranges::remove, in, x, &Bar::val);
   in_pred(std::ranges::remove_if, in, &Foo::unary_pred, &Bar::val);
