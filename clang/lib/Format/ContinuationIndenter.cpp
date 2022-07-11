@@ -37,7 +37,7 @@ static bool shouldIndentWrappedSelectorName(const FormatStyle &Style,
 // Returns the length of everything up to the first possible line break after
 // the ), ], } or > matching \c Tok.
 static unsigned getLengthToMatchingParen(const FormatToken &Tok,
-                                         const std::vector<ParenState> &Stack) {
+                                         const SmallVector<ParenState> &Stack) {
   // Normally whether or not a break before T is possible is calculated and
   // stored in T.CanBreakBefore. Braces, array initializers and text proto
   // messages like `key: < ... >` are an exception: a break is possible
