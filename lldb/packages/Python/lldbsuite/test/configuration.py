@@ -124,6 +124,9 @@ all_tests = set()
 # LLDB library directory.
 lldb_libs_dir = None
 
+# Force us to use the just-built libcxx
+hermetic_libcxx = False
+
 # A plugin whose tests will be enabled, like intel-pt.
 enabled_plugins = []
 
