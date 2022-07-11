@@ -1096,8 +1096,8 @@ struct __builtin_new_allocator {
     _LIBCPP_CONSTEXPR explicit __builtin_new_deleter(size_t __size, size_t __align)
         : __size_(__size), __align_(__align) {}
 
-    void operator()(void* p) const _NOEXCEPT {
-        _VSTD::__libcpp_deallocate(p, __size_, __align_);
+    void operator()(void* __p) const _NOEXCEPT {
+        _VSTD::__libcpp_deallocate(__p, __size_, __align_);
     }
 
    private:

@@ -684,6 +684,10 @@ Only G_LOAD is valid if the result is a vector type. If the result is larger
 than the memory size, the high elements are undefined (i.e. this is not a
 per-element, vector anyextload)
 
+Unlike in SelectionDAG, atomic loads are expressed with the same
+opcodes as regular loads. G_LOAD, G_SEXTLOAD and G_ZEXTLOAD may all
+have atomic memory operands.
+
 G_INDEXED_LOAD
 ^^^^^^^^^^^^^^
 

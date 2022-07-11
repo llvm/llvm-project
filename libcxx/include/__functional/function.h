@@ -390,9 +390,9 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
     typedef __base<_Rp(_ArgTypes...)> __func;
     __func* __f_;
 
-    _LIBCPP_NO_CFI static __func* __as_base(void* p)
+    _LIBCPP_NO_CFI static __func* __as_base(void* __p)
     {
-        return reinterpret_cast<__func*>(p);
+        return reinterpret_cast<__func*>(__p);
     }
 
   public:
