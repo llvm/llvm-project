@@ -189,7 +189,8 @@ void VPInstruction::generateInstruction(VPTransformState &State,
   if (Instruction::isBinaryOp(getOpcode())) {
     Value *A = State.get(getOperand(0), Part);
     Value *B = State.get(getOperand(1), Part);
-    Value *V = Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B);
+    Value *V =
+        Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
     State.set(this, V, Part);
     return;
   }
@@ -197,14 +198,14 @@ void VPInstruction::generateInstruction(VPTransformState &State,
   switch (getOpcode()) {
   case VPInstruction::Not: {
     Value *A = State.get(getOperand(0), Part);
-    Value *V = Builder.CreateNot(A);
+    Value *V = Builder.CreateNot(A, Name);
     State.set(this, V, Part);
     break;
   }
   case VPInstruction::ICmpULE: {
     Value *IV = State.get(getOperand(0), Part);
     Value *TC = State.get(getOperand(1), Part);
-    Value *V = Builder.CreateICmpULE(IV, TC);
+    Value *V = Builder.CreateICmpULE(IV, TC, Name);
     State.set(this, V, Part);
     break;
   }
@@ -212,7 +213,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     Value *Cond = State.get(getOperand(0), Part);
     Value *Op1 = State.get(getOperand(1), Part);
     Value *Op2 = State.get(getOperand(2), Part);
-    Value *V = Builder.CreateSelect(Cond, Op1, Op2);
+    Value *V = Builder.CreateSelect(Cond, Op1, Op2, Name);
     State.set(this, V, Part);
     break;
   }
@@ -226,7 +227,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     auto *PredTy = VectorType::get(Int1Ty, State.VF);
     Instruction *Call = Builder.CreateIntrinsic(
         Intrinsic::get_active_lane_mask, {PredTy, ScalarTC->getType()},
-        {VIVElem0, ScalarTC}, nullptr, "active.lane.mask");
+        {VIVElem0, ScalarTC}, nullptr, Name);
     State.set(this, Call, Part);
     break;
   }
@@ -250,7 +251,8 @@ void VPInstruction::generateInstruction(VPTransformState &State,
       State.set(this, PartMinus1, Part);
     } else {
       Value *V2 = State.get(getOperand(1), Part);
-      State.set(this, Builder.CreateVectorSplice(PartMinus1, V2, -1), Part);
+      State.set(this, Builder.CreateVectorSplice(PartMinus1, V2, -1, Name),
+                Part);
     }
     break;
   }
@@ -264,7 +266,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
       // elements) times the unroll factor (num of SIMD instructions).
       Value *Step =
           createStepForVF(Builder, Phi->getType(), State.VF, State.UF);
-      Next = Builder.CreateAdd(Phi, Step, "index.next", IsNUW, false);
+      Next = Builder.CreateAdd(Phi, Step, Name, IsNUW, false);
     } else {
       Next = State.get(this, 0);
     }

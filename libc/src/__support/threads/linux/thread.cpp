@@ -119,6 +119,10 @@ static void start_thread() __attribute__((noinline)) {
     // Thread is detached so cleanup the resources.
     if (attrib->owned_stack)
       free_stack(attrib->stack, attrib->stack_size);
+
+    // Set the CLEAR_TID address to nullptr to prevent the kernel
+    // from signalling at a non-existent futex location.
+    __llvm_libc::syscall(SYS_set_tid_address, 0);
   }
 
   __llvm_libc::syscall(SYS_exit, retval);
