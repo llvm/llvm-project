@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}gs_const:
 ; GCN-NOT: v_cmpx
@@ -222,7 +222,7 @@ define amdgpu_gs void @neg_olt(float %a) {
 ; GCN-LABEL: {{^}}fcmp_x2:
 ; FIXME: LLVM should be able to combine these fcmp opcodes.
 ; SI: v_cmp_lt_f32_e32 vcc, s{{[0-9]+}}, v0
-; GFX10PLUS: v_cmp_lt_f32_e32 vcc, 0x3e800000, v0
+; GFX10: v_cmp_lt_f32_e32 vcc, 0x3e800000, v0
 ; GCN: v_cndmask_b32
 ; GCN: v_cmp_nle_f32
 define amdgpu_ps void @fcmp_x2(float %a) #0 {

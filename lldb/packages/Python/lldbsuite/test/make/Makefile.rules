@@ -387,7 +387,8 @@ ifeq (1,$(USE_LIBSTDCPP))
 endif
 
 ifeq (1,$(USE_LIBCPP))
-	CXXFLAGS += -DLLDB_USING_LIBCPP
+	# TODO: Teach LLDB to handle ABI tags in libc++ namespaces.
+	CXXFLAGS += -DLLDB_USING_LIBCPP -D_LIBCPP_NO_ABI_TAG
 	ifeq "$(OS)" "Android"
 		# Nothing to do, this is already handled in
 		# Android.rules.

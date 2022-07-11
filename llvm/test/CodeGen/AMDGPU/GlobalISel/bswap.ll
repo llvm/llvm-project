@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=fiji -o - %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -o - %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -o - %s | FileCheck -check-prefix=GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -o - %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -o - %s | FileCheck -check-prefix=GFX10 %s
 
 define amdgpu_ps i32 @s_bswap_i32(i32 inreg %src) {
 ; GFX7-LABEL: s_bswap_i32:
@@ -36,12 +36,6 @@ define amdgpu_ps i32 @s_bswap_i32(i32 inreg %src) {
 ; GFX10-NEXT:    v_perm_b32 v0, 0, s0, 0x10203
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: s_bswap_i32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_perm_b32 v0, 0, s0, 0x10203
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    ; return to shader part epilog
   %bswap = call i32 @llvm.bswap.i32(i32 %src)
   ret i32 %bswap
 }
@@ -76,13 +70,6 @@ define i32 @v_bswap_i32(i32 %src) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0x10203
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_bswap_i32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0x10203
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i32 @llvm.bswap.i32(i32 %src)
   ret i32 %bswap
 }
@@ -130,14 +117,6 @@ define amdgpu_ps <2 x i32> @s_bswap_v2i32(<2 x i32> inreg %src) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: s_bswap_v2i32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_perm_b32 v0, 0, s0, 0x10203
-; GFX11-NEXT:    v_perm_b32 v1, 0, s1, 0x10203
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-NEXT:    ; return to shader part epilog
   %bswap = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %src)
   ret <2 x i32> %bswap
 }
@@ -178,14 +157,6 @@ define <2 x i32> @v_bswap_v2i32(<2 x i32> %src) {
 ; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0x10203
 ; GFX10-NEXT:    v_perm_b32 v1, 0, v1, 0x10203
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_bswap_v2i32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0x10203
-; GFX11-NEXT:    v_perm_b32 v1, 0, v1, 0x10203
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %src)
   ret <2 x i32> %bswap
 }
@@ -233,14 +204,6 @@ define amdgpu_ps i64 @s_bswap_i64(i64 inreg %src) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: s_bswap_i64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_perm_b32 v0, 0, s1, 0x10203
-; GFX11-NEXT:    v_perm_b32 v1, 0, s0, 0x10203
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-NEXT:    ; return to shader part epilog
   %bswap = call i64 @llvm.bswap.i64(i64 %src)
   ret i64 %bswap
 }
@@ -285,15 +248,6 @@ define i64 @v_bswap_i64(i64 %src) {
 ; GFX10-NEXT:    v_perm_b32 v1, 0, v0, 0x10203
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_bswap_i64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_perm_b32 v2, 0, v1, 0x10203
-; GFX11-NEXT:    v_perm_b32 v1, 0, v0, 0x10203
-; GFX11-NEXT:    v_mov_b32_e32 v0, v2
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i64 @llvm.bswap.i64(i64 %src)
   ret i64 %bswap
 }
@@ -365,18 +319,6 @@ define amdgpu_ps <2 x i64> @s_bswap_v2i64(<2 x i64> inreg %src) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: s_bswap_v2i64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_perm_b32 v0, 0, s1, 0x10203
-; GFX11-NEXT:    v_perm_b32 v1, 0, s0, 0x10203
-; GFX11-NEXT:    v_perm_b32 v2, 0, s3, 0x10203
-; GFX11-NEXT:    v_perm_b32 v3, 0, s2, 0x10203
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX11-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX11-NEXT:    ; return to shader part epilog
   %bswap = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %src)
   ret <2 x i64> %bswap
 }
@@ -437,18 +379,6 @@ define <2 x i64> @v_bswap_v2i64(<2 x i64> %src) {
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_bswap_v2i64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_perm_b32 v4, 0, v1, 0x10203
-; GFX11-NEXT:    v_perm_b32 v5, 0, v3, 0x10203
-; GFX11-NEXT:    v_perm_b32 v1, 0, v0, 0x10203
-; GFX11-NEXT:    v_perm_b32 v3, 0, v2, 0x10203
-; GFX11-NEXT:    v_mov_b32_e32 v0, v4
-; GFX11-NEXT:    v_mov_b32_e32 v2, v5
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %src)
   ret <2 x i64> %bswap
 }
@@ -482,12 +412,6 @@ define amdgpu_ps i16 @s_bswap_i16(i16 inreg %src) {
 ; GFX10-NEXT:    v_perm_b32 v0, 0, s0, 0xc0c0001
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: s_bswap_i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_perm_b32 v0, 0, s0, 0xc0c0001
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    ; return to shader part epilog
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   ret i16 %bswap
 }
@@ -521,13 +445,6 @@ define i16 @v_bswap_i16(i16 %src) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_bswap_i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   ret i16 %bswap
 }
@@ -568,12 +485,6 @@ define amdgpu_ps i32 @s_bswap_v2i16(<2 x i16> inreg %src) {
 ; GFX10-NEXT:    v_perm_b32 v0, 0, s0, 0x2030001
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: s_bswap_v2i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_perm_b32 v0, 0, s0, 0x2030001
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    ; return to shader part epilog
   %bswap = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %src)
   %cast = bitcast <2 x i16> %bswap to i32
   ret i32 %cast
@@ -609,13 +520,6 @@ define i32 @v_bswap_i16_zext_to_i32(i16 %src) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_bswap_i16_zext_to_i32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   %zext = zext i16 %bswap to i32
   ret i32 %zext
@@ -654,14 +558,6 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX10-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_bswap_i16_sext_to_i32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
-; GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   %zext = sext i16 %bswap to i32
   ret i32 %zext
@@ -699,13 +595,6 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0x2030001
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_bswap_v2i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0x2030001
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %src)
   ret <2 x i16> %bswap
 }
@@ -756,15 +645,6 @@ define i64 @v_bswap_i48(i64 %src) {
 ; GFX10-NEXT:    v_perm_b32 v2, 0, v0, 0x10203
 ; GFX10-NEXT:    v_lshrrev_b64 v[0:1], 16, v[1:2]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_bswap_i48:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_perm_b32 v1, 0, v1, 0x10203
-; GFX11-NEXT:    v_perm_b32 v2, 0, v0, 0x10203
-; GFX11-NEXT:    v_lshrrev_b64 v[0:1], 16, v[1:2]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %trunc = trunc i64 %src to i48
   %bswap = call i48 @llvm.bswap.i48(i48 %trunc)
   %zext = zext i48 %bswap to i64

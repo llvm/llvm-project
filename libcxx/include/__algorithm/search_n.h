@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _BinaryPredicate, class _ForwardIterator, class _Size, class _Tp>
 _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator __search_n(_ForwardIterator __first, _ForwardIterator __last,
-                                                          _Size __count, const _Tp& __value_, _BinaryPredicate __pred,
+                                                          _Size __count, const _Tp& __value, _BinaryPredicate __pred,
                                                           forward_iterator_tag) {
   if (__count <= 0)
     return __first;
@@ -32,7 +32,7 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator __search_n(_ForwardIterator __fir
     while (true) {
       if (__first == __last) // return __last if no element matches __value_
         return __last;
-      if (__pred(*__first, __value_))
+      if (__pred(*__first, __value))
         break;
       ++__first;
     }
@@ -44,7 +44,7 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator __search_n(_ForwardIterator __fir
         return __first;
       if (++__m == __last) // Otherwise if source exhaused, pattern not found
         return __last;
-      if (!__pred(*__m, __value_)) // if there is a mismatch, restart with a new __first
+      if (!__pred(*__m, __value)) // if there is a mismatch, restart with a new __first
       {
         __first = __m;
         ++__first;
@@ -57,7 +57,7 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator __search_n(_ForwardIterator __fir
 template <class _BinaryPredicate, class _RandomAccessIterator, class _Size, class _Tp>
 _LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator __search_n(_RandomAccessIterator __first,
                                                                _RandomAccessIterator __last, _Size __count,
-                                                               const _Tp& __value_, _BinaryPredicate __pred,
+                                                               const _Tp& __value, _BinaryPredicate __pred,
                                                                random_access_iterator_tag) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   if (__count <= 0)
@@ -71,7 +71,7 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator __search_n(_RandomAccessIter
     while (true) {
       if (__first >= __s) // return __last if no element matches __value_
         return __last;
-      if (__pred(*__first, __value_))
+      if (__pred(*__first, __value))
         break;
       ++__first;
     }
@@ -82,7 +82,7 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator __search_n(_RandomAccessIter
       if (++__c == __count) // If pattern exhausted, __first is the answer (works for 1 element pattern)
         return __first;
       ++__m;                       // no need to check range on __m because __s guarantees we have enough source
-      if (!__pred(*__m, __value_)) // if there is a mismatch, restart with a new __first
+      if (!__pred(*__m, __value)) // if there is a mismatch, restart with a new __first
       {
         __first = __m;
         ++__first;
@@ -94,17 +94,17 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator __search_n(_RandomAccessIter
 
 template <class _ForwardIterator, class _Size, class _Tp, class _BinaryPredicate>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator search_n(
-    _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value_, _BinaryPredicate __pred) {
+    _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value, _BinaryPredicate __pred) {
   return _VSTD::__search_n<_BinaryPredicate&>(
-      __first, __last, _VSTD::__convert_to_integral(__count), __value_, __pred,
+      __first, __last, _VSTD::__convert_to_integral(__count), __value, __pred,
       typename iterator_traits<_ForwardIterator>::iterator_category());
 }
 
 template <class _ForwardIterator, class _Size, class _Tp>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
-search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value_) {
+search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value) {
   typedef typename iterator_traits<_ForwardIterator>::value_type __v;
-  return _VSTD::search_n(__first, __last, _VSTD::__convert_to_integral(__count), __value_, __equal_to<__v, _Tp>());
+  return _VSTD::search_n(__first, __last, _VSTD::__convert_to_integral(__count), __value, __equal_to<__v, _Tp>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

@@ -64,7 +64,7 @@ __parse_arg_id(const _CharT* __begin, const _CharT* __end, auto& __parse_ctx) {
 
 template <class _Context>
 _LIBCPP_HIDE_FROM_ABI constexpr uint32_t
-__substitute_arg_id(basic_format_arg<_Context> _Arg) {
+__substitute_arg_id(basic_format_arg<_Context> __format_arg) {
   return visit_format_arg(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
@@ -88,7 +88,7 @@ __substitute_arg_id(basic_format_arg<_Context> _Arg) {
           __throw_format_error("A format-spec arg-id replacement argument "
                                "isn't an integral type");
       },
-      _Arg);
+      __format_arg);
 }
 
 /** Helper struct returned from @ref __get_string_alignment. */

@@ -3762,6 +3762,14 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
   }
 
+  // If there's no chance any bit will need to borrow from an adjacent bit:
+  // sub C, X --> xor X, C
+  if (ConstantSDNode *C0 = isConstOrConstSplat(N0)) {
+    if (!C0->isOpaque() &&
+        (~DAG.computeKnownBits(N1).Zero).isSubsetOf(C0->getAPIntValue()))
+      return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
+  }
+
   return SDValue();
 }
 

@@ -347,6 +347,7 @@ module std [system] {
       module ranges_replace                  { private header "__algorithm/ranges_replace.h" }
       module ranges_replace_if               { private header "__algorithm/ranges_replace_if.h" }
       module ranges_reverse                  { private header "__algorithm/ranges_reverse.h" }
+      module ranges_set_difference           { private header "__algorithm/ranges_set_difference.h" }
       module ranges_sort                     { private header "__algorithm/ranges_sort.h" }
       module ranges_stable_sort              { private header "__algorithm/ranges_stable_sort.h" }
       module ranges_swap_ranges              { private header "__algorithm/ranges_swap_ranges.h" }

@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10PLUS,GFX10 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10PLUS,GFX11 %s
 
 declare half @llvm.minnum.f16(half %a, half %b)
 declare <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
@@ -172,15 +172,10 @@ define amdgpu_ps half @minnum_f16_no_ieee(half %a, half %b) #0 {
 ; GFX9-NEXT:    v_min_f16_e32 v0, v0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: minnum_f16_no_ieee:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_min_f16_e32 v0, v0, v1
-; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: minnum_f16_no_ieee:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_min_f16_e32 v0, v0, v1
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX10PLUS-LABEL: minnum_f16_no_ieee:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    v_min_f16_e32 v0, v0, v1
+; GFX10PLUS-NEXT:    ; return to shader part epilog
   %r.val = call half @llvm.minnum.f16(half %a, half %b)
   ret half %r.val
 }
@@ -543,15 +538,10 @@ define amdgpu_ps <2 x half> @minnum_v2f16_no_ieee(<2 x half> %a, <2 x half> %b) 
 ; GFX9-NEXT:    v_pk_min_f16 v0, v0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: minnum_v2f16_no_ieee:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_pk_min_f16 v0, v0, v1
-; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: minnum_v2f16_no_ieee:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_pk_min_f16 v0, v0, v1
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX10PLUS-LABEL: minnum_v2f16_no_ieee:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    v_pk_min_f16 v0, v0, v1
+; GFX10PLUS-NEXT:    ; return to shader part epilog
   %r.val = call <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
   ret <2 x half> %r.val
 }

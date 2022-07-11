@@ -108,6 +108,7 @@ set(files
   __algorithm/ranges_replace.h
   __algorithm/ranges_replace_if.h
   __algorithm/ranges_reverse.h
+  __algorithm/ranges_set_difference.h
   __algorithm/ranges_sort.h
   __algorithm/ranges_stable_sort.h
   __algorithm/ranges_swap_ranges.h

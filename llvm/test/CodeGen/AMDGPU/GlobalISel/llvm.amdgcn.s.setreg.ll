@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=tonga -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GFX789 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GFX789 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GFX10 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GFX11 %s
 
 ; FIXME: This test has a DAG duplicate
 
@@ -1470,6 +1470,7 @@ define void @test_setreg_roundingmode_var_vgpr(i32 %var.mode) {
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0 ; encoding: [0x00,0x05,0x00,0x7e]
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) ; encoding: [0x01,0x00,0x87,0xbf]
 ; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 3), s0 ; encoding: [0x01,0x10,0x00,0xb9]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
   call void @llvm.amdgcn.s.setreg(i32 4097, i32 %var.mode)

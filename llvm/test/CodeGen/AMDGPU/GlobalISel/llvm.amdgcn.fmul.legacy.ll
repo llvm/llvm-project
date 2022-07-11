@@ -4,7 +4,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900  -verify-machineinstrs < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX101 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX103 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 define float @v_mul_legacy_f32(float %a, float %b) {
 ; GFX6-LABEL: v_mul_legacy_f32:
@@ -312,6 +312,7 @@ define float @v_add_mul_legacy_f32(float %a, float %b, float %c) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_dx9_zero_f32_e32 v0, v0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %mul = call float @llvm.amdgcn.fmul.legacy(float %a, float %b)
@@ -358,6 +359,7 @@ define float @v_mad_legacy_f32(float %a, float %b, float %c) #2 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_dx9_zero_f32_e32 v0, v0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %mul = call float @llvm.amdgcn.fmul.legacy(float %a, float %b)
@@ -404,6 +406,7 @@ define float @v_mad_legacy_fneg_f32(float %a, float %b, float %c) #2 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_dx9_zero_f32_e64 v0, -v0, -v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a.fneg = fneg float %a

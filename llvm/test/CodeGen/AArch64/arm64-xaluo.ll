@@ -25,8 +25,7 @@ define zeroext i1 @saddo1.i32(i32 %v1, i32 %v2, i32* %res) {
 ; GISEL-LABEL: saddo1.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds w8, w0, w1
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str w8, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -57,8 +56,7 @@ define zeroext i1 @saddo2.i32(i32 %v1, i32* %res) {
 ; GISEL-LABEL: saddo2.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds w8, w0, #4
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str w8, [x1]
 ; GISEL-NEXT:    ret
 entry:
@@ -89,8 +87,7 @@ define zeroext i1 @saddo3.i32(i32 %v1, i32* %res) {
 ; GISEL-LABEL: saddo3.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    subs w8, w0, #4
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str w8, [x1]
 ; GISEL-NEXT:    ret
 entry:
@@ -124,8 +121,7 @@ define zeroext i1 @saddo4.i32(i32 %v1, i32* %res) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    mov w8, #16777215
 ; GISEL-NEXT:    adds w8, w0, w8
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str w8, [x1]
 ; GISEL-NEXT:    ret
 entry:
@@ -156,8 +152,7 @@ define zeroext i1 @saddo5.i32(i32 %v1, i32 %v2, i32* %res) {
 ; GISEL-LABEL: saddo5.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds w8, w0, w1, lsl #16
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str w8, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -188,8 +183,7 @@ define zeroext i1 @saddo1.i64(i64 %v1, i64 %v2, i64* %res) {
 ; GISEL-LABEL: saddo1.i64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds x8, x0, x1
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str x8, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -219,8 +213,7 @@ define zeroext i1 @saddo2.i64(i64 %v1, i64* %res) {
 ; GISEL-LABEL: saddo2.i64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds x8, x0, #4
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str x8, [x1]
 ; GISEL-NEXT:    ret
 entry:
@@ -250,8 +243,7 @@ define zeroext i1 @saddo3.i64(i64 %v1, i64* %res) {
 ; GISEL-LABEL: saddo3.i64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    subs x8, x0, #4
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str x8, [x1]
 ; GISEL-NEXT:    ret
 entry:
@@ -281,8 +273,7 @@ define zeroext i1 @uaddo.i32(i32 %v1, i32 %v2, i32* %res) {
 ; GISEL-LABEL: uaddo.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds w8, w0, w1
-; GISEL-NEXT:    cset w9, hs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, hs
 ; GISEL-NEXT:    str w8, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -312,8 +303,7 @@ define zeroext i1 @uaddo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; GISEL-LABEL: uaddo.i64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds x8, x0, x1
-; GISEL-NEXT:    cset w9, hs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, hs
 ; GISEL-NEXT:    str x8, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -343,8 +333,7 @@ define zeroext i1 @ssubo1.i32(i32 %v1, i32 %v2, i32* %res) {
 ; GISEL-LABEL: ssubo1.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    subs w8, w0, w1
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str w8, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -374,8 +363,7 @@ define zeroext i1 @ssubo2.i32(i32 %v1, i32* %res) {
 ; GISEL-LABEL: ssubo2.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds w8, w0, #4
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str w8, [x1]
 ; GISEL-NEXT:    ret
 entry:
@@ -405,8 +393,7 @@ define zeroext i1 @ssubo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; GISEL-LABEL: ssubo.i64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    subs x8, x0, x1
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str x8, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -436,8 +423,7 @@ define zeroext i1 @usubo.i32(i32 %v1, i32 %v2, i32* %res) {
 ; GISEL-LABEL: usubo.i32:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    subs w8, w0, w1
-; GISEL-NEXT:    cset w9, lo
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, lo
 ; GISEL-NEXT:    str w8, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -467,8 +453,7 @@ define zeroext i1 @usubo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; GISEL-LABEL: usubo.i64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    subs x8, x0, x1
-; GISEL-NEXT:    cset w9, lo
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, lo
 ; GISEL-NEXT:    str x8, [x2]
 ; GISEL-NEXT:    ret
 entry:
@@ -569,8 +554,7 @@ define zeroext i1 @smulo2.i64(i64 %v1, i64* %res) {
 ; GISEL-LABEL: smulo2.i64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds x8, x0, x0
-; GISEL-NEXT:    cset w9, vs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, vs
 ; GISEL-NEXT:    str x8, [x1]
 ; GISEL-NEXT:    ret
 entry:
@@ -675,8 +659,7 @@ define zeroext i1 @umulo2.i64(i64 %v1, i64* %res) {
 ; GISEL-LABEL: umulo2.i64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    adds x8, x0, x0
-; GISEL-NEXT:    cset w9, hs
-; GISEL-NEXT:    ubfx w0, w9, #0, #1
+; GISEL-NEXT:    cset w0, hs
 ; GISEL-NEXT:    str x8, [x1]
 ; GISEL-NEXT:    ret
 entry:
@@ -735,8 +718,7 @@ define i1 @saddo.not.i32(i32 %v1, i32 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn w0, w1
 ; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 %v2)
@@ -789,8 +771,7 @@ define i1 @saddo.not.i64(i64 %v1, i64 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn x0, x1
 ; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 %v2)
@@ -843,8 +824,7 @@ define i1 @uaddo.not.i32(i32 %v1, i32 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn w0, w1
 ; GISEL-NEXT:    cset w8, hs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 %v2)
@@ -897,8 +877,7 @@ define i1 @uaddo.not.i64(i64 %v1, i64 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn x0, x1
 ; GISEL-NEXT:    cset w8, hs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 %v2)
@@ -951,8 +930,7 @@ define i1 @ssubo.not.i32(i32 %v1, i32 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmp w0, w1
 ; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %v1, i32 %v2)
@@ -1005,8 +983,7 @@ define i1 @ssub.not.i64(i64 %v1, i64 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmp x0, x1
 ; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %v1, i64 %v2)
@@ -1059,8 +1036,7 @@ define i1 @usubo.not.i32(i32 %v1, i32 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmp w0, w1
 ; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %v1, i32 %v2)
@@ -1113,8 +1089,7 @@ define i1 @usubo.not.i64(i64 %v1, i64 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmp x0, x1
 ; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v2)
@@ -2155,8 +2130,7 @@ define zeroext i1 @saddo.br.i32(i32 %v1, i32 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn w0, w1
 ; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 %v2)
@@ -2191,8 +2165,7 @@ define zeroext i1 @saddo.br.i64(i64 %v1, i64 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn x0, x1
 ; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 %v2)
@@ -2227,8 +2200,7 @@ define zeroext i1 @uaddo.br.i32(i32 %v1, i32 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn w0, w1
 ; GISEL-NEXT:    cset w8, hs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 %v2)
@@ -2263,8 +2235,7 @@ define zeroext i1 @uaddo.br.i64(i64 %v1, i64 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn x0, x1
 ; GISEL-NEXT:    cset w8, hs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 %v2)
@@ -2299,8 +2270,7 @@ define zeroext i1 @ssubo.br.i32(i32 %v1, i32 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmp w0, w1
 ; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %v1, i32 %v2)
@@ -2335,8 +2305,7 @@ define zeroext i1 @ssubo.br.i64(i64 %v1, i64 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmp x0, x1
 ; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %v1, i64 %v2)
@@ -2371,8 +2340,7 @@ define zeroext i1 @usubo.br.i32(i32 %v1, i32 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmp w0, w1
 ; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %v1, i32 %v2)
@@ -2407,8 +2375,7 @@ define zeroext i1 @usubo.br.i64(i64 %v1, i64 %v2) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmp x0, x1
 ; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v2)
@@ -2524,8 +2491,7 @@ define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn x0, x0
 ; GISEL-NEXT:    cset w8, vs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 2)
@@ -2637,8 +2603,7 @@ define zeroext i1 @umulo2.br.i64(i64 %v1) {
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    cmn x0, x0
 ; GISEL-NEXT:    cset w8, hs
-; GISEL-NEXT:    eor w8, w8, #0x1
-; GISEL-NEXT:    and w0, w8, #0x1
+; GISEL-NEXT:    eor w0, w8, #0x1
 ; GISEL-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 2)

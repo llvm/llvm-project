@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX10PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX10 %s
 
 ; FIXME: GFX9 should be producing v_mad_u16 instead of v_mad_legacy_u16.
 
@@ -11,7 +11,7 @@
 ; GCN: {{flat|global}}_load_{{ushort|u16}} v[[C:[0-9]+]]
 ; GFX8: v_mad_u16 v[[R:[0-9]+]], v[[A]], v[[B]], v[[C]]
 ; GFX9: v_mad_legacy_u16 v[[R:[0-9]+]], v[[A]], v[[B]], v[[C]]
-; GFX10PLUS: v_mad_u16 v[[R:[0-9]+]], v[[A]], v[[B]], v[[C]]
+; GFX10: v_mad_u16 v[[R:[0-9]+]], v[[A]], v[[B]], v[[C]]
 ; GCN: {{flat|global}}_store_{{short|b16}} v{{.+}}, v[[R]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @mad_u16(
