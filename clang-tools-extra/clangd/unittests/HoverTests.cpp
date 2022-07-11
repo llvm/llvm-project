@@ -198,7 +198,7 @@ TEST(Hover, Structured) {
                     typename = char,
                     int = 0,
                     bool Q = false,
-                    class... Ts> class Foo {};
+                    class... Ts> class Foo final {};
           template <template<typename, bool...> class T>
           [[F^oo]]<T> foo;
           )cpp",
@@ -209,7 +209,7 @@ TEST(Hover, Structured) {
          HI.Definition =
              R"cpp(template <template <typename, bool...> class C, typename = char, int = 0,
           bool Q = false, class... Ts>
-class Foo {})cpp";
+class Foo final {})cpp";
          HI.TemplateParameters = {
              {{"template <typename, bool...> class"},
               std::string("C"),
