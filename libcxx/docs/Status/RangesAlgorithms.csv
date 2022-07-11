@@ -54,8 +54,8 @@ Write,replace_if,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
 Write,replace_copy,Nikolas Klauser,n/a,Not started
 Write,replace_copy_if,Nikolas Klauser,n/a,Not started
 Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,✅
-Write,reverse_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,Under review
-Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,Under review
+Write,reverse_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
+Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,sample,Not assigned,n/a,Not started
 Write,unique_copy,Not assigned,n/a,Not started
 Write,partition_copy,Not assigned,n/a,Not started

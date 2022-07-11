@@ -15,15 +15,20 @@
 #include <__compare/three_way_comparable.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/readable_traits.h>
 #include <__memory/addressof.h>
+#include <__ranges/access.h>
+#include <__ranges/concepts.h>
+#include <__ranges/subrange.h>
 #include <__utility/move.h>
 #include <type_traits>
 
@@ -364,6 +369,16 @@ struct __rewrap_iter_impl<_ReverseWrapper<_OrigIter>, _UnwrappedIter> {
     return __rewrap<_ReverseWrapperCount<_OrigIter>::value>(__iter1, __iter2);
   }
 };
+
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+template <ranges::bidirectional_range _Range>
+_LIBCPP_HIDE_FROM_ABI constexpr ranges::
+    subrange<reverse_iterator<ranges::iterator_t<_Range>>, reverse_iterator<ranges::iterator_t<_Range>>>
+    __reverse_range(_Range&& __range) {
+  auto __first = ranges::begin(__range);
+  return {std::make_reverse_iterator(ranges::next(__first, ranges::end(__range))), std::make_reverse_iterator(__first)};
+}
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
