@@ -73,7 +73,9 @@
 #include <sys/vt.h>
 #include <linux/cdrom.h>
 #include <linux/fd.h>
+#if SANITIZER_ANDROID
 #include <linux/fs.h>
+#endif
 #include <linux/hdreg.h>
 #include <linux/input.h>
 #include <linux/ioctl.h>
@@ -876,10 +878,10 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_EVIOCGPROP = IOCTL_NOT_PRESENT;
   unsigned IOCTL_EVIOCSKEYCODE_V2 = IOCTL_NOT_PRESENT;
 #endif
-  unsigned IOCTL_FS_IOC_GETFLAGS = FS_IOC_GETFLAGS;
-  unsigned IOCTL_FS_IOC_GETVERSION = FS_IOC_GETVERSION;
-  unsigned IOCTL_FS_IOC_SETFLAGS = FS_IOC_SETFLAGS;
-  unsigned IOCTL_FS_IOC_SETVERSION = FS_IOC_SETVERSION;
+  unsigned IOCTL_FS_IOC_GETFLAGS = _IOR('f', 1, long);
+  unsigned IOCTL_FS_IOC_GETVERSION = _IOR('v', 1, long);
+  unsigned IOCTL_FS_IOC_SETFLAGS = _IOW('f', 2, long);
+  unsigned IOCTL_FS_IOC_SETVERSION = _IOW('v', 2, long);
   unsigned IOCTL_GIO_CMAP = GIO_CMAP;
   unsigned IOCTL_GIO_FONT = GIO_FONT;
   unsigned IOCTL_GIO_UNIMAP = GIO_UNIMAP;
