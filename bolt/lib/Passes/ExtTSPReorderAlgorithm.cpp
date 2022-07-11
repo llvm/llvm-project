@@ -642,20 +642,25 @@ private:
     }
   }
 
-  /// Merge cold blocks to reduce code size
+  /// Merge remaining blocks into chains w/o taking jump counts into
+  /// consideration. This allows to maintain the original block order in the
+  /// absense of profile data
   void mergeColdChains() {
     for (BinaryBasicBlock *SrcBB : BF.layout()) {
       // Iterating in reverse order to make sure original fallthrough jumps are
-      // merged first
+      // merged first; this might be beneficial for code size.
       for (auto Itr = SrcBB->succ_rbegin(); Itr != SrcBB->succ_rend(); ++Itr) {
         BinaryBasicBlock *DstBB = *Itr;
         size_t SrcIndex = SrcBB->getLayoutIndex();
         size_t DstIndex = DstBB->getLayoutIndex();
         Chain *SrcChain = AllBlocks[SrcIndex].CurChain;
         Chain *DstChain = AllBlocks[DstIndex].CurChain;
+        bool IsColdSrc = SrcChain->executionCount() == 0;
+        bool IsColdDst = DstChain->executionCount() == 0;
         if (SrcChain != DstChain && !DstChain->isEntryPoint() &&
             SrcChain->blocks().back()->Index == SrcIndex &&
-            DstChain->blocks().front()->Index == DstIndex)
+            DstChain->blocks().front()->Index == DstIndex &&
+            IsColdSrc == IsColdDst)
           mergeChains(SrcChain, DstChain, 0, MergeTypeTy::X_Y);
       }
     }
