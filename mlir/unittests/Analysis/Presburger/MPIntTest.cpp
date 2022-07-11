@@ -1,4 +1,4 @@
-//===- SlowMPIntTest.cpp - Tests for SlowMPInt ----------------------------===//
+//===- MPIntTest.cpp - Tests for MPInt ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,34 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/SlowMPInt.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 using namespace mlir;
 using namespace presburger;
-using detail::SlowMPInt;
 
-TEST(SlowMPIntTest, ops) {
-  SlowMPInt two(2), five(5), seven(7), ten(10);
+// googletest boilerplate to run the same tests with both MPInt and SlowMPInt.
+template <typename>
+class IntTest : public testing::Test {};
+using TypeList = testing::Types<MPInt, detail::SlowMPInt>;
+// This is for pretty-printing the test name with the name of the class in use.
+class TypeNames {
+public:
+  template <typename T>
+  static std::string GetName(int) { // NOLINT; gtest mandates this name.
+    if (std::is_same<T, MPInt>())
+      return "MPInt";
+    if (std::is_same<T, detail::SlowMPInt>())
+      return "SlowMPInt";
+    llvm_unreachable("Unknown class!");
+  }
+};
+TYPED_TEST_SUITE(IntTest, TypeList, TypeNames);
+
+TYPED_TEST(IntTest, ops) {
+  TypeParam two(2), five(5), seven(7), ten(10);
   EXPECT_EQ(five + five, ten);
   EXPECT_EQ(five * five, 2 * ten + five);
   EXPECT_EQ(five * five, 3 * ten - five);
@@ -33,7 +51,7 @@ TEST(SlowMPIntTest, ops) {
   EXPECT_EQ(-ten / -seven, -10 / -7);
   EXPECT_EQ(ten / seven, 10 / 7);
 
-  SlowMPInt x = ten;
+  TypeParam x = ten;
   x += five;
   EXPECT_EQ(x, 15);
   x *= two;
@@ -57,8 +75,8 @@ TEST(SlowMPIntTest, ops) {
   EXPECT_GT(ten, five);
 }
 
-TEST(SlowMPIntTest, ops64Overloads) {
-  SlowMPInt two(2), five(5), seven(7), ten(10);
+TYPED_TEST(IntTest, ops64Overloads) {
+  TypeParam two(2), five(5), seven(7), ten(10);
   EXPECT_EQ(five + 5, ten);
   EXPECT_EQ(five + 5, 5 + five);
   EXPECT_EQ(five * 5, 2 * ten + 5);
@@ -70,7 +88,7 @@ TEST(SlowMPIntTest, ops64Overloads) {
   EXPECT_EQ(2 - two, 0);
   EXPECT_EQ(2 % two, two % 2);
 
-  SlowMPInt x = ten;
+  TypeParam x = ten;
   x += 5;
   EXPECT_EQ(x, 15);
   x *= 2;
@@ -103,10 +121,34 @@ TEST(SlowMPIntTest, ops64Overloads) {
   EXPECT_GT(10, five);
 }
 
-TEST(SlowMPIntTest, overflows) {
-  SlowMPInt x(1ll << 60);
+TYPED_TEST(IntTest, overflows) {
+  TypeParam x(1ll << 60);
   EXPECT_EQ((x * x - x * x * x * x) / (x * x * x), 1 - (1ll << 60));
-  SlowMPInt y(1ll << 62);
+  TypeParam y(1ll << 62);
   EXPECT_EQ((y + y + y + y + y + y) / y, 6);
   EXPECT_EQ(-(2 * (-y)), 2 * y); // -(-2^63) overflow.
+  x *= x;
+  EXPECT_EQ(x, (y * y) / 16);
+  y += y;
+  y += y;
+  y += y;
+  y /= 8;
+  EXPECT_EQ(y, 1ll << 62);
+  int64_t min = std::numeric_limits<int64_t>::min();
+  int64_t max = std::numeric_limits<int64_t>::max();
+  TypeParam z(min);
+  z /= -1;
+  EXPECT_EQ(z, -TypeParam(min));
+  TypeParam w(min);
+  --w;
+  EXPECT_EQ(w, TypeParam(min) - 1);
+  TypeParam u(min);
+  u -= 1;
+  EXPECT_EQ(u, w);
+  TypeParam v(max);
+  ++v;
+  EXPECT_EQ(v, TypeParam(max) + 1);
+  TypeParam t(max);
+  t += 1;
+  EXPECT_EQ(t, v);
 }
