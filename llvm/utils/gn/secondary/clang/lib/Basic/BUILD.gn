@@ -79,7 +79,6 @@ static_library("Basic") {
     "ProfileList.cpp",
     "SanitizerSpecialCaseList.cpp",
     "Sanitizers.cpp",
-    "Sarif.cpp",
     "SourceLocation.cpp",
     "SourceManager.cpp",
     "Stack.cpp",
