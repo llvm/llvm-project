@@ -30,8 +30,8 @@ struct __set_intersection_result {
 
   // need a constructor as C++03 aggregate init is hard
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-  __set_intersection_result(_InIter1&& __inIter1, _InIter2&& __inIter2, _OutIter&& __outIter)
-      : in1(std::move(__inIter1)), in2(std::move(__inIter2)), out(std::move(__outIter)) {}
+  __set_intersection_result(_InIter1&& __in_iter1, _InIter2&& __in_iter2, _OutIter&& __out_iter)
+      : in1(std::move(__in_iter1)), in2(std::move(__in_iter2)), out(std::move(__out_iter)) {}
 };
 
 template < class _IterOper, class _Compare, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
