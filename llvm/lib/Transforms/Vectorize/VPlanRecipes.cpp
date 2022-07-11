@@ -274,6 +274,23 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     State.set(this, Next, Part);
     break;
   }
+
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::CanonicalIVIncrementForPartNUW: {
+    bool IsNUW = getOpcode() == VPInstruction::CanonicalIVIncrementForPartNUW;
+    auto *IV = State.get(getOperand(0), VPIteration(0, 0));
+    if (Part == 0) {
+      State.set(this, IV, Part);
+      break;
+    }
+
+    // The canonical IV is incremented by the vectorization factor (num of SIMD
+    // elements) times the unroll part.
+    Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
+    Value *Next = Builder.CreateAdd(IV, Step, Name, IsNUW, false);
+    State.set(this, Next, Part);
+    break;
+  }
   case VPInstruction::BranchOnCond: {
     if (Part != 0)
       break;
@@ -374,6 +391,12 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BranchOnCond:
     O << "branch-on-cond";
+    break;
+  case VPInstruction::CanonicalIVIncrementForPart:
+    O << "VF * Part + ";
+    break;
+  case VPInstruction::CanonicalIVIncrementForPartNUW:
+    O << "VF * Part +(nuw) ";
     break;
   case VPInstruction::BranchOnCount:
     O << "branch-on-count ";
@@ -1063,6 +1086,31 @@ void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
     O << VPlanIngredient(OriginalPhi);
     return;
   }
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+// TODO: It would be good to use the existing VPWidenPHIRecipe instead and
+// remove VPActiveLaneMaskPHIRecipe.
+void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
+    Value *StartMask = State.get(getOperand(0), Part);
+    PHINode *EntryPart =
+        State.Builder.CreatePHI(StartMask->getType(), 2, "active.lane.mask");
+    EntryPart->addIncoming(StartMask, VectorPH);
+    EntryPart->setDebugLoc(DL);
+    State.set(this, EntryPart, Part);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPActiveLaneMaskPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                      VPSlotTracker &SlotTracker) const {
+  O << Indent << "ACTIVE-LANE-MASK-PHI ";
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";

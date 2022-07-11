@@ -607,7 +607,7 @@ public:
     return BaseT::preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
   }
 
-  bool emitGetActiveLaneMask() {
+  PredicationStyle emitGetActiveLaneMask() {
     return BaseT::emitGetActiveLaneMask();
   }
 
