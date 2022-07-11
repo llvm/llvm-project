@@ -385,6 +385,7 @@ std::string Args::GetShellSafeArgument(const FileSpec &shell,
   };
 
   static ShellDescriptor g_Shells[] = {{ConstString("bash"), " '\"<>()&;"},
+                                       {ConstString("fish"), " '\"<>()&\\|;"},
                                        {ConstString("tcsh"), " '\"<>()&;"},
                                        {ConstString("zsh"), " '\"<>()&;\\|"},
                                        {ConstString("sh"), " '\"<>()&;"}};
