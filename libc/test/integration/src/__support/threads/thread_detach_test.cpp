@@ -1,4 +1,4 @@
-//===-- Unittests for thrd_t ----------------------------------------------===//
+//===-- Tests for thread detach functionality -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 #include "src/__support/threads/mutex.h"
 #include "src/__support/threads/thread.h"
-#include "utils/UnitTest/Test.h"
+#include "utils/IntegrationTest/test.h"
 
 __llvm_libc::Mutex mutex(false, false, false);
 
@@ -18,7 +18,7 @@ int func(void *) {
   return 0;
 }
 
-TEST(LlvmLibcTestThreadTest, DetachSimpleTest) {
+void detach_simple_test() {
   mutex.lock();
   __llvm_libc::Thread th;
   th.run(func, nullptr, nullptr, 0);
@@ -32,7 +32,7 @@ TEST(LlvmLibcTestThreadTest, DetachSimpleTest) {
   mutex.unlock();
 }
 
-TEST(LlvmLibcTestThreadTest, DetachCleanupTest) {
+void detach_cleanup_test() {
   mutex.lock();
   __llvm_libc::Thread th;
   ASSERT_EQ(0, th.run(func, nullptr, nullptr, 0));
@@ -48,4 +48,10 @@ TEST(LlvmLibcTestThreadTest, DetachCleanupTest) {
   // Since |th| is now finished, detaching should cleanup the thread
   // resources.
   ASSERT_EQ(th.detach(), int(__llvm_libc::DetachType::CLEANUP));
+}
+
+int main() {
+  detach_simple_test();
+  detach_cleanup_test();
+  return 0;
 }
