@@ -1,0 +1,351 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+  Entry:           0x210710
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x200040
+    Align:           0x8
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x2002A8
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .rodata
+    VAddr:           0x200000
+    Align:           0x10000
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .iplt
+    VAddr:           0x210710
+    Align:           0x10000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .iplt
+    LastSec:         .got
+    VAddr:           0x220990
+    Align:           0x10000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .data
+    LastSec:         .bss
+    VAddr:           0x230B40
+    Align:           0x10000
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x2209A0
+    Align:           0x8
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2002A8
+    AddressAlign:    0x1
+    Content:         2F6C69622F6C642D6C696E75782D616172636836342E736F2E3100
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2002E8
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x200418
+    AddressAlign:    0x1
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x2004A0
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x220B38
+        Symbol:          t1
+        Type:            R_AARCH64_TLS_TPREL64
+      - Offset:          0x230B98
+        Symbol:          a
+        Type:            R_AARCH64_COPY
+      - Offset:          0x230B88
+        Type:            R_AARCH64_IRELATIVE
+        Addend:          2164764
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x200500
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x230B68
+        Symbol:          abort
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x230B70
+        Symbol:          __libc_start_main
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x230B80
+        Symbol:          inc
+        Type:            R_AARCH64_JUMP_SLOT
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_MERGE ]
+    Address:         0x200560
+    AddressAlign:    0x8
+    Content:         '010002000000000000000000000000000000000000000000'
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x210710
+    AddressAlign:    0x8
+    Content:         1D0080D21E0080D2E50300AAE10340F9E2230091E60300910000009000201D911F2003D5230A00101F2003D5E40D0010840000947F0000943800001480000090009845F9400000B482000014C0035FD61F2003D5601F10101F2003D5211F10103F0000EBC000005481FFFF9021B442F9610000B4F00301AA00021FD6C0035FD61F2003D5E01D10101F2003D5A11D1010210000CB22FC7FD3410C818BFF0781EB21FC4193C000005482FFFF9042B842F9620000B4F00302AA00021FD6C0035FD6FD7BBEA9FD030091F30B00F91301009060426E3980000035DEFFFF972000805260422E39F30B40F9FD7BC2A8C0035FD6E4FFFF17FF4300D1E00F00B9E80F40B900050071FF430091C0035FD61F2003D520FFFF10C0035FD6FF8300D1FD7B01A9FD4300918A0000904A9D45F949D03BD528696AB80805001128692AB808010090E80700F900994BB94A000094E80740F900994BB943000094E0031F2AFD7B41A9FF830091C0035FD6FD7BBCA9FD030091F35301A91F2003D5D4080810F55B02A91F2003D535080810940215CBF603002AF76303A9F70301AAF80302AA14000094FF0F94EB6001005494FE4393130080D2A37A73F8E20318AA73060091E10317AAE003162A60003FD69F0213EB21FFFF54F35341A9F55B42A9F76343A9FD7BC4A8C0035FD61F2003D5C0035FD6
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x210920
+    AddressAlign:    0x10
+    Content:         F07BBFA91001009011B245F910822D9120021FD61F2003D51F2003D51F2003D51001009011B645F910A22D9120021FD61001009011BA45F910C22D9120021FD61001009011BE45F910E22D9120021FD61001009011C245F910022E9120021FD6
+  - Name:            .iplt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x210980
+    AddressAlign:    0x10
+    Content:         1001009011C645F910222E9120021FD6
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2209A0
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x7C
+      - Tag:             DT_NEEDED
+        Value:           0x67
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_RELA
+        Value:           0x2004A0
+      - Tag:             DT_RELASZ
+        Value:           0x48
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_JMPREL
+        Value:           0x200500
+      - Tag:             DT_PLTRELSZ
+        Value:           0x48
+      - Tag:             DT_PLTGOT
+        Value:           0x230B50
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_SYMTAB
+        Value:           0x2002E8
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_STRTAB
+        Value:           0x200418
+      - Tag:             DT_STRSZ
+        Value:           0x83
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x220B30
+    AddressAlign:    0x8
+    Content:         '00000000000000000000000000000000'
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x230B40
+    AddressAlign:    0x8
+    Content:         '00000000000000000000000000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x230B50
+    AddressAlign:    0x8
+    Content:         '00000000000000000000000000000000000000000000000020092100000000002009210000000000200921000000000020092100000000000000000000000000'
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x230B90
+    AddressAlign:    0x8
+    Size:            0xC
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x210728
+        Symbol:          .text
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+        Addend:          56
+      - Offset:          0x21072C
+        Symbol:          .text
+        Type:            R_AARCH64_ADD_ABS_LO12_NC
+        Addend:          56
+      - Offset:          0x210740
+        Symbol:          __libc_start_main
+        Type:            R_AARCH64_CALL26
+      - Offset:          0x210744
+        Symbol:          abort
+        Type:            R_AARCH64_CALL26
+      - Offset:          0x210748
+        Symbol:          main
+        Type:            R_AARCH64_JUMP26
+      - Offset:          0x210778
+        Symbol:          .rodata
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+        Addend:          8
+      - Offset:          0x21077C
+        Symbol:          .rodata
+        Type:            R_AARCH64_LDST64_ABS_LO12_NC
+        Addend:          8
+      - Offset:          0x2107B8
+        Symbol:          .rodata
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+        Addend:          16
+      - Offset:          0x2107BC
+        Symbol:          .rodata
+        Type:            R_AARCH64_LDST64_ABS_LO12_NC
+        Addend:          16
+      - Offset:          0x2107DC
+        Symbol:          .bss
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x2107E0
+        Symbol:          .bss
+        Type:            R_AARCH64_LDST8_ABS_LO12_NC
+      - Offset:          0x2107F0
+        Symbol:          .bss
+        Type:            R_AARCH64_LDST8_ABS_LO12_NC
+      - Offset:          0x21081C
+        Symbol:          dec
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x210820
+        Symbol:          dec
+        Type:            R_AARCH64_ADD_ABS_LO12_NC
+      - Offset:          0x210834
+        Symbol:          t1
+        Type:            R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21
+      - Offset:          0x210838
+        Symbol:          t1
+        Type:            R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC
+      - Offset:          0x21084C
+        Symbol:          a
+        Type:            R_AARCH64_ADR_PREL_PG_HI21
+      - Offset:          0x210854
+        Symbol:          a
+        Type:            R_AARCH64_LDST32_ABS_LO12_NC
+      - Offset:          0x210858
+        Symbol:          ifuncDec
+        Type:            R_AARCH64_CALL26
+      - Offset:          0x210860
+        Symbol:          a
+        Type:            R_AARCH64_LDST32_ABS_LO12_NC
+      - Offset:          0x210864
+        Symbol:          inc
+        Type:            R_AARCH64_CALL26
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x210710
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+    Value:           0x230B40
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+    Value:           0x230B90
+  - Name:            .rodata
+    Type:            STT_SECTION
+    Section:         .rodata
+    Value:           0x200560
+  - Name:            .interp
+    Type:            STT_SECTION
+    Section:         .interp
+    Value:           0x2002A8
+  - Name:            _DYNAMIC
+    Section:         .dynamic
+    Value:           0x2209A0
+    Other:           [ STV_HIDDEN ]
+  - Name:            abort
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x210710
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x210828
+    Size:            0x50
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            dec
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x210804
+    Size:            0x18
+  - Name:            resolver
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x21081C
+    Size:            0xC
+  - Name:            t1
+    Type:            STT_TLS
+    Binding:         STB_GLOBAL
+  - Name:            a
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x230B98
+    Size:            0x4
+  - Name:            ifuncDec
+    Type:            STT_GNU_IFUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x21081C
+    Size:            0xC
+  - Name:            inc
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+DynamicSymbols:
+  - Name:            abort
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            t1
+    Type:            STT_TLS
+    Binding:         STB_GLOBAL
+  - Name:            inc
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            a
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x230B98
+    Size:            0x4
