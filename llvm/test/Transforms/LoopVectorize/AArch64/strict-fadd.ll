@@ -263,8 +263,8 @@ define void @fadd_strict_interleave(float* noalias nocapture readonly %a, float*
 ; CHECK-ORDERED: %[[WIDE_LOAD:.*]] = load <8 x float>, <8 x float>*
 ; CHECK-ORDERED: %[[STRIDED1:.*]] = shufflevector <8 x float> %[[WIDE_LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-ORDERED: %[[STRIDED2:.*]] = shufflevector <8 x float> %[[WIDE_LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-ORDERED: %[[RDX1]] = call float @llvm.vector.reduce.fadd.v4f32(float %[[VEC_PHI2]], <4 x float> %[[STRIDED1]])
 ; CHECK-ORDERED: %[[RDX2]] = call float @llvm.vector.reduce.fadd.v4f32(float %[[VEC_PHI1]], <4 x float> %[[STRIDED2]])
+; CHECK-ORDERED: %[[RDX1]] = call float @llvm.vector.reduce.fadd.v4f32(float %[[VEC_PHI2]], <4 x float> %[[STRIDED1]])
 ; CHECK-ORDERED: for.end
 ; CHECK-ORDERED: ret void
 
