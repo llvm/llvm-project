@@ -4418,7 +4418,6 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
       spec->AddRawParamValue(optKeyword, std::move(param));
     }
   }
-
   // The DerivedTypeSpec *spec is used initially as a search key.
   // If it turns out to have the same name and actual parameter
   // value expressions as another DerivedTypeSpec in the current
@@ -6645,7 +6644,8 @@ const parser::Name *DeclarationVisitor::FindComponent(
       MakePlaceholder(component, miscKind);
       return &component;
     }
-  } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+  } else if (DerivedTypeSpec * derived{type->AsDerived()}) {
+    derived->Instantiate(currScope()); // in case of forward referenced type
     if (const Scope * scope{derived->scope()}) {
       if (Resolve(component, scope->FindComponent(component.source))) {
         if (auto msg{
