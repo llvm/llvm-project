@@ -1174,6 +1174,13 @@ bool RISCVTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   if (isInt<32>(Val))
     return true;
 
+  // A constant pool entry may be more aligned thant he load we're trying to
+  // replace. If we don't support unaligned scalar mem, prefer the constant
+  // pool.
+  // TODO: Can the caller pass down the alignment?
+  if (!Subtarget.enableUnalignedScalarMem())
+    return true;
+
   // Prefer to keep the load if it would require many instructions.
   // This uses the same threshold we use for constant pools but doesn't
   // check useConstantPoolForLargeInts.
