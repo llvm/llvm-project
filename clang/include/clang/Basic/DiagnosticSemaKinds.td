@@ -6610,13 +6610,16 @@ def warn_addition_in_bitshift : Warning<
   "'%1' will be evaluated first">, InGroup<ShiftOpParentheses>;
 
 def warn_self_assignment_builtin : Warning<
-  "explicitly assigning value of variable of type %0 to itself">,
+  "explicitly assigning value of variable of type %0 to itself%select{|; did "
+  "you mean to assign to member %2?}1">,
   InGroup<SelfAssignment>, DefaultIgnore;
 def warn_self_assignment_overloaded : Warning<
-  "explicitly assigning value of variable of type %0 to itself">,
+  "explicitly assigning value of variable of type %0 to itself%select{|; did "
+  "you mean to assign to member %2?}1">,
   InGroup<SelfAssignmentOverloaded>, DefaultIgnore;
 def warn_self_move : Warning<
-  "explicitly moving variable of type %0 to itself">,
+  "explicitly moving variable of type %0 to itself%select{|; did you mean to "
+  "move to member %2?}1">,
   InGroup<SelfMove>, DefaultIgnore;
 
 def err_builtin_move_forward_unsupported : Error<
@@ -9399,6 +9402,12 @@ def warn_array_index_exceeds_max_addressable_bounds : Warning<
   InGroup<ArrayBounds>;
 def note_array_declared_here : Note<
   "array %0 declared here">;
+
+def warn_inconsistent_array_form : Warning<
+  "argument %0 of type %1 with mismatched bound">,
+  InGroup<ArrayParameter>, DefaultIgnore;
+def note_previous_declaration_as : Note<
+  "previously declared as %0 here">;
 
 def warn_printf_insufficient_data_args : Warning<
   "more '%%' conversions than data arguments">, InGroup<FormatInsufficientArgs>;

@@ -567,15 +567,21 @@ function(add_mlir_python_sources_target name)
         COMMAND "${CMAKE_COMMAND}" -E ${_link_or_copy}
             "${_src_path}" "${_dest_path}"
       )
+      if(ARG_INSTALL_DIR)
+        # We have to install each file individually because we need to preserve
+        # the relative directory structure in the install destination.
+        # As an example, ${_source_relative_path} may be dialects/math.py
+        # which would be transformed to ${ARG_INSTALL_DIR}/dialects
+        # here. This could be moved outside of the loop and cleaned up
+        # if we used FILE_SETS (introduced in CMake 3.23).
+        get_filename_component(_install_destination "${ARG_INSTALL_DIR}/${_source_relative_path}" DIRECTORY)
+        install(
+          FILES ${_src_path}
+          DESTINATION "${_install_destination}"
+          COMPONENT ${ARG_INSTALL_COMPONENT}
+        )
+      endif()
     endforeach()
-
-    if(ARG_INSTALL_DIR)
-      install(
-        FILES ${_src_paths}
-        DESTINATION "${ARG_INSTALL_DIR}"
-        COMPONENT ${ARG_INSTALL_COMPONENT}
-      )
-    endif()
   endforeach()
 endfunction()
 

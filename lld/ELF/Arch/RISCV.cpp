@@ -743,7 +743,7 @@ void elf::riscvFinalizeRelax(int passes) {
       }
       memcpy(p, old.data() + offset, old.size() - offset);
 
-      // Substract the previous relocDeltas value from the relocation offset.
+      // Subtract the previous relocDeltas value from the relocation offset.
       // For a pair of R_RISCV_CALL/R_RISCV_RELAX with the same offset, decrease
       // their r_offset by the same delta.
       delta = 0;

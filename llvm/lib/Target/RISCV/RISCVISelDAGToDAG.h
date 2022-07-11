@@ -128,7 +128,6 @@ public:
 #include "RISCVGenDAGISel.inc"
 
 private:
-  bool doPeepholeLoadStoreADDI(SDNode *Node);
   bool doPeepholeSExtW(SDNode *Node);
   bool doPeepholeMaskedRVV(SDNode *Node);
 };

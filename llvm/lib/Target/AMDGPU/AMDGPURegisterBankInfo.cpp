@@ -2164,6 +2164,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     return;
   }
+  case AMDGPU::G_FCMP:
+    if (!Subtarget.hasSALUFloatInsts())
+      break;
+    LLVM_FALLTHROUGH;
   case AMDGPU::G_ICMP:
   case AMDGPU::G_UADDO:
   case AMDGPU::G_USUBO:
@@ -2171,7 +2175,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_SADDE:
   case AMDGPU::G_USUBE:
   case AMDGPU::G_SSUBE: {
-    unsigned BoolDstOp = Opc == AMDGPU::G_ICMP ? 0 : 1;
+    unsigned BoolDstOp =
+        (Opc == AMDGPU::G_ICMP || Opc == AMDGPU::G_FCMP) ? 0 : 1;
     Register DstReg = MI.getOperand(BoolDstOp).getReg();
 
     const RegisterBank *DstBank =
@@ -3764,18 +3769,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       return getDefaultMappingSOP(MI);
     LLVM_FALLTHROUGH;
 
-  case AMDGPU::G_SADDSAT: // FIXME: Could lower sat ops for SALU
-  case AMDGPU::G_SSUBSAT:
-  case AMDGPU::G_UADDSAT:
-  case AMDGPU::G_USUBSAT:
   case AMDGPU::G_FADD:
   case AMDGPU::G_FSUB:
   case AMDGPU::G_FPTOSI:
   case AMDGPU::G_FPTOUI:
   case AMDGPU::G_FMUL:
   case AMDGPU::G_FMA:
-  case AMDGPU::G_FMAD:
-  case AMDGPU::G_FSQRT:
   case AMDGPU::G_FFLOOR:
   case AMDGPU::G_FCEIL:
   case AMDGPU::G_FRINT:
@@ -3783,14 +3782,24 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_UITOFP:
   case AMDGPU::G_FPTRUNC:
   case AMDGPU::G_FPEXT:
-  case AMDGPU::G_FEXP2:
-  case AMDGPU::G_FLOG2:
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
+  case AMDGPU::G_INTRINSIC_TRUNC:
+    if (Subtarget.hasSALUFloatInsts() && isSALUMapping(MI))
+      return getDefaultMappingSOP(MI);
+    LLVM_FALLTHROUGH;
+
+  case AMDGPU::G_SADDSAT: // FIXME: Could lower sat ops for SALU
+  case AMDGPU::G_SSUBSAT:
+  case AMDGPU::G_UADDSAT:
+  case AMDGPU::G_USUBSAT:
+  case AMDGPU::G_FMAD:
+  case AMDGPU::G_FSQRT:
+  case AMDGPU::G_FEXP2:
+  case AMDGPU::G_FLOG2:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FCANONICALIZE:
-  case AMDGPU::G_INTRINSIC_TRUNC:
   case AMDGPU::G_BSWAP: // TODO: Somehow expand for scalar?
   case AMDGPU::G_FSHR: // TODO: Expand for scalar
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
@@ -4009,14 +4018,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                                        SrcSize);
     break;
   }
-  case AMDGPU::G_FCMP: {
-    unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
-    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
-    OpdsMapping[1] = nullptr; // Predicate Operand.
-    OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
-    OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
-    break;
-  }
   case AMDGPU::G_STORE: {
     assert(MI.getOperand(0).isReg());
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
@@ -4029,8 +4030,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());
     break;
   }
-  case AMDGPU::G_ICMP: {
-    auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  case AMDGPU::G_ICMP:
+  case AMDGPU::G_FCMP: {
     unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
 
     // See if the result register has already been constrained to vcc, which may
@@ -4040,12 +4041,23 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Op2Bank = getRegBankID(MI.getOperand(2).getReg(), MRI);
     unsigned Op3Bank = getRegBankID(MI.getOperand(3).getReg(), MRI);
 
+    auto canUseSCCICMP = [&]() {
+      auto Pred =
+          static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+      return Size == 32 ||
+             (Size == 64 &&
+              (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
+              Subtarget.hasScalarCompareEq64());
+    };
+    auto canUseSCCFCMP = [&]() {
+      return Subtarget.hasSALUFloatInsts() && (Size == 32 || Size == 16);
+    };
+
+    bool isICMP = MI.getOpcode() == AMDGPU::G_ICMP;
     bool CanUseSCC = DstBank == AMDGPU::SGPRRegBankID &&
                      Op2Bank == AMDGPU::SGPRRegBankID &&
                      Op3Bank == AMDGPU::SGPRRegBankID &&
-      (Size == 32 || (Size == 64 &&
-                      (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
-                      Subtarget.hasScalarCompareEq64()));
+                     (isICMP ? canUseSCCICMP() : canUseSCCFCMP());
 
     DstBank = CanUseSCC ? AMDGPU::SGPRRegBankID : AMDGPU::VCCRegBankID;
     unsigned SrcBank = CanUseSCC ? AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
@@ -4055,6 +4067,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     const unsigned ResultSize = 1;
 
     OpdsMapping[0] = AMDGPU::getValueMapping(DstBank, ResultSize);
+    OpdsMapping[1] = nullptr; // Predicate Operand.
     OpdsMapping[2] = AMDGPU::getValueMapping(SrcBank, Size);
     OpdsMapping[3] = AMDGPU::getValueMapping(SrcBank, Size);
     break;
@@ -4248,7 +4261,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_frexp_mant:
     case Intrinsic::amdgcn_frexp_exp:
     case Intrinsic::amdgcn_fract:
-    case Intrinsic::amdgcn_cvt_pkrtz:
     case Intrinsic::amdgcn_cvt_pknorm_i16:
     case Intrinsic::amdgcn_cvt_pknorm_u16:
     case Intrinsic::amdgcn_cvt_pk_i16:
@@ -4315,6 +4327,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_set_inactive:
     case Intrinsic::amdgcn_permlane64:
       return getDefaultMappingAllVGPR(MI);
+    case Intrinsic::amdgcn_cvt_pkrtz:
+      if (Subtarget.hasSALUFloatInsts() && isSALUMapping(MI))
+        return getDefaultMappingSOP(MI);
+      return getDefaultMappingVOP(MI);
     case Intrinsic::amdgcn_kernarg_segment_ptr:
     case Intrinsic::amdgcn_s_getpc:
     case Intrinsic::amdgcn_groupstaticsize:

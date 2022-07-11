@@ -126,3 +126,102 @@ body:               |
   %3:sreg_32 = COPY %1:vgpr_32
   %4:sreg_32 = S_CSELECT_B32 killed %2:sreg_32, killed %3:sreg_32, implicit undef $scc
 ---
+
+---
+name:            cmp_f32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: cmp_f32
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: %6:sreg_64_xexec = nofpexcept V_CMP_LT_F32_e64 0, [[V_CVT_F32_U32_e64_]], 0, [[DEF1]], 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %6, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = V_CVT_F32_U32_e64 %0:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %3:sreg_32 = COPY %2:vgpr_32
+    nofpexcept S_CMP_LT_F32 killed %3:sreg_32, %1:sreg_32, implicit-def $scc, implicit $mode
+    %4:sreg_64_xexec = COPY $scc
+    %5:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %4, implicit $exec
+...
+
+---
+name:            cmp_f16
+body:             |
+  bb.0.entry:
+    ; GCN-LABEL: name: cmp_f16
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_CVT_F16_U16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F16_U16_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: %6:sreg_64_xexec = nofpexcept V_CMP_LT_F16_e64 0, [[V_CVT_F16_U16_e64_]], 0, [[DEF1]], 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %6, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = V_CVT_F16_U16_e64 %0:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %3:sreg_32 = COPY %2:vgpr_32
+    nofpexcept S_CMP_LT_F16 killed %3:sreg_32, %1:sreg_32, implicit-def $scc, implicit $mode
+    %4:sreg_64_xexec = COPY $scc
+    %5:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %4, implicit $exec
+...
+
+# Needs extra shift instruction to select hi 16 bits
+---
+name:            cvt_hi_f32_f16
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: cvt_hi_f32_f16
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_CVT_F16_U16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F16_U16_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, [[V_CVT_F16_U16_e64_]], implicit $exec
+    ; GCN-NEXT: [[V_CVT_F32_F16_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_F16_e32 [[V_LSHRREV_B32_e64_]], implicit $mode, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_CVT_F16_U16_e64 %0:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %2:sreg_32 = COPY %1:vgpr_32
+    %3:sreg_32 = S_CVT_HI_F32_F16 %2:sreg_32, implicit $mode
+...
+
+# Test to ensure that src2 of fmac is moved to vgpr
+---
+name:            fmac_f32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fmac_f32
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
+    ; GCN-NEXT: %6:vgpr_32 = nofpexcept V_FMAC_F32_e32 [[DEF1]], [[V_CVT_F32_U32_e64_]], [[COPY]], implicit $mode, implicit $mode, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:sreg_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_CVT_F32_U32_e64 %0:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %4:sreg_32 = COPY %3:vgpr_32
+    %5:sreg_32 = nofpexcept S_FMAC_F32 killed %4:sreg_32, %1:sreg_32, %2:sreg_32, implicit $mode
+...
+
+---
+name:            fmac_f16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fmac_f16
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
+    ; GCN-NEXT: %6:vgpr_32 = nofpexcept V_FMAC_F16_e32 killed [[DEF1]], [[COPY]], [[V_CVT_F32_U32_e64_]], implicit $mode, implicit $mode, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:sreg_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_CVT_F32_U32_e64 %0:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %4:sreg_32 = COPY %3:vgpr_32
+    %5:sreg_32 = nofpexcept S_FMAC_F16 killed %1:sreg_32, %2:sreg_32, %4:sreg_32, implicit $mode
+...

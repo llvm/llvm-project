@@ -9,6 +9,7 @@
 #include "AST.h"
 #include "FindSymbols.h"
 #include "FindTarget.h"
+#include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "Quality.h"
@@ -1907,37 +1908,53 @@ static QualType typeForNode(const SelectionTree::Node *N) {
   return QualType();
 }
 
-// Given a type targeted by the cursor, return a type that's more interesting
+// Given a type targeted by the cursor, return one or more types that are more interesting
 // to target.
-static QualType unwrapFindType(QualType T) {
+static void unwrapFindType(
+    QualType T, const HeuristicResolver* H, llvm::SmallVector<QualType>& Out) {
   if (T.isNull())
-    return T;
+    return;
 
   // If there's a specific type alias, point at that rather than unwrapping.
   if (const auto* TDT = T->getAs<TypedefType>())
-    return QualType(TDT, 0);
+    return Out.push_back(QualType(TDT, 0));
 
   // Pointers etc => pointee type.
   if (const auto *PT = T->getAs<PointerType>())
-    return unwrapFindType(PT->getPointeeType());
+    return unwrapFindType(PT->getPointeeType(), H, Out);
   if (const auto *RT = T->getAs<ReferenceType>())
-    return unwrapFindType(RT->getPointeeType());
+    return unwrapFindType(RT->getPointeeType(), H, Out);
   if (const auto *AT = T->getAsArrayTypeUnsafe())
-    return unwrapFindType(AT->getElementType());
-  // FIXME: use HeuristicResolver to unwrap smart pointers?
+    return unwrapFindType(AT->getElementType(), H, Out);
 
   // Function type => return type.
   if (auto *FT = T->getAs<FunctionType>())
-    return unwrapFindType(FT->getReturnType());
+    return unwrapFindType(FT->getReturnType(), H, Out);
   if (auto *CRD = T->getAsCXXRecordDecl()) {
     if (CRD->isLambda())
-      return unwrapFindType(CRD->getLambdaCallOperator()->getReturnType());
+      return unwrapFindType(CRD->getLambdaCallOperator()->getReturnType(), H, Out);
     // FIXME: more cases we'd prefer the return type of the call operator?
     //        std::function etc?
   }
 
-  return T;
+  // For smart pointer types, add the underlying type
+  if (H)
+    if (const auto* PointeeType = H->getPointeeType(T.getNonReferenceType().getTypePtr())) {
+        unwrapFindType(QualType(PointeeType, 0), H, Out);
+        return Out.push_back(T);
+    }
+
+  return Out.push_back(T);
 }
+
+// Convenience overload, to allow calling this without the out-parameter
+static llvm::SmallVector<QualType> unwrapFindType(
+    QualType T, const HeuristicResolver* H) {
+    llvm::SmallVector<QualType> Result;
+    unwrapFindType(T, H, Result);
+    return Result;
+}
+
 
 std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
@@ -1951,10 +1968,16 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos) {
   // The general scheme is: position -> AST node -> type -> declaration.
   auto SymbolsFromNode =
       [&AST](const SelectionTree::Node *N) -> std::vector<LocatedSymbol> {
-    QualType Type = unwrapFindType(typeForNode(N));
-    if (Type.isNull())
-      return {};
-    return locateSymbolForType(AST, Type);
+    std::vector<LocatedSymbol> LocatedSymbols;
+
+    // NOTE: unwrapFindType might return duplicates for something like
+    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
+    // information about the type you may have not known before
+    // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
+    for (const QualType& Type : unwrapFindType(typeForNode(N), AST.getHeuristicResolver()))
+        llvm::copy(locateSymbolForType(AST, Type), std::back_inserter(LocatedSymbols));
+
+    return LocatedSymbols;
   };
   SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), *Offset,
                             *Offset, [&](SelectionTree ST) {

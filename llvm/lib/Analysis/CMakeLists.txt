@@ -2,10 +2,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
   include(TensorFlowCompile)
   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
 
-  # This url points to the most recent most which is known to be compatible with
-  # LLVM. When better models are published, this url should be updated to aid
-  # discoverability.
-  set(LLVM_INLINER_MODEL_CURRENT_URL "https://github.com/google/ml-compiler-opt/releases/download/inlining-Oz-v1.1/inlining-Oz-99f0063-v1.1.tar.gz")
+  set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>")
 
   if (DEFINED LLVM_HAVE_TF_AOT)
     tf_find_and_compile(

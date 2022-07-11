@@ -1625,21 +1625,19 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
   Module *NewM = New->getOwningModule();
   Module *OldM = Old->getOwningModule();
 
-  if (NewM && NewM->Kind == Module::PrivateModuleFragment)
+  if (NewM && NewM->isPrivateModule())
     NewM = NewM->Parent;
-  if (OldM && OldM->Kind == Module::PrivateModuleFragment)
+  if (OldM && OldM->isPrivateModule())
     OldM = OldM->Parent;
-
-  // If we have a decl in a module partition, it is part of the containing
-  // module (which is the only thing that can be importing it).
-  if (NewM && OldM &&
-      (OldM->Kind == Module::ModulePartitionInterface ||
-       OldM->Kind == Module::ModulePartitionImplementation)) {
-    return false;
-  }
 
   if (NewM == OldM)
     return false;
+
+  // Partitions are part of the module, but a partition could import another
+  // module, so verify that the PMIs agree.
+  if (NewM && OldM && (NewM->isModulePartition() || OldM->isModulePartition()))
+    return NewM->getPrimaryModuleInterfaceName() ==
+           OldM->getPrimaryModuleInterfaceName();
 
   bool NewIsModuleInterface = NewM && NewM->isModulePurview();
   bool OldIsModuleInterface = OldM && OldM->isModulePurview();
@@ -3209,6 +3207,39 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
   if (!foundAny) newDecl->dropAttrs();
 }
 
+static bool EquivalentArrayTypes(QualType Old, QualType New,
+                                 const ASTContext &Ctx) {
+
+  auto NoSizeInfo = [&Ctx](QualType Ty) {
+    if (Ty->isIncompleteArrayType() || Ty->isPointerType())
+      return true;
+    if (const auto *VAT = Ctx.getAsVariableArrayType(Ty))
+      return VAT->getSizeModifier() == ArrayType::ArraySizeModifier::Star;
+    return false;
+  };
+
+  // `type[]` is equivalent to `type *` and `type[*]`.
+  if (NoSizeInfo(Old) && NoSizeInfo(New))
+    return true;
+
+  // Don't try to compare VLA sizes, unless one of them has the star modifier.
+  if (Old->isVariableArrayType() && New->isVariableArrayType()) {
+    const auto *OldVAT = Ctx.getAsVariableArrayType(Old);
+    const auto *NewVAT = Ctx.getAsVariableArrayType(New);
+    if ((OldVAT->getSizeModifier() == ArrayType::ArraySizeModifier::Star) ^
+        (NewVAT->getSizeModifier() == ArrayType::ArraySizeModifier::Star))
+      return false;
+    return true;
+  }
+
+  // Only compare size, ignore Size modifiers and CVR.
+  if (Old->isConstantArrayType() && New->isConstantArrayType())
+    return Ctx.getAsConstantArrayType(Old)->getSize() ==
+           Ctx.getAsConstantArrayType(New)->getSize();
+
+  return Old == New;
+}
+
 static void mergeParamDeclTypes(ParmVarDecl *NewParam,
                                 const ParmVarDecl *OldParam,
                                 Sema &S) {
@@ -3232,6 +3263,19 @@ static void mergeParamDeclTypes(ParmVarDecl *NewParam,
                          AttributedType::getNullabilityAttrKind(*Oldnullability),
                          NewT, NewT);
       NewParam->setType(NewT);
+    }
+  }
+  const auto *OldParamDT = dyn_cast<DecayedType>(OldParam->getType());
+  const auto *NewParamDT = dyn_cast<DecayedType>(NewParam->getType());
+  if (OldParamDT && NewParamDT &&
+      OldParamDT->getPointeeType() == NewParamDT->getPointeeType()) {
+    QualType OldParamOT = OldParamDT->getOriginalType();
+    QualType NewParamOT = NewParamDT->getOriginalType();
+    if (!EquivalentArrayTypes(OldParamOT, NewParamOT, S.getASTContext())) {
+      S.Diag(NewParam->getLocation(), diag::warn_inconsistent_array_form)
+          << NewParam << NewParamOT;
+      S.Diag(OldParam->getLocation(), diag::note_previous_declaration_as)
+          << OldParamOT;
     }
   }
 }
@@ -9361,15 +9405,25 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     NewFD->setLocalExternDecl();
 
   if (getLangOpts().CPlusPlus) {
+    // The rules for implicit inlines changed in C++20 for methods and friends
+    // with an in-class definition (when such a definition is not attached to
+    // the global module).  User-specified 'inline' overrides this (set when
+    // the function decl is created above).
+    bool ImplicitInlineCXX20 = !getLangOpts().CPlusPlus20 ||
+                               !NewFD->getOwningModule() ||
+                               NewFD->getOwningModule()->isGlobalModule();
     bool isInline = D.getDeclSpec().isInlineSpecified();
     bool isVirtual = D.getDeclSpec().isVirtualSpecified();
     bool hasExplicit = D.getDeclSpec().hasExplicitSpecifier();
     isFriend = D.getDeclSpec().isFriendSpecified();
     if (isFriend && !isInline && D.isFunctionDefinition()) {
-      // C++ [class.friend]p5
+      // Pre-C++20 [class.friend]p5
       //   A function can be defined in a friend declaration of a
       //   class . . . . Such a function is implicitly inline.
-      NewFD->setImplicitlyInline();
+      // Post C++20 [class.friend]p7
+      //   Such a function is implicitly an inline function if it is attached
+      //   to the global module.
+      NewFD->setImplicitlyInline(ImplicitInlineCXX20);
     }
 
     // If this is a method defined in an __interface, and is not a constructor
@@ -9652,11 +9706,14 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
 
     if (isa<CXXMethodDecl>(NewFD) && DC == CurContext &&
-        D.isFunctionDefinition()) {
-      // C++ [class.mfct]p2:
+        D.isFunctionDefinition() && !isInline) {
+      // Pre C++20 [class.mfct]p2:
       //   A member function may be defined (8.4) in its class definition, in
       //   which case it is an inline member function (7.1.2)
-      NewFD->setImplicitlyInline();
+      // Post C++20 [class.mfct]p1:
+      //   If a member function is attached to the global module and is defined
+      //   in its class definition, it is inline.
+      NewFD->setImplicitlyInline(ImplicitInlineCXX20);
     }
 
     if (SC == SC_Static && isa<CXXMethodDecl>(NewFD) &&

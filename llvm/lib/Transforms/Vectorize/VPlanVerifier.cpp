@@ -142,8 +142,17 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
     // other recipes in between.
     auto RecipeI = VPBB->begin();
     auto End = VPBB->end();
-    while (RecipeI != End && RecipeI->isPhi())
+    unsigned NumActiveLaneMaskPhiRecipes = 0;
+    while (RecipeI != End && RecipeI->isPhi()) {
+      if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
+        NumActiveLaneMaskPhiRecipes++;
       RecipeI++;
+    }
+
+    if (NumActiveLaneMaskPhiRecipes > 1) {
+      errs() << "There should be no more than one VPActiveLaneMaskPHIRecipe";
+      return false;
+    }
 
     while (RecipeI != End) {
       if (RecipeI->isPhi() && !isa<VPBlendRecipe>(&*RecipeI)) {
@@ -181,15 +190,16 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
   }
 
   if (Exiting->empty()) {
-    errs() << "VPlan vector loop exiting block must end with BranchOnCount "
-              "VPInstruction but is empty\n";
+    errs() << "VPlan vector loop exiting block must end with BranchOnCount or "
+              "BranchOnCond VPInstruction but is empty\n";
     return false;
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!LastInst || LastInst->getOpcode() != VPInstruction::BranchOnCount) {
-    errs() << "VPlan vector loop exit must end with BranchOnCount "
-              "VPInstruction\n";
+  if (!LastInst || (LastInst->getOpcode() != VPInstruction::BranchOnCount &&
+                    LastInst->getOpcode() != VPInstruction::BranchOnCond)) {
+    errs() << "VPlan vector loop exit must end with BranchOnCount or "
+              "BranchOnCond VPInstruction\n";
     return false;
   }
 

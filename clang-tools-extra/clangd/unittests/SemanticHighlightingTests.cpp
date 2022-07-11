@@ -745,6 +745,23 @@ sizeof...($TemplateParameter[[Elements]]);
             int &operator[](int &);
             int operator[](int) const;
         };
+        struct $Class_decl[[ClassWithStaticMember]] {
+            static inline int $StaticField_decl_static[[j]] = 0;
+        };
+        struct $Class_decl[[ClassWithRefMembers]] {
+          $Class_decl[[ClassWithRefMembers]](int $Parameter_decl[[i]])
+            : $Field[[i1]]($Parameter[[i]]),
+              $Field_readonly[[i2]]($Parameter[[i]]),
+              $Field[[i3]]($Parameter_usedAsMutableReference[[i]]),
+              $Field_readonly[[i4]]($Class[[ClassWithStaticMember]]::$StaticField_static[[j]]),
+              $Field[[i5]]($Class[[ClassWithStaticMember]]::$StaticField_static_usedAsMutableReference[[j]])
+          {}
+          int $Field_decl[[i1]];
+          const int &$Field_decl_readonly[[i2]];
+          int &$Field_decl[[i3]];
+          const int &$Field_decl_readonly[[i4]];
+          int &$Field_decl[[i5]];
+        };
         void $Function_decl[[fun]](int, const int,
                                    int*, const int*,
                                    int&, const int&,

@@ -56,10 +56,16 @@ typedef struct StructWithPtrTag : public Base {
   int *ptr1;
 } StructWithPtr;
 
-// CK30-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @.__omp_offloading_{{.*}}map_with_deep_copy{{.*}}_l{{[0-9]+}}.region_id, i32 4, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* [[MTYPE00]], i32 0, i32 0), i8** null, i8** null)
-// CK30-DAG: [[GEPS]] = getelementptr inbounds [4 x i{{64|32}}], [4 x i64]* [[SIZES:%.+]], i32 0, i32 0
-// CK30-DAG: [[GEPP]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[PTRS:%.+]], i32 0, i32 0
-// CK30-DAG: [[GEPBP]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BASES:%.+]], i32 0, i32 0
+// CK30-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK30-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK30-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK30-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK30-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK30-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+// CK30-DAG: store i64* [[SIZES:%.+]], i64** [[SARG]]
+// CK30-DAG: [[SIZES]] = getelementptr inbounds [4 x i{{64|32}}], [4 x i64]* [[SIZES:%.+]], i32 0, i32 0
+// CK30-DAG: [[PGEP]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[PTRS:%.+]], i32 0, i32 0
+// CK30-DAG: [[BPGEP]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BASES:%.+]], i32 0, i32 0
 
 // CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BASES]], i32 0, i32 0
 // CK30-DAG: [[BC:%.+]] = bitcast i8** [[BASE_PTR]] to [[STRUCT]]**

@@ -629,6 +629,63 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   if (Error E = updateAndRemoveSymbols(Config, ELFConfig, Obj))
     return E;
 
+  if (!Config.SetSectionAlignment.empty()) {
+    for (SectionBase &Sec : Obj.sections()) {
+      auto I = Config.SetSectionAlignment.find(Sec.Name);
+      if (I != Config.SetSectionAlignment.end())
+        Sec.Align = I->second;
+    }
+  }
+
+  if (Config.OnlyKeepDebug)
+    for (auto &Sec : Obj.sections())
+      if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
+        Sec.Type = SHT_NOBITS;
+
+  for (const NewSectionInfo &AddedSection : Config.AddSection) {
+    auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
+      OwnedDataSection &NewSection =
+          Obj.addSection<OwnedDataSection>(Name, Data);
+      if (Name.startswith(".note") && Name != ".note.GNU-stack")
+        NewSection.Type = SHT_NOTE;
+      return Error::success();
+    };
+    if (Error E = handleUserSection(AddedSection, AddSection))
+      return E;
+  }
+
+  for (const NewSectionInfo &NewSection : Config.UpdateSection) {
+    auto UpdateSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
+      return Obj.updateSection(Name, Data);
+    };
+    if (Error E = handleUserSection(NewSection, UpdateSection))
+      return E;
+  }
+
+  if (!Config.AddGnuDebugLink.empty())
+    Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink,
+                                        Config.GnuDebugLinkCRC32);
+
+  // If the symbol table was previously removed, we need to create a new one
+  // before adding new symbols.
+  if (!Obj.SymbolTable && !Config.SymbolsToAdd.empty())
+    if (Error E = Obj.addNewSymbolTable())
+      return E;
+
+  for (const NewSymbolInfo &SI : Config.SymbolsToAdd)
+    addSymbol(Obj, SI, ELFConfig.NewSymbolVisibility);
+
+  // --set-section-flags works with sections added by --add-section.
+  if (!Config.SetSectionFlags.empty()) {
+    for (auto &Sec : Obj.sections()) {
+      const auto Iter = Config.SetSectionFlags.find(Sec.Name);
+      if (Iter != Config.SetSectionFlags.end()) {
+        const SectionFlagsUpdate &SFU = Iter->second;
+        setSectionFlagsAndType(Sec, SFU.NewFlags);
+      }
+    }
+  }
+
   if (!Config.SectionsToRename.empty()) {
     std::vector<RelocationSectionBase *> RelocSections;
     DenseSet<SectionBase *> RenamedSections;
@@ -689,63 +746,6 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                         TargetSec->Name)
                            .str();
         }
-      }
-    }
-  }
-
-  if (!Config.SetSectionAlignment.empty()) {
-    for (SectionBase &Sec : Obj.sections()) {
-      auto I = Config.SetSectionAlignment.find(Sec.Name);
-      if (I != Config.SetSectionAlignment.end())
-        Sec.Align = I->second;
-    }
-  }
-
-  if (Config.OnlyKeepDebug)
-    for (auto &Sec : Obj.sections())
-      if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
-        Sec.Type = SHT_NOBITS;
-
-  for (const NewSectionInfo &AddedSection : Config.AddSection) {
-    auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
-      OwnedDataSection &NewSection =
-          Obj.addSection<OwnedDataSection>(Name, Data);
-      if (Name.startswith(".note") && Name != ".note.GNU-stack")
-        NewSection.Type = SHT_NOTE;
-      return Error::success();
-    };
-    if (Error E = handleUserSection(AddedSection, AddSection))
-      return E;
-  }
-
-  for (const NewSectionInfo &NewSection : Config.UpdateSection) {
-    auto UpdateSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
-      return Obj.updateSection(Name, Data);
-    };
-    if (Error E = handleUserSection(NewSection, UpdateSection))
-      return E;
-  }
-
-  if (!Config.AddGnuDebugLink.empty())
-    Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink,
-                                        Config.GnuDebugLinkCRC32);
-
-  // If the symbol table was previously removed, we need to create a new one
-  // before adding new symbols.
-  if (!Obj.SymbolTable && !Config.SymbolsToAdd.empty())
-    if (Error E = Obj.addNewSymbolTable())
-      return E;
-
-  for (const NewSymbolInfo &SI : Config.SymbolsToAdd)
-    addSymbol(Obj, SI, ELFConfig.NewSymbolVisibility);
-
-  // --set-section-flags works with sections added by --add-section.
-  if (!Config.SetSectionFlags.empty()) {
-    for (auto &Sec : Obj.sections()) {
-      const auto Iter = Config.SetSectionFlags.find(Sec.Name);
-      if (Iter != Config.SetSectionFlags.end()) {
-        const SectionFlagsUpdate &SFU = Iter->second;
-        setSectionFlagsAndType(Sec, SFU.NewFlags);
       }
     }
   }

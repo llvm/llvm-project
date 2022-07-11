@@ -248,10 +248,8 @@ static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
   uptr bottom = stack & ~(PageSize - 1);
   ssize += stack - bottom;
   ssize = RoundUpTo(ssize, PageSize);
-  static const uptr kMaxSaneContextStackSize = 1 << 22;  // 4 Mb
-  if (AddrIsInMem(bottom) && ssize && ssize <= kMaxSaneContextStackSize) {
+  if (AddrIsInMem(bottom) && ssize)
     PoisonShadow(bottom, ssize, 0);
-  }
 }
 
 INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,

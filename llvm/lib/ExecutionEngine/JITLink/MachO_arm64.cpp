@@ -425,7 +425,7 @@ private:
           else
             return TargetSymbolOrErr.takeError();
 
-          Kind = aarch64::PointerToGOT;
+          Kind = aarch64::Delta32ToGOT;
           break;
         case MachODelta32:
         case MachODelta64: {

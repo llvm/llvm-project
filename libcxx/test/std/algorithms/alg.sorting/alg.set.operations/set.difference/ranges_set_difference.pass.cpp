@@ -214,27 +214,11 @@ constexpr void testImpl() {
 
   // check that ranges::dangling is returned for non-borrowed_range
   {
-    struct NonBorrowedRange {
-      int* data_;
-      size_t size_;
-
-      // TODO: std::ranges::set_difference calls std::__copy
-      // std::ranges::copy(contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>, contiguous_iterator<int*>) doesn't seem to work.
-      // It seems that std::ranges::copy calls std::copy, which unwraps contiguous_iterator<int*> into int*,
-      // and then it failed because there is no == between int* and sentinel_wrapper<contiguous_iterator<int*>>
-      using Sent = std::conditional_t<std::contiguous_iterator<In2>, In2, sentinel_wrapper<In2>>;
-
-      constexpr NonBorrowedRange(int* d, size_t s) : data_{d}, size_{s} {}
-
-      constexpr In2 begin() const { return In2{data_}; };
-      constexpr Sent end() const { return Sent{In2{data_ + size_}}; };
-    };
-
     std::array r1{3, 6, 7, 9};
     std::array r2{2, 3, 4, 5, 6};
     std::array<int, 2> out;
     std::same_as<set_difference_result<std::ranges::dangling, int*>> decltype(auto) result =
-        std::ranges::set_difference(NonBorrowedRange{r1.data(), r1.size()}, r2, out.data());
+        std::ranges::set_difference(NonBorrowedRange<In1>{r1.data(), r1.size()}, r2, out.data());
     assert(base(result.out) == out.data() + out.size());
     assert(std::ranges::equal(out, std::array{7, 9}));
   }

@@ -14,7 +14,7 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Transforms/SideEffectUtils.h"
-
+#include "llvm/ADT/SetVector.h"
 #include <utility>
 
 using namespace mlir;
@@ -165,19 +165,34 @@ static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(
 }
 
 /// Helper to create a new WarpExecuteOnLane0Op region with extra outputs.
+/// `indices` return the index of each new output.
 static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndAppendReturns(
     RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
-    ValueRange newYieldedValues, TypeRange newReturnTypes) {
+    ValueRange newYieldedValues, TypeRange newReturnTypes,
+    llvm::SmallVector<size_t> &indices) {
   SmallVector<Type> types(warpOp.getResultTypes().begin(),
                           warpOp.getResultTypes().end());
-  types.append(newReturnTypes.begin(), newReturnTypes.end());
   auto yield = cast<vector::YieldOp>(
       warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-  SmallVector<Value> yieldValues(yield.getOperands().begin(),
-                                 yield.getOperands().end());
-  yieldValues.append(newYieldedValues.begin(), newYieldedValues.end());
+  llvm::SmallSetVector<Value, 32> yieldValues(yield.getOperands().begin(),
+                                              yield.getOperands().end());
+  for (auto newRet : llvm::zip(newYieldedValues, newReturnTypes)) {
+    if (yieldValues.insert(std::get<0>(newRet))) {
+      types.push_back(std::get<1>(newRet));
+      indices.push_back(yieldValues.size() - 1);
+    } else {
+      // If the value already exit the region don't create a new output.
+      for (auto &yieldOperand : llvm::enumerate(yieldValues.getArrayRef())) {
+        if (yieldOperand.value() == std::get<0>(newRet)) {
+          indices.push_back(yieldOperand.index());
+          break;
+        }
+      }
+    }
+  }
+  yieldValues.insert(newYieldedValues.begin(), newYieldedValues.end());
   WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
-      rewriter, warpOp, yieldValues, types);
+      rewriter, warpOp, yieldValues.getArrayRef(), types);
   rewriter.replaceOp(warpOp,
                      newWarpOp.getResults().take_front(warpOp.getNumResults()));
   return newWarpOp;
@@ -273,14 +288,15 @@ static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
   assert(writeOp->getParentOp() == warpOp &&
          "write must be nested immediately under warp");
   OpBuilder::InsertionGuard g(rewriter);
+  SmallVector<size_t> newRetIndices;
   WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
       rewriter, warpOp, ValueRange{{writeOp.getVector()}},
-      TypeRange{targetType});
+      TypeRange{targetType}, newRetIndices);
   rewriter.setInsertionPointAfter(newWarpOp);
   auto newWriteOp =
       cast<vector::TransferWriteOp>(rewriter.clone(*writeOp.getOperation()));
   rewriter.eraseOp(writeOp);
-  newWriteOp.getVectorMutable().assign(newWarpOp.getResults().back());
+  newWriteOp.getVectorMutable().assign(newWarpOp.getResult(newRetIndices[0]));
   return newWriteOp;
 }
 
@@ -387,8 +403,9 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
 
     SmallVector<Value> yieldValues = {writeOp.getVector()};
     SmallVector<Type> retTypes = {vecType};
+    SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, yieldValues, retTypes);
+        rewriter, warpOp, yieldValues, retTypes, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
 
     // Create a second warp op that contains only writeOp.
@@ -398,8 +415,7 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
     rewriter.setInsertionPointToStart(&body);
     auto newWriteOp =
         cast<vector::TransferWriteOp>(rewriter.clone(*writeOp.getOperation()));
-    newWriteOp.getVectorMutable().assign(
-        newWarpOp.getResult(newWarpOp.getNumResults() - 1));
+    newWriteOp.getVectorMutable().assign(newWarpOp.getResult(newRetIndices[0]));
     rewriter.eraseOp(writeOp);
     rewriter.create<vector::YieldOp>(newWarpOp.getLoc());
     return success();
@@ -489,14 +505,14 @@ struct WarpOpElementwise : public OpRewritePattern<WarpExecuteOnLane0Op> {
       retTypes.push_back(targetType);
       yieldValues.push_back(operand.get());
     }
-    unsigned numResults = warpOp.getNumResults();
+    SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, yieldValues, retTypes);
+        rewriter, warpOp, yieldValues, retTypes, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newOperands(elementWise->getOperands().begin(),
                                    elementWise->getOperands().end());
     for (unsigned i : llvm::seq(unsigned(0), elementWise->getNumOperands())) {
-      newOperands[i] = newWarpOp.getResult(i + numResults);
+      newOperands[i] = newWarpOp.getResult(newRetIndices[i]);
     }
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(newWarpOp);
@@ -504,6 +520,44 @@ struct WarpOpElementwise : public OpRewritePattern<WarpExecuteOnLane0Op> {
         rewriter, loc, elementWise, newOperands,
         {newWarpOp.getResult(operandIndex).getType()});
     newWarpOp.getResult(operandIndex).replaceAllUsesWith(newOp->getResult(0));
+    return success();
+  }
+};
+
+/// Sink out splat constant op feeding into a warp op yield.
+/// ```
+/// %0 = vector.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
+///   ...
+///   %cst = arith.constant dense<2.0> : vector<32xf32>
+///   vector.yield %cst : vector<32xf32>
+/// }
+/// ```
+/// To
+/// ```
+/// vector.warp_execute_on_lane_0(%arg0 {
+///   ...
+/// }
+/// %0 = arith.constant dense<2.0> : vector<1xf32>
+struct WarpOpConstant : public OpRewritePattern<WarpExecuteOnLane0Op> {
+  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+  LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *yieldOperand = getWarpResult(
+        warpOp, [](Operation *op) { return isa<arith::ConstantOp>(op); });
+    if (!yieldOperand)
+      return failure();
+    auto constantOp = yieldOperand->get().getDefiningOp<arith::ConstantOp>();
+    auto dense = constantOp.getValue().dyn_cast<SplatElementsAttr>();
+    if (!dense)
+      return failure();
+    unsigned operandIndex = yieldOperand->getOperandNumber();
+    Attribute scalarAttr = dense.getSplatValue<Attribute>();
+    Attribute newAttr = DenseElementsAttr::get(
+        warpOp.getResult(operandIndex).getType(), scalarAttr);
+    Location loc = warpOp.getLoc();
+    rewriter.setInsertionPointAfter(warpOp);
+    Value distConstant = rewriter.create<arith::ConstantOp>(loc, newAttr);
+    warpOp.getResult(operandIndex).replaceAllUsesWith(distConstant);
     return success();
   }
 };
@@ -653,12 +707,13 @@ struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
     Location loc = broadcastOp.getLoc();
     auto destVecType =
         warpOp->getResultTypes()[operandNumber].cast<VectorType>();
+    SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, {broadcastOp.getSource()},
-        {broadcastOp.getSource().getType()});
+        {broadcastOp.getSource().getType()}, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     Value broadcasted = rewriter.create<vector::BroadcastOp>(
-        loc, destVecType, newWarpOp->getResults().back());
+        loc, destVecType, newWarpOp->getResult(newRetIndices[0]));
     newWarpOp->getResult(operandNumber).replaceAllUsesWith(broadcasted);
     return success();
   }
@@ -798,7 +853,7 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
       return rewriter.notifyMatchFailure(
           warpOp, "Only rank 1 reductions can be distributed.");
     // Only warp_size-sized vectors supported.
-    if (static_cast<uint64_t>(vectorType.getShape()[0]) != warpOp.getWarpSize())
+    if (vectorType.getShape()[0] % warpOp.getWarpSize() != 0)
       return rewriter.notifyMatchFailure(
           warpOp, "Reduction vector dimension must match was size.");
     // Only f32 and i32 element types are supported.
@@ -808,24 +863,26 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
           warpOp,
           "Reduction distribution currently only supports 32bits types.");
 
-    Location yieldLoc = yieldOperand->getOwner()->getLoc();
-
+    int64_t numElements = vectorType.getShape()[0] / warpOp.getWarpSize();
     // Return vector that will be reduced from the WarpExecuteOnLane0Op.
     unsigned operandIndex = yieldOperand->getOperandNumber();
     SmallVector<Value> yieldValues = {reductionOp.getVector()};
-    SmallVector<Type> retTypes = {VectorType::get({1}, reductionOp.getType())};
-    unsigned numResults = warpOp.getNumResults();
+    SmallVector<Type> retTypes = {
+        VectorType::get({numElements}, reductionOp.getType())};
+    SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, yieldValues, retTypes);
+        rewriter, warpOp, yieldValues, retTypes, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
 
-    // Every lane has one scalar value. These should be reduced.
-    Value laneValVec = newWarpOp.getResult(numResults);
-    Value laneVal = rewriter.create<vector::ExtractOp>(yieldLoc, laneValVec, 0);
-    laneVal =
-        distributedReductionFn(reductionOp.getLoc(), rewriter, laneVal,
+    Value laneValVec = newWarpOp.getResult(newRetIndices[0]);
+    // First reduce on a single thread.
+    Value perLaneReduction = rewriter.create<vector::ReductionOp>(
+        reductionOp.getLoc(), reductionOp.getKind(), laneValVec);
+    // Then distribute across threads.
+    Value fullReduce =
+        distributedReductionFn(reductionOp.getLoc(), rewriter, perLaneReduction,
                                reductionOp.getKind(), newWarpOp.getWarpSize());
-    newWarpOp.getResult(operandIndex).replaceAllUsesWith(laneVal);
+    newWarpOp.getResult(operandIndex).replaceAllUsesWith(fullReduce);
     return success();
   }
 
@@ -849,8 +906,8 @@ void mlir::vector::populateDistributeTransferWriteOpPatterns(
 void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<WarpOpElementwise, WarpOpTransferRead, WarpOpDeadResult,
-               WarpOpBroadcast, WarpOpForwardOperand, WarpOpScfForOp>(
-      patterns.getContext());
+               WarpOpBroadcast, WarpOpForwardOperand, WarpOpScfForOp,
+               WarpOpConstant>(patterns.getContext());
 }
 
 void mlir::vector::populateDistributeReduction(

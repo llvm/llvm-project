@@ -577,17 +577,11 @@ Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
 
   // Parse the kind keyword first.
   StringRef attrKind;
-  if (parser.parseKeyword(&attrKind))
-    return {};
-
   Attribute attr;
   OptionalParseResult result =
-      generatedAttributeParser(parser, attrKind, type, attr);
-  if (result.hasValue()) {
-    if (failed(result.getValue()))
-      return {};
+      generatedAttributeParser(parser, &attrKind, type, attr);
+  if (result.hasValue())
     return attr;
-  }
 
   if (attrKind == spirv::TargetEnvAttr::getKindName())
     return parseTargetEnvAttr(parser);

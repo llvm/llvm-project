@@ -539,20 +539,6 @@ OpFoldResult ToTensorOp::fold(ArrayRef<Attribute>) {
 }
 
 namespace {
-/// Canonicalize bufferization.to_tensor + bufferization.to_memref.
-struct ToTensorToMemrefFolding : public OpRewritePattern<ToTensorOp> {
-  using OpRewritePattern<ToTensorOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ToTensorOp toTensorOp,
-                                PatternRewriter &rewriter) const final {
-    auto toMemrefOp = toTensorOp.getMemref().getDefiningOp<ToMemrefOp>();
-    if (!toMemrefOp)
-      return failure();
-    rewriter.replaceOp(toTensorOp, toMemrefOp.getTensor());
-    return success();
-  }
-};
-
 struct DimOfToTensorFolder : public OpRewritePattern<tensor::DimOp> {
   using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
 
@@ -571,7 +557,7 @@ struct DimOfToTensorFolder : public OpRewritePattern<tensor::DimOp> {
 
 void ToTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.add<DimOfToTensorFolder, ToTensorToMemrefFolding>(context);
+  results.add<DimOfToTensorFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -629,12 +615,12 @@ struct LoadOfToMemref : public OpRewritePattern<memref::LoadOp> {
 
   LogicalResult matchAndRewrite(memref::LoadOp load,
                                 PatternRewriter &rewriter) const override {
-    auto toMemref = load.memref().getDefiningOp<ToMemrefOp>();
+    auto toMemref = load.getMemref().getDefiningOp<ToMemrefOp>();
     if (!toMemref)
       return failure();
 
     rewriter.replaceOpWithNewOp<tensor::ExtractOp>(load, toMemref.getTensor(),
-                                                   load.indices());
+                                                   load.getIndices());
     return success();
   }
 };
@@ -645,11 +631,12 @@ struct DimOfCastOp : public OpRewritePattern<memref::DimOp> {
 
   LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto castOp = dimOp.source().getDefiningOp<ToMemrefOp>();
+    auto castOp = dimOp.getSource().getDefiningOp<ToMemrefOp>();
     if (!castOp)
       return failure();
     Value newSource = castOp.getOperand();
-    rewriter.replaceOpWithNewOp<tensor::DimOp>(dimOp, newSource, dimOp.index());
+    rewriter.replaceOpWithNewOp<tensor::DimOp>(dimOp, newSource,
+                                               dimOp.getIndex());
     return success();
   }
 };

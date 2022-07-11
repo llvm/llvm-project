@@ -951,7 +951,7 @@ static bool getCompressDebugSections(opt::InputArgList &args) {
     return false;
   if (s != "zlib")
     error("unknown --compress-debug-sections value: " + s);
-  if (!zlib::isAvailable())
+  if (!compression::zlib::isAvailable())
     error("--compress-debug-sections: zlib is not available");
   return true;
 }

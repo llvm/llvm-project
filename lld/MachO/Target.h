@@ -79,6 +79,15 @@ public:
 
   bool usesThunks() const { return thunkSize > 0; }
 
+  // For now, handleDtraceReloc only implements -no_dtrace_dof, and ensures
+  // that the linking would not fail even when there are user-provided dtrace
+  // symbols. However, unlike ld64, lld currently does not emit __dof sections.
+  virtual void handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                                 uint8_t *loc) const {
+    llvm_unreachable("Unsupported architecture for dtrace symbols");
+  }
+
+
   virtual void applyOptimizationHints(uint8_t *buf, const ConcatInputSection *,
                                       llvm::ArrayRef<uint64_t>) const {};
 

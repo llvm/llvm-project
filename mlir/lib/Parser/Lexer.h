@@ -40,6 +40,10 @@ public:
   /// Returns the start of the buffer.
   const char *getBufferBegin() { return curBuffer.data(); }
 
+  /// Return the code completion location of the lexer, or nullptr if there is
+  /// none.
+  const char *getCodeCompleteLoc() const { return codeCompleteLoc; }
+
 private:
   // Helpers.
   Token formToken(Token::Kind kind, const char *tokStart) {
