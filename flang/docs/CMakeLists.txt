@@ -106,12 +106,13 @@ if (LLVM_ENABLE_SPHINX)
         COMMAND "${CMAKE_COMMAND}" -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_BINARY_DIR}/Source"
-
-        COMMAND "${CMAKE_COMMAND}" -E copy
-        "${CMAKE_CURRENT_BINARY_DIR}/Dialect/FIRLangRef.md"
-        "${CMAKE_CURRENT_BINARY_DIR}/Source/FIRLangRef.md"
-
         DEPENDS flang-doc)
+
+        # Runs a python script prior to HTML generation to prepend a header to FIRLangRef,
+        # Without the header, the page is incorrectly formatted, as it assumes the first entry is the page title.
+        add_custom_command(TARGET copy-flang-src-docs
+          COMMAND "${Python3_EXECUTABLE}"
+          ARGS ${CMAKE_CURRENT_BINARY_DIR}/Source/FIR/CreateFIRLangRef.py)
 
     endif()
     if (${SPHINX_OUTPUT_MAN})
