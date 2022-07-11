@@ -73,11 +73,9 @@ public:
     uint64_t load_address;
     uint64_t mod_date; // may not be available - 0 if so
     struct mach_o_information macho_info;
-    bool is_valid_mach_header;
 
     binary_image_information()
-        : filename(), load_address(INVALID_NUB_ADDRESS), mod_date(0),
-          is_valid_mach_header(false) {}
+        : filename(), load_address(INVALID_NUB_ADDRESS), mod_date(0) {}
   };
 
   // Child process control
