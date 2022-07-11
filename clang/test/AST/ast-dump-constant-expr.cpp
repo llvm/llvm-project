@@ -58,7 +58,7 @@ struct Test {
 
 // CHECK:Dumping Test:
 // CHECK-NEXT:CXXRecordDecl {{.*}} <{{.*}}ast-dump-constant-expr.cpp:43:1, line:57:1> line:43:8 struct Test definition
-// CHECK:|-CXXMethodDecl {{.*}} <line:44:3, line:54:3> line:44:8 test 'void ()' implicit-inline
+// CHECK:|-CXXMethodDecl {{.*}} <line:44:3, line:54:3> line:44:8 test 'void ()'
 // CHECK-NEXT:| `-CompoundStmt {{.*}} <col:15, line:54:3>
 // CHECK-NEXT:|   |-CStyleCastExpr {{.*}} <line:45:5, col:20> 'void' <ToVoid>
 // CHECK-NEXT:|   | `-ConstantExpr {{.*}} <col:11, col:20> 'int'
@@ -90,4 +90,4 @@ struct Test {
 // CHECK-NEXT:|       `-CallExpr {{.*}} <col:11, col:23> '__int128'
 // CHECK-NEXT:|         `-ImplicitCastExpr {{.*}} <col:11> '__int128 (*)()' <FunctionToPointerDecay>
 // CHECK-NEXT:|           `-DeclRefExpr {{.*}} <col:11> '__int128 ()' lvalue Function {{.*}} 'test_Int128' '__int128 ()'
-// CHECK-NEXT:`-CXXMethodDecl {{.*}} <line:56:3, col:38> col:18 consteval consteval_method 'void ()' implicit-inline
+// CHECK-NEXT:`-CXXMethodDecl {{.*}} <line:56:3, col:38> col:18 consteval consteval_method 'void ()'
