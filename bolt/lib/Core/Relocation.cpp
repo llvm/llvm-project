@@ -580,7 +580,11 @@ bool Relocation::isX86GOTPCRELX(uint64_t Type) {
   return Type == ELF::R_X86_64_GOTPCRELX || Type == ELF::R_X86_64_REX_GOTPCRELX;
 }
 
-bool Relocation::isNone(uint64_t Type) { return Type == getNone(); }
+bool Relocation::isNone(uint64_t Type) {
+  if (Arch == Triple::aarch64)
+    return Type == ELF::R_AARCH64_NONE;
+  return Type == ELF::R_X86_64_NONE;
+}
 
 bool Relocation::isRelative(uint64_t Type) {
   if (Arch == Triple::aarch64)
@@ -600,10 +604,10 @@ bool Relocation::isTLS(uint64_t Type) {
   return isTLSX86(Type);
 }
 
-uint64_t Relocation::getNone() {
+bool Relocation::isPCRelative(uint64_t Type) {
   if (Arch == Triple::aarch64)
-    return ELF::R_AARCH64_NONE;
-  return ELF::R_X86_64_NONE;
+    return isPCRelativeAArch64(Type);
+  return isPCRelativeX86(Type);
 }
 
 uint64_t Relocation::getPC32() {
@@ -616,12 +620,6 @@ uint64_t Relocation::getPC64() {
   if (Arch == Triple::aarch64)
     return ELF::R_AARCH64_PREL64;
   return ELF::R_X86_64_PC64;
-}
-
-bool Relocation::isPCRelative(uint64_t Type) {
-  if (Arch == Triple::aarch64)
-    return isPCRelativeAArch64(Type);
-  return isPCRelativeX86(Type);
 }
 
 size_t Relocation::emit(MCStreamer *Streamer) const {
