@@ -39,6 +39,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok_r
  
     # inttypes.h entrypoints
+    libc.src.inttypes.imaxabs
     libc.src.inttypes.imaxdiv
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
