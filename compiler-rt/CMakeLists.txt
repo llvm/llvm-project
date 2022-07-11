@@ -474,6 +474,8 @@ append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
 append_list_if(MINGW -fms-extensions SANITIZER_COMMON_CFLAGS)
 
 # Set common link flags.
+# TODO: We should consider using the same model as libc++, that is use either
+# -nostdlib++ and --unwindlib=none if supported, or -nodefaultlibs otherwise.
 append_list_if(C_SUPPORTS_NODEFAULTLIBS_FLAG -nodefaultlibs SANITIZER_COMMON_LINK_FLAGS)
 append_list_if(COMPILER_RT_HAS_Z_TEXT -Wl,-z,text SANITIZER_COMMON_LINK_FLAGS)
 
@@ -533,10 +535,14 @@ string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_
 set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
 
 if(COMPILER_RT_USE_LLVM_UNWINDER)
+  # We're linking directly against the libunwind that we're building so don't
+  # try to link in the toolchain's default libunwind which may be missing.
+  append_list_if(CXX_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none COMPILER_RT_COMMON_LINK_FLAGS)
+  append_list_if(CXX_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none COMPILER_RT_UNITTEST_LINK_FLAGS)
   if (COMPILER_RT_ENABLE_STATIC_UNWINDER)
-    list(APPEND SANITIZER_CXX_ABI_LIBRARIES "$<TARGET_LINKER_FILE:unwind_static>")
+    list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:unwind_static>")
   else()
-    list(APPEND SANITIZER_CXX_ABI_LIBRARIES "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:unwind_shared>,unwind_shared,unwind_static>>")
+    list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:unwind_shared>,unwind_shared,unwind_static>>")
   endif()
 endif()
 
@@ -561,6 +567,11 @@ endif()
 
 macro(append_libcxx_libs var)
   if (${var}_INTREE)
+    # TODO: We don't need to add --unwindlib=none to SANITIZER_COMMON_LINK_FLAGS
+    # because we added -nodefaultlibs there earlier, and adding would result in
+    # a warning, but if we switch to -nostdlib++, we would need to add it here.
+    # append_list_if(CXX_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none SANITIZER_COMMON_LINK_FLAGS)
+
     if (SANITIZER_USE_STATIC_LLVM_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
       list(APPEND ${var}_LIBRARIES unwind_static)
     elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)

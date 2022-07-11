@@ -36,6 +36,7 @@ set(SCUDO_TEST_ARCH ${SCUDO_STANDALONE_SUPPORTED_ARCH})
 # gtests requires c++
 set(SCUDO_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${SANITIZER_TEST_CXX_LIBRARIES})
 list(APPEND SCUDO_UNITTEST_LINK_FLAGS -pthread -no-pie)
 # Linking against libatomic is required with some compilers
