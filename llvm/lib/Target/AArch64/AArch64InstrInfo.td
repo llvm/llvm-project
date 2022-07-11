@@ -4356,10 +4356,12 @@ defm FCVTZU : SIMDTwoVectorFPToInt<1, 1, 0b11011, "fcvtzu", any_fp_to_uint>;
 
 // AArch64's FCVT instructions saturate when out of range.
 multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, string INST> {
+  let Predicates = [HasFullFP16] in {
   def : Pat<(v4i16 (to_int_sat v4f16:$Rn, i16)),
             (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
   def : Pat<(v8i16 (to_int_sat v8f16:$Rn, i16)),
             (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
+  }
   def : Pat<(v2i32 (to_int_sat v2f32:$Rn, i32)),
             (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
   def : Pat<(v4i32 (to_int_sat v4f32:$Rn, i32)),
