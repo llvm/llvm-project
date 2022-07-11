@@ -20,12 +20,13 @@ template <typename T> class SmallVectorImpl;
 class Error;
 class StringRef;
 
+namespace compression {
 namespace zlib {
 
-static constexpr int NoCompression = 0;
-static constexpr int BestSpeedCompression = 1;
-static constexpr int DefaultCompression = 6;
-static constexpr int BestSizeCompression = 9;
+constexpr int NoCompression = 0;
+constexpr int BestSpeedCompression = 1;
+constexpr int DefaultCompression = 6;
+constexpr int BestSizeCompression = 9;
 
 bool isAvailable();
 
@@ -39,9 +40,9 @@ Error uncompress(StringRef InputBuffer,
                  SmallVectorImpl<char> &UncompressedBuffer,
                  size_t UncompressedSize);
 
-uint32_t crc32(StringRef Buffer);
+} // End of namespace zlib
 
-}  // End of namespace zlib
+} // End of namespace compression
 
 } // End of namespace llvm
 

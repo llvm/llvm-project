@@ -29,18 +29,23 @@
 void implicit_maps_double_complex (int a, int *b){
   double _Complex dc = (double)a;
 
-  // CK11-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 2, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** null)
-  // CK11-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
-  // CK11-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
-  // CK11-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
-  // CK11-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-  // CK11-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to { double, double }**
-  // CK11-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to { double, double }**
-  // CK11-DAG: store { double, double }* [[PTR:%[^,]+]], { double, double }** [[CBP1]]
-  // CK11-DAG: store { double, double }* [[PTR]], { double, double }** [[CP1]]
+// CK11-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK11-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK11-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK11-DAG: [[PGEP:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK11-DAG: store i8** [[PGEP:%.+]], i8*** [[BPARG]]
+// CK11-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
+// CK11-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
+// CK11-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
+// CK11-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
+// CK11-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to { double, double }**
+// CK11-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to { double, double }**
+// CK11-DAG: store { double, double }* [[PTR:%[^,]+]], { double, double }** [[CBP1]]
+// CK11-DAG: store { double, double }* [[PTR]], { double, double }** [[CP1]]
 
-  // CK11: call void [[KERNEL:@.+]]({ double, double }* [[PTR]], i32** %{{.+}})
-  #pragma omp target defaultmap(tofrom:scalar)
+// CK11: call void [[KERNEL:@.+]]({ double, double }* [[PTR]], i32** %{{.+}})
+#pragma omp target defaultmap(tofrom \
+                              : scalar)
   {
    dc *= dc; *b = 1;
   }

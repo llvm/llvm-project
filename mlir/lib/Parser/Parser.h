@@ -57,7 +57,16 @@ public:
     return parseCommaSeparatedList(Delimiter::None, parseElementFn);
   }
 
-  ParseResult parseDialectSymbolBody(StringRef &body);
+  /// Parse the body of a dialect symbol, which starts and ends with <>'s, and
+  /// may be recursive. Return with the 'body' StringRef encompassing the entire
+  /// body. `isCodeCompletion` is set to true if the body contained a code
+  /// completion location, in which case the body is only populated up to the
+  /// completion.
+  ParseResult parseDialectSymbolBody(StringRef &body, bool &isCodeCompletion);
+  ParseResult parseDialectSymbolBody(StringRef &body) {
+    bool isCodeCompletion = false;
+    return parseDialectSymbolBody(body, isCodeCompletion);
+  }
 
   // We have two forms of parsing methods - those that return a non-null
   // pointer on success, and those that return a ParseResult to indicate whether
@@ -319,6 +328,14 @@ public:
   ParseResult codeCompleteOperationName(StringRef dialectName);
   ParseResult codeCompleteDialectOrElidedOpName(SMLoc loc);
   ParseResult codeCompleteStringDialectOrOperationName(StringRef name);
+  ParseResult codeCompleteExpectedTokens(ArrayRef<StringRef> tokens);
+  ParseResult codeCompleteOptionalTokens(ArrayRef<StringRef> tokens);
+
+  Attribute codeCompleteAttribute();
+  Type codeCompleteType();
+  Attribute
+  codeCompleteDialectSymbol(const llvm::StringMap<Attribute> &aliases);
+  Type codeCompleteDialectSymbol(const llvm::StringMap<Type> &aliases);
 
 protected:
   /// The Parser is subclassed and reinstantiated.  Do not add additional

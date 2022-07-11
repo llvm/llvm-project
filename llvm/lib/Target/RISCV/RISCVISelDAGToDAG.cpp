@@ -705,12 +705,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         break;
       }
 
-      // If the memory instruction already has an offset, make sure the combined
-      // offset is foldable.
+      // If the memory instruction already has an offset, don't allow folding.
       int64_t MemOffs =
           cast<ConstantSDNode>(User->getOperand(OffsetOpIdx))->getSExtValue();
-      MemOffs += Lo12;
-      if (!isInt<12>(MemOffs)) {
+      if (MemOffs != 0) {
         AllPointerUses = false;
         break;
       }
@@ -1887,6 +1885,53 @@ bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
   return false;
 }
 
+// Fold constant addresses.
+static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
+                               const MVT VT, const RISCVSubtarget *Subtarget,
+                               SDValue Addr, SDValue &Base, SDValue &Offset) {
+  if (!isa<ConstantSDNode>(Addr))
+    return false;
+
+  int64_t CVal = cast<ConstantSDNode>(Addr)->getSExtValue();
+
+  // If the constant is a simm12, we can fold the whole constant and use X0 as
+  // the base. If the constant can be materialized with LUI+simm12, use LUI as
+  // the base. We can't use generateInstSeq because it favors LUI+ADDIW.
+  int64_t Lo12 = SignExtend64<12>(CVal);
+  int64_t Hi = (uint64_t)CVal - (uint64_t)Lo12;
+  if (!Subtarget->is64Bit() || isInt<32>(Hi)) {
+    if (Hi) {
+      int64_t Hi20 = (Hi >> 12) & 0xfffff;
+      Base = SDValue(
+          CurDAG->getMachineNode(RISCV::LUI, DL, VT,
+                                 CurDAG->getTargetConstant(Hi20, DL, VT)),
+          0);
+    } else {
+      Base = CurDAG->getRegister(RISCV::X0, VT);
+    }
+    Offset = CurDAG->getTargetConstant(Lo12, DL, VT);
+    return true;
+  }
+
+  // Ask how constant materialization would handle this constant.
+  RISCVMatInt::InstSeq Seq =
+      RISCVMatInt::generateInstSeq(CVal, Subtarget->getFeatureBits());
+
+  // If the last instruction would be an ADDI, we can fold its immediate and
+  // emit the rest of the sequence as the base.
+  if (Seq.back().Opc != RISCV::ADDI)
+    return false;
+  Lo12 = Seq.back().Imm;
+
+  // Drop the last instruction.
+  Seq.pop_back();
+  assert(!Seq.empty() && "Expected more instructions in sequence");
+
+  Base = SDValue(selectImmSeq(CurDAG, DL, VT, Seq), 0);
+  Offset = CurDAG->getTargetConstant(Lo12, DL, VT);
+  return true;
+}
+
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -1951,6 +1996,9 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
       return true;
     }
   }
+
+  if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset))
+    return true;
 
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);

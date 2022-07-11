@@ -18,6 +18,7 @@
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using namespace llvm::compression;
 
 namespace {
 
@@ -60,12 +61,6 @@ TEST(CompressionTest, Zlib) {
   TestZlibCompression(BinaryDataStr, zlib::BestSizeCompression);
   TestZlibCompression(BinaryDataStr, zlib::BestSpeedCompression);
   TestZlibCompression(BinaryDataStr, zlib::DefaultCompression);
-}
-
-TEST(CompressionTest, ZlibCRC32) {
-  EXPECT_EQ(
-      0x414FA339U,
-      zlib::crc32(StringRef("The quick brown fox jumps over the lazy dog")));
 }
 
 #endif

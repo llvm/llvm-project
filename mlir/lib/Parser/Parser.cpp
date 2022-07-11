@@ -395,6 +395,35 @@ ParseResult Parser::codeCompleteStringDialectOrOperationName(StringRef name) {
   return failure();
 }
 
+ParseResult Parser::codeCompleteExpectedTokens(ArrayRef<StringRef> tokens) {
+  state.codeCompleteContext->completeExpectedTokens(tokens, /*optional=*/false);
+  return failure();
+}
+ParseResult Parser::codeCompleteOptionalTokens(ArrayRef<StringRef> tokens) {
+  state.codeCompleteContext->completeExpectedTokens(tokens, /*optional=*/true);
+  return failure();
+}
+
+Attribute Parser::codeCompleteAttribute() {
+  state.codeCompleteContext->completeAttribute(
+      state.symbols.attributeAliasDefinitions);
+  return {};
+}
+Type Parser::codeCompleteType() {
+  state.codeCompleteContext->completeType(state.symbols.typeAliasDefinitions);
+  return {};
+}
+
+Attribute
+Parser::codeCompleteDialectSymbol(const llvm::StringMap<Attribute> &aliases) {
+  state.codeCompleteContext->completeDialectAttributeOrAlias(aliases);
+  return {};
+}
+Type Parser::codeCompleteDialectSymbol(const llvm::StringMap<Type> &aliases) {
+  state.codeCompleteContext->completeDialectTypeOrAlias(aliases);
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // OperationParser
 //===----------------------------------------------------------------------===//

@@ -1983,6 +1983,10 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
                          tok::annot_module_begin, Action.ModuleForHeader);
     break;
+  case ImportAction::HeaderUnitImport:
+    EnterAnnotationToken(SourceRange(HashLoc, EndLoc), tok::annot_header_unit,
+                         Action.ModuleForHeader);
+    break;
   case ImportAction::ModuleImport:
     EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
                          tok::annot_module_include, Action.ModuleForHeader);
@@ -2191,6 +2195,17 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // known to have no effect beyond its effect on module visibility -- that is,
   // if it's got an include guard that is already defined, set to Import if it
   // is a modular header we've already built and should import.
+
+  // For C++20 Modules
+  // [cpp.include]/7 If the header identified by the header-name denotes an
+  // importable header, it is implementation-defined whether the #include
+  // preprocessing directive is instead replaced by an import directive.
+  // For this implementation, the translation is permitted when we are parsing
+  // the Global Module Fragment, and not otherwise (the cases where it would be
+  // valid to replace an include with an import are highly constrained once in
+  // named module purview; this choice avoids considerable complexity in
+  // determining valid cases).
+
   enum { Enter, Import, Skip, IncludeLimitReached } Action = Enter;
 
   if (PPOpts->SingleFileParseMode)
@@ -2203,13 +2218,34 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       alreadyIncluded(*File))
     Action = IncludeLimitReached;
 
+  bool MaybeTranslateInclude = Action == Enter && File && SuggestedModule &&
+                               !isForModuleBuilding(SuggestedModule.getModule(),
+                                                    getLangOpts().CurrentModule,
+                                                    getLangOpts().ModuleName);
+
+  // FIXME: We do not have a good way to disambiguate C++ clang modules from
+  // C++ standard modules (other than use/non-use of Header Units).
+  Module *SM = SuggestedModule.getModule();
+  // Maybe a usable Header Unit
+  bool UsableHeaderUnit = false;
+  if (getLangOpts().CPlusPlusModules && SM && SM->isHeaderUnit()) {
+    if (TrackGMFState.inGMF() || IsImportDecl)
+      UsableHeaderUnit = true;
+    else if (!IsImportDecl) {
+      // This is a Header Unit that we do not include-translate
+      SuggestedModule = ModuleMap::KnownHeader();
+      SM = nullptr;
+    }
+  }
+  // Maybe a usable clang header module.
+  bool UsableHeaderModule =
+      (getLangOpts().CPlusPlusModules || getLangOpts().Modules) && SM &&
+      !SM->isHeaderUnit();
+
   // Determine whether we should try to import the module for this #include, if
   // there is one. Don't do so if precompiled module support is disabled or we
   // are processing this module textually (because we're building the module).
-  if (Action == Enter && File && SuggestedModule && getLangOpts().Modules &&
-      !isForModuleBuilding(SuggestedModule.getModule(),
-                           getLangOpts().CurrentModule,
-                           getLangOpts().ModuleName)) {
+  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableHeaderModule)) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
@@ -2226,7 +2262,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // FIXME: Should we have a second loadModule() overload to avoid this
     // extra lookup step?
     SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
-    for (Module *Mod = SuggestedModule.getModule(); Mod; Mod = Mod->Parent)
+    for (Module *Mod = SM; Mod; Mod = Mod->Parent)
       Path.push_back(std::make_pair(getIdentifierInfo(Mod->Name),
                                     FilenameTok.getLocation()));
     std::reverse(Path.begin(), Path.end());
@@ -2293,9 +2329,12 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // Ask HeaderInfo if we should enter this #include file.  If not, #including
   // this file will have no effect.
   if (Action == Enter && File &&
-      !HeaderInfo.ShouldEnterIncludeFile(
-          *this, &File->getFileEntry(), EnterOnce, getLangOpts().Modules,
-          SuggestedModule.getModule(), IsFirstIncludeOfFile)) {
+      !HeaderInfo.ShouldEnterIncludeFile(*this, &File->getFileEntry(),
+                                         EnterOnce, getLangOpts().Modules, SM,
+                                         IsFirstIncludeOfFile)) {
+    // C++ standard modules:
+    // If we are not in the GMF, then we textually include only
+    // clang modules:
     // Even if we've already preprocessed this header once and know that we
     // don't need to see its contents again, we still need to import it if it's
     // modular because we might not have imported it from this submodule before.
@@ -2303,7 +2342,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // FIXME: We don't do this when compiling a PCH because the AST
     // serialization layer can't cope with it. This means we get local
     // submodule visibility semantics wrong in that case.
-    Action = (SuggestedModule && !getLangOpts().CompilingPCH) ? Import : Skip;
+    if (UsableHeaderUnit && !getLangOpts().CompilingPCH)
+      Action = TrackGMFState.inGMF() ? Import : Skip;
+    else
+      Action = (SuggestedModule && !getLangOpts().CompilingPCH) ? Import : Skip;
   }
 
   // Check for circular inclusion of the main file.
@@ -2440,8 +2482,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   switch (Action) {
   case Skip:
     // If we don't need to enter the file, stop now.
-    if (Module *M = SuggestedModule.getModule())
-      return {ImportAction::SkippedModuleImport, M};
+    if (SM)
+      return {ImportAction::SkippedModuleImport, SM};
     return {ImportAction::None};
 
   case IncludeLimitReached:
@@ -2451,16 +2493,15 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   case Import: {
     // If this is a module import, make it visible if needed.
-    Module *M = SuggestedModule.getModule();
-    assert(M && "no module to import");
+    assert(SM && "no module to import");
 
-    makeModuleVisible(M, EndLoc);
+    makeModuleVisible(SM, EndLoc);
 
     if (IncludeTok.getIdentifierInfo()->getPPKeywordID() ==
         tok::pp___include_macros)
       return {ImportAction::None};
 
-    return {ImportAction::ModuleImport, M};
+    return {ImportAction::ModuleImport, SM};
   }
 
   case Enter:
@@ -2492,13 +2533,14 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     return {ImportAction::None};
 
   // Determine if we're switching to building a new submodule, and which one.
-  if (auto *M = SuggestedModule.getModule()) {
-    if (M->getTopLevelModule()->ShadowingModule) {
+  // This does not apply for C++20 modules header units.
+  if (SM && !SM->isHeaderUnit()) {
+    if (SM->getTopLevelModule()->ShadowingModule) {
       // We are building a submodule that belongs to a shadowed module. This
       // means we find header files in the shadowed module.
-      Diag(M->DefinitionLoc, diag::err_module_build_shadowed_submodule)
-        << M->getFullModuleName();
-      Diag(M->getTopLevelModule()->ShadowingModule->DefinitionLoc,
+      Diag(SM->DefinitionLoc, diag::err_module_build_shadowed_submodule)
+          << SM->getFullModuleName();
+      Diag(SM->getTopLevelModule()->ShadowingModule->DefinitionLoc,
            diag::note_previous_definition);
       return {ImportAction::None};
     }
@@ -2511,22 +2553,22 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // that PCH, which means we should enter the submodule. We need to teach
     // the AST serialization layer to deal with the resulting AST.
     if (getLangOpts().CompilingPCH &&
-        isForModuleBuilding(M, getLangOpts().CurrentModule,
+        isForModuleBuilding(SM, getLangOpts().CurrentModule,
                             getLangOpts().ModuleName))
       return {ImportAction::None};
 
     assert(!CurLexerSubmodule && "should not have marked this as a module yet");
-    CurLexerSubmodule = M;
+    CurLexerSubmodule = SM;
 
     // Let the macro handling code know that any future macros are within
     // the new submodule.
-    EnterSubmodule(M, EndLoc, /*ForPragma*/false);
+    EnterSubmodule(SM, EndLoc, /*ForPragma*/ false);
 
     // Let the parser know that any future declarations are within the new
     // submodule.
     // FIXME: There's no point doing this if we're handling a #__include_macros
     // directive.
-    return {ImportAction::ModuleBegin, M};
+    return {ImportAction::ModuleBegin, SM};
   }
 
   assert(!IsImportDecl && "failed to diagnose missing module for import decl");

@@ -61,8 +61,13 @@ LLVMBool LLVMGetBitcodeModuleInContext(LLVMContextRef ContextRef,
                                        LLVMMemoryBufferRef MemBuf,
                                        LLVMModuleRef *OutM, char **OutMessage);
 
-/** Reads a module from the specified path, returning via the OutMP parameter a
- * module provider which performs lazy deserialization. Returns 0 on success. */
+/** Reads a module from the given memory buffer, returning via the OutMP
+ * parameter a module provider which performs lazy deserialization.
+ *
+ * Returns 0 on success.
+ *
+ * Takes ownership of \p MemBuf if (and only if) the module was read
+ * successfully. */
 LLVMBool LLVMGetBitcodeModuleInContext2(LLVMContextRef ContextRef,
                                         LLVMMemoryBufferRef MemBuf,
                                         LLVMModuleRef *OutM);

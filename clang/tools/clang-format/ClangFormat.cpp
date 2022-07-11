@@ -246,8 +246,12 @@ static bool fillRanges(MemoryBuffer *Code,
         errs() << "error: invalid <start line>:<end line> pair\n";
         return true;
       }
+      if (FromLine < 1) {
+        errs() << "error: start line should be at least 1\n";
+        return true;
+      }
       if (FromLine > ToLine) {
-        errs() << "error: start line should be less than end line\n";
+        errs() << "error: start line should not exceed end line\n";
         return true;
       }
       SourceLocation Start = Sources.translateLineCol(ID, FromLine, 1);

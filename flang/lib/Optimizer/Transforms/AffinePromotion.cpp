@@ -188,7 +188,7 @@ private:
 
   MaybeAffineExpr affineBinaryOp(mlir::AffineExprKind kind, MaybeAffineExpr lhs,
                                  MaybeAffineExpr rhs) {
-    if (lhs.hasValue() && rhs.hasValue())
+    if (lhs && rhs)
       return mlir::getAffineBinaryOpExpr(kind, lhs.getValue(), rhs.getValue());
     return {};
   }
@@ -233,7 +233,7 @@ private:
   void fromCmpIOp(mlir::arith::CmpIOp cmpOp) {
     auto lhsAffine = toAffineExpr(cmpOp.getLhs());
     auto rhsAffine = toAffineExpr(cmpOp.getRhs());
-    if (!lhsAffine.hasValue() || !rhsAffine.hasValue())
+    if (!lhsAffine || !rhsAffine)
       return;
     auto constraintPair = constraint(
         cmpOp.getPredicate(), rhsAffine.getValue() - lhsAffine.getValue());

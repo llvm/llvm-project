@@ -64,7 +64,7 @@ void init_unit_tests() {
 
   bool b;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: variable 'b' is not initialized [cppcoreguidelines-init-variables]
-  // CHECK-FIXES: {{^}}  bool b = 0;{{$}}
+  // CHECK-FIXES: {{^}}  bool b = false;{{$}}
   bool bval = true;
 
   const char *ptr;

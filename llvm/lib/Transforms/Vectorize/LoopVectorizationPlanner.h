@@ -45,8 +45,9 @@ class VPBuilder {
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   VPInstruction *createInstruction(unsigned Opcode,
-                                   ArrayRef<VPValue *> Operands, DebugLoc DL) {
-    VPInstruction *Instr = new VPInstruction(Opcode, Operands, DL);
+                                   ArrayRef<VPValue *> Operands, DebugLoc DL,
+                                   const Twine &Name = "") {
+    VPInstruction *Instr = new VPInstruction(Opcode, Operands, DL, Name);
     if (BB)
       BB->insert(Instr, InsertPt);
     return Instr;
@@ -54,8 +55,8 @@ class VPBuilder {
 
   VPInstruction *createInstruction(unsigned Opcode,
                                    std::initializer_list<VPValue *> Operands,
-                                   DebugLoc DL) {
-    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL);
+                                   DebugLoc DL, const Twine &Name = "") {
+    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name);
   }
 
 public:
@@ -123,34 +124,37 @@ public:
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
   VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Instruction *Inst = nullptr) {
+                        Instruction *Inst = nullptr, const Twine &Name = "") {
     DebugLoc DL;
     if (Inst)
       DL = Inst->getDebugLoc();
-    VPInstruction *NewVPInst = createInstruction(Opcode, Operands, DL);
+    VPInstruction *NewVPInst = createInstruction(Opcode, Operands, DL, Name);
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
   VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        DebugLoc DL) {
-    return createInstruction(Opcode, Operands, DL);
+                        DebugLoc DL, const Twine &Name = "") {
+    return createInstruction(Opcode, Operands, DL, Name);
   }
 
-  VPValue *createNot(VPValue *Operand, DebugLoc DL) {
-    return createInstruction(VPInstruction::Not, {Operand}, DL);
+  VPValue *createNot(VPValue *Operand, DebugLoc DL, const Twine &Name = "") {
+    return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }
 
-  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL) {
-    return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL);
+  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL,
+                     const Twine &Name = "") {
+    return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL, Name);
   }
 
-  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL) {
-    return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL);
+  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL,
+                    const Twine &Name = "") {
+    return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL, Name);
   }
 
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-                        DebugLoc DL) {
-    return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL);
+                        DebugLoc DL, const Twine &Name = "") {
+    return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL,
+                        Name);
   }
 
   //===--------------------------------------------------------------------===//
