@@ -43,9 +43,6 @@ private:
 };
 } // namespace
 
-/// Parse the body of a dialect symbol, which starts and ends with <>'s, and may
-/// be recursive. Return with the 'body' StringRef encompassing the entire
-/// body.
 ///
 ///   pretty-dialect-sym-body ::= '<' pretty-dialect-sym-contents+ '>'
 ///   pretty-dialect-sym-contents ::= pretty-dialect-sym-body
@@ -54,7 +51,8 @@ private:
 ///                                  | '{' pretty-dialect-sym-contents+ '}'
 ///                                  | '[^[<({>\])}\0]+'
 ///
-ParseResult Parser::parseDialectSymbolBody(StringRef &body) {
+ParseResult Parser::parseDialectSymbolBody(StringRef &body,
+                                           bool &isCodeCompletion) {
   // Symbol bodies are a relatively unstructured format that contains a series
   // of properly nested punctuation, with anything else in the middle. Scan
   // ahead to find it and consume it if successful, otherwise emit an error.
@@ -65,7 +63,16 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body) {
   // go until we find the matching '>' character.
   assert(*curPtr == '<');
   SmallVector<char, 8> nestedPunctuation;
+  const char *codeCompleteLoc = state.lex.getCodeCompleteLoc();
   do {
+    // Handle code completions, which may appear in the middle of the symbol
+    // body.
+    if (curPtr == codeCompleteLoc) {
+      isCodeCompletion = true;
+      nestedPunctuation.clear();
+      break;
+    }
+
     char c = *curPtr++;
     switch (c) {
     case '\0':
@@ -107,9 +114,19 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body) {
     case '"': {
       // Dispatch to the lexer to lex past strings.
       resetToken(curPtr - 1);
+      curPtr = state.curToken.getEndLoc().getPointer();
+
+      // Handle code completions, which may appear in the middle of the symbol
+      // body.
+      if (state.curToken.isCodeCompletion()) {
+        isCodeCompletion = true;
+        nestedPunctuation.clear();
+        break;
+      }
+
+      // Otherwise, ensure this token was actually a string.
       if (state.curToken.isNot(Token::string))
         return failure();
-      curPtr = state.curToken.getEndLoc().getPointer();
       break;
     }
 
@@ -129,19 +146,24 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body) {
 
 /// Parse an extended dialect symbol.
 template <typename Symbol, typename SymbolAliasMap, typename CreateFn>
-static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
-                                  SymbolAliasMap &aliases,
+static Symbol parseExtendedSymbol(Parser &p, SymbolAliasMap &aliases,
                                   CreateFn &&createSymbol) {
+  Token tok = p.getToken();
+
+  // Handle code completion of the extended symbol.
+  StringRef identifier = tok.getSpelling().drop_front();
+  if (tok.isCodeCompletion() && identifier.empty())
+    return p.codeCompleteDialectSymbol(aliases);
+
   // Parse the dialect namespace.
-  StringRef identifier = p.getTokenSpelling().drop_front();
   SMLoc loc = p.getToken().getLoc();
-  p.consumeToken(identifierTok);
+  p.consumeToken();
 
   // Check to see if this is a pretty name.
   StringRef dialectName;
   StringRef symbolData;
   std::tie(dialectName, symbolData) = identifier.split('.');
-  bool isPrettyName = !symbolData.empty();
+  bool isPrettyName = !symbolData.empty() || identifier.back() == '.';
 
   // Check to see if the symbol has trailing data, i.e. has an immediately
   // following '<'.
@@ -167,9 +189,17 @@ static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
   if (!isPrettyName) {
     // Point the symbol data to the end of the dialect name to start.
     symbolData = StringRef(dialectName.end(), 0);
-    if (p.parseDialectSymbolBody(symbolData))
+
+    // Parse the body of the symbol.
+    bool isCodeCompletion = false;
+    if (p.parseDialectSymbolBody(symbolData, isCodeCompletion))
       return nullptr;
-    symbolData = symbolData.drop_front().drop_back();
+    symbolData = symbolData.drop_front();
+
+    // If the body contained a code completion it won't have the trailing `>`
+    // token, so don't drop it.
+    if (!isCodeCompletion)
+      symbolData = symbolData.drop_back();
   } else {
     loc = SMLoc::getFromPointer(symbolData.data());
 
@@ -192,7 +222,7 @@ static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
 Attribute Parser::parseExtendedAttr(Type type) {
   MLIRContext *ctx = getContext();
   Attribute attr = parseExtendedSymbol<Attribute>(
-      *this, Token::hash_identifier, state.symbols.attributeAliasDefinitions,
+      *this, state.symbols.attributeAliasDefinitions,
       [&](StringRef dialectName, StringRef symbolData, SMLoc loc) -> Attribute {
         // Parse an optional trailing colon type.
         Type attrType = type;
@@ -238,7 +268,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
 Type Parser::parseExtendedType() {
   MLIRContext *ctx = getContext();
   return parseExtendedSymbol<Type>(
-      *this, Token::exclamation_identifier, state.symbols.typeAliasDefinitions,
+      *this, state.symbols.typeAliasDefinitions,
       [&](StringRef dialectName, StringRef symbolData, SMLoc loc) -> Type {
         // If we found a registered dialect, then ask it to parse the type.
         if (auto *dialect = ctx->getOrLoadDialect(dialectName)) {

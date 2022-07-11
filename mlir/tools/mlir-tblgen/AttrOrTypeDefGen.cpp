@@ -673,11 +673,9 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
                                       ::mlir::Type type) const {{
   ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
   ::llvm::StringRef attrTag;
-  if (::mlir::failed(parser.parseKeyword(&attrTag)))
-    return {{};
   {{
     ::mlir::Attribute attr;
-    auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
+    auto parseResult = generatedAttributeParser(parser, &attrTag, type, attr);
     if (parseResult.hasValue())
       return attr;
   }
@@ -723,10 +721,8 @@ static const char *const dialectDefaultTypePrinterParserDispatch = R"(
 ::mlir::Type {0}::parseType(::mlir::DialectAsmParser &parser) const {{
   ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
   ::llvm::StringRef mnemonic;
-  if (parser.parseKeyword(&mnemonic))
-    return ::mlir::Type();
   ::mlir::Type genType;
-  auto parseResult = generatedTypeParser(parser, mnemonic, genType);
+  auto parseResult = generatedTypeParser(parser, &mnemonic, genType);
   if (parseResult.hasValue())
     return genType;
   {1}
@@ -771,7 +767,7 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   }
   // Declare the parser.
   SmallVector<MethodParameter> params = {{"::mlir::AsmParser &", "parser"},
-                                         {"::llvm::StringRef", "mnemonic"}};
+                                         {"::llvm::StringRef *", "mnemonic"}};
   if (isAttrGenerator)
     params.emplace_back("::mlir::Type", "type");
   params.emplace_back(strfmt("::mlir::{0} &", valueType), "value");
@@ -784,14 +780,18 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
                  {{strfmt("::mlir::{0}", valueType), "def"},
                   {"::mlir::AsmPrinter &", "printer"}});
 
-  // The parser dispatch is just a list of if-elses, matching on the mnemonic
-  // and calling the def's parse function.
+  // The parser dispatch uses a KeywordSwitch, matching on the mnemonic and
+  // calling the def's parse function.
+  parse.body() << "  return "
+                  "::mlir::AsmParser::KeywordSwitch<::mlir::"
+                  "OptionalParseResult>(parser)\n";
   const char *const getValueForMnemonic =
-      R"(  if (mnemonic == {0}::getMnemonic()) {{
-    value = {0}::{1};
-    return ::mlir::success(!!value);
-  }
+      R"(    .Case({0}::getMnemonic(), [&](llvm::StringRef, llvm::SMLoc) {{
+      value = {0}::{1};
+      return ::mlir::success(!!value);
+    })
 )";
+
   // The printer dispatch uses llvm::TypeSwitch to find and call the correct
   // printer.
   printer.body() << "  return ::llvm::TypeSwitch<::mlir::" << valueType
@@ -822,7 +822,10 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
       printDef = "\nt.print(printer);";
     printer.body() << llvm::formatv(printValue, defClass, printDef);
   }
-  parse.body() << "  return {};";
+  parse.body() << "    .Default([&](llvm::StringRef keyword, llvm::SMLoc) {\n"
+                  "      *mnemonic = keyword;\n"
+                  "      return llvm::None;\n"
+                  "    });";
   printer.body() << "    .Default([](auto) { return ::mlir::failure(); });";
 
   raw_indented_ostream indentedOs(os);

@@ -357,7 +357,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // TODO: Generalize to more vector types.
   setOperationAction({ISD::EXTRACT_VECTOR_ELT, ISD::INSERT_VECTOR_ELT},
                      {MVT::v2i16, MVT::v2f16, MVT::v2i8, MVT::v4i8, MVT::v8i8,
-                      MVT::v4i16, MVT::v4f16, MVT::v16i16, MVT::v16f16},
+                      MVT::v4i16, MVT::v4f16},
                      Custom);
 
   // Deal with vec3 vector operations when widened to vec4.

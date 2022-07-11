@@ -200,7 +200,7 @@ struct DimOpInterface
     if (failed(v))
       return failure();
     replaceOpWithNewBufferizedOp<memref::DimOp>(rewriter, op, *v,
-                                                dimOp.index());
+                                                dimOp.getIndex());
     return success();
   }
 };
@@ -332,7 +332,7 @@ struct ExtractOpInterface
     if (failed(srcMemref))
       return failure();
     replaceOpWithNewBufferizedOp<memref::LoadOp>(rewriter, op, *srcMemref,
-                                                 extractOp.indices());
+                                                 extractOp.getIndices());
     return success();
   }
 };

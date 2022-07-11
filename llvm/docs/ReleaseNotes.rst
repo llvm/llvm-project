@@ -202,6 +202,12 @@ Changes to the C API
 * Add ``LLVMDeleteInstruction`` function which allows deleting instructions that
   are not inserted into a basic block.
 
+* Refactor compression namespaces across the project, making way for a possible
+  introduction of alternatives to zlib compression in the llvm toolchain.
+  Changes are as follows:
+  * Relocate the ``llvm::zlib`` namespace to ``llvm::compression::zlib``.
+  * Remove crc32 from zlib compression namespace, people should use the ``llvm::crc32`` instead.
+
 Changes to the Go bindings
 --------------------------
 
@@ -227,6 +233,8 @@ Changes to the LLVM tools
   filter :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` into human-readable
   form.
 * :doc:`llvm-objcopy <CommandGuide/llvm-objcopy>` has removed support for the legacy ``zlib-gnu`` format.
+* :doc:`llvm-objcopy <CommandGuide/llvm-objcopy>` now allows ``--set-section-flags src=... --rename-section src=tst``.
+  ``--add-section=.foo1=... --rename-section=.foo1=.foo2`` now adds ``.foo1`` instead of ``.foo2``.
 
 Changes to LLDB
 ---------------------------------

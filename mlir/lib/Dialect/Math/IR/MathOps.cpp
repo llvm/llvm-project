@@ -92,28 +92,19 @@ OpFoldResult math::CtPopOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult math::Log2Op::fold(ArrayRef<Attribute> operands) {
-  auto constOperand = operands.front();
-  if (!constOperand)
-    return {};
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        if (a.isNegative())
+          return {};
 
-  auto attr = constOperand.dyn_cast<FloatAttr>();
-  if (!attr)
-    return {};
+        if (a.getSizeInBits(a.getSemantics()) == 64)
+          return APFloat(log2(a.convertToDouble()));
 
-  auto ft = getType().cast<FloatType>();
+        if (a.getSizeInBits(a.getSemantics()) == 32)
+          return APFloat(log2f(a.convertToFloat()));
 
-  APFloat apf = attr.getValue();
-
-  if (apf.isNegative())
-    return {};
-
-  if (ft.getWidth() == 64)
-    return FloatAttr::get(getType(), log2(apf.convertToDouble()));
-
-  if (ft.getWidth() == 32)
-    return FloatAttr::get(getType(), log2f(apf.convertToFloat()));
-
-  return {};
+        return {};
+      });
 }
 
 //===----------------------------------------------------------------------===//
