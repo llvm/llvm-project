@@ -148,9 +148,6 @@ protected:
   /// Run or not the local reassignment heuristic. This information is
   /// obtained from the TargetSubtargetInfo.
   const bool EnableLocalReassign;
-
-private:
-  unsigned NextCascade = 1;
 };
 
 /// ImmutableAnalysis abstraction for fetching the Eviction Advisor. We model it
