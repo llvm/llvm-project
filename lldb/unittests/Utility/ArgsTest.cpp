@@ -348,6 +348,13 @@ TEST(ArgsTest, GetShellSafeArgument) {
   // Normal characters and globbing expressions that shouldn't be escaped.
   EXPECT_EQ(Args::GetShellSafeArgument(sh, "aA$1*"), "aA$1*");
 
+  // Test escaping fish special characters.
+  FileSpec fish("/bin/fish", FileSpec::Style::posix);
+  EXPECT_EQ(Args::GetShellSafeArgument(fish, R"( '"<>()&\|;)"),
+            R"(\ \'\"\<\>\(\)\&\\\|\;)");
+  // Normal characters and expressions that shouldn't be escaped.
+  EXPECT_EQ(Args::GetShellSafeArgument(fish, "aA$1*"), "aA$1*");
+
   // Try escaping with an unknown shell.
   FileSpec unknown_shell("/bin/unknown_shell", FileSpec::Style::posix);
   EXPECT_EQ(Args::GetShellSafeArgument(unknown_shell, "a'b"), "a\\'b");
