@@ -6,8 +6,6 @@ import gdbremote_testcase
 
 class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows  # no SIGSEGV support
     @add_test_categories(["llgs"])
     def test_run(self):
