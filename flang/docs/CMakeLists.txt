@@ -95,7 +95,24 @@ if (LLVM_ENABLE_SPHINX)
   include(AddSphinxTarget)
   if (SPHINX_FOUND)
     if (${SPHINX_OUTPUT_HTML})
-      add_sphinx_target(html flang)
+      add_sphinx_target(html flang SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Source")
+
+      add_dependencies(docs-flang-html copy-flang-src-docs)
+
+      # Copy the flang/docs directory and the generated FIRLangRef.md file to a place in the binary directory.
+      # Having all the files in a single directory makes it possible for Sphinx to process them together.
+      # Add a dependency to the flang-doc target to ensure that the FIRLangRef.md file is generated before the copying happens.
+      add_custom_target(copy-flang-src-docs
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}/Source"
+
+        COMMAND "${CMAKE_COMMAND}" -E copy
+        "${CMAKE_CURRENT_BINARY_DIR}/Dialect/FIRLangRef.md"
+        "${CMAKE_CURRENT_BINARY_DIR}/Source/FIRLangRef.md"
+
+        DEPENDS flang-doc)
+
     endif()
     if (${SPHINX_OUTPUT_MAN})
       add_sphinx_target(man flang)
