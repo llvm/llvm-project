@@ -652,81 +652,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget));
     return;
   }
-  case ISD::ADD: {
-    // Try to select ADD + immediate used as memory addresses to
-    // (ADDI (ADD X, Imm-Lo12), Lo12) if it will allow the ADDI to be removed by
-    // doPeepholeLoadStoreADDI.
-
-    // LHS should be an immediate.
-    auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
-    if (!N1C)
-      break;
-
-    int64_t Offset = N1C->getSExtValue();
-    int64_t Lo12 = SignExtend64<12>(Offset);
-
-    // Don't do this if the lower 12 bits are 0 or we could use ADDI directly.
-    if (Lo12 == 0 || isInt<12>(Offset))
-      break;
-
-    // Don't do this if we can use a pair of ADDIs.
-    if (isInt<12>(Offset / 2) && isInt<12>(Offset - Offset / 2))
-      break;
-
-    RISCVMatInt::InstSeq Seq =
-        RISCVMatInt::generateInstSeq(Offset, Subtarget->getFeatureBits());
-
-    Offset -= Lo12;
-    // Restore sign bits for RV32.
-    if (!Subtarget->is64Bit())
-      Offset = SignExtend64<32>(Offset);
-
-    // We can fold if the last operation is an ADDI or its an ADDIW that could
-    // be treated as an ADDI.
-    if (Seq.back().Opc != RISCV::ADDI &&
-        !(Seq.back().Opc == RISCV::ADDIW && isInt<32>(Offset)))
-      break;
-    assert(Seq.back().Imm == Lo12 && "Expected immediate to match Lo12");
-    // Drop the last operation.
-    Seq.pop_back();
-    assert(!Seq.empty() && "Expected more instructions in sequence");
-
-    bool AllPointerUses = true;
-    for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
-      SDNode *User = *UI;
-
-      // Is this user a memory instruction that uses a register and immediate
-      // that has this ADD as its pointer.
-      unsigned BaseOpIdx, OffsetOpIdx;
-      if (!User->isMachineOpcode() ||
-          !hasMemOffset(User, BaseOpIdx, OffsetOpIdx) ||
-          UI.getOperandNo() != BaseOpIdx) {
-        AllPointerUses = false;
-        break;
-      }
-
-      // If the memory instruction already has an offset, don't allow folding.
-      int64_t MemOffs =
-          cast<ConstantSDNode>(User->getOperand(OffsetOpIdx))->getSExtValue();
-      if (MemOffs != 0) {
-        AllPointerUses = false;
-        break;
-      }
-    }
-
-    if (!AllPointerUses)
-      break;
-
-    // Emit (ADDI (ADD X, Hi), Lo)
-    SDNode *Imm = selectImmSeq(CurDAG, DL, VT, Seq);
-    SDNode *ADD = CurDAG->getMachineNode(RISCV::ADD, DL, VT,
-                                         Node->getOperand(0), SDValue(Imm, 0));
-    SDNode *ADDI =
-        CurDAG->getMachineNode(RISCV::ADDI, DL, VT, SDValue(ADD, 0),
-                               CurDAG->getTargetConstant(Lo12, DL, VT));
-    ReplaceNode(Node, ADDI);
-    return;
-  }
   case ISD::SHL: {
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
@@ -1932,6 +1857,30 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
   return true;
 }
 
+// Is this ADD instruction only used as the base pointer of scalar loads and
+// stores?
+static bool isWorthFoldingAdd(SDValue Add) {
+  for (auto Use : Add->uses()) {
+    if (Use->getOpcode() != ISD::LOAD && Use->getOpcode() != ISD::STORE &&
+        Use->getOpcode() != ISD::ATOMIC_LOAD &&
+        Use->getOpcode() != ISD::ATOMIC_STORE)
+      return false;
+    EVT VT = cast<MemSDNode>(Use)->getMemoryVT();
+    if (!VT.isScalarInteger() && VT != MVT::f16 && VT != MVT::f32 &&
+        VT != MVT::f64)
+      return false;
+    // Don't allow stores of the value. It must be used as the address.
+    if (Use->getOpcode() == ISD::STORE &&
+        cast<StoreSDNode>(Use)->getValue() == Add)
+      return false;
+    if (Use->getOpcode() == ISD::ATOMIC_STORE &&
+        cast<AtomicSDNode>(Use)->getVal() == Add)
+      return false;
+  }
+
+  return true;
+}
+
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -1984,15 +1933,32 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
     assert(!isInt<12>(CVal) && "simm12 not already handled?");
 
+    // Handle immediates in the range [-4096,-2049] or [2048, 4094]. We can use
+    // an ADDI for part of the offset and fold the rest into the load/store.
+    // This mirrors the AddiPair PatFrag in RISCVInstrInfo.td.
     if (isInt<12>(CVal / 2) && isInt<12>(CVal - CVal / 2)) {
-      // We can use an ADDI for part of the offset and fold the rest into the
-      // load/store. This mirrors the AddiPair PatFrag in RISCVInstrInfo.td.
       int64_t Adj = CVal < 0 ? -2048 : 2047;
       Base = SDValue(
           CurDAG->getMachineNode(RISCV::ADDI, DL, VT, Addr.getOperand(0),
                                  CurDAG->getTargetConstant(Adj, DL, VT)),
           0);
       Offset = CurDAG->getTargetConstant(CVal - Adj, DL, VT);
+      return true;
+    }
+
+    // For larger immediates, we might be able to save one instruction from
+    // constant materialization by folding the Lo12 bits of the immediate into
+    // the address. We should only do this if the ADD is only used by loads and
+    // stores that can fold the lo12 bits. Otherwise, the ADD will get iseled
+    // separately with the full materialized immediate creating extra
+    // instructions.
+    if (isWorthFoldingAdd(Addr) &&
+        selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr.getOperand(1), Base,
+                           Offset)) {
+      // Insert an ADD instruction with the materialized Hi52 bits.
+      Base = SDValue(
+          CurDAG->getMachineNode(RISCV::ADD, DL, VT, Addr.getOperand(0), Base),
+          0);
       return true;
     }
   }
