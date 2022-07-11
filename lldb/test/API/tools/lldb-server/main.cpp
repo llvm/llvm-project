@@ -355,7 +355,7 @@ int main(int argc, char **argv) {
       trap();
 #if !defined(_WIN32)
     } else if (arg == "stop") {
-      raise(SIGSTOP);
+      raise(SIGINT);
 #endif
     } else {
       // Treat the argument as text for stdout.
