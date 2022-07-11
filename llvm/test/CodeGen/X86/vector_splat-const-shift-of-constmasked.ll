@@ -3083,25 +3083,15 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_1(<2 x i64> %a
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    psrad $1, %xmm0
 ; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    psrad $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
-; X64-AVX1-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpsrad $1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpsrad $1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3]
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpsrad $1, %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 18446744065119617024, i64 18446744065119617024>
   %t1 = ashr <2 x i64> %t0, <i64 1, i64 1>
   ret <2 x i64> %t1
