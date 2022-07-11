@@ -26,15 +26,14 @@ define i8 @masked_sub_i8(i8 %x) {
   ret i8 %m
 }
 
-; TODO: Borrow from the MSB is ok.
+; Borrow from the MSB is ok.
 
 define i8 @masked_sub_high_bit_mask_i8(i8 %x) {
 ; CHECK-LABEL: masked_sub_high_bit_mask_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-96
-; CHECK-NEXT:    mov w9, #60
 ; CHECK-NEXT:    and w8, w0, w8
-; CHECK-NEXT:    sub w0, w9, w8
+; CHECK-NEXT:    eor w0, w8, #0x3c
 ; CHECK-NEXT:    ret
   %maskx = and i8 %x, 160 ; 0b10100000
   %s = sub i8 60, %maskx  ; 0b00111100
