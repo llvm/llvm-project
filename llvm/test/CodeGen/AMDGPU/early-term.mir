@@ -1,5 +1,6 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX9 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=si-late-branch-lowering -verify-machineinstrs  %s -o - | FileCheck -check-prefixes=GCN,GFX11 %s
 
 --- |
   define amdgpu_ps void @early_term_scc0_end_block() {
@@ -54,7 +55,9 @@ body: |
   ; GCN:   S_ENDPGM 0
   ; GCN: bb.2:
   ; GCN:   $exec = S_MOV_B64 0
-  ; GCN:   EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX9:  EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX10: EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX11: EXP_DONE 0, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
   ; GCN:   S_ENDPGM 0
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -94,7 +97,9 @@ body: |
   ; GCN:   S_ENDPGM 0
   ; GCN: bb.3:
   ; GCN:   $exec = S_MOV_B64 0
-  ; GCN:   EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX9:  EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX10: EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX11: EXP_DONE 0, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
   ; GCN:   S_ENDPGM 0
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -141,7 +146,9 @@ body: |
   ; GCN:   S_ENDPGM 0
   ; GCN: bb.2:
   ; GCN:   $exec = S_MOV_B64 0
-  ; GCN:   EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX9:  EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX10: EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX11: EXP_DONE 0, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
   ; GCN:   S_ENDPGM 0
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -246,6 +253,7 @@ body: |
   ; GCN:   $exec = S_MOV_B64 0
   ; GFX9:  EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
   ; GFX10-NOT: EXP_DONE
+  ; GFX11-NOT: EXP_DONE
   ; GCN:   S_ENDPGM 0
   bb.0:
     liveins: $sgpr0, $sgpr1
