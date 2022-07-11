@@ -585,9 +585,9 @@ namespace ranges {
     requires permutable<iterator_t<R>>
     constexpr borrowed_subrange_t<R>
       ranges::remove_if(R&& r, Pred pred, Proj proj = {});                                          // since C++20
-  
+
   template<class I, class O>
-    using set_difference_result = in_out_result<I, O>;                                              // since C++20                                              
+    using set_difference_result = in_out_result<I, O>;                                              // since C++20
 
   template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
            weakly_incrementable O, class Comp = ranges::less,
@@ -622,6 +622,32 @@ namespace ranges {
     constexpr set_intersection_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>, O>
       set_intersection(R1&& r1, R2&& r2, O result,
                        Comp comp = {}, Proj1 proj1 = {}, Proj2 proj2 = {});                         // since C++20
+
+  template <class _InIter, class _OutIter>
+  using reverse_copy_result = in_out_result<_InIter, _OutIter>;                                     // since C++20
+
+  template<bidirectional_iterator I, sentinel_for<I> S, weakly_incrementable O>
+    requires indirectly_copyable<I, O>
+    constexpr ranges::reverse_copy_result<I, O>
+      ranges::reverse_copy(I first, S last, O result);                                              // since C++20
+
+  template<bidirectional_range R, weakly_incrementable O>
+    requires indirectly_copyable<iterator_t<R>, O>
+    constexpr ranges::reverse_copy_result<borrowed_iterator_t<R>, O>
+      ranges::reverse_copy(R&& r, O result);                                                        // since C++20
+
+  template <class _InIter, class _OutIter>
+  using rotate_copy_result = in_out_result<_InIter, _OutIter>;                                      // since C++20
+
+  template<forward_iterator I, sentinel_for<I> S, weakly_incrementable O>
+    requires indirectly_copyable<I, O>
+    constexpr ranges::rotate_copy_result<I, O>
+      ranges::rotate_copy(I first, I middle, S last, O result);                                     // since C++20
+
+  template<forward_range R, weakly_incrementable O>
+    requires indirectly_copyable<iterator_t<R>, O>
+    constexpr ranges::rotate_copy_result<borrowed_iterator_t<R>, O>
+      ranges::rotate_copy(R&& r, iterator_t<R> middle, O result);                                   // since C++20
 
 }
 
@@ -1396,6 +1422,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_replace.h>
 #include <__algorithm/ranges_replace_if.h>
 #include <__algorithm/ranges_reverse.h>
+#include <__algorithm/ranges_reverse_copy.h>
+#include <__algorithm/ranges_rotate_copy.h>
 #include <__algorithm/ranges_set_difference.h>
 #include <__algorithm/ranges_set_intersection.h>
 #include <__algorithm/ranges_sort.h>

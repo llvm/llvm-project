@@ -112,6 +112,8 @@ set(files
   __algorithm/ranges_replace.h
   __algorithm/ranges_replace_if.h
   __algorithm/ranges_reverse.h
+  __algorithm/ranges_reverse_copy.h
+  __algorithm/ranges_rotate_copy.h
   __algorithm/ranges_set_difference.h
   __algorithm/ranges_set_intersection.h
   __algorithm/ranges_sort.h
