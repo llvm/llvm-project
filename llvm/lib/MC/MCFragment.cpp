@@ -274,9 +274,6 @@ void MCFragment::destroy() {
     case FT_Align:
       delete cast<MCAlignFragment>(this);
       return;
-    case FT_NeverAlign:
-      delete cast<MCNeverAlignFragment>(this);
-      return;
     case FT_Data:
       delete cast<MCDataFragment>(this);
       return;
@@ -345,9 +342,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   OS << "<";
   switch (getKind()) {
   case MCFragment::FT_Align: OS << "MCAlignFragment"; break;
-  case MCFragment::FT_NeverAlign:
-    OS << "MCNeverAlignFragment";
-    break;
   case MCFragment::FT_Data:  OS << "MCDataFragment"; break;
   case MCFragment::FT_CompactEncodedInst:
     OS << "MCCompactEncodedInstFragment"; break;
@@ -385,12 +379,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     OS << " Alignment:" << AF->getAlignment().value()
        << " Value:" << AF->getValue() << " ValueSize:" << AF->getValueSize()
        << " MaxBytesToEmit:" << AF->getMaxBytesToEmit() << ">";
-    break;
-  }
-  case MCFragment::FT_NeverAlign: {
-    const MCNeverAlignFragment *NAF = cast<MCNeverAlignFragment>(this);
-    OS << "\n       ";
-    OS << " Alignment:" << NAF->getAlignment() << ">";
     break;
   }
   case MCFragment::FT_Data:  {

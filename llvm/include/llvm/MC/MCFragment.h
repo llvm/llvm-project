@@ -33,7 +33,6 @@ class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
 public:
   enum FragmentType : uint8_t {
     FT_Align,
-    FT_NeverAlign,
     FT_Data,
     FT_CompactEncodedInst,
     FT_Fill,
@@ -338,27 +337,6 @@ public:
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Align;
-  }
-};
-
-class MCNeverAlignFragment : public MCFragment {
-  /// The alignment the end of the next fragment should avoid.
-  unsigned Alignment;
-
-  /// When emitting Nops some subtargets have specific nop encodings.
-  const MCSubtargetInfo &STI;
-
-public:
-  MCNeverAlignFragment(unsigned Alignment, const MCSubtargetInfo &STI,
-                       MCSection *Sec = nullptr)
-      : MCFragment(FT_NeverAlign, false, Sec), Alignment(Alignment), STI(STI) {}
-
-  unsigned getAlignment() const { return Alignment; }
-
-  const MCSubtargetInfo &getSubtargetInfo() const { return STI; }
-
-  static bool classof(const MCFragment *F) {
-    return F->getKind() == MCFragment::FT_NeverAlign;
   }
 };
 
