@@ -684,12 +684,41 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Facebook T92898286
+  if (Args.hasArg(options::OPT_post_link_optimize))
+    CmdArgs.push_back("-q");
+  // End Facebook T92898286
+
   Args.AddAllArgs(CmdArgs, options::OPT_T);
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Exec, CmdArgs, Inputs, Output));
+  // Facebook T92898286
+  if (!Args.hasArg(options::OPT_post_link_optimize) || !Output.isFilename())
+    return;
+
+  const char *MvExec = Args.MakeArgString(ToolChain.GetProgramPath("mv"));
+  ArgStringList MoveCmdArgs;
+  MoveCmdArgs.push_back(Output.getFilename());
+  const char *PreBoltBin =
+      Args.MakeArgString(Twine(Output.getFilename()) + ".pre-bolt");
+  MoveCmdArgs.push_back(PreBoltBin);
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         MvExec, MoveCmdArgs, None));
+
+  ArgStringList BoltCmdArgs;
+  const char *BoltExec =
+      Args.MakeArgString(ToolChain.GetProgramPath("llvm-bolt"));
+  BoltCmdArgs.push_back(PreBoltBin);
+  BoltCmdArgs.push_back("-reorder-blocks=reverse");
+  BoltCmdArgs.push_back("-update-debug-sections");
+  BoltCmdArgs.push_back("-o");
+  BoltCmdArgs.push_back(Output.getFilename());
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         BoltExec, BoltCmdArgs, None));
+  // End Facebook T92898286
 }
 
 void tools::gnutools::Assembler::ConstructJob(Compilation &C,
