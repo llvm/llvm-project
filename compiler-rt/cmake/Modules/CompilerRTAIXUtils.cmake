@@ -75,6 +75,6 @@ macro(archive_aix_libatomic name libname)
             DESTINATION ${install_dir})
     add_custom_target(aix-${libname}
                       DEPENDS "${output_dir}/${libname}.a")
+    add_dependencies(${LIB_PARENT_TARGET} aix-${libname})
   endif()
-  add_dependencies(${LIB_PARENT_TARGET} aix-${libname})
 endmacro()
