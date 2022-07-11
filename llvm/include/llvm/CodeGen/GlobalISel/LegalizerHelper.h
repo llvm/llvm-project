@@ -327,9 +327,6 @@ public:
   LegalizeResult reduceLoadStoreWidth(GLoadStore &MI, unsigned TypeIdx,
                                       LLT NarrowTy);
 
-  LegalizeResult fewerElementsVectorSextInReg(MachineInstr &MI, unsigned TypeIdx,
-                                              LLT NarrowTy);
-
   LegalizeResult narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
                                              LLT HalfTy, LLT ShiftAmtTy);
 
