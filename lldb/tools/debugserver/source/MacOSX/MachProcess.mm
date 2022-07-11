@@ -746,16 +746,6 @@ const char *MachProcess::GetPlatformString(unsigned char platform) {
   return nullptr;
 }
 
-static bool mach_header_validity_test (uint32_t magic, uint32_t cputype) {
-  if (magic != MH_MAGIC && magic != MH_CIGAM && magic != MH_MAGIC_64 &&
-      magic != MH_CIGAM_64)
-    return false;
-  if (cputype != CPU_TYPE_X86_64 && cputype != CPU_TYPE_ARM &&
-      cputype != CPU_TYPE_ARM64 && cputype != CPU_TYPE_ARM64_32)
-    return false;
-  return true;
-}
-
 // Given an address, read the mach-o header and load commands out of memory to
 // fill in
 // the mach_o_information "inf" object.
@@ -767,16 +757,12 @@ bool MachProcess::GetMachOInformationFromMemory(
     uint32_t dyld_platform, nub_addr_t mach_o_header_addr, int wordsize,
     struct mach_o_information &inf) {
   uint64_t load_cmds_p;
-
   if (wordsize == 4) {
     struct mach_header header;
     if (ReadMemory(mach_o_header_addr, sizeof(struct mach_header), &header) !=
         sizeof(struct mach_header)) {
       return false;
     }
-    if (!mach_header_validity_test(header.magic, header.cputype))
-      return false;
-
     load_cmds_p = mach_o_header_addr + sizeof(struct mach_header);
     inf.mach_header.magic = header.magic;
     inf.mach_header.cputype = header.cputype;
@@ -793,8 +779,6 @@ bool MachProcess::GetMachOInformationFromMemory(
                    &header) != sizeof(struct mach_header_64)) {
       return false;
     }
-    if (!mach_header_validity_test(header.magic, header.cputype))
-      return false;
     load_cmds_p = mach_o_header_addr + sizeof(struct mach_header_64);
     inf.mach_header.magic = header.magic;
     inf.mach_header.cputype = header.cputype;
@@ -912,8 +896,6 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
   const size_t image_count = image_infos.size();
 
   for (size_t i = 0; i < image_count; i++) {
-    if (!image_infos[i].is_valid_mach_header)
-      continue;
     JSONGenerator::DictionarySP image_info_dict_sp(
         new JSONGenerator::Dictionary());
     image_info_dict_sp->AddIntegerItem("load_address",
@@ -988,6 +970,7 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
   }
 
   JSONGenerator::DictionarySP reply_sp(new JSONGenerator::Dictionary());
+  ;
   reply_sp->AddItem("images", image_infos_array_sp);
 
   return reply_sp;
@@ -1002,8 +985,8 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
 // information.
 JSONGenerator::ObjectSP MachProcess::GetLoadedDynamicLibrariesInfos(
     nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count) {
+  JSONGenerator::DictionarySP reply_sp;
 
-  JSONGenerator::ObjectSP empty_reply_sp(new JSONGenerator::Dictionary());
   int pointer_size = GetInferiorAddrSize(pid);
 
   std::vector<struct binary_image_information> image_infos;
@@ -1011,89 +994,91 @@ JSONGenerator::ObjectSP MachProcess::GetLoadedDynamicLibrariesInfos(
 
   uint8_t *image_info_buf = (uint8_t *)malloc(image_infos_size);
   if (image_info_buf == NULL) {
-    return empty_reply_sp;
+    return reply_sp;
   }
-  if (ReadMemory(image_list_address, image_infos_size, image_info_buf) !=
-      image_infos_size) {
-    return empty_reply_sp;
-  }
-
-  /// First the image_infos array with (load addr, pathname, mod date)
-  /// tuples
-
-  for (size_t i = 0; i < image_count; i++) {
-    struct binary_image_information info;
-    nub_addr_t pathname_address;
-    if (pointer_size == 4) {
-      uint32_t load_address_32;
-      uint32_t pathname_address_32;
-      uint32_t mod_date_32;
-      ::memcpy(&load_address_32, image_info_buf + (i * 3 * pointer_size), 4);
-      ::memcpy(&pathname_address_32,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size, 4);
-      ::memcpy(&mod_date_32,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size +
-                   pointer_size,
-               4);
-      info.load_address = load_address_32;
-      info.mod_date = mod_date_32;
-      pathname_address = pathname_address_32;
-    } else {
-      uint64_t load_address_64;
-      uint64_t pathname_address_64;
-      uint64_t mod_date_64;
-      ::memcpy(&load_address_64, image_info_buf + (i * 3 * pointer_size), 8);
-      ::memcpy(&pathname_address_64,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size, 8);
-      ::memcpy(&mod_date_64,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size +
-                   pointer_size,
-               8);
-      info.load_address = load_address_64;
-      info.mod_date = mod_date_64;
-      pathname_address = pathname_address_64;
+    if (ReadMemory(image_list_address, image_infos_size, image_info_buf) !=
+        image_infos_size) {
+      return reply_sp;
     }
-    char strbuf[17];
-    info.filename = "";
-    uint64_t pathname_ptr = pathname_address;
-    bool still_reading = true;
-    while (still_reading && ReadMemory(pathname_ptr, sizeof(strbuf) - 1,
-                                       strbuf) == sizeof(strbuf) - 1) {
-      strbuf[sizeof(strbuf) - 1] = '\0';
-      info.filename += strbuf;
-      pathname_ptr += sizeof(strbuf) - 1;
-      // Stop if we found nul byte indicating the end of the string
-      for (size_t i = 0; i < sizeof(strbuf) - 1; i++) {
-        if (strbuf[i] == '\0') {
-          still_reading = false;
-          break;
+
+    ////  First the image_infos array with (load addr, pathname, mod date)
+    ///tuples
+
+    for (size_t i = 0; i < image_count; i++) {
+      struct binary_image_information info;
+      nub_addr_t pathname_address;
+      if (pointer_size == 4) {
+        uint32_t load_address_32;
+        uint32_t pathname_address_32;
+        uint32_t mod_date_32;
+        ::memcpy(&load_address_32, image_info_buf + (i * 3 * pointer_size), 4);
+        ::memcpy(&pathname_address_32,
+                 image_info_buf + (i * 3 * pointer_size) + pointer_size, 4);
+        ::memcpy(&mod_date_32, image_info_buf + (i * 3 * pointer_size) +
+                                   pointer_size + pointer_size,
+                 4);
+        info.load_address = load_address_32;
+        info.mod_date = mod_date_32;
+        pathname_address = pathname_address_32;
+      } else {
+        uint64_t load_address_64;
+        uint64_t pathname_address_64;
+        uint64_t mod_date_64;
+        ::memcpy(&load_address_64, image_info_buf + (i * 3 * pointer_size), 8);
+        ::memcpy(&pathname_address_64,
+                 image_info_buf + (i * 3 * pointer_size) + pointer_size, 8);
+        ::memcpy(&mod_date_64, image_info_buf + (i * 3 * pointer_size) +
+                                   pointer_size + pointer_size,
+                 8);
+        info.load_address = load_address_64;
+        info.mod_date = mod_date_64;
+        pathname_address = pathname_address_64;
+      }
+      char strbuf[17];
+      info.filename = "";
+      uint64_t pathname_ptr = pathname_address;
+      bool still_reading = true;
+      while (still_reading &&
+             ReadMemory(pathname_ptr, sizeof(strbuf) - 1, strbuf) ==
+                 sizeof(strbuf) - 1) {
+        strbuf[sizeof(strbuf) - 1] = '\0';
+        info.filename += strbuf;
+        pathname_ptr += sizeof(strbuf) - 1;
+        // Stop if we found nul byte indicating the end of the string
+        for (size_t i = 0; i < sizeof(strbuf) - 1; i++) {
+          if (strbuf[i] == '\0') {
+            still_reading = false;
+            break;
+          }
         }
       }
+      uuid_clear(info.macho_info.uuid);
+      image_infos.push_back(info);
     }
-    uuid_clear(info.macho_info.uuid);
-    image_infos.push_back(info);
-  }
-  if (image_infos.size() == 0) {
-    return empty_reply_sp;
-  }
-
-  free(image_info_buf);
-
-  ///  Second, read the mach header / load commands for all the dylibs
-
-  for (size_t i = 0; i < image_count; i++) {
-    // The SPI to provide platform is not available on older systems.
-    uint32_t platform = 0;
-    if (GetMachOInformationFromMemory(platform, image_infos[i].load_address,
-                                      pointer_size,
-                                      image_infos[i].macho_info)) {
-      image_infos[i].is_valid_mach_header = true;
+    if (image_infos.size() == 0) {
+      return reply_sp;
     }
-  }
 
-  ///  Third, format all of the above in the JSONGenerator object.
+    free(image_info_buf);
 
-  return FormatDynamicLibrariesIntoJSON(image_infos);
+    ////  Second, read the mach header / load commands for all the dylibs
+
+    for (size_t i = 0; i < image_count; i++) {
+      // The SPI to provide platform is not available on older systems.
+      uint32_t platform = 0;
+      if (!GetMachOInformationFromMemory(platform,
+                                         image_infos[i].load_address,
+                                         pointer_size,
+                                         image_infos[i].macho_info)) {
+        return reply_sp;
+      }
+    }
+
+    ////  Third, format all of the above in the JSONGenerator object.
+
+    return FormatDynamicLibrariesIntoJSON(image_infos);
+
+  return reply_sp;
 }
 
 /// From dyld SPI header dyld_process_info.h
@@ -1156,6 +1141,7 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
 // macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP
 MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid) {
+  JSONGenerator::DictionarySP reply_sp;
 
   int pointer_size = GetInferiorAddrSize(pid);
   std::vector<struct binary_image_information> image_infos;
@@ -1163,11 +1149,8 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid) {
   uint32_t platform = GetPlatform();
   const size_t image_count = image_infos.size();
   for (size_t i = 0; i < image_count; i++) {
-    if (GetMachOInformationFromMemory(platform, image_infos[i].load_address,
-                                      pointer_size,
-                                      image_infos[i].macho_info)) {
-      image_infos[i].is_valid_mach_header = true;
-    }
+    GetMachOInformationFromMemory(platform, image_infos[i].load_address,
+                                  pointer_size, image_infos[i].macho_info);
   }
     return FormatDynamicLibrariesIntoJSON(image_infos);
 }
@@ -1177,11 +1160,10 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid) {
 // dyld SPIs that exist in macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
     nub_process_t pid, std::vector<uint64_t> &macho_addresses) {
+  JSONGenerator::DictionarySP reply_sp;
 
   int pointer_size = GetInferiorAddrSize(pid);
 
-  // Collect the list of all binaries that dyld knows about in
-  // the inferior process.
   std::vector<struct binary_image_information> all_image_infos;
   GetAllLoadedBinariesViaDYLDSPI(all_image_infos);
   uint32_t platform = GetPlatform();
@@ -1189,35 +1171,19 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
   std::vector<struct binary_image_information> image_infos;
   const size_t macho_addresses_count = macho_addresses.size();
   const size_t all_image_infos_count = all_image_infos.size();
-
   for (size_t i = 0; i < macho_addresses_count; i++) {
-    bool found_matching_entry = false;
     for (size_t j = 0; j < all_image_infos_count; j++) {
       if (all_image_infos[j].load_address == macho_addresses[i]) {
         image_infos.push_back(all_image_infos[j]);
-        found_matching_entry = true;
       }
-    }
-    if (!found_matching_entry) {
-      // dyld doesn't think there is a binary at this address,
-      // but maybe there isn't a binary YET - let's look in memory
-      // for a proper mach-o header etc and return what we can.
-      // We will have an empty filename for the binary (because dyld
-      // doesn't know about it yet) but we can read all of the mach-o
-      // load commands from memory directly.
-      struct binary_image_information entry;
-      entry.load_address = macho_addresses[i];
-      image_infos.push_back(entry);
     }
   }
 
     const size_t image_infos_count = image_infos.size();
     for (size_t i = 0; i < image_infos_count; i++) {
-      if (GetMachOInformationFromMemory(platform, image_infos[i].load_address,
-                                        pointer_size,
-                                        image_infos[i].macho_info)) {
-        image_infos[i].is_valid_mach_header = true;
-      }
+      GetMachOInformationFromMemory(platform,
+                                    image_infos[i].load_address, pointer_size,
+                                    image_infos[i].macho_info);
     }
     return FormatDynamicLibrariesIntoJSON(image_infos);
 }
