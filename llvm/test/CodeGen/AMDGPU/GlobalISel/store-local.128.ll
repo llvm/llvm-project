@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefix=GFX7 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 ; FIXME:
 ; XUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=tahiti -verify-machineinstrs < %s | FileCheck --check-prefix=GFX6 %s
@@ -266,12 +266,14 @@ define amdgpu_kernel void @store_lds_v4i32_align1(<4 x i32> addrspace(3)* %out, 
 ; GFX11-NEXT:    ds_store_b8 v1, v8 offset:7
 ; GFX11-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX11-NEXT:    s_lshr_b32 s2, s7, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v7, s2
 ; GFX11-NEXT:    s_lshr_b32 s0, s5, s1
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v5, s7
 ; GFX11-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX11-NEXT:    s_bfe_u32 s0, s7, 0x100000
 ; GFX11-NEXT:    s_lshr_b32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v6, s0
 ; GFX11-NEXT:    s_lshr_b32 s0, s2, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v8, s0

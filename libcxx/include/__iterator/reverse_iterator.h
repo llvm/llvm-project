@@ -136,7 +136,7 @@ public:
 #if _LIBCPP_STD_VER > 17
     _LIBCPP_INLINE_VISIBILITY
     constexpr pointer operator->() const
-      requires is_pointer_v<_Iter> || requires(const _Iter i) { i.operator->(); }
+      requires is_pointer_v<_Iter> || requires(const _Iter __i) { __i.operator->(); }
     {
       if constexpr (is_pointer_v<_Iter>) {
         return std::prev(current);

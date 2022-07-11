@@ -139,7 +139,7 @@ print the coroutine frame by:
 Just as printing the `promise_type` is possible from the coroutine address,
 printing the details of the coroutine frame from an address is also possible:
 
-.. parsed-literal::
+::
 
   (gdb) # Get the address of coroutine frame
   (gdb) print/x *0x418eb0

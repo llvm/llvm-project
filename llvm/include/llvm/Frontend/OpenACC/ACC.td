@@ -128,10 +128,8 @@ def ACCC_DeviceResident : Clause<"device_resident"> {
 
 // 2.4
 def ACCC_DeviceType : Clause<"device_type"> {
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "AccDeviceTypeExprList";
   let defaultValue = "*";
-  let isValueOptional = true;
-  let isValueList = true;
 }
 
 // 2.6.6
@@ -218,6 +216,7 @@ def ACCC_Reduction : Clause<"reduction"> {
 // 2.5.6
 def ACCC_Self : Clause<"self"> {
   let flangClass = "AccSelfClause";
+  let isValueOptional = true;
 }
 
 // 2.9.5

@@ -236,7 +236,7 @@ class _LIBCPP_HIDDEN __do_message
     : public error_category
 {
 public:
-    virtual string message(int ev) const;
+    virtual string message(int __ev) const;
 };
 
 _LIBCPP_FUNC_VIS const error_category& generic_category() _NOEXCEPT;
@@ -482,7 +482,7 @@ private:
 };
 
 _LIBCPP_NORETURN _LIBCPP_FUNC_VIS
-void __throw_system_error(int ev, const char* what_arg);
+void __throw_system_error(int __ev, const char* __what_arg);
 
 _LIBCPP_END_NAMESPACE_STD
 

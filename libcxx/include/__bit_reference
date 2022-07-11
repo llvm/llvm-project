@@ -250,9 +250,9 @@ __find_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type
 template <class _Cp, bool _IsConst, class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 __bit_iterator<_Cp, _IsConst>
-find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value_)
+find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value)
 {
-    if (static_cast<bool>(__value_))
+    if (static_cast<bool>(__value))
         return _VSTD::__find_bool_true(__first, static_cast<typename _Cp::size_type>(__last - __first));
     return _VSTD::__find_bool_false(__first, static_cast<typename _Cp::size_type>(__last - __first));
 }
@@ -324,9 +324,9 @@ __count_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_typ
 template <class _Cp, bool _IsConst, class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 typename __bit_iterator<_Cp, _IsConst>::difference_type
-count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value_)
+count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value)
 {
-    if (static_cast<bool>(__value_))
+    if (static_cast<bool>(__value))
         return _VSTD::__count_bool_true(__first, static_cast<typename _Cp::size_type>(__last - __first));
     return _VSTD::__count_bool_false(__first, static_cast<typename _Cp::size_type>(__last - __first));
 }
@@ -396,11 +396,11 @@ __fill_n_true(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
 void
-fill_n(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n, bool __value_)
+fill_n(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n, bool __value)
 {
     if (__n > 0)
     {
-        if (__value_)
+        if (__value)
             _VSTD::__fill_n_true(__first, __n);
         else
             _VSTD::__fill_n_false(__first, __n);
@@ -412,9 +412,9 @@ fill_n(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n, bool __v
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
 void
-fill(__bit_iterator<_Cp, false> __first, __bit_iterator<_Cp, false> __last, bool __value_)
+fill(__bit_iterator<_Cp, false> __first, __bit_iterator<_Cp, false> __last, bool __value)
 {
-    _VSTD::fill_n(__first, static_cast<typename _Cp::size_type>(__last - __first), __value_);
+    _VSTD::fill_n(__first, static_cast<typename _Cp::size_type>(__last - __first), __value);
 }
 
 // copy

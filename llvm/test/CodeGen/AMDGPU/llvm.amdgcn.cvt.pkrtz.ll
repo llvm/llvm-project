@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GCN,VI
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GCN,GFX9
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX10
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11
 
 define amdgpu_kernel void @s_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, float %x, float %y) #0 {
 ; SI-LABEL: s_cvt_pkrtz_v2f16_f32:

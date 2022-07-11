@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=fiji -verify-machineinstrs | FileCheck -check-prefix=VI %s
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefix=GFX11 %s
+; RUN: llc < %s -mtriple=amdgcn-amd-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
 
 ; ===================================================================================
 ; V_LSHL_OR_B32
@@ -24,11 +24,6 @@ define amdgpu_ps float @shl_or(i32 %a, i32 %b, i32 %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, v1, v2
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: shl_or:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, v1, v2
-; GFX11-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -52,11 +47,6 @@ define amdgpu_ps float @shl_or_vgpr_c(i32 inreg %a, i32 inreg %b, i32 %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, s2, s3, v0
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: shl_or_vgpr_c:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_or_b32 v0, s2, s3, v0
-; GFX11-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -79,11 +69,6 @@ define amdgpu_ps float @shl_or_vgpr_all2(i32 %a, i32 %b, i32 %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, v1, v2
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: shl_or_vgpr_all2:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, v1, v2
-; GFX11-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %c, %x
   %bc = bitcast i32 %result to float
@@ -106,11 +91,6 @@ define amdgpu_ps float @shl_or_vgpr_ac(i32 %a, i32 inreg %b, i32 %c) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, s2, v1
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: shl_or_vgpr_ac:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, s2, v1
-; GFX11-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -133,11 +113,6 @@ define amdgpu_ps float @shl_or_vgpr_const(i32 %a, i32 %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, v1, 6
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: shl_or_vgpr_const:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, v1, 6
-; GFX11-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %x, 6
   %bc = bitcast i32 %result to float
@@ -160,11 +135,6 @@ define amdgpu_ps float @shl_or_vgpr_const2(i32 %a, i32 %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 6, v1
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: shl_or_vgpr_const2:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 6, v1
-; GFX11-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, 6
   %result = or i32 %x, %b
   %bc = bitcast i32 %result to float
@@ -187,11 +157,6 @@ define amdgpu_ps float @shl_or_vgpr_const_scalar1(i32 inreg %a, i32 %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, s2, 6, v0
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: shl_or_vgpr_const_scalar1:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_or_b32 v0, s2, 6, v0
-; GFX11-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, 6
   %result = or i32 %x, %b
   %bc = bitcast i32 %result to float
@@ -214,11 +179,6 @@ define amdgpu_ps float @shl_or_vgpr_const_scalar2(i32 %a, i32 inreg %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 6, s2
 ; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: shl_or_vgpr_const_scalar2:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 6, s2
-; GFX11-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, 6
   %result = or i32 %x, %b
   %bc = bitcast i32 %result to float

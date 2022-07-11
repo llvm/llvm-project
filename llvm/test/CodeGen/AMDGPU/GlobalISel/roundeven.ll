@@ -3,8 +3,8 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefix=GFX7 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=fiji < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 
 define float @v_roundeven_f32(float %x) {
 ; GFX6-LABEL: v_roundeven_f32:
@@ -31,19 +31,12 @@ define float @v_roundeven_f32(float %x) {
 ; GFX9-NEXT:    v_rndne_f32_e32 v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_f32:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f32_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f32_e32 v0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_f32:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %roundeven = call float @llvm.roundeven.f32(float %x)
   ret float %roundeven
 }
@@ -77,21 +70,13 @@ define <2 x float> @v_roundeven_v2f32(<2 x float> %x) {
 ; GFX9-NEXT:    v_rndne_f32_e32 v1, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_v2f32:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f32_e32 v0, v0
-; GFX10-NEXT:    v_rndne_f32_e32 v1, v1
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_v2f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f32_e32 v0, v0
-; GFX11-NEXT:    v_rndne_f32_e32 v1, v1
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_v2f32:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v0, v0
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v1, v1
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %roundeven = call <2 x float> @llvm.roundeven.v2f32(<2 x float> %x)
   ret <2 x float> %roundeven
 }
@@ -129,23 +114,14 @@ define <3 x float> @v_roundeven_v3f32(<3 x float> %x) {
 ; GFX9-NEXT:    v_rndne_f32_e32 v2, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_v3f32:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f32_e32 v0, v0
-; GFX10-NEXT:    v_rndne_f32_e32 v1, v1
-; GFX10-NEXT:    v_rndne_f32_e32 v2, v2
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_v3f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f32_e32 v0, v0
-; GFX11-NEXT:    v_rndne_f32_e32 v1, v1
-; GFX11-NEXT:    v_rndne_f32_e32 v2, v2
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_v3f32:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v0, v0
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v1, v1
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v2, v2
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %roundeven = call <3 x float> @llvm.roundeven.v3f32(<3 x float> %x)
   ret <3 x float> %roundeven
 }
@@ -187,25 +163,15 @@ define <4 x float> @v_roundeven_v4f32(<4 x float> %x) {
 ; GFX9-NEXT:    v_rndne_f32_e32 v3, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_v4f32:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f32_e32 v0, v0
-; GFX10-NEXT:    v_rndne_f32_e32 v1, v1
-; GFX10-NEXT:    v_rndne_f32_e32 v2, v2
-; GFX10-NEXT:    v_rndne_f32_e32 v3, v3
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_v4f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f32_e32 v0, v0
-; GFX11-NEXT:    v_rndne_f32_e32 v1, v1
-; GFX11-NEXT:    v_rndne_f32_e32 v2, v2
-; GFX11-NEXT:    v_rndne_f32_e32 v3, v3
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_v4f32:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v0, v0
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v1, v1
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v2, v2
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v3, v3
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %roundeven = call <4 x float> @llvm.roundeven.v4f32(<4 x float> %x)
   ret <4 x float> %roundeven
 }
@@ -239,19 +205,12 @@ define half @v_roundeven_f16(half %x) {
 ; GFX9-NEXT:    v_rndne_f16_e32 v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_f16:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f16_e32 v0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_f16:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %roundeven = call half @llvm.roundeven.f16(half %x)
   ret half %roundeven
 }
@@ -519,19 +478,12 @@ define float @v_roundeven_f32_fabs(float %x) {
 ; GFX9-NEXT:    v_rndne_f32_e64 v0, |v0|
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_f32_fabs:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f32_e64 v0, |v0|
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_f32_fabs:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f32_e64 v0, |v0|
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_f32_fabs:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f32_e64 v0, |v0|
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %fabs.x = call float @llvm.fabs.f32(float %x)
   %roundeven = call float @llvm.roundeven.f32(float %fabs.x)
   ret float %roundeven
@@ -558,15 +510,10 @@ define amdgpu_ps float @s_roundeven_f32(float inreg %x) {
 ; GFX9-NEXT:    v_rndne_f32_e32 v0, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: s_roundeven_f32:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_rndne_f32_e32 v0, s0
-; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: s_roundeven_f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_rndne_f32_e32 v0, s0
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX10PLUS-LABEL: s_roundeven_f32:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    v_rndne_f32_e32 v0, s0
+; GFX10PLUS-NEXT:    ; return to shader part epilog
   %roundeven = call float @llvm.roundeven.f32(float %x)
   ret float %roundeven
 }
@@ -596,19 +543,12 @@ define float @v_roundeven_f32_fneg(float %x) {
 ; GFX9-NEXT:    v_rndne_f32_e64 v0, -v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_f32_fneg:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f32_e64 v0, -v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_f32_fneg:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f32_e64 v0, -v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_f32_fneg:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f32_e64 v0, -v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg float %x
   %roundeven = call float @llvm.roundeven.f32(float %neg.x)
   ret float %roundeven
@@ -648,19 +588,12 @@ define double @v_roundeven_f64(double %x) {
 ; GFX9-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_f64:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %roundeven = call double @llvm.roundeven.f64(double %x)
   ret double %roundeven
 }
@@ -700,19 +633,12 @@ define double @v_roundeven_f64_fneg(double %x) {
 ; GFX9-NEXT:    v_rndne_f64_e64 v[0:1], -v[0:1]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_f64_fneg:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f64_e64 v[0:1], -v[0:1]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_f64_fneg:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f64_e64 v[0:1], -v[0:1]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_f64_fneg:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f64_e64 v[0:1], -v[0:1]
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg double %x
   %roundeven = call double @llvm.roundeven.f64(double %neg.x)
   ret double %roundeven
@@ -762,21 +688,13 @@ define <2 x double> @v_roundeven_v2f64(<2 x double> %x) {
 ; GFX9-NEXT:    v_rndne_f64_e32 v[2:3], v[2:3]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_roundeven_v2f64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
-; GFX10-NEXT:    v_rndne_f64_e32 v[2:3], v[2:3]
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_roundeven_v2f64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
-; GFX11-NEXT:    v_rndne_f64_e32 v[2:3], v[2:3]
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_roundeven_v2f64:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10PLUS-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
+; GFX10PLUS-NEXT:    v_rndne_f64_e32 v[2:3], v[2:3]
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %roundeven = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %x)
   ret <2 x double> %roundeven
 }
