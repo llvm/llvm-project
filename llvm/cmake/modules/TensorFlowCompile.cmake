@@ -92,10 +92,11 @@ function(tf_find_and_compile model default_url default_path test_model_generator
   else()
     if ("${model}" STREQUAL "download")
       # Crash if the user wants to download a model but a URL is set to "TO_BE_UPDATED"
-      if ("${default_url}" STREQUAL "TO_BE_UPDATED")
-          message(FATAL_ERROR "Default URL was set to 'download' but there is no"
-          " model url currently specified in cmake - likely, the model interface"
-          " recently changed, and so there is not a released model available.")
+      if ("${default_url}" STREQUAL "<UNSPECIFIED>")
+          message(FATAL_ERROR "Model path was set to 'download' but there is no"
+          " model url currently specified in cmake. You can generate a model"
+          " using, for example, the tools at http://github.com/google/ml-compiler-opt."
+          " Some reference models are also periodically released there.")
       endif()
 
       set(model ${default_url})

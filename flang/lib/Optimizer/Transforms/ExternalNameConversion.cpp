@@ -49,7 +49,7 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
     auto callee = op.getCallee();
-    if (callee.hasValue()) {
+    if (callee) {
       auto result = fir::NameUniquer::deconstruct(
           callee.getValue().getRootReference().getValue());
       if (fir::NameUniquer::isExternalFacingUniquedName(result))
@@ -137,7 +137,7 @@ void ExternalNameConversionPass::runOnOperation() {
                          acc::OpenACCDialect, omp::OpenMPDialect>();
 
   target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp op) {
-    if (op.getCallee().hasValue())
+    if (op.getCallee())
       return !fir::NameUniquer::needExternalNameMangling(
           op.getCallee().getValue().getRootReference().getValue());
     return true;

@@ -2518,6 +2518,11 @@ void format_test_handle(TestFunction check, ExceptionTest check_exception) {
   check.template operator()<"answer is '{:X}'">(SV("answer is '0XAA55'"), status::foobar);
   check.template operator()<"answer is '{:s}'">(SV("answer is 'foobar'"), status::foobar);
 
+  // P2418 Changed the argument from a const reference to a forwarding reference.
+  // This mainly affects handle classes, however since we use an abstraction
+  // layer here it's "tricky" to verify whether this test would do the "right"
+  // thing. So these tests are done separately.
+
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("xXs"))
     check_exception("The format-spec type has a type not supported for a status argument", fmt, status::foo);

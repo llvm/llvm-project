@@ -29,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS is_convertible
     : public integral_constant<bool, __is_convertible_to(_T1, _T2)> {};
 
-#else  // __has_builtin(__is_convertible_to)
+#else  // __has_builtin(__is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
 
 namespace __is_convertible_imp
 {
@@ -96,7 +96,7 @@ template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS is_convertible
     static const size_t __complete_check2 = __is_convertible_check<_T2>::__v;
 };
 
-#endif // __has_builtin(__is_convertible_to)
+#endif // __has_builtin(__is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
 
 #if _LIBCPP_STD_VER > 14
 template <class _From, class _To>

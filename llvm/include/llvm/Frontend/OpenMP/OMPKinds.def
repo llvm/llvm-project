@@ -88,6 +88,8 @@ __OMP_ARRAY_TYPE(KmpCriticalName, Int32, 8)
 __OMP_STRUCT_TYPE(Ident, ident_t, Int32, Int32, Int32, Int32, Int8Ptr)
 __OMP_STRUCT_TYPE(OffloadEntry, __tgt_offload_entry, Int8Ptr, Int8Ptr, SizeTy,
                   Int32, Int32)
+__OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, Int32, Int32, VoidPtrPtr,
+                  VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr, Int64)
 __OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, Int8Ptr)
 
 #undef __OMP_STRUCT_TYPE
@@ -412,6 +414,10 @@ __OMP_RTL(__tgt_target_teams_mapper, false, Int32, IdentPtr, Int64, VoidPtr, Int
 __OMP_RTL(__tgt_target_teams_nowait_mapper, false, Int32, IdentPtr, Int64,
           VoidPtr, Int32, VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr,
           VoidPtrPtr, VoidPtrPtr, Int32, Int32, Int32, VoidPtr, Int32, VoidPtr)
+__OMP_RTL(__tgt_target_kernel, false, Int32, IdentPtr, Int64, Int32, Int32,
+          VoidPtr, KernelArgsPtr)
+__OMP_RTL(__tgt_target_kernel_nowait, false, Int32, IdentPtr, Int64, Int32,
+          Int32, VoidPtr, KernelArgsPtr, Int32, VoidPtr, Int32, VoidPtr)
 __OMP_RTL(__tgt_register_requires, false, Void, Int64)
 __OMP_RTL(__tgt_target_data_begin_mapper, false, Void, IdentPtr, Int64, Int32, VoidPtrPtr,
           VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
@@ -936,6 +942,10 @@ __OMP_RTL_ATTRS(__tgt_target_nowait_mapper, ForkAttrs, AttributeSet(),
 __OMP_RTL_ATTRS(__tgt_target_teams_mapper, ForkAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(__tgt_target_teams_nowait_mapper, ForkAttrs, AttributeSet(),
+                ParamAttrs())
+__OMP_RTL_ATTRS(__tgt_target_kernel, ForkAttrs, AttributeSet(),
+                ParamAttrs())
+__OMP_RTL_ATTRS(__tgt_target_kernel_nowait, ForkAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(__tgt_register_requires, ForkAttrs, AttributeSet(),
                 ParamAttrs())

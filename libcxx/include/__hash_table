@@ -1146,9 +1146,16 @@ public:
 #endif
 
     void clear() _NOEXCEPT;
-    void rehash(size_type __n);
-    _LIBCPP_INLINE_VISIBILITY void reserve(size_type __n)
-        {rehash(static_cast<size_type>(ceil(__n / max_load_factor())));}
+    _LIBCPP_INLINE_VISIBILITY void __rehash_unique(size_type __n) { __rehash<true>(__n); }
+    _LIBCPP_INLINE_VISIBILITY void __rehash_multi(size_type __n) { __rehash<false>(__n); }
+    _LIBCPP_INLINE_VISIBILITY void __reserve_unique(size_type __n)
+    {
+        __rehash_unique(static_cast<size_type>(ceil(__n / max_load_factor())));
+    }
+    _LIBCPP_INLINE_VISIBILITY void __reserve_multi(size_type __n)
+    {
+        __rehash_multi(static_cast<size_type>(ceil(__n / max_load_factor())));
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     size_type bucket_count() const _NOEXCEPT
@@ -1285,7 +1292,8 @@ public:
 #endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 private:
-    void __rehash(size_type __n);
+    template <bool _UniqueKeys> void __rehash(size_type __n);
+    template <bool _UniqueKeys> void __do_rehash(size_type __n);
 
     template <class ..._Args>
     __node_holder __construct_node(_Args&& ...__args);
@@ -1790,7 +1798,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique_prepare(
     }
     if (size()+1 > __bc * max_load_factor() || __bc == 0)
     {
-        rehash(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
+        __rehash_unique(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
                                      size_type(ceil(float(size() + 1) / max_load_factor()))));
     }
     return nullptr;
@@ -1862,7 +1870,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_prepare(
     size_type __bc = bucket_count();
     if (size()+1 > __bc * max_load_factor() || __bc == 0)
     {
-        rehash(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
+        __rehash_multi(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
                        size_type(ceil(float(size() + 1) / max_load_factor()))));
         __bc = bucket_count();
     }
@@ -1956,7 +1964,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
         size_type __bc = bucket_count();
         if (size()+1 > __bc * max_load_factor() || __bc == 0)
         {
-            rehash(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
+            __rehash_multi(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
                            size_type(ceil(float(size() + 1) / max_load_factor()))));
             __bc = bucket_count();
         }
@@ -2004,7 +2012,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
         __node_holder __h = __construct_node_hash(__hash, _VSTD::forward<_Args>(__args)...);
         if (size()+1 > __bc * max_load_factor() || __bc == 0)
         {
-            rehash(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
+            __rehash_unique(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
                            size_type(ceil(float(size() + 1) / max_load_factor()))));
             __bc = bucket_count();
             __chash = __constrain_hash(__hash, __bc);
@@ -2207,8 +2215,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_merge_multi(
 #endif // _LIBCPP_STD_VER > 14
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <bool _UniqueKeys>
 void
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::rehash(size_type __n)
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __n)
 _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
     if (__n == 1)
@@ -2217,7 +2226,7 @@ _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
         __n = __next_prime(__n);
     size_type __bc = bucket_count();
     if (__n > __bc)
-        __rehash(__n);
+        __do_rehash<_UniqueKeys>(__n);
     else if (__n < __bc)
     {
         __n = _VSTD::max<size_type>
@@ -2227,13 +2236,14 @@ _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
                                            __next_prime(size_t(ceil(float(size()) / max_load_factor())))
               );
         if (__n < __bc)
-            __rehash(__n);
+            __do_rehash<_UniqueKeys>(__n);
     }
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <bool _UniqueKeys>
 void
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __nbc)
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc)
 {
     std::__debug_db_invalidate_all(this);
     __pointer_allocator& __npa = __bucket_list_.get_deleter().__alloc();
@@ -2268,11 +2278,14 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __nbc)
                     else
                     {
                         __next_pointer __np = __cp;
-                        for (; __np->__next_ != nullptr &&
-                               key_eq()(__cp->__upcast()->__value_,
-                                        __np->__next_->__upcast()->__value_);
-                                                           __np = __np->__next_)
-                            ;
+                        if _LIBCPP_CONSTEXPR_AFTER_CXX14 (!_UniqueKeys)
+                        {
+                            for (; __np->__next_ != nullptr &&
+                                   key_eq()(__cp->__upcast()->__value_,
+                                            __np->__next_->__upcast()->__value_);
+                                                               __np = __np->__next_)
+                                ;
+                        }
                         __pp->__next_ = __np->__next_;
                         __np->__next_ = __bucket_list_[__chash]->__next_;
                         __bucket_list_[__chash]->__next_ = __cp;

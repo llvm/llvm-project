@@ -147,15 +147,20 @@ public:
   /// Contains the implementation for basic_format_arg::handle.
   struct __handle {
     template <class _Tp>
-    _LIBCPP_HIDE_FROM_ABI explicit __handle(const _Tp& __v) noexcept
+    _LIBCPP_HIDE_FROM_ABI explicit __handle(_Tp&& __v) noexcept
         : __ptr_(_VSTD::addressof(__v)),
           __format_([](basic_format_parse_context<_CharT>& __parse_ctx, _Context& __ctx, const void* __ptr) {
-            using _Formatter = typename _Context::template formatter_type<_Tp>;
-            using _Qp = conditional_t<requires { _Formatter().format(declval<const _Tp&>(), declval<_Context&>()); },
-                                      const _Tp, _Tp>;
+            using _Dp = remove_cvref_t<_Tp>;
+            using _Formatter = typename _Context::template formatter_type<_Dp>;
+            constexpr bool __const_formattable =
+                requires { _Formatter().format(declval<const _Dp&>(), declval<_Context&>()); };
+            using _Qp = conditional_t<__const_formattable, const _Dp, _Dp>;
+
+            static_assert(__const_formattable || !is_const_v<remove_reference_t<_Tp>>, "Mandated by [format.arg]/18");
+
             _Formatter __f;
             __parse_ctx.advance_to(__f.parse(__parse_ctx));
-            __ctx.advance_to(__f.format(*const_cast<_Qp*>(static_cast<const _Tp*>(__ptr)), __ctx));
+            __ctx.advance_to(__f.format(*const_cast<_Qp*>(static_cast<const _Dp*>(__ptr)), __ctx));
           }) {}
 
     const void* __ptr_;
@@ -205,7 +210,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(basic_string_view<_CharT> __value) noexcept
       : __string_view_(__value) {}
   _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(const void* __value) noexcept : __ptr_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__handle __value) noexcept : __handle_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__handle __value) noexcept
+      // TODO FMT Investigate why it doesn't work without the forward.
+      : __handle_(std::forward<__handle>(__value)) {}
 };
 
 template <class _Context>
@@ -251,11 +258,11 @@ public:
     __handle_.__format_(__parse_ctx, __ctx, __handle_.__ptr_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI explicit handle(typename __basic_format_arg_value<_Context>::__handle __handle) noexcept
+  _LIBCPP_HIDE_FROM_ABI explicit handle(typename __basic_format_arg_value<_Context>::__handle& __handle) noexcept
       : __handle_(__handle) {}
 
 private:
-  typename __basic_format_arg_value<_Context>::__handle __handle_;
+  typename __basic_format_arg_value<_Context>::__handle& __handle_;
 };
 
 #endif //_LIBCPP_STD_VER > 17

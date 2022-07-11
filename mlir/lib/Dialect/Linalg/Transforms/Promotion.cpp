@@ -108,7 +108,8 @@ defaultDeallocBufferCallBack(const LinalgPromotionOptions &options,
                              OpBuilder &b, Value fullLocalView) {
   if (!options.useAlloca) {
     auto viewOp = cast<memref::ViewOp>(fullLocalView.getDefiningOp());
-    b.create<memref::DeallocOp>(viewOp.source().getLoc(), viewOp.source());
+    b.create<memref::DeallocOp>(viewOp.getSource().getLoc(),
+                                viewOp.getSource());
   }
   return success();
 }

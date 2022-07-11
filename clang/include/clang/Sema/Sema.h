@@ -5170,6 +5170,11 @@ public:
   void DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
                         SourceLocation OpLoc);
 
+  /// Returns a field in a CXXRecordDecl that has the same name as the decl \p
+  /// SelfAssigned when inside a CXXMethodDecl.
+  const FieldDecl *
+  getSelfAssignmentClassMemberCandidate(const ValueDecl *SelfAssigned);
+
   /// Warn if we're implicitly casting from a _Nullable pointer type to a
   /// _Nonnull one.
   void diagnoseNullableToNonnullConversion(QualType DstType, QualType SrcType,

@@ -520,9 +520,7 @@ public:
                     SmallVectorImpl<SDValue> &InVals) const override;
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
-                                         Type *Ty) const override {
-    return true;
-  }
+                                         Type *Ty) const override;
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
 

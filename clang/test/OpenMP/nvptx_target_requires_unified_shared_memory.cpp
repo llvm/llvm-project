@@ -78,7 +78,7 @@ int bar(int n){
 // CHECK-HOST: [[BPTR7:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[OFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-HOST: [[BPTR8:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[OFFLOAD_PTRS]], i32 0, i32 0
 
-// CHECK-HOST: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.*}}.region_id, i32 2, i8** [[BPTR7]], i8** [[BPTR8]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[OFFLOAD_SIZES]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[OFFLOAD_MAPTYPES]], i32 0, i32 0), i8** null, i8** null)
+// CHECK-HOST: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* %{{.+}})
 
 // CHECK-DEVICE: [[VAR_LINK:@.+]] = weak{{.*}} global double* null
 // CHECK-DEVICE: [[VAR_TO:@.+]] = weak{{.*}} global double* null

@@ -2591,11 +2591,12 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
   }
 }
 
-static bool isSupportedByOpenMPIRBuilder(const OMPExecutableDirective &S) {
+static bool isSupportedByOpenMPIRBuilder(const OMPSimdDirective &S) {
   // Check for unsupported clauses
-  if (!S.clauses().empty()) {
-    // Currently no clause is supported
-    return false;
+  for (OMPClause *C : S.clauses()) {
+    // Currently only simdlen clause is supported
+    if (!isa<OMPSimdlenClause>(C))
+      return false;
   }
 
   // Check if we have a statement with the ordered directive.
@@ -2630,7 +2631,6 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
       // Use the OpenMPIRBuilder if enabled.
       if (UseOMPIRBuilder) {
         // Emit the associated statement and get its loop representation.
-        llvm::DebugLoc DL = SourceLocToDebugLoc(S.getBeginLoc());
         const Stmt *Inner = S.getRawStmt();
         llvm::CanonicalLoopInfo *CLI =
             EmitOMPCollapsedCanonicalLoopNest(Inner, 1);
@@ -2638,7 +2638,15 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
         llvm::OpenMPIRBuilder &OMPBuilder =
             CGM.getOpenMPRuntime().getOMPBuilder();
         // Add SIMD specific metadata
-        OMPBuilder.applySimd(DL, CLI);
+        llvm::ConstantInt *Simdlen = nullptr;
+        if (const auto *C = S.getSingleClause<OMPSimdlenClause>()) {
+          RValue Len =
+              this->EmitAnyExpr(C->getSimdlen(), AggValueSlot::ignored(),
+                                /*ignoreResult=*/true);
+          auto *Val = cast<llvm::ConstantInt>(Len.getScalarVal());
+          Simdlen = Val;
+        }
+        OMPBuilder.applySimd(CLI, Simdlen);
         return;
       }
     };

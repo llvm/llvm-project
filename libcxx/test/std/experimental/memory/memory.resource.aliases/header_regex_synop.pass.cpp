@@ -9,6 +9,11 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: no-localization
 
+// Aligned allocation is required by std::experimental::pmr, but it was not provided
+// before macosx10.13 and as a result we get linker errors when deploying to older than
+// macosx10.13.
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+
 // <experimental/regex>
 
 // namespace std { namespace experimental { namespace pmr {

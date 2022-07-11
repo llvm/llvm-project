@@ -14600,6 +14600,40 @@ static inline UnaryOperatorKind ConvertTokenKindToUnaryOpcode(
   return Opc;
 }
 
+const FieldDecl *
+Sema::getSelfAssignmentClassMemberCandidate(const ValueDecl *SelfAssigned) {
+  // Explore the case for adding 'this->' to the LHS of a self assignment, very
+  // common for setters.
+  // struct A {
+  // int X;
+  // -void setX(int X) { X = X; }
+  // +void setX(int X) { this->X = X; }
+  // };
+
+  // Only consider parameters for self assignment fixes.
+  if (!isa<ParmVarDecl>(SelfAssigned))
+    return nullptr;
+  const auto *Method =
+      dyn_cast_or_null<CXXMethodDecl>(getCurFunctionDecl(true));
+  if (!Method)
+    return nullptr;
+
+  const CXXRecordDecl *Parent = Method->getParent();
+  // In theory this is fixable if the lambda explicitly captures this, but
+  // that's added complexity that's rarely going to be used.
+  if (Parent->isLambda())
+    return nullptr;
+
+  // FIXME: Use an actual Lookup operation instead of just traversing fields
+  // in order to get base class fields.
+  auto Field =
+      llvm::find_if(Parent->fields(),
+                    [Name(SelfAssigned->getDeclName())](const FieldDecl *F) {
+                      return F->getDeclName() == Name;
+                    });
+  return (Field != Parent->field_end()) ? *Field : nullptr;
+}
+
 /// DiagnoseSelfAssignment - Emits a warning if a value is assigned to itself.
 /// This warning suppressed in the event of macro expansions.
 static void DiagnoseSelfAssignment(Sema &S, Expr *LHSExpr, Expr *RHSExpr,
@@ -14630,10 +14664,16 @@ static void DiagnoseSelfAssignment(Sema &S, Expr *LHSExpr, Expr *RHSExpr,
     if (RefTy->getPointeeType().isVolatileQualified())
       return;
 
-  S.Diag(OpLoc, IsBuiltin ? diag::warn_self_assignment_builtin
-                          : diag::warn_self_assignment_overloaded)
-      << LHSDeclRef->getType() << LHSExpr->getSourceRange()
-      << RHSExpr->getSourceRange();
+  auto Diag = S.Diag(OpLoc, IsBuiltin ? diag::warn_self_assignment_builtin
+                                      : diag::warn_self_assignment_overloaded)
+              << LHSDeclRef->getType() << LHSExpr->getSourceRange()
+              << RHSExpr->getSourceRange();
+  if (const FieldDecl *SelfAssignField =
+          S.getSelfAssignmentClassMemberCandidate(RHSDecl))
+    Diag << 1 << SelfAssignField
+         << FixItHint::CreateInsertion(LHSDeclRef->getBeginLoc(), "this->");
+  else
+    Diag << 0;
 }
 
 /// Check if a bitwise-& is performed on an Objective-C pointer.  This

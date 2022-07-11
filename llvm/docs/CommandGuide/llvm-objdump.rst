@@ -183,6 +183,10 @@ OPTIONS
 
   When disassembling, do not print the raw bytes of each instruction.
 
+.. option:: --offloading
+
+  Display the content of the LLVM offloading section.
+
 .. option:: --prefix=<prefix>
 
   When disassembling with the :option:`--source` option, prepend ``prefix`` to
@@ -377,10 +381,6 @@ MACH-O ONLY OPTIONS AND COMMANDS
 .. option:: --objc-meta-data
 
   Display the Objective-C runtime meta data.
-
-.. option:: --offloading
-
-  Display the content of the LLVM offloading section.
 
 .. option:: --private-header
 

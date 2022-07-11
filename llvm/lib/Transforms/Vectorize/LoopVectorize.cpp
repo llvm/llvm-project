@@ -1026,7 +1026,8 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
       if (isa<VPWidenMemoryInstructionRecipe>(CurRec) ||
           isa<VPInterleaveRecipe>(CurRec) ||
           isa<VPScalarIVStepsRecipe>(CurRec) ||
-          isa<VPCanonicalIVPHIRecipe>(CurRec))
+          isa<VPCanonicalIVPHIRecipe>(CurRec) ||
+          isa<VPActiveLaneMaskPHIRecipe>(CurRec))
         continue;
 
       // This recipe contributes to the address computation of a widen
@@ -1510,6 +1511,13 @@ public:
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
   bool foldTailByMasking() const { return FoldTailByMasking; }
+
+  /// Returns true if were tail-folding and want to use the active lane mask
+  /// for vector loop control flow.
+  bool useActiveLaneMaskForControlFlow() const {
+    return FoldTailByMasking &&
+           TTI.emitGetActiveLaneMask() == PredicationStyle::DataAndControlFlow;
+  }
 
   /// Returns true if the instructions in this block requires predication
   /// for any reason, e.g. because tail folding now requires a predicate
@@ -8016,11 +8024,19 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
     if (!CM.blockNeedsPredicationForAnyReason(BB))
       return BlockMaskCache[BB] = BlockMask; // Loop incoming mask is all-one.
 
+    assert(CM.foldTailByMasking() && "must fold the tail");
+
+    // If we're using the active lane mask for control flow, then we get the
+    // mask from the active lane mask PHI that is cached in the VPlan.
+    PredicationStyle EmitGetActiveLaneMask = CM.TTI.emitGetActiveLaneMask();
+    if (EmitGetActiveLaneMask == PredicationStyle::DataAndControlFlow)
+      return BlockMaskCache[BB] = Plan->getActiveLaneMaskPhi();
+
     // Introduce the early-exit compare IV <= BTC to form header block mask.
     // This is used instead of IV < TC because TC may wrap, unlike BTC. Start by
     // constructing the desired canonical IV in the header block as its first
     // non-phi instructions.
-    assert(CM.foldTailByMasking() && "must fold the tail");
+
     VPBasicBlock *HeaderVPBB =
         Plan->getVectorLoopRegion()->getEntryBasicBlock();
     auto NewInsertionPoint = HeaderVPBB->getFirstNonPhi();
@@ -8029,9 +8045,10 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
 
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(HeaderVPBB, NewInsertionPoint);
-    if (CM.TTI.emitGetActiveLaneMask()) {
+    if (EmitGetActiveLaneMask != PredicationStyle::None) {
       VPValue *TC = Plan->getOrCreateTripCount();
-      BlockMask = Builder.createNaryOp(VPInstruction::ActiveLaneMask, {IV, TC});
+      BlockMask = Builder.createNaryOp(VPInstruction::ActiveLaneMask, {IV, TC},
+                                       nullptr, "active.lane.mask");
     } else {
       VPValue *BTC = Plan->getOrCreateBackedgeTakenCount();
       BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
@@ -8572,32 +8589,84 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   }
 }
 
-// Add a VPCanonicalIVPHIRecipe starting at 0 to the header, a
-// CanonicalIVIncrement{NUW} VPInstruction to increment it by VF * UF and a
-// BranchOnCount VPInstruction to the latch.
+// Add the necessary canonical IV and branch recipes required to control the
+// loop.
 static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
-                                  bool HasNUW) {
+                                  bool HasNUW,
+                                  bool UseLaneMaskForLoopControlFlow) {
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   auto *StartV = Plan.getOrAddVPValue(StartIdx);
 
+  // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
   auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = TopRegion->getEntryBasicBlock();
   Header->insert(CanonicalIVPHI, Header->begin());
 
+  // Add a CanonicalIVIncrement{NUW} VPInstruction to increment the scalar
+  // IV by VF * UF.
   auto *CanonicalIVIncrement =
       new VPInstruction(HasNUW ? VPInstruction::CanonicalIVIncrementNUW
                                : VPInstruction::CanonicalIVIncrement,
-                        {CanonicalIVPHI}, DL);
+                        {CanonicalIVPHI}, DL, "index.next");
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   EB->appendRecipe(CanonicalIVIncrement);
 
-  auto *BranchOnCount =
-      new VPInstruction(VPInstruction::BranchOnCount,
-                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
-  EB->appendRecipe(BranchOnCount);
+  if (UseLaneMaskForLoopControlFlow) {
+    // Create the active lane mask instruction in the vplan preheader.
+    VPBasicBlock *Preheader = Plan.getEntry()->getEntryBasicBlock();
+
+    // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
+    // we have to take unrolling into account. Each part needs to start at
+    //   Part * VF
+    auto *CanonicalIVIncrementParts =
+        new VPInstruction(HasNUW ? VPInstruction::CanonicalIVIncrementForPartNUW
+                                 : VPInstruction::CanonicalIVIncrementForPart,
+                          {StartV}, DL, "index.part.next");
+    Preheader->appendRecipe(CanonicalIVIncrementParts);
+
+    // Create the ActiveLaneMask instruction using the correct start values.
+    VPValue *TC = Plan.getOrCreateTripCount();
+    auto *EntryALM = new VPInstruction(VPInstruction::ActiveLaneMask,
+                                       {CanonicalIVIncrementParts, TC}, DL,
+                                       "active.lane.mask.entry");
+    Preheader->appendRecipe(EntryALM);
+
+    // Now create the ActiveLaneMaskPhi recipe in the main loop using the
+    // preheader ActiveLaneMask instruction.
+    auto *LaneMaskPhi = new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc());
+    Header->insert(LaneMaskPhi, Header->getFirstNonPhi());
+
+    // Create the active lane mask for the next iteration of the loop.
+    CanonicalIVIncrementParts =
+        new VPInstruction(HasNUW ? VPInstruction::CanonicalIVIncrementForPartNUW
+                                 : VPInstruction::CanonicalIVIncrementForPart,
+                          {CanonicalIVIncrement}, DL);
+    EB->appendRecipe(CanonicalIVIncrementParts);
+
+    auto *ALM = new VPInstruction(VPInstruction::ActiveLaneMask,
+                                  {CanonicalIVIncrementParts, TC}, DL,
+                                  "active.lane.mask.next");
+    EB->appendRecipe(ALM);
+    LaneMaskPhi->addOperand(ALM);
+
+    // We have to invert the mask here because a true condition means jumping
+    // to the exit block.
+    auto *NotMask = new VPInstruction(VPInstruction::Not, ALM, DL);
+    EB->appendRecipe(NotMask);
+
+    VPInstruction *BranchBack =
+        new VPInstruction(VPInstruction::BranchOnCond, {NotMask}, DL);
+    EB->appendRecipe(BranchBack);
+  } else {
+    // Add the BranchOnCount VPInstruction to the latch.
+    VPInstruction *BranchBack = new VPInstruction(
+        VPInstruction::BranchOnCount,
+        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
+    EB->appendRecipe(BranchBack);
+  }
 }
 
 // Add exit values to \p Plan. VPLiveOuts are added for each LCSSA phi in the
@@ -8698,7 +8767,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction());
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(),
                         DLInst ? DLInst->getDebugLoc() : DebugLoc(),
-                        !CM.foldTailByMasking());
+                        !CM.foldTailByMasking(),
+                        CM.useActiveLaneMaskForControlFlow());
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -9013,7 +9083,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   Term->eraseFromParent();
 
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), DebugLoc(),
-                        true);
+                        true, CM.useActiveLaneMaskForControlFlow());
   return Plan;
 }
 
@@ -9156,208 +9226,6 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   State.ILV->widenCallInstruction(*cast<CallInst>(getUnderlyingInstr()), this,
                                   *this, State);
-}
-
-void VPWidenRecipe::execute(VPTransformState &State) {
-  auto &I = *cast<Instruction>(getUnderlyingValue());
-  auto &Builder = State.Builder;
-  switch (I.getOpcode()) {
-  case Instruction::Call:
-  case Instruction::Br:
-  case Instruction::PHI:
-  case Instruction::GetElementPtr:
-  case Instruction::Select:
-    llvm_unreachable("This instruction is handled by a different recipe.");
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::SRem:
-  case Instruction::URem:
-  case Instruction::Add:
-  case Instruction::FAdd:
-  case Instruction::Sub:
-  case Instruction::FSub:
-  case Instruction::FNeg:
-  case Instruction::Mul:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::FRem:
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor: {
-    // Just widen unops and binops.
-    State.setDebugLocFromInst(&I);
-
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      SmallVector<Value *, 2> Ops;
-      for (VPValue *VPOp : operands())
-        Ops.push_back(State.get(VPOp, Part));
-
-      Value *V = Builder.CreateNAryOp(I.getOpcode(), Ops);
-
-      if (auto *VecOp = dyn_cast<Instruction>(V)) {
-        VecOp->copyIRFlags(&I);
-
-        // If the instruction is vectorized and was in a basic block that needed
-        // predication, we can't propagate poison-generating flags (nuw/nsw,
-        // exact, etc.). The control flow has been linearized and the
-        // instruction is no longer guarded by the predicate, which could make
-        // the flag properties to no longer hold.
-        if (State.MayGeneratePoisonRecipes.contains(this))
-          VecOp->dropPoisonGeneratingFlags();
-      }
-
-      // Use this vector value for all users of the original instruction.
-      State.set(this, V, Part);
-      State.addMetadata(V, &I);
-    }
-
-    break;
-  }
-  case Instruction::Freeze: {
-    State.setDebugLocFromInst(&I);
-
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Value *Op = State.get(getOperand(0), Part);
-
-      Value *Freeze = Builder.CreateFreeze(Op);
-      State.set(this, Freeze, Part);
-    }
-    break;
-  }
-  case Instruction::ICmp:
-  case Instruction::FCmp: {
-    // Widen compares. Generate vector compares.
-    bool FCmp = (I.getOpcode() == Instruction::FCmp);
-    auto *Cmp = cast<CmpInst>(&I);
-    State.setDebugLocFromInst(Cmp);
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Value *A = State.get(getOperand(0), Part);
-      Value *B = State.get(getOperand(1), Part);
-      Value *C = nullptr;
-      if (FCmp) {
-        // Propagate fast math flags.
-        IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-        Builder.setFastMathFlags(Cmp->getFastMathFlags());
-        C = Builder.CreateFCmp(Cmp->getPredicate(), A, B);
-      } else {
-        C = Builder.CreateICmp(Cmp->getPredicate(), A, B);
-      }
-      State.set(this, C, Part);
-      State.addMetadata(C, &I);
-    }
-
-    break;
-  }
-
-  case Instruction::ZExt:
-  case Instruction::SExt:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
-  case Instruction::FPExt:
-  case Instruction::PtrToInt:
-  case Instruction::IntToPtr:
-  case Instruction::SIToFP:
-  case Instruction::UIToFP:
-  case Instruction::Trunc:
-  case Instruction::FPTrunc:
-  case Instruction::BitCast: {
-    auto *CI = cast<CastInst>(&I);
-    State.setDebugLocFromInst(CI);
-
-    /// Vectorize casts.
-    Type *DestTy = (State.VF.isScalar())
-                       ? CI->getType()
-                       : VectorType::get(CI->getType(), State.VF);
-
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Value *A = State.get(getOperand(0), Part);
-      Value *Cast = Builder.CreateCast(CI->getOpcode(), A, DestTy);
-      State.set(this, Cast, Part);
-      State.addMetadata(Cast, &I);
-    }
-    break;
-  }
-  default:
-    // This instruction is not vectorized by simple widening.
-    LLVM_DEBUG(dbgs() << "LV: Found an unhandled instruction: " << I);
-    llvm_unreachable("Unhandled instruction!");
-  } // end of switch.
-}
-
-void VPWidenGEPRecipe::execute(VPTransformState &State) {
-  auto *GEP = cast<GetElementPtrInst>(getUnderlyingInstr());
-  // Construct a vector GEP by widening the operands of the scalar GEP as
-  // necessary. We mark the vector GEP 'inbounds' if appropriate. A GEP
-  // results in a vector of pointers when at least one operand of the GEP
-  // is vector-typed. Thus, to keep the representation compact, we only use
-  // vector-typed operands for loop-varying values.
-
-  if (State.VF.isVector() && IsPtrLoopInvariant && IsIndexLoopInvariant.all()) {
-    // If we are vectorizing, but the GEP has only loop-invariant operands,
-    // the GEP we build (by only using vector-typed operands for
-    // loop-varying values) would be a scalar pointer. Thus, to ensure we
-    // produce a vector of pointers, we need to either arbitrarily pick an
-    // operand to broadcast, or broadcast a clone of the original GEP.
-    // Here, we broadcast a clone of the original.
-    //
-    // TODO: If at some point we decide to scalarize instructions having
-    //       loop-invariant operands, this special case will no longer be
-    //       required. We would add the scalarization decision to
-    //       collectLoopScalars() and teach getVectorValue() to broadcast
-    //       the lane-zero scalar value.
-    auto *Clone = State.Builder.Insert(GEP->clone());
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Value *EntryPart = State.Builder.CreateVectorSplat(State.VF, Clone);
-      State.set(this, EntryPart, Part);
-      State.addMetadata(EntryPart, GEP);
-    }
-  } else {
-    // If the GEP has at least one loop-varying operand, we are sure to
-    // produce a vector of pointers. But if we are only unrolling, we want
-    // to produce a scalar GEP for each unroll part. Thus, the GEP we
-    // produce with the code below will be scalar (if VF == 1) or vector
-    // (otherwise). Note that for the unroll-only case, we still maintain
-    // values in the vector mapping with initVector, as we do for other
-    // instructions.
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      // The pointer operand of the new GEP. If it's loop-invariant, we
-      // won't broadcast it.
-      auto *Ptr = IsPtrLoopInvariant
-                      ? State.get(getOperand(0), VPIteration(0, 0))
-                      : State.get(getOperand(0), Part);
-
-      // Collect all the indices for the new GEP. If any index is
-      // loop-invariant, we won't broadcast it.
-      SmallVector<Value *, 4> Indices;
-      for (unsigned I = 1, E = getNumOperands(); I < E; I++) {
-        VPValue *Operand = getOperand(I);
-        if (IsIndexLoopInvariant[I - 1])
-          Indices.push_back(State.get(Operand, VPIteration(0, 0)));
-        else
-          Indices.push_back(State.get(Operand, Part));
-      }
-
-      // If the GEP instruction is vectorized and was in a basic block that
-      // needed predication, we can't propagate the poison-generating 'inbounds'
-      // flag. The control flow has been linearized and the GEP is no longer
-      // guarded by the predicate, which could make the 'inbounds' properties to
-      // no longer hold.
-      bool IsInBounds =
-          GEP->isInBounds() && State.MayGeneratePoisonRecipes.count(this) == 0;
-
-      // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
-      // but it should be a vector, otherwise.
-      auto *NewGEP = State.Builder.CreateGEP(GEP->getSourceElementType(), Ptr,
-                                             Indices, "", IsInBounds);
-      assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
-             "NewGEP is not a pointer vector");
-      State.set(this, NewGEP, Part);
-      State.addMetadata(NewGEP, GEP);
-    }
-  }
 }
 
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {

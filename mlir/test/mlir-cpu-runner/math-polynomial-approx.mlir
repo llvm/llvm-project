@@ -80,7 +80,7 @@ func.func @log2() {
   %1 = math.log2 %0 : f32
   vector.print %1 : f32
 
-  // CHECK: -2, -0.415037, 0, 0.321928
+  // CHECK: -2, -0.415038, 0, 0.321928
   %2 = arith.constant dense<[0.25, 0.75, 1.0, 1.25]> : vector<4xf32>
   %3 = math.log2 %2 : vector<4xf32>
   vector.print %3 : vector<4xf32>
