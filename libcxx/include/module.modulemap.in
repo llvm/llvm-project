@@ -373,6 +373,7 @@ module std [system] {
       module ranges_search_n                 { private header "__algorithm/ranges_search_n.h" }
       module ranges_set_difference           { private header "__algorithm/ranges_set_difference.h" }
       module ranges_set_intersection         { private header "__algorithm/ranges_set_intersection.h" }
+      module ranges_set_symmetric_difference { private header "__algorithm/ranges_set_symmetric_difference.h" }
       module ranges_set_union                { private header "__algorithm/ranges_set_union.h" }
       module ranges_shuffle                  { private header "__algorithm/ranges_shuffle.h" }
       module ranges_sort                     { private header "__algorithm/ranges_sort.h" }

@@ -25,14 +25,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InIter1, class _InIter2, class _OutIter>
 struct __set_intersection_result {
-  _InIter1 in1;
-  _InIter2 in2;
-  _OutIter out;
+  _InIter1 __in1_;
+  _InIter2 __in2_;
+  _OutIter __out_;
 
   // need a constructor as C++03 aggregate init is hard
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
   __set_intersection_result(_InIter1&& __in_iter1, _InIter2&& __in_iter2, _OutIter&& __out_iter)
-      : in1(std::move(__in_iter1)), in2(std::move(__in_iter2)), out(std::move(__out_iter)) {}
+      : __in1_(std::move(__in_iter1)), __in2_(std::move(__in_iter2)), __out_(std::move(__out_iter)) {}
 };
 
 template <class _AlgPolicy, class _Compare, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
@@ -74,7 +74,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _OutputIterator set_i
              std::move(__last2),
              std::move(__result),
              __comp)
-      .out;
+      .__out_;
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
@@ -92,7 +92,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _OutputIterator set_i
              std::move(__result),
              __less<typename iterator_traits<_InputIterator1>::value_type,
                     typename iterator_traits<_InputIterator2>::value_type>())
-      .out;
+      .__out_;
 }
 
 _LIBCPP_END_NAMESPACE_STD
