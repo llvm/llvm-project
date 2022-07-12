@@ -88,6 +88,9 @@ Error registerELFGraphInfo(Session &S, jitlink::LinkGraph &G);
 /// Record symbols, GOT entries, stubs, and sections for MachO file.
 Error registerMachOGraphInfo(Session &S, jitlink::LinkGraph &G);
 
+/// Record symbols, GOT entries, stubs, and sections for COFF file.
+Error registerCOFFGraphInfo(Session &S, jitlink::LinkGraph &G);
+
 } // end namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_JITLINK_LLVM_JITLINK_H
