@@ -78,6 +78,15 @@ struct FormatSection {
     return true;
   }
 };
+
+// This is the value to be returned by conversions when no error has occurred.
+constexpr int WRITE_OK = 0;
+// These are the printf return values for when an error has occurred. They are
+// all negative, and should be distinct.
+constexpr int FILE_WRITE_ERROR = -1;
+constexpr int FILE_STATUS_ERROR = -2;
+constexpr int NULLPTR_WRITE_ERROR = -3;
+
 } // namespace printf_core
 } // namespace __llvm_libc
 
