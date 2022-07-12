@@ -105,9 +105,6 @@ public:
     uint32_t
     GetTargetByteSize ();
 
-    uint32_t
-    GetAlignment ();
-
     bool
     GetDescription (lldb::SBStream &description);
 
@@ -141,7 +138,6 @@ public:
         data = property(GetSectionData, None, doc='''A read only property that returns an lldb object that represents the bytes for this section (lldb.SBData) for this section.''')
         type = property(GetSectionType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSectionType") that represents the type of this section (code, data, etc.).''')
         target_byte_size = property(GetTargetByteSize, None, doc='''A read only property that returns the size of a target byte represented by this section as a number of host bytes.''')
-        alignment = property(GetAlignment, None, doc='''A read only property that returns the alignment of this section as a number of host bytes.''')
     %}
 #endif
 

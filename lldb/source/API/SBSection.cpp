@@ -242,15 +242,6 @@ uint32_t SBSection::GetTargetByteSize() {
   return 0;
 }
 
-uint32_t SBSection::GetAlignment() {
-  LLDB_INSTRUMENT_VA(this);
-
-  SectionSP section_sp(GetSP());
-  if (section_sp.get())
-    return (1 << section_sp->GetLog2Align());
-  return 0;
-}
-
 bool SBSection::operator==(const SBSection &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
