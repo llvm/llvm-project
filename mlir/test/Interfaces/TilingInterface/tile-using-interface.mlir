@@ -192,3 +192,37 @@ func.func @conv2D(%arg0 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?xf32>,
 // CHECK-SAME:             outs(%[[INIT_TILE]] :
 //      CHECK:         tensor.insert_slice %[[CONV_TILE]] into %[[INIT2]]
 // CHECK-SAME:             [0, 0, 0, 0] [%[[N]], %[[R]], %[[S]], %[[F]]]
+
+// -----
+
+// CHECK: #[[$MAP_ADD:.+]] = affine_map<(d0, d1) -> (d0 + d1)>
+
+// CHECK-LABEL: @indexed_semantics
+func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // Check that we correctly amend "linalg.index" results.
+
+  // CHECK: scf.for %[[I0:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
+  // CHECK: scf.for %[[I1:.+]] = %{{.*}} to %{{.*}} step %{{.*}}
+  %0 = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]}
+    {__internal_linalg_transform__ = "indexed_semantics"}
+    ins(%arg0: tensor<?x?xf32>)
+    outs(%arg1: tensor<?x?xf32>) {
+  ^bb0(%arg2: f32, %arg3: f32):
+    // CHECK: %[[INDEX0:.+]] = linalg.index 0
+    // CHECK: %[[INDEX0_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX0]], %[[I0]])
+    %1 = linalg.index 0 : index
+    // CHECK: %[[INDEX1:.+]] = linalg.index 1
+    // CHECK: %[[INDEX1_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX1]], %[[I1]])
+    %2 = linalg.index 1 : index
+    // CHECK: arith.addi %[[INDEX0_AMENDED]], %[[INDEX1_AMENDED]]
+    %3 = arith.addi %1, %2 : index
+    %4 = arith.index_cast %3 : index to i64
+    %5 = arith.uitofp %4 : i64 to f32
+    %6 = arith.addf %5, %arg2 : f32
+    linalg.yield %6 : f32
+  } -> (tensor<?x?xf32>)
+  return %0 : tensor<?x?xf32>
+}

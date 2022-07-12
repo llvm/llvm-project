@@ -139,8 +139,7 @@ std::pair<LinalgOp, LinalgOp> linalg::splitOp(RewriterBase &rewriter,
   SmallVector<Value> ivAdditions;
   ivAdditions.resize(splitIterationSpace.size());
   ivAdditions[dimension] = splitPointValue;
-  linalg::addTileLoopIvsToIndexOpResults(builder, cast<LinalgOp>(second),
-                                         ivAdditions);
+  linalg::offsetIndices(rewriter, cast<LinalgOp>(second), ivAdditions);
 
   // Replace the original op with the results of the two newly created ops.
   rewriter.replaceOp(op, secondResults);
