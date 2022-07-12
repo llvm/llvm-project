@@ -2280,6 +2280,39 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
   return enumerators_added;
 }
 
+ConstString
+DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
+  bool is_static = false;
+  bool is_variadic = false;
+  bool has_template_params = false;
+  unsigned type_quals = 0;
+  std::vector<CompilerType> param_types;
+  std::vector<clang::ParmVarDecl *> param_decls;
+  StreamString sstr;
+
+  DWARFDeclContext decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
+  sstr << decl_ctx.GetQualifiedName();
+
+  clang::DeclContext *containing_decl_ctx =
+      GetClangDeclContextContainingDIE(die, nullptr);
+  ParseChildParameters(containing_decl_ctx, die, true, is_static, is_variadic,
+                       has_template_params, param_types, param_decls,
+                       type_quals);
+  sstr << "(";
+  for (size_t i = 0; i < param_types.size(); i++) {
+    if (i > 0)
+      sstr << ", ";
+    sstr << param_types[i].GetTypeName();
+  }
+  if (is_variadic)
+    sstr << ", ...";
+  sstr << ")";
+  if (type_quals & clang::Qualifiers::Const)
+    sstr << " const";
+
+  return ConstString(sstr.GetString());
+}
+
 Function *
 DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
                                             const DWARFDIE &die,
@@ -2317,35 +2350,7 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
       // If the mangled name is not present in the DWARF, generate the
       // demangled name using the decl context. We skip if the function is
       // "main" as its name is never mangled.
-      bool is_static = false;
-      bool is_variadic = false;
-      bool has_template_params = false;
-      unsigned type_quals = 0;
-      std::vector<CompilerType> param_types;
-      std::vector<clang::ParmVarDecl *> param_decls;
-      StreamString sstr;
-
-      DWARFDeclContext decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
-      sstr << decl_ctx.GetQualifiedName();
-
-      clang::DeclContext *containing_decl_ctx =
-          GetClangDeclContextContainingDIE(die, nullptr);
-      ParseChildParameters(containing_decl_ctx, die, true, is_static,
-                           is_variadic, has_template_params, param_types,
-                           param_decls, type_quals);
-      sstr << "(";
-      for (size_t i = 0; i < param_types.size(); i++) {
-        if (i > 0)
-          sstr << ", ";
-        sstr << param_types[i].GetTypeName();
-      }
-      if (is_variadic)
-        sstr << ", ...";
-      sstr << ")";
-      if (type_quals & clang::Qualifiers::Const)
-        sstr << " const";
-
-      func_name.SetValue(ConstString(sstr.GetString()), false);
+      func_name.SetValue(ConstructDemangledNameFromDWARF(die), false);
     } else
       func_name.SetValue(ConstString(name), false);
 

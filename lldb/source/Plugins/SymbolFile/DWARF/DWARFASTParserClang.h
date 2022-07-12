@@ -45,6 +45,9 @@ public:
                                   const DWARFDIE &die,
                                   bool *type_is_new_ptr) override;
 
+  lldb_private::ConstString
+  ConstructDemangledNameFromDWARF(const DWARFDIE &die) override;
+
   lldb_private::Function *
   ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
                          const DWARFDIE &die,

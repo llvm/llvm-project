@@ -727,6 +727,41 @@ Module::LookupInfo::LookupInfo(ConstString name,
   }
 }
 
+bool Module::LookupInfo::NameMatchesLookupInfo(
+    ConstString function_name, LanguageType language_type) const {
+  // We always keep unnamed symbols
+  if (!function_name)
+    return true;
+
+  // If we match exactly, we can return early
+  if (m_name == function_name)
+    return true;
+
+  // If function_name is mangled, we'll need to demangle it.
+  // In the pathologial case where the function name "looks" mangled but is
+  // actually demangled (e.g. a method named _Zonk), this operation should be
+  // relatively inexpensive since no demangling is actually occuring. See
+  // Mangled::SetValue for more context.
+  const bool function_name_may_be_mangled =
+      Mangled::GetManglingScheme(function_name.GetStringRef()) !=
+      Mangled::eManglingSchemeNone;
+  ConstString demangled_function_name = function_name;
+  if (function_name_may_be_mangled) {
+    Mangled mangled_function_name(function_name);
+    demangled_function_name = mangled_function_name.GetDemangledName();
+  }
+
+  // If the symbol has a language, then let the language make the match.
+  // Otherwise just check that the demangled function name contains the
+  // demangled user-provided name.
+  if (Language *language = Language::FindPlugin(language_type))
+    return language->DemangledNameContainsPath(m_name.GetStringRef(),
+                                               demangled_function_name);
+
+  llvm::StringRef function_name_ref = demangled_function_name.GetStringRef();
+  return function_name_ref.contains(m_name.GetStringRef());
+}
+
 void Module::LookupInfo::Prune(SymbolContextList &sc_list,
                                size_t start_idx) const {
   if (m_match_name_after_lookup && m_name) {
@@ -736,20 +771,8 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
       if (!sc_list.GetContextAtIndex(i, sc))
         break;
       
-      llvm::StringRef user_name = m_name.GetStringRef();
-      bool keep_it = true;
-      Language *language = Language::FindPlugin(sc.GetLanguage());
-      // If the symbol has a language, then let the language make the match.
-      // Otherwise just check that the demangled name contains the user name.
-      if (language)
-        keep_it = language->DemangledNameContainsPath(m_name.GetStringRef(),
-                sc.GetFunctionName());
-      else {
-        llvm::StringRef full_name = sc.GetFunctionName().GetStringRef();
-        // We always keep unnamed symbols:
-        if (!full_name.empty())
-          keep_it = full_name.contains(user_name);
-      }
+      bool keep_it =
+          NameMatchesLookupInfo(sc.GetFunctionName(), sc.GetLanguage());
       if (keep_it)
         ++i;
       else
@@ -798,51 +821,37 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
   }
 }
 
+void Module::FindFunctions(const Module::LookupInfo &lookup_info,
+                           const CompilerDeclContext &parent_decl_ctx,
+                           const ModuleFunctionSearchOptions &options,
+                           SymbolContextList &sc_list) {
+  // Find all the functions (not symbols, but debug information functions...
+  if (SymbolFile *symbols = GetSymbolFile()) {
+    symbols->FindFunctions(lookup_info, parent_decl_ctx,
+                           options.include_inlines, sc_list);
+    // Now check our symbol table for symbols that are code symbols if
+    // requested
+    if (options.include_symbols) {
+      if (Symtab *symtab = symbols->GetSymtab()) {
+        symtab->FindFunctionSymbols(lookup_info.GetLookupName(),
+                                    lookup_info.GetNameTypeMask(), sc_list);
+      }
+    }
+  }
+}
+
 void Module::FindFunctions(ConstString name,
                            const CompilerDeclContext &parent_decl_ctx,
                            FunctionNameType name_type_mask,
                            const ModuleFunctionSearchOptions &options,
                            SymbolContextList &sc_list) {
   const size_t old_size = sc_list.GetSize();
-
-  // Find all the functions (not symbols, but debug information functions...
-  SymbolFile *symbols = GetSymbolFile();
-
+  LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
+  FindFunctions(lookup_info, parent_decl_ctx, options, sc_list);
   if (name_type_mask & eFunctionNameTypeAuto) {
-    LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
-
-    if (symbols) {
-      symbols->FindFunctions(lookup_info.GetLookupName(), parent_decl_ctx,
-                             lookup_info.GetNameTypeMask(),
-                             options.include_inlines, sc_list);
-
-      // Now check our symbol table for symbols that are code symbols if
-      // requested
-      if (options.include_symbols) {
-        Symtab *symtab = symbols->GetSymtab();
-        if (symtab)
-          symtab->FindFunctionSymbols(lookup_info.GetLookupName(),
-                                      lookup_info.GetNameTypeMask(), sc_list);
-      }
-    }
-
     const size_t new_size = sc_list.GetSize();
-
     if (old_size < new_size)
       lookup_info.Prune(sc_list, old_size);
-  } else {
-    if (symbols) {
-      symbols->FindFunctions(name, parent_decl_ctx, name_type_mask,
-                             options.include_inlines, sc_list);
-
-      // Now check our symbol table for symbols that are code symbols if
-      // requested
-      if (options.include_symbols) {
-        Symtab *symtab = symbols->GetSymtab();
-        if (symtab)
-          symtab->FindFunctionSymbols(name, name_type_mask, sc_list);
-      }
-    }
   }
 }
 
