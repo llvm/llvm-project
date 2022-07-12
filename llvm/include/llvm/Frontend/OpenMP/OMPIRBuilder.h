@@ -599,9 +599,9 @@ public:
 
   /// Add metadata to simd-ize a loop.
   ///
-  /// \param DL   Debug location for instructions added by unrolling.
-  /// \param Loop The loop to simd-ize.
-  void applySimd(DebugLoc DL, CanonicalLoopInfo *Loop);
+  /// \param Loop    The loop to simd-ize.
+  /// \param Simdlen The Simdlen length to apply to the simd loop.
+  void applySimd(CanonicalLoopInfo *Loop, ConstantInt *Simdlen);
 
   /// Generator for '#omp flush'
   ///

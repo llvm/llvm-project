@@ -126,8 +126,6 @@ define void @PR46178(i16* %0) {
 ; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X64-NEXT:    vpsllw $8, %ymm0, %ymm0
 ; X64-NEXT:    vpsraw $8, %ymm0, %ymm0
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
 ; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,1]
 ; X64-NEXT:    vmovdqu %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper

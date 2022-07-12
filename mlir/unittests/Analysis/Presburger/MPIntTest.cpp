@@ -27,6 +27,7 @@ public:
       return "MPInt";
     if (std::is_same<T, detail::SlowMPInt>())
       return "SlowMPInt";
+    llvm_unreachable("Unknown class!");
   }
 };
 TYPED_TEST_SUITE(IntTest, TypeList, TypeNames);

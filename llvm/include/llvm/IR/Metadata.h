@@ -955,7 +955,9 @@ class MDNode : public Metadata {
   /// The operands are in turn located immediately before the header.
   /// For resizable MDNodes, the space for the storage vector is also allocated
   /// immediately before the header, overlapping with the operands.
-  struct Header {
+  /// Explicity set alignment because bitfields by default have an
+  /// alignment of 1 on z/OS.
+  struct alignas(alignof(size_t)) Header {
     bool IsResizable : 1;
     bool IsLarge : 1;
     size_t SmallSize : 4;

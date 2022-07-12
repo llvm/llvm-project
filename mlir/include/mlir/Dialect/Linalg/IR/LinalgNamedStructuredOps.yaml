@@ -1648,7 +1648,7 @@ metadata: !LinalgOpMetadata
   name: conv_2d_ngchw_fgchw
   cpp_class_name: Conv2DNgchwFgchwOp
   doc: |-
-    Performs 2-D convolution.
+    Performs 2-D grouped convolution.
 
     Layout:
       * Input: NGCHW.
@@ -1664,44 +1664,44 @@ structured_op: !LinalgStructuredOpConfig
     name: I
     kind: input_tensor
     type_var: T1
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] -> (s0,
-      s1, s2 * s3 + s4 * s5, s6 * s7 + s8 * s9)>
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
+      (s0, s1, s2, s3 * s4 + s5 * s6, s7 * s8 + s9 * s10)>
   - !LinalgOperandDefConfig
     name: K
     kind: input_tensor
     type_var: T2
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] -> (s10,
-      s1, s11, s4, s8)>
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
+      (s11, s1, s2, s5, s9)>
   - !LinalgOperandDefConfig
     name: O
     kind: output_tensor
     type_var: U
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] -> (s0,
-      s1, s10, s2, s6)>
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
+      (s0, s11, s1, s3, s7)>
   - !LinalgOperandDefConfig
     name: strides
     kind: index_attr
-    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
-      (s3, s7)>
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11]
+      -> (s4, s8)>
     default_indices:
     - 1
     - 1
   - !LinalgOperandDefConfig
     name: dilations
     kind: index_attr
-    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
-      (s5, s9)>
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11]
+      -> (s6, s10)>
     default_indices:
     - 1
     - 1
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
-    - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11] -> (d0, d1, d5, d3 * s3 + d6 * s5, d4 * s7 + d7 * s9)>
-    - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11] -> (d2, d1, d5, d6, d7)>
-    - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11] -> (d0, d1, d2, d3, d4)>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
+      s8, s9, s10, s11] -> (d0, d1, d5, d3 * s4 + d6 * s6, d4 * s8 + d7 * s10)>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
+      s8, s9, s10, s11] -> (d1, d2, d5, d6, d7)>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
+      s8, s9, s10, s11] -> (d0, d1, d2, d3, d4)>
   iterator_types:
   - parallel
   - parallel
