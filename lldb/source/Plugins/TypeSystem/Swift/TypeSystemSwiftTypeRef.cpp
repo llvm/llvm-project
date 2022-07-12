@@ -2431,6 +2431,9 @@ TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
 
     // The type that will be wrapped in UnsafePointer.
     auto *pointee_type = GetDemangledType(dem, AsMangledName(type));
+    if (!pointee_type)
+      return {};
+
     // The UnsafePointer type.
     auto *pointer_type = dem.createNode(Node::Kind::Type);
 
