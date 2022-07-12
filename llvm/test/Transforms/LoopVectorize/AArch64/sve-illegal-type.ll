@@ -1,4 +1,5 @@
-; RUN: opt < %s -loop-vectorize -mattr=+sve -force-vector-width=4 -pass-remarks-analysis=loop-vectorize -S 2>%t | FileCheck %s
+; RUN: opt < %s -loop-vectorize -mattr=+sve -force-vector-width=4 -pass-remarks-analysis=loop-vectorize \
+; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -S 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s -check-prefix=CHECK-REMARKS
 target triple = "aarch64-linux-gnu"
 
