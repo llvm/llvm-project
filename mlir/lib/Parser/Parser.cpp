@@ -24,6 +24,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
@@ -2349,7 +2350,7 @@ public:
                          "expected hex string blob for key '" + key +
                              "' to encode alignment in first 4 bytes");
     }
-    uint32_t align = 0;
+    llvm::support::ulittle32_t align;
     memcpy(&align, blobData->data(), sizeof(uint32_t));
 
     // Get the data portion of the blob.
