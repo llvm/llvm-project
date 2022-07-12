@@ -76,6 +76,11 @@ Changes to the LLVM IR
   * ``sdiv``
   * ``urem``
   * ``srem``
+  * ``fadd``
+  * ``fsub``
+  * ``fmul``
+  * ``fdiv``
+  * ``frem``
 * Added the support for ``fmax`` and ``fmin`` in ``atomicrmw`` instruction. The
   comparison is expected to match the behavior of ``llvm.maxnum.*`` and
   ``llvm.minnum.*`` respectively.
@@ -198,6 +203,11 @@ Changes to the C API
   * ``LLVMConstExactSDiv``
   * ``LLVMConstURem``
   * ``LLVMConstSRem``
+  * ``LLVMConstFAdd``
+  * ``LLVMConstFSub``
+  * ``LLVMConstFMul``
+  * ``LLVMConstFDiv``
+  * ``LLVMConstFRem``
 
 * Add ``LLVMDeleteInstruction`` function which allows deleting instructions that
   are not inserted into a basic block.

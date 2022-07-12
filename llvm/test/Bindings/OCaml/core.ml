@@ -244,17 +244,12 @@ let test_constants () =
    * CHECK: @const_add = global i64 add
    * CHECK: @const_nsw_add = global i64 add nsw
    * CHECK: @const_nuw_add = global i64 add nuw
-   * CHECK: @const_fadd = global double fadd
    * CHECK: @const_sub = global i64 sub
    * CHECK: @const_nsw_sub = global i64 sub nsw
    * CHECK: @const_nuw_sub = global i64 sub nuw
-   * CHECK: @const_fsub = global double fsub
    * CHECK: @const_mul = global i64 mul
    * CHECK: @const_nsw_mul = global i64 mul nsw
    * CHECK: @const_nuw_mul = global i64 mul nuw
-   * CHECK: @const_fmul = global double fmul
-   * CHECK: @const_fdiv = global double fdiv
-   * CHECK: @const_frem = global double frem
    * CHECK: @const_and = global i64 and
    * CHECK: @const_or = global i64 or
    * CHECK: @const_xor = global i64 xor
@@ -275,17 +270,12 @@ let test_constants () =
   ignore (define_global "const_add" (const_add foldbomb five) m);
   ignore (define_global "const_nsw_add" (const_nsw_add foldbomb five) m);
   ignore (define_global "const_nuw_add" (const_nuw_add foldbomb five) m);
-  ignore (define_global "const_fadd" (const_fadd ffoldbomb ffive) m);
   ignore (define_global "const_sub" (const_sub foldbomb five) m);
   ignore (define_global "const_nsw_sub" (const_nsw_sub foldbomb five) m);
   ignore (define_global "const_nuw_sub" (const_nuw_sub foldbomb five) m);
-  ignore (define_global "const_fsub" (const_fsub ffoldbomb ffive) m);
   ignore (define_global "const_mul" (const_mul foldbomb five) m);
   ignore (define_global "const_nsw_mul" (const_nsw_mul foldbomb five) m);
   ignore (define_global "const_nuw_mul" (const_nuw_mul foldbomb five) m);
-  ignore (define_global "const_fmul" (const_fmul ffoldbomb ffive) m);
-  ignore (define_global "const_fdiv" (const_fdiv ffoldbomb ffive) m);
-  ignore (define_global "const_frem" (const_frem ffoldbomb ffive) m);
   ignore (define_global "const_and" (const_and foldbomb five) m);
   ignore (define_global "const_or" (const_or foldbomb five) m);
   ignore (define_global "const_xor" (const_xor foldbomb five) m);
