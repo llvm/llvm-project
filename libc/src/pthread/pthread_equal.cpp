@@ -1,4 +1,4 @@
-//===-- Implementation of the pthread_join function -----------------------===//
+//===-- Implementation of the pthread_equal function ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "pthread_join.h"
+#include "pthread_equal.h"
 
 #include "src/__support/common.h"
 #include "src/__support/threads/thread.h"
@@ -18,10 +18,10 @@ namespace __llvm_libc {
 static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread),
               "Mismatch between pthread_t and internal Thread.");
 
-LLVM_LIBC_FUNCTION(int, pthread_join, (pthread_t th, void **retval)) {
-  auto *thread = reinterpret_cast<Thread *>(&th);
-  int result = thread->join(retval);
-  return result;
+LLVM_LIBC_FUNCTION(int, pthread_equal, (pthread_t lhs, pthread_t rhs)) {
+  auto *lhs_internal = reinterpret_cast<Thread *>(&lhs);
+  auto *rhs_internal = reinterpret_cast<Thread *>(&rhs);
+  return *lhs_internal == *rhs_internal;
 }
 
 } // namespace __llvm_libc

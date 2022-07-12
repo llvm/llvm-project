@@ -279,3 +279,25 @@ add_entrypoint_object(
     libc.include.pthread
     libc.src.__support.threads.thread
 )
+
+add_entrypoint_object(
+  pthread_equal
+  SRCS
+    pthread_equal.cpp
+  HDRS
+    pthread_equal.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  pthread_self
+  SRCS
+    pthread_self.cpp
+  HDRS
+    pthread_self.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.thread
+)

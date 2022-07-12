@@ -111,6 +111,8 @@ __attribute__((noinline))
 static void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
+  self.attrib = attrib;
+
   long retval;
   if (attrib->style == ThreadStyle::POSIX) {
     attrib->retval.posix_retval =
@@ -270,6 +272,10 @@ void Thread::wait() {
     __llvm_libc::syscall(SYS_futex, &clear_tid->val, FUTEX_WAIT,
                          CLEAR_TID_VALUE, nullptr);
   }
+}
+
+bool Thread::operator==(const Thread &thread) const {
+  return attrib->tid == thread.attrib->tid;
 }
 
 } // namespace __llvm_libc

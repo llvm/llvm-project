@@ -20,6 +20,26 @@ add_integration_test(
 )
 
 add_integration_test(
+  thrd_equal_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    thrd_equal_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.mtx_destroy
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_current
+    libc.src.threads.thrd_equal
+    libc.src.threads.thrd_join
+)
+
+add_integration_test(
   thrd_test
   SUITE
     libc-threads-integration-tests
