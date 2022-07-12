@@ -234,13 +234,13 @@ private:
   bool processNextReconstructed();
   void finalize();
 
-  struct Line;
+  struct ReconstructedLine;
 
-  void appendToken(FormatToken *Token, Line *L = nullptr);
-  UnwrappedLine createUnwrappedLine(const Line &Line, int Level);
-  void debug(const Line &Line, int Level);
-  Line &parentLine();
-  Line *currentLine();
+  void appendToken(FormatToken *Token, ReconstructedLine *L = nullptr);
+  UnwrappedLine createUnwrappedLine(const ReconstructedLine &Line, int Level);
+  void debug(const ReconstructedLine &Line, int Level);
+  ReconstructedLine &parentLine();
+  ReconstructedLine *currentLine();
   void debugParentMap() const;
 
 #ifndef NDEBUG
@@ -258,13 +258,13 @@ private:
     LineNode() = default;
     LineNode(FormatToken *Tok) : Tok(Tok) {}
     FormatToken *Tok = nullptr;
-    llvm::SmallVector<std::unique_ptr<Line>> Children;
+    llvm::SmallVector<std::unique_ptr<ReconstructedLine>> Children;
   };
 
   // Line in which we build up the resulting unwrapped line.
   // FIXME: Investigate changing UnwrappedLine to a pointer type and using it
   // instead of rolling our own type.
-  struct Line {
+  struct ReconstructedLine {
     llvm::SmallVector<std::unique_ptr<LineNode>> Tokens;
   };
 
@@ -277,11 +277,11 @@ private:
   // in order to format the overall expression as a single logical line -
   // if we created separate lines, we'd format them with their own top-level
   // indent depending on the semantic structure, which is not desired.
-  Line Result;
+  ReconstructedLine Result;
 
   // Stack of currently "open" lines, where each line's predecessor's last
   // token is the parent token for that line.
-  llvm::SmallVector<Line *> ActiveReconstructedLines;
+  llvm::SmallVector<ReconstructedLine *> ActiveReconstructedLines;
 
   // Maps from the expanded token to the token that takes its place in the
   // reconstructed token stream in terms of parent-child relationships.
@@ -324,10 +324,10 @@ private:
   llvm::SmallVector<Expansion> ActiveExpansions;
 
   struct MacroCallState {
-    MacroCallState(Line *Line, FormatToken *ParentLastToken,
+    MacroCallState(ReconstructedLine *Line, FormatToken *ParentLastToken,
                    FormatToken *MacroCallLParen);
 
-    Line *Line;
+    ReconstructedLine *Line;
 
     // The last token in the parent line or expansion, or nullptr if the macro
     // expansion is on a top-level line.
