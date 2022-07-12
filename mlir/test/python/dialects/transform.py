@@ -94,3 +94,19 @@ def testMergeHandlesOp():
   # CHECK: transform.sequence
   # CHECK: ^{{.*}}(%[[ARG1:.+]]: !pdl.operation):
   # CHECK:   = merge_handles %[[ARG1]]
+
+
+@run
+def testReplicateOp():
+  with_pdl = transform.WithPDLPatternsOp()
+  with InsertionPoint(with_pdl.body):
+    sequence = transform.SequenceOp(with_pdl.bodyTarget)
+    with InsertionPoint(sequence.body):
+      m1 = transform.PDLMatchOp(sequence.bodyTarget, "first")
+      m2 = transform.PDLMatchOp(sequence.bodyTarget, "second")
+      transform.ReplicateOp(m1, [m2])
+      transform.YieldOp()
+  # CHECK-LABEL: TEST: testReplicateOp
+  # CHECK: %[[FIRST:.+]] = pdl_match
+  # CHECK: %[[SECOND:.+]] = pdl_match
+  # CHECK: %{{.*}} = replicate num(%[[FIRST]]) %[[SECOND]]
