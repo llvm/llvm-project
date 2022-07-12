@@ -1,10 +1,7 @@
 static_library("grammar") {
   output_name = "clangPseudoGrammar"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
-  deps = [
-    "//clang/lib/Basic",
-    "//llvm/lib/Support",
-  ]
+  deps = [ "//llvm/lib/Support" ]
   include_dirs = [ "../../include" ]
   sources = [
     "Grammar.cpp",
