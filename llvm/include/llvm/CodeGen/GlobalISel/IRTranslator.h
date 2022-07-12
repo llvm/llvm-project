@@ -221,7 +221,7 @@ private:
   bool translateMemFunc(const CallInst &CI, MachineIRBuilder &MIRBuilder,
                         unsigned Opcode);
 
-  void getStackGuard(Register DstReg, MachineIRBuilder &MIRBuilder);
+  Register getStackGuard(LLT Ty, MachineIRBuilder &MIRBuilder);
 
   bool translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
                                   MachineIRBuilder &MIRBuilder);
