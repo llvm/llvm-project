@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -67,8 +68,14 @@ private:
                   MachineRegisterInfo &MRI) const;
   bool selectICmp(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
-  bool selectCondBr(MachineInstr &I, MachineBasicBlock &MBB,
+  bool selectBrCond(MachineInstr &I, MachineBasicBlock &MBB,
                     MachineRegisterInfo &MRI) const;
+  bool selectJumpTable(MachineInstr &I, MachineBasicBlock &MBB,
+                       MachineRegisterInfo &MRI) const;
+  bool selectBrJT(MachineInstr &I, MachineBasicBlock &MBB,
+                  MachineRegisterInfo &MRI) const;
+  bool selectBrIndirect(MachineInstr &I, MachineBasicBlock &MBB,
+                        MachineRegisterInfo &MRI) const;
   bool selectPtrAdd(MachineInstr &I, MachineBasicBlock &MBB,
                     MachineRegisterInfo &MRI) const;
   bool selectLoadStore(MachineInstr &I, MachineBasicBlock &MBB,
@@ -359,7 +366,7 @@ bool M88kInstructionSelector::selectICmp(MachineInstr &I,
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
-bool M88kInstructionSelector::selectCondBr(MachineInstr &I,
+bool M88kInstructionSelector::selectBrCond(MachineInstr &I,
                                            MachineBasicBlock &MBB,
                                            MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_BRCOND && "Unexpected G code");
@@ -432,6 +439,76 @@ bool M88kInstructionSelector::selectCondBr(MachineInstr &I,
              .addMBB(BB);
   }
 
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
+bool M88kInstructionSelector::selectJumpTable(MachineInstr &I,
+                                              MachineBasicBlock &MBB,
+                                              MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_JUMP_TABLE && "Unexpected G code");
+
+  MachineInstr *MI = nullptr;
+  Register Reg = I.getOperand(0).getReg();
+  int JTIndex = I.getOperand(1).getIndex();
+
+  Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+  MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ORriu))
+           .addReg(Temp, RegState::Define)
+           .addReg(M88k::R0)
+           .addJumpTableIndex(JTIndex, M88kII::MO_ABS_HI);
+  if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+    return false;
+
+  MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ORri))
+           .addReg(Reg, RegState::Define)
+           .addReg(Temp, RegState::Kill)
+           .addJumpTableIndex(JTIndex, M88kII::MO_ABS_LO);
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
+bool M88kInstructionSelector::selectBrJT(MachineInstr &I,
+                                         MachineBasicBlock &MBB,
+                                         MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_BRJT && "Unexpected G code");
+
+  MachineInstr *MI = nullptr;
+  MachineFunction &MF = *I.getParent()->getParent();
+  unsigned EntrySize = MF.getJumpTableInfo()->getEntrySize(MF.getDataLayout());
+  assert((EntrySize == 0 || EntrySize == 4) &&
+         "Unsupported size of jump-table entry.");
+
+  Register JTPtrReg = I.getOperand(0).getReg();
+  Register JTIndexReg = I.getOperand(2).getReg();
+
+  Register DstReg = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+  if (EntrySize == 4) {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::LDrrsw))
+             .addReg(DstReg, RegState::Define)
+             .addReg(JTPtrReg)
+             .addReg(JTIndexReg);
+  } else {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::LDrruw))
+             .addReg(DstReg, RegState::Define)
+             .addReg(JTPtrReg)
+             .addReg(JTIndexReg);
+  }
+  if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+    return false;
+
+  MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::JMP)).addReg(DstReg);
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
+bool M88kInstructionSelector::selectBrIndirect(MachineInstr &I,
+                                               MachineBasicBlock &MBB,
+                                               MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_BRINDIRECT && "Unexpected G code");
+
+  MachineInstr *MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::JMP))
+                         .addReg(I.getOperand(0).getReg());
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
@@ -868,7 +945,13 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ICMP:
     return selectICmp(I, MBB, MRI);
   case TargetOpcode::G_BRCOND:
-    return selectCondBr(I, MBB, MRI);
+    return selectBrCond(I, MBB, MRI);
+  case TargetOpcode::G_JUMP_TABLE:
+    return selectJumpTable(I, MBB, MRI);
+  case TargetOpcode::G_BRJT:
+    return selectBrJT(I, MBB, MRI);
+  case TargetOpcode::G_BRINDIRECT:
+    return selectBrIndirect(I, MBB, MRI);
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_LOAD:

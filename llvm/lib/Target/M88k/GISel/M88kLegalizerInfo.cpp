@@ -85,6 +85,9 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .legalForCartesianProduct({S1}, {S32, P0})
       .clampScalar(1, S32, S32);
   getActionDefinitionsBuilder(G_BRCOND).legalFor({S1});
+  getActionDefinitionsBuilder(G_BRJT).legalFor({{P0, S32}});
+  getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({P0});
+  getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({P0});
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({P0});
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({P0});
