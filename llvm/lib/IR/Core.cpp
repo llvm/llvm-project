@@ -1574,11 +1574,6 @@ LLVMValueRef LLVMConstNUWAdd(LLVMValueRef LHSConstant,
                                       unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstFAdd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFAdd(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstSub(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getSub(unwrap<Constant>(LHSConstant),
                                    unwrap<Constant>(RHSConstant)));
@@ -1596,11 +1591,6 @@ LLVMValueRef LLVMConstNUWSub(LLVMValueRef LHSConstant,
                                       unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstFSub(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFSub(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getMul(unwrap<Constant>(LHSConstant),
                                    unwrap<Constant>(RHSConstant)));
@@ -1616,21 +1606,6 @@ LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant,
                              LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getNUWMul(unwrap<Constant>(LHSConstant),
                                       unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstFMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFMul(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstFDiv(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFDiv(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstFRem(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFRem(unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
 }
 
 LLVMValueRef LLVMConstAnd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {

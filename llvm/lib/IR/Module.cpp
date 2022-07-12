@@ -714,6 +714,18 @@ void Module::setStackProtectorGuardReg(StringRef Reg) {
   addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-reg", ID);
 }
 
+StringRef Module::getStackProtectorGuardSymbol() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard-symbol");
+  if (auto *MDS = dyn_cast_or_null<MDString>(MD))
+    return MDS->getString();
+  return {};
+}
+
+void Module::setStackProtectorGuardSymbol(StringRef Symbol) {
+  MDString *ID = MDString::get(getContext(), Symbol);
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-symbol", ID);
+}
+
 int Module::getStackProtectorGuardOffset() const {
   Metadata *MD = getModuleFlag("stack-protector-guard-offset");
   if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))

@@ -1099,10 +1099,6 @@ val const_nsw_add : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWAdd]. *)
 val const_nuw_add : llvalue -> llvalue -> llvalue
 
-(** [const_fadd c1 c2] returns the constant sum of two constant floats.
-    See the method [llvm::ConstantExpr::getFAdd]. *)
-val const_fadd : llvalue -> llvalue -> llvalue
-
 (** [const_sub c1 c2] returns the constant difference, [c1 - c2], of two
     constants. See the method [llvm::ConstantExpr::getSub]. *)
 val const_sub : llvalue -> llvalue -> llvalue
@@ -1117,10 +1113,6 @@ val const_nsw_sub : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWSub]. *)
 val const_nuw_sub : llvalue -> llvalue -> llvalue
 
-(** [const_fsub c1 c2] returns the constant difference, [c1 - c2], of two
-    constant floats. See the method [llvm::ConstantExpr::getFSub]. *)
-val const_fsub : llvalue -> llvalue -> llvalue
-
 (** [const_mul c1 c2] returns the constant product of two constants.
     See the method [llvm::ConstantExpr::getMul]. *)
 val const_mul : llvalue -> llvalue -> llvalue
@@ -1134,20 +1126,6 @@ val const_nsw_mul : llvalue -> llvalue -> llvalue
     no unsigned wrapping. The result is undefined if the sum overflows.
     See the method [llvm::ConstantExpr::getNSWMul]. *)
 val const_nuw_mul : llvalue -> llvalue -> llvalue
-
-(** [const_fmul c1 c2] returns the constant product of two constants floats.
-    See the method [llvm::ConstantExpr::getFMul]. *)
-val const_fmul : llvalue -> llvalue -> llvalue
-
-(** [const_fdiv c1 c2] returns the constant quotient [c1 / c2] of two floating
-    point constants.
-    See the method [llvm::ConstantExpr::getFDiv]. *)
-val const_fdiv : llvalue -> llvalue -> llvalue
-
-(** [const_frem c1 c2] returns the constant remainder [c1 MOD c2] of two
-    signed floating point constants.
-    See the method [llvm::ConstantExpr::getFRem]. *)
-val const_frem : llvalue -> llvalue -> llvalue
 
 (** [const_and c1 c2] returns the constant bitwise [AND] of two integer
     constants.

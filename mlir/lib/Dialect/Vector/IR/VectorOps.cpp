@@ -334,34 +334,14 @@ ArrayAttr vector::getVectorSubscriptAttr(Builder &builder,
 
 void vector::MultiDimReductionOp::build(OpBuilder &builder,
                                         OperationState &result, Value source,
-                                        ArrayRef<bool> reductionMask,
+                                        Value acc, ArrayRef<bool> reductionMask,
                                         CombiningKind kind) {
   SmallVector<int64_t> reductionDims;
   for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
-  build(builder, result, kind, source, builder.getI64ArrayAttr(reductionDims));
-}
-
-LogicalResult MultiDimReductionOp::inferReturnTypes(
-    MLIRContext *, Optional<Location>, ValueRange operands,
-    DictionaryAttr attributes, RegionRange,
-    SmallVectorImpl<Type> &inferredReturnTypes) {
-  MultiDimReductionOp::Adaptor op(operands, attributes);
-  auto vectorType = op.getSource().getType().cast<VectorType>();
-  SmallVector<int64_t> targetShape;
-  for (auto it : llvm::enumerate(vectorType.getShape()))
-    if (!llvm::any_of(op.getReductionDims().getValue(), [&](Attribute attr) {
-          return attr.cast<IntegerAttr>().getValue() == it.index();
-        }))
-      targetShape.push_back(it.value());
-  // TODO: update to also allow 0-d vectors when available.
-  if (targetShape.empty())
-    inferredReturnTypes.push_back(vectorType.getElementType());
-  else
-    inferredReturnTypes.push_back(
-        VectorType::get(targetShape, vectorType.getElementType()));
-  return success();
+  build(builder, result, kind, source, acc,
+        builder.getI64ArrayAttr(reductionDims));
 }
 
 OpFoldResult MultiDimReductionOp::fold(ArrayRef<Attribute> operands) {
@@ -373,6 +353,28 @@ OpFoldResult MultiDimReductionOp::fold(ArrayRef<Attribute> operands) {
 
 Optional<SmallVector<int64_t, 4>> MultiDimReductionOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getSourceVectorType().getShape());
+}
+
+LogicalResult MultiDimReductionOp::verify() {
+  SmallVector<int64_t> targetShape;
+  Type inferredReturnType;
+  for (auto it : llvm::enumerate(getSourceVectorType().getShape()))
+    if (!llvm::any_of(getReductionDims().getValue(), [&](Attribute attr) {
+          return attr.cast<IntegerAttr>().getValue() == it.index();
+        }))
+      targetShape.push_back(it.value());
+  // TODO: update to also allow 0-d vectors when available.
+  if (targetShape.empty())
+    inferredReturnType = getSourceVectorType().getElementType();
+  else
+    inferredReturnType =
+        VectorType::get(targetShape, getSourceVectorType().getElementType());
+  if (getType() != inferredReturnType)
+    return emitOpError() << "destination type " << getType()
+                         << " is incompatible with source type "
+                         << getSourceVectorType();
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

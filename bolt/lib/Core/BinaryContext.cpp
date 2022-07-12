@@ -124,8 +124,7 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
     break;
   case llvm::Triple::aarch64:
     ArchName = "aarch64";
-    FeaturesStr = "+fp-armv8,+neon,+crypto,+dotprod,+crc,+lse,+ras,+rdm,"
-                  "+fullfp16,+spe,+fuse-aes,+rcpc";
+    FeaturesStr = "+all";
     break;
   default:
     return createStringError(std::errc::not_supported,

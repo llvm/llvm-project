@@ -315,6 +315,8 @@ public:
   void run() {
     derived().preflight();
 
+    if (Func.begin() == Func.end())
+      return;
     // Initialize state for all points of the function
     for (BinaryBasicBlock &BB : Func) {
       StateTy &St = getOrCreateStateAt(BB);
@@ -324,7 +326,6 @@ public:
         St = derived().getStartingStateAtPoint(Inst);
       }
     }
-    assert(Func.begin() != Func.end() && "Unexpected empty function");
 
     std::queue<BinaryBasicBlock *> Worklist;
     // TODO: Pushing this in a DFS ordering will greatly speed up the dataflow

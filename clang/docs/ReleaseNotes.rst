@@ -281,9 +281,11 @@ Improvements to Clang's diagnostics
   unevaluated operands of a ``typeid`` expression, as they are now
   modeled correctly in the CFG. This fixes
   `Issue 21668 <https://github.com/llvm/llvm-project/issues/21668>`_.
-- ``-Wself-assign``, ``-Wself-assign-overloaded`` and ``-Wself-move`` will 
+- ``-Wself-assign``, ``-Wself-assign-overloaded`` and ``-Wself-move`` will
   suggest a fix if the decl being assigned is a parameter that shadows a data
   member of the contained class.
+- Added ``-Winvalid-utf8`` which diagnoses invalid UTF-8 code unit sequences in
+  comments.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -486,6 +488,7 @@ C++2b Feature Support
 - Implemented `P2128R6: Multidimensional subscript operator <https://wg21.link/P2128R6>`_.
 - Implemented `P0849R8: auto(x): decay-copy in the language <https://wg21.link/P0849R8>`_.
 - Implemented `P2242R3: Non-literal variables (and labels and gotos) in constexpr functions	<https://wg21.link/P2242R3>`_.
+- Implemented `LWG3659: Consider ATOMIC_FLAG_INIT undeprecation <https://wg21.link/LWG3659>`_.
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------
@@ -548,6 +551,8 @@ X86 Support in Clang
 - Added the ``-m[no-]rdpru`` flag to enable/disable the RDPRU instruction
   provided by AMD Zen2 and later processors. Defined intrinsics for using
   this instruction (see rdpruintrin.h).
+- Support ``-mstack-protector-guard-symbol=[SymbolName]`` to use the given
+  symbol for addressing the stack protector guard.
 
 DWARF Support in Clang
 ----------------------
@@ -594,7 +599,7 @@ AST Matchers
 
 - Added ``forEachTemplateArgument`` matcher which creates a match every
   time a ``templateArgument`` matches the matcher supplied to it.
-  
+
 - Added ``objcStringLiteral`` matcher which matches ObjectiveC String
   literal expressions.
 

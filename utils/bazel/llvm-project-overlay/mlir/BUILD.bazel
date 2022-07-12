@@ -7461,6 +7461,9 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":AffineDialect",
+        ":ArithmeticDialect",
+        ":ControlFlowDialect",
         ":IR",
         ":LinalgDialect",
         ":LinalgTransformOpsIncGen",

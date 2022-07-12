@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
 if "%1"=="" goto usage
 goto begin
@@ -15,6 +15,30 @@ echo.
 exit /b
 
 :begin
+
+REM Note:
+REM   7zip versions 21.x and higher will try to extract the symlinks in
+REM   llvm's git archive, which requires running as administrator.
+
+REM Check 7-zip version and/or administrator permissions.
+for /f "delims=" %%i in ('7z.exe ^| findstr /r "2[1-9].[0-9][0-9]"') do set version=%%i
+if not "%version%"=="" (
+  REM Unique temporary filename to use by the 'mklink' command.
+  set "link_name=%temp%\%username%_%random%_%random%.tmp"
+
+  REM As the 'mklink' requires elevated permissions, the symbolic link
+  REM creation will fail if the script is not running as administrator.
+  mklink /d "!link_name!" . 1>nul 2>nul
+  if errorlevel 1 (
+    echo.
+    echo Script requires administrator permissions, or a 7-zip version 20.x or older.
+    echo Current version is "%version%"
+    exit /b
+  ) else (
+    REM Remove the temporary symbolic link.
+    rd "!link_name!"
+  )
+)
 
 REM Prerequisites:
 REM

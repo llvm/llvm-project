@@ -50,3 +50,12 @@ define <2 x float> @fmul_fdiv_common_operand_commute_vec(<2 x float> %x, <2 x fl
   ret <2 x float> %d
 }
 
+; The constant expression version of this used to crash llvm-as.
+define <2 x i1> @pr6096() {
+; CHECK-LABEL: @pr6096(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %fdiv = fdiv <2 x float> undef, <float 1.000000e+00, float 1.000000e+00>
+  %fcmp = fcmp ole <2 x float> %fdiv, zeroinitializer
+  ret <2 x i1> %fcmp
+}

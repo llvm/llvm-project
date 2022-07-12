@@ -64,6 +64,20 @@ static mlir::Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
                               mlir::Region::iterator(insertBefore));
 }
 
+/// Extract constant from a value that must be the result of one of the
+/// ConstantOp operations.
+static int64_t getConstantIntValue(mlir::Value val) {
+  assert(val && val.dyn_cast<mlir::OpResult>() && "must not be null value");
+  mlir::Operation *defop = val.getDefiningOp();
+
+  if (auto constOp = mlir::dyn_cast<mlir::arith::ConstantIntOp>(defop))
+    return constOp.value();
+  if (auto llConstOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(defop))
+    if (auto attr = llConstOp.getValue().dyn_cast<mlir::IntegerAttr>())
+      return attr.getValue().getSExtValue();
+  fir::emitFatalError(val.getLoc(), "must be a constant");
+}
+
 namespace {
 /// FIR conversion pattern template
 template <typename FromOp>
@@ -1384,28 +1398,83 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     return {boxTy, descriptor, eleSize};
   }
 
-  /// Compute the base address of a substring given the base address of a scalar
-  /// string and the zero based string lower bound.
-  mlir::Value shiftSubstringBase(mlir::ConversionPatternRewriter &rewriter,
-                                 mlir::Location loc, mlir::Value base,
-                                 mlir::Value lowerBound) const {
-    llvm::SmallVector<mlir::Value> gepOperands;
-    auto baseType =
+  // Compute the base address of a fir.box given the indices from the slice.
+  // The indices from the "outer" dimensions (every dimension after the first
+  // one (inlcuded) that is not a compile time constant) must have been
+  // multiplied with the related extents and added together into \p outerOffset.
+  mlir::Value
+  genBoxOffsetGep(mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
+                  mlir::Value base, mlir::Value outerOffset,
+                  mlir::ValueRange cstInteriorIndices,
+                  mlir::ValueRange componentIndices,
+                  llvm::Optional<mlir::Value> substringOffset) const {
+    llvm::SmallVector<mlir::Value> gepArgs{outerOffset};
+    mlir::Type resultTy =
         base.getType().cast<mlir::LLVM::LLVMPointerType>().getElementType();
-    if (auto arrayType = baseType.dyn_cast<mlir::LLVM::LLVMArrayType>()) {
-      // FIXME: The baseType should be the array element type here, meaning
-      // there should at most be one dimension (constant length characters are
-      // lowered to LLVM as an array of length one characters.). However, using
-      // the character type in the GEP does not lead to correct GEPs when llvm
-      // opaque pointers are enabled.
-      auto idxTy = this->lowerTy().indexType();
-      gepOperands.append(getDimension(arrayType),
-                         genConstantIndex(loc, idxTy, rewriter, 0));
-      gepOperands.push_back(lowerBound);
-    } else {
-      gepOperands.push_back(lowerBound);
+    // Fortran is column major, llvm GEP is row major: reverse the indices here.
+    for (mlir::Value interiorIndex : llvm::reverse(cstInteriorIndices)) {
+      auto arrayTy = resultTy.dyn_cast<mlir::LLVM::LLVMArrayType>();
+      if (!arrayTy)
+        fir::emitFatalError(
+            loc,
+            "corrupted GEP generated being generated in fir.embox/fir.rebox");
+      resultTy = arrayTy.getElementType();
+      gepArgs.push_back(interiorIndex);
     }
-    return this->genGEP(loc, base.getType(), rewriter, base, gepOperands);
+    for (mlir::Value componentIndex : componentIndices) {
+      // Component indices can be field index to select a component, or array
+      // index, to select an element in an array component.
+      if (auto structTy = resultTy.dyn_cast<mlir::LLVM::LLVMStructType>()) {
+        std::int64_t cstIndex = getConstantIntValue(componentIndex);
+        resultTy = structTy.getBody()[cstIndex];
+      } else if (auto arrayTy =
+                     resultTy.dyn_cast<mlir::LLVM::LLVMArrayType>()) {
+        resultTy = arrayTy.getElementType();
+      } else {
+        fir::emitFatalError(loc, "corrupted component GEP generated being "
+                                 "generated in fir.embox/fir.rebox");
+      }
+      gepArgs.push_back(componentIndex);
+    }
+    if (substringOffset) {
+      if (auto arrayTy = resultTy.dyn_cast<mlir::LLVM::LLVMArrayType>()) {
+        gepArgs.push_back(*substringOffset);
+        resultTy = arrayTy.getElementType();
+      } else {
+        // If the CHARACTER length is dynamic, the whole base type should have
+        // degenerated to an llvm.ptr<i[width]>, and there should not be any
+        // cstInteriorIndices/componentIndices. The substring offset can be
+        // added to the outterOffset since it applies on the same LLVM type.
+        if (gepArgs.size() != 1)
+          fir::emitFatalError(loc,
+                              "corrupted substring GEP in fir.embox/fir.rebox");
+        mlir::Type outterOffsetTy = gepArgs[0].getType();
+        mlir::Value cast =
+            this->integerCast(loc, rewriter, outterOffsetTy, *substringOffset);
+
+        gepArgs[0] = rewriter.create<mlir::LLVM::AddOp>(loc, outterOffsetTy,
+                                                        gepArgs[0], cast);
+      }
+    }
+    resultTy = mlir::LLVM::LLVMPointerType::get(resultTy);
+    return rewriter.create<mlir::LLVM::GEPOp>(loc, resultTy, base, gepArgs);
+  }
+
+  template <typename BOX>
+  void
+  getSubcomponentIndices(BOX xbox, mlir::Value memref,
+                         mlir::ValueRange operands,
+                         mlir::SmallVectorImpl<mlir::Value> &indices) const {
+    // For each field in the path add the offset to base via the args list.
+    // In the most general case, some offsets must be computed since
+    // they are not be known until runtime.
+    if (fir::hasDynamicSize(fir::unwrapSequenceType(
+            fir::unwrapPassByRefType(memref.getType()))))
+      TODO(xbox.getLoc(),
+           "fir.embox codegen dynamic size component in derived type");
+    indices.append(operands.begin() + xbox.subcomponentOffset(),
+                   operands.begin() + xbox.subcomponentOffset() +
+                       xbox.subcomponent().size());
   }
 
   /// If the embox is not in a globalOp body, allocate storage for the box;
@@ -1489,7 +1558,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     mlir::Value prevPtrOff = one;
     mlir::Type eleTy = boxTy.getEleTy();
     const unsigned rank = xbox.getRank();
-    llvm::SmallVector<mlir::Value> gepArgs;
+    llvm::SmallVector<mlir::Value> cstInteriorIndices;
     unsigned constRows = 0;
     mlir::Value ptrOffset = zero;
     mlir::Type memEleTy = fir::dyn_cast_ptrEleTy(xbox.memref().getType());
@@ -1554,7 +1623,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
           adj = operands[shiftOffset];
         auto ao = rewriter.create<mlir::LLVM::SubOp>(loc, i64Ty, off, adj);
         if (constRows > 0) {
-          gepArgs.push_back(ao);
+          cstInteriorIndices.push_back(ao);
         } else {
           auto dimOff =
               rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, ao, prevPtrOff);
@@ -1624,24 +1693,15 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
         sliceOffset += 3;
     }
     if (hasSlice || hasSubcomp || hasSubstr) {
-      llvm::SmallVector<mlir::Value> args = {ptrOffset};
-      args.append(gepArgs.rbegin(), gepArgs.rend());
-      if (hasSubcomp) {
-        // For each field in the path add the offset to base via the args list.
-        // In the most general case, some offsets must be computed since
-        // they are not be known until runtime.
-        if (fir::hasDynamicSize(fir::unwrapSequenceType(
-                fir::unwrapPassByRefType(xbox.memref().getType()))))
-          TODO(loc, "fir.embox codegen dynamic size component in derived type");
-        args.append(operands.begin() + xbox.subcomponentOffset(),
-                    operands.begin() + xbox.subcomponentOffset() +
-                        xbox.subcomponent().size());
-      }
-      base =
-          rewriter.create<mlir::LLVM::GEPOp>(loc, base.getType(), base, args);
+      // Shift the base address.
+      llvm::SmallVector<mlir::Value> fieldIndices;
+      llvm::Optional<mlir::Value> substringOffset;
+      if (hasSubcomp)
+        getSubcomponentIndices(xbox, xbox.memref(), operands, fieldIndices);
       if (hasSubstr)
-        base = shiftSubstringBase(rewriter, loc, base,
-                                  operands[xbox.substrOffset()]);
+        substringOffset = operands[xbox.substrOffset()];
+      base = genBoxOffsetGep(rewriter, loc, base, ptrOffset, cstInteriorIndices,
+                             fieldIndices, substringOffset);
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
     if (isDerivedTypeWithLenParams(boxTy))
@@ -1765,15 +1825,15 @@ private:
           mlir::LLVM::LLVMPointerType::get(convertType(inputEleTy));
       base = rewriter.create<mlir::LLVM::BitcastOp>(loc, llvmElePtrTy, base);
 
-      if (!rebox.subcomponent().empty()) {
-        llvm::SmallVector<mlir::Value> gepOperands = {zero};
-        for (unsigned i = 0; i < rebox.subcomponent().size(); ++i)
-          gepOperands.push_back(operands[rebox.subcomponentOffset() + i]);
-        base = genGEP(loc, llvmElePtrTy, rewriter, base, gepOperands);
-      }
+      llvm::SmallVector<mlir::Value> fieldIndices;
+      llvm::Optional<mlir::Value> substringOffset;
+      if (!rebox.subcomponent().empty())
+        getSubcomponentIndices(rebox, rebox.box(), operands, fieldIndices);
       if (!rebox.substr().empty())
-        base = shiftSubstringBase(rewriter, loc, base,
-                                  operands[rebox.substrOffset()]);
+        substringOffset = operands[rebox.substrOffset()];
+      base = genBoxOffsetGep(rewriter, loc, base, zero,
+                             /*cstInteriorIndices=*/llvm::None, fieldIndices,
+                             substringOffset);
     }
 
     if (rebox.slice().empty())
@@ -2266,19 +2326,7 @@ struct CoordinateOpConversion
                ? op.getDefiningOp()
                      ->getAttrOfType<mlir::IntegerAttr>("field")
                      .getInt()
-               : getIntValue(op);
-  }
-
-  static int64_t getIntValue(mlir::Value val) {
-    assert(val && val.dyn_cast<mlir::OpResult>() && "must not be null value");
-    mlir::Operation *defop = val.getDefiningOp();
-
-    if (auto constOp = mlir::dyn_cast<mlir::arith::ConstantIntOp>(defop))
-      return constOp.value();
-    if (auto llConstOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(defop))
-      if (auto attr = llConstOp.getValue().dyn_cast<mlir::IntegerAttr>())
-        return attr.getValue().getSExtValue();
-    fir::emitFatalError(val.getLoc(), "must be a constant");
+               : getConstantIntValue(op);
   }
 
   static bool hasSubDimensions(mlir::Type type) {
@@ -2306,7 +2354,7 @@ struct CoordinateOpConversion
         type = recTy.getType(getFieldNumber(recTy, nxtOpnd));
       } else if (auto tupTy = type.dyn_cast<mlir::TupleType>()) {
         subEle = true;
-        type = tupTy.getType(getIntValue(nxtOpnd));
+        type = tupTy.getType(getConstantIntValue(nxtOpnd));
       } else {
         ptrEle = true;
       }
@@ -2330,7 +2378,7 @@ struct CoordinateOpConversion
       } else if (auto strTy = type.dyn_cast<fir::RecordType>()) {
         type = strTy.getType(getFieldNumber(strTy, nxtOpnd));
       } else if (auto strTy = type.dyn_cast<mlir::TupleType>()) {
-        type = strTy.getType(getIntValue(nxtOpnd));
+        type = strTy.getType(getConstantIntValue(nxtOpnd));
       } else {
         return true;
       }
@@ -2520,7 +2568,7 @@ private:
         if (auto recTy = cpnTy.dyn_cast<fir::RecordType>())
           cpnTy = recTy.getType(getFieldNumber(recTy, nxtOpnd));
         else if (auto tupTy = cpnTy.dyn_cast<mlir::TupleType>())
-          cpnTy = tupTy.getType(getIntValue(nxtOpnd));
+          cpnTy = tupTy.getType(getConstantIntValue(nxtOpnd));
         else
           cpnTy = nullptr;
 
@@ -2635,7 +2683,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
     if (global.getInitVal())
       initAttr = global.getInitVal().getValue();
     auto linkage = convertLinkage(global.getLinkName());
-    auto isConst = global.getConstant().hasValue();
+    auto isConst = global.getConstant().has_value();
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
         loc, tyAttr, isConst, linkage, global.getSymName(), initAttr);
     auto &gr = g.getInitializerRegion();
