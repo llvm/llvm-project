@@ -2635,7 +2635,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
     if (global.getInitVal())
       initAttr = global.getInitVal().getValue();
     auto linkage = convertLinkage(global.getLinkName());
-    auto isConst = global.getConstant().hasValue();
+    auto isConst = global.getConstant().has_value();
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
         loc, tyAttr, isConst, linkage, global.getSymName(), initAttr);
     auto &gr = g.getInitializerRegion();
