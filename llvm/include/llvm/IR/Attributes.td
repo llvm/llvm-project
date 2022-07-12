@@ -102,6 +102,10 @@ def DisableSanitizerInstrumentation: EnumAttr<"disable_sanitizer_instrumentation
 /// Provide pointer element type to intrinsic.
 def ElementType : TypeAttr<"elementtype", [ParamAttr]>;
 
+/// Whether to keep return instructions, or replace with a jump to an external
+/// symbol.
+def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", [FnAttr]>;
+
 /// Function may only access memory that is inaccessible from IR.
 def InaccessibleMemOnly : EnumAttr<"inaccessiblememonly", [FnAttr]>;
 

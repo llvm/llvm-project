@@ -404,6 +404,12 @@ Attribute Changes in Clang
   format string must correctly format the fixed parameter types of the function.
   Using the attribute this way emits a GCC compatibility diagnostic.
 
+- Support was added for ``__attribute__((function_return("thunk-extern")))``
+  to X86 to replace ``ret`` instructions with ``jmp __x86_return_thunk``. The
+  corresponding attribute to disable this,
+  ``__attribute__((function_return("keep")))`` was added. This is intended to
+  be used by the Linux kernel to mitigate RETBLEED.
+
 Windows Support
 ---------------
 
@@ -556,6 +562,9 @@ X86 Support in Clang
   this instruction (see rdpruintrin.h).
 - Support ``-mstack-protector-guard-symbol=[SymbolName]`` to use the given
   symbol for addressing the stack protector guard.
+- ``-mfunction-return=thunk-extern`` support was added to clang for x86. This
+  will be used by Linux kernel mitigations for RETBLEED. The corresponding flag
+  ``-mfunction-return=keep`` may be appended to disable the feature.
 
 DWARF Support in Clang
 ----------------------

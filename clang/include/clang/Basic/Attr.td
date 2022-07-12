@@ -4036,3 +4036,14 @@ def NoRandomizeLayout : InheritableAttr {
   let LangOpts = [COnly];
 }
 def : MutualExclusions<[RandomizeLayout, NoRandomizeLayout]>;
+
+def FunctionReturnThunks : InheritableAttr,
+    TargetSpecificAttr<TargetAnyX86> {
+  let Spellings = [GCC<"function_return">];
+  let Args = [EnumArgument<"ThunkType", "Kind",
+    ["keep", "thunk-extern"],
+    ["Keep", "Extern"]
+  >];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [FunctionReturnThunksDocs];
+}

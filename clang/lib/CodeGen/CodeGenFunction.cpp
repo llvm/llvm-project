@@ -898,6 +898,20 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (D && D->hasAttr<NoProfileFunctionAttr>())
     Fn->addFnAttr(llvm::Attribute::NoProfile);
 
+  if (D) {
+    // Function attributes take precedence over command line flags.
+    if (auto *A = D->getAttr<FunctionReturnThunksAttr>()) {
+      switch (A->getThunkType()) {
+      case FunctionReturnThunksAttr::Kind::Keep:
+        break;
+      case FunctionReturnThunksAttr::Kind::Extern:
+        Fn->addFnAttr(llvm::Attribute::FnRetThunkExtern);
+        break;
+      }
+    } else if (CGM.getCodeGenOpts().FunctionReturnThunks)
+      Fn->addFnAttr(llvm::Attribute::FnRetThunkExtern);
+  }
+
   if (FD && (getLangOpts().OpenCL ||
              (getLangOpts().HIP && getLangOpts().CUDAIsDevice))) {
     // Add metadata for a kernel function.

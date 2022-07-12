@@ -1998,6 +1998,13 @@ def fcf_protection : Flag<["-"], "fcf-protection">, Group<f_Group>, Flags<[CoreO
   HelpText<"Enable cf-protection in 'full' mode">;
 def mibt_seal : Flag<["-"], "mibt-seal">, Group<m_Group>, Flags<[CoreOption, CC1Option]>,
   HelpText<"Optimize fcf-protection=branch/full (requires LTO).">;
+def mfunction_return_EQ : Joined<["-"], "mfunction-return=">,
+  Group<m_Group>, Flags<[CoreOption, CC1Option]>,
+  HelpText<"Replace returns with jumps to ``__x86_return_thunk`` (x86 only, error otherwise)">,
+  Values<"keep,thunk-extern">,
+  NormalizedValues<["Keep", "Extern"]>,
+  NormalizedValuesScope<"llvm::FunctionReturnThunksKind">,
+  MarshallingInfoEnum<CodeGenOpts<"FunctionReturnThunks">, "Keep">;
 
 defm xray_instrument : BoolFOption<"xray-instrument",
   LangOpts<"XRayInstrument">, DefaultFalse,

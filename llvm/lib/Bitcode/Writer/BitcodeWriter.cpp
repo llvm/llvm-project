@@ -634,6 +634,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_COLD;
   case Attribute::DisableSanitizerInstrumentation:
     return bitc::ATTR_KIND_DISABLE_SANITIZER_INSTRUMENTATION;
+  case Attribute::FnRetThunkExtern:
+    return bitc::ATTR_KIND_FNRETTHUNK_EXTERN;
   case Attribute::Hot:
     return bitc::ATTR_KIND_HOT;
   case Attribute::ElementType:

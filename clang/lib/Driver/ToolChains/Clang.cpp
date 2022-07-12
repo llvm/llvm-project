@@ -6344,6 +6344,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (IsUsingLTO)
     Args.AddLastArg(CmdArgs, options::OPT_mibt_seal);
 
+  if (Arg *A = Args.getLastArg(options::OPT_mfunction_return_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-mfunction-return=") + A->getValue()));
+
   // Forward -f options with positive and negative forms; we translate these by
   // hand.  Do not propagate PGO options to the GPU-side compilations as the
   // profile info is for the host-side compilation only.
