@@ -76,12 +76,6 @@ public:
   ///     The number of host (8-bit) bytes needed to hold a target byte
   uint32_t GetTargetByteSize();
 
-  /// Return the alignment of the section in bytes
-  ///
-  /// \return
-  ///     The alignment of the section in bytes
-  uint32_t GetAlignment();
-
   bool operator==(const lldb::SBSection &rhs);
 
   bool operator!=(const lldb::SBSection &rhs);
