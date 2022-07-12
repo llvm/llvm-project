@@ -2685,8 +2685,9 @@ private:
                    uint32_t dataAlignment) final {
       printFn(key, [&](raw_ostream &os) {
         // Store the blob in a hex string containing the alignment and the data.
+        llvm::support::ulittle32_t dataAlignmentLE(dataAlignment);
         os << "\"0x"
-           << llvm::toHex(StringRef(reinterpret_cast<char *>(&dataAlignment),
+           << llvm::toHex(StringRef(reinterpret_cast<char *>(&dataAlignmentLE),
                                     sizeof(dataAlignment)))
            << llvm::toHex(StringRef(data.data(), data.size())) << "\"";
       });
