@@ -7,6 +7,9 @@ static_library("JITLink") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "COFF.cpp",
+    "COFFLinkGraphBuilder.cpp",
+    "COFF_x86_64.cpp",
     "DWARFRecordSectionSplitter.cpp",
     "EHFrameSupport.cpp",
     "ELF.cpp",
