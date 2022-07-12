@@ -597,6 +597,8 @@ public:
                                           unsigned uid,
                                           MCContext &Ctx) const override;
 
+  bool isVScaleKnownToBeAPowerOfTwo() const override;
+
 private:
   /// RISCVCCAssignFn - This target-specific function extends the default
   /// CCValAssign with additional information used to lower RISC-V calling

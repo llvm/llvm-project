@@ -3869,6 +3869,12 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
       if (C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2())
         return true;
 
+  // vscale(power-of-two) is a power-of-two for some targets
+  if (Val.getOpcode() == ISD::VSCALE &&
+      getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
+      isKnownToBeAPowerOfTwo(Val.getOperand(0)))
+    return true;
+
   // More could be done here, though the above checks are enough
   // to handle some common cases.
 
