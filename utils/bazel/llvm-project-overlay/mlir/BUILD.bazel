@@ -2614,7 +2614,6 @@ cc_library(
         ":TosaToTensor",
         ":VectorToGPU",
         ":VectorToLLVM",
-        ":VectorToROCDL",
         ":VectorToSCF",
         ":VectorToSPIRV",
     ],
@@ -3805,30 +3804,6 @@ cc_library(
 )
 
 cc_library(
-    name = "VectorToROCDL",
-    srcs = [
-        "lib/Conversion/VectorToROCDL/VectorToROCDL.cpp",
-        ":ConversionPassDetail",
-    ],
-    hdrs = ["include/mlir/Conversion/VectorToROCDL/VectorToROCDL.h"],
-    includes = ["include"],
-    deps = [
-        ":ConversionPassIncGen",
-        ":FuncDialect",
-        ":FuncToLLVM",
-        ":GPUDialect",
-        ":IR",
-        ":LLVMCommonConversion",
-        ":LLVMDialect",
-        ":MemRefToLLVM",
-        ":Pass",
-        ":ROCDLDialect",
-        ":Transforms",
-        ":VectorDialect",
-    ],
-)
-
-cc_library(
     name = "VectorToSPIRV",
     srcs = glob([
         "lib/Conversion/VectorToSPIRV/*.cpp",
@@ -3895,7 +3870,6 @@ cc_library(
         ":Transforms",
         ":VectorDialect",
         ":VectorToLLVM",
-        ":VectorToROCDL",
         ":VectorToSCF",
         "//llvm:Support",
     ],
@@ -6348,7 +6322,6 @@ cc_library(
         ":TransformsPassIncGen",
         ":VectorDialect",
         ":VectorToLLVM",
-        ":VectorToROCDL",
         ":VectorToSCF",
         ":VectorToSPIRV",
         ":VectorTransforms",

@@ -854,12 +854,12 @@ def ConvertVectorToGPU : Pass<"convert-vector-to-gpu"> {
                 "dialect";
   let constructor = "mlir::createConvertVectorToGPUPass()";
   let dependentDialects = [
-    "memref::MemRefDialect", "gpu::GPUDialect", "AffineDialect", 
+    "memref::MemRefDialect", "gpu::GPUDialect", "AffineDialect",
     "vector::VectorDialect", "nvgpu::NVGPUDialect"
   ];
 
   let options = [
-    Option<"useNvGpu", "use-nvgpu", "bool", /*default=*/"false", 
+    Option<"useNvGpu", "use-nvgpu", "bool", /*default=*/"false",
       "convert to NvGPU ops instead of GPU dialect ops">
   ];
 }
@@ -935,17 +935,6 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
            "Enables the use of X86Vector dialect while lowering the vector "
 	   "dialect.">
   ];
-}
-
-//===----------------------------------------------------------------------===//
-// VectorToROCDL
-//===----------------------------------------------------------------------===//
-
-def ConvertVectorToROCDL : Pass<"convert-vector-to-rocdl", "ModuleOp"> {
-  let summary = "Lower the operations from the vector dialect into the ROCDL "
-                "dialect";
-  let constructor = "mlir::createConvertVectorToROCDLPass()";
-  let dependentDialects = ["ROCDL::ROCDLDialect"];
 }
 
 //===----------------------------------------------------------------------===//
