@@ -13,6 +13,7 @@ namespace llvm {
 namespace bolt {
 
 class BinaryFunction;
+class DataflowInfoManager;
 
 enum MCFCostFunction : char {
   MCF_DISABLE = 0,
@@ -21,6 +22,12 @@ enum MCFCostFunction : char {
   MCF_LOG,
   MCF_BLAMEFTS
 };
+
+/// Implement the idea in "SamplePGO - The Power of Profile Guided Optimizations
+/// without the Usability Burden" by Diego Novillo to make basic block counts
+/// equal if we show that A dominates B, B post-dominates A and they are in the
+/// same loop and same loop nesting level.
+void equalizeBBCounts(DataflowInfoManager &Info, BinaryFunction &BF);
 
 /// Fill edge counts based on the basic block count. Used in nonLBR mode when
 /// we only have bb count.

@@ -13,6 +13,7 @@
 #include "bolt/Passes/MCF.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Passes/DataflowInfoManager.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
 #include <algorithm>
@@ -33,14 +34,7 @@ extern cl::opt<bool> TimeOpts;
 static cl::opt<bool> IterativeGuess(
     "iterative-guess",
     cl::desc("in non-LBR mode, guess edge counts using iterative technique"),
-
     cl::Hidden, cl::cat(BoltOptCategory));
-
-static cl::opt<bool>
-    EqualizeBBCounts("equalize-bb-counts",
-                     cl::desc("in non-LBR mode, use same count for BBs "
-                              "that should have equivalent count"),
-                     cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool> UseRArcs(
     "mcf-use-rarcs",
@@ -370,12 +364,12 @@ createLoopNestLevelMap(BinaryFunction &BF) {
   return LoopNestLevel;
 }
 
-/// Implement the idea in "SamplePGO - The Power of Profile Guided Optimizations
-/// without the Usability Burden" by Diego Novillo to make basic block counts
-/// equal if we show that A dominates B, B post-dominates A and they are in the
-/// same loop and same loop nesting level.
-void equalizeBBCounts(BinaryFunction &BF) {
-  auto Info = DataflowInfoManager(BF, nullptr, nullptr);
+} // end anonymous namespace
+
+void equalizeBBCounts(DataflowInfoManager &Info, BinaryFunction &BF) {
+  if (BF.begin() == BF.end())
+    return;
+
   DominatorAnalysis<false> &DA = Info.getDominatorAnalysis();
   DominatorAnalysis<true> &PDA = Info.getPostDominatorAnalysis();
   auto &InsnToBB = Info.getInsnToBBMap();
@@ -448,8 +442,6 @@ void equalizeBBCounts(BinaryFunction &BF) {
   }
 }
 
-} // end anonymous namespace
-
 void estimateEdgeCounts(BinaryFunction &BF) {
   EdgeWeightMap PredEdgeWeights;
   EdgeWeightMap SuccEdgeWeights;
@@ -459,7 +451,8 @@ void estimateEdgeCounts(BinaryFunction &BF) {
   }
   if (opts::EqualizeBBCounts) {
     LLVM_DEBUG(BF.print(dbgs(), "before equalize BB counts", true));
-    equalizeBBCounts(BF);
+    auto Info = DataflowInfoManager(BF, nullptr, nullptr);
+    equalizeBBCounts(Info, BF);
     LLVM_DEBUG(BF.print(dbgs(), "after equalize BB counts", true));
   }
   if (opts::IterativeGuess)
