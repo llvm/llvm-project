@@ -20,6 +20,7 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Regex.h"
+#include <list>
 #include <stack>
 #include <vector>
 
@@ -38,7 +39,7 @@ struct UnwrappedLine {
   UnwrappedLine();
 
   /// The \c Tokens comprising this \c UnwrappedLine.
-  std::vector<UnwrappedLineNode> Tokens;
+  std::list<UnwrappedLineNode> Tokens;
 
   /// The indent level of the \c UnwrappedLine.
   unsigned Level;
