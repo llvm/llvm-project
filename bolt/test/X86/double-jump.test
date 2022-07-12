@@ -1,5 +1,9 @@
 # Test the double jump removqal peephole.
 
+# This test has commands that rely on shell capabilities that won't execute
+# correctly on Windows e.g. subshell execution
+REQUIRES: shell
+
 RUN: %clang %cflags %p/Inputs/double_jump.cpp -o %t.exe
 RUN: (llvm-bolt %t.exe --peepholes=double-jumps \
 RUN:   --eliminate-unreachable -o %t 2>&1 \
