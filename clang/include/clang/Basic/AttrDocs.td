@@ -6616,6 +6616,7 @@ The attribute ``function_return`` can replace return instructions with jumps to
 target-specific symbols. This attribute supports 2 possible values,
 corresponding to the values supported by the ``-mfunction-return=`` command
 line flag:
+
 * ``__attribute__((function_return("keep")))`` to disable related transforms.
   This is useful for undoing global setting from ``-mfunction-return=`` locally
   for individual functions.
