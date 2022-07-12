@@ -9,7 +9,7 @@
 // CHECK-SAME:                flags:
 // CHECK-SAME:                -I path\\ with\\ \\\\spaces
 // CHECK-SAME:                -g -Os
-// CHECK-SAME:                -mmacosx-version-min=10.5.0
+// CHECK-SAME:                -mmacos-version-min=10.5.0
 
 int x;
 
