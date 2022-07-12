@@ -95,6 +95,8 @@ fin:
 define float* @no_store_single_load() {
 ; CHECK-LABEL: @no_store_single_load(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne float* undef, null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    ret float* undef
 ;
 entry:
