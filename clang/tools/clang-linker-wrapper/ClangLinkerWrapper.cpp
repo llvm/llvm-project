@@ -134,6 +134,7 @@ template <> struct DenseMapInfo<OffloadKind> {
 } // namespace llvm
 
 namespace {
+using std::error_code;
 
 /// Must not overlap with llvm::opt::DriverFlag.
 enum WrapperFlags {
@@ -427,7 +428,8 @@ Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
 }
 
 namespace nvptx {
-Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args) {
+Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args,
+                             bool RDC = true) {
   // NVPTX uses the ptxas binary to create device object files.
   Expected<std::string> PtxasPath = findProgram("ptxas", {CudaBinaryPath});
   if (!PtxasPath)
@@ -435,11 +437,9 @@ Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args) {
 
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  // Create a new file to write the linked device image to.
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
-                           Triple.getArchName() + "-" + Arch,
-                       "cubin");
+  // Create a new file to write the linked device image to. Assume that the
+  // input filename already has the device and architecture.
+  auto TempFileOrErr = createOutputFile(sys::path::stem(InputFile), "cubin");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -458,7 +458,7 @@ Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args) {
   CmdArgs.push_back(Arch);
   if (Args.hasArg(OPT_debug))
     CmdArgs.push_back("-g");
-  if (!Args.hasArg(OPT_whole_program))
+  if (RDC)
     CmdArgs.push_back("-c");
 
   CmdArgs.push_back(InputFile);
@@ -821,11 +821,12 @@ std::unique_ptr<lto::LTO> createLTO(
 
   if (SaveTemps) {
     std::string TempName = (sys::path::filename(ExecutableName) + "-" +
-                            Triple.getTriple() + "-" + Arch + ".bc")
+                            Triple.getTriple() + "-" + Arch)
                                .str();
-    Conf.PostInternalizeModuleHook = [=](size_t, const Module &M) {
-      std::error_code EC;
-      raw_fd_ostream LinkedBitcode(TempName, EC, sys::fs::OF_None);
+    Conf.PostInternalizeModuleHook = [=](size_t Task, const Module &M) {
+      std::string Output = TempName + "." + std::to_string(Task) + ".bc";
+      error_code EC;
+      raw_fd_ostream LinkedBitcode(Output, EC, sys::fs::OF_None);
       if (EC)
         reportError(errorCodeToError(EC));
       WriteBitcodeToFile(M, LinkedBitcode);
@@ -932,7 +933,6 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
 
   // We assume visibility of the whole program if every input file was bitcode.
   auto Features = getTargetFeatures(BitcodeInputFiles);
-  bool WholeProgram = InputFiles.empty();
   auto LTOBackend = Args.hasArg(OPT_embed_bitcode)
                         ? createLTO(Args, Features, OutputBitcode)
                         : createLTO(Args, Features);
@@ -940,10 +940,15 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   // We need to resolve the symbols so the LTO backend knows which symbols need
   // to be kept or can be internalized. This is a simplified symbol resolution
   // scheme to approximate the full resolution a linker would do.
+  uint64_t Idx = 0;
   DenseSet<StringRef> PrevailingSymbols;
   for (auto &BitcodeInput : BitcodeInputFiles) {
+    // Get a semi-unique buffer identifier for Thin-LTO.
+    StringRef Identifier = Saver.save(
+        std::to_string(Idx++) + "." +
+        BitcodeInput.getBinary()->getMemoryBufferRef().getBufferIdentifier());
     MemoryBufferRef Buffer =
-        MemoryBufferRef(BitcodeInput.getBinary()->getImage(), "");
+        MemoryBufferRef(BitcodeInput.getBinary()->getImage(), Identifier);
     Expected<std::unique_ptr<lto::InputFile>> BitcodeFileOrErr =
         llvm::lto::InputFile::create(Buffer);
     if (!BitcodeFileOrErr)
@@ -1004,9 +1009,10 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     int FD = -1;
     auto &TempFile = Files[Task];
     StringRef Extension = (Triple.isNVPTX()) ? "s" : "o";
-    auto TempFileOrErr = createOutputFile(sys::path::filename(ExecutableName) +
-                                              "-device-" + Triple.getTriple(),
-                                          Extension);
+    auto TempFileOrErr =
+        createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
+                             Triple.getTriple() + "." + std::to_string(Task),
+                         Extension);
     if (!TempFileOrErr)
       reportError(TempFileOrErr.takeError());
     TempFile = *TempFileOrErr;
@@ -1024,8 +1030,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
                              "Errors encountered inside the LTO pipeline.");
 
   // If we are embedding bitcode we only need the intermediate output.
+  bool SingleOutput = Files.size() == 1;
   if (Args.hasArg(OPT_embed_bitcode)) {
-    if (BitcodeOutput.size() != 1 || !WholeProgram)
+    if (BitcodeOutput.size() != 1 || !SingleOutput)
       return createStringError(inconvertibleErrorCode(),
                                "Cannot embed bitcode with multiple files.");
     OutputFiles.push_back(static_cast<std::string>(BitcodeOutput.front()));
@@ -1035,7 +1042,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   // Is we are compiling for NVPTX we need to run the assembler first.
   if (Triple.isNVPTX()) {
     for (StringRef &File : Files) {
-      auto FileOrErr = nvptx::assemble(File, Args);
+      auto FileOrErr = nvptx::assemble(File, Args, !SingleOutput);
       if (!FileOrErr)
         return FileOrErr.takeError();
       File = *FileOrErr;
@@ -1302,10 +1309,11 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
 
     // Link the remaining device files, if necessary, using the device linker.
     llvm::Triple Triple(LinkerArgs.getLastArgValue(OPT_triple_EQ));
-    bool RequiresLinking = !Input.empty() || (!Args.hasArg(OPT_embed_bitcode) &&
-                                              !Triple.isNVPTX());
-    auto OutputOrErr = (RequiresLinking) ? linkDevice(InputFiles, LinkerArgs)
-                                         : InputFiles.front();
+    bool RequiresLinking =
+        !Args.hasArg(OPT_embed_bitcode) &&
+        !(Input.empty() && InputFiles.size() == 1 && Triple.isNVPTX());
+    auto OutputOrErr = RequiresLinking ? linkDevice(InputFiles, LinkerArgs)
+                                       : InputFiles.front();
     if (!OutputOrErr)
       return OutputOrErr.takeError();
 
