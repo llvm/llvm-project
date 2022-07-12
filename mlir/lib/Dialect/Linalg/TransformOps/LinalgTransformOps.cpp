@@ -294,11 +294,11 @@ DiagnosedSilenceableFailure transform::MultiTileSizesOp::applyToOne(
     return emitSilenceableError() << "could not generate tile size computation";
   }
 
+  AffineExpr s0 = builder.getAffineSymbolExpr(0);
+  AffineExpr s1 = builder.getAffineSymbolExpr(1);
   Operation *splitPoint =
-      builder
-          .createOrFold<arith::MulIOp>(target.getLoc(), spec->lowTileSize,
-                                       spec->lowTripCount)
-          .getDefiningOp();
+      makeComposedAffineApply(builder, target.getLoc(), s0 * s1,
+                              {spec->lowTileSize, spec->lowTripCount});
   Operation *lowTileSize = spec->lowTileSize.getDefiningOp();
   Operation *highTileSize = spec->highTileSize.getDefiningOp();
   assert(lowTileSize && highTileSize && splitPoint &&

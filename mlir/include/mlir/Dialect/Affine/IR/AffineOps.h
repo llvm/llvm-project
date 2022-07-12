@@ -25,7 +25,7 @@ namespace mlir {
 class AffineApplyOp;
 class AffineBound;
 class AffineValueMap;
-class IRRewriter;
+class RewriterBase;
 
 /// TODO: These should be renamed if they are on the mlir namespace.
 ///       Ideally, they should go in a mlir::affine:: namespace.
@@ -381,13 +381,37 @@ AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
 AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
                                       ValueRange values);
 
+/// Constructs an AffineApplyOp that applies `map` to `operands` after composing
+/// the map with the maps of any other AffineApplyOp supplying the operands,
+/// then immediately attempts to fold it. If folding results in a constant
+/// value, erases all created ops. The `map` must be a single-result affine map.
+OpFoldResult makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
+                                           AffineMap map,
+                                           ArrayRef<OpFoldResult> operands);
+/// Variant of `makeComposedFoldedAffineApply` that applies to an expression.
+OpFoldResult makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
+                                           AffineExpr expr,
+                                           ArrayRef<OpFoldResult> operands);
+
+/// Returns an AffineMinOp obtained by composing `map` and `operands` with
+/// AffineApplyOps supplying those operands.
+Value makeComposedAffineMin(OpBuilder &b, Location loc, AffineMap map,
+                            ValueRange operands);
+
+/// Constructs an AffineMinOp that computes a minimum across the results of
+/// applying `map` to `operands`, then immediately attempts to fold it. If
+/// folding results in a constant value, erases all created ops.
+OpFoldResult makeComposedFoldedAffineMin(RewriterBase &b, Location loc,
+                                         AffineMap map,
+                                         ArrayRef<OpFoldResult> operands);
+
 /// Returns the values obtained by applying `map` to the list of values.
 SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
                                        AffineMap map, ValueRange values);
 
 /// Returns the values obtained by applying `map` to the list of values, which
 /// may be known constants.
-SmallVector<OpFoldResult> applyMapToValues(IRRewriter &b, Location loc,
+SmallVector<OpFoldResult> applyMapToValues(RewriterBase &b, Location loc,
                                            AffineMap map,
                                            ArrayRef<OpFoldResult> values);
 
