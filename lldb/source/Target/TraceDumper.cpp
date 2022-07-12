@@ -145,16 +145,16 @@ public:
       m_s << "(error) " << *item.error;
     } else {
       m_s.Format("{0:x+16}", item.load_address);
-      if (item.symbol_info) {
+      if (item.symbol_info && item.symbol_info->instruction) {
         m_s << "    ";
-        item.symbol_info->instruction->Dump(&m_s, /*max_opcode_byte_size=*/0,
-                                            /*show_address=*/false,
-                                            /*show_bytes=*/false,
-                                            &item.symbol_info->exe_ctx,
-                                            &item.symbol_info->sc,
-                                            /*prev_sym_ctx=*/nullptr,
-                                            /*disassembly_addr_format=*/nullptr,
-                                            /*max_address_text_size=*/0);
+        item.symbol_info->instruction->Dump(
+            &m_s, /*max_opcode_byte_size=*/0,
+            /*show_address=*/false,
+            /*show_bytes=*/false, m_options.show_control_flow_kind,
+            &item.symbol_info->exe_ctx, &item.symbol_info->sc,
+            /*prev_sym_ctx=*/nullptr,
+            /*disassembly_addr_format=*/nullptr,
+            /*max_address_text_size=*/0);
       }
     }
 
@@ -200,6 +200,35 @@ public:
 
   ~OutputWriterJSON() { m_j.arrayEnd(); }
 
+  void DumpEvent(const TraceDumper::TraceItem &item) {
+    m_j.attribute("event", TraceCursor::EventKindToString(*item.event));
+  }
+
+  void DumpInstruction(const TraceDumper::TraceItem &item) {
+    m_j.attribute("loadAddress", formatv("{0:x}", item.load_address));
+    if (item.symbol_info) {
+      m_j.attribute("module", ToOptionalString(GetModuleName(item)));
+      m_j.attribute(
+          "symbol",
+          ToOptionalString(item.symbol_info->sc.GetFunctionName().AsCString()));
+
+      if (item.symbol_info->instruction) {
+        m_j.attribute("mnemonic",
+                      ToOptionalString(item.symbol_info->instruction->GetMnemonic(
+                          &item.symbol_info->exe_ctx)));
+      }
+
+      if (IsLineEntryValid(item.symbol_info->sc.line_entry)) {
+        m_j.attribute(
+            "source",
+            ToOptionalString(
+                item.symbol_info->sc.line_entry.file.GetPath().c_str()));
+        m_j.attribute("line", item.symbol_info->sc.line_entry.line);
+        m_j.attribute("column", item.symbol_info->sc.line_entry.column);
+      }
+    }
+  }
+
   void TraceItem(const TraceDumper::TraceItem &item) override {
     m_j.object([&] {
       m_j.attribute("id", item.id);
@@ -209,9 +238,7 @@ public:
             item.tsc ? Optional<std::string>(std::to_string(*item.tsc)) : None);
 
       if (item.event) {
-        m_j.object([&] {
-          m_j.attribute("event", TraceCursor::EventKindToString(*item.event));
-        });
+        DumpEvent(item);
         return;
       }
 
@@ -221,26 +248,7 @@ public:
       }
 
       // we know we are seeing an actual instruction
-      m_j.attribute("loadAddress", formatv("{0:x}", item.load_address));
-      if (item.symbol_info) {
-        m_j.attribute("module", ToOptionalString(GetModuleName(item)));
-        m_j.attribute("symbol",
-                      ToOptionalString(
-                          item.symbol_info->sc.GetFunctionName().AsCString()));
-        m_j.attribute(
-            "mnemonic",
-            ToOptionalString(item.symbol_info->instruction->GetMnemonic(
-                &item.symbol_info->exe_ctx)));
-
-        if (IsLineEntryValid(item.symbol_info->sc.line_entry)) {
-          m_j.attribute(
-              "source",
-              ToOptionalString(
-                  item.symbol_info->sc.line_entry.file.GetPath().c_str()));
-          m_j.attribute("line", item.symbol_info->sc.line_entry.line);
-          m_j.attribute("column", item.symbol_info->sc.line_entry.column);
-        }
-      }
+      DumpInstruction(item);
     });
   }
 
