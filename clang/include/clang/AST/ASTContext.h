@@ -130,6 +130,7 @@ class TemplateDecl;
 class TemplateParameterList;
 class TemplateTemplateParmDecl;
 class TemplateTypeParmDecl;
+class TypeConstraint;
 class UnresolvedSetIterator;
 class UsingShadowDecl;
 class VarTemplateDecl;
@@ -2663,6 +2664,18 @@ public:
   /// Determine whether two template parameters are similar enough
   /// that they may be used in declarations of the same template.
   bool isSameTemplateParameter(const NamedDecl *X, const NamedDecl *Y) const;
+
+  /// Determine whether two 'requires' expressions are similar enough that they
+  /// may be used in re-declarations.
+  ///
+  /// Use of 'requires' isn't mandatory, works with constraints expressed in
+  /// other ways too.
+  bool isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const;
+
+  /// Determine whether two type contraint are similar enough that they could
+  /// used in declarations of the same template.
+  bool isSameTypeConstraint(const TypeConstraint *XTC,
+                            const TypeConstraint *YTC) const;
 
   /// Determine whether two default template arguments are similar enough
   /// that they may be used in declarations of the same template.
