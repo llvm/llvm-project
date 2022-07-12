@@ -26,7 +26,7 @@ goto_target:
    * first pass through.
    */
   /* Get us to the right function.
-     CHECK-LABEL: define {{.*}} void @dr268() {{.*}} {
+     CHECK-LABEL: define{{.*}} void @dr268() {{.*}} {
 
      First is the initialization and goto.
      CHECK: store i32 5
