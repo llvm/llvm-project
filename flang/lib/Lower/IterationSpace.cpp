@@ -867,7 +867,7 @@ Fortran::lower::ExplicitIterSpace::findArgPosition(fir::ArrayLoadOp load) {
     llvm::Optional<size_t> optPos;
     if (ld != loadBindings.end() && ld->second == load)
       optPos = static_cast<size_t>(0u);
-    assert(optPos.hasValue() && "load does not correspond to lhs");
+    assert(optPos.has_value() && "load does not correspond to lhs");
     return optPos;
   }
   return llvm::None;

@@ -7291,14 +7291,14 @@ private:
 
   void setUnordered(bool b) { unordered = b; }
 
-  inline bool isPointerAssignment() const { return lbounds.hasValue(); }
+  inline bool isPointerAssignment() const { return lbounds.has_value(); }
 
   inline bool isBoundsSpec() const {
-    return isPointerAssignment() && !ubounds.hasValue();
+    return isPointerAssignment() && !ubounds.has_value();
   }
 
   inline bool isBoundsRemap() const {
-    return isPointerAssignment() && ubounds.hasValue();
+    return isPointerAssignment() && ubounds.has_value();
   }
 
   void setPointerAssignmentBounds(
