@@ -42,7 +42,7 @@ p Twine
 
 # CHECK: llvm::StringMap with 2 elements = {["foo"] = 123, ["bar"] = 456}
 py import sys
-py gdb.execute("p StringMap" if sys.version_info.major > 2 else "printf \"llvm::StringMap with 2 elements = {[\\\"foo\\\"] = 123, [\\\"bar\\\"] = 456}\"\n")
+py gdb.execute("p StringMap" if sys.version_info.major > 2 else "printf \"llvm::StringMap with 2 elements = {[\\\"foo\\\"] = 123, [\\\"bar\\\"] = 456}\"\n\n")
 
 # CHECK: {pointer = 0xabc, value = 1}
 p PointerIntPair
@@ -64,7 +64,7 @@ set print pretty
 # CHECK:     },
 # CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
 # CHECK:       prev = [[Node_14]],
-# CHECK:       next = [[SimpleIlist_Sentinel:0x.*]] <completed>
+# CHECK:       next = [[SimpleIlist_Sentinel:0x.*]] <SimpleIlist>
 # CHECK:     },
 # CHECK:     members of IlistNode:
 # CHECK:     Value = 13
@@ -87,7 +87,7 @@ set print pretty
 # CHECK:       next = [[Ilist_Sentinel]] <Ilist>
 # CHECK:     },
 # CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
-# CHECK:       prev = [[SimpleIlist_Sentinel]] <completed>,
+# CHECK:       prev = [[SimpleIlist_Sentinel]] <SimpleIlist>,
 # CHECK:       next = [[Node_14]]
 # CHECK:     },
 # CHECK:     members of IlistNode:
@@ -103,7 +103,7 @@ p Ilist
 # CHECK:       next = [[Ilist_Sentinel]] <Ilist>
 # CHECK:     },
 # CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
-# CHECK:       prev = [[SimpleIlist_Sentinel]] <completed>,
+# CHECK:       prev = [[SimpleIlist_Sentinel]] <SimpleIlist>,
 # CHECK:       next = [[Node_14]]
 # CHECK:     },
 # CHECK:     members of IlistNode:
@@ -128,7 +128,7 @@ p Ilist
 # CHECK:     },
 # CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
 # CHECK:       prev = [[Node_14]],
-# CHECK:       next = [[SimpleIlist_Sentinel]] <completed>
+# CHECK:       next = [[SimpleIlist_Sentinel]] <SimpleIlist>
 # CHECK:     },
 # CHECK:     members of IlistNode:
 # CHECK:     Value = 13
