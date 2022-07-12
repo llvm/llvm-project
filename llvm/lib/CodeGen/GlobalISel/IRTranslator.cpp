@@ -1629,27 +1629,26 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   return true;
 }
 
-void IRTranslator::getStackGuard(Register DstReg,
-                                 MachineIRBuilder &MIRBuilder) {
+Register IRTranslator::getStackGuard(LLT Ty, MachineIRBuilder &MIRBuilder) {
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  Register DstReg = MRI->createGenericVirtualRegister(Ty);
   MRI->setRegClass(DstReg, TRI->getPointerRegClass(*MF));
   auto MIB =
       MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD, {DstReg}, {});
 
   auto &TLI = *MF->getSubtarget().getTargetLowering();
-  Value *Global = TLI.getSDagStackGuard(*MF->getFunction().getParent());
-  if (!Global)
-    return;
+  if (Value *Global = TLI.getSDagStackGuard(*MF->getFunction().getParent())) {
+    unsigned AddrSpace = Global->getType()->getPointerAddressSpace();
+    LLT PtrTy = LLT::pointer(AddrSpace, DL->getPointerSizeInBits(AddrSpace));
 
-  unsigned AddrSpace = Global->getType()->getPointerAddressSpace();
-  LLT PtrTy = LLT::pointer(AddrSpace, DL->getPointerSizeInBits(AddrSpace));
-
-  MachinePointerInfo MPInfo(Global);
-  auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
-               MachineMemOperand::MODereferenceable;
-  MachineMemOperand *MemRef = MF->getMachineMemOperand(
-      MPInfo, Flags, PtrTy, DL->getPointerABIAlignment(AddrSpace));
-  MIB.setMemRefs({MemRef});
+    MachinePointerInfo MPInfo(Global);
+    auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
+                 MachineMemOperand::MODereferenceable;
+    MachineMemOperand *MemRef = MF->getMachineMemOperand(
+        MPInfo, Flags, PtrTy, DL->getPointerABIAlignment(AddrSpace));
+    MIB.setMemRefs({MemRef});
+  }
+  return DstReg;
 }
 
 bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
@@ -2073,17 +2072,15 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     llvm_unreachable("llvm.is.constant.* should have been lowered already");
 
   case Intrinsic::stackguard:
-    getStackGuard(getOrCreateVReg(CI), MIRBuilder);
+    getStackGuard(getLLTForType(*CI.getArgOperand(0)->getType(), *DL), MIRBuilder);
     return true;
   case Intrinsic::stackprotector: {
     const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
     LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
-    Register GuardVal;
-    if (TLI.useLoadStackGuardNode()) {
-      GuardVal = MRI->createGenericVirtualRegister(PtrTy);
-      getStackGuard(GuardVal, MIRBuilder);
-    } else
-      GuardVal = getOrCreateVReg(*CI.getArgOperand(0)); // The guard's value.
+    Register GuardVal =
+        TLI.useLoadStackGuardNode()
+            ? getStackGuard(PtrTy, MIRBuilder)
+            : getOrCreateVReg(*CI.getArgOperand(0)); // The guard's value.
 
     AllocaInst *Slot = cast<AllocaInst>(CI.getArgOperand(1));
     int FI = getOrCreateFrameIndex(*Slot);
@@ -3168,7 +3165,6 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
   Type *PtrIRTy = Type::getInt8PtrTy(MF->getFunction().getContext());
   const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
-  LLT PtrMemTy = getLLTForMVT(TLI.getPointerMemTy(*DL));
 
   MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
   int FI = MFI.getStackProtectorIndex();
@@ -3181,7 +3177,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // Generate code to load the content of the guard slot.
   Register GuardVal =
       CurBuilder
-          ->buildLoad(PtrMemTy, StackSlotPtr,
+          ->buildLoad(PtrTy, StackSlotPtr,
                       MachinePointerInfo::getFixedStack(*MF, FI), Align,
                       MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile)
           .getReg(0);
@@ -3228,16 +3224,14 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
   if (TLI.useLoadStackGuardNode()) {
-    Guard =
-        MRI->createGenericVirtualRegister(LLT::scalar(PtrTy.getSizeInBits()));
-    getStackGuard(Guard, *CurBuilder);
+    Guard = getStackGuard(PtrTy, *CurBuilder);
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
     const Value *IRGuard = TLI.getSDagStackGuard(M);
     Register GuardPtr = getOrCreateVReg(*IRGuard);
 
     Guard = CurBuilder
-                ->buildLoad(PtrMemTy, GuardPtr,
+                ->buildLoad(PtrTy, GuardPtr,
                             MachinePointerInfo::getFixedStack(*MF, FI), Align,
                             MachineMemOperand::MOLoad |
                                 MachineMemOperand::MOVolatile)

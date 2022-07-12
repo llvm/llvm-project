@@ -16,9 +16,9 @@ define void @caller() sspreq {
   ; CHECK-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.StackGuardSlot
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX2]](p0) :: (volatile load (s64) from %stack.0.StackGuardSlot)
-  ; CHECK-NEXT:   [[LOAD_STACK_GUARD2:%[0-9]+]]:gpr64sp(s64) = LOAD_STACK_GUARD :: (dereferenceable invariant load (p0) from @__stack_chk_guard)
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD_STACK_GUARD2]](s64), [[LOAD]]
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (volatile load (p0) from %stack.0.StackGuardSlot)
+  ; CHECK-NEXT:   [[LOAD_STACK_GUARD2:%[0-9]+]]:gpr64sp(p0) = LOAD_STACK_GUARD :: (dereferenceable invariant load (p0) from @__stack_chk_guard)
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD_STACK_GUARD2]](p0), [[LOAD]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
