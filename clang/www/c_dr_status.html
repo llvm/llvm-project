@@ -1500,19 +1500,19 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_261.htm">261</a></td>
     <td>NAD</td>
     <td>Constant expressions</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="262">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_262.htm">262</a></td>
     <td>C99</td>
     <td>Maximum size of bit fields</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="263">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_263.htm">263</a></td>
     <td>C99</td>
     <td>All-zero bits representations</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="264">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_264.htm">264</a></td>
@@ -1524,25 +1524,25 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_265.htm">265</a></td>
     <td>C99</td>
     <td>Preprocessor arithmetic</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="266">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_266.htm">266</a></td>
     <td>NAD</td>
     <td>Overflow of sizeof</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="267">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_267.htm">267</a></td>
     <td>C99</td>
     <td>Typos in 5.1.2.3, 7.24.4.4.5, 7.24.6.1, 7.24.6.1</td>
-    <td class="na" align="center">N/A</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="268">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_268.htm">268</a></td>
     <td>C99</td>
     <td>Jumps into iteration statements</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="269">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_269.htm">269</a></td>
@@ -1566,13 +1566,20 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_272.htm">272</a></td>
     <td>C99</td>
     <td>Type category</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="273">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_273.htm">273</a></td>
     <td>C99</td>
     <td>Meaning of __STDC_ISO_10646__</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">
+      <details><summary>Yes</summary>
+        The compiler portion of this DR is implemented in Clang, but the
+        <code>__STDC_ISO_10646__</code> macro is not defined by Clang; the
+        standard library behavior factors into whether this macro can or cannot
+        be defined.
+      </details>
+    </td>
   </tr>
   <tr id="274">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_274.htm">274</a></td>
@@ -1596,19 +1603,19 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_277.htm">277</a></td>
     <td>NAD</td>
     <td>Declarations within iteration statements</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="none" align="center">No</td>
   </tr>
   <tr id="278">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_278.htm">278</a></td>
     <td>C99</td>
     <td>Lacuna in character encodings</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="279">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_279.htm">279</a></td>
     <td>C99</td>
     <td>Wide character code values for members of the basic character set</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="280">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_280.htm">280</a></td>
@@ -1626,7 +1633,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_282.htm">282</a></td>
     <td>C99</td>
     <td>Flexible array members & struct padding</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="283">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_283.htm">283</a></td>
@@ -1644,7 +1651,12 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_285.htm">285</a></td>
     <td>C99</td>
     <td>Conversion of an imaginary type to _Bool</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="partial" align="center">
+      <details><summary>Partial</summary>
+        Clang detects use of the _Imaginary keyword but does not otherwise
+        support the type yet.
+      </details>
+    </td>
   </tr>
   <tr id="286">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_286.htm">286</a></td>
@@ -1668,7 +1680,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_289.htm">289</a></td>
     <td>C99</td>
     <td>Function prototype with [restrict]</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="290">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_290.htm">290</a></td>
@@ -1686,7 +1698,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_292.htm">292</a></td>
     <td>C99</td>
     <td>Use of the word variable</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="293">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_293.htm">293</a></td>
@@ -1704,7 +1716,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_295.htm">295</a></td>
     <td>C99</td>
     <td>Incomplete types for function parameters</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="296">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_296.htm">296</a></td>
@@ -1722,7 +1734,14 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_298.htm">298</a></td>
     <td>C99</td>
     <td>Validity of constant in unsigned long long range</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="partial" align="center">
+      <details><summary>Partial</summary>
+        Clang defines the behavior in this situation by automatically using
+        <code>long long</code> or <code>unsigned long long</code> as the
+        underlying type of the constant; however, Clang fails to diagnose the
+        extension in C89 mode with such constants.
+      </details>
+    </td>
   </tr>
   <tr id="299">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_299.htm">299</a></td>
