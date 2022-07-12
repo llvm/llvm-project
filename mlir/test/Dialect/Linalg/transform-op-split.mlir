@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s --test-transform-dialect-interpreter --canonicalize --split-input-file -verify-diagnostics | FileCheck %s --check-prefix=CANON
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
@@ -59,6 +60,8 @@ func.func @one_d_static(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tenso
 
 // CHECK-LABEL: @one_d_static_overflow
 // CHECK-SAME:  %[[IN:.+]]: tensor<10xf32>, %[[OUT:.+]]: tensor<10xf32>
+// CANON-LABEL:  @one_d_static_overflow
+// CANON-SAME:  %[[IN:.+]]: tensor<10xf32>, %[[OUT:.+]]: tensor<10xf32>
 func.func @one_d_static_overflow(%arg0: tensor<10xf32>, %arg1: tensor<10xf32>) -> tensor<10xf32> {
   // CHECK: %[[IN_SLICE_LOW:.+]] = tensor.extract_slice %[[IN]][0] [10] [1] : tensor<10xf32> to tensor<10xf32>
   // CHECK: %[[OUT_SLICE_LOW:.+]] = tensor.extract_slice %[[OUT]][0] [10] [1] : tensor<10xf32> to tensor<10xf32>
@@ -68,6 +71,16 @@ func.func @one_d_static_overflow(%arg0: tensor<10xf32>, %arg1: tensor<10xf32>) -
   // CHECK:   linalg.index 0
   // CHECK:   func.call @elem
   // CHECK: %[[RES_PARTIAL:.+]] = tensor.insert_slice %[[RES_SLICE_LOW]] into %[[OUT]][0] [10] [1]
+  //
+  // Due to overflow, the first part of the split computes everything and the
+  // insert/extract slices are folded away by the canonicalizer.
+  // CANON: %[[RES_PARTIAL:.+]] = linalg.generic
+  // CANON:   ins(%[[IN]]
+  // CANON:   outs(%[[OUT]]
+  // CANON:   linalg.index 0
+  // CANON:   func.call @elem
+  // The second part operates on zero-sized slices that are not currently
+  // folded away.
   //
   // CHECK: %[[IN_SLICE_HIGH:.+]] = tensor.extract_slice %[[IN]][10] [0] [1] : tensor<10xf32> to tensor<0xf32>
   // CHECK: %[[OUT_SLICE_HIGH:.+]] = tensor.extract_slice %[[RES_PARTIAL]][10] [0] [1] : tensor<10xf32> to tensor<0xf32>
@@ -118,13 +131,13 @@ transform.with_pdl_patterns {
 
 func.func private @get_size() -> index
 
-// CHECK: #[[$MAP_MIN_100:.+]] = affine_map<(d0, d1) -> (d0, 100)>
+// CHECK: #[[$MAP_MIN_100:.+]] = affine_map<()[s0] -> (s0, 100)>
 // CHECK: #[[$MAP_S_MINUS_100:.+]] = affine_map<()[s0] -> (-s0 + 100)>
 
 // CHECK-LABEL: @dynamic
 func.func @dynamic(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tensor<100xf32> {
   // CHECK: %[[SPLIT:.+]] = call @get_size
-  // CHECK: %[[SPLIT_LOW:.+]] = affine.min #[[$MAP_MIN_100]](%[[SPLIT]]
+  // CHECK: %[[SPLIT_LOW:.+]] = affine.min #[[$MAP_MIN_100]]()[%[[SPLIT]]
   // CHECK: %[[IN_SLICE_LOW:.+]] = tensor.extract_slice %[[IN:.+]][0] [%[[SPLIT_LOW]]] [1] : tensor<100xf32> to tensor<?xf32>
   // CHECK: %[[OUT_SLICE_LOW:.+]] = tensor.extract_slice %[[OUT:.+]][0] [%[[SPLIT_LOW]]] [1] : tensor<100xf32> to tensor<?xf32>
   // CHECK: %[[RES_SLICE_LOW:.+]] = linalg.generic
@@ -148,7 +161,8 @@ func.func @dynamic(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tensor<100
   }
   ins(%arg0: tensor<100xf32>) outs(%arg1: tensor<100xf32>) {
   ^bb0(%3: f32, %4: f32):
-    linalg.yield %3 : f32
+    %5 = arith.addf %3, %4 : f32
+    linalg.yield %5 : f32
   } -> tensor<100xf32>
   return %1 : tensor<100xf32>
 }

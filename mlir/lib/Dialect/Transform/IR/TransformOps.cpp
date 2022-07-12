@@ -23,6 +23,16 @@
 
 using namespace mlir;
 
+static ParseResult parsePDLOpTypedResults(
+    OpAsmParser &parser, SmallVectorImpl<Type> &types,
+    const SmallVectorImpl<OpAsmParser::UnresolvedOperand> &handles) {
+  types.resize(handles.size(), pdl::OperationType::get(parser.getContext()));
+  return success();
+}
+
+static void printPDLOpTypedResults(OpAsmPrinter &, Operation *, TypeRange,
+                                   ValueRange) {}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
 
@@ -308,16 +318,8 @@ transform::MergeHandlesOp::apply(transform::TransformResults &results,
 
 void transform::MergeHandlesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (Value operand : getHandles()) {
-    effects.emplace_back(MemoryEffects::Read::get(), operand,
-                         transform::TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Free::get(), operand,
-                         transform::TransformMappingResource::get());
-  }
-  effects.emplace_back(MemoryEffects::Allocate::get(), getResult(),
-                       transform::TransformMappingResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(), getResult(),
-                       transform::TransformMappingResource::get());
+  consumesHandle(getHandles(), effects);
+  producesHandle(getResult(), effects);
 
   // There are no effects on the Payload IR as this is only a handle
   // manipulation.
@@ -355,6 +357,33 @@ transform::PDLMatchOp::apply(transform::TransformResults &results,
 }
 
 //===----------------------------------------------------------------------===//
+// ReplicateOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ReplicateOp::apply(transform::TransformResults &results,
+                              transform::TransformState &state) {
+  unsigned numRepetitions = state.getPayloadOps(getPattern()).size();
+  for (const auto &en : llvm::enumerate(getHandles())) {
+    Value handle = en.value();
+    ArrayRef<Operation *> current = state.getPayloadOps(handle);
+    SmallVector<Operation *> payload;
+    payload.reserve(numRepetitions * current.size());
+    for (unsigned i = 0; i < numRepetitions; ++i)
+      llvm::append_range(payload, current);
+    results.set(getReplicated()[en.index()].cast<OpResult>(), payload);
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::ReplicateOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getPattern(), effects);
+  consumesHandle(getHandles(), effects);
+  producesHandle(getReplicated(), effects);
+}
+
+//===----------------------------------------------------------------------===//
 // SequenceOp
 //===----------------------------------------------------------------------===//
 
@@ -384,16 +413,11 @@ transform::SequenceOp::apply(transform::TransformResults &results,
 /// the Transform IR. That is, if it may have a Free effect on it.
 static bool isValueUsePotentialConsumer(OpOperand &use) {
   // Conservatively assume the effect being present in absence of the interface.
-  auto memEffectInterface = dyn_cast<MemoryEffectOpInterface>(use.getOwner());
-  if (!memEffectInterface)
+  auto iface = dyn_cast<transform::TransformOpInterface>(use.getOwner());
+  if (!iface)
     return true;
 
-  SmallVector<MemoryEffects::EffectInstance, 2> effects;
-  memEffectInterface.getEffectsOnValue(use.get(), effects);
-  return llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
-    return isa<transform::TransformMappingResource>(effect.getResource()) &&
-           isa<MemoryEffects::Free>(effect.getEffect());
-  });
+  return isHandleConsumed(use.get(), iface);
 }
 
 LogicalResult

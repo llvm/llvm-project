@@ -31,7 +31,7 @@ int inline convert_char(Writer *writer, const FormatSection &to_conv) {
   } else {
     RET_IF_RESULT_NEGATIVE(writer->write(&c, 1));
   }
-  return 0;
+  return WRITE_OK;
 }
 
 } // namespace printf_core
