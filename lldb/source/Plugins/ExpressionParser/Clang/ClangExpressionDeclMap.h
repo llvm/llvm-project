@@ -353,7 +353,7 @@ private:
   /// The following values contain layout information for the materialized
   /// struct, but are not specific to a single materialization
   struct StructVars {
-    StructVars() : m_result_name(), m_object_pointer_type(nullptr, nullptr) {}
+    StructVars() = default;
 
     lldb::offset_t m_struct_alignment =
         0;                    ///< The alignment of the struct in bytes.
@@ -364,8 +364,6 @@ private:
                /// added since).
     ConstString
         m_result_name; ///< The name of the result variable ($1, for example)
-    TypeFromUser m_object_pointer_type; ///< The type of the "this" variable, if
-                                        ///one exists
   };
 
   std::unique_ptr<StructVars> m_struct_vars;
