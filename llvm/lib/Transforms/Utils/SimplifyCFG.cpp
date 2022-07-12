@@ -2285,7 +2285,9 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
       continue;
 
     Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(), nullptr,
-                                   CmpInst::BAD_ICMP_PREDICATE, CostKind);
+                                   CmpInst::BAD_ICMP_PREDICATE, CostKind,
+                                   nullptr,
+                                   ArrayRef<const Value *>({OrigV, ThenV}));
 
     // Don't convert to selects if we could remove undefined behavior instead.
     if (passingValueIsAlwaysUndefined(OrigV, &PN) ||
@@ -2301,6 +2303,7 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
     if ((ThenCE && !isSafeToSpeculativelyExecute(ThenCE)) ||
         (OrigCE && !isSafeToSpeculativelyExecute(OrigCE)))
       return false;
+
     InstructionCost OrigCost = OrigCE ? computeSpeculationCost(OrigCE, TTI) : 0;
     InstructionCost ThenCost = ThenCE ? computeSpeculationCost(ThenCE, TTI) : 0;
     InstructionCost MaxCost =
@@ -2478,6 +2481,9 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   Convert |= validateAndCostRequiredSelects(BB, ThenBB, EndBB,
                                             SpeculatedInstructions,
                                             Cost, TTI);
+  if (TTI.canMacroFuseCmp())
+    Cost += TargetTransformInfo::TCC_Basic * 2;
+
   if (!Convert || Cost > Budget)
     return false;
 

@@ -530,7 +530,9 @@ public:
   InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                      CmpInst::Predicate VecPred,
                                      TTI::TargetCostKind CostKind,
-                                     const Instruction *I) const {
+                                     const Instruction *I,
+                                     ArrayRef<const Value *> Operands =
+                                       ArrayRef<const Value *>() ) const {
     return 1;
   }
 

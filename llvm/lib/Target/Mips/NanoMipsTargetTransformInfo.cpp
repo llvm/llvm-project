@@ -97,3 +97,44 @@ void NanoMipsTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.Threshold = 60;
   UP.OptSizeThreshold = 0;
 }
+
+
+/// Cost for compare and select. When selecting between constant 0 and
+/// 1 values, this can be implemented as just a comparison, making the
+/// selection free.
+InstructionCost NanoMipsTTIImpl::getCmpSelInstrCost (
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind,
+    const Instruction *I,
+    ArrayRef<const Value *> Operands) const {
+
+  if (I != nullptr) {
+    // Decode compare and select
+    if (I->getOpcode() == Instruction::Select) {
+      const ConstantInt *A = dyn_cast<ConstantInt>(I->getOperand(1)),
+        *B = dyn_cast<ConstantInt>(I->getOperand(2));
+      if (A && B) {
+        uint64_t AV = A->getZExtValue(), BV = B->getZExtValue();
+
+        if ((AV == 0 && BV == 1) || (AV == 1 && BV == 0)) {
+          return TTI::TCC_Free;
+        }
+      }
+    }
+    // XXX also compare and phi?
+  } else if (Operands.size() == 2) {
+
+    // Putative operands passed
+    const ConstantInt *A = dyn_cast<ConstantInt>(Operands[0]),
+      *B = dyn_cast<ConstantInt>(Operands[1]);
+    if (A && B) {
+      uint64_t AV = A->getZExtValue(), BV = B->getZExtValue();
+      if (AV == 0 && BV == 1 || AV == 1 && BV == 0) {
+        return TTI::TCC_Free;
+      }
+    }
+
+  }
+
+  return TTI::TCC_Basic;
+}
