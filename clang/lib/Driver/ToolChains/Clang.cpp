@@ -3231,16 +3231,6 @@ static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
   Args.AddAllArgValues(CmdArgs, options::OPT_Xanalyzer);
 }
 
-static bool isValidSymbolName(StringRef S) {
-  if (S.empty())
-    return false;
-
-  if (std::isdigit(S[0]))
-    return false;
-
-  return llvm::all_of(S, [](char C) { return std::isalnum(C) || C == '_'; });
-}
-
 static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
                              const ArgList &Args, ArgStringList &CmdArgs,
                              bool KernelOrKext) {
@@ -3368,16 +3358,6 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     }
     if (EffectiveTriple.isAArch64() && Value != "sp_el0") {
       D.Diag(diag::err_drv_invalid_value) << A->getOption().getName() << Value;
-      return;
-    }
-    A->render(Args, CmdArgs);
-  }
-
-  if (Arg *A = Args.getLastArg(options::OPT_mstack_protector_guard_symbol_EQ)) {
-    StringRef Value = A->getValue();
-    if (!isValidSymbolName(Value)) {
-      D.Diag(diag::err_drv_argument_only_allowed_with)
-          << A->getOption().getName() << "legal symbol name";
       return;
     }
     A->render(Args, CmdArgs);
