@@ -30,7 +30,7 @@ int inline convert_pointer(Writer *writer, const FormatSection &to_conv) {
     hex_conv.conv_val_raw = reinterpret_cast<uintptr_t>(to_conv.conv_val_ptr);
     return convert_hex(writer, hex_conv);
   }
-  return 0;
+  return WRITE_OK;
 }
 
 } // namespace printf_core

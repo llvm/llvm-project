@@ -228,6 +228,11 @@ genCopyinClause(Fortran::lower::AbstractConverter &converter,
       }
     }
   }
+  // [OMP 5.0, 2.19.6.1] The copy is done after the team is formed and prior to
+  // the execution of the associated structured block. Emit implicit barrier to
+  // synchronize threads and avoid data races on propagation master's thread
+  // values of threadprivate variables to local instances of that variables of
+  // all other implicit threads.
   if (hasCopyin)
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
   firOpBuilder.restoreInsertionPoint(insPt);

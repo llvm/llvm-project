@@ -202,7 +202,7 @@ public:
   ///   frames may be unable to provide this value; they will return false.
   bool GetFrameBaseValue(Scalar &value, Status *error_ptr);
 
-  /// Get the DWARFExpression corresponding to the Canonical Frame Address.
+  /// Get the DWARFExpressionList corresponding to the Canonical Frame Address.
   ///
   /// Often a register (bp), but sometimes a register + offset.
   ///
@@ -212,7 +212,7 @@ public:
   ///
   /// \return
   ///   Returns the corresponding DWARF expression, or NULL.
-  DWARFExpression *GetFrameBaseExpression(Status *error_ptr);
+  DWARFExpressionList *GetFrameBaseExpression(Status *error_ptr);
 
   /// Get the current lexical scope block for this StackFrame, if possible.
   ///

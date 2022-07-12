@@ -405,7 +405,7 @@ func.func @simple_store_missing_operand(%arg0 : f32) -> () {
 
 func.func @simple_store_missing_operand(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
-  // expected-error @+1 {{custom op 'spv.Store' expected 2 operands}} : f32
+  // expected-error @+1 {{custom op 'spv.Store' expected 2 operands}}
   spv.Store  "Function" %0 : f32
   return
 }

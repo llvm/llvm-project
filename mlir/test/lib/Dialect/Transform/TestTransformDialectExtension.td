@@ -48,7 +48,7 @@ def TestConsumeOperandIfMatchesParamOrFail
        [DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins 
     Arg<PDL_Operation, "",
-        [TransformMappingWrite, TransformMappingFree]>:$operand,
+        [TransformMappingRead, TransformMappingFree]>:$operand,
     I64Attr:$parameter);
   let assemblyFormat = "$operand `[` $parameter `]` attr-dict";
   let cppNamespace = "::mlir::test";
@@ -210,6 +210,15 @@ def TestMixedSuccessAndSilenceableOp
         ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
         ::mlir::transform::TransformState &state);
   }];
+}
+
+def TestPrintNumberOfAssociatedPayloadIROps
+  : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_ops",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let arguments = (ins PDL_Operation:$handle);
+  let assemblyFormat = "$handle attr-dict";
+  let cppNamespace = "::mlir::test";
 }
 
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD
