@@ -976,6 +976,7 @@ void DWARFLinker::DIECloner::cloneExpression(
       // instead indicate the generic type. The same holds for
       // DW_OP_reinterpret, which is currently not supported.
       if (RefOffset > 0 || Op.getCode() != dwarf::DW_OP_convert) {
+        RefOffset += Unit.getOrigUnit().getOffset();
         auto RefDie = Unit.getOrigUnit().getDIEForOffset(RefOffset);
         CompileUnit::DIEInfo &Info = Unit.getInfo(RefDie);
         if (DIE *Clone = Info.Clone)
