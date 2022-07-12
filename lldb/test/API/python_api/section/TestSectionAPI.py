@@ -37,14 +37,3 @@ class SectionAPITestCase(TestBase):
 
         self.assertIsNotNone(data_section)
         self.assertEqual(data_section.target_byte_size, 1)
-
-    def test_get_alignment(self):
-        exe = self.getBuildArtifact("aligned.out")
-        self.yaml2obj("aligned.yaml", exe)
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # exe contains a single section aligned to 0x1000
-        section = target.modules[0].sections[0]
-        self.assertEqual(section.GetAlignment(), 0x1000)
-        self.assertEqual(section.alignment, 0x1000)
