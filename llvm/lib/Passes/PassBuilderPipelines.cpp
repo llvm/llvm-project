@@ -1728,8 +1728,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // in ICP (which is performed earlier than this in the regular LTO pipeline).
   MPM.addPass(LowerTypeTestsPass(nullptr, nullptr, true));
 
-  // Enable splitting late in the FullLTO post-link pipeline. This is done in
-  // the same stage in the old pass manager (\ref addLateLTOOptimizationPasses).
+  // Enable splitting late in the FullLTO post-link pipeline.
   if (EnableHotColdSplit)
     MPM.addPass(HotColdSplittingPass());
 
