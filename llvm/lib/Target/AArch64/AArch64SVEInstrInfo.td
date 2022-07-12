@@ -875,6 +875,16 @@ let Predicates = [HasSVEorSME] in {
   defm LD1RQ_W      : sve_mem_ldqr_ss<0b10, "ld1rqw", Z_s, ZPR32, GPR64NoXZRshifted32>;
   defm LD1RQ_D      : sve_mem_ldqr_ss<0b11, "ld1rqd", Z_d, ZPR64, GPR64NoXZRshifted64>;
 
+  let AddedComplexity = 1 in {
+  class LD1RQPat<ValueType vt1, ValueType vt2, SDPatternOperator op, Instruction load_instr, Instruction ptrue> :
+          Pat<(vt1 (op (vt1 (vector_insert_subvec (vt1 undef), (vt2 (load GPR64sp:$Xn)), (i64 0))), (i64 0))),
+          (load_instr (ptrue 31), GPR64sp:$Xn, 0)>;
+  }
+  def : LD1RQPat<nxv16i8, v16i8, AArch64duplane128, LD1RQ_B_IMM, PTRUE_B>;
+  def : LD1RQPat<nxv8i16, v8i16, AArch64duplane128, LD1RQ_H_IMM, PTRUE_H>;
+  def : LD1RQPat<nxv4i32, v4i32, AArch64duplane128, LD1RQ_W_IMM, PTRUE_S>;
+  def : LD1RQPat<nxv2i64, v2i64, AArch64duplane128, LD1RQ_D_IMM, PTRUE_D>;
+
   // continuous load with reg+reg addressing.
   defm LD1B    : sve_mem_cld_ss<0b0000, "ld1b",  Z_b, ZPR8,  GPR64NoXZRshifted8>;
   defm LD1B_H  : sve_mem_cld_ss<0b0001, "ld1b",  Z_h, ZPR16, GPR64NoXZRshifted8>;
