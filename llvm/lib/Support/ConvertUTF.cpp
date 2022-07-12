@@ -417,6 +417,16 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd) {
     return isLegalUTF8(source, length);
 }
 
+/*
+ * Exported function to return the size of the first utf-8 code unit sequence,
+ * Or 0 if the sequence is not valid;
+ */
+unsigned getUTF8SequenceSize(const UTF8 *source, const UTF8 *sourceEnd) {
+  int length = trailingBytesForUTF8[*source] + 1;
+  return (length <= sourceEnd - source && isLegalUTF8(source, length)) ? length
+                                                                       : 0;
+}
+
 /* --------------------------------------------------------------------- */
 
 static unsigned
