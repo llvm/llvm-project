@@ -8,6 +8,7 @@
 
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 
+#include "clang/Basic/MakeSupport.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
@@ -112,7 +113,7 @@ serializeCompilerInvocation(const CompilerInvocation &CI) {
 
 static std::vector<std::string> splitString(std::string S, char Separator) {
   SmallVector<StringRef> Segments;
-  StringRef(S).split(Segments, Separator);
+  StringRef(S).split(Segments, Separator, /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   std::vector<std::string> Result;
   Result.reserve(Segments.size());
   for (StringRef Segment : Segments)
@@ -135,10 +136,17 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
     CI.getDiagnosticOpts().DiagnosticSerializationFile =
         LookupModuleOutput(ID, ModuleOutputKind::DiagnosticSerializationFile);
   if (HadDependencyFile) {
-    CI.getDependencyOutputOpts().OutputFile =
+    DependencyOutputOptions &DepOpts = CI.getDependencyOutputOpts();
+    DepOpts.OutputFile =
         LookupModuleOutput(ID, ModuleOutputKind::DependencyFile);
-    CI.getDependencyOutputOpts().Targets = splitString(
+    DepOpts.Targets = splitString(
         LookupModuleOutput(ID, ModuleOutputKind::DependencyTargets), '\0');
+    if (!DepOpts.OutputFile.empty() && DepOpts.Targets.empty()) {
+      // Fallback to -o as dependency target, as in the driver.
+      SmallString<128> Target;
+      quoteMakeTarget(FrontendOpts.OutputFile, Target);
+      DepOpts.Targets.push_back(std::string(Target));
+    }
   }
 
   for (ModuleID MID : ClangModuleDeps)
