@@ -85,7 +85,7 @@ Error ARMAttributeParser::CPU_arch(AttrType tag) {
   static const char *strings[] = {
     "Pre-v4", "ARM v4", "ARM v4T", "ARM v5T", "ARM v5TE", "ARM v5TEJ", "ARM v6",
     "ARM v6KZ", "ARM v6T2", "ARM v6K", "ARM v7", "ARM v6-M", "ARM v6S-M",
-    "ARM v7E-M", "ARM v8", nullptr,
+    "ARM v7E-M", "ARM v8-A", "ARM v8-R",
     "ARM v8-M Baseline", "ARM v8-M Mainline", nullptr, nullptr, nullptr,
     "ARM v8.1-M Mainline", "ARM v9-A"
   };
