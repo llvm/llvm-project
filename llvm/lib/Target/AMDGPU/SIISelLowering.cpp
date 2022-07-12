@@ -2113,7 +2113,8 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
                                            SIMachineFunctionInfo &Info,
                                            CallingConv::ID CallConv,
                                            bool IsShader) const {
-  if (Subtarget->hasUserSGPRInit16Bug()) {
+  if (Subtarget->hasUserSGPRInit16Bug() && !Subtarget->isAmdPalOS()) {
+    // Note: user SGPRs are handled by the front-end for pal based shaders
     // Pad up the used user SGPRs with dead inputs.
     unsigned CurrentUserSGPRs = Info.getNumUserSGPRs();
 
@@ -2176,7 +2177,8 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(PrivateSegmentWaveByteOffsetReg);
   }
 
-  assert(!Subtarget->hasUserSGPRInit16Bug() || Info.getNumPreloadedSGPRs() >= 16);
+  assert(!Subtarget->hasUserSGPRInit16Bug() || Subtarget->isAmdPalOS() ||
+         Info.getNumPreloadedSGPRs() >= 16);
 }
 
 static void reservePrivateMemoryRegs(const TargetMachine &TM,
