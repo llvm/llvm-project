@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11 -pedantic -triple=x86_64-linux-gnu -Wno-invalid-utf8
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11 -pedantic -triple=x86_64-linux-gnu
 
 int f(); // expected-note {{declared here}}
 
