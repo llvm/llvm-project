@@ -23,9 +23,9 @@ Search,max_element,Nikolas Klauser,`D117523 <https://llvm.org/D117523>`_,✅
 Search,minmax_element,Nikolas Klauser,`D120637 <https://llvm.org/D120637>`_,✅
 Search,count,Nikolas Klauser,`D121523 <https://llvm.org/D121523>`_,✅
 Search,count_if,Nikolas Klauser,`D121523 <https://llvm.org/D121523>`_,✅
-Search,search,Nikolas Klauser,`D124079 <https://llvm.org/D124079>`_,Under review
-Search,search_n,Nikolas Klauser,`D124079 <https://llvm.org/D124079>`_,Under review
-Search,find_end,Nikolas Klauser,`D124079 <https://llvm.org/D124079>`_,Under review
+Search,search,Nikolas Klauser,`D124079 <https://llvm.org/D124079>`_,✅
+Search,search_n,Nikolas Klauser,`D124079 <https://llvm.org/D124079>`_,✅
+Search,find_end,Nikolas Klauser,`D124079 <https://llvm.org/D124079>`_,✅
 Read-only,is_partitioned,Nikolas Klauser,`D124440 <https://llvm.org/D124440>`_,✅
 Read-only,is_sorted,Nikolas Klauser,`D125608 <https://llvm.org/D125608>`_,✅
 Read-only,is_sorted_until,Nikolas Klauser,`D125608 <https://llvm.org/D125608>`_,✅

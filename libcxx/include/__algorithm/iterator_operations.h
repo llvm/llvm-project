@@ -39,6 +39,7 @@ struct _IterOps<_RangeAlgPolicy> {
   static constexpr auto __iter_move = ranges::iter_move;
   static constexpr auto iter_swap = ranges::iter_swap;
   static constexpr auto next = ranges::next;
+  static constexpr auto __advance_to = ranges::advance;
 };
 #endif
 
