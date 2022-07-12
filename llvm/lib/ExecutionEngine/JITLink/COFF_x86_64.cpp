@@ -120,10 +120,6 @@ private:
         orc::ExecutorAddr(FixupSect.getAddress()) + Rel.getOffset();
     Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
 
-    // Get a pointer to the fixup content.
-    const void *FixupContent = BlockToFix.getContent().data() +
-                               (FixupAddress - BlockToFix.getAddress());
-
     Edge::Kind Kind = Edge::Invalid;
 
     switch (*RelocKind) {
