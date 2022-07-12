@@ -15,7 +15,9 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_DEBUGSUPPORT_H_
 
 #include <string>
+#include <vector>
 
+#include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 
@@ -32,6 +34,28 @@ namespace dataflow {
 std::string debugString(
     const BoolValue &B,
     llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
+
+/// Returns a string representation for `Constraints` - a collection of boolean
+/// formulas and the `Result` of satisfiability checking.
+///
+/// Atomic booleans appearing in `Constraints` and `Result` are assigned to
+/// labels either specified in `AtomNames` or created by default rules as B0,
+/// B1, ...
+///
+/// Requirements:
+///
+///   Names assigned to atoms should not be repeated in `AtomNames`.
+std::string debugString(
+    const std::vector<BoolValue *> &Constraints, const Solver::Result &Result,
+    llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
+inline std::string debugString(
+    const llvm::DenseSet<BoolValue *> &Constraints,
+    const Solver::Result &Result,
+    llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}}) {
+  std::vector<BoolValue *> ConstraintsVec(Constraints.begin(),
+                                          Constraints.end());
+  return debugString(ConstraintsVec, Result, std::move(AtomNames));
+}
 
 } // namespace dataflow
 } // namespace clang

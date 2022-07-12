@@ -9,6 +9,7 @@
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "TestingSupport.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -187,4 +188,242 @@ TEST(BoolValueDebugStringTest, ComplexBooleanWithSomeNames) {
               StrEq(Expected));
 }
 
+Solver::Result CheckSAT(std::vector<BoolValue *> Constraints) {
+  llvm::DenseSet<BoolValue *> ConstraintsSet(Constraints.begin(),
+                                             Constraints.end());
+  return WatchedLiteralsSolver().solve(std::move(ConstraintsSet));
+}
+
+TEST(SATCheckDebugStringTest, AtomicBoolean) {
+  // B0
+  ConstraintContext Ctx;
+  std::vector<BoolValue *> Constraints({Ctx.atom()});
+  auto Result = CheckSAT(Constraints);
+
+  auto Expected = R"(
+Constraints
+------------
+B0
+------------
+Satisfiable.
+
+B0 = True
+)";
+  EXPECT_THAT(debugString(Constraints, Result), StrEq(Expected));
+}
+
+TEST(SATCheckDebugStringTest, AtomicBooleanAndNegation) {
+  // B0, !B0
+  ConstraintContext Ctx;
+  auto B0 = Ctx.atom();
+  std::vector<BoolValue *> Constraints({B0, Ctx.neg(B0)});
+  auto Result = CheckSAT(Constraints);
+
+  auto Expected = R"(
+Constraints
+------------
+B0
+
+(not
+    B0)
+------------
+Unsatisfiable.
+
+)";
+  EXPECT_THAT(debugString(Constraints, Result), StrEq(Expected));
+}
+
+TEST(SATCheckDebugStringTest, MultipleAtomicBooleans) {
+  // B0, B1
+  ConstraintContext Ctx;
+  std::vector<BoolValue *> Constraints({Ctx.atom(), Ctx.atom()});
+  auto Result = CheckSAT(Constraints);
+
+  auto Expected = R"(
+Constraints
+------------
+B0
+
+B1
+------------
+Satisfiable.
+
+B0 = True
+B1 = True
+)";
+  EXPECT_THAT(debugString(Constraints, Result), StrEq(Expected));
+}
+
+TEST(SATCheckDebugStringTest, Implication) {
+  // B0, B0 => B1
+  ConstraintContext Ctx;
+  auto B0 = Ctx.atom();
+  auto B1 = Ctx.atom();
+  auto Impl = Ctx.disj(Ctx.neg(B0), B1);
+  std::vector<BoolValue *> Constraints({B0, Impl});
+  auto Result = CheckSAT(Constraints);
+
+  auto Expected = R"(
+Constraints
+------------
+B0
+
+(or
+    (not
+        B0)
+    B1)
+------------
+Satisfiable.
+
+B0 = True
+B1 = True
+)";
+  EXPECT_THAT(debugString(Constraints, Result), StrEq(Expected));
+}
+
+TEST(SATCheckDebugStringTest, Iff) {
+  // B0, B0 <=> B1
+  ConstraintContext Ctx;
+  auto B0 = Ctx.atom();
+  auto B1 = Ctx.atom();
+  auto Iff = Ctx.conj(Ctx.disj(Ctx.neg(B0), B1), Ctx.disj(B0, Ctx.neg(B1)));
+  std::vector<BoolValue *> Constraints({B0, Iff});
+  auto Result = CheckSAT(Constraints);
+
+  auto Expected = R"(
+Constraints
+------------
+B0
+
+(and
+    (or
+        (not
+            B0)
+        B1)
+    (or
+        B0
+        (not
+            B1)))
+------------
+Satisfiable.
+
+B0 = True
+B1 = True
+)";
+  EXPECT_THAT(debugString(Constraints, Result), StrEq(Expected));
+}
+
+TEST(SATCheckDebugStringTest, Xor) {
+  // B0, XOR(B0, B1)
+  ConstraintContext Ctx;
+  auto B0 = Ctx.atom();
+  auto B1 = Ctx.atom();
+  auto XOR = Ctx.disj(Ctx.conj(B0, Ctx.neg(B1)), Ctx.conj(Ctx.neg(B0), B1));
+  std::vector<BoolValue *> Constraints({B0, XOR});
+  auto Result = CheckSAT(Constraints);
+
+  auto Expected = R"(
+Constraints
+------------
+B0
+
+(or
+    (and
+        B0
+        (not
+            B1))
+    (and
+        (not
+            B0)
+        B1))
+------------
+Satisfiable.
+
+B0 = True
+B1 = False
+)";
+  EXPECT_THAT(debugString(Constraints, Result), StrEq(Expected));
+}
+
+TEST(SATCheckDebugStringTest, ComplexBooleanWithNames) {
+  // Cond, (Cond ^ Then ^ !Else) v (!Cond ^ !Then ^ Else)
+  ConstraintContext Ctx;
+  auto Cond = cast<AtomicBoolValue>(Ctx.atom());
+  auto Then = cast<AtomicBoolValue>(Ctx.atom());
+  auto Else = cast<AtomicBoolValue>(Ctx.atom());
+  auto B = Ctx.disj(Ctx.conj(Cond, Ctx.conj(Then, Ctx.neg(Else))),
+                    Ctx.conj(Ctx.neg(Cond), Ctx.conj(Ctx.neg(Then), Else)));
+  std::vector<BoolValue *> Constraints({Cond, B});
+  auto Result = CheckSAT(Constraints);
+
+  auto Expected = R"(
+Constraints
+------------
+Cond
+
+(or
+    (and
+        Cond
+        (and
+            Then
+            (not
+                Else)))
+    (and
+        (not
+            Cond)
+        (and
+            (not
+                Then)
+            Else)))
+------------
+Satisfiable.
+
+Cond = True
+Else = False
+Then = True
+)";
+  EXPECT_THAT(debugString(Constraints, Result,
+                          {{Cond, "Cond"}, {Then, "Then"}, {Else, "Else"}}),
+              StrEq(Expected));
+}
+
+TEST(SATCheckDebugStringTest, ComplexBooleanWithLongNames) {
+  // ThisIntEqZero, !IntsAreEq, ThisIntEqZero ^ OtherIntEqZero => IntsAreEq
+  ConstraintContext Ctx;
+  auto IntsAreEq = cast<AtomicBoolValue>(Ctx.atom());
+  auto ThisIntEqZero = cast<AtomicBoolValue>(Ctx.atom());
+  auto OtherIntEqZero = cast<AtomicBoolValue>(Ctx.atom());
+  auto BothZeroImpliesEQ =
+      Ctx.disj(Ctx.neg(Ctx.conj(ThisIntEqZero, OtherIntEqZero)), IntsAreEq);
+  std::vector<BoolValue *> Constraints(
+      {ThisIntEqZero, Ctx.neg(IntsAreEq), BothZeroImpliesEQ});
+  auto Result = CheckSAT(Constraints);
+
+  auto Expected = R"(
+Constraints
+------------
+ThisIntEqZero
+
+(not
+    IntsAreEq)
+
+(or
+    (not
+        (and
+            ThisIntEqZero
+            OtherIntEqZero))
+    IntsAreEq)
+------------
+Satisfiable.
+
+IntsAreEq      = False
+OtherIntEqZero = False
+ThisIntEqZero  = True
+)";
+  EXPECT_THAT(debugString(Constraints, Result,
+                          {{IntsAreEq, "IntsAreEq"},
+                           {ThisIntEqZero, "ThisIntEqZero"},
+                           {OtherIntEqZero, "OtherIntEqZero"}}),
+              StrEq(Expected));
+}
 } // namespace
