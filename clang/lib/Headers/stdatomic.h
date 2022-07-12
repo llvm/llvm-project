@@ -158,10 +158,6 @@ typedef _Atomic(uintmax_t)          atomic_uintmax_t;
 typedef struct atomic_flag { atomic_bool _Value; } atomic_flag;
 
 #define ATOMIC_FLAG_INIT { 0 }
-#if __cplusplus >= 202002L && !defined(_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS)
-/* ATOMIC_FLAG_INIT was deprecated in C++20 but is not deprecated in C. */
-#pragma clang deprecated(ATOMIC_FLAG_INIT)
-#endif
 
 /* These should be provided by the libc implementation. */
 #ifdef __cplusplus
