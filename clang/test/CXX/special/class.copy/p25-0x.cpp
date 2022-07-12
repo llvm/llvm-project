@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -verify %s
-// RUN: %clang_cc1 -std=c++11 -verify %s -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
 
 // expected-no-diagnostics
 

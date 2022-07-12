@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -fcxx-exceptions %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -fcxx-exceptions -Wno-deprecated-builtins %s
 
 void fn() = default; // expected-error {{only special member}}
 struct foo {

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fms-extensions -Wno-microsoft %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fms-extensions -Wno-microsoft %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++1z -fms-extensions -Wno-microsoft %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++1z -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
 
 #define T(b) (b) ? 1 : -1
 #define F(b) (b) ? -1 : 1
