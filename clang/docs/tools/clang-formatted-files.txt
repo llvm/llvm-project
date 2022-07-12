@@ -129,6 +129,7 @@ clang/include/clang/Analysis/FlowSensitive/DataflowAnalysisContext.h
 clang/include/clang/Analysis/FlowSensitive/DataflowEnvironment.h
 clang/include/clang/Analysis/FlowSensitive/DataflowLattice.h
 clang/include/clang/Analysis/FlowSensitive/DataflowWorklist.h
+clang/include/clang/Analysis/FlowSensitive/DebugSupport.h
 clang/include/clang/Analysis/FlowSensitive/MapLattice.h
 clang/include/clang/Analysis/FlowSensitive/MatchSwitch.h
 clang/include/clang/Analysis/FlowSensitive/NoopLattice.h
@@ -309,6 +310,7 @@ clang/lib/Analysis/CodeInjector.cpp
 clang/lib/Analysis/FlowSensitive/ControlFlowContext.cpp
 clang/lib/Analysis/FlowSensitive/DataflowAnalysisContext.cpp
 clang/lib/Analysis/FlowSensitive/DataflowEnvironment.cpp
+clang/lib/Analysis/FlowSensitive/DebugSupport.cpp
 clang/lib/Analysis/FlowSensitive/Transfer.cpp
 clang/lib/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.cpp
 clang/lib/Analysis/FlowSensitive/WatchedLiteralsSolver.cpp
