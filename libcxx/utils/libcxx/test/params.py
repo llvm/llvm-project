@@ -38,6 +38,9 @@ _warningFlags = [
   # TODO(mordante) investigate a solution for this issue.
   '-Wno-tautological-compare',
 
+  # -Wstringop-overread seems to be a bit buggy currently
+  '-Wno-stringop-overread',
+
   # These warnings should be enabled in order to support the MSVC
   # team using the test suite; They enable the warnings below and
   # expect the test suite to be clean.
