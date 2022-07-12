@@ -73,6 +73,12 @@ EnableBAT("enable-bat",
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
+cl::opt<bool> EqualizeBBCounts(
+    "equalize-bb-counts",
+    cl::desc("use same count for BBs that should have equivalent count (used "
+             "in non-LBR and shrink wrapping)"),
+    cl::ZeroOrMore, cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
+
 cl::opt<bool> RemoveSymtab("remove-symtab", cl::desc("Remove .symtab section"),
                            cl::cat(BoltCategory));
 
