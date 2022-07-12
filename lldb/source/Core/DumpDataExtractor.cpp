@@ -170,10 +170,11 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
         offset += bytes_consumed;
         const bool show_address = base_addr != LLDB_INVALID_ADDRESS;
         const bool show_bytes = true;
+        const bool show_control_flow_kind = true;
         ExecutionContext exe_ctx;
         exe_scope->CalculateExecutionContext(exe_ctx);
-        disassembler_sp->GetInstructionList().Dump(s, show_address, show_bytes,
-                                                   &exe_ctx);
+        disassembler_sp->GetInstructionList().Dump(
+            s, show_address, show_bytes, show_control_flow_kind, &exe_ctx);
       }
     }
   } else
