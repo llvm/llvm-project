@@ -12,6 +12,7 @@
 
 #include <__chrono/duration.h>
 #include <__config>
+#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -100,9 +101,11 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 year& year::operator-=(const years& __dy) noexcept
 { *this = *this - __dy; return *this; }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool year::ok() const noexcept
-{ return static_cast<int>(min()) <= __y && __y <= static_cast<int>(max()); }
+_LIBCPP_HIDE_FROM_ABI constexpr bool year::ok() const noexcept {
+  static_assert(static_cast<int>(std::numeric_limits<decltype(__y)>::max()) == static_cast<int>(max()));
+  return static_cast<int>(min()) <= __y;
+}
+
 } // namespace chrono
 
 _LIBCPP_END_NAMESPACE_STD
