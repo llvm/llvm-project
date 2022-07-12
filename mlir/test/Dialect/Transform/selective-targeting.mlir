@@ -77,7 +77,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @pdl_target_attrA in %arg1
-    transform.structured.tile %0 {sizes = [4, 4, 4]}
+    transform.structured.tile %0 [4, 4, 4]
     %1 = pdl_match @pdl_target_attrC in %arg1
     %2 = transform.get_closest_isolated_parent %1
     transform.structured.vectorize %2
