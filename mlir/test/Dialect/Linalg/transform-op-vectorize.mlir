@@ -10,9 +10,8 @@ func.func @vectorize_matmul(%arg0: tensor<24x12xf32>,
   // CHECK: %[[vA:.+]] = vector.transfer_read %[[A]]
   // CHECK: %[[vB:.+]] = vector.transfer_read %[[B]]
   // CHECK: %[[vC:.+]] = vector.transfer_read %[[C]]
-  // CHECK: %[[vR:.+]] = vector.contract {{.*}} %[[vA]], %[[vB]]
-  // CHECK: %[[vS:.+]] = arith.addf %[[vR]], %[[vC]]
-  // CHECK: vector.transfer_write %[[vS]], %[[C]]
+  // CHECK: %[[vR:.+]] = vector.contract {{.*}} %[[vA]], %[[vB]], %[[vC]]
+  // CHECK: vector.transfer_write %[[vR]], %[[C]]
   %0 = linalg.matmul ins(%arg0, %arg1 : tensor<24x12xf32>, tensor<12x25xf32>) outs(%arg2 : tensor<24x25xf32>) -> tensor<24x25xf32>
   func.return %0 : tensor<24x25xf32>
 }
@@ -67,9 +66,8 @@ func.func @vectorize_keep_pad(
   // CHECK: %[[vA:.+]] = vector.transfer_read %[[pA]]
   // CHECK: %[[vB:.+]] = vector.transfer_read %[[pB]]
   // CHECK: %[[vC:.+]] = vector.transfer_read %[[C]]
-  // CHECK: %[[vR:.+]] = vector.contract {{.*}} %[[vA]], %[[vB]]
-  // CHECK: %[[vS:.+]] = arith.addf %[[vR]], %[[vC]]
-  // CHECK: vector.transfer_write %[[vS]], %[[C]]
+  // CHECK: %[[vR:.+]] = vector.contract {{.*}} %[[vA]], %[[vB]], %[[vC]]
+  // CHECK: vector.transfer_write %[[vR]], %[[C]]
   %8 = linalg.matmul ins(%5, %7 : tensor<4x7xf32>, tensor<7x5xf32>) outs(%3 : tensor<4x5xf32>) -> tensor<4x5xf32>
   %9 = tensor.insert_slice %8 into %arg2[%arg3, %arg4] [4, 5] [1, 1] : tensor<4x5xf32> into tensor<24x25xf32>
   return %9 : tensor<24x25xf32>
@@ -127,9 +125,8 @@ func.func @vectorize_pad(
     tensor.yield %cst : f32
   } : tensor<?x5xf32> to tensor<7x5xf32>
   // CHECK: %[[vC:.+]] = vector.transfer_read %[[C]]
-  // CHECK: %[[vR:.+]] = vector.contract {{.*}} %[[vA]], %[[vB]]
-  // CHECK: %[[vS:.+]] = arith.addf %[[vR]], %[[vC]]
-  // CHECK: vector.transfer_write %[[vS]], %[[C]]
+  // CHECK: %[[vR:.+]] = vector.contract {{.*}} %[[vA]], %[[vB]], %[[vC]]
+  // CHECK: vector.transfer_write %[[vR]], %[[C]]
   %8 = linalg.matmul ins(%5, %7 : tensor<4x7xf32>, tensor<7x5xf32>) outs(%3 : tensor<4x5xf32>) -> tensor<4x5xf32>
   %9 = tensor.insert_slice %8 into %arg2[%arg3, %arg4] [4, 5] [1, 1] : tensor<4x5xf32> into tensor<24x25xf32>
   return %9 : tensor<24x25xf32>

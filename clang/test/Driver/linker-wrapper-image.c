@@ -114,7 +114,7 @@
 // RUN: clang-offload-packager -o %t.out --image=file=%S/Inputs/dummy-elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
-// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple x86_64-unknown-linux-gnu \
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
 // RUN:   -linker-path /usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=HIP
 
 //      HIP: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".hip_fatbin"

@@ -5562,6 +5562,9 @@ def warn_deprecated_def : Warning<
 def warn_unavailable_def : Warning<
   "implementing unavailable method">,
   InGroup<DeprecatedImplementations>, DefaultIgnore;
+def warn_deprecated_builtin : Warning<
+  "builtin %0 is deprecated; use %1 instead">,
+  InGroup<DeprecatedBuiltins>;
 def err_unavailable : Error<"%0 is unavailable">;
 def err_property_method_unavailable :
     Error<"property access is using %0 method which is unavailable">;

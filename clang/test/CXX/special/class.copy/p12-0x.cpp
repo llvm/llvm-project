@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-defaulted-function-deleted
-// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-defaulted-function-deleted -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins -Wno-defaulted-function-deleted
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins -Wno-defaulted-function-deleted -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
 
 // expected-no-diagnostics
 

@@ -318,6 +318,7 @@ def Vector_ReductionOp :
 
 def Vector_MultiDimReductionOp :
   Vector_Op<"multi_reduction", [NoSideEffect,
+     AllTypesMatch<["dest", "acc"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      DeclareOpInterfaceMethods<InferTypeOpInterface>,
@@ -325,6 +326,7 @@ def Vector_MultiDimReductionOp :
                                ["getShapeForUnroll"]>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVector:$source,
+                   AnyType:$acc,
                    I64ArrayAttr:$reduction_dims)>,
     Results<(outs AnyType:$dest)> {
   let summary = "Multi-dimensional reduction operation";
@@ -332,19 +334,20 @@ def Vector_MultiDimReductionOp :
     Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n)
     using the given operation (add/mul/min/max for int/fp and and/or/xor for
     int only).
+    Takes an initial accumulator operand.
 
     Example:
 
     ```mlir
-    %1 = vector.multi_reduction <add>, %0 [1, 3] :
+    %1 = vector.multi_reduction <add>, %0, %acc0 [1, 3] :
       vector<4x8x16x32xf32> into vector<4x16xf32>
-    %2 = vector.multi_reduction <add>, %1 [0, 1] :
+    %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
       vector<4x16xf32> into f32
     ```
   }];
   let builders = [
-    OpBuilder<(ins "Value":$source, "ArrayRef<bool>":$reductionMask,
-                   "CombiningKind":$kind)>
+    OpBuilder<(ins "Value":$source, "Value":$acc,
+                   "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind)>                   
   ];
   let extraClassDeclaration = [{
     static StringRef getKindAttrStrName() { return "kind"; }
@@ -378,8 +381,9 @@ def Vector_MultiDimReductionOp :
     }
   }];
   let assemblyFormat =
-    "$kind `,` $source attr-dict $reduction_dims `:` type($source) `to` type($dest)";
+    "$kind `,` $source `,` $acc attr-dict $reduction_dims `:` type($source) `to` type($dest)";
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 def Vector_BroadcastOp :

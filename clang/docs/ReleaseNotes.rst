@@ -183,6 +183,9 @@ Bug Fixes
   initializer is not allowed this is now diagnosed as an error.
 - Clang now correctly emits symbols for implicitly instantiated constexpr
   template function. Fixes `Issue 55560 <https://github.com/llvm/llvm-project/issues/55560>`_.
+- Clang now checks ODR violations when merging concepts from different modules.
+  Note that this may possibly break existing code, and is done so intentionally.
+  Fixes `Issue 56310 <https://github.com/llvm/llvm-project/issues/56310>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -281,9 +284,11 @@ Improvements to Clang's diagnostics
   unevaluated operands of a ``typeid`` expression, as they are now
   modeled correctly in the CFG. This fixes
   `Issue 21668 <https://github.com/llvm/llvm-project/issues/21668>`_.
-- ``-Wself-assign``, ``-Wself-assign-overloaded`` and ``-Wself-move`` will 
+- ``-Wself-assign``, ``-Wself-assign-overloaded`` and ``-Wself-move`` will
   suggest a fix if the decl being assigned is a parameter that shadows a data
   member of the contained class.
+- Added ``-Winvalid-utf8`` which diagnoses invalid UTF-8 code unit sequences in
+  comments.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -306,6 +311,10 @@ Non-comprehensive list of changes in this release
 - Previously disabled sanitizer options now enabled by default:
   - ASAN_OPTIONS=detect_stack_use_after_return=1 (only on Linux).
   - MSAN_OPTIONS=poison_in_dtor=1.
+
+- Some type-trait builtins, such as ``__has_trivial_assign``, have been documented
+  as deprecated for a while because their semantics don't mix well with post-C++11 type-traits.
+  Clang now emits deprecation warnings for them under the flag ``-Wdeprecated-builtins``.
 
 New Compiler Flags
 ------------------
@@ -399,6 +408,12 @@ Attribute Changes in Clang
   format string must correctly format the fixed parameter types of the function.
   Using the attribute this way emits a GCC compatibility diagnostic.
 
+- Support was added for ``__attribute__((function_return("thunk-extern")))``
+  to X86 to replace ``ret`` instructions with ``jmp __x86_return_thunk``. The
+  corresponding attribute to disable this,
+  ``__attribute__((function_return("keep")))`` was added. This is intended to
+  be used by the Linux kernel to mitigate RETBLEED.
+
 Windows Support
 ---------------
 
@@ -486,6 +501,7 @@ C++2b Feature Support
 - Implemented `P2128R6: Multidimensional subscript operator <https://wg21.link/P2128R6>`_.
 - Implemented `P0849R8: auto(x): decay-copy in the language <https://wg21.link/P0849R8>`_.
 - Implemented `P2242R3: Non-literal variables (and labels and gotos) in constexpr functions	<https://wg21.link/P2242R3>`_.
+- Implemented `LWG3659: Consider ATOMIC_FLAG_INIT undeprecation <https://wg21.link/LWG3659>`_.
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------
@@ -548,6 +564,11 @@ X86 Support in Clang
 - Added the ``-m[no-]rdpru`` flag to enable/disable the RDPRU instruction
   provided by AMD Zen2 and later processors. Defined intrinsics for using
   this instruction (see rdpruintrin.h).
+- Support ``-mstack-protector-guard-symbol=[SymbolName]`` to use the given
+  symbol for addressing the stack protector guard.
+- ``-mfunction-return=thunk-extern`` support was added to clang for x86. This
+  will be used by Linux kernel mitigations for RETBLEED. The corresponding flag
+  ``-mfunction-return=keep`` may be appended to disable the feature.
 
 DWARF Support in Clang
 ----------------------
@@ -594,7 +615,7 @@ AST Matchers
 
 - Added ``forEachTemplateArgument`` matcher which creates a match every
   time a ``templateArgument`` matches the matcher supplied to it.
-  
+
 - Added ``objcStringLiteral`` matcher which matches ObjectiveC String
   literal expressions.
 

@@ -1342,7 +1342,8 @@
 // PS4:#define __SSE2__ 1
 // PS4:#define __SSE_MATH__ 1
 // PS4:#define __SSE__ 1
-// PS4:#define __STDC_VERSION__ 199901L
+// PS4ONLY:#define __STDC_VERSION__ 199901L
+// PS5ONLY:#define __STDC_VERSION__ 201710L
 // PS4:#define __UINTMAX_TYPE__ long unsigned int
 // PS4:#define __USER_LABEL_PREFIX__
 // PS4:#define __WCHAR_MAX__ 65535

@@ -21,6 +21,11 @@ add_llvm_component_library(LLVMJITLink
   ELF_riscv.cpp
   ELF_x86_64.cpp
 
+  # COFF
+  COFF.cpp
+  COFFLinkGraphBuilder.cpp
+  COFF_x86_64.cpp
+
   # Architectures:
   aarch64.cpp
   riscv.cpp

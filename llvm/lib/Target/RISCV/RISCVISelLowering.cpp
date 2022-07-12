@@ -1694,7 +1694,7 @@ static SDValue convertFromScalableVector(EVT VT, SDValue V, SelectionDAG &DAG,
 /// Return the type of the mask type suitable for masking the provided
 /// vector type.  This is simply an i1 element type vector of the same
 /// (possibly scalable) length.
-static MVT getMaskTypeFor(EVT VecVT) {
+static MVT getMaskTypeFor(MVT VecVT) {
   assert(VecVT.isVector());
   ElementCount EC = VecVT.getVectorElementCount();
   return MVT::getVectorVT(MVT::i1, EC);
@@ -5783,8 +5783,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
       DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VecVT, DAG.getUNDEF(VecVT), V1,
                   DownOffset, TrueMask, UpOffset);
   return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VecVT, SlideDown, V2, UpOffset,
-                     TrueMask,
-                     DAG.getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT));
+                     TrueMask, DAG.getRegister(RISCV::X0, XLenVT));
 }
 
 SDValue
@@ -9187,10 +9186,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // FIXME: Support FP.
     if (Val.getOpcode() == RISCVISD::VMV_X_S) {
       SDValue Src = Val.getOperand(0);
-      EVT VecVT = Src.getValueType();
+      MVT VecVT = Src.getSimpleValueType();
       EVT MemVT = Store->getMemoryVT();
       // The memory VT and the element type must match.
-      if (VecVT.getVectorElementType() == MemVT) {
+      if (MemVT == VecVT.getVectorElementType()) {
         SDLoc DL(N);
         MVT MaskVT = getMaskTypeFor(VecVT);
         return DAG.getStoreVP(

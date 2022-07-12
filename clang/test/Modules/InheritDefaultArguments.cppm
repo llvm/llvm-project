@@ -10,7 +10,10 @@ template <typename T, typename U = int>
 class Templ;
 
 template <typename T, typename U>
-class Templ {};
+class Templ {
+public:
+    Templ(T t) {}
+};
 
 template <typename T>
 Templ(T t) -> Templ<T, int>;
@@ -26,3 +29,6 @@ module;
 #include "foo.h"
 export module X;
 import A;
+void foo() {
+    Templ t(0);
+}

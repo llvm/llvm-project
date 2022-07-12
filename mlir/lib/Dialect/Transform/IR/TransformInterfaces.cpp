@@ -55,7 +55,7 @@ Value transform::TransformState::getHandleForPayloadOp(Operation *op) const {
 LogicalResult transform::TransformState::tryEmplaceReverseMapping(
     Mappings &map, Operation *operation, Value handle) {
   auto insertionResult = map.reverse.insert({operation, handle});
-  if (!insertionResult.second) {
+  if (!insertionResult.second && insertionResult.first->second != handle) {
     InFlightDiagnostic diag = operation->emitError()
                               << "operation tracked by two handles";
     diag.attachNote(handle.getLoc()) << "handle";
@@ -191,9 +191,27 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
 DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
   LLVM_DEBUG(DBGS() << "applying: " << transform << "\n");
-  if (options.getExpensiveChecksEnabled() &&
-      failed(checkAndRecordHandleInvalidation(transform))) {
-    return DiagnosedSilenceableFailure::definiteFailure();
+  if (options.getExpensiveChecksEnabled()) {
+    if (failed(checkAndRecordHandleInvalidation(transform)))
+      return DiagnosedSilenceableFailure::definiteFailure();
+
+    for (OpOperand &operand : transform->getOpOperands()) {
+      if (!isHandleConsumed(operand.get(), transform))
+        continue;
+
+      DenseSet<Operation *> seen;
+      for (Operation *op : getPayloadOps(operand.get())) {
+        if (!seen.insert(op).second) {
+          DiagnosedSilenceableFailure diag =
+              transform.emitSilenceableError()
+              << "a handle passed as operand #" << operand.getOperandNumber()
+              << " and consumed by this operation points to a payload "
+                 "operation more than once";
+          diag.attachNote(op->getLoc()) << "repeated target op";
+          return diag;
+        }
+      }
+    }
   }
 
   transform::TransformResults results(transform->getNumResults());
@@ -324,6 +342,71 @@ transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Memory effects.
+//===----------------------------------------------------------------------===//
+
+void transform::consumesHandle(
+    ValueRange handles,
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  for (Value handle : handles) {
+    effects.emplace_back(MemoryEffects::Read::get(), handle,
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Free::get(), handle,
+                         TransformMappingResource::get());
+  }
+}
+
+/// Returns `true` if the given list of effects instances contains an instance
+/// with the effect type specified as template parameter.
+template <typename EffectTy, typename ResourceTy = SideEffects::DefaultResource>
+static bool hasEffect(ArrayRef<MemoryEffects::EffectInstance> effects) {
+  return llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
+    return isa<EffectTy>(effect.getEffect()) &&
+           isa<ResourceTy>(effect.getResource());
+  });
+}
+
+bool transform::isHandleConsumed(Value handle,
+                                 transform::TransformOpInterface transform) {
+  auto iface = cast<MemoryEffectOpInterface>(transform.getOperation());
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  iface.getEffectsOnValue(handle, effects);
+  return hasEffect<MemoryEffects::Read, TransformMappingResource>(effects) &&
+         hasEffect<MemoryEffects::Free, TransformMappingResource>(effects);
+}
+
+void transform::producesHandle(
+    ValueRange handles,
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  for (Value handle : handles) {
+    effects.emplace_back(MemoryEffects::Allocate::get(), handle,
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(), handle,
+                         TransformMappingResource::get());
+  }
+}
+
+void transform::onlyReadsHandle(
+    ValueRange handles,
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  for (Value handle : handles) {
+    effects.emplace_back(MemoryEffects::Read::get(), handle,
+                         TransformMappingResource::get());
+  }
+}
+
+void transform::modifiesPayload(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
+}
+
+void transform::onlyReadsPayload(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
 }
 
 //===----------------------------------------------------------------------===//

@@ -997,11 +997,8 @@ struct MultiReduceToContract
     }
     auto dstMap = AffineMap::get(/*dimCount=*/reductionMask.size(),
                                  /*symCount=*/0, exprs, reduceOp.getContext());
-    Value zero = rewriter.create<arith::ConstantOp>(
-        reduceOp.getLoc(), reduceOp.getDestType(),
-        rewriter.getZeroAttr(reduceOp.getDestType()));
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
-        reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), zero,
+        reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
         rewriter.getStrArrayAttr(iteratorTypes));
     return success();

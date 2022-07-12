@@ -171,7 +171,7 @@ struct AffineIfCondition {
       fromCmpIOp(condDef);
   }
 
-  bool hasIntegerSet() const { return integerSet.hasValue(); }
+  bool hasIntegerSet() const { return integerSet.has_value(); }
 
   mlir::IntegerSet getIntegerSet() const {
     assert(hasIntegerSet() && "integer set is missing");

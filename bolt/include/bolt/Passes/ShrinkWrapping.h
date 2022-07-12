@@ -303,13 +303,16 @@ class ShrinkWrapping {
   std::vector<int64_t> PopOffsetByReg;
   std::vector<MCPhysReg> DomOrder;
   CalleeSavedAnalysis CSA;
-  std::vector<SmallSetVector<MCInst *, 4>> SavePos;
-  std::vector<uint64_t> BestSaveCount;
-  std::vector<MCInst *> BestSavePos;
+  std::vector<std::vector<uint64_t>> BestSaveCount;
+  std::vector<std::vector<MCInst *>> BestSavePos;
 
   /// Pass stats
   static std::atomic_uint64_t SpillsMovedRegularMode;
   static std::atomic_uint64_t SpillsMovedPushPopMode;
+  static std::atomic_uint64_t SpillsMovedDynamicCount;
+  static std::atomic_uint64_t SpillsFailedDynamicCount;
+  static std::atomic_uint64_t InstrDynamicCount;
+  static std::atomic_uint64_t StoreDynamicCount;
 
   Optional<unsigned> AnnotationIndex;
 
@@ -515,7 +518,7 @@ public:
         BC.MIB->removeAnnotation(Inst, getAnnotationIndex());
   }
 
-  bool perform();
+  bool perform(bool HotOnly = false);
 
   static void printStats();
 };

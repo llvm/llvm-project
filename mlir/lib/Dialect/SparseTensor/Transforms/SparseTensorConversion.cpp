@@ -238,7 +238,7 @@ static void newParams(OpBuilder &builder, SmallVector<Value, 8> &params,
 /// the following and the insertion point after this routine is inside the
 /// if-then branch behind the assignment to ind. This is to ensure that the
 /// addEltX call generated after is inside the if-then branch.
-///    if (tensor[ivs]!=0) {
+///    if (tensor[ivs] != 0)
 ///      ind = ivs
 static Value genIndexAndValueForDense(OpBuilder &builder, Location loc,
                                       Value tensor, Value ind, ValueRange ivs) {
@@ -382,6 +382,133 @@ static bool canUseDirectConversion(
   return true;
 }
 
+/// Helper method to translate indices during a reshaping operation.
+/// TODO: provide as general utility to MLIR at large?
+static void translateIndices(Location loc, ConversionPatternRewriter &rewriter,
+                             ArrayRef<ReassociationIndices> reassociation,
+                             TensorType dstTp, TensorType srcTp, Value dstIdx,
+                             Value srcIdx) {
+  unsigned dstRank = dstTp.getRank();
+  unsigned srcRank = srcTp.getRank();
+  unsigned start = 0;
+  unsigned i = 0;
+  bool isExpand = srcRank > dstRank;
+  ArrayRef<int64_t> shape = isExpand ? srcTp.getShape() : dstTp.getShape();
+  // Iterate over reassociation map.
+  for (const auto &map : llvm::enumerate(reassociation)) {
+    // Prepare strides information in dimension slice.
+    uint64_t linear = 1;
+    for (unsigned j = start, end = start + map.value().size(); j < end; j++) {
+      assert(!ShapedType::isDynamic(shape[j]));
+      linear *= shape[j];
+    }
+    // Start collapse.
+    Value idx = constantIndex(rewriter, loc, i++);
+    Value val;
+    if (!isExpand)
+      val = rewriter.create<memref::LoadOp>(loc, srcIdx, idx);
+    // Iterate over dimension slice.
+    for (unsigned j = start, end = start + map.value().size(); j < end; j++) {
+      linear /= shape[j];
+      Value stride = constantIndex(rewriter, loc, linear);
+      Value jdx = constantIndex(rewriter, loc, j);
+      if (isExpand) {
+        Value old = rewriter.create<memref::LoadOp>(loc, srcIdx, jdx);
+        Value mul = linear == 1
+                        ? old
+                        : rewriter.create<arith::MulIOp>(loc, old, stride);
+        val = val ? rewriter.create<arith::AddIOp>(loc, val, mul) : mul;
+      } else {
+        Value old = val;
+        if (linear != 1)
+          val = rewriter.create<arith::DivUIOp>(loc, val, stride);
+        rewriter.create<memref::StoreOp>(loc, val, dstIdx, jdx);
+        if (linear != 1)
+          val = rewriter.create<arith::RemUIOp>(loc, old, stride);
+      }
+    }
+    // Finalize expansion.
+    if (isExpand)
+      rewriter.create<memref::StoreOp>(loc, val, dstIdx, idx);
+    start += map.value().size();
+  }
+  // Sanity.
+  assert((isExpand && i == dstRank) || (!isExpand && i == srcRank));
+}
+
+/// Generate code for a general sparse to sparse reshaping operation.
+/// Note that unlike dense reshaping (which can be done with a "cheap"
+/// change of view), sparse reshaping is currently done with actual
+/// data shuffling.
+///
+/// TODO: proportional to nnz, but still a lot of data movement
+///       https://github.com/llvm/llvm-project/issues/56477
+///
+///   iter = src->toCOO();
+///   coo = newSparseCOO()
+///   while (elem = iter->getNext()) {
+///     coo->add(reshape(elem.indices), elem.value)
+///   }
+///   s = newSparseTensor(coo)
+static LogicalResult
+genSparse2SparseReshape(Operation *op, ConversionPatternRewriter &rewriter,
+                        ArrayRef<ReassociationIndices> reassociation, Value src,
+                        RankedTensorType dstTp, RankedTensorType srcTp) {
+  Location loc = op->getLoc();
+  auto encDst = getSparseTensorEncoding(dstTp);
+  auto encSrc = getSparseTensorEncoding(srcTp);
+  assert(encDst && encSrc);
+  unsigned srcRank = srcTp.getRank();
+  unsigned dstRank = dstTp.getRank();
+  Type elemTp = srcTp.getElementType();
+  assert(elemTp == dstTp.getElementType() &&
+         "reshape should not change element type");
+  // Start an iterator over the source tensor (in original index order).
+  auto noPerm = SparseTensorEncodingAttr::get(
+      op->getContext(), encSrc.getDimLevelType(), AffineMap(),
+      encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
+  SmallVector<Value, 4> sizes;
+  SmallVector<Value, 8> params;
+  sizesFromPtr(rewriter, sizes, op, noPerm, srcTp, src);
+  newParams(rewriter, params, op, srcTp, noPerm, Action::kToIterator, sizes,
+            src);
+  Value iter = genNewCall(rewriter, op, params);
+  // Start a new COO for the destination tensor.
+  sizes.clear();
+  params.clear();
+  sizesFromPtr(rewriter, sizes, op, encDst, dstTp, src);
+  newParams(rewriter, params, op, dstTp, encDst, Action::kEmptyCOO, sizes);
+  Value coo = genNewCall(rewriter, op, params);
+  Value dstPerm = params[2];
+  // Construct a while loop over the iterator.
+  Value srcIdx = genAlloca(rewriter, loc, srcRank, rewriter.getIndexType());
+  Value dstIdx = genAlloca(rewriter, loc, dstRank, rewriter.getIndexType());
+  Value elemPtr = genAllocaScalar(rewriter, loc, elemTp);
+  SmallVector<Value> noArgs;
+  SmallVector<Type> noTypes;
+  auto whileOp = rewriter.create<scf::WhileOp>(loc, noTypes, noArgs);
+  Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, noTypes);
+  rewriter.setInsertionPointToEnd(before);
+  Value cond = genGetNextCall(rewriter, op, iter, srcIdx, elemPtr);
+  rewriter.create<scf::ConditionOp>(loc, cond, before->getArguments());
+  // Translate indices from source to target and insert. Note that we do
+  // not need to store the value in elemPtr, as the value is still there.
+  Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, noTypes);
+  rewriter.setInsertionPointToStart(after);
+  translateIndices(loc, rewriter, reassociation, dstTp, srcTp, dstIdx, srcIdx);
+  genAddEltCall(rewriter, op, elemTp, coo, elemPtr, dstIdx, dstPerm);
+  rewriter.create<scf::YieldOp>(loc);
+  // Final call to construct sparse tensor storage and free temporary resources.
+  rewriter.setInsertionPointAfter(whileOp);
+  params[6] = constantAction(rewriter, loc, Action::kFromCOO);
+  params[7] = coo;
+  Value dst = genNewCall(rewriter, op, params);
+  genDelCOOCall(rewriter, op, elemTp, coo);
+  genDelCOOCall(rewriter, op, elemTp, iter);
+  rewriter.replaceOp(op, dst);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Conversion rules.
 //===----------------------------------------------------------------------===//
@@ -423,6 +550,7 @@ public:
 
 /// Sparse conversion rule for trivial tensor casts.
 class SparseCastConverter : public OpConversionPattern<tensor::CastOp> {
+public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(tensor::CastOp op, OpAdaptor adaptor,
@@ -437,8 +565,30 @@ class SparseCastConverter : public OpConversionPattern<tensor::CastOp> {
   }
 };
 
+/// Sparse conversion rule for a reshape operator.
+template <typename ReshapeOp>
+class SparseReshapeConverter : public OpConversionPattern<ReshapeOp> {
+public:
+  using OpAdaptor = typename OpConversionPattern<ReshapeOp>::OpAdaptor;
+  using OpConversionPattern<ReshapeOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ReshapeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = op.getResult().getType();
+    Type srcType = op.getSrc().getType();
+    auto encDst = getSparseTensorEncoding(dstType);
+    auto encSrc = getSparseTensorEncoding(srcType);
+    if (encDst && encSrc)
+      return genSparse2SparseReshape(
+          op, rewriter, op.getReassociationIndices(), adaptor.getOperands()[0],
+          dstType.cast<RankedTensorType>(), srcType.cast<RankedTensorType>());
+    return failure(); // handled elsewhere
+  }
+};
+
 /// Sparse conversion rule for the new operator.
 class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
+public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(NewOp op, OpAdaptor adaptor,
@@ -463,6 +613,7 @@ class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
 /// Sparse conversion rule for the alloc operator.
 class SparseTensorAllocConverter
     : public OpConversionPattern<bufferization::AllocTensorOp> {
+public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(bufferization::AllocTensorOp op, OpAdaptor adaptor,
@@ -494,9 +645,6 @@ class SparseTensorAllocConverter
 
 /// Sparse conversion rule for the convert operator.
 class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
-  /// Options to control sparse code generation.
-  SparseTensorConversionOptions options;
-
 public:
   using OpConversionPattern::OpConversionPattern;
   SparseTensorConvertConverter(MLIRContext *context,
@@ -697,6 +845,10 @@ public:
     rewriter.replaceOp(op, dst);
     return success();
   }
+
+private:
+  /// Options to control sparse code generation.
+  SparseTensorConversionOptions options;
 };
 
 /// Sparse conversion rule for the release operator.
@@ -799,6 +951,7 @@ public:
   }
 };
 
+/// Sparse conversion rule for the expand operator.
 class SparseTensorExpandConverter : public OpConversionPattern<ExpandOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -841,6 +994,7 @@ public:
   }
 };
 
+/// Sparse conversion rule for the compress operator.
 class SparseTensorCompressConverter : public OpConversionPattern<CompressOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -873,6 +1027,7 @@ public:
   }
 };
 
+/// Sparse conversion rule for the output operator.
 class SparseTensorOutConverter : public OpConversionPattern<OutOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -926,6 +1081,8 @@ void mlir::populateSparseTensorConversionPatterns(
     const SparseTensorConversionOptions &options) {
   patterns.add<SparseReturnConverter, SparseTensorToDimSizeConverter,
                SparseCastConverter, SparseTensorNewConverter,
+               SparseReshapeConverter<tensor::ExpandShapeOp>,
+               SparseReshapeConverter<tensor::CollapseShapeOp>,
                SparseTensorAllocConverter, SparseTensorReleaseConverter,
                SparseTensorToPointersConverter, SparseTensorToIndicesConverter,
                SparseTensorToValuesConverter, SparseTensorLoadConverter,
