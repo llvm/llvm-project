@@ -21,6 +21,7 @@ c:
     pushf
     push  %rbx
     push  %rbp
+    addq $0x50, -0x30(%rbp)
     pop   %rbp
     pop   %rbx
     popf

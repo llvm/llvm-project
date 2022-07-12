@@ -1091,8 +1091,10 @@ public:
       bool IsLoad = MCII.mayLoad();
       bool IsStore = MCII.mayStore();
       // Is it LEA? (deals with memory but is not loading nor storing)
-      if (!IsLoad && !IsStore)
-        return false;
+      if (!IsLoad && !IsStore) {
+        I = {0, IsLoad, IsStore, false, false};
+        break;
+      }
       uint8_t Sz = getMemDataSize(Inst, MemOpNo);
       I = {Sz, IsLoad, IsStore, false, false};
       break;
