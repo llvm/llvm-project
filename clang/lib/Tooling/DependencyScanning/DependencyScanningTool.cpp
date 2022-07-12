@@ -11,9 +11,9 @@
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 
-namespace clang {
-namespace tooling {
-namespace dependencies {
+using namespace clang;
+using namespace tooling;
+using namespace dependencies;
 
 std::vector<std::string> FullDependencies::getCommandLine(
     std::function<StringRef(ModuleID)> LookupPCMPath) const {
@@ -291,7 +291,3 @@ DependencyScanningTool::getFullDependencies(
 
   return Consumer.getFullDependencies(CommandLine, FS);
 }
-
-} // end namespace dependencies
-} // end namespace tooling
-} // end namespace clang
