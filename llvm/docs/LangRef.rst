@@ -1678,6 +1678,10 @@ example:
     Front ends can provide optional ``srcloc`` metadata nodes on call sites of
     such callees to attach information about where in the source language such a
     call came from. A string value can be provided as a note.
+``fn_ret_thunk_extern``
+    This attribute tells the code generator that returns from functions should
+    be replaced with jumps to externally-defined architecture-specific symbols.
+    For X86, this symbol's identifier is ``__x86_return_thunk``.
 ``"frame-pointer"``
     This attribute tells the code generator whether the function
     should keep the frame pointer. The code generator may emit the frame pointer
