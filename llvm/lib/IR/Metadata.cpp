@@ -592,13 +592,6 @@ MDNode::Header::~Header() {
     (void)(O - 1)->~MDOperand();
 }
 
-void *MDNode::Header::getLargePtr() const {
-  static_assert(alignof(LargeStorageVector) <= alignof(Header),
-                "LargeStorageVector too strongly aligned");
-  return reinterpret_cast<char *>(const_cast<Header *>(this)) -
-         sizeof(LargeStorageVector);
-}
-
 void *MDNode::Header::getSmallPtr() {
   static_assert(alignof(MDOperand) <= alignof(Header),
                 "MDOperand too strongly aligned");

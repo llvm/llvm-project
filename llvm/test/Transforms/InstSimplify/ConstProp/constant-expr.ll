@@ -51,13 +51,6 @@
 @T5 = global ptr inttoptr (i64 add (i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 192)), i256 192) to i64), i64 trunc (i256 lshr (i256 or (i256 and (i256 and (i256 shl (i256 zext (i64 ptrtoint (ptr @B to i64) to i256), i256 64), i256 -6277101735386680763495507056286727952638980837032266301441), i256 6277101735386680763835789423207666416102355444464034512895), i256 shl (i256 zext (i64 ptrtoint (ptr @A to i64) to i256), i256 192)), i256 128) to i64)) to ptr)
 
 
-
-; PR6096
-
-; No check line. This used to crash llvm-as.
-@T6 = global <2 x i1> fcmp ole (<2 x float> fdiv (<2 x float> undef, <2 x float> <float 1.000000e+00, float 1.000000e+00>), <2 x float> zeroinitializer)
-
-
 ; PR9011
 
 @pr9011_1 = constant <4 x i32> zext (<4 x i8> zeroinitializer to <4 x i32>)

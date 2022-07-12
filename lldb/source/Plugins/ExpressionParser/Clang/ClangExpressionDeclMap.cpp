@@ -773,10 +773,6 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
       return;
 
     AddContextClassType(context, TypeFromUser(m_ctx_obj->GetCompilerType()));
-
-    m_struct_vars->m_object_pointer_type =
-        TypeFromUser(ctx_obj_ptr->GetCompilerType());
-
     return;
   }
 
@@ -811,18 +807,6 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
              class_qual_type.getAsString());
 
     AddContextClassType(context, class_user_type);
-
-    if (method_decl->isInstance()) {
-      // self is a pointer to the object
-
-      QualType class_pointer_type =
-          method_decl->getASTContext().getPointerType(class_qual_type);
-
-      TypeFromUser self_user_type(class_pointer_type.getAsOpaquePtr(),
-                                  function_decl_ctx.GetTypeSystem());
-
-      m_struct_vars->m_object_pointer_type = self_user_type;
-    }
     return;
   }
 
@@ -853,8 +837,6 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
              ClangUtil::GetQualType(pointee_type).getAsString());
 
     AddContextClassType(context, pointee_type);
-    TypeFromUser this_user_type(this_type->GetFullCompilerType());
-    m_struct_vars->m_object_pointer_type = this_user_type;
   }
 }
 
@@ -870,10 +852,6 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
       return;
 
     AddOneType(context, TypeFromUser(m_ctx_obj->GetCompilerType()));
-
-    m_struct_vars->m_object_pointer_type =
-        TypeFromUser(ctx_obj_ptr->GetCompilerType());
-
     return;
   }
 
@@ -918,28 +896,6 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
              ClangUtil::ToString(interface_type));
 
     AddOneType(context, class_user_type);
-
-    if (method_decl->isInstanceMethod()) {
-      // self is a pointer to the object
-
-      QualType class_pointer_type =
-          method_decl->getASTContext().getObjCObjectPointerType(
-              QualType(interface_type, 0));
-
-      TypeFromUser self_user_type(class_pointer_type.getAsOpaquePtr(),
-                                  function_decl_ctx.GetTypeSystem());
-
-      m_struct_vars->m_object_pointer_type = self_user_type;
-    } else {
-      // self is a Class pointer
-      QualType class_type = method_decl->getASTContext().getObjCClassType();
-
-      TypeFromUser self_user_type(class_type.getAsOpaquePtr(),
-                                  function_decl_ctx.GetTypeSystem());
-
-      m_struct_vars->m_object_pointer_type = self_user_type;
-    }
-
     return;
   }
   // This branch will get hit if we are executing code in the context of
@@ -982,10 +938,6 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
   TypeFromUser class_user_type(self_clang_type);
 
   AddOneType(context, class_user_type);
-
-  TypeFromUser self_user_type(self_type->GetFullCompilerType());
-
-  m_struct_vars->m_object_pointer_type = self_user_type;
 }
 
 void ClangExpressionDeclMap::LookupLocalVarNamespace(

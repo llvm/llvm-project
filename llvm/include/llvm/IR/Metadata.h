@@ -999,7 +999,13 @@ class MDNode : public Metadata {
              alignTo(getAllocSize(), alignof(uint64_t));
     }
 
-    void *getLargePtr() const;
+    void *getLargePtr() const {
+      static_assert(alignof(LargeStorageVector) <= alignof(Header),
+                    "LargeStorageVector too strongly aligned");
+      return reinterpret_cast<char *>(const_cast<Header *>(this)) -
+             sizeof(LargeStorageVector);
+    }
+
     void *getSmallPtr();
 
     LargeStorageVector &getLarge() {
@@ -1031,6 +1037,12 @@ class MDNode : public Metadata {
         return getLarge();
       return makeArrayRef(reinterpret_cast<const MDOperand *>(this) - SmallSize,
                           SmallNumOps);
+    }
+
+    unsigned getNumOperands() const {
+      if (!IsLarge)
+        return SmallNumOps;
+      return getLarge().size();
     }
   };
 
@@ -1283,7 +1295,7 @@ public:
   }
 
   /// Return number of MDNode operands.
-  unsigned getNumOperands() const { return getHeader().operands().size(); }
+  unsigned getNumOperands() const { return getHeader().getNumOperands(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Metadata *MD) {

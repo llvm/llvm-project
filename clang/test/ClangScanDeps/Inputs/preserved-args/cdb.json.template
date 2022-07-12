@@ -1,7 +1,0 @@
-[
-  {
-    "directory": "DIR",
-    "command": "clang -MD -MT my_target -serialize-diagnostics DIR/tu.dia -fsyntax-only DIR/tu.c -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -fmodule-file=Foo=DIR/foo.pcm -o DIR/tu.o",
-    "file": "DIR/tu.c"
-  }
-]

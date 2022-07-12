@@ -9,7 +9,8 @@ entry:
 for.cond.outer:                                   ; preds = %if.end71, %entry
   %theta.0.ph = phi <2 x double> [ undef, %entry ], [ %theta.1, %if.end71 ]
   %mul.i97 = fmul <2 x double> %theta.0.ph, undef
-  %mul.i96 = fmul <2 x double> %mul.i97, fmul (<2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double> undef)
+  %fmul = fmul <2 x double> <double 2.000000e+00, double 2.000000e+00>, undef
+  %mul.i96 = fmul <2 x double> %mul.i97, %fmul
   br i1 undef, label %for.body, label %for.end82
 
 for.body:                                         ; preds = %for.cond.outer

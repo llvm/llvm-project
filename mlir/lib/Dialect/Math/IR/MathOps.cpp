@@ -126,29 +126,25 @@ OpFoldResult math::PowFOp::fold(ArrayRef<Attribute> operands) {
       });
 }
 
+//===----------------------------------------------------------------------===//
+// SqrtOp folder
+//===----------------------------------------------------------------------===//
+
 OpFoldResult math::SqrtOp::fold(ArrayRef<Attribute> operands) {
-  auto constOperand = operands.front();
-  if (!constOperand)
-    return {};
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        if (a.isNegative())
+          return {};
 
-  auto attr = constOperand.dyn_cast<FloatAttr>();
-  if (!attr)
-    return {};
-
-  auto ft = getType().cast<FloatType>();
-
-  APFloat apf = attr.getValue();
-
-  if (apf.isNegative())
-    return {};
-
-  if (ft.getWidth() == 64)
-    return FloatAttr::get(getType(), sqrt(apf.convertToDouble()));
-
-  if (ft.getWidth() == 32)
-    return FloatAttr::get(getType(), sqrtf(apf.convertToFloat()));
-
-  return {};
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(sqrt(a.convertToDouble()));
+        case 32:
+          return APFloat(sqrtf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
 }
 
 /// Materialize an integer or floating point constant.

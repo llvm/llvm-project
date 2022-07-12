@@ -24,8 +24,8 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
     (depthwise) convolutions, into combinations of lower-dimensional equivalents
     when possible.
 
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-Linalg ops and drops them in the return.
     If all the operations referred to by the `target` PDLOperation decompose
     properly, the transform succeeds. Otherwise the transform silently fails.
@@ -68,11 +68,11 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
   let description = [{
-    Transforms a named structued operation into the generic form with the
+    Transforms a named structured operation into the generic form with the
     explicit attached region. 
     
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-Linalg ops and drops them in the return.
     If all the operations referred to by the `target` PDLOperation generalize
     properly, the transform succeeds. Otherwise the transform silently fails.
@@ -100,8 +100,8 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
     Interchanges the iterators of the operations pointed to by the target handle
     using the iterator interchange attribute.
 
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-linalg::Generic ops and drops them in the return.
     This operation fails if the interchange attribute is invalid.
     If all the operations referred to by the `target` PDLOperation interchange
@@ -127,6 +127,71 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
   }];
 }
 
+def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Emits the IR computing the tile sizes `s1` and `s2` such that:
+
+      - there exists a combination of `n` tiles of size `s1` and `m` tiles of
+        size `s2` that covers the entirety of the iteration space `dimension` of
+        the target structured op;
+      - `s1`, `s2` is less than or equal to `target_size`;
+      - `s1` and `s2` are divisible by `divisor.
+
+    For example, for a dimension of size 54 with target size 12 and divisor 2,
+    this can emit the IR computing the tile size 10, used for 3 tiles, and 12,
+    used for 2 tiles, totally 10*3 + 12*2 = 54. Note that when the divisor does
+    not divide the original dimension size, it is impossible to compute such
+    tile sizes. An assertion is emitted to guard against this in the dynamic
+    case.
+
+    Expects the target size and the divisor to be strictly positive. Folds the
+    IR as much as possible, normally obtaining constant sizes and numbers of
+    tiles for a statically known dimension.
+
+    This does *not* consume the target handle and produces three handles each
+    pointing to single-result index-typed operations (which may be arithmetic
+    constant operations) defining the two respective tile sizes and the product
+    of the first tile size with the number of tiles of that size (useful for
+    splitting the iteration space).
+
+    This operation composes with the regular tiling when applied per-dimension:
+
+    ```mlir
+    %sz1, %sz2, %split = structured.multitile_sizes %target
+                         { target_size = 10, dimension = 1 }
+    %low, %high = structured.split %target after %split { dimension = 1 }
+    %tiled_low = structured.tile %low [0, %sz1]
+    %tiled_high = structured.tile %high [0, %sz2]
+    %common = merge_handles %tiled_low, %tiled_high
+
+    %sz3, %sz4, %split = structured.multitile_size %target
+                         { target_size = 42, dimension = 0 }
+    %sz3r, %sz4r, %splitr = replicate num(%common) %sz3, %sz4, %splitr
+    structured.split %common after %splitr { dimension = 0 }
+    // ...
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       I64Attr:$dimension,
+                       I64Attr:$target_size,
+                       DefaultValuedAttr<I64Attr, "1">:$divisor);
+  let results = (outs PDL_Operation:$low_size,
+                      PDL_Operation:$high_size,
+                      PDL_Operation:$split_point);
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVector<::mlir::Operation *> &results,
+        TransformState &state);
+  }];
+}
+
+
 def PadOp : Op<Transform_Dialect, "structured.pad",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
@@ -134,8 +199,8 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
     Pads the operations pointed to by the target handle using the options
     provides as operation attributes.
 
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-Linalg ops and drops them in the return.
     This operation may produce a definiteFailure if the padding fails for any
     reason.
@@ -174,8 +239,8 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
     Indicates that ops of a specific kind in the given function should be
     scalarized (i.e. their dynamic dimensions tiled by 1).
 
-    Return modes:
-    =============
+    #### Return modes:
+    
     This operation ignores non-Linalg ops and drops them in the return.
     This operation produces `definiteFailure` if the scalarization fails for any
     reason.
@@ -259,8 +324,8 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       - use_alloc: whether to use an alloc op to allocate the temporary 
         tensor (default: do not use alloc op)
 
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-Linalg ops and drops them in the return.
     This operation produces `definiteFailure` if the splitting fails for any
     reason.
@@ -275,8 +340,8 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       - the split op and 
       - the result-combining op.
 
-    Example (default: use_scaling_algorithm = false, use_alloc = false):
-    ====================================================================
+    #### Example (default: `use_scaling_algorithm = false, use_alloc = false`):
+    
     ```
       %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
                                             affine_map<(d0) -> ()>],
@@ -314,8 +379,8 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       } -> tensor<f32>
     ```
 
-    Example (use_scaling_algorithm = true, use_alloc = true):
-    =========================================================
+    #### Example (`use_scaling_algorithm = true, use_alloc = true`):
+    
     Instead of introducing an ExpandShapeOp, this scaling-based implementation 
     rewrites a reduction dimension `k` into `k * split_factor + kk`.
     The dimension `kk` is added as an extra parallel dimension to the 
@@ -329,7 +394,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       b. O(i, j) += O_i(kk, i, j)
     The intermediate tensor O_i is of shape (128/16)x3x5 == 8x3x5.
 
-    Example:
+    #### Example:
 
     ```
      %0 = linalg.matmul ins(%A, %B: tensor<16x256xf32>, tensor<256x32xf32>)
@@ -396,28 +461,59 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
 
 def TileOp : Op<Transform_Dialect, "structured.tile",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
-        FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
-    Indicates that the given `target` op should be tiled with the options
-    provided as attributes. This transform generates a loop nest with a smaller
-    ("tiled") target operation in its body. Currently limited to LinalgOps.
+    Indicates that the given `target` op should be tiled with the given sizes.
+    This transform generates a loop nest with a smaller ("tiled") target
+    operation in its body. Currently limited to LinalgOps.
 
-    `sizes` are the tile sizes. A tile size of `0` indicates that the
-    respective dimension should not be tiled. No loop will be generated for such
-    dimensions. If all tile sizes are `0`, this transform is effectively a
-    no-op.
+    Tile sizes may be known at transformation time, in which case they are
+    expected to be provided in the `static_size` attribute, or not, in which
+    case the tile value must be computed by the payload IR and the handle to the
+    operation computing it must be provided through `dynamic_sizes`. When the
+    sizes are not known statically, the corresponding entry in the
+    `static_sizes` attribute must be set to `ShapedType::kDynamicSize`. Only
+    the dynamic sizes must be provided in `dynamic_sizes`, i.e., there should
+    be as many handles as `ShapedType::kDynamicSize` values in the
+    `static_sizes` attribute. A static size of `0` indicates that the dimension
+    should not be tiled. No loop will be generated for such dimensions. If all
+    tile sizes are `0`, this transform is effectively a no-op.
 
     This op returns handles to the tiled op (in the generated loop nest) and the
-    generated loops. The number of loops is the number of non-zero tile sizes.
+    generated loops. The number of loops is the number of tile sizes that are
+    statically known to be non-zero.
+
+    #### Return modes
+
+    On success, the resulting handles are associated with co-indexed lists of
+    tiled operations and loops around them.
+
+    This operation only supports Linalg ops and produces a silenceable failure
+    if the input contains any non-Linalg ops. The ops preceding it in the list
+    associated with the `target` handle will have been tiled.
+
+    This operation produces a silenceable failure if the `dynamic_sizes` handles
+    are associated with lists of payload operations of a size different than
+    that of the list associated with the `target` handle.
+
+    If the internal implementation of tiling for any of the operations fails,
+    produces a definite failure.
   }];
 
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$sizes,
+                   Variadic<PDL_Operation>:$dynamic_sizes,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$static_sizes,
                    DefaultValuedAttr<I64ArrayAttr, "{}">:$interchange);
   let results = (outs PDL_Operation:$tiled_linalg_op,
                       Variadic<PDL_Operation>:$loops);
 
   let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    /// Returns the list of tile sizes, which may be static (Attribute) or
+    /// dynamic (Value).
+    SmallVector<OpFoldResult> getMixedSizes();
+  }];
 }
 
 def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
@@ -439,8 +535,8 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     Note that this transformation is invalidating the handles to any payload IR
     operation that is contained inside the vectorization target.
 
-    Return modes:
-    =============
+    #### Return modes:
+    
     This operation produces `definiteFailure` if vectorization fails for any
     reason.
     The operation always returns the handle to the target op that is expected 

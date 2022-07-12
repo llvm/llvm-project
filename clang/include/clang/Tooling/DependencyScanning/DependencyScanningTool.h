@@ -57,12 +57,12 @@ struct FullDependencies {
 
   /// Get the full command line.
   ///
-  /// \param LookupPCMPath This function is called to fill in "-fmodule-file="
-  ///                      arguments and the "-o" argument. It needs to return
-  ///                      a path for where the PCM for the given module is to
-  ///                      be located.
-  std::vector<std::string>
-  getCommandLine(std::function<StringRef(ModuleID)> LookupPCMPath) const;
+  /// \param LookupModuleOutput This function is called to fill in
+  ///                           "-fmodule-file=", "-o" and other output
+  ///                           arguments for dependencies.
+  std::vector<std::string> getCommandLine(
+      llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
+          LookupOutput) const;
 
   /// Get the full command line, excluding -fmodule-file=" arguments.
   std::vector<std::string> getCommandLineWithoutModulePaths() const;

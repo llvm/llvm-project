@@ -1,4 +1,4 @@
-break set -n main
+break set -f local-variables.cpp -l 17
 run a b c d e f g
 p argc
 step

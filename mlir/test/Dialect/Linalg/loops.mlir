@@ -137,6 +137,32 @@ func.func @dot(%arg0: memref<?xi8>, %M: index) {
 //       CHECKPARALLEL:   store %[[res]], %[[C]][] : memref<f32>
 
 
+func.func @dot_int(%arg0: memref<?xi32>, %arg1: memref<?xi32>,
+                   %arg3: memref<i32>) {
+  // Verifies that we use the correct arith operations for integers.
+  linalg.dot ins(%arg0, %arg1 : memref<?xi32>, memref<?xi32>)
+             outs(%arg3 : memref<i32>)
+  return
+}
+// CHECK-LABEL: func @dot_int(
+//       CHECK:   %[[inc:.*]] = arith.muli {{.*}} : i32
+//  CHECK-NEXT:   %[[res:.*]] = arith.addi {{.*}}, %[[inc]] : i32
+//  CHECK-NEXT:   store %[[res]], {{.*}} : memref<i32>
+
+
+func.func @dot_bool(%arg0: memref<?xi1>, %arg1: memref<?xi1>,
+                    %arg3: memref<i1>) {
+  // Verifies that we use the correct (saturating) arith operations for booleans.
+  linalg.dot ins(%arg0, %arg1 : memref<?xi1>, memref<?xi1>)
+             outs(%arg3 : memref<i1>)
+  return
+}
+// CHECK-LABEL: func @dot_bool(
+//       CHECK:   %[[inc:.*]] = arith.andi {{.*}} : i1
+//  CHECK-NEXT:   %[[res:.*]] = arith.ori {{.*}}, %[[inc]] : i1
+//  CHECK-NEXT:   store %[[res]], {{.*}} : memref<i1>
+
+
 func.func @dot_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>, %arg2: memref<f32>) {
   linalg.dot ins(%arg0, %arg1 : memref<?xf32, offset: ?, strides: [1]>,
                                 memref<?xf32, offset: ?, strides: [1]>)
