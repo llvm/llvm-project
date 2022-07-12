@@ -303,24 +303,27 @@ public:
   /// given offset. Update the offset to be relative to the field type.
   TBAAStructTypeNode getField(uint64_t &Offset) const {
     bool NewFormat = isNewFormat();
+    const ArrayRef<MDOperand> Operands(Node->op_begin(), Node->op_end());
+    const unsigned NumOperands = Operands.size();
+
     if (NewFormat) {
       // New-format root and scalar type nodes have no fields.
-      if (Node->getNumOperands() < 6)
+      if (NumOperands < 6)
         return TBAAStructTypeNode();
     } else {
       // Parent can be omitted for the root node.
-      if (Node->getNumOperands() < 2)
+      if (NumOperands < 2)
         return TBAAStructTypeNode();
 
       // Fast path for a scalar type node and a struct type node with a single
       // field.
-      if (Node->getNumOperands() <= 3) {
-        uint64_t Cur = Node->getNumOperands() == 2
-                           ? 0
-                           : mdconst::extract<ConstantInt>(Node->getOperand(2))
-                                 ->getZExtValue();
+      if (NumOperands <= 3) {
+        uint64_t Cur =
+            NumOperands == 2
+                ? 0
+                : mdconst::extract<ConstantInt>(Operands[2])->getZExtValue();
         Offset -= Cur;
-        MDNode *P = dyn_cast_or_null<MDNode>(Node->getOperand(1));
+        MDNode *P = dyn_cast_or_null<MDNode>(Operands[1]);
         if (!P)
           return TBAAStructTypeNode();
         return TBAAStructTypeNode(P);
@@ -332,10 +335,11 @@ public:
     unsigned FirstFieldOpNo = NewFormat ? 3 : 1;
     unsigned NumOpsPerField = NewFormat ? 3 : 2;
     unsigned TheIdx = 0;
-    for (unsigned Idx = FirstFieldOpNo; Idx < Node->getNumOperands();
+
+    for (unsigned Idx = FirstFieldOpNo; Idx < NumOperands;
          Idx += NumOpsPerField) {
-      uint64_t Cur = mdconst::extract<ConstantInt>(Node->getOperand(Idx + 1))
-                         ->getZExtValue();
+      uint64_t Cur =
+          mdconst::extract<ConstantInt>(Operands[Idx + 1])->getZExtValue();
       if (Cur > Offset) {
         assert(Idx >= FirstFieldOpNo + NumOpsPerField &&
                "TBAAStructTypeNode::getField should have an offset match!");
@@ -345,11 +349,11 @@ public:
     }
     // Move along the last field.
     if (TheIdx == 0)
-      TheIdx = Node->getNumOperands() - NumOpsPerField;
-    uint64_t Cur = mdconst::extract<ConstantInt>(Node->getOperand(TheIdx + 1))
-                       ->getZExtValue();
+      TheIdx = NumOperands - NumOpsPerField;
+    uint64_t Cur =
+        mdconst::extract<ConstantInt>(Operands[TheIdx + 1])->getZExtValue();
     Offset -= Cur;
-    MDNode *P = dyn_cast_or_null<MDNode>(Node->getOperand(TheIdx));
+    MDNode *P = dyn_cast_or_null<MDNode>(Operands[TheIdx]);
     if (!P)
       return TBAAStructTypeNode();
     return TBAAStructTypeNode(P);
