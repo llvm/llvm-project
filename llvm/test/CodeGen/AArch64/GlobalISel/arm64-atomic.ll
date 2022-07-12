@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -O0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-NOLSE,CHECK-NOLSE-O0
 ; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mcpu=apple-a13 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LSE-O1
 ; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mcpu=apple-a13 -O0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LSE-O0
-; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mattr=+ldapr -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LDAPR-O1
-; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mattr=+ldapr -O0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LDAPR-O0
+; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mattr=+rcpc,+ldapr -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LDAPR-O1
+; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mattr=+rcpc,+ldapr -O0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LDAPR-O0
 
 define i32 @val_compare_and_swap(i32* %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap:
