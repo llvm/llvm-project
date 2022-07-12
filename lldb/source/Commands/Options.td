@@ -300,6 +300,11 @@ let Command = "breakpoint command delete" in {
 let Command = "disassemble" in {
   def disassemble_options_bytes : Option<"bytes", "b">,
     Desc<"Show opcode bytes when disassembling.">;
+  def disassemble_options_kind : Option<"kind", "k">,
+    Desc<"Show instruction control flow kind. Refer to the enum "
+    "`InstructionControlFlowKind` for a list of control flow kind. "
+    "As an important note, far jumps, far calls and far returns often indicate "
+    "calls to and from kernel.">;
   def disassemble_options_context : Option<"context", "C">, Arg<"NumLines">,
     Desc<"Number of context lines of source to show.">;
   def disassemble_options_mixed : Option<"mixed", "m">,
@@ -1150,6 +1155,11 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instructions_pretty_print: Option<"pretty-json", "J">,
     Group<1>,
     Desc<"Dump in JSON format but pretty printing the output for easier readability.">;
+  def thread_trace_dump_instructions_show_kind : Option<"kind", "k">, Group<1>,
+    Desc<"Show instruction control flow kind. Refer to the enum "
+    "`InstructionControlFlowKind` for a list of control flow kind. "
+    "As an important note, far jumps, far calls and far returns often indicate "
+    "calls to and from kernel.">;
   def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">, Group<1>,
     Desc<"For each instruction, print the corresponding timestamp counter if "
     "available.">;

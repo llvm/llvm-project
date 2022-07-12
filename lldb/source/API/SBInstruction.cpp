@@ -241,7 +241,8 @@ bool SBInstruction::GetDescription(lldb::SBStream &s) {
     // didn't have a stream already created, one will get created...
     FormatEntity::Entry format;
     FormatEntity::Parse("${addr}: ", format);
-    inst_sp->Dump(&s.ref(), 0, true, false, nullptr, &sc, nullptr, &format, 0);
+    inst_sp->Dump(&s.ref(), 0, true, false, /*show_control_flow_kind=*/false,
+                  nullptr, &sc, nullptr, &format, 0);
     return true;
   }
   return false;
@@ -275,8 +276,8 @@ void SBInstruction::Print(FileSP out_sp) {
     StreamFile out_stream(out_sp);
     FormatEntity::Entry format;
     FormatEntity::Parse("${addr}: ", format);
-    inst_sp->Dump(&out_stream, 0, true, false, nullptr, &sc, nullptr, &format,
-                  0);
+    inst_sp->Dump(&out_stream, 0, true, false, /*show_control_flow_kind=*/false,
+                  nullptr, &sc, nullptr, &format, 0);
   }
 }
 
