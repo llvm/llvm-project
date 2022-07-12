@@ -548,6 +548,8 @@ X86 Support in Clang
 - Added the ``-m[no-]rdpru`` flag to enable/disable the RDPRU instruction
   provided by AMD Zen2 and later processors. Defined intrinsics for using
   this instruction (see rdpruintrin.h).
+- Support ``-mstack-protector-guard-symbol=[SymbolName]`` to use the given
+  symbol for addressing the stack protector guard.
 
 DWARF Support in Clang
 ----------------------
