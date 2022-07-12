@@ -3484,6 +3484,16 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "urem constexprs are no longer supported");
   case lltok::kw_srem:
     return error(ID.Loc, "srem constexprs are no longer supported");
+  case lltok::kw_fadd:
+    return error(ID.Loc, "fadd constexprs are no longer supported");
+  case lltok::kw_fsub:
+    return error(ID.Loc, "fsub constexprs are no longer supported");
+  case lltok::kw_fmul:
+    return error(ID.Loc, "fmul constexprs are no longer supported");
+  case lltok::kw_fdiv:
+    return error(ID.Loc, "fdiv constexprs are no longer supported");
+  case lltok::kw_frem:
+    return error(ID.Loc, "frem constexprs are no longer supported");
   case lltok::kw_icmp:
   case lltok::kw_fcmp: {
     unsigned PredVal, Opc = Lex.getUIntVal();
@@ -3543,13 +3553,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
   // Binary Operators.
   case lltok::kw_add:
-  case lltok::kw_fadd:
   case lltok::kw_sub:
-  case lltok::kw_fsub:
   case lltok::kw_mul:
-  case lltok::kw_fmul:
-  case lltok::kw_fdiv:
-  case lltok::kw_frem:
   case lltok::kw_shl:
   case lltok::kw_lshr:
   case lltok::kw_ashr: {
