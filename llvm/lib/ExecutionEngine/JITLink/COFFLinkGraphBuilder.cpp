@@ -21,10 +21,10 @@ namespace jitlink {
 COFFLinkGraphBuilder::COFFLinkGraphBuilder(
     const object::COFFObjectFile &Obj, Triple TT,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
-    : G(std::make_unique<LinkGraph>(
+    : Obj(Obj),
+      G(std::make_unique<LinkGraph>(
           Obj.getFileName().str(), Triple(std::move(TT)), getPointerSize(Obj),
-          getEndianness(Obj), std::move(GetEdgeKindName))),
-      Obj(Obj) {
+          getEndianness(Obj), std::move(GetEdgeKindName))) {
   LLVM_DEBUG({
     dbgs() << "Created COFFLinkGraphBuilder for \"" << Obj.getFileName()
            << "\"\n";
@@ -117,7 +117,8 @@ Error COFFLinkGraphBuilder::graphifySections() {
 
   GraphBlocks.resize(Obj.getNumberOfSections() + 1);
   // For each section...
-  for (COFFSectionIndex SecIndex = 1; SecIndex <= Obj.getNumberOfSections();
+  for (COFFSectionIndex SecIndex = 1;
+       SecIndex <= static_cast<COFFSectionIndex>(Obj.getNumberOfSections());
        SecIndex++) {
     Expected<const object::coff_section *> Sec = Obj.getSection(SecIndex);
     if (!Sec)
@@ -191,7 +192,8 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
   SymbolSets.resize(Obj.getNumberOfSections() + 1);
   GraphSymbols.resize(Obj.getNumberOfSymbols());
 
-  for (COFFSymbolIndex SymIndex = 0; SymIndex < Obj.getNumberOfSymbols();
+  for (COFFSymbolIndex SymIndex = 0;
+       SymIndex < static_cast<COFFSymbolIndex>(Obj.getNumberOfSymbols());
        SymIndex++) {
     Expected<object::COFFSymbolRef> Sym = Obj.getSymbol(SymIndex);
     if (!Sym)
@@ -318,7 +320,8 @@ Error COFFLinkGraphBuilder::flushWeakAliasRequests() {
 // the set once it's processed in graphifySymbols. In this function, we iterate
 // each collected symbol in sorted order and calculate the implicit size.
 Error COFFLinkGraphBuilder::calculateImplicitSizeOfSymbols() {
-  for (COFFSectionIndex SecIndex = 1; SecIndex <= Obj.getNumberOfSections();
+  for (COFFSectionIndex SecIndex = 1;
+       SecIndex <= static_cast<COFFSectionIndex>(Obj.getNumberOfSections());
        SecIndex++) {
     auto &SymbolSet = SymbolSets[SecIndex];
     jitlink::Block *B = getGraphBlock(SecIndex);
