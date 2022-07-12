@@ -8,6 +8,8 @@
 
 #include "ClangExpressionSourceCode.h"
 
+#include "ClangExpressionUtil.h"
+
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
@@ -27,6 +29,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-forward.h"
 
 using namespace lldb_private;
 
@@ -200,6 +203,34 @@ public:
     return m_tokens.find(token) != m_tokens.end();
   }
 };
+
+// If we're evaluating from inside a lambda that captures a 'this' pointer,
+// add a "using" declaration to 'stream' for each capture used in the
+// expression (tokenized by 'verifier').
+//
+// If no 'this' capture exists, generate no using declarations. Instead
+// capture lookups will get resolved by the same mechanism as class member
+// variable lookup. That's because Clang generates an unnamed structure
+// representing the lambda closure whose members are the captured variables.
+void AddLambdaCaptureDecls(StreamString &stream, StackFrame *frame,
+                           TokenVerifier const &verifier) {
+  assert(frame);
+
+  if (auto thisValSP = ClangExpressionUtil::GetLambdaValueObject(frame)) {
+    uint32_t numChildren = thisValSP->GetNumChildren();
+    for (uint32_t i = 0; i < numChildren; ++i) {
+      auto childVal = thisValSP->GetChildAtIndex(i, true);
+      ConstString childName(childVal ? childVal->GetName() : ConstString(""));
+
+      if (!childName.IsEmpty() && verifier.hasToken(childName.GetStringRef()) &&
+          childName != "this") {
+        stream.Printf("using $__lldb_local_vars::%s;\n",
+                      childName.GetCString());
+      }
+    }
+  }
+}
+
 } // namespace
 
 TokenVerifier::TokenVerifier(std::string body) {
@@ -264,16 +295,24 @@ TokenVerifier::TokenVerifier(std::string body) {
   }
 }
 
-void ClangExpressionSourceCode::AddLocalVariableDecls(
-    const lldb::VariableListSP &var_list_sp, StreamString &stream,
-    const std::string &expr) const {
+void ClangExpressionSourceCode::AddLocalVariableDecls(StreamString &stream,
+                                                      const std::string &expr,
+                                                      StackFrame *frame) const {
+  assert(frame);
   TokenVerifier tokens(expr);
+
+  lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false, true);
 
   for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
     lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
 
     ConstString var_name = var_sp->GetName();
 
+    if (var_name == "this" && m_wrap_kind == WrapKind::CppMemberFunction) {
+      AddLambdaCaptureDecls(stream, frame, tokens);
+
+      continue;
+    }
 
     // We can check for .block_descriptor w/o checking for langauge since this
     // is not a valid identifier in either C or C++.
@@ -286,9 +325,6 @@ void ClangExpressionSourceCode::AddLocalVariableDecls(
     const bool is_objc = m_wrap_kind == WrapKind::ObjCInstanceMethod ||
                          m_wrap_kind == WrapKind::ObjCStaticMethod;
     if ((var_name == "self" || var_name == "_cmd") && is_objc)
-      continue;
-
-    if (var_name == "this" && m_wrap_kind == WrapKind::CppMemberFunction)
       continue;
 
     stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());
@@ -376,10 +412,8 @@ bool ClangExpressionSourceCode::GetText(
 
     if (add_locals)
       if (target->GetInjectLocalVariables(&exe_ctx)) {
-        lldb::VariableListSP var_list_sp =
-            frame->GetInScopeVariableList(false, true);
-        AddLocalVariableDecls(var_list_sp, lldb_local_var_decls,
-                              force_add_all_locals ? "" : m_body);
+        AddLocalVariableDecls(lldb_local_var_decls,
+                              force_add_all_locals ? "" : m_body, frame);
       }
   }
 

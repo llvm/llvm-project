@@ -531,6 +531,23 @@ private:
                         TypeFromParser *parser_type = nullptr);
 
   /// Use the NameSearchContext to generate a Decl for the given LLDB
+  /// ValueObject, and put it in the list of found entities.
+  ///
+  /// Helper function used by the other AddOneVariable APIs.
+  ///
+  /// \param[in,out] context
+  ///     The NameSearchContext to use when constructing the Decl.
+  ///
+  /// \param[in] pt
+  ///     The CompilerType of the variable we're adding a Decl for.
+  ///
+  /// \param[in] var
+  ///     The LLDB ValueObject that needs a Decl.
+  ClangExpressionVariable::ParserVars *
+  AddExpressionVariable(NameSearchContext &context, TypeFromParser const &pt,
+                        lldb::ValueObjectSP valobj);
+
+  /// Use the NameSearchContext to generate a Decl for the given LLDB
   /// Variable, and put it in the Tuple list.
   ///
   /// \param[in] context
@@ -543,6 +560,20 @@ private:
   ///     The LLDB ValueObject for that variable.
   void AddOneVariable(NameSearchContext &context, lldb::VariableSP var,
                       lldb::ValueObjectSP valobj);
+
+  /// Use the NameSearchContext to generate a Decl for the given ValueObject
+  /// and put it in the list of found entities.
+  ///
+  /// \param[in,out] context
+  ///     The NameSearchContext to use when constructing the Decl.
+  ///
+  /// \param[in] valobj
+  ///     The ValueObject that needs a Decl.
+  ///
+  /// \param[in] valobj_provider Callback that fetches a ValueObjectSP
+  ///            from the specified frame
+  void AddOneVariable(NameSearchContext &context, lldb::ValueObjectSP valobj,
+                      ValueObjectProviderTy valobj_provider);
 
   /// Use the NameSearchContext to generate a Decl for the given persistent
   /// variable, and put it in the list of found entities.

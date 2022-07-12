@@ -198,6 +198,10 @@ private:
                         ExecutionContext &exe_ctx,
                         std::vector<std::string> modules_to_import,
                         bool for_completion);
+
+  lldb::addr_t GetCppObjectPointer(lldb::StackFrameSP frame,
+                                   ConstString &object_name, Status &err);
+
   /// Defines how the current expression should be wrapped.
   ClangExpressionSourceCode::WrapKind GetWrapKind() const;
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
