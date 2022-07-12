@@ -56,8 +56,8 @@ using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::object;
 
-/// TODO: We use the command line parser only to forward `-pass-remarks` options
-/// to the LTO backend. This should be replaced when there is a better way.
+/// We use the command line parser only to forward options like `-pass-remarks`
+/// to the LLVM tools.
 static cl::OptionCategory
     ClangLinkerWrapperCategory("clang-linker-wrapper options");
 static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
@@ -91,14 +91,6 @@ static codegen::RegisterCodeGenFlags CodeGenFlags;
 
 /// Global flag to indicate that the LTO pipeline threw an error.
 static std::atomic<bool> LTOError;
-
-/// Magic section string that marks the existence of offloading data. The
-/// section will contain one or more offloading binaries stored contiguously.
-#define OFFLOAD_SECTION_MAGIC_STR ".llvm.offloading"
-
-/// The magic offset for the first object inside CUDA's fatbinary. This can be
-/// different but it should work for what is passed here.
-static constexpr unsigned FatbinaryOffset = 0x50;
 
 using OffloadingImage = OffloadBinary::OffloadingImage;
 
@@ -353,7 +345,7 @@ Error extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
       continue;
 
     MDString *SectionID = dyn_cast<MDString>(Op->getOperand(1));
-    if (!SectionID || SectionID->getString() != OFFLOAD_SECTION_MAGIC_STR)
+    if (!SectionID || SectionID->getString() != ".llvm.offloading")
       continue;
 
     GlobalVariable *GV =
@@ -872,24 +864,14 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
       BitcodeInputFiles.emplace_back(std::move(File));
       continue;
     }
-    case file_magic::cuda_fatbinary: {
-      // Cuda fatbinaries made by Clang almost almost have an object eighty
-      // bytes from the beginning. This should be sufficient to identify the
-      // symbols.
-      Buffer =
-          MemoryBufferRef(Buffer.getBuffer().drop_front(FatbinaryOffset), "");
-      LLVM_FALLTHROUGH;
-    }
     case file_magic::elf_relocatable:
-    case file_magic::elf_shared_object:
-    case file_magic::macho_object:
-    case file_magic::coff_object: {
+    case file_magic::elf_shared_object: {
       Expected<std::unique_ptr<ObjectFile>> ObjFile =
           ObjectFile::createObjectFile(Buffer);
       if (!ObjFile)
         continue;
 
-      for (auto &Sym : (*ObjFile)->symbols()) {
+      for (SymbolRef Sym : (*ObjFile)->symbols()) {
         Expected<StringRef> Name = Sym.getName();
         if (!Name)
           return Name.takeError();
