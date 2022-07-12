@@ -183,6 +183,9 @@ Bug Fixes
   initializer is not allowed this is now diagnosed as an error.
 - Clang now correctly emits symbols for implicitly instantiated constexpr
   template function. Fixes `Issue 55560 <https://github.com/llvm/llvm-project/issues/55560>`_.
+- Clang now checks ODR violations when merging concepts from different modules.
+  Note that this may possibly break existing code, and is done so intentionally.
+  Fixes `Issue 56310 <https://github.com/llvm/llvm-project/issues/56310>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1677,7 +1677,8 @@ private:
 
   /// A set containing all BasicBlocks that are known to present after
   /// vectorization as a predicated block.
-  SmallPtrSet<BasicBlock *, 4> PredicatedBBsAfterVectorization;
+  DenseMap<ElementCount, SmallPtrSet<BasicBlock *, 4>>
+      PredicatedBBsAfterVectorization;
 
   /// Records whether it is allowed to have the original scalar loop execute at
   /// least once. This may be needed as a fallback loop in case runtime
@@ -6088,6 +6089,8 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
   // map will indicate that we've analyzed it already.
   ScalarCostsTy &ScalarCostsVF = InstsToScalarize[VF];
 
+  PredicatedBBsAfterVectorization[VF].clear();
+
   // Find all the instructions that are scalar with predication in the loop and
   // determine if it would be better to not if-convert the blocks they are in.
   // If so, we also record the instructions to scalarize.
@@ -6105,7 +6108,7 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
         // Remember that BB will remain after vectorization.
-        PredicatedBBsAfterVectorization.insert(BB);
+        PredicatedBBsAfterVectorization[VF].insert(BB);
       }
   }
 }
@@ -6970,8 +6973,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     bool ScalarPredicatedBB = false;
     BranchInst *BI = cast<BranchInst>(I);
     if (VF.isVector() && BI->isConditional() &&
-        (PredicatedBBsAfterVectorization.count(BI->getSuccessor(0)) ||
-         PredicatedBBsAfterVectorization.count(BI->getSuccessor(1))))
+        (PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(0)) ||
+         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))))
       ScalarPredicatedBB = true;
 
     if (ScalarPredicatedBB) {

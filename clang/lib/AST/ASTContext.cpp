@@ -6561,6 +6561,20 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   // and patterns match.
   if (const auto *TemplateX = dyn_cast<TemplateDecl>(X)) {
     const auto *TemplateY = cast<TemplateDecl>(Y);
+
+    // ConceptDecl wouldn't be the same if their constraint expression differs.
+    if (const auto *ConceptX = dyn_cast<ConceptDecl>(X)) {
+      const auto *ConceptY = cast<ConceptDecl>(Y);
+      const Expr *XCE = ConceptX->getConstraintExpr();
+      const Expr *YCE = ConceptY->getConstraintExpr();
+      assert(XCE && YCE && "ConceptDecl without constraint expression?");
+      llvm::FoldingSetNodeID XID, YID;
+      XCE->Profile(XID, *this, /*Canonical=*/true);
+      YCE->Profile(YID, *this, /*Canonical=*/true);
+      if (XID != YID)
+        return false;
+    }
+
     return isSameEntity(TemplateX->getTemplatedDecl(),
                         TemplateY->getTemplatedDecl()) &&
            isSameTemplateParameterList(TemplateX->getTemplateParameters(),
