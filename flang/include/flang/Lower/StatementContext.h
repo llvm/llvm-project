@@ -82,7 +82,7 @@ public:
 
   bool workListIsEmpty() const {
     return cufs.empty() || llvm::all_of(cufs, [](auto &opt) -> bool {
-             return !opt.hasValue();
+             return !opt.has_value();
            });
   }
 
