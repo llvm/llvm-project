@@ -136,7 +136,7 @@ int inline convert_int(Writer *writer, const FormatSection &to_conv) {
     if (digits_written > 0)
       RET_IF_RESULT_NEGATIVE(writer->write(buffer + buff_cur, digits_written));
   }
-  return 0;
+  return WRITE_OK;
 }
 
 } // namespace printf_core
