@@ -89,11 +89,18 @@ set cmake_flags=^
   -DLLDB_EMBED_PYTHON_HOME=OFF ^
   -DLLDB_TEST_COMPILER=%cd%\build32_stage0\bin\clang.exe ^
   -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: " ^
+  -DLLVM_ENABLE_LIBXML2=FORCE_ON ^
+  -DLLDB_ENABLE_LIBXML2=OFF ^
+  -DCMAKE_C_FLAGS="-DLIBXML_STATIC" ^
+  -DCMAKE_CXX_FLAGS="-DLIBXML_STATIC" ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
 
 REM TODO: Run the "check-all" tests.
 
 set OLDPATH=%PATH%
+
+curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b
+tar zxf libxml2-v2.9.12.tar.gz
 
 set "VSCMD_START_DIR=%CD%"
 call "%vsdevcmd%" -arch=x86
@@ -102,7 +109,17 @@ set CC=
 set CXX=
 mkdir build32_stage0
 cd build32_stage0
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPython3_ROOT_DIR=%python32_dir% ..\llvm-project\llvm || exit /b
+
+mkdir libxmlbuild
+cd libxmlbuild
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_C14N=OFF -DLIBXML2_WITH_CATALOG=OFF -DLIBXML2_WITH_DEBUG=OFF -DLIBXML2_WITH_DOCB=OFF -DLIBXML2_WITH_FTP=OFF -DLIBXML2_WITH_HTML=OFF -DLIBXML2_WITH_HTTP=OFF -DLIBXML2_WITH_ICONV=OFF -DLIBXML2_WITH_ICU=OFF -DLIBXML2_WITH_ISO8859X=OFF -DLIBXML2_WITH_LEGACY=OFF -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_MEM_DEBUG=OFF -DLIBXML2_WITH_MODULES=OFF -DLIBXML2_WITH_OUTPUT=ON -DLIBXML2_WITH_PATTERN=OFF -DLIBXML2_WITH_PROGRAMS=OFF -DLIBXML2_WITH_PUSH=OFF -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_READER=OFF -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=OFF -DLIBXML2_WITH_SCHEMAS=OFF -DLIBXML2_WITH_SCHEMATRON=OFF -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF ../../libxml2-v2.9.12 || exit /b
+ninja install || exit /b
+set libxmldir=%cd%\install
+set "libxmldir=%libxmldir:\=/%"
+cd ..
+
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPython3_ROOT_DIR=%python32_dir% -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
+
 ninja || ninja || ninja || exit /b
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b
@@ -115,7 +132,7 @@ mkdir build32
 cd build32
 set CC=..\build32_stage0\bin\clang-cl
 set CXX=..\build32_stage0\bin\clang-cl
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPython3_ROOT_DIR=%python32_dir% ..\llvm-project\llvm || exit /b
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPython3_ROOT_DIR=%python32_dir% -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
 ninja || ninja || ninja || exit /b
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b
@@ -133,7 +150,16 @@ set CC=
 set CXX=
 mkdir build64_stage0
 cd build64_stage0
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPython3_ROOT_DIR=%python64_dir% ..\llvm-project\llvm || exit /b
+
+mkdir libxmlbuild
+cd libxmlbuild
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_C14N=OFF -DLIBXML2_WITH_CATALOG=OFF -DLIBXML2_WITH_DEBUG=OFF -DLIBXML2_WITH_DOCB=OFF -DLIBXML2_WITH_FTP=OFF -DLIBXML2_WITH_HTML=OFF -DLIBXML2_WITH_HTTP=OFF -DLIBXML2_WITH_ICONV=OFF -DLIBXML2_WITH_ICU=OFF -DLIBXML2_WITH_ISO8859X=OFF -DLIBXML2_WITH_LEGACY=OFF -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_MEM_DEBUG=OFF -DLIBXML2_WITH_MODULES=OFF -DLIBXML2_WITH_OUTPUT=ON -DLIBXML2_WITH_PATTERN=OFF -DLIBXML2_WITH_PROGRAMS=OFF -DLIBXML2_WITH_PUSH=OFF -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_READER=OFF -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=OFF -DLIBXML2_WITH_SCHEMAS=OFF -DLIBXML2_WITH_SCHEMATRON=OFF -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF ../../libxml2-v2.9.12 || exit /b
+ninja install || exit /b
+set libxmldir=%cd%\install
+set "libxmldir=%libxmldir:\=/%"
+cd ..
+
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPython3_ROOT_DIR=%python64_dir% -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
 ninja || ninja || ninja || exit /b
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b
@@ -147,7 +173,7 @@ mkdir build64
 cd build64
 set CC=..\build64_stage0\bin\clang-cl
 set CXX=..\build64_stage0\bin\clang-cl
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPython3_ROOT_DIR=%python64_dir% ..\llvm-project\llvm || exit /b
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPython3_ROOT_DIR=%python64_dir% -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
 ninja || ninja || ninja || exit /b
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b
