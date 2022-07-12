@@ -35,3 +35,30 @@ compute:
 exit:
   ret i32 0
 }
+
+define i32 @f3(i1 noundef zeroext %cnd) {
+; CHECK-LABEL: f3:
+; CHECK: bb0.n 0, {{%r[0-9]+}}, .{{[A-Z0-9]+}}
+; CHECK: jmp %r1
+  br i1 %cnd, label %true, label %false
+
+true:
+  ret i32 42
+
+false:
+  ret i32 84
+}
+
+define i32 @f4(i1 noundef zeroext %cnd) {
+; CHECK-LABEL: f4:
+; CHECK: bb1.n 0, {{%r[0-9]+}}, .{{[A-Z0-9]+}}
+; CHECK: jmp %r1
+  %not = xor i1 %cnd, true
+  br i1 %not, label %true, label %false
+
+true:
+  ret i32 42
+
+false:
+  ret i32 84
+}

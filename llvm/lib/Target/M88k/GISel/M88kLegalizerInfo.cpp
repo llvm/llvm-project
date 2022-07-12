@@ -50,9 +50,7 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .legalIf([](const LegalityQuery &Query) { return false; })
       .maxScalar(0, S32);
   getActionDefinitionsBuilder(G_SEXT_INREG).legalForTypeWithAnyImm({S32});
-  getActionDefinitionsBuilder(G_TRUNC)
-      .legalIf([](const LegalityQuery &Query) { return false; })
-      .maxScalar(1, S32);
+  getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
       .legalForTypesWithMemDesc({{S32, P0, S8, 8}, {S32, P0, S16, 16}});
   getActionDefinitionsBuilder({G_LOAD, G_STORE})

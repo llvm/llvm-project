@@ -311,6 +311,7 @@ bool M88kInstrInfo::reverseBranchCondition(
     // Invert bits to get reverse condition.
     Cond[1].setImm(~Cond[1].getImm() & 0x0f);
     break;
+#if 0
   case M88k::BB1:
   case M88k::BB0: {
     // TODO This only works if the value was produced by cmp/fcmp.
@@ -322,6 +323,12 @@ bool M88kInstrInfo::reverseBranchCondition(
     Cond[1].setImm(CC);
     break;
   }
+#else
+  case M88k::BB1:
+  case M88k::BB0:
+    // The save way is to delare that the condition cannot be reversed.
+    return true;
+#endif
   default:
     return true;
   }

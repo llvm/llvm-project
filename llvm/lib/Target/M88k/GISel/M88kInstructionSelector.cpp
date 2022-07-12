@@ -363,25 +363,25 @@ bool M88kInstructionSelector::selectCondBr(MachineInstr &I,
                                            MachineBasicBlock &MBB,
                                            MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_BRCOND && "Unexpected G code");
-  // Match combinations of G_BRCND and G_ICMP/G_FCMP
+  // Match combinations of G_BRCND and G_ICMP/G_FCMP or
+  // combinations of G_BRCOND and G_TRUNC of G_AND/G_XOR.
 
   // G_ICMP: $tst, $src1, $src2
   // G_BRCOND: $tst, $truebb
   MachineInstr *MI = nullptr;
-  MachineOperand CC = I.getOperand(0);
-  MachineOperand BB = I.getOperand(1);
+  Register CC = I.getOperand(0).getReg();
+  MachineBasicBlock *BB = I.getOperand(1).getMBB();
   CmpInst::Predicate Pred;
-  Register LHS, RHS;
+  Register LHS, RHS, Reg;
   int64_t SImm16;
-  if (mi_match(CC.getReg(), MRI,
-               m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(SImm16))) &&
+  if (mi_match(CC, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(SImm16))) &&
       isInt<16>(SImm16)) {
     if (SImm16 == 0) {
       CC0 CCCode = getCCforBCOND(Pred);
       MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BCND))
                .addImm(static_cast<int64_t>(CCCode))
                .addReg(LHS)
-               .add(BB);
+               .addMBB(BB);
     } else {
       Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
       ICC CCCode = getCCforICMP(Pred);
@@ -394,10 +394,9 @@ bool M88kInstructionSelector::selectCondBr(MachineInstr &I,
       MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
                .addImm(static_cast<int64_t>(CCCode))
                .addReg(Temp, RegState::Kill)
-               .add(BB);
+               .addMBB(BB);
     }
-  } else if (mi_match(CC.getReg(), MRI,
-                      m_GICmp(m_Pred(Pred), m_Reg(LHS), m_Reg(RHS)))) {
+  } else if (mi_match(CC, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_Reg(RHS)))) {
     Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
     ICC CCCode = getCCforICMP(Pred);
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPrr))
@@ -409,12 +408,28 @@ bool M88kInstructionSelector::selectCondBr(MachineInstr &I,
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
              .addImm(static_cast<int64_t>(CCCode))
              .addReg(Temp, RegState::Kill)
-             .add(BB);
+             .addMBB(BB);
+  } else if (mi_match(
+                 CC, MRI,
+                 m_GTrunc(m_any_of(m_GAnd(m_Reg(Reg), m_SpecificICst(1)),
+                                   m_GXor(m_GXor(m_Reg(Reg), m_SpecificICst(1)),
+                                          m_SpecificICst(1)))))) {
+    // TODO The xor(xor %r, 1), 1) pattern should be handled by a combiner.
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
+             .addImm(0)
+             .addReg(Reg)
+             .addMBB(BB);
+  } else if (mi_match(CC, MRI,
+                      m_GTrunc(m_GXor(m_Reg(Reg), m_SpecificICst(1))))) {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB0))
+             .addImm(0)
+             .addReg(Reg)
+             .addMBB(BB);
   } else {
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
-             .add(I.getOperand(0))
              .addImm(0)
-             .add(I.getOperand(1));
+             .addReg(CC)
+             .addMBB(BB);
   }
 
   I.eraseFromParent();
