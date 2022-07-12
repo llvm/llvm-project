@@ -33,6 +33,10 @@ if(DIST)
             "--version"
             OUTPUT_VARIABLE PIP_VERSION_INFO
             RESULT_VARIABLE HAD_ERROR)
+    if (NOT ${HAD_ERROR} EQUAL 0)
+      message(WARNING "PIP command failed, gdb-plugin disabled.")
+      return()
+    endif ()
     string(REGEX REPLACE " " ";" PIP_VERSION_INFO "${PIP_VERSION_INFO}")
     list(GET PIP_VERSION_INFO 1 PIP_VERSION)
     set(PYSYSFLAG "")
