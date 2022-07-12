@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -36,6 +37,61 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "clone-function"
+
+namespace {
+class LifetimeMaterializer final : public ValueMaterializer {
+  ValueToValueMapTy &VMap;
+  SmallSet<Metadata *, 16> GlobalFragments;
+
+  Metadata *mapToMetadata(const Metadata *Key, Metadata *Val) {
+    VMap.MD()[Key].reset(Val);
+    return Val;
+  }
+
+  Metadata *mapLifetime(Metadata *M) {
+    if (Optional<Metadata *> Mapped = VMap.getMappedMD(M))
+      return *Mapped;
+    if (isa<DIFragment>(M) && !GlobalFragments.contains(M)) {
+      M = mapToMetadata(
+          M, MDNode::replaceWithDistinct(cast<DIFragment>(M)->clone()));
+    }
+    return M;
+  };
+
+public:
+  LifetimeMaterializer(ValueToValueMapTy &VMap, const Function *Func)
+      : VMap(VMap) {
+    // FIXME: This is inefficient, and has to be repeated for each call to
+    // CloneFunction. Caching this information, maybe as a "kind" on the
+    // fragment, is one possible solution.
+    unsigned KindID = Func->getContext().getMDKindID("dbg.def");
+    SmallVector<MDNode *> MDs;
+    for (const GlobalVariable &GV : Func->getParent()->globals()) {
+      GV.getMetadata(KindID, MDs);
+      GlobalFragments.insert(MDs.begin(), MDs.end());
+    }
+  }
+
+  Value *materialize(Value *V) override {
+    if (!isa<MetadataAsValue>(V))
+      return nullptr;
+    const auto *MDV = cast<MetadataAsValue>(V);
+    const Metadata *MD = MDV->getMetadata();
+    if (!isa<DILifetime>(MD))
+      return nullptr;
+    const auto *LT = cast<DILifetime>(MD);
+    SmallVector<Metadata *> ArgObjects;
+    for (auto *AO : LT->argObjects())
+      ArgObjects.push_back(mapLifetime(AO));
+    return VMap[V] = MetadataAsValue::get(
+               V->getContext(),
+               mapToMetadata(
+                   LT, DILifetime::getDistinct(V->getContext(),
+                                               mapLifetime(LT->getObject()),
+                                               LT->getLocation(), ArgObjects)));
+  }
+};
+} // namespace
 
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
@@ -341,16 +397,18 @@ struct PruningFunctionCloner {
   const char *NameSuffix;
   ClonedCodeInfo *CodeInfo;
   bool HostFuncIsStrictFP;
+  ValueMaterializer *Materializer;
 
   Instruction *cloneInstruction(BasicBlock::const_iterator II);
 
 public:
   PruningFunctionCloner(Function *newFunc, const Function *oldFunc,
                         ValueToValueMapTy &valueMap, bool moduleLevelChanges,
-                        const char *nameSuffix, ClonedCodeInfo *codeInfo)
+                        const char *nameSuffix, ClonedCodeInfo *codeInfo,
+                        ValueMaterializer *materializer)
       : NewFunc(newFunc), OldFunc(oldFunc), VMap(valueMap),
         ModuleLevelChanges(moduleLevelChanges), NameSuffix(nameSuffix),
-        CodeInfo(codeInfo) {
+        CodeInfo(codeInfo), Materializer(materializer) {
     HostFuncIsStrictFP =
         newFunc->getAttributes().hasFnAttr(Attribute::StrictFP);
   }
@@ -497,7 +555,8 @@ void PruningFunctionCloner::CloneBlock(
     // nodes for which we defer processing until we update the CFG.
     if (!isa<PHINode>(NewInst)) {
       RemapInstruction(NewInst, VMap,
-                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges);
+                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
+                       nullptr, Materializer);
 
       // If we can simplify this instruction to some other value, simply add
       // a mapping to that value rather than inserting a new instruction into
@@ -615,46 +674,8 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   assert(NameSuffix && "NameSuffix cannot be null!");
 
   ValueMapTypeRemapper *TypeMapper = nullptr;
-  ValueMaterializer *Materializer = nullptr;
-
-  DebugInfoFinder DIFinder;
-  if (DISubprogram *SP = OldFunc->getSubprogram())
-    DIFinder.processSubprogram(SP);
-  for (const BasicBlock &BI : *OldFunc)
-    for (const Instruction &II : BI)
-      DIFinder.processInstruction(*II.getModule(), II);
-  if (DIFinder.subprogram_count() > 0) {
-    ModuleLevelChanges = true;
-
-    auto mapToSelfIfNew = [&VMap](MDNode *N) {
-      // Avoid clobbering an existing mapping.
-      (void)VMap.MD().try_emplace(N, N);
-    };
-
-    // Avoid cloning types, compile units, and subprograms.
-    for (DISubprogram *ISP : DIFinder.subprograms())
-      mapToSelfIfNew(ISP);
-
-    for (DICompileUnit *CU : DIFinder.compile_units())
-      mapToSelfIfNew(CU);
-
-    for (DIType *Type : DIFinder.types())
-      mapToSelfIfNew(Type);
-
-    for (DIGlobalVariable *DGV : DIFinder.heterogeneous_global_variables())
-      mapToSelfIfNew(DGV);
-
-    // FIXME: This is inefficient, and has to be repeated for each call to
-    // CloneFunction. Caching this information, maybe as a "kind" on the
-    // fragment, is one possible solution.
-    unsigned KindID = OldFunc->getContext().getMDKindID("dbg.def");
-    SmallVector<MDNode *> MDs;
-    for (const GlobalVariable &GV : OldFunc->getParent()->globals()) {
-      GV.getMetadata(KindID, MDs);
-      for (auto &MD : MDs)
-        mapToSelfIfNew(MD);
-    }
-  }
+  LifetimeMaterializer LTMaterializer(VMap, OldFunc);
+  ValueMaterializer *Materializer = &LTMaterializer;
 
 #ifndef NDEBUG
   // If the cloning starts at the beginning of the function, verify that
@@ -665,7 +686,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 #endif
 
   PruningFunctionCloner PFC(NewFunc, OldFunc, VMap, ModuleLevelChanges,
-                            NameSuffix, CodeInfo);
+                            NameSuffix, CodeInfo, Materializer);
   const BasicBlock *StartingBB;
   if (StartingInst)
     StartingBB = StartingInst->getParent();
