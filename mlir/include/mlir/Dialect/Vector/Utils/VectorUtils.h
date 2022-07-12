@@ -34,11 +34,6 @@ namespace vector {
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
 Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
-
-/// Return the result value of reducing two scalar/vector values with the
-/// corresponding arith operation.
-Value makeArithReduction(OpBuilder &b, Location loc, CombiningKind kind,
-                         Value v1, Value v2);
 } // namespace vector
 
 /// Return the number of elements of basis, `0` if empty.
