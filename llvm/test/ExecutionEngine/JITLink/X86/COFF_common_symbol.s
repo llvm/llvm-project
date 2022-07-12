@@ -1,3 +1,4 @@
+# REQUIRES: asserts
 # RUN: llvm-mc -filetype=obj -triple=x86_64-windows-msvc %s -o %t
 # RUN: llvm-jitlink --debug-only=jitlink -noexec %t 2>&1 | FileCheck %s
 #
