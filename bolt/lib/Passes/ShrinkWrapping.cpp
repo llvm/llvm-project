@@ -779,7 +779,7 @@ void ShrinkWrapping::pruneUnwantedCSRs() {
 }
 
 void ShrinkWrapping::computeSaveLocations() {
-  SavePos = std::vector<SmallSetVector<MCInst *, 4>>(BC.MRI->getNumRegs());
+  BestSavePos = std::vector<std::vector<MCInst *>>(BC.MRI->getNumRegs());
   ReachingInsns<true> &RI = Info.getReachingInsnsBackwards();
   DominatorAnalysis<false> &DA = Info.getDominatorAnalysis();
   StackPointerTracking &SPT = Info.getStackPointerTracking();
@@ -819,11 +819,12 @@ void ShrinkWrapping::computeSaveLocations() {
       if (BBDominatedUses == UsesByReg[I]) {
         LLVM_DEBUG(dbgs() << "\t\t\tAdded " << BB.getName()
                           << " as a save pos for " << I << "\n");
-        SavePos[I].insert(First);
+        BestSavePos[I].push_back(First);
         LLVM_DEBUG({
           dbgs() << "Dominated uses are:\n";
           for (int J : UsesByReg[I].set_bits()) {
             dbgs() << "Idx " << J << ": ";
+            BC.printInstruction(dbgs(), *DA.Expressions[J]);
             DA.Expressions[J]->dump();
           }
         });
@@ -831,27 +832,32 @@ void ShrinkWrapping::computeSaveLocations() {
     }
   }
 
-  BestSaveCount = std::vector<uint64_t>(BC.MRI->getNumRegs(),
-                                        std::numeric_limits<uint64_t>::max());
-  BestSavePos = std::vector<MCInst *>(BC.MRI->getNumRegs(), nullptr);
+  BestSaveCount = std::vector<std::vector<uint64_t>>(BC.MRI->getNumRegs());
+
   auto &InsnToBB = Info.getInsnToBBMap();
   for (unsigned I = 0, E = BC.MRI->getNumRegs(); I != E; ++I) {
     if (!CSA.CalleeSaved[I])
       continue;
 
-    for (MCInst *Pos : SavePos[I]) {
-      BinaryBasicBlock *BB = InsnToBB[Pos];
-      uint64_t Count = BB->getExecutionCount();
-      if (Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
-          Count < BestSaveCount[I]) {
-        BestSavePos[I] = Pos;
-        BestSaveCount[I] = Count;
-      }
+    std::stable_sort(BestSavePos[I].begin(), BestSavePos[I].end(),
+                     [&](const MCInst *A, const MCInst *B) {
+                       const BinaryBasicBlock *BBA = InsnToBB[A];
+                       const BinaryBasicBlock *BBB = InsnToBB[B];
+                       const uint64_t CountA = BBA->getKnownExecutionCount();
+                       const uint64_t CountB = BBB->getKnownExecutionCount();
+                       return CountB < CountA;
+                     });
+
+    for (MCInst *Pos : BestSavePos[I]) {
+      const BinaryBasicBlock *BB = InsnToBB[Pos];
+      const uint64_t Count = BB->getKnownExecutionCount();
+      BestSaveCount[I].push_back(Count);
     }
   }
 }
 
 void ShrinkWrapping::computeDomOrder() {
+  DomOrder = std::vector<MCPhysReg>(BC.MRI->getNumRegs(), 0);
   std::vector<MCPhysReg> Order;
   for (MCPhysReg I = 0, E = BC.MRI->getNumRegs(); I != E; ++I) {
     Order.push_back(I);
@@ -860,17 +866,19 @@ void ShrinkWrapping::computeDomOrder() {
   DominatorAnalysis<false> &DA = Info.getDominatorAnalysis();
   auto &InsnToBB = Info.getInsnToBBMap();
   llvm::sort(Order, [&](const MCPhysReg &A, const MCPhysReg &B) {
-    BinaryBasicBlock *BBA = BestSavePos[A] ? InsnToBB[BestSavePos[A]] : nullptr;
-    BinaryBasicBlock *BBB = BestSavePos[B] ? InsnToBB[BestSavePos[B]] : nullptr;
+    BinaryBasicBlock *BBA =
+        BestSavePos[A].size() ? InsnToBB[BestSavePos[A].back()] : nullptr;
+    BinaryBasicBlock *BBB =
+        BestSavePos[B].size() ? InsnToBB[BestSavePos[B].back()] : nullptr;
     if (BBA == BBB)
       return A < B;
     if (!BBA && BBB)
       return false;
     if (BBA && !BBB)
       return true;
-    if (DA.doesADominateB(*BestSavePos[A], *BestSavePos[B]))
+    if (DA.doesADominateB(*BestSavePos[A].back(), *BestSavePos[B].back()))
       return true;
-    if (DA.doesADominateB(*BestSavePos[B], *BestSavePos[A]))
+    if (DA.doesADominateB(*BestSavePos[B].back(), *BestSavePos[A].back()))
       return false;
     return A < B;
   });
@@ -885,33 +893,25 @@ bool ShrinkWrapping::isBestSavePosCold(unsigned CSR, MCInst *&BestPosSave,
   if (!CSA.CalleeSaved[CSR])
     return false;
 
-  uint64_t BestCount = BestSaveCount[CSR];
-  BestPosSave = BestSavePos[CSR];
-  bool ShouldMove = false;
-  if (BestCount != std::numeric_limits<uint64_t>::max() &&
-      BestCount < (opts::ShrinkWrappingThreshold / 100.0) * CurSavingCost) {
-    LLVM_DEBUG({
-      auto &InsnToBB = Info.getInsnToBBMap();
-      dbgs() << "Better position for saves found in func " << BF.getPrintName()
-             << " count << " << BF.getKnownExecutionCount() << "\n";
-      dbgs() << "Reg: " << CSR
-             << "; New BB: " << InsnToBB[BestPosSave]->getName()
-             << " Freq reduction: " << (CurSavingCost - BestCount) << "\n";
-    });
-    TotalEstimatedWin += CurSavingCost - BestCount;
-    ShouldMove = true;
-  }
+  assert(BestSaveCount[CSR].size() == BestSavePos[CSR].size() &&
+         "save position vectors out of sync");
+  if (BestSaveCount[CSR].empty())
+    return false;
 
-  if (!ShouldMove)
+  const uint64_t BestCount = BestSaveCount[CSR].back();
+  BestPosSave = BestSavePos[CSR].back();
+  if (BestCount >= (opts::ShrinkWrappingThreshold / 100.0) * CurSavingCost)
     return false;
-  if (!BestPosSave) {
-    LLVM_DEBUG({
-      dbgs() << "Dropping opportunity because we don't know where to put "
-                "stores -- total est. freq reduc: "
-             << TotalEstimatedWin << "\n";
-    });
-    return false;
-  }
+
+  LLVM_DEBUG({
+    auto &InsnToBB = Info.getInsnToBBMap();
+    dbgs() << "Better position for saves found in func " << BF.getPrintName()
+           << " count << " << BF.getKnownExecutionCount() << "\n";
+    dbgs() << "Reg: " << CSR << "; New BB: " << InsnToBB[BestPosSave]->getName()
+           << " Freq reduction: " << (CurSavingCost - BestCount) << "\n";
+  });
+
+  TotalEstimatedWin = CurSavingCost - BestCount;
   return true;
 }
 
@@ -973,7 +973,6 @@ ShrinkWrapping::doRestorePlacement(MCInst *BestPosSave, unsigned CSR,
                                    uint64_t TotalEstimatedWin) {
   SmallVector<ProgramPoint, 4> Frontier;
   SmallVector<bool, 4> IsCritEdge;
-  bool CannotPlace = false;
   DominatorAnalysis<false> &DA = Info.getDominatorAnalysis();
 
   SmallVector<BinaryBasicBlock *, 4> CritEdgesFrom;
@@ -994,8 +993,10 @@ ShrinkWrapping::doRestorePlacement(MCInst *BestPosSave, unsigned CSR,
   for (ProgramPoint &PP : Frontier) {
     bool HasCritEdges = false;
     if (PP.isInst() && BC.MIB->isTerminator(*PP.getInst()) &&
-        doesInstUsesCSR(*PP.getInst(), CSR))
-      CannotPlace = true;
+        doesInstUsesCSR(*PP.getInst(), CSR)) {
+      Frontier.clear();
+      return Frontier;
+    }
     BinaryBasicBlock *FrontierBB = Info.getParentBB(PP);
     CritEdgesFrom.emplace_back(FrontierBB);
     CritEdgesTo.emplace_back(0);
@@ -1003,8 +1004,6 @@ ShrinkWrapping::doRestorePlacement(MCInst *BestPosSave, unsigned CSR,
     // Check for invoke instructions at the dominance frontier, which indicates
     // the landing pad is not dominated.
     if (PP.isInst() && BC.MIB->isInvoke(*PP.getInst())) {
-      LLVM_DEBUG(
-          dbgs() << "Bailing on restore placement to avoid LP splitting\n");
       Frontier.clear();
       return Frontier;
     }
@@ -1053,15 +1052,6 @@ ShrinkWrapping::doRestorePlacement(MCInst *BestPosSave, unsigned CSR,
     // valid
     Info.invalidateAll();
     classifyCSRUses();
-  }
-  if (CannotPlace) {
-    LLVM_DEBUG({
-      dbgs() << "Dropping opportunity because restore placement failed"
-                " -- total est. freq reduc: "
-             << TotalEstimatedWin << "\n";
-    });
-    Frontier.clear();
-    return Frontier;
   }
   return Frontier;
 }
@@ -1281,13 +1271,26 @@ void ShrinkWrapping::moveSaveRestores() {
   std::vector<std::tuple<unsigned, MCInst *, size_t>> MovedRegs;
   uint64_t TotalEstimatedWin = 0;
 
+  computeDomOrder();
   for (unsigned I = 0, E = BC.MRI->getNumRegs(); I != E; ++I) {
     MCInst *BestPosSave = nullptr;
     uint64_t EstimatedWin = 0;
-    if (!isBestSavePosCold(I, BestPosSave, EstimatedWin))
-      continue;
-    SmallVector<ProgramPoint, 4> RestorePoints =
-        doRestorePlacement(BestPosSave, I, EstimatedWin);
+    SmallVector<ProgramPoint, 4> RestorePoints;
+    while (RestorePoints.empty() &&
+           isBestSavePosCold(I, BestPosSave, EstimatedWin)) {
+      RestorePoints = doRestorePlacement(BestPosSave, I, EstimatedWin);
+      if (RestorePoints.empty()) {
+        LLVM_DEBUG({
+          dbgs() << "Dropping opportunity because restore placement failed"
+                    " -- total est. freq reduc: "
+                 << EstimatedWin << ". Will try "
+                 << (BestSaveCount[I].size() - 1) << " more times.\n";
+        });
+        BestSaveCount[I].pop_back();
+        BestSavePos[I].pop_back();
+        computeDomOrder();
+      }
+    }
     if (RestorePoints.empty()) {
       SpillsFailedDynamicCount += EstimatedWin;
       continue;
@@ -1958,7 +1961,6 @@ bool ShrinkWrapping::perform(bool HotOnly) {
   HasDeletedOffsetCFIs = BitVector(BC.MRI->getNumRegs(), false);
   PushOffsetByReg = std::vector<int64_t>(BC.MRI->getNumRegs(), 0LL);
   PopOffsetByReg = std::vector<int64_t>(BC.MRI->getNumRegs(), 0LL);
-  DomOrder = std::vector<MCPhysReg>(BC.MRI->getNumRegs(), 0);
 
   // Update pass statistics
   uint64_t TotalInstrs = 0ULL;
@@ -2001,7 +2003,6 @@ bool ShrinkWrapping::perform(bool HotOnly) {
   classifyCSRUses();
   pruneUnwantedCSRs();
   computeSaveLocations();
-  computeDomOrder();
   moveSaveRestores();
   LLVM_DEBUG({
     dbgs() << "Func before shrink-wrapping: \n";
