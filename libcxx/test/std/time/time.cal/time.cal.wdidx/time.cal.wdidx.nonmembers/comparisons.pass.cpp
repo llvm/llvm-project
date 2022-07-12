@@ -27,8 +27,8 @@ int main(int, char**)
     using weekday         = std::chrono::weekday;
     using weekday_indexed = std::chrono::weekday_indexed;
 
-    AssertComparisons2AreNoexcept<weekday_indexed>();
-    AssertComparisons2ReturnBool<weekday_indexed>();
+    AssertEqualityAreNoexcept<weekday_indexed>();
+    AssertEqualityReturnBool<weekday_indexed>();
 
     static_assert( (weekday_indexed{} == weekday_indexed{}), "");
     static_assert(!(weekday_indexed{} != weekday_indexed{}), "");

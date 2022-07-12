@@ -35,15 +35,15 @@ int main(int, char**)
     constexpr weekday Tuesday = std::chrono::Tuesday;
     constexpr weekday Wednesday = std::chrono::Wednesday;
 
-    AssertComparisons2AreNoexcept<month_weekday_last>();
-    AssertComparisons2ReturnBool<month_weekday_last>();
+    AssertEqualityAreNoexcept<month_weekday_last>();
+    AssertEqualityReturnBool<month_weekday_last>();
 
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         month_weekday_last{std::chrono::January, weekday_last{Tuesday}},
         month_weekday_last{std::chrono::January, weekday_last{Tuesday}},
         true), "");
 
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         month_weekday_last{std::chrono::January, weekday_last{Tuesday}},
         month_weekday_last{std::chrono::January, weekday_last{Wednesday}},
         false), "");
@@ -51,7 +51,7 @@ int main(int, char**)
     //  vary the months
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
-            assert((testComparisons2(
+            assert((testEquality(
                 month_weekday_last{month{i}, weekday_last{Tuesday}},
                 month_weekday_last{month{j}, weekday_last{Tuesday}},
             i == j)));
@@ -59,13 +59,13 @@ int main(int, char**)
     //  vary the weekday
     for (unsigned i = 0; i < 6; ++i)
         for (unsigned j = 0; j < 6; ++j)
-            assert((testComparisons2(
+            assert((testEquality(
                 month_weekday_last{January, weekday_last{weekday{i}}},
                 month_weekday_last{January, weekday_last{weekday{j}}},
             i == j)));
 
     //  both different
-    assert((testComparisons2(
+    assert((testEquality(
         month_weekday_last{month{1}, weekday_last{weekday{1}}},
         month_weekday_last{month{2}, weekday_last{weekday{2}}},
     false)));

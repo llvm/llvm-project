@@ -46,28 +46,28 @@ int main(int, char**) {
         m1.insert(value_type(1, "abc"));
         m2.insert(value_type(2, "abc"));
         const map_type& cm1 = m1, cm2 = m2;
-        assert(testComparisons6(cm1, cm2, false, true));
+        assert(testComparisons(cm1, cm2, false, true));
     }
     {
         map_type m1, m2;
         m1.insert(value_type(1, "abc"));
         m2.insert(value_type(1, "abc"));
         const map_type& cm1 = m1, cm2 = m2;
-        assert(testComparisons6(cm1, cm2, true, false));
+        assert(testComparisons(cm1, cm2, true, false));
     }
     {
         map_type m1, m2;
         m1.insert(value_type(1, "ab"));
         m2.insert(value_type(1, "abc"));
         const map_type& cm1 = m1, cm2 = m2;
-        assert(testComparisons6(cm1, cm2, false, true));
+        assert(testComparisons(cm1, cm2, false, true));
     }
     {
         map_type m1, m2;
         m1.insert(value_type(1, "abc"));
         m2.insert(value_type(1, "bcd"));
         const map_type& cm1 = m1, cm2 = m2;
-        assert(testComparisons6(cm1, cm2, false, true));
+        assert(testComparisons(cm1, cm2, false, true));
     }
     {
         map_type m1, m2;
@@ -75,7 +75,7 @@ int main(int, char**) {
         m2.insert(value_type(1, "abc"));
         m2.insert(value_type(2, "abc"));
         const map_type& cm1 = m1, cm2 = m2;
-        assert(testComparisons6(cm1, cm2, false, true));
+        assert(testComparisons(cm1, cm2, false, true));
     }
     {
         map_type m1, m2;
@@ -84,7 +84,7 @@ int main(int, char**) {
         m2.insert(value_type(1, "abc"));
         m2.insert(value_type(1, "bcd"));
         const map_type& cm1 = m1, cm2 = m2;
-        assert(testComparisons6(cm1, cm2, false, true));
+        assert(testComparisons(cm1, cm2, false, true));
     }
     return 0;
 }
