@@ -389,6 +389,9 @@ public:
   /// On AArch64 this can only be "sp_el0".
   std::string StackProtectorGuardReg;
 
+  /// Specify a symbol to be the guard value.
+  std::string StackProtectorGuardSymbol;
+
   /// Path to ignorelist file specifying which objects
   /// (files, functions) listed for instrumentation by sanitizer
   /// coverage pass should actually not be instrumented.

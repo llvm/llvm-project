@@ -2845,6 +2845,21 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
         AddressSpace = X86AS::FS;
       else if (GuardReg == "gs")
         AddressSpace = X86AS::GS;
+
+      // Use symbol guard if user specify.
+      StringRef GuardSymb = M->getStackProtectorGuardSymbol();
+      if (!GuardSymb.empty()) {
+        GlobalVariable *GV = M->getGlobalVariable(GuardSymb);
+        if (!GV) {
+          Type *Ty = Subtarget.is64Bit() ? Type::getInt64Ty(M->getContext())
+                                         : Type::getInt32Ty(M->getContext());
+          GV = new GlobalVariable(*M, Ty, false, GlobalValue::ExternalLinkage,
+                                  nullptr, GuardSymb, nullptr,
+                                  GlobalValue::NotThreadLocal, AddressSpace);
+        }
+        return GV;
+      }
+
       return SegmentOffset(IRB, Offset, AddressSpace);
     }
   }
