@@ -221,12 +221,6 @@ Changes to the DAG infrastructure
 ---------------------------------
 
 
-Changes to the Metadata Info
----------------------------------
-
-* Add Module Flags Metadata ``stack-protector-guard-symbol`` which specify a
-  symbol for addressing the stack-protector guard.
-
 Changes to the Debug Info
 ---------------------------------
 
