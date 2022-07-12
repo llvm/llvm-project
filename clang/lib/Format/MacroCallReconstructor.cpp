@@ -98,7 +98,7 @@ void MacroCallReconstructor::add(FormatToken *Token,
   if (!ActiveExpansions.empty() && Token->MacroCtx &&
       (Token->MacroCtx->Role != MR_Hidden ||
        ActiveExpansions.size() != Token->MacroCtx->ExpandedFrom.size())) {
-    if (bool PassedMacroComma = reconstructActiveCallUntil(Token))
+    if (/*PassedMacroComma = */ reconstructActiveCallUntil(Token))
       First = true;
   }
 
@@ -172,7 +172,7 @@ void MacroCallReconstructor::prepareParent(FormatToken *ExpandedParent,
     }
     assert(!ActiveReconstructedLines.empty());
     ActiveReconstructedLines.back()->Tokens.back()->Children.push_back(
-        std::make_unique<Line>());
+        std::make_unique<ReconstructedLine>());
     ActiveReconstructedLines.push_back(
         &*ActiveReconstructedLines.back()->Tokens.back()->Children.back());
   } else if (parentLine().Tokens.back()->Tok != Parent) {
@@ -498,14 +498,16 @@ void MacroCallReconstructor::finalize() {
   Top.Children.resize(1);
 }
 
-void MacroCallReconstructor::appendToken(FormatToken *Token, Line *L) {
+void MacroCallReconstructor::appendToken(FormatToken *Token,
+                                         ReconstructedLine *L) {
   L = L ? L : currentLine();
   LLVM_DEBUG(llvm::dbgs() << "-> " << Token->TokenText << "\n");
   L->Tokens.push_back(std::make_unique<LineNode>(Token));
 }
 
-UnwrappedLine MacroCallReconstructor::createUnwrappedLine(const Line &Line,
-                                                          int Level) {
+UnwrappedLine
+MacroCallReconstructor::createUnwrappedLine(const ReconstructedLine &Line,
+                                            int Level) {
   UnwrappedLine Result;
   Result.Level = Level;
   for (const auto &N : Line.Tokens) {
@@ -526,7 +528,7 @@ UnwrappedLine MacroCallReconstructor::createUnwrappedLine(const Line &Line,
   return Result;
 }
 
-void MacroCallReconstructor::debug(const Line &Line, int Level) {
+void MacroCallReconstructor::debug(const ReconstructedLine &Line, int Level) {
   for (int i = 0; i < Level; ++i)
     llvm::dbgs() << " ";
   for (const auto &N : Line.Tokens) {
@@ -544,17 +546,19 @@ void MacroCallReconstructor::debug(const Line &Line, int Level) {
   llvm::dbgs() << "\n";
 }
 
-MacroCallReconstructor::Line &MacroCallReconstructor::parentLine() {
+MacroCallReconstructor::ReconstructedLine &
+MacroCallReconstructor::parentLine() {
   return **std::prev(std::prev(ActiveReconstructedLines.end()));
 }
 
-MacroCallReconstructor::Line *MacroCallReconstructor::currentLine() {
+MacroCallReconstructor::ReconstructedLine *
+MacroCallReconstructor::currentLine() {
   return ActiveReconstructedLines.back();
 }
 
 MacroCallReconstructor::MacroCallState::MacroCallState(
-    MacroCallReconstructor::Line *Line, FormatToken *ParentLastToken,
-    FormatToken *MacroCallLParen)
+    MacroCallReconstructor::ReconstructedLine *Line,
+    FormatToken *ParentLastToken, FormatToken *MacroCallLParen)
     : Line(Line), ParentLastToken(ParentLastToken),
       MacroCallLParen(MacroCallLParen) {
   LLVM_DEBUG(
