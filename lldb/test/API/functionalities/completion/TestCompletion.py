@@ -291,6 +291,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('help watchpoint s', 'help watchpoint set ')
 
     @expectedFailureNetBSD
+    @add_test_categories(["watchpoint"])
     def test_common_complete_watchpoint_ids(self):
         subcommands = ['enable', 'disable', 'delete', 'modify', 'ignore']
 
