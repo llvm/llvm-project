@@ -22,7 +22,7 @@
 # REGULAR-THEN-FORCE-NOT: _foo
 ## If the -force_load comes first, then the second load will just be a no-op.
 # RUN: %lld -lSystem -force_load %t/foo.a %t/foo.a %t/test.o -o %t/test-force-then-regular
-# RUN: llvm-objdump --syms %t/test-regular-then-force | FileCheck %s --check-prefix=REGULAR-THEN-FORCE
+# RUN: llvm-objdump --syms %t/test-force-then-regular | FileCheck %s --check-prefix=FORCE-THEN-REGULAR
 # FORCE-THEN-REGULAR: _foo
 
 ## Force-loading the same path twice is fine
