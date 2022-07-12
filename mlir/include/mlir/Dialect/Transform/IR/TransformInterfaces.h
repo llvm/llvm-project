@@ -695,6 +695,26 @@ struct PayloadIRResource
   StringRef getName() override { return "transform.payload_ir"; }
 };
 
+/// Populates `effects` with the memory effects indicating the operation on the
+/// given handle value:
+///   - consumes = Read + Free,
+///   - produces = Allocate + Write,
+///   - onlyReads = Read.
+void consumesHandle(ValueRange handles,
+                    SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
+void producesHandle(ValueRange handles,
+                    SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
+void onlyReadsHandle(ValueRange handles,
+                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
+
+/// Checks whether the transform op consumes the given handle.
+bool isHandleConsumed(Value handle, transform::TransformOpInterface transform);
+
+/// Populates `effects` with the memory effects indicating the access to payload
+/// IR resource.
+void modifiesPayload(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
+void onlyReadsPayload(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
+
 /// Trait implementing the MemoryEffectOpInterface for operations that "consume"
 /// their operands and produce new results.
 template <typename OpTy>
@@ -705,20 +725,9 @@ public:
   /// the results by allocating and writing it and reads/writes the payload IR
   /// in the process.
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-    for (Value operand : this->getOperation()->getOperands()) {
-      effects.emplace_back(MemoryEffects::Read::get(), operand,
-                           TransformMappingResource::get());
-      effects.emplace_back(MemoryEffects::Free::get(), operand,
-                           TransformMappingResource::get());
-    }
-    for (Value result : this->getOperation()->getResults()) {
-      effects.emplace_back(MemoryEffects::Allocate::get(), result,
-                           TransformMappingResource::get());
-      effects.emplace_back(MemoryEffects::Write::get(), result,
-                           TransformMappingResource::get());
-    }
-    effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
-    effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
+    consumesHandle(this->getOperation()->getOperands(), effects);
+    producesHandle(this->getOperation()->getResults(), effects);
+    modifiesPayload(effects);
   }
 
   /// Checks that the op matches the expectations of this trait.
@@ -742,16 +751,9 @@ public:
   /// This op produces handles to the Payload IR without consuming the original
   /// handles and without modifying the IR itself.
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-    effects.emplace_back(MemoryEffects::Read::get(),
-                         this->getOperation()->getOperand(0),
-                         TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Allocate::get(),
-                         this->getOperation()->getResult(0),
-                         TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Write::get(),
-                         this->getOperation()->getResult(0),
-                         TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+    onlyReadsHandle(this->getOperation()->getOperands(), effects);
+    producesHandle(this->getOperation()->getResults(), effects);
+    onlyReadsPayload(effects);
   }
 
   /// Checks that the op matches the expectation of this trait.
@@ -845,27 +847,6 @@ transposeResults(const SmallVector<SmallVector<Operation *>, 1> &m) {
   return res;
 }
 } // namespace detail
-
-/// Populates `effects` with the memory effects indicating the operation on the
-/// given handle value:
-///   - consumes = Read + Free,
-///   - produces = Allocate + Write,
-///   - onlyReads = Read.
-void consumesHandle(ValueRange handles,
-                    SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
-void producesHandle(ValueRange handles,
-                    SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
-void onlyReadsHandle(ValueRange handles,
-                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
-
-/// Checks whether the transform op consumes the given handle.
-bool isHandleConsumed(Value handle, transform::TransformOpInterface transform);
-
-/// Populates `effects` with the memory effects indicating the access to payload
-/// IR resource.
-void modifiesPayload(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
-void onlyReadsPayload(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
-
 } // namespace transform
 } // namespace mlir
 

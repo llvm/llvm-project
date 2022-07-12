@@ -127,6 +127,71 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
   }];
 }
 
+def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Emits the IR computing the tile sizes `s1` and `s2` such that:
+
+      - there exists a combination of `n` tiles of size `s1` and `m` tiles of
+        size `s2` that covers the entirety of the iteration space `dimension` of
+        the target structured op;
+      - `s1`, `s2` is less than or equal to `target_size`;
+      - `s1` and `s2` are divisible by `divisor.
+
+    For example, for a dimension of size 54 with target size 12 and divisor 2,
+    this can emit the IR computing the tile size 10, used for 3 tiles, and 12,
+    used for 2 tiles, totally 10*3 + 12*2 = 54. Note that when the divisor does
+    not divide the original dimension size, it is impossible to compute such
+    tile sizes. An assertion is emitted to guard against this in the dynamic
+    case.
+
+    Expects the target size and the divisor to be strictly positive. Folds the
+    IR as much as possible, normally obtaining constant sizes and numbers of
+    tiles for a statically known dimension.
+
+    This does *not* consume the target handle and produces three handles each
+    pointing to single-result index-typed operations (which may be arithmetic
+    constant operations) defining the two respective tile sizes and the product
+    of the first tile size with the number of tiles of that size (useful for
+    splitting the iteration space).
+
+    This operation composes with the regular tiling when applied per-dimension:
+
+    ```mlir
+    %sz1, %sz2, %split = structured.multitile_sizes %target
+                         { target_size = 10, dimension = 1 }
+    %low, %high = structured.split %target after %split { dimension = 1 }
+    %tiled_low = structured.tile %low [0, %sz1]
+    %tiled_high = structured.tile %high [0, %sz2]
+    %common = merge_handles %tiled_low, %tiled_high
+
+    %sz3, %sz4, %split = structured.multitile_size %target
+                         { target_size = 42, dimension = 0 }
+    %sz3r, %sz4r, %splitr = replicate num(%common) %sz3, %sz4, %splitr
+    structured.split %common after %splitr { dimension = 0 }
+    // ...
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       I64Attr:$dimension,
+                       I64Attr:$target_size,
+                       DefaultValuedAttr<I64Attr, "1">:$divisor);
+  let results = (outs PDL_Operation:$low_size,
+                      PDL_Operation:$high_size,
+                      PDL_Operation:$split_point);
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVector<::mlir::Operation *> &results,
+        TransformState &state);
+  }];
+}
+
+
 def PadOp : Op<Transform_Dialect, "structured.pad",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
@@ -396,28 +461,59 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
 
 def TileOp : Op<Transform_Dialect, "structured.tile",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
-        FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
-    Indicates that the given `target` op should be tiled with the options
-    provided as attributes. This transform generates a loop nest with a smaller
-    ("tiled") target operation in its body. Currently limited to LinalgOps.
+    Indicates that the given `target` op should be tiled with the given sizes.
+    This transform generates a loop nest with a smaller ("tiled") target
+    operation in its body. Currently limited to LinalgOps.
 
-    `sizes` are the tile sizes. A tile size of `0` indicates that the
-    respective dimension should not be tiled. No loop will be generated for such
-    dimensions. If all tile sizes are `0`, this transform is effectively a
-    no-op.
+    Tile sizes may be known at transformation time, in which case they are
+    expected to be provided in the `static_size` attribute, or not, in which
+    case the tile value must be computed by the payload IR and the handle to the
+    operation computing it must be provided through `dynamic_sizes`. When the
+    sizes are not known statically, the corresponding entry in the
+    `static_sizes` attribute must be set to `ShapedType::kDynamicSize`. Only
+    the dynamic sizes must be provided in `dynamic_sizes`, i.e., there should
+    be as many handles as `ShapedType::kDynamicSize` values in the
+    `static_sizes` attribute. A static size of `0` indicates that the dimension
+    should not be tiled. No loop will be generated for such dimensions. If all
+    tile sizes are `0`, this transform is effectively a no-op.
 
     This op returns handles to the tiled op (in the generated loop nest) and the
-    generated loops. The number of loops is the number of non-zero tile sizes.
+    generated loops. The number of loops is the number of tile sizes that are
+    statically known to be non-zero.
+
+    #### Return modes
+
+    On success, the resulting handles are associated with co-indexed lists of
+    tiled operations and loops around them.
+
+    This operation only supports Linalg ops and produces a silenceable failure
+    if the input contains any non-Linalg ops. The ops preceding it in the list
+    associated with the `target` handle will have been tiled.
+
+    This operation produces a silenceable failure if the `dynamic_sizes` handles
+    are associated with lists of payload operations of a size different than
+    that of the list associated with the `target` handle.
+
+    If the internal implementation of tiling for any of the operations fails,
+    produces a definite failure.
   }];
 
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$sizes,
+                   Variadic<PDL_Operation>:$dynamic_sizes,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$static_sizes,
                    DefaultValuedAttr<I64ArrayAttr, "{}">:$interchange);
   let results = (outs PDL_Operation:$tiled_linalg_op,
                       Variadic<PDL_Operation>:$loops);
 
   let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    /// Returns the list of tile sizes, which may be static (Attribute) or
+    /// dynamic (Value).
+    SmallVector<OpFoldResult> getMixedSizes();
+  }];
 }
 
 def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",

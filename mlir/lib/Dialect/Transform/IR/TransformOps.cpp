@@ -318,16 +318,8 @@ transform::MergeHandlesOp::apply(transform::TransformResults &results,
 
 void transform::MergeHandlesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (Value operand : getHandles()) {
-    effects.emplace_back(MemoryEffects::Read::get(), operand,
-                         transform::TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Free::get(), operand,
-                         transform::TransformMappingResource::get());
-  }
-  effects.emplace_back(MemoryEffects::Allocate::get(), getResult(),
-                       transform::TransformMappingResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(), getResult(),
-                       transform::TransformMappingResource::get());
+  consumesHandle(getHandles(), effects);
+  producesHandle(getResult(), effects);
 
   // There are no effects on the Payload IR as this is only a handle
   // manipulation.
@@ -421,16 +413,11 @@ transform::SequenceOp::apply(transform::TransformResults &results,
 /// the Transform IR. That is, if it may have a Free effect on it.
 static bool isValueUsePotentialConsumer(OpOperand &use) {
   // Conservatively assume the effect being present in absence of the interface.
-  auto memEffectInterface = dyn_cast<MemoryEffectOpInterface>(use.getOwner());
-  if (!memEffectInterface)
+  auto iface = dyn_cast<transform::TransformOpInterface>(use.getOwner());
+  if (!iface)
     return true;
 
-  SmallVector<MemoryEffects::EffectInstance, 2> effects;
-  memEffectInterface.getEffectsOnValue(use.get(), effects);
-  return llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
-    return isa<transform::TransformMappingResource>(effect.getResource()) &&
-           isa<MemoryEffects::Free>(effect.getEffect());
-  });
+  return isHandleConsumed(use.get(), iface);
 }
 
 LogicalResult

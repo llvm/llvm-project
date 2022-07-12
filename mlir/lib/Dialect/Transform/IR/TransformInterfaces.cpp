@@ -361,10 +361,11 @@ void transform::consumesHandle(
 
 /// Returns `true` if the given list of effects instances contains an instance
 /// with the effect type specified as template parameter.
-template <typename EffectTy>
+template <typename EffectTy, typename ResourceTy = SideEffects::DefaultResource>
 static bool hasEffect(ArrayRef<MemoryEffects::EffectInstance> effects) {
   return llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
-    return isa<EffectTy>(effect.getEffect());
+    return isa<EffectTy>(effect.getEffect()) &&
+           isa<ResourceTy>(effect.getResource());
   });
 }
 
@@ -373,8 +374,8 @@ bool transform::isHandleConsumed(Value handle,
   auto iface = cast<MemoryEffectOpInterface>(transform.getOperation());
   SmallVector<MemoryEffects::EffectInstance> effects;
   iface.getEffectsOnValue(handle, effects);
-  return hasEffect<MemoryEffects::Read>(effects) &&
-         hasEffect<MemoryEffects::Free>(effects);
+  return hasEffect<MemoryEffects::Read, TransformMappingResource>(effects) &&
+         hasEffect<MemoryEffects::Free, TransformMappingResource>(effects);
 }
 
 void transform::producesHandle(
