@@ -24,8 +24,8 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
     (depthwise) convolutions, into combinations of lower-dimensional equivalents
     when possible.
 
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-Linalg ops and drops them in the return.
     If all the operations referred to by the `target` PDLOperation decompose
     properly, the transform succeeds. Otherwise the transform silently fails.
@@ -68,11 +68,11 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
   let description = [{
-    Transforms a named structued operation into the generic form with the
+    Transforms a named structured operation into the generic form with the
     explicit attached region. 
     
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-Linalg ops and drops them in the return.
     If all the operations referred to by the `target` PDLOperation generalize
     properly, the transform succeeds. Otherwise the transform silently fails.
@@ -100,8 +100,8 @@ def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
     Interchanges the iterators of the operations pointed to by the target handle
     using the iterator interchange attribute.
 
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-linalg::Generic ops and drops them in the return.
     This operation fails if the interchange attribute is invalid.
     If all the operations referred to by the `target` PDLOperation interchange
@@ -134,8 +134,8 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
     Pads the operations pointed to by the target handle using the options
     provides as operation attributes.
 
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-Linalg ops and drops them in the return.
     This operation may produce a definiteFailure if the padding fails for any
     reason.
@@ -174,8 +174,8 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
     Indicates that ops of a specific kind in the given function should be
     scalarized (i.e. their dynamic dimensions tiled by 1).
 
-    Return modes:
-    =============
+    #### Return modes:
+    
     This operation ignores non-Linalg ops and drops them in the return.
     This operation produces `definiteFailure` if the scalarization fails for any
     reason.
@@ -259,8 +259,8 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       - use_alloc: whether to use an alloc op to allocate the temporary 
         tensor (default: do not use alloc op)
 
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-Linalg ops and drops them in the return.
     This operation produces `definiteFailure` if the splitting fails for any
     reason.
@@ -275,8 +275,8 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       - the split op and 
       - the result-combining op.
 
-    Example (default: use_scaling_algorithm = false, use_alloc = false):
-    ====================================================================
+    #### Example (default: `use_scaling_algorithm = false, use_alloc = false`):
+    
     ```
       %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
                                             affine_map<(d0) -> ()>],
@@ -314,8 +314,8 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       } -> tensor<f32>
     ```
 
-    Example (use_scaling_algorithm = true, use_alloc = true):
-    =========================================================
+    #### Example (`use_scaling_algorithm = true, use_alloc = true`):
+    
     Instead of introducing an ExpandShapeOp, this scaling-based implementation 
     rewrites a reduction dimension `k` into `k * split_factor + kk`.
     The dimension `kk` is added as an extra parallel dimension to the 
@@ -329,7 +329,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
       b. O(i, j) += O_i(kk, i, j)
     The intermediate tensor O_i is of shape (128/16)x3x5 == 8x3x5.
 
-    Example:
+    #### Example:
 
     ```
      %0 = linalg.matmul ins(%A, %B: tensor<16x256xf32>, tensor<256x32xf32>)
@@ -439,8 +439,8 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     Note that this transformation is invalidating the handles to any payload IR
     operation that is contained inside the vectorization target.
 
-    Return modes:
-    =============
+    #### Return modes:
+    
     This operation produces `definiteFailure` if vectorization fails for any
     reason.
     The operation always returns the handle to the target op that is expected 

@@ -73,8 +73,8 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
      In the absence of sufficient static information, this op may peel a loop,
      even if the step always divides the range evenly at runtime.
 
-     Return modes:
-     =============
+     #### Return modes
+     
      This operation ignores non-scf::ForOp ops and drops them in the return.
 
      This operation always succeeds and returns the scf::ForOp with the
@@ -122,8 +122,8 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
     arguments. Currently supports memref and vector transfer operations as 
     memory reads/writes.
 
-    Return modes:
-    =============
+    #### Return modes
+    
     This operation ignores non-scf::For ops and drops them in the return.
     If all the operations referred to by the `target` PDLOperation pipeline
     properly, the transform succeeds. Otherwise the transform silently fails.
@@ -155,8 +155,8 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
     number of loop body copies per iteration. If the unroll factor is larger
     than the loop trip count, the latter is used as the unroll factor instead.
 
-    Return modes:
-    ==============
+    #### Return modes
+    
     This operation ignores non-scf::For ops and drops them in the return.
     If all the operations referred to by the `target` PDLOperation unroll
     properly, the transform succeeds. Otherwise the transform silently fails.

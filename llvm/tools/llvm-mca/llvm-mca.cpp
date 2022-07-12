@@ -92,9 +92,10 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::cat(ToolOptions), cl::init("native"));
 
-static cl::opt<std::string> MATTR("mattr",
-                                  cl::desc("Additional target features."),
-                                  cl::cat(ToolOptions));
+static cl::list<std::string>
+    MATTRS("mattr", cl::CommaSeparated,
+           cl::desc("Target specific attributes (-mattr=help for details)"),
+           cl::value_desc("a1,+a2,-a3,..."), cl::cat(ToolOptions));
 
 static cl::opt<bool> PrintJson("json",
                                cl::desc("Print the output in json format"),
@@ -346,8 +347,17 @@ int main(int argc, char **argv) {
   if (MCPU == "native")
     MCPU = std::string(llvm::sys::getHostCPUName());
 
+  // Package up features to be passed to target/subtarget
+  std::string FeaturesStr;
+  if (MATTRS.size()) {
+    SubtargetFeatures Features;
+    for (std::string &MAttr : MATTRS)
+      Features.AddFeature(MAttr);
+    FeaturesStr = Features.getString();
+  }
+
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, MATTR));
+      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
   assert(STI && "Unable to create subtarget info!");
   if (!STI->isCPUStringValid(MCPU))
     return 1;
