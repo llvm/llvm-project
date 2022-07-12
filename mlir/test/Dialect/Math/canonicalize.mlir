@@ -111,6 +111,15 @@ func.func @sqrt_fold() -> f32 {
   return %r : f32
 }
 
+// CHECK-LABEL: @sqrt_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<[1.000000e+00, 1.41421354, 1.73205078, 2.000000e+00]> : vector<4xf32>
+// CHECK: return %[[cst]]
+func.func @sqrt_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
+  %0 = math.sqrt %v1 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 // CHECK-LABEL: @abs_fold
 // CHECK: %[[cst:.+]] = arith.constant 4.000000e+00 : f32
 // CHECK: return %[[cst]]
