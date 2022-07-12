@@ -1,0 +1,64 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-jitlink -noexec --debug-only=jitlink -noexec %t 2>&1 | FileCheck %s
+# 
+# Check a weak symbol is created for a COMDAT symbol with IMAGE_COMDAT_SELECT_SAME_SIZE selection type.
+# Doesn't check the size validation.
+#
+# CHECK: Creating graph symbols...
+# CHECK:      2: Creating defined graph symbol for COFF symbol ".text" in .text (index: 2)
+# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000001, linkage: strong, scope: local, dead  -   <anonymous symbol>
+# CHECK-NEXT: 4: Exporting COMDAT graph symbol for COFF symbol "func" in section 2
+# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000001, linkage: weak, scope: default, dead  -   func
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     C3
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     C3
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        40735498
+      Number:          1
+  - Name:            .text
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        40735498
+      Number:          2
+      Selection:       IMAGE_COMDAT_SELECT_SAME_SIZE
+  - Name:            func
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
