@@ -121,7 +121,9 @@ struct __tgt_kernel_arguments {
   void **ArgMappers;  // User-defined mappers, possibly null.
   int64_t Tripcount;  // Tripcount for the teams / distribute loop, 0 otherwise.
 };
-static_assert(sizeof(__tgt_kernel_arguments) == 64, "Invalid struct size");
+static_assert(sizeof(__tgt_kernel_arguments) == 64 ||
+                  sizeof(__tgt_kernel_arguments) == 40,
+              "Invalid struct size");
 
 /// This struct is a record of an entry point or global. For a function
 /// entry point the size is expected to be zero
