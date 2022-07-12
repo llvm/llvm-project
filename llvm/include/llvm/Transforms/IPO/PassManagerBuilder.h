@@ -211,8 +211,6 @@ private:
   void addExtensionsToPM(ExtensionPointTy ETy,
                          legacy::PassManagerBase &PM) const;
   void addInitialAliasAnalysisPasses(legacy::PassManagerBase &PM) const;
-  void addLTOOptimizationPasses(legacy::PassManagerBase &PM);
-  void addLateLTOOptimizationPasses(legacy::PassManagerBase &PM);
   void addFunctionSimplificationPasses(legacy::PassManagerBase &MPM);
   void addVectorPasses(legacy::PassManagerBase &PM, bool IsFullLTO);
 

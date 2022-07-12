@@ -166,6 +166,8 @@ public:
   void SetStrOffsetsBase(dw_offset_t str_offsets_base);
   virtual void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) = 0;
 
+  dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const;
+
   lldb::ByteOrder GetByteOrder() const;
 
   const DWARFDebugAranges &GetFunctionAranges();

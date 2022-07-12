@@ -87,8 +87,8 @@ public:
         reductionMask[i] = true;
     }
     rewriter.replaceOpWithNewOp<vector::MultiDimReductionOp>(
-        multiReductionOp, transposeOp.getResult(), reductionMask,
-        multiReductionOp.getKind());
+        multiReductionOp, transposeOp.getResult(), multiReductionOp.getAcc(),
+        reductionMask, multiReductionOp.getKind());
     return success();
   }
 
@@ -188,11 +188,17 @@ public:
         vectorShape, multiReductionOp.getSourceVectorType().getElementType());
     Value cast = rewriter.create<vector::ShapeCastOp>(
         loc, castedType, multiReductionOp.getSource());
-
+    Value acc = multiReductionOp.getAcc();
+    if (flattenedParallelDim) {
+      auto accType = VectorType::get(
+          {flattenedParallelDim},
+          multiReductionOp.getSourceVectorType().getElementType());
+      acc = rewriter.create<vector::ShapeCastOp>(loc, accType, acc);
+    }
     // 5. Creates the flattened form of vector.multi_reduction with inner/outer
     // most dim as reduction.
     auto newOp = rewriter.create<vector::MultiDimReductionOp>(
-        loc, cast, mask, multiReductionOp.getKind());
+        loc, cast, acc, mask, multiReductionOp.getKind());
 
     // 6. If there are no parallel shapes, the result is a scalar.
     // TODO: support 0-d vectors when available.
@@ -238,10 +244,8 @@ struct TwoDimMultiReductionToElementWise
     if (!elementType.isIntOrIndexOrFloat())
       return failure();
 
-    Value result =
-        rewriter.create<vector::ExtractOp>(loc, multiReductionOp.getSource(), 0)
-            .getResult();
-    for (int64_t i = 1; i < srcShape[0]; i++) {
+    Value result = multiReductionOp.getAcc();
+    for (int64_t i = 0; i < srcShape[0]; i++) {
       auto operand = rewriter.create<vector::ExtractOp>(
           loc, multiReductionOp.getSource(), i);
       result = makeArithReduction(rewriter, loc, multiReductionOp.getKind(),
@@ -277,8 +281,10 @@ struct TwoDimMultiReductionToReduction
     for (int i = 0; i < outerDim; ++i) {
       auto v = rewriter.create<vector::ExtractOp>(
           loc, multiReductionOp.getSource(), ArrayRef<int64_t>{i});
+      auto acc = rewriter.create<vector::ExtractOp>(
+          loc, multiReductionOp.getAcc(), ArrayRef<int64_t>{i});
       auto reducedValue = rewriter.create<vector::ReductionOp>(
-          loc, multiReductionOp.getKind(), v);
+          loc, multiReductionOp.getKind(), v, acc);
       result = rewriter.create<vector::InsertElementOp>(
           loc, reducedValue, result,
           rewriter.create<arith::ConstantIndexOp>(loc, i));
@@ -309,6 +315,8 @@ struct OneDimMultiReductionToTwoDim
     auto srcShape = srcVectorType.getShape();
     auto castedType = VectorType::get(ArrayRef<int64_t>{1, srcShape.back()},
                                       srcVectorType.getElementType());
+    auto accType =
+        VectorType::get(ArrayRef<int64_t>{1}, srcVectorType.getElementType());
     assert(!multiReductionOp.getDestType().isa<VectorType>() &&
            "multi_reduction with a single dimension expects a scalar result");
 
@@ -319,8 +327,10 @@ struct OneDimMultiReductionToTwoDim
     /// vector.extract(vector.multi_reduce(vector.shape_cast(v, 1xk)), 0)
     Value cast = rewriter.create<vector::ShapeCastOp>(
         loc, castedType, multiReductionOp.getSource());
+    Value castAcc = rewriter.create<vector::BroadcastOp>(
+        loc, accType, multiReductionOp.getAcc());
     Value reduced = rewriter.create<vector::MultiDimReductionOp>(
-        loc, cast, mask, multiReductionOp.getKind());
+        loc, cast, castAcc, mask, multiReductionOp.getKind());
     rewriter.replaceOpWithNewOp<vector::ExtractOp>(multiReductionOp, reduced,
                                                    ArrayRef<int64_t>{0});
     return success();

@@ -34,6 +34,8 @@ a:
 
 # Check shrink wrapping results:
 # CHECK: BOLT-INFO: Shrink wrapping moved 0 spills inserting load/stores and 2 spills inserting push/pops
+# CHECK: BOLT-INFO: Shrink wrapping reduced 6 store executions (28.6% total instructions executed, 100.0% store instructions)
+# CHECK: BOLT-INFO: Shrink wrapping failed at reducing 0 store executions (0.0% total instructions executed, 0.0% store instructions)
 
 # Check that order is correct
 # CHECK:      Binary Function "_start" after frame-optimizer
