@@ -1,8 +1,8 @@
 # Strip out debug info, then run ldst-opt with limit=1.
-# RUN: llc -aarch64-load-store-scan-limit=1 -mtriple=aarch64-none-linux-gnu -run-pass mir-strip-debug,aarch64-ldst-opt -mir-strip-debugify-only=0 -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -aarch64-load-store-scan-limit=1 -mtriple=aarch64-none-linux-gnu -mattr=+mte -run-pass mir-strip-debug,aarch64-ldst-opt -mir-strip-debugify-only=0 -verify-machineinstrs  -o - %s | FileCheck %s
 #
 # Run ldst-opt with limit=1, then strip out debug info.
-# RUN: llc -aarch64-load-store-scan-limit=1 -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt,mir-strip-debug -mir-strip-debugify-only=0 -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -aarch64-load-store-scan-limit=1 -mtriple=aarch64-none-linux-gnu -mattr=+mte -run-pass aarch64-ldst-opt,mir-strip-debug -mir-strip-debugify-only=0 -verify-machineinstrs  -o - %s | FileCheck %s
 ---
 
 ### STG and its offset limits

@@ -14,7 +14,7 @@ namespace {
 std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("aarch64--"));
   std::string CPU("generic");
-  std::string FS("");
+  std::string FS("+pauth,+mops,+mte");
 
   LLVMInitializeAArch64TargetInfo();
   LLVMInitializeAArch64Target();
