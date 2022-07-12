@@ -812,13 +812,14 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
   if (SaveTemps) {
-    std::string TempName = (sys::path::filename(ExecutableName) + "-" +
+    std::string TempName = (sys::path::filename(ExecutableName) + "-device-" +
                             Triple.getTriple() + "-" + Arch)
                                .str();
     Conf.PostInternalizeModuleHook = [=](size_t Task, const Module &M) {
-      std::string Output = TempName + "." + std::to_string(Task) + ".bc";
+      std::string File = !Task ? TempName + ".bc"
+                               : TempName + "." + std::to_string(Task) + ".bc";
       error_code EC;
-      raw_fd_ostream LinkedBitcode(Output, EC, sys::fs::OF_None);
+      raw_fd_ostream LinkedBitcode(File, EC, sys::fs::OF_None);
       if (EC)
         reportError(errorCodeToError(EC));
       WriteBitcodeToFile(M, LinkedBitcode);
@@ -897,7 +898,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
 
   // LTO Module hook to output bitcode without running the backend.
   SmallVector<StringRef, 4> BitcodeOutput;
-  auto OutputBitcode = [&](size_t Task, const Module &M) {
+  auto OutputBitcode = [&](size_t, const Module &M) {
     auto TempFileOrErr = createOutputFile(sys::path::filename(ExecutableName) +
                                               "-jit-" + Triple.getTriple(),
                                           "bc");
@@ -991,9 +992,10 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     int FD = -1;
     auto &TempFile = Files[Task];
     StringRef Extension = (Triple.isNVPTX()) ? "s" : "o";
+    std::string TaskStr = Task ? "." + std::to_string(Task) : "";
     auto TempFileOrErr =
         createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
-                             Triple.getTriple() + "." + std::to_string(Task),
+                             Triple.getTriple() + TaskStr,
                          Extension);
     if (!TempFileOrErr)
       reportError(TempFileOrErr.takeError());
