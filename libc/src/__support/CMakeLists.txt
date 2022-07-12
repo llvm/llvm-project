@@ -48,6 +48,17 @@ add_header_library(
     libc.src.__support.CPP.type_traits
 )
 
+
+add_header_library(
+  float_to_string
+  HDRS
+    float_to_string.h
+    ryu_constants.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
+)
+
 add_header_library(
   high_precision_decimal
   HDRS
