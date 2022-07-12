@@ -196,11 +196,10 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
   Log *log = GetLog(LLDBLog::Step);
   Status error;
   Value callee_addr_val;
-  if (!call_target.Evaluate(&exe_ctx, exe_ctx.GetRegisterContext(),
-                            /*loclist_base_load_addr=*/LLDB_INVALID_ADDRESS,
-                            /*initial_value_ptr=*/nullptr,
-                            /*object_address_ptr=*/nullptr, callee_addr_val,
-                            &error)) {
+  if (!call_target.Evaluate(
+          &exe_ctx, exe_ctx.GetRegisterContext(), LLDB_INVALID_ADDRESS,
+          /*initial_value_ptr=*/nullptr,
+          /*object_address_ptr=*/nullptr, callee_addr_val, &error)) {
     LLDB_LOGF(log, "IndirectCallEdge: Could not evaluate expression: %s",
               error.AsCString());
     return nullptr;

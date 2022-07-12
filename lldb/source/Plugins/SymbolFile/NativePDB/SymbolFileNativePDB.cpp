@@ -823,8 +823,10 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
 
   m_ast->GetOrCreateVariableDecl(var_id);
 
-  DWARFExpression location = MakeGlobalLocationExpression(
-      section, offset, GetObjectFile()->GetModule());
+  ModuleSP module_sp = GetObjectFile()->GetModule();
+  DWARFExpressionList location(
+      module_sp, MakeGlobalLocationExpression(section, offset, module_sp),
+      nullptr);
 
   std::string global_name("::");
   global_name += name;
@@ -855,8 +857,10 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   Declaration decl;
   Variable::RangeList ranges;
   ModuleSP module = GetObjectFile()->GetModule();
-  DWARFExpression location = MakeConstantLocationExpression(
-      constant.Type, tpi, constant.Value, module);
+  DWARFExpressionList location(module,
+                               MakeConstantLocationExpression(
+                                   constant.Type, tpi, constant.Value, module),
+                               nullptr);
 
   bool external = false;
   bool artificial = false;
@@ -1689,8 +1693,15 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
                                                     bool is_param) {
   ModuleSP module = GetObjectFile()->GetModule();
   Block &block = GetOrCreateBlock(scope_id);
+  // Get function block.
+  Block *func_block = &block;
+  while (func_block->GetParent()) {
+    func_block = func_block->GetParent();
+  }
+  Address addr;
+  func_block->GetStartAddress(addr);
   VariableInfo var_info =
-      GetVariableLocationInfo(*m_index, var_id, block, module);
+      GetVariableLocationInfo(*m_index, var_id, *func_block, module);
   if (!var_info.location || !var_info.ranges)
     return nullptr;
 
@@ -1709,11 +1720,12 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   bool artificial = false;
   bool location_is_constant_data = false;
   bool static_member = false;
+  DWARFExpressionList locaiton_list = DWARFExpressionList(
+      module, *var_info.location, nullptr);
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), name.c_str(), name.c_str(), sftype, var_scope,
-      &block, *var_info.ranges, &decl, *var_info.location, external,
-      artificial, location_is_constant_data, static_member);
-
+      &block, *var_info.ranges, &decl, locaiton_list, external, artificial,
+      location_is_constant_data, static_member);
   if (!is_param)
     m_ast->GetOrCreateVariableDecl(scope_id, var_id);
 

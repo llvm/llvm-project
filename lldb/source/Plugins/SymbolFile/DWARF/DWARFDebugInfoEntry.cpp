@@ -231,7 +231,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     DWARFUnit *cu, const char *&name, const char *&mangled,
     DWARFRangeList &ranges, int &decl_file, int &decl_line, int &decl_column,
     int &call_file, int &call_line, int &call_column,
-    DWARFExpression *frame_base) const {
+    DWARFExpressionList *frame_base) const {
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
   std::vector<DWARFDIE> dies;
@@ -345,21 +345,22 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
               uint32_t block_offset =
                   form_value.BlockData() - data.GetDataStart();
               uint32_t block_length = form_value.Unsigned();
-              *frame_base = DWARFExpression(
-                  module, DataExtractor(data, block_offset, block_length), cu);
+              *frame_base =
+                  DWARFExpressionList(module,
+                                      DWARFExpression(DataExtractor(
+                                          data, block_offset, block_length)),
+                                      cu);
             } else {
               DataExtractor data = cu->GetLocationData();
               const dw_offset_t offset = form_value.Unsigned();
               if (data.ValidOffset(offset)) {
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
-                *frame_base = DWARFExpression(module, data, cu);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
-                  frame_base->SetLocationListAddresses(cu->GetBaseAddress(),
-                                                       lo_pc);
-                } else {
+                  DWARFExpression::ParseDWARFLocationList(cu, data, frame_base);
+                  frame_base->SetFuncFileAddress(lo_pc);
+                } else
                   set_frame_base_loclist_addr = true;
-                }
               }
             }
           }
@@ -384,7 +385,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   if (set_frame_base_loclist_addr) {
     dw_addr_t lowest_range_pc = ranges.GetMinRangeBase(0);
     assert(lowest_range_pc >= cu->GetBaseAddress());
-    frame_base->SetLocationListAddresses(cu->GetBaseAddress(), lowest_range_pc);
+    frame_base->SetFuncFileAddress(lowest_range_pc);
   }
 
   if (ranges.IsEmpty() || name == nullptr || mangled == nullptr) {

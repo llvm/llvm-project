@@ -1437,15 +1437,14 @@ bool ClangExpressionDeclMap::GetVariableValue(VariableSP &var,
     return false;
   }
 
-  DWARFExpression &var_location_expr = var->LocationExpression();
+  DWARFExpressionList &var_location_list = var->LocationExpressionList();
 
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
   Status err;
 
   if (var->GetLocationIsConstantValueData()) {
     DataExtractor const_value_extractor;
-
-    if (var_location_expr.GetExpressionData(const_value_extractor)) {
+    if (var_location_list.GetExpressionData(const_value_extractor)) {
       var_location = Value(const_value_extractor.GetDataStart(),
                            const_value_extractor.GetByteSize());
       var_location.SetValueType(Value::ValueType::HostAddress);

@@ -39,13 +39,13 @@ Variable::Variable(lldb::user_id_t uid, const char *name, const char *mangled,
                    const lldb::SymbolFileTypeSP &symfile_type_sp,
                    ValueType scope, SymbolContextScope *context,
                    const RangeList &scope_range, Declaration *decl_ptr,
-                   const DWARFExpression &location, bool external,
+                   const DWARFExpressionList &location_list, bool external,
                    bool artificial, bool location_is_constant_data,
                    bool static_member)
     : UserID(uid), m_name(name), m_mangled(ConstString(mangled)),
       m_symfile_type_sp(symfile_type_sp), m_scope(scope),
       m_owner_scope(context), m_scope_range(scope_range),
-      m_declaration(decl_ptr), m_location(location), m_external(external),
+      m_declaration(decl_ptr), m_location_list(location_list), m_external(external),
       m_artificial(artificial), m_loc_is_const_data(location_is_constant_data),
       m_static_member(static_member) {}
 
@@ -145,7 +145,7 @@ void Variable::Dump(Stream *s, bool show_context) const {
   bool show_fullpaths = false;
   m_declaration.Dump(s, show_fullpaths);
 
-  if (m_location.IsValid()) {
+  if (m_location_list.IsValid()) {
     s->PutCString(", location = ");
     ABISP abi;
     if (m_owner_scope) {
@@ -153,7 +153,7 @@ void Variable::Dump(Stream *s, bool show_context) const {
       if (module_sp)
         abi = ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture());
     }
-    m_location.GetDescription(s, lldb::eDescriptionLevelBrief, abi.get());
+    m_location_list.GetDescription(s, lldb::eDescriptionLevelBrief, abi.get());
   }
 
   if (m_external)
@@ -212,12 +212,6 @@ void Variable::CalculateSymbolContext(SymbolContext *sc) {
 }
 
 bool Variable::LocationIsValidForFrame(StackFrame *frame) {
-  // Is the variable is described by a single location?
-  if (!m_location.IsLocationList()) {
-    // Yes it is, the location is valid.
-    return true;
-  }
-
   if (frame) {
     Function *function =
         frame->GetSymbolContext(eSymbolContextFunction).function;
@@ -231,7 +225,7 @@ bool Variable::LocationIsValidForFrame(StackFrame *frame) {
         return false;
       // It is a location list. We just need to tell if the location list
       // contains the current address when converted to a load address
-      return m_location.LocationListContainsAddress(
+      return m_location_list.ContainsAddress(
           loclist_base_load_addr,
           frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get()));
     }
@@ -244,7 +238,7 @@ bool Variable::LocationIsValidForAddress(const Address &address) {
   // function.
   if (address.IsSectionOffset()) {
     // We need to check if the address is valid for both scope range and value
-    // range. 
+    // range.
     // Empty scope range means block range.
     bool valid_in_scope_range =
         GetScopeRange().IsEmpty() || GetScopeRange().FindEntryThatContains(
@@ -255,7 +249,7 @@ bool Variable::LocationIsValidForAddress(const Address &address) {
     CalculateSymbolContext(&sc);
     if (sc.module_sp == address.GetModule()) {
       // Is the variable is described by a single location?
-      if (!m_location.IsLocationList()) {
+      if (m_location_list.IsAlwaysValidSingleExpr()) {
         // Yes it is, the location is valid.
         return true;
       }
@@ -267,8 +261,8 @@ bool Variable::LocationIsValidForAddress(const Address &address) {
           return false;
         // It is a location list. We just need to tell if the location list
         // contains the current address when converted to a load address
-        return m_location.LocationListContainsAddress(loclist_base_file_addr,
-                                                      address.GetFileAddress());
+        return m_location_list.ContainsAddress(loclist_base_file_addr,
+                                               address.GetFileAddress());
       }
     }
   }
@@ -459,9 +453,9 @@ bool Variable::DumpLocations(Stream *s, const Address &address) {
         sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
     if (loclist_base_file_addr == LLDB_INVALID_ADDRESS)
       return false;
-    return m_location.DumpLocations(s, eDescriptionLevelBrief,
-                                    loclist_base_file_addr, file_addr,
-                                    abi.get());
+    return m_location_list.DumpLocations(s, eDescriptionLevelBrief,
+                                         loclist_base_file_addr, file_addr,
+                                         abi.get());
   }
   return false;
 }
