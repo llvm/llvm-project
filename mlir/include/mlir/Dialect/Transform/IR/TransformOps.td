@@ -38,7 +38,7 @@ def AlternativesOp : TransformDialectOp<"alternatives",
     "alternatives" transformation fails.
 
     It is up to the nested operations to define which errors are "recoverable"
-    (or "silencable") and allow another alternatives to be attempted, and which
+    (or "silenceable") and allow another alternatives to be attempted, and which
     errors should be propagated without attempting the other alternatives.
 
     The single operand of this operation is the scope in which the alternative
@@ -51,7 +51,7 @@ def AlternativesOp : TransformDialectOp<"alternatives",
     irrecoverable error and thus abort the execution without attempting the
     remaining alternatives. Note that the payload IR outside of the given scope
     is not necessarily in the valid state, or even accessible to the
-    tranfsormation.
+    transformation.
     
     The changes to the IR within the scope performed by transforms in the failed
     alternative region are reverted before attempting the next region.
@@ -79,7 +79,7 @@ def AlternativesOp : TransformDialectOp<"alternatives",
       transform.yield %0 : !pdl.operation
     }, {
     ^bb0(%arg0: !pdl.operation):
-      // Otherwise, the second alternative is tried and it always succeeeds by
+      // Otherwise, the second alternative is tried and it always succeeds by
       // returning the original handle.
       transform.yield %arg0 : !pdl.operation
     }
@@ -106,8 +106,8 @@ def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent
     there usually is a top-level ModuleOp), the transformation is considered to
     have failed.
 
-    Ancestor ops follow the same order as the ops assocaited with the
-    operand, except for potential duplicates (multiple Payload IR ops assocaited
+    Ancestor ops follow the same order as the ops associated with the
+    operand, except for potential duplicates (multiple Payload IR ops associated
     with the operand have the same parent) for which the ancestor will only be
     listed once for the first time it occurs. For example, given the list
     "(childof(A), childof(B), childof(B), childof(A), childof(B))", the
@@ -154,11 +154,11 @@ def PDLMatchOp : TransformDialectOp<"pdl_match",
     Produces a Transform IR value associated with the list of Payload IR ops
     that matched the pattern. The order of results in the list is that of the
     Operation::walk, clients are advised not to rely on a specific order though.
-    If the operand is assocaited with multiple Payload IR ops, finds matching
+    If the operand is associated with multiple Payload IR ops, finds matching
     ops nested within each of those and produces a single list containing all
     of the matched ops.
 
-    The tranfsormation is considered successful regardless of whether some
+    The transformation is considered successful regardless of whether some
     Payload IR ops actually matched the pattern and only fails if the pattern
     could not be looked up or compiled.
   }];
@@ -312,7 +312,7 @@ def YieldOp : TransformDialectOp<"yield", [Terminator]> {
   }];
 
   let arguments = (ins 
-    Arg<Variadic<AnyType>, "Opration handles yielded back to the parent",
+    Arg<Variadic<AnyType>, "Operation handles yielded back to the parent",
         [TransformMappingRead]>:$operands);
   let assemblyFormat = "operands attr-dict (`:` type($operands)^)?";
 
