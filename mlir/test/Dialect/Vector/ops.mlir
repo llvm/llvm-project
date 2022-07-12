@@ -705,10 +705,13 @@ func.func @extract_insert_map(%v: vector<32xf32>, %v2: vector<16x32xf32>,
 }
 
 // CHECK-LABEL: @multi_reduction
-func.func @multi_reduction(%0: vector<4x8x16x32xf32>) -> f32 {
-  %1 = vector.multi_reduction <add>, %0 [1, 3] :
+func.func @multi_reduction(%0: vector<4x8x16x32xf32>, %acc0: vector<4x16xf32>,
+                           %acc1: f32) -> f32 {
+  // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} [1, 3] : vector<4x8x16x32xf32> to vector<4x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc0 [1, 3] :
     vector<4x8x16x32xf32> to vector<4x16xf32>
-  %2 = vector.multi_reduction <add>, %1 [0, 1] :
+  // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} [0, 1] : vector<4x16xf32> to f32
+  %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
     vector<4x16xf32> to f32
   return %2 : f32
 }

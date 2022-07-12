@@ -1138,9 +1138,9 @@ func.func @reduce_unsupported_rank(%arg0: vector<4x16xf32>) -> f32 {
 
 // -----
 
-func.func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>) -> f32 {
-  // expected-error@+1 {{'vector.multi_reduction' op inferred type(s) 'vector<4xf32>' are incompatible with return type(s) of operation 'vector<16xf32>'}}
-  %0 = vector.multi_reduction <mul>, %arg0 [1] : vector<4x16xf32> to vector<16xf32>
+func.func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>, %acc: vector<16xf32>) -> f32 {
+  // expected-error@+1 {{'vector.multi_reduction' op destination type 'vector<16xf32>' is incompatible with source type 'vector<4x16xf32>'}}
+  %0 = vector.multi_reduction <mul>, %arg0, %acc [1] : vector<4x16xf32> to vector<16xf32>
 }
 
 // -----
