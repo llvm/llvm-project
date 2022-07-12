@@ -911,10 +911,6 @@ public:
   StringRef getStackProtectorGuardReg() const;
   void setStackProtectorGuardReg(StringRef Reg);
 
-  /// Get/set a symbol to use as the stack protector guard.
-  StringRef getStackProtectorGuardSymbol() const;
-  void setStackProtectorGuardSymbol(StringRef Symbol);
-
   /// Get/set what offset from the stack protector to use.
   int getStackProtectorGuardOffset() const;
   void setStackProtectorGuardOffset(int Offset);
