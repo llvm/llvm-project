@@ -4880,8 +4880,7 @@ struct AAFunctionReachability
   /// Can  \p Inst reach \p Fn.
   /// See also AA::isPotentiallyReachable.
   virtual bool instructionCanReach(Attributor &A, const Instruction &Inst,
-                                   const Function &Fn,
-                                   bool UseBackwards = true) const = 0;
+                                   const Function &Fn) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAFunctionReachability &createForPosition(const IRPosition &IRP,
