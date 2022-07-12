@@ -10,6 +10,7 @@
 
 #include "TestingSupport.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
+#include "TestingSupport.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "gmock/gmock.h"
