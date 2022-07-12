@@ -11,7 +11,9 @@ let Command = "thread trace start intel pt" in {
     Arg<"Value">,
     Desc<"Trace size in bytes per thread. It must be a power of 2 greater "
          "than or equal to 4096 (2^12). The trace is circular keeping "
-         "the most recent data. Defaults to 4096 bytes.">;
+         "the most recent data. Defaults to 4096 bytes. It's possible to "
+         "specify size using multiples of unit bytes, e.g., 4KB, 1MB, 1MiB, "
+         "where 1K is 1024 bytes and 1M is 1048576 bytes.">;
   def thread_trace_start_intel_pt_tsc: Option<"tsc", "t">,
     Group<1>,
     Desc<"Enable the use of TSC timestamps. This is supported on all devices "
@@ -40,7 +42,8 @@ let Command = "process trace start intel pt" in {
     Arg<"Value">,
     Desc<"Size in bytes used by each individual per-thread or per-cpu trace "
          "buffer. It must be a power of 2 greater than or equal to 4096 (2^12) "
-         "bytes.">;
+         "bytes. It's possible to specify a unit for these bytes, like 4KB, "
+         "16KiB or 1MB. Lower case units are allowed for convenience.">;
   def process_trace_start_intel_pt_per_cpu_tracing:
     Option<"per-cpu-tracing", "c">,
     Group<1>,
@@ -53,7 +56,8 @@ let Command = "process trace start intel pt" in {
          "option forces the capture of TSC timestamps (see --tsc). Also, this "
          "option can't be used simulatenously with any other trace sessions "
          "because of its system-wide nature.">;
-  def process_trace_start_intel_pt_process_size_limit: Option<"total-size-limit", "l">,
+  def process_trace_start_intel_pt_process_size_limit:
+    Option<"total-size-limit", "l">,
     Group<1>,
     Arg<"Value">,
     Desc<"Maximum total trace size per process in bytes. This limit applies to "
@@ -62,7 +66,9 @@ let Command = "process trace start intel pt" in {
          "Whenever a thread is attempted to be traced due to this command and "
          "the limit would be reached, the process is stopped with a "
          "\"processor trace\" reason, so that the user can retrace the process "
-         "if needed. Defaults to 500MB.">;
+         "if needed. Defaults to 500MB. It's possible to specify a unit for "
+         "these bytes, like 4KB, 16KiB or 1MB. Lower case units are allowed "
+         "for convenience.">;
   def process_trace_start_intel_pt_tsc: Option<"tsc", "t">,
     Group<1>,
     Desc<"Enable the use of TSC timestamps. This is supported on all devices "

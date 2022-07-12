@@ -476,7 +476,20 @@ Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
-      dict->GetValueForKeyAsInteger("iptTraceSize", ipt_trace_size);
+      llvm::StringRef ipt_trace_size_not_parsed;
+      if (dict->GetValueForKeyAsString("iptTraceSize",
+                                       ipt_trace_size_not_parsed)) {
+        if (Optional<uint64_t> bytes =
+                ParsingUtils::ParseUserFriendlySizeExpression(
+                    ipt_trace_size_not_parsed))
+          ipt_trace_size = *bytes;
+        else
+          return createStringError(inconvertibleErrorCode(),
+                                   "iptTraceSize is wrong bytes expression");
+      } else {
+        dict->GetValueForKeyAsInteger("iptTraceSize", ipt_trace_size);
+      }
+
       dict->GetValueForKeyAsBoolean("enableTsc", enable_tsc);
       dict->GetValueForKeyAsInteger("psbPeriod", psb_period);
     } else {
