@@ -130,7 +130,6 @@ class FrameAnalysis {
   /// Analysis stats counters
   uint64_t NumFunctionsNotOptimized{0};
   uint64_t NumFunctionsFailedRestoreFI{0};
-  uint64_t CountFunctionsNotOptimized{0};
   uint64_t CountFunctionsFailedRestoreFI{0};
   uint64_t CountDenominator{0};
 

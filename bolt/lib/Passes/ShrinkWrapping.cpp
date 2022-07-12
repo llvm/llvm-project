@@ -712,6 +712,10 @@ void StackLayoutModifier::initialize() {
 
 std::atomic_uint64_t ShrinkWrapping::SpillsMovedRegularMode{0};
 std::atomic_uint64_t ShrinkWrapping::SpillsMovedPushPopMode{0};
+std::atomic_uint64_t ShrinkWrapping::SpillsMovedDynamicCount{0};
+std::atomic_uint64_t ShrinkWrapping::SpillsFailedDynamicCount{0};
+std::atomic_uint64_t ShrinkWrapping::InstrDynamicCount{0};
+std::atomic_uint64_t ShrinkWrapping::StoreDynamicCount{0};
 
 using BBIterTy = BinaryBasicBlock::iterator;
 
@@ -1273,16 +1277,19 @@ void ShrinkWrapping::moveSaveRestores() {
   // Keeps info about successfully moved regs: reg index, save position and
   // save size
   std::vector<std::tuple<unsigned, MCInst *, size_t>> MovedRegs;
+  uint64_t TotalEstimatedWin = 0;
 
   for (unsigned I = 0, E = BC.MRI->getNumRegs(); I != E; ++I) {
     MCInst *BestPosSave = nullptr;
-    uint64_t TotalEstimatedWin = 0;
-    if (!isBestSavePosCold(I, BestPosSave, TotalEstimatedWin))
+    uint64_t EstimatedWin = 0;
+    if (!isBestSavePosCold(I, BestPosSave, EstimatedWin))
       continue;
     SmallVector<ProgramPoint, 4> RestorePoints =
-        doRestorePlacement(BestPosSave, I, TotalEstimatedWin);
-    if (RestorePoints.empty())
+        doRestorePlacement(BestPosSave, I, EstimatedWin);
+    if (RestorePoints.empty()) {
+      SpillsFailedDynamicCount += EstimatedWin;
       continue;
+    }
 
     const FrameIndexEntry *FIESave = CSA.SaveFIEByReg[I];
     const FrameIndexEntry *FIELoad = CSA.LoadFIEByReg[I];
@@ -1295,8 +1302,10 @@ void ShrinkWrapping::moveSaveRestores() {
 
     // If we don't know stack state at this point, bail
     if ((SPFP.first == SPT.SUPERPOSITION || SPFP.first == SPT.EMPTY) &&
-        (SPFP.second == SPT.SUPERPOSITION || SPFP.second == SPT.EMPTY))
+        (SPFP.second == SPT.SUPERPOSITION || SPFP.second == SPT.EMPTY)) {
+      SpillsFailedDynamicCount += EstimatedWin;
       continue;
+    }
 
     // Operation mode: if true, will insert push/pops instead of loads/restores
     bool UsePushPops = validatePushPopsMode(I, BestPosSave, SaveOffset);
@@ -1319,6 +1328,7 @@ void ShrinkWrapping::moveSaveRestores() {
     scheduleOldSaveRestoresRemoval(I, UsePushPops);
     scheduleSaveRestoreInsertions(I, BestPosSave, RestorePoints, UsePushPops);
     MovedRegs.emplace_back(std::make_tuple(I, BestPosSave, SaveSize));
+    TotalEstimatedWin += EstimatedWin;
   }
 
   // Revert push-pop mode if it failed for a single CSR
@@ -1348,6 +1358,7 @@ void ShrinkWrapping::moveSaveRestores() {
       }
     }
   }
+  SpillsMovedDynamicCount += TotalEstimatedWin;
 
   // Update statistics
   if (!UsedPushPopMode) {
@@ -1941,11 +1952,35 @@ void ShrinkWrapping::rebuildCFI() {
   }
 }
 
-bool ShrinkWrapping::perform() {
+bool ShrinkWrapping::perform(bool HotOnly) {
   HasDeletedOffsetCFIs = BitVector(BC.MRI->getNumRegs(), false);
   PushOffsetByReg = std::vector<int64_t>(BC.MRI->getNumRegs(), 0LL);
   PopOffsetByReg = std::vector<int64_t>(BC.MRI->getNumRegs(), 0LL);
   DomOrder = std::vector<MCPhysReg>(BC.MRI->getNumRegs(), 0);
+
+  // Update pass statistics
+  uint64_t TotalInstrs = 0ULL;
+  uint64_t TotalStoreInstrs = 0ULL;
+  for (BinaryBasicBlock *BB : BF.layout()) {
+    uint64_t BBExecCount = BB->getExecutionCount();
+    if (!BBExecCount || BBExecCount == BinaryBasicBlock::COUNT_NO_PROFILE)
+      continue;
+    for (const auto &Instr : *BB) {
+      if (BC.MIB->isPseudo(Instr))
+        continue;
+      if (BC.MIB->isStore(Instr))
+        TotalStoreInstrs += BBExecCount;
+      TotalInstrs += BBExecCount;
+    }
+  }
+  InstrDynamicCount += TotalInstrs;
+  StoreDynamicCount += TotalStoreInstrs;
+
+  if (!FA.hasFrameInfo(BF))
+    return false;
+
+  if (HotOnly && (BF.getKnownExecutionCount() < BC.getHotThreshold()))
+    return false;
 
   if (BF.checkForAmbiguousJumpTables()) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ambiguous JTs in " << BF.getPrintName()
@@ -1993,6 +2028,24 @@ void ShrinkWrapping::printStats() {
   outs() << "BOLT-INFO: Shrink wrapping moved " << SpillsMovedRegularMode
          << " spills inserting load/stores and " << SpillsMovedPushPopMode
          << " spills inserting push/pops\n";
+  if (!InstrDynamicCount || !StoreDynamicCount)
+    return;
+  outs() << "BOLT-INFO: Shrink wrapping reduced " << SpillsMovedDynamicCount
+         << " store executions ("
+         << format("%.1lf%%",
+                   (100.0 * SpillsMovedDynamicCount / InstrDynamicCount))
+         << " total instructions executed, "
+         << format("%.1lf%%",
+                   (100.0 * SpillsMovedDynamicCount / StoreDynamicCount))
+         << " store instructions)\n";
+  outs() << "BOLT-INFO: Shrink wrapping failed at reducing "
+         << SpillsFailedDynamicCount << " store executions ("
+         << format("%.1lf%%",
+                   (100.0 * SpillsFailedDynamicCount / InstrDynamicCount))
+         << " total instructions executed, "
+         << format("%.1lf%%",
+                   (100.0 * SpillsFailedDynamicCount / StoreDynamicCount))
+         << " store instructions)\n";
 }
 
 // Operators necessary as a result of using MCAnnotation
