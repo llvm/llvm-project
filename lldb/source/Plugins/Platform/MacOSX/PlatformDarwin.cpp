@@ -1031,7 +1031,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     minimum_version_option << '-';
     switch (sdk_type) {
     case XcodeSDK::Type::MacOSX:
-      minimum_version_option << opt_mmacosx_version_min_EQ;
+      minimum_version_option << opt_mmacos_version_min_EQ;
       break;
     case XcodeSDK::Type::iPhoneSimulator:
       minimum_version_option << opt_mios_simulator_version_min_EQ;
