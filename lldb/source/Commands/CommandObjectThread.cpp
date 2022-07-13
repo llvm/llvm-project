@@ -2174,6 +2174,10 @@ public:
         m_dumper_options.forwards = true;
         break;
       }
+      case 'k': {
+        m_dumper_options.show_control_flow_kind = true;
+        break;
+      }
       case 't': {
         m_dumper_options.show_tsc = true;
         break;

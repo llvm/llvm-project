@@ -165,8 +165,9 @@ bool SBInstructionList::GetDescription(Stream &sref) {
               addr, eSymbolContextEverything, sc);
         }
 
-        inst->Dump(&sref, max_opcode_byte_size, true, false, nullptr, &sc,
-                   &prev_sc, &format, 0);
+        inst->Dump(&sref, max_opcode_byte_size, true, false,
+                   /*show_control_flow_kind=*/false, nullptr, &sc, &prev_sc,
+                   &format, 0);
         sref.EOL();
       }
       return true;
