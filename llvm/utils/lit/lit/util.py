@@ -384,28 +384,6 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0,
 
     return out, err, exitCode
 
-# A predicate to determine whether or not a specific config's target_triple is
-# referring to macOS. The reason that this is useful is that macOS has multiple
-# valid triples. This just centralizes the query into a convenient place.
-def isMacOSTriple(target):
-    arches = [
-        'x86_64',
-        'i386',
-        'x86_64h'
-    ]
-
-    names = [
-        'darwin',
-        'macosx'
-    ]
-
-    for a in arches:
-        for n in names:
-            triple = '%s-apple-%s' % (a,n)
-            if triple not in target:
-                continue
-            return True
-    return False
 
 def isMacOSTriple(target_triple):
     """Whether the given target triple is for macOS,
