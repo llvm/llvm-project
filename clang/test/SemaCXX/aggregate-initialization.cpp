@@ -206,7 +206,7 @@ namespace ElementDestructor {
   struct Y { X x; };
 
   void test0() {
-    auto *y = new Y {}; // expected-error {{temporary of type 'X' has private destructor}}
+    auto *y = new Y {}; // expected-error {{temporary of type 'ElementDestructor::X' has private destructor}}
   }
 
   struct S0 { int f; ~S0() = delete; }; // expected-note 3 {{'~S0' has been explicitly marked deleted here}}

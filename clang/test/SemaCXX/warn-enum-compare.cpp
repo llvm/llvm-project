@@ -78,15 +78,15 @@ void test () {
 
   while (B1 == B2); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'name2::Baz')}}
   while (name1::B2 == name2::B3); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'name2::Baz')}}
-  while (z == name2::B2); // expected-warning  {{comparison of different enumeration types ('Baz' and 'name2::Baz')}}
+  while (z == name2::B2); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'name2::Baz')}}
 
   while (((((B1)))) == B2); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'name2::Baz')}}
   while (name1::B2 == (name2::B3)); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'name2::Baz')}}
-  while (z == ((((name2::B2))))); // expected-warning  {{comparison of different enumeration types ('Baz' and 'name2::Baz')}}
+  while (z == ((((name2::B2))))); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'name2::Baz')}}
 
   while ((((B1))) == (((B2)))); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'name2::Baz')}}
   while ((name1::B2) == (((name2::B3)))); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'name2::Baz')}}
-  while ((((z))) == (name2::B2)); // expected-warning  {{comparison of different enumeration types ('Baz' and 'name2::Baz')}}
+  while ((((z))) == (name2::B2)); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'name2::Baz')}}
 
   while (x == a); // expected-warning  {{comparison of different enumeration types ('Foo' and 'name1::Foo')}}
   while (x == b); // expected-warning  {{comparison of different enumeration types ('Foo' and 'oneFoo' (aka 'name1::Foo'))}}
@@ -229,14 +229,14 @@ void test () {
   while (td == c); // expected-warning  {{comparison of different enumeration types ('TD' and 'twoFoo' (aka 'name1::Foo'))}}
   while (td == x); // expected-warning  {{comparison of different enumeration types ('TD' and 'Foo')}}
   while (td == y); // expected-warning  {{comparison of different enumeration types ('TD' and 'Bar')}}
-  while (td == z); // expected-warning  {{comparison of different enumeration types ('TD' and 'Baz')}}
+  while (td == z); // expected-warning  {{comparison of different enumeration types ('TD' and 'name1::Baz')}}
 
   while (a == TD1); // expected-warning  {{comparison of different enumeration types ('name1::Foo' and 'TD')}}
   while (b == TD2); // expected-warning  {{comparison of different enumeration types ('oneFoo' (aka 'name1::Foo') and 'TD')}}
   while (c == TD1); // expected-warning  {{comparison of different enumeration types ('twoFoo' (aka 'name1::Foo') and 'TD')}}
   while (x == TD2); // expected-warning  {{comparison of different enumeration types ('Foo' and 'TD')}}
   while (y == TD1); // expected-warning  {{comparison of different enumeration types ('Bar' and 'TD')}}
-  while (z == TD2); // expected-warning  {{comparison of different enumeration types ('Baz' and 'TD')}}
+  while (z == TD2); // expected-warning  {{comparison of different enumeration types ('name1::Baz' and 'TD')}}
 
   switch (a) {
     case name1::F1: break;

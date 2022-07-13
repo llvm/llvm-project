@@ -34,9 +34,9 @@ extern const bool UV;
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B1]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B1.3], A[2])
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B1.3], class A[2])
 // CHECK-NEXT:   3: A a[2];
-// CHECK-NEXT:   4:  (CXXConstructExpr, [B1.5], A[0])
+// CHECK-NEXT:   4:  (CXXConstructExpr, [B1.5], class A[0])
 // CHECK-NEXT:   5: A b[0];
 // CHECK-NEXT:   6: [B1.3].~A[2]() (Implicit destructor)
 // CHECK-NEXT:   7: CFGScopeEnd(a)
@@ -53,17 +53,17 @@ void test_array() {
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B1]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B1.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B1.3], class A)
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   4: CFGScopeBegin(c)
-// CHECK-NEXT:   5:  (CXXConstructExpr, [B1.6], A)
+// CHECK-NEXT:   5:  (CXXConstructExpr, [B1.6], class A)
 // CHECK-NEXT:   6: A c;
-// CHECK-NEXT:   7:  (CXXConstructExpr, [B1.8], A)
+// CHECK-NEXT:   7:  (CXXConstructExpr, [B1.8], class A)
 // CHECK-NEXT:   8: A d;
 // CHECK-NEXT:   9: [B1.8].~A() (Implicit destructor)
 // CHECK-NEXT:  10: [B1.6].~A() (Implicit destructor)
 // CHECK-NEXT:  11: CFGScopeEnd(c)
-// CHECK-NEXT:  12:  (CXXConstructExpr, [B1.13], A)
+// CHECK-NEXT:  12:  (CXXConstructExpr, [B1.13], class A)
 // CHECK-NEXT:  13: A b;
 // CHECK-NEXT:  14: [B1.13].~A() (Implicit destructor)
 // CHECK-NEXT:  15: [B1.3].~A() (Implicit destructor)
@@ -83,7 +83,7 @@ void test_scope() {
 // CHECK:      [B4 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B3
 // CHECK:      [B1]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], A)
+// CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B3.5].~A() (Implicit destructor)
@@ -100,9 +100,9 @@ void test_scope() {
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B3]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], class A)
 // CHECK-NEXT:   3: A a;
-// CHECK-NEXT:   4:  (CXXConstructExpr, [B3.5], A)
+// CHECK-NEXT:   4:  (CXXConstructExpr, [B3.5], class A)
 // CHECK-NEXT:   5: A b;
 // CHECK-NEXT:   6: UV
 // CHECK-NEXT:   7: [B3.6] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -129,7 +129,7 @@ void test_return() {
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:   1: CFGScopeBegin(c)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B2.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B2.3], class A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: [B2.3].~A() (Implicit destructor)
 // CHECK-NEXT:   5: CFGScopeEnd(c)
@@ -137,7 +137,7 @@ void test_return() {
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B3]
 // CHECK-NEXT:   1: CFGScopeBegin(c)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], class A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: [B3.3].~A() (Implicit destructor)
 // CHECK-NEXT:   5: CFGScopeEnd(c)
@@ -145,12 +145,12 @@ void test_return() {
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B4]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B4.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B4.3], class A)
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   4: CFGScopeBegin(b)
 // CHECK-NEXT:   5: a
 // CHECK-NEXT:   6: [B4.5] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   7: [B4.6] (CXXConstructExpr, [B4.8], A)
+// CHECK-NEXT:   7: [B4.6] (CXXConstructExpr, [B4.8], class A)
 // CHECK-NEXT:   8: A b = a;
 // CHECK-NEXT:   9: b
 // CHECK-NEXT:  10: [B4.9] (ImplicitCastExpr, NoOp, const class A)
@@ -175,7 +175,7 @@ void test_if_implicit_scope() {
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B8.8].~A() (Implicit destructor)
 // CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3:  (CXXConstructExpr, [B1.4], A)
+// CHECK-NEXT:   3:  (CXXConstructExpr, [B1.4], class A)
 // CHECK-NEXT:   4: A e;
 // CHECK-NEXT:   5: [B1.4].~A() (Implicit destructor)
 // CHECK-NEXT:   6: [B8.3].~A() (Implicit destructor)
@@ -183,7 +183,7 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Preds (2): B2 B5
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B2.2], A)
+// CHECK-NEXT:   1:  (CXXConstructExpr, [B2.2], class A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B2.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B4.3].~A() (Implicit destructor)
@@ -202,7 +202,7 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B4]
 // CHECK-NEXT:   1: CFGScopeBegin(c)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B4.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B4.3], class A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: UV
 // CHECK-NEXT:   5: [B4.4] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -210,7 +210,7 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Preds (1): B8
 // CHECK-NEXT:   Succs (2): B3 B2
 // CHECK:      [B5]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B5.2], A)
+// CHECK-NEXT:   1:  (CXXConstructExpr, [B5.2], class A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B5.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B7.3].~A() (Implicit destructor)
@@ -229,7 +229,7 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B7]
 // CHECK-NEXT:   1: CFGScopeBegin(c)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B7.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B7.3], class A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: UV
 // CHECK-NEXT:   5: [B7.4] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -238,12 +238,12 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Succs (2): B6 B5
 // CHECK:      [B8]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B8.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B8.3], class A)
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   4: CFGScopeBegin(b)
 // CHECK-NEXT:   5: a
 // CHECK-NEXT:   6: [B8.5] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   7: [B8.6] (CXXConstructExpr, [B8.8], A)
+// CHECK-NEXT:   7: [B8.6] (CXXConstructExpr, [B8.8], class A)
 // CHECK-NEXT:   8: A b = a;
 // CHECK-NEXT:   9: b
 // CHECK-NEXT:  10: [B8.9] (ImplicitCastExpr, NoOp, const class A)
@@ -284,7 +284,7 @@ void test_if_jumps() {
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B3]
 // CHECK-NEXT:   1: CFGScopeBegin(c)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], class A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: [B3.3].~A() (Implicit destructor)
 // CHECK-NEXT:   5: CFGScopeEnd(c)
@@ -296,7 +296,7 @@ void test_if_jumps() {
 // CHECK-NEXT:   1: CFGScopeBegin(b)
 // CHECK-NEXT:   2: a
 // CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, [B4.5], A)
+// CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, [B4.5], class A)
 // CHECK-NEXT:   5: A b = a;
 // CHECK-NEXT:   6: b
 // CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, NoOp, const class A)
@@ -309,7 +309,7 @@ void test_if_jumps() {
 // CHECK-NEXT:   Succs (2): B3 B1
 // CHECK:      [B5]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B5.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B5.3], class A)
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   Preds (1): B6
 // CHECK-NEXT:   Succs (1): B4
@@ -326,7 +326,7 @@ void test_while_implicit_scope() {
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B10.5].~A() (Implicit destructor)
 // CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3:  (CXXConstructExpr, [B1.4], A)
+// CHECK-NEXT:   3:  (CXXConstructExpr, [B1.4], class A)
 // CHECK-NEXT:   4: A e;
 // CHECK-NEXT:   5: [B1.4].~A() (Implicit destructor)
 // CHECK-NEXT:   6: [B11.3].~A() (Implicit destructor)
@@ -337,7 +337,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   Preds (2): B3 B6
 // CHECK-NEXT:   Succs (1): B10
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B3.2], A)
+// CHECK-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B9.3].~A() (Implicit destructor)
@@ -384,7 +384,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B9]
 // CHECK-NEXT:   1: CFGScopeBegin(c)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B9.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B9.3], class A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: UV
 // CHECK-NEXT:   5: [B9.4] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -395,7 +395,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   1: CFGScopeBegin(b)
 // CHECK-NEXT:   2: a
 // CHECK-NEXT:   3: [B10.2] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, [B10.5], A)
+// CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, [B10.5], class A)
 // CHECK-NEXT:   5: A b = a;
 // CHECK-NEXT:   6: b
 // CHECK-NEXT:   7: [B10.6] (ImplicitCastExpr, NoOp, const class A)
@@ -408,7 +408,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   Succs (2): B9 B1
 // CHECK:      [B11]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B11.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B11.3], class A)
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   Preds (1): B12
 // CHECK-NEXT:   Succs (1): B10
@@ -429,7 +429,7 @@ void test_while_jumps() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], A)
+// CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], class A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B11.3].~A() (Implicit destructor)
@@ -443,7 +443,7 @@ void test_while_jumps() {
 // CHECK-NEXT:   Preds (2): B3 B6
 // CHECK-NEXT:   Succs (2): B10 B1
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B3.2], A)
+// CHECK-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B9.3].~A() (Implicit destructor)
@@ -484,7 +484,7 @@ void test_while_jumps() {
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B9]
 // CHECK-NEXT:   1: CFGScopeBegin(b)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B9.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B9.3], class A)
 // CHECK-NEXT:   3: A b;
 // CHECK-NEXT:   4: UV
 // CHECK-NEXT:   5: [B9.4] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -496,7 +496,7 @@ void test_while_jumps() {
 // CHECK-NEXT:   Succs (1): B9
 // CHECK:      [B11]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B11.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B11.3], class A)
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   Preds (1): B12
 // CHECK-NEXT:   Succs (1): B9
@@ -528,7 +528,7 @@ void test_do_jumps() {
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B3]
 // CHECK-NEXT:   1: CFGScopeBegin(c)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], class A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: [B3.3].~A() (Implicit destructor)
 // CHECK-NEXT:   5: CFGScopeEnd(c)
@@ -540,7 +540,7 @@ void test_do_jumps() {
 // CHECK-NEXT:   1: CFGScopeBegin(b)
 // CHECK-NEXT:   2: a
 // CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, [B4.5], A)
+// CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, [B4.5], class A)
 // CHECK-NEXT:   5: A b = a;
 // CHECK-NEXT:   6: b
 // CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, NoOp, const class A)
@@ -553,7 +553,7 @@ void test_do_jumps() {
 // CHECK-NEXT:   Succs (2): B3 B1
 // CHECK:      [B5]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B5.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B5.3], class A)
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   Preds (1): B6
 // CHECK-NEXT:   Succs (1): B4
@@ -571,7 +571,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   2: CFGScopeEnd(c)
 // CHECK-NEXT:   3: [B11.6].~A() (Implicit destructor)
 // CHECK-NEXT:   4: CFGScopeEnd(b)
-// CHECK-NEXT:   5:  (CXXConstructExpr, [B1.6], A)
+// CHECK-NEXT:   5:  (CXXConstructExpr, [B1.6], class A)
 // CHECK-NEXT:   6: A f;
 // CHECK-NEXT:   7: [B1.6].~A() (Implicit destructor)
 // CHECK-NEXT:   8: [B11.3].~A() (Implicit destructor)
@@ -582,7 +582,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   Preds (2): B3 B6
 // CHECK-NEXT:   Succs (1): B10
 // CHECK:      [B3]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B3.2], A)
+// CHECK-NEXT:   1:  (CXXConstructExpr, [B3.2], class A)
 // CHECK-NEXT:   2: A e;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B9.3].~A() (Implicit destructor)
@@ -629,7 +629,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B9]
 // CHECK-NEXT:   1: CFGScopeBegin(d)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B9.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B9.3], class A)
 // CHECK-NEXT:   3: A d;
 // CHECK-NEXT:   4: UV
 // CHECK-NEXT:   5: [B9.4] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -640,7 +640,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   1: CFGScopeBegin(c)
 // CHECK-NEXT:   2: b
 // CHECK-NEXT:   3: [B10.2] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, [B10.5], A)
+// CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, [B10.5], class A)
 // CHECK-NEXT:   5: A c = b;
 // CHECK-NEXT:   6: c
 // CHECK-NEXT:   7: [B10.6] (ImplicitCastExpr, NoOp, const class A)
@@ -653,10 +653,10 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   Succs (2): B9 B1
 // CHECK:      [B11]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B11.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B11.3], class A)
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   4: CFGScopeBegin(b)
-// CHECK-NEXT:   5:  (CXXConstructExpr, [B11.6], A)
+// CHECK-NEXT:   5:  (CXXConstructExpr, [B11.6], class A)
 // CHECK-NEXT:   6: A b;
 // CHECK-NEXT:   Preds (1): B12
 // CHECK-NEXT:   Succs (1): B10
@@ -678,7 +678,7 @@ void test_for_jumps() {
 // CHECK-NEXT:   Succs (1): B7
 // CHECK:      [B1]
 // CHECK-NEXT:  l1:
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], A)
+// CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], class A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B6.5].~A() (Implicit destructor)
@@ -688,7 +688,7 @@ void test_for_jumps() {
 // CHECK-NEXT:   Preds (2): B2 B3
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B2.2], A)
+// CHECK-NEXT:   1:  (CXXConstructExpr, [B2.2], class A)
 // CHECK-NEXT:   2: A b;
 // CHECK-NEXT:   3: [B2.2].~A() (Implicit destructor)
 // CHECK-NEXT:   4: [B6.8].~A() (Implicit destructor)
@@ -718,12 +718,12 @@ void test_for_jumps() {
 // CHECK:      [B6]
 // CHECK-NEXT:  l0:
 // CHECK-NEXT:   1: CFGScopeBegin(cb)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B6.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B6.3], class A)
 // CHECK-NEXT:   3: A cb;
-// CHECK-NEXT:   4:  (CXXConstructExpr, [B6.5], A)
+// CHECK-NEXT:   4:  (CXXConstructExpr, [B6.5], class A)
 // CHECK-NEXT:   5: A b;
 // CHECK-NEXT:   6: CFGScopeBegin(a)
-// CHECK-NEXT:   7:  (CXXConstructExpr, [B6.8], A)
+// CHECK-NEXT:   7:  (CXXConstructExpr, [B6.8], class A)
 // CHECK-NEXT:   8: A a;
 // CHECK-NEXT:   9: UV
 // CHECK-NEXT:  10: [B6.9] (ImplicitCastExpr, LValueToRValue, _Bool)
@@ -732,7 +732,7 @@ void test_for_jumps() {
 // CHECK-NEXT:   Succs (2): B5 B4
 // CHECK:      [B7]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B7.3], A)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B7.3], class A)
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   Preds (1): B8
 // CHECK-NEXT:   Succs (1): B6
@@ -816,9 +816,9 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:   1: __begin1
-// CHECK-NEXT:   2: [B2.1] (ImplicitCastExpr, LValueToRValue, A *)
+// CHECK-NEXT:   2: [B2.1] (ImplicitCastExpr, LValueToRValue, class A *)
 // CHECK-NEXT:   3: __end1
-// CHECK-NEXT:   4: [B2.3] (ImplicitCastExpr, LValueToRValue, A *)
+// CHECK-NEXT:   4: [B2.3] (ImplicitCastExpr, LValueToRValue, class A *)
 // CHECK-NEXT:   5: [B2.2] != [B2.4]
 // CHECK-NEXT:   T: for (auto &i : [B5.4])
 // CHECK:         [B4.11];
@@ -832,7 +832,7 @@ void test_for_compound_and_break() {
 // CHECK:      [B4]
 // CHECK-NEXT:   1: CFGScopeBegin(i)
 // CHECK-NEXT:   2: __begin1
-// CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, LValueToRValue, A *)
+// CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, LValueToRValue, class A *)
 // CHECK-NEXT:   4: *[B4.3]
 // CHECK-NEXT:   5: auto &i
 // CHECK-NEXT:   6: operator=
@@ -846,18 +846,18 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   Succs (1): B3
 // CHECK:      [B5]
 // CHECK-NEXT:   1: CFGScopeBegin(a)
-// CHECK-NEXT:   2:  (CXXConstructExpr, [B5.3], A[10])
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B5.3], class A[10])
 // CHECK-NEXT:   3: A a[10];
 // CHECK-NEXT:   4: a
 // CHECK-NEXT:   5: auto &&__range1 = a;
 // CHECK-NEXT:   6: CFGScopeBegin(__end1)
 // CHECK-NEXT:   7: __range1
-// CHECK-NEXT:   8: [B5.7] (ImplicitCastExpr, ArrayToPointerDecay, A *)
+// CHECK-NEXT:   8: [B5.7] (ImplicitCastExpr, ArrayToPointerDecay, class A *)
 // CHECK-NEXT:   9: 10
 // CHECK-NEXT:  10: [B5.8] + [B5.9]
 // CHECK-NEXT:  11: auto __end1 = __range1 + 10
 // CHECK-NEXT:  12: __range1
-// CHECK-NEXT:  13: [B5.12] (ImplicitCastExpr, ArrayToPointerDecay, A *)
+// CHECK-NEXT:  13: [B5.12] (ImplicitCastExpr, ArrayToPointerDecay, class A *)
 // CHECK-NEXT:  14: auto __begin1 = __range1;
 // CHECK-NEXT:   Preds (1): B6
 // CHECK-NEXT:   Succs (1): B2

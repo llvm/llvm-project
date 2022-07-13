@@ -185,9 +185,9 @@ void t_529_5_8()
   typedef D &Dr;
   (void)Dr(*((A*)0)); // expected-error {{cannot cast 'A' to 'Dr' (aka 'D &') via virtual base 'B'}}
   typedef H *Hp;
-  (void)Hp((A*)0); // expected-error {{ambiguous cast from base 'A' to derived 'H':\n    A -> B -> G1 -> struct H\n    A -> B -> G2 -> struct H}}
+  (void)Hp((A*)0); // expected-error {{ambiguous cast from base 'A' to derived 'H':\n    struct A -> struct B -> struct G1 -> struct H\n    struct A -> struct B -> struct G2 -> struct H}}
   typedef H &Hr;
-  (void)Hr(*((A*)0)); // expected-error {{ambiguous cast from base 'A' to derived 'H':\n    A -> B -> G1 -> struct H\n    A -> B -> G2 -> struct H}}
+  (void)Hr(*((A*)0)); // expected-error {{ambiguous cast from base 'A' to derived 'H':\n    struct A -> struct B -> struct G1 -> struct H\n    struct A -> struct B -> struct G2 -> struct H}}
 
   // TODO: Test DR427. This requires user-defined conversions, though.
 }

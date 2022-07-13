@@ -466,7 +466,7 @@
    <key>type</key><string>Double free</string>
    <key>check_name</key><string>cplusplus.NewDelete</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>f3139fe330e830526fe60a2e19266627</string>
+   <key>issue_hash_content_of_line_in_context</key><string>8bf1a5b9fdae9d86780aa6c4cdce2605</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test</string>
   <key>issue_hash_function_offset</key><string>3</string>

@@ -29,8 +29,8 @@ struct A {
 
 template<typename T> struct Dependent {
   using U = typename T::type;
-  bool operator==(U) const = default; // expected-error {{found 'U'}}
-  friend bool operator==(U, U) = default; // expected-error {{found 'U'}}
+  bool operator==(U) const = default; // expected-error {{found 'Dependent<Bad>::U'}}
+  friend bool operator==(U, U) = default; // expected-error {{found 'Dependent<Bad>::U'}}
 };
 
 struct Good { using type = const Dependent<Good>&; };

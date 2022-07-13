@@ -20,7 +20,7 @@ class DVA : public virtual A {
 };
 class DDVA : public virtual DA {
 };
-class DMA : public virtual A, public virtual DA { //expected-warning{{direct base 'A' is inaccessible due to ambiguity:\n    class DMA -> A\n    class DMA -> DA -> A}}
+class DMA : public virtual A, public virtual DA { //expected-warning{{direct base 'A' is inaccessible due to ambiguity:\n    class DMA -> class A\n    class DMA -> class DA -> class A}}
 };
 
 class B;
@@ -46,7 +46,7 @@ void reinterpret_not_defined_class(B *b, C *c) {
 namespace BaseMalformed {
   struct A; // expected-note {{forward declaration of 'BaseMalformed::A'}}
   struct B {
-    A a; // expected-error {{field has incomplete type 'A'}}
+    A a; // expected-error {{field has incomplete type 'BaseMalformed::A'}}
   };
   struct C : public B {} c;
   B *b = reinterpret_cast<B *>(&c);
@@ -57,7 +57,7 @@ namespace ChildMalformed {
   struct A; // expected-note {{forward declaration of 'ChildMalformed::A'}}
   struct B {};
   struct C : public B {
-    A a; // expected-error {{field has incomplete type 'A'}}
+    A a; // expected-error {{field has incomplete type 'ChildMalformed::A'}}
   } c;
   B *b = reinterpret_cast<B *>(&c);
 } // end anonymous namespace
@@ -66,7 +66,7 @@ namespace ChildMalformed {
 namespace BaseBaseMalformed {
   struct A; // expected-note {{forward declaration of 'BaseBaseMalformed::A'}}
   struct Y {};
-  struct X { A a; }; // expected-error {{field has incomplete type 'A'}}
+  struct X { A a; }; // expected-error {{field has incomplete type 'BaseBaseMalformed::A'}}
   struct B : Y, X {};
   struct C : B {} c;
   B *p = reinterpret_cast<B*>(&c);
@@ -82,7 +82,7 @@ namespace InheritanceMalformed {
 // Virtual base class outside upcast base-chain is malformed.
 namespace VBaseMalformed{
   struct A; // expected-note {{forward declaration of 'VBaseMalformed::A'}}
-  struct X { A a; };  // expected-error {{field has incomplete type 'A'}}
+  struct X { A a; };  // expected-error {{field has incomplete type 'VBaseMalformed::A'}}
   struct B : public virtual X {};
   struct C : B {} c;
   B *p = reinterpret_cast<B*>(&c);

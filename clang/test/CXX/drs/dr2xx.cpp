@@ -483,7 +483,7 @@ namespace dr244 { // dr244: 11
   B* B_ptr = &D_object;
 
   void f() {
-    D_object.~B(); // expected-error {{does not match the type 'D' of the object being destroyed}}
+    D_object.~B(); // expected-error {{does not match the type 'dr244::D' of the object being destroyed}}
     D_object.B::~B();
     D_object.D::~B(); // FIXME: Missing diagnostic for this.
     B_ptr->~B();
@@ -680,7 +680,7 @@ namespace dr257 { // dr257: yes
     C() {}
   };
   struct D : B {
-    D() {} // expected-error {{must explicitly initialize the base class 'A'}}
+    D() {} // expected-error {{must explicitly initialize the base class 'dr257::A'}}
     void f();
   };
 }
@@ -1057,7 +1057,7 @@ namespace dr294 { // dr294: no
 
 namespace dr295 { // dr295: 3.7
   typedef int f();
-  const f g; // expected-warning {{'const' qualifier on function type 'f' (aka 'int ()') has no effect}}
+  const f g; // expected-warning {{'const' qualifier on function type 'dr295::f' (aka 'int ()') has no effect}}
   f &r = g;
   template<typename T> struct X {
     const T &f;
@@ -1065,10 +1065,10 @@ namespace dr295 { // dr295: 3.7
   X<f> x = {g};
 
   typedef int U();
-  typedef const U U; // expected-warning {{'const' qualifier on function type 'U' (aka 'int ()') has no effect}}
+  typedef const U U; // expected-warning {{'const' qualifier on function type 'dr295::U' (aka 'int ()') has no effect}}
 
   typedef int (*V)();
-  typedef volatile U *V; // expected-warning {{'volatile' qualifier on function type 'U' (aka 'int ()') has no effect}}
+  typedef volatile U *V; // expected-warning {{'volatile' qualifier on function type 'dr295::U' (aka 'int ()') has no effect}}
 }
 
 namespace dr296 { // dr296: yes
@@ -1096,7 +1096,7 @@ namespace dr298 { // dr298: yes
 
   B::B() {} // expected-error {{a type specifier is required}}
   B::A() {} // ok
-  C::~C() {} // expected-error {{destructor cannot be declared using a typedef 'C' (aka 'const dr298::A') of the class name}}
+  C::~C() {} // expected-error {{destructor cannot be declared using a typedef 'dr298::C' (aka 'const dr298::A') of the class name}}
 
   typedef struct D E; // expected-note {{here}}
   struct E {}; // expected-error {{conflicts with typedef}}

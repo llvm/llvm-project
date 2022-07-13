@@ -783,7 +783,7 @@ void fVirtualDiamondInheritanceTest3() {
 
 struct DynTBase1 {};
 struct DynTDerived1 : DynTBase1 {
-  int y; // expected-note{{uninitialized field 'static_cast<DynTDerived1 *>(this->bptr)->y'}}
+  int y; // expected-note{{uninitialized field 'static_cast<struct DynTDerived1 *>(this->bptr)->y'}}
 };
 
 struct DynamicTypeTest1 {
@@ -799,10 +799,10 @@ void fDynamicTypeTest1() {
 };
 
 struct DynTBase2 {
-  int x; // expected-note{{uninitialized field 'static_cast<DynTDerived2 *>(this->bptr)->DynTBase2::x'}}
+  int x; // expected-note{{uninitialized field 'static_cast<struct DynTDerived2 *>(this->bptr)->DynTBase2::x'}}
 };
 struct DynTDerived2 : DynTBase2 {
-  int y; // expected-note{{uninitialized field 'static_cast<DynTDerived2 *>(this->bptr)->y'}}
+  int y; // expected-note{{uninitialized field 'static_cast<struct DynTDerived2 *>(this->bptr)->y'}}
 };
 
 struct DynamicTypeTest2 {

@@ -38,8 +38,7 @@ public:
 
     const auto *RetReg = cast<TypedValueRegion>(RetVal->getAsRegion());
     const Expr *OrigExpr = Call.getOriginExpr();
-    ASSERT_EQ(OrigExpr->getType()->getCanonicalTypeInternal(),
-              RetReg->getValueType()->getCanonicalTypeInternal());
+    ASSERT_EQ(OrigExpr->getType(), RetReg->getValueType());
   }
 };
 
