@@ -38,7 +38,7 @@ namespace PR10142 {
       X x2;
       if (i)
         throw x2; // okay
-      throw x; // expected-error{{call to deleted constructor of 'X'}}
+      throw x; // expected-error{{call to deleted constructor of 'PR10142::X'}}
     } catch (...) {
     }
   }

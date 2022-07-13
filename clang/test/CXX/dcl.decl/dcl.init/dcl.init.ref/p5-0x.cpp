@@ -118,7 +118,7 @@ namespace std_example_2 {
   const A& r = x;
   int&& rri = static_cast<int&&>(i);
   B&& rrb = x;
-  int&& rri2 = X(); // expected-error{{no viable conversion from 'X' to 'int'}}
+  int&& rri2 = X(); // expected-error{{no viable conversion from 'std_example_2::X' to 'int'}}
 
   const double& rcd2 = 2;
   double&& rrd = 2;
@@ -196,9 +196,9 @@ namespace PR11003 {
 namespace rdar13278115 {
   struct X { };
   struct Y : X { };
-  X &&f0(X &x) { return x; } // expected-error{{rvalue reference to type 'X' cannot bind to lvalue of type 'X'}}
-  X &&f1(Y &y) { return y; } // expected-error{{rvalue reference to type 'X' cannot bind to lvalue of type 'Y'}}
-  const X &&f2(Y &y) { return y; } // expected-error{{rvalue reference to type 'const X' cannot bind to lvalue of type 'Y'}}
+  X &&f0(X &x) { return x; } // expected-error{{rvalue reference to type 'rdar13278115::X' cannot bind to lvalue of type 'rdar13278115::X'}}
+  X &&f1(Y &y) { return y; } // expected-error{{rvalue reference to type 'rdar13278115::X' cannot bind to lvalue of type 'rdar13278115::Y'}}
+  const X &&f2(Y &y) { return y; } // expected-error{{rvalue reference to type 'const rdar13278115::X' cannot bind to lvalue of type 'rdar13278115::Y'}}
 }
 
 namespace bitfields {

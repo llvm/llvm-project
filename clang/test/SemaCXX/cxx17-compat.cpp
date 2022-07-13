@@ -126,8 +126,8 @@ namespace NTTP {
   struct A {};
   template<A> struct Class {};
 #if __cplusplus <= 201703L
-  // expected-error@-2 {{non-type template parameter cannot have type 'A' before C++20}}
+  // expected-error@-2 {{non-type template parameter cannot have type 'NTTP::A' before C++20}}
 #else
-  // expected-warning@-4 {{non-type template parameter of type 'A' is incompatible with C++ standards before C++20}}
+  // expected-warning@-4 {{non-type template parameter of type 'NTTP::A' is incompatible with C++ standards before C++20}}
 #endif
 }

@@ -877,13 +877,13 @@ static_assert(&pb1 != &pb2, "");
 static_assert(pb1 == &bot1, "");
 static_assert(pb2 == &bot2, "");
 
-constexpr Base2 &fail = (Base2&)bot1; // expected-error {{constant expression}} expected-note {{cannot cast object of dynamic type 'const Derived' to type 'Base2'}}
-constexpr Base &fail2 = (Base&)*pb2; // expected-error {{constant expression}} expected-note {{cannot cast object of dynamic type 'const Derived' to type 'Base'}}
+constexpr Base2 &fail = (Base2&)bot1; // expected-error {{constant expression}} expected-note {{cannot cast object of dynamic type 'const Class::Derived' to type 'Class::Base2'}}
+constexpr Base &fail2 = (Base&)*pb2; // expected-error {{constant expression}} expected-note {{cannot cast object of dynamic type 'const Class::Derived' to type 'Class::Base'}}
 constexpr Base2 &ok2 = (Base2&)bot2;
 static_assert(&ok2 == &derived, "");
 
-constexpr Base2 *pfail = (Base2*)pb1; // expected-error {{constant expression}} expected-note {{cannot cast object of dynamic type 'const Derived' to type 'Base2'}}
-constexpr Base *pfail2 = (Base*)&bot2; // expected-error {{constant expression}} expected-note {{cannot cast object of dynamic type 'const Derived' to type 'Base'}}
+constexpr Base2 *pfail = (Base2*)pb1; // expected-error {{constant expression}} expected-note {{cannot cast object of dynamic type 'const Class::Derived' to type 'Class::Base2'}}
+constexpr Base *pfail2 = (Base*)&bot2; // expected-error {{constant expression}} expected-note {{cannot cast object of dynamic type 'const Class::Derived' to type 'Class::Base'}}
 constexpr Base2 *pok2 = (Base2*)pb2;
 static_assert(pok2 == &derived, "");
 static_assert(&ok2 == pok2, "");
@@ -892,18 +892,18 @@ static_assert((Derived*)(Base*)pb1 == (Derived*)pok2, "");
 
 // Core issue 903: we do not perform constant evaluation when checking for a
 // null pointer in C++11. Just check for an integer literal with value 0.
-constexpr Base *nullB = 42 - 6 * 7; // expected-error {{cannot initialize a variable of type 'Base *const' with an rvalue of type 'int'}}
+constexpr Base *nullB = 42 - 6 * 7; // expected-error {{cannot initialize a variable of type 'Class::Base *const' with an rvalue of type 'int'}}
 constexpr Base *nullB1 = 0;
 static_assert((Bottom*)nullB == 0, "");
 static_assert((Derived*)nullB1 == 0, "");
 static_assert((void*)(Bottom*)nullB1 == (void*)(Derived*)nullB1, "");
-Base *nullB2 = '\0'; // expected-error {{cannot initialize a variable of type 'Base *' with an rvalue of type 'char'}}
+Base *nullB2 = '\0'; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'char'}}
 Base *nullB3 = (0);
-Base *nullB4 = false; // expected-error {{cannot initialize a variable of type 'Base *' with an rvalue of type 'bool'}}
+Base *nullB4 = false; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'bool'}}
 Base *nullB5 = ((0ULL));
-Base *nullB6 = 0.; // expected-error {{cannot initialize a variable of type 'Base *' with an rvalue of type 'double'}}
+Base *nullB6 = 0.; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'double'}}
 enum Null { kNull };
-Base *nullB7 = kNull; // expected-error {{cannot initialize a variable of type 'Base *' with an rvalue of type 'Class::Null'}}
+Base *nullB7 = kNull; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'Class::Null'}}
 static_assert(nullB1 == (1 - 1), ""); // expected-error {{comparison between pointer and integer}}
 
 
@@ -975,8 +975,8 @@ constexpr int S::g() const {
 // The T temporary is implicitly cast to an S subobject, but we can recover the
 // T full-object via a base-to-derived cast, or a derived-to-base-casted member
 // pointer.
-static_assert(S().f(), ""); // expected-error {{constant expression}} expected-note {{in call to '&S()->f()'}}
-static_assert(S().g(), ""); // expected-error {{constant expression}} expected-note {{in call to '&S()->g()'}}
+static_assert(S().f(), ""); // expected-error {{constant expression}} expected-note {{in call to '&Temporaries::S()->f()'}}
+static_assert(S().g(), ""); // expected-error {{constant expression}} expected-note {{in call to '&Temporaries::S()->g()'}}
 static_assert(T(3).f() == 3, "");
 static_assert(T(4).g() == 4, "");
 
@@ -993,7 +993,7 @@ struct NonLiteral {
   NonLiteral();
   int f();
 };
-constexpr int k = NonLiteral().f(); // expected-error {{constant expression}} expected-note {{non-literal type 'NonLiteral'}}
+constexpr int k = NonLiteral().f(); // expected-error {{constant expression}} expected-note {{non-literal type 'Temporaries::NonLiteral'}}
 
 }
 
@@ -1250,10 +1250,10 @@ static_assert(makeComplexWrap(1,0) != complex(0, 1), "");
 namespace PR11595 {
   struct A { constexpr bool operator==(int x) const { return true; } };
   struct B { B(); A& x; };
-  static_assert(B().x == 3, "");  // expected-error {{constant expression}} expected-note {{non-literal type 'B' cannot be used in a constant expression}}
+  static_assert(B().x == 3, "");  // expected-error {{constant expression}} expected-note {{non-literal type 'PR11595::B' cannot be used in a constant expression}}
 
   constexpr bool f(int k) { // expected-error {{constexpr function never produces a constant expression}}
-    return B().x == k; // expected-note {{non-literal type 'B' cannot be used in a constant expression}}
+    return B().x == k; // expected-note {{non-literal type 'PR11595::B' cannot be used in a constant expression}}
   }
 }
 
@@ -1771,7 +1771,7 @@ namespace TypeId {
   A &g(); // cxx20_2b-note {{declared here}}
   constexpr auto &x = typeid(f());
   constexpr auto &y = typeid(g()); // expected-error{{constant expression}}
-  // cxx11-note@-1 {{typeid applied to expression of polymorphic type 'A' is not allowed in a constant expression}}
+  // cxx11-note@-1 {{typeid applied to expression of polymorphic type 'TypeId::A' is not allowed in a constant expression}}
   // expected-warning@-2 {{expression with side effects will be evaluated despite being used as an operand to 'typeid'}}
   // cxx20_2b-note@-3 {{non-constexpr function 'g' cannot be used in a constant expression}}
 }
@@ -1930,7 +1930,7 @@ namespace ConstexprConstructorRecovery {
       };
       constexpr X() noexcept {};
   protected:
-      E val{0}; // cxx11-error {{cannot initialize a member subobject of type 'E' with an rvalue of type 'int'}} cxx11-note {{here}}
+      E val{0}; // cxx11-error {{cannot initialize a member subobject of type 'ConstexprConstructorRecovery::X::E' with an rvalue of type 'int'}} cxx11-note {{here}}
   };
   // FIXME: We should avoid issuing this follow-on diagnostic.
   constexpr X x{}; // cxx11-error {{constant expression}} cxx11-note {{not initialized}}

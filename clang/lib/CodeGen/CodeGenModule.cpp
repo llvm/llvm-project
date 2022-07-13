@@ -1747,7 +1747,7 @@ void CodeGenModule::GenKernelArgMetadata(llvm::Function *Fn,
       // Get image and pipe access qualifier:
       if (ty->isImageType() || ty->isPipeType()) {
         const Decl *PDecl = parm;
-        if (const auto *TD = ty->getAs<TypedefType>())
+        if (auto *TD = dyn_cast<TypedefType>(ty))
           PDecl = TD->getDecl();
         const OpenCLAccessAttr *A = PDecl->getAttr<OpenCLAccessAttr>();
         if (A && A->isWriteOnly())

@@ -109,20 +109,17 @@ bool NonnullGlobalConstantsChecker::isGlobalConstString(SVal V) const {
 
   // Look through the typedefs.
   while (const Type *T = Ty.getTypePtr()) {
-    if (const auto *AT = dyn_cast<AttributedType>(T)) {
-      if (AT->getAttrKind() == attr::TypeNonNull)
-        return true;
-      Ty = AT->getModifiedType();
-    } else if (const auto *ET = dyn_cast<ElaboratedType>(T)) {
-      const auto *TT = dyn_cast<TypedefType>(ET->getNamedType());
-      if (!TT)
-        return false;
+    if (const auto *TT = dyn_cast<TypedefType>(T)) {
       Ty = TT->getDecl()->getUnderlyingType();
       // It is sufficient for any intermediate typedef
       // to be classified const.
       HasConst = HasConst || Ty.isConstQualified();
       if (isNonnullType(Ty) && HasConst)
         return true;
+    } else if (const auto *AT = dyn_cast<AttributedType>(T)) {
+      if (AT->getAttrKind() == attr::TypeNonNull)
+        return true;
+      Ty = AT->getModifiedType();
     } else {
       return false;
     }
@@ -139,7 +136,7 @@ bool NonnullGlobalConstantsChecker::isNonnullType(QualType Ty) const {
   if (auto *T = dyn_cast<ObjCObjectPointerType>(Ty)) {
     return T->getInterfaceDecl() &&
       T->getInterfaceDecl()->getIdentifier() == NSStringII;
-  } else if (auto *T = Ty->getAs<TypedefType>()) {
+  } else if (auto *T = dyn_cast<TypedefType>(Ty)) {
     IdentifierInfo* II = T->getDecl()->getIdentifier();
     return II == CFStringRefII || II == CFBooleanRefII || II == CFNullRefII;
   }

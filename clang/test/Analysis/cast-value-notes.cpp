@@ -86,7 +86,7 @@ void evalReferences_addrspace(const Shape &S) {
   const auto &C = dyn_cast<DEVICE Circle>(S);
   clang_analyzer_printState();
   // X86-CHECK-SUPPRESSED: "dynamic_types": [
-  // X86-CHECK-SUPPRESSED-NEXT: { "region": "SymRegion{reg_$0<const Shape & S>}", "dyn_type": "const __attribute__((address_space(3))) class clang::Circle &", "sub_classable": true }
+  // X86-CHECK-SUPPRESSED-NEXT: { "region": "SymRegion{reg_$0<const struct clang::Shape & S>}", "dyn_type": "const __attribute__((address_space(3))) class clang::Circle &", "sub_classable": true }
   (void)C;
 }
 #endif
@@ -98,7 +98,7 @@ void evalReferences_addrspace(const Shape &S) {
   // expected-warning@-3 {{Dereference of null pointer}}
   clang_analyzer_printState();
   // X86-CHECK: "dynamic_types": [
-  // X86-CHECK-NEXT: { "region": "SymRegion{reg_$0<const Shape & S>}", "dyn_type": "const __attribute__((address_space(3))) class clang::Circle &", "sub_classable": true }
+  // X86-CHECK-NEXT: { "region": "SymRegion{reg_$0<const struct clang::Shape & S>}", "dyn_type": "const __attribute__((address_space(3))) class clang::Circle &", "sub_classable": true }
   (void)C;
 }
 #endif

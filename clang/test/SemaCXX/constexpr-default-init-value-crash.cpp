@@ -8,7 +8,7 @@ struct Foo {        // expected-note 2{{candidate constructor}}
 };
 
 constexpr Foo getFoo() {
-  Foo e = 123; // expected-error {{no viable conversion from 'int' to 'Foo'}}
+  Foo e = 123; // expected-error {{no viable conversion from 'int' to 'NoCrash::Foo'}}
   return e;
 }
 }

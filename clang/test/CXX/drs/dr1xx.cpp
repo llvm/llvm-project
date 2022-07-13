@@ -866,7 +866,7 @@ namespace dr177 { // dr177: yes
   struct B {};
   struct A {
     A(A &); // expected-note 0-1{{not viable: expects an lvalue}}
-    A(const B &); // expected-note 0-1{{not viable: no known conversion from 'A' to}}
+    A(const B &); // expected-note 0-1{{not viable: no known conversion from 'dr177::A' to}}
   };
   B b;
   A a = b;
@@ -878,7 +878,7 @@ namespace dr177 { // dr177: yes
   struct D : C {};
   struct E { operator D(); };
   E e;
-  C c = e; // expected-error {{no viable constructor copying variable of type 'D'}}
+  C c = e; // expected-error {{no viable constructor copying variable of type 'dr177::D'}}
 }
 
 namespace dr178 { // dr178: yes
