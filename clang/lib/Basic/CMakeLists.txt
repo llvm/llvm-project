@@ -54,6 +54,7 @@ add_clang_library(clangBasic
   IdentifierTable.cpp
   LangOptions.cpp
   LangStandards.cpp
+  MakeSupport.cpp
   Module.cpp
   ObjCRuntime.cpp
   OpenCLOptions.cpp

@@ -72,7 +72,7 @@ enum class ModuleOutputKind {
   /// The path of the dependency file (.d), if any.
   DependencyFile,
   /// The null-separated list of names to use as the targets in the dependency
-  /// file, if any.
+  /// file, if any. Defaults to the value of \c ModuleFile, as in the driver.
   DependencyTargets,
   /// The path of the serialized diagnostic file (.dia), if any.
   DiagnosticSerializationFile,
