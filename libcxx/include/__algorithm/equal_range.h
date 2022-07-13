@@ -55,7 +55,7 @@ __equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
             _ForwardIterator __mp1 = __m;
             return pair<_ForwardIterator, _ForwardIterator>
                    (
-                      _VSTD::__lower_bound_impl<_StdIterOps>(__first, __m, __value, __comp, __proj),
+                      _VSTD::__lower_bound_impl<_ClassicAlgPolicy>(__first, __m, __value, __comp, __proj),
                       _VSTD::__upper_bound<_Compare>(++__mp1, __last, __value, __comp)
                    );
         }
