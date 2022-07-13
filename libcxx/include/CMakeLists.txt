@@ -83,7 +83,6 @@ set(files
   __algorithm/ranges_fill.h
   __algorithm/ranges_fill_n.h
   __algorithm/ranges_find.h
-  __algorithm/ranges_find_end.h
   __algorithm/ranges_find_first_of.h
   __algorithm/ranges_find_if.h
   __algorithm/ranges_find_if_not.h
@@ -130,8 +129,6 @@ set(files
   __algorithm/ranges_reverse.h
   __algorithm/ranges_reverse_copy.h
   __algorithm/ranges_rotate_copy.h
-  __algorithm/ranges_search.h
-  __algorithm/ranges_search_n.h
   __algorithm/ranges_set_difference.h
   __algorithm/ranges_set_intersection.h
   __algorithm/ranges_set_union.h

@@ -11,15 +11,8 @@
 #define _LIBCPP___ALGORITHM_SEARCH_N_H
 
 #include <__algorithm/comp.h>
-#include <__algorithm/iterator_operations.h>
 #include <__config>
-#include <__functional/identity.h>
-#include <__iterator/advance.h>
-#include <__iterator/concepts.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
-#include <__ranges/concepts.h>
-#include <__utility/pair.h>
 #include <type_traits>  // __convert_to_integral
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -28,86 +21,30 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _IterOps, class _Pred, class _Iter, class _Sent, class _SizeT, class _Type, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-pair<_Iter, _Iter> __search_n_forward_impl(_Iter __first, _Sent __last,
-                                           _SizeT __count,
-                                           const _Type& __value,
-                                           _Pred& __pred,
-                                           _Proj& __proj) {
+template <class _BinaryPredicate, class _ForwardIterator, class _Size, class _Tp>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator __search_n(_ForwardIterator __first, _ForwardIterator __last,
+                                                          _Size __count, const _Tp& __value, _BinaryPredicate __pred,
+                                                          forward_iterator_tag) {
   if (__count <= 0)
-    return std::make_pair(__first, __first);
+    return __first;
   while (true) {
-    // Find first element in sequence that matchs __value, with a mininum of loop checks
+    // Find first element in sequence that matchs __value_, with a mininum of loop checks
     while (true) {
-      if (__first == __last) { // return __last if no element matches __value
-        _IterOps::__advance_to(__first, __last);
-        return std::make_pair(__first, __first);
-      }
-      if (std::__invoke(__pred, std::__invoke(__proj, *__first), __value))
-        break;
-      ++__first;
-    }
-    // *__first matches __value, now match elements after here
-    _Iter __m = __first;
-    _SizeT __c(0);
-    while (true) {
-      if (++__c == __count) // If pattern exhausted, __first is the answer (works for 1 element pattern)
-        return std::make_pair(__first, ++__m);
-      if (++__m == __last) { // Otherwise if source exhaused, pattern not found
-        _IterOps::__advance_to(__first, __last);
-        return std::make_pair(__first, __first);
-      }
-
-      // if there is a mismatch, restart with a new __first
-      if (!std::__invoke(__pred, std::__invoke(__proj, *__m), __value))
-      {
-        __first = __m;
-        ++__first;
-        break;
-      } // else there is a match, check next elements
-    }
-  }
-}
-
-template <class _IterOps, class _Pred, class _Iter, class _Sent, class _SizeT, class _Type, class _Proj, class _DiffT>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-std::pair<_Iter, _Iter> __search_n_random_access_impl(_Iter __first, _Sent __last,
-                                                      _SizeT __count,
-                                                      const _Type& __value,
-                                                      _Pred& __pred,
-                                                      _Proj& __proj,
-                                                      _DiffT __size1) {
-  using difference_type = typename iterator_traits<_Iter>::difference_type;
-  if (__count == 0)
-    return std::make_pair(__first, __first);
-  if (__size1 < static_cast<_DiffT>(__count)) {
-    _IterOps::__advance_to(__first, __last);
-    return std::make_pair(__first, __first);
-  }
-
-  const auto __s = __first + __size1 - difference_type(__count - 1); // Start of pattern match can't go beyond here
-  while (true) {
-    // Find first element in sequence that matchs __value, with a mininum of loop checks
-    while (true) {
-      if (__first >= __s) { // return __last if no element matches __value
-        _IterOps::__advance_to(__first, __last);
-        return std::make_pair(__first, __first);
-      }
-      if (std::__invoke(__pred, std::__invoke(__proj, *__first), __value))
+      if (__first == __last) // return __last if no element matches __value_
+        return __last;
+      if (__pred(*__first, __value))
         break;
       ++__first;
     }
     // *__first matches __value_, now match elements after here
-    auto __m = __first;
-    _SizeT __c(0);
+    _ForwardIterator __m = __first;
+    _Size __c(0);
     while (true) {
       if (++__c == __count) // If pattern exhausted, __first is the answer (works for 1 element pattern)
-        return std::make_pair(__first, __first + _DiffT(__count));
-      ++__m; // no need to check range on __m because __s guarantees we have enough source
-
-      // if there is a mismatch, restart with a new __first
-      if (!std::__invoke(__pred, std::__invoke(__proj, *__m), __value))
+        return __first;
+      if (++__m == __last) // Otherwise if source exhaused, pattern not found
+        return __last;
+      if (!__pred(*__m, __value)) // if there is a mismatch, restart with a new __first
       {
         __first = __m;
         ++__first;
@@ -117,63 +54,57 @@ std::pair<_Iter, _Iter> __search_n_random_access_impl(_Iter __first, _Sent __las
   }
 }
 
-template <class _Iter, class _Sent,
-          class _DiffT,
-          class _Type,
-          class _Pred,
-          class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-pair<_Iter, _Iter> __search_n_impl(_Iter __first, _Sent __last,
-                                   _DiffT __count,
-                                   const _Type& __value,
-                                   _Pred& __pred,
-                                   _Proj& __proj,
-                                   __enable_if_t<__is_cpp17_random_access_iterator<_Iter>::value>* = nullptr) {
-  return std::__search_n_random_access_impl<_StdIterOps>(__first, __last,
-                                                         __count,
-                                                         __value,
-                                                         __pred,
-                                                         __proj,
-                                                         __last - __first);
-}
-
-template <class _Iter1, class _Sent1,
-          class _DiffT,
-          class _Type,
-          class _Pred,
-          class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-pair<_Iter1, _Iter1> __search_n_impl(_Iter1 __first, _Sent1 __last,
-                                     _DiffT __count,
-                                     const _Type& __value,
-                                     _Pred& __pred,
-                                     _Proj& __proj,
-                                     __enable_if_t<__is_cpp17_forward_iterator<_Iter1>::value
-                                               && !__is_cpp17_random_access_iterator<_Iter1>::value>* = nullptr) {
-  return std::__search_n_forward_impl<_StdIterOps>(__first, __last,
-                                                   __count,
-                                                   __value,
-                                                   __pred,
-                                                   __proj);
+template <class _BinaryPredicate, class _RandomAccessIterator, class _Size, class _Tp>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator __search_n(_RandomAccessIterator __first,
+                                                               _RandomAccessIterator __last, _Size __count,
+                                                               const _Tp& __value, _BinaryPredicate __pred,
+                                                               random_access_iterator_tag) {
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  if (__count <= 0)
+    return __first;
+  _Size __len = static_cast<_Size>(__last - __first);
+  if (__len < __count)
+    return __last;
+  const _RandomAccessIterator __s = __last - difference_type(__count - 1); // Start of pattern match can't go beyond here
+  while (true) {
+    // Find first element in sequence that matchs __value_, with a mininum of loop checks
+    while (true) {
+      if (__first >= __s) // return __last if no element matches __value_
+        return __last;
+      if (__pred(*__first, __value))
+        break;
+      ++__first;
+    }
+    // *__first matches __value_, now match elements after here
+    _RandomAccessIterator __m = __first;
+    _Size __c(0);
+    while (true) {
+      if (++__c == __count) // If pattern exhausted, __first is the answer (works for 1 element pattern)
+        return __first;
+      ++__m;                       // no need to check range on __m because __s guarantees we have enough source
+      if (!__pred(*__m, __value)) // if there is a mismatch, restart with a new __first
+      {
+        __first = __m;
+        ++__first;
+        break;
+      } // else there is a match, check next elements
+    }
+  }
 }
 
 template <class _ForwardIterator, class _Size, class _Tp, class _BinaryPredicate>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-_ForwardIterator search_n(_ForwardIterator __first, _ForwardIterator __last,
-                          _Size __count,
-                          const _Tp& __value,
-                          _BinaryPredicate __pred) {
-  static_assert(__is_callable<_BinaryPredicate, decltype(*__first), decltype(*__last)>::value,
-                "BinaryPredicate has to be callable");
-  auto __proj = __identity();
-  return std::__search_n_impl(__first, __last, std::__convert_to_integral(__count), __value, __pred, __proj).first;
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator search_n(
+    _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value, _BinaryPredicate __pred) {
+  return _VSTD::__search_n<_BinaryPredicate&>(
+      __first, __last, _VSTD::__convert_to_integral(__count), __value, __pred,
+      typename iterator_traits<_ForwardIterator>::iterator_category());
 }
 
 template <class _ForwardIterator, class _Size, class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-_ForwardIterator search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value) {
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
+search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value) {
   typedef typename iterator_traits<_ForwardIterator>::value_type __v;
-  return std::search_n(__first, __last, std::__convert_to_integral(__count), __value, __equal_to<__v, _Tp>());
+  return _VSTD::search_n(__first, __last, _VSTD::__convert_to_integral(__count), __value, __equal_to<__v, _Tp>());
 }
 
 _LIBCPP_END_NAMESPACE_STD
