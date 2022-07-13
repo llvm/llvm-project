@@ -53,9 +53,9 @@ TEST(ClangTidyOptionsProvider, InMemoryFileSystems) {
   ClangTidyOptions File3Options =
       FileOpt.getOptions("ProjectRoot/SubDir1/SubDir2/SubDir3/File.cpp");
 
-  ASSERT_TRUE(File1Options.Checks.hasValue());
+  ASSERT_TRUE(File1Options.Checks.has_value());
   EXPECT_EQ(*File1Options.Checks, "-*,clang-diagnostic-*,readability-*");
-  ASSERT_TRUE(File2Options.Checks.hasValue());
+  ASSERT_TRUE(File2Options.Checks.has_value());
   EXPECT_EQ(*File2Options.Checks, "bugprone-*,misc-*,clang-diagnostic-*");
 
   // 2 and 3 should use the same config so these should also be the same.

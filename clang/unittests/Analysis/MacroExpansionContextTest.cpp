@@ -121,14 +121,14 @@ TEST_F(MacroExpansionContextTest, IgnoresPragmas) {
   EXPECT_EQ("\n=============== ExpansionRanges ===============\n",
             dumpExpansionRanges(*Ctx));
 
-  EXPECT_FALSE(Ctx->getExpandedText(at(2, 1)).hasValue());
-  EXPECT_FALSE(Ctx->getOriginalText(at(2, 1)).hasValue());
+  EXPECT_FALSE(Ctx->getExpandedText(at(2, 1)).has_value());
+  EXPECT_FALSE(Ctx->getOriginalText(at(2, 1)).has_value());
 
-  EXPECT_FALSE(Ctx->getExpandedText(at(2, 3)).hasValue());
-  EXPECT_FALSE(Ctx->getOriginalText(at(2, 3)).hasValue());
+  EXPECT_FALSE(Ctx->getExpandedText(at(2, 3)).has_value());
+  EXPECT_FALSE(Ctx->getOriginalText(at(2, 3)).has_value());
 
-  EXPECT_FALSE(Ctx->getExpandedText(at(3, 3)).hasValue());
-  EXPECT_FALSE(Ctx->getOriginalText(at(3, 3)).hasValue());
+  EXPECT_FALSE(Ctx->getExpandedText(at(3, 3)).has_value());
+  EXPECT_FALSE(Ctx->getOriginalText(at(3, 3)).has_value());
 }
 
 TEST_F(MacroExpansionContextTest, NoneForNonExpansionLocations) {
@@ -142,33 +142,33 @@ EMPTY zz
   //      zz
 
   // That's the beginning of the definition of EMPTY.
-  EXPECT_FALSE(Ctx->getExpandedText(at(2, 11)).hasValue());
-  EXPECT_FALSE(Ctx->getOriginalText(at(2, 11)).hasValue());
+  EXPECT_FALSE(Ctx->getExpandedText(at(2, 11)).has_value());
+  EXPECT_FALSE(Ctx->getOriginalText(at(2, 11)).has_value());
 
   // The space before the first expansion of EMPTY.
-  EXPECT_FALSE(Ctx->getExpandedText(at(3, 9)).hasValue());
-  EXPECT_FALSE(Ctx->getOriginalText(at(3, 9)).hasValue());
+  EXPECT_FALSE(Ctx->getExpandedText(at(3, 9)).has_value());
+  EXPECT_FALSE(Ctx->getOriginalText(at(3, 9)).has_value());
 
   // The beginning of the first expansion of EMPTY.
-  EXPECT_TRUE(Ctx->getExpandedText(at(3, 10)).hasValue());
-  EXPECT_TRUE(Ctx->getOriginalText(at(3, 10)).hasValue());
+  EXPECT_TRUE(Ctx->getExpandedText(at(3, 10)).has_value());
+  EXPECT_TRUE(Ctx->getOriginalText(at(3, 10)).has_value());
 
   // Pointing inside of the token EMPTY, but not at the beginning.
   // FIXME: We only deal with begin locations.
-  EXPECT_FALSE(Ctx->getExpandedText(at(3, 11)).hasValue());
-  EXPECT_FALSE(Ctx->getOriginalText(at(3, 11)).hasValue());
+  EXPECT_FALSE(Ctx->getExpandedText(at(3, 11)).has_value());
+  EXPECT_FALSE(Ctx->getOriginalText(at(3, 11)).has_value());
 
   // Same here.
-  EXPECT_FALSE(Ctx->getExpandedText(at(3, 12)).hasValue());
-  EXPECT_FALSE(Ctx->getOriginalText(at(3, 12)).hasValue());
+  EXPECT_FALSE(Ctx->getExpandedText(at(3, 12)).has_value());
+  EXPECT_FALSE(Ctx->getOriginalText(at(3, 12)).has_value());
 
   // The beginning of the last expansion of EMPTY.
-  EXPECT_TRUE(Ctx->getExpandedText(at(4, 1)).hasValue());
-  EXPECT_TRUE(Ctx->getOriginalText(at(4, 1)).hasValue());
+  EXPECT_TRUE(Ctx->getExpandedText(at(4, 1)).has_value());
+  EXPECT_TRUE(Ctx->getOriginalText(at(4, 1)).has_value());
 
   // Same as for the 3:11 case.
-  EXPECT_FALSE(Ctx->getExpandedText(at(4, 2)).hasValue());
-  EXPECT_FALSE(Ctx->getOriginalText(at(4, 2)).hasValue());
+  EXPECT_FALSE(Ctx->getExpandedText(at(4, 2)).has_value());
+  EXPECT_FALSE(Ctx->getOriginalText(at(4, 2)).has_value());
 }
 
 TEST_F(MacroExpansionContextTest, EmptyExpansions) {
@@ -388,8 +388,8 @@ TEST_F(MacroExpansionContextTest, RedefUndef) {
   EXPECT_EQ("Hi", Ctx->getOriginalText(at(5, 3)).getValue());
 
   // There was no macro expansion at 7:3, we should expect None.
-  EXPECT_FALSE(Ctx->getExpandedText(at(7, 3)).hasValue());
-  EXPECT_FALSE(Ctx->getOriginalText(at(7, 3)).hasValue());
+  EXPECT_FALSE(Ctx->getExpandedText(at(7, 3)).has_value());
+  EXPECT_FALSE(Ctx->getOriginalText(at(7, 3)).has_value());
 }
 
 TEST_F(MacroExpansionContextTest, UnbalacedParenthesis) {

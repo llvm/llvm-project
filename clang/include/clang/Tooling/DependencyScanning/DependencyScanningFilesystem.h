@@ -94,7 +94,7 @@ public:
     assert(!isDirectory() && "not a file");
     assert(Contents && "contents not initialized");
     if (auto *Directives = Contents->DepDirectives.load()) {
-      if (Directives->hasValue())
+      if (Directives->has_value())
         return ArrayRef<dependency_directives_scan::Directive>(
             Directives->getValue());
     }

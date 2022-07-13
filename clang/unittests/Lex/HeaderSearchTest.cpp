@@ -200,7 +200,7 @@ TEST_F(HeaderSearchTest, HeaderFrameworkLookup) {
       /*RelativePath=*/nullptr, /*RequestingModule=*/nullptr,
       /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr, &IsFrameworkFound);
 
-  EXPECT_TRUE(FoundFile.hasValue());
+  EXPECT_TRUE(FoundFile.has_value());
   EXPECT_TRUE(IsFrameworkFound);
   auto &FE = FoundFile.getValue();
   auto FI = Search.getExistingFileInfo(FE);
@@ -269,7 +269,7 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
       /*SuggestedModule=*/nullptr, &IsMapped,
       /*IsFrameworkFound=*/nullptr);
 
-  EXPECT_TRUE(FoundFile.hasValue());
+  EXPECT_TRUE(FoundFile.has_value());
   EXPECT_TRUE(IsMapped);
   auto &FE = FoundFile.getValue();
   auto FI = Search.getExistingFileInfo(FE);

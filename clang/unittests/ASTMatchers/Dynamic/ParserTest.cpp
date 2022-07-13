@@ -449,27 +449,27 @@ TEST(ParserTest, ParseMultiline) {
   )
 )matcher";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).has_value());
   }
 
   {
     Code = R"matcher(decl(decl()
 , decl()))matcher";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).has_value());
   }
 
   {
     Code = R"matcher(decl(decl(),
 decl()))matcher";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).has_value());
   }
 
   {
     Code = "namedDecl(hasName(\"n\"\n))";
     Diagnostics Error;
-    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).hasValue());
+    EXPECT_TRUE(Parser::parseMatcherExpression(Code, &Error).has_value());
   }
 
   {

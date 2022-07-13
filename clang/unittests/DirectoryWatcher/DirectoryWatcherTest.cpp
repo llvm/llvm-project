@@ -258,7 +258,7 @@ void checkEventualResultWithTimeout(VerifyingConsumer &TestConsumer) {
               std::future_status::ready)
       << "The expected result state wasn't reached before the time-out.";
   std::unique_lock<std::mutex> L(TestConsumer.Mtx);
-  EXPECT_TRUE(TestConsumer.result().hasValue());
+  EXPECT_TRUE(TestConsumer.result().has_value());
   if (TestConsumer.result()) {
     EXPECT_TRUE(*TestConsumer.result());
   }

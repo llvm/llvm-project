@@ -64,14 +64,14 @@ TEST(DarwinSDKInfo, VersionMappingParseEmpty) {
   llvm::json::Object Obj({});
   EXPECT_FALSE(
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj, VersionTuple())
-          .hasValue());
+          .has_value());
 }
 
 TEST(DarwinSDKInfo, VersionMappingParseError) {
   llvm::json::Object Obj({{"test", "1.2"}});
   EXPECT_FALSE(
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj, VersionTuple())
-          .hasValue());
+          .has_value());
 }
 
 TEST(DarwinSDKInfoTest, ParseAndTestMappingMacCatalyst) {
