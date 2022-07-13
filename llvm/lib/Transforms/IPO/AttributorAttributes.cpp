@@ -6402,6 +6402,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       MayContainIrreducibleControl = mayContainIrreducibleControl(*F, LI);
     if (MayContainIrreducibleControl.value())
       return true;
+    if (!LI)
+      return true;
     return LI->getLoopFor(&BB) != nullptr;
   };
 
