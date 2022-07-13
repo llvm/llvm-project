@@ -26,6 +26,11 @@ def SDT_LoongArchIntBinOpW : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
 ]>;
 
+def SDT_LoongArchBStrIns: SDTypeProfile<1, 4, [
+  SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<3>,
+  SDTCisSameAs<3, 4>
+]>;
+
 def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
   SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<2, 3>
 ]>;
@@ -46,6 +51,8 @@ def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_bstrins
+    : SDNode<"LoongArchISD::BSTRINS", SDT_LoongArchBStrIns>;
 def loongarch_bstrpick
     : SDNode<"LoongArchISD::BSTRPICK", SDT_LoongArchBStrPick>;
 
@@ -777,15 +784,21 @@ let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
 
-/// BSTRPICK
+/// BSTRINS and BSTRPICK
 
-let Predicates = [IsLA32] in
+let Predicates = [IsLA32] in {
+def : Pat<(loongarch_bstrins GPR:$rd, GPR:$rj, uimm5:$msbd, uimm5:$lsbd),
+          (BSTRINS_W GPR:$rd, GPR:$rj, uimm5:$msbd, uimm5:$lsbd)>;
 def : Pat<(loongarch_bstrpick GPR:$rj, uimm5:$msbd, uimm5:$lsbd),
           (BSTRPICK_W GPR:$rj, uimm5:$msbd, uimm5:$lsbd)>;
+} // Predicates = [IsLA32]
 
-let Predicates = [IsLA64] in
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_bstrins GPR:$rd, GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
+          (BSTRINS_D GPR:$rd, GPR:$rj, uimm6:$msbd, uimm6:$lsbd)>;
 def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
           (BSTRPICK_D GPR:$rj, uimm6:$msbd, uimm6:$lsbd)>;
+} // Predicates = [IsLA64]
 
 /// Loads
 
