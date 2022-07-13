@@ -159,13 +159,12 @@ define i64 @test11(i32* %0, i64 %1) {
   ret i64 %5
 }
 
-; TODO: We should use slli+srai to enable the possibility of compressed
-; instructions.
+; Make sure we use slli+srai to enable the possibility of compressed
 define i32 @test12(i32 signext %0) {
 ; RV64I-LABEL: test12:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a0, a0, 17
-; RV64I-NEXT:    sraiw a0, a0, 15
+; RV64I-NEXT:    slli a0, a0, 49
+; RV64I-NEXT:    srai a0, a0, 47
 ; RV64I-NEXT:    ret
   %2 = shl i32 %0, 17
   %3 = ashr i32 %2, 15
