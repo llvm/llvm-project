@@ -299,7 +299,8 @@ public:
           continue;
         }
         if (this->num_digits < MAX_NUM_DIGITS) {
-          this->digits[this->num_digits] = *numString - '0';
+          this->digits[this->num_digits] =
+              static_cast<uint8_t>(*numString - '0');
           ++this->num_digits;
         } else if (*numString != '0') {
           this->truncated = true;
