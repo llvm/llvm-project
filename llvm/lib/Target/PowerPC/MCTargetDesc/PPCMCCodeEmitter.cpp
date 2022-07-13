@@ -449,12 +449,9 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   return MO.getImm();
 }
 
-void PPCMCCodeEmitter::encodeInstruction(
-    const MCInst &MI, raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
-    const MCSubtargetInfo &STI) const {
-  verifyInstructionPredicates(MI,
-                              computeAvailableFeatures(STI.getFeatureBits()));
-
+void PPCMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+                                         SmallVectorImpl<MCFixup> &Fixups,
+                                         const MCSubtargetInfo &STI) const {
   uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
 
   // Output the constant in big/little endian byte order.
@@ -492,5 +489,4 @@ bool PPCMCCodeEmitter::isPrefixedInstruction(const MCInst &MI) const {
   return InstrInfo->isPrefixed(Opcode);
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "PPCGenMCCodeEmitter.inc"

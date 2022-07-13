@@ -74,12 +74,6 @@ public:
   uint64_t getRDOpValue(const MCInst &MI, unsigned OpNo,
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
-
-private:
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // end anonymous namespace
@@ -87,9 +81,6 @@ private:
 void VEMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
-  verifyInstructionPredicates(MI,
-                              computeAvailableFeatures(STI.getFeatureBits()));
-
   uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
   support::endian::write<uint64_t>(OS, Bits, support::little);
 
@@ -155,7 +146,6 @@ uint64_t VEMCCodeEmitter::getRDOpValue(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "VEGenMCCodeEmitter.inc"
 
 MCCodeEmitter *llvm::createVEMCCodeEmitter(const MCInstrInfo &MCII,
