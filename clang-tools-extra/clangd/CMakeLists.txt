@@ -170,6 +170,8 @@ target_link_libraries(clangDaemon
   clangTidy
 
   clangdSupport
+
+  clangPseudo
   )
 if(CLANGD_TIDY_CHECKS)
   target_link_libraries(clangDaemon PRIVATE ${ALL_CLANG_TIDY_CHECKS})
