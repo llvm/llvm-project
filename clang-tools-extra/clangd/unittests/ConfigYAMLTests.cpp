@@ -163,9 +163,9 @@ Index:
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_EQ(Results.size(), 1u);
   ASSERT_TRUE(Results[0].Index.External);
-  EXPECT_FALSE(Results[0].Index.External.getValue()->File.hasValue());
-  EXPECT_FALSE(Results[0].Index.External.getValue()->MountPoint.hasValue());
-  EXPECT_FALSE(Results[0].Index.External.getValue()->Server.hasValue());
+  EXPECT_FALSE(Results[0].Index.External.getValue()->File.has_value());
+  EXPECT_FALSE(Results[0].Index.External.getValue()->MountPoint.has_value());
+  EXPECT_FALSE(Results[0].Index.External.getValue()->Server.has_value());
   EXPECT_THAT(*Results[0].Index.External.getValue()->IsNone, testing::Eq(true));
 }
 
