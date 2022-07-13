@@ -250,8 +250,6 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
 }
 
 void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  Sparc_MC::verifyInstructionPredicates(MI->getOpcode(),
-                                        getSubtargetInfo().getFeatureBits());
 
   switch (MI->getOpcode()) {
   default: break;

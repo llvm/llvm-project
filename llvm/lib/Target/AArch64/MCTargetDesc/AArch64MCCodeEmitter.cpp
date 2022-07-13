@@ -193,6 +193,12 @@ public:
   uint32_t encodeMatrixIndexGPR32(const MCInst &MI, unsigned OpIdx,
                                   SmallVectorImpl<MCFixup> &Fixups,
                                   const MCSubtargetInfo &STI) const;
+
+private:
+  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
+  void
+  verifyInstructionPredicates(const MCInst &MI,
+                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // end anonymous namespace
@@ -612,6 +618,9 @@ unsigned AArch64MCCodeEmitter::fixMOVZ(const MCInst &MI, unsigned EncodedValue,
 void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                              SmallVectorImpl<MCFixup> &Fixups,
                                              const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
   if (MI.getOpcode() == AArch64::TLSDESCCALL) {
     // This is a directive which applies an R_AARCH64_TLSDESC_CALL to the
     // following (BLR) instruction. It doesn't emit any code itself so it
@@ -665,6 +674,7 @@ unsigned AArch64MCCodeEmitter::fixOneOperandFPComparison(
   return EncodedValue;
 }
 
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "AArch64GenMCCodeEmitter.inc"
 
 MCCodeEmitter *llvm::createAArch64MCCodeEmitter(const MCInstrInfo &MCII,

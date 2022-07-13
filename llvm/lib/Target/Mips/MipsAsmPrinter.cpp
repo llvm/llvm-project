@@ -181,10 +181,6 @@ static void emitDirectiveRelocJalr(const MachineInstr &MI,
 }
 
 void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  // FIXME: Enable feature predicate checks once all the test pass.
-  // Mips_MC::verifyInstructionPredicates(MI->getOpcode(),
-  //                                      getSubtargetInfo().getFeatureBits());
-
   MipsTargetStreamer &TS = getTargetStreamer();
   unsigned Opc = MI->getOpcode();
   TS.forbidModuleDirective();

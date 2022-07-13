@@ -46,7 +46,6 @@ std::unique_ptr<MCObjectTargetWriter> createSparcELFObjectWriter(bool Is64Bit,
 // Defines symbolic names for the Sparc instructions.
 //
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "SparcGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

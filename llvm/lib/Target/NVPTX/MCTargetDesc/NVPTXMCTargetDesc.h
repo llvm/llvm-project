@@ -21,7 +21,6 @@
 
 // Defines symbolic names for the PTX instructions.
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "NVPTXGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

@@ -256,9 +256,6 @@ bool XCoreAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  XCore_MC::verifyInstructionPredicates(MI->getOpcode(),
-                                        getSubtargetInfo().getFeatureBits());
-
   SmallString<128> Str;
   raw_svector_ostream O(Str);
 

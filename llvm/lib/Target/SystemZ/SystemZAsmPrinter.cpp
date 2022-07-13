@@ -143,9 +143,6 @@ void SystemZAsmPrinter::emitCallInformation(CallType CT) {
 }
 
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  SystemZ_MC::verifyInstructionPredicates(MI->getOpcode(),
-                                          getSubtargetInfo().getFeatureBits());
-
   SystemZMCInstLower Lower(MF->getContext(), *this);
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
