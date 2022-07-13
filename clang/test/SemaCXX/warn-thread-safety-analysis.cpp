@@ -1690,6 +1690,15 @@ struct TestScopedLockable {
   }
 #endif
 
+  void temporary() {
+    MutexLock{&mu1}, a = 5;
+  }
+
+  void lifetime_extension() {
+    const MutexLock &mulock = MutexLock(&mu1);
+    a = 5;
+  }
+
   void foo2() {
     ReaderMutexLock mulock1(&mu1);
     if (getBool()) {
@@ -1705,6 +1714,12 @@ struct TestScopedLockable {
   void foo3() {
     MutexLock mulock_a(&mu1); // expected-note{{mutex acquired here}}
     MutexLock mulock_b(&mu1); // \
+      // expected-warning {{acquiring mutex 'mu1' that is already held}}
+  }
+
+  void temporary_double_lock() {
+    MutexLock mulock_a(&mu1); // expected-note{{mutex acquired here}}
+    MutexLock{&mu1};          // \
       // expected-warning {{acquiring mutex 'mu1' that is already held}}
   }
 
@@ -4187,6 +4202,20 @@ public:
   void foo() EXCLUSIVE_LOCKS_REQUIRED(this);
 };
 
+class SelfLockDeferred {
+public:
+  SelfLockDeferred() LOCKS_EXCLUDED(mu_);
+  ~SelfLockDeferred() UNLOCK_FUNCTION(mu_);
+
+  Mutex mu_;
+};
+
+class LOCKABLE SelfLockDeferred2 {
+public:
+  SelfLockDeferred2() LOCKS_EXCLUDED(this);
+  ~SelfLockDeferred2() UNLOCK_FUNCTION();
+};
+
 
 void test() {
   SelfLock s;
@@ -4196,6 +4225,14 @@ void test() {
 void test2() {
   SelfLock2 s2;
   s2.foo();
+}
+
+void testDeferredTemporary() {
+  SelfLockDeferred(); // expected-warning {{releasing mutex '<temporary>.mu_' that was not held}}
+}
+
+void testDeferredTemporary2() {
+  SelfLockDeferred2(); // expected-warning {{releasing mutex '<temporary>' that was not held}}
 }
 
 }  // end namespace SelfConstructorTest
@@ -5892,46 +5929,40 @@ C c;
 void f() { c[A()]->g(); }
 } // namespace PR34800
 
+#ifdef __cpp_guaranteed_copy_elision
+
 namespace ReturnScopedLockable {
-  template<typename Object> class SCOPED_LOCKABLE ReadLockedPtr {
-  public:
-    ReadLockedPtr(Object *ptr) SHARED_LOCK_FUNCTION((*this)->mutex);
-    ReadLockedPtr(ReadLockedPtr &&) SHARED_LOCK_FUNCTION((*this)->mutex);
-    ~ReadLockedPtr() UNLOCK_FUNCTION();
 
-    Object *operator->() const { return object; }
+class Object {
+public:
+  MutexLock lock() EXCLUSIVE_LOCK_FUNCTION(mutex) {
+    // TODO: False positive because scoped lock isn't destructed.
+    return MutexLock(&mutex); // expected-note {{mutex acquired here}}
+  }                           // expected-warning {{mutex 'mutex' is still held at the end of function}}
 
-  private:
-    Object *object;
-  };
+  int x GUARDED_BY(mutex);
+  void needsLock() EXCLUSIVE_LOCKS_REQUIRED(mutex);
 
-  struct Object {
-    int f() SHARED_LOCKS_REQUIRED(mutex);
-    Mutex mutex;
-  };
-
-  ReadLockedPtr<Object> get();
-  int use() {
-    auto ptr = get();
-    return ptr->f();
+  void testInside() {
+    MutexLock scope = lock();
+    x = 1;
+    needsLock();
   }
-  void use_constructor() {
-    auto ptr = ReadLockedPtr<Object>(nullptr);
-    ptr->f();
-    auto ptr2 = ReadLockedPtr<Object>{nullptr};
-    ptr2->f();
-    auto ptr3 = (ReadLockedPtr<Object>{nullptr});
-    ptr3->f();
-  }
-  struct Convertible {
-    Convertible();
-    operator ReadLockedPtr<Object>();
-  };
-  void use_conversion() {
-    ReadLockedPtr<Object> ptr = Convertible();
-    ptr->f();
-  }
+
+private:
+  Mutex mutex;
+};
+
+void testOutside() {
+  Object obj;
+  MutexLock scope = obj.lock();
+  obj.x = 1;
+  obj.needsLock();
 }
+
+} // namespace ReturnScopedLockable
+
+#endif
 
 namespace PR38640 {
 void f() {
