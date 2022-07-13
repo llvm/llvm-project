@@ -52,6 +52,10 @@ def print_wrapped_module : Flag<["--"], "print-wrapped-module">,
 def save_temps : Flag<["--"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;
 
+def wrapper_time_trace_eq : Joined<["--"], "wrapper-time-trace=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<file>">,
+  HelpText<"Enable time-trace and write the output to <file>">;
+
 // Flags passed to the device linker.
 def arch_EQ : Joined<["--"], "arch=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<arch>">,
