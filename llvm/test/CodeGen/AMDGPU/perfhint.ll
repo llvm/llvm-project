@@ -19,6 +19,75 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}test_membound_1:
+; GCN: MemoryBound: 0
+define amdgpu_kernel void @test_membound_1(<2 x double> addrspace(1)* nocapture readonly %ptr.0,
+                                           <2 x double> addrspace(1)* nocapture %ptr.1,
+                                           <2 x double> %arg.0, i32 %arg.1, <4 x double> %arg.2) {
+bb.entry:
+  %id.32 = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %id.0 = zext i32 %id.32 to i64
+  %gep.0 = getelementptr inbounds <2 x double>, <2 x double> addrspace(1)* %ptr.0, i64 %id.0
+  %ld.0 = load <2 x double>, <2 x double> addrspace(1)* %gep.0, align 16
+  %add.0 = fadd <2 x double> %arg.0, %ld.0
+
+  %id.1 = add nuw nsw i64 %id.0, 1
+  %gep.1 = getelementptr inbounds <2 x double>, <2 x double> addrspace(1)* %ptr.0, i64 %id.1
+  %ld.1 = load <2 x double>, <2 x double> addrspace(1)* %gep.1, align 16
+  %add.1 = fadd <2 x double> %add.0, %ld.1
+
+  %id.2 = add nuw nsw i64 %id.0, 2
+  %gep.2 = getelementptr inbounds <2 x double>, <2 x double> addrspace(1)* %ptr.0, i64 %id.2
+  %ld.2 = load <2 x double>, <2 x double> addrspace(1)* %gep.2, align 16
+  %add.2 = fadd <2 x double> %add.1, %ld.2
+
+  %id.3 = add nuw nsw i64 %id.0, 3
+  %gep.3= getelementptr inbounds <2 x double>, <2 x double> addrspace(1)* %ptr.0, i64 %id.3
+  %ld.3 = load <2 x double>, <2 x double> addrspace(1)* %gep.3, align 16
+  %add.3 = fadd <2 x double> %add.2, %ld.3
+
+  %id.4 = add nuw nsw i64 %id.0, 4
+  %gep.4= getelementptr inbounds <2 x double>, <2 x double> addrspace(1)* %ptr.0, i64 %id.4
+  %ld.4 = load <2 x double>, <2 x double> addrspace(1)* %gep.4, align 16
+  %add.4 = fadd <2 x double> %add.3, %ld.4
+
+  store <2 x double> %add.4, <2 x double> addrspace(1)* %ptr.1, align 16
+  %cond = icmp eq i32 %arg.1, 0
+  br i1 %cond, label %bb.true, label %bb.ret
+
+bb.true:
+  %i0.arg.0 = extractelement <2 x double> %arg.0, i32 0
+  %i1.arg.0 = extractelement <2 x double> %arg.0, i32 1
+  %add.1.0 = fadd double %i0.arg.0, %i1.arg.0
+  %i0.arg.2 = extractelement <4 x double> %arg.2, i32 0
+  %i1.arg.2 = extractelement <4 x double> %arg.2, i32 1
+  %add.1.1 = fadd double %i0.arg.2, %i1.arg.2
+  %add.1.2 = fadd double %add.1.0, %add.1.1
+  %i2.arg.2 = extractelement <4 x double> %arg.2, i32 2
+  %i3.arg.2 = extractelement <4 x double> %arg.2, i32 3
+  %add.1.3 = fadd double %i2.arg.2, %i3.arg.2
+  %add.1.4 = fadd double %add.1.2, %add.1.3
+  %i0.add.0 = extractelement <2 x double> %add.0, i32 0
+  %i1.add.0 = extractelement <2 x double> %add.0, i32 1
+  %add.1.5 = fadd double %i0.add.0, %i1.add.0
+  %add.1.6 = fadd double %add.1.4, %add.1.5
+  %i0.add.1 = extractelement <2 x double> %add.1, i32 0
+  %i1.add.1 = extractelement <2 x double> %add.1, i32 1
+  %add.1.7 = fadd double %i0.add.1, %i1.add.1
+  %add.1.8 = fadd double %add.1.6, %add.1.7
+  %i0.add.2 = extractelement <2 x double> %add.2, i32 0
+  %i1.add.2 = extractelement <2 x double> %add.2, i32 1
+  %add.1.9 = fadd double %i0.add.2, %i1.add.2
+  %add.1.10 = fadd double %add.1.8, %add.1.9
+
+  %ptr.1.bc = bitcast <2 x double> addrspace(1)* %ptr.1 to double addrspace(1)*
+  store double %add.1.8, double addrspace(1)* %ptr.1.bc, align 8
+  br label %bb.ret
+
+bb.ret:
+  ret void
+}
+
 ; GCN-LABEL: {{^}}test_large_stride:
 ; GCN: MemoryBound: 0
 ; GCN: WaveLimiterHint : 1
