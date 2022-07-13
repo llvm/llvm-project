@@ -65,6 +65,11 @@ public:
     return nullptr;
   }
 
+  Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
+                     FastMathFlags FMF) const override {
+    return nullptr;
+  }
+
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return nullptr;
   }
@@ -100,19 +105,6 @@ public:
   Value *FoldShuffleVector(Value *V1, Value *V2,
                            ArrayRef<int> Mask) const override {
     return nullptr;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Unary Operators
-  //===--------------------------------------------------------------------===//
-
-  Instruction *CreateFNeg(Constant *C) const override {
-    return UnaryOperator::CreateFNeg(C);
-  }
-
-  Instruction *CreateUnOp(Instruction::UnaryOps Opc,
-                          Constant *C) const override {
-    return UnaryOperator::Create(Opc, C);
   }
 
   //===--------------------------------------------------------------------===//
