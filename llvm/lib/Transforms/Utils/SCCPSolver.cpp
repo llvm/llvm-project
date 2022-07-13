@@ -961,7 +961,7 @@ void SCCPInstVisitor::visitUnaryOperator(Instruction &I) {
 
   if (isConstant(V0State)) {
     if (Constant *C = ConstantFoldUnaryOpOperand(I.getOpcode(),
-                                                 getConstant(V0State, DL))) {
+                                                 getConstant(V0State), DL)) {
       // op Y -> undef.
       if (isa<UndefValue>(C))
         return;
