@@ -899,7 +899,8 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
 }
 
 std::pair<int64_t, Align>
-RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const {
+RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   // Create a buffer of RVV objects to allocate.
   SmallVector<int, 8> ObjectsToAllocate;
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
@@ -912,10 +913,18 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const {
     ObjectsToAllocate.push_back(I);
   }
 
-  // Allocate all RVV locals and spills
-  int64_t Offset = 0;
   // The minimum alignment is 16 bytes.
   Align RVVStackAlign(16);
+  const auto &ST = MF.getSubtarget<RISCVSubtarget>();
+
+  if (!ST.hasVInstructions()) {
+    assert(ObjectsToAllocate.empty() &&
+           "Can't allocate scalable-vector objects without V instructions");
+    return std::make_pair(0, RVVStackAlign);
+  }
+
+  // Allocate all RVV locals and spills
+  int64_t Offset = 0;
   for (int FI : ObjectsToAllocate) {
     // ObjectSize in bytes.
     int64_t ObjectSize = MFI.getObjectSize(FI);
@@ -997,7 +1006,7 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
 
   int64_t RVVStackSize;
   Align RVVStackAlign;
-  std::tie(RVVStackSize, RVVStackAlign) = assignRVVStackObjectOffsets(MFI);
+  std::tie(RVVStackSize, RVVStackAlign) = assignRVVStackObjectOffsets(MF);
 
   RVFI->setRVVStackSize(RVVStackSize);
   RVFI->setRVVStackAlign(RVVStackAlign);
