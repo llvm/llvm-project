@@ -91,7 +91,7 @@ debug_pubtypes:
   DWARFYAML::Data Data;
   ASSERT_THAT_ERROR(parseDWARFYAML(Yaml, Data), Succeeded());
 
-  ASSERT_TRUE(Data.PubNames.hasValue());
+  ASSERT_TRUE(Data.PubNames.has_value());
   DWARFYAML::PubSection PubNames = Data.PubNames.getValue();
 
   ASSERT_EQ(PubNames.Entries.size(), 2u);
@@ -100,7 +100,7 @@ debug_pubtypes:
   EXPECT_EQ((uint32_t)PubNames.Entries[1].DieOffset, 0x4321u);
   EXPECT_EQ(PubNames.Entries[1].Name, "def");
 
-  ASSERT_TRUE(Data.PubTypes.hasValue());
+  ASSERT_TRUE(Data.PubTypes.has_value());
   DWARFYAML::PubSection PubTypes = Data.PubTypes.getValue();
 
   ASSERT_EQ(PubTypes.Entries.size(), 2u);
@@ -157,7 +157,7 @@ debug_gnu_pubtypes:
   DWARFYAML::Data Data;
   ASSERT_THAT_ERROR(parseDWARFYAML(Yaml, Data), Succeeded());
 
-  ASSERT_TRUE(Data.GNUPubNames.hasValue());
+  ASSERT_TRUE(Data.GNUPubNames.has_value());
   DWARFYAML::PubSection GNUPubNames = Data.GNUPubNames.getValue();
 
   ASSERT_EQ(GNUPubNames.Entries.size(), 2u);
@@ -168,7 +168,7 @@ debug_gnu_pubtypes:
   EXPECT_EQ((uint8_t)GNUPubNames.Entries[1].Descriptor, 0x34);
   EXPECT_EQ(GNUPubNames.Entries[1].Name, "def");
 
-  ASSERT_TRUE(Data.GNUPubTypes.hasValue());
+  ASSERT_TRUE(Data.GNUPubTypes.has_value());
   DWARFYAML::PubSection GNUPubTypes = Data.GNUPubTypes.getValue();
 
   ASSERT_EQ(GNUPubTypes.Entries.size(), 2u);
