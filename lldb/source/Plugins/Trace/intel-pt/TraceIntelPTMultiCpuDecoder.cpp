@@ -1,4 +1,4 @@
-//===-- TraceIntelPTMultiCpuDecoder.cpp ----0------------------------------===//
+//===-- TraceIntelPTMultiCpuDecoder.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -110,6 +110,7 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
     if (!intel_pt_subtraces)
       return intel_pt_subtraces.takeError();
 
+    m_total_psb_blocks += intel_pt_subtraces->size();
     // We'll be iterating through the thread continuous executions and the intel
     // pt subtraces sorted by time.
     auto it = intel_pt_subtraces->begin();
@@ -123,7 +124,7 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
             if (it->tsc > thread_execution.GetStartTSC()) {
               execution.intelpt_subtraces.push_back(*it);
             } else {
-              m_unattributed_intelpt_subtraces++;
+              m_unattributed_psb_blocks++;
             }
           }
           continuous_executions_per_thread[thread_execution.tid].push_back(
@@ -142,6 +143,8 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
         });
     if (err)
       return std::move(err);
+
+    m_unattributed_psb_blocks += intel_pt_subtraces->end() - it;
   }
   // We now sort the executions of each thread to have them ready for
   // instruction decoding
@@ -191,4 +194,25 @@ size_t TraceIntelPTMultiCpuDecoder::GetTotalContinuousExecutionsCount() const {
   for (const auto &kv : *m_continuous_executions_per_thread)
     count += kv.second.size();
   return count;
+}
+
+size_t
+TraceIntelPTMultiCpuDecoder::GePSBBlocksCountForThread(lldb::tid_t tid) const {
+  if (!m_continuous_executions_per_thread)
+    return 0;
+  size_t count = 0;
+  auto it = m_continuous_executions_per_thread->find(tid);
+  if (it == m_continuous_executions_per_thread->end())
+    return 0;
+  for (const IntelPTThreadContinousExecution &execution : it->second)
+    count += execution.intelpt_subtraces.size();
+  return count;
+}
+
+size_t TraceIntelPTMultiCpuDecoder::GetUnattributedPSBBlocksCount() const {
+  return m_unattributed_psb_blocks;
+}
+
+size_t TraceIntelPTMultiCpuDecoder::GetTotalPSBBlocksCount() const {
+  return m_total_psb_blocks;
 }

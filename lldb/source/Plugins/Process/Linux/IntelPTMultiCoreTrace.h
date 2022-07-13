@@ -35,12 +35,18 @@ public:
   /// \param[in] process
   ///   The process being debugged.
   ///
+  ///  \param[in] cgroup_fd
+  ///  A file descriptor in /sys/fs associated with the cgroup of the process to
+  ///  trace. If not \a llvm::None, then the trace sesion will use cgroup
+  ///  filtering.
+  ///
   /// \return
   ///   An \a IntelPTMultiCoreTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
   static llvm::Expected<std::unique_ptr<IntelPTMultiCoreTrace>>
   StartOnAllCores(const TraceIntelPTStartRequest &request,
-                  NativeProcessProtocol &process);
+                  NativeProcessProtocol &process,
+                  llvm::Optional<int> cgroup_fd = llvm::None);
 
   /// Execute the provided callback on each core that is being traced.
   ///
@@ -90,8 +96,9 @@ private:
       llvm::DenseMap<lldb::cpu_id_t,
                      std::pair<IntelPTSingleBufferTrace, ContextSwitchTrace>>
           &&traces_per_core,
-      NativeProcessProtocol &process)
-      : m_traces_per_core(std::move(traces_per_core)), m_process(process) {}
+      NativeProcessProtocol &process, bool using_cgroup_filtering)
+      : m_traces_per_core(std::move(traces_per_core)), m_process(process),
+        m_using_cgroup_filtering(using_cgroup_filtering) {}
 
   llvm::DenseMap<lldb::cpu_id_t,
                  std::pair<IntelPTSingleBufferTrace, ContextSwitchTrace>>
@@ -99,6 +106,7 @@ private:
 
   /// The target process.
   NativeProcessProtocol &m_process;
+  bool m_using_cgroup_filtering;
 };
 
 } // namespace process_linux

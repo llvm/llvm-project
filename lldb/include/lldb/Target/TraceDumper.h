@@ -66,6 +66,7 @@ public:
     llvm::Optional<lldb::TraceEvent> event;
     llvm::Optional<SymbolInfo> symbol_info;
     llvm::Optional<SymbolInfo> prev_symbol_info;
+    llvm::Optional<lldb::cpu_id_t> cpu_id;
   };
 
   /// Interface used to abstract away the format in which the instruction
