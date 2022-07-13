@@ -294,6 +294,11 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 2nd Monday of the month at 9:30am PT, for 30 minutes.
     - `GoogleMeet <https://meet.google.com/pdz-xhns-uus>`__
     - English, Russian
+  * - Maksim Panchenko
+    - BOLT internals, IR, new passes, proposals, etc.
+    - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
+    - `Zoom <https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09>`__
+    - English, Russian
 
 
 Guidance for office hours hosts
