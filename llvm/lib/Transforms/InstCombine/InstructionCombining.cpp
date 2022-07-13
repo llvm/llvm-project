@@ -3893,26 +3893,20 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // *all* uses if the operand is an invoke/callbr and the use is in a phi on
   // the normal/default destination. This is why the domination check in the
   // replacement below is still necessary.
-  BasicBlock::iterator MoveBefore;
+  Instruction *MoveBefore;
   if (isa<Argument>(Op)) {
-    MoveBefore = FI.getFunction()->getEntryBlock().begin();
-    while (isa<AllocaInst>(*MoveBefore))
-      ++MoveBefore;
-  } else if (auto *PN = dyn_cast<PHINode>(Op)) {
-    MoveBefore = PN->getParent()->getFirstInsertionPt();
-  } else if (auto *II = dyn_cast<InvokeInst>(Op)) {
-    MoveBefore = II->getNormalDest()->getFirstInsertionPt();
-  } else if (auto *CB = dyn_cast<CallBrInst>(Op)) {
-    MoveBefore = CB->getDefaultDest()->getFirstInsertionPt();
+    MoveBefore = &FI.getFunction()->getEntryBlock().front();
+    while (isa<AllocaInst>(MoveBefore))
+      MoveBefore = MoveBefore->getNextNode();
   } else {
-    auto *I = cast<Instruction>(Op);
-    assert(!I->isTerminator() && "Cannot be a terminator");
-    MoveBefore = std::next(I->getIterator());
+    MoveBefore = cast<Instruction>(Op)->getInsertionPointAfterDef();
+    if (!MoveBefore)
+      return false;
   }
 
   bool Changed = false;
-  if (FI.getIterator() != MoveBefore) {
-    FI.moveBefore(*MoveBefore->getParent(), MoveBefore);
+  if (&FI != MoveBefore) {
+    FI.moveBefore(MoveBefore);
     Changed = true;
   }
 
