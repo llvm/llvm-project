@@ -30,15 +30,15 @@ TEST_CONSTEXPR_CXX20 bool tests()
         const C c2 = {1, 2, 3};
         const C c3 = {3, 2, 1};
         const C c4 = {1, 2, 1};
-        assert(testComparisons6(c1, c2, true, false));
-        assert(testComparisons6(c1, c3, false, true));
-        assert(testComparisons6(c1, c4, false, false));
+        assert(testComparisons(c1, c2, true, false));
+        assert(testComparisons(c1, c3, false, true));
+        assert(testComparisons(c1, c4, false, false));
     }
     {
         typedef std::array<int, 0> C;
         const C c1 = {};
         const C c2 = {};
-        assert(testComparisons6(c1, c2, true, false));
+        assert(testComparisons(c1, c2, true, false));
     }
     {
         typedef std::array<LessAndEqComp, 3> C;
@@ -46,15 +46,15 @@ TEST_CONSTEXPR_CXX20 bool tests()
         const C c2 = {LessAndEqComp(1), LessAndEqComp(2), LessAndEqComp(3)};
         const C c3 = {LessAndEqComp(3), LessAndEqComp(2), LessAndEqComp(1)};
         const C c4 = {LessAndEqComp(1), LessAndEqComp(2), LessAndEqComp(1)};
-        assert(testComparisons6(c1, c2, true, false));
-        assert(testComparisons6(c1, c3, false, true));
-        assert(testComparisons6(c1, c4, false, false));
+        assert(testComparisons(c1, c2, true, false));
+        assert(testComparisons(c1, c3, false, true));
+        assert(testComparisons(c1, c4, false, false));
     }
     {
         typedef std::array<LessAndEqComp, 0> C;
         const C c1 = {};
         const C c2 = {};
-        assert(testComparisons6(c1, c2, true, false));
+        assert(testComparisons(c1, c2, true, false));
     }
 
     return true;

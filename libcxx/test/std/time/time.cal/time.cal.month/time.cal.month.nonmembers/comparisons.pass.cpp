@@ -30,19 +30,19 @@ int main(int, char**)
 {
     using month = std::chrono::month;
 
-    AssertComparisons6AreNoexcept<month>();
-    AssertComparisons6ReturnBool<month>();
+    AssertComparisonsAreNoexcept<month>();
+    AssertComparisonsReturnBool<month>();
 
-    static_assert(testComparisons6Values<month>(0U ,0U), "");
-    static_assert(testComparisons6Values<month>(0U, 1U), "");
+    static_assert(testComparisonsValues<month>(0U ,0U), "");
+    static_assert(testComparisonsValues<month>(0U, 1U), "");
 
     //  Some 'ok' values as well
-    static_assert(testComparisons6Values<month>( 5U,  5U), "");
-    static_assert(testComparisons6Values<month>( 5U, 10U), "");
+    static_assert(testComparisonsValues<month>( 5U,  5U), "");
+    static_assert(testComparisonsValues<month>( 5U, 10U), "");
 
     for (unsigned i = 1; i <= 12; ++i)
         for (unsigned j = 1; j <= 12; ++j)
-            assert(testComparisons6Values<month>(i, j));
+            assert(testComparisonsValues<month>(i, j));
 
   return 0;
 }
