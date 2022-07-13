@@ -99,7 +99,8 @@ __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
 #endif
 }
 
-static void start_thread() __attribute__((noinline)) {
+__attribute__((noinline))
+static void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
   long retval;
@@ -174,7 +175,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   auto clear_tid = reinterpret_cast<cpp::Atomic<FutexWordType> *>(
       adjusted_stack + sizeof(StartArgs) + sizeof(ThreadAttributes));
   clear_tid->val = CLEAR_TID_VALUE;
-  platform_data = clear_tid;
+  attrib->platform_data = clear_tid;
 
   // The clone syscall takes arguments in an architecture specific order.
   // Also, we want the result of the syscall to be in a register as the child
@@ -252,7 +253,7 @@ void Thread::wait() {
   // If not, it is a spurious wake and we should continue to wait on
   // the futex.
   auto *clear_tid =
-      reinterpret_cast<cpp::Atomic<FutexWordType> *>(platform_data);
+      reinterpret_cast<cpp::Atomic<FutexWordType> *>(attrib->platform_data);
   while (clear_tid->load() != 0) {
     // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
     // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
