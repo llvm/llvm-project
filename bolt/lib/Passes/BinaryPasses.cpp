@@ -1595,6 +1595,9 @@ void InstructionLowering::runOnFunctions(BinaryContext &BC) {
 }
 
 void StripRepRet::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86())
+    return;
+
   uint64_t NumPrefixesRemoved = 0;
   uint64_t NumBytesSaved = 0;
   for (auto &BFI : BC.getBinaryFunctions()) {
