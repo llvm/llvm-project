@@ -844,19 +844,34 @@ Attribute Parser::parseDenseArrayAttr() {
     return {};
   CustomAsmParser parser(*this);
   Attribute result;
+  // Check for empty list.
+  bool isEmptyList = getToken().is(Token::r_square);
+
   if (auto intType = type.dyn_cast<IntegerType>()) {
     switch (type.getIntOrFloatBitWidth()) {
     case 8:
-      result = DenseI8ArrayAttr::parseWithoutBraces(parser, Type{});
+      if (isEmptyList)
+        result = DenseI8ArrayAttr::get(parser.getContext(), {});
+      else
+        result = DenseI8ArrayAttr::parseWithoutBraces(parser, Type{});
       break;
     case 16:
-      result = DenseI16ArrayAttr::parseWithoutBraces(parser, Type{});
+      if (isEmptyList)
+        result = DenseI16ArrayAttr::get(parser.getContext(), {});
+      else
+        result = DenseI16ArrayAttr::parseWithoutBraces(parser, Type{});
       break;
     case 32:
-      result = DenseI32ArrayAttr::parseWithoutBraces(parser, Type{});
+      if (isEmptyList)
+        result = DenseI32ArrayAttr::get(parser.getContext(), {});
+      else
+        result = DenseI32ArrayAttr::parseWithoutBraces(parser, Type{});
       break;
     case 64:
-      result = DenseI64ArrayAttr::parseWithoutBraces(parser, Type{});
+      if (isEmptyList)
+        result = DenseI64ArrayAttr::get(parser.getContext(), {});
+      else
+        result = DenseI64ArrayAttr::parseWithoutBraces(parser, Type{});
       break;
     default:
       emitError(typeLoc, "expected i8, i16, i32, or i64 but got: ") << type;
@@ -865,10 +880,16 @@ Attribute Parser::parseDenseArrayAttr() {
   } else if (auto floatType = type.dyn_cast<FloatType>()) {
     switch (type.getIntOrFloatBitWidth()) {
     case 32:
-      result = DenseF32ArrayAttr::parseWithoutBraces(parser, Type{});
+      if (isEmptyList)
+        result = DenseF32ArrayAttr::get(parser.getContext(), {});
+      else
+        result = DenseF32ArrayAttr::parseWithoutBraces(parser, Type{});
       break;
     case 64:
-      result = DenseF64ArrayAttr::parseWithoutBraces(parser, Type{});
+      if (isEmptyList)
+        result = DenseF64ArrayAttr::get(parser.getContext(), {});
+      else
+        result = DenseF64ArrayAttr::parseWithoutBraces(parser, Type{});
       break;
     default:
       emitError(typeLoc, "expected f32 or f64 but got: ") << type;

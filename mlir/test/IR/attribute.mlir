@@ -521,7 +521,19 @@ func.func @simple_scalar_example() {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: func @dense_array_attr
-func.func @dense_array_attr() attributes{ 
+func.func @dense_array_attr() attributes{
+// CHECK-SAME: emptyf32attr = [:f32],
+               emptyf32attr = [:f32],
+// CHECK-SAME: emptyf64attr = [:f64],
+               emptyf64attr = [:f64],
+// CHECK-SAME: emptyi16attr = [:i16],
+               emptyi16attr = [:i16],
+// CHECK-SAME: emptyi32attr = [:i32],
+               emptyi32attr = [:i32],
+// CHECK-SAME: emptyi64attr = [:i64],
+               emptyi64attr = [:i64],
+// CHECK-SAME: emptyi8attr = [:i8],
+               emptyi8attr = [:i8],
 // CHECK-SAME: f32attr = [:f32 1.024000e+03, 4.530000e+02, -6.435000e+03],
                f32attr = [:f32 1024., 453., -6435.],
 // CHECK-SAME: f64attr = [:f64 -1.420000e+02],
@@ -549,6 +561,8 @@ func.func @dense_array_attr() attributes{
                f32attr = [1024., 453., -6435.]
 // CHECK-SAME: f64attr = [-1.420000e+02]
                f64attr = [-142.]
+// CHECK-SAME: emptyattr = []
+               emptyattr = []
   return
 }
 

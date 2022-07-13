@@ -169,6 +169,7 @@ def : PatFPSetcc<SETULT, FCMP_CULT_D, FPR64>;
 def : PatFPSetcc<SETULE, FCMP_CULE_D, FPR64>;
 def : PatFPSetcc<SETUNE, FCMP_CUNE_D, FPR64>;
 def : PatFPSetcc<SETUO,  FCMP_CUN_D,  FPR64>;
+def : PatFPSetcc<SETLT,  FCMP_CLT_D,  FPR64>;
 
 // TODO: Match signaling comparison strict_fsetccs with FCMP_S*_D instructions.
 
@@ -197,6 +198,17 @@ defm : LdPat<load, FLD_D, f64>;
 /// Stores
 
 defm : StPat<store, FST_D, FPR64, f64>;
+
+/// FP conversion operations
+
+def : Pat<(loongarch_ftint FPR64:$src), (FTINTRZ_W_D FPR64:$src)>;
+def : Pat<(f64 (loongarch_ftint FPR64:$src)), (FTINTRZ_L_D FPR64:$src)>;
+def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_L_S FPR32:$src)>;
+
+// f64 -> f32
+def : Pat<(f32 (fpround FPR64:$src)), (FCVT_S_D FPR64:$src)>;
+// f32 -> f64
+def : Pat<(f64 (fpextend FPR32:$src)), (FCVT_D_S FPR32:$src)>;
 } // Predicates = [HasBasicD]
 
 /// Floating point constants
@@ -205,10 +217,26 @@ let Predicates = [HasBasicD, IsLA64] in {
 def : Pat<(f64 fpimm0), (MOVGR2FR_D R0)>;
 def : Pat<(f64 fpimm0neg), (FNEG_D (MOVGR2FR_D R0))>;
 def : Pat<(f64 fpimm1), (FFINT_D_L (MOVGR2FR_D (ADDI_D R0, 1)))>;
+
+// Convert int to FP
+def : Pat<(f64 (sint_to_fp (i64 (sexti32 (i64 GPR:$src))))),
+          (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
+def : Pat<(f64 (sint_to_fp GPR:$src)), (FFINT_D_L (MOVGR2FR_D GPR:$src))>;
+
+def : Pat<(f64 (uint_to_fp (i64 (zexti32 (i64 GPR:$src))))),
+          (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
+
+def : Pat<(bitconvert GPR:$src), (MOVGR2FR_D GPR:$src)>;
+
+// Convert FP to int
+def : Pat<(bitconvert FPR64:$src), (MOVFR2GR_D FPR64:$src)>;
 } // Predicates = [HasBasicD, IsLA64]
 
 let Predicates = [HasBasicD, IsLA32] in {
 def : Pat<(f64 fpimm0), (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0)>;
 def : Pat<(f64 fpimm0neg), (FNEG_D (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0))>;
 def : Pat<(f64 fpimm1), (FCVT_D_S (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1))))>;
+
+// Convert int to FP
+def : Pat<(f64 (sint_to_fp (i32 GPR:$src))), (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
 } // Predicates = [HasBasicD, IsLA32]
