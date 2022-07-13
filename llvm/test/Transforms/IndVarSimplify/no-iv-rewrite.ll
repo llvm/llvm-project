@@ -436,12 +436,10 @@ define void @congruentgepiv(%structIF* %base) nounwind uwtable ssp {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi %structIF* [ [[PTR_INC:%.*]], [[LATCH:%.*]] ], [ [[BASE:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INDVARS1:%.*]] = bitcast %structIF* [[PTR_IV]] to i32*
+; CHECK-NEXT:    [[INDVARS1:%.*]] = bitcast %structIF* [[BASE:%.*]] to i32*
 ; CHECK-NEXT:    store i32 4, i32* [[INDVARS1]], align 4
-; CHECK-NEXT:    br i1 false, label [[LATCH]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[PTR_INC]] = getelementptr inbounds [[STRUCTIF:%.*]], %structIF* [[PTR_IV]], i64 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -476,22 +474,19 @@ define void @phiUsesTrunc() nounwind {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 1, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN33:%.*]], label [[FOR_INC]]
+; CHECK-NEXT:    br i1 undef, label [[IF_THEN33:%.*]], label [[FOR_INC:%.*]]
 ; CHECK:       if.then33:
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN97:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then97:
-; CHECK-NEXT:    call void @use64(i64 [[INDVARS_IV]])
+; CHECK-NEXT:    call void @use64(i64 1)
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[KMIN_1:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN33]] ], [ 0, [[IF_THEN]] ], [ [[TMP0]], [[IF_THEN97]] ], [ 0, [[IF_ELSE]] ]
+; CHECK-NEXT:    [[KMIN_1:%.*]] = phi i32 [ 1, [[IF_THEN33]] ], [ 0, [[IF_THEN]] ], [ 1, [[IF_THEN97]] ], [ 0, [[IF_ELSE]] ]
 ; CHECK-NEXT:    call void @use32(i32 [[KMIN_1]])
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]

@@ -127,7 +127,7 @@ multiple file formats.
 
 .. option:: --set-section-alignment <section>=<align>
 
- Set the alignment of section ``<section>`` to `<align>``. Can be specified
+ Set the alignment of section ``<section>`` to ``<align>``. Can be specified
  multiple times to update multiple sections.
 
 .. option:: --set-section-flags <section>=<flag>[,<flag>,...]
@@ -427,6 +427,11 @@ them.
  Rename sections called ``<old>`` to ``<new>`` in the output, and apply any
  specified ``<flag>`` values. See :option:`--set-section-flags` for a list of
  supported flags. Can be specified multiple times to rename multiple sections.
+
+.. option:: --set-section-type <section>=<type>
+
+ Set the type of section ``<section>`` to the integer ``<type>``. Can be
+ specified multiple times to update multiple sections.
 
 .. option:: --set-start-addr <addr>
 

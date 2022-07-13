@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=INPUT-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t.o | FileCheck --check-prefix=INPUT-ASM %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t.o | FileCheck --check-prefix=INPUT-ASM %s
 
 # RUN: ld.lld --shared %t.o --soname=t.so -o %t.so
 # RUN: llvm-readelf -r %t.so | FileCheck --check-prefix=SO-REL %s

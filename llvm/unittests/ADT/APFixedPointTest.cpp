@@ -220,11 +220,13 @@ void CheckIntPart(const FixedPointSemantics &Sema, int64_t IntPart) {
 }
 
 void CheckIntPartMin(const FixedPointSemantics &Sema, int64_t Expected) {
-  ASSERT_EQ(APFixedPoint::getMin(Sema).getIntPart(), Expected);
+  EXPECT_TRUE(APSInt::compareValues(APFixedPoint::getMin(Sema).getIntPart(),
+                                    APSInt::get(Expected)) == 0);
 }
 
 void CheckIntPartMax(const FixedPointSemantics &Sema, uint64_t Expected) {
-  ASSERT_EQ(APFixedPoint::getMax(Sema).getIntPart(), Expected);
+  EXPECT_TRUE(APSInt::compareValues(APFixedPoint::getMax(Sema).getIntPart(),
+                                    APSInt::getUnsigned(Expected)) == 0);
 }
 
 TEST(FixedPoint, getIntPart) {

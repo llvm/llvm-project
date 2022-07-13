@@ -129,32 +129,30 @@ public:
     m_s.Format("    {0}: ", item.id);
 
     if (m_options.show_tsc) {
-      m_s << "[tsc=";
-
-      if (item.tsc)
-        m_s.Format("{0}", *item.tsc);
-      else
-        m_s << "unavailable";
-
-      m_s << "] ";
+      m_s.Format("[tsc={0}] ",
+                 item.tsc ? std::to_string(*item.tsc) : "unavailable");
     }
 
     if (item.event) {
       m_s << "(event) " << TraceCursor::EventKindToString(*item.event);
+      if (*item.event == eTraceEventCPUChanged) {
+        m_s.Format(" [new CPU={0}]",
+                   item.cpu_id ? std::to_string(*item.cpu_id) : "unavailable");
+      }
     } else if (item.error) {
       m_s << "(error) " << *item.error;
     } else {
       m_s.Format("{0:x+16}", item.load_address);
-      if (item.symbol_info) {
+      if (item.symbol_info && item.symbol_info->instruction) {
         m_s << "    ";
-        item.symbol_info->instruction->Dump(&m_s, /*max_opcode_byte_size=*/0,
-                                            /*show_address=*/false,
-                                            /*show_bytes=*/false,
-                                            &item.symbol_info->exe_ctx,
-                                            &item.symbol_info->sc,
-                                            /*prev_sym_ctx=*/nullptr,
-                                            /*disassembly_addr_format=*/nullptr,
-                                            /*max_address_text_size=*/0);
+        item.symbol_info->instruction->Dump(
+            &m_s, /*max_opcode_byte_size=*/0,
+            /*show_address=*/false,
+            /*show_bytes=*/false, m_options.show_control_flow_kind,
+            &item.symbol_info->exe_ctx, &item.symbol_info->sc,
+            /*prev_sym_ctx=*/nullptr,
+            /*disassembly_addr_format=*/nullptr,
+            /*max_address_text_size=*/0);
       }
     }
 
@@ -172,14 +170,16 @@ class OutputWriterJSON : public TraceDumper::OutputWriter {
   /* schema:
     error_message: string
     | {
+      "event": string,
       "id": decimal,
       "tsc"?: string decimal,
-      "event": string
+      "cpuId"? decimal,
     } | {
+      "error": string,
       "id": decimal,
       "tsc"?: string decimal,
-      "error": string,
     | {
+      "loadAddress": string decimal,
       "id": decimal,
       "tsc"?: string decimal,
       "module"?: string,
@@ -200,6 +200,37 @@ public:
 
   ~OutputWriterJSON() { m_j.arrayEnd(); }
 
+  void DumpEvent(const TraceDumper::TraceItem &item) {
+    m_j.attribute("event", TraceCursor::EventKindToString(*item.event));
+    if (item.event == eTraceEventCPUChanged)
+      m_j.attribute("cpuId", item.cpu_id);
+  }
+
+  void DumpInstruction(const TraceDumper::TraceItem &item) {
+    m_j.attribute("loadAddress", formatv("{0:x}", item.load_address));
+    if (item.symbol_info) {
+      m_j.attribute("module", ToOptionalString(GetModuleName(item)));
+      m_j.attribute(
+          "symbol",
+          ToOptionalString(item.symbol_info->sc.GetFunctionName().AsCString()));
+
+      if (item.symbol_info->instruction) {
+        m_j.attribute("mnemonic",
+                      ToOptionalString(item.symbol_info->instruction->GetMnemonic(
+                          &item.symbol_info->exe_ctx)));
+      }
+
+      if (IsLineEntryValid(item.symbol_info->sc.line_entry)) {
+        m_j.attribute(
+            "source",
+            ToOptionalString(
+                item.symbol_info->sc.line_entry.file.GetPath().c_str()));
+        m_j.attribute("line", item.symbol_info->sc.line_entry.line);
+        m_j.attribute("column", item.symbol_info->sc.line_entry.column);
+      }
+    }
+  }
+
   void TraceItem(const TraceDumper::TraceItem &item) override {
     m_j.object([&] {
       m_j.attribute("id", item.id);
@@ -209,37 +240,11 @@ public:
             item.tsc ? Optional<std::string>(std::to_string(*item.tsc)) : None);
 
       if (item.event) {
-        m_j.object([&] {
-          m_j.attribute("event", TraceCursor::EventKindToString(*item.event));
-        });
-        return;
-      }
-
-      if (item.error) {
+        DumpEvent(item);
+      } else if (item.error) {
         m_j.attribute("error", *item.error);
-        return;
-      }
-
-      // we know we are seeing an actual instruction
-      m_j.attribute("loadAddress", formatv("{0:x}", item.load_address));
-      if (item.symbol_info) {
-        m_j.attribute("module", ToOptionalString(GetModuleName(item)));
-        m_j.attribute("symbol",
-                      ToOptionalString(
-                          item.symbol_info->sc.GetFunctionName().AsCString()));
-        m_j.attribute(
-            "mnemonic",
-            ToOptionalString(item.symbol_info->instruction->GetMnemonic(
-                &item.symbol_info->exe_ctx)));
-
-        if (IsLineEntryValid(item.symbol_info->sc.line_entry)) {
-          m_j.attribute(
-              "source",
-              ToOptionalString(
-                  item.symbol_info->sc.line_entry.file.GetPath().c_str()));
-          m_j.attribute("line", item.symbol_info->sc.line_entry.line);
-          m_j.attribute("column", item.symbol_info->sc.line_entry.column);
-        }
+      } else {
+        DumpInstruction(item);
       }
     });
   }
@@ -361,6 +366,8 @@ Optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
       if (!m_options.show_events)
         continue;
       item.event = m_cursor_up->GetEventType();
+      if (*item.event == eTraceEventCPUChanged)
+        item.cpu_id = m_cursor_up->GetCPU();
     } else if (m_cursor_up->IsError()) {
       item.error = m_cursor_up->GetError();
     } else {

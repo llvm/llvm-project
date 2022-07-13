@@ -89,10 +89,7 @@ define void @test4() nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 40, [[ENTRY:%.*]] ], [ [[DOTINT:%.*]], [[BB]] ]
-; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[INDVAR_CONV]]) #[[ATTR0]]
-; CHECK-NEXT:    [[DOTINT]] = add nsw i32 [[IV_INT]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double 4.000000e+01) #[[ATTR0]]
 ; CHECK-NEXT:    br i1 false, label [[BB]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void

@@ -99,6 +99,28 @@ public:
   void PrintStats() const {}
 };
 
+namespace detail {
+
+template <typename Alloc> class AllocatorHolder : Alloc {
+public:
+  AllocatorHolder() = default;
+  AllocatorHolder(const Alloc &A) : Alloc(A) {}
+  AllocatorHolder(Alloc &&A) : Alloc(static_cast<Alloc &&>(A)) {}
+  Alloc &getAllocator() { return *this; }
+  const Alloc &getAllocator() const { return *this; }
+};
+
+template <typename Alloc> class AllocatorHolder<Alloc &> {
+  Alloc &A;
+
+public:
+  AllocatorHolder(Alloc &A) : A(A) {}
+  Alloc &getAllocator() { return A; }
+  const Alloc &getAllocator() const { return A; }
+};
+
+} // namespace detail
+
 } // namespace llvm
 
 #endif // LLVM_SUPPORT_ALLOCATORBASE_H

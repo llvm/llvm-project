@@ -344,6 +344,20 @@ private:
   std::vector<GlobalDecl> DeferredDeclsToEmit;
   void addDeferredDeclToEmit(GlobalDecl GD) {
     DeferredDeclsToEmit.emplace_back(GD);
+    addEmittedDeferredDecl(GD);
+  }
+
+  /// Decls that were DeferredDecls and have now been emitted.
+  llvm::DenseMap<llvm::StringRef, GlobalDecl> EmittedDeferredDecls;
+
+  void addEmittedDeferredDecl(GlobalDecl GD) {
+    if (!llvm::isa<FunctionDecl>(GD.getDecl()))
+      return;
+    llvm::GlobalVariable::LinkageTypes L = getFunctionLinkage(GD);
+    if (llvm::GlobalValue::isLinkOnceLinkage(L) ||
+        llvm::GlobalValue::isWeakLinkage(L)) {
+      EmittedDeferredDecls[getMangledName(GD)] = GD;
+    }
   }
 
   /// List of alias we have emitted. Used to make sure that what they point to
@@ -1516,6 +1530,11 @@ public:
     NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
     NewBuilder->TBAA = std::move(TBAA);
+
+    assert(NewBuilder->EmittedDeferredDecls.empty() &&
+           "Still have (unmerged) EmittedDeferredDecls deferred decls");
+
+    NewBuilder->EmittedDeferredDecls = std::move(EmittedDeferredDecls);
   }
 
 private:

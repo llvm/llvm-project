@@ -11,4 +11,5 @@ add_loader_object(
   COMPILE_OPTIONS
     -fno-omit-frame-pointer
     -ffreestanding # To avoid compiler warnings about calling the main function.
+    -fno-builtin
 )

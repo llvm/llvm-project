@@ -5,6 +5,7 @@ add_clang_library(clangAnalysisFlowSensitive
   Transfer.cpp
   TypeErasedDataflowAnalysis.cpp
   WatchedLiteralsSolver.cpp
+  DebugSupport.cpp
 
   LINK_LIBS
   clangAnalysis

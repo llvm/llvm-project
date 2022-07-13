@@ -58,17 +58,8 @@ exit:
 define i16 @test(i16 %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb6.i.i.i:
-; CHECK-NEXT:    [[DATA_I:%.*]] = alloca [2 x i8], align 2
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr nonnull [[DATA_I]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[DATA_I]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[ARG:%.*]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[ARG]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[DATA_I]], align 2
-; CHECK-NEXT:    store i8 [[TMP1]], ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[DOTSROA_0_0_COPYLOAD_I:%.*]] = load i16, ptr [[DATA_I]], align 2
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[DATA_I]])
-; CHECK-NEXT:    ret i16 [[DOTSROA_0_0_COPYLOAD_I]]
+; CHECK-NEXT:    [[DATA_I_SROA_0_0_INSERT_INSERT:%.*]] = call i16 @llvm.bswap.i16(i16 [[ARG:%.*]])
+; CHECK-NEXT:    ret i16 [[DATA_I_SROA_0_0_INSERT_INSERT]]
 ;
   %ret = call i16 @helper(i16 %arg, i64 1)
   ret i16 %ret

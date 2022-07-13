@@ -196,7 +196,7 @@ TEST(SimplexTest, getSamplePointIfIntegral) {
                                       },
                                       {})
                    .getSamplePointIfIntegral()
-                   .hasValue());
+                   .has_value());
 
   auto maybeSample = simplexFromConstraints(2,
                                             {// x = y - 2.
@@ -208,7 +208,7 @@ TEST(SimplexTest, getSamplePointIfIntegral) {
                                             {})
                          .getSamplePointIfIntegral();
 
-  EXPECT_TRUE(maybeSample.hasValue());
+  EXPECT_TRUE(maybeSample.has_value());
   EXPECT_THAT(*maybeSample, testing::ElementsAre(0, 2));
 
   auto maybeSample2 = simplexFromConstraints(2,
@@ -220,7 +220,7 @@ TEST(SimplexTest, getSamplePointIfIntegral) {
                                                  {0, 1, -2} // y = 2.
                                              })
                           .getSamplePointIfIntegral();
-  EXPECT_TRUE(maybeSample2.hasValue());
+  EXPECT_TRUE(maybeSample2.has_value());
   EXPECT_THAT(*maybeSample2, testing::ElementsAre(0, 2));
 
   EXPECT_FALSE(simplexFromConstraints(1,
@@ -229,7 +229,7 @@ TEST(SimplexTest, getSamplePointIfIntegral) {
                                        {-2, +1}},
                                       {})
                    .getSamplePointIfIntegral()
-                   .hasValue());
+                   .has_value());
 }
 
 /// Some basic sanity checks involving zero or one variables.
@@ -545,7 +545,7 @@ TEST(SimplexTest, addDivisionVariable) {
   simplex.addInequality({1, 0, -3}); // x >= 3.
   simplex.addInequality({-1, 0, 9}); // x <= 9.
   Optional<SmallVector<int64_t, 8>> sample = simplex.findIntegerSample();
-  ASSERT_TRUE(sample.hasValue());
+  ASSERT_TRUE(sample.has_value());
   EXPECT_EQ((*sample)[0] / 2, (*sample)[1]);
 }
 

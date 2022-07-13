@@ -285,6 +285,8 @@ Error lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
   for (size_t i = 0; i < executions.size(); i++) {
     const IntelPTThreadContinousExecution &execution = executions[i];
 
+    decoded_thread.NotifyCPU(execution.thread_execution.cpu_id);
+
     auto variant = execution.thread_execution.variant;
     // If we haven't seen a PSB yet, then it's fine not to show errors
     if (has_seen_psbs) {

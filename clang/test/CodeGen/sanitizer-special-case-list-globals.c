@@ -17,12 +17,9 @@
 // RUN: -fsanitize-ignorelist=%S/Inputs/sanitizer-special-case-list-globals.txt \
 // RUN: | FileCheck %s --check-prefix=HWASAN
 
-/// TODO(hctim): Move over to memtag-globals when it's implemented. For now
-/// though, it's fine, the frontend still annotates based on any memtag sanitizer
-/// being used.
-// RUN: %clang_cc1 -fsanitize=memtag-heap -triple=aarch64-linux-android31 -emit-llvm %s -o -\
+// RUN: %clang_cc1 -fsanitize=memtag-globals -triple=aarch64-linux-android31 \
 // RUN: -fsanitize-ignorelist=%S/Inputs/sanitizer-special-case-list-globals.txt \
-// RUN: | FileCheck %s --check-prefix=MEMTAG
+// RUN: -emit-llvm %s -o - | FileCheck %s --check-prefix=MEMTAG
 
 /// Check that the '[cfi-vcall|cfi-icall] src:*' rule in the ignorelist doesn't change
 /// anything for ASan.
@@ -46,11 +43,12 @@
 // RUN: -fsanitize-ignorelist=%S/Inputs/sanitizer-special-case-list-globals.txt \
 // RUN: | FileCheck %s --check-prefix=NONE
 
-// NONE:     @always_ignored ={{.*}} global
-// NONE-NOT: no_sanitize
-// ASAN:     @always_ignored ={{.*}} global {{.*}}, no_sanitize_address
-// HWASAN:   @always_ignored ={{.*}} global {{.*}}, no_sanitize_hwaddress
-// MEMTAG:   @always_ignored ={{.*}} global {{.*}}, no_sanitize_memtag
+// NONE:       @always_ignored ={{.*}} global
+// NONE-NOT:   no_sanitize
+// ASAN:       @always_ignored ={{.*}} global {{.*}}, no_sanitize_address
+// HWASAN:     @always_ignored ={{.*}} global {{.*}}, no_sanitize_hwaddress
+// MEMTAG:     @always_ignored ={{.*}} global
+// MEMTAG-NOT: sanitize_memtag
 unsigned always_ignored;
 
 // NONE:       @hwasan_ignored ={{.*}} global
@@ -58,8 +56,7 @@ unsigned always_ignored;
 // ASAN:       @hwasan_ignored ={{.*}} global
 // ASAN-NOT:   no_sanitize_address
 // HWASAN:     @hwasan_ignored ={{.*}} global {{.*}}, no_sanitize_hwaddress
-// MEMTAG:     @hwasan_ignored ={{.*}} global
-// MEMTAG-NOT: no_sanitize_memtag
+// MEMTAG:     @hwasan_ignored ={{.*}} global {{.*}} sanitize_memtag
 unsigned hwasan_ignored;
 
 // NONE:       @asan_ignored ={{.*}} global
@@ -67,8 +64,7 @@ unsigned hwasan_ignored;
 // ASAN:       @asan_ignored ={{.*}} global {{.*}}, no_sanitize_address
 // HWASAN:     @asan_ignored.hwasan = {{.*}} global
 // HWASAN-NOT: no_sanitize_hwaddress
-// MEMTAG:     @asan_ignored ={{.*}} global
-// MEMTAG-NOT: no_sanitize_memtag
+// MEMTAG:     @asan_ignored ={{.*}} global {{.*}} sanitize_memtag
 unsigned asan_ignored;
 
 // NONE:       @memtag_ignored ={{.*}} global
@@ -77,7 +73,8 @@ unsigned asan_ignored;
 // ASAN-NOT:   no_sanitize_address
 // HWASAN:     @memtag_ignored.hwasan = {{.*}} global
 // HWASAN-NOT: no_sanitize_hwaddress
-// MEMTAG:     @memtag_ignored ={{.*}} global {{.*}}, no_sanitize_memtag
+// MEMTAG:     @memtag_ignored ={{.*}} global
+// MEMTAG-NOT: sanitize_memtag
 unsigned memtag_ignored;
 
 // NONE:       @never_ignored ={{.*}} global
@@ -86,6 +83,5 @@ unsigned memtag_ignored;
 // ASAN-NOT:   no_sanitize_address
 // HWASAN:     @never_ignored.hwasan ={{.*}} global
 // HWASAN-NOT: no_sanitize_hwaddress
-// MEMTAG:     @never_ignored ={{.*}} global
-// MEMTAG-NOT: no_sanitize_memtag
+// MEMTAG:     @never_ignored ={{.*}} global {{.*}} sanitize_memtag
 unsigned never_ignored;

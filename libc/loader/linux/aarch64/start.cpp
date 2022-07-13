@@ -14,7 +14,6 @@
 
 #include <linux/auxvec.h>
 #include <linux/elf.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -36,9 +35,12 @@ static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
 
 AppProperties app;
 
-void initTLS() {
-  if (app.tls.size == 0)
+void init_tls(TLSDescriptor &tls_descriptor) {
+  if (app.tls.size == 0) {
+    tls_descriptor.size = 0;
+    tls_descriptor.tp = 0;
     return;
+  }
 
   // aarch64 follows the variant 1 TLS layout:
   //
@@ -49,14 +51,14 @@ void initTLS() {
   //
   // The thread pointer points to the first entry.
 
-  const size_t size_of_pointers = 2 * sizeof(uintptr_t);
-  size_t padding = 0;
-  const size_t ALIGNMENT_MASK = app.tls.align - 1;
-  size_t diff = size_of_pointers & ALIGNMENT_MASK;
+  const uintptr_t size_of_pointers = 2 * sizeof(uintptr_t);
+  uintptr_t padding = 0;
+  const uintptr_t ALIGNMENT_MASK = app.tls.align - 1;
+  uintptr_t diff = size_of_pointers & ALIGNMENT_MASK;
   if (diff != 0)
     padding += (ALIGNMENT_MASK - diff) + 1;
 
-  size_t alloc_size = size_of_pointers + padding + app.tls.size;
+  uintptr_t alloc_size = size_of_pointers + padding + app.tls.size;
 
   // We cannot call the mmap function here as the functions set errno on
   // failure. Since errno is implemented via a thread local variable, we cannot
@@ -73,8 +75,18 @@ void initTLS() {
   __llvm_libc::inline_memcpy(reinterpret_cast<char *>(tls_addr),
                              reinterpret_cast<const char *>(app.tls.address),
                              app.tls.init_size);
-  __arm_wsr64("tpidr_el0", thread_ptr);
+  tls_descriptor.size = alloc_size;
+  tls_descriptor.addr = thread_ptr;
+  tls_descriptor.tp = thread_ptr;
 }
+
+void cleanup_tls(uintptr_t addr, uintptr_t size) {
+  if (size == 0)
+    return;
+  __llvm_libc::syscall(SYS_munmap, addr, size);
+}
+
+static void set_thread_ptr(uintptr_t val) { __arm_wsr64("tpidr_el0", val); }
 
 } // namespace __llvm_libc
 
@@ -134,9 +146,13 @@ extern "C" void _start() {
     app.tls.align = phdr->p_align;
   }
 
-  __llvm_libc::initTLS();
+  __llvm_libc::TLSDescriptor tls;
+  __llvm_libc::init_tls(tls);
+  if (tls.size != 0)
+    __llvm_libc::set_thread_ptr(tls.tp);
 
-  __llvm_libc::syscall(SYS_exit, main(app.args->argc,
-                                      reinterpret_cast<char **>(app.args->argv),
-                                      reinterpret_cast<char **>(env_ptr)));
+  int retval = main(app.args->argc, reinterpret_cast<char **>(app.args->argv),
+                    reinterpret_cast<char **>(env_ptr));
+  __llvm_libc::cleanup_tls(tls.addr, tls.size);
+  __llvm_libc::syscall(SYS_exit, retval);
 }

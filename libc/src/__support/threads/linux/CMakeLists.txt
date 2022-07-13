@@ -26,6 +26,7 @@ add_object_library(
     thread.cpp
   DEPENDS
     .futex_word_type
+    libc.config.linux.app_h
     libc.include.sys_syscall
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.error

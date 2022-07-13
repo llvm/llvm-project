@@ -11,12 +11,12 @@
 # RUN: llvm-readelf -r %t-ie | FileCheck %s --check-prefix=IE-RELOC
 # RUN: llvm-readelf -s %t-ie | FileCheck %s --check-prefix=IE-SYM
 # RUN: llvm-readelf -x .got %t-ie | FileCheck %s --check-prefix=IE-GOT
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t-ie | FileCheck %s --check-prefix=IE
+# RUN: llvm-objdump -d --no-show-raw-insn %t-ie | FileCheck %s --check-prefix=IE
 
 # RUN: llvm-readelf -r %t-le | FileCheck %s --check-prefix=LE-RELOC
 # RUN: llvm-readelf -s %t-le | FileCheck %s --check-prefix=LE-SYM
 # RUN: llvm-readelf -x .got %t-le 2>&1 | FileCheck %s --check-prefix=LE-GOT
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t-le | FileCheck %s --check-prefix=LE
+# RUN: llvm-objdump -d --no-show-raw-insn %t-le | FileCheck %s --check-prefix=LE
 
 ## This test checks the Initial Exec PC Relative TLS implementation.
 ## The IE version checks that the relocations are generated correctly.

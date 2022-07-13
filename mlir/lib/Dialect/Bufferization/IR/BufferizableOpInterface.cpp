@@ -567,11 +567,11 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options) {
 
   // If we still do not know the memory space, use the default memory space (if
   // any).
-  if (!memorySpace.hasValue())
+  if (!memorySpace.has_value())
     memorySpace = options.defaultMemorySpace;
 
   // If we still do not know the memory space, report a failure.
-  if (!memorySpace.hasValue())
+  if (!memorySpace.has_value())
     return op->emitError("could not infer memory space");
 
   return getMemRefType(value, options, /*layout=*/{}, *memorySpace);

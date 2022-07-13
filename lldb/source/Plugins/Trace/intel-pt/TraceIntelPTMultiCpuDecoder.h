@@ -50,8 +50,21 @@ public:
   size_t GetNumContinuousExecutionsForThread(lldb::tid_t tid) const;
 
   /// \return
+  ///   The number of PSB blocks for a given thread in all cores.
+  size_t GePSBBlocksCountForThread(lldb::tid_t tid) const;
+
+  /// \return
   ///   The total number of continuous executions found across CPUs.
   size_t GetTotalContinuousExecutionsCount() const;
+
+  /// \return
+  ///   The number of psb blocks in all cores that couldn't be matched with a
+  ///   thread execution coming from context switch traces.
+  size_t GetUnattributedPSBBlocksCount() const;
+
+  /// \return
+  ///   The total number of PSB blocks in all cores.
+  size_t GetTotalPSBBlocksCount() const;
 
 private:
   /// Traverse the context switch traces and the basic intel pt continuous
@@ -80,7 +93,8 @@ private:
   /// This variable will be non-None if a severe error happened during the setup
   /// of the decoder and we don't want decoding to be reattempted.
   llvm::Optional<std::string> m_setup_error;
-  uint64_t m_unattributed_intelpt_subtraces;
+  uint64_t m_unattributed_psb_blocks = 0;
+  uint64_t m_total_psb_blocks = 0;
 };
 
 } // namespace trace_intel_pt
