@@ -156,8 +156,7 @@ TypeLoc TypeLocBuilder::pushImpl(QualType T, size_t LocalSize, unsigned LocalAli
 
   Index -= LocalSize;
 
-  unsigned FDSz = TypeLoc::getFullDataSizeForType(T);
-  assert(Capacity - Index == FDSz &&
+  assert(Capacity - Index == TypeLoc::getFullDataSizeForType(T) &&
          "incorrect data size provided to CreateTypeSourceInfo!");
 
   return getTemporaryTypeLoc(T);
