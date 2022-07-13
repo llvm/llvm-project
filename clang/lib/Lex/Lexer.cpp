@@ -3287,7 +3287,10 @@ llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
   }
 
   if (Delimited && PP) {
-    Diag(BufferPtr, diag::ext_delimited_escape_sequence) << /*delimited*/ 0;
+    Diag(BufferPtr, PP->getLangOpts().CPlusPlus2b
+                        ? diag::warn_cxx2b_delimited_escape_sequence
+                        : diag::ext_delimited_escape_sequence)
+        << /*delimited*/ 0 << (PP->getLangOpts().CPlusPlus ? 1 : 0);
   }
 
   if (Result) {
@@ -3371,7 +3374,10 @@ llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
   }
 
   if (Diagnose && PP && !LooseMatch)
-    Diag(BufferPtr, diag::ext_delimited_escape_sequence) << /*named*/ 1;
+    Diag(BufferPtr, PP->getLangOpts().CPlusPlus2b
+                        ? diag::warn_cxx2b_delimited_escape_sequence
+                        : diag::ext_delimited_escape_sequence)
+        << /*named*/ 1 << (PP->getLangOpts().CPlusPlus ? 1 : 0);
 
   if (LooseMatch)
     Res = LooseMatch->CodePoint;
