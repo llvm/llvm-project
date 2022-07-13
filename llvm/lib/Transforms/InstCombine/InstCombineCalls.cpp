@@ -3495,18 +3495,9 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       NV = NC = CastInst::CreateBitOrPointerCast(NC, OldRetTy);
       NC->setDebugLoc(Caller->getDebugLoc());
 
-      // If this is an invoke/callbr instruction, we should insert it after the
-      // first non-phi instruction in the normal successor block.
-      if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
-        BasicBlock::iterator I = II->getNormalDest()->getFirstInsertionPt();
-        InsertNewInstBefore(NC, *I);
-      } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(Caller)) {
-        BasicBlock::iterator I = CBI->getDefaultDest()->getFirstInsertionPt();
-        InsertNewInstBefore(NC, *I);
-      } else {
-        // Otherwise, it's a call, just insert cast right after the call.
-        InsertNewInstBefore(NC, *Caller);
-      }
+      Instruction *InsertPt = NewCall->getInsertionPointAfterDef();
+      assert(InsertPt && "No place to insert cast");
+      InsertNewInstBefore(NC, *InsertPt);
       Worklist.pushUsersToWorkList(*Caller);
     } else {
       NV = PoisonValue::get(Caller->getType());
