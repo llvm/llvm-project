@@ -13087,6 +13087,8 @@ private:
                             ArrayRef<const Expr *> Args,
                             const FunctionProtoType *Proto, SourceLocation Loc);
 
+  void checkAIXMemberAlignment(SourceLocation Loc, const Expr *Arg);
+
   void CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
                          StringRef ParamName, QualType ArgTy, QualType ParamTy);
 
