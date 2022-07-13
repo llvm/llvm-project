@@ -1474,7 +1474,7 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
     if (IsTargetUsed.contains(LazyFile))
       InputFiles.emplace_back(std::move(LazyFile));
 
-  return InputFiles;
+  return std::move(InputFiles);
 }
 
 } // namespace
