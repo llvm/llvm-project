@@ -374,8 +374,8 @@ public:
     Header.RootFile.DirIndex = 0;
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;
-    Header.trackMD5Usage(Checksum.hasValue());
-    Header.HasSource = Source.hasValue();
+    Header.trackMD5Usage(Checksum.has_value());
+    Header.HasSource = Source.has_value();
   }
 
   void resetFileTable() { Header.resetFileTable(); }
