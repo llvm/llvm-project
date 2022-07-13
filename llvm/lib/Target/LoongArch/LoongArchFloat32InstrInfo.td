@@ -165,6 +165,7 @@ def : PatFPSetcc<SETULT, FCMP_CULT_S, FPR32>;
 def : PatFPSetcc<SETULE, FCMP_CULE_S, FPR32>;
 def : PatFPSetcc<SETUNE, FCMP_CUNE_S, FPR32>;
 def : PatFPSetcc<SETUO,  FCMP_CUN_S,  FPR32>;
+def : PatFPSetcc<SETLT,  FCMP_CLT_S,  FPR32>;
 
 // TODO: Match signaling comparison strict_fsetccs with FCMP_S*_S instructions.
 

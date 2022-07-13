@@ -60,6 +60,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SRL, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
+    if (Subtarget.hasBasicF() && !Subtarget.hasBasicD())
+      setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
   }
 
   static const ISD::CondCode FPCCToExpand[] = {ISD::SETOGT, ISD::SETOGE,
@@ -80,9 +82,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, GRLenVT, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
   setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, GRLenVT, Expand);
-
   if (!Subtarget.is64Bit())
     setLibcallName(RTLIB::MUL_I128, nullptr);
+
+  setOperationAction(ISD::FP_TO_UINT, GRLenVT, Custom);
+  setOperationAction(ISD::UINT_TO_FP, GRLenVT, Custom);
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
@@ -125,7 +129,28 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFP_TO_SINT(Op, DAG);
   case ISD::BITCAST:
     return lowerBITCAST(Op, DAG);
+  case ISD::FP_TO_UINT:
+    return SDValue();
+  case ISD::UINT_TO_FP:
+    return lowerUINT_TO_FP(Op, DAG);
   }
+}
+
+SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+
+  SDLoc DL(Op);
+  auto &TLI = DAG.getTargetLoweringInfo();
+  SDValue Tmp1, Tmp2;
+  SDValue Op1 = Op.getOperand(0);
+  if (Op1->getOpcode() == ISD::AssertZext ||
+      Op1->getOpcode() == ISD::AssertSext)
+    return Op;
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op.getOperand(0));
+  SDValue Res = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f64, Trunc);
+  SDNode *N = Res.getNode();
+  TLI.expandUINT_TO_FP(N, Tmp1, Tmp2, DAG);
+  return Tmp1;
 }
 
 SDValue LoongArchTargetLowering::lowerBITCAST(SDValue Op,
@@ -357,6 +382,15 @@ void LoongArchTargetLowering::ReplaceNodeResults(
           DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Src);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Dst));
     }
+    break;
+  }
+  case ISD::FP_TO_UINT: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    auto &TLI = DAG.getTargetLoweringInfo();
+    SDValue Tmp1, Tmp2;
+    TLI.expandFP_TO_UINT(N, Tmp1, Tmp2, DAG);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Tmp1));
     break;
   }
   }
