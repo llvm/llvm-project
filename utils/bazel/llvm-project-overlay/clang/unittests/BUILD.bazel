@@ -205,6 +205,7 @@ cc_test(
         "//clang:frontend",
         "//clang:tooling_core",
         "//llvm:Support",
+        "//llvm:gmock",
         "//llvm:gtest",
         "//llvm:gtest_main",
     ],
