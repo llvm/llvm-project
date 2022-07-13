@@ -62,6 +62,8 @@ private:
   void renderHI16(MachineInstrBuilder &MIB, const MachineInstr &I,
                   int OpIdx = -1) const;
 
+  bool selectFrameIndex(MachineInstr &I, MachineBasicBlock &MBB,
+                        MachineRegisterInfo &MRI) const;
   bool selectGlobalValue(MachineInstr &I, MachineBasicBlock &MBB,
                          MachineRegisterInfo &MRI) const;
   bool selectUbfx(MachineInstr &I, MachineBasicBlock &MBB,
@@ -192,6 +194,20 @@ void M88kInstructionSelector::renderHI16(MachineInstrBuilder &MIB,
   uint64_t Val = I.getOperand(1).getCImm()->getZExtValue();
   Val = (Val & 0x00000000FFFF0000ULL) >> 16;
   MIB.addImm(Val);
+}
+
+bool M88kInstructionSelector::selectFrameIndex(MachineInstr &I,
+                                               MachineBasicBlock &MBB,
+                                               MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_FRAME_INDEX && "Unexpected G code");
+
+  MachineInstr *MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ADDri))
+                         .add(I.getOperand(0))
+                         .add(I.getOperand(1))
+                         .addImm(0);
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return false;
 }
 
 bool M88kInstructionSelector::selectGlobalValue(
@@ -938,6 +954,8 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return selectGlobalValue(I, MBB, MRI);
   case TargetOpcode::G_PTR_ADD:
     return selectPtrAdd(I, MBB, MRI);
+  case TargetOpcode::G_FRAME_INDEX:
+    return selectFrameIndex(I, MBB, MRI);
   case TargetOpcode::G_UBFX:
   case TargetOpcode::G_SBFX:
   case TargetOpcode::G_SEXT_INREG:
