@@ -21,6 +21,7 @@ const size_t kDefaultProcessBufferSizeLimit = 5 * 1024 * 1024; // 500MB
 const bool kDefaultEnableTscValue = false;
 const llvm::Optional<size_t> kDefaultPsbPeriod = llvm::None;
 const bool kDefaultPerCpuTracing = false;
+const bool kDefaultDisableCgroupFiltering = false;
 
 } // namespace trace_intel_pt
 } // namespace lldb_private
