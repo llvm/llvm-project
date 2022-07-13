@@ -169,6 +169,7 @@ def : PatFPSetcc<SETULT, FCMP_CULT_D, FPR64>;
 def : PatFPSetcc<SETULE, FCMP_CULE_D, FPR64>;
 def : PatFPSetcc<SETUNE, FCMP_CUNE_D, FPR64>;
 def : PatFPSetcc<SETUO,  FCMP_CUN_D,  FPR64>;
+def : PatFPSetcc<SETLT,  FCMP_CLT_D,  FPR64>;
 
 // TODO: Match signaling comparison strict_fsetccs with FCMP_S*_D instructions.
 
@@ -221,6 +222,9 @@ def : Pat<(f64 fpimm1), (FFINT_D_L (MOVGR2FR_D (ADDI_D R0, 1)))>;
 def : Pat<(f64 (sint_to_fp (i64 (sexti32 (i64 GPR:$src))))),
           (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
 def : Pat<(f64 (sint_to_fp GPR:$src)), (FFINT_D_L (MOVGR2FR_D GPR:$src))>;
+
+def : Pat<(f64 (uint_to_fp (i64 (zexti32 (i64 GPR:$src))))),
+          (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
 
 def : Pat<(bitconvert GPR:$src), (MOVGR2FR_D GPR:$src)>;
 
