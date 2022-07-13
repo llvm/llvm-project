@@ -1112,7 +1112,7 @@ static bool isSanitizer(lltok::Kind Kind) {
   switch (Kind) {
   case lltok::kw_no_sanitize_address:
   case lltok::kw_no_sanitize_hwaddress:
-  case lltok::kw_no_sanitize_memtag:
+  case lltok::kw_sanitize_memtag:
   case lltok::kw_sanitize_address_dyninit:
     return true;
   default:
@@ -1133,8 +1133,8 @@ bool LLParser::parseSanitizer(GlobalVariable *GV) {
   case lltok::kw_no_sanitize_hwaddress:
     Meta.NoHWAddress = true;
     break;
-  case lltok::kw_no_sanitize_memtag:
-    Meta.NoMemtag = true;
+  case lltok::kw_sanitize_memtag:
+    Meta.Memtag = true;
     break;
   case lltok::kw_sanitize_address_dyninit:
     Meta.IsDynInit = true;
