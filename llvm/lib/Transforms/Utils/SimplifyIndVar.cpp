@@ -749,17 +749,15 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
 /// unsigned-overflow.  Returns true if anything changed, false otherwise.
 bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
                                                     Value *IVOperand) {
-  SCEV::NoWrapFlags Flags;
-  bool Deduced;
-  std::tie(Flags, Deduced) = SE->getStrengthenedNoWrapFlagsFromBinOp(
+  auto Flags = SE->getStrengthenedNoWrapFlagsFromBinOp(
       cast<OverflowingBinaryOperator>(BO));
 
-  if (!Deduced)
-    return Deduced;
+  if (!Flags)
+    return false;
 
-  BO->setHasNoUnsignedWrap(ScalarEvolution::maskFlags(Flags, SCEV::FlagNUW) ==
+  BO->setHasNoUnsignedWrap(ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) ==
                            SCEV::FlagNUW);
-  BO->setHasNoSignedWrap(ScalarEvolution::maskFlags(Flags, SCEV::FlagNSW) ==
+  BO->setHasNoSignedWrap(ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) ==
                          SCEV::FlagNSW);
 
   // The getStrengthenedNoWrapFlagsFromBinOp() check inferred additional nowrap
@@ -767,7 +765,7 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
   // forgetValue() here to make sure those flags also propagate to any other
   // SCEV expressions based on the addrec. However, this can have pathological
   // compile-time impact, see https://bugs.llvm.org/show_bug.cgi?id=50384.
-  return Deduced;
+  return true;
 }
 
 /// Annotate the Shr in (X << IVOperand) >> C as exact using the
