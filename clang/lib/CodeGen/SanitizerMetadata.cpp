@@ -60,8 +60,10 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
   Meta.NoHWAddress |= CGM.isInNoSanitizeList(
       FsanitizeArgument.Mask & SanitizerKind::HWAddress, GV, Loc, Ty);
 
-  Meta.NoMemtag |= NoSanitizeAttrSet.hasOneOf(SanitizerKind::MemTag);
-  Meta.NoMemtag |= CGM.isInNoSanitizeList(
+  Meta.Memtag |=
+      static_cast<bool>(FsanitizeArgument.Mask & SanitizerKind::MemtagGlobals);
+  Meta.Memtag &= !NoSanitizeAttrSet.hasOneOf(SanitizerKind::MemTag);
+  Meta.Memtag &= !CGM.isInNoSanitizeList(
       FsanitizeArgument.Mask & SanitizerKind::MemTag, GV, Loc, Ty);
 
   Meta.IsDynInit = IsDynInit && !Meta.NoAddress &&

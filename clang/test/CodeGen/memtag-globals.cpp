@@ -17,23 +17,30 @@ void func() {
   const char *literal = "Hello, world!";
 }
 
-// CHECK: @{{.*}}extra_global{{.*}} =
-// CHECK-NOT: no_sanitize_memtag
-// CHECK: @{{.*}}global{{.*}} =
-// CHECK-NOT: no_sanitize_memtag
-// CHECK: @{{.*}}attributed_global{{.*}} ={{.*}} global {{.*}}, no_sanitize_memtag
-// CHECK: @{{.*}}disable_instrumentation_global{{.*}} ={{.*}} global {{.*}}, no_sanitize_memtag
-// CHECK: @{{.*}}ignorelisted_global{{.*}} ={{.*}} global {{.*}}, no_sanitize_memtag
-// CHECK: @{{.*}}static_var{{.*}} =
-// CHECK-NOT: no_sanitize_memtag
-// CHECK: @{{.*}} = {{.*}} c"Hello, world!\00"
-// CHECK-NOT: no_sanitize_memtag
+// CHECK: @{{.*}}extra_global{{.*}} ={{.*}} sanitize_memtag
+// CHECK: @{{.*}}global{{.*}} ={{.*}} sanitize_memtag
 
-// IGNORELIST: @{{.*}}extra_global{{.*}} ={{.*}} global
-// IGNORELIST-NOT: no_sanitize_memtag
-// IGNORELIST: @{{.*}}global{{.*}} ={{.*}} global {{.*}}, no_sanitize_memtag
-// IGNORELIST: @{{.*}}attributed_global{{.*}} ={{.*}} global {{.*}}, no_sanitize_memtag
-// IGNORELIST: @{{.*}}disable_instrumentation_global{{.*}} ={{.*}} global {{.*}}, no_sanitize_memtag
-// IGNORELIST: @{{.*}}ignorelisted_globa{{.*}} ={{.*}} global {{.*}}, no_sanitize_memtag
-// IGNORELIST: @{{.*}}static_var{{.*}} ={{.*}} global {{.*}}, no_sanitize_memtag
-// IGNORELIST: @{{.*}} = {{.*}} c"Hello, world!\00"{{.*}}, no_sanitize_memtag
+// CHECK:     @{{.*}}attributed_global{{.*}} =
+// CHECK-NOT: sanitize_memtag
+// CHECK:     @{{.*}}disable_instrumentation_global{{.*}} =
+// CHECK-NOT: sanitize_memtag
+// CHECK:     @{{.*}}ignorelisted_global{{.*}} =
+// CHECK-NOT: sanitize_memtag
+
+// CHECK: @{{.*}}static_var{{.*}} ={{.*}} sanitize_memtag
+// CHECK: @{{.*}} = {{.*}} c"Hello, world!\00"{{.*}} sanitize_memtag
+
+// IGNORELIST: @{{.*}}extra_global{{.*}} ={{.*}} sanitize_memtag
+
+// IGNORELIST:     @{{.*}}global{{.*}} =
+// IGNORELIST-NOT: sanitize_memtag
+// IGNORELIST:     @{{.*}}attributed_global{{.*}} =
+// IGNORELIST-NOT: sanitize_memtag
+// IGNORELIST:     @{{.*}}disable_instrumentation_global{{.*}} =
+// IGNORELIST-NOT: sanitize_memtag
+// IGNORELIST:     @{{.*}}ignorelisted_globa{{.*}} =
+// IGNORELIST-NOT: sanitize_memtag
+// IGNORELIST:     @{{.*}}static_var{{.*}} =
+// IGNORELIST-NOT: sanitize_memtag
+// IGNORELIST:     @{{.*}} = {{.*}} c"Hello, world!\00"{{.*}}
+// IGNORELIST-NOT: sanitize_memtag
