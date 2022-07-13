@@ -2933,22 +2933,24 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 #define EXPECT_VALID_FRAGMENT(Offset, Size, ...)                               \
   do {                                                                         \
     uint64_t Elements[] = {__VA_ARGS__};                                       \
-    DIExpression* Expression = DIExpression::get(Context, Elements);           \
-    EXPECT_TRUE(DIExpression::createFragmentExpression(                        \
-      Expression, Offset, Size).hasValue());                                   \
+    DIExpression *Expression = DIExpression::get(Context, Elements);           \
+    EXPECT_TRUE(                                                               \
+        DIExpression::createFragmentExpression(Expression, Offset, Size)       \
+            .has_value());                                                     \
   } while (false)
 #define EXPECT_INVALID_FRAGMENT(Offset, Size, ...)                             \
   do {                                                                         \
     uint64_t Elements[] = {__VA_ARGS__};                                       \
-    DIExpression* Expression = DIExpression::get(Context, Elements);           \
-    EXPECT_FALSE(DIExpression::createFragmentExpression(                       \
-      Expression, Offset, Size).hasValue());                                   \
+    DIExpression *Expression = DIExpression::get(Context, Elements);           \
+    EXPECT_FALSE(                                                              \
+        DIExpression::createFragmentExpression(Expression, Offset, Size)       \
+            .has_value());                                                     \
   } while (false)
 
   // createFragmentExpression adds correct ops.
   Optional<DIExpression*> R = DIExpression::createFragmentExpression(
     DIExpression::get(Context, {}), 0, 32);
-  EXPECT_EQ(R.hasValue(), true);
+  EXPECT_EQ(R.has_value(), true);
   EXPECT_EQ(3u, (*R)->getNumElements());
   EXPECT_EQ(dwarf::DW_OP_LLVM_fragment, (*R)->getElement(0));
   EXPECT_EQ(0u, (*R)->getElement(1));
@@ -3455,20 +3457,20 @@ TEST_F(FunctionAttachmentTest, Verifier) {
 
 TEST_F(FunctionAttachmentTest, RealEntryCount) {
   Function *F = getFunction("foo");
-  EXPECT_FALSE(F->getEntryCount().hasValue());
+  EXPECT_FALSE(F->getEntryCount().has_value());
   F->setEntryCount(12304, Function::PCT_Real);
   auto Count = F->getEntryCount();
-  EXPECT_TRUE(Count.hasValue());
+  EXPECT_TRUE(Count.has_value());
   EXPECT_EQ(12304u, Count->getCount());
   EXPECT_EQ(Function::PCT_Real, Count->getType());
 }
 
 TEST_F(FunctionAttachmentTest, SyntheticEntryCount) {
   Function *F = getFunction("bar");
-  EXPECT_FALSE(F->getEntryCount().hasValue());
+  EXPECT_FALSE(F->getEntryCount().has_value());
   F->setEntryCount(123, Function::PCT_Synthetic);
   auto Count = F->getEntryCount(true /*allow synthetic*/);
-  EXPECT_TRUE(Count.hasValue());
+  EXPECT_TRUE(Count.has_value());
   EXPECT_EQ(123u, Count->getCount());
   EXPECT_EQ(Function::PCT_Synthetic, Count->getType());
 }

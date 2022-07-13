@@ -2715,7 +2715,6 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr,
       while (CurPtr + 16 < BufferEnd) {
         int Mask = _mm_movemask_epi8(*(const __m128i *)CurPtr);
         if (LLVM_UNLIKELY(Mask != 0)) {
-          CurPtr += llvm::countTrailingZeros<unsigned>(Mask);
           goto MultiByteUTF8;
         }
         // look for slashes

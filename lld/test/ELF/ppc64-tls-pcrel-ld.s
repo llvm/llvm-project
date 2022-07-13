@@ -7,12 +7,12 @@
 # RUN: llvm-readelf -r %t-ld.so | FileCheck %s --check-prefix=LD-RELOC
 # RUN: llvm-readelf -s %t-ld.so | FileCheck %s --check-prefix=LD-SYM
 # RUN: llvm-readelf -x .got %t-ld.so | FileCheck %s --check-prefix=LD-GOT
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t-ld.so | FileCheck %s --check-prefix=LD
+# RUN: llvm-objdump -d --no-show-raw-insn %t-ld.so | FileCheck %s --check-prefix=LD
 
 # RUN: llvm-readelf -r %t-ldtole | FileCheck %s --check-prefix=LDTOLE-RELOC
 # RUN: llvm-readelf -s %t-ldtole | FileCheck %s --check-prefix=LDTOLE-SYM
 # RUN: llvm-readelf -x .got %t-ldtole 2>&1 | FileCheck %s --check-prefix=LDTOLE-GOT
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t-ldtole | FileCheck %s --check-prefix=LDTOLE
+# RUN: llvm-objdump -d --no-show-raw-insn %t-ldtole | FileCheck %s --check-prefix=LDTOLE
 
 ## This test checks the Local Dynamic PC Relative TLS implementation for lld.
 ## LD - Local Dynamic with no relaxation possible

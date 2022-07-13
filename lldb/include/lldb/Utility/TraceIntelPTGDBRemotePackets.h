@@ -50,6 +50,10 @@ struct TraceIntelPTStartRequest : TraceStartRequest {
   /// Whether to have a trace buffer per thread or per cpu cpu.
   llvm::Optional<bool> per_cpu_tracing;
 
+  /// Disable the cgroup filtering that is automatically applied in per cpu
+  /// mode.
+  llvm::Optional<bool> disable_cgroup_filtering;
+
   bool IsPerCpuTracing() const;
 };
 
@@ -107,6 +111,7 @@ struct LinuxPerfZeroTscConversion {
 struct TraceIntelPTGetStateResponse : TraceGetStateResponse {
   /// The TSC to wall time conversion if it exists, otherwise \b nullptr.
   llvm::Optional<LinuxPerfZeroTscConversion> tsc_perf_zero_conversion;
+  bool using_cgroup_filtering = false;
 };
 
 bool fromJSON(const llvm::json::Value &value,

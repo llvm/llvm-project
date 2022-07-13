@@ -50,6 +50,7 @@ on how to get in touch with us and to learn more about the current status.
    FortranLLVMTestSuite
    IORuntimeInternals
    Intrinsics
+   IntrinsicTypes
    LabelResolution
    ModFiles
    OpenMP-4.5-grammar.md

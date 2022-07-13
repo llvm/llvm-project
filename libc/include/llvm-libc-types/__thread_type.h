@@ -11,7 +11,6 @@
 
 typedef struct {
   void *__attrib;
-  void *__platform_attrib;
 } __thread_type;
 
 #endif // __LLVM_LIBC_TYPES_THREAD_TYPE_H__

@@ -9,8 +9,8 @@
 # RUN: ld.lld --shared %t1.o -o %t1.so
 # RUN: ld.lld -T %t.script %t1.so %t2.o -o %t2
 # RUN: ld.lld -T %t.script %t1.so %t3.o -o %t3
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t2 | FileCheck %s --check-prefix=T2
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t3 | FileCheck %s --check-prefix=T3
+# RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck %s --check-prefix=T2
+# RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck %s --check-prefix=T3
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s --defsym T1=1 -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s --defsym T2=1 -o %t2.o
@@ -18,8 +18,8 @@
 # RUN: ld.lld --shared %t1.o -o %t1.so
 # RUN: ld.lld -T %t.script %t1.so %t2.o -o %t2
 # RUN: ld.lld -T %t.script %t1.so %t3.o -o %t3
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t2 | FileCheck %s --check-prefix=T2
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t3 | FileCheck %s --check-prefix=T3
+# RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck %s --check-prefix=T2
+# RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck %s --check-prefix=T3
 
 .ifdef T1
 .globl callee

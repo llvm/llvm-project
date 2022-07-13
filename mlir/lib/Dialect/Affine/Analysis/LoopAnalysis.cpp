@@ -92,7 +92,7 @@ Optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
   Optional<uint64_t> tripCount;
   for (auto resultExpr : map.getResults()) {
     if (auto constExpr = resultExpr.dyn_cast<AffineConstantExpr>()) {
-      if (tripCount.hasValue())
+      if (tripCount.has_value())
         tripCount = std::min(tripCount.getValue(),
                              static_cast<uint64_t>(constExpr.getValue()));
       else
@@ -132,12 +132,12 @@ uint64_t mlir::getLargestDivisorOfTripCount(AffineForOp forOp) {
       // Trip count is not a known constant; return its largest known divisor.
       thisGcd = resultExpr.getLargestKnownDivisor();
     }
-    if (gcd.hasValue())
+    if (gcd.has_value())
       gcd = llvm::GreatestCommonDivisor64(gcd.getValue(), thisGcd);
     else
       gcd = thisGcd;
   }
-  assert(gcd.hasValue() && "value expected per above logic");
+  assert(gcd.has_value() && "value expected per above logic");
   return gcd.getValue();
 }
 

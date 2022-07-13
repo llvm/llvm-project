@@ -158,3 +158,15 @@ define i64 @test11(i32* %0, i64 %1) {
   %5 = ashr exact i64 %4, 32
   ret i64 %5
 }
+
+; Make sure we use slli+srai to enable the possibility of compressed
+define i32 @test12(i32 signext %0) {
+; RV64I-LABEL: test12:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 49
+; RV64I-NEXT:    srai a0, a0, 47
+; RV64I-NEXT:    ret
+  %2 = shl i32 %0, 17
+  %3 = ashr i32 %2, 15
+  ret i32 %3
+}

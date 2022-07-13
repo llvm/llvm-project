@@ -266,6 +266,16 @@ public:
   ///    The value of the counter or \b llvm::None if not available.
   virtual llvm::Optional<uint64_t>
   GetCounter(lldb::TraceCounter counter_type) const = 0;
+
+  /// Get the CPU associated with the current trace item.
+  ///
+  /// This call might not be O(1), so it's suggested to invoke this method
+  /// whenever a cpu change event is fired.
+  ///
+  /// \return
+  ///    The requested CPU id, or \a llvm::None if this information is
+  ///    not available for the current item.
+  virtual llvm::Optional<lldb::cpu_id_t> GetCPU() const = 0;
   /// \}
 
 protected:

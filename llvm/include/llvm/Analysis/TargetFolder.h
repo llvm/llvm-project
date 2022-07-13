@@ -103,7 +103,14 @@ public:
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC)
-      return ConstantExpr::getCompare(P, LC, RC);
+      return Fold(ConstantExpr::getCompare(P, LC, RC));
+    return nullptr;
+  }
+
+  Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
+                      FastMathFlags FMF) const override {
+    if (Constant *C = dyn_cast<Constant>(V))
+      return Fold(ConstantExpr::get(Opc, C));
     return nullptr;
   }
 
@@ -172,18 +179,6 @@ public:
     if (C1 && C2)
       return Fold(ConstantExpr::getShuffleVector(C1, C2, Mask));
     return nullptr;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Unary Operators
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateFNeg(Constant *C) const override {
-    return Fold(ConstantExpr::getFNeg(C));
-  }
-
-  Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {
-    return Fold(ConstantExpr::get(Opc, C));
   }
 
   //===--------------------------------------------------------------------===//
