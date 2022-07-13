@@ -45,6 +45,10 @@ using LinalgLoops = SmallVector<Operation *, 4>;
 void populatePadTensorTilingPatterns(RewritePatternSet &patterns,
                                      const LinalgTilingOptions &options);
 
+/// Populate patterns for splitting a `LinalgOp` with multiple statements within
+/// its payload into multiple `GenericOp` that have a single statement.
+void populateDecomposeLinalgOpsPattern(RewritePatternSet &patterns);
+
 /// Populate patterns for vectorizing low-D convolution ops. This is a step in
 /// progressive lowering for convolution ops, it assume high-D convolution ops
 /// were decomposed previously.
