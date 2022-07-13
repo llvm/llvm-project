@@ -135,9 +135,6 @@ struct LinalgOpInstancePromotionOptions {
   CopyCallbackFn copyInFn;
   CopyCallbackFn copyOutFn;
 
-  /// Allow the use of dynamically-sized buffers.
-  bool dynamicBuffers;
-
   /// Alignment of promoted buffer.
   Optional<unsigned> alignment;
 };
@@ -145,8 +142,7 @@ struct LinalgOpInstancePromotionOptions {
 
 LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
     LinalgOp linalgOp, const LinalgPromotionOptions &options)
-    : subViews(), dynamicBuffers(options.dynamicBuffers),
-      alignment(options.alignment) {
+    : subViews(), alignment(options.alignment) {
   assert(linalgOp.hasBufferSemantics() && "revisit usage of shaped operand");
   auto vUseFullTileBuffers =
       options.useFullTileBuffers.value_or(llvm::SmallBitVector());
@@ -393,37 +389,4 @@ mlir::linalg::promoteSubViews(OpBuilder &builder, LinalgOp linalgOp,
   if (failed(res))
     return failure();
   return res;
-}
-
-namespace {
-struct LinalgPromotionPass : public LinalgPromotionBase<LinalgPromotionPass> {
-  LinalgPromotionPass() = default;
-  LinalgPromotionPass(bool dynamicBuffers, bool useAlloca) {
-    this->dynamicBuffers = dynamicBuffers;
-    this->useAlloca = useAlloca;
-  }
-
-  void runOnOperation() override {
-    getOperation().walk([&](LinalgOp op) {
-      auto options = LinalgPromotionOptions()
-                         .setDynamicBuffers(dynamicBuffers)
-                         .setUseAlloca(useAlloca);
-      if (failed(promoteSubviewsPrecondition(op, options)))
-        return;
-      LLVM_DEBUG(llvm::dbgs() << "Promote: " << *(op.getOperation()) << "\n");
-      ImplicitLocOpBuilder b(op.getLoc(), op);
-      // TODO: signalPassFailure() ?
-      (void)promoteSubViews(b, op, options);
-    });
-  }
-};
-} // namespace
-
-// TODO: support more transformation options in the pass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgPromotionPass(bool dynamicBuffers, bool useAlloca) {
-  return std::make_unique<LinalgPromotionPass>(dynamicBuffers, useAlloca);
-}
-std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLinalgPromotionPass() {
-  return std::make_unique<LinalgPromotionPass>();
 }

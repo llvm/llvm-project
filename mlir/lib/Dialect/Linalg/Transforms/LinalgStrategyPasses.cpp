@@ -230,38 +230,6 @@ struct LinalgStrategyInterchangePass
   LinalgTransformationFilter filter;
 };
 
-/// Configurable pass to apply pattern-based linalg promotion.
-struct LinalgStrategyPromotePass
-    : public LinalgStrategyPromotePassBase<LinalgStrategyPromotePass> {
-
-  LinalgStrategyPromotePass() = default;
-
-  LinalgStrategyPromotePass(StringRef opName, LinalgPromotionOptions opt,
-                            LinalgTransformationFilter filt)
-      : options(std::move(opt)), filter(std::move(filt)) {
-    this->anchorOpName.setValue(opName.str());
-  }
-
-  void runOnOperation() override {
-    auto funcOp = getOperation();
-    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
-      return;
-
-    RewritePatternSet promotionPattern(funcOp.getContext());
-    if (!anchorOpName.empty()) {
-      promotionPattern.add<LinalgBasePromotionPattern>(
-          anchorOpName, funcOp.getContext(), options, filter);
-    } else {
-      promotionPattern.add<LinalgBasePromotionPattern>(funcOp.getContext(),
-                                                       filter, options);
-    }
-    (void)applyPatternsAndFoldGreedily(funcOp, std::move(promotionPattern));
-  }
-
-  LinalgPromotionOptions options;
-  LinalgTransformationFilter filter;
-};
-
 /// Configurable pass to apply pattern-based linalg peeling.
 struct LinalgStrategyPeelPass
     : public LinalgStrategyPeelPassBase<LinalgStrategyPeelPass> {
@@ -506,14 +474,6 @@ mlir::createLinalgStrategyPadPass(StringRef opName,
                                   const LinalgPaddingOptions &opt,
                                   const LinalgTransformationFilter &filter) {
   return std::make_unique<LinalgStrategyPadPass>(opName, opt, filter);
-}
-
-/// Create a LinalgStrategyPromotePass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgStrategyPromotePass(
-    StringRef opName, const LinalgPromotionOptions &opt,
-    const LinalgTransformationFilter &filter) {
-  return std::make_unique<LinalgStrategyPromotePass>(opName, opt, filter);
 }
 
 /// Create a LinalgStrategyGeneralizePass.
