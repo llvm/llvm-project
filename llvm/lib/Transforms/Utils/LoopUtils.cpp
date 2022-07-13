@@ -1357,7 +1357,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         const SCEV *ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
         if (isa<SCEVCouldNotCompute>(ExitValue) ||
             !SE->isLoopInvariant(ExitValue, L) ||
-            !isSafeToExpand(ExitValue, *SE)) {
+            !Rewriter.isSafeToExpand(ExitValue)) {
           // TODO: This should probably be sunk into SCEV in some way; maybe a
           // getSCEVForExit(SCEV*, L, ExitingBB)?  It can be generalized for
           // most SCEV expressions and other recurrence types (e.g. shift
@@ -1370,7 +1370,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
               ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
           if (isa<SCEVCouldNotCompute>(ExitValue) ||
               !SE->isLoopInvariant(ExitValue, L) ||
-              !isSafeToExpand(ExitValue, *SE))
+              !Rewriter.isSafeToExpand(ExitValue))
             continue;
         }
 

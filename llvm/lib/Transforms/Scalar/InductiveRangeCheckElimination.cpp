@@ -1451,7 +1451,7 @@ bool LoopConstrainer::run() {
       return false;
     }
 
-    if (!isSafeToExpandAt(ExitPreLoopAtSCEV, InsertPt, SE)) {
+    if (!Expander.isSafeToExpandAt(ExitPreLoopAtSCEV, InsertPt)) {
       LLVM_DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
                         << " preloop exit limit " << *ExitPreLoopAtSCEV
                         << " at block " << InsertPt->getParent()->getName()
@@ -1478,7 +1478,7 @@ bool LoopConstrainer::run() {
       return false;
     }
 
-    if (!isSafeToExpandAt(ExitMainLoopAtSCEV, InsertPt, SE)) {
+    if (!Expander.isSafeToExpandAt(ExitMainLoopAtSCEV, InsertPt)) {
       LLVM_DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
                         << " main loop exit limit " << *ExitMainLoopAtSCEV
                         << " at block " << InsertPt->getParent()->getName()
