@@ -11,19 +11,15 @@ declare void @abort() #1
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_PROMOTED13:%.*]] = load i32, i32* @a, align 4
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    [[ADD:%.*]] = sub i32 0, 1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A_PROMOTED13]], [[ADD]]
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY3]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND1_PREHEADER]], label [[FOR_END6:%.*]]
 ; CHECK:       for.end6:
-; CHECK-NEXT:    [[OR_LCSSA_LCSSA:%.*]] = phi i32 [ [[OR_LCSSA]], [[FOR_END]] ]
+; CHECK-NEXT:    [[OR_LCSSA_LCSSA:%.*]] = phi i32 [ -1, [[FOR_END]] ]
 ; CHECK-NEXT:    store i32 [[OR_LCSSA_LCSSA]], i32* @a, align 4
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[OR_LCSSA_LCSSA]], -1
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]

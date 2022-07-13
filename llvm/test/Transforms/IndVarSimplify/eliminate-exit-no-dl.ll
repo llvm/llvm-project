@@ -14,10 +14,8 @@ define void @foo() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @global, i64 0, i64 2), i64 -1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, i8* [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i8* [[TMP4]], getelementptr inbounds ([0 x i8], [0 x i8]* @global, i64 0, i64 500)
-; CHECK-NEXT:    br i1 [[TMP5]], label [[BB7:%.*]], label [[BB11:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @global, i64 0, i64 1), align 1
+; CHECK-NEXT:    br i1 false, label [[BB7:%.*]], label [[BB11:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP6]] to i64
 ; CHECK-NEXT:    br i1 true, label [[BB11]], label [[BB3]]
