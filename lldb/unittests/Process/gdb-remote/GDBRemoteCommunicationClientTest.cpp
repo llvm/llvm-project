@@ -190,7 +190,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
       R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}]])");
 
   auto result = async_result.get();
-  ASSERT_TRUE(result.hasValue());
+  ASSERT_TRUE(result.has_value());
   ASSERT_EQ(1u, result->size());
   EXPECT_EQ("/foo/bar.so", result.getValue()[0].GetFileSpec().GetPath());
   EXPECT_EQ(triple, result.getValue()[0].GetArchitecture().GetTriple());
@@ -215,7 +215,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
       R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}]])");
 
   auto result = async_result.get();
-  ASSERT_TRUE(result.hasValue());
+  ASSERT_TRUE(result.has_value());
   ASSERT_EQ(1u, result->size());
   EXPECT_EQ("/foo/bar.so", result.getValue()[0].GetFileSpec().GetPath());
   EXPECT_EQ(triple, result.getValue()[0].GetArchitecture().GetTriple());
