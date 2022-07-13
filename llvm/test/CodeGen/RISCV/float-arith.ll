@@ -611,6 +611,12 @@ define float @fnmadd_s_3(float %a, float %b, float %c) nounwind {
 ; RV64IF-NEXT:    fneg.s fa0, ft0
 ; RV64IF-NEXT:    ret
 ;
+; CHECKIF-LABEL: fnmadd_s_3:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fmadd.s ft0, fa0, fa1, fa2
+; CHECKIF-NEXT:    fneg.s fa0, ft0
+; CHECKIF-NEXT:    ret
+;
 ; RV32I-LABEL: fnmadd_s_3:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -647,6 +653,11 @@ define float @fnmadd_nsz(float %a, float %b, float %c) nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fnmadd.s fa0, fa0, fa1, fa2
 ; RV64IF-NEXT:    ret
+;
+; CHECKIF-LABEL: fnmadd_nsz:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    fnmadd.s fa0, fa0, fa1, fa2
+; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_nsz:
 ; RV32I:       # %bb.0:
