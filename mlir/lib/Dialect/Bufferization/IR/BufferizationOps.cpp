@@ -172,12 +172,12 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
 
   // Compute memory space of this allocation.
   unsigned memorySpace;
-  if (getMemorySpace().hasValue()) {
+  if (getMemorySpace().has_value()) {
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
     memorySpace =
         copyBuffer.getType().cast<BaseMemRefType>().getMemorySpaceAsInt();
-  } else if (options.defaultMemorySpace.hasValue()) {
+  } else if (options.defaultMemorySpace.has_value()) {
     memorySpace = *options.defaultMemorySpace;
   } else {
     return op->emitError("could not infer memory space");
@@ -470,11 +470,11 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     llvm::Optional<Operation *> maybeCloneDeallocOp =
         memref::findDealloc(cloneOp.getOutput());
     // Skip if either of them has > 1 deallocate operations.
-    if (!maybeCloneDeallocOp.hasValue())
+    if (!maybeCloneDeallocOp.has_value())
       return failure();
     llvm::Optional<Operation *> maybeSourceDeallocOp =
         memref::findDealloc(source);
-    if (!maybeSourceDeallocOp.hasValue())
+    if (!maybeSourceDeallocOp.has_value())
       return failure();
     Operation *cloneDeallocOp = *maybeCloneDeallocOp;
     Operation *sourceDeallocOp = *maybeSourceDeallocOp;

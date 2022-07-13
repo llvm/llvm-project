@@ -68,7 +68,7 @@ LogicalResult ScalarOpToLibmCall<Op, TypeResolver>::matchAndRewrite(
     Op op, PatternRewriter &rewriter) const {
   auto module = SymbolTable::getNearestSymbolTable(op);
   auto isDouble = TypeResolver()(op.getType());
-  if (!isDouble.hasValue())
+  if (!isDouble.has_value())
     return failure();
 
   auto name = isDouble.value() ? doubleFunc : floatFunc;

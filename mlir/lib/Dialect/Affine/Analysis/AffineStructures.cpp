@@ -322,7 +322,7 @@ unsigned FlatAffineValueConstraints::insertVar(VarKind kind, unsigned pos,
 
 bool FlatAffineValueConstraints::hasValues() const {
   return llvm::find_if(values, [](Optional<Value> var) {
-           return var.hasValue();
+           return var.has_value();
          }) != values.end();
 }
 
@@ -402,11 +402,11 @@ static void mergeAndAlignVars(unsigned offset, FlatAffineValueConstraints *a,
 
   assert(std::all_of(a->getMaybeValues().begin() + offset,
                      a->getMaybeValues().end(),
-                     [](Optional<Value> var) { return var.hasValue(); }));
+                     [](Optional<Value> var) { return var.has_value(); }));
 
   assert(std::all_of(b->getMaybeValues().begin() + offset,
                      b->getMaybeValues().end(),
-                     [](Optional<Value> var) { return var.hasValue(); }));
+                     [](Optional<Value> var) { return var.has_value(); }));
 
   SmallVector<Value, 4> aDimValues;
   a->getValues(offset, a->getNumDimVars(), &aDimValues);
@@ -1009,7 +1009,7 @@ void FlatAffineValueConstraints::getSliceBounds(
 
       auto lbConst = getConstantBound(BoundType::LB, pos);
       auto ubConst = getConstantBound(BoundType::UB, pos);
-      if (lbConst.hasValue() && ubConst.hasValue()) {
+      if (lbConst.has_value() && ubConst.has_value()) {
         // Detect equality to a constant.
         if (lbConst.getValue() == ubConst.getValue()) {
           memo[pos] = getAffineConstantExpr(lbConst.getValue(), context);
@@ -1120,7 +1120,7 @@ void FlatAffineValueConstraints::getSliceBounds(
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice lb\n");
         auto lbConst = getConstantBound(BoundType::LB, pos + offset);
-        if (lbConst.hasValue()) {
+        if (lbConst.has_value()) {
           lbMap = AffineMap::get(
               numMapDims, numMapSymbols,
               getAffineConstantExpr(lbConst.getValue(), context));
@@ -1130,7 +1130,7 @@ void FlatAffineValueConstraints::getSliceBounds(
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice ub\n");
         auto ubConst = getConstantBound(BoundType::UB, pos + offset);
-        if (ubConst.hasValue()) {
+        if (ubConst.has_value()) {
           ubMap =
               AffineMap::get(numMapDims, numMapSymbols,
                              getAffineConstantExpr(
@@ -1673,12 +1673,12 @@ void FlatAffineRelation::compose(const FlatAffineRelation &other) {
 
   // Add and match domain of `rel` to domain of `this`.
   for (unsigned i = 0, e = rel.getNumDomainDims(); i < e; ++i)
-    if (relMaybeValues[i].hasValue())
+    if (relMaybeValues[i].has_value())
       setValue(i, relMaybeValues[i].getValue());
   // Add and match range of `this` to range of `rel`.
   for (unsigned i = 0, e = getNumRangeDims(); i < e; ++i) {
     unsigned rangeIdx = rel.getNumDomainDims() + i;
-    if (thisMaybeValues[rangeIdx].hasValue())
+    if (thisMaybeValues[rangeIdx].has_value())
       rel.setValue(rangeIdx, thisMaybeValues[rangeIdx].getValue());
   }
 

@@ -44,7 +44,7 @@ public:
   OptionalParseResult(llvm::NoneType) : impl(llvm::None) {}
 
   /// Returns true if we contain a valid ParseResult value.
-  bool hasValue() const { return impl.hasValue(); }
+  bool hasValue() const { return impl.has_value(); }
 
   /// Access the internal ParseResult value.
   ParseResult getValue() const { return impl.getValue(); }

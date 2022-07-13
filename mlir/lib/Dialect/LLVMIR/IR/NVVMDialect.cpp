@@ -117,14 +117,14 @@ static bool isIntegerPtxType(MMATypes type) {
 MMATypes MmaOp::accumPtxType() {
   Optional<mlir::NVVM::MMATypes> val = inferOperandMMAType(
       getODSOperands(2).getTypes().front(), /*isAccum=*/true);
-  assert(val.hasValue() && "accumulator PTX type should always be inferrable");
+  assert(val.has_value() && "accumulator PTX type should always be inferrable");
   return val.getValue();
 }
 
 MMATypes MmaOp::resultPtxType() {
   Optional<mlir::NVVM::MMATypes> val =
       inferOperandMMAType(getResult().getType(), /*isAccum=*/true);
-  assert(val.hasValue() && "result PTX type should always be inferrable");
+  assert(val.has_value() && "result PTX type should always be inferrable");
   return val.getValue();
 }
 
@@ -224,10 +224,10 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
     result.addAttribute("layoutB", MMALayoutAttr::get(ctx, MMALayout::col));
   }
 
-  if (intOverflow.hasValue())
+  if (intOverflow.has_value())
     result.addAttribute("intOverflowBehavior",
                         MMAIntOverflowAttr::get(ctx, *intOverflow));
-  if (b1Op.hasValue())
+  if (b1Op.has_value())
     result.addAttribute("b1Op", MMAB1OpAttr::get(ctx, *b1Op));
 
   result.addTypes(resultType);
@@ -311,13 +311,13 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   for (unsigned idx = 0; idx < names.size(); idx++) {
     const auto &frag = frags[idx];
     Optional<NamedAttribute> attr = namedAttributes.getNamed(names[idx]);
-    if (!frag.elemtype.hasValue() && !attr.hasValue()) {
+    if (!frag.elemtype.has_value() && !attr.has_value()) {
       return parser.emitError(
           parser.getNameLoc(),
           "attribute " + names[idx] +
               " is not provided explicitly and cannot be inferred");
     }
-    if (!attr.hasValue())
+    if (!attr.has_value())
       result.addAttribute(
           names[idx], MMATypesAttr::get(parser.getContext(), *frag.elemtype));
   }
