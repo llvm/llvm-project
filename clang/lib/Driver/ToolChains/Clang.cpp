@@ -2228,8 +2228,23 @@ void Clang::AddSparcTargetArgs(const ArgList &Args,
 
 void Clang::AddSystemZTargetArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
-  bool HasBackchain = Args.hasFlag(options::OPT_mbackchain,
-                                   options::OPT_mno_backchain, false);
+  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
+    StringRef Name = A->getValue();
+
+    std::string TuneCPU;
+    if (Name == "native")
+      TuneCPU = std::string(llvm::sys::getHostCPUName());
+    else
+      TuneCPU = std::string(Name);
+
+    if (!TuneCPU.empty()) {
+      CmdArgs.push_back("-tune-cpu");
+      CmdArgs.push_back(Args.MakeArgString(TuneCPU));
+    }
+  }
+
+  bool HasBackchain =
+      Args.hasFlag(options::OPT_mbackchain, options::OPT_mno_backchain, false);
   bool HasPackedStack = Args.hasFlag(options::OPT_mpacked_stack,
                                      options::OPT_mno_packed_stack, false);
   systemz::FloatABI FloatABI =
