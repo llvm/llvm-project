@@ -102,6 +102,7 @@ public:
     return getTM<LoongArchTargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
 };
 } // namespace
@@ -109,6 +110,12 @@ public:
 TargetPassConfig *
 LoongArchTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new LoongArchPassConfig(*this, PM);
+}
+
+void LoongArchPassConfig::addIRPasses() {
+  addPass(createAtomicExpandPass());
+
+  TargetPassConfig::addIRPasses();
 }
 
 bool LoongArchPassConfig::addInstSelector() {

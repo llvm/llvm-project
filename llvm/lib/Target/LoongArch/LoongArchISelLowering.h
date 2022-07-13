@@ -109,6 +109,10 @@ private:
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
+
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override {
+    return isa<LoadInst>(I) || isa<StoreInst>(I);
+  }
 };
 
 } // end namespace llvm
