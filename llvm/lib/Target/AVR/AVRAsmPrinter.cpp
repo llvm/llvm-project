@@ -180,10 +180,6 @@ bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void AVRAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  // FIXME: Enable feature predicate checks once all the test pass.
-  // AVR_MC::verifyInstructionPredicates(MI->getOpcode(),
-  //                                     getSubtargetInfo().getFeatureBits());
-
   AVRMCInstLower MCInstLowering(OutContext, *this);
 
   MCInst I;

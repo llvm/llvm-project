@@ -37,5 +37,4 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTargetInfo() {
 // which have to be in a shared location between CodeGen and MC.
 #define GET_INSTRMAP_INFO 1
 #define GET_INSTRINFO_ENUM 1
-#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "WebAssemblyGenInstrInfo.inc"

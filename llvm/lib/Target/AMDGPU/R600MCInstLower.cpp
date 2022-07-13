@@ -13,7 +13,6 @@
 //
 
 #include "AMDGPUMCInstLower.h"
-#include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600AsmPrinter.h"
 #include "R600Subtarget.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -43,9 +42,6 @@ void R600MCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
 }
 
 void R600AsmPrinter::emitInstruction(const MachineInstr *MI) {
-  R600_MC::verifyInstructionPredicates(MI->getOpcode(),
-                                       getSubtargetInfo().getFeatureBits());
-
   const R600Subtarget &STI = MF->getSubtarget<R600Subtarget>();
   R600MCInstLower MCInstLowering(OutContext, STI, *this);
 

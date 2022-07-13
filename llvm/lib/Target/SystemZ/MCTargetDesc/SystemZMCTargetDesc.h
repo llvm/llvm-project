@@ -95,7 +95,6 @@ std::unique_ptr<MCObjectTargetWriter> createSystemZObjectWriter(uint8_t OSABI);
 
 // Defines symbolic names for the SystemZ instructions.
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "SystemZGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

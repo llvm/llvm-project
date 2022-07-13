@@ -77,9 +77,6 @@ bool M68kAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 void M68kAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  M68k_MC::verifyInstructionPredicates(MI->getOpcode(),
-                                       getSubtargetInfo().getFeatureBits());
-
   switch (MI->getOpcode()) {
   default: {
     if (MI->isPseudo()) {
