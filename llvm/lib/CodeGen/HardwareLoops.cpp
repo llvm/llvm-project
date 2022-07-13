@@ -407,13 +407,13 @@ Value *HardwareLoop::InitLoopCount() {
     BasicBlock *Predecessor = BB->getSinglePredecessor();
     // If it's not safe to create a while loop then don't force it and create a
     // do-while loop instead
-    if (!isSafeToExpandAt(ExitCount, Predecessor->getTerminator(), SE))
+    if (!SCEVE.isSafeToExpandAt(ExitCount, Predecessor->getTerminator()))
         UseLoopGuard = false;
     else
         BB = Predecessor;
   }
 
-  if (!isSafeToExpandAt(ExitCount, BB->getTerminator(), SE)) {
+  if (!SCEVE.isSafeToExpandAt(ExitCount, BB->getTerminator())) {
     LLVM_DEBUG(dbgs() << "- Bailing, unsafe to expand ExitCount "
                << *ExitCount << "\n");
     return nullptr;

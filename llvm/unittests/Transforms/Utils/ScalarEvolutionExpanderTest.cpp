@@ -259,17 +259,17 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderIsSafeToExpandAt) {
   Instruction *Ret = Builder.CreateRetVoid();
 
   ScalarEvolution SE = buildSE(*F);
+  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
   const SCEV *S = SE.getSCEV(Phi);
   EXPECT_TRUE(isa<SCEVAddRecExpr>(S));
   const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(S);
   EXPECT_TRUE(AR->isAffine());
-  EXPECT_FALSE(isSafeToExpandAt(AR, Top->getTerminator(), SE));
-  EXPECT_FALSE(isSafeToExpandAt(AR, LPh->getTerminator(), SE));
-  EXPECT_TRUE(isSafeToExpandAt(AR, L->getTerminator(), SE));
-  EXPECT_TRUE(isSafeToExpandAt(AR, Post->getTerminator(), SE));
+  EXPECT_FALSE(Exp.isSafeToExpandAt(AR, Top->getTerminator()));
+  EXPECT_FALSE(Exp.isSafeToExpandAt(AR, LPh->getTerminator()));
+  EXPECT_TRUE(Exp.isSafeToExpandAt(AR, L->getTerminator()));
+  EXPECT_TRUE(Exp.isSafeToExpandAt(AR, Post->getTerminator()));
 
   EXPECT_TRUE(LI->getLoopFor(L)->isLCSSAForm(*DT));
-  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
   Exp.expandCodeFor(SE.getSCEV(Add), nullptr, Ret);
   EXPECT_TRUE(LI->getLoopFor(L)->isLCSSAForm(*DT));
 }
