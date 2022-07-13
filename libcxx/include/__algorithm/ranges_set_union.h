@@ -42,34 +42,68 @@ using set_union_result = in_in_out_result<_InIter1, _InIter2, _OutIter>;
 namespace __set_union {
 
 struct __fn {
-
-  template <input_iterator _InIter1, sentinel_for<_InIter1> _Sent1,
-            input_iterator _InIter2, sentinel_for<_InIter2> _Sent2,
-            weakly_incrementable _OutIter, class _Comp = ranges::less,
-            class _Proj1 = identity, class _Proj2 = identity>
-  requires mergeable<_InIter1, _InIter2, _OutIter, _Comp, _Proj1, _Proj2>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  set_union_result<_InIter1, _InIter2, _OutIter>
-  operator()(_InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Sent2 __last2, _OutIter __result, _Comp __comp = {},
-            _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
-    // TODO: implement
-    (void)__first1; (void)__last1; (void)__first2; (void)__last2; (void)__result; (void)__comp; (void)__proj1;
-    (void)__proj2;
-    return {};
+  template <
+      input_iterator _InIter1,
+      sentinel_for<_InIter1> _Sent1,
+      input_iterator _InIter2,
+      sentinel_for<_InIter2> _Sent2,
+      weakly_incrementable _OutIter,
+      class _Comp  = ranges::less,
+      class _Proj1 = identity,
+      class _Proj2 = identity>
+    requires mergeable<_InIter1, _InIter2, _OutIter, _Comp, _Proj1, _Proj2>
+  _LIBCPP_HIDE_FROM_ABI constexpr set_union_result<_InIter1, _InIter2, _OutIter> operator()(
+      _InIter1 __first1,
+      _Sent1 __last1,
+      _InIter2 __first2,
+      _Sent2 __last2,
+      _OutIter __result,
+      _Comp __comp   = {},
+      _Proj1 __proj1 = {},
+      _Proj2 __proj2 = {}) const {
+    auto __ret = std::__set_union(
+        std::move(__first1),
+        std::move(__last1),
+        std::move(__first2),
+        std::move(__last2),
+        std::move(__result),
+        ranges::__make_projected_comp(__comp, __proj1, __proj2));
+    return {std::move(__ret.__in1_), std::move(__ret.__in2_), std::move(__ret.__out_)};
   }
 
-  template <input_range _Range1, input_range _Range2, weakly_incrementable _OutIter,
-            class _Comp = ranges::less, class _Proj1 = identity, class _Proj2 = identity>
-  requires mergeable<iterator_t<_Range1>, iterator_t<_Range2>, _OutIter, _Comp, _Proj1, _Proj2>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  set_union_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>, _OutIter>
-  operator()(_Range1&& __range1, _Range2&& __range2, _OutIter __result, _Comp __comp = {},
-            _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
-    // TODO: implement
-    (void)__range1; (void)__range2; (void)__result; (void)__comp; (void)__proj1; (void)__proj2;
-    return {};
+  template <
+      input_range _Range1,
+      input_range _Range2,
+      weakly_incrementable _OutIter,
+      class _Comp  = ranges::less,
+      class _Proj1 = identity,
+      class _Proj2 = identity>
+    requires mergeable<
+        iterator_t<_Range1>,
+        iterator_t<_Range2>,
+        _OutIter,
+        _Comp,
+        _Proj1,
+        _Proj2> 
+  _LIBCPP_HIDE_FROM_ABI constexpr set_union_result<borrowed_iterator_t<_Range1>,
+                                                   borrowed_iterator_t<_Range2>,
+                                                   _OutIter>
+    operator()(
+        _Range1&& __range1,
+        _Range2&& __range2,
+        _OutIter __result,
+        _Comp __comp   = {},
+        _Proj1 __proj1 = {},
+        _Proj2 __proj2 = {}) const {
+    auto __ret = std::__set_union(
+        ranges::begin(__range1),
+        ranges::end(__range1),
+        ranges::begin(__range2),
+        ranges::end(__range2),
+        std::move(__result),
+        ranges::__make_projected_comp(__comp, __proj1, __proj2));
+    return {std::move(__ret.__in1_), std::move(__ret.__in2_), std::move(__ret.__out_)};
   }
-
 };
 
 } // namespace __set_union
