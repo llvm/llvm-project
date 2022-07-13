@@ -210,6 +210,11 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
                                     LinalgOp op, ValueRange operands,
                                     ValueRange results);
 
+/// Turns an OpFoldResult into a value, creating an index-typed constant if
+/// necessary.
+Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
+                              OpFoldResult opFoldResult);
+
 /// Creates an extract_slice/subview op for a single `valueToTile` with
 /// `builder`. This new operation extracts a tile of `valueToTile`, starting
 /// at offsets `lbs` and with sizes `subShapeSizes`. `omitPartialTileCheck`
@@ -238,10 +243,11 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &builder, Location loc,
                                       ArrayRef<Value> sizeBounds,
                                       bool omitPartialTileCheck);
 
-/// Add the tile loop induction variables `ivs` to the IndexOp results found in
-/// the body of the `tiledOp` to account for the tile offset.
-void addTileLoopIvsToIndexOpResults(OpBuilder &b, LinalgOp tiledOp,
-                                    ArrayRef<Value> ivs);
+/// Add the specified offsets to any `linalg.index` ops contained in the given
+/// `linalgOp`. The offsets are provided in the same order as iteration space
+/// dimensions. Null offests are assumed to be zero.
+void offsetIndices(OpBuilder &b, LinalgOp linalgOp, ArrayRef<Value> offests);
+void offsetIndices(RewriterBase &b, LinalgOp linalgOp, ArrayRef<Value> offests);
 
 using FusableOpDependencesTy = llvm::MapVector<
     Operation *,

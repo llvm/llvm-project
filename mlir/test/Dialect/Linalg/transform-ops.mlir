@@ -3,7 +3,7 @@
 transform.sequence {
 ^bb1(%arg0: !pdl.operation):
   // CHECK %{{.*}}, %{{.*}}:2 = transform.structured.tile
-  %0, %1:2 = transform.structured.tile %arg0 { sizes = [2, 0, 3] }
+  %0, %1:2 = transform.structured.tile %arg0 [2, 0, 3]
 }
 
 //===----------------------------------------------------------------------===//

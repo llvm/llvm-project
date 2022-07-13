@@ -88,7 +88,8 @@ LOOP:                                             ; preds = %ENDIF2795, %main_bo
 ENDLOOP:                                          ; preds = %ELSE2566, %LOOP
   %one.sub.a.i = fsub float 1.000000e+00, %tmp
   %one.sub.ac.i = fmul float %one.sub.a.i, undef
-  %result.i = fadd float fmul (float undef, float undef), %one.sub.ac.i
+  %fmul = fmul float undef, undef
+  %result.i = fadd float %fmul, %one.sub.ac.i
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float undef, float %result.i, float undef, float 1.000000e+00, i1 true, i1 true) #0
   ret void
 

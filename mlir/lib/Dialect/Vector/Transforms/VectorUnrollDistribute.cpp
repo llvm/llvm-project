@@ -431,10 +431,11 @@ struct UnrollMultiReductionPattern
       SmallVector<int64_t, 4> offsets =
           getVectorOffset(originalSize, *targetShape, i);
 
+      SmallVector<Value> operands;
       SmallVector<int64_t, 4> operandStrides(offsets.size(), 1);
       Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, reductionOp.getOperand(), offsets, *targetShape, operandStrides);
-
+          loc, reductionOp.getSource(), offsets, *targetShape, operandStrides);
+      operands.push_back(slicedOperand);
       SmallVector<int64_t> dstShape;
       SmallVector<int64_t> destOffset;
       for (size_t i : llvm::seq(size_t(0), targetShape->size())) {
@@ -443,17 +444,22 @@ struct UnrollMultiReductionPattern
           dstShape.push_back((*targetShape)[i]);
         }
       }
+      Value acc;
+      SmallVector<int64_t, 4> accStrides(destOffset.size(), 1);
+      // If a version of the accumulator has already been computed, use it
+      // otherwise extract the first version from the original operand.
+      auto accIt = accCache.find(destOffset);
+      if (accIt != accCache.end())
+        acc = accIt->second;
+      else
+        acc = rewriter.create<vector::ExtractStridedSliceOp>(
+            loc, reductionOp.getAcc(), destOffset, dstShape, accStrides);
+      operands.push_back(acc);
       auto targetType = VectorType::get(
           dstShape, reductionOp.getSourceVectorType().getElementType());
       Operation *newOp = cloneOpWithOperandsAndTypes(rewriter, loc, reductionOp,
-                                                     slicedOperand, targetType);
+                                                     operands, targetType);
       Value result = newOp->getResult(0);
-      // Save the accumulated value until all the loops are unrolled since
-      // reduction loop keeps updating the accumulator.
-      auto accIt = accCache.find(destOffset);
-      if (accIt != accCache.end())
-        result = makeArithReduction(rewriter, loc, reductionOp.getKind(),
-                                    result, accIt->second);
       accCache[destOffset] = result;
     }
     // Assemble back the accumulator into a single vector.

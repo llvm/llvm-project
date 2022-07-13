@@ -906,6 +906,9 @@ void CodeGenModule::Release() {
   if (!getCodeGenOpts().StackProtectorGuardReg.empty())
     getModule().setStackProtectorGuardReg(
         getCodeGenOpts().StackProtectorGuardReg);
+  if (!getCodeGenOpts().StackProtectorGuardSymbol.empty())
+    getModule().setStackProtectorGuardSymbol(
+        getCodeGenOpts().StackProtectorGuardSymbol);
   if (getCodeGenOpts().StackProtectorGuardOffset != INT_MAX)
     getModule().setStackProtectorGuardOffset(
         getCodeGenOpts().StackProtectorGuardOffset);

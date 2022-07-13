@@ -3307,6 +3307,10 @@ Use the given offset for addressing the stack-protector guard
 
 Use the given reg for addressing the stack-protector guard
 
+.. option:: -mstack-protector-guard-symbol=<arg>
+
+Use the given symbol for addressing the stack-protector guard
+
 .. option:: -mstack-protector-guard=<arg>
 
 Use the given guard (global, tls) for addressing the stack-protector guard

@@ -174,13 +174,13 @@ static Value broadcastIfNeeded(OpBuilder &b, Value value,
 /// Create MultiDimReductionOp to compute the reduction for `reductionOp`. This
 /// assumes that `reductionOp` has two operands and one of them is the reduction
 /// initial value.
-static Value buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
-                                 Value valueToReduce,
-                                 const SmallVector<bool> &reductionMask) {
+static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
+                                      Value valueToReduce, Value acc,
+                                      const SmallVector<bool> &reductionMask) {
   auto maybeKind = getCombinerOpKind(reduceOp);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
   return b.create<vector::MultiDimReductionOp>(
-      reduceOp->getLoc(), valueToReduce, reductionMask, *maybeKind);
+      reduceOp->getLoc(), valueToReduce, acc, reductionMask, *maybeKind);
 }
 
 static SmallVector<bool> getReductionMask(LinalgOp linalgOp) {
@@ -315,10 +315,7 @@ static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp, Operation *op,
       (outputType && reduceType.getShape() == outputType.getShape()))
     return nullptr;
   SmallVector<bool> reductionMask = getReductionMask(linalgOp);
-  Value reduce = buildMultiDimReduce(b, op, reduceVec, reductionMask);
-  return b.create(op->getLoc(), op->getName().getIdentifier(),
-                  /*operands=*/{reduce, outputVec}, reduce.getType(),
-                  op->getAttrs());
+  return buildMultiDimReduce(b, op, reduceVec, outputVec, reductionMask);
 }
 
 /// Generic vectorization for a single operation `op`, given already vectorized

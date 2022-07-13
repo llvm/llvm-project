@@ -9,9 +9,9 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Frontend/Utils.h"
 
-namespace clang {
-namespace tooling {
-namespace dependencies {
+using namespace clang;
+using namespace tooling;
+using namespace dependencies;
 
 std::vector<std::string> FullDependencies::getCommandLine(
     std::function<StringRef(ModuleID)> LookupPCMPath) const {
@@ -192,7 +192,3 @@ DependencyScanningTool::getFullDependencies(
     return std::move(Result);
   return Consumer.getFullDependencies(CommandLine);
 }
-
-} // end namespace dependencies
-} // end namespace tooling
-} // end namespace clang

@@ -17,9 +17,14 @@ define <1 x i64> @test1() {
 
 define i1 @bad_icmp_constexpr_bitcast() {
 ; CHECK-LABEL: @bad_icmp_constexpr_bitcast(
-; CHECK-NEXT:    ret i1 icmp eq (i32 ptrtoint (ptr @a to i32), i32 bitcast (float fadd (float bitcast (i32 ptrtoint (ptr @b to i32) to float), float 2.000000e+00) to i32))
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float bitcast (i32 ptrtoint (ptr @b to i32) to float), 2.000000e+00
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[FADD]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 ptrtoint (ptr @a to i32), [[BITCAST]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %cmp = icmp eq i32 ptrtoint (ptr @a to i32), bitcast (float fadd (float bitcast (i32 ptrtoint (ptr @b to i32) to float), float 2.0) to i32)
+  %fadd = fadd float bitcast (i32 ptrtoint (ptr @b to i32) to float), 2.0
+  %bitcast = bitcast float %fadd to i32
+  %cmp = icmp eq i32 ptrtoint (ptr @a to i32), %bitcast
   ret i1 %cmp
 }
 

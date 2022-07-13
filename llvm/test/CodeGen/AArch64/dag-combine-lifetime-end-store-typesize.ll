@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-- < %s
+; RUN: llc -mtriple=aarch64-- -mattr=+sve < %s
 
 ; This regression test is defending against using the wrong interface for TypeSize.
 ; This issue appeared in DAGCombiner::visitLIFETIME_END when visiting a LIFETIME_END
