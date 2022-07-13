@@ -153,7 +153,7 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   BitsType final_mantissa = static_cast<BitsType>(high64(final_approx) >>
                             (msb + BITS_IN_MANTISSA -
                              (fputil::FloatProperties<T>::MANTISSA_WIDTH + 3)));
-  exp2 -= 1 ^ msb; // same as !msb
+  exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   // Half-way ambiguity
   if (low64(final_approx) == 0 &&
@@ -259,7 +259,7 @@ inline bool eisel_lemire<long double>(
       final_approx_upper >>
       (msb + BITS_IN_MANTISSA -
        (fputil::FloatProperties<long double>::MANTISSA_WIDTH + 3));
-  exp2 -= 1 ^ msb; // same as !msb
+  exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   // Half-way ambiguity
   if (final_approx_lower == 0 && (final_approx_upper & HALFWAY_CONSTANT) == 0 &&
