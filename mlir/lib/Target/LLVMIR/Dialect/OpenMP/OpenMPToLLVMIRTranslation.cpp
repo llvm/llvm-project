@@ -28,7 +28,7 @@ using namespace mlir;
 namespace {
 static llvm::omp::ScheduleKind
 convertToScheduleKind(Optional<omp::ClauseScheduleKind> schedKind) {
-  if (!schedKind.hasValue())
+  if (!schedKind.has_value())
     return llvm::omp::OMP_SCHEDULE_Default;
   switch (schedKind.getValue()) {
   case omp::ClauseScheduleKind::Static:

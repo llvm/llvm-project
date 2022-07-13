@@ -645,7 +645,7 @@ public:
     ModuleOp module = op->getParentOfType<ModuleOp>();
     IntegerAttr executionModeAttr = op.execution_modeAttr();
     std::string moduleName;
-    if (module.getName().hasValue())
+    if (module.getName().has_value())
       moduleName = "_" + module.getName().getValue().str();
     else
       moduleName = "";
@@ -1585,7 +1585,7 @@ void mlir::encodeBindAttribute(ModuleOp module) {
       if (descriptorSet && binding) {
         // Encode these numbers into the variable's symbolic name. If the
         // SPIR-V module has a name, add it at the beginning.
-        auto moduleAndName = spvModule.getName().hasValue()
+        auto moduleAndName = spvModule.getName().has_value()
                                  ? spvModule.getName().getValue().str() + "_" +
                                        op.sym_name().str()
                                  : op.sym_name().str();

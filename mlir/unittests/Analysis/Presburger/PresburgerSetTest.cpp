@@ -844,7 +844,7 @@ void testComputeReprAtPoints(IntegerPolyhedron poly,
   EXPECT_TRUE(repr.hasOnlyDivLocals());
   EXPECT_TRUE(repr.getSpace().isCompatible(poly.getSpace()));
   for (const SmallVector<int64_t, 4> &point : points) {
-    EXPECT_EQ(poly.containsPointNoLocal(point).hasValue(),
+    EXPECT_EQ(poly.containsPointNoLocal(point).has_value(),
               repr.containsPoint(point));
   }
 }
