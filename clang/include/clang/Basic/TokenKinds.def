@@ -908,6 +908,9 @@ PRAGMA_ANNOTATION(pragma_fp)
 // Annotation for the attribute pragma directives - #pragma clang attribute ...
 PRAGMA_ANNOTATION(pragma_attribute)
 
+// Annotation for the riscv pragma directives - #pragma clang riscv intrinsic ...
+PRAGMA_ANNOTATION(pragma_riscv)
+
 // Annotations for module import translated from #include etc.
 ANNOTATION(module_include)
 ANNOTATION(module_begin)

@@ -90,3 +90,6 @@ clang_tablegen(riscv_vector_builtins.inc -gen-riscv-vector-builtins
 clang_tablegen(riscv_vector_builtin_cg.inc -gen-riscv-vector-builtin-codegen
   SOURCE riscv_vector.td
   TARGET ClangRISCVVectorBuiltinCG)
+clang_tablegen(riscv_vector_builtin_sema.inc -gen-riscv-vector-builtin-sema
+  SOURCE riscv_vector.td
+  TARGET ClangRISCVVectorBuiltinSema)

@@ -226,6 +226,7 @@ namespace sema {
   class FunctionScopeInfo;
   class LambdaScopeInfo;
   class PossiblyUnreachableDiag;
+  class RISCVIntrinsicManager;
   class SemaPPCallbacks;
   class TemplateDeductionInfo;
 }
@@ -1587,7 +1588,12 @@ public:
   /// assignment.
   llvm::DenseMap<const VarDecl *, int> RefsMinusAssignments;
 
+  /// Indicate RISC-V vector builtin functions enabled or not.
+  bool DeclareRISCVVBuiltins = false;
+
 private:
+  std::unique_ptr<sema::RISCVIntrinsicManager> RVIntrinsicManager;
+
   Optional<std::unique_ptr<DarwinSDKInfo>> CachedDarwinSDKInfo;
 
   bool WarnedDarwinSDKInfoMissing = false;
@@ -13590,6 +13596,8 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
 
+std::unique_ptr<sema::RISCVIntrinsicManager>
+CreateRISCVIntrinsicManager(Sema &S);
 } // end namespace clang
 
 namespace llvm {

@@ -350,6 +350,16 @@ struct PragmaMaxTokensTotalHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+struct PragmaRISCVHandler : public PragmaHandler {
+  PragmaRISCVHandler(Sema &Actions)
+      : PragmaHandler("riscv"), Actions(Actions) {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+
+private:
+  Sema &Actions;
+};
+
 void markAsReinjectedForRelexing(llvm::MutableArrayRef<clang::Token> Toks) {
   for (auto &T : Toks)
     T.setFlag(clang::Token::IsReinjected);
@@ -493,6 +503,11 @@ void Parser::initializePragmaHandlers() {
 
   MaxTokensTotalPragmaHandler = std::make_unique<PragmaMaxTokensTotalHandler>();
   PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
+
+  if (getTargetInfo().getTriple().isRISCV()) {
+    RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
+    PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
+  }
 }
 
 void Parser::resetPragmaHandlers() {
@@ -617,6 +632,11 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
   MaxTokensTotalPragmaHandler.reset();
+
+  if (getTargetInfo().getTriple().isRISCV()) {
+    PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
+    RISCVPragmaHandler.reset();
+  }
 }
 
 /// Handle the annotation token produced for #pragma unused(...)
@@ -3928,4 +3948,36 @@ void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
   }
 
   PP.overrideMaxTokens(MaxTokens, Loc);
+}
+
+// Handle '#pragma clang riscv intrinsic vector'.
+void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
+                                      PragmaIntroducer Introducer,
+                                      Token &FirstToken) {
+  Token Tok;
+  PP.Lex(Tok);
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+
+  if (!II || !II->isStr("intrinsic")) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+        << PP.getSpelling(Tok) << "riscv" << /*Expected=*/true << "'intrinsic'";
+    return;
+  }
+
+  PP.Lex(Tok);
+  II = Tok.getIdentifierInfo();
+  if (!II || !II->isStr("vector")) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+        << PP.getSpelling(Tok) << "riscv" << /*Expected=*/true << "'vector'";
+    return;
+  }
+
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "clang riscv intrinsic";
+    return;
+  }
+
+  Actions.DeclareRISCVVBuiltins = true;
 }
