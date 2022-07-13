@@ -5,15 +5,6 @@
 // RUN: %env_hwasan_opts=stack_history_size=5 not %run %t 2>&1 | FileCheck %s --check-prefix=D5
 // RUN:                                       not %run %t 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
-// Run the same tests as above, but using the __hwasan_add_frame_record libcall.
-// The output should be the exact same.
-// RUN: %clang_hwasan -O1 %s -o %t -mllvm -hwasan-record-stack-history=libcall
-// RUN: %env_hwasan_opts=stack_history_size=1 not %run %t 2>&1 | FileCheck %s --check-prefix=D1
-// RUN: %env_hwasan_opts=stack_history_size=2 not %run %t 2>&1 | FileCheck %s --check-prefix=D2
-// RUN: %env_hwasan_opts=stack_history_size=3 not %run %t 2>&1 | FileCheck %s --check-prefix=D3
-// RUN: %env_hwasan_opts=stack_history_size=5 not %run %t 2>&1 | FileCheck %s --check-prefix=D5
-// RUN:                                       not %run %t 2>&1 | FileCheck %s --check-prefix=DEFAULT
-
 // REQUIRES: stable-runtime
 
 // Stack histories are currently not recorded on x86.

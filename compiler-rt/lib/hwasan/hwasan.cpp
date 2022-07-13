@@ -576,12 +576,6 @@ u8 __hwasan_generate_tag() {
   return t->GenerateRandomTag();
 }
 
-void __hwasan_add_frame_record(u64 frame_record_info) {
-  Thread *t = GetCurrentThread();
-  if (t)
-    t->stack_allocations()->push(frame_record_info);
-}
-
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
