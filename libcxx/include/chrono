@@ -13,6 +13,8 @@
 /*
     chrono synopsis
 
+#include <compare> // C++20
+
 namespace std
 {
 namespace chrono
@@ -325,11 +327,7 @@ struct last_spec;
 
 class day;
 constexpr bool operator==(const day& x, const day& y) noexcept;
-constexpr bool operator!=(const day& x, const day& y) noexcept;
-constexpr bool operator< (const day& x, const day& y) noexcept;
-constexpr bool operator> (const day& x, const day& y) noexcept;
-constexpr bool operator<=(const day& x, const day& y) noexcept;
-constexpr bool operator>=(const day& x, const day& y) noexcept;
+constexpr strong_ordering operator<=>(const day& x, const day& y) noexcept;
 constexpr day  operator+(const day&  x, const days& y) noexcept;
 constexpr day  operator+(const days& x, const day&  y) noexcept;
 constexpr day  operator-(const day&  x, const days& y) noexcept;
@@ -715,8 +713,10 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #include <__chrono/year_month_day.h>
 #include <__chrono/year_month_weekday.h>
 #include <__config>
-#include <compare>
 #include <version>
+
+// standard-mandated includes
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -499,7 +499,7 @@ private:
       FamilySequences.emplace_back(Sequences.top().first.Rule, *Push.Seq);
       for (const GSS::Node *Base : Push.LastPop->parents()) {
         auto NextState = Lang.Table.getGoToState(Base->State, F.Symbol);
-        assert(NextState.hasValue() && "goto must succeed after reduce!");
+        assert(NextState.has_value() && "goto must succeed after reduce!");
         FamilyBases.emplace_back(*NextState, Base);
       }
 
@@ -555,7 +555,7 @@ private:
     const GSS::Node *Head = Heads->back();
     llvm::Optional<RuleID> RID;
     for (RuleID R : Lang.Table.getReduceRules(Head->State)) {
-      if (RID.hasValue())
+      if (RID.has_value())
         return false;
       RID = R;
     }
@@ -577,7 +577,7 @@ private:
     const ForestNode *Parsed =
         &Params.Forest.createSequence(Rule.Target, *RID, TempSequence);
     auto NextState = Lang.Table.getGoToState(Base->State, Rule.Target);
-    assert(NextState.hasValue() && "goto must succeed after reduce!");
+    assert(NextState.has_value() && "goto must succeed after reduce!");
     Heads->push_back(Params.GSStack.addNode(*NextState, Parsed, {Base}));
     return true;
   }
@@ -642,7 +642,7 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
 
   // The parse was successful if we're in state `_ := start-symbol .`
   auto AcceptState = Lang.Table.getGoToState(StartState, StartSymbol);
-  assert(AcceptState.hasValue() && "goto must succeed after start symbol!");
+  assert(AcceptState.has_value() && "goto must succeed after start symbol!");
   auto SearchForAccept = [&](llvm::ArrayRef<const GSS::Node *> Heads) {
     const ForestNode *Result = nullptr;
     for (const auto *Head : Heads) {

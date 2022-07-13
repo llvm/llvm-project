@@ -28,6 +28,7 @@ union ThreadRunner {
 union ThreadReturnValue {
   void *posix_retval;
   int stdc_retval;
+  constexpr ThreadReturnValue() : posix_retval(nullptr) {}
 };
 
 #if (defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_X86_64))
@@ -80,20 +81,27 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   //          exits. It will clean up the thread resources once the thread
   //          exits.
   cpp::Atomic<uint32_t> detach_state;
-  void *stack; // Pointer to the thread stack
-  void *tls;
+  void *stack;                   // Pointer to the thread stack
   unsigned long long stack_size; // Size of the stack
+  uintptr_t tls;                 // Address to the thread TLS memory
+  uintptr_t tls_size;            // The size of area pointed to by |tls|.
   unsigned char owned_stack; // Indicates if the thread owns this stack memory
   int tid;
   ThreadStyle style;
   ThreadReturnValue retval;
+  void *platform_data;
+
+  constexpr ThreadAttributes()
+      : detach_state(uint32_t(DetachState::DETACHED)), stack(nullptr),
+        stack_size(0), tls(0), tls_size(0), owned_stack(false), tid(-1),
+        style(ThreadStyle::POSIX), retval(), platform_data(nullptr) {}
 };
 
 struct Thread {
   ThreadAttributes *attrib;
-  void *platform_data;
 
-  Thread() = default;
+  constexpr Thread() : attrib(nullptr) {}
+  constexpr Thread(ThreadAttributes *attr) : attrib(attr) {}
 
   int run(ThreadRunnerPosix *func, void *arg, void *stack, size_t size,
           bool detached = false) {

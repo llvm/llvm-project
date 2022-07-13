@@ -290,7 +290,7 @@ static bool importSchedule(Scop &S, const json::Object &JScop,
     }
     Optional<StringRef> Schedule =
         statements[Index].getAsObject()->getString("schedule");
-    assert(Schedule.hasValue() &&
+    assert(Schedule.has_value() &&
            "Schedules that contain extension nodes require special handling.");
     isl_map *Map = isl_map_read_from_str(S.getIslCtx().get(),
                                          Schedule.getValue().str().c_str());

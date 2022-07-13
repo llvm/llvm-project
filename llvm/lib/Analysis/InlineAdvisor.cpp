@@ -56,10 +56,10 @@ static cl::opt<int>
                         cl::desc("Scale to limit the cost of inline deferral"),
                         cl::init(2), cl::Hidden);
 
-static cl::opt<bool> AnnotateInlinePhase(
-    "annotate-inline-phase", cl::Hidden, cl::init(false),
-    cl::desc("If true, annotate inline advisor remarks "
-             "with LTO and pass information."));
+static cl::opt<bool>
+    AnnotateInlinePhase("annotate-inline-phase", cl::Hidden, cl::init(false),
+                        cl::desc("If true, annotate inline advisor remarks "
+                                 "with LTO and pass information."));
 
 extern cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats;
 
@@ -514,8 +514,9 @@ void llvm::emitInlinedIntoBasedOnCost(
 InlineAdvisor::InlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
                              Optional<InlineContext> IC)
     : M(M), FAM(FAM), IC(IC),
-      AnnotatedInlinePassName((IC && AnnotateInlinePhase) ? llvm::AnnotateInlinePassName(*IC)
-                                 : DEBUG_TYPE) {
+      AnnotatedInlinePassName((IC && AnnotateInlinePhase)
+                                  ? llvm::AnnotateInlinePassName(*IC)
+                                  : DEBUG_TYPE) {
   if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No) {
     ImportedFunctionsStats =
         std::make_unique<ImportedFunctionsInliningStatistics>();

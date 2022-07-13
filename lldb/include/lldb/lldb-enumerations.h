@@ -970,20 +970,30 @@ enum ExpressionEvaluationPhase {
 /// control flow of a trace.
 ///
 /// A single instruction can match one or more of these categories.
-FLAGS_ENUM(TraceInstructionControlFlowType){
-    /// Any instruction.
-    eTraceInstructionControlFlowTypeInstruction = (1u << 1),
-    /// A conditional or unconditional branch/jump.
-    eTraceInstructionControlFlowTypeBranch = (1u << 2),
-    /// A conditional or unconditional branch/jump that changed
-    /// the control flow of the program.
-    eTraceInstructionControlFlowTypeTakenBranch = (1u << 3),
-    /// A call to a function.
-    eTraceInstructionControlFlowTypeCall = (1u << 4),
-    /// A return from a function.
-    eTraceInstructionControlFlowTypeReturn = (1u << 5)};
-
-LLDB_MARK_AS_BITMASK_ENUM(TraceInstructionControlFlowType)
+enum InstructionControlFlowKind {
+  /// The instruction could not be classified.
+  eInstructionControlFlowKindUnknown = 0,
+  /// The instruction is something not listed below, i.e. it's a sequential
+  /// instruction that doesn't affect the control flow of the program.
+  eInstructionControlFlowKindOther,
+  /// The instruction is a near (function) call.
+  eInstructionControlFlowKindCall,
+  /// The instruction is a near (function) return.
+  eInstructionControlFlowKindReturn,
+  /// The instruction is a near unconditional jump.
+  eInstructionControlFlowKindJump,
+  /// The instruction is a near conditional jump.
+  eInstructionControlFlowKindCondJump,
+  /// The instruction is a call-like far transfer.
+  /// E.g. SYSCALL, SYSENTER, or FAR CALL.
+  eInstructionControlFlowKindFarCall,
+  /// The instruction is a return-like far transfer.
+  /// E.g. SYSRET, SYSEXIT, IRET, or FAR RET.
+  eInstructionControlFlowKindFarReturn,
+  /// The instruction is a jump-like far transfer.
+  /// E.g. FAR JMP.
+  eInstructionControlFlowKindFarJump
+};
 
 /// Watchpoint Kind.
 ///
@@ -1153,12 +1163,15 @@ enum TraceCounter {
   eTraceCounterTSC = 0,
 };
 
-// Events that might happen during a trace session.
+/// Events that might happen during a trace session.
 enum TraceEvent {
-  // Tracing was disabled for some time due to a software trigger
+  /// Tracing was disabled for some time due to a software trigger
   eTraceEventDisabledSW,
-  // Tracing was disable for some time due to a hardware trigger
+  /// Tracing was disable for some time due to a hardware trigger
   eTraceEventDisabledHW,
+  /// Event due to CPU change for a thread. This event is also fired when
+  /// suddenly it's not possible to identify the cpu of a given thread.
+  eTraceEventCPUChanged,
 };
 
 // Enum used to identify which kind of item a \a TraceCursor is pointing at

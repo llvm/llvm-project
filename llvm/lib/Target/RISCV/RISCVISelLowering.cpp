@@ -8564,12 +8564,6 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
   return Opcode;
 }
 
-// Combine (sra (shl X, 32), 32 - C) -> (shl (sext_inreg X, i32), C)
-// FIXME: Should this be a generic combine? There's a similar combine on X86.
-//
-// Also try these folds where an add or sub is in the middle.
-// (sra (add (shl X, 32), C1), 32 - C) -> (shl (sext_inreg (add X, C1), C)
-// (sra (sub C1, (shl X, 32)), 32 - C) -> (shl (sext_inreg (sub C1, X), C)
 static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == ISD::SRA && "Unexpected opcode");
@@ -8577,12 +8571,40 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
   if (N->getValueType(0) != MVT::i64 || !Subtarget.is64Bit())
     return SDValue();
 
-  auto *ShAmtC = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!ShAmtC || ShAmtC->getZExtValue() > 32)
+  if (!isa<ConstantSDNode>(N->getOperand(1)))
+    return SDValue();
+  uint64_t ShAmt = N->getConstantOperandVal(1);
+  if (ShAmt > 32)
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
 
+  // Combine (sra (sext_inreg (shl X, C1), i32), C2) ->
+  // (sra (shl X, C1+32), C2+32) so it gets selected as SLLI+SRAI instead of
+  // SLLIW+SRAIW. SLLI+SRAI have compressed forms.
+  if (ShAmt < 32 &&
+      N0.getOpcode() == ISD::SIGN_EXTEND_INREG && N0.hasOneUse() &&
+      cast<VTSDNode>(N0.getOperand(1))->getVT() == MVT::i32 &&
+      N0.getOperand(0).getOpcode() == ISD::SHL && N0.getOperand(0).hasOneUse() &&
+      isa<ConstantSDNode>(N0.getOperand(0).getOperand(1))) {
+    uint64_t LShAmt = N0.getOperand(0).getConstantOperandVal(1);
+    if (LShAmt < 32) {
+      SDLoc ShlDL(N0.getOperand(0));
+      SDValue Shl = DAG.getNode(ISD::SHL, ShlDL, MVT::i64,
+                                N0.getOperand(0).getOperand(0),
+                                DAG.getConstant(LShAmt + 32, ShlDL, MVT::i64));
+      SDLoc DL(N);
+      return DAG.getNode(ISD::SRA, DL, MVT::i64, Shl,
+                         DAG.getConstant(ShAmt + 32, DL, MVT::i64));
+    }
+  }
+
+  // Combine (sra (shl X, 32), 32 - C) -> (shl (sext_inreg X, i32), C)
+  // FIXME: Should this be a generic combine? There's a similar combine on X86.
+  //
+  // Also try these folds where an add or sub is in the middle.
+  // (sra (add (shl X, 32), C1), 32 - C) -> (shl (sext_inreg (add X, C1), C)
+  // (sra (sub C1, (shl X, 32)), 32 - C) -> (shl (sext_inreg (sub C1, X), C)
   SDValue Shl;
   ConstantSDNode *AddC = nullptr;
 
@@ -8628,12 +8650,12 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
 
   SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, In,
                              DAG.getValueType(MVT::i32));
-  if (ShAmtC->getZExtValue() == 32)
+  if (ShAmt == 32)
     return SExt;
 
   return DAG.getNode(
       ISD::SHL, DL, MVT::i64, SExt,
-      DAG.getConstant(32 - ShAmtC->getZExtValue(), DL, MVT::i64));
+      DAG.getConstant(32 - ShAmt, DL, MVT::i64));
 }
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
@@ -12128,6 +12150,17 @@ const MCExpr *RISCVTargetLowering::LowerCustomJumpTableEntry(
   assert(Subtarget.is64Bit() && !isPositionIndependent() &&
          getTargetMachine().getCodeModel() == CodeModel::Small);
   return MCSymbolRefExpr::create(MBB->getSymbol(), Ctx);
+}
+
+bool RISCVTargetLowering::isVScaleKnownToBeAPowerOfTwo() const {
+  // We define vscale to be VLEN/RVVBitsPerBlock.  VLEN is always a power
+  // of two >= 64, and RVVBitsPerBlock is 64.  Thus, vscale must be
+  // a power of two as well.
+  // FIXME: This doesn't work for zve32, but that's already broken
+  // elsewhere for the same reason.
+  assert(Subtarget.getRealMinVLen() >= 64 && "zve32* unsupported");
+  assert(RISCV::RVVBitsPerBlock == 64 && "RVVBitsPerBlock changed, audit needed");
+  return true;
 }
 
 bool RISCVTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,

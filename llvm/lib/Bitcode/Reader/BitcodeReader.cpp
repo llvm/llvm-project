@@ -3678,7 +3678,7 @@ GlobalValue::SanitizerMetadata deserializeSanitizerMetadata(unsigned V) {
   if (V & (1 << 1))
     Meta.NoHWAddress = true;
   if (V & (1 << 2))
-    Meta.NoMemtag = true;
+    Meta.Memtag = true;
   if (V & (1 << 3))
     Meta.IsDynInit = true;
   return Meta;

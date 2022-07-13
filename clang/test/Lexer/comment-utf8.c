@@ -18,3 +18,10 @@
     ----------------------------------------------------
     ----------------------------------------------------
 */
+
+// The following test checks that a short comment is not merged
+// with a subsequent long comment containing utf-8
+enum a {
+    x  /* 01234567890ABCDEF*/
+};
+/*ααααααααα*/

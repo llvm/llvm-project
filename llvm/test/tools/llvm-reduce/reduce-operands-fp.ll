@@ -25,6 +25,7 @@
 ; CHECK-INTERESTINGNESS: = fadd <2 x float>
 ; CHECK-INTERESTINGNESS: = fadd <2 x float>
 ; CHECK-INTERESTINGNESS: = fadd <2 x float>
+; CHECK-INTERESTINGNESS: = fadd <2 x float>
 
 ; CHECK-LABEL: define void @foo(
 
@@ -41,6 +42,7 @@
 ; ONE: %fadd9 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, <float 1.000000e+00, float 1.000000e+00>
 ; ONE: %fadd10 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, <float 1.000000e+00, float 1.000000e+00>
 ; ONE: %fadd11 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, <float 1.000000e+00, float 1.000000e+00>
+; ONE: %fadd12 = fadd <2 x float> <float 1.000000e+00, float 1.000000e+00>, <float 1.000000e+00, float 1.000000e+00>
 
 
 ; ZERO: %fadd0 = fadd float %arg0, 0.000000e+00
@@ -55,6 +57,7 @@
 ; ZERO: %fadd9 = fadd <2 x float> zeroinitializer, zeroinitializer
 ; ZERO: %fadd10 = fadd <2 x float> zeroinitializer, zeroinitializer
 ; ZERO: %fadd11 = fadd <2 x float> zeroinitializer, zeroinitializer
+; ZERO: %fadd12 = fadd <2 x float> zeroinitializer, zeroinitializer
 
 
 ; NAN: %fadd0 = fadd float %arg0, 0x7FF8000000000000
@@ -69,6 +72,7 @@
 ; NAN: %fadd9 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 1.000000e+00, float 1.000000e+00>
 ; NAN: %fadd10 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
 ; NAN: %fadd11 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+; NAN: %fadd12 = fadd <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <float 0x7FF8000000000000, float 0x7FF8000000000000>
 
 define void @foo(float %arg0, float %arg1, <2 x float> %arg2, <2 x float> %arg3) {
 bb0:
@@ -84,5 +88,6 @@ bb0:
   %fadd9 = fadd <2 x float> %arg2, <float 1.0, float 1.0>
   %fadd10 = fadd <2 x float> %arg2, undef
   %fadd11 = fadd <2 x float> %arg2, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+  %fadd12 = fadd <2 x float> %arg2, <float 0x7FF8000000000000, float 2.0>
   ret void
 }

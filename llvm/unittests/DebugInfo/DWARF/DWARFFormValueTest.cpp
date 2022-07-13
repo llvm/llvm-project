@@ -89,7 +89,7 @@ TEST(DWARFFormValue, SignedConstantForms) {
   auto UMax = createULEBFormValue(LLONG_MAX);
   auto TooBig = createULEBFormValue(uint64_t(LLONG_MAX) + 1);
   EXPECT_EQ(UMax.getAsSignedConstant().getValue(), LLONG_MAX);
-  EXPECT_EQ(TooBig.getAsSignedConstant().hasValue(), false);
+  EXPECT_EQ(TooBig.getAsSignedConstant().has_value(), false);
 
   // Sanity check some other forms.
   auto Data1 = createDataXFormValue<uint8_t>(DW_FORM_data1, 120);

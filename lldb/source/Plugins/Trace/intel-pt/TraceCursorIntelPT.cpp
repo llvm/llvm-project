@@ -84,6 +84,10 @@ TraceCursorIntelPT::GetCounter(lldb::TraceCounter counter_type) const {
   }
 }
 
+Optional<lldb::cpu_id_t> TraceCursorIntelPT::GetCPU() const {
+  return m_decoded_thread_sp->GetCPUByIndex(m_pos);
+}
+
 lldb::TraceEvent TraceCursorIntelPT::GetEventType() const {
   return m_decoded_thread_sp->GetEventByIndex(m_pos);
 }

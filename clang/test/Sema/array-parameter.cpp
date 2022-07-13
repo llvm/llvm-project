@@ -16,3 +16,10 @@ void func<10>(int (&Val)[10]) {
 static constexpr int Extent = 10;
 void funk(int i[10]);
 void funk(int i[Extent]); // no-warning
+
+template<int K>
+struct T {
+  static void F(int a[8 * K]);
+};
+template<int K>
+void T<K>::F(int a[8 * K]) {} // no-warning

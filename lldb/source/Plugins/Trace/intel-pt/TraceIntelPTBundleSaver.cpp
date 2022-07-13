@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "TraceIntelPTBundleSaver.h"
+
+#include "PerfContextSwitchDecoder.h"
 #include "TraceIntelPT.h"
 #include "TraceIntelPTJSONStructs.h"
+
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Target/Process.h"
@@ -29,6 +32,13 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
+
+/// Strip the \p directory component from the given \p path. It assumes that \p
+/// directory is a prefix of \p path.
+static std::string GetRelativePath(const FileSpec &directory,
+                                   const FileSpec &path) {
+  return path.GetPath().substr(directory.GetPath().size() + 1);
+}
 
 /// Write a stream of bytes from \p data to the given output file.
 /// It creates or overwrites the output file, but not append.
@@ -57,11 +67,11 @@ static llvm::Error WriteBytesToDisk(FileSpec &output_file,
 ///     The directory where the JSON file will be saved.
 ///
 /// \return
-///     \a llvm::Success if the operation was successful, or an \a llvm::Error
-///     otherwise.
-static llvm::Error
+///     A \a FileSpec pointing to the bundle description file, or an \a
+///     llvm::Error otherwise.
+static Expected<FileSpec>
 SaveTraceBundleDescription(const llvm::json::Value &trace_bundle_description,
-                   const FileSpec &directory) {
+                           const FileSpec &directory) {
   FileSpec trace_path = directory;
   trace_path.AppendPathComponent("trace.json");
   std::ofstream os(trace_path.GetPath());
@@ -71,7 +81,7 @@ SaveTraceBundleDescription(const llvm::json::Value &trace_bundle_description,
     return createStringError(inconvertibleErrorCode(),
                              formatv("couldn't write to the file {0}",
                                      trace_path.GetPath().c_str()));
-  return Error::success();
+  return trace_path;
 }
 
 /// Build the threads sub-section of the trace bundle description file.
@@ -106,7 +116,7 @@ BuildThreadsSection(Process &process, FileSpec directory) {
     if (trace_sp->GetTracedCpus().empty()) {
       FileSpec output_file = threads_dir;
       output_file.AppendPathComponent(std::to_string(tid) + ".intelpt_trace");
-      json_thread.ipt_trace = output_file.GetPath();
+      json_thread.ipt_trace = GetRelativePath(directory, output_file);
 
       llvm::Error err = process.GetTarget().GetTrace()->OnThreadBinaryDataRead(
           tid, IntelPTDataKinds::kIptTrace,
@@ -122,8 +132,68 @@ BuildThreadsSection(Process &process, FileSpec directory) {
   return json_threads;
 }
 
+/// \return
+///   an \a llvm::Error in case of failures, \a None if the trace is not written
+///   to disk because the trace is empty and the \p compact flag is present, or
+///   the FileSpec of the trace file on disk.
+static Expected<Optional<FileSpec>>
+WriteContextSwitchTrace(TraceIntelPT &trace_ipt, lldb::cpu_id_t cpu_id,
+                        const FileSpec &cpus_dir, bool compact) {
+  FileSpec output_context_switch_trace = cpus_dir;
+  output_context_switch_trace.AppendPathComponent(std::to_string(cpu_id) +
+                                                  ".perf_context_switch_trace");
+
+  bool should_skip = false;
+
+  Error err = trace_ipt.OnCpuBinaryDataRead(
+      cpu_id, IntelPTDataKinds::kPerfContextSwitchTrace,
+      [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
+        if (!compact)
+          return WriteBytesToDisk(output_context_switch_trace, data);
+
+        std::set<lldb::pid_t> pids;
+        for (Process *process : trace_ipt.GetAllProcesses())
+          pids.insert(process->GetID());
+
+        Expected<std::vector<uint8_t>> compact_context_switch_trace =
+            FilterProcessesFromContextSwitchTrace(data, pids);
+        if (!compact_context_switch_trace)
+          return compact_context_switch_trace.takeError();
+
+        if (compact_context_switch_trace->empty()) {
+          should_skip = true;
+          return Error::success();
+        }
+
+        return WriteBytesToDisk(output_context_switch_trace,
+                                *compact_context_switch_trace);
+      });
+  if (err)
+    return std::move(err);
+
+  if (should_skip)
+    return None;
+  return output_context_switch_trace;
+}
+
+static Expected<FileSpec> WriteIntelPTTrace(TraceIntelPT &trace_ipt,
+                                            lldb::cpu_id_t cpu_id,
+                                            const FileSpec &cpus_dir) {
+  FileSpec output_trace = cpus_dir;
+  output_trace.AppendPathComponent(std::to_string(cpu_id) + ".intelpt_trace");
+
+  Error err = trace_ipt.OnCpuBinaryDataRead(
+      cpu_id, IntelPTDataKinds::kIptTrace,
+      [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
+        return WriteBytesToDisk(output_trace, data);
+      });
+  if (err)
+    return std::move(err);
+  return output_trace;
+}
+
 static llvm::Expected<llvm::Optional<std::vector<JSONCpu>>>
-BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory) {
+BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory, bool compact) {
   if (trace_ipt.GetTracedCpus().empty())
     return None;
 
@@ -135,36 +205,21 @@ BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory) {
   for (lldb::cpu_id_t cpu_id : trace_ipt.GetTracedCpus()) {
     JSONCpu json_cpu;
     json_cpu.id = cpu_id;
+    Expected<Optional<FileSpec>> context_switch_trace_path =
+        WriteContextSwitchTrace(trace_ipt, cpu_id, cpus_dir, compact);
+    if (!context_switch_trace_path)
+      return context_switch_trace_path.takeError();
+    if (!*context_switch_trace_path)
+      continue;
+    json_cpu.context_switch_trace =
+        GetRelativePath(directory, **context_switch_trace_path);
 
-    {
-      FileSpec output_trace = cpus_dir;
-      output_trace.AppendPathComponent(std::to_string(cpu_id) +
-                                       ".intelpt_trace");
-      json_cpu.ipt_trace = output_trace.GetPath();
+    if (Expected<FileSpec> ipt_trace_path =
+            WriteIntelPTTrace(trace_ipt, cpu_id, cpus_dir))
+      json_cpu.ipt_trace = GetRelativePath(directory, *ipt_trace_path);
+    else
+      return ipt_trace_path.takeError();
 
-      llvm::Error err = trace_ipt.OnCpuBinaryDataRead(
-          cpu_id, IntelPTDataKinds::kIptTrace,
-          [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
-            return WriteBytesToDisk(output_trace, data);
-          });
-      if (err)
-        return std::move(err);
-    }
-
-    {
-      FileSpec output_context_switch_trace = cpus_dir;
-      output_context_switch_trace.AppendPathComponent(
-          std::to_string(cpu_id) + ".perf_context_switch_trace");
-      json_cpu.context_switch_trace = output_context_switch_trace.GetPath();
-
-      llvm::Error err = trace_ipt.OnCpuBinaryDataRead(
-          cpu_id, IntelPTDataKinds::kPerfContextSwitchTrace,
-          [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
-            return WriteBytesToDisk(output_context_switch_trace, data);
-          });
-      if (err)
-        return std::move(err);
-    }
     json_cpus.push_back(std::move(json_cpu));
   }
   return json_cpus;
@@ -222,14 +277,14 @@ BuildModulesSection(Process &process, FileSpec directory) {
     path_to_copy_module.AppendPathComponent(system_path);
     sys::fs::create_directories(path_to_copy_module.GetDirectory().AsCString());
 
-    if (std::error_code ec = llvm::sys::fs::copy_file(
-            system_path, path_to_copy_module.GetPath()))
+    if (std::error_code ec =
+            llvm::sys::fs::copy_file(file, path_to_copy_module.GetPath()))
       return createStringError(
           inconvertibleErrorCode(),
           formatv("couldn't write to the file. {0}", ec.message()));
 
     json_modules.push_back(
-        JSONModule{system_path, path_to_copy_module.GetPath(),
+        JSONModule{system_path, GetRelativePath(directory, path_to_copy_module),
                    JSONUINT64{load_addr}, module_sp->GetUUID().GetAsString()});
   }
   return json_modules;
@@ -280,8 +335,9 @@ BuildProcessesSection(TraceIntelPT &trace_ipt, const FileSpec &directory) {
   return processes;
 }
 
-Error TraceIntelPTBundleSaver::SaveToDisk(TraceIntelPT &trace_ipt,
-                                           FileSpec directory) {
+Expected<FileSpec> TraceIntelPTBundleSaver::SaveToDisk(TraceIntelPT &trace_ipt,
+                                                       FileSpec directory,
+                                                       bool compact) {
   if (std::error_code ec =
           sys::fs::create_directories(directory.GetPath().c_str()))
     return llvm::errorCodeToError(ec);
@@ -299,7 +355,7 @@ Error TraceIntelPTBundleSaver::SaveToDisk(TraceIntelPT &trace_ipt,
     return json_processes.takeError();
 
   Expected<Optional<std::vector<JSONCpu>>> json_cpus =
-      BuildCpusSection(trace_ipt, directory);
+      BuildCpusSection(trace_ipt, directory, compact);
   if (!json_cpus)
     return json_cpus.takeError();
 

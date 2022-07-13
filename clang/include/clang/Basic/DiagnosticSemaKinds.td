@@ -3341,10 +3341,11 @@ def warn_assume_aligned_too_great
               "alignment assumed">,
       InGroup<DiagGroup<"builtin-assume-aligned-alignment">>;
 def warn_not_xl_compatible
-    : Warning<"requesting an alignment of 16 bytes or greater for struct"
-              " members is not binary compatible with IBM XL C/C++ for AIX"
-              " 16.1.0 and older">,
+    : Warning<"alignment of 16 bytes for a struct member is not binary "
+              "compatible with IBM XL C/C++ for AIX 16.1.0 or older">,
       InGroup<AIXCompat>;
+def note_misaligned_member_used_here : Note<
+    "passing byval argument %0 with potentially incompatible alignment here">;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
   "%q0 redeclared without %1 attribute: previous %1 ignored">,
   InGroup<MicrosoftInconsistentDllImport>;

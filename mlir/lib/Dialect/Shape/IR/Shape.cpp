@@ -1247,7 +1247,7 @@ OpFoldResult GetExtentOp::fold(ArrayRef<Attribute> operands) {
   if (!elements)
     return nullptr;
   Optional<int64_t> dim = getConstantDim();
-  if (!dim.hasValue())
+  if (!dim.has_value())
     return nullptr;
   if (dim.getValue() >= elements.getNumElements())
     return nullptr;

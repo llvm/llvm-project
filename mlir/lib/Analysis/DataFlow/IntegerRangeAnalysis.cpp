@@ -101,7 +101,7 @@ void IntegerRangeAnalysis::visitOperation(
     bool isYieldedResult = llvm::any_of(v.getUsers(), [](Operation *op) {
       return op->hasTrait<OpTrait::IsTerminator>();
     });
-    if (isYieldedResult && oldRange.hasValue() &&
+    if (isYieldedResult && oldRange.has_value() &&
         !(lattice->getValue() == *oldRange)) {
       LLVM_DEBUG(llvm::dbgs() << "Loop variant loop result detected\n");
       changed |= lattice->markPessimisticFixpoint();
@@ -162,7 +162,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
   auto getLoopBoundFromFold = [&](Optional<OpFoldResult> loopBound,
                                   Type boundType, bool getUpper) {
     unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
-    if (loopBound.hasValue()) {
+    if (loopBound.has_value()) {
       if (loopBound->is<Attribute>()) {
         if (auto bound =
                 loopBound->get<Attribute>().dyn_cast_or_null<IntegerAttr>())
