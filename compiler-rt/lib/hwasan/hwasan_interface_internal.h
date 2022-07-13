@@ -168,14 +168,6 @@ void __hwasan_thread_exit();
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_print_memory_usage();
 
-// The compiler will generate this when
-// `-hwasan-record-stack-history-with-calls` is added as a flag, which will add
-// frame record information to the stack ring buffer. This is an alternative to
-// the compiler emitting instructions in the prologue for doing the same thing
-// by accessing the ring buffer directly.
-SANITIZER_INTERFACE_ATTRIBUTE
-void __hwasan_add_frame_record(u64 frame_record_info);
-
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__hwasan_memcpy(void *dst, const void *src, uptr size);
 SANITIZER_INTERFACE_ATTRIBUTE
