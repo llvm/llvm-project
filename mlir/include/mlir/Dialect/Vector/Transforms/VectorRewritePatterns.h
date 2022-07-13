@@ -527,11 +527,12 @@ private:
   vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
   // Lower one parallel dimension.
-  Value lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
-                      int64_t rhsIndex, PatternRewriter &rewriter) const;
+  FailureOr<Value> lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
+                                 int64_t rhsIndex,
+                                 PatternRewriter &rewriter) const;
   // Lower one reduction dimension.
-  Value lowerReduction(vector::ContractionOp op,
-                       PatternRewriter &rewriter) const;
+  FailureOr<Value> lowerReduction(vector::ContractionOp op,
+                                  PatternRewriter &rewriter) const;
 };
 
 } // namespace vector
