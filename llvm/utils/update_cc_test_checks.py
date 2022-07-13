@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''A utility to update LLVM IR CHECK lines in C/C++ FileCheck test files.
 
 Example RUN lines in .c/.cc test files:
