@@ -87,7 +87,7 @@ private:
     Optional<llvm::cas::CASID> ID;
   };
   llvm::BumpPtrAllocator EntryAlloc;
-  llvm::StringMap<FileEntry, llvm::BumpPtrAllocator> Entries;
+  llvm::StringMap<FileEntry, llvm::BumpPtrAllocator &> Entries;
 
   struct LookupPathResult {
     const FileEntry *Entry = nullptr;
