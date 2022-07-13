@@ -354,8 +354,7 @@ define void @test5(i8* %header, i32 %conv, i8 %n) {
 ; CHECK-NEXT:    br i1 [[CMP7_I4]], label [[FOR_INNER_2]], label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC_I3_LCSSA:%.*]] = phi i32 [ [[INC_I3]], [[FOR_INNER_2]] ]
-; CHECK-NEXT:    [[ADD71:%.*]] = add i32 0, [[INC_I_LCSSA]]
-; CHECK-NEXT:    [[ADD85:%.*]] = add i32 [[ADD71]], [[INC_I3_LCSSA]]
+; CHECK-NEXT:    [[ADD85:%.*]] = add i32 [[INC_I_LCSSA]], [[INC_I3_LCSSA]]
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[WHILE_COND_PREHEADER:%.*]]
 ; CHECK:       while.cond.preheader:
 ; CHECK-NEXT:    [[ADD85_LCSSA:%.*]] = phi i32 [ [[ADD85]], [[FOR_INC]] ]

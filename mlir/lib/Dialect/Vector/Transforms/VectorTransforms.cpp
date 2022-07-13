@@ -553,7 +553,7 @@ public:
       Value b = rewriter.create<vector::BroadcastOp>(loc, lhsType, op.getRhs());
       Optional<Value> mult = createContractArithOp(loc, op.getLhs(), b, acc,
                                                    kind, rewriter, isInt);
-      if (!mult.hasValue())
+      if (!mult.has_value())
         return failure();
       rewriter.replaceOp(op, mult.getValue());
       return success();
@@ -571,7 +571,7 @@ public:
         r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
       Optional<Value> m =
           createContractArithOp(loc, a, op.getRhs(), r, kind, rewriter, isInt);
-      if (!m.hasValue())
+      if (!m.has_value())
         return failure();
       result = rewriter.create<vector::InsertOp>(loc, resType, m.getValue(),
                                                  result, pos);
@@ -1861,7 +1861,7 @@ Value ContractionOpLowering::lowerParallel(vector::ContractionOp op,
   }
   assert(iterIndex >= 0 && "parallel index not listed in operand mapping");
   Optional<int64_t> lookup = getResultIndex(iMap[2], iterIndex);
-  assert(lookup.hasValue() && "parallel index not listed in reduction");
+  assert(lookup.has_value() && "parallel index not listed in reduction");
   int64_t resIndex = lookup.getValue();
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
@@ -1901,8 +1901,8 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
   Optional<int64_t> lookupLhs = getResultIndex(iMap[0], iterIndex);
   Optional<int64_t> lookupRhs = getResultIndex(iMap[1], iterIndex);
-  assert(lookupLhs.hasValue() && "missing LHS parallel index");
-  assert(lookupRhs.hasValue() && "missing RHS parallel index");
+  assert(lookupLhs.has_value() && "missing LHS parallel index");
+  assert(lookupRhs.has_value() && "missing RHS parallel index");
   int64_t lhsIndex = lookupLhs.getValue();
   int64_t rhsIndex = lookupRhs.getValue();
   int64_t dimSize = lhsType.getDimSize(lhsIndex);

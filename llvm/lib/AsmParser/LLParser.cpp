@@ -456,10 +456,15 @@ bool LLParser::parseTargetDefinition() {
     return false;
   case lltok::kw_datalayout:
     Lex.Lex();
-    if (parseToken(lltok::equal, "expected '=' after target datalayout") ||
-        parseStringConstant(Str))
+    if (parseToken(lltok::equal, "expected '=' after target datalayout"))
       return true;
-    M->setDataLayout(Str);
+    LocTy Loc = Lex.getLoc();
+    if (parseStringConstant(Str))
+      return true;
+    Expected<DataLayout> MaybeDL = DataLayout::parse(Str);
+    if (!MaybeDL)
+      return error(Loc, toString(MaybeDL.takeError()));
+    M->setDataLayout(MaybeDL.get());
     return false;
   }
 }
@@ -5385,13 +5390,8 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
   case ValID::t_InlineAsm: {
     if (!ID.FTy)
       return error(ID.Loc, "invalid type for inline asm constraint string");
-    if (Error Err = InlineAsm::verify(ID.FTy, ID.StrVal2)) {
-      std::string Str;
-      raw_string_ostream OS(Str);
-      OS << Err;
-      consumeError(std::move(Err));
-      return error(ID.Loc, Str.c_str());
-    }
+    if (Error Err = InlineAsm::verify(ID.FTy, ID.StrVal2))
+      return error(ID.Loc, toString(std::move(Err)));
     V = InlineAsm::get(
         ID.FTy, ID.StrVal, ID.StrVal2, ID.UIntVal & 1, (ID.UIntVal >> 1) & 1,
         InlineAsm::AsmDialect((ID.UIntVal >> 2) & 1), (ID.UIntVal >> 3) & 1);
