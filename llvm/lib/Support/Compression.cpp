@@ -86,16 +86,16 @@ Error zlib::uncompress(ArrayRef<uint8_t> Input,
 
 #else
 bool zlib::isAvailable() { return false; }
-void zlib::compress(StringRef InputBuffer,
-                    SmallVectorImpl<char> &CompressedBuffer, int Level) {
+void zlib::compress(ArrayRef<uint8_t> Input,
+                    SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
   llvm_unreachable("zlib::compress is unavailable");
 }
-Error zlib::uncompress(StringRef InputBuffer, char *UncompressedBuffer,
+Error zlib::uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
                        size_t &UncompressedSize) {
   llvm_unreachable("zlib::uncompress is unavailable");
 }
-Error zlib::uncompress(StringRef InputBuffer,
-                       SmallVectorImpl<char> &UncompressedBuffer,
+Error zlib::uncompress(ArrayRef<uint8_t> Input,
+                       SmallVectorImpl<uint8_t> &UncompressedBuffer,
                        size_t UncompressedSize) {
   llvm_unreachable("zlib::uncompress is unavailable");
 }
