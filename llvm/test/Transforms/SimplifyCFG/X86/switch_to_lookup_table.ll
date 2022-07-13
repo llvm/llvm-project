@@ -1333,8 +1333,8 @@ define i32 @reuse_cmp1(i32 %x) {
 ; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[X]], 10
 ; CHECK-NEXT:    [[R_0:%.*]] = select i1 [[TMP0]], i32 [[SWITCH_OFFSET]], i32 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[R_0]], 0
-; CHECK-NEXT:    [[DOTR_0:%.*]] = select i1 [[INVERTED_CMP]], i32 100, i32 [[R_0]]
-; CHECK-NEXT:    ret i32 [[DOTR_0]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[INVERTED_CMP]], i32 100, i32 [[R_0]]
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -1401,8 +1401,8 @@ define i32 @no_reuse_cmp(i32 %x) {
 ; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[X]], 10
 ; CHECK-NEXT:    [[R_0:%.*]] = select i1 [[TMP0]], i32 [[SWITCH_OFFSET]], i32 12
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[R_0]], 0
-; CHECK-NEXT:    [[R_0_:%.*]] = select i1 [[CMP]], i32 [[R_0]], i32 100
-; CHECK-NEXT:    ret i32 [[R_0_]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], i32 [[R_0]], i32 100
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -1661,3 +1661,33 @@ cleanup2:
 }
 
 declare i32 @__CxxFrameHandler3(...)
+
+define i1 @use_x_as_index(i32 %x) {
+; CHECK-LABEL: @use_x_as_index(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X]] to i9
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul i9 [[SWITCH_CAST]], 1
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i9 -234, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i9 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
+; CHECK-NEXT:    ret i1 [[STOREMERGE]]
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 1, label %sw.bb
+  i32 2, label %sw.bb
+  i32 4, label %sw.bb
+  i32 8, label %sw.bb
+  ]
+
+sw.bb:
+  br label %return
+
+sw.default:
+  br label %return
+
+return:
+  %storemerge = phi i1 [ true, %sw.bb ], [ false, %sw.default ]
+  ret i1 %storemerge
+}
