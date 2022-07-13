@@ -463,7 +463,7 @@ bool LLParser::parseTargetDefinition() {
       return true;
     Expected<DataLayout> MaybeDL = DataLayout::parse(Str);
     if (!MaybeDL)
-      return error(Loc, toString(std::move(MaybeDL.takeError())));
+      return error(Loc, toString(MaybeDL.takeError()));
     M->setDataLayout(MaybeDL.get());
     return false;
   }
