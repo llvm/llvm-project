@@ -33,6 +33,6 @@ MAIN-SAME:    (int (ST::*)(int){{( __attribute__\(\(thiscall\)\))?}}), scope = l
 F:   Function{[[FID2:.*]]}, demangled = {{.*}}f(int)
 F-NEXT:  Block{[[FID2]]}
 F:     Variable{{.*}}, name = "this"
-F-SAME:    (ST *), scope = parameter,{{( location = DW_OP.*,)?}} artificial
+F-SAME:    (ST *), scope = parameter, location = {{(DW_OP.*)|(<empty>)}}, artificial
 F:     Variable{{.*}}, name = "x"
 F-SAME:    (int), scope = parameter, decl = PointerTypeTest.cpp:8
