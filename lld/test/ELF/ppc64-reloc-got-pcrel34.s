@@ -8,13 +8,13 @@
 # RUN: ld.lld -T %t.script --shared %t.o -o %t
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
 # RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=RELA
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=future %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
 # RUN: ld.lld -T %t.script --shared %t.o -o %t
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
 # RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=RELA
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=future %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 .text
 .section .text_low, "ax", %progbits
