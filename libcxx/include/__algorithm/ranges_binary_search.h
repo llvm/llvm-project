@@ -35,7 +35,7 @@ struct __fn {
             indirect_strict_weak_order<const _Type*, projected<_Iter, _Proj>> _Comp = ranges::less>
   _LIBCPP_HIDE_FROM_ABI constexpr
   bool operator()(_Iter __first, _Sent __last, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __ret = std::__lower_bound_impl<_RangesIterOps>(__first, __last, __value, __comp, __proj);
+    auto __ret = std::__lower_bound_impl<_RangeAlgPolicy>(__first, __last, __value, __comp, __proj);
     return __ret != __last && !std::invoke(__comp, __value, std::invoke(__proj, *__first));
   }
 
@@ -45,7 +45,7 @@ struct __fn {
   bool operator()(_Range&& __r, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __first = ranges::begin(__r);
     auto __last = ranges::end(__r);
-    auto __ret = std::__lower_bound_impl<_RangesIterOps>(__first, __last, __value, __comp, __proj);
+    auto __ret = std::__lower_bound_impl<_RangeAlgPolicy>(__first, __last, __value, __comp, __proj);
     return __ret != __last && !std::invoke(__comp, __value, std::invoke(__proj, *__first));
   }
 };
