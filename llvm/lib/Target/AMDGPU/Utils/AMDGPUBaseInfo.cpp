@@ -33,11 +33,6 @@ static llvm::cl::opt<unsigned>
                             llvm::cl::desc("AMDHSA Code Object Version"),
                             llvm::cl::init(4));
 
-// TODO-GFX11: Remove this when full 16-bit codegen is implemented.
-static llvm::cl::opt<bool>
-    LimitTo128VGPRs("amdgpu-limit-to-128-vgprs", llvm::cl::Hidden,
-                    llvm::cl::desc("Never use more than 128 VGPRs"));
-
 namespace {
 
 /// \returns Bit mask for given bit \p Shift and bit \p Width.
@@ -289,6 +284,11 @@ struct VOPDInfo {
   uint16_t OpY;
 };
 
+struct VOPTrue16Info {
+  uint16_t Opcode;
+  bool IsTrue16;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -309,6 +309,8 @@ struct VOPDInfo {
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
 #define GET_VOPDPairs_IMPL
+#define GET_VOPTrue16Table_DECL
+#define GET_VOPTrue16Table_IMPL
 #define GET_WMMAOpcode2AddrMappingTable_DECL
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
 #define GET_WMMAOpcode3AddrMappingTable_DECL
@@ -429,6 +431,11 @@ unsigned getVOPDOpcode(unsigned Opc) {
 
 bool isVOPD(unsigned Opc) {
   return AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0X) != -1;
+}
+
+bool isTrue16Inst(unsigned Opc) {
+  const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
+  return Info ? Info->IsTrue16 : false;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -864,15 +871,6 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
 }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
-  if (LimitTo128VGPRs.getNumOccurrences() ? LimitTo128VGPRs
-                                          : isGFX11Plus(*STI)) {
-    // GFX11 changes the encoding of 16-bit operands in VOP1/2/C instructions
-    // such that values 128..255 no longer mean v128..v255, they mean
-    // v0.hi..v127.hi instead. Until the compiler understands this, it is not
-    // safe to use v128..v255.
-    // TODO-GFX11: Remove this when full 16-bit codegen is implemented.
-    return 128;
-  }
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
   return 256;
