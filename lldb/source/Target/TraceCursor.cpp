@@ -51,4 +51,5 @@ const char *TraceCursor::EventKindToString(lldb::TraceEvent event_kind) {
   case lldb::eTraceEventCPUChanged:
     return "CPU core changed";
   }
+  llvm_unreachable("Fully covered switch above");
 }
