@@ -222,8 +222,8 @@ define i1 @xor_of_icmps_commute(i64 %a) {
 
 ; FIXME: This is (a != 5).
 
-define i1 @xor_of_icmps_folds_more(i64 %a) {
-; CHECK-LABEL: @xor_of_icmps_folds_more(
+define i1 @xor_of_icmps_to_ne(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_to_ne(
 ; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[A:%.*]], 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[A]], 6
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[B]], [[C]]
@@ -231,6 +231,43 @@ define i1 @xor_of_icmps_folds_more(i64 %a) {
 ;
   %b = icmp sgt i64 %a, 4
   %c = icmp slt i64 %a, 6
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
+define i1 @xor_of_icmps_to_ne_commute(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_to_ne_commute(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i64 [[A:%.*]], 4
+; CHECK-NEXT:    [[B:%.*]] = icmp slt i64 [[A]], 6
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[B]], [[C]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %c = icmp sgt i64 %a, 4
+  %b = icmp slt i64 %a, 6
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
+define i1 @xor_of_icmps_neg_to_ne(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_neg_to_ne(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[A:%.*]], -6
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[A]], -4
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[B]], [[C]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %b = icmp sgt i64 %a, -6
+  %c = icmp slt i64 %a, -4
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
+define i1 @xor_of_icmps_to_eq(i8 %a) {
+; CHECK-LABEL: @xor_of_icmps_to_eq(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], 127
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c = icmp sgt i8 %a, 126
+  %b = icmp slt i8 %a, 128
   %xor = xor i1 %b, %c
   ret i1 %xor
 }
