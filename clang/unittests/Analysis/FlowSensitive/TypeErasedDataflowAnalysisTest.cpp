@@ -82,8 +82,8 @@ TEST(DataflowAnalysisTest, NoopAnalysis) {
         return NoopAnalysis(C, false);
       }));
   EXPECT_EQ(BlockStates.size(), 2u);
-  EXPECT_TRUE(BlockStates[0].hasValue());
-  EXPECT_TRUE(BlockStates[1].hasValue());
+  EXPECT_TRUE(BlockStates[0].has_value());
+  EXPECT_TRUE(BlockStates[1].has_value());
 }
 
 struct NonConvergingLattice {

@@ -354,23 +354,23 @@ template <> struct MappingTraits<CompileCommandYAML> {
 
 template <> struct MappingTraits<VariantEntry> {
   static void mapping(IO &IO, VariantEntry &Variant) {
-    if (IO.mapTag("!Symbol", Variant.Symbol.hasValue())) {
+    if (IO.mapTag("!Symbol", Variant.Symbol.has_value())) {
       if (!IO.outputting())
         Variant.Symbol.emplace();
       MappingTraits<Symbol>::mapping(IO, *Variant.Symbol);
-    } else if (IO.mapTag("!Refs", Variant.Refs.hasValue())) {
+    } else if (IO.mapTag("!Refs", Variant.Refs.has_value())) {
       if (!IO.outputting())
         Variant.Refs.emplace();
       MappingTraits<RefBundle>::mapping(IO, *Variant.Refs);
-    } else if (IO.mapTag("!Relations", Variant.Relation.hasValue())) {
+    } else if (IO.mapTag("!Relations", Variant.Relation.has_value())) {
       if (!IO.outputting())
         Variant.Relation.emplace();
       MappingTraits<Relation>::mapping(IO, *Variant.Relation);
-    } else if (IO.mapTag("!Source", Variant.Source.hasValue())) {
+    } else if (IO.mapTag("!Source", Variant.Source.has_value())) {
       if (!IO.outputting())
         Variant.Source.emplace();
       MappingTraits<IncludeGraphNode>::mapping(IO, *Variant.Source);
-    } else if (IO.mapTag("!Cmd", Variant.Cmd.hasValue())) {
+    } else if (IO.mapTag("!Cmd", Variant.Cmd.has_value())) {
       if (!IO.outputting())
         Variant.Cmd.emplace();
       MappingTraits<CompileCommandYAML>::mapping(
