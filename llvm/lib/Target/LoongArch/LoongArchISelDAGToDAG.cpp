@@ -146,6 +146,21 @@ bool LoongArchDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
   return true;
 }
 
+bool LoongArchDAGToDAGISel::selectSExti32(SDValue N, SDValue &Val) {
+  if (N.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+      cast<VTSDNode>(N.getOperand(1))->getVT() == MVT::i32) {
+    Val = N.getOperand(0);
+    return true;
+  }
+  MVT VT = N.getSimpleValueType();
+  if (CurDAG->ComputeNumSignBits(N) > (VT.getSizeInBits() - 32)) {
+    Val = N;
+    return true;
+  }
+
+  return false;
+}
+
 // This pass converts a legalized DAG into a LoongArch-specific DAG, ready
 // for instruction scheduling.
 FunctionPass *llvm::createLoongArchISelDag(LoongArchTargetMachine &TM) {

@@ -50,6 +50,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SHL_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRA_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRL_PARTS, GRLenVT, Custom);
+  setOperationAction(ISD::FP_TO_SINT, GRLenVT, Custom);
 
   setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, GRLenVT, Custom);
 
@@ -57,6 +58,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SHL, MVT::i32, Custom);
     setOperationAction(ISD::SRA, MVT::i32, Custom);
     setOperationAction(ISD::SRL, MVT::i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
+    setOperationAction(ISD::BITCAST, MVT::i32, Custom);
   }
 
   static const ISD::CondCode FPCCToExpand[] = {ISD::SETOGT, ISD::SETOGE,
@@ -69,6 +72,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasBasicD()) {
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   }
 
@@ -117,7 +121,42 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return SDValue();
   case ISD::ConstantPool:
     return lowerConstantPool(Op, DAG);
+  case ISD::FP_TO_SINT:
+    return lowerFP_TO_SINT(Op, DAG);
+  case ISD::BITCAST:
+    return lowerBITCAST(Op, DAG);
   }
+}
+
+SDValue LoongArchTargetLowering::lowerBITCAST(SDValue Op,
+                                              SelectionDAG &DAG) const {
+
+  SDLoc DL(Op);
+  SDValue Op0 = Op.getOperand(0);
+
+  if (Op.getValueType() == MVT::f32 && Op0.getValueType() == MVT::i32 &&
+      Subtarget.is64Bit() && Subtarget.hasBasicF()) {
+    SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
+    return DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, NewOp0);
+  }
+  return Op;
+}
+
+SDValue LoongArchTargetLowering::lowerFP_TO_SINT(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+
+  SDLoc DL(Op);
+
+  if (Op.getValueSizeInBits() > 32 && Subtarget.hasBasicF() &&
+      !Subtarget.hasBasicD()) {
+    SDValue Dst =
+        DAG.getNode(LoongArchISD::FTINT, DL, MVT::f32, Op.getOperand(0));
+    return DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Dst);
+  }
+
+  EVT FPTy = EVT::getFloatingPointVT(Op.getValueSizeInBits());
+  SDValue Trunc = DAG.getNode(LoongArchISD::FTINT, DL, FPTy, Op.getOperand(0));
+  return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Trunc);
 }
 
 SDValue LoongArchTargetLowering::lowerConstantPool(SDValue Op,
@@ -299,6 +338,27 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       break;
     }
     break;
+  case ISD::FP_TO_SINT: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    SDValue Src = N->getOperand(0);
+    EVT VT = EVT::getFloatingPointVT(N->getValueSizeInBits(0));
+    SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, VT, Src);
+    Results.push_back(DAG.getNode(ISD::BITCAST, DL, N->getValueType(0), Dst));
+    break;
+  }
+  case ISD::BITCAST: {
+    EVT VT = N->getValueType(0);
+    SDValue Src = N->getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    if (VT == MVT::i32 && SrcVT == MVT::f32 && Subtarget.is64Bit() &&
+        Subtarget.hasBasicF()) {
+      SDValue Dst =
+          DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Src);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Dst));
+    }
+    break;
+  }
   }
 }
 
@@ -484,6 +544,9 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(SRA_W)
     NODE_NAME_CASE(SRL_W)
     NODE_NAME_CASE(BSTRPICK)
+    NODE_NAME_CASE(MOVGR2FR_W_LA64)
+    NODE_NAME_CASE(MOVFR2GR_S_LA64)
+    NODE_NAME_CASE(FTINT)
   }
 #undef NODE_NAME_CASE
   return nullptr;
