@@ -44,6 +44,24 @@
  *
  * WG14 DR255: yes
  * Non-prototyped function calls and argument mismatches
+ *
+ * WG14 DR267: yes
+ * Typos in 5.1.2.3, 7.24.4.4.5, 7.24.6.1, 7.24.6.1
+ *
+ * WG14 DR273: yes
+ * Meaning of __STDC_ISO_10646__
+ *
+ * WG14 DR278: yes
+ * Lacuna in character encodings
+ *
+ * WG14 DR279: yes
+ * Wide character code values for members of the basic character set
+ *
+ * WG14 DR282: yes
+ * Flexible array members & struct padding
+ *
+ * WG14 DR292: yes
+ * Use of the word variable
  */
 
 
@@ -252,3 +270,187 @@ void dr258(void) {
 #undef repeat
 #undef forget
 }
+
+/* WG14 DR261: yes
+ * Constant expressions
+ */
+void dr261(void) {
+  /* This is still an integer constant expression despite the overflow. */
+  enum e1 {
+    ex1 = __INT_MAX__ + 1  /* expected-warning {{overflow in expression; result is -2147483648 with type 'int'}} */
+  };
+
+  /* This is not an integer constant expression, because of the comma operator,
+   * but we fold it as a constant expression anyway as a GNU extension.
+   */
+  enum e2 {
+    ex2 = __INT_MAX__ + (0, 1) /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                                  expected-note {{value 2147483648 is outside the range of representable values of type 'int'}}
+                                  expected-warning {{left operand of comma operator has no effect}}
+                                */
+  };
+
+  /* It's a bit weird that we issue a "congratulations, you did the thing"
+   * diagnostic, but the diagnostic does help demonstrate that we correctly
+   * treat it as a null pointer constant value.
+   */
+  char *p1 = (1 - 1); /* expected-warning {{expression which evaluates to zero treated as a null pointer constant of type 'char *'}} */
+
+  /* This is an invalid initialization/assignment because the right-hand side
+   * does not have pointer to void or pointer to char type and is not the null
+   * pointer constant. */
+  char *p2 = (42, 1 - 1); /* expected-warning {{incompatible integer to pointer conversion initializing 'char *' with an expression of type 'int'}}
+                             expected-warning {{left operand of comma operator has no effect}}
+                           */
+  p1 = (42, 1 - 1);       /* expected-warning {{incompatible integer to pointer conversion assigning to 'char *' from 'int'}}
+                             expected-warning {{left operand of comma operator has no effect}}
+                           */
+
+  /* These are both valid. The initialization doesn't require an integer
+   * constant expression, nor does the assignment.
+   */
+  short s1 = 42 + (0, 1); /* c89only-warning {{mixing declarations and code is a C99 extension}}
+                             expected-warning {{left operand of comma operator has no effect}}
+                           */
+  s1 = (42, 69); /* expected-warning {{left operand of comma operator has no effect}} */
+
+  /* These are both valid because they are constant expressions and the value
+   * is the null pointer constant.
+   */
+  p2 = 0;
+  p2 = 1 - 1; /* expected-warning {{expression which evaluates to zero treated as a null pointer constant of type 'char *'}} */
+}
+
+/* WG14 DR262: yes
+ * Maximum size of bit fields
+ */
+void dr262(void) {
+  _Static_assert(sizeof(short) == 2, "short is not two chars?");
+  struct S {
+    short field : __CHAR_BIT__ * 2; /* ok */
+    short other_field : __CHAR_BIT__ * 2 + 1; /* expected-error-re {{width of bit-field 'other_field' ({{[0-9]+}} bits) exceeds the width of its type ({{[0-9]+}} bits)}} */
+  };
+}
+
+/* WG14 DR263: yes
+ * All-zero bits representations
+ *
+ * This tests that the integer value 0 is not comprised of any non-zero bits,
+ * which demonstrates that a value with all zero bits will be treated as the
+ * integer value zero.
+ */
+_Static_assert(__builtin_popcount(0) < 1, "zero is not all zero bits");
+
+
+/* WG14 DR265: yes
+ * Preprocessor arithmetic
+ */
+#if __UINT_MAX__ == 0xFFFFFFFF
+/* Ensure that the literal is interpreted as intptr_t instead of uintptr_t,
+ * despite that being the phase 7 behavior being that the literal is unsigned.
+ */
+#if -0xFFFFFFFF >= 0
+#error "Interpreting the literal incorrectly in the preprocessor"
+#endif
+#endif /* __UINT_MAX__ == 0xFFFFFFFF */
+
+
+/* WG14 DR266: yes
+ * Overflow of sizeof
+ */
+void dr266(void) {
+  /* Some targets support a maximum size which cannot be represented by an
+   * unsigned long, and so unsigned long long is used instead. However, C89
+   * doesn't have the long long type, so we issue a pedantic warning about it.
+   * Disable the warning momentarily so we don't have to add target triples to
+   * the RUN lines pinning the targets down concretely.
+   */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlong-long"
+  (void)sizeof(int[__SIZE_MAX__ / 2][__SIZE_MAX__ / 2]); /* expected-error-re 2 {{array is too large ({{[0-9]+}} elements)}} */
+#pragma clang diagnostic pop
+}
+
+/* WG14 DR272: yes
+ * Type category
+ */
+void dr272(void) {
+  /* The crux of this DR is to confirm that lvalue conversion of the rhs on an
+   * assignment expression strips top-level qualifiers, and not all qualifiers,
+   * from the resulting expression type.
+   */
+  const int * volatile ptr;
+  (void)_Generic(ptr = 0, const int * : 1); /* expected-warning {{expression with side effects has no effect in an unevaluated context}} */
+}
+
+/* WG14 DR277: no
+ * Declarations within iteration statements
+ */
+void dr277(void) {
+  /* FIXME: it's a bit silly to issue both of these warnings at the same time
+   * in pedantic mode given that they're both effectively the same root cause.
+   *
+   * C99 6.8.5p3: The declaration part of a for statement shall only declare
+   * identifiers for objects having storage class auto or register.
+   *
+   * FIXME: we don't issue a pedantic warning below for the declaration of E,
+   * and its enumerators, none of which declare an object with auto or register
+   * storage classes.
+   */
+  for (enum E { one, two } i = one; i < two; ++i) /* c89only-warning {{variable declaration in for loop is a C99-specific feature}}
+                                                     c89only-warning {{GCC does not allow variable declarations in for loop initializers before C99}}
+                                                   */
+    ;
+}
+
+#if __STDC_VERSION__ >= 199901L
+/* WG14 DR289: yes
+ * Function prototype with [restrict]
+ *
+ * Ensure that we support [restrict] array syntax as an abstract declarator and
+ * not just as a direct declarator.
+ */
+void dr289(int * restrict const [restrict]);
+#endif /* __STDC_VERSION__ >= 199901L */
+
+/* WG14 DR295: yes
+ * Incomplete types for function parameters
+ */
+struct NotCompleted;                    /* expected-note {{forward declaration of 'struct NotCompleted'}} */
+void dr295_1(struct NotCompleted);
+void dr295_1(struct NotCompleted Val) { /* expected-error {{variable has incomplete type 'struct NotCompleted'}} */
+}
+
+/* There's no reason to reject this code, but it's technically undefined
+ * behavior, so diagnosing it is reasonable.
+ *
+ * FIXME: either downgrade this error into a warning or remove it entirely; it
+ * doesn't add a whole lot of value as an error.
+ */
+void dr295_2(void param); /* expected-error {{argument may not have 'void' type}} */
+
+/* WG14 DR298: partial
+ * Validity of constant in unsigned long long range
+ *
+ * I'm giving this one a partial because we fail to pedantically diagnose the
+ * use of 'long long' through a constant value. We correctly warn about the
+ * type when spelled out and when using an explicit suffix, but we fail to warn
+ * otherwise.
+ */
+#if __LLONG_WIDTH__ >= 64 && __LONG_WIDTH__ < 64
+/* This test requires that long long be at least 64-bits and long be smaller
+ * because the test is whether the integer literal which is too large to fit in
+ * a constant of type long long. This is undefined behavior in C, which means
+ * we're free to pick a different type so long as we diagnose the extension
+ * appropriately.
+ */
+void dr298(void) {
+  /* FIXME: These uses of the constants need a pedantic warning in C89 mode;
+   * we've picked a type that does not exist in C89.
+   */
+  (void)_Generic(9223372036854775808,     /* expected-warning {{integer literal is too large to be represented in a signed integer type, interpreting as unsigned}} */
+                 unsigned long long : 1); /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
+  (void)_Generic(9223372036854775807,
+                 long long : 1);          /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
+}
+#endif /* __LLONG_WIDTH__ == 64 && __LONG_WIDTH__ < 64 */
