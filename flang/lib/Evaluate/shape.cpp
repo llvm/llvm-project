@@ -931,19 +931,34 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
           } else {
             // SIZE= is absent and MOLD= is array: result is vector whose
             // length is determined by sizes of types.  See 16.9.193p4 case(ii).
+            // Note that if sourceBytes is not known to be empty, we
+            // can fold only when moldElementBytes is known to not be zero;
+            // the most general case risks a division by zero otherwise.
             if (auto sourceTypeAndShape{
                     characteristics::TypeAndShape::Characterize(
                         call.arguments().at(0), *context_)}) {
-              auto sourceBytes{
-                  sourceTypeAndShape->MeasureSizeInBytes(*context_)};
-              auto moldElementBytes{
-                  moldTypeAndShape->MeasureElementSizeInBytes(*context_, true)};
-              if (sourceBytes && moldElementBytes) {
-                ExtentExpr extent{Fold(*context_,
-                    (std::move(*sourceBytes) +
-                        common::Clone(*moldElementBytes) - ExtentExpr{1}) /
-                        common::Clone(*moldElementBytes))};
-                return Shape{MaybeExtentExpr{std::move(extent)}};
+              if (auto sourceBytes{
+                      sourceTypeAndShape->MeasureSizeInBytes(*context_)}) {
+                *sourceBytes = Fold(*context_, std::move(*sourceBytes));
+                if (auto sourceBytesConst{ToInt64(*sourceBytes)}) {
+                  if (*sourceBytesConst == 0) {
+                    return Shape{ExtentExpr{0}};
+                  }
+                }
+                if (auto moldElementBytes{
+                        moldTypeAndShape->MeasureElementSizeInBytes(
+                            *context_, true)}) {
+                  *moldElementBytes =
+                      Fold(*context_, std::move(*moldElementBytes));
+                  auto moldElementBytesConst{ToInt64(*moldElementBytes)};
+                  if (moldElementBytesConst && *moldElementBytesConst != 0) {
+                    ExtentExpr extent{Fold(*context_,
+                        (std::move(*sourceBytes) +
+                            common::Clone(*moldElementBytes) - ExtentExpr{1}) /
+                            common::Clone(*moldElementBytes))};
+                    return Shape{MaybeExtentExpr{std::move(extent)}};
+                  }
+                }
               }
             }
           }

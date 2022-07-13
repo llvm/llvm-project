@@ -145,7 +145,7 @@ struct ELFWriter {
   uint64_t align(unsigned Alignment);
 
   bool maybeWriteCompression(uint64_t Size,
-                             SmallVectorImpl<char> &CompressedContents,
+                             SmallVectorImpl<uint8_t> &CompressedContents,
                              bool ZLibStyle, unsigned Alignment);
 
 public:
@@ -819,7 +819,7 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
 
 // Include the debug info compression header.
 bool ELFWriter::maybeWriteCompression(
-    uint64_t Size, SmallVectorImpl<char> &CompressedContents, bool ZLibStyle,
+    uint64_t Size, SmallVectorImpl<uint8_t> &CompressedContents, bool ZLibStyle,
     unsigned Alignment) {
   if (ZLibStyle) {
     uint64_t HdrSize =
@@ -875,9 +875,10 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
   raw_svector_ostream VecOS(UncompressedData);
   Asm.writeSectionData(VecOS, &Section, Layout);
 
-  SmallVector<char, 128> CompressedContents;
+  SmallVector<uint8_t, 128> CompressedContents;
   compression::zlib::compress(
-      StringRef(UncompressedData.data(), UncompressedData.size()),
+      makeArrayRef(reinterpret_cast<uint8_t *>(UncompressedData.data()),
+                   UncompressedData.size()),
       CompressedContents);
 
   bool ZlibStyle = MAI->compressDebugSections() == DebugCompressionType::Z;
@@ -897,7 +898,7 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
     // Add "z" prefix to section name. This is zlib-gnu style.
     MC.renameELFSection(&Section, (".z" + SectionName.drop_front(1)).str());
   }
-  W.OS << CompressedContents;
+  W.OS << toStringRef(CompressedContents);
 }
 
 void ELFWriter::WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,

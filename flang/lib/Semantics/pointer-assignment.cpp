@@ -257,9 +257,10 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
 // Common handling for procedure pointer right-hand sides
 bool PointerAssignmentChecker::Check(
     parser::CharBlock rhsName, bool isCall, const Procedure *rhsProcedure) {
-  if (std::optional<MessageFixedText> msg{
-          evaluate::CheckProcCompatibility(isCall, procedure_, rhsProcedure)}) {
-    Say(std::move(*msg), description_, rhsName);
+  std::string whyNot;
+  if (std::optional<MessageFixedText> msg{evaluate::CheckProcCompatibility(
+          isCall, procedure_, rhsProcedure, whyNot)}) {
+    Say(std::move(*msg), description_, rhsName, whyNot);
     return false;
   }
   return true;

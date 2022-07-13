@@ -199,7 +199,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   }
   // TODO: dot_product, is_iostat_end,
   // is_iostat_eor, logical, matmul, out_of_range,
-  // parity, transfer
+  // parity
   return Expr<T>{std::move(funcRef)};
 }
 
