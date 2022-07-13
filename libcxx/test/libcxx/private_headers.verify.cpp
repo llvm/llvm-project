@@ -171,6 +171,7 @@ END-SCRIPT
 #include <__algorithm/ranges_search_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_search_n.h'}}
 #include <__algorithm/ranges_set_difference.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_set_difference.h'}}
 #include <__algorithm/ranges_set_intersection.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_set_intersection.h'}}
+#include <__algorithm/ranges_set_symmetric_difference.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_set_symmetric_difference.h'}}
 #include <__algorithm/ranges_set_union.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_set_union.h'}}
 #include <__algorithm/ranges_shuffle.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_shuffle.h'}}
 #include <__algorithm/ranges_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_sort.h'}}
