@@ -725,7 +725,7 @@ static llvm::Optional<std::pair<uint64_t, ValueObjectSP>>
 ExtractLibcxxStringInfo(ValueObject &valobj) {
   ValueObjectSP valobj_r_sp =
       valobj.GetChildMemberWithName(ConstString("__r_"), /*can_create=*/true);
-  if (!valobj_r_sp)
+  if (!valobj_r_sp || !valobj_r_sp->GetError().Success())
     return {};
 
   // __r_ is a compressed_pair of the actual data and the allocator. The data we
