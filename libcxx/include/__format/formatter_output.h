@@ -59,14 +59,11 @@ struct _LIBCPP_TYPE_VIS __padding_size_result {
 _LIBCPP_HIDE_FROM_ABI constexpr __padding_size_result
 __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
   _LIBCPP_ASSERT(__width > __size, "don't call this function when no padding is required");
-  _LIBCPP_ASSERT(__align != __format_spec::__alignment::__default,
-                 "the caller should adjust the default to the value required by the type");
   _LIBCPP_ASSERT(__align != __format_spec::__alignment::__zero_padding,
                  "the caller should have handled the zero-padding");
 
   size_t __fill = __width - __size;
   switch (__align) {
-  case __format_spec::__alignment::__default:
   case __format_spec::__alignment::__zero_padding:
     __libcpp_unreachable();
 
@@ -81,6 +78,7 @@ __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align
     size_t __after = __fill - __before;
     return {__before, __after};
   }
+  case __format_spec::__alignment::__default:
   case __format_spec::__alignment::__right:
     return {__fill, 0};
   }
@@ -91,9 +89,6 @@ template <class _OutIt, class _CharT>
 _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, const char* __begin, const char* __first,
                                                               const char* __last, string&& __grouping, _CharT __sep,
                                                               __format_spec::__parsed_specifications<_CharT> __specs) {
-  _LIBCPP_ASSERT(__specs.__alignment_ != __format_spec::__alignment::__default,
-                 "the caller should adjust the default to the value required by the type");
-
   int __size = (__first - __begin) +    // [sign][prefix]
                (__last - __first) +     // data
                (__grouping.size() - 1); // number of separator characters

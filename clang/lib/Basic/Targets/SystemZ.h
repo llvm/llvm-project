@@ -123,6 +123,14 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
+  bool isValidTuneCPUName(StringRef Name) const override {
+    return isValidCPUName(Name);
+  }
+
+  void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override {
+    fillValidCPUList(Values);
+  }
+
   bool setCPU(const std::string &Name) override {
     CPU = Name;
     ISARevision = getISARevision(CPU);
