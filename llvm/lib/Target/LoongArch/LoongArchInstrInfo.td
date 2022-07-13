@@ -827,6 +827,23 @@ defm : StPat<truncstorei32, ST_W, GPR, i64>;
 defm : StPat<store, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
 
+/// Atomic loads and stores
+
+def : Pat<(atomic_fence timm, timm), (DBAR 0)>;
+
+defm : LdPat<atomic_load_8, LD_B>;
+defm : LdPat<atomic_load_16, LD_H>;
+defm : LdPat<atomic_load_32, LD_W>;
+
+defm : StPat<atomic_store_8, ST_B, GPR, GRLenVT>;
+defm : StPat<atomic_store_16, ST_H, GPR, GRLenVT>;
+defm : StPat<atomic_store_32, ST_W, GPR, i32>, Requires<[IsLA32]>;
+let Predicates = [IsLA64] in {
+defm : LdPat<atomic_load_64, LD_D>;
+defm : StPat<atomic_store_32, ST_W, GPR, i64>;
+defm : StPat<atomic_store_64, ST_D, GPR, i64>;
+} // Predicates = [IsLA64]
+
 /// Other pseudo-instructions
 
 // Pessimistically assume the stack pointer will be clobbered

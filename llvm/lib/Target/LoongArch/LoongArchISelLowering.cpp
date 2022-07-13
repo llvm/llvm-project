@@ -95,6 +95,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
+  setMaxAtomicSizeInBitsSupported(Subtarget.getGRLen());
+
   // Function alignments.
   const Align FunctionAlignment(4);
   setMinFunctionAlignment(FunctionAlignment);
