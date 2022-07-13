@@ -67,6 +67,71 @@ done:
   ret i32 %iv
 }
 
+; TODO: The 2nd check can be made invariant.
+; slt and ult checks are equivalent. When IV is negative, slt check will pass and ult will
+; fail. Because IV is incrementing, this will fail on 1st iteration or never.
+define i32 @unknown.start(i32 %start, i32* %len.ptr) {
+; CHECK-LABEL: @unknown.start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[PREHEADER:%.*]]
+; CHECK:       preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[PREHEADER]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[SIGNED_CMP:%.*]] = icmp slt i32 [[IV]], [[LEN]]
+; CHECK-NEXT:    br i1 [[SIGNED_CMP]], label [[SIGNED_PASSED:%.*]], label [[FAILED_SIGNED:%.*]]
+; CHECK:       signed.passed:
+; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV]], [[LEN]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK:       failed.signed:
+; CHECK-NEXT:    call void @fail(i32 1)
+; CHECK-NEXT:    unreachable
+; CHECK:       failed.unsigned:
+; CHECK-NEXT:    call void @fail(i32 2)
+; CHECK-NEXT:    unreachable
+; CHECK:       done:
+; CHECK-NEXT:    [[IV_LCSSA2:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA2]]
+;
+entry:
+  %len = load i32, i32* %len.ptr, !range !0
+  br label %preheader
+
+preheader:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %preheader], [%iv.next, %backedge]
+  %signed.cmp = icmp slt i32 %iv, %len
+  br i1 %signed.cmp, label %signed.passed, label %failed.signed
+
+signed.passed:
+  %unsigned.cmp = icmp ult i32 %iv, %len
+  br i1 %unsigned.cmp, label %backedge, label %failed.unsigned
+
+backedge:
+  %iv.next = add i32 %iv, 1
+  %cond = call i1 @cond()
+  br i1 %cond, label %loop, label %done
+
+failed.signed:
+  call void @fail(i32 1)
+  unreachable
+
+failed.unsigned:
+  call void @fail(i32 2)
+  unreachable
+
+done:
+  ret i32 %iv
+}
+
+
 ; TODO: We should be able to prove that:
 ; - %sibling.iv.next is non-negative;
 ; - therefore, %iv is non-negative;
