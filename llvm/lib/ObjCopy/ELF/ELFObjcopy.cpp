@@ -675,14 +675,17 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   for (const NewSymbolInfo &SI : Config.SymbolsToAdd)
     addSymbol(Obj, SI, ELFConfig.NewSymbolVisibility);
 
-  // --set-section-flags works with sections added by --add-section.
-  if (!Config.SetSectionFlags.empty()) {
+  // --set-section-{flags,type} work with sections added by --add-section.
+  if (!Config.SetSectionFlags.empty() || !Config.SetSectionType.empty()) {
     for (auto &Sec : Obj.sections()) {
       const auto Iter = Config.SetSectionFlags.find(Sec.Name);
       if (Iter != Config.SetSectionFlags.end()) {
         const SectionFlagsUpdate &SFU = Iter->second;
         setSectionFlagsAndType(Sec, SFU.NewFlags);
       }
+      auto It2 = Config.SetSectionType.find(Sec.Name);
+      if (It2 != Config.SetSectionType.end())
+        Sec.Type = It2->second;
     }
   }
 
