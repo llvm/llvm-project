@@ -70,6 +70,7 @@ static_library("Basic") {
     "IdentifierTable.cpp",
     "LangOptions.cpp",
     "LangStandards.cpp",
+    "MakeSupport.cpp",
     "Module.cpp",
     "NoSanitizeList.cpp",
     "ObjCRuntime.cpp",
