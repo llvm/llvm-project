@@ -18,7 +18,7 @@ namespace dr1305 { // dr1305: yes
 struct Incomplete; // expected-note {{forward declaration of 'dr1305::Incomplete'}}
 struct Complete {};
 
-int incomplete = alignof(Incomplete(&)[]); // expected-error {{invalid application of 'alignof' to an incomplete type 'Incomplete'}}
+int incomplete = alignof(Incomplete(&)[]); // expected-error {{invalid application of 'alignof' to an incomplete type 'dr1305::Incomplete'}}
 int complete = alignof(Complete(&)[]);
 }
 #endif

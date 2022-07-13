@@ -45,8 +45,8 @@ union u {
   struct simple s1;
 };
 
-// CHECK64: VarDecl=s1:[[@LINE+2]]:8 (Definition) [type=simple] [typekind=Elaborated] [sizeof=48] [alignof=8]
-// CHECK32: VarDecl=s1:[[@LINE+1]]:8 (Definition) [type=simple] [typekind=Elaborated] [sizeof=36] [alignof=4]
+// CHECK64: VarDecl=s1:[[@LINE+2]]:8 (Definition) [type=basic::simple] [typekind=Record] [sizeof=48] [alignof=8]
+// CHECK32: VarDecl=s1:[[@LINE+1]]:8 (Definition) [type=basic::simple] [typekind=Record] [sizeof=36] [alignof=4]
 simple s1;
 
 struct Test {
@@ -354,11 +354,11 @@ struct BaseStruct
     BaseStruct(){}
     double v0;
     float v1;
-// CHECK64: FieldDecl=fg:[[@LINE+2]]:7 (Definition) [type=C] [typekind=Elaborated] [sizeof=88] [alignof=8] [offsetof=128]
-// CHECK32: FieldDecl=fg:[[@LINE+1]]:7 (Definition) [type=C] [typekind=Elaborated] [sizeof=60] [alignof=4] [offsetof=96]
+// CHECK64: FieldDecl=fg:[[@LINE+2]]:7 (Definition) [type=Test3::C] [typekind=Record] [sizeof=88] [alignof=8] [offsetof=128]
+// CHECK32: FieldDecl=fg:[[@LINE+1]]:7 (Definition) [type=Test3::C] [typekind=Record] [sizeof=60] [alignof=4] [offsetof=96]
     C fg;
-// CHECK64: FieldDecl=rg:[[@LINE+2]]:8 (Definition) [type=C &] [typekind=LValueReference] [sizeof=88] [alignof=8] [offsetof=832]
-// CHECK32: FieldDecl=rg:[[@LINE+1]]:8 (Definition) [type=C &] [typekind=LValueReference] [sizeof=60] [alignof=4] [offsetof=576]
+// CHECK64: FieldDecl=rg:[[@LINE+2]]:8 (Definition) [type=Test3::C &] [typekind=LValueReference] [sizeof=88] [alignof=8] [offsetof=832]
+// CHECK32: FieldDecl=rg:[[@LINE+1]]:8 (Definition) [type=Test3::C &] [typekind=LValueReference] [sizeof=60] [alignof=4] [offsetof=576]
     C &rg;
     int x;
 };

@@ -84,7 +84,7 @@ constexpr bool all_the_algorithms()
     void **mid = a+5;
     void **last = a+10;
     void **first2 = b;
-    //void **mid2 = b+5;
+    void **mid2 = b+5;
     void **last2 = b+10;
     void *value = nullptr;
     int count = 1;
@@ -110,8 +110,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::equal(a, b, Equal(&copies)); assert(copies == 0);
     //(void)std::ranges::equal_range(first, last, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::equal_range(a, value, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::find_end(first, last, first2, mid2, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::find_end(a, b, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::find_end(first, last, first2, mid2, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::find_end(a, b, Equal(&copies)); assert(copies == 0);
     (void)std::ranges::find_first_of(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
     (void)std::ranges::find_first_of(a, b, Equal(&copies)); assert(copies == 0);
     (void)std::ranges::find_if(first, last, UnaryTrue(&copies)); assert(copies == 0);
@@ -195,10 +195,10 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::replace_copy_if(a, first2, UnaryTrue(&copies), value); assert(copies == 0);
     (void)std::ranges::replace_if(first, last, UnaryTrue(&copies), value); assert(copies == 0);
     (void)std::ranges::replace_if(a, UnaryTrue(&copies), value); assert(copies == 0);
-    //(void)std::ranges::search(first, last, first2, mid2, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::search(a, b, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::search_n(first, last, count, value, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::search_n(a, count, value, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::search(first, last, first2, mid2, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::search(a, b, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::search_n(first, last, count, value, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::search_n(a, count, value, Equal(&copies)); assert(copies == 0);
     (void)std::ranges::set_difference(first, mid, mid, last, first2, Less(&copies)); assert(copies == 0);
     (void)std::ranges::set_difference(a, b, first2, Less(&copies)); assert(copies == 0);
     (void)std::ranges::set_intersection(first, mid, mid, last, first2, Less(&copies)); assert(copies == 0);

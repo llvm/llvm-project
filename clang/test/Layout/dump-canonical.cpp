@@ -14,7 +14,7 @@ struct c {
 } d;
 
 // CHECK:          0 | foo_t
-// CHECK:          0 | bar_t
+// CHECK:          0 | c::bar_t
 // CANONICAL-NOT:  0 | foo_t
-// CANONICAL-NOT:  0 | bar_t
+// CANONICAL-NOT:  0 | c::bar_t
 // CANONICAL:      0 | long

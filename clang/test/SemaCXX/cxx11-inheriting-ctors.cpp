@@ -94,7 +94,7 @@ namespace PR31606 {
 
   struct A : Base {
     using Base::Base;
-    bool operator==(A const &) const; // expected-note {{no known conversion from 'B' to 'const A' for 1st argument}}
+    bool operator==(A const &) const; // expected-note {{no known conversion from 'PR31606::B' to 'const PR31606::A' for 1st argument}}
   };
 
   struct B : Base {

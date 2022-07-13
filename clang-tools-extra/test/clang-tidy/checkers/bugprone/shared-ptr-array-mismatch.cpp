@@ -72,8 +72,6 @@ std::shared_ptr<int> f_ret() {
 template <class T>
 void f_tmpl() {
   std::shared_ptr<T> P1{new T[10]};
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: shared pointer to non-array is initialized with array [bugprone-shared-ptr-array-mismatch]
-  // CHECK-FIXES: std::shared_ptr<T[]> P1{new T[10]};
 }
 
 void f5() {

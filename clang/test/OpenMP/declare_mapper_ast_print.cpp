@@ -21,7 +21,7 @@ public:
 };
 // CHECK: };
 
-// CHECK: class vecchild : public vec {
+// CHECK: class vecchild : public N1::vec {
 class vecchild : public vec {
 public:
   int lenc;
@@ -29,7 +29,7 @@ public:
 // CHECK: };
 
 #pragma omp declare mapper(id: vec v) map(v.len)
-// CHECK: #pragma omp declare mapper (id : vec v) map(tofrom: v.len){{$}}
+// CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len){{$}}
 };
 // CHECK: }
 // CHECK: ;
@@ -49,11 +49,11 @@ public:
 
 // CHECK: template <class T> class dat {
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len){{$}}
-// CHECK: #pragma omp declare mapper (id : datin v) map(tofrom: v.in){{$}}
+// CHECK: #pragma omp declare mapper (id : dat::datin v) map(tofrom: v.in){{$}}
 // CHECK: };
 // CHECK: template<> class dat<double> {
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len){{$}}
-// CHECK: #pragma omp declare mapper (id : datin v) map(tofrom: v.in){{$}}
+// CHECK: #pragma omp declare mapper (id : dat<double>::datin v) map(tofrom: v.in){{$}}
 // CHECK: };
 
 constexpr int N = 2;

@@ -16,7 +16,7 @@ public:
 
 void f(C &c1, C &c2) {
   if (!std::memcmp(&c1, &c2, sizeof(C))) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: comparing object representation of non-standard-layout type 'C'; consider using a comparison operator instead
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: comparing object representation of non-standard-layout type 'sei_cert_example_oop57_cpp::C'; consider using a comparison operator instead
   }
 }
 } // namespace sei_cert_example_oop57_cpp
@@ -30,7 +30,7 @@ struct S {
 void test() {
   S a, b;
   std::memcmp(&a, &b, sizeof(S));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'S' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'inner_padding_64bit_only::S' which does not have a unique object representation; consider comparing the members of the object manually
 }
 } // namespace inner_padding_64bit_only
 
@@ -47,17 +47,17 @@ class Derived2 : public Derived {};
 void testDerived() {
   Derived a, b;
   std::memcmp(&a, &b, sizeof(Base));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'Derived' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'padding_in_base::Derived' which does not have a unique object representation; consider comparing the members of the object manually
   std::memcmp(&a, &b, sizeof(Derived));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'Derived' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'padding_in_base::Derived' which does not have a unique object representation; consider comparing the members of the object manually
 }
 
 void testDerived2() {
   Derived2 a, b;
   std::memcmp(&a, &b, sizeof(Base));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'Derived2' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'padding_in_base::Derived2' which does not have a unique object representation; consider comparing the members of the object manually
   std::memcmp(&a, &b, sizeof(Derived2));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'Derived2' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'padding_in_base::Derived2' which does not have a unique object representation; consider comparing the members of the object manually
 }
 
 } // namespace padding_in_base
@@ -97,7 +97,7 @@ public:
 void test() {
   C a, b;
   std::memcmp(&a, &b, sizeof(C));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of non-standard-layout type 'C'; consider using a comparison operator instead
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of non-standard-layout type 'non_standard_layout::C'; consider using a comparison operator instead
 }
 
 } // namespace non_standard_layout
@@ -131,7 +131,7 @@ struct S {};
 void test() {
   S a, b;
   std::memcmp(&a, &b, sizeof(S));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'S' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'empty_struct::S' which does not have a unique object representation; consider comparing the members of the object manually
 }
 } // namespace empty_struct
 
@@ -144,7 +144,7 @@ struct S {
 void test() {
   S a, b;
   std::memcmp(&a, &b, sizeof(S));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'S' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'empty_field::S' which does not have a unique object representation; consider comparing the members of the object manually
 }
 } // namespace empty_field
 
@@ -173,7 +173,7 @@ struct S {
 void test() {
   S a, b;
   std::memcmp(&a, &b, sizeof(S));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'S' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'no_unique_address_attribute::multiple_empties_same_type::S' which does not have a unique object representation; consider comparing the members of the object manually
 }
 
 } // namespace multiple_empties_same_type
@@ -203,7 +203,7 @@ struct S {
 void test() {
   S a, b;
   std::memcmp(&a, &b, sizeof(S));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'S' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'alignment::S' which does not have a unique object representation; consider comparing the members of the object manually
 }
 } // namespace alignment
 

@@ -85,8 +85,8 @@ Task bar() {
 // CHECK:           CaseStmt
 // CHECK:             ExprWithCleanups {{.*}} 'void'
 // CHECK-NEXT:          CoawaitExpr
-// CHECK-NEXT:            CXXBindTemporaryExpr {{.*}} 'Task':'Task' (CXXTemporary {{.*}})
-// CHECK:                 MaterializeTemporaryExpr {{.*}} 'Awaiter':'Task::Awaiter'
+// CHECK-NEXT:            CXXBindTemporaryExpr {{.*}} 'Task' (CXXTemporary {{.*}})
+// CHECK:                 MaterializeTemporaryExpr {{.*}} 'Task::Awaiter':'Task::Awaiter'
 // CHECK:                 ExprWithCleanups {{.*}} 'bool'
 // CHECK-NEXT:              CXXMemberCallExpr {{.*}} 'bool'
 // CHECK-NEXT:                MemberExpr {{.*}} .await_ready
@@ -98,8 +98,8 @@ Task bar() {
 // CHECK:           CaseStmt
 // CHECK:             ExprWithCleanups {{.*}} 'void'
 // CHECK-NEXT:          CoawaitExpr
-// CHECK-NEXT:            CXXBindTemporaryExpr {{.*}} 'Task':'Task' (CXXTemporary {{.*}})
-// CHECK:                 MaterializeTemporaryExpr {{.*}} 'Awaiter':'Task::Awaiter'
+// CHECK-NEXT:            CXXBindTemporaryExpr {{.*}} 'Task' (CXXTemporary {{.*}})
+// CHECK:                 MaterializeTemporaryExpr {{.*}} 'Task::Awaiter':'Task::Awaiter'
 // CHECK:                 ExprWithCleanups {{.*}} 'bool'
 // CHECK-NEXT:              CXXMemberCallExpr {{.*}} 'bool'
 // CHECK-NEXT:                MemberExpr {{.*}} .await_ready

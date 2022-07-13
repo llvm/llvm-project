@@ -336,7 +336,7 @@ Error extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
 
   // Extract offloading data from globals referenced by the
   // `llvm.embedded.object` metadata with the `.llvm.offloading` section.
-  auto *MD = M->getNamedMetadata("llvm.embedded.object");
+  auto *MD = M->getNamedMetadata("llvm.embedded.objects");
   if (!MD)
     return Error::success();
 

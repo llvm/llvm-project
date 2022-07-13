@@ -28,6 +28,6 @@ struct S {
 void test() {
   S a, b;
   std::memcmp(&a, &b, sizeof(S));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'S' which does not have a unique object representation; consider comparing the members of the object manually
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'inner_padding::S' which does not have a unique object representation; consider comparing the members of the object manually
 }
 } // namespace inner_padding

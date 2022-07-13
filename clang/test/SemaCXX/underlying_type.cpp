@@ -47,11 +47,11 @@ namespace PR19966 {
     // expected-error@-1 {{ISO C++ forbids forward references to 'enum'}}
     // expected-error@-2 {{variable has incomplete type}}
     __underlying_type(Invalid) dont_crash;
-    // expected-error@-1 {{cannot determine underlying type of incomplete enumeration type 'Invalid'}}
+    // expected-error@-1 {{cannot determine underlying type of incomplete enumeration type 'PR19966::Invalid'}}
   }
   enum E { // expected-note {{forward declaration of 'E'}}
     a = (__underlying_type(E)){}
-    // expected-error@-1 {{cannot determine underlying type of incomplete enumeration type 'E'}}
+    // expected-error@-1 {{cannot determine underlying type of incomplete enumeration type 'PR19966::E'}}
     // expected-error@-2 {{constant expression}}
   };
 }

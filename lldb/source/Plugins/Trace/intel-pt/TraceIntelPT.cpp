@@ -199,10 +199,10 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
                               std::chrono::milliseconds duration) {
       s.Format("    {0}: {1:2}s\n", name, duration.count() / 1000.0);
     };
-    GetTimer().ForThread(tid).ForEachTimedTask(print_duration);
+    GetThreadTimer(tid).ForEachTimedTask(print_duration);
 
     s << "\n  Timing for global tasks:\n";
-    GetTimer().ForGlobal().ForEachTimedTask(print_duration);
+    GetGlobalTimer().ForEachTimedTask(print_duration);
   }
 
   // Instruction events stats
@@ -476,7 +476,20 @@ Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
-      dict->GetValueForKeyAsInteger("iptTraceSize", ipt_trace_size);
+      llvm::StringRef ipt_trace_size_not_parsed;
+      if (dict->GetValueForKeyAsString("iptTraceSize",
+                                       ipt_trace_size_not_parsed)) {
+        if (Optional<uint64_t> bytes =
+                ParsingUtils::ParseUserFriendlySizeExpression(
+                    ipt_trace_size_not_parsed))
+          ipt_trace_size = *bytes;
+        else
+          return createStringError(inconvertibleErrorCode(),
+                                   "iptTraceSize is wrong bytes expression");
+      } else {
+        dict->GetValueForKeyAsInteger("iptTraceSize", ipt_trace_size);
+      }
+
       dict->GetValueForKeyAsBoolean("enableTsc", enable_tsc);
       dict->GetValueForKeyAsInteger("psbPeriod", psb_period);
     } else {
@@ -494,3 +507,11 @@ Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,
 }
 
 TaskTimer &TraceIntelPT::GetTimer() { return GetUpdatedStorage().task_timer; }
+
+ScopedTaskTimer &TraceIntelPT::GetThreadTimer(lldb::tid_t tid) {
+  return GetTimer().ForThread(tid);
+}
+
+ScopedTaskTimer &TraceIntelPT::GetGlobalTimer() {
+  return GetTimer().ForGlobal();
+}

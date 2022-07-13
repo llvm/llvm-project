@@ -422,6 +422,13 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     return QT;
   }
 
+  // We don't consider the alias introduced by `using a::X` as a new type.
+  // The qualified name is still a::X.
+  if (isa<UsingType>(QT.getTypePtr())) {
+    return getFullyQualifiedType(QT.getSingleStepDesugaredType(Ctx), Ctx,
+                                 WithGlobalNsPrefix);
+  }
+
   // Remove the part of the type related to the type being a template
   // parameter (we won't report it as part of the 'type name' and it
   // is actually make the code below to be more complex (to handle
@@ -448,14 +455,6 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     assert(!QT.hasLocalQualifiers());
     Keyword = ETypeInput->getKeyword();
   }
-
-  // We don't consider the alias introduced by `using a::X` as a new type.
-  // The qualified name is still a::X.
-  if (const auto *UT = QT->getAs<UsingType>()) {
-    return getFullyQualifiedType(UT->getUnderlyingType(), Ctx,
-                                 WithGlobalNsPrefix);
-  }
-
   // Create a nested name specifier if needed.
   Prefix = createNestedNameSpecifierForScopeOf(Ctx, QT.getTypePtr(),
                                                true /*FullyQualified*/,

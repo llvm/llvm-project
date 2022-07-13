@@ -31,10 +31,10 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
   clang_analyzer_printState();
 
   // CHECK:      "dynamic_types": [
-  // CHECK-NEXT:   { "region": "SymRegion{reg_$0<const Shape * S>}", "dyn_type": "const class clang::Circle", "sub_classable": true }
+  // CHECK-NEXT:   { "region": "SymRegion{reg_$0<const struct clang::Shape * S>}", "dyn_type": "const class clang::Circle", "sub_classable": true }
   // CHECK-NEXT: ],
   // CHECK-NEXT: "dynamic_casts": [
-  // CHECK:        { "region": "SymRegion{reg_$0<const Shape * S>}", "casts": [
+  // CHECK:        { "region": "SymRegion{reg_$0<const struct clang::Shape * S>}", "casts": [
   // CHECK-NEXT:     { "from": "struct clang::Shape", "to": "class clang::Circle", "kind": "success" },
   // CHECK-NEXT:     { "from": "struct clang::Shape", "to": "class clang::Square", "kind": "fail" }
   // CHECK-NEXT:   ] }

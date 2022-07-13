@@ -565,21 +565,21 @@ namespace preferred_name {
   using Z = const C<double>; // expected-note {{'Z' declared here}}
   template<typename T> struct [[clang::preferred_name(C<int>)]] C; // expected-error {{argument 'C<int>' to 'preferred_name' attribute is not a typedef for a specialization of 'C'}}
   template<typename T> struct [[clang::preferred_name(X), clang::preferred_name(Y)]] C;
-  template<typename T> struct [[clang::preferred_name(const X)]] C; // expected-error {{argument 'const X'}}
-  template<typename T> struct [[clang::preferred_name(Z)]] C; // expected-error {{argument 'Z' (aka 'const C<double>')}}
+  template<typename T> struct [[clang::preferred_name(const X)]] C; // expected-error {{argument 'const preferred_name::X'}}
+  template<typename T> struct [[clang::preferred_name(Z)]] C; // expected-error {{argument 'preferred_name::Z' (aka 'const C<double>')}}
   template<typename T> struct C {};
 
   // CHECK: ClassTemplateDecl {{.*}} <line:[[@LINE-10]]:{{.*}} C
   // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct C definition
   // CHECK:     TemplateArgument type 'int'
   // CHECK-NOT: PreferredNameAttr
-  // CHECK:     PreferredNameAttr {{.*}} X
+  // CHECK:     PreferredNameAttr {{.*}} preferred_name::X
   // CHECK-NOT: PreferredNameAttr
   // CHECK:     CXXRecordDecl
   // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct C definition
   // CHECK:     TemplateArgument type 'float'
   // CHECK-NOT: PreferredNameAttr
-  // CHECK:     PreferredNameAttr {{.*}} Y
+  // CHECK:     PreferredNameAttr {{.*}} preferred_name::Y
   // CHECK-NOT: PreferredNameAttr
   // CHECK:     CXXRecordDecl
   // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct C definition

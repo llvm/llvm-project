@@ -844,7 +844,7 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
   }
 
   // Handle size_t, ptrdiff_t, etc. that have dedicated length modifiers in C99.
-  if (LangOpt.C99 || LangOpt.CPlusPlus11)
+  if (isa<TypedefType>(QT) && (LangOpt.C99 || LangOpt.CPlusPlus11))
     namedTypeToLengthModifier(QT, LM);
 
   // If fixing the length modifier was enough, we might be done.
@@ -874,7 +874,7 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 
   // Set conversion specifier and disable any flags which do not apply to it.
   // Let typedefs to char fall through to int, as %c is silly for uint8_t.
-  if (!QT->getAs<TypedefType>() && QT->isCharType()) {
+  if (!isa<TypedefType>(QT) && QT->isCharType()) {
     CS.setKind(ConversionSpecifier::cArg);
     LM.setKind(LengthModifier::None);
     Precision.setHowSpecified(OptionalAmount::NotSpecified);
@@ -885,10 +885,12 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
   // Test for Floating type first as LongDouble can pass isUnsignedIntegerType
   else if (QT->isRealFloatingType()) {
     CS.setKind(ConversionSpecifier::fArg);
-  } else if (QT->isSignedIntegerType()) {
+  }
+  else if (QT->isSignedIntegerType()) {
     CS.setKind(ConversionSpecifier::dArg);
     HasAlternativeForm = false;
-  } else if (QT->isUnsignedIntegerType()) {
+  }
+  else if (QT->isUnsignedIntegerType()) {
     CS.setKind(ConversionSpecifier::uArg);
     HasAlternativeForm = false;
     HasPlusPrefix = false;

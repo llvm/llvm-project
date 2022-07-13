@@ -44,7 +44,7 @@ namespace Test {
     // avoid accepting and printing out a typo correction that proves to be
     // incorrect once argument-dependent lookup resolution has occurred.
     func(B::B()); // expected-error {{use of undeclared identifier 'func'; did you mean 'C::func'?}} \
-                  // expected-error {{no viable conversion from 'B::B' to 'C'}}
+                  // expected-error {{no viable conversion from 'B::B' to 'C::C'}}
     func(C::C());
     A::A() + A::A();
     B::B() + B::B();

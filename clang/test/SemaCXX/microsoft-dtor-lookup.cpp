@@ -42,7 +42,7 @@ private:
   int a;
 };
 
-struct B : public A { // expected-note {{destructor of 'B' is implicitly deleted because base class 'A' has an inaccessible destructor}}
+struct B : public A { // expected-note {{destructor of 'B' is implicitly deleted because base class 'Test2::A' has an inaccessible destructor}}
   int b;
 };
 

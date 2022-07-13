@@ -131,6 +131,6 @@ namespace PR13492 {
   };
 
   void f() {
-    const B b; // expected-error {{default initialization of an object of const type 'const B' without a user-provided default constructor}}
+    const B b; // expected-error {{default initialization of an object of const type 'const PR13492::B' without a user-provided default constructor}}
   }
 }

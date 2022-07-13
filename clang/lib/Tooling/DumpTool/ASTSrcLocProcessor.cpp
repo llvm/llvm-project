@@ -161,7 +161,7 @@ CaptureMethods(std::string TypeString, const clang::CXXRecordDecl *ASTClass,
                   optionally(
                       isDerivedFrom(cxxRecordDecl(hasName("clang::TypeLoc"))
                                         .bind("typeLocBase"))))),
-              returns(hasCanonicalType(asString(TypeString))))
+              returns(asString(TypeString)))
               .bind("classMethod")),
       *ASTClass, *Result.Context);
 

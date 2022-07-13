@@ -32,13 +32,12 @@ Status CommandObjectThreadTraceStartIntelPT::CommandOptions::SetOptionValue(
 
   switch (short_option) {
   case 's': {
-    int64_t ipt_trace_size;
-    if (option_arg.empty() || option_arg.getAsInteger(0, ipt_trace_size) ||
-        ipt_trace_size < 0)
-      error.SetErrorStringWithFormat("invalid integer value for option '%s'",
-                                     option_arg.str().c_str());
+    if (Optional<uint64_t> bytes =
+            ParsingUtils::ParseUserFriendlySizeExpression(option_arg))
+      m_ipt_trace_size = *bytes;
     else
-      m_ipt_trace_size = ipt_trace_size;
+      error.SetErrorStringWithFormat("invalid bytes expression for '%s'",
+                                     option_arg.str().c_str());
     break;
   }
   case 't': {
@@ -98,24 +97,21 @@ Status CommandObjectProcessTraceStartIntelPT::CommandOptions::SetOptionValue(
 
   switch (short_option) {
   case 's': {
-    int64_t ipt_trace_size;
-    if (option_arg.empty() || option_arg.getAsInteger(0, ipt_trace_size) ||
-        ipt_trace_size < 0)
-      error.SetErrorStringWithFormat("invalid integer value for option '%s'",
-                                     option_arg.str().c_str());
+    if (Optional<uint64_t> bytes =
+            ParsingUtils::ParseUserFriendlySizeExpression(option_arg))
+      m_ipt_trace_size = *bytes;
     else
-      m_ipt_trace_size = ipt_trace_size;
+      error.SetErrorStringWithFormat("invalid bytes expression for '%s'",
+                                     option_arg.str().c_str());
     break;
   }
   case 'l': {
-    int64_t process_buffer_size_limit;
-    if (option_arg.empty() ||
-        option_arg.getAsInteger(0, process_buffer_size_limit) ||
-        process_buffer_size_limit < 0)
-      error.SetErrorStringWithFormat("invalid integer value for option '%s'",
-                                     option_arg.str().c_str());
+    if (Optional<uint64_t> bytes =
+            ParsingUtils::ParseUserFriendlySizeExpression(option_arg))
+      m_process_buffer_size_limit = *bytes;
     else
-      m_process_buffer_size_limit = process_buffer_size_limit;
+      error.SetErrorStringWithFormat("invalid bytes expression for '%s'",
+                                     option_arg.str().c_str());
     break;
   }
   case 't': {
@@ -167,4 +163,46 @@ bool CommandObjectProcessTraceStartIntelPT::DoExecute(
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
   return result.Succeeded();
+}
+
+Optional<uint64_t>
+ParsingUtils::ParseUserFriendlySizeExpression(llvm::StringRef size_expression) {
+  if (size_expression.empty()) {
+    return llvm::None;
+  }
+  const uint64_t kBytesMultiplier = 1;
+  const uint64_t kKibiBytesMultiplier = 1024;
+  const uint64_t kMebiBytesMultiplier = 1024 * 1024;
+
+  DenseMap<StringRef, uint64_t> multipliers = {
+      {"mib", kMebiBytesMultiplier}, {"mb", kMebiBytesMultiplier},
+      {"m", kMebiBytesMultiplier},   {"kib", kKibiBytesMultiplier},
+      {"kb", kKibiBytesMultiplier},  {"k", kKibiBytesMultiplier},
+      {"b", kBytesMultiplier},       {"", kBytesMultiplier}};
+
+  const auto non_digit_index = size_expression.find_first_not_of("0123456789");
+  if (non_digit_index == 0) { // expression starts from from non-digit char.
+    return llvm::None;
+  }
+
+  const llvm::StringRef number_part =
+      non_digit_index == llvm::StringRef::npos
+          ? size_expression
+          : size_expression.substr(0, non_digit_index);
+  uint64_t parsed_number;
+  if (number_part.getAsInteger(10, parsed_number)) {
+    return llvm::None;
+  }
+
+  if (non_digit_index != llvm::StringRef::npos) { // if expression has units.
+    const auto multiplier = size_expression.substr(non_digit_index).lower();
+
+    auto it = multipliers.find(multiplier);
+    if (it == multipliers.end())
+      return llvm::None;
+
+    return parsed_number * it->second;
+  } else {
+    return parsed_number;
+  }
 }

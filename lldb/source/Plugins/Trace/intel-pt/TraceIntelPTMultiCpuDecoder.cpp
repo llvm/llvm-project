@@ -39,30 +39,35 @@ Expected<DecodedThreadSP> TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
   if (Error err = CorrelateContextSwitchesAndIntelPtTraces())
     return std::move(err);
 
-  auto it = m_decoded_threads.find(thread.GetID());
-  if (it != m_decoded_threads.end())
-    return it->second;
-
-  DecodedThreadSP decoded_thread_sp =
-      std::make_shared<DecodedThread>(thread.shared_from_this());
-
   TraceIntelPTSP trace_sp = GetTrace();
 
-  Error err = trace_sp->OnAllCpusBinaryDataRead(
-      IntelPTDataKinds::kIptTrace,
-      [&](const DenseMap<cpu_id_t, ArrayRef<uint8_t>> &buffers) -> Error {
-        auto it = m_continuous_executions_per_thread->find(thread.GetID());
-        if (it != m_continuous_executions_per_thread->end())
-          return DecodeSystemWideTraceForThread(*decoded_thread_sp, *trace_sp,
-                                                buffers, it->second);
+  return trace_sp
+      ->GetThreadTimer(thread.GetID())
+      .TimeTask("Decoding instructions", [&]() -> Expected<DecodedThreadSP> {
+        auto it = m_decoded_threads.find(thread.GetID());
+        if (it != m_decoded_threads.end())
+          return it->second;
 
-        return Error::success();
+        DecodedThreadSP decoded_thread_sp =
+            std::make_shared<DecodedThread>(thread.shared_from_this());
+
+        Error err = trace_sp->OnAllCpusBinaryDataRead(
+            IntelPTDataKinds::kIptTrace,
+            [&](const DenseMap<cpu_id_t, ArrayRef<uint8_t>> &buffers) -> Error {
+              auto it =
+                  m_continuous_executions_per_thread->find(thread.GetID());
+              if (it != m_continuous_executions_per_thread->end())
+                return DecodeSystemWideTraceForThread(
+                    *decoded_thread_sp, *trace_sp, buffers, it->second);
+
+              return Error::success();
+            });
+        if (err)
+          return std::move(err);
+
+        m_decoded_threads.try_emplace(thread.GetID(), decoded_thread_sp);
+        return decoded_thread_sp;
       });
-  if (err)
-    return std::move(err);
-
-  m_decoded_threads.try_emplace(thread.GetID(), decoded_thread_sp);
-  return decoded_thread_sp;
 }
 
 static Expected<std::vector<IntelPTThreadSubtrace>>
@@ -153,7 +158,7 @@ Error TraceIntelPTMultiCpuDecoder::CorrelateContextSwitchesAndIntelPtTraces() {
   if (m_continuous_executions_per_thread)
     return Error::success();
 
-  Error err = GetTrace()->GetTimer().ForGlobal().TimeTask<Error>(
+  Error err = GetTrace()->GetGlobalTimer().TimeTask(
       "Context switch and Intel PT traces correlation", [&]() -> Error {
         if (auto correlation = DoCorrelateContextSwitchesAndIntelPtTraces()) {
           m_continuous_executions_per_thread.emplace(std::move(*correlation));

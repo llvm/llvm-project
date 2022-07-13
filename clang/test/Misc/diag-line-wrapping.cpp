@@ -9,8 +9,8 @@ struct DD : D1, D2 {
   // Ensure that after line-wrapping takes place, we preserve artificial
   // newlines introduced to manually format a section of the diagnostic text.
   // CHECK: {{.*}}: error:
-  // CHECK: struct DD -> D1 -> B
-  // CHECK: struct DD -> D2 -> B
+  // CHECK: struct DD -> struct D1 -> struct B
+  // CHECK: struct DD -> struct D2 -> struct B
 };
 
 // A line longer than 4096 characters should cause us to suppress snippets no
