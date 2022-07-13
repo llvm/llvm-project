@@ -572,18 +572,20 @@ static bool relax(InputSection &sec) {
   auto &aux = *sec.relaxAux;
   bool changed = false;
 
-  // Restore original st_value for symbols relative to this section.
+  // Get st_value delta for symbols relative to this section from the previous
+  // iteration.
+  DenseMap<const Defined *, uint64_t> valueDelta;
   ArrayRef<SymbolAnchor> sa = makeArrayRef(aux.anchors);
   uint32_t delta = 0;
   for (auto it : llvm::enumerate(sec.relocations)) {
     for (; sa.size() && sa[0].offset <= it.value().offset; sa = sa.slice(1))
       if (!sa[0].end)
-        sa[0].d->value += delta;
+        valueDelta[sa[0].d] = delta;
     delta = aux.relocDeltas[it.index()];
   }
   for (const SymbolAnchor &sa : sa)
     if (!sa.end)
-      sa.d->value += delta;
+      valueDelta[sa.d] = delta;
   sa = makeArrayRef(aux.anchors);
   delta = 0;
 
@@ -615,13 +617,11 @@ static bool relax(InputSection &sec) {
     // For all anchors whose offsets are <= r.offset, they are preceded by
     // the previous relocation whose `relocDeltas` value equals `delta`.
     // Decrease their st_value and update their st_size.
-    if (remove) {
-      for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1)) {
-        if (sa[0].end)
-          sa[0].d->size = sa[0].offset - delta - sa[0].d->value;
-        else
-          sa[0].d->value -= delta;
-      }
+    for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1)) {
+      if (sa[0].end)
+        sa[0].d->size = sa[0].offset - delta - sa[0].d->value;
+      else
+        sa[0].d->value -= delta - valueDelta.find(sa[0].d)->second;
     }
     delta += remove;
     if (delta != cur) {
@@ -634,7 +634,7 @@ static bool relax(InputSection &sec) {
     if (a.end)
       a.d->size = a.offset - delta - a.d->value;
     else
-      a.d->value -= delta;
+      a.d->value -= delta - valueDelta.find(a.d)->second;
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<16>(delta))
