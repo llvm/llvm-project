@@ -87,6 +87,11 @@ defm set_section_flags
          "data, rom, share, contents, merge, strings.">,
       MetaVarName<"section=flag1[,flag2,...]">;
 
+defm set_section_type
+    : Eq<"set-section-type",
+         "Set the type of section <section> to the integer <type>">,
+      MetaVarName<"section=type">;
+
 def S : Flag<["-"], "S">,
         Alias<strip_all>,
         HelpText<"Alias for --strip-all">;
