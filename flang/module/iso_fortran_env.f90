@@ -130,8 +130,10 @@ module iso_fortran_env
 
   integer, parameter :: input_unit = 5, output_unit = 6
   integer, parameter :: error_unit = 0
-  integer, parameter :: iostat_end = -1, iostat_eor = -2
-  integer, parameter :: iostat_inquire_internal_unit = -1
+  integer, parameter :: iostat_end = FORTRAN_RUNTIME_IOSTAT_END
+  integer, parameter :: iostat_eor = FORTRAN_RUNTIME_IOSTAT_EOR
+  integer, parameter :: iostat_inquire_internal_unit = &
+                          FORTRAN_RUNTIME_IOSTAT_INQUIRE_INTERNAL_UNIT
 
   integer, parameter :: character_storage_size = 8
   integer, parameter :: file_storage_size = 8
