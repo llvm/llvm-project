@@ -79,8 +79,12 @@ void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
       return isZeroOrOneFP(Op) ? nullptr : ConstantFP::get(Ty, 1.0);
 
     if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
-      if (isZeroOrOneFP(Op))
+      if (isOne(Op) || isZero(Op) || isZeroOrOneFP(Op))
         return nullptr;
+
+      if (auto *IntTy = dyn_cast<IntegerType>(VT->getElementType()))
+        return ConstantVector::getSplat(VT->getElementCount(),
+                                        ConstantInt::get(IntTy, 1));
 
       return ConstantVector::getSplat(
           VT->getElementCount(), ConstantFP::get(VT->getElementType(), 1.0));
