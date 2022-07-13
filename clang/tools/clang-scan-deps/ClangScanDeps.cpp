@@ -378,6 +378,7 @@ private:
     case ModuleOutputKind::DiagnosticSerializationFile:
       return PCMPath.first->second + ".diag";
     }
+    llvm_unreachable("Fully covered switch above!");
   }
 
   /// Construct a path for the explicitly built PCM.
