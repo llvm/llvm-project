@@ -171,6 +171,10 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  // FIXME: Enable feature predicate checks once all the test pass.
+  // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
+  //                                        getSubtargetInfo().getFeatureBits());
+
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;
 
