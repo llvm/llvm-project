@@ -428,6 +428,11 @@ them.
  specified ``<flag>`` values. See :option:`--set-section-flags` for a list of
  supported flags. Can be specified multiple times to rename multiple sections.
 
+.. option:: --set-section-type <section>=<type>
+
+ Set the type of section ``<section>`` to the integer ``<type>``. Can be
+ specified multiple times to update multiple sections.
+
 .. option:: --set-start-addr <addr>
 
  Set the start address of the output to ``<addr>``. Overrides any previously
