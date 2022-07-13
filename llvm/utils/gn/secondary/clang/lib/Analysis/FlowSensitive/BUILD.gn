@@ -12,5 +12,6 @@ static_library("FlowSensitive") {
     "Transfer.cpp",
     "TypeErasedDataflowAnalysis.cpp",
     "WatchedLiteralsSolver.cpp",
+    "DebugSupport.cpp",
   ]
 }
