@@ -4293,6 +4293,9 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
       getCUDARuntime().handleVarRegistration(D, *GV);
   }
 
+  if (D)
+    SanitizerMD->reportGlobal(GV, *D);
+
   LangAS ExpectedAS =
       D ? D->getType().getAddressSpace()
         : (LangOpts.OpenCL ? LangAS::opencl_global : LangAS::Default);
