@@ -415,7 +415,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
             BF.addEntryPointAtOffset(Address - BF.getAddress()), Addend);
       }
     } else {
-      BF.InterproceduralReferences.insert(Address);
+      addInterproceduralReference(&BF, Address);
     }
   }
 
@@ -1120,9 +1120,106 @@ bool BinaryContext::registerFragment(BinaryFunction &TargetFunction,
   return true;
 }
 
-void BinaryContext::processInterproceduralReferences(BinaryFunction &Function) {
-  for (uint64_t Address : Function.InterproceduralReferences) {
-    if (!Address)
+void BinaryContext::addAdrpAddRelocAArch64(BinaryFunction &BF,
+                                           MCInst &LoadLowBits,
+                                           MCInst &LoadHiBits,
+                                           uint64_t Target) {
+  const MCSymbol *TargetSymbol;
+  uint64_t Addend = 0;
+  std::tie(TargetSymbol, Addend) = handleAddressRef(Target, BF,
+                                                    /*IsPCRel*/ true);
+  int64_t Val;
+  MIB->replaceImmWithSymbolRef(LoadHiBits, TargetSymbol, Addend, Ctx.get(), Val,
+                               ELF::R_AARCH64_ADR_PREL_PG_HI21);
+  MIB->replaceImmWithSymbolRef(LoadLowBits, TargetSymbol, Addend, Ctx.get(),
+                               Val, ELF::R_AARCH64_ADD_ABS_LO12_NC);
+}
+
+bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
+  BinaryFunction *TargetFunction = getBinaryFunctionContainingAddress(Address);
+  if (TargetFunction)
+    return false;
+
+  ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
+  assert(Section && "cannot get section for referenced address");
+  if (!Section->isText())
+    return false;
+
+  bool Ret = false;
+  StringRef SectionContents = Section->getContents();
+  uint64_t Offset = Address - Section->getAddress();
+  const uint64_t MaxSize = SectionContents.size() - Offset;
+  const uint8_t *Bytes =
+      reinterpret_cast<const uint8_t *>(SectionContents.data());
+  ArrayRef<uint8_t> Data(Bytes + Offset, MaxSize);
+
+  auto matchVeneer = [&](BinaryFunction::InstrMapType &Instructions,
+                         MCInst &Instruction, uint64_t Offset,
+                         uint64_t AbsoluteInstrAddr,
+                         uint64_t TotalSize) -> bool {
+    MCInst *TargetHiBits, *TargetLowBits;
+    uint64_t TargetAddress, Count;
+    Count = MIB->matchLinkerVeneer(Instructions.begin(), Instructions.end(),
+                                   AbsoluteInstrAddr, Instruction, TargetHiBits,
+                                   TargetLowBits, TargetAddress);
+    if (!Count)
+      return false;
+
+    if (MatchOnly)
+      return true;
+
+    // NOTE The target symbol was created during disassemble's
+    // handleExternalReference
+    const MCSymbol *VeneerSymbol = getOrCreateGlobalSymbol(Address, "FUNCat");
+    BinaryFunction *Veneer = createBinaryFunction(VeneerSymbol->getName().str(),
+                                                  *Section, Address, TotalSize);
+    addAdrpAddRelocAArch64(*Veneer, *TargetLowBits, *TargetHiBits,
+                           TargetAddress);
+    MIB->addAnnotation(Instruction, "AArch64Veneer", true);
+    Veneer->addInstruction(Offset, std::move(Instruction));
+    --Count;
+    for (auto It = std::prev(Instructions.end()); Count != 0;
+         It = std::prev(It), --Count) {
+      MIB->addAnnotation(It->second, "AArch64Veneer", true);
+      Veneer->addInstruction(It->first, std::move(It->second));
+    }
+
+    Veneer->getOrCreateLocalLabel(Address);
+    Veneer->setMaxSize(TotalSize);
+    Veneer->updateState(BinaryFunction::State::Disassembled);
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: handling veneer function at 0x" << Address
+                      << "\n");
+    return true;
+  };
+
+  uint64_t Size = 0, TotalSize = 0;
+  BinaryFunction::InstrMapType VeneerInstructions;
+  for (Offset = 0; Offset < MaxSize; Offset += Size) {
+    MCInst Instruction;
+    const uint64_t AbsoluteInstrAddr = Address + Offset;
+    if (!SymbolicDisAsm->getInstruction(Instruction, Size, Data.slice(Offset),
+                                        AbsoluteInstrAddr, nulls()))
+      break;
+
+    TotalSize += Size;
+    if (MIB->isBranch(Instruction)) {
+      Ret = matchVeneer(VeneerInstructions, Instruction, Offset,
+                        AbsoluteInstrAddr, TotalSize);
+      break;
+    }
+
+    VeneerInstructions.emplace(Offset, std::move(Instruction));
+  }
+
+  return Ret;
+}
+
+void BinaryContext::processInterproceduralReferences() {
+  for (const std::pair<BinaryFunction *, uint64_t> &It :
+       InterproceduralReferences) {
+    BinaryFunction &Function = *It.first;
+    uint64_t Address = It.second;
+    if (!Address || Function.isIgnored())
       continue;
 
     BinaryFunction *TargetFunction =
@@ -1131,7 +1228,7 @@ void BinaryContext::processInterproceduralReferences(BinaryFunction &Function) {
       continue;
 
     if (TargetFunction) {
-      if (TargetFunction->IsFragment &&
+      if (TargetFunction->isFragment() &&
           !registerFragment(*TargetFunction, Function)) {
         errs() << "BOLT-WARNING: interprocedural reference between unrelated "
                   "fragments: "
@@ -1157,6 +1254,10 @@ void BinaryContext::processInterproceduralReferences(BinaryFunction &Function) {
     if (SectionName == ".plt" || SectionName == ".plt.got")
       continue;
 
+    // Check if it is aarch64 veneer written at Address
+    if (isAArch64() && handleAArch64Veneer(Address))
+      continue;
+
     if (opts::processAllFunctions()) {
       errs() << "BOLT-ERROR: cannot process binaries with unmarked "
              << "object in code at address 0x" << Twine::utohexstr(Address)
@@ -1177,7 +1278,7 @@ void BinaryContext::processInterproceduralReferences(BinaryFunction &Function) {
     }
   }
 
-  clearList(Function.InterproceduralReferences);
+  InterproceduralReferences.clear();
 }
 
 void BinaryContext::postProcessSymbolTable() {
