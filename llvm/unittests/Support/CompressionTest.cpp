@@ -24,15 +24,15 @@ namespace {
 
 #if LLVM_ENABLE_ZLIB
 static void testZlibCompression(StringRef Input, int Level) {
-  SmallString<32> Compressed;
-  SmallString<32> Uncompressed;
-  zlib::compress(Input, Compressed, Level);
+  SmallVector<uint8_t, 0> Compressed;
+  SmallVector<uint8_t, 0> Uncompressed;
+  zlib::compress(arrayRefFromStringRef(Input), Compressed, Level);
 
   // Check that uncompressed buffer is the same as original.
   Error E = zlib::uncompress(Compressed, Uncompressed, Input.size());
   consumeError(std::move(E));
 
-  EXPECT_EQ(Input, Uncompressed);
+  EXPECT_EQ(Input, toStringRef(Uncompressed));
   if (Input.size() > 0) {
     // Uncompression fails if expected length is too short.
     E = zlib::uncompress(Compressed, Uncompressed, Input.size() - 1);

@@ -33,12 +33,12 @@ public:
   /// @param Out         Destination buffer.
   template <class T> Error resizeAndDecompress(T &Out) {
     Out.resize(DecompressedSize);
-    return decompress({Out.data(), (size_t)DecompressedSize});
+    return decompress({(uint8_t *)Out.data(), (size_t)DecompressedSize});
   }
 
   /// Uncompress section data to raw buffer provided.
   /// @param Buffer      Destination buffer.
-  Error decompress(MutableArrayRef<char> Buffer);
+  Error decompress(MutableArrayRef<uint8_t> Buffer);
 
   /// Return memory buffer size required for decompression.
   uint64_t getDecompressedSize() { return DecompressedSize; }

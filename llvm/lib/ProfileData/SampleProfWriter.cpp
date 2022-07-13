@@ -85,12 +85,13 @@ std::error_code SampleProfileWriterExtBinaryBase::compressAndOutput() {
   if (UncompressedStrings.size() == 0)
     return sampleprof_error::success;
   auto &OS = *OutputStream;
-  SmallString<128> CompressedStrings;
-  compression::zlib::compress(UncompressedStrings, CompressedStrings,
+  SmallVector<uint8_t, 128> CompressedStrings;
+  compression::zlib::compress(arrayRefFromStringRef(UncompressedStrings),
+                              CompressedStrings,
                               compression::zlib::BestSizeCompression);
   encodeULEB128(UncompressedStrings.size(), OS);
   encodeULEB128(CompressedStrings.size(), OS);
-  OS << CompressedStrings.str();
+  OS << toStringRef(CompressedStrings);
   UncompressedStrings.clear();
   return sampleprof_error::success;
 }

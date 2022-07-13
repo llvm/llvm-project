@@ -463,11 +463,9 @@ Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
                                 ? (ZlibGnuMagic.size() + sizeof(Sec.Size))
                                 : sizeof(Elf_Chdr_Impl<ELFT>);
 
-  StringRef CompressedContent(
-      reinterpret_cast<const char *>(Sec.OriginalData.data()) + DataOffset,
-      Sec.OriginalData.size() - DataOffset);
-
-  SmallVector<char, 128> DecompressedContent;
+  ArrayRef<uint8_t> CompressedContent(Sec.OriginalData.data() + DataOffset,
+                                      Sec.OriginalData.size() - DataOffset);
+  SmallVector<uint8_t, 128> DecompressedContent;
   if (Error Err =
           compression::zlib::uncompress(CompressedContent, DecompressedContent,
                                         static_cast<size_t>(Sec.Size)))
@@ -545,10 +543,7 @@ CompressedSection::CompressedSection(const SectionBase &Sec,
                                      DebugCompressionType CompressionType)
     : SectionBase(Sec), CompressionType(CompressionType),
       DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
-  compression::zlib::compress(
-      StringRef(reinterpret_cast<const char *>(OriginalData.data()),
-                OriginalData.size()),
-      CompressedData);
+  compression::zlib::compress(OriginalData, CompressedData);
 
   assert(CompressionType != DebugCompressionType::None);
   Flags |= ELF::SHF_COMPRESSED;

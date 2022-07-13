@@ -46,11 +46,12 @@ void CoverageFilenamesSectionWriter::write(raw_ostream &OS, bool Compress) {
     }
   }
 
-  SmallString<128> CompressedStr;
+  SmallVector<uint8_t, 128> CompressedStr;
   bool doCompression = Compress && compression::zlib::isAvailable() &&
                        DoInstrProfNameCompression;
   if (doCompression)
-    compression::zlib::compress(FilenamesStr, CompressedStr,
+    compression::zlib::compress(arrayRefFromStringRef(FilenamesStr),
+                                CompressedStr,
                                 compression::zlib::BestSizeCompression);
 
   // ::= <num-filenames>
@@ -60,7 +61,7 @@ void CoverageFilenamesSectionWriter::write(raw_ostream &OS, bool Compress) {
   encodeULEB128(Filenames.size(), OS);
   encodeULEB128(FilenamesStr.size(), OS);
   encodeULEB128(doCompression ? CompressedStr.size() : 0U, OS);
-  OS << (doCompression ? CompressedStr.str() : StringRef(FilenamesStr));
+  OS << (doCompression ? toStringRef(CompressedStr) : StringRef(FilenamesStr));
 }
 
 namespace {
