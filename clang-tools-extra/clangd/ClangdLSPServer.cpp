@@ -534,10 +534,11 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
        }},
       {"completionProvider",
        llvm::json::Object{
-           {"allCommitCharacters",
-            {" ", "\t", "(", ")", "[", "]", "{",  "}", "<",
-             ">", ":",  ";", ",", "+", "-", "/",  "*", "%",
-             "^", "&",  "#", "?", ".", "=", "\"", "'", "|"}},
+           // We don't set `(` etc as allCommitCharacters as they interact
+           // poorly with snippet results.
+           // See https://github.com/clangd/vscode-clangd/issues/357
+           // Hopefully we can use them one day without this side-effect:
+           //     https://github.com/microsoft/vscode/issues/42544
            {"resolveProvider", false},
            // We do extra checks, e.g. that > is part of ->.
            {"triggerCharacters", {".", "<", ">", ":", "\"", "/", "*"}},
