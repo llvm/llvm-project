@@ -74,12 +74,10 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
   if (dimension >= iterationSpace.size())
     return std::make_pair(op, TilingInterface());
 
-  SmallVector<OpFoldResult> offsets =
-      getAsOpFoldResult(llvm::to_vector(llvm::map_range(
-          iterationSpace, [](const Range &range) { return range.offset; })));
-  SmallVector<OpFoldResult> sizes =
-      getAsOpFoldResult(llvm::to_vector(llvm::map_range(
-          iterationSpace, [](const Range &range) { return range.size; })));
+  SmallVector<OpFoldResult> offsets = llvm::to_vector(llvm::map_range(
+      iterationSpace, [](const Range &range) { return range.offset; }));
+  SmallVector<OpFoldResult> sizes = llvm::to_vector(llvm::map_range(
+      iterationSpace, [](const Range &range) { return range.size; }));
 
   // Adjust the split point so that it doesn't overflow the size.
   AffineExpr d0, d1, d2;
@@ -105,7 +103,7 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
   TilingInterface firstPart = createSplitPart(
       rewriter, op.getLoc(), op, offsets, sizes,
       op.getDestinationOperands(rewriter), dimension, minSplitPoint,
-      getAsOpFoldResult(iterationSpace[dimension].offset), firstResults);
+      iterationSpace[dimension].offset, firstResults);
 
   // Need to pretend that the original op now takes as operands firstResults,
   // otherwise tiling interface implementation will take the wrong value to

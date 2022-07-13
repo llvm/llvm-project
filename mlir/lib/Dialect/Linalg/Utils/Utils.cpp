@@ -129,13 +129,14 @@ template struct mlir::linalg::GenerateLoopNest<AffineForOp>;
 
 /// Given a list of subview ranges, extract individual values for lower, upper
 /// bounds and steps and put them into the corresponding vectors.
-static void unpackRanges(ArrayRef<Range> ranges, SmallVectorImpl<Value> &lbs,
+static void unpackRanges(OpBuilder &builder, Location loc,
+                         ArrayRef<Range> ranges, SmallVectorImpl<Value> &lbs,
                          SmallVectorImpl<Value> &ubs,
                          SmallVectorImpl<Value> &steps) {
   for (Range range : ranges) {
-    lbs.emplace_back(range.offset);
-    ubs.emplace_back(range.size);
-    steps.emplace_back(range.stride);
+    lbs.emplace_back(materializeOpFoldResult(builder, loc, range.offset));
+    ubs.emplace_back(materializeOpFoldResult(builder, loc, range.size));
+    steps.emplace_back(materializeOpFoldResult(builder, loc, range.stride));
   }
 }
 
@@ -524,7 +525,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
   }
 
   SmallVector<Value, 4> lbs, ubs, steps;
-  unpackRanges(loopRanges, lbs, ubs, steps);
+  unpackRanges(b, loc, loopRanges, lbs, ubs, steps);
   LoopNest loopNest = mlir::scf::buildLoopNest(
       b, loc, lbs, ubs, steps, iterArgInitValues,
       [&](OpBuilder &b, Location loc, ValueRange ivs, ValueRange iterArgs) {
@@ -567,7 +568,7 @@ void GenerateLoopNest<AffineForOp>::doit(
   SmallVector<Value> iterArgInitValues = linalgOp.getOutputTensorOperands();
   assert(iterArgInitValues.empty() && "unexpected AffineForOp init values");
   SmallVector<Value, 4> lbs, ubs, steps;
-  unpackRanges(loopRanges, lbs, ubs, steps);
+  unpackRanges(b, loc, loopRanges, lbs, ubs, steps);
 
   // Affine loops require constant steps.
   SmallVector<int64_t, 4> constantSteps;
@@ -744,7 +745,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   stepsStorage.reserve(numLoops);
 
   // Get the loop lb, ub, and step.
-  unpackRanges(loopRanges, lbsStorage, ubsStorage, stepsStorage);
+  unpackRanges(b, loc, loopRanges, lbsStorage, ubsStorage, stepsStorage);
 
   // Modify the lb, ub, and step based on the distribution options.
   SmallVector<DistributionMethod, 0> distributionMethod;
@@ -984,6 +985,12 @@ Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
     return value;
   auto attr = opFoldResult.get<Attribute>().cast<IntegerAttr>();
   return builder.create<arith::ConstantIndexOp>(attr.getValue().getSExtValue());
+}
+
+Value materializeOpFoldResult(OpBuilder &builder, Location loc,
+                              OpFoldResult opFoldResult) {
+  ImplicitLocOpBuilder b(loc, builder);
+  return materializeOpFoldResult(b, opFoldResult);
 }
 
 SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,

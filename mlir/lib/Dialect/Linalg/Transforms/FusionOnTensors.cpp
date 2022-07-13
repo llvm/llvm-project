@@ -143,8 +143,9 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
   // Obtain the `producerOp` loop bounds and the `sliceOp` ranges.
   SmallVector<Value> producerLoopBounds;
   llvm::transform(producerOp.createLoopRanges(b, loc),
-                  std::back_inserter(producerLoopBounds),
-                  [](Range range) { return range.size; });
+                  std::back_inserter(producerLoopBounds), [&](Range range) {
+                    return materializeOpFoldResult(b, loc, range.size);
+                  });
   SmallVector<Range> sliceOpRanges = sliceOp.getOrCreateRanges(b, loc);
 
   // Tile the producer operands given the `sliceOp` ranges. Iterate the
@@ -157,8 +158,10 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
   for (auto it : zip(tiledSliceDimIndices, tiledProducerLoopIndices)) {
     int64_t tiledSliceDim = std::get<0>(it);
     int64_t tiledProducerLoop = std::get<1>(it);
-    tileIvs[tiledProducerLoop] = sliceOpRanges[tiledSliceDim].offset;
-    tileSizes[tiledProducerLoop] = sliceOpRanges[tiledSliceDim].size;
+    tileIvs[tiledProducerLoop] =
+        materializeOpFoldResult(b, loc, sliceOpRanges[tiledSliceDim].offset);
+    tileSizes[tiledProducerLoop] =
+        materializeOpFoldResult(b, loc, sliceOpRanges[tiledSliceDim].size);
     allIvs[tiledProducerLoop] = tileIvs[tiledProducerLoop];
   }
   erase_value(tileIvs, nullptr);
