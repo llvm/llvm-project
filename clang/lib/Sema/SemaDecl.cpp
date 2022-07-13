@@ -3241,9 +3241,15 @@ static bool EquivalentArrayTypes(QualType Old, QualType New,
   }
 
   // Only compare size, ignore Size modifiers and CVR.
-  if (Old->isConstantArrayType() && New->isConstantArrayType())
+  if (Old->isConstantArrayType() && New->isConstantArrayType()) {
     return Ctx.getAsConstantArrayType(Old)->getSize() ==
            Ctx.getAsConstantArrayType(New)->getSize();
+  }
+
+  // Don't try to compare dependent sized array
+  if (Old->isDependentSizedArrayType() && New->isDependentSizedArrayType()) {
+    return true;
+  }
 
   return Old == New;
 }
