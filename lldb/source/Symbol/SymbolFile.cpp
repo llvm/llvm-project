@@ -106,28 +106,6 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
   return best_symfile_up.release();
 }
 
-llvm::Expected<TypeSystem &>
-SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
-  auto type_system_or_err =
-      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system_or_err) {
-    type_system_or_err->SetSymbolFile(this);
-  }
-  return type_system_or_err;
-}
-
-bool SymbolFile::ForceInlineSourceFileCheck() {
-  // Force checking for inline breakpoint locations for any JIT object files.
-  // If we have a symbol file for something that has been JIT'ed, chances
-  // are we used "#line" directives to point to the expression code and this
-  // means we will have DWARF line tables that have source implementation
-  // entries that do not match the compile unit source (usually a memory buffer)
-  // file. Returning true for JIT files means all breakpoints set by file and
-  // line
-  // will be found correctly.
-  return m_objfile_sp->GetType() == ObjectFile::eTypeJIT;
-}
-
 std::vector<lldb::DataBufferSP>
 SymbolFile::GetASTData(lldb::LanguageType language) {
   // SymbolFile subclasses must add this functionality

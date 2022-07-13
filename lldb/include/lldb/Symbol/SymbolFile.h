@@ -302,12 +302,6 @@ public:
     return false;
   }
 
-  // Some symbol files might know if we should always check for inline
-  // source file and line entries. This virtual function lets
-  // SymbolFile subclasses control that, but a default implementation
-  // is supplied.
-  virtual bool ForceInlineSourceFileCheck();
-
   /// Retrieve all the AST data blobs from the SymbolFile.
   ///
   /// Symbol files can store AST data for any language that wants to
