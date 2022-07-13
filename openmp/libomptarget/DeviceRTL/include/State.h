@@ -277,7 +277,8 @@ private:
 
 template <typename VTy, typename Ty> struct ValueRAII {
   ValueRAII(VTy &V, Ty NewValue, Ty OldValue, bool Active, IdentTy *Ident)
-      : Ptr(Active ? &V.lookup(/* IsReadonly */ false, Ident) : nullptr),
+      : Ptr(Active ? &V.lookup(/* IsReadonly */ false, Ident)
+                   : (Ty *)utils::UndefPtr),
         Val(OldValue), Active(Active) {
     if (!Active)
       return;
