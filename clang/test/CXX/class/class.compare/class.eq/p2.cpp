@@ -127,7 +127,7 @@ namespace Access {
     // Note: this function is not deleted. The selected operator== is
     // accessible. But the derived-to-base conversion involves an inaccessible
     // base class, which we don't check for until we define the function.
-    bool operator==(const Z&) const = default; // expected-error {{cannot cast 'const Access::Y' to its private base class 'const Access::X'}} expected-warning {{ambiguous}}
+    bool operator==(const Z&) const = default; // expected-error {{cannot cast 'const Y' to its private base class 'const X'}} expected-warning {{ambiguous}}
   };
   bool z = Z() == Z(); // expected-note {{first required here}}
 }

@@ -142,5 +142,5 @@ namespace pr16061 {
     };
   };
 
-  Test2<X> t2x;  // expected-error {{call to implicitly-deleted default constructor of 'Test2<pr16061::X>'}}
+  Test2<X> t2x;  // expected-error {{call to implicitly-deleted default constructor of 'Test2<X>'}}
 }

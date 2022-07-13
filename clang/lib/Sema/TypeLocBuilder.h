@@ -40,12 +40,13 @@ class TypeLocBuilder {
   /// The inline buffer.
   enum { BufferMaxAlignment = alignof(void *) };
   alignas(BufferMaxAlignment) char InlineBuffer[InlineCapacity];
-  unsigned NumBytesAtAlign4, NumBytesAtAlign8;
+  unsigned NumBytesAtAlign4;
+  bool AtAlign8;
 
 public:
   TypeLocBuilder()
       : Buffer(InlineBuffer), Capacity(InlineCapacity), Index(InlineCapacity),
-        NumBytesAtAlign4(0), NumBytesAtAlign8(0) {}
+        NumBytesAtAlign4(0), AtAlign8(false) {}
 
   ~TypeLocBuilder() {
     if (Buffer != InlineBuffer)
@@ -77,7 +78,8 @@ public:
     LastTy = QualType();
 #endif
     Index = Capacity;
-    NumBytesAtAlign4 = NumBytesAtAlign8 = 0;
+    NumBytesAtAlign4 = 0;
+    AtAlign8 = false;
   }
 
   /// Tell the TypeLocBuilder that the type it is storing has been

@@ -48,8 +48,8 @@ namespace bullet4 {
   bool cmp = x1 <=> x2; // expected-error {{selected deleted operator '<=>'}}
 
   // expected-note@#1member 5{{candidate function has been explicitly deleted}}
-  // expected-note@#1 5{{candidate function not viable: no known conversion from 'bullet4::Y' to 'X<1>' for 1st argument}}
-  // expected-note@#1 5{{candidate function (with reversed parameter order) not viable: no known conversion from 'bullet4::Y' to 'X<2>' for 1st argument}}
+  // expected-note@#1 5{{candidate function not viable: no known conversion from 'Y' to 'X<1>' for 1st argument}}
+  // expected-note@#1 5{{candidate function (with reversed parameter order) not viable: no known conversion from 'Y' to 'X<2>' for 1st argument}}
   bool mem_lt = y < x2; // expected-error {{selected deleted operator '<=>'}}
   bool mem_le = y <= x2; // expected-error {{selected deleted operator '<=>'}}
   bool mem_gt = y > x2; // expected-error {{selected deleted operator '<=>'}}
@@ -71,7 +71,7 @@ namespace bullet4 {
 
   // expected-note@#1member 5{{candidate function (with reversed parameter order) has been explicitly deleted}}
   // expected-note@#1 5{{candidate function not viable: no known conversion from 'X<2>' to 'X<1>' for 1st argument}}
-  // expected-note@#1 5{{candidate function (with reversed parameter order) not viable: no known conversion from 'bullet4::Y' to 'X<1>' for 2nd argument}}
+  // expected-note@#1 5{{candidate function (with reversed parameter order) not viable: no known conversion from 'Y' to 'X<1>' for 2nd argument}}
   bool mem_rlt = x2 < y; // expected-error {{selected deleted operator '<=>'}}
   bool mem_rle = x2 <= y; // expected-error {{selected deleted operator '<=>'}}
   bool mem_rgt = x2 > y; // expected-error {{selected deleted operator '<=>'}}
@@ -88,8 +88,8 @@ namespace bullet4 {
   bool ne = x1 != x2; // expected-error {{selected deleted operator '=='}}
 
   // expected-note@#2member 2{{candidate function has been explicitly deleted}}
-  // expected-note@#2 2{{candidate function not viable: no known conversion from 'bullet4::Y' to 'X<1>' for 1st argument}}
-  // expected-note@#2 2{{candidate function (with reversed parameter order) not viable: no known conversion from 'bullet4::Y' to 'X<2>' for 1st argument}}
+  // expected-note@#2 2{{candidate function not viable: no known conversion from 'Y' to 'X<1>' for 1st argument}}
+  // expected-note@#2 2{{candidate function (with reversed parameter order) not viable: no known conversion from 'Y' to 'X<2>' for 1st argument}}
   bool mem_eq = y == x2; // expected-error {{selected deleted operator '=='}}
   bool mem_ne = y != x2; // expected-error {{selected deleted operator '=='}}
 
@@ -104,7 +104,7 @@ namespace bullet4 {
 
   // expected-note@#2member 2{{candidate function (with reversed parameter order) has been explicitly deleted}}
   // expected-note@#2 2{{candidate function not viable: no known conversion from 'X<2>' to 'X<1>' for 1st argument}}
-  // expected-note@#2 2{{candidate function (with reversed parameter order) not viable: no known conversion from 'bullet4::Y' to 'X<1>' for 2nd argument}}
+  // expected-note@#2 2{{candidate function (with reversed parameter order) not viable: no known conversion from 'Y' to 'X<1>' for 2nd argument}}
   bool mem_req = x2 == y; // expected-error {{selected deleted operator '=='}}
   bool mem_rne = x2 != y; // expected-error {{selected deleted operator '=='}}
 
@@ -163,7 +163,7 @@ namespace problem_cases {
   struct ICUDerived : ICUBase {
     UBool operator==(const ICUBase&) const override; // expected-note {{declared here}} expected-note {{ambiguity is between}}
   };
-  bool cmp_icu = ICUDerived() != ICUDerived(); // expected-warning {{ambiguous}} expected-warning {{'bool', not 'problem_cases::UBool'}}
+  bool cmp_icu = ICUDerived() != ICUDerived(); // expected-warning {{ambiguous}} expected-warning {{'bool', not 'UBool'}}
 }
 
 #else // NO_ERRORS
