@@ -7156,8 +7156,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   if ((IsCuda || IsHIP) && CudaDeviceInput) {
       CmdArgs.push_back("-fcuda-include-gpubinary");
       CmdArgs.push_back(CudaDeviceInput->getFilename());
-      if (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
-        CmdArgs.push_back("-fgpu-rdc");
   }
 
   if (IsCuda) {
