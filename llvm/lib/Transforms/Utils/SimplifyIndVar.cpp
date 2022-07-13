@@ -85,16 +85,17 @@ namespace {
     bool eliminateSaturatingIntrinsic(SaturatingInst *SI);
     bool eliminateTrunc(TruncInst *TI);
     bool eliminateIVUser(Instruction *UseInst, Instruction *IVOperand);
-    bool makeIVComparisonInvariant(ICmpInst *ICmp, Value *IVOperand);
-    void eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand);
-    void simplifyIVRemainder(BinaryOperator *Rem, Value *IVOperand,
+    bool makeIVComparisonInvariant(ICmpInst *ICmp, Instruction *IVOperand);
+    void eliminateIVComparison(ICmpInst *ICmp, Instruction *IVOperand);
+    void simplifyIVRemainder(BinaryOperator *Rem, Instruction *IVOperand,
                              bool IsSigned);
     void replaceRemWithNumerator(BinaryOperator *Rem);
     void replaceRemWithNumeratorOrZero(BinaryOperator *Rem);
     void replaceSRemWithURem(BinaryOperator *Rem);
     bool eliminateSDiv(BinaryOperator *SDiv);
-    bool strengthenOverflowingOperation(BinaryOperator *OBO, Value *IVOperand);
-    bool strengthenRightShift(BinaryOperator *BO, Value *IVOperand);
+    bool strengthenOverflowingOperation(BinaryOperator *OBO,
+                                        Instruction *IVOperand);
+    bool strengthenRightShift(BinaryOperator *BO, Instruction *IVOperand);
   };
 }
 
@@ -193,7 +194,7 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
 }
 
 bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
-                                               Value *IVOperand) {
+                                               Instruction *IVOperand) {
   unsigned IVOperIdx = 0;
   ICmpInst::Predicate Pred = ICmp->getPredicate();
   if (IVOperand != ICmp->getOperand(0)) {
@@ -262,7 +263,8 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
 
 /// SimplifyIVUsers helper for eliminating useless
 /// comparisons against an induction variable.
-void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
+void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
+                                           Instruction *IVOperand) {
   unsigned IVOperIdx = 0;
   ICmpInst::Predicate Pred = ICmp->getPredicate();
   ICmpInst::Predicate OriginalPred = Pred;
@@ -373,7 +375,8 @@ void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
 
 /// SimplifyIVUsers helper for eliminating useless remainder operations
 /// operating on an induction variable or replacing srem by urem.
-void SimplifyIndvar::simplifyIVRemainder(BinaryOperator *Rem, Value *IVOperand,
+void SimplifyIndvar::simplifyIVRemainder(BinaryOperator *Rem,
+                                         Instruction *IVOperand,
                                          bool IsSigned) {
   auto *NValue = Rem->getOperand(0);
   auto *DValue = Rem->getOperand(1);
@@ -748,7 +751,7 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
 /// Annotate BO with nsw / nuw if it provably does not signed-overflow /
 /// unsigned-overflow.  Returns true if anything changed, false otherwise.
 bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
-                                                    Value *IVOperand) {
+                                                    Instruction *IVOperand) {
   auto Flags = SE->getStrengthenedNoWrapFlagsFromBinOp(
       cast<OverflowingBinaryOperator>(BO));
 
@@ -772,7 +775,7 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
 /// information from the IV's range. Returns true if anything changed, false
 /// otherwise.
 bool SimplifyIndvar::strengthenRightShift(BinaryOperator *BO,
-                                          Value *IVOperand) {
+                                          Instruction *IVOperand) {
   using namespace llvm::PatternMatch;
 
   if (BO->getOpcode() == Instruction::Shl) {
