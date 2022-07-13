@@ -28,6 +28,7 @@ union ThreadRunner {
 union ThreadReturnValue {
   void *posix_retval;
   int stdc_retval;
+  constexpr ThreadReturnValue() : posix_retval(nullptr) {}
 };
 
 #if (defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_X86_64))
@@ -87,13 +88,21 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   int tid;
   ThreadStyle style;
   ThreadReturnValue retval;
+  void *platform_data;
+
+  constexpr ThreadAttributes()
+      : detach_state(uint32_t(DetachState::DETACHED)), stack(nullptr),
+        tls(nullptr), stack_size(0), owned_stack(false), tid(-1),
+        style(ThreadStyle::POSIX), retval(),
+        platform_data(nullptr) {
+  }
 };
 
 struct Thread {
   ThreadAttributes *attrib;
-  void *platform_data;
 
-  Thread() = default;
+  constexpr Thread() : attrib(nullptr) {}
+  constexpr Thread(ThreadAttributes *attr) : attrib(attr) {}
 
   int run(ThreadRunnerPosix *func, void *arg, void *stack, size_t size,
           bool detached = false) {
