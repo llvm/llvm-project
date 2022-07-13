@@ -20,4 +20,9 @@ int foo() { return 2; }
 auto r3 = printf("foo() = %d\n", foo());
 // CHECK-NEXT: foo() = 2
 
+inline int bar() { return 42;}
+auto r4 = bar();
+%undo
+auto r5 = bar();
+
 %quit
