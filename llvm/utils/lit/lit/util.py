@@ -407,6 +407,13 @@ def isMacOSTriple(target):
             return True
     return False
 
+def isMacOSTriple(target_triple):
+    """Whether the given target triple is for macOS,
+       e.g. x86_64-apple-darwin, arm64-apple-macos
+    """
+    return 'darwin' in target_triple or 'macos' in target_triple
+
+
 def usePlatformSdkOnDarwin(config, lit_config):
     # On Darwin, support relocatable SDKs by providing Clang with a
     # default system root path.
@@ -426,7 +433,7 @@ def usePlatformSdkOnDarwin(config, lit_config):
 
 
 def findPlatformSdkVersionOnMacOS(config, lit_config):
-    if 'darwin' in config.target_triple:
+    if isMacOSTriple(config.target_triple):
         try:
             cmd = subprocess.Popen(['xcrun', '--show-sdk-version', '--sdk', 'macosx'],
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
