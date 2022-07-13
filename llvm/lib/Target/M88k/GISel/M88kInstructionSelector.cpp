@@ -66,6 +66,8 @@ private:
                         MachineRegisterInfo &MRI) const;
   bool selectGlobalValue(MachineInstr &I, MachineBasicBlock &MBB,
                          MachineRegisterInfo &MRI) const;
+  bool selectFPtoSI(MachineInstr &I, MachineBasicBlock &MBB,
+                    MachineRegisterInfo &MRI) const;
   bool selectUbfx(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
   bool selectICmp(MachineInstr &I, MachineBasicBlock &MBB,
@@ -229,6 +231,30 @@ bool M88kInstructionSelector::selectGlobalValue(
            .addReg(Temp, RegState::Kill)
            .addGlobalAddress(GV, 0, M88kII::MO_ABS_LO);
 
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
+bool M88kInstructionSelector::selectFPtoSI(MachineInstr &I,
+                                           MachineBasicBlock &MBB,
+                                           MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_FPTOSI ||
+         I.getOpcode() == TargetOpcode::G_SITOFP && "Unexpected G code");
+
+  static unsigned Opx[2][2] = {
+      {M88k::FLTgss, M88k::FLTgds},
+      {M88k::TRNCgss, M88k::TRNCgsd},
+  };
+
+  bool ToInt = I.getOpcode() == TargetOpcode::G_FPTOSI;
+  bool IsDblType =
+      MRI.getType(I.getOperand(ToInt ? 1 : 0).getReg()).getSizeInBits() == 64;
+  const unsigned NewOpc = Opx[ToInt][IsDblType];
+
+  MachineInstr *MI;
+  MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc),
+               I.getOperand(0).getReg())
+           .addReg(I.getOperand(1).getReg());
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
@@ -956,6 +982,9 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return selectPtrAdd(I, MBB, MRI);
   case TargetOpcode::G_FRAME_INDEX:
     return selectFrameIndex(I, MBB, MRI);
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_FPTOSI:
+    return selectFPtoSI(I, MBB, MRI);
   case TargetOpcode::G_UBFX:
   case TargetOpcode::G_SBFX:
   case TargetOpcode::G_SEXT_INREG:
