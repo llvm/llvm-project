@@ -1234,7 +1234,7 @@ static_assert(sizeof(GlobalValue::SanitizerMetadata) <= sizeof(unsigned),
 static unsigned
 serializeSanitizerMetadata(const GlobalValue::SanitizerMetadata &Meta) {
   return Meta.NoAddress | (Meta.NoHWAddress << 1) |
-         (Meta.NoMemtag << 2) | (Meta.IsDynInit << 3);
+         (Meta.Memtag << 2) | (Meta.IsDynInit << 3);
 }
 
 /// Emit top-level description of module, including target triple, inline asm,

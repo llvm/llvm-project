@@ -295,26 +295,38 @@ public:
   void setPartition(StringRef Part);
 
   // ASan, HWASan and Memtag sanitizers have some instrumentation that applies
-  // specifically to global variables. This instrumentation is implicitly
-  // applied to all global variables when built with -fsanitize=*. What we need
-  // is a way to persist the information that a certain global variable should
-  // *not* have sanitizers applied, which occurs if:
-  //   1. The global variable is in the sanitizer ignore list, or
-  //   2. The global variable is created by the sanitizers itself for internal
-  //      usage, or
-  //   3. The global variable has __attribute__((no_sanitize("..."))) or
-  //      __attribute__((disable_sanitizer_instrumentation)).
-  //
-  // This is important, a some IR passes like GlobalMerge can delete global
-  // variables and replace them with new ones. If the old variables were marked
-  // to be unsanitized, then the new ones should also be.
+  // specifically to global variables.
   struct SanitizerMetadata {
     SanitizerMetadata()
-        : NoAddress(false), NoHWAddress(false), NoMemtag(false),
-          IsDynInit(false) {}
+        : NoAddress(false), NoHWAddress(false),
+          Memtag(false), IsDynInit(false) {}
+    // For ASan and HWASan, this instrumentation is implicitly applied to all
+    // global variables when built with -fsanitize=*. What we need is a way to
+    // persist the information that a certain global variable should *not* have
+    // sanitizers applied, which occurs if:
+    //   1. The global variable is in the sanitizer ignore list, or
+    //   2. The global variable is created by the sanitizers itself for internal
+    //      usage, or
+    //   3. The global variable has __attribute__((no_sanitize("..."))) or
+    //      __attribute__((disable_sanitizer_instrumentation)).
+    //
+    // This is important, a some IR passes like GlobalMerge can delete global
+    // variables and replace them with new ones. If the old variables were
+    // marked to be unsanitized, then the new ones should also be.
     unsigned NoAddress : 1;
     unsigned NoHWAddress : 1;
-    unsigned NoMemtag : 1;
+
+    // Memtag sanitization works differently: sanitization is requested by clang
+    // when `-fsanitize=memtag-globals` is provided, and the request can be
+    // denied (and the attribute removed) by the AArch64 global tagging pass if
+    // it can't be fulfilled (e.g. the global variable is a TLS variable).
+    // Memtag sanitization has to interact with other parts of LLVM (like
+    // supressing certain optimisations, emitting assembly directives, or
+    // creating special relocation sections).
+    //
+    // Use `GlobalValue::isTagged()` to check whether tagging should be enabled
+    // for a global variable.
+    unsigned Memtag : 1;
 
     // ASan-specific metadata. Is this global variable dynamically initialized
     // (from a C++ language perspective), and should therefore be checked for
@@ -330,6 +342,10 @@ public:
   // storage is shared between `G1` and `G2`.
   void setSanitizerMetadata(SanitizerMetadata Meta);
   void removeSanitizerMetadata();
+
+  bool isTagged() const {
+    return hasSanitizerMetadata() && getSanitizerMetadata().Memtag;
+  }
 
   static LinkageTypes getLinkOnceLinkage(bool ODR) {
     return ODR ? LinkOnceODRLinkage : LinkOnceAnyLinkage;
