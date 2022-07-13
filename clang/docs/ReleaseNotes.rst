@@ -307,6 +307,13 @@ Improvements to Clang's diagnostics
   function definition without a prototype which is preceded by a static
   declaration of the function with a prototype. Fixes
   `Issue 58181 <https://github.com/llvm/llvm-project/issues/58181>`_.
+- Copy-elided initialization of lock scopes is now handled differently in
+  ``-Wthread-safety-analysis``: annotations on the move constructor are no
+  longer taken into account, in favor of annotations on the function returning
+  the lock scope by value. This could result in new warnings if code depended
+  on the previous undocumented behavior. As a side effect of this change,
+  constructor calls outside of initializer expressions are no longer ignored,
+  which can result in new warnings (or make existing warnings disappear).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
