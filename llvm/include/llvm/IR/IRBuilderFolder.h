@@ -45,6 +45,9 @@ public:
   virtual Value *FoldBinOpFMF(Instruction::BinaryOps Opc, Value *LHS,
                               Value *RHS, FastMathFlags FMF) const = 0;
 
+  virtual Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
+                             FastMathFlags FMF) const = 0;
+
   virtual Value *FoldICmp(CmpInst::Predicate P, Value *LHS,
                           Value *RHS) const = 0;
 
@@ -66,13 +69,6 @@ public:
 
   virtual Value *FoldShuffleVector(Value *V1, Value *V2,
                                    ArrayRef<int> Mask) const = 0;
-
-  //===--------------------------------------------------------------------===//
-  // Unary Operators
-  //===--------------------------------------------------------------------===//
-
-  virtual Value *CreateFNeg(Constant *C) const = 0;
-  virtual Value *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const = 0;
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators

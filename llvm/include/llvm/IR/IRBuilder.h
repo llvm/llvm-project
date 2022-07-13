@@ -1588,8 +1588,8 @@ public:
 
   Value *CreateFNeg(Value *V, const Twine &Name = "",
                     MDNode *FPMathTag = nullptr) {
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateFNeg(VC), Name);
+    if (Value *Res = Folder.FoldUnOpFMF(Instruction::FNeg, V, FMF))
+      return Res;
     return Insert(setFPAttrs(UnaryOperator::CreateFNeg(V), FPMathTag, FMF),
                   Name);
   }
@@ -1598,10 +1598,10 @@ public:
   /// default FMF.
   Value *CreateFNegFMF(Value *V, Instruction *FMFSource,
                        const Twine &Name = "") {
-   if (auto *VC = dyn_cast<Constant>(V))
-     return Insert(Folder.CreateFNeg(VC), Name);
-   return Insert(setFPAttrs(UnaryOperator::CreateFNeg(V), nullptr,
-                            FMFSource->getFastMathFlags()),
+   FastMathFlags FMF = FMFSource->getFastMathFlags();
+    if (Value *Res = Folder.FoldUnOpFMF(Instruction::FNeg, V, FMF))
+      return Res;
+   return Insert(setFPAttrs(UnaryOperator::CreateFNeg(V), nullptr, FMF),
                  Name);
   }
 
@@ -1612,8 +1612,8 @@ public:
   Value *CreateUnOp(Instruction::UnaryOps Opc,
                     Value *V, const Twine &Name = "",
                     MDNode *FPMathTag = nullptr) {
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateUnOp(Opc, VC), Name);
+    if (Value *Res = Folder.FoldUnOpFMF(Opc, V, FMF))
+      return Res;
     Instruction *UnOp = UnaryOperator::Create(Opc, V);
     if (isa<FPMathOperator>(UnOp))
       setFPAttrs(UnOp, FPMathTag, FMF);
