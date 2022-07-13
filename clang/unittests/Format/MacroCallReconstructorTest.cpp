@@ -91,14 +91,6 @@ struct Chunk {
   llvm::SmallVector<UnwrappedLine, 0> Children;
 };
 
-bool tokenMatches(const FormatToken *Left, const FormatToken *Right) {
-  if (Left->getType() == Right->getType() &&
-      Left->TokenText == Right->TokenText)
-    return true;
-  llvm::dbgs() << Left->TokenText << " != " << Right->TokenText << "\n";
-  return false;
-}
-
 // Allows to produce chunks of a token list by typing the code of equal tokens.
 //
 // Created from a list of tokens, users call "consume" to get the next chunk
@@ -110,7 +102,9 @@ struct Matcher {
   Chunk consume(StringRef Tokens) {
     TokenList Result;
     for (const FormatToken *Token : uneof(Lex.lex(Tokens))) {
-      assert(tokenMatches(*It, Token));
+      (void)Token;  // Fix unused variable warning when asserts are disabled.
+      assert((*It)->getType() == Token->getType() &&
+             (*It)->TokenText == Token->TokenText);
       Result.push_back(*It);
       ++It;
     }
