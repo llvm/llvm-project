@@ -113,24 +113,24 @@ static SmallVector<Value> getTiledOperands(LinalgOp producer) {
 /// obtained from the producer itself, since they are not tiled + fused.
 static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
                      const DenseMap<unsigned, Range> &fusedLoopsAndRanges) {
-  SmallVector<Value, 8> ivs, tileSizes, sizeBounds;
-  SmallVector<Range, 8> loopRanges;
+  SmallVector<OpFoldResult> ivs, tileSizes, sizeBounds;
+  SmallVector<Range> loopRanges;
   Location loc = producer.getLoc();
-  auto zero = b.create<arith::ConstantIndexOp>(loc, 0);
 
   for (unsigned i = 0, e = producer.getNumLoops(); i < e; ++i) {
     auto shapeDim = getShapeDefiningLoopRange(producer, i);
-    Value dim = createOrFoldDimOp(b, loc, shapeDim.shape, shapeDim.dimension);
+    OpFoldResult dim =
+        createFoldedDimOp(b, loc, shapeDim.shape, shapeDim.dimension);
     sizeBounds.push_back(dim);
     auto it = fusedLoopsAndRanges.find(i);
     if (it != fusedLoopsAndRanges.end()) {
-      ivs.push_back(materializeOpFoldResult(b, loc, it->second.offset));
-      tileSizes.push_back(materializeOpFoldResult(b, loc, it->second.size));
+      ivs.push_back(it->second.offset);
+      tileSizes.push_back(it->second.size);
       loopRanges.push_back(it->second);
       LLVM_DEBUG(llvm::dbgs() << "tiled loop#" << i << " with LoopRange "
                               << loopRanges.back() << "\n");
     } else {
-      tileSizes.push_back(zero);
+      tileSizes.push_back(b.getIndexAttr(0));
       loopRanges.push_back(Range{b.getIndexAttr(0), dim, b.getIndexAttr(1)});
       LLVM_DEBUG(llvm::dbgs() << "full loop#" << i << " with LoopRange "
                               << loopRanges.back() << "\n");
@@ -166,10 +166,8 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   Operation *clonedOp = producer.clone(b, loc, resultTypes, clonedShapes);
 
   // Shift all IndexOp results by the tile offset.
-  SmallVector<Value> allIvs;
-  llvm::transform(loopRanges, std::back_inserter(allIvs), [&](Range range) {
-    return materializeOpFoldResult(b, loc, range.offset);
-  });
+  SmallVector<OpFoldResult> allIvs = llvm::to_vector(
+      llvm::map_range(loopRanges, [&](Range range) { return range.offset; }));
   offsetIndices(b, clonedOp, allIvs);
 
   return clonedOp;

@@ -109,7 +109,9 @@ static SmallVector<OpFoldResult> getGenericOpLoopRange(OpBuilder &b,
   auto allShapesSizes =
       cast<LinalgOp>(op.getOperation()).createFlatListOfOperandDims(b, loc);
   AffineMap map = op.getShapesToLoopsMap();
-  return getAsOpFoldResult(applyMapToValues(b, loc, map, allShapesSizes));
+  IRRewriter rewriter(b);
+  return makeComposedFoldedMultiResultAffineApply(rewriter, loc, map,
+                                                  allShapesSizes);
 }
 
 /// Helper method to permute the list of `values` based on the `map`.

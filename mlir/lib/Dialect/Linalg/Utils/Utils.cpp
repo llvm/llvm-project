@@ -42,8 +42,14 @@ using namespace presburger;
 using namespace mlir::linalg;
 using namespace mlir::scf;
 
-static bool isZero(Value v) {
-  if (auto cst = v.getDefiningOp<arith::ConstantIndexOp>())
+static bool isZero(OpFoldResult v) {
+  if (!v)
+    return false;
+  if (auto attr = v.dyn_cast<Attribute>()) {
+    IntegerAttr intAttr = attr.dyn_cast<IntegerAttr>();
+    return intAttr && intAttr.getValue().isZero();
+  }
+  if (auto cst = v.get<Value>().getDefiningOp<arith::ConstantIndexOp>())
     return cst.value() == 0;
   return false;
 }
@@ -59,7 +65,7 @@ namespace {
 //   `d0 + 2 * d1 + d3` is tiled by [0, 0, 0, 2] but not by [0, 0, 2, 0]
 //
 struct TileCheck : public AffineExprVisitor<TileCheck> {
-  TileCheck(ValueRange tileSizes) : tileSizes(tileSizes) {}
+  TileCheck(ArrayRef<OpFoldResult> tileSizes) : tileSizes(tileSizes) {}
 
   void visitDimExpr(AffineDimExpr expr) {
     isTiled |= !isZero(tileSizes[expr.getPosition()]);
@@ -72,12 +78,12 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
              "nonpositive multiplying coefficient");
   }
   bool isTiled = false;
-  ValueRange tileSizes;
+  ArrayRef<OpFoldResult> tileSizes;
 };
 
 } // namespace
 
-static bool isTiled(AffineExpr expr, ValueRange tileSizes) {
+static bool isTiled(AffineExpr expr, ArrayRef<OpFoldResult> tileSizes) {
   if (!expr)
     return false;
   TileCheck t(tileSizes);
@@ -86,7 +92,7 @@ static bool isTiled(AffineExpr expr, ValueRange tileSizes) {
 }
 
 // Checks whether the `map  varies with respect to a non-zero `tileSize`.
-static bool isTiled(AffineMap map, ValueRange tileSizes) {
+static bool isTiled(AffineMap map, ArrayRef<OpFoldResult> tileSizes) {
   if (!map)
     return false;
   for (unsigned r = 0; r < map.getNumResults(); ++r)
@@ -199,6 +205,14 @@ Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim) {
   if (source.getType().isa<UnrankedTensorType, RankedTensorType>())
     return b.createOrFold<tensor::DimOp>(loc, source, dim);
   llvm_unreachable("Expected MemRefType or TensorType");
+}
+
+OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value source,
+                               int64_t dim) {
+  auto shapedType = source.getType().cast<ShapedType>();
+  if (!shapedType.hasRank() || shapedType.isDynamicDim(dim))
+    return createOrFoldDimOp(b, loc, source, dim);
+  return b.getIndexAttr(shapedType.getDimSize(dim));
 }
 
 /// Given an operation, retrieves the value of each dynamic dimension through
@@ -788,18 +802,10 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   assert(ivs.size() == iteratorTypes.size() && "did not generate enough loops");
 }
 
-static Value fullyComposeAndAffineApply(OpBuilder &b, Location loc,
-                                        AffineExpr expr, ValueRange operands) {
-  AffineMap map = AffineMap::inferFromExprList({expr}).front();
-  SmallVector<Value> normalizedOperands(operands.begin(), operands.end());
-  mlir::fullyComposeAffineMapAndOperands(&map, &normalizedOperands);
-  canonicalizeMapAndOperands(&map, &normalizedOperands);
-  return b.createOrFold<AffineApplyOp>(loc, map, normalizedOperands);
-}
-
 Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
-                     ValueRange tileSizes, AffineMap map, ValueRange lbs,
-                     ValueRange ubs, ValueRange subShapeSizes,
+                     ArrayRef<OpFoldResult> tileSizes, AffineMap map,
+                     ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
+                     ArrayRef<OpFoldResult> subShapeSizes,
                      bool omitPartialTileCheck) {
   auto shapedType = valueToTile.getType().dyn_cast<ShapedType>();
   assert(shapedType && "only shaped types can be tiled");
@@ -815,8 +821,8 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: for dim#" << r);
     if (!isTiled(map.getSubMap({r}), tileSizes)) {
       offsets.push_back(builder.getIndexAttr(0));
-      Value dim = createOrFoldDimOp(builder, loc, valueToTile, r);
-      sizes.push_back(getAsOpFoldResult(dim));
+      OpFoldResult dim = createFoldedDimOp(builder, loc, valueToTile, r);
+      sizes.push_back(dim);
       strides.push_back(builder.getIndexAttr(1));
       LLVM_DEBUG(llvm::dbgs() << ": not tiled: use size: " << dim << "\n");
       continue;
@@ -827,14 +833,15 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
     // (i.e. the op does not subsample, stepping occurs in the loop).
     auto m = map.getSubMap({r});
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: submap: " << m << "\n");
-    auto offset = applyMapToValues(builder, loc, m, lbs).front();
-    offsets.push_back(getAsOpFoldResult(offset));
-    auto closedIntSize =
-        applyMapToValues(builder, loc, m, subShapeSizes).front();
+    IRRewriter rewriter(builder);
+    OpFoldResult offset = makeComposedFoldedAffineApply(rewriter, loc, m, lbs);
+    offsets.push_back(offset);
+    OpFoldResult closedIntSize =
+        makeComposedFoldedAffineApply(rewriter, loc, m, subShapeSizes);
     // Resulting size needs to be made half open interval again.
     AffineExpr s0 = getAffineSymbolExpr(0, builder.getContext());
-    Value size =
-        fullyComposeAndAffineApply(builder, loc, s0 + 1, closedIntSize);
+    OpFoldResult size =
+        makeComposedFoldedAffineApply(rewriter, loc, s0 + 1, closedIntSize);
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: raw size: " << size << "\n");
     LLVM_DEBUG(llvm::dbgs()
                << "makeTiledShape: new offset: " << offset << "\n");
@@ -844,7 +851,7 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
       // We statically know that the partial/boundary tile condition is
       // unnecessary.
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: new size: " << size << "\n");
-      sizes.push_back(getAsOpFoldResult(size));
+      sizes.push_back(size);
       continue;
     }
 
@@ -854,10 +861,10 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
     // b. The subshape size is 1. According to the way the loops are set up,
     //    tensors with "0" dimensions would never be constructed.
     int64_t shapeSize = shape[r];
-    auto sizeCst = size.getDefiningOp<arith::ConstantIndexOp>();
-    auto hasTileSizeOne = sizeCst && sizeCst.value() == 1;
+    Optional<int64_t> sizeCst = getConstantIntValue(size);
+    auto hasTileSizeOne = sizeCst && *sizeCst == 1;
     auto dividesEvenly = sizeCst && !ShapedType::isDynamic(shapeSize) &&
-                         ((shapeSize % sizeCst.value()) == 0);
+                         ((shapeSize % *sizeCst) == 0);
     if (!hasTileSizeOne && !dividesEvenly) {
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: shapeSize=" << shapeSize
                               << ", size: " << size
@@ -878,25 +885,25 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
       AffineMap plusOneMap =
           AffineMap::inferFromExprList({ArrayRef<AffineExpr>{dim0 + 1}})
               .front();
-      auto maxIndices = llvm::to_vector<8>(llvm::map_range(ubs, [&](Value ub) {
-        return makeComposedAffineApply(builder, loc, minusOneMap, {ub})
-            .getResult();
-      }));
-      Value maxIndex = applyMapToValues(builder, loc, m, maxIndices).front();
-      Value d = makeComposedAffineApply(builder, loc, plusOneMap, {maxIndex});
+      SmallVector<OpFoldResult> maxIndices =
+          llvm::to_vector(llvm::map_range(ubs, [&](OpFoldResult ub) {
+            return makeComposedFoldedAffineApply(rewriter, loc, minusOneMap,
+                                                 {ub});
+          }));
+      OpFoldResult maxIndex =
+          makeComposedFoldedAffineApply(rewriter, loc, m, maxIndices);
+      OpFoldResult d =
+          makeComposedFoldedAffineApply(rewriter, loc, plusOneMap, {maxIndex});
 
       // Compute min(dim - offset, size) to avoid out-of-bounds accesses.
       AffineMap minMap = AffineMap::inferFromExprList(
                              {ArrayRef<AffineExpr>{dim1 - dim2, dim0}})
                              .front();
-      SmallVector<Value, 4> operands{size, d, offset};
-      fullyComposeAffineMapAndOperands(&minMap, &operands);
-      canonicalizeMapAndOperands(&minMap, &operands);
-      size = builder.create<AffineMinOp>(loc, builder.getIndexType(), minMap,
-                                         operands);
+      size =
+          makeComposedFoldedAffineMin(rewriter, loc, minMap, {size, d, offset});
     }
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: new size: " << size << "\n");
-    sizes.push_back(getAsOpFoldResult(size));
+    sizes.push_back(size);
   }
 
   auto *sliceOp = TypeSwitch<ShapedType, Operation *>(shapedType)
@@ -914,31 +921,31 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
   return sliceOp->getResult(0);
 }
 
-SmallVector<Value> computeTileOffsets(OpBuilder &b, Location loc,
-                                      ValueRange ivs, ValueRange tileSizes) {
-  SmallVector<Value> offsets;
+SmallVector<OpFoldResult> computeTileOffsets(OpBuilder &b, Location loc,
+                                             ArrayRef<OpFoldResult> ivs,
+                                             ArrayRef<OpFoldResult> tileSizes) {
+  SmallVector<OpFoldResult> offsets;
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for loop#" << idx << "\n");
     bool isTiled = !isZero(tileSizes[idx]);
-    offsets.push_back(
-        isTiled ? ivs[idxIvs++]
-                : b.create<arith::ConstantIndexOp>(loc, 0).getResult());
+    offsets.push_back(isTiled ? ivs[idxIvs++] : b.getIndexAttr(0));
     LLVM_DEBUG(llvm::dbgs()
                << "computeTileOffsets: " << offsets.back() << "\n");
   }
   return offsets;
 }
 
-SmallVector<Value> computeTileSizes(OpBuilder &b, Location loc,
-                                    ValueRange tileSizes,
-                                    ArrayRef<Value> sizeBounds) {
-  SmallVector<Value> sizes;
+SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
+                                           ArrayRef<OpFoldResult> tileSizes,
+                                           ArrayRef<OpFoldResult> sizeBounds) {
+  SmallVector<OpFoldResult> sizes;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx) {
     bool isTiled = !isZero(tileSizes[idx]);
     // Before composing, we need to make range a closed interval.
-    Value size = isTiled ? tileSizes[idx] : sizeBounds[idx];
+    OpFoldResult size = isTiled ? tileSizes[idx] : sizeBounds[idx];
     AffineExpr d0 = getAffineDimExpr(0, b.getContext());
-    sizes.push_back(fullyComposeAndAffineApply(b, loc, d0 - 1, size));
+    IRRewriter rewriter(b);
+    sizes.push_back(makeComposedFoldedAffineApply(rewriter, loc, d0 - 1, size));
     LLVM_DEBUG(llvm::dbgs() << "computeTileSizes: " << sizes.back() << "\n");
   }
   return sizes;
@@ -981,6 +988,9 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
 
 Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
                               OpFoldResult opFoldResult) {
+  if (!opFoldResult)
+    return nullptr;
+
   if (auto value = opFoldResult.dyn_cast<Value>())
     return value;
   auto attr = opFoldResult.get<Attribute>().cast<IntegerAttr>();
@@ -993,27 +1003,27 @@ Value materializeOpFoldResult(OpBuilder &builder, Location loc,
   return materializeOpFoldResult(b, opFoldResult);
 }
 
-SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
-                                      LinalgOp linalgOp,
-                                      ArrayRef<Value> valuesToTile,
-                                      ValueRange ivs, ValueRange tileSizes,
-                                      ArrayRef<Value> sizeBounds,
-                                      bool omitPartialTileCheck) {
+SmallVector<Value> makeTiledShapes(OpBuilder &b, Location loc,
+                                   LinalgOp linalgOp, ValueRange valuesToTile,
+                                   ArrayRef<OpFoldResult> ivs,
+                                   ArrayRef<OpFoldResult> tileSizes,
+                                   ArrayRef<OpFoldResult> sizeBounds,
+                                   bool omitPartialTileCheck) {
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
                            llvm::make_range(tileSizes.begin(), tileSizes.end()),
-                           [](Value v) { return !isZero(v); })) &&
+                           [](OpFoldResult v) { return !isZero(v); })) &&
          "expected as many ivs as non-zero sizes");
 
   // Construct (potentially temporary) mins and maxes on which to apply maps
   // that define tile subshapes.
-  SmallVector<Value> lbs = computeTileOffsets(b, loc, ivs, tileSizes);
-  SmallVector<Value> subShapeSizes =
+  SmallVector<OpFoldResult> lbs = computeTileOffsets(b, loc, ivs, tileSizes);
+  SmallVector<OpFoldResult> subShapeSizes =
       computeTileSizes(b, loc, tileSizes, sizeBounds);
 
   assert(static_cast<int64_t>(valuesToTile.size()) ==
              linalgOp.getNumInputsAndOutputs() &&
          "expected one value to tile for every operand");
-  SmallVector<Value, 4> tiledShapes;
+  SmallVector<Value> tiledShapes;
   tiledShapes.reserve(valuesToTile.size());
   for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
     Value shapedOp = valuesToTile[opOperand->getOperandNumber()];
@@ -1040,28 +1050,30 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
   return tiledShapes;
 }
 
-void offsetIndices(OpBuilder &b, LinalgOp linalgOp, ArrayRef<Value> offsets) {
+void offsetIndices(OpBuilder &b, LinalgOp linalgOp,
+                   ArrayRef<OpFoldResult> offsets) {
   IRRewriter rewriter(b);
   offsetIndices(rewriter, linalgOp, offsets);
 }
 
 void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
-                   ArrayRef<Value> offsets) {
+                   ArrayRef<OpFoldResult> offsets) {
   if (!linalgOp.hasIndexSemantics())
     return;
 
   for (IndexOp indexOp : linalgOp.getBlock()->getOps<IndexOp>()) {
-    if (indexOp.dim() >= offsets.size() || offsets[indexOp.dim()] == nullptr)
+    if (indexOp.dim() >= offsets.size() || !offsets[indexOp.dim()])
       continue;
     OpBuilder::InsertionGuard guard(b);
     b.setInsertionPointAfter(indexOp);
     AffineExpr index, offset;
     bindDims(b.getContext(), index, offset);
-    AffineApplyOp applyOp = makeComposedAffineApply(
+    OpFoldResult applied = makeComposedFoldedAffineApply(
         b, indexOp.getLoc(), index + offset,
-        ValueRange{indexOp.getResult(), offsets[indexOp.dim()]});
-    b.replaceOpWithIf(indexOp, applyOp.getResult(), [&](OpOperand &use) {
-      return use.getOwner() != applyOp;
+        {getAsOpFoldResult(indexOp.getResult()), offsets[indexOp.dim()]});
+    Value materialized = materializeOpFoldResult(b, indexOp.getLoc(), applied);
+    b.replaceOpWithIf(indexOp, materialized, [&](OpOperand &use) {
+      return use.getOwner() != materialized.getDefiningOp();
     });
   }
 }

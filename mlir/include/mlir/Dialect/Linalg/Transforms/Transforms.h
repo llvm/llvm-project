@@ -410,7 +410,8 @@ using TileSizeComputationFunction =
 using LoopIndexToRangeIndexMap = DenseMap<int, int>;
 std::tuple<SmallVector<Range, 4>, LoopIndexToRangeIndexMap>
 makeTiledLoopRanges(RewriterBase &b, Location loc, AffineMap map,
-                    ValueRange allShapeSizes, ValueRange allTileSizes);
+                    ArrayRef<OpFoldResult> allShapeSizes,
+                    ArrayRef<OpFoldResult> allTileSizes);
 
 /// A description of a multi-size tiling comprising tile sizes and numbers of
 /// tiles, expressed as Values which may or may not be constant. Multi-size
