@@ -142,14 +142,18 @@ LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
     if (!linalgOp)
       return tileSizes;
     Location loc = linalgOp.getLoc();
-    auto allShapeSizes = linalgOp.createFlatListOfOperandDims(b, loc);
+    SmallVector<OpFoldResult> allShapeSizes =
+        linalgOp.createFlatListOfOperandDims(b, loc);
     AffineMap map = linalgOp.getShapesToLoopsMap();
     if (!map)
       return tileSizes;
-    auto shapeSizes = applyMapToValues(b, loc, map, allShapeSizes);
+    IRRewriter rewriter(b);
+    SmallVector<OpFoldResult> shapeSizes =
+        makeComposedFoldedMultiResultAffineApply(rewriter, loc, map,
+                                                 allShapeSizes);
     // If the shape size is dynamic, tile by 1. Otherwise, do not tile (tile
     // size 0).
-    for (Value shapeSize : shapeSizes)
+    for (OpFoldResult shapeSize : shapeSizes)
       tileSizes.push_back(getConstantIntValue(shapeSize)
                               ? b.create<arith::ConstantIndexOp>(loc, 0)
                               : b.create<arith::ConstantIndexOp>(loc, 1));
