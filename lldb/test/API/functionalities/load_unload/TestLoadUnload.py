@@ -377,6 +377,7 @@ class LoadUnloadTestCase(TestBase):
     # We can't find a breakpoint location for d_init before launching because
     # executable dependencies are resolved relative to the debuggers PWD. Bug?
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"], triple=no_match('aarch64-.*-android'))
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     def test_static_init_during_load(self):
         """Test that we can set breakpoints correctly in static initializers"""
         self.copy_shlibs_to_remote()
