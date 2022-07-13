@@ -221,25 +221,48 @@
 //
 // Test the phases generated when using the new offloading driver.
 //
-// RUN: %clang -### -target powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver \
-// RUN: --offload-arch=sm_52 --offload-arch=sm_70 %s 2>&1 | FileCheck --check-prefix=NEW_DRIVER %s
-// NEW_DRIVER: 0: input, "[[INPUT:.+]]", cuda
-// NEW_DRIVER: 1: preprocessor, {0}, cuda-cpp-output
-// NEW_DRIVER: 2: compiler, {1}, ir
-// NEW_DRIVER: 3: input, "[[INPUT]]", cuda, (device-cuda, sm_52)
-// NEW_DRIVER: 4: preprocessor, {3}, cuda-cpp-output, (device-cuda, sm_52)
-// NEW_DRIVER: 5: compiler, {4}, ir, (device-cuda, sm_52)
-// NEW_DRIVER: 6: backend, {5}, assembler, (device-cuda, sm_52)
-// NEW_DRIVER: 7: assembler, {6}, object, (device-cuda, sm_52)
-// NEW_DRIVER: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, object
-// NEW_DRIVER: 9: input, "[[INPUT]]", cuda, (device-cuda, sm_70)
-// NEW_DRIVER: 10: preprocessor, {9}, cuda-cpp-output, (device-cuda, sm_70)
-// NEW_DRIVER: 11: compiler, {10}, ir, (device-cuda, sm_70)
-// NEW_DRIVER: 12: backend, {11}, assembler, (device-cuda, sm_70)
-// NEW_DRIVER: 13: assembler, {12}, object, (device-cuda, sm_70)
-// NEW_DRIVER: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
-// NEW_DRIVER: 15: clang-offload-packager, {8, 14}, image
-// NEW_DRIVER: 16: offload, " (powerpc64le-ibm-linux-gnu)" {2}, " (powerpc64le-ibm-linux-gnu)" {15}, ir
-// NEW_DRIVER: 17: backend, {16}, assembler, (host-cuda)
-// NEW_DRIVER: 18: assembler, {17}, object, (host-cuda)
-// NEW_DRIVER: 19: clang-linker-wrapper, {18}, image, (host-cuda)
+// RUN: %clang -### -target powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver -fgpu-rdc \
+// RUN: --offload-arch=sm_52 --offload-arch=sm_70 %s 2>&1 | FileCheck --check-prefix=NEW-DRIVER-RDC %s
+// NEW-DRIVER-RDC: 0: input, "[[INPUT:.+]]", cuda
+// NEW-DRIVER-RDC: 1: preprocessor, {0}, cuda-cpp-output
+// NEW-DRIVER-RDC: 2: compiler, {1}, ir
+// NEW-DRIVER-RDC: 3: input, "[[INPUT]]", cuda, (device-cuda, sm_52)
+// NEW-DRIVER-RDC: 4: preprocessor, {3}, cuda-cpp-output, (device-cuda, sm_52)
+// NEW-DRIVER-RDC: 5: compiler, {4}, ir, (device-cuda, sm_52)
+// NEW-DRIVER-RDC: 6: backend, {5}, assembler, (device-cuda, sm_52)
+// NEW-DRIVER-RDC: 7: assembler, {6}, object, (device-cuda, sm_52)
+// NEW-DRIVER-RDC: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, object
+// NEW-DRIVER-RDC: 9: input, "[[INPUT]]", cuda, (device-cuda, sm_70)
+// NEW-DRIVER-RDC: 10: preprocessor, {9}, cuda-cpp-output, (device-cuda, sm_70)
+// NEW-DRIVER-RDC: 11: compiler, {10}, ir, (device-cuda, sm_70)
+// NEW-DRIVER-RDC: 12: backend, {11}, assembler, (device-cuda, sm_70)
+// NEW-DRIVER-RDC: 13: assembler, {12}, object, (device-cuda, sm_70)
+// NEW-DRIVER-RDC: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
+// NEW-DRIVER-RDC: 15: clang-offload-packager, {8, 14}, image
+// NEW-DRIVER-RDC: 16: offload, " (powerpc64le-ibm-linux-gnu)" {2}, " (powerpc64le-ibm-linux-gnu)" {15}, ir
+// NEW-DRIVER-RDC: 17: backend, {16}, assembler, (host-cuda)
+// NEW-DRIVER-RDC: 18: assembler, {17}, object, (host-cuda)
+// NEW-DRIVER-RDC: 19: clang-linker-wrapper, {18}, image, (host-cuda)
+
+// RUN: %clang -### -target powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver -fgpu-rdc \
+// RUN: --offload-arch=sm_52 --offload-arch=sm_70 %s 2>&1 | FileCheck --check-prefix=NEW-DRIVER %s
+// NEW-DRIVER: 0: input, "[[INPUT:.+]]", cuda
+// NEW-DRIVER: 1: preprocessor, {0}, cuda-cpp-output
+// NEW-DRIVER: 2: compiler, {1}, ir
+// NEW-DRIVER: 3: input, "[[INPUT]]", cuda, (device-cuda, sm_52)
+// NEW-DRIVER: 4: preprocessor, {3}, cuda-cpp-output, (device-cuda, sm_52)
+// NEW-DRIVER: 5: compiler, {4}, ir, (device-cuda, sm_52)
+// NEW-DRIVER: 6: backend, {5}, assembler, (device-cuda, sm_52)
+// NEW-DRIVER: 7: assembler, {6}, object, (device-cuda, sm_52)
+// NEW-DRIVER: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, object
+// NEW-DRIVER: 9: input, "[[INPUT]]", cuda, (device-cuda, sm_70)
+// NEW-DRIVER: 10: preprocessor, {9}, cuda-cpp-output, (device-cuda, sm_70)
+// NEW-DRIVER: 11: compiler, {10}, ir, (device-cuda, sm_70)
+// NEW-DRIVER: 12: backend, {11}, assembler, (device-cuda, sm_70)
+// NEW-DRIVER: 13: assembler, {12}, object, (device-cuda, sm_70)
+// NEW-DRIVER: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
+// NEW-DRIVER: 15: clang-offload-packager, {8, 14}, image
+// NEW-DRIVER: 16: offload, " (powerpc64le-ibm-linux-gnu)" {2}, " (powerpc64le-ibm-linux-gnu)" {15}, ir
+// NEW-DRIVER: 17: backend, {16}, assembler, (host-cuda)
+// NEW-DRIVER: 18: assembler, {17}, object, (host-cuda)
+// NEW-DRIVER: 19: clang-linker-wrapper, {18}, image, (host-cuda)
