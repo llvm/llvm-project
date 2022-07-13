@@ -802,7 +802,9 @@ __str_rfind(const _CharT *__p, _SizeT __sz,
         __pos += __n;
     else
         __pos = __sz;
-    const _CharT* __r = std::__find_end_classic(__p, __p + __pos, __s, __s + __n, _Traits::eq);
+    const _CharT* __r = _VSTD::__find_end(
+                  __p, __p + __pos, __s, __s + __n, _Traits::eq,
+                        random_access_iterator_tag(), random_access_iterator_tag());
     if (__n > 0 && __r == __p + __pos)
         return __npos;
     return static_cast<_SizeT>(__r - __p);
