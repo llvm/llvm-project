@@ -485,9 +485,14 @@ public:
   using size_type = size_t;
 
   NamedAttrList() : dictionarySorted({}, true) {}
+  NamedAttrList(llvm::NoneType none) : NamedAttrList() {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
   NamedAttrList(DictionaryAttr attributes);
   NamedAttrList(const_iterator inStart, const_iterator inEnd);
+
+  template <typename Container>
+  NamedAttrList(const Container &vec)
+      : NamedAttrList(ArrayRef<NamedAttribute>(vec)) {}
 
   bool operator!=(const NamedAttrList &other) const {
     return !(*this == other);
