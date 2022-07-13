@@ -39,7 +39,7 @@ body: |
     ; GFX11: liveins: $vgpr0
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0, implicit %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
@@ -82,7 +82,7 @@ body: |
     ; GFX11: liveins: $vgpr0
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0, implicit %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0

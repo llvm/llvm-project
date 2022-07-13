@@ -767,8 +767,8 @@ class VOP3_DOT_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP
   let HasSrc0Mods = 1;
   let HasSrc1Mods = 1;
   let HasSrc2Mods = 1;
-  let Src0ModDPP = FPVRegInputMods;
-  let Src1ModDPP = FPVRegInputMods;
+  let Src0ModVOP3DPP = FPVRegInputMods;
+  let Src1ModVOP3DPP = FPVRegInputMods;
   let Src2ModVOP3DPP = FP16InputMods;
   let InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                                      HasClamp, HasOMod, FP16InputMods,
@@ -922,13 +922,13 @@ defm V_MAD_U64_U32_gfx11   : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32_gfx11", "v_
 defm V_MAD_I64_I32_gfx11   : VOP3be_Real_gfx11<0x2ff, "V_MAD_I64_I32_gfx11", "v_mad_i64_i32">;
 defm V_ADD_NC_U16          : VOP3Only_Realtriple_gfx11<0x303>;
 defm V_SUB_NC_U16          : VOP3Only_Realtriple_gfx11<0x304>;
-defm V_MUL_LO_U16          : VOP3Only_Realtriple_gfx11<0x305>;
+defm V_MUL_LO_U16_t16      : VOP3Only_Realtriple_t16_gfx11<0x305, "v_mul_lo_u16">;
 defm V_CVT_PK_I16_F32      : VOP3_Realtriple_gfx11<0x306>;
 defm V_CVT_PK_U16_F32      : VOP3_Realtriple_gfx11<0x307>;
-defm V_MAX_U16             : VOP3Only_Realtriple_gfx11<0x309>;
-defm V_MAX_I16             : VOP3Only_Realtriple_gfx11<0x30a>;
-defm V_MIN_U16             : VOP3Only_Realtriple_gfx11<0x30b>;
-defm V_MIN_I16             : VOP3Only_Realtriple_gfx11<0x30c>;
+defm V_MAX_U16_t16         : VOP3Only_Realtriple_t16_gfx11<0x309, "v_max_u16">;
+defm V_MAX_I16_t16         : VOP3Only_Realtriple_t16_gfx11<0x30a, "v_max_i16">;
+defm V_MIN_U16_t16         : VOP3Only_Realtriple_t16_gfx11<0x30b, "v_min_u16">;
+defm V_MIN_I16_t16         : VOP3Only_Realtriple_t16_gfx11<0x30c, "v_min_i16">;
 defm V_ADD_NC_I16          : VOP3_Realtriple_with_name_gfx11<0x30d, "V_ADD_I16", "v_add_nc_i16">;
 defm V_SUB_NC_I16          : VOP3_Realtriple_with_name_gfx11<0x30e, "V_SUB_I16", "v_sub_nc_i16">;
 defm V_PACK_B32_F16        : VOP3_Realtriple_gfx11<0x311>;
@@ -945,9 +945,9 @@ defm V_MUL_LO_U32          : VOP3_Real_Base_gfx11<0x32c>;
 defm V_MUL_HI_U32          : VOP3_Real_Base_gfx11<0x32d>;
 defm V_MUL_HI_I32          : VOP3_Real_Base_gfx11<0x32e>;
 defm V_TRIG_PREOP_F64      : VOP3_Real_Base_gfx11<0x32f>;
-defm V_LSHLREV_B16         : VOP3Only_Realtriple_gfx11<0x338>;
-defm V_LSHRREV_B16         : VOP3Only_Realtriple_gfx11<0x339>;
-defm V_ASHRREV_I16         : VOP3Only_Realtriple_gfx11<0x33a>;
+defm V_LSHLREV_B16_t16     : VOP3Only_Realtriple_t16_gfx11<0x338, "v_lshlrev_b16">;
+defm V_LSHRREV_B16_t16     : VOP3Only_Realtriple_t16_gfx11<0x339, "v_lshrrev_b16">;
+defm V_ASHRREV_I16_t16     : VOP3Only_Realtriple_t16_gfx11<0x33a, "v_ashrrev_i16">;
 defm V_LSHLREV_B64         : VOP3_Real_Base_gfx11<0x33c>;
 defm V_LSHRREV_B64         : VOP3_Real_Base_gfx11<0x33d>;
 defm V_ASHRREV_I64         : VOP3_Real_Base_gfx11<0x33e>;
@@ -955,9 +955,9 @@ defm V_READLANE_B32        : VOP3_Real_No_Suffix_gfx11<0x360>; // Pseudo in VOP2
 let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in) in {
   defm V_WRITELANE_B32     : VOP3_Real_No_Suffix_gfx11<0x361>; // Pseudo in VOP2
 } // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
-defm V_AND_B16             : VOP3Only_Realtriple_gfx11<0x362>;
-defm V_OR_B16              : VOP3Only_Realtriple_gfx11<0x363>;
-defm V_XOR_B16             : VOP3Only_Realtriple_gfx11<0x364>;
+defm V_AND_B16_t16         : VOP3Only_Realtriple_t16_gfx11<0x362, "v_and_b16">;
+defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11<0x363, "v_or_b16">;
+defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11<0x364, "v_xor_b16">;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

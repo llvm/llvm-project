@@ -156,6 +156,8 @@ static unsigned macToMad(unsigned Opc) {
     return AMDGPU::V_FMA_F32_e64;
   case AMDGPU::V_FMAC_F16_e64:
     return AMDGPU::V_FMA_F16_gfx9_e64;
+  case AMDGPU::V_FMAC_F16_t16_e64:
+    return AMDGPU::V_FMA_F16_gfx9_e64;
   case AMDGPU::V_FMAC_LEGACY_F32_e64:
     return AMDGPU::V_FMA_LEGACY_F32_e64;
   case AMDGPU::V_FMAC_F64_e64:
@@ -1297,6 +1299,7 @@ const MachineOperand *SIFoldOperands::isClamp(const MachineInstr &MI) const {
   switch (Op) {
   case AMDGPU::V_MAX_F32_e64:
   case AMDGPU::V_MAX_F16_e64:
+  case AMDGPU::V_MAX_F16_t16_e64:
   case AMDGPU::V_MAX_F64_e64:
   case AMDGPU::V_PK_MAX_F16: {
     if (!TII->getNamedOperand(MI, AMDGPU::OpName::clamp)->getImm())
@@ -1391,7 +1394,8 @@ static int getOModValue(unsigned Opc, int64_t Val) {
       return SIOutMods::NONE;
     }
   }
-  case AMDGPU::V_MUL_F16_e64: {
+  case AMDGPU::V_MUL_F16_e64:
+  case AMDGPU::V_MUL_F16_t16_e64: {
     switch (static_cast<uint16_t>(Val)) {
     case 0x3800: // 0.5
       return SIOutMods::DIV2;
@@ -1417,10 +1421,12 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
   switch (Op) {
   case AMDGPU::V_MUL_F64_e64:
   case AMDGPU::V_MUL_F32_e64:
+  case AMDGPU::V_MUL_F16_t16_e64:
   case AMDGPU::V_MUL_F16_e64: {
     // If output denormals are enabled, omod is ignored.
     if ((Op == AMDGPU::V_MUL_F32_e64 && MFI->getMode().FP32OutputDenormals) ||
-        ((Op == AMDGPU::V_MUL_F64_e64 || Op == AMDGPU::V_MUL_F16_e64) &&
+        ((Op == AMDGPU::V_MUL_F64_e64 || Op == AMDGPU::V_MUL_F16_e64 ||
+          Op == AMDGPU::V_MUL_F16_t16_e64) &&
          MFI->getMode().FP64FP16OutputDenormals))
       return std::make_pair(nullptr, SIOutMods::NONE);
 
@@ -1449,10 +1455,12 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
   }
   case AMDGPU::V_ADD_F64_e64:
   case AMDGPU::V_ADD_F32_e64:
-  case AMDGPU::V_ADD_F16_e64: {
+  case AMDGPU::V_ADD_F16_e64:
+  case AMDGPU::V_ADD_F16_t16_e64: {
     // If output denormals are enabled, omod is ignored.
     if ((Op == AMDGPU::V_ADD_F32_e64 && MFI->getMode().FP32OutputDenormals) ||
-        ((Op == AMDGPU::V_ADD_F64_e64 || Op == AMDGPU::V_ADD_F16_e64) &&
+        ((Op == AMDGPU::V_ADD_F64_e64 || Op == AMDGPU::V_ADD_F16_e64 ||
+          Op == AMDGPU::V_ADD_F16_t16_e64) &&
          MFI->getMode().FP64FP16OutputDenormals))
       return std::make_pair(nullptr, SIOutMods::NONE);
 

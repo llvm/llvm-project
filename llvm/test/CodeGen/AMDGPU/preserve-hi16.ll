@@ -215,7 +215,7 @@ define i32 @zext_fadd_f16(half %x, half %y) {
 ; GFX9: v_fma_f16 [[FMA:v[0-9]+]], v0, v1, v2
 ; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, [[FMA]]
 
-; GFX10Plus: v_fmac_f16_e32 [[FMA:v[0-9]+]], v0, v1
+; GFX10Plus: v_fmac_f16{{_e64|_e32}} [[FMA:v[0-9]+]], v0, v1
 ; GFX10Plus-NEXT: v_and_b32_e32 v0, 0xffff, [[FMA]]
 define i32 @zext_fma_f16(half %x, half %y, half %z) {
   %fma = call half @llvm.fma.f16(half %x, half %y, half %z)
