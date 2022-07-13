@@ -15,8 +15,7 @@ define void @pr54413(i64* %ptr.base) {
 ; CHECK:       loop2.preheader:
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    [[PTR:%.*]] = phi i64* [ [[PTR_BASE:%.*]], [[LOOP2_PREHEADER]] ], [ [[PTR_NEXT:%.*]], [[LOOP2]] ]
-; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
+; CHECK-NEXT:    [[PTR_NEXT:%.*]] = getelementptr inbounds i64, i64* [[PTR_BASE:%.*]], i64 1
 ; CHECK-NEXT:    br i1 true, label [[LOOP2_EXIT:%.*]], label [[LOOP2]]
 ; CHECK:       loop2.exit:
 ; CHECK-NEXT:    [[PTR_NEXT_LCSSA:%.*]] = phi i64* [ [[PTR_NEXT]], [[LOOP2]] ]

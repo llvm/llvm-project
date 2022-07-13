@@ -40,14 +40,25 @@ define i64 @strtol_hex() #0 {
   ret i64 %call
 }
 
-define i64 @strtol_endptr_not_null() #0 {
+; Fold a call to strtol with an endptr known to be nonnull.
+
+define i64 @strtol_endptr_not_null(i8** nonnull %pend) {
 ; CHECK-LABEL: @strtol_endptr_not_null(
-; CHECK-NEXT:    [[END:%.*]] = alloca i8*, align 4
-; CHECK-NEXT:    [[CALL:%.*]] = call i64 @strtol(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0), i8** nonnull [[END]], i32 10)
+; CHECK-NEXT:    store i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i64 0, i64 2), i8** [[PEND:%.*]], align 8
+; CHECK-NEXT:    ret i64 12
+;
+  %call = call i64 @strtol(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i8** %pend, i32 10)
+  ret i64 %call
+}
+
+; Don't fold a call to strtol with an endptr that's not known to be nonnull.
+
+define i64 @strtol_endptr_maybe_null(i8** %end) {
+; CHECK-LABEL: @strtol_endptr_maybe_null(
+; CHECK-NEXT:    [[CALL:%.*]] = call i64 @strtol(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0), i8** [[END:%.*]], i32 10)
 ; CHECK-NEXT:    ret i64 [[CALL]]
 ;
-  %end = alloca i8*, align 4
-  %call = call i64 @strtol(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0), i8** %end, i32 10) #2
+  %call = call i64 @strtol(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0), i8** %end, i32 10)
   ret i64 %call
 }
 

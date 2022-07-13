@@ -13,6 +13,13 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOW_SENSITIVE_TESTING_SUPPORT_H_
 #define LLVM_CLANG_ANALYSIS_FLOW_SENSITIVE_TESTING_SUPPORT_H_
 
+#include <functional>
+#include <memory>
+#include <ostream>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
@@ -30,17 +37,10 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Testing/Support/Annotations.h"
-#include <functional>
-#include <memory>
-#include <ostream>
-#include <string>
-#include <utility>
 
 namespace clang {
 namespace dataflow {
@@ -219,6 +219,49 @@ llvm::Error checkDataflow(
 ///
 ///  `Name` must be unique in `ASTCtx`.
 const ValueDecl *findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name);
+
+/// Creates and owns constraints which are boolean values.
+class ConstraintContext {
+public:
+  // Creates an atomic boolean value.
+  BoolValue *atom() {
+    Vals.push_back(std::make_unique<AtomicBoolValue>());
+    return Vals.back().get();
+  }
+
+  // Creates a boolean conjunction value.
+  BoolValue *conj(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
+    Vals.push_back(
+        std::make_unique<ConjunctionValue>(*LeftSubVal, *RightSubVal));
+    return Vals.back().get();
+  }
+
+  // Creates a boolean disjunction value.
+  BoolValue *disj(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
+    Vals.push_back(
+        std::make_unique<DisjunctionValue>(*LeftSubVal, *RightSubVal));
+    return Vals.back().get();
+  }
+
+  // Creates a boolean negation value.
+  BoolValue *neg(BoolValue *SubVal) {
+    Vals.push_back(std::make_unique<NegationValue>(*SubVal));
+    return Vals.back().get();
+  }
+
+  // Creates a boolean implication value.
+  BoolValue *impl(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
+    return disj(neg(LeftSubVal), RightSubVal);
+  }
+
+  // Creates a boolean biconditional value.
+  BoolValue *iff(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
+    return conj(impl(LeftSubVal, RightSubVal), impl(RightSubVal, LeftSubVal));
+  }
+
+private:
+  std::vector<std::unique_ptr<BoolValue>> Vals;
+};
 
 } // namespace test
 } // namespace dataflow

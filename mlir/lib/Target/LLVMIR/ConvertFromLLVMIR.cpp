@@ -432,7 +432,7 @@ GlobalOp Importer::processGlobal(llvm::GlobalVariable *gv) {
 
   uint64_t alignment = 0;
   llvm::MaybeAlign maybeAlign = gv->getAlign();
-  if (maybeAlign.hasValue()) {
+  if (maybeAlign.has_value()) {
     llvm::Align align = maybeAlign.getValue();
     alignment = align.value();
   }

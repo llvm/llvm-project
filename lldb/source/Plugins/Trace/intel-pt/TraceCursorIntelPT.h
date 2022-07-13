@@ -34,6 +34,8 @@ public:
 
   lldb::TraceEvent GetEventType() const override;
 
+  llvm::Optional<lldb::cpu_id_t> GetCPU() const override;
+
   lldb::TraceItemKind GetItemKind() const override;
 
   bool GoToId(lldb::user_id_t id) override;

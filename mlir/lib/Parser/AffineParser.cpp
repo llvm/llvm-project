@@ -332,7 +332,7 @@ AffineExpr AffineParser::parseSymbolSSAIdExpr() {
 ///   affine-expr ::= integer-literal
 AffineExpr AffineParser::parseIntegerExpr() {
   auto val = getToken().getUInt64IntegerValue();
-  if (!val.hasValue() || (int64_t)val.getValue() < 0)
+  if (!val.has_value() || (int64_t)val.getValue() < 0)
     return emitError("constant too large for index"), nullptr;
 
   consumeToken(Token::integer);

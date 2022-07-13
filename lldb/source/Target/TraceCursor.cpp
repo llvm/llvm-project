@@ -48,5 +48,8 @@ const char *TraceCursor::EventKindToString(lldb::TraceEvent event_kind) {
     return "hardware disabled tracing";
   case lldb::eTraceEventDisabledSW:
     return "software disabled tracing";
+  case lldb::eTraceEventCPUChanged:
+    return "CPU core changed";
   }
+  llvm_unreachable("Fully covered switch above");
 }
