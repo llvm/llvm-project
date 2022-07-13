@@ -55,9 +55,9 @@ StringRef TraceIntelPT::GetSchema() {
 
 void TraceIntelPT::Dump(Stream *s) const {}
 
-llvm::Error TraceIntelPT::SaveLiveTraceToDisk(FileSpec directory) {
+Expected<FileSpec> TraceIntelPT::SaveToDisk(FileSpec directory, bool compact) {
   RefreshLiveProcessState();
-  return TraceIntelPTBundleSaver().SaveToDisk(*this, directory);
+  return TraceIntelPTBundleSaver().SaveToDisk(*this, directory, compact);
 }
 
 Expected<TraceSP> TraceIntelPT::CreateInstanceForTraceBundle(

@@ -21,6 +21,39 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
     @testSBAPIAndCommands
+    def testLoadCompactMultiCoreTrace(self):
+        src_dir = self.getSourceDir()
+        trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
+
+        self.expect("thread trace dump info 2", substrs=["Total number of continuous executions found: 153"])
+
+        # we'll save the trace in compact format
+        compact_trace_bundle_dir = os.path.join(self.getBuildDir(), "intelpt-multi-core-trace-compact")
+        self.traceSave(compact_trace_bundle_dir, compact=True)
+
+        # we'll delete the previous target and make sure it's trace object is deleted
+        self.dbg.DeleteTarget(self.dbg.GetTargetAtIndex(0))
+        self.expect("thread trace dump instructions 2 -t", substrs=["error: invalid target"], error=True)
+
+        # we'll load the compact trace and make sure it works
+        self.traceLoad(os.path.join(compact_trace_bundle_dir, "trace.json"), substrs=["intel-pt"])
+        self.expect("thread trace dump instructions 2 -t",
+          substrs=["19522: [tsc=40450075478109270] (error) expected tracing enabled event",
+                   "m.out`foo() + 65 at multi_thread.cpp:12:21",
+                   "19520: [tsc=40450075477657246] 0x0000000000400ba7    jg     0x400bb3"])
+        self.expect("thread trace dump instructions 3 -t",
+          substrs=["67911: [tsc=40450075477799536] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+                   "m.out`bar() + 26 at multi_thread.cpp:20:6"])
+
+        # This reduced the number of continuous executions to look at
+        self.expect("thread trace dump info 2", substrs=["Total number of continuous executions found: 3"])
+
+        # We clean up for the next run of this test
+        self.dbg.DeleteTarget(self.dbg.GetTargetAtIndex(0))
+
+
+    @testSBAPIAndCommands
     def testLoadMultiCoreTraceWithStringNumbers(self):
         src_dir = self.getSourceDir()
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_with_string_numbers.json")
