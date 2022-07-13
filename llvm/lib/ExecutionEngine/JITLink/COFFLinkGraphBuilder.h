@@ -58,7 +58,8 @@ protected:
   }
 
   Symbol *getGraphSymbol(COFFSymbolIndex SymIndex) const {
-    if (SymIndex < 0 || SymIndex >= GraphSymbols.size())
+    if (SymIndex < 0 ||
+        SymIndex >= static_cast<COFFSymbolIndex>(GraphSymbols.size()))
       return nullptr;
     return GraphSymbols[SymIndex];
   }
@@ -70,7 +71,8 @@ protected:
   }
 
   Block *getGraphBlock(COFFSectionIndex SecIndex) const {
-    if (SecIndex <= 0 || SecIndex >= GraphSymbols.size())
+    if (SecIndex <= 0 ||
+        SecIndex >= static_cast<COFFSectionIndex>(GraphSymbols.size()))
       return nullptr;
     return GraphBlocks[SecIndex];
   }
