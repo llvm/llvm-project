@@ -697,7 +697,9 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
     return false;
 
   Register SrcReg = MI.getOperand(1).getReg();
-  GAnyLoad *LoadMI = getOpcodeDef<GAnyLoad>(SrcReg, MRI);
+  // Don't use getOpcodeDef() here since intermediate instructions may have
+  // multiple users.
+  GAnyLoad *LoadMI = dyn_cast<GAnyLoad>(MRI.getVRegDef(SrcReg));
   if (!LoadMI || !MRI.hasOneNonDBGUse(LoadMI->getDstReg()))
     return false;
 
