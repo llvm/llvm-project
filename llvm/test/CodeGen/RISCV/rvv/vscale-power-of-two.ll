@@ -8,7 +8,8 @@ define i64 @vscale_lshr(i64 %TC) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 6
-; CHECK-NEXT:    remu a0, a0, a1
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %shifted = lshr i64 %vscale, 3
@@ -21,7 +22,8 @@ define i64 @vscale(i64 %TC) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 3
-; CHECK-NEXT:    remu a0, a0, a1
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %urem = urem i64 %TC, %vscale
@@ -32,7 +34,8 @@ define i64 @vscale_shl(i64 %TC) {
 ; CHECK-LABEL: vscale_shl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    remu a0, a0, a1
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %shifted = shl i64 %vscale, 3
@@ -45,8 +48,8 @@ define i64 @TC_minus_rem(i64 %TC) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 3
-; CHECK-NEXT:    remu a1, a0, a1
-; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %urem = urem i64 %TC, %vscale
@@ -58,8 +61,8 @@ define i64 @TC_minus_rem_shl(i64 %TC) {
 ; CHECK-LABEL: TC_minus_rem_shl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    remu a1, a0, a1
-; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %shifted = shl i64 %vscale, 3
@@ -73,9 +76,8 @@ define i64 @con1024_minus_rem() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    li a1, 1024
-; CHECK-NEXT:    remu a0, a1, a0
-; CHECK-NEXT:    sub a0, a1, a0
+; CHECK-NEXT:    negw a0, a0
+; CHECK-NEXT:    andi a0, a0, 1024
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %urem = urem i64 1024, %vscale
@@ -90,10 +92,10 @@ define i64 @con2048_minus_rem() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    lui a1, 1
 ; CHECK-NEXT:    addiw a1, a1, -2048
-; CHECK-NEXT:    remu a0, a1, a0
-; CHECK-NEXT:    sub a0, a1, a0
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %urem = urem i64 2048, %vscale
