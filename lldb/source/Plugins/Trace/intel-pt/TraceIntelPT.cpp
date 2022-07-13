@@ -199,10 +199,10 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
                               std::chrono::milliseconds duration) {
       s.Format("    {0}: {1:2}s\n", name, duration.count() / 1000.0);
     };
-    GetTimer().ForThread(tid).ForEachTimedTask(print_duration);
+    GetThreadTimer(tid).ForEachTimedTask(print_duration);
 
     s << "\n  Timing for global tasks:\n";
-    GetTimer().ForGlobal().ForEachTimedTask(print_duration);
+    GetGlobalTimer().ForEachTimedTask(print_duration);
   }
 
   // Instruction events stats
@@ -507,3 +507,11 @@ Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,
 }
 
 TaskTimer &TraceIntelPT::GetTimer() { return GetUpdatedStorage().task_timer; }
+
+ScopedTaskTimer &TraceIntelPT::GetThreadTimer(lldb::tid_t tid) {
+  return GetTimer().ForThread(tid);
+}
+
+ScopedTaskTimer &TraceIntelPT::GetGlobalTimer() {
+  return GetTimer().ForGlobal();
+}

@@ -157,6 +157,14 @@ public:
   ///     The timer object for this trace.
   TaskTimer &GetTimer();
 
+  /// \return
+  ///     The ScopedTaskTimer object for the given thread in this trace.
+  ScopedTaskTimer &GetThreadTimer(lldb::tid_t tid);
+
+  /// \return
+  ///     The global copedTaskTimer object for this trace.
+  ScopedTaskTimer &GetGlobalTimer();
+
   TraceIntelPTSP GetSharedPtr();
 
 private:

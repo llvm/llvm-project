@@ -35,9 +35,9 @@ public:
   ///
   /// \return
   ///     The return value of the task.
-  template <class R> R TimeTask(llvm::StringRef name, std::function<R()> task) {
+  template <typename C> auto TimeTask(llvm::StringRef name, C task) {
     auto start = std::chrono::steady_clock::now();
-    R result = task();
+    auto result = task();
     auto end = std::chrono::steady_clock::now();
     std::chrono::milliseconds duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
