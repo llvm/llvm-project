@@ -1337,10 +1337,6 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
 #include "ARMGenMCPseudoLowering.inc"
 
 void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  // TODOD FIXME: Enable feature predicate checks once all the test pass.
-  // ARM_MC::verifyInstructionPredicates(MI->getOpcode(),
-  //                                   getSubtargetInfo().getFeatureBits());
-
   const DataLayout &DL = getDataLayout();
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);

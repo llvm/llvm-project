@@ -41,7 +41,6 @@ MCCodeEmitter *createCSKYMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 #include "CSKYGenRegisterInfo.inc"
 
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "CSKYGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

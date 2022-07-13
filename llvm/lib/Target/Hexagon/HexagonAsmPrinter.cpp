@@ -743,9 +743,6 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
 
 /// Print out a single Hexagon MI to the current output stream.
 void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  Hexagon_MC::verifyInstructionPredicates(MI->getOpcode(),
-                                          getSubtargetInfo().getFeatureBits());
-
   MCInst MCB;
   MCB.setOpcode(Hexagon::BUNDLE);
   MCB.addOperand(MCOperand::createImm(0));

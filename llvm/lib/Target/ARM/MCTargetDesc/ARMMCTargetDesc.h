@@ -139,7 +139,6 @@ bool isCDECoproc(size_t Coproc, const MCSubtargetInfo &STI);
 // Defines symbolic names for the ARM instructions.
 //
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "ARMGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

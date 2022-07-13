@@ -2413,10 +2413,6 @@ static void addConstantComments(const MachineInstr *MI,
 }
 
 void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
-  // FIXME: Enable feature predicate checks once all the test pass.
-  // X86_MC::verifyInstructionPredicates(MI->getOpcode(),
-  //                                     Subtarget->getFeatureBits());
-
   X86MCInstLower MCInstLowering(*MF, *this);
   const X86RegisterInfo *RI =
       MF->getSubtarget<X86Subtarget>().getRegisterInfo();

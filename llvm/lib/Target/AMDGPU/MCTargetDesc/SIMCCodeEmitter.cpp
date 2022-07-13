@@ -310,8 +310,11 @@ uint64_t SIMCCodeEmitter::getImplicitOpSelHiEncoding(int Opcode) const {
 }
 
 void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
-                                        SmallVectorImpl<MCFixup> &Fixups,
-                                        const MCSubtargetInfo &STI) const {
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
   int Opcode = MI.getOpcode();
   APInt Encoding, Scratch;
   getBinaryCodeForInstr(MI, Fixups, Encoding, Scratch,  STI);
@@ -571,4 +574,5 @@ void SIMCCodeEmitter::getMachineOpValueCommon(
   llvm_unreachable("Encoding of this operand type is not supported yet.");
 }
 
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "AMDGPUGenMCCodeEmitter.inc"

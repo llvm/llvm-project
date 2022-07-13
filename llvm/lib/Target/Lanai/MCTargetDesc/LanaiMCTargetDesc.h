@@ -43,7 +43,6 @@ std::unique_ptr<MCObjectTargetWriter> createLanaiELFObjectWriter(uint8_t OSABI);
 
 // Defines symbolic names for the Lanai instructions.
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "LanaiGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

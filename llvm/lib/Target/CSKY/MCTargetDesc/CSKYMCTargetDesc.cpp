@@ -26,7 +26,6 @@
 #include "llvm/MC/TargetRegistry.h"
 
 #define GET_INSTRINFO_MC_DESC
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "CSKYGenInstrInfo.inc"
 
 #define GET_REGINFO_MC_DESC

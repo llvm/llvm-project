@@ -597,8 +597,6 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
 
 void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
-  WebAssembly_MC::verifyInstructionPredicates(MI->getOpcode(),
-                                              Subtarget->getFeatureBits());
 
   switch (MI->getOpcode()) {
   case WebAssembly::ARGUMENT_i32:

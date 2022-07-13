@@ -35,7 +35,6 @@ MCInstrInfo *createR600MCInstrInfo();
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_OPERAND_ENUM
 #define GET_INSTRINFO_SCHED_ENUM
-#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "R600GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

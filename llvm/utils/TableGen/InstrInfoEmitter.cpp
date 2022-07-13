@@ -17,9 +17,7 @@
 #include "CodeGenTarget.h"
 #include "PredicateExpander.h"
 #include "SequenceToOffsetTable.h"
-#include "SubtargetFeatureInfo.h"
 #include "TableGenBackends.h"
-#include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -81,9 +79,6 @@ private:
   /// Expand TIIPredicate definitions to functions that accept a const MCInst
   /// reference.
   void emitMCIIHelperMethods(raw_ostream &OS, StringRef TargetName);
-
-  /// Write verifyInstructionPredicates methods.
-  void emitFeatureVerifier(raw_ostream &OS, const CodeGenTarget &Target);
   void emitRecord(const CodeGenInstruction &Inst, unsigned Num,
                   Record *InstrInfo,
                   std::map<std::vector<Record*>, unsigned> &EL,
@@ -671,13 +666,14 @@ void InstrInfoEmitter::emitLogicalOperandTypeMappings(
 void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
                                              StringRef TargetName) {
   RecVec TIIPredicates = Records.getAllDerivedDefinitions("TIIPredicate");
+  if (TIIPredicates.empty())
+    return;
 
   OS << "#ifdef GET_INSTRINFO_MC_HELPER_DECLS\n";
   OS << "#undef GET_INSTRINFO_MC_HELPER_DECLS\n\n";
 
   OS << "namespace llvm {\n";
-  OS << "class MCInst;\n";
-  OS << "class FeatureBitset;\n\n";
+  OS << "class MCInst;\n\n";
 
   OS << "namespace " << TargetName << "_MC {\n\n";
 
@@ -685,9 +681,6 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
     OS << "bool " << Rec->getValueAsString("FunctionName")
         << "(const MCInst &MI);\n";
   }
-
-  OS << "void verifyInstructionPredicates(unsigned Opcode, const FeatureBitset "
-        "&Features);\n";
 
   OS << "\n} // end namespace " << TargetName << "_MC\n";
   OS << "} // end namespace llvm\n\n";
@@ -715,148 +708,7 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
   OS << "} // end namespace " << TargetName << "_MC\n";
   OS << "} // end namespace llvm\n\n";
 
-  OS << "#endif // GET_GENISTRINFO_MC_HELPERS\n\n";
-}
-
-static std::string
-getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
-  std::string Name = "CEFBS";
-  for (const auto &Feature : FeatureBitset)
-    Name += ("_" + Feature->getName()).str();
-  return Name;
-}
-
-void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
-                                           const CodeGenTarget &Target) {
-  const auto &All = SubtargetFeatureInfo::getAll(Records);
-  std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;
-  SubtargetFeatures.insert(All.begin(), All.end());
-
-  OS << "#ifdef ENABLE_INSTR_PREDICATE_VERIFIER\n"
-     << "#undef ENABLE_INSTR_PREDICATE_VERIFIER\n"
-     << "#include <sstream>\n\n";
-
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Target.getName() << "_MC {\n\n";
-
-  // Emit the subtarget feature enumeration.
-  SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(SubtargetFeatures,
-                                                           OS);
-
-  // Emit the name table for error messages.
-  OS << "#ifndef NDEBUG\n";
-  SubtargetFeatureInfo::emitNameTable(SubtargetFeatures, OS);
-  OS << "#endif // NDEBUG\n\n";
-
-  // Emit the available features compute function.
-  SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
-      Target.getName(), "", "computeAvailableFeatures", SubtargetFeatures, OS);
-
-  std::vector<std::vector<Record *>> FeatureBitsets;
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    FeatureBitsets.emplace_back();
-    for (Record *Predicate : Inst->TheDef->getValueAsListOfDefs("Predicates")) {
-      const auto &I = SubtargetFeatures.find(Predicate);
-      if (I != SubtargetFeatures.end())
-        FeatureBitsets.back().push_back(I->second.TheDef);
-    }
-  }
-
-  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
-                                 const std::vector<Record *> &B) {
-    if (A.size() < B.size())
-      return true;
-    if (A.size() > B.size())
-      return false;
-    for (auto Pair : zip(A, B)) {
-      if (std::get<0>(Pair)->getName() < std::get<1>(Pair)->getName())
-        return true;
-      if (std::get<0>(Pair)->getName() > std::get<1>(Pair)->getName())
-        return false;
-    }
-    return false;
-  });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
-  OS << "#ifndef NDEBUG\n"
-     << "// Feature bitsets.\n"
-     << "enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
-     << "  CEFBS_None,\n";
-  for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
-      continue;
-    OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
-  }
-  OS << "};\n\n"
-     << "static constexpr FeatureBitset FeatureBitsets[] = {\n"
-     << "  {}, // CEFBS_None\n";
-  for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
-      continue;
-    OS << "  {";
-    for (const auto &Feature : FeatureBitset) {
-      const auto &I = SubtargetFeatures.find(Feature);
-      assert(I != SubtargetFeatures.end() && "Didn't import predicate?");
-      OS << I->second.getEnumBitName() << ", ";
-    }
-    OS << "},\n";
-  }
-  OS << "};\n"
-     << "#endif // NDEBUG\n\n";
-
-  // Emit the predicate verifier.
-  OS << "void verifyInstructionPredicates(\n"
-     << "    unsigned Opcode, const FeatureBitset &Features) {\n"
-     << "#ifndef NDEBUG\n"
-     << "  static " << getMinimalTypeForRange(FeatureBitsets.size())
-     << " RequiredFeaturesRefs[] = {\n";
-  unsigned InstIdx = 0;
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    OS << "    CEFBS";
-    unsigned NumPredicates = 0;
-    for (Record *Predicate : Inst->TheDef->getValueAsListOfDefs("Predicates")) {
-      const auto &I = SubtargetFeatures.find(Predicate);
-      if (I != SubtargetFeatures.end()) {
-        OS << '_' << I->second.TheDef->getName();
-        NumPredicates++;
-      }
-    }
-    if (!NumPredicates)
-      OS << "_None";
-    OS << ", // " << Inst->TheDef->getName() << " = " << InstIdx << "\n";
-    InstIdx++;
-  }
-  OS << "  };\n\n";
-  OS << "  assert(Opcode < " << InstIdx << ");\n";
-  OS << "  FeatureBitset AvailableFeatures = "
-        "computeAvailableFeatures(Features);\n";
-  OS << "  const FeatureBitset &RequiredFeatures = "
-        "FeatureBitsets[RequiredFeaturesRefs[Opcode]];\n";
-  OS << "  FeatureBitset MissingFeatures =\n"
-     << "      (AvailableFeatures & RequiredFeatures) ^\n"
-     << "      RequiredFeatures;\n"
-     << "  if (MissingFeatures.any()) {\n"
-     << "    std::ostringstream Msg;\n"
-     << "    Msg << \"Attempting to emit \" << &" << Target.getName()
-     << "InstrNameData[" << Target.getName() << "InstrNameIndices[Opcode]]\n"
-     << "        << \" instruction but the \";\n"
-     << "    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i)\n"
-     << "      if (MissingFeatures.test(i))\n"
-     << "        Msg << SubtargetFeatureNames[i] << \" \";\n"
-     << "    Msg << \"predicate(s) are not met\";\n"
-     << "    report_fatal_error(Msg.str().c_str());\n"
-     << "  }\n"
-     << "#else\n"
-     << "  // Silence unused variable warning on targets that don't use MCII "
-        "for "
-        "other purposes (e.g. BPF).\n"
-     << "  (void)MCII;\n"
-     << "#endif // NDEBUG\n";
-  OS << "}\n";
-  OS << "} // end namespace " << Target.getName() << "_MC\n";
-  OS << "} // end namespace llvm\n";
-  OS << "#endif // ENABLE_INSTR_PREDICATE_VERIFIER\n\n";
+  OS << "#endif // GET_GENISTRINFO_MC_HELPERS\n";
 }
 
 void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
@@ -1103,9 +955,6 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   Records.startTimer("Emit helper methods");
   emitMCIIHelperMethods(OS, TargetName);
-
-  Records.startTimer("Emit verifier methods");
-  emitFeatureVerifier(OS, Target);
 }
 
 void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,

@@ -49,7 +49,6 @@ std::unique_ptr<MCObjectTargetWriter> createAVRELFObjectWriter(uint8_t OSABI);
 #include "AVRGenRegisterInfo.inc"
 
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "AVRGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

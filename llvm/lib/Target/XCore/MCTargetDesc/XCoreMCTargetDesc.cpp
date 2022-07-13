@@ -29,7 +29,6 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "XCoreGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC

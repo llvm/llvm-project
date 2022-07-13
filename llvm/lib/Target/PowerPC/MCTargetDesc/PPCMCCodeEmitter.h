@@ -121,6 +121,12 @@ public:
 
   // Is this instruction a prefixed instruction.
   bool isPrefixedInstruction(const MCInst &MI) const;
+
+private:
+  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
+  void
+  verifyInstructionPredicates(const MCInst &MI,
+                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // namespace llvm
