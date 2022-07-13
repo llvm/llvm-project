@@ -208,6 +208,8 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
 /// necessary.
 Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
                               OpFoldResult opFoldResult);
+Value materializeOpFoldResult(OpBuilder &b, Location loc,
+                              OpFoldResult opFoldResult);
 
 /// Creates an extract_slice/subview op for a single `valueToTile` with
 /// `builder`. This new operation extracts a tile of `valueToTile`, starting

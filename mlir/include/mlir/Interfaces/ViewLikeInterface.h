@@ -24,9 +24,9 @@ namespace mlir {
 /// operands into a list of triples. Such a list can be more convenient to
 /// manipulate.
 struct Range {
-  Value offset;
-  Value size;
-  Value stride;
+  OpFoldResult offset;
+  OpFoldResult size;
+  OpFoldResult stride;
 };
 
 class OffsetSizeAndStrideOpInterface;

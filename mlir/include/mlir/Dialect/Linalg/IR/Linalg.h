@@ -30,20 +30,6 @@ namespace linalg {
 
 class LinalgOp;
 
-// TOFO: allow an extra ValueRange to specify an indexing and allow
-// non-hyperrectangular shapes.
-using LoopRangeBuilder =
-    std::function<SmallVector<Range, 4>(ImplicitLocOpBuilder)>;
-
-/// Provide a very simple inference procedure to build the loop ranges from the
-/// op and its operands. This only works with permutation affine maps and
-/// patterns of the form `(m, n)[s] -> (m + n - s floordiv 2)`.
-/// A more advanced Tensor-Comprehension like inference is possible but has
-/// proven to be ambiguous in unfavorable case.
-/// As a consequence, we relax the default behavior very conservatively and
-/// provide an op-specified hook so that Linalg ops may override the behavior.
-LoopRangeBuilder defaultLoopRangesBuilder(LinalgOp op);
-
 /// Returns the name mangled library call name to disambiguate between different
 /// overloads at the C level. The name mangling scheme is basic and uses MLIR
 /// type names:
