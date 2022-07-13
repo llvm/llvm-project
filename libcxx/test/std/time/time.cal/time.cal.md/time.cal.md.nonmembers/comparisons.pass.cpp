@@ -11,13 +11,7 @@
 // class month_day;
 
 // constexpr bool operator==(const month_day& x, const month_day& y) noexcept;
-//   Returns: x.month() == y.month() && x.day() == y.day().
-//
-// constexpr bool operator< (const month_day& x, const month_day& y) noexcept;
-//   Returns:
-//      If x.month() < y.month() returns true.
-//      Otherwise, if x.month() > y.month() returns false.
-//      Otherwise, returns x.day() < y.day().
+// constexpr strong_comparison operator<=>(const month_day& x, const month_day& y) noexcept;
 
 #include <chrono>
 #include <type_traits>
@@ -26,46 +20,50 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main(int, char**)
-{
-    using day       = std::chrono::day;
-    using month     = std::chrono::month;
-    using month_day = std::chrono::month_day;
+constexpr bool test() {
+  using day       = std::chrono::day;
+  using month     = std::chrono::month;
+  using month_day = std::chrono::month_day;
 
-    AssertComparisonsAreNoexcept<month_day>();
-    AssertComparisonsReturnBool<month_day>();
+  assert(testOrder(
+      month_day{std::chrono::January, day{1}}, month_day{std::chrono::January, day{1}}, std::strong_ordering::equal));
 
-    static_assert( testComparisons(
-        month_day{std::chrono::January, day{1}},
-        month_day{std::chrono::January, day{1}},
-        true, false), "");
+  assert(testOrder(
+      month_day{std::chrono::January, day{1}}, month_day{std::chrono::January, day{2}}, std::strong_ordering::less));
 
-    static_assert( testComparisons(
-        month_day{std::chrono::January, day{1}},
-        month_day{std::chrono::January, day{2}},
-        false, true), "");
+  assert(testOrder(
+      month_day{std::chrono::January, day{1}}, month_day{std::chrono::February, day{1}}, std::strong_ordering::less));
 
-    static_assert( testComparisons(
-        month_day{std::chrono::January,  day{1}},
-        month_day{std::chrono::February, day{1}},
-        false, true), "");
+  //  same day, different months
+  for (unsigned i = 1; i < 12; ++i)
+    for (unsigned j = 1; j < 12; ++j)
+      assert((testOrder(
+          month_day{month{i}, day{1}},
+          month_day{month{j}, day{1}},
+          i == j  ? std::strong_ordering::equal
+          : i < j ? std::strong_ordering::less
+                  : std::strong_ordering::greater)));
 
-    //  same day, different months
-    for (unsigned i = 1; i < 12; ++i)
-        for (unsigned j = 1; j < 12; ++j)
-            assert((testComparisons(
-                month_day{month{i}, day{1}},
-                month_day{month{j}, day{1}},
-                i == j, i < j )));
+  //  same month, different days
+  for (unsigned i = 1; i < 31; ++i)
+    for (unsigned j = 1; j < 31; ++j)
+      assert((testOrder(
+          month_day{month{2}, day{i}},
+          month_day{month{2}, day{j}},
+          i == j  ? std::strong_ordering::equal
+          : i < j ? std::strong_ordering::less
+                  : std::strong_ordering::greater)));
 
-    //  same month, different days
-    for (unsigned i = 1; i < 31; ++i)
-        for (unsigned j = 1; j < 31; ++j)
-            assert((testComparisons(
-                month_day{month{2}, day{i}},
-                month_day{month{2}, day{j}},
-                i == j, i < j )));
+  return true;
+}
 
+int main(int, char**) {
+  using month_day = std::chrono::month_day;
+  AssertOrderAreNoexcept<month_day>();
+  AssertOrderReturn<std::strong_ordering, month_day>();
+
+  test();
+  static_assert(test());
 
   return 0;
 }

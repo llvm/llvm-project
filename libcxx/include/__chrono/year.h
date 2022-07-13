@@ -12,6 +12,7 @@
 
 #include <__chrono/duration.h>
 #include <__config>
+#include <compare>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -56,25 +57,9 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const year& __lhs, const year& __rhs) noexcept
 { return static_cast<int>(__lhs) == static_cast<int>(__rhs); }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const year& __lhs, const year& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator< (const year& __lhs, const year& __rhs) noexcept
-{ return static_cast<int>(__lhs)  < static_cast<int>(__rhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator> (const year& __lhs, const year& __rhs) noexcept
-{ return __rhs < __lhs; }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator<=(const year& __lhs, const year& __rhs) noexcept
-{ return !(__rhs < __lhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator>=(const year& __lhs, const year& __rhs) noexcept
-{ return !(__lhs < __rhs); }
+_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const year& __lhs, const year& __rhs) noexcept {
+    return static_cast<int>(__lhs) <=> static_cast<int>(__rhs);
+}
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 year operator+ (const year& __lhs, const years& __rhs) noexcept
