@@ -29,7 +29,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Regex.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -139,7 +138,7 @@ struct Config {
     // Whether specific categories of hints are enabled.
     bool Parameters = true;
     bool DeducedTypes = true;
-    bool Designators = false;
+    bool Designators = true;
   } InlayHints;
 };
 
