@@ -441,7 +441,7 @@ bool DWARFDIE::GetDIENamesAndRanges(
     const char *&name, const char *&mangled, DWARFRangeList &ranges,
     int &decl_file, int &decl_line, int &decl_column, int &call_file,
     int &call_line, int &call_column,
-    lldb_private::DWARFExpression *frame_base) const {
+    lldb_private::DWARFExpressionList *frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(
         GetCU(), name, mangled, ranges, decl_file, decl_line, decl_column,

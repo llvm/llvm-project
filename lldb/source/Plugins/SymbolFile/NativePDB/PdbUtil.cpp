@@ -602,7 +602,7 @@ static RegisterId GetBaseFrameRegister(PdbIndex &index,
 }
 
 VariableInfo lldb_private::npdb::GetVariableLocationInfo(
-    PdbIndex &index, PdbCompilandSymId var_id, Block &block,
+    PdbIndex &index, PdbCompilandSymId var_id, Block &func_block,
     lldb::ModuleSP module) {
 
   CVSymbol sym = index.ReadSymbolRecord(var_id);
@@ -642,14 +642,8 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
 
       Variable::RangeList ranges = MakeRangeList(index, loc.Range, loc.Gaps);
 
-      // TODO: may be better to pass function scope and not lookup it every
-      // time? find nearest parent function block
-      Block *cur = &block;
-      while (cur->GetParent()) {
-        cur = cur->GetParent();
-      }
       PdbCompilandSymId func_scope_id =
-          PdbSymUid(cur->GetID()).asCompilandSym();
+          PdbSymUid(func_block.GetID()).asCompilandSym();
       CVSymbol func_block_cvs = index.ReadSymbolRecord(func_scope_id);
       lldbassert(func_block_cvs.kind() == S_GPROC32 ||
                  func_block_cvs.kind() == S_LPROC32);
