@@ -796,6 +796,50 @@ static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, Extract);
 }
 
+static Optional<Instruction *> instCombineSVECondLast(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  // The SIMD&FP variant of CLAST[AB] is significantly faster than the scalar
+  // integer variant across a variety of micro-architectures. Replace scalar
+  // integer CLAST[AB] intrinsic with optimal SIMD&FP variant. A simple
+  // bitcast-to-fp + clast[ab] + bitcast-to-int will cost a cycle or two more
+  // depending on the micro-architecture, but has been observed as generally
+  // being faster, particularly when the CLAST[AB] op is a loop-carried
+  // dependency.
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+  Value *Pg = II.getArgOperand(0);
+  Value *Fallback = II.getArgOperand(1);
+  Value *Vec = II.getArgOperand(2);
+  Type *Ty = II.getType();
+
+  if (!Ty->isIntegerTy())
+    return None;
+
+  Type *FPTy;
+  switch (cast<IntegerType>(Ty)->getBitWidth()) {
+  default:
+    return None;
+  case 16:
+    FPTy = Builder.getHalfTy();
+    break;
+  case 32:
+    FPTy = Builder.getFloatTy();
+    break;
+  case 64:
+    FPTy = Builder.getDoubleTy();
+    break;
+  }
+
+  Value *FPFallBack = Builder.CreateBitCast(Fallback, FPTy);
+  auto *FPVTy = VectorType::get(
+      FPTy, cast<VectorType>(Vec->getType())->getElementCount());
+  Value *FPVec = Builder.CreateBitCast(Vec, FPVTy);
+  auto *FPII = Builder.CreateIntrinsic(II.getIntrinsicID(), {FPVec->getType()},
+                                       {Pg, FPFallBack, FPVec});
+  Value *FPIItoInt = Builder.CreateBitCast(FPII, II.getType());
+  return IC.replaceInstUsesWith(II, FPIItoInt);
+}
+
 static Optional<Instruction *> instCombineRDFFR(InstCombiner &IC,
                                                 IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
@@ -1294,6 +1338,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_lasta:
   case Intrinsic::aarch64_sve_lastb:
     return instCombineSVELast(IC, II);
+  case Intrinsic::aarch64_sve_clasta_n:
+  case Intrinsic::aarch64_sve_clastb_n:
+    return instCombineSVECondLast(IC, II);
   case Intrinsic::aarch64_sve_cntd:
     return instCombineSVECntElts(IC, II, 2);
   case Intrinsic::aarch64_sve_cntw:
