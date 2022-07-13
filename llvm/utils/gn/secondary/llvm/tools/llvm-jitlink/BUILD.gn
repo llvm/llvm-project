@@ -11,6 +11,7 @@ executable("llvm-jitlink") {
     "//llvm/lib/Target:TargetsToBuild",
   ]
   sources = [
+    "llvm-jitlink-coff.cpp",
     "llvm-jitlink-elf.cpp",
     "llvm-jitlink-macho.cpp",
     "llvm-jitlink.cpp",
