@@ -873,27 +873,6 @@ RVVIntrinsic::RVVIntrinsic(
     Name += "_m";
   }
 
-  // Init RISC-V extensions
-  for (const auto &T : OutInTypes) {
-    if (T->isFloatVector(16) || T->isFloat(16))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::Zvfh;
-    if (T->isFloatVector(32))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::VectorMaxELenFp32;
-    if (T->isFloatVector(64))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::VectorMaxELenFp64;
-    if (T->isVector(64))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::VectorMaxELen64;
-  }
-  for (auto Feature : RequiredFeatures) {
-    if (Feature == "RV64")
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::RV64;
-    // Note: Full multiply instruction (mulh, mulhu, mulhsu, smul) for EEW=64
-    // require V.
-    if (Feature == "FullMultiply" &&
-        (RISCVPredefinedMacros & RISCVPredefinedMacro::VectorMaxELen64))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::V;
-  }
-
   // Init OutputType and InputTypes
   OutputType = OutInTypes[0];
   InputTypes.assign(OutInTypes.begin() + 1, OutInTypes.end());
@@ -949,6 +928,30 @@ SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
     Prototypes = Prototypes.drop_front(Idx + 1);
   }
   return PrototypeDescriptors;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
+  OS << "{";
+  OS << "\"" << Record.Name << "\",";
+  if (Record.OverloadedName == nullptr ||
+      StringRef(Record.OverloadedName).empty())
+    OS << "nullptr,";
+  else
+    OS << "\"" << Record.OverloadedName << "\",";
+  OS << Record.PrototypeIndex << ",";
+  OS << Record.MaskedPrototypeIndex << ",";
+  OS << Record.SuffixIndex << ",";
+  OS << Record.OverloadedSuffixIndex << ",";
+  OS << (int)Record.PrototypeLength << ",";
+  OS << (int)Record.MaskedPrototypeLength << ",";
+  OS << (int)Record.SuffixLength << ",";
+  OS << (int)Record.OverloadedSuffixSize << ",";
+  OS << (int)Record.RequiredExtensions << ",";
+  OS << (int)Record.TypeRangeMask << ",";
+  OS << (int)Record.Log2LMULMask << ",";
+  OS << (int)Record.NF << ",";
+  OS << "},\n";
+  return OS;
 }
 
 } // end namespace RISCV
