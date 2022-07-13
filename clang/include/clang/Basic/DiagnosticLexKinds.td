@@ -130,8 +130,15 @@ def warn_utf8_symbol_zero_width : Warning<
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
 
 def ext_delimited_escape_sequence : Extension<
-  "%select{delimited|named}0 escape sequences are a Clang extension">,
+  "%select{delimited|named}0 escape sequences are a "
+  "%select{Clang|C++2b}1 extension">,
   InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
+
+def warn_cxx2b_delimited_escape_sequence : Warning<
+  "%select{delimited|named}0 escape sequences are "
+  "incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
+
 def err_delimited_escape_empty : Error<
   "delimited escape sequence cannot be empty">;
 def err_delimited_escape_missing_brace: Error<

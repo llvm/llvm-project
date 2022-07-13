@@ -502,6 +502,10 @@ C++2b Feature Support
 - Implemented `P0849R8: auto(x): decay-copy in the language <https://wg21.link/P0849R8>`_.
 - Implemented `P2242R3: Non-literal variables (and labels and gotos) in constexpr functions	<https://wg21.link/P2242R3>`_.
 - Implemented `LWG3659: Consider ATOMIC_FLAG_INIT undeprecation <https://wg21.link/LWG3659>`_.
+- Implemented `P2290 Delimited escape sequences <https://wg21.link/P2290R3>`_.
+  This feature is available as an extension in all C and C++ language modes.
+- Implemented `P2071 Named universal character escapes <https://wg21.link/P2290R2>`_.
+  This feature is available as an extension in all C and C++ language modes.
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------
