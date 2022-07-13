@@ -441,8 +441,8 @@ public:
       ++pos;
     }
 
-    if (firstSrcDepPos.hasValue()) {
-      if (lastDstDepPos.hasValue()) {
+    if (firstSrcDepPos.has_value()) {
+      if (lastDstDepPos.has_value()) {
         if (firstSrcDepPos.getValue() <= lastDstDepPos.getValue()) {
           // No valid insertion point exists which preserves dependences.
           return nullptr;
@@ -944,7 +944,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   uint64_t bufSize =
       getMemRefEltSizeInBytes(oldMemRefType) * numElements.getValue();
   unsigned newMemSpace;
-  if (bufSize <= localBufSizeThreshold && fastMemorySpace.hasValue()) {
+  if (bufSize <= localBufSizeThreshold && fastMemorySpace.has_value()) {
     newMemSpace = fastMemorySpace.getValue();
   } else {
     newMemSpace = oldMemRefType.getMemorySpaceAsInt();
@@ -1141,7 +1141,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
 
   Optional<int64_t> maybeSrcWriteRegionSizeBytes =
       srcWriteRegion.getRegionSize();
-  if (!maybeSrcWriteRegionSizeBytes.hasValue())
+  if (!maybeSrcWriteRegionSizeBytes.has_value())
     return false;
   int64_t srcWriteRegionSizeBytes = maybeSrcWriteRegionSizeBytes.getValue();
 
@@ -1183,7 +1183,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
 
     Optional<int64_t> maybeSliceWriteRegionSizeBytes =
         sliceWriteRegion.getRegionSize();
-    if (!maybeSliceWriteRegionSizeBytes.hasValue() ||
+    if (!maybeSliceWriteRegionSizeBytes.has_value() ||
         maybeSliceWriteRegionSizeBytes.getValue() == 0) {
       LLVM_DEBUG(llvm::dbgs()
                  << "Failed to get slice write region size at loopDepth: " << i

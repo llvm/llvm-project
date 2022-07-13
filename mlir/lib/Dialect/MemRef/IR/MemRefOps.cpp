@@ -1300,7 +1300,7 @@ LogicalResult GlobalOp::verify() {
 
   // Verify that the initial value, if present, is either a unit attribute or
   // an elements attribute.
-  if (getInitialValue().hasValue()) {
+  if (getInitialValue().has_value()) {
     Attribute initValue = getInitialValue().getValue();
     if (!initValue.isa<UnitAttr>() && !initValue.isa<ElementsAttr>())
       return emitOpError("initial value should be a unit or elements "
@@ -1332,7 +1332,7 @@ LogicalResult GlobalOp::verify() {
 
 ElementsAttr GlobalOp::getConstantInitValue() {
   auto initVal = getInitialValue();
-  if (getConstant() && initVal.hasValue())
+  if (getConstant() && initVal.has_value())
     return initVal.getValue().cast<ElementsAttr>();
   return {};
 }
@@ -2164,7 +2164,7 @@ Type SubViewOp::inferRankReducedResultType(ArrayRef<int64_t> resultShape,
   // Compute which dimensions are dropped.
   Optional<llvm::SmallDenseSet<unsigned>> dimsToProject =
       computeRankReductionMask(inferredType.getShape(), resultShape);
-  assert(dimsToProject.hasValue() && "invalid rank reduction");
+  assert(dimsToProject.has_value() && "invalid rank reduction");
   llvm::SmallBitVector dimsToProjectVector(inferredType.getRank());
   for (unsigned dim : *dimsToProject)
     dimsToProjectVector.set(dim);

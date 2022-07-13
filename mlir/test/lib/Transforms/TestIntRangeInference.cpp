@@ -30,7 +30,7 @@ static LogicalResult replaceWithConstant(DataFlowSolver &solver, OpBuilder &b,
   const ConstantIntRanges &inferredRange =
       maybeInferredRange->getValue().getValue();
   Optional<APInt> maybeConstValue = inferredRange.getConstantValue();
-  if (!maybeConstValue.hasValue())
+  if (!maybeConstValue.has_value())
     return failure();
 
   Operation *maybeDefiningOp = value.getDefiningOp();

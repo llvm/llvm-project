@@ -102,7 +102,7 @@ LogicalResult mlir::linalg::LinalgTransformationFilter::checkAndNotify(
 void mlir::linalg::LinalgTransformationFilter::
     replaceLinalgTransformationFilter(PatternRewriter &rewriter,
                                       Operation *op) const {
-  if (replacement.hasValue())
+  if (replacement.has_value())
     op->setAttr(LinalgTransforms::kLinalgTransformMarker,
                 replacement.getValue());
   else

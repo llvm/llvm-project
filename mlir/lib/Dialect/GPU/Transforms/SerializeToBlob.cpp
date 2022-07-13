@@ -75,7 +75,7 @@ void gpu::SerializeToBlobPass::runOnOperation() {
   Optional<std::string> maybeTargetISA =
       translateToISA(*llvmModule, *targetMachine);
 
-  if (!maybeTargetISA.hasValue())
+  if (!maybeTargetISA.has_value())
     return signalPassFailure();
 
   std::string targetISA = std::move(maybeTargetISA.getValue());

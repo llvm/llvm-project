@@ -120,7 +120,7 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
     };
 
     Optional<TypeRange> sourceTypes = getInputsTypesForRegion(succRegionNo);
-    if (!sourceTypes.hasValue())
+    if (!sourceTypes.has_value())
       continue;
 
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();

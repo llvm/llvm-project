@@ -405,7 +405,7 @@ checkTilingLegalityImpl(MutableArrayRef<mlir::AffineForOp> origLoops) {
         LLVM_DEBUG(dstAccess.opInst->dump(););
         for (unsigned k = 0, e = depComps.size(); k < e; k++) {
           DependenceComponent depComp = depComps[k];
-          if (depComp.lb.hasValue() && depComp.ub.hasValue() &&
+          if (depComp.lb.has_value() && depComp.ub.has_value() &&
               depComp.lb.getValue() < depComp.ub.getValue() &&
               depComp.ub.getValue() < 0) {
             LLVM_DEBUG(llvm::dbgs()
@@ -974,7 +974,7 @@ void mlir::getTileableBands(func::FuncOp f,
 /// Unrolls this loop completely.
 LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
-  if (mayBeConstantTripCount.hasValue()) {
+  if (mayBeConstantTripCount.has_value()) {
     uint64_t tripCount = mayBeConstantTripCount.getValue();
     if (tripCount == 0)
       return success();
@@ -990,7 +990,7 @@ LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
 LogicalResult mlir::loopUnrollUpToFactor(AffineForOp forOp,
                                          uint64_t unrollFactor) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
-  if (mayBeConstantTripCount.hasValue() &&
+  if (mayBeConstantTripCount.has_value() &&
       mayBeConstantTripCount.getValue() < unrollFactor)
     return loopUnrollByFactor(forOp, mayBeConstantTripCount.getValue());
   return loopUnrollByFactor(forOp, unrollFactor);
@@ -1150,7 +1150,7 @@ LogicalResult mlir::loopUnrollByFactor(
 LogicalResult mlir::loopUnrollJamUpToFactor(AffineForOp forOp,
                                             uint64_t unrollJamFactor) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
-  if (mayBeConstantTripCount.hasValue() &&
+  if (mayBeConstantTripCount.has_value() &&
       mayBeConstantTripCount.getValue() < unrollJamFactor)
     return loopUnrollJamByFactor(forOp, mayBeConstantTripCount.getValue());
   return loopUnrollJamByFactor(forOp, unrollJamFactor);
@@ -1573,7 +1573,7 @@ AffineForOp mlir::sinkSequentialLoops(AffineForOp forOp) {
     assert(depComps.size() >= maxLoopDepth);
     for (unsigned j = 0; j < maxLoopDepth; ++j) {
       DependenceComponent &depComp = depComps[j];
-      assert(depComp.lb.hasValue() && depComp.ub.hasValue());
+      assert(depComp.lb.has_value() && depComp.ub.has_value());
       if (depComp.lb.getValue() != 0 || depComp.ub.getValue() != 0)
         isParallelLoop[j] = false;
     }
@@ -2406,12 +2406,12 @@ LogicalResult mlir::affineDataCopyGenerate(Block::iterator begin,
   block->walk(begin, end, [&](Operation *opInst) {
     // Gather regions to allocate to buffers in faster memory space.
     if (auto loadOp = dyn_cast<AffineLoadOp>(opInst)) {
-      if ((filterMemRef.hasValue() && filterMemRef != loadOp.getMemRef()) ||
+      if ((filterMemRef.has_value() && filterMemRef != loadOp.getMemRef()) ||
           (loadOp.getMemRefType().getMemorySpaceAsInt() !=
            copyOptions.slowMemorySpace))
         return;
     } else if (auto storeOp = dyn_cast<AffineStoreOp>(opInst)) {
-      if ((filterMemRef.hasValue() && filterMemRef != storeOp.getMemRef()) ||
+      if ((filterMemRef.has_value() && filterMemRef != storeOp.getMemRef()) ||
           storeOp.getMemRefType().getMemorySpaceAsInt() !=
               copyOptions.slowMemorySpace)
         return;

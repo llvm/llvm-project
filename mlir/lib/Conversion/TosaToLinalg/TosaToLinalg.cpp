@@ -1164,7 +1164,7 @@ public:
 
     auto dynamicDimsOr =
         checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
-    if (!dynamicDimsOr.hasValue())
+    if (!dynamicDimsOr.has_value())
       return failure();
     SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
@@ -1356,7 +1356,7 @@ public:
 
     auto dynamicDimsOr =
         checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
-    if (!dynamicDimsOr.hasValue())
+    if (!dynamicDimsOr.has_value())
       return failure();
     SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
@@ -2051,7 +2051,7 @@ public:
 
     auto dynamicDimsOr =
         checkHasDynamicBatchDims(rewriter, op, {input, indices, op.output()});
-    if (!dynamicDimsOr.hasValue())
+    if (!dynamicDimsOr.has_value())
       return failure();
     SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 

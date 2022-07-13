@@ -730,8 +730,8 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
       }
       // Add the index attributes to the op definition and builders.
       if (arg.kind == LinalgOperandDefKind::IndexAttr) {
-        assert(arg.indexAttrMap.hasValue());
-        assert(arg.defaultIndices.hasValue());
+        assert(arg.indexAttrMap.has_value());
+        assert(arg.defaultIndices.has_value());
         size_t size = arg.indexAttrMap->affineMap().getNumResults();
         assert(arg.defaultIndices.getValue().size() == size);
         static const char typeFmt[] = "RankedI64ElementsAttr<[{0}]>";
@@ -1101,7 +1101,7 @@ if ({1}Iter != attrs.end()) {{
           // Add the optional type parameter to the operands.
           SmallVector<std::string> operandCppValues;
           if (expression.scalarFn->kind == ScalarFnKind::Type) {
-            assert(expression.scalarFn->typeVar.hasValue());
+            assert(expression.scalarFn->typeVar.has_value());
             Optional<std::string> typeCppValue =
                 findTypeValue(expression.scalarFn->typeVar.getValue(), args);
             if (!typeCppValue) {
