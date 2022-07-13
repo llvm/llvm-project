@@ -257,6 +257,7 @@ OCML_MANGLE_F64(cvtrtz_f32)(double a)
 ATTR float
 OCML_MANGLE_S32(cvtrtn_f32)(int i)
 {
+#if defined AVOID_FP
     int s = i >> 31;
     uint u = AS_UINT((i + s) ^ s);
     uint lz = BUILTIN_CLZ_U32(u);
@@ -266,11 +267,17 @@ OCML_MANGLE_S32(cvtrtn_f32)(int i)
     uint t = u & 0xffU;
     u = (e << 23) | (u >> 8);
     return AS_FLOAT((u + ((s & t) > 0)) | (s & 0x80000000));
+#else
+    float r = (float)BUILTIN_MIN_S32(i, 0x7fffffbf);
+    float p = OCML_MANGLE_F32(pred)(r);
+    return (int)r > i ? p : r;
+#endif
 }
 
 ATTR float
 OCML_MANGLE_S32(cvtrtp_f32)(int i)
 {
+#if defined AVOID_FP
     int s = i >> 31;
     uint u = AS_UINT((i + s) ^ s);
     uint lz = BUILTIN_CLZ_U32(u);
@@ -280,6 +287,11 @@ OCML_MANGLE_S32(cvtrtp_f32)(int i)
     uint t = u & 0xffU;
     u = (e << 23) | (u >> 8);
     return AS_FLOAT((u + ((~s & t) > 0)) | (s & 0x80000000));
+#else
+    float r = (float)BUILTIN_MIN_S32(i, 0x7fffffbf);
+    float s = OCML_MANGLE_F32(succ)(r);
+    return (int)r < i ? s : r;
+#endif
 }
 
 ATTR float
@@ -310,6 +322,7 @@ extern AATTR("cvt1f4_zu4") float OCML_MANGLE_U32(cvtrtz_f32)(uint);
 ATTR float
 OCML_MANGLE_U32(cvtrtp_f32)(uint u)
 {
+#if defined AVOID_FP
     uint lz = BUILTIN_CLZ_U32(u);
     uint e = 127U + 31U - lz;
     e = u ? e : 0;
@@ -317,6 +330,11 @@ OCML_MANGLE_U32(cvtrtp_f32)(uint u)
     uint t = u & 0xffU;
     u = (e << 23) | (u >> 8);
     return AS_FLOAT(u + (t > 0));
+#else
+    float r = (float)BUILTIN_MIN_S32(u, 0xffffff7fU);
+    float s = OCML_MANGLE_F32(succ)(r);
+    return (uint)r < u ? s : r;
+#endif
 }
 
 ATTR float
