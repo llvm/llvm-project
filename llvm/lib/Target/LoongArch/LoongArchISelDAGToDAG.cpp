@@ -161,6 +161,24 @@ bool LoongArchDAGToDAGISel::selectSExti32(SDValue N, SDValue &Val) {
   return false;
 }
 
+bool LoongArchDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
+  if (N.getOpcode() == ISD::AND) {
+    auto *C = dyn_cast<ConstantSDNode>(N.getOperand(1));
+    if (C && C->getZExtValue() == UINT64_C(0xFFFFFFFF)) {
+      Val = N.getOperand(0);
+      return true;
+    }
+  }
+  MVT VT = N.getSimpleValueType();
+  APInt Mask = APInt::getHighBitsSet(VT.getSizeInBits(), 32);
+  if (CurDAG->MaskedValueIsZero(N, Mask)) {
+    Val = N;
+    return true;
+  }
+
+  return false;
+}
+
 // This pass converts a legalized DAG into a LoongArch-specific DAG, ready
 // for instruction scheduling.
 FunctionPass *llvm::createLoongArchISelDag(LoongArchTargetMachine &TM) {
