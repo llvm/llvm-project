@@ -277,11 +277,13 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
     DenseI32ArrayAttr:$i32attr,
     DenseI64ArrayAttr:$i64attr,
     DenseF32ArrayAttr:$f32attr,
-    DenseF64ArrayAttr:$f64attr
+    DenseF64ArrayAttr:$f64attr,
+    DenseI32ArrayAttr:$emptyattr
   );
   let assemblyFormat = [{
    `i8attr` `=` $i8attr `i16attr` `=` $i16attr `i32attr` `=` $i32attr
    `i64attr` `=` $i64attr  `f32attr` `=` $f32attr `f64attr` `=` $f64attr
+   `emptyattr` `=` $emptyattr
    attr-dict
   }];
 }
