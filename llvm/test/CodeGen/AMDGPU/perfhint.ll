@@ -20,7 +20,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_membound_1:
-; GCN: MemoryBound: 0
+; GCN: MemoryBound: 1
 define amdgpu_kernel void @test_membound_1(<2 x double> addrspace(1)* nocapture readonly %ptr.0,
                                            <2 x double> addrspace(1)* nocapture %ptr.1,
                                            <2 x double> %arg.0, i32 %arg.1, <4 x double> %arg.2) {
