@@ -249,6 +249,7 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
 SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
   switch (Kind) {
   case index::SymbolKind::Unknown:
+  case index::SymbolKind::CommentTag:
     return SymbolKind::Variable;
   case index::SymbolKind::Module:
     return SymbolKind::Module;
