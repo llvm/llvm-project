@@ -207,6 +207,12 @@ llvm::cl::opt<std::string> ModuleName(
     llvm::cl::desc("the module of which the dependencies are to be computed"),
     llvm::cl::cat(DependencyScannerCategory));
 
+llvm::cl::list<std::string> ModuleDepTargets(
+    "dependency-target",
+    llvm::cl::desc("With '-generate-modules-path-args', the names of "
+                   "dependency targets for the dependency file"),
+    llvm::cl::cat(DependencyScannerCategory));
+
 enum ResourceDirRecipeKind {
   RDRK_ModifyCompilerPath,
   RDRK_InvokeCompiler,
@@ -574,7 +580,8 @@ private:
     case ModuleOutputKind::DependencyFile:
       return PCMPath.first->second + ".d";
     case ModuleOutputKind::DependencyTargets:
-      return ""; // Will get the default target name.
+      // Null-separate the list of targets.
+      return join(ModuleDepTargets, StringRef("\0", 1));
     case ModuleOutputKind::DiagnosticSerializationFile:
       return PCMPath.first->second + ".diag";
     }
