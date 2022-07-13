@@ -104,9 +104,6 @@ public:
   typedef std::vector<CommandArgumentData>
       CommandArgumentEntry; // Used to build individual command argument lists
 
-  static ArgumentTableEntry g_arguments_data
-      [lldb::eArgTypeLastArg]; // Main argument information table
-
   typedef std::map<std::string, lldb::CommandObjectSP> CommandMap;
 
   CommandObject(CommandInterpreter &interpreter, llvm::StringRef name,
