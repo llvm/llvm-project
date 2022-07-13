@@ -590,6 +590,8 @@ def shiftMaskGRLen
     : ComplexPattern<GRLenVT, 1, "selectShiftMaskGRLen", [], [], 0>;
 def shiftMask32 : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
 
+def sexti32 : ComplexPattern<i64, 1, "selectSExti32">;
+
 class shiftop<SDPatternOperator operator>
     : PatFrag<(ops node:$val, node:$count),
               (operator node:$val, (GRLenVT (shiftMaskGRLen node:$count)))>;

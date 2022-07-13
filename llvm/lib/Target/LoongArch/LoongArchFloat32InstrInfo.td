@@ -11,6 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// LoongArch specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_LoongArchMOVGR2FR_W_LA64
+    : SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, i64>]>;
+def SDT_LoongArchMOVFR2GR_S_LA64
+    : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, f32>]>;
+def SDT_LoongArchFTINT : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
+
+def loongarch_movgr2fr_w_la64
+    : SDNode<"LoongArchISD::MOVGR2FR_W_LA64", SDT_LoongArchMOVGR2FR_W_LA64>;
+def loongarch_movfr2gr_s_la64
+    : SDNode<"LoongArchISD::MOVFR2GR_S_LA64", SDT_LoongArchMOVFR2GR_S_LA64>;
+def loongarch_ftint : SDNode<"LoongArchISD::FTINT", SDT_LoongArchFTINT>;
+
+//===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
@@ -187,4 +203,26 @@ defm : StPat<store, FST_S, FPR32, f32>;
 def : Pat<(f32 fpimm0), (MOVGR2FR_W R0)>;
 def : Pat<(f32 fpimm0neg), (FNEG_S (MOVGR2FR_W R0))>;
 def : Pat<(f32 fpimm1), (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1)))>;
+
+// FP Conversion
+def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
 } // Predicates = [HasBasicF]
+
+let Predicates = [HasBasicF, IsLA64] in {
+// GPR -> FPR
+def : Pat<(loongarch_movgr2fr_w_la64 GPR:$src), (MOVGR2FR_W GPR:$src)>;
+// FPR -> GPR
+def : Pat<(loongarch_movfr2gr_s_la64 FPR32:$src),
+          (MOVFR2GR_S FPR32:$src)>;
+// int -> f32
+def : Pat<(f32 (sint_to_fp GPR:$src)), (FFINT_S_W (MOVGR2FR_W GPR:$src))>;
+} // Predicates = [HasBasicF, IsLA64]
+
+let Predicates = [HasBasicF, IsLA32] in {
+// GPR -> FPR
+def : Pat<(bitconvert (i32 GPR:$src)), (MOVGR2FR_W GPR:$src)>;
+// FPR -> GPR
+def : Pat<(i32 (bitconvert FPR32:$src)), (MOVFR2GR_S FPR32:$src)>;
+// int -> f32
+def : Pat<(f32 (sint_to_fp (i32 GPR:$src))), (FFINT_S_W (MOVGR2FR_W GPR:$src))>;
+} // Predicates = [HasBasicF, IsLA64]

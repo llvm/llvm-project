@@ -35,6 +35,12 @@ enum NodeType : unsigned {
   SRA_W,
   SRL_W,
 
+  // FPR<->GPR transfer operations
+  MOVGR2FR_W_LA64,
+  MOVFR2GR_S_LA64,
+
+  FTINT,
+
   BSTRPICK,
 
 };
@@ -97,6 +103,8 @@ private:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
