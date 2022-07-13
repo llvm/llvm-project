@@ -59,7 +59,7 @@ struct __fn {
       _Comp __comp   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_intersection<_RangesIterOps>(
+    auto __ret = std::__set_intersection<_RangeAlgPolicy>(
         std::move(__first1),
         std::move(__last1),
         std::move(__first2),
@@ -93,7 +93,7 @@ struct __fn {
         _Comp __comp   = {},
         _Proj1 __proj1 = {},
         _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_intersection<_RangesIterOps>(
+    auto __ret = std::__set_intersection<_RangeAlgPolicy>(
         ranges::begin(__range1),
         ranges::end(__range1),
         ranges::begin(__range2),
