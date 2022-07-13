@@ -479,7 +479,7 @@ namespace ArrayNewNeedsDtor {
 #endif
   struct B { B(); A a; };
 #if __cplusplus <= 199711L
-  // expected-error@-2 {{field of type 'ArrayNewNeedsDtor::A' has private destructor}}
+  // expected-error@-2 {{field of type 'A' has private destructor}}
 #else
   // expected-note@-4 {{destructor of 'B' is implicitly deleted because field 'a' has an inaccessible destructor}}
 #endif

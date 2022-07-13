@@ -3,17 +3,17 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %t/asm -o %t.o
 # RUN: ld.lld -T %t/lts %t.o -o %t_le
-# RUN: llvm-objdump --mcpu=pwr10 --no-show-raw-insn -d %t_le | FileCheck %s
+# RUN: llvm-objdump --no-show-raw-insn -d %t_le | FileCheck %s
 # RUN: llvm-readelf -s %t_le | FileCheck %s --check-prefix=SYM
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %t/asm -o %t.o
 # RUN: ld.lld -T %t/lts %t.o -o %t_be
-# RUN: llvm-objdump --mcpu=pwr10 --no-show-raw-insn -d %t_be | FileCheck %s
+# RUN: llvm-objdump --no-show-raw-insn -d %t_be | FileCheck %s
 # RUN: llvm-readelf -s %t_be | FileCheck %s --check-prefix=SYM
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %t/asm -o %t.o
 # RUN: ld.lld -T %t/lts %t.o -o %t_le --no-power10-stubs
-# RUN: llvm-objdump --mcpu=pwr10 --no-show-raw-insn -d %t_le | FileCheck %s --check-prefix=NoP10
+# RUN: llvm-objdump --no-show-raw-insn -d %t_le | FileCheck %s --check-prefix=NoP10
 # RUN: llvm-readelf -s %t_le | FileCheck %s --check-prefix=SYM
 
 # SYM:      Symbol table '.symtab' contains 9 entries:

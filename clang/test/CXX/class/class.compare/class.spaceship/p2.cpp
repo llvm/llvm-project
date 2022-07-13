@@ -41,7 +41,7 @@ namespace DeducedNotCat {
     A operator<=>(const A&) const; // expected-note {{selected 'operator<=>' for member 'a' declared here}}
   };
   struct B {
-    A a; // expected-note {{return type 'DeducedNotCat::A' of three-way comparison for member 'a' is not a standard comparison category type}}
+    A a; // expected-note {{return type 'A' of three-way comparison for member 'a' is not a standard comparison category type}}
     auto operator<=>(const B&) const = default; // expected-warning {{implicitly deleted}}
   };
 }

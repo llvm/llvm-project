@@ -2789,7 +2789,7 @@ namespace ErrorType {
   struct S; //expected-note{{forward declaration of 'ErrorType::S'}}
 
   struct T {
-        S t; //expected-error{{field has incomplete type 'ErrorType::S'}}
+        S t; //expected-error{{field has incomplete type 'S'}}
   };
   bool b = __has_unique_object_representations(T);
 };
