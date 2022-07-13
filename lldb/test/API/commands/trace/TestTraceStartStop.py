@@ -46,6 +46,62 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
 
         self.traceStartThread(iptTraceSize=1048576)
 
+    @testSBAPIAndCommands
+    def testStartSessionWithSizeDeclarationInUnits(self):
+        self.expect("file " + os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
+        self.expect("b main")
+        self.expect("r")
+
+        self.traceStartThread(
+            error=True, iptTraceSize="abc",
+            substrs=["invalid bytes expression for 'abc'"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="123.12",
+            substrs=["invalid bytes expression for '123.12'"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="\"\"",
+            substrs=["invalid bytes expression for ''"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="2000B",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 2000"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3MB",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3145728"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3MiB",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3145728"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3mib",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3145728"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3M",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3145728"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3KB",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3072"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3KiB",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3072"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3K",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3072"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3MS",
+            substrs=["invalid bytes expression for '3MS'"])
+
+        self.traceStartThread(iptTraceSize="1048576")
+
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     def testSBAPIHelp(self):
         self.expect("file " + os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
