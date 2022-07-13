@@ -241,7 +241,7 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
       if (IsAcceptableResult(Type)) {
         QualType T = Context.getTypeDeclType(Type);
         MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
-        return CreateParsedType(Context.getElaboratedType(ETK_None, nullptr, T),
+        return CreateParsedType(T,
                                 Context.getTrivialTypeSourceInfo(T, NameLoc));
       }
     }
@@ -7713,8 +7713,8 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
   //   designated by the pseudo-destructor-name shall be the same type.
   if (DestructedTypeInfo) {
     QualType DestructedType = DestructedTypeInfo->getType();
-    SourceLocation DestructedTypeStart =
-        DestructedTypeInfo->getTypeLoc().getBeginLoc();
+    SourceLocation DestructedTypeStart
+      = DestructedTypeInfo->getTypeLoc().getLocalSourceRange().getBegin();
     if (!DestructedType->isDependentType() && !ObjectType->isDependentType()) {
       if (!Context.hasSameUnqualifiedType(DestructedType, ObjectType)) {
         // Detect dot pseudo destructor calls on pointer objects, e.g.:
@@ -7739,7 +7739,7 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
         } else {
           Diag(DestructedTypeStart, diag::err_pseudo_dtor_type_mismatch)
               << ObjectType << DestructedType << Base->getSourceRange()
-              << DestructedTypeInfo->getTypeLoc().getSourceRange();
+              << DestructedTypeInfo->getTypeLoc().getLocalSourceRange();
 
           // Recover by setting the destructed type to the object type.
           DestructedType = ObjectType;
@@ -7755,8 +7755,8 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
           // type.
         } else {
           Diag(DestructedTypeStart, diag::err_arc_pseudo_dtor_inconstant_quals)
-              << ObjectType << DestructedType << Base->getSourceRange()
-              << DestructedTypeInfo->getTypeLoc().getSourceRange();
+            << ObjectType << DestructedType << Base->getSourceRange()
+            << DestructedTypeInfo->getTypeLoc().getLocalSourceRange();
         }
 
         // Recover by setting the destructed type to the object type.
@@ -7780,10 +7780,10 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
     if (!ScopeType->isDependentType() && !ObjectType->isDependentType() &&
         !Context.hasSameUnqualifiedType(ScopeType, ObjectType)) {
 
-      Diag(ScopeTypeInfo->getTypeLoc().getSourceRange().getBegin(),
+      Diag(ScopeTypeInfo->getTypeLoc().getLocalSourceRange().getBegin(),
            diag::err_pseudo_dtor_type_mismatch)
-          << ObjectType << ScopeType << Base->getSourceRange()
-          << ScopeTypeInfo->getTypeLoc().getSourceRange();
+        << ObjectType << ScopeType << Base->getSourceRange()
+        << ScopeTypeInfo->getTypeLoc().getLocalSourceRange();
 
       ScopeType = QualType();
       ScopeTypeInfo = nullptr;

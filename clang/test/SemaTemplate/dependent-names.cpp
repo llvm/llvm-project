@@ -344,11 +344,11 @@ X3::Y<>::iterator it; // expected-error {{no type named 'iterator' in 'PR11421::
 namespace rdar12629723 {
   template<class T>
   struct X {
-    struct C : public C { }; // expected-error{{circular inheritance between 'C' and 'rdar12629723::X::C'}}
+    struct C : public C { }; // expected-error{{circular inheritance between 'rdar12629723::X::C' and 'rdar12629723::X::C'}}
 
     struct B;
 
-    struct A : public B {  // expected-note{{'A' declared here}}
+    struct A : public B {  // expected-note{{'rdar12629723::X::A' declared here}}
       virtual void foo() { }
     };
 
@@ -357,7 +357,7 @@ namespace rdar12629723 {
   };
 
   template<class T>
-  struct X<T>::B : public A {  // expected-error{{circular inheritance between 'A' and 'rdar12629723::X::B'}}
+  struct X<T>::B : public A {  // expected-error{{circular inheritance between 'rdar12629723::X::A' and 'rdar12629723::X::B'}}
     virtual void foo() { }
   };
 }

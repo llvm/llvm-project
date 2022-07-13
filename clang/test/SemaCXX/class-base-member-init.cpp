@@ -83,7 +83,7 @@ namespace test5 {
     A() : decltype(Base(1))(3) {
     }
     A(int) : Base(3), // expected-note {{previous initialization is here}}
-             decltype(Base(1))(2), // expected-error {{multiple initializations given for base 'decltype(Base(1))' (aka 'test5::Base')}}
+             decltype(Base(1))(2), // expected-error {{multiple initializations given for base 'decltype(test5::Base(1))' (aka 'test5::Base')}}
              decltype(int())() { // expected-error {{constructor initializer 'decltype(int())' (aka 'int') does not name a class}}
     }
     A(float) : decltype(A())(3) {

@@ -853,7 +853,7 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
   if (D->isBitField())
     IvarT = GetGroupRecordTypeForObjCIvarBitfield(D);
 
-  if (!IvarT->getAs<TypedefType>() && IvarT->isRecordType()) {
+  if (!isa<TypedefType>(IvarT) && IvarT->isRecordType()) {
     RecordDecl *RD = IvarT->castAs<RecordType>()->getDecl();
     RD = RD->getDefinition();
     if (RD && !RD->getDeclName().getAsIdentifierInfo()) {
@@ -3629,7 +3629,7 @@ bool RewriteModernObjC::IsTagDefinedInsideClass(ObjCContainerDecl *IDecl,
 /// It handles elaborated types, as well as enum types in the process.
 bool RewriteModernObjC::RewriteObjCFieldDeclType(QualType &Type,
                                                  std::string &Result) {
-  if (Type->getAs<TypedefType>()) {
+  if (isa<TypedefType>(Type)) {
     Result += "\t";
     return false;
   }
@@ -3724,7 +3724,7 @@ void RewriteModernObjC::RewriteObjCFieldDecl(FieldDecl *fieldDecl,
 void RewriteModernObjC::RewriteLocallyDefinedNamedAggregates(FieldDecl *fieldDecl,
                                              std::string &Result) {
   QualType Type = fieldDecl->getType();
-  if (Type->getAs<TypedefType>())
+  if (isa<TypedefType>(Type))
     return;
   if (Type->isArrayType())
     Type = Context->getBaseElementType(Type);
@@ -7496,7 +7496,7 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
       if (D->isBitField())
         IvarT = GetGroupRecordTypeForObjCIvarBitfield(D);
 
-      if (!IvarT->getAs<TypedefType>() && IvarT->isRecordType()) {
+      if (!isa<TypedefType>(IvarT) && IvarT->isRecordType()) {
         RecordDecl *RD = IvarT->castAs<RecordType>()->getDecl();
         RD = RD->getDefinition();
         if (RD && !RD->getDeclName().getAsIdentifierInfo()) {

@@ -30,8 +30,8 @@ void usage() {
   // expected-error@+2 {{'A' requires 128 bit size '__int128' type support, but target 'spir64' does not support it}}
   // expected-error@+1 {{'field1' requires 128 bit size '__int128' type support, but target 'spir64' does not support it}}
   C.field1 = A;
-  // expected-error@+2 {{expression requires 128 bit size 'BIGTYPE' (aka '__int128') type support, but target 'spir64' does not support it}}
-  // expected-error@+1 {{'bigfield' requires 128 bit size 'BIGTYPE' (aka '__int128') type support, but target 'spir64' does not support it}}
+  // expected-error@+2 {{expression requires 128 bit size 'Z::BIGTYPE' (aka '__int128') type support, but target 'spir64' does not support it}}
+  // expected-error@+1 {{'bigfield' requires 128 bit size 'Z::BIGTYPE' (aka '__int128') type support, but target 'spir64' does not support it}}
   C.bigfield += 1.0;
 
   // expected-error@+1 {{'A' requires 128 bit size '__int128' type support, but target 'spir64' does not support it}}

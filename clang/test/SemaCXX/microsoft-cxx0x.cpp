@@ -15,7 +15,7 @@ namespace PR13433 {
 
   template<typename F> auto x(F f) -> decltype(f(make()));
 #ifndef MS_COMPAT
-// expected-error@-2{{calling 'make' with incomplete return type 'S'}}
+// expected-error@-2{{calling 'make' with incomplete return type 'PR13433::S'}}
 // expected-note@-5{{'make' declared here}}
 // expected-note@-7{{forward declaration of 'PR13433::S'}}
 #endif

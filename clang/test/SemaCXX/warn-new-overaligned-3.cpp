@@ -16,8 +16,8 @@ struct Test {
 
 void helper() {
   Test t;
-  new Test;  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
-  new Test[10];  // expected-warning {{type 'Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test;  // expected-warning {{type 'test1::Test' requires 256 bytes of alignment and the default allocator only guarantees}}
+  new Test[10];  // expected-warning {{type 'test1::Test' requires 256 bytes of alignment and the default allocator only guarantees}}
 }
 }
 

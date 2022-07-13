@@ -48,8 +48,7 @@ AST_MATCHER(CXXRecordDecl, isMoveConstructible) {
 
 static TypeMatcher notTemplateSpecConstRefType() {
   return lValueReferenceType(
-      pointee(unless(elaboratedType(namesType(templateSpecializationType()))),
-              isConstQualified()));
+      pointee(unless(templateSpecializationType()), isConstQualified()));
 }
 
 static TypeMatcher nonConstValueType() {

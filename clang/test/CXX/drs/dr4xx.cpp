@@ -885,8 +885,8 @@ namespace dr479 { // dr479: yes
   };
   void f() {
     throw S();
-    // expected-error@-1 {{temporary of type 'S' has private destructor}}
-    // expected-error@-2 {{exception object of type 'S' has private destructor}}
+    // expected-error@-1 {{temporary of type 'dr479::S' has private destructor}}
+    // expected-error@-2 {{exception object of type 'dr479::S' has private destructor}}
 #if __cplusplus < 201103L
     // expected-error@-4 {{C++98 requires an accessible copy constructor}}
 #endif
@@ -898,7 +898,7 @@ namespace dr479 { // dr479: yes
     S s; // expected-error {{private destructor}}}
     throw s;
     // expected-error@-1 {{calling a private constructor}}
-    // expected-error@-2 {{exception object of type 'S' has private destructor}}
+    // expected-error@-2 {{exception object of type 'dr479::S' has private destructor}}
   }
   void h() {
     try {
@@ -906,7 +906,7 @@ namespace dr479 { // dr479: yes
       g();
     } catch (S s) {
       // expected-error@-1 {{calling a private constructor}}
-      // expected-error@-2 {{variable of type 'S' has private destructor}}
+      // expected-error@-2 {{variable of type 'dr479::S' has private destructor}}
     }
   }
 }

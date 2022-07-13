@@ -29,7 +29,7 @@ public:
   D() : B(), C() { }
 };
 
-class E : public D, public B {  // expected-warning{{direct base 'B' is inaccessible due to ambiguity:\n    class E -> D -> C -> B\n    class E -> B}}
+class E : public D, public B {  // expected-warning{{direct base 'B' is inaccessible due to ambiguity:\n    class E -> class D -> class C -> class B\n    class E -> class B}}
 public:
   E() : B(), D() { } // expected-error{{base class initializer 'B' names both a direct base class and an inherited virtual base class}}
 };
@@ -211,7 +211,7 @@ struct A {
 
 struct B : virtual A { };
 
-  struct C : A, B { }; // expected-warning{{direct base 'A' is inaccessible due to ambiguity:\n    struct Test2::C -> A\n    struct Test2::C -> B -> A}}
+  struct C : A, B { }; // expected-warning{{direct base 'Test2::A' is inaccessible due to ambiguity:\n    struct Test2::C -> struct Test2::A\n    struct Test2::C -> struct Test2::B -> struct Test2::A}}
 
 C f(C c) {
   return c;
@@ -309,18 +309,18 @@ namespace PR14073 {
 namespace PR10758 {
 struct A;
 struct B {
-  B (A const &); // expected-note 2 {{candidate constructor not viable: no known conversion from 'const B' to 'const A &' for 1st argument}}
-  B (B &); // expected-note 2 {{candidate constructor not viable: 1st argument ('const B') would lose const qualifier}}
+  B (A const &); // expected-note 2 {{candidate constructor not viable: no known conversion from 'const PR10758::B' to 'const PR10758::A &' for 1st argument}}
+  B (B &); // expected-note 2 {{candidate constructor not viable: 1st argument ('const PR10758::B') would lose const qualifier}}
 };
 struct A {
   A (B); // expected-note 2 {{passing argument to parameter here}}
 };
 
 B f(B const &b) {
-  return b; // expected-error {{no matching constructor for initialization of 'B'}}
+  return b; // expected-error {{no matching constructor for initialization of 'PR10758::B'}}
 }
 
 A f2(const B &b) {
-  return b; // expected-error {{no matching constructor for initialization of 'B'}}
+  return b; // expected-error {{no matching constructor for initialization of 'PR10758::B'}}
 }
 }

@@ -53,9 +53,9 @@ void string() {
 }
 
 void struct_simple_ptr(S *a) {
-  clang_analyzer_dump(a);             // expected-warning {{SymRegion{reg_$0<S * a>}}}
-  clang_analyzer_dumpExtent(a);       // expected-warning {{extent_$1{SymRegion{reg_$0<S * a>}}}}
-  clang_analyzer_dumpElementCount(a); // expected-warning {{(extent_$1{SymRegion{reg_$0<S * a>}}) / 4}}
+  clang_analyzer_dump(a);             // expected-warning {{SymRegion{reg_$0<struct S * a>}}}
+  clang_analyzer_dumpExtent(a);       // expected-warning {{extent_$1{SymRegion{reg_$0<struct S * a>}}}}
+  clang_analyzer_dumpElementCount(a); // expected-warning {{(extent_$1{SymRegion{reg_$0<struct S * a>}}) / 4}}
 }
 
 void field_ref(S a) {
@@ -65,7 +65,7 @@ void field_ref(S a) {
 }
 
 void field_ptr(S *a) {
-  clang_analyzer_dump(&a->f);             // expected-warning {{SymRegion{reg_$0<S * a>}.f}}
+  clang_analyzer_dump(&a->f);             // expected-warning {{SymRegion{reg_$0<struct S * a>}.f}}
   clang_analyzer_dumpExtent(&a->f);       // expected-warning {{4 S64b}}
   clang_analyzer_dumpElementCount(&a->f); // expected-warning {{1 S64b}}
 }
