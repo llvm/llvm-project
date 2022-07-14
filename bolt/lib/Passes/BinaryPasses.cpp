@@ -339,9 +339,9 @@ void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
     uint64_t Bytes;
     Function.markUnreachableBlocks();
     LLVM_DEBUG({
-      for (BinaryBasicBlock *BB : Function.layout()) {
-        if (!BB->isValid()) {
-          dbgs() << "BOLT-INFO: UCE found unreachable block " << BB->getName()
+      for (BinaryBasicBlock &BB : Function) {
+        if (!BB.isValid()) {
+          dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
                  << " in function " << Function << "\n";
           Function.dump();
         }

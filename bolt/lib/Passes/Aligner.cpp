@@ -83,11 +83,11 @@ void alignCompact(BinaryFunction &Function, const MCCodeEmitter *Emitter) {
   size_t HotSize = 0;
   size_t ColdSize = 0;
 
-  for (const BinaryBasicBlock *BB : Function.layout())
-    if (BB->isCold())
-      ColdSize += BC.computeCodeSize(BB->begin(), BB->end(), Emitter);
+  for (const BinaryBasicBlock &BB : Function)
+    if (BB.isCold())
+      ColdSize += BC.computeCodeSize(BB.begin(), BB.end(), Emitter);
     else
-      HotSize += BC.computeCodeSize(BB->begin(), BB->end(), Emitter);
+      HotSize += BC.computeCodeSize(BB.begin(), BB.end(), Emitter);
 
   Function.setAlignment(opts::AlignFunctions);
   if (HotSize > 0)
