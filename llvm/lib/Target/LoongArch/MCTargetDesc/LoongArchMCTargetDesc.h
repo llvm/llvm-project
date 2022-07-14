@@ -46,6 +46,7 @@ createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit);
 
 // Defines symbolic names for LoongArch instructions.
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "LoongArchGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

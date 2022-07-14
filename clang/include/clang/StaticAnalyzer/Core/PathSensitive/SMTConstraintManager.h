@@ -344,7 +344,7 @@ protected:
     if (!res)
       Cached[hash] = ConditionTruthVal();
     else
-      Cached[hash] = ConditionTruthVal(res.getValue());
+      Cached[hash] = ConditionTruthVal(res.value());
 
     return Cached[hash];
   }

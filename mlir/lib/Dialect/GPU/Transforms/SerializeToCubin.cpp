@@ -133,16 +133,15 @@ SerializeToCubinPass::serializeISA(const std::string &isa) {
 
 // Register pass to serialize GPU kernel functions to a CUBIN binary annotation.
 void mlir::registerGpuSerializeToCubinPass() {
-  PassRegistration<SerializeToCubinPass> registerSerializeToCubin(
-      [] {
-        // Initialize LLVM NVPTX backend.
-        LLVMInitializeNVPTXTarget();
-        LLVMInitializeNVPTXTargetInfo();
-        LLVMInitializeNVPTXTargetMC();
-        LLVMInitializeNVPTXAsmPrinter();
+  PassRegistration<SerializeToCubinPass> registerSerializeToCubin([] {
+    // Initialize LLVM NVPTX backend.
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTargetMC();
+    LLVMInitializeNVPTXAsmPrinter();
 
-        return std::make_unique<SerializeToCubinPass>();
-      });
+    return std::make_unique<SerializeToCubinPass>();
+  });
 }
 #else  // MLIR_GPU_TO_CUBIN_PASS_ENABLE
 void mlir::registerGpuSerializeToCubinPass() {}

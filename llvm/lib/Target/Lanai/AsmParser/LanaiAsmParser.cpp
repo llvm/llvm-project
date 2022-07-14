@@ -705,14 +705,14 @@ LanaiAsmParser::parseRegister(bool RestoreOnFailure) {
     RegNum = MatchRegisterName(Lexer.getTok().getIdentifier());
     if (RegNum == 0) {
       if (PercentTok && RestoreOnFailure)
-        Lexer.UnLex(PercentTok.getValue());
+        Lexer.UnLex(PercentTok.value());
       return nullptr;
     }
     Parser.Lex(); // Eat identifier token
     return LanaiOperand::createReg(RegNum, Start, End);
   }
   if (PercentTok && RestoreOnFailure)
-    Lexer.UnLex(PercentTok.getValue());
+    Lexer.UnLex(PercentTok.value());
   return nullptr;
 }
 

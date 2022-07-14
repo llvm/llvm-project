@@ -153,7 +153,7 @@ void test_all() {
   in2_out_pred(std::ranges::set_difference, in, in2, out, binary_pred);
   in2_out_pred(std::ranges::set_intersection, in, in2, out, binary_pred);
   in2_out_pred(std::ranges::set_symmetric_difference, in, in2, out, binary_pred);
-  //in2_out_pred(std::ranges::set_union, in, in2, out, binary_pred);
+  in2_out_pred(std::ranges::set_union, in, in2, out, binary_pred);
   in_pred(std::ranges::remove_if, in, unary_pred);
   //in_pred(std::ranges::unique, in, binary_pred);
   //in_pred(std::ranges::partition, in, binary_pred);

@@ -373,8 +373,7 @@ struct SourceMgrDiagnosticHandlerImpl {
 
     // Otherwise, try to load the source file.
     std::string ignored;
-    unsigned id =
-        mgr.AddIncludeFile(std::string(filename), SMLoc(), ignored);
+    unsigned id = mgr.AddIncludeFile(std::string(filename), SMLoc(), ignored);
     filenameToBufId[filename] = id;
     return id;
   }

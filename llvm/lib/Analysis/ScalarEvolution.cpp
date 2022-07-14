@@ -4838,7 +4838,7 @@ public:
         Optional<const SCEV *> Res =
             compareWithBackedgeCondition(SI->getCondition());
         if (Res) {
-          bool IsOne = cast<SCEVConstant>(Res.getValue())->getValue()->isOne();
+          bool IsOne = cast<SCEVConstant>(Res.value())->getValue()->isOne();
           Result = SE.getSCEV(IsOne ? SI->getTrueValue() : SI->getFalseValue());
         }
         break;
@@ -4846,7 +4846,7 @@ public:
       default: {
         Optional<const SCEV *> Res = compareWithBackedgeCondition(I);
         if (Res)
-          Result = Res.getValue();
+          Result = Res.value();
         break;
       }
       }
@@ -6586,8 +6586,8 @@ ScalarEvolution::getRangeRef(const SCEV *S,
     // Check if the IR explicitly contains !range metadata.
     Optional<ConstantRange> MDRange = GetRangeFromMetadata(U->getValue());
     if (MDRange)
-      ConservativeResult = ConservativeResult.intersectWith(MDRange.getValue(),
-                                                            RangeType);
+      ConservativeResult =
+          ConservativeResult.intersectWith(MDRange.value(), RangeType);
 
     // Use facts about recurrences in the underlying IR.  Note that add
     // recurrences are AddRecExprs and thus don't hit this path.  This
@@ -6650,6 +6650,13 @@ ScalarEvolution::getRangeRef(const SCEV *S,
         (void) Erased;
       }
     }
+
+    // vscale can't be equal to zero
+    if (const auto *II = dyn_cast<IntrinsicInst>(U->getValue()))
+      if (II->getIntrinsicID() == Intrinsic::vscale) {
+        ConstantRange Disallowed = APInt::getZero(BitWidth);
+        ConservativeResult = ConservativeResult.difference(Disallowed);
+      }
 
     return setRange(U, SignHint, std::move(ConservativeResult));
   }
@@ -7340,12 +7347,34 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
     // Keep constructing SCEVs' for phis recursively for now.
     return nullptr;
 
-  case Instruction::Select:
+  case Instruction::Select: {
+    // Check if U is a select that can be simplified to a SCEVUnknown.
+    auto CanSimplifyToUnknown = [this, U]() {
+      if (U->getType()->isIntegerTy(1) || isa<ConstantInt>(U->getOperand(0)))
+        return false;
+
+      auto *ICI = dyn_cast<ICmpInst>(U->getOperand(0));
+      if (!ICI)
+        return false;
+      Value *LHS = ICI->getOperand(0);
+      Value *RHS = ICI->getOperand(1);
+      if (ICI->getPredicate() == CmpInst::ICMP_EQ ||
+          ICI->getPredicate() == CmpInst::ICMP_NE) {
+        if (!(isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isZero()))
+          return true;
+      } else if (getTypeSizeInBits(LHS->getType()) >
+                 getTypeSizeInBits(U->getType()))
+        return true;
+      return false;
+    };
+    if (CanSimplifyToUnknown())
+      return getUnknown(U);
+
     for (Value *Inc : U->operands())
       Ops.push_back(Inc);
     return nullptr;
     break;
-
+  }
   case Instruction::Call:
   case Instruction::Invoke:
     if (Value *RV = cast<CallBase>(U)->getReturnedArgOperand()) {
@@ -10632,7 +10661,7 @@ ScalarEvolution::getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
         getMonotonicPredicateTypeImpl(LHS, ICmpInst::getSwappedPredicate(Pred));
 
     assert(ResultSwapped && "should be able to analyze both!");
-    assert(ResultSwapped.getValue() != Result.getValue() &&
+    assert(ResultSwapped.value() != Result.value() &&
            "monotonicity should flip as we flip the predicate");
   }
 #endif

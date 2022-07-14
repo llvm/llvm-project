@@ -64,6 +64,7 @@ static_library("LLVMRISCVCodeGen") {
   sources = [
     "RISCVAsmPrinter.cpp",
     "RISCVCallLowering.cpp",
+    "RISCVCodeGenPrepare.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
     "RISCVFrameLowering.cpp",

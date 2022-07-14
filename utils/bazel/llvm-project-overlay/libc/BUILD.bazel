@@ -263,6 +263,28 @@ cc_library(
     ],
 )
 
+nearest_integer_common_hdrs = [
+    "src/__support/FPUtil/nearest_integer.h",
+]
+
+nearest_integer_platform_hdrs = [
+    "src/__support/FPUtil/x86_64/nearest_integer.h",
+    "src/__support/FPUtil/aarch64/nearest_integer.h",
+]
+
+cc_library(
+    name = "__support_fputil_nearest_integer",
+    hdrs = nearest_integer_common_hdrs,
+    # These are conditionally included and will #error out if the platform
+    # doesn't support rounding instructions, so they can't be compiled on their
+    # own.
+    textual_hdrs = nearest_integer_platform_hdrs,
+    deps = [
+        ":__support_common",
+        ":libc_root",
+    ],
+)
+
 ################################ fenv targets ################################
 
 libc_function(

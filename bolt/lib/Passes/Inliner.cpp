@@ -165,8 +165,8 @@ InliningInfo getInliningInfo(const BinaryFunction &BF) {
       return INL_NONE;
 
     const MCPhysReg SPReg = BC.MIB->getStackPointer();
-    for (const BinaryBasicBlock *BB : BF.layout()) {
-      for (const MCInst &Inst : *BB) {
+    for (const BinaryBasicBlock &BB : BF) {
+      for (const MCInst &Inst : BB) {
         // Tail calls are marked as implicitly using the stack pointer and they
         // could be inlined.
         if (BC.MIB->isTailCall(Inst))

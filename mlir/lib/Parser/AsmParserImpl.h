@@ -51,9 +51,7 @@ public:
 
   /// Get the location of the next token and store it into the argument.  This
   /// always succeeds.
-  SMLoc getCurrentLocation() override {
-    return parser.getToken().getLoc();
-  }
+  SMLoc getCurrentLocation() override { return parser.getToken().getLoc(); }
 
   /// Re-encode the given source location as an MLIR location and return it.
   Location getEncodedSourceLoc(SMLoc loc) override {

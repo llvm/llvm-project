@@ -26,10 +26,8 @@
 // CHECK-HIR-DAG:       %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR-DAG:       %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
-// CHECK-HIR-DAG:       %[[VAL_10:.*]] = memref.alloc() : memref<f32>
-// CHECK-HIR:           memref.copy %[[VAL_9]], %[[VAL_10]] : memref<f32> to memref<f32>
-// CHECK-HIR:           %[[VAL_11:.*]] = memref.load %[[VAL_10]][] : memref<f32>
+// CHECK-HIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
+// CHECK-HIR:           %[[VAL_11:.*]] = tensor.extract %[[VAL_1]][] : tensor<f32>
 // CHECK-HIR:           %[[VAL_12:.*]] = scf.for %[[VAL_13:.*]] = %[[VAL_3]] to %[[VAL_5]] step %[[VAL_2]] iter_args(%[[VAL_14:.*]] = %[[VAL_11]]) -> (f32) {
 // CHECK-HIR:             %[[VAL_15:.*]] = scf.for %[[VAL_16:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_2]] iter_args(%[[VAL_17:.*]] = %[[VAL_14]]) -> (f32) {
 // CHECK-HIR:               %[[VAL_18:.*]] = arith.muli %[[VAL_6]], %[[VAL_13]] : index
@@ -60,10 +58,8 @@
 // CHECK-MIR-DAG:       %[[VAL_6:.*]] = call @sparseDimSize(%[[VAL_0]], %[[VAL_3]]) : (!llvm.ptr<i8>, index) -> index
 // CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparseDimSize(%[[VAL_0]], %[[VAL_2]]) : (!llvm.ptr<i8>, index) -> index
 // CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseValuesF32(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf32>
-// CHECK-MIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
-// CHECK-MIR-DAG:       %[[VAL_10:.*]] = memref.alloc() : memref<f32>
-// CHECK-MIR:           memref.copy %[[VAL_9]], %[[VAL_10]] : memref<f32> to memref<f32>
-// CHECK-MIR:           %[[VAL_11:.*]] = memref.load %[[VAL_10]][] : memref<f32>
+// CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
+// CHECK-MIR:           %[[VAL_11:.*]] = tensor.extract %[[VAL_1]][] : tensor<f32>
 // CHECK-MIR:           %[[VAL_12:.*]] = scf.for %[[VAL_13:.*]] = %[[VAL_4]] to %[[VAL_5]] step %[[VAL_3]] iter_args(%[[VAL_14:.*]] = %[[VAL_11]]) -> (f32) {
 // CHECK-MIR:             %[[VAL_15:.*]] = scf.for %[[VAL_16:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_3]] iter_args(%[[VAL_17:.*]] = %[[VAL_14]]) -> (f32) {
 // CHECK-MIR:               %[[VAL_18:.*]] = arith.muli %[[VAL_6]], %[[VAL_13]] : index

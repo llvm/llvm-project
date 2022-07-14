@@ -74,7 +74,8 @@ inline bool failed(LogicalResult result) { return result.failed(); }
 /// This class provides support for representing a failure result, or a valid
 /// value of type `T`. This allows for integrating with LogicalResult, while
 /// also providing a value on the success path.
-template <typename T> class LLVM_NODISCARD FailureOr : public Optional<T> {
+template <typename T>
+class LLVM_NODISCARD FailureOr : public Optional<T> {
 public:
   /// Allow constructing from a LogicalResult. The result *must* be a failure.
   /// Success results should use a proper instance of type `T`.

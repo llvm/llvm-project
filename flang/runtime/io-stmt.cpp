@@ -630,7 +630,6 @@ std::optional<char32_t> IoStatementState::NextInField(
         switch (*next) {
         case ' ':
         case '\t':
-        case ';':
         case '/':
         case '(':
         case ')':
@@ -640,11 +639,15 @@ std::optional<char32_t> IoStatementState::NextInField(
         case '\n': // for stream access
           return std::nullopt;
         case ',':
-          if (edit.modes.editingFlags & decimalComma) {
-            break;
-          } else {
+          if (!(edit.modes.editingFlags & decimalComma)) {
             return std::nullopt;
           }
+          break;
+        case ';':
+          if (edit.modes.editingFlags & decimalComma) {
+            return std::nullopt;
+          }
+          break;
         default:
           break;
         }
