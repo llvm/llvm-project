@@ -345,6 +345,7 @@ Error COFFLinkGraphBuilder::calculateImplicitSizeOfSymbols() {
                  << "\n"
                  << "    " << *Symbol << "\n";
       });
+      (void)LastDifferentOffset;
       if (LastOffset != Offset)
         LastDifferentOffset = Offset;
       LastSize = CandSize;
