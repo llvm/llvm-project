@@ -555,7 +555,7 @@ public:
                                                    kind, rewriter, isInt);
       if (!mult.has_value())
         return failure();
-      rewriter.replaceOp(op, mult.getValue());
+      rewriter.replaceOp(op, mult.value());
       return success();
     }
 
@@ -573,7 +573,7 @@ public:
           createContractArithOp(loc, a, op.getRhs(), r, kind, rewriter, isInt);
       if (!m.has_value())
         return failure();
-      result = rewriter.create<vector::InsertOp>(loc, resType, m.getValue(),
+      result = rewriter.create<vector::InsertOp>(loc, resType, m.value(),
                                                  result, pos);
     }
     rewriter.replaceOp(op, result);
@@ -1940,8 +1940,8 @@ ContractionOpLowering::lowerReduction(vector::ContractionOp op,
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
       diag << "expected iterIndex=" << iterIndex << "to map to a RHS dimension";
     });
-  int64_t lhsIndex = lookupLhs.getValue();
-  int64_t rhsIndex = lookupRhs.getValue();
+  int64_t lhsIndex = lookupLhs.value();
+  int64_t rhsIndex = lookupRhs.value();
   int64_t dimSize = lhsType.getDimSize(lhsIndex);
   if (dimSize != rhsType.getDimSize(rhsIndex))
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {

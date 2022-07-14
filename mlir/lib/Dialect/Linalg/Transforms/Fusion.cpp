@@ -777,16 +777,14 @@ fuseOperations(OpBuilder &b, LinalgOp rootOp, TiledLinalgOp tiledLinalgOp,
           LinalgDependenceGraph::DependenceType::RAW)
         continue;
 
-      unsigned resultIndex =
-          dependence.getDependentOpViewResultNum().getValue();
+      unsigned resultIndex = dependence.getDependentOpViewResultNum().value();
       LinalgOp consumer = origOpToFusedOp.lookup(dependence.getIndexingOp());
       if (!consumer)
         continue;
 
       Value replacementValue = fusedOp.getOperation()->getResult(resultIndex);
       consumer.getOperation()->setOperand(
-          dependence.getIndexingOpViewOperandNum().getValue(),
-          replacementValue);
+          dependence.getIndexingOpViewOperandNum().value(), replacementValue);
     }
 
     // At this point, all Linalg uses of the tensors produced by `origOp` have
