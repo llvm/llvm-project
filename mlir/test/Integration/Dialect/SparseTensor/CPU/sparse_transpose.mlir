@@ -113,6 +113,7 @@ module {
     // Release resources.
     sparse_tensor.release %a : tensor<3x4xf64, #DCSR>
     sparse_tensor.release %0 : tensor<4x3xf64, #DCSR>
+    sparse_tensor.release %1 : tensor<4x3xf64, #DCSR>
 
     return
   }
