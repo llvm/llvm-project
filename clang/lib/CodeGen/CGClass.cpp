@@ -1783,14 +1783,14 @@ namespace {
          StartIndex = FieldIndex;
      } else if (StartIndex) {
        EHStack.pushCleanup<SanitizeDtorFieldRange>(
-           NormalAndEHCleanup, DD, StartIndex.getValue(), FieldIndex);
+           NormalAndEHCleanup, DD, StartIndex.value(), FieldIndex);
        StartIndex = None;
      }
    }
    void End() {
      if (StartIndex)
        EHStack.pushCleanup<SanitizeDtorFieldRange>(NormalAndEHCleanup, DD,
-                                                   StartIndex.getValue(), -1);
+                                                   StartIndex.value(), -1);
    }
  };
 } // end anonymous namespace

@@ -699,7 +699,7 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
 Stmt *BodyFarm::getBody(const FunctionDecl *D) {
   Optional<Stmt *> &Val = Bodies[D];
   if (Val)
-    return Val.getValue();
+    return Val.value();
 
   Val = nullptr;
 
@@ -874,7 +874,7 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
 
   Optional<Stmt *> &Val = Bodies[D];
   if (Val)
-    return Val.getValue();
+    return Val.value();
   Val = nullptr;
 
   // For now, we only synthesize getters.

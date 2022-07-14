@@ -538,7 +538,7 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
             const Optional<bool> V = handleDeclForVisitation(*TL);
             if (!V)
               continue;
-            return V.getValue();
+            return V.value();
           }
         } else if (VisitDeclContext(
                        CXXUnit->getASTContext().getTranslationUnitDecl()))
@@ -643,7 +643,7 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
     const Optional<bool> V = handleDeclForVisitation(D);
     if (!V)
       continue;
-    return V.getValue();
+    return V.value();
   }
   return false;
 }
@@ -677,7 +677,7 @@ Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
   const Optional<bool> V = shouldVisitCursor(Cursor);
   if (!V)
     return None;
-  if (!V.getValue())
+  if (!V.value())
     return false;
   if (Visit(Cursor, true))
     return true;
@@ -1076,7 +1076,7 @@ bool CursorVisitor::VisitObjCContainerDecl(ObjCContainerDecl *D) {
     const Optional<bool> &V = shouldVisitCursor(Cursor);
     if (!V)
       continue;
-    if (!V.getValue())
+    if (!V.value())
       return false;
     if (Visit(Cursor, true))
       return true;

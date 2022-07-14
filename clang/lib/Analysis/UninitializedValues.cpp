@@ -149,7 +149,7 @@ public:
                  const VarDecl *vd) {
     const Optional<unsigned> &idx = declToIndex.getValueIndex(vd);
     assert(idx);
-    return getValueVector(block)[idx.getValue()];
+    return getValueVector(block)[idx.value()];
   }
 };
 
@@ -210,7 +210,7 @@ void CFGBlockValues::resetScratch() {
 ValueVector::reference CFGBlockValues::operator[](const VarDecl *vd) {
   const Optional<unsigned> &idx = declToIndex.getValueIndex(vd);
   assert(idx);
-  return scratch[idx.getValue()];
+  return scratch[idx.value()];
 }
 
 //------------------------------------------------------------------------====//

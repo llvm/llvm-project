@@ -51,7 +51,7 @@ public:
     assert(BlockIT != CFCtx.getStmtToBlock().end());
     const auto &State = BlockToState[BlockIT->getSecond()->getBlockID()];
     assert(State);
-    return &State.getValue().Env;
+    return &State.value().Env;
   }
 
 private:
@@ -212,7 +212,7 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
     if (!MaybePredState)
       continue;
 
-    TypeErasedDataflowAnalysisState PredState = MaybePredState.getValue();
+    TypeErasedDataflowAnalysisState PredState = MaybePredState.value();
     if (ApplyBuiltinTransfer) {
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
         const StmtToEnvMapImpl StmtToEnv(CFCtx, BlockStates);
@@ -370,7 +370,7 @@ runTypeErasedDataflowAnalysis(
         transferBlock(CFCtx, BlockStates, *Block, InitEnv, Analysis);
 
     if (OldBlockState &&
-        Analysis.isEqualTypeErased(OldBlockState.getValue().Lattice,
+        Analysis.isEqualTypeErased(OldBlockState.value().Lattice,
                                    NewBlockState.Lattice) &&
         OldBlockState->Env.equivalentTo(NewBlockState.Env, Analysis)) {
       // The state of `Block` didn't change after transfer so there's no need to
