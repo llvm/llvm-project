@@ -756,6 +756,9 @@ void CodeGenModule::Release() {
   if (CodeGenOpts.IBTSeal)
     getModule().addModuleFlag(llvm::Module::Override, "ibt-seal", 1);
 
+  if (CodeGenOpts.FunctionReturnThunks)
+    getModule().addModuleFlag(llvm::Module::Override, "function_return_thunk_extern", 1);
+
   // Add module metadata for return address signing (ignoring
   // non-leaf/all) and stack tagging. These are actually turned on by function
   // attributes, but we use module metadata to emit build attributes. This is

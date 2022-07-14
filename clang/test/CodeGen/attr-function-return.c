@@ -7,6 +7,15 @@
 // RUN: %clang_cc1 -std=gnu2x -triple x86_64-linux-gnu %s -emit-llvm -o - \
 // RUN:   -Werror=ignored-attributes -mfunction-return=thunk-extern \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-EXTERN
+// RUN: %clang_cc1 -std=gnu2x -triple x86_64-linux-gnu %s -emit-llvm -o - \
+// RUN:  -mfunction-return=thunk-extern -fprofile-arcs \
+// RUN:   | FileCheck %s --check-prefix=CHECK-GCOV
+// RUN: %clang_cc1 -std=gnu2x -triple x86_64-linux-gnu %s -emit-llvm -o - \
+// RUN:  -mfunction-return=thunk-extern -fsanitize=address \
+// RUN:   | FileCheck %s --check-prefix=CHECK-ASAN
+// RUN: %clang_cc1 -std=gnu2x -triple x86_64-linux-gnu %s -emit-llvm -o - \
+// RUN:  -mfunction-return=thunk-extern -fsanitize=thread \
+// RUN:   | FileCheck %s --check-prefix=CHECK-TSAN
 
 #if !__has_attribute(function_return)
 #error "missing attribute support for function_return"
@@ -92,6 +101,16 @@ __attribute__((function_return("thunk-extern"))) void change_def4(void) {}
 // CHECK-EXTERN: @no_attrs() [[EXTERN]]
 void no_attrs(void) {}
 
+// Test synthetic functions.
+// CHECK-GCOV: @__llvm_gcov_writeout() unnamed_addr [[EXTERNGCOV:#[0-9]+]]
+// CHECK-GCOV: @__llvm_gcov_reset() unnamed_addr [[EXTERNGCOV]]
+// CHECK-GCOV: @__llvm_gcov_init() unnamed_addr [[EXTERNGCOV]]
+// CHECK-ASAN: @asan.module_ctor() [[EXTERNASAN:#[0-9]+]]
+// CHECK-TSAN: @tsan.module_ctor() [[EXTERNTSAN:#[0-9]+]]
+
 // CHECK-NOM-NOT:  [[NOATTR]] = {{.*}}fn_ret_thunk_extern
 // CHECK-KEEP-NOT: [[NOATTR]] = {{.*}}fn_ret_thunk_extern
 // CHECK: [[EXTERN]] = {{.*}}fn_ret_thunk_extern
+// CHECK-GCOV: [[EXTERNGCOV]] = {{.*}}fn_ret_thunk_extern
+// CHECK-ASAN: [[EXTERNASAN]] = {{.*}}fn_ret_thunk_extern
+// CHECK-TSAN: [[EXTERNTSAN]] = {{.*}}fn_ret_thunk_extern
