@@ -239,7 +239,7 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
       result.attributes.getNamed("alignment");
   if (alignmentAttr.has_value()) {
     auto alignmentInt =
-        alignmentAttr.getValue().getValue().dyn_cast<IntegerAttr>();
+        alignmentAttr.value().getValue().dyn_cast<IntegerAttr>();
     if (!alignmentInt)
       return parser.emitError(parser.getNameLoc(),
                               "expected integer alignment");
@@ -934,7 +934,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
 
   // Either function name or pointer
   if (isDirect)
-    p.printSymbolName(callee.getValue());
+    p.printSymbolName(callee.value());
   else
     p << getOperand(0);
 
@@ -1239,7 +1239,7 @@ void CallOp::print(OpAsmPrinter &p) {
   // callee (first operand) otherwise.
   p << ' ';
   if (isDirect)
-    p.printSymbolName(callee.getValue());
+    p.printSymbolName(callee.value());
   else
     p << getOperand(0);
 
@@ -2012,7 +2012,7 @@ LogicalResult GlobalOp::verify() {
 
   Optional<uint64_t> alignAttr = getAlignment();
   if (alignAttr.has_value()) {
-    uint64_t value = alignAttr.getValue();
+    uint64_t value = alignAttr.value();
     if (!llvm::isPowerOf2_64(value))
       return emitError() << "alignment attribute is not a power of 2";
   }

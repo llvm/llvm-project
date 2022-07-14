@@ -680,7 +680,7 @@ DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc,
                                                      ShapedType type,
                                                      Type eltTy) {
   if (hexStorage.has_value()) {
-    auto stringValue = hexStorage.getValue().getStringValue();
+    auto stringValue = hexStorage.value().getStringValue();
     return DenseStringElementsAttr::get(type, {stringValue});
   }
 

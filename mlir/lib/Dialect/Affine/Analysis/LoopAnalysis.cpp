@@ -93,7 +93,7 @@ Optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
   for (auto resultExpr : map.getResults()) {
     if (auto constExpr = resultExpr.dyn_cast<AffineConstantExpr>()) {
       if (tripCount.has_value())
-        tripCount = std::min(tripCount.getValue(),
+        tripCount = std::min(tripCount.value(),
                              static_cast<uint64_t>(constExpr.getValue()));
       else
         tripCount = constExpr.getValue();
@@ -133,12 +133,12 @@ uint64_t mlir::getLargestDivisorOfTripCount(AffineForOp forOp) {
       thisGcd = resultExpr.getLargestKnownDivisor();
     }
     if (gcd.has_value())
-      gcd = llvm::GreatestCommonDivisor64(gcd.getValue(), thisGcd);
+      gcd = llvm::GreatestCommonDivisor64(gcd.value(), thisGcd);
     else
       gcd = thisGcd;
   }
   assert(gcd.has_value() && "value expected per above logic");
-  return gcd.getValue();
+  return gcd.value();
 }
 
 /// Given an induction variable `iv` of type AffineForOp and an access `index`

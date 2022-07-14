@@ -377,7 +377,7 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
 
   std::string fnName = getFunctionSymbol(fnID);
   auto funcOp = opBuilder.create<spirv::FuncOp>(
-      unknownLoc, fnName, functionType, fnControl.getValue());
+      unknownLoc, fnName, functionType, fnControl.value());
   curFunction = funcMap[fnID] = funcOp;
   auto *entryBlock = funcOp.addEntryBlock();
   LLVM_DEBUG({
@@ -883,7 +883,7 @@ spirv::Deserializer::processCooperativeMatrixType(ArrayRef<uint32_t> operands) {
   unsigned columns = getConstantInt(operands[4]).getInt();
 
   typeMap[operands[0]] = spirv::CooperativeMatrixNVType::get(
-      elementTy, scope.getValue(), rows, columns);
+      elementTy, scope.value(), rows, columns);
   return success();
 }
 
@@ -1067,8 +1067,8 @@ spirv::Deserializer::processImageType(ArrayRef<uint32_t> operands) {
            << operands[7];
 
   typeMap[operands[0]] = spirv::ImageType::get(
-      elementTy, dim.getValue(), depthInfo.getValue(), arrayedInfo.getValue(),
-      samplingInfo.getValue(), samplerUseInfo.getValue(), format.getValue());
+      elementTy, dim.value(), depthInfo.value(), arrayedInfo.value(),
+      samplingInfo.value(), samplerUseInfo.value(), format.value());
   return success();
 }
 

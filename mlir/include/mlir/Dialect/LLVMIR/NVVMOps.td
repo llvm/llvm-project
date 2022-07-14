@@ -569,7 +569,7 @@ class MMA_SYNC_INTR {
        # " \"" # op[2].ptx_elt_type # "\" == eltypeC && "
        # " \"" # op[3].ptx_elt_type # "\" == eltypeD "
        # " && (sat.has_value()  ? " # sat # " == static_cast<int>(*sat) : true)"
-       # !if(!ne(b1op, ""), " && (b1Op.has_value() ? MMAB1Op::" # b1op # " == b1Op.getValue() : true)", "") # ")\n"
+       # !if(!ne(b1op, ""), " && (b1Op.has_value() ? MMAB1Op::" # b1op # " == b1Op.value() : true)", "") # ")\n"
        # "  return " #
        MMA_SYNC_NAME<layoutA, layoutB, b1op, sat, op[0], op[1], op[2], op[3]>.id # ";", 
           "") // if supported
@@ -995,8 +995,8 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
         $shape.getM(), $shape.getN(), $shape.getK(), 
         $b1Op, $intOverflowBehavior,
         $layoutA, $layoutB,
-        $multiplicandAPtxType.getValue(), 
-        $multiplicandBPtxType.getValue(),
+        $multiplicandAPtxType.value(), 
+        $multiplicandBPtxType.value(),
         op.accumPtxType(), 
         op.resultPtxType());
 
