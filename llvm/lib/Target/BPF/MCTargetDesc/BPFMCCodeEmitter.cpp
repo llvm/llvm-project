@@ -31,14 +31,13 @@ using namespace llvm;
 namespace {
 
 class BPFMCCodeEmitter : public MCCodeEmitter {
-  const MCInstrInfo &MCII;
   const MCRegisterInfo &MRI;
   bool IsLittleEndian;
 
 public:
-  BPFMCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri,
+  BPFMCCodeEmitter(const MCInstrInfo &, const MCRegisterInfo &mri,
                    bool IsLittleEndian)
-      : MCII(mcii), MRI(mri), IsLittleEndian(IsLittleEndian) {}
+      : MRI(mri), IsLittleEndian(IsLittleEndian) { }
   BPFMCCodeEmitter(const BPFMCCodeEmitter &) = delete;
   void operator=(const BPFMCCodeEmitter &) = delete;
   ~BPFMCCodeEmitter() override = default;
@@ -62,12 +61,6 @@ public:
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
-
-private:
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // end anonymous namespace
@@ -117,9 +110,6 @@ static uint8_t SwapBits(uint8_t Val)
 void BPFMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
-  verifyInstructionPredicates(MI,
-                              computeAvailableFeatures(STI.getFeatureBits()));
-
   unsigned Opcode = MI.getOpcode();
   support::endian::Writer OSE(OS,
                               IsLittleEndian ? support::little : support::big);
@@ -174,5 +164,4 @@ uint64_t BPFMCCodeEmitter::getMemoryOpValue(const MCInst &MI, unsigned Op,
   return Encoding;
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "BPFGenMCCodeEmitter.inc"

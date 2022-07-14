@@ -149,6 +149,9 @@ bool MSP430AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
 //===----------------------------------------------------------------------===//
 void MSP430AsmPrinter::emitInstruction(const MachineInstr *MI) {
+  MSP430_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                         getSubtargetInfo().getFeatureBits());
+
   MSP430MCInstLower MCInstLowering(OutContext, *this);
 
   MCInst TmpInst;

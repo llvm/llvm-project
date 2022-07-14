@@ -139,6 +139,9 @@ VisitGlobalVariableForEmission(const GlobalVariable *GV,
 }
 
 void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  NVPTX_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                        getSubtargetInfo().getFeatureBits());
+
   MCInst Inst;
   lowerToMCInst(MI, Inst);
   EmitToStreamer(*OutStreamer, Inst);

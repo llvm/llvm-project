@@ -195,6 +195,9 @@ void LanaiAsmPrinter::customEmitInstruction(const MachineInstr *MI) {
 }
 
 void LanaiAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  Lanai_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                        getSubtargetInfo().getFeatureBits());
+
   MachineBasicBlock::const_instr_iterator I = MI->getIterator();
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
 

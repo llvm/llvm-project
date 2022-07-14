@@ -27,6 +27,9 @@ using namespace llvm;
 #include "LoongArchGenMCPseudoLowering.inc"
 
 void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  LoongArch_MC::verifyInstructionPredicates(
+      MI->getOpcode(), getSubtargetInfo().getFeatureBits());
+
   // Do any auto-generated pseudo lowerings.
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;

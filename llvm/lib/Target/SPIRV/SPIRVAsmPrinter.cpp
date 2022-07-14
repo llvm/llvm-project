@@ -215,6 +215,9 @@ void SPIRVAsmPrinter::outputInstruction(const MachineInstr *MI) {
 }
 
 void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  SPIRV_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                        getSubtargetInfo().getFeatureBits());
+
   if (!MAI->getSkipEmission(MI))
     outputInstruction(MI);
 
