@@ -13,9 +13,6 @@
 // BINDINGS-NEXT: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT]]", "[[BINARY]]"], output: "[[HOST_OBJ:.+]]"
 // BINDINGS-NEXT: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 
-// RUN: %clang -### -nocudalib --offload-new-driver %s 2>&1 | FileCheck -check-prefix RDC %s
-// RDC: error: Using '--offload-new-driver' requires '-fgpu-rdc'
-
 // RUN: %clang -### -target x86_64-linux-gnu -nocudalib -ccc-print-bindings -fgpu-rdc \
 // RUN:        --offload-new-driver --offload-arch=sm_35 --offload-arch=sm_70 %s 2>&1 \
 // RUN: | FileCheck -check-prefix BINDINGS-HOST %s
@@ -37,3 +34,10 @@
 // RUN: | FileCheck -check-prefix DEVICE-LINK %s
 
 // DEVICE-LINK: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[INPUT:.+]]"], output: "a.out"
+
+// RUN: %clang -### -target x86_64-linux-gnu -nocudalib --offload-new-driver \
+// RUN:   --offload-arch=sm_35 --offload-arch=sm_70 %s 2>&1 \
+// RUN: | FileCheck -check-prefix GPU-BINARY %s
+
+// GPU-BINARY: fatbinary{{.*}}"--create" "{{.*}}.fatbin"
+// GPU-BINARY: -cc1{{.*}}-fcuda-include-gpubinary" "{{.*}}.fatbin"
