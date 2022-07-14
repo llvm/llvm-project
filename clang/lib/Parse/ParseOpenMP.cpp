@@ -1884,11 +1884,11 @@ void Parser::ParseOMPDeclareTargetClauses(
         if (DevTypeData) {
           if (DeviceTypeLoc.isValid()) {
             // We already saw another device_type clause, diagnose it.
-            Diag(DevTypeData.getValue().Loc,
+            Diag(DevTypeData.value().Loc,
                  diag::warn_omp_more_one_device_type_clause);
             break;
           }
-          switch (static_cast<OpenMPDeviceType>(DevTypeData.getValue().Type)) {
+          switch (static_cast<OpenMPDeviceType>(DevTypeData.value().Type)) {
           case OMPC_DEVICE_TYPE_any:
             DTCI.DT = OMPDeclareTargetDeclAttr::DT_Any;
             break;
@@ -3634,20 +3634,20 @@ OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
   if (!Val || ParseOnly)
     return nullptr;
   if (getLangOpts().OpenMP < 51 && Kind == OMPC_default &&
-      (static_cast<DefaultKind>(Val.getValue().Type) == OMP_DEFAULT_private ||
-       static_cast<DefaultKind>(Val.getValue().Type) ==
+      (static_cast<DefaultKind>(Val.value().Type) == OMP_DEFAULT_private ||
+       static_cast<DefaultKind>(Val.value().Type) ==
            OMP_DEFAULT_firstprivate)) {
-    Diag(Val.getValue().LOpen, diag::err_omp_invalid_dsa)
-        << getOpenMPClauseName(static_cast<DefaultKind>(Val.getValue().Type) ==
+    Diag(Val.value().LOpen, diag::err_omp_invalid_dsa)
+        << getOpenMPClauseName(static_cast<DefaultKind>(Val.value().Type) ==
                                        OMP_DEFAULT_private
                                    ? OMPC_private
                                    : OMPC_firstprivate)
         << getOpenMPClauseName(OMPC_default) << "5.1";
     return nullptr;
   }
-  return Actions.ActOnOpenMPSimpleClause(
-      Kind, Val.getValue().Type, Val.getValue().TypeLoc, Val.getValue().LOpen,
-      Val.getValue().Loc, Val.getValue().RLoc);
+  return Actions.ActOnOpenMPSimpleClause(Kind, Val.value().Type,
+                                         Val.value().TypeLoc, Val.value().LOpen,
+                                         Val.value().Loc, Val.value().RLoc);
 }
 
 /// Parsing of OpenMP clauses like 'ordered'.

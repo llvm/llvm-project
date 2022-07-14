@@ -262,7 +262,7 @@ void checkEventualResultWithTimeout(VerifyingConsumer &TestConsumer) {
   if (TestConsumer.result()) {
     EXPECT_TRUE(*TestConsumer.result());
   }
-  if ((TestConsumer.result() && !TestConsumer.result().getValue()) ||
+  if ((TestConsumer.result() && !TestConsumer.result().value()) ||
       !TestConsumer.result())
     TestConsumer.printUnmetExpectations(llvm::outs());
 }

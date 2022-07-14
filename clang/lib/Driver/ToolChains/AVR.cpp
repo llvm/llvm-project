@@ -475,8 +475,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (SectionAddressData) {
-    std::string DataSectionArg = std::string("-Tdata=0x") +
-                                 llvm::utohexstr(SectionAddressData.getValue());
+    std::string DataSectionArg =
+        std::string("-Tdata=0x") + llvm::utohexstr(SectionAddressData.value());
     CmdArgs.push_back(Args.MakeArgString(DataSectionArg));
   } else {
     // We do not have an entry for this CPU in the address mapping table yet.
