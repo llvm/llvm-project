@@ -485,7 +485,8 @@ recordStructIndices(Type baseGEPType, unsigned indexPos,
   unsigned dynamicIndexPos = indexPos;
   if (!isStaticIndex)
     dynamicIndexPos = llvm::count(structIndices.take_front(indexPos + 1),
-                                  LLVM::GEPOp::kDynamicIndex) - 1;
+                                  LLVM::GEPOp::kDynamicIndex) -
+                      1;
 
   return llvm::TypeSwitch<Type, llvm::Error>(baseGEPType)
       .Case<LLVMStructType>([&](LLVMStructType structType) -> llvm::Error {

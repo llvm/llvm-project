@@ -311,8 +311,7 @@ static LLVMArrayType parseArrayType(AsmParser &parser) {
 /// error at `subtypesLoc` in case of failure.
 static LLVMStructType trySetStructBody(LLVMStructType type,
                                        ArrayRef<Type> subtypes, bool isPacked,
-                                       AsmParser &parser,
-                                       SMLoc subtypesLoc) {
+                                       AsmParser &parser, SMLoc subtypesLoc) {
   for (Type t : subtypes) {
     if (!LLVMStructType::isValidElementType(t)) {
       parser.emitError(subtypesLoc)

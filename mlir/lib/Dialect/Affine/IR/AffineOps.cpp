@@ -2753,7 +2753,8 @@ LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineMinMaxOpBase
 //===----------------------------------------------------------------------===//
 
-template <typename T> static LogicalResult verifyAffineMinMaxOp(T op) {
+template <typename T>
+static LogicalResult verifyAffineMinMaxOp(T op) {
   // Verify that operand count matches affine map dimension and symbol count.
   if (op.getNumOperands() !=
       op.getMap().getNumDims() + op.getMap().getNumSymbols())
@@ -2762,7 +2763,8 @@ template <typename T> static LogicalResult verifyAffineMinMaxOp(T op) {
   return success();
 }
 
-template <typename T> static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
+template <typename T>
+static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
   p << ' ' << op->getAttr(T::getMapAttrStrName());
   auto operands = op.getOperands();
   unsigned numDims = op.getMap().getNumDims();
@@ -2870,7 +2872,8 @@ struct DeduplicateAffineMinMaxExpressions : public OpRewritePattern<T> {
 ///
 ///   %1 = affine.min affine_map<
 ///          ()[s0, s1] -> (s0 + 4, s1 + 16, s1 * 8)> ()[%sym2, %sym1]
-template <typename T> struct MergeAffineMinMaxOp : public OpRewritePattern<T> {
+template <typename T>
+struct MergeAffineMinMaxOp : public OpRewritePattern<T> {
   using OpRewritePattern<T>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(T affineOp,

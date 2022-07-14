@@ -8,8 +8,8 @@
 
 #include <utility>
 
-#include "mlir/IR/AffineExpr.h"
 #include "AffineExprDetail.h"
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"

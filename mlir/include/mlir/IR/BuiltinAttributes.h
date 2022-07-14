@@ -61,7 +61,8 @@ protected:
 };
 
 /// Type trait detector that checks if a given type T is a complex type.
-template <typename T> struct is_complex_t : public std::false_type {};
+template <typename T>
+struct is_complex_t : public std::false_type {};
 template <typename T>
 struct is_complex_t<std::complex<T>> : public std::true_type {};
 } // namespace detail
@@ -81,7 +82,8 @@ public:
   /// floating point type that can be used to access the underlying element
   /// types of a DenseElementsAttr.
   // TODO: Use std::disjunction when C++17 is supported.
-  template <typename T> struct is_valid_cpp_fp_type {
+  template <typename T>
+  struct is_valid_cpp_fp_type {
     /// The type is a valid floating point type if it is a builtin floating
     /// point type, or is a potentially user defined floating point type. The
     /// latter allows for supporting users that have custom types defined for

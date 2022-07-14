@@ -483,7 +483,8 @@ namespace {
 // parseAndVerify does the actual parsing and verification of individual
 // elements. This is a functor since parsing the last element of the list
 // (termination condition) needs partial specialization.
-template <typename ParseType, typename... Args> struct ParseCommaSeparatedList {
+template <typename ParseType, typename... Args>
+struct ParseCommaSeparatedList {
   Optional<std::tuple<ParseType, Args...>>
   operator()(SPIRVDialect const &dialect, DialectAsmParser &parser) const {
     auto parseVal = parseAndVerify<ParseType>(dialect, parser);
@@ -503,7 +504,8 @@ template <typename ParseType, typename... Args> struct ParseCommaSeparatedList {
 
 // Partial specialization of the function to parse a comma separated list of
 // specs to parse the last element of the list.
-template <typename ParseType> struct ParseCommaSeparatedList<ParseType> {
+template <typename ParseType>
+struct ParseCommaSeparatedList<ParseType> {
   Optional<std::tuple<ParseType>> operator()(SPIRVDialect const &dialect,
                                              DialectAsmParser &parser) const {
     if (auto value = parseAndVerify<ParseType>(dialect, parser))

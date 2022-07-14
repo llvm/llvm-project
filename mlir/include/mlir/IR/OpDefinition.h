@@ -1732,14 +1732,16 @@ private:
   struct InterfaceTargetOrOpT {
     using type = typename T::ConcreteEntity;
   };
-  template <typename T> struct InterfaceTargetOrOpT<T, false> {
+  template <typename T>
+  struct InterfaceTargetOrOpT<T, false> {
     using type = ConcreteType;
   };
 
   /// A hook for static assertion that the external interface model T is
   /// targeting the concrete type of this op. The model can also be a fallback
   /// model that works for every op.
-  template <typename T> static void checkInterfaceTarget() {
+  template <typename T>
+  static void checkInterfaceTarget() {
     static_assert(std::is_same<typename InterfaceTargetOrOpT<T>::type,
                                ConcreteType>::value,
                   "attaching an interface to the wrong op kind");

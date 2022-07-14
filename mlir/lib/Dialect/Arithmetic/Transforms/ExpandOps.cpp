@@ -159,7 +159,7 @@ public:
     Location loc = op.getLoc();
     // If any operand is NaN, 'cmp' will be true (and 'select' returns 'lhs').
     static_assert(pred == arith::CmpFPredicate::UGT ||
-                  pred == arith::CmpFPredicate::ULT,
+                      pred == arith::CmpFPredicate::ULT,
                   "pred must be either UGT or ULT");
     Value cmp = rewriter.create<arith::CmpFOp>(loc, pred, lhs, rhs);
     Value select = rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);

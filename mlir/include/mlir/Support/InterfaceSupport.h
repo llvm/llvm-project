@@ -71,7 +71,8 @@ template <typename ConcreteType, typename ValueT, typename Traits,
 class Interface : public BaseType {
 public:
   using Concept = typename Traits::Concept;
-  template <typename T> using Model = typename Traits::template Model<T>;
+  template <typename T>
+  using Model = typename Traits::template Model<T>;
   template <typename T>
   using FallbackModel = typename Traits::template FallbackModel<T>;
   using InterfaceBase =
@@ -205,7 +206,8 @@ public:
 
   /// Returns an instance of the concept object for the given interface if it
   /// was registered to this map, null otherwise.
-  template <typename T> typename T::Concept *lookup() const {
+  template <typename T>
+  typename T::Concept *lookup() const {
     return reinterpret_cast<typename T::Concept *>(lookup(T::getInterfaceID()));
   }
 

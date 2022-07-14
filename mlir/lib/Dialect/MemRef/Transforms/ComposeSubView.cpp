@@ -127,7 +127,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
 
 } // namespace
 
-void mlir::memref::populateComposeSubViewPatterns(
-    RewritePatternSet &patterns, MLIRContext *context) {
+void mlir::memref::populateComposeSubViewPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
   patterns.add<ComposeSubViewOpPattern>(context);
 }

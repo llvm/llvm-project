@@ -77,8 +77,8 @@ protected:
     verifyOp(std::move(op), {i32Ty}, {*cstI32, *cstI32}, noAttrs);
 
     // Test collective params build method.
-    op =
-        builder.create<OpTy>(loc, TypeRange{i32Ty}, ValueRange{*cstI32, *cstI32});
+    op = builder.create<OpTy>(loc, TypeRange{i32Ty},
+                              ValueRange{*cstI32, *cstI32});
     verifyOp(std::move(op), {i32Ty}, {*cstI32, *cstI32}, noAttrs);
 
     // Test build method with no result types, default value of attributes.
