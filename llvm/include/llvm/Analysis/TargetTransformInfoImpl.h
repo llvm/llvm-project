@@ -475,6 +475,7 @@ public:
   }
   unsigned getMaxPrefetchIterationsAhead() const { return UINT_MAX; }
   bool enableWritePrefetching() const { return false; }
+  bool shouldPrefetchAddressSpace(unsigned AS) const { return !AS; }
 
   unsigned getMaxInterleaveFactor(unsigned VF) const { return 1; }
 
