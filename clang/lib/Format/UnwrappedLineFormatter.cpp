@@ -1132,7 +1132,7 @@ private:
   typedef std::pair<OrderedPenalty, StateNode *> QueueItem;
 
   /// The BFS queue type.
-  typedef std::priority_queue<QueueItem, std::vector<QueueItem>,
+  typedef std::priority_queue<QueueItem, SmallVector<QueueItem>,
                               std::greater<QueueItem>>
       QueueType;
 
