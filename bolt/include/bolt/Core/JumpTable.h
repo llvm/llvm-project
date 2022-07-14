@@ -69,9 +69,9 @@ public:
   /// All the entries as labels.
   std::vector<MCSymbol *> Entries;
 
-  /// All the entries as offsets into a function. Invalid after CFG is built.
-  using OffsetsType = std::vector<uint64_t>;
-  OffsetsType OffsetEntries;
+  /// All the entries as absolute addresses. Invalid after disassembly is done.
+  using AddressesType = std::vector<uint64_t>;
+  AddressesType EntriesAsAddress;
 
   /// Map <Offset> -> <Label> used for embedded jump tables. Label at 0 offset
   /// is the main label for the jump table.
@@ -87,18 +87,17 @@ public:
   uint64_t Count{0};
 
   /// BinaryFunction this jump tables belongs to.
-  BinaryFunction *Parent{nullptr};
+  SmallVector<BinaryFunction *, 1> Parents;
 
 private:
   /// Constructor should only be called by a BinaryContext.
   JumpTable(MCSymbol &Symbol, uint64_t Address, size_t EntrySize,
-            JumpTableType Type, LabelMapType &&Labels, BinaryFunction &BF,
-            BinarySection &Section);
+            JumpTableType Type, LabelMapType &&Labels, BinarySection &Section);
 
 public:
   /// Return the size of the jump table.
   uint64_t getSize() const {
-    return std::max(OffsetEntries.size(), Entries.size()) * EntrySize;
+    return std::max(EntriesAsAddress.size(), Entries.size()) * EntrySize;
   }
 
   const MCSymbol *getFirstLabel() const {

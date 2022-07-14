@@ -333,9 +333,9 @@ private:
   /// True if the original entry point was patched.
   bool IsPatched{false};
 
-  /// True if the function contains jump table with entries pointing to
-  /// locations in fragments.
-  bool HasSplitJumpTable{false};
+  /// True if the function contains explicit or implicit indirect branch to its
+  /// split fragments, e.g., split jump table, landing pad in split fragment
+  bool HasIndirectTargetToSplitFragment{false};
 
   /// True if there are no control-flow edges with successors in other functions
   /// (i.e. if tail calls have edges to function-local basic blocks).
@@ -1437,9 +1437,12 @@ public:
   /// otherwise processed.
   bool isPseudo() const { return IsPseudo; }
 
-  /// Return true if the function contains a jump table with entries pointing
-  /// to split fragments.
-  bool hasSplitJumpTable() const { return HasSplitJumpTable; }
+  /// Return true if the function contains explicit or implicit indirect branch
+  /// to its split fragments, e.g., split jump table, landing pad in split
+  /// fragment.
+  bool hasIndirectTargetToSplitFragment() const {
+    return HasIndirectTargetToSplitFragment;
+  }
 
   /// Return true if all CFG edges have local successors.
   bool hasCanonicalCFG() const { return HasCanonicalCFG; }
@@ -1834,7 +1837,9 @@ public:
 
   void setIsPatched(bool V) { IsPatched = V; }
 
-  void setHasSplitJumpTable(bool V) { HasSplitJumpTable = V; }
+  void setHasIndirectTargetToSplitFragment(bool V) {
+    HasIndirectTargetToSplitFragment = V;
+  }
 
   void setHasCanonicalCFG(bool V) { HasCanonicalCFG = V; }
 

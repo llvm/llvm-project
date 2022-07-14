@@ -1642,11 +1642,35 @@ void BinaryFunction::postProcessJumpTables() {
              << *this << '\n';
     }
     if (JT.Entries.empty()) {
-      for (unsigned I = 0; I < JT.OffsetEntries.size(); ++I) {
-        MCSymbol *Label =
-            getOrCreateLocalLabel(getAddress() + JT.OffsetEntries[I],
-                                  /*CreatePastEnd*/ true);
-        JT.Entries.push_back(Label);
+      bool HasOneParent = (JT.Parents.size() == 1);
+      for (unsigned I = 0; I < JT.EntriesAsAddress.size(); ++I) {
+        uint64_t EntryAddress = JT.EntriesAsAddress[I];
+        // builtin_unreachable does not belong to any function
+        // Need to handle separately
+        bool IsBuiltIn = false;
+        for (BinaryFunction *Parent : JT.Parents) {
+          if (EntryAddress == Parent->getAddress() + Parent->getSize()) {
+            IsBuiltIn = true;
+            // Specify second parameter as true to accept builtin_unreachable
+            MCSymbol *Label = getOrCreateLocalLabel(EntryAddress, true);
+            JT.Entries.push_back(Label);
+            break;
+          }
+        }
+        if (IsBuiltIn)
+          continue;
+        // Create local label for targets cannot be reached by other fragments
+        // Otherwise, secondary entry point to target function
+        BinaryFunction *TargetBF =
+            BC.getBinaryFunctionContainingAddress(EntryAddress);
+        if (TargetBF->getAddress() != EntryAddress) {
+          MCSymbol *Label =
+              (HasOneParent && TargetBF == this)
+                  ? getOrCreateLocalLabel(JT.EntriesAsAddress[I], true)
+                  : TargetBF->addEntryPointAtOffset(EntryAddress -
+                                                    TargetBF->getAddress());
+          JT.Entries.push_back(Label);
+        }
       }
     }
 
@@ -1672,7 +1696,8 @@ void BinaryFunction::postProcessJumpTables() {
 
     uint64_t EntryOffset = JTAddress - JT->getAddress();
     while (EntryOffset < JT->getSize()) {
-      uint64_t TargetOffset = JT->OffsetEntries[EntryOffset / JT->EntrySize];
+      uint64_t EntryAddress = JT->EntriesAsAddress[EntryOffset / JT->EntrySize];
+      uint64_t TargetOffset = EntryAddress - getAddress();
       if (TargetOffset < getSize()) {
         TakenBranches.emplace_back(JTSiteOffset, TargetOffset);
 
