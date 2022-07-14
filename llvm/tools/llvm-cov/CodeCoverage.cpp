@@ -1053,7 +1053,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 
   sys::fs::file_status Status;
   if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("Could not read profile data!", EC.message());
+    error("Could not read profile data!" + EC.message(), PGOFilename);
     return 1;
   }
 
@@ -1170,6 +1170,12 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
     return 1;
   }
 
+  sys::fs::file_status Status;
+  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
+    error("Could not read profile data!" + EC.message(), PGOFilename);
+    return 1;
+  }
+
   auto Coverage = load();
   if (!Coverage)
     return 1;
@@ -1216,6 +1222,12 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {
     error("Coverage data can only be exported as textual JSON or an "
           "lcov tracefile.");
+    return 1;
+  }
+
+  sys::fs::file_status Status;
+  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
+    error("Could not read profile data!" + EC.message(), PGOFilename);
     return 1;
   }
 
