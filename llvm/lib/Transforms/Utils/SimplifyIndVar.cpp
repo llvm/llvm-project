@@ -1019,7 +1019,7 @@ class WidenIV {
 
   SmallPtrSet<Instruction *,16> Widened;
 
-  enum ExtendKind { ZeroExtended, SignExtended, Unknown };
+  enum class ExtendKind { Zero, Sign, Unknown };
 
   // A map tracking the kind of extension used to widen each narrow IV
   // and narrow IV user.
@@ -1176,7 +1176,7 @@ WidenIV::WidenIV(const WideIVInfo &WI, LoopInfo *LInfo, ScalarEvolution *SEv,
         HasGuards(HasGuards), UsePostIncrementRanges(UsePostIncrementRanges),
         DeadInsts(DI) {
     assert(L->getHeader() == OrigPhi->getParent() && "Phi must be an IV");
-    ExtendKindMap[OrigPhi] = WI.IsSigned ? SignExtended : ZeroExtended;
+    ExtendKindMap[OrigPhi] = WI.IsSigned ? ExtendKind::Sign : ExtendKind::Zero;
 }
 
 Value *WidenIV::createExtendInst(Value *NarrowOper, Type *WideType,
@@ -1229,7 +1229,7 @@ Instruction *WidenIV::cloneBitwiseIVUser(WidenIV::NarrowIVDefUse DU) {
   // about the narrow operand yet so must insert a [sz]ext. It is probably loop
   // invariant and will be folded or hoisted. If it actually comes from a
   // widened IV, it should be removed during a future call to widenIVUse.
-  bool IsSigned = getExtendKind(NarrowDef) == SignExtended;
+  bool IsSigned = getExtendKind(NarrowDef) == ExtendKind::Sign;
   Value *LHS = (NarrowUse->getOperand(0) == NarrowDef)
                    ? WideDef
                    : createExtendInst(NarrowUse->getOperand(0), WideType,
@@ -1294,7 +1294,7 @@ Instruction *WidenIV::cloneArithmeticIVUser(WidenIV::NarrowIVDefUse DU,
     return WideUse == WideAR;
   };
 
-  bool SignExtend = getExtendKind(NarrowDef) == SignExtended;
+  bool SignExtend = getExtendKind(NarrowDef) == ExtendKind::Sign;
   if (!GuessNonIVOperand(SignExtend)) {
     SignExtend = !SignExtend;
     if (!GuessNonIVOperand(SignExtend))
@@ -1354,7 +1354,7 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
   // Only Add/Sub/Mul instructions supported yet.
   if (OpCode != Instruction::Add && OpCode != Instruction::Sub &&
       OpCode != Instruction::Mul)
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
 
   // One operand (NarrowDef) has already been extended to WideDef. Now determine
   // if extending the other will lead to a recurrence.
@@ -1366,14 +1366,14 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(DU.NarrowUse);
   ExtendKind ExtKind = getExtendKind(DU.NarrowDef);
-  if (ExtKind == SignExtended && OBO->hasNoSignedWrap())
+  if (ExtKind == ExtendKind::Sign && OBO->hasNoSignedWrap())
     ExtendOperExpr = SE->getSignExtendExpr(
       SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else if(ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap())
+  else if (ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap())
     ExtendOperExpr = SE->getZeroExtendExpr(
       SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
   else
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
 
   // When creating this SCEV expr, don't apply the current operations NSW or NUW
   // flags. This instruction may be guarded by control flow that the no-wrap
@@ -1391,7 +1391,7 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
       dyn_cast<SCEVAddRecExpr>(getSCEVByOpCode(lhs, rhs, OpCode));
 
   if (!AddRec || AddRec->getLoop() != L)
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
 
   return {AddRec, ExtKind};
 }
@@ -1400,17 +1400,17 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
 /// widening it's type? In other words, can the extend be safely hoisted out of
 /// the loop with SCEV reducing the value to a recurrence on the same loop. If
 /// so, return the extended recurrence and the kind of extension used. Otherwise
-/// return {nullptr, Unknown}.
+/// return {nullptr, ExtendKind::Unknown}.
 WidenIV::WidenedRecTy WidenIV::getWideRecurrence(WidenIV::NarrowIVDefUse DU) {
   if (!DU.NarrowUse->getType()->isIntegerTy())
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
 
   const SCEV *NarrowExpr = SE->getSCEV(DU.NarrowUse);
   if (SE->getTypeSizeInBits(NarrowExpr->getType()) >=
       SE->getTypeSizeInBits(WideType)) {
     // NarrowUse implicitly widens its operand. e.g. a gep with a narrow
     // index. So don't follow this use.
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
   }
 
   const SCEV *WideExpr;
@@ -1418,21 +1418,21 @@ WidenIV::WidenedRecTy WidenIV::getWideRecurrence(WidenIV::NarrowIVDefUse DU) {
   if (DU.NeverNegative) {
     WideExpr = SE->getSignExtendExpr(NarrowExpr, WideType);
     if (isa<SCEVAddRecExpr>(WideExpr))
-      ExtKind = SignExtended;
+      ExtKind = ExtendKind::Sign;
     else {
       WideExpr = SE->getZeroExtendExpr(NarrowExpr, WideType);
-      ExtKind = ZeroExtended;
+      ExtKind = ExtendKind::Zero;
     }
-  } else if (getExtendKind(DU.NarrowDef) == SignExtended) {
+  } else if (getExtendKind(DU.NarrowDef) == ExtendKind::Sign) {
     WideExpr = SE->getSignExtendExpr(NarrowExpr, WideType);
-    ExtKind = SignExtended;
+    ExtKind = ExtendKind::Sign;
   } else {
     WideExpr = SE->getZeroExtendExpr(NarrowExpr, WideType);
-    ExtKind = ZeroExtended;
+    ExtKind = ExtendKind::Zero;
   }
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(WideExpr);
   if (!AddRec || AddRec->getLoop() != L)
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
   return {AddRec, ExtKind};
 }
 
@@ -1472,7 +1472,7 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
   //
   //      (A) == icmp slt i32 sext(%narrow), sext(%val)
   //          == icmp slt i32 zext(%narrow), sext(%val)
-  bool IsSigned = getExtendKind(DU.NarrowDef) == SignExtended;
+  bool IsSigned = getExtendKind(DU.NarrowDef) == ExtendKind::Sign;
   if (!(DU.NeverNegative || IsSigned == Cmp->isSigned()))
     return false;
 
@@ -1537,8 +1537,8 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(NarrowUse);
   ExtendKind ExtKind = getExtendKind(NarrowDef);
-  bool CanSignExtend = ExtKind == SignExtended && OBO->hasNoSignedWrap();
-  bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
+  bool CanSignExtend = ExtKind == ExtendKind::Sign && OBO->hasNoSignedWrap();
+  bool CanZeroExtend = ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap();
   auto AnotherOpExtKind = ExtKind;
 
   // Check that all uses are either:
@@ -1568,14 +1568,14 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       // predicates. For equality, it's legal to widen icmp for either sign and
       // zero extend. For sign extend, we can also do so for signed predicates,
       // likeweise for zero extend we can widen icmp for unsigned predicates.
-      if (ExtKind == ZeroExtended && ICmpInst::isSigned(Pred))
+      if (ExtKind == ExtendKind::Zero && ICmpInst::isSigned(Pred))
         return false;
-      if (ExtKind == SignExtended && ICmpInst::isUnsigned(Pred))
+      if (ExtKind == ExtendKind::Sign && ICmpInst::isUnsigned(Pred))
         return false;
       ICmpUsers.push_back(ICmp);
       continue;
     }
-    if (ExtKind == SignExtended)
+    if (ExtKind == ExtendKind::Sign)
       User = dyn_cast<SExtInst>(User);
     else
       User = dyn_cast<ZExtInst>(User);
@@ -1598,7 +1598,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     // will most likely not see it. Let's try to prove it.
     if (OpCode != Instruction::Add)
       return false;
-    if (ExtKind != ZeroExtended)
+    if (ExtKind != ExtendKind::Zero)
       return false;
     const SCEV *LHS = SE->getSCEV(OBO->getOperand(0));
     const SCEV *RHS = SE->getSCEV(OBO->getOperand(1));
@@ -1613,7 +1613,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       return false;
     // In fact, our 'add' is 'sub nuw'. We will need to widen the 2nd operand as
     // neg(zext(neg(op))), which is basically sext(op).
-    AnotherOpExtKind = SignExtended;
+    AnotherOpExtKind = ExtendKind::Sign;
   }
 
   // Verifying that Defining operand is an AddRec
@@ -1625,14 +1625,16 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
 
   // Generating a widening use instruction.
-  Value *LHS = (NarrowUse->getOperand(0) == NarrowDef)
-                   ? WideDef
-                   : createExtendInst(NarrowUse->getOperand(0), WideType,
-                                      AnotherOpExtKind, NarrowUse);
-  Value *RHS = (NarrowUse->getOperand(1) == NarrowDef)
-                   ? WideDef
-                   : createExtendInst(NarrowUse->getOperand(1), WideType,
-                                      AnotherOpExtKind, NarrowUse);
+  Value *LHS =
+      (NarrowUse->getOperand(0) == NarrowDef)
+          ? WideDef
+          : createExtendInst(NarrowUse->getOperand(0), WideType,
+                             AnotherOpExtKind == ExtendKind::Sign, NarrowUse);
+  Value *RHS =
+      (NarrowUse->getOperand(1) == NarrowDef)
+          ? WideDef
+          : createExtendInst(NarrowUse->getOperand(1), WideType,
+                             AnotherOpExtKind == ExtendKind::Sign, NarrowUse);
 
   auto *NarrowBO = cast<BinaryOperator>(NarrowUse);
   auto *WideBO = BinaryOperator::Create(NarrowBO->getOpcode(), LHS, RHS,
@@ -1671,7 +1673,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     auto ExtendedOp = [&](Value * V)->Value * {
       if (V == NarrowUse)
         return WideBO;
-      if (ExtKind == ZeroExtended)
+      if (ExtKind == ExtendKind::Zero)
         return Builder.CreateZExt(V, WideBO->getType());
       else
         return Builder.CreateSExt(V, WideBO->getType());
@@ -1727,10 +1729,10 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
   // This narrow use can be widened by a sext if it's non-negative or its narrow
   // def was widended by a sext. Same for zext.
   auto canWidenBySExt = [&]() {
-    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == SignExtended;
+    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ExtendKind::Sign;
   };
   auto canWidenByZExt = [&]() {
-    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ZeroExtended;
+    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ExtendKind::Zero;
   };
 
   // Our raison d'etre! Eliminate sign and zero extension.
@@ -1778,7 +1780,8 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
   if (!WideAddRec.first)
     WideAddRec = getWideRecurrence(DU);
 
-  assert((WideAddRec.first == nullptr) == (WideAddRec.second == Unknown));
+  assert((WideAddRec.first == nullptr) ==
+         (WideAddRec.second == ExtendKind::Unknown));
   if (!WideAddRec.first) {
     // If use is a loop condition, try to promote the condition instead of
     // truncating the IV first.
@@ -1873,7 +1876,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
     return nullptr;
 
   // Widen the induction variable expression.
-  const SCEV *WideIVExpr = getExtendKind(OrigPhi) == SignExtended
+  const SCEV *WideIVExpr = getExtendKind(OrigPhi) == ExtendKind::Sign
                                ? SE->getSignExtendExpr(AddRec, WideType)
                                : SE->getZeroExtendExpr(AddRec, WideType);
 
