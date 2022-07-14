@@ -68,11 +68,6 @@ static cl::opt<bool>
                           cl::desc("Allow relaxed uniform region checks"),
                           cl::init(true));
 
-static cl::opt<unsigned>
-    ReorderNodeSize("structurizecfg-node-reorder-size",
-                     cl::desc("Limit region size for reordering nodes"),
-                     cl::init(100), cl::Hidden);
-
 // Definition of the complex types used in this pass.
 
 using BBValuePair = std::pair<BasicBlock *, Value *>;
@@ -267,8 +262,6 @@ class StructurizeCFG {
 
   void orderNodes();
 
-  void reorderNodes();
-
   void analyzeLoops(RegionNode *N);
 
   Value *buildCondition(BranchInst *Term, unsigned Idx, bool Invert);
@@ -425,57 +418,6 @@ void StructurizeCFG::orderNodes() {
     EntryNode.first = Order[E - 1];
     EntryNode.second = &Nodes;
   }
-}
-
-/// Change the node ordering to decrease the range of live values, especially
-/// the values that capture the control flow path for branches. We do this
-/// by moving blocks with a single predecessor and successor to appear after
-/// predecessor. The motivation is to move some loop exit blocks into a loop.
-/// In cases where a loop has a large number of exit blocks, this reduces the
-/// amount of values needed across the loop boundary.
-void StructurizeCFG::reorderNodes() {
-  SmallVector<RegionNode *, 8> NewOrder;
-  DenseMap<BasicBlock *, unsigned> MoveTo;
-  BitVector Moved(Order.size());
-
-  // The benefits of reordering nodes occurs for large regions.
-  if (Order.size() <= ReorderNodeSize)
-    return;
-
-  // The algorithm works with two passes over Order. The first pass identifies
-  // the blocks to move and the position to move them to. The second pass
-  // creates the new order based upon this information. We move blocks with
-  // a single predecessor and successor. If there are multiple candidates then
-  // maintain the original order.
-  BBSet Seen;
-  for (int I = Order.size() - 1; I >= 0; --I) {
-    auto *BB = Order[I]->getEntry();
-    Seen.insert(BB);
-    auto *Pred = BB->getSinglePredecessor();
-    auto *Succ = BB->getSingleSuccessor();
-    // Consider only those basic blocks that have a predecessor in Order and a
-    // successor that exits the region. The region may contain subregions that
-    // have been structurized and are not included in Order.
-    if (Pred && Succ && Seen.count(Pred) && Succ == ParentRegion->getExit() &&
-        !MoveTo.count(Pred)) {
-      MoveTo[Pred] = I;
-      Moved.set(I);
-    }
-  }
-
-  // If no blocks have been moved then the original order is good.
-  if (!Moved.count())
-    return;
-
-  for (size_t I = 0, E = Order.size(); I < E; ++I) {
-    auto *BB = Order[I]->getEntry();
-    if (MoveTo.count(BB))
-      NewOrder.push_back(Order[MoveTo[BB]]);
-    if (!Moved[I])
-      NewOrder.push_back(Order[I]);
-  }
-
-  Order.assign(NewOrder);
 }
 
 /// Determine the end of the loops
@@ -1139,7 +1081,6 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
   ParentRegion = R;
 
   orderNodes();
-  reorderNodes();
   collectInfos();
   createFlow();
   insertConditions(false);
