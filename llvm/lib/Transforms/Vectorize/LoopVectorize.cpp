@@ -8444,9 +8444,8 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
   return RegSucc;
 }
 
-VPRegionBlock *VPRecipeBuilder::createReplicateRegion(Instruction *Instr,
-                                                      VPRecipeBase *PredRecipe,
-                                                      VPlanPtr &Plan) {
+VPRegionBlock *VPRecipeBuilder::createReplicateRegion(
+    Instruction *Instr, VPReplicateRecipe *PredRecipe, VPlanPtr &Plan) {
   // Instructions marked for predication are replicated and placed under an
   // if-then construct to prevent side-effects.
 
@@ -8460,7 +8459,7 @@ VPRegionBlock *VPRecipeBuilder::createReplicateRegion(Instruction *Instr,
   auto *Entry = new VPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
   auto *PHIRecipe = Instr->getType()->isVoidTy()
                         ? nullptr
-                        : new VPPredInstPHIRecipe(Plan->getOrAddVPValue(Instr));
+                        : new VPPredInstPHIRecipe(PredRecipe);
   if (PHIRecipe) {
     Plan->removeVPValueFor(Instr);
     Plan->addVPValue(Instr, PHIRecipe);
