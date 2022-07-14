@@ -2726,6 +2726,9 @@ alpha.unix.cstring.OutOfBounds (C)
 """"""""""""""""""""""""""""""""""
 Check for out-of-bounds access in string functions; applies to:`` strncopy, strncat``.
 
+This check also applies to string literals, except there is a known bug in that
+the analyzer cannot detect embedded NULL characters.
+
 .. code-block:: c
 
  void test() {
