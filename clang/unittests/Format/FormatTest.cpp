@@ -25742,6 +25742,17 @@ TEST_F(FormatTest, RemoveBraces) {
                Style);
 
   verifyFormat("if (a) {\n"
+               "  if (b)\n"
+               "    c = 1; // comment\n"
+               "}",
+               "if (a) {\n"
+               "  if (b) {\n"
+               "    c = 1; // comment\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
                "Label:\n"
                "}",
                Style);
