@@ -7,16 +7,12 @@
 define void @sext_shl_trunc_same_size(i16 %x, i32 %y, i16* %res) {
 ; RV32I-LABEL: sext_shl_trunc_same_size:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    sll a0, a0, a1
 ; RV32I-NEXT:    sh a0, 0(a2)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_shl_trunc_same_size:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    sh a0, 0(a2)
 ; RV64I-NEXT:    ret
@@ -30,16 +26,12 @@ define void @sext_shl_trunc_same_size(i16 %x, i32 %y, i16* %res) {
 define void @zext_shl_trunc_same_size(i16 %x, i32 %y, i16* %res) {
 ; RV32I-LABEL: zext_shl_trunc_same_size:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    sll a0, a0, a1
 ; RV32I-NEXT:    sh a0, 0(a2)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_shl_trunc_same_size:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    sh a0, 0(a2)
 ; RV64I-NEXT:    ret
@@ -53,16 +45,12 @@ define void @zext_shl_trunc_same_size(i16 %x, i32 %y, i16* %res) {
 define void @sext_shl_trunc_smaller(i16 %x, i32 %y, i8* %res) {
 ; RV32I-LABEL: sext_shl_trunc_smaller:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    sll a0, a0, a1
 ; RV32I-NEXT:    sb a0, 0(a2)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_shl_trunc_smaller:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    sb a0, 0(a2)
 ; RV64I-NEXT:    ret
@@ -76,16 +64,12 @@ define void @sext_shl_trunc_smaller(i16 %x, i32 %y, i8* %res) {
 define void @zext_shl_trunc_smaller(i16 %x, i32 %y, i8* %res) {
 ; RV32I-LABEL: zext_shl_trunc_smaller:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    sll a0, a0, a1
 ; RV32I-NEXT:    sb a0, 0(a2)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_shl_trunc_smaller:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    sb a0, 0(a2)
 ; RV64I-NEXT:    ret
@@ -151,8 +135,6 @@ define zeroext i17 @zext_shl_trunc_larger(i16 %x, i32 %y) {
 define i32 @sext_shl_mask(i16 %x, i32 %y) {
 ; RV32I-LABEL: sext_shl_mask:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    sll a0, a0, a1
 ; RV32I-NEXT:    slli a0, a0, 16
 ; RV32I-NEXT:    srli a0, a0, 16
@@ -160,8 +142,6 @@ define i32 @sext_shl_mask(i16 %x, i32 %y) {
 ;
 ; RV64I-LABEL: sext_shl_mask:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
@@ -175,20 +155,16 @@ define i32 @sext_shl_mask(i16 %x, i32 %y) {
 define i32 @zext_shl_mask(i16 %x, i32 %y) {
 ; RV32I-LABEL: zext_shl_mask:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 16
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_shl_mask:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
-; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
   %conv = zext i16 %x to i32
   %shl = shl i32 %conv, %y
@@ -253,22 +229,20 @@ define i32 @zext_shl_mask_higher(i16 %x, i32 %y) {
 define i32 @set_shl_mask(i32 %x, i32 %y) {
 ; RV32I-LABEL: set_shl_mask:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 48
-; RV32I-NEXT:    addi a2, a2, 1
-; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    lui a2, 16
+; RV32I-NEXT:    addi a3, a2, 1
+; RV32I-NEXT:    or a0, a0, a3
 ; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: set_shl_mask:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 48
-; RV64I-NEXT:    addiw a2, a2, 1
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    lui a2, 16
+; RV64I-NEXT:    addiw a3, a2, 1
+; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    ret
   %z = or i32 %x, 196609
   %s = shl i32 %z, %y
