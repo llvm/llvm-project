@@ -8,7 +8,7 @@
 // CHECK-HELP: {{.*}}target binaries as input and produces bitcode file containing target binaries packaged
 // CHECK-HELP: {{.*}}as data and initialization code which registers target binaries in offload runtime.
 // CHECK-HELP: {{.*}}USAGE: clang-offload-wrapper [options] <input files>
-// CHECK-HELP: {{.*}}  -o=<filename>               - Output filename
+// CHECK-HELP: {{.*}}  -o <filename>               - Output filename
 // CHECK-HELP: {{.*}}  --target=<triple>           - Target triple for the output module
 
 //
