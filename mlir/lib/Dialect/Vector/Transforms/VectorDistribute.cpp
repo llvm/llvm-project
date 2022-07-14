@@ -869,6 +869,10 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
     SmallVector<Value> yieldValues = {reductionOp.getVector()};
     SmallVector<Type> retTypes = {
         VectorType::get({numElements}, reductionOp.getType())};
+    if (reductionOp.getAcc()) {
+      yieldValues.push_back(reductionOp.getAcc());
+      retTypes.push_back(reductionOp.getAcc().getType());
+    }
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, yieldValues, retTypes, newRetIndices);
@@ -882,6 +886,11 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
     Value fullReduce =
         distributedReductionFn(reductionOp.getLoc(), rewriter, perLaneReduction,
                                reductionOp.getKind(), newWarpOp.getWarpSize());
+    if (reductionOp.getAcc()) {
+      fullReduce = vector::makeArithReduction(
+          rewriter, reductionOp.getLoc(), reductionOp.getKind(), fullReduce,
+          newWarpOp.getResult(newRetIndices[1]));
+    }
     newWarpOp.getResult(operandIndex).replaceAllUsesWith(fullReduce);
     return success();
   }
