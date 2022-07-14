@@ -88,6 +88,10 @@ LogicalResult DeviceAsyncCopyOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// NVGPU_MmaSyncOp
+//===----------------------------------------------------------------------===//
+
 LogicalResult MmaSyncOp::verify() {
 
   // Fundamental tensor core mma.sync op
@@ -182,6 +186,57 @@ LogicalResult MmaSyncOp::verify() {
   if (!((cShape[0] == mTile * nTile) && (cShape[1] == numElementC)))
     return emitOpError() << "expected matrix C to be shaped (" << mTile * nTile
                          << " x " << numElementC << ")";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVGPU_LdMatrixOp
+//===----------------------------------------------------------------------===//
+LogicalResult LdMatrixOp::verify() {
+
+  // ldmatrix reads data from source in shared memory
+  auto srcMemref = getSrcMemref().getType().cast<MemRefType>();
+
+  // ldmatrix writes data to result/destination in vector registers
+  auto resVector = getRes().getType().cast<VectorType>();
+
+  // vector register shape, element type, and bitwidth
+  ArrayRef<int64_t> resShape = resVector.getShape();
+  Type resType = resVector.getElementType();
+  int64_t elementBitWidth = resType.getIntOrFloatBitWidth();
+
+  // ldmatrix loads 32 bits into vector registers per 8-by-8 tile per thread
+  int64_t numElementsPer32b = 32 / elementBitWidth;
+
+  // number of 8-by-8 tiles
+  int64_t numTiles = getNumTiles();
+
+  // transpose elements in vector registers at 16b granularity when true
+  bool isTranspose = getTranspose();
+
+  // address space id for shared memory
+  unsigned smemAddressSpace = gpu::GPUDialect::getWorkgroupAddressSpace();
+
+  //
+  // verification
+  //
+
+  if (!(srcMemref.getMemorySpaceAsInt() == smemAddressSpace))
+    return emitError()
+           << "expected nvgpu.ldmatrix srcMemref must have memory space "
+           << smemAddressSpace;
+  if (elementBitWidth > 32)
+    return emitError() << "nvgpu.ldmatrix works for 32b or lower";
+  if (isTranspose && !(elementBitWidth == 16))
+    return emitError()
+           << "nvgpu.ldmatrix transpose works only at 16b granularity";
+  if (!(resShape[1] == numElementsPer32b))
+    return emitError() << "expected vector register shape[1] = "
+                       << numElementsPer32b;
+  if (!(resShape[0] == numTiles))
+    return emitError()
+           << "expected vector register shape[0] and numTiles to match";
 
   return success();
 }
