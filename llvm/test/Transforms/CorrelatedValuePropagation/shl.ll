@@ -376,3 +376,48 @@ bb:
 exit:
   ret i8 0
 }
+
+define i1 @nuw_range1(i8 %b) {
+; CHECK-LABEL: @nuw_range1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[C]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %c = add nuw nsw i8 %b, 1
+  %shl = shl nuw i8 %c, 2
+  %cmp = icmp eq i8 %shl, 0
+  ret i1 %cmp
+}
+
+define i1 @nuw_range2(i8 %b) {
+; CHECK-LABEL: @nuw_range2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[B:%.*]], 3
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[C]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SHL]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %c = add nuw nsw i8 %b, 3
+  %shl = shl nuw i8 %c, 2
+  %cmp = icmp ult i8 %shl, 2
+  ret i1 %cmp
+}
+
+define i1 @nsw_range1(i8 %b) {
+; CHECK-LABEL: @nsw_range1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[B:%.*]], -3
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[C]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[C]], [[SHL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %c = add nuw nsw i8 %b, -3
+  %shl = shl nsw i8 %c, 2
+  %cmp = icmp slt i8 %c, %shl
+  ret i1 %cmp
+}

@@ -293,8 +293,8 @@ BinaryFunction::getBasicBlockContainingOffset(uint64_t Offset) {
 void BinaryFunction::markUnreachableBlocks() {
   std::stack<BinaryBasicBlock *> Stack;
 
-  for (BinaryBasicBlock *BB : layout())
-    BB->markValid(false);
+  for (BinaryBasicBlock &BB : blocks())
+    BB.markValid(false);
 
   // Add all entries and landing pads as roots.
   for (BinaryBasicBlock *BB : BasicBlocks) {
@@ -1750,14 +1750,14 @@ bool BinaryFunction::postProcessIndirectBranches(
   BinaryBasicBlock *LastIndirectJumpBB = nullptr;
   uint64_t LastJT = 0;
   uint16_t LastJTIndexReg = BC.MIB->getNoRegister();
-  for (BinaryBasicBlock *BB : layout()) {
-    for (MCInst &Instr : *BB) {
+  for (BinaryBasicBlock &BB : blocks()) {
+    for (MCInst &Instr : BB) {
       if (!BC.MIB->isIndirectBranch(Instr))
         continue;
 
       // If there's an indirect branch in a single-block function -
       // it must be a tail call.
-      if (layout_size() == 1) {
+      if (BasicBlocks.size() == 1) {
         BC.MIB->convertJmpToTailCall(Instr);
         return true;
       }
@@ -1779,7 +1779,7 @@ bool BinaryFunction::postProcessIndirectBranches(
         const MCExpr *DispExpr;
         MCInst *PCRelBaseInstr;
         IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
-            Instr, BB->begin(), BB->end(), PtrSize, MemLocInstr, BaseRegNum,
+            Instr, BB.begin(), BB.end(), PtrSize, MemLocInstr, BaseRegNum,
             IndexRegNum, DispValue, DispExpr, PCRelBaseInstr);
         if (Type != IndirectBranchType::UNKNOWN || MemLocInstr != nullptr)
           continue;
@@ -1791,7 +1791,7 @@ bool BinaryFunction::postProcessIndirectBranches(
           BC.MIB->convertTailCallToJmp(Instr);
         } else {
           LastIndirectJump = &Instr;
-          LastIndirectJumpBB = BB;
+          LastIndirectJumpBB = &BB;
           LastJT = BC.MIB->getJumpTable(Instr);
           LastJTIndexReg = BC.MIB->getJumpTableIndexReg(Instr);
           BC.MIB->unsetJumpTable(Instr);
@@ -1807,7 +1807,7 @@ bool BinaryFunction::postProcessIndirectBranches(
           }
         }
 
-        addUnknownControlFlow(*BB);
+        addUnknownControlFlow(BB);
         continue;
       }
 
@@ -1815,7 +1815,7 @@ bool BinaryFunction::postProcessIndirectBranches(
       // then most likely it's a tail call. Otherwise, we cannot tell for sure
       // what it is and conservatively reject the function's CFG.
       bool IsEpilogue = false;
-      for (const MCInst &Instr : *BB) {
+      for (const MCInst &Instr : BB) {
         if (BC.MIB->isLeave(Instr) || BC.MIB->isPop(Instr)) {
           IsEpilogue = true;
           break;
@@ -1823,22 +1823,22 @@ bool BinaryFunction::postProcessIndirectBranches(
       }
       if (IsEpilogue) {
         BC.MIB->convertJmpToTailCall(Instr);
-        BB->removeAllSuccessors();
+        BB.removeAllSuccessors();
         continue;
       }
 
       if (opts::Verbosity >= 2) {
         outs() << "BOLT-INFO: rejected potential indirect tail call in "
-               << "function " << *this << " in basic block " << BB->getName()
+               << "function " << *this << " in basic block " << BB.getName()
                << ".\n";
-        LLVM_DEBUG(BC.printInstructions(dbgs(), BB->begin(), BB->end(),
-                                        BB->getOffset(), this, true));
+        LLVM_DEBUG(BC.printInstructions(dbgs(), BB.begin(), BB.end(),
+                                        BB.getOffset(), this, true));
       }
 
       if (!opts::StrictMode)
         return false;
 
-      addUnknownControlFlow(*BB);
+      addUnknownControlFlow(BB);
     }
   }
 
@@ -2180,8 +2180,8 @@ void BinaryFunction::postProcessCFG() {
   // later. This has no cost, since annotations are allocated by a bumpptr
   // allocator and won't be released anyway until late in the pipeline.
   if (!requiresAddressTranslation() && !opts::Instrument) {
-    for (BinaryBasicBlock *BB : layout())
-      for (MCInst &Inst : *BB)
+    for (BinaryBasicBlock &BB : blocks())
+      for (MCInst &Inst : BB)
         BC.MIB->clearOffset(Inst);
   }
 
@@ -2192,9 +2192,9 @@ void BinaryFunction::postProcessCFG() {
 void BinaryFunction::calculateMacroOpFusionStats() {
   if (!getBinaryContext().isX86())
     return;
-  for (BinaryBasicBlock *BB : layout()) {
-    auto II = BB->getMacroOpFusionPair();
-    if (II == BB->end())
+  for (const BinaryBasicBlock &BB : blocks()) {
+    auto II = BB.getMacroOpFusionPair();
+    if (II == BB.end())
       continue;
 
     // Check offset of the second instruction.
@@ -2206,9 +2206,9 @@ void BinaryFunction::calculateMacroOpFusionStats() {
     LLVM_DEBUG(dbgs() << "\nmissed macro-op fusion at address 0x"
                       << Twine::utohexstr(getAddress() + Offset)
                       << " in function " << *this << "; executed "
-                      << BB->getKnownExecutionCount() << " times.\n");
+                      << BB.getKnownExecutionCount() << " times.\n");
     ++BC.MissedMacroFusionPairs;
-    BC.MissedMacroFusionExecCount += BB->getKnownExecutionCount();
+    BC.MissedMacroFusionExecCount += BB.getKnownExecutionCount();
   }
 }
 
@@ -2308,11 +2308,11 @@ uint64_t BinaryFunction::getFunctionScore() const {
   }
 
   uint64_t TotalScore = 0ULL;
-  for (BinaryBasicBlock *BB : layout()) {
-    uint64_t BBExecCount = BB->getExecutionCount();
+  for (const BinaryBasicBlock &BB : blocks()) {
+    uint64_t BBExecCount = BB.getExecutionCount();
     if (BBExecCount == BinaryBasicBlock::COUNT_NO_PROFILE)
       continue;
-    TotalScore += BBExecCount * BB->getNumNonPseudos();
+    TotalScore += BBExecCount * BB.getNumNonPseudos();
   }
   FunctionScore = TotalScore;
   return FunctionScore;
@@ -2818,12 +2818,12 @@ bool BinaryFunction::finalizeCFIState() {
   }
   LLVM_DEBUG(dbgs() << "\n");
 
-  for (BinaryBasicBlock *BB : BasicBlocksLayout) {
-    for (auto II = BB->begin(); II != BB->end();) {
+  for (BinaryBasicBlock &BB : blocks()) {
+    for (auto II = BB.begin(); II != BB.end();) {
       const MCCFIInstruction *CFI = getCFIFor(*II);
       if (CFI && (CFI->getOperation() == MCCFIInstruction::OpRememberState ||
                   CFI->getOperation() == MCCFIInstruction::OpRestoreState)) {
-        II = BB->eraseInstruction(II);
+        II = BB.eraseInstruction(II);
       } else {
         ++II;
       }
@@ -2839,8 +2839,8 @@ bool BinaryFunction::requiresAddressTranslation() const {
 
 uint64_t BinaryFunction::getInstructionCount() const {
   uint64_t Count = 0;
-  for (BinaryBasicBlock *const &Block : BasicBlocksLayout)
-    Count += Block->getNumNonPseudos();
+  for (const BinaryBasicBlock &BB : blocks())
+    Count += BB.getNumNonPseudos();
   return Count;
 }
 
@@ -3337,39 +3337,39 @@ void BinaryFunction::propagateGnuArgsSizeInfo(
 void BinaryFunction::postProcessBranches() {
   if (!isSimple())
     return;
-  for (BinaryBasicBlock *BB : BasicBlocksLayout) {
-    auto LastInstrRI = BB->getLastNonPseudo();
-    if (BB->succ_size() == 1) {
-      if (LastInstrRI != BB->rend() &&
+  for (BinaryBasicBlock &BB : blocks()) {
+    auto LastInstrRI = BB.getLastNonPseudo();
+    if (BB.succ_size() == 1) {
+      if (LastInstrRI != BB.rend() &&
           BC.MIB->isConditionalBranch(*LastInstrRI)) {
         // __builtin_unreachable() could create a conditional branch that
         // falls-through into the next function - hence the block will have only
         // one valid successor. Such behaviour is undefined and thus we remove
         // the conditional branch while leaving a valid successor.
-        BB->eraseInstruction(std::prev(LastInstrRI.base()));
+        BB.eraseInstruction(std::prev(LastInstrRI.base()));
         LLVM_DEBUG(dbgs() << "BOLT-DEBUG: erasing conditional branch in "
-                          << BB->getName() << " in function " << *this << '\n');
+                          << BB.getName() << " in function " << *this << '\n');
       }
-    } else if (BB->succ_size() == 0) {
+    } else if (BB.succ_size() == 0) {
       // Ignore unreachable basic blocks.
-      if (BB->pred_size() == 0 || BB->isLandingPad())
+      if (BB.pred_size() == 0 || BB.isLandingPad())
         continue;
 
       // If it's the basic block that does not end up with a terminator - we
       // insert a return instruction unless it's a call instruction.
-      if (LastInstrRI == BB->rend()) {
+      if (LastInstrRI == BB.rend()) {
         LLVM_DEBUG(
             dbgs() << "BOLT-DEBUG: at least one instruction expected in BB "
-                   << BB->getName() << " in function " << *this << '\n');
+                   << BB.getName() << " in function " << *this << '\n');
         continue;
       }
       if (!BC.MIB->isTerminator(*LastInstrRI) &&
           !BC.MIB->isCall(*LastInstrRI)) {
         LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding return to basic block "
-                          << BB->getName() << " in function " << *this << '\n');
+                          << BB.getName() << " in function " << *this << '\n');
         MCInst ReturnInstr;
         BC.MIB->createReturn(ReturnInstr);
-        BB->addInstruction(ReturnInstr);
+        BB.addInstruction(ReturnInstr);
       }
     }
   }
@@ -3502,20 +3502,28 @@ bool BinaryFunction::forEachEntryPoint(EntryPointCallbackTy Callback) const {
   return Status;
 }
 
-BinaryFunction::BasicBlockOrderType BinaryFunction::dfs() const {
-  BasicBlockOrderType DFS;
+BinaryFunction::BasicBlockListType BinaryFunction::dfs() const {
+  BasicBlockListType DFS;
   unsigned Index = 0;
   std::stack<BinaryBasicBlock *> Stack;
 
   // Push entry points to the stack in reverse order.
   //
   // NB: we rely on the original order of entries to match.
-  for (auto BBI = layout_rbegin(); BBI != layout_rend(); ++BBI) {
-    BinaryBasicBlock *BB = *BBI;
-    if (isEntryPoint(*BB))
-      Stack.push(BB);
-    BB->setLayoutIndex(BinaryBasicBlock::InvalidIndex);
-  }
+  SmallVector<BinaryBasicBlock *> EntryPoints;
+  llvm::copy_if(BasicBlocks, std::back_inserter(EntryPoints),
+          [&](const BinaryBasicBlock *const BB) { return isEntryPoint(*BB); });
+  // Sort entry points by their offset to make sure we got them in the right
+  // order.
+  llvm::stable_sort(EntryPoints, [](const BinaryBasicBlock *const A,
+                              const BinaryBasicBlock *const B) {
+    return A->getOffset() < B->getOffset();
+  });
+  for (BinaryBasicBlock *const BB : reverse(EntryPoints))
+    Stack.push(BB);
+
+  for (BinaryBasicBlock &BB : blocks())
+    BB.setLayoutIndex(BinaryBasicBlock::InvalidIndex);
 
   while (!Stack.empty()) {
     BinaryBasicBlock *BB = Stack.top();
@@ -3951,8 +3959,8 @@ void BinaryFunction::adjustExecutionCount(uint64_t Count) {
   if (AdjustmentRatio < 0.0)
     AdjustmentRatio = 0.0;
 
-  for (BinaryBasicBlock *&BB : layout())
-    BB->adjustExecutionCount(AdjustmentRatio);
+  for (BinaryBasicBlock &BB : blocks())
+    BB.adjustExecutionCount(AdjustmentRatio);
 
   ExecutionCount -= Count;
 }

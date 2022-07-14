@@ -196,8 +196,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::set_intersection(a, b, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::set_symmetric_difference(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::set_symmetric_difference(a, b, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::set_union(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::set_union(a, b, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::set_union(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::set_union(a, b, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::sort(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::sort(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::sort_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);

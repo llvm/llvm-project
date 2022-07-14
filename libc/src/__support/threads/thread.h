@@ -162,7 +162,12 @@ struct Thread {
   // NOTE: This function is to be used for testing only. There is no standard
   // which requires exposing it via a public API.
   void wait();
+
+  // Return true if this thread is equal to the other thread.
+  bool operator==(const Thread &other) const;
 };
+
+extern thread_local Thread self;
 
 } // namespace __llvm_libc
 
