@@ -25,10 +25,6 @@ if(LLVM_ENABLE_ZLIB)
   set(imported_libs ZLIB::ZLIB)
 endif()
 
-if(LLVM_ENABLE_ZSTD)
-  list(APPEND imported_libs zstd)
-endif()
-
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
