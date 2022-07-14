@@ -1645,7 +1645,7 @@ class DWARFObjInMemory final : public DWARFObject {
   /// provided by Data. Otherwise leaves it unchanged.
   Error maybeDecompress(const object::SectionRef &Sec, StringRef Name,
                         StringRef &Data) {
-    if (!Decompressor::isCompressed(Sec))
+    if (!Sec.isCompressed())
       return Error::success();
 
     Expected<Decompressor> Decompressor =
