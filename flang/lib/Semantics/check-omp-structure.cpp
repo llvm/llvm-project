@@ -314,6 +314,48 @@ void OmpStructureChecker::CheckPredefinedAllocatorRestriction(
   }
 }
 
+template <class D>
+void OmpStructureChecker::CheckHintClause(
+    D *leftOmpClauseList, D *rightOmpClauseList) {
+  auto checkForValidHintClause = [&](const D *clauseList) {
+    for (const auto &clause : clauseList->v) {
+      const Fortran::parser::OmpClause *ompClause = nullptr;
+      if constexpr (std::is_same_v<D,
+                        const Fortran::parser::OmpAtomicClauseList>) {
+        ompClause = std::get_if<Fortran::parser::OmpClause>(&clause.u);
+        if (!ompClause)
+          continue;
+      } else if constexpr (std::is_same_v<D,
+                               const Fortran::parser::OmpClauseList>) {
+        ompClause = &clause;
+      }
+      if (const Fortran::parser::OmpClause::Hint *
+          hintClause{
+              std::get_if<Fortran::parser::OmpClause::Hint>(&ompClause->u)}) {
+        std::optional<std::int64_t> hintValue = GetIntValue(hintClause->v);
+        if (hintValue && hintValue.value() >= 0) {
+          if((hintValue.value() & 0xC) == 0xC /*`omp_sync_hint_nonspeculative` and `omp_lock_hint_speculative`*/ 
+                  || (hintValue.value() & 0x3) == 0x3 /*`omp_sync_hint_uncontended` and omp_sync_hint_contended*/ )
+            context_.Say(clause.source,
+                "Hint clause value "
+                "is not a valid OpenMP synchronization value"_err_en_US);
+        } else {
+          context_.Say(clause.source,
+              "Hint clause must have non-negative constant "
+              "integer expression"_err_en_US);
+        }
+      }
+    }
+  };
+
+  if (leftOmpClauseList) {
+    checkForValidHintClause(leftOmpClauseList);
+  }
+  if (rightOmpClauseList) {
+    checkForValidHintClause(rightOmpClauseList);
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   // Simd Construct with Ordered Construct Nesting check
   // We cannot use CurrentDirectiveIsNested() here because
@@ -1277,6 +1319,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
         parser::MessageFormattedText{
             "Hint clause other than omp_sync_hint_none cannot be specified for an unnamed CRITICAL directive"_err_en_US});
   }
+  CheckHintClause<const parser::OmpClauseList>(&ompClause, nullptr);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
@@ -1580,6 +1623,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
             CheckAtomicMemoryOrderClause(
                 &std::get<parser::OmpAtomicClauseList>(atomicConstruct.t),
                 nullptr);
+            CheckHintClause<const parser::OmpAtomicClauseList>(
+                &std::get<parser::OmpAtomicClauseList>(atomicConstruct.t),
+                nullptr);
           },
           [&](const parser::OmpAtomicUpdate &atomicUpdate) {
             const auto &dir{std::get<parser::Verbatim>(atomicUpdate.t)};
@@ -1591,12 +1637,17 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
                     .statement);
             CheckAtomicMemoryOrderClause(
                 &std::get<0>(atomicUpdate.t), &std::get<2>(atomicUpdate.t));
+            CheckHintClause<const parser::OmpAtomicClauseList>(
+                &std::get<0>(atomicUpdate.t), &std::get<2>(atomicUpdate.t));
           },
           [&](const auto &atomicConstruct) {
             const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
             PushContextAndClauseSets(
                 dir.source, llvm::omp::Directive::OMPD_atomic);
             CheckAtomicMemoryOrderClause(&std::get<0>(atomicConstruct.t),
+                &std::get<2>(atomicConstruct.t));
+            CheckHintClause<const parser::OmpAtomicClauseList>(
+                &std::get<0>(atomicConstruct.t),
                 &std::get<2>(atomicConstruct.t));
           },
       },
