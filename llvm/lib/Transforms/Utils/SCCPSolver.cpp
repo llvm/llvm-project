@@ -953,14 +953,14 @@ void SCCPInstVisitor::visitUnaryOperator(Instruction &I) {
   if (isOverdefined(IV))
     return (void)markOverdefined(&I);
 
+  // If something is unknown/undef, wait for it to resolve.
+  if (V0State.isUnknownOrUndef())
+    return;
+
   if (isConstant(V0State))
     if (Constant *C = ConstantFoldUnaryOpOperand(I.getOpcode(),
                                                  getConstant(V0State), DL))
       return (void)markConstant(IV, &I, C);
-
-  // If something is undef, wait for it to resolve.
-  if (!isOverdefined(V0State))
-    return;
 
   markOverdefined(&I);
 }
