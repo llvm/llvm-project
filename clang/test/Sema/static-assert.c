@@ -5,11 +5,11 @@
 
 _Static_assert("foo", "string is nonzero"); // ext-warning {{'_Static_assert' is a C11 extension}}
 #ifndef __cplusplus
-// expected-error@-2 {{static assertion expression is not an integral constant expression}}
+// expected-error@-2 {{static_assert expression is not an integral constant expression}}
 #endif
 
 _Static_assert(1, "1 is nonzero"); // ext-warning {{'_Static_assert' is a C11 extension}}
-_Static_assert(0, "0 is nonzero"); // expected-error {{static assertion failed: 0 is nonzero}} \
+_Static_assert(0, "0 is nonzero"); // expected-error {{static_assert failed: 0 is nonzero}} \
                                    // ext-warning {{'_Static_assert' is a C11 extension}}
 
 #ifdef MS
@@ -18,7 +18,7 @@ static_assert(1, "1 is nonzero"); // ms-warning {{use of 'static_assert' without
 
 void foo(void) {
   _Static_assert(1, "1 is nonzero"); // ext-warning {{'_Static_assert' is a C11 extension}}
-  _Static_assert(0, "0 is nonzero"); // expected-error {{static assertion failed: 0 is nonzero}} \
+  _Static_assert(0, "0 is nonzero"); // expected-error {{static_assert failed: 0 is nonzero}} \
                                      // ext-warning {{'_Static_assert' is a C11 extension}}
 #ifdef MS
   static_assert(1, "1 is nonzero"); // ms-warning {{use of 'static_assert' without}}
@@ -31,7 +31,7 @@ _Static_assert(1, invalid); // expected-error {{expected string literal for diag
 struct A {
   int a;
   _Static_assert(1, "1 is nonzero"); // ext-warning {{'_Static_assert' is a C11 extension}}
-  _Static_assert(0, "0 is nonzero"); // expected-error {{static assertion failed: 0 is nonzero}} \
+  _Static_assert(0, "0 is nonzero"); // expected-error {{static_assert failed: 0 is nonzero}} \
                                      // ext-warning {{'_Static_assert' is a C11 extension}}
 #ifdef MS
   static_assert(1, "1 is nonzero"); // ms-warning {{use of 'static_assert' without}}
@@ -54,7 +54,7 @@ struct A {
 
 typedef UNION(unsigned, struct A) U1; // ext-warning 3 {{'_Static_assert' is a C11 extension}}
 UNION(char[2], short) u2 = { .one = { 'a', 'b' } }; // ext-warning 3 {{'_Static_assert' is a C11 extension}} cxx-warning {{designated initializers are a C++20 extension}}
-typedef UNION(char, short) U3; // expected-error {{static assertion failed due to requirement 'sizeof(char) == sizeof(short)': type size mismatch}} \
+typedef UNION(char, short) U3; // expected-error {{static_assert failed due to requirement 'sizeof(char) == sizeof(short)': type size mismatch}} \
                                // ext-warning 3 {{'_Static_assert' is a C11 extension}}
 typedef UNION(float, 0.5f) U4; // expected-error {{expected a type}} \
                                // ext-warning 3 {{'_Static_assert' is a C11 extension}}
@@ -70,6 +70,3 @@ static_assert(1, "1 is nonzero"); // ok
 #undef static_assert
 static_assert(1, "1 is nonzero"); // ms-warning {{use of 'static_assert' without}}
 #endif
-
-_Static_assert(1 , "") // expected-error {{expected ';' after '_Static_assert'}} \
-                      // ext-warning {{'_Static_assert' is a C11 extension}}

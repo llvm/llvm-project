@@ -95,7 +95,7 @@ namespace aliastemplateinst {
 
 namespace DontDiagnoseInvalidTest {
 template <bool Value> struct Base {
-  static_assert(Value, ""); // expected-error {{static assertion failed}}
+  static_assert(Value, ""); // expected-error {{static_assert failed}}
 };
 struct Derived : Base<false> { // expected-note {{requested here}}
   using Base<false>::Base; // OK. Don't diagnose that 'Base' isn't a base class of Derived.
