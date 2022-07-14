@@ -23,7 +23,7 @@
 // CHECK-SAME:              %[[VAL_1:.*1]]: tensor<f32>,
 // CHECK-SAME:              %[[VAL_2:.*2]]: f32,
 // CHECK-SAME:              %[[VAL_3:.*3]]: f32,
-// CHECK-SAME:              %[[VAL_4:.*4]]: tensor<32x16xf32> {linalg.inplaceable = true}) -> tensor<32x16xf32> {
+// CHECK-SAME:              %[[VAL_4:.*4]]: tensor<32x16xf32>) -> tensor<32x16xf32> {
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 2.200000e+00 : f32
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 1 : index
@@ -60,10 +60,10 @@
 // CHECK:           return %[[VAL_34]] : tensor<32x16xf32>
 // CHECK:         }
 func.func @mul(%arga: tensor<32x16xf32, #SparseMatrix>,
-          %argp: tensor<f32>,
-          %argq: f32,
-          %argr: f32,
-          %argx: tensor<32x16xf32> {linalg.inplaceable = true}) -> tensor<32x16xf32> {
+               %argp: tensor<f32>,
+               %argq: f32,
+               %argr: f32,
+               %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %s = arith.addf %argq, %argr : f32
   %c = arith.constant 2.2 : f32
   %0 = linalg.generic #trait

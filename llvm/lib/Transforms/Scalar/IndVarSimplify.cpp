@@ -1307,7 +1307,7 @@ static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
 }
 
 static void replaceLoopPHINodesWithPreheaderValues(
-    Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+    LoopInfo *LI, Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   assert(L->isLoopSimplifyForm() && "Should only do it in simplify form!");
   auto *LoopPreheader = L->getLoopPreheader();
   auto *LoopHeader = L->getHeader();
@@ -1332,7 +1332,8 @@ static void replaceLoopPHINodesWithPreheaderValues(
     if (!L->contains(I))
       continue;
 
-    if (Value *Res = simplifyInstruction(I, I->getModule()->getDataLayout())) {
+    Value *Res = simplifyInstruction(I, I->getModule()->getDataLayout());
+    if (Res && LI->replacementPreservesLCSSAForm(I, Res)) {
       for (User *U : I->users())
         Worklist.push_back(cast<Instruction>(U));
       I->replaceAllUsesWith(Res);
@@ -1586,7 +1587,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // unconditional exit, we can still replace header phis with their
       // preheader value.
       if (!L->contains(BI->getSuccessor(CI->isNullValue())))
-        replaceLoopPHINodesWithPreheaderValues(L, DeadInsts);
+        replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts);
       return true;
     }
 
@@ -1673,7 +1674,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // the header PHIs with values coming from the preheader.
     if (ExitCount->isZero()) {
       foldExit(L, ExitingBB, true, DeadInsts);
-      replaceLoopPHINodesWithPreheaderValues(L, DeadInsts);
+      replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts);
       Changed = true;
       continue;
     }
@@ -1737,7 +1738,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // through *explicit* control flow.  We have to eliminate the possibility of
   // implicit exits (see below) before we know it's truly exact.
   const SCEV *ExactBTC = SE->getBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(ExactBTC) || !isSafeToExpand(ExactBTC, *SE))
+  if (isa<SCEVCouldNotCompute>(ExactBTC) || !Rewriter.isSafeToExpand(ExactBTC))
     return false;
 
   assert(SE->isLoopInvariant(ExactBTC, L) && "BTC must be loop invariant");
@@ -1768,7 +1769,8 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       return true;
 
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
-    if (isa<SCEVCouldNotCompute>(ExitCount) || !isSafeToExpand(ExitCount, *SE))
+    if (isa<SCEVCouldNotCompute>(ExitCount) ||
+        !Rewriter.isSafeToExpand(ExitCount))
       return true;
 
     assert(SE->isLoopInvariant(ExitCount, L) &&

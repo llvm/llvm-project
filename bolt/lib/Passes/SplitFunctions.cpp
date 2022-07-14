@@ -90,8 +90,8 @@ struct SplitCold {
       return false;
 
     bool AllCold = true;
-    for (BinaryBasicBlock *BB : BF.layout()) {
-      const uint64_t ExecCount = BB->getExecutionCount();
+    for (const BinaryBasicBlock &BB : BF) {
+      const uint64_t ExecCount = BB.getExecutionCount();
       if (ExecCount == BinaryBasicBlock::COUNT_NO_PROFILE)
         return false;
       if (ExecCount != 0)

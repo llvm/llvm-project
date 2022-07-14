@@ -268,6 +268,7 @@ private:
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
+  template <typename D> void CheckHintClause(D *, D *);
 
   enum directiveNestType {
     SIMDNest,

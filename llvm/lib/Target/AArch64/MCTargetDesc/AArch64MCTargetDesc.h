@@ -33,6 +33,7 @@ class MCSubtargetInfo;
 class MCTargetOptions;
 class MCTargetStreamer;
 class Target;
+class FeatureBitset;
 
 MCCodeEmitter *createAArch64MCCodeEmitter(const MCInstrInfo &MCII,
                                           MCContext &Ctx);

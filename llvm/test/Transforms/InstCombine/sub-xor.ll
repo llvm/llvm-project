@@ -3,8 +3,8 @@
 
 declare void @use(i32)
 
-define i32 @test1(i32 %x) {
-; CHECK-LABEL: @test1(
+define i32 @low_mask_nsw_nuw(i32 %x) {
+; CHECK-LABEL: @low_mask_nsw_nuw(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[AND]], 63
 ; CHECK-NEXT:    ret i32 [[SUB]]
@@ -14,8 +14,8 @@ define i32 @test1(i32 %x) {
   ret i32 %sub
 }
 
-define <2 x i32> @test1vec(<2 x i32> %x) {
-; CHECK-LABEL: @test1vec(
+define <2 x i32> @low_mask_nsw_nuw_vec(<2 x i32> %x) {
+; CHECK-LABEL: @low_mask_nsw_nuw_vec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 31, i32 31>
 ; CHECK-NEXT:    [[SUB:%.*]] = xor <2 x i32> [[AND]], <i32 63, i32 63>
 ; CHECK-NEXT:    ret <2 x i32> [[SUB]]
@@ -25,8 +25,8 @@ define <2 x i32> @test1vec(<2 x i32> %x) {
   ret <2 x i32> %sub
 }
 
-define i8 @masked_sub_i8(i8 %x) {
-; CHECK-LABEL: @masked_sub_i8(
+define i8 @arbitrary_mask_sub_i8(i8 %x) {
+; CHECK-LABEL: @arbitrary_mask_sub_i8(
 ; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[M:%.*]] = xor i8 [[A]], 11
 ; CHECK-NEXT:    ret i8 [[M]]
@@ -38,8 +38,8 @@ define i8 @masked_sub_i8(i8 %x) {
 
 ; TODO: Borrow from the MSB is ok.
 
-define i8 @masked_sub_high_bit_mask_i8(i8 %x) {
-; CHECK-LABEL: @masked_sub_high_bit_mask_i8(
+define i8 @arbitrary_mask_sub_high_bit_dont_care_i8(i8 %x) {
+; CHECK-LABEL: @arbitrary_mask_sub_high_bit_dont_care_i8(
 ; CHECK-NEXT:    [[MASKX:%.*]] = and i8 [[X:%.*]], -93
 ; CHECK-NEXT:    [[S:%.*]] = sub i8 39, [[MASKX]]
 ; CHECK-NEXT:    ret i8 [[S]]
@@ -49,8 +49,30 @@ define i8 @masked_sub_high_bit_mask_i8(i8 %x) {
   ret i8 %s
 }
 
-define <2 x i5> @masked_sub_v2i5(<2 x i5> %x) {
-; CHECK-LABEL: @masked_sub_v2i5(
+define i8 @arbitrary_mask_sub_nsw_high_bit_dont_care_i8(i8 %x) {
+; CHECK-LABEL: @arbitrary_mask_sub_nsw_high_bit_dont_care_i8(
+; CHECK-NEXT:    [[MASKX:%.*]] = and i8 [[X:%.*]], -93
+; CHECK-NEXT:    [[S:%.*]] = sub nsw i8 39, [[MASKX]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %maskx = and i8 %x, 163     ; 0b10100011
+  %s = sub nsw i8 39, %maskx  ; 0b00100111
+  ret i8 %s
+}
+
+define i8 @arbitrary_mask_sub_nuw_high_bit_dont_care_i8(i8 %x) {
+; CHECK-LABEL: @arbitrary_mask_sub_nuw_high_bit_dont_care_i8(
+; CHECK-NEXT:    [[MASKX:%.*]] = and i8 [[X:%.*]], -93
+; CHECK-NEXT:    [[S:%.*]] = sub nuw i8 39, [[MASKX]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %maskx = and i8 %x, 163     ; 0b10100011
+  %s = sub nuw i8 39, %maskx  ; 0b00100111
+  ret i8 %s
+}
+
+define <2 x i5> @arbitrary_mask_sub_v2i5(<2 x i5> %x) {
+; CHECK-LABEL: @arbitrary_mask_sub_v2i5(
 ; CHECK-NEXT:    [[A:%.*]] = and <2 x i5> [[X:%.*]], <i5 -8, i5 -8>
 ; CHECK-NEXT:    [[M:%.*]] = xor <2 x i5> [[A]], <i5 -6, i5 -6>
 ; CHECK-NEXT:    ret <2 x i5> [[M]]
@@ -73,11 +95,11 @@ define i8 @not_masked_sub_i8(i8 %x) {
   ret i8 %m
 }
 
-declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
+declare i32 @llvm.ctlz.i32(i32, i1)
 
-define i32 @test2(i32 %x) nounwind {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[COUNT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true) #[[ATTR2:[0-9]+]], !range [[RNG0:![0-9]+]]
+define i32 @range_masked_sub(i32 %x) {
+; CHECK-LABEL: @range_masked_sub(
+; CHECK-NEXT:    [[COUNT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[COUNT]], 31
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;

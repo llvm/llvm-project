@@ -30,7 +30,7 @@ static llvm::omp::ScheduleKind
 convertToScheduleKind(Optional<omp::ClauseScheduleKind> schedKind) {
   if (!schedKind.has_value())
     return llvm::omp::OMP_SCHEDULE_Default;
-  switch (schedKind.getValue()) {
+  switch (schedKind.value()) {
   case omp::ClauseScheduleKind::Static:
     return llvm::omp::OMP_SCHEDULE_Static;
   case omp::ClauseScheduleKind::Dynamic:

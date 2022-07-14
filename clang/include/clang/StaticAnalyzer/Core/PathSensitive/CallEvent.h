@@ -1019,7 +1019,7 @@ public:
   SVal getObjectUnderConstruction() const {
     return ExprEngine::getObjectUnderConstruction(getState(), getOriginExpr(),
                                                   getLocationContext())
-        .getValue();
+        .value();
   }
 
   /// Number of non-placement arguments to the call. It is equal to 2 for

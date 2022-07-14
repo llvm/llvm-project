@@ -36,7 +36,7 @@ module module1
 !    call scalararg(scalar(4)(5.,6,(7._8,8._2),4_'b',.true._4))
     call scalararg(scalar(4)(ix=5.,rx=6,zx=(7._8,8._2),cx=4_'b',lx=.true.))
     call scalararg(scalar(4)(5.,6,(7._8,8._2),4_'b',.true.))
-    !ERROR: Value in structure constructor of type 'CHARACTER(1)' is incompatible with component 'ix' of type 'INTEGER(4)'
+    !ERROR: Value in structure constructor of type 'CHARACTER(KIND=1,LEN=1_8)' is incompatible with component 'ix' of type 'INTEGER(4)'
     call scalararg(scalar(4)(ix='a'))
     !ERROR: Value in structure constructor of type 'LOGICAL(4)' is incompatible with component 'ix' of type 'INTEGER(4)'
     call scalararg(scalar(4)(ix=.false.))

@@ -339,7 +339,7 @@ static bool isDimOpValidSymbol(OpTy dimOp, Region *region) {
   Optional<int64_t> index = dimOp.getConstantIndex();
   assert(index.has_value() &&
          "expect only `dim` operations with a constant index");
-  int64_t i = index.getValue();
+  int64_t i = index.value();
   return TypeSwitch<Operation *, bool>(dimOp.getSource().getDefiningOp())
       .Case<memref::ViewOp, memref::SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
@@ -1897,8 +1897,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
       return failure();
     // Bail out when the loop iterates more than once and it returns any iterArg
     // out of order.
-    if (tripCount.has_value() && tripCount.getValue() >= 2 &&
-        iterArgsNotInOrder)
+    if (tripCount.has_value() && tripCount.value() >= 2 && iterArgsNotInOrder)
       return failure();
     rewriter.replaceOp(forOp, replacements);
     return success();
@@ -1931,19 +1930,18 @@ OperandRange AffineForOp::getSuccessorEntryOperands(Optional<unsigned> index) {
 void AffineForOp::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
-  assert((!index.has_value() || index.getValue() == 0) &&
-         "expected loop region");
+  assert((!index.has_value() || index.value() == 0) && "expected loop region");
   // The loop may typically branch back to its body or to the parent operation.
   // If the predecessor is the parent op and the trip count is known to be at
   // least one, branch into the body using the iterator arguments. And in cases
   // we know the trip count is zero, it can only branch back to its parent.
   Optional<uint64_t> tripCount = getTrivialConstantTripCount(*this);
   if (!index.has_value() && tripCount.has_value()) {
-    if (tripCount.getValue() > 0) {
+    if (tripCount.value() > 0) {
       regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
       return;
     }
-    if (tripCount.getValue() == 0) {
+    if (tripCount.value() == 0) {
       regions.push_back(RegionSuccessor(getResults()));
       return;
     }
@@ -2755,7 +2753,8 @@ LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineMinMaxOpBase
 //===----------------------------------------------------------------------===//
 
-template <typename T> static LogicalResult verifyAffineMinMaxOp(T op) {
+template <typename T>
+static LogicalResult verifyAffineMinMaxOp(T op) {
   // Verify that operand count matches affine map dimension and symbol count.
   if (op.getNumOperands() !=
       op.getMap().getNumDims() + op.getMap().getNumSymbols())
@@ -2764,7 +2763,8 @@ template <typename T> static LogicalResult verifyAffineMinMaxOp(T op) {
   return success();
 }
 
-template <typename T> static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
+template <typename T>
+static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
   p << ' ' << op->getAttr(T::getMapAttrStrName());
   auto operands = op.getOperands();
   unsigned numDims = op.getMap().getNumDims();
@@ -2872,7 +2872,8 @@ struct DeduplicateAffineMinMaxExpressions : public OpRewritePattern<T> {
 ///
 ///   %1 = affine.min affine_map<
 ///          ()[s0, s1] -> (s0 + 4, s1 + 16, s1 * 8)> ()[%sym2, %sym1]
-template <typename T> struct MergeAffineMinMaxOp : public OpRewritePattern<T> {
+template <typename T>
+struct MergeAffineMinMaxOp : public OpRewritePattern<T> {
   using OpRewritePattern<T>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(T affineOp,
@@ -3771,8 +3772,8 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
           arith::symbolizeAtomicRMWKind(attrVal.getValue());
       if (!reduction)
         return parser.emitError(loc, "invalid reduction value: ") << attrVal;
-      reductions.push_back(builder.getI64IntegerAttr(
-          static_cast<int64_t>(reduction.getValue())));
+      reductions.push_back(
+          builder.getI64IntegerAttr(static_cast<int64_t>(reduction.value())));
       // While we keep getting commas, keep parsing.
       return success();
     };

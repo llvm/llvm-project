@@ -191,7 +191,6 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
   }];
 }
 
-
 def PadOp : Op<Transform_Dialect, "structured.pad",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
@@ -223,6 +222,45 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
 
   let assemblyFormat = "$target attr-dict";
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+def PromoteOp : Op<Transform_Dialect, "structured.promote",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+    TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Promotes the specified operands of the target into a separate memory buffer.
+
+    At this point, this transform does not allow customizing alloc/dealloc 
+    functions nor the behavior on copy in/out operations.
+
+    #### Return modes
+    
+    This operation applies to a single Linalg op that satisfies the 
+    `promoteSubviewsPrecondition`, otherwise it fails.
+    
+    If the operations referred to by the `target` PDLOperation promote
+    properly, the transform succeeds. 
+
+    When successful, the return handle points to the $target operation that 
+    was modified inplace.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       DefaultValuedAttr<I64ArrayAttr, "{}">:$operands_to_promote,
+                       DefaultValuedAttr<BoolArrayAttr, "{}">:$use_full_tile_buffers,
+                       UnitAttr:$use_full_tiles_by_default,
+                       UnitAttr:$use_alloca,
+                       OptionalAttr<I64Attr>:$alignment);
+  let results = (outs PDL_Operation:$transformed);
+
+  let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

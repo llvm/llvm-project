@@ -118,14 +118,14 @@ MMATypes MmaOp::accumPtxType() {
   Optional<mlir::NVVM::MMATypes> val = inferOperandMMAType(
       getODSOperands(2).getTypes().front(), /*isAccum=*/true);
   assert(val.has_value() && "accumulator PTX type should always be inferrable");
-  return val.getValue();
+  return val.value();
 }
 
 MMATypes MmaOp::resultPtxType() {
   Optional<mlir::NVVM::MMATypes> val =
       inferOperandMMAType(getResult().getType(), /*isAccum=*/true);
   assert(val.has_value() && "result PTX type should always be inferrable");
-  return val.getValue();
+  return val.value();
 }
 
 void MmaOp::print(OpAsmPrinter &p) {
@@ -399,10 +399,10 @@ LogicalResult MmaOp::verify() {
       break;
     default:
       return emitError("invalid shape or multiplicand type: " +
-                       stringifyEnum(getMultiplicandAPtxType().getValue()));
+                       stringifyEnum(getMultiplicandAPtxType().value()));
     }
 
-    if (isIntegerPtxType(getMultiplicandAPtxType().getValue())) {
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
       expectedResult.push_back(s32x4StructTy);
       expectedC.emplace_back(4, i32Ty);
       multiplicandFragType = i32Ty;
@@ -440,16 +440,16 @@ LogicalResult MmaOp::verify() {
           context, SmallVector<Type>(2, f64Ty)));
       allowedShapes.push_back({8, 8, 4});
     }
-    if (isIntegerPtxType(getMultiplicandAPtxType().getValue())) {
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
       expectedA.push_back({i32Ty});
       expectedB.push_back({i32Ty});
       expectedC.push_back({i32Ty, i32Ty});
       expectedResult.push_back(s32x2StructTy);
-      if (isInt4PtxType(getMultiplicandAPtxType().getValue()))
+      if (isInt4PtxType(getMultiplicandAPtxType().value()))
         allowedShapes.push_back({8, 8, 32});
-      if (isInt8PtxType(getMultiplicandAPtxType().getValue()))
+      if (isInt8PtxType(getMultiplicandAPtxType().value()))
         allowedShapes.push_back({8, 8, 16});
-      if (getMultiplicandAPtxType().getValue() == MMATypes::b1)
+      if (getMultiplicandAPtxType().value() == MMATypes::b1)
         allowedShapes.push_back({8, 8, 128});
     }
   }

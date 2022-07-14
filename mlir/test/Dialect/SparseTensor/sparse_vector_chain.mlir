@@ -18,7 +18,7 @@
 // while-loop are chained before horizontally reducing these back to scalar.
 //
 // CHECK-LABEL:   func @sparse_matrix_sum(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<f64> {linalg.inplaceable = true},
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<f64>,
 // CHECK-SAME:      %[[VAL_1:.*]]: tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:      %[[VAL_2:.*]]: tensor<64x32xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<f64> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant dense<0.000000e+00> : vector<8xf64>
@@ -112,9 +112,9 @@
 // CHECK:           %[[VAL_87:.*]] = bufferization.to_tensor %[[VAL_15]] : memref<f64>
 // CHECK:           return %[[VAL_87]] : tensor<f64>
 // CHECK:         }
-func.func @sparse_matrix_sum(%argx: tensor<f64> {linalg.inplaceable = true},
-                         %arga: tensor<64x32xf64, #SparseMatrix>,
-                         %argb: tensor<64x32xf64, #SparseMatrix>) -> tensor<f64> {
+func.func @sparse_matrix_sum(%argx: tensor<f64>,
+                             %arga: tensor<64x32xf64, #SparseMatrix>,
+                             %argb: tensor<64x32xf64, #SparseMatrix>) -> tensor<f64> {
   %0 = linalg.generic #trait
      ins(%arga, %argb: tensor<64x32xf64, #SparseMatrix>,
                        tensor<64x32xf64, #SparseMatrix>)

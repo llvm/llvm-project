@@ -166,7 +166,10 @@
 ; CHECK-O3-NEXT: Running pass: ControlHeightReductionPass on foo
 ; CHECK-O3-NEXT: Running analysis: RegionInfoAnalysis on foo
 ; CHECK-O3-NEXT: Running analysis: DominanceFrontierAnalysis on foo
+; CHECK-O-NEXT: Running analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Running pass: CoroSplitPass
+; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ShouldNotRunFunctionPassesAnalysis
+; CHECK-O-NEXT: Invalidating analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass

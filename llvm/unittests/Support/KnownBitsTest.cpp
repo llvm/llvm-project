@@ -369,27 +369,27 @@ TEST(KnownBitsTest, ICmpExhaustive) {
       EXPECT_EQ(AllSLT || NoneSLT, KnownSLT.has_value());
       EXPECT_EQ(AllSLE || NoneSLE, KnownSLE.has_value());
 
-      EXPECT_EQ(AllEQ, KnownEQ.has_value() && KnownEQ.getValue());
-      EXPECT_EQ(AllNE, KnownNE.has_value() && KnownNE.getValue());
-      EXPECT_EQ(AllUGT, KnownUGT.has_value() && KnownUGT.getValue());
-      EXPECT_EQ(AllUGE, KnownUGE.has_value() && KnownUGE.getValue());
-      EXPECT_EQ(AllULT, KnownULT.has_value() && KnownULT.getValue());
-      EXPECT_EQ(AllULE, KnownULE.has_value() && KnownULE.getValue());
-      EXPECT_EQ(AllSGT, KnownSGT.has_value() && KnownSGT.getValue());
-      EXPECT_EQ(AllSGE, KnownSGE.has_value() && KnownSGE.getValue());
-      EXPECT_EQ(AllSLT, KnownSLT.has_value() && KnownSLT.getValue());
-      EXPECT_EQ(AllSLE, KnownSLE.has_value() && KnownSLE.getValue());
+      EXPECT_EQ(AllEQ, KnownEQ.has_value() && KnownEQ.value());
+      EXPECT_EQ(AllNE, KnownNE.has_value() && KnownNE.value());
+      EXPECT_EQ(AllUGT, KnownUGT.has_value() && KnownUGT.value());
+      EXPECT_EQ(AllUGE, KnownUGE.has_value() && KnownUGE.value());
+      EXPECT_EQ(AllULT, KnownULT.has_value() && KnownULT.value());
+      EXPECT_EQ(AllULE, KnownULE.has_value() && KnownULE.value());
+      EXPECT_EQ(AllSGT, KnownSGT.has_value() && KnownSGT.value());
+      EXPECT_EQ(AllSGE, KnownSGE.has_value() && KnownSGE.value());
+      EXPECT_EQ(AllSLT, KnownSLT.has_value() && KnownSLT.value());
+      EXPECT_EQ(AllSLE, KnownSLE.has_value() && KnownSLE.value());
 
-      EXPECT_EQ(NoneEQ, KnownEQ.has_value() && !KnownEQ.getValue());
-      EXPECT_EQ(NoneNE, KnownNE.has_value() && !KnownNE.getValue());
-      EXPECT_EQ(NoneUGT, KnownUGT.has_value() && !KnownUGT.getValue());
-      EXPECT_EQ(NoneUGE, KnownUGE.has_value() && !KnownUGE.getValue());
-      EXPECT_EQ(NoneULT, KnownULT.has_value() && !KnownULT.getValue());
-      EXPECT_EQ(NoneULE, KnownULE.has_value() && !KnownULE.getValue());
-      EXPECT_EQ(NoneSGT, KnownSGT.has_value() && !KnownSGT.getValue());
-      EXPECT_EQ(NoneSGE, KnownSGE.has_value() && !KnownSGE.getValue());
-      EXPECT_EQ(NoneSLT, KnownSLT.has_value() && !KnownSLT.getValue());
-      EXPECT_EQ(NoneSLE, KnownSLE.has_value() && !KnownSLE.getValue());
+      EXPECT_EQ(NoneEQ, KnownEQ.has_value() && !KnownEQ.value());
+      EXPECT_EQ(NoneNE, KnownNE.has_value() && !KnownNE.value());
+      EXPECT_EQ(NoneUGT, KnownUGT.has_value() && !KnownUGT.value());
+      EXPECT_EQ(NoneUGE, KnownUGE.has_value() && !KnownUGE.value());
+      EXPECT_EQ(NoneULT, KnownULT.has_value() && !KnownULT.value());
+      EXPECT_EQ(NoneULE, KnownULE.has_value() && !KnownULE.value());
+      EXPECT_EQ(NoneSGT, KnownSGT.has_value() && !KnownSGT.value());
+      EXPECT_EQ(NoneSGE, KnownSGE.has_value() && !KnownSGE.value());
+      EXPECT_EQ(NoneSLT, KnownSLT.has_value() && !KnownSLT.value());
+      EXPECT_EQ(NoneSLE, KnownSLE.has_value() && !KnownSLE.value());
     });
   });
 }

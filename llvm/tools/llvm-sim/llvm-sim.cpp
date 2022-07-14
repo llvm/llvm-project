@@ -90,8 +90,8 @@ exportToFile(const StringRef FilePath,
       assert(End && "Could not find instruction number for last instruction");
 
       J.object([&] {
-        J.attribute("start", Start.getValue());
-        J.attribute("end", End.getValue());
+        J.attribute("start", Start.value());
+        J.attribute("end", End.value());
       });
     }
     J.arrayEnd();

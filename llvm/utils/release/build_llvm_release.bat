@@ -118,7 +118,7 @@ set libxmldir=%cd%\install
 set "libxmldir=%libxmldir:\=/%"
 cd ..
 
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPython3_ROOT_DIR=%python32_dir% -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPython3_ROOT_DIR=%python32_dir% -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
 
 ninja || ninja || ninja || exit /b
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b
@@ -132,7 +132,7 @@ mkdir build32
 cd build32
 set CC=..\build32_stage0\bin\clang-cl
 set CXX=..\build32_stage0\bin\clang-cl
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPython3_ROOT_DIR=%python32_dir% -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DPython3_ROOT_DIR=%python32_dir% -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
 ninja || ninja || ninja || exit /b
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b
@@ -159,7 +159,7 @@ set libxmldir=%cd%\install
 set "libxmldir=%libxmldir:\=/%"
 cd ..
 
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPython3_ROOT_DIR=%python64_dir% -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPython3_ROOT_DIR=%python64_dir% -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
 ninja || ninja || ninja || exit /b
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b
@@ -173,7 +173,7 @@ mkdir build64
 cd build64
 set CC=..\build64_stage0\bin\clang-cl
 set CXX=..\build64_stage0\bin\clang-cl
-cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPython3_ROOT_DIR=%python64_dir% -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DPython3_ROOT_DIR=%python64_dir% -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ..\llvm-project\llvm || exit /b
 ninja || ninja || ninja || exit /b
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b

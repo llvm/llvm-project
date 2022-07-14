@@ -854,8 +854,9 @@ void DumpModuleInfoAction::ExecuteAction() {
     std::error_code EC;
     OutFile.reset(new llvm::raw_fd_ostream(OutputFileName.str(), EC,
                                            llvm::sys::fs::OF_TextWithCRLF));
+    OutputStream = OutFile.get();
   }
-  llvm::raw_ostream &Out = OutFile.get()? *OutFile.get() : llvm::outs();
+  llvm::raw_ostream &Out = OutputStream ? *OutputStream : llvm::outs();
 
   Out << "Information for module file '" << getCurrentFile() << "':\n";
   auto &FileMgr = getCompilerInstance().getFileManager();

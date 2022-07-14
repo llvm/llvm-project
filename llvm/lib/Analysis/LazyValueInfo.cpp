@@ -921,7 +921,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueCast(
   if (!LHSRes)
     // More work to do before applying this transfer rule.
     return None;
-  const ConstantRange &LHSRange = LHSRes.getValue();
+  const ConstantRange &LHSRange = LHSRes.value();
 
   const unsigned ResultBitWidth = CI->getType()->getIntegerBitWidth();
 
@@ -946,8 +946,8 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
     // More work to do before applying this transfer rule.
     return None;
 
-  const ConstantRange &LHSRange = LHSRes.getValue();
-  const ConstantRange &RHSRange = RHSRes.getValue();
+  const ConstantRange &LHSRange = LHSRes.value();
+  const ConstantRange &RHSRange = RHSRes.value();
   return ValueLatticeElement::getRange(OpFn(LHSRange, RHSRange));
 }
 
