@@ -2557,6 +2557,10 @@ Value *SCEVExpander::fixupLCSSAFormFor(Instruction *User, unsigned OpIdx) {
   return User->getOperand(OpIdx);
 }
 
+bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
+  return llvm::isSafeToExpand(S, SE, CanonicalMode);
+}
+
 namespace {
 // Search for a SCEV subexpression that is not safe to expand.  Any expression
 // that may expand to a !isSafeToSpeculativelyExecute value is unsafe, namely
@@ -2613,7 +2617,7 @@ struct SCEVFindUnsafe {
   }
   bool isDone() const { return IsUnsafe; }
 };
-}
+} // namespace
 
 namespace llvm {
 bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE, bool CanonicalMode) {
@@ -2622,9 +2626,9 @@ bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE, bool CanonicalMode) {
   return !Search.IsUnsafe;
 }
 
-bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
-                      ScalarEvolution &SE) {
-  if (!isSafeToExpand(S, SE))
+bool SCEVExpander::isSafeToExpandAt(const SCEV *S,
+                                    const Instruction *InsertionPoint) const {
+  if (!isSafeToExpand(S))
     return false;
   // We have to prove that the expanded site of S dominates InsertionPoint.
   // This is easy when not in the same block, but hard when S is an instruction

@@ -1129,7 +1129,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   // TODO: ideally we should still be able to generate memset if SCEV expander
   // is taught to generate the dependencies at the latest point.
-  if (!isSafeToExpand(Start, *SE))
+  if (!Expander.isSafeToExpand(Start))
     return Changed;
 
   // Okay, we have a strided store "p[i]" of a splattable value.  We can turn
@@ -1163,7 +1163,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   // TODO: ideally we should still be able to generate memset if SCEV expander
   // is taught to generate the dependencies at the latest point.
-  if (!isSafeToExpand(NumBytesS, *SE))
+  if (!Expander.isSafeToExpand(NumBytesS))
     return Changed;
 
   Value *NumBytes =
