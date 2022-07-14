@@ -1077,23 +1077,13 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
-  // Send the stop reason unless this is the stop after the launch or attach.
-  switch (m_inferior_prev_state) {
-  case eStateLaunching:
-  case eStateAttaching:
-    // Don't send anything per debugserver behavior.
-    break;
-  default:
-    // In all other cases, send the stop reason.
-    PacketResult result = SendStopReasonForState(
-        *process, StateType::eStateStopped, /*force_synchronous=*/false);
-    if (result != PacketResult::Success) {
-      LLDB_LOGF(log,
-                "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
-                "notification for PID %" PRIu64 ", state: eStateExited",
-                __FUNCTION__, process->GetID());
-    }
-    break;
+  PacketResult result = SendStopReasonForState(
+      *process, StateType::eStateStopped, /*force_synchronous=*/false);
+  if (result != PacketResult::Success) {
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
+              "notification for PID %" PRIu64 ", state: eStateExited",
+              __FUNCTION__, process->GetID());
   }
 }
 
@@ -1138,9 +1128,6 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
     }
     break;
   }
-
-  // Remember the previous state reported to us.
-  m_inferior_prev_state = state;
 }
 
 void GDBRemoteCommunicationServerLLGS::DidExec(NativeProcessProtocol *process) {
