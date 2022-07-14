@@ -254,8 +254,6 @@ public:
 
   lldb::addr_t GetShlibInfoAddr();
 
-  bool GetSupportsThreadSuffix();
-
   bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info);
 
   uint32_t FindProcesses(const ProcessInstanceInfoMatch &process_match_info,
