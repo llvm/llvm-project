@@ -1157,8 +1157,8 @@ public:
   /// Return the number of emitted instructions for this function.
   uint32_t getNumNonPseudos() const {
     uint32_t N = 0;
-    for (BinaryBasicBlock *const &BB : layout())
-      N += BB->getNumNonPseudos();
+    for (const BinaryBasicBlock &BB : blocks())
+      N += BB.getNumNonPseudos();
     return N;
   }
 
@@ -2335,13 +2335,13 @@ public:
   size_t estimateHotSize(const bool UseSplitSize = true) const {
     size_t Estimate = 0;
     if (UseSplitSize && isSplit()) {
-      for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-        if (!BB->isCold())
-          Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+      for (const BinaryBasicBlock &BB : blocks())
+        if (!BB.isCold())
+          Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     } else {
-      for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-        if (BB->getKnownExecutionCount() != 0)
-          Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+      for (const BinaryBasicBlock &BB : blocks())
+        if (BB.getKnownExecutionCount() != 0)
+          Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     }
     return Estimate;
   }
@@ -2350,16 +2350,16 @@ public:
     if (!isSplit())
       return estimateSize();
     size_t Estimate = 0;
-    for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-      if (BB->isCold())
-        Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+    for (const BinaryBasicBlock &BB : blocks())
+      if (BB.isCold())
+        Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     return Estimate;
   }
 
   size_t estimateSize() const {
     size_t Estimate = 0;
-    for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-      Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+    for (const BinaryBasicBlock &BB : blocks())
+      Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     return Estimate;
   }
 

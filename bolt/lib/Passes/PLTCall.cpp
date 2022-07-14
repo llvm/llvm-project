@@ -57,11 +57,11 @@ void PLTCall::runOnFunctions(BinaryContext &BC) {
         Function.getExecutionCount() == BinaryFunction::COUNT_NO_PROFILE)
       continue;
 
-    for (BinaryBasicBlock *BB : Function.layout()) {
-      if (opts::PLT == OT_HOT && !BB->getKnownExecutionCount())
+    for (BinaryBasicBlock &BB : Function) {
+      if (opts::PLT == OT_HOT && !BB.getKnownExecutionCount())
         continue;
 
-      for (MCInst &Instr : *BB) {
+      for (MCInst &Instr : BB) {
         if (!BC.MIB->isCall(Instr))
           continue;
         const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);

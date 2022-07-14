@@ -29,8 +29,8 @@ namespace bolt {
 
 void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
-  for (BinaryBasicBlock *BB : BF.layout()) {
-    for (auto It = BB->begin(); It != BB->end(); ++It) {
+  for (BinaryBasicBlock &BB : BF) {
+    for (auto It = BB.begin(); It != BB.end(); ++It) {
       MCInst &Inst = *It;
       if (!BC.MIB->isADR(Inst))
         continue;
@@ -54,7 +54,7 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
       int64_t Addend = BC.MIB->getTargetAddend(Inst);
       InstructionListType Addr =
           BC.MIB->materializeAddress(Symbol, BC.Ctx.get(), Reg, Addend);
-      It = BB->replaceInstruction(It, Addr);
+      It = BB.replaceInstruction(It, Addr);
     }
   }
 }

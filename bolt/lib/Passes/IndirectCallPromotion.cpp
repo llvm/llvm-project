@@ -162,11 +162,11 @@ static bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
     BinaryFunction &BF = BFI.second;
     if (!BF.isSimple())
       continue;
-    for (BinaryBasicBlock *BB : BF.layout()) {
-      auto BI = BB->branch_info_begin();
-      for (BinaryBasicBlock *SuccBB : BB->successors()) {
+    for (const BinaryBasicBlock &BB : BF) {
+      auto BI = BB.branch_info_begin();
+      for (BinaryBasicBlock *SuccBB : BB.successors()) {
         if (BI->Count != BinaryBasicBlock::COUNT_NO_PROFILE && BI->Count > 0) {
-          if (BB->getKnownExecutionCount() == 0 ||
+          if (BB.getKnownExecutionCount() == 0 ||
               SuccBB->getKnownExecutionCount() == 0) {
             errs() << "BOLT-WARNING: profile verification failed after ICP for "
                       "function "
