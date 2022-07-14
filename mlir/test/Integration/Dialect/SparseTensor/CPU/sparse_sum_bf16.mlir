@@ -24,7 +24,7 @@ module {
   // A kernel that sum-reduces a matrix to a single scalar.
   //
   func.func @kernel_sum_reduce(%arga: tensor<?x?xbf16, #SparseMatrix>,
-                          %argx: tensor<bf16> {linalg.inplaceable = true}) -> tensor<bf16> {
+                               %argx: tensor<bf16>) -> tensor<bf16> {
     %0 = linalg.generic #trait_sum_reduce
       ins(%arga: tensor<?x?xbf16, #SparseMatrix>)
       outs(%argx: tensor<bf16>) {
