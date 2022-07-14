@@ -660,7 +660,7 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
 
   auto *IP = GetLoopInvariantInsertPosition(L, I);
 
-  if (!isSafeToExpandAt(S, IP, *SE)) {
+  if (!Rewriter.isSafeToExpandAt(S, IP)) {
     LLVM_DEBUG(dbgs() << "INDVARS: Can not replace IV user: " << *I
                       << " with non-speculable loop invariant: " << *S << '\n');
     return false;

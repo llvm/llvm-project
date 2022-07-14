@@ -388,15 +388,15 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
     if (!isStrideLargeEnough(P.LSCEVAddRec, TargetMinStride))
       continue;
 
+    BasicBlock *BB = P.InsertPt->getParent();
+    SCEVExpander SCEVE(*SE, BB->getModule()->getDataLayout(), "prefaddr");
     const SCEV *NextLSCEV = SE->getAddExpr(P.LSCEVAddRec, SE->getMulExpr(
       SE->getConstant(P.LSCEVAddRec->getType(), ItersAhead),
       P.LSCEVAddRec->getStepRecurrence(*SE)));
-    if (!isSafeToExpand(NextLSCEV, *SE))
+    if (!SCEVE.isSafeToExpand(NextLSCEV))
       continue;
 
-    BasicBlock *BB = P.InsertPt->getParent();
     Type *I8Ptr = Type::getInt8PtrTy(BB->getContext(), 0/*PtrAddrSpace*/);
-    SCEVExpander SCEVE(*SE, BB->getModule()->getDataLayout(), "prefaddr");
     Value *PrefPtrValue = SCEVE.expandCodeFor(NextLSCEV, I8Ptr, P.InsertPt);
 
     IRBuilder<> Builder(P.InsertPt);
