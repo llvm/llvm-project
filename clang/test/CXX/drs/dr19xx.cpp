@@ -83,7 +83,7 @@ namespace dr1940 { // dr1940: yes
 #if __cplusplus >= 201103L
 static union {
   static_assert(true, "");  // ok
-  static_assert(false, ""); // expected-error {{static assertion failed}}
+  static_assert(false, ""); // expected-error {{static_assert failed}}
   int not_empty;
 };
 #endif

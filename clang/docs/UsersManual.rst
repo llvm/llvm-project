@@ -2513,6 +2513,32 @@ When the file contains only excludes, all files and functions except for the
 excluded ones will be instrumented. Otherwise, only the files and functions
 specified will be instrumented.
 
+Instrument function groups
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Sometimes it is desirable to minimize the size overhead of instrumented
+binaries. One way to do this is to partition functions into groups and only
+instrument functions in a specified group. This can be done using the
+`-fprofile-function-groups` and `-fprofile-selected-function-group` options.
+
+.. option:: -fprofile-function-groups=<N>, -fprofile-selected-function-group=<i>
+
+  The following uses 3 groups
+
+  .. code-block:: console
+
+    $ clang++ -Oz -fprofile-generate=group_0/ -fprofile-function-groups=3 -fprofile-selected-function-group=0 code.cc -o code.0
+    $ clang++ -Oz -fprofile-generate=group_1/ -fprofile-function-groups=3 -fprofile-selected-function-group=1 code.cc -o code.1
+    $ clang++ -Oz -fprofile-generate=group_2/ -fprofile-function-groups=3 -fprofile-selected-function-group=2 code.cc -o code.2
+
+  After collecting raw profiles from the three binaries, they can be merged into
+  a single profile like normal.
+
+  .. code-block:: console
+
+    $ llvm-profdata merge -output=code.profdata group_*/*.profraw
+
+
 Profile remapping
 ^^^^^^^^^^^^^^^^^
 

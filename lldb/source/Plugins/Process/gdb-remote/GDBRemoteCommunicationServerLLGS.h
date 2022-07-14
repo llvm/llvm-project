@@ -110,7 +110,6 @@ protected:
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;
 
-  lldb::StateType m_inferior_prev_state = lldb::StateType::eStateInvalid;
   llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> m_xfer_buffer_map;
   std::mutex m_saved_registers_mutex;
   std::unordered_map<uint32_t, lldb::DataBufferSP> m_saved_registers_map;
