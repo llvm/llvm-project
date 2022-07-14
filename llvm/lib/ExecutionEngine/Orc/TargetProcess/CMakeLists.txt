@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMOrcTargetProcess
+  ExecutorSharedMemoryMapperService.cpp
   JITLoaderGDB.cpp
   OrcRTBootstrap.cpp
   RegisterEHFrames.cpp

@@ -151,8 +151,8 @@ void test_all() {
   //in2_pred(std::ranges::partial_sort_copy, in, in2, binary_pred);
   in2_out_pred(std::ranges::merge, in, in2, out, binary_pred);
   in2_out_pred(std::ranges::set_difference, in, in2, out, binary_pred);
-  //in2_out_pred(std::ranges::set_intersection, in, in2, out, binary_pred);
-  //in2_out_pred(std::ranges::set_symmetric_difference, in, in2, out, binary_pred);
+  in2_out_pred(std::ranges::set_intersection, in, in2, out, binary_pred);
+  in2_out_pred(std::ranges::set_symmetric_difference, in, in2, out, binary_pred);
   //in2_out_pred(std::ranges::set_union, in, in2, out, binary_pred);
   in_pred(std::ranges::remove_if, in, unary_pred);
   //in_pred(std::ranges::unique, in, binary_pred);

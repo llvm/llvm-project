@@ -300,6 +300,11 @@ let Command = "breakpoint command delete" in {
 let Command = "disassemble" in {
   def disassemble_options_bytes : Option<"bytes", "b">,
     Desc<"Show opcode bytes when disassembling.">;
+  def disassemble_options_kind : Option<"kind", "k">,
+    Desc<"Show instruction control flow kind. Refer to the enum "
+    "`InstructionControlFlowKind` for a list of control flow kind. "
+    "As an important note, far jumps, far calls and far returns often indicate "
+    "calls to and from kernel.">;
   def disassemble_options_context : Option<"context", "C">, Arg<"NumLines">,
     Desc<"Number of context lines of source to show.">;
   def disassemble_options_mixed : Option<"mixed", "m">,
@@ -783,14 +788,6 @@ let Command = "process save_core" in {
     "This allows core files to be saved in different formats.">;
 }
 
-let Command = "process trace save" in {
-  def process_trace_save_directory: Option<"directory", "d">,
-    Group<1>,
-    Arg<"Value">, Required,
-    Desc<"The directory where the trace will be saved."
-        "It will be created if it does not exist.">;
-}
-
 let Command = "script import" in {
   def script_import_allow_reload : Option<"allow-reload", "r">, Group<1>,
     Desc<"Allow the script to be loaded even if it was already loaded before. "
@@ -1150,6 +1147,11 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instructions_pretty_print: Option<"pretty-json", "J">,
     Group<1>,
     Desc<"Dump in JSON format but pretty printing the output for easier readability.">;
+  def thread_trace_dump_instructions_show_kind : Option<"kind", "k">, Group<1>,
+    Desc<"Show instruction control flow kind. Refer to the enum "
+    "`InstructionControlFlowKind` for a list of control flow kind. "
+    "As an important note, far jumps, far calls and far returns often indicate "
+    "calls to and from kernel.">;
   def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">, Group<1>,
     Desc<"For each instruction, print the corresponding timestamp counter if "
     "available.">;
@@ -1167,6 +1169,8 @@ let Command = "thread trace dump instructions" in {
 let Command = "thread trace dump info" in {
   def thread_trace_dump_info_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"show verbose thread trace dump info">;
+  def thread_trace_dump_info_json: Option<"json", "j">, Group<1>,
+    Desc<"Dump in JSON format.">;
 }
 
 let Command = "type summary add" in {
@@ -1347,6 +1351,14 @@ let Command = "trace load" in {
   def trace_load_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose trace load logging for debugging the plug-in "
     "implementation.">;
+}
+
+let Command = "trace save" in {
+  def trace_save_compact: Option<"compact", "c">,
+    Group<1>,
+    Desc<"Try not to save to disk information irrelevant to the traced "
+        "processes. Each trace plug-in implements this in a different "
+        "fashion.">;
 }
 
 let Command = "trace dump" in {

@@ -69,7 +69,7 @@ program selectCaseProg
 
   ! C1147
   select case (grade2)
-     !ERROR: CASE value has type 'CHARACTER(1)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=1,LEN=1_8)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
      case (:'Z')
      case default
    end select
@@ -94,19 +94,19 @@ program selectCaseProg
      case (.true. :)
      !ERROR: CASE value has type 'REAL(4)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
      case (1.0)
-     !ERROR: CASE value has type 'CHARACTER(1)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=1,LEN=3_8)' which is not compatible with the SELECT CASE expression's type 'INTEGER(4)'
      case ('wow')
   end select
 
   select case (ASCII_parm1)
      case (ASCII_parm2)
-     !ERROR: CASE value has type 'CHARACTER(4)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(1)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=4,LEN=1_8)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(KIND=1,LEN=1_8)'
      case (UCS32_parm)
-     !ERROR: CASE value has type 'CHARACTER(2)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(1)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=2,LEN=1_8)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(KIND=1,LEN=1_8)'
      case (UCS16_parm)
-     !ERROR: CASE value has type 'CHARACTER(4)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(1)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=4,LEN=6_8)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(KIND=1,LEN=1_8)'
      case (4_"ucs-32")
-     !ERROR: CASE value has type 'CHARACTER(2)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(1)'
+     !ERROR: CASE value has type 'CHARACTER(KIND=2,LEN=6_8)' which is not compatible with the SELECT CASE expression's type 'CHARACTER(KIND=1,LEN=1_8)'
      case (2_"ucs-16")
      case default
    end select

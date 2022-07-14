@@ -746,8 +746,8 @@ Syntax::
                          <global | constant> <Type> [<InitializerConstant>]
                          [, section "name"] [, partition "name"]
                          [, comdat [($name)]] [, align <Alignment>]
-                         [, no_sanitize] [, no_sanitize_address]
-                         [, no_sanitize_hwaddress] [, sanitize_address_dyninit]
+                         [, no_sanitize_address] [, no_sanitize_hwaddress]
+                         [, sanitize_address_dyninit] [, sanitize_memtag]
                          (, !name !N)*
 
 For example, the following defines a global in a numbered address space
@@ -1678,6 +1678,10 @@ example:
     Front ends can provide optional ``srcloc`` metadata nodes on call sites of
     such callees to attach information about where in the source language such a
     call came from. A string value can be provided as a note.
+``fn_ret_thunk_extern``
+    This attribute tells the code generator that returns from functions should
+    be replaced with jumps to externally-defined architecture-specific symbols.
+    For X86, this symbol's identifier is ``__x86_return_thunk``.
 ``"frame-pointer"``
     This attribute tells the code generator whether the function
     should keep the frame pointer. The code generator may emit the frame pointer
@@ -2323,19 +2327,31 @@ Attributes may be set to communicate additional information about a global varia
 Unlike :ref:`function attributes <fnattrs>`, attributes on a global variable
 are grouped into a single :ref:`attribute group <attrgrp>`.
 
-``no_sanitize``
-    This attribute indicates that the global variable should not have any
-    sanitizers applied to it, either because it was in the sanitizer ignore
-    list, or it was annotated with
-    `__attribute__((disable_sanitizer_instrumentation))`.
 ``no_sanitize_address``
     This attribute indicates that the global variable should not have
     AddressSanitizer instrumentation applied to it, because it was annotated
-    with `__attribute__((no_sanitize("address")))`.
+    with `__attribute__((no_sanitize("address")))`,
+    `__attribute__((disable_sanitizer_instrumentation))`, or included in the
+    `-fsanitize-ignorelist` file.
 ``no_sanitize_hwaddress``
     This attribute indicates that the global variable should not have
     HWAddressSanitizer instrumentation applied to it, because it was annotated
-    with `__attribute__((no_sanitize("hwaddress")))`.
+    with `__attribute__((no_sanitize("hwaddress")))`,
+    `__attribute__((disable_sanitizer_instrumentation))`, or included in the
+    `-fsanitize-ignorelist` file.
+``sanitize_memtag``
+    This attribute indicates that the global variable should have AArch64 memory
+    tags (MTE) instrumentation applied to it. This attribute causes the
+    suppression of certain optimisations, like GlobalMerge, as well as ensuring
+    extra directives are emitted in the assembly and extra bits of metadata are
+    placed in the object file so that the linker can ensure the accesses are
+    protected by MTE. This attribute is added by clang when
+    `-fsanitize=memtag-globals` is provided, as long as the global is not marked
+    with `__attribute__((no_sanitize("memtag")))`,
+    `__attribute__((disable_sanitizer_instrumentation))`, or included in the
+    `-fsanitize-ignorelist` file. The AArch64 Globals Tagging pass may remove
+    this attribute when it's not possible to tag the global (e.g. it's a TLS
+    variable).
 ``sanitize_address_dyninit``
     This attribute indicates that the global variable, when instrumented with
     AddressSanitizer, should be checked for ODR violations. This attribute is

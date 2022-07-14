@@ -39,7 +39,7 @@ struct __fn {
             indirect_strict_weak_order<const _Type*, projected<_Iter, _Proj>> _Comp = ranges::less>
   _LIBCPP_HIDE_FROM_ABI constexpr
   _Iter operator()(_Iter __first, _Sent __last, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
-    return std::__lower_bound_impl<_RangesIterOps>(__first, __last, __value, __comp, __proj);
+    return std::__lower_bound_impl<_RangeAlgPolicy>(__first, __last, __value, __comp, __proj);
   }
 
   template <forward_range _Range, class _Type, class _Proj = identity,
@@ -49,7 +49,7 @@ struct __fn {
                                          const _Type& __value,
                                          _Comp __comp = {},
                                          _Proj __proj = {}) const {
-    return std::__lower_bound_impl<_RangesIterOps>(ranges::begin(__r), ranges::end(__r), __value, __comp, __proj);
+    return std::__lower_bound_impl<_RangeAlgPolicy>(ranges::begin(__r), ranges::end(__r), __value, __comp, __proj);
   }
 };
 } // namespace __lower_bound

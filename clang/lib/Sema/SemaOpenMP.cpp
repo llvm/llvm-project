@@ -840,7 +840,7 @@ public:
   /// false - otherwise.
   bool isOrderedRegion() const {
     if (const SharingMapTy *Top = getTopOfStackOrNull())
-      return Top->OrderedRegion.hasValue();
+      return Top->OrderedRegion.has_value();
     return false;
   }
   /// Returns optional parameter for the ordered region.
@@ -854,7 +854,7 @@ public:
   /// 'ordered' clause), false - otherwise.
   bool isParentOrderedRegion() const {
     if (const SharingMapTy *Parent = getSecondOnStackOrNull())
-      return Parent->OrderedRegion.hasValue();
+      return Parent->OrderedRegion.has_value();
     return false;
   }
   /// Returns optional parameter for the ordered region.
@@ -7832,9 +7832,9 @@ public:
   /// Return true if any expression is dependent.
   bool dependent() const;
   /// Returns true if the initializer forms non-rectangular loop.
-  bool doesInitDependOnLC() const { return InitDependOnLC.hasValue(); }
+  bool doesInitDependOnLC() const { return InitDependOnLC.has_value(); }
   /// Returns true if the condition forms non-rectangular loop.
-  bool doesCondDependOnLC() const { return CondDependOnLC.hasValue(); }
+  bool doesCondDependOnLC() const { return CondDependOnLC.has_value(); }
   /// Returns index of the loop we depend on (starting from 1), or 0 otherwise.
   unsigned getLoopDependentIdx() const {
     return InitDependOnLC.value_or(CondDependOnLC.value_or(0));
@@ -8775,10 +8775,10 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
   Expr *MaxExpr = nullptr;
   Expr *LBExpr = TestIsLessOp.getValue() ? LB : UB;
   Expr *UBExpr = TestIsLessOp.getValue() ? UB : LB;
-  bool LBNonRect = TestIsLessOp.getValue() ? InitDependOnLC.hasValue()
-                                           : CondDependOnLC.hasValue();
-  bool UBNonRect = TestIsLessOp.getValue() ? CondDependOnLC.hasValue()
-                                           : InitDependOnLC.hasValue();
+  bool LBNonRect = TestIsLessOp.getValue() ? InitDependOnLC.has_value()
+                                           : CondDependOnLC.has_value();
+  bool UBNonRect = TestIsLessOp.getValue() ? CondDependOnLC.has_value()
+                                           : InitDependOnLC.has_value();
   Expr *Lower =
       LBNonRect ? LBExpr : tryBuildCapture(SemaRef, LBExpr, Captures).get();
   Expr *Upper =

@@ -2891,10 +2891,9 @@ void RewriteInstance::disassembleFunctions() {
 
     if (opts::PrintAll || opts::PrintDisasm)
       Function.print(outs(), "after disassembly", true);
-
-    BC->processInterproceduralReferences(Function);
   }
 
+  BC->processInterproceduralReferences();
   BC->clearJumpTableOffsets();
   BC->populateJumpTables();
   BC->skipMarkedFragments();

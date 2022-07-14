@@ -414,7 +414,8 @@ public:
   bool isArgumentConstructedDirectly(unsigned Index) const {
     // This assumes that the object was not yet removed from the state.
     return ExprEngine::getObjectUnderConstruction(
-        getState(), {getOriginExpr(), Index}, getLocationContext()).hasValue();
+               getState(), {getOriginExpr(), Index}, getLocationContext())
+        .has_value();
   }
 
   /// Some calls have parameter numbering mismatched from argument numbering.

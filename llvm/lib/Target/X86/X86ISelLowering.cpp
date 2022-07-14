@@ -5912,11 +5912,6 @@ static bool isInRange(int Val, int Low, int Hi) {
   return (Val >= Low && Val < Hi);
 }
 
-/// Return true if every val in Mask falls within the specified range (L, H].
-static bool isInRange(ArrayRef<int> Mask, int Low, int Hi) {
-  return llvm::all_of(Mask, [Low, Hi](int M) { return isInRange(M, Low, Hi); });
-}
-
 /// Return true if the value of any element in Mask falls within the specified
 /// range (L, H].
 static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
@@ -11733,7 +11728,8 @@ static bool isTargetShuffleEquivalent(MVT VT, ArrayRef<int> Mask,
   int Size = Mask.size();
   if (Size != (int)ExpectedMask.size())
     return false;
-  assert(isInRange(ExpectedMask, 0, 2 * Size) &&
+  assert(llvm::all_of(ExpectedMask,
+                      [Size](int M) { return isInRange(M, 0, 2 * Size); }) &&
          "Illegal target shuffle mask");
 
   // Check for out-of-range target shuffle mask indices.

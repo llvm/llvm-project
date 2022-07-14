@@ -2108,9 +2108,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     getStackGuard(getOrCreateVReg(CI), MIRBuilder);
     return true;
   case Intrinsic::stackprotector: {
+    const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
     LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
-    Register GuardVal = MRI->createGenericVirtualRegister(PtrTy);
-    getStackGuard(GuardVal, MIRBuilder);
+    Register GuardVal;
+    if (TLI.useLoadStackGuardNode()) {
+      GuardVal = MRI->createGenericVirtualRegister(PtrTy);
+      getStackGuard(GuardVal, MIRBuilder);
+    } else
+      GuardVal = getOrCreateVReg(*CI.getArgOperand(0)); // The guard's value.
 
     AllocaInst *Slot = cast<AllocaInst>(CI.getArgOperand(1));
     int FI = getOrCreateFrameIndex(*Slot);

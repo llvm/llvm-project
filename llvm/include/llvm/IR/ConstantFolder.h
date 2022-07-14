@@ -88,6 +88,13 @@ public:
     return FoldBinOp(Opc, LHS, RHS);
   }
 
+  Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
+                      FastMathFlags FMF) const override {
+    if (Constant *C = dyn_cast<Constant>(V))
+      return ConstantExpr::get(Opc, C);
+    return nullptr;
+  }
+
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
@@ -161,18 +168,6 @@ public:
     if (C1 && C2)
       return ConstantExpr::getShuffleVector(C1, C2, Mask);
     return nullptr;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Unary Operators
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateFNeg(Constant *C) const override {
-    return ConstantExpr::getFNeg(C);
-  }
-
-  Constant *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {
-    return ConstantExpr::get(Opc, C);
   }
 
   //===--------------------------------------------------------------------===//

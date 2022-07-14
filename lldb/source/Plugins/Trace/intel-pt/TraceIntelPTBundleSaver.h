@@ -31,10 +31,16 @@ public:
   /// \param[in] directory
   ///     The directory where the trace bundle will be created.
   ///
+  /// \param[in] compact
+  ///     Filter out information irrelevant to the traced processes in the
+  ///     context switch and intel pt traces when using per-cpu mode. This
+  ///     effectively reduces the size of those traces.
+  ///
   /// \return
-  ///     \a llvm::success if the operation was successful, or an \a llvm::Error
-  ///     otherwise.
-  llvm::Error SaveToDisk(TraceIntelPT &trace_ipt, FileSpec directory);
+  ///   A \a FileSpec pointing to the bundle description file, or an \a
+  ///   llvm::Error otherwise.
+  llvm::Expected<FileSpec> SaveToDisk(TraceIntelPT &trace_ipt,
+                                      FileSpec directory, bool compact);
 };
 
 } // namespace trace_intel_pt

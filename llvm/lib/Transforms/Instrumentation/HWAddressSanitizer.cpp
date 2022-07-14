@@ -180,11 +180,31 @@ static cl::opt<bool> ClWithTls(
              "platforms that support this"),
     cl::Hidden, cl::init(true));
 
-static cl::opt<bool>
-    ClRecordStackHistory("hwasan-record-stack-history",
-                         cl::desc("Record stack frames with tagged allocations "
-                                  "in a thread-local ring buffer"),
-                         cl::Hidden, cl::init(true));
+// Mode for selecting how to insert frame record info into the stack ring
+// buffer.
+enum RecordStackHistoryMode {
+  // Do not record frame record info.
+  none,
+
+  // Insert instructions into the prologue for storing into the stack ring
+  // buffer directly.
+  instr,
+
+  // Add a call to __hwasan_add_frame_record in the runtime.
+  libcall,
+};
+
+static cl::opt<RecordStackHistoryMode> ClRecordStackHistory(
+    "hwasan-record-stack-history",
+    cl::desc("Record stack frames with tagged allocations in a thread-local "
+             "ring buffer"),
+    cl::values(clEnumVal(none, "Do not record stack ring history"),
+               clEnumVal(instr, "Insert instructions into the prologue for "
+                                "storing into the stack ring buffer directly"),
+               clEnumVal(libcall, "Add a call to __hwasan_add_frame_record for "
+                                  "storing into the stack ring buffer")),
+    cl::Hidden, cl::init(instr));
+
 static cl::opt<bool>
     ClInstrumentMemIntrinsics("hwasan-instrument-mem-intrinsics",
                               cl::desc("instrument memory intrinsics"),
@@ -379,6 +399,7 @@ private:
 
   FunctionCallee HwasanTagMemoryFunc;
   FunctionCallee HwasanGenerateTagFunc;
+  FunctionCallee HwasanRecordFrameRecordFunc;
 
   Constant *ShadowGlobal;
 
@@ -629,6 +650,9 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
       "__hwasan_tag_memory", IRB.getVoidTy(), Int8PtrTy, Int8Ty, IntptrTy);
   HwasanGenerateTagFunc =
       M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty);
+
+  HwasanRecordFrameRecordFunc = M.getOrInsertFunction(
+      "__hwasan_add_frame_record", IRB.getVoidTy(), Int64Ty);
 
   ShadowGlobal = M.getOrInsertGlobal("__hwasan_shadow",
                                      ArrayType::get(IRB.getInt8Ty(), 0));
@@ -1157,39 +1181,67 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   if (!WithFrameRecord && ShadowBase)
     return;
 
-  Value *SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
-  assert(SlotPtr);
+  Value *SlotPtr = nullptr;
+  Value *ThreadLong = nullptr;
+  Value *ThreadLongMaybeUntagged = nullptr;
 
-  Value *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
-  // Extract the address field from ThreadLong. Unnecessary on AArch64 with TBI.
-  Value *ThreadLongMaybeUntagged =
-      TargetTriple.isAArch64() ? ThreadLong : untagPointer(IRB, ThreadLong);
+  auto getThreadLongMaybeUntagged = [&]() {
+    if (!SlotPtr)
+      SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
+    if (!ThreadLong)
+      ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
+    // Extract the address field from ThreadLong. Unnecessary on AArch64 with
+    // TBI.
+    return TargetTriple.isAArch64() ? ThreadLong
+                                    : untagPointer(IRB, ThreadLong);
+  };
 
   if (WithFrameRecord) {
-    StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
+    switch (ClRecordStackHistory) {
+    case libcall: {
+      // Emit a runtime call into hwasan rather than emitting instructions for
+      // recording stack history.
+      Value *FrameRecordInfo = getFrameRecordInfo(IRB);
+      IRB.CreateCall(HwasanRecordFrameRecordFunc, {FrameRecordInfo});
+      break;
+    }
+    case instr: {
+      ThreadLongMaybeUntagged = getThreadLongMaybeUntagged();
 
-    // Store data to ring buffer.
-    Value *FrameRecordInfo = getFrameRecordInfo(IRB);
-    Value *RecordPtr =
-        IRB.CreateIntToPtr(ThreadLongMaybeUntagged, IntptrTy->getPointerTo(0));
-    IRB.CreateStore(FrameRecordInfo, RecordPtr);
+      StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
 
-    // Update the ring buffer. Top byte of ThreadLong defines the size of the
-    // buffer in pages, it must be a power of two, and the start of the buffer
-    // must be aligned by twice that much. Therefore wrap around of the ring
-    // buffer is simply Addr &= ~((ThreadLong >> 56) << 12).
-    // The use of AShr instead of LShr is due to
-    //   https://bugs.llvm.org/show_bug.cgi?id=39030
-    // Runtime library makes sure not to use the highest bit.
-    Value *WrapMask = IRB.CreateXor(
-        IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
-        ConstantInt::get(IntptrTy, (uint64_t)-1));
-    Value *ThreadLongNew = IRB.CreateAnd(
-        IRB.CreateAdd(ThreadLong, ConstantInt::get(IntptrTy, 8)), WrapMask);
-    IRB.CreateStore(ThreadLongNew, SlotPtr);
+      // Store data to ring buffer.
+      Value *FrameRecordInfo = getFrameRecordInfo(IRB);
+      Value *RecordPtr = IRB.CreateIntToPtr(ThreadLongMaybeUntagged,
+                                            IntptrTy->getPointerTo(0));
+      IRB.CreateStore(FrameRecordInfo, RecordPtr);
+
+      // Update the ring buffer. Top byte of ThreadLong defines the size of the
+      // buffer in pages, it must be a power of two, and the start of the buffer
+      // must be aligned by twice that much. Therefore wrap around of the ring
+      // buffer is simply Addr &= ~((ThreadLong >> 56) << 12).
+      // The use of AShr instead of LShr is due to
+      //   https://bugs.llvm.org/show_bug.cgi?id=39030
+      // Runtime library makes sure not to use the highest bit.
+      Value *WrapMask = IRB.CreateXor(
+          IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
+          ConstantInt::get(IntptrTy, (uint64_t)-1));
+      Value *ThreadLongNew = IRB.CreateAnd(
+          IRB.CreateAdd(ThreadLong, ConstantInt::get(IntptrTy, 8)), WrapMask);
+      IRB.CreateStore(ThreadLongNew, SlotPtr);
+      break;
+    }
+    case none: {
+      llvm_unreachable(
+          "A stack history recording mode should've been selected.");
+    }
+    }
   }
 
   if (!ShadowBase) {
+    if (!ThreadLongMaybeUntagged)
+      ThreadLongMaybeUntagged = getThreadLongMaybeUntagged();
+
     // Get shadow base address by aligning RecordPtr up.
     // Note: this is not correct if the pointer is already aligned.
     // Runtime library will make sure this never happens.
@@ -1413,7 +1465,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F,
   Instruction *InsertPt = &*F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(InsertPt);
   emitPrologue(EntryIRB,
-               /*WithFrameRecord*/ ClRecordStackHistory &&
+               /*WithFrameRecord*/ ClRecordStackHistory != none &&
                    Mapping.WithFrameRecord &&
                    !SInfo.AllocasToInstrument.empty());
 

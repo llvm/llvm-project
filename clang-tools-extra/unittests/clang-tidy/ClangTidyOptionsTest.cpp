@@ -129,14 +129,14 @@ TEST(ParseConfiguration, MergeConfigurations) {
   EXPECT_EQ("check1,check2,check3,check4", *Options.Checks);
   EXPECT_EQ("filter2", *Options.HeaderFilterRegex);
   EXPECT_EQ("user2", *Options.User);
-  ASSERT_TRUE(Options.ExtraArgs.hasValue());
+  ASSERT_TRUE(Options.ExtraArgs.has_value());
   EXPECT_EQ("arg1,arg2,arg3,arg4", llvm::join(Options.ExtraArgs->begin(),
                                               Options.ExtraArgs->end(), ","));
-  ASSERT_TRUE(Options.ExtraArgsBefore.hasValue());
+  ASSERT_TRUE(Options.ExtraArgsBefore.has_value());
   EXPECT_EQ("arg-before1,arg-before2,arg-before3,arg-before4",
             llvm::join(Options.ExtraArgsBefore->begin(),
                        Options.ExtraArgsBefore->end(), ","));
-  ASSERT_TRUE(Options.UseColor.hasValue());
+  ASSERT_TRUE(Options.UseColor.has_value());
   EXPECT_TRUE(*Options.UseColor);
 }
 
@@ -326,9 +326,9 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
 
   CHECK_VAL(TestCheck.getIntLocal("IntExpected"), 1);
   CHECK_VAL(TestCheck.getIntGlobal("GlobalIntExpected"), 1);
-  EXPECT_FALSE(TestCheck.getIntLocal("IntInvalid1").hasValue());
-  EXPECT_FALSE(TestCheck.getIntLocal("IntInvalid2").hasValue());
-  EXPECT_FALSE(TestCheck.getIntGlobal("GlobalIntInvalid").hasValue());
+  EXPECT_FALSE(TestCheck.getIntLocal("IntInvalid1").has_value());
+  EXPECT_FALSE(TestCheck.getIntLocal("IntInvalid2").has_value());
+  EXPECT_FALSE(TestCheck.getIntGlobal("GlobalIntInvalid").has_value());
   ASSERT_EQ(TestCheck.getIntLocal("DefaultedIntInvalid", 1), 1);
 
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolITrueValue"), true);
@@ -397,14 +397,14 @@ TEST(ValidConfiguration, ValidEnumOptions) {
                                             /*IgnoreCase*/ true),
             Colours::Violet);
 
-  EXPECT_FALSE(TestCheck.getIntLocal<Colours>("ValidWrongCase").hasValue());
-  EXPECT_FALSE(TestCheck.getIntLocal<Colours>("NearMiss").hasValue());
-  EXPECT_FALSE(TestCheck.getIntGlobal<Colours>("GlobalInvalid").hasValue());
+  EXPECT_FALSE(TestCheck.getIntLocal<Colours>("ValidWrongCase").has_value());
+  EXPECT_FALSE(TestCheck.getIntLocal<Colours>("NearMiss").has_value());
+  EXPECT_FALSE(TestCheck.getIntGlobal<Colours>("GlobalInvalid").has_value());
   EXPECT_FALSE(
-      TestCheck.getIntGlobal<Colours>("GlobalValidWrongCase").hasValue());
-  EXPECT_FALSE(TestCheck.getIntGlobal<Colours>("GlobalNearMiss").hasValue());
+      TestCheck.getIntGlobal<Colours>("GlobalValidWrongCase").has_value());
+  EXPECT_FALSE(TestCheck.getIntGlobal<Colours>("GlobalNearMiss").has_value());
 
-  EXPECT_FALSE(TestCheck.getIntLocal<Colours>("Invalid").hasValue());
+  EXPECT_FALSE(TestCheck.getIntLocal<Colours>("Invalid").has_value());
   EXPECT_THAT(
       DiagConsumer.take(),
       UnorderedElementsAre(

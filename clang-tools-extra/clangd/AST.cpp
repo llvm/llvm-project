@@ -745,7 +745,7 @@ public:
     if (Callee) {
       handleCall(Callee, E->arguments());
     }
-    return !Info.hasValue();
+    return !Info.has_value();
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
@@ -753,7 +753,7 @@ public:
     if (Callee) {
       handleCall(Callee, E->arguments());
     }
-    return !Info.hasValue();
+    return !Info.has_value();
   }
 
   // The expanded parameter pack to be resolved

@@ -57,7 +57,8 @@ void zlib::compress(StringRef InputBuffer,
   // Tell MemorySanitizer that zlib output buffer is fully initialized.
   // This avoids a false report when running LLVM with uninstrumented ZLib.
   __msan_unpoison(CompressedBuffer.data(), CompressedSize);
-  CompressedBuffer.truncate(CompressedSize);
+  if (CompressedSize < CompressedBuffer.size())
+    CompressedBuffer.truncate(CompressedSize);
 }
 
 Error zlib::uncompress(StringRef InputBuffer, char *UncompressedBuffer,
@@ -79,7 +80,8 @@ Error zlib::uncompress(StringRef InputBuffer,
   UncompressedBuffer.resize_for_overwrite(UncompressedSize);
   Error E = zlib::uncompress(InputBuffer, UncompressedBuffer.data(),
                              UncompressedSize);
-  UncompressedBuffer.truncate(UncompressedSize);
+  if (UncompressedSize < UncompressedBuffer.size())
+    UncompressedBuffer.truncate(UncompressedSize);
   return E;
 }
 

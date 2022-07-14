@@ -134,6 +134,8 @@ if(LLVM_ENABLE_ZLIB)
     endif()
   endif()
   set(LLVM_ENABLE_ZLIB "${HAVE_ZLIB}")
+else()
+  set(LLVM_ENABLE_ZLIB 0)
 endif()
 
 if(LLVM_ENABLE_LIBXML2)

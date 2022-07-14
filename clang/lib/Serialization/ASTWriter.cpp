@@ -1888,8 +1888,8 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
         // without this file existing on disk.
         if (!U.Size || (!U.ModTime && IncludeTimestamps)) {
           PP->Diag(U.FileNameLoc, diag::err_module_no_size_mtime_for_header)
-            << WritingModule->getFullModuleName() << U.Size.hasValue()
-            << U.FileName;
+              << WritingModule->getFullModuleName() << U.Size.has_value()
+              << U.FileName;
           continue;
         }
 

@@ -27,6 +27,18 @@ namespace dr1715 { // dr1715: 3.9
 #endif
 }
 
+namespace dr1734 { // dr1734: no
+#if __cplusplus >= 201103L
+struct A {
+    A(const A&) = delete;
+};
+// FIXME: 'A' should not be trivially copyable because the class lacks at least
+// one non-deleted copy constructor, move constructor, copy assignment
+// operator, or move assignment operator.
+static_assert(__is_trivially_copyable(A), "");
+#endif
+}
+
 namespace dr1736 { // dr1736: 3.9
 #if __cplusplus >= 201103L
 struct S {
