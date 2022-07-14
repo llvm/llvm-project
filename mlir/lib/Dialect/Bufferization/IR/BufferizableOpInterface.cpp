@@ -38,11 +38,6 @@ namespace bufferization {
 using namespace mlir;
 using namespace bufferization;
 
-/// Attribute name used to mark region arguments that can be bufferized
-/// in-place during linalg comprehensive bufferization.
-constexpr const ::llvm::StringLiteral
-    bufferization::BufferizableOpInterface::kInplaceableAttrName;
-
 /// Return the owner of the given value.
 static Operation *getOwnerOfValue(Value value) {
   if (auto opResult = value.dyn_cast<OpResult>())
