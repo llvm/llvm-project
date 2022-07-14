@@ -24,12 +24,12 @@ namespace mlir {
 namespace presburger {
 
 namespace detail {
-// If builtin intrinsics for overflow-checked arithmetic are available,
-// use them. Otherwise, call through to LLVM's overflow-checked arithmetic
-// functionality. Those functions also have such macro-gated uses of intrinsics,
-// however they are not always_inlined, which is important for us to achieve
-// high-performance; calling the functions directly would result in a slowdown
-// of 1.15x.
+/// If builtin intrinsics for overflow-checked arithmetic are available,
+/// use them. Otherwise, call through to LLVM's overflow-checked arithmetic
+/// functionality. Those functions also have such macro-gated uses of intrinsics
+/// but they are not always_inlined, which is important for us to achieve
+/// high-performance; calling the functions directly would result in a slowdown
+/// of 1.15x.
 LLVM_ATTRIBUTE_ALWAYS_INLINE bool addOverflow(int64_t x, int64_t y,
                                               int64_t &result) {
 #if __has_builtin(__builtin_add_overflow)
