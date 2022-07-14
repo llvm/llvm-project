@@ -1679,6 +1679,17 @@ void BuildLockset::checkAccess(const Expr *Exp, AccessKind AK,
     return;
   }
 
+  if (const auto *BO = dyn_cast<BinaryOperator>(Exp)) {
+    switch (BO->getOpcode()) {
+    case BO_PtrMemD: // .*
+      return checkAccess(BO->getLHS(), AK, POK);
+    case BO_PtrMemI: // ->*
+      return checkPtAccess(BO->getLHS(), AK, POK);
+    default:
+      return;
+    }
+  }
+
   if (const auto *AE = dyn_cast<ArraySubscriptExpr>(Exp)) {
     checkPtAccess(AE->getLHS(), AK, POK);
     return;
