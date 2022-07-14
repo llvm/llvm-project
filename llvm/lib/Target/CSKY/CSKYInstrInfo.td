@@ -153,7 +153,7 @@ def CSKYSymbol : AsmOperandClass {
   let ParserMethod = "parseCSKYSymbol";
 }
 
-def br_symbol : Operand<iPTR> {
+def br_symbol : Operand<OtherVT> {
   let EncoderMethod =
     "getBranchSymbolOpValue<CSKY::fixup_csky_pcrel_imm16_scale2>";
   let ParserMatchClass = CSKYSymbol;
