@@ -2,7 +2,8 @@
 # RUN: yaml2obj %s -DMAGIC=0x01DF -o %t-32
 # RUN: obj2yaml %t-32 | FileCheck %s --check-prefix=CHECK32
 # RUN: yaml2obj %s -DMAGIC=0x01F7 -o %t-64
-# RUN: obj2yaml %t-64 | FileCheck %s --check-prefix=CHECK64
+# RUN: obj2yaml %t-64 -o %t-64.yaml 2>&1 | count 0
+# RUN: FileCheck --input-file %t-64.yaml %s --check-prefix=CHECK64
 
 # CHECK32:      --- !XCOFF
 # CHECK32-NEXT: FileHeader:
