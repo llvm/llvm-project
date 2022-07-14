@@ -78,7 +78,7 @@ AnalyzerOptions::getExplorationStrategy() const {
                 ExplorationStrategyKind::BFSBlockDFSContents)
           .Default(None);
   assert(K && "User mode is invalid.");
-  return K.getValue();
+  return K.value();
 }
 
 CTUPhase1InliningKind AnalyzerOptions::getCTUPhase1Inlining() const {
@@ -89,7 +89,7 @@ CTUPhase1InliningKind AnalyzerOptions::getCTUPhase1Inlining() const {
                .Case("all", CTUPhase1InliningKind::All)
                .Default(None);
   assert(K && "CTU inlining mode is invalid.");
-  return K.getValue();
+  return K.value();
 }
 
 IPAKind AnalyzerOptions::getIPAMode() const {
@@ -102,7 +102,7 @@ IPAKind AnalyzerOptions::getIPAMode() const {
           .Default(None);
   assert(K && "IPA Mode is invalid.");
 
-  return K.getValue();
+  return K.value();
 }
 
 bool
