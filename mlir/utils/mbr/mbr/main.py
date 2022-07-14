@@ -36,16 +36,17 @@ def main(top_level_path, stop_on_error):
         for benchmark_function in benchmark_functions:
             try:
                 compiler, runner = benchmark_function()
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as e:
                 error_message = (
-                    f"benchmark_function '{benchmark_function.__name__}'"
-                    f" must return a two tuple value (compiler, runner)."
+                    f"Obtaining compiler and runner failed because of {e}."
+                    f" Benchmark function '{benchmark_function.__name__}'"
+                    f" must return a two-tuple value (compiler, runner)."
                 )
                 if stop_on_error is False:
                     print(error_message, file=sys.stderr)
                     continue
                 else:
-                    raise AssertionError(error_message)
+                    raise AssertionError(error_message) from e
             measurements_ns = np.array([])
             if compiler:
                 start_compile_time_s = time.time()
@@ -60,7 +61,7 @@ def main(top_level_path, stop_on_error):
                         print(error_message, file=sys.stderr)
                         continue
                     else:
-                        raise AssertionError(error_message)
+                        raise AssertionError(error_message) from e
                 total_compile_time_s = time.time() - start_compile_time_s
                 runner_args = (compiled_callable,)
             else:
@@ -80,7 +81,7 @@ def main(top_level_path, stop_on_error):
                         # and continuing forward.
                         break
                     else:
-                        raise AssertionError(error_message)
+                        raise AssertionError(error_message) from e
                 if not isinstance(measurement_ns, int):
                     error_message = (
                         f"Expected benchmark runner function"
