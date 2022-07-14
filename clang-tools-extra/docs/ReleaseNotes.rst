@@ -183,6 +183,11 @@ Changes in existing checks
 
   - Don't emit an erroneous warning on self-moves.
 
+- Improved :doc:`cert-dcl58-cpp
+  <clang-tidy/checks/cert/dcl58-cpp>` check.
+
+  The check now detects explicit template specializations that are handled specially.
+
 - Made :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` more sensitive
   by checking for an arbitrary expression in the second argument of ``memset``.
 
