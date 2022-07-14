@@ -496,8 +496,8 @@ template <typename ParseType, typename... Args> struct ParseCommaSeparatedList {
     auto remainingValues = ParseCommaSeparatedList<Args...>{}(dialect, parser);
     if (!remainingValues)
       return llvm::None;
-    return std::tuple_cat(std::tuple<ParseType>(parseVal.getValue()),
-                          remainingValues.getValue());
+    return std::tuple_cat(std::tuple<ParseType>(parseVal.value()),
+                          remainingValues.value());
   }
 };
 
@@ -607,11 +607,11 @@ static ParseResult parseStructMemberDecorations(
 
       memberDecorationInfo.emplace_back(
           static_cast<uint32_t>(memberTypes.size() - 1), 1,
-          memberDecoration.getValue(), memberDecorationValue.getValue());
+          memberDecoration.value(), memberDecorationValue.value());
     } else {
       memberDecorationInfo.emplace_back(
           static_cast<uint32_t>(memberTypes.size() - 1), 0,
-          memberDecoration.getValue(), 0);
+          memberDecoration.value(), 0);
     }
     return success();
   };

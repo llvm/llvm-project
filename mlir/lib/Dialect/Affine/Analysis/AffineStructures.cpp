@@ -1011,16 +1011,16 @@ void FlatAffineValueConstraints::getSliceBounds(
       auto ubConst = getConstantBound(BoundType::UB, pos);
       if (lbConst.has_value() && ubConst.has_value()) {
         // Detect equality to a constant.
-        if (lbConst.getValue() == ubConst.getValue()) {
-          memo[pos] = getAffineConstantExpr(lbConst.getValue(), context);
+        if (lbConst.value() == ubConst.value()) {
+          memo[pos] = getAffineConstantExpr(lbConst.value(), context);
           changed = true;
           continue;
         }
 
         // Detect an variable as modulo of another variable w.r.t a
         // constant.
-        if (detectAsMod(*this, pos, lbConst.getValue(), ubConst.getValue(),
-                        memo, context)) {
+        if (detectAsMod(*this, pos, lbConst.value(), ubConst.value(), memo,
+                        context)) {
           changed = true;
           continue;
         }
@@ -1121,9 +1121,9 @@ void FlatAffineValueConstraints::getSliceBounds(
                    << "WARNING: Potentially over-approximating slice lb\n");
         auto lbConst = getConstantBound(BoundType::LB, pos + offset);
         if (lbConst.has_value()) {
-          lbMap = AffineMap::get(
-              numMapDims, numMapSymbols,
-              getAffineConstantExpr(lbConst.getValue(), context));
+          lbMap =
+              AffineMap::get(numMapDims, numMapSymbols,
+                             getAffineConstantExpr(lbConst.value(), context));
         }
       }
       if (!ubMap || ubMap.getNumResults() > 1) {
@@ -1131,10 +1131,9 @@ void FlatAffineValueConstraints::getSliceBounds(
                    << "WARNING: Potentially over-approximating slice ub\n");
         auto ubConst = getConstantBound(BoundType::UB, pos + offset);
         if (ubConst.has_value()) {
-          ubMap =
-              AffineMap::get(numMapDims, numMapSymbols,
-                             getAffineConstantExpr(
-                                 ubConst.getValue() + ubAdjustment, context));
+          ubMap = AffineMap::get(
+              numMapDims, numMapSymbols,
+              getAffineConstantExpr(ubConst.value() + ubAdjustment, context));
         }
       }
     }
@@ -1674,12 +1673,12 @@ void FlatAffineRelation::compose(const FlatAffineRelation &other) {
   // Add and match domain of `rel` to domain of `this`.
   for (unsigned i = 0, e = rel.getNumDomainDims(); i < e; ++i)
     if (relMaybeValues[i].has_value())
-      setValue(i, relMaybeValues[i].getValue());
+      setValue(i, relMaybeValues[i].value());
   // Add and match range of `this` to range of `rel`.
   for (unsigned i = 0, e = getNumRangeDims(); i < e; ++i) {
     unsigned rangeIdx = rel.getNumDomainDims() + i;
     if (thisMaybeValues[rangeIdx].has_value())
-      rel.setValue(rangeIdx, thisMaybeValues[rangeIdx].getValue());
+      rel.setValue(rangeIdx, thisMaybeValues[rangeIdx].value());
   }
 
   // Append `this` to `rel` and simplify constraints.

@@ -1770,7 +1770,7 @@ public:
     Optional<unsigned> optExp = merger.buildTensorExpFromLinalg(op);
     if (!optExp.has_value())
       return failure();
-    unsigned exp = optExp.getValue();
+    unsigned exp = optExp.value();
 
     // Rejects an inadmissable tensor expression.
     OpOperand *sparseOut = nullptr;

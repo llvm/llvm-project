@@ -122,7 +122,7 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
       return emitError("expected integer column number in FileLineColLoc");
     consumeToken(Token::integer);
 
-    loc = FileLineColLoc::get(ctx, str, line.getValue(), column.getValue());
+    loc = FileLineColLoc::get(ctx, str, line.value(), column.value());
     return success();
   }
 

@@ -1792,11 +1792,11 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
       // For a static memref and an affine map with no symbols, this is
       // always bounded.
       assert(ubConst && "should always have an upper bound");
-      if (ubConst.getValue() < 0)
+      if (ubConst.value() < 0)
         // This is due to an invalid map that maps to a negative space.
         return memrefType;
       // If dimension of new memrefType is dynamic, the value is -1.
-      newShape[d] = ubConst.getValue() + 1;
+      newShape[d] = ubConst.value() + 1;
     }
   }
 

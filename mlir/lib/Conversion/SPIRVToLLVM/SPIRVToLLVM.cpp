@@ -646,7 +646,7 @@ public:
     IntegerAttr executionModeAttr = op.execution_modeAttr();
     std::string moduleName;
     if (module.getName().has_value())
-      moduleName = "_" + module.getName().getValue().str();
+      moduleName = "_" + module.getName().value().str();
     else
       moduleName = "";
     std::string executionModeInfoName =
@@ -1585,10 +1585,10 @@ void mlir::encodeBindAttribute(ModuleOp module) {
       if (descriptorSet && binding) {
         // Encode these numbers into the variable's symbolic name. If the
         // SPIR-V module has a name, add it at the beginning.
-        auto moduleAndName = spvModule.getName().has_value()
-                                 ? spvModule.getName().getValue().str() + "_" +
-                                       op.sym_name().str()
-                                 : op.sym_name().str();
+        auto moduleAndName =
+            spvModule.getName().has_value()
+                ? spvModule.getName().value().str() + "_" + op.sym_name().str()
+                : op.sym_name().str();
         std::string name =
             llvm::formatv("{0}_descriptor_set{1}_binding{2}", moduleAndName,
                           std::to_string(descriptorSet.getInt()),

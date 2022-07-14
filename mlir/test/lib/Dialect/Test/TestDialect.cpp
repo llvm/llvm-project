@@ -1418,7 +1418,7 @@ void RegionIfOp::getSuccessorRegions(
     SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
   if (index.has_value()) {
-    if (index.getValue() < 2)
+    if (index.value() < 2)
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
       regions.push_back(RegionSuccessor(getResults()));

@@ -2029,7 +2029,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       if (!constLb.has_value() || !constOtherLb.has_value())
         return failure();
       std::fill(minLb.begin(), minLb.end(), 0);
-      minLb.back() = std::min(constLb.getValue(), constOtherLb.getValue());
+      minLb.back() = std::min(constLb.value(), constOtherLb.value());
     }
 
     // Do the same for ub's but max of upper bounds. Identify max.
@@ -2045,7 +2045,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       if (!constUb.has_value() || !constOtherUb.has_value())
         return failure();
       std::fill(maxUb.begin(), maxUb.end(), 0);
-      maxUb.back() = std::max(constUb.getValue(), constOtherUb.getValue());
+      maxUb.back() = std::max(constUb.value(), constOtherUb.value());
     }
 
     std::fill(newLb.begin(), newLb.end(), 0);

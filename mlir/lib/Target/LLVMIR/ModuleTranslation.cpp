@@ -676,7 +676,7 @@ LogicalResult ModuleTranslation::convertGlobals() {
 
     Optional<uint64_t> alignment = op.getAlignment();
     if (alignment.has_value())
-      var->setAlignment(llvm::MaybeAlign(alignment.getValue()));
+      var->setAlignment(llvm::MaybeAlign(alignment.value()));
 
     globalsMapping.try_emplace(op, var);
   }

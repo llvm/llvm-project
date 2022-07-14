@@ -238,7 +238,7 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
           return emitError("invalid to have a single dimension (" +
                            Twine(map.index()) +
                            ") expanded into multiple dynamic dims (" +
-                           Twine(expandedDimStart + dynamicShape.getValue()) +
+                           Twine(expandedDimStart + dynamicShape.value()) +
                            "," + Twine(expandedDimStart + dim.index()) + ")");
         }
         dynamicShape = dim.index();
