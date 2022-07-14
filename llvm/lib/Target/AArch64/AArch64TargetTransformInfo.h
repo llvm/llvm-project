@@ -347,6 +347,11 @@ public:
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const;
 
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
+                                       TTI::ReductionFlags Flags) const {
+    return ST->hasSVE();
+  }
+
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                              Optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind);
