@@ -110,10 +110,6 @@ template<> class numeric_limits<cv long double>;
 #include "__support/win32/limits_msvc_win32.h"
 #endif // _LIBCPP_MSVCRT
 
-#if defined(__IBMCPP__)
-#include "__support/ibm/limits.h"
-#endif // __IBMCPP__
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

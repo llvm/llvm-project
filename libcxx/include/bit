@@ -75,9 +75,6 @@ namespace std {
 #  include <iosfwd>
 #endif
 
-#if defined(__IBMCPP__)
-#  include "__support/ibm/support.h"
-#endif
 #if defined(_LIBCPP_COMPILER_MSVC)
 #  include <intrin.h>
 #endif
