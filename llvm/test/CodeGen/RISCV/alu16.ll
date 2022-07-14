@@ -213,16 +213,12 @@ define i16 @sll(i16 %a, i16 %b) nounwind {
 define void @sll_ext(i16 %a, i32 signext %b, i16* %p) nounwind {
 ; RV32I-LABEL: sll_ext:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    sll a0, a0, a1
 ; RV32I-NEXT:    sh a0, 0(a2)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sll_ext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    sh a0, 0(a2)
 ; RV64I-NEXT:    ret
@@ -238,16 +234,12 @@ define void @sll_ext(i16 %a, i32 signext %b, i16* %p) nounwind {
 define void @sll_ext_drop_poison(i16 %a, i32 signext %b, i16* %p) nounwind {
 ; RV32I-LABEL: sll_ext_drop_poison:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    sll a0, a0, a1
 ; RV32I-NEXT:    sh a0, 0(a2)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sll_ext_drop_poison:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    sh a0, 0(a2)
 ; RV64I-NEXT:    ret
