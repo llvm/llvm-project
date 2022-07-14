@@ -181,6 +181,7 @@ public:
 
 private:
   StringRef Buf;
+  std::vector<Elf_Shdr> FakeSections;
 
   ELFFile(StringRef Object);
 
@@ -389,6 +390,8 @@ public:
   Expected<ArrayRef<uint8_t>> getSectionContents(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSegmentContents(const Elf_Phdr &Phdr) const;
   Expected<std::vector<BBAddrMap>> decodeBBAddrMap(const Elf_Shdr &Sec) const;
+
+  void createFakeSections();
 };
 
 using ELF32LEFile = ELFFile<ELF32LE>;
@@ -757,11 +760,37 @@ Expected<ELFFile<ELFT>> ELFFile<ELFT>::create(StringRef Object) {
   return ELFFile(Object);
 }
 
+/// Used by llvm-objdump -d (which needs sections for disassembly) to
+/// disassemble objects without a section header table (e.g. ET_CORE objects
+/// analyzed by linux perf or ET_EXEC with llvm-strip --strip-sections).
+template <class ELFT> void ELFFile<ELFT>::createFakeSections() {
+  if (!FakeSections.empty())
+    return;
+  auto PhdrsOrErr = program_headers();
+  if (!PhdrsOrErr)
+    return;
+
+  for (auto Phdr : *PhdrsOrErr) {
+    if (!(Phdr.p_type & ELF::PT_LOAD) || !(Phdr.p_flags & ELF::PF_X))
+      continue;
+    Elf_Shdr FakeShdr = {};
+    FakeShdr.sh_type = ELF::SHT_PROGBITS;
+    FakeShdr.sh_flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
+    FakeShdr.sh_addr = Phdr.p_vaddr;
+    FakeShdr.sh_size = Phdr.p_memsz;
+    FakeShdr.sh_offset = Phdr.p_offset;
+    FakeSections.push_back(FakeShdr);
+  }
+}
+
 template <class ELFT>
 Expected<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
   const uintX_t SectionTableOffset = getHeader().e_shoff;
-  if (SectionTableOffset == 0)
+  if (SectionTableOffset == 0) {
+    if (!FakeSections.empty())
+      return makeArrayRef(FakeSections.data(), FakeSections.size());
     return ArrayRef<Elf_Shdr>();
+  }
 
   if (getHeader().e_shentsize != sizeof(Elf_Shdr))
     return createError("invalid e_shentsize in ELF header: " +

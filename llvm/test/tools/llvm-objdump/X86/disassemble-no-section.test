@@ -1,0 +1,51 @@
+## This test checks -d disassembles an ELF file without section headers.
+## Such files include kcore files extracted by linux perf tools, or
+## executables with section headers stripped by e.g.
+## llvm-strip --strip-sections.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -d %t | FileCheck %s
+
+# CHECK:       Disassembly of section :
+# CHECK-EMPTY:
+# CHECK-NEXT:  <>:
+# CHECK-NEXT:  55                    pushq   %rbp
+# CHECK-NEXT:  48 89 e5              movq    %rsp, %rbp
+# CHECK-NEXT:  0f 1f 40 00           nopl    (%rax)
+# CHECK-NEXT:  5d                    popq    %rbp
+# CHECK-NEXT:  c3                    retq
+
+## Check disassembly with an address range.
+# RUN: llvm-objdump -d --start-address=0xffffffff00000000 \
+# RUN:   --stop-address=0xffffffff00000004 %t 2>&1 | \
+# RUN:   FileCheck %s --check-prefix RANGE
+
+# RANGE:       no section overlaps the range
+# RANGE-EMPTY:
+# RANGE-NEXT:  Disassembly of section :
+# RANGE-EMPTY:
+# RANGE-NEXT:  <>:
+# RANGE-NEXT:  55                    pushq   %rbp
+# RANGE-NEXT:  48 89 e5              movq    %rsp, %rbp
+# RANGE-EMPTY:
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_CORE
+  Machine:         EM_X86_64
+Sections:
+  - Type:            SectionHeaderTable
+    NoHeaders:       true
+  - Type:            Fill
+    Name:            code
+    Pattern:         "554889E50F1F40005DC3"
+    Size:            10
+    Offset:          0x1000
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X ]
+    VAddr:           0xFFFFFFFF00000000
+    FirstSec:        code
+    LastSec:         code
