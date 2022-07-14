@@ -124,21 +124,21 @@ Error RawCoverageFilenamesReader::read(CovMapVersion Version) {
           coveragemap_error::decompression_failed);
 
     // Allocate memory for the decompressed filenames.
-    SmallVector<char, 0> StorageBuf;
+    SmallVector<uint8_t, 0> StorageBuf;
 
     // Read compressed filenames.
     StringRef CompressedFilenames = Data.substr(0, CompressedLen);
     Data = Data.substr(CompressedLen);
-    auto Err = compression::zlib::uncompress(CompressedFilenames, StorageBuf,
-                                             UncompressedLen);
+    auto Err = compression::zlib::uncompress(
+        arrayRefFromStringRef(CompressedFilenames), StorageBuf,
+        UncompressedLen);
     if (Err) {
       consumeError(std::move(Err));
       return make_error<CoverageMapError>(
           coveragemap_error::decompression_failed);
     }
 
-    StringRef UncompressedFilenames(StorageBuf.data(), StorageBuf.size());
-    RawCoverageFilenamesReader Delegate(UncompressedFilenames, Filenames,
+    RawCoverageFilenamesReader Delegate(toStringRef(StorageBuf), Filenames,
                                         CompilationDir);
     return Delegate.readUncompressed(Version, NumFilenames);
   }

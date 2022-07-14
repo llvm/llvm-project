@@ -1466,14 +1466,15 @@ bool ASTReader::ReadSLocEntry(int ID) {
         Error("zlib is not available");
         return nullptr;
       }
-      SmallString<0> Uncompressed;
+      SmallVector<uint8_t, 0> Uncompressed;
       if (llvm::Error E = llvm::compression::zlib::uncompress(
-              Blob, Uncompressed, Record[0])) {
+              llvm::arrayRefFromStringRef(Blob), Uncompressed, Record[0])) {
         Error("could not decompress embedded file contents: " +
               llvm::toString(std::move(E)));
         return nullptr;
       }
-      return llvm::MemoryBuffer::getMemBufferCopy(Uncompressed, Name);
+      return llvm::MemoryBuffer::getMemBufferCopy(
+          llvm::toStringRef(Uncompressed), Name);
     } else if (RecCode == SM_SLOC_BUFFER_BLOB) {
       return llvm::MemoryBuffer::getMemBuffer(Blob.drop_back(1), Name, true);
     } else {

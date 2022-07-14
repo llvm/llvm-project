@@ -111,18 +111,17 @@ size_t InputSectionBase::getSize() const {
 
 void InputSectionBase::uncompress() const {
   size_t size = uncompressedSize;
-  char *uncompressedBuf;
+  uint8_t *uncompressedBuf;
   {
     static std::mutex mu;
     std::lock_guard<std::mutex> lock(mu);
-    uncompressedBuf = bAlloc().Allocate<char>(size);
+    uncompressedBuf = bAlloc().Allocate<uint8_t>(size);
   }
 
-  if (Error e = compression::zlib::uncompress(toStringRef(rawData),
-                                              uncompressedBuf, size))
+  if (Error e = compression::zlib::uncompress(rawData, uncompressedBuf, size))
     fatal(toString(this) +
           ": uncompress failed: " + llvm::toString(std::move(e)));
-  rawData = makeArrayRef((uint8_t *)uncompressedBuf, size);
+  rawData = makeArrayRef(uncompressedBuf, size);
   uncompressedSize = -1;
 }
 
@@ -1219,8 +1218,7 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // to the buffer.
   if (uncompressedSize >= 0) {
     size_t size = uncompressedSize;
-    if (Error e = compression::zlib::uncompress(toStringRef(rawData),
-                                                (char *)buf, size))
+    if (Error e = compression::zlib::uncompress(rawData, buf, size))
       fatal(toString(this) +
             ": uncompress failed: " + llvm::toString(std::move(e)));
     uint8_t *bufEnd = buf + size;

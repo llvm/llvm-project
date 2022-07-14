@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_COMPRESSION_H
 #define LLVM_SUPPORT_COMPRESSION_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -30,14 +31,15 @@ constexpr int BestSizeCompression = 9;
 
 bool isAvailable();
 
-void compress(StringRef InputBuffer, SmallVectorImpl<char> &CompressedBuffer,
+void compress(ArrayRef<uint8_t> Input,
+              SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression);
 
-Error uncompress(StringRef InputBuffer, char *UncompressedBuffer,
+Error uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
                  size_t &UncompressedSize);
 
-Error uncompress(StringRef InputBuffer,
-                 SmallVectorImpl<char> &UncompressedBuffer,
+Error uncompress(ArrayRef<uint8_t> Input,
+                 SmallVectorImpl<uint8_t> &UncompressedBuffer,
                  size_t UncompressedSize);
 
 } // End of namespace zlib

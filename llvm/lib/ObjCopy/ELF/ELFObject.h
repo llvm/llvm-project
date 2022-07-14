@@ -539,7 +539,7 @@ class CompressedSection : public SectionBase {
   DebugCompressionType CompressionType;
   uint64_t DecompressedSize;
   uint64_t DecompressedAlign;
-  SmallVector<char, 128> CompressedData;
+  SmallVector<uint8_t, 128> CompressedData;
 
 public:
   CompressedSection(const SectionBase &Sec,
