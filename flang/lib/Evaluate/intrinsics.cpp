@@ -1073,16 +1073,6 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
-    {"co_sum",
-        {{"a", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
-             common::Intent::InOut},
-            {"result_image", AnyInt, Rank::scalar, Optionality::optional,
-                common::Intent::In},
-            {"stat", AnyInt, Rank::scalar, Optionality::optional,
-                common::Intent::Out},
-            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
-                common::Intent::InOut}},
-        {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
     {"cpu_time",
         {{"time", AnyReal, Rank::scalar, Optionality::required,
             common::Intent::Out}},
@@ -2374,26 +2364,6 @@ static bool CheckForNonPositiveValues(FoldingContext &context,
   return ok;
 }
 
-static bool CheckForCoindexedObjects(SpecificCall &call,
-    FoldingContext &context, const std::vector<std::string> &dummyNames) {
-  bool ok{true};
-  CHECK(call.arguments.size() == dummyNames.size());
-  for (std::size_t j{0}; j < call.arguments.size(); ++j) {
-    if (dummyNames[j] != "result_image") {
-      const auto &arg{call.arguments[j]};
-      if (const auto *expr{arg->UnwrapExpr()}) {
-        if (ExtractCoarrayRef(*expr)) {
-          ok = false;
-          context.messages().Say(arg->sourceLocation(),
-              "'%s' argument to '%s' may not be a coindexed object"_err_en_US,
-              dummyNames[j], call.specificIntrinsic.name);
-        }
-      }
-    }
-  }
-  return ok;
-}
-
 // Applies any semantic checks peculiar to an intrinsic.
 static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
   bool ok{true};
@@ -2412,9 +2382,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     }
   } else if (name == "associated") {
     return CheckAssociated(call, context);
-  } else if (name == "co_sum") {
-    return CheckForCoindexedObjects(call, context,
-        std::vector<std::string>{"a", "result_image", "stat", "errmsg"});
   } else if (name == "image_status") {
     if (const auto &arg{call.arguments[0]}) {
       ok = CheckForNonPositiveValues(context, *arg, name, "image");
@@ -2446,9 +2413,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
     }
-  } else if (name == "move_alloc") {
-    return CheckForCoindexedObjects(call, context,
-        std::vector<std::string>{"from", "to", "stat", "errmsg"});
   } else if (name == "present") {
     const auto &arg{call.arguments[0]};
     if (arg) {
@@ -2596,7 +2560,6 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
     for (auto iter{subrRange.first}; iter != subrRange.second; ++iter) {
       if (auto specificCall{iter->second->Match(
               call, defaults_, arguments, context, builtinsScope_)}) {
-        ApplySpecificChecks(*specificCall, context);
         return specificCall;
       }
     }
