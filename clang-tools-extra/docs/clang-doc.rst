@@ -90,7 +90,7 @@ Options
       =html                     -   Documentation in HTML format.
     --ignore-map-errors         - Continue if files are not mapped correctly.
     --output=<string>           - Directory for outputting generated files.
-    -p=<string>                 - Build path
+    -p <string>                 - Build path
     --project-name=<string>     - Name of project.
     --public                    - Document only public declarations.
     --repository=<string>       -

@@ -200,7 +200,7 @@ class BinaryContext {
   uint32_t DuplicatedJumpTables{0x10000000};
 
   /// Function fragments to skip.
-  std::vector<BinaryFunction *> FragmentsToSkip;
+  std::unordered_set<BinaryFunction *> FragmentsToSkip;
 
   /// The runtime library.
   std::unique_ptr<RuntimeLibrary> RtLibrary;
@@ -235,6 +235,18 @@ public:
   void initializeTarget(std::unique_ptr<MCPlusBuilder> TargetBuilder) {
     MIB = std::move(TargetBuilder);
   }
+
+  /// Return function fragments to skip.
+  const std::unordered_set<BinaryFunction *> &getFragmentsToSkip() {
+    return FragmentsToSkip;
+  }
+
+  /// Add function fragment to skip
+  void addFragmentsToSkip(BinaryFunction *Function) {
+    FragmentsToSkip.insert(Function);
+  }
+
+  void clearFragmentsToSkip() { FragmentsToSkip.clear(); }
 
   /// Given DWOId returns CU if it exists in DWOCUs.
   Optional<DWARFUnit *> getDWOCU(uint64_t DWOId);
@@ -476,15 +488,15 @@ public:
   /// If \p NextJTAddress is different from zero, it is used as an upper
   /// bound for jump table memory layout.
   ///
-  /// Optionally, populate \p Offsets with jump table entries. The entries
+  /// Optionally, populate \p Address from jump table entries. The entries
   /// could be partially populated if the jump table detection fails.
   bool analyzeJumpTable(const uint64_t Address,
                         const JumpTable::JumpTableType Type, BinaryFunction &BF,
                         const uint64_t NextJTAddress = 0,
-                        JumpTable::OffsetsType *Offsets = nullptr);
+                        JumpTable::AddressesType *EntriesAsAddress = nullptr);
 
   /// After jump table locations are established, this function will populate
-  /// their OffsetEntries based on memory contents.
+  /// their EntriesAsAddress based on memory contents.
   void populateJumpTables();
 
   /// Returns a jump table ID and label pointing to the duplicated jump table.
@@ -499,12 +511,12 @@ public:
   /// to function \p BF.
   std::string generateJumpTableName(const BinaryFunction &BF, uint64_t Address);
 
-  /// Free memory used by jump table offsets
-  void clearJumpTableOffsets() {
+  /// Free memory used by JumpTable's EntriesAsAddress
+  void clearJumpTableTempData() {
     for (auto &JTI : JumpTables) {
       JumpTable &JT = *JTI.second;
-      JumpTable::OffsetsType Temp;
-      Temp.swap(JT.OffsetEntries);
+      JumpTable::AddressesType Temp;
+      Temp.swap(JT.EntriesAsAddress);
     }
   }
   /// Return true if the array of bytes represents a valid code padding.

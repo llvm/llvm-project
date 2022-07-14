@@ -41,8 +41,8 @@ module {
   // into a dense matrix X.
   //
   func.func @kernel_spmm(%arga: tensor<?x?xf64, #SparseMatrix>,
-                    %argb: tensor<?x?xf64>,
-                    %argx: tensor<?x?xf64> {linalg.inplaceable = true}) -> tensor<?x?xf64> {
+                         %argb: tensor<?x?xf64>,
+                         %argx: tensor<?x?xf64>) -> tensor<?x?xf64> {
     %0 = linalg.generic #spmm
       ins(%arga, %argb: tensor<?x?xf64, #SparseMatrix>, tensor<?x?xf64>)
       outs(%argx: tensor<?x?xf64>) {

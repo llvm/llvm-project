@@ -424,6 +424,41 @@ LogicalResult transform::PadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// PromoteOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::PromoteOp::applyToOne(linalg::LinalgOp target,
+                                 SmallVectorImpl<Operation *> &results,
+                                 transform::TransformState &state) {
+  LinalgPromotionOptions promotionOptions;
+  if (!getOperandsToPromote().empty())
+    promotionOptions = promotionOptions.setOperandsToPromote(
+        extractFromI64ArrayAttr(getOperandsToPromote()));
+  if (getUseFullTilesByDefault())
+    promotionOptions = promotionOptions.setUseFullTileBuffersByDefault(
+        getUseFullTilesByDefault());
+  if (getUseAlloca())
+    promotionOptions = promotionOptions.setUseAlloca(getUseAlloca());
+  if (!getUseFullTileBuffers().empty())
+    promotionOptions = promotionOptions.setUseFullTileBuffers(
+        llvm::to_vector(getUseFullTileBuffers().getAsValueRange<BoolAttr>()));
+  if (getAlignment().hasValue())
+    promotionOptions = promotionOptions.setAlignment(*getAlignment());
+
+  if (failed(promoteSubviewsPrecondition(target, promotionOptions)))
+    return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
+
+  SimpleRewriter rewriter(target->getContext());
+  rewriter.setInsertionPoint(target);
+  FailureOr<LinalgOp> res = promoteSubViews(rewriter, target, promotionOptions);
+  if (failed(res))
+    return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
+  results.push_back(target);
+  return DiagnosedSilenceableFailure(success());
+}
+
+//===----------------------------------------------------------------------===//
 // ScalarizeOp
 //===----------------------------------------------------------------------===//
 

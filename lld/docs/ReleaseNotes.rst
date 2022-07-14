@@ -65,7 +65,11 @@ MinGW Improvements
 MachO Improvements
 ------------------
 
-* Item 1.
+* We now support proper relocation and pruning of EH frames. **Note:** this
+  comes at some performance overhead on x86_64 builds, and we recommend adding
+  the ``-femit-compact-unwind=no-compact-unwind`` compile flag to avoid it.
+  (`D129540 <https://reviews.llvm.org/D129540>`_,
+  `D122258 <https://reviews.llvm.org/D122258>`_)
 
 WebAssembly Improvements
 ------------------------

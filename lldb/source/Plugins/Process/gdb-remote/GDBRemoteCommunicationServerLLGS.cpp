@@ -290,7 +290,9 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     if (!process_or)
       return Status(process_or.takeError());
     m_continue_process = m_current_process = process_or->get();
-    m_debugged_processes[m_current_process->GetID()] = std::move(*process_or);
+    m_debugged_processes.emplace(
+        m_current_process->GetID(),
+        DebuggedProcess{std::move(*process_or), DebuggedProcess::Flag{}});
   }
 
   SetEnabledExtensions(*m_current_process);
@@ -361,7 +363,9 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
     return status;
   }
   m_continue_process = m_current_process = process_or->get();
-  m_debugged_processes[m_current_process->GetID()] = std::move(*process_or);
+  m_debugged_processes.emplace(
+      m_current_process->GetID(),
+      DebuggedProcess{std::move(*process_or), DebuggedProcess::Flag{}});
   SetEnabledExtensions(*m_current_process);
 
   // Setup stdout/stderr mapping from inferior.
@@ -489,12 +493,14 @@ GDBRemoteCommunicationServerLLGS::SendWResponse(
            *wait_status);
 
   // If the process was killed through vKill, return "OK".
-  if (m_vkilled_processes.find(process->GetID()) != m_vkilled_processes.end())
+  if (bool(m_debugged_processes.at(process->GetID()).flags &
+           DebuggedProcess::Flag::vkilled))
     return SendOKResponse();
 
   StreamGDBRemote response;
   response.Format("{0:g}", *wait_status);
-  if (bool(m_extensions_supported & NativeProcessProtocol::Extension::multiprocess))
+  if (bool(m_extensions_supported &
+           NativeProcessProtocol::Extension::multiprocess))
     response.Format(";process:{0:x-}", process->GetID());
   if (m_non_stop)
     return SendNotificationPacketNoLock("Stop", m_stop_notification_queue,
@@ -1045,14 +1051,14 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
 
   lldb::pid_t pid = process->GetID();
   m_mainloop.AddPendingCallback([this, pid](MainLoopBase &loop) {
-    m_debugged_processes.erase(pid);
-    auto vkill_it = m_vkilled_processes.find(pid);
-    if (vkill_it != m_vkilled_processes.end())
-      m_vkilled_processes.erase(vkill_it);
+    auto find_it = m_debugged_processes.find(pid);
+    assert(find_it != m_debugged_processes.end());
+    bool vkilled = bool(find_it->second.flags & DebuggedProcess::Flag::vkilled);
+    m_debugged_processes.erase(find_it);
     // Terminate the main loop only if vKill has not been used.
     // When running in non-stop mode, wait for the vStopped to clear
     // the notification queue.
-    else if (m_debugged_processes.empty() && !m_non_stop) {
+    if (m_debugged_processes.empty() && !m_non_stop && !vkilled) {
       // Close the pipe to the inferior terminal i/o if we launched it and set
       // one up.
       MaybeCloseInferiorTerminalConnection();
@@ -1071,23 +1077,13 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
-  // Send the stop reason unless this is the stop after the launch or attach.
-  switch (m_inferior_prev_state) {
-  case eStateLaunching:
-  case eStateAttaching:
-    // Don't send anything per debugserver behavior.
-    break;
-  default:
-    // In all other cases, send the stop reason.
-    PacketResult result = SendStopReasonForState(
-        *process, StateType::eStateStopped, /*force_synchronous=*/false);
-    if (result != PacketResult::Success) {
-      LLDB_LOGF(log,
-                "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
-                "notification for PID %" PRIu64 ", state: eStateExited",
-                __FUNCTION__, process->GetID());
-    }
-    break;
+  PacketResult result = SendStopReasonForState(
+      *process, StateType::eStateStopped, /*force_synchronous=*/false);
+  if (result != PacketResult::Success) {
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
+              "notification for PID %" PRIu64 ", state: eStateExited",
+              __FUNCTION__, process->GetID());
   }
 }
 
@@ -1132,9 +1128,6 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
     }
     break;
   }
-
-  // Remember the previous state reported to us.
-  m_inferior_prev_state = state;
 }
 
 void GDBRemoteCommunicationServerLLGS::DidExec(NativeProcessProtocol *process) {
@@ -1147,7 +1140,9 @@ void GDBRemoteCommunicationServerLLGS::NewSubprocess(
   lldb::pid_t child_pid = child_process->GetID();
   assert(child_pid != LLDB_INVALID_PROCESS_ID);
   assert(m_debugged_processes.find(child_pid) == m_debugged_processes.end());
-  m_debugged_processes[child_pid] = std::move(child_process);
+  m_debugged_processes.emplace(
+      child_pid,
+      DebuggedProcess{std::move(child_process), DebuggedProcess::Flag{}});
 }
 
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
@@ -1432,7 +1427,7 @@ GDBRemoteCommunicationServerLLGS::Handle_k(StringExtractorGDBRemote &packet) {
   for (auto it = m_debugged_processes.begin(); it != m_debugged_processes.end();
        ++it) {
     LLDB_LOG(log, "Killing process {0}", it->first);
-    Status error = it->second->Kill();
+    Status error = it->second.process_up->Kill();
     if (error.Fail())
       LLDB_LOG(log, "Failed to kill debugged process {0}: {1}", it->first,
                error);
@@ -1460,12 +1455,12 @@ GDBRemoteCommunicationServerLLGS::Handle_vKill(
   if (it == m_debugged_processes.end())
     return SendErrorResponse(42);
 
-  Status error = it->second->Kill();
+  Status error = it->second.process_up->Kill();
   if (error.Fail())
     return SendErrorResponse(error.ToError());
 
   // OK response is sent when the process dies.
-  m_vkilled_processes.insert(pid);
+  it->second.flags |= DebuggedProcess::Flag::vkilled;
   return PacketResult::Success;
 }
 
@@ -1770,7 +1765,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       return SendErrorResponse(GDBRemoteServerError::eErrorResume);
     }
 
-    Status error = process_it->second->Resume(x.second);
+    Status error = process_it->second.process_up->Resume(x.second);
     if (error.Fail()) {
       LLDB_LOG(log, "vCont failed for process {0}: {1}", x.first, error);
       return SendErrorResponse(GDBRemoteServerError::eErrorResume);
@@ -1998,7 +1993,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qfThreadInfo(
   StreamGDBRemote response;
 
   for (auto &pid_ptr : m_debugged_processes)
-    AddProcessThreads(response, *pid_ptr.second, had_any);
+    AddProcessThreads(response, *pid_ptr.second.process_up, had_any);
 
   if (!had_any)
     return SendOKResponse();
@@ -2284,7 +2279,8 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   // Ensure we have the given thread when not specifying -1 (all threads) or 0
   // (any thread).
   if (tid != LLDB_INVALID_THREAD_ID && tid != 0) {
-    NativeThreadProtocol *thread = new_process_it->second->GetThreadByID(tid);
+    NativeThreadProtocol *thread =
+        new_process_it->second.process_up->GetThreadByID(tid);
     if (!thread) {
       LLDB_LOGF(log,
                 "GDBRemoteCommunicationServerLLGS::%s failed, tid %" PRIu64
@@ -2297,12 +2293,12 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   // Now switch the given process and thread type.
   switch (h_variant) {
   case 'g':
-    m_current_process = new_process_it->second.get();
+    m_current_process = new_process_it->second.process_up.get();
     SetCurrentThreadID(tid);
     break;
 
   case 'c':
-    m_continue_process = new_process_it->second.get();
+    m_continue_process = new_process_it->second.process_up.get();
     SetContinueThreadID(tid);
     break;
 
@@ -3466,12 +3462,12 @@ GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
       LLDB_LOGF(log,
                 "GDBRemoteCommunicationServerLLGS::%s detaching %" PRId64,
                 __FUNCTION__, it->first);
-      if (llvm::Error e = it->second->Detach().ToError())
+      if (llvm::Error e = it->second.process_up->Detach().ToError())
         detach_error = llvm::joinErrors(std::move(detach_error), std::move(e));
       else {
-        if (it->second.get() == m_current_process)
+        if (it->second.process_up.get() == m_current_process)
           m_current_process = nullptr;
-        if (it->second.get() == m_continue_process)
+        if (it->second.process_up.get() == m_continue_process)
           m_continue_process = nullptr;
         it = m_debugged_processes.erase(it);
         detached = true;
@@ -3907,7 +3903,7 @@ GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
     return SendErrorResponse(1);
 
   // Check the thread ID
-  if (!new_process_it->second->GetThreadByID(tid))
+  if (!new_process_it->second.process_up->GetThreadByID(tid))
     return SendErrorResponse(2);
 
   return SendOKResponse();
@@ -4108,7 +4104,7 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("vfork-events+");
 
   for (auto &x : m_debugged_processes)
-    SetEnabledExtensions(*x.second);
+    SetEnabledExtensions(*x.second.process_up);
   return ret;
 }
 

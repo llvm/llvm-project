@@ -769,7 +769,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     if (!errorNode)
       errorNode = C.generateNonFatalErrorNode();
 
-    if (!errorNode.getValue())
+    if (!errorNode.value())
       continue;
 
     SmallString<128> sbuf;
@@ -787,7 +787,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     os << "'";
 
     auto R = std::make_unique<PathSensitiveBugReport>(*BT, os.str(),
-                                                      errorNode.getValue());
+                                                      errorNode.value());
     R->addRange(msg.getArgSourceRange(I));
     C.emitReport(std::move(R));
   }

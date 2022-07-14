@@ -13,4 +13,7 @@ static_library("TargetProcess") {
     "SimpleRemoteEPCServer.cpp",
     "TargetExecutionUtils.cpp",
   ]
+  if (current_os == "linux") {
+    libs = [ "rt" ]
+  }
 }

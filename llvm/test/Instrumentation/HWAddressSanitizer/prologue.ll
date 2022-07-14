@@ -84,7 +84,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-HISTORY-TLS: %[[D5:[^ ]*]] = and i64 %[[D4]], %[[D3]]
 ; CHECK-HISTORY-TLS-SLOT: store i64 %[[D5]], i64* %[[C]]
 ; CHECK-HISTORY-HWASAN-TLS: store i64 %[[D5]], i64* @__hwasan_tls
-; CHECK-HISTORY-LIBCALL: call void @__hwasan_record_frame_record(i64 %[[MIX]])
+; CHECK-HISTORY-LIBCALL: call void @__hwasan_add_frame_record(i64 %[[MIX]])
 
 ; CHECK-TLS:   %[[F:[^ ]*]] = or i64 %[[D]], 4294967295
 ; CHECK-TLS:   = add i64 %[[F]], 1

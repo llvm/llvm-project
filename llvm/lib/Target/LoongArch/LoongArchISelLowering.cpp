@@ -21,6 +21,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
 
@@ -102,6 +103,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(FunctionAlignment);
 
   setTargetDAGCombine(ISD::AND);
+  setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::SRL);
 }
 
@@ -502,6 +504,224 @@ static SDValue performSRLCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI,
+                                const LoongArchSubtarget &Subtarget) {
+  MVT GRLenVT = Subtarget.getGRLenVT();
+  EVT ValTy = N->getValueType(0);
+  SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
+  ConstantSDNode *CN0, *CN1;
+  SDLoc DL(N);
+  unsigned ValBits = ValTy.getSizeInBits();
+  unsigned MaskIdx0, MaskLen0, MaskIdx1, MaskLen1;
+  unsigned Shamt;
+  bool SwapAndRetried = false;
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  if (ValBits != 32 && ValBits != 64)
+    return SDValue();
+
+Retry:
+  // 1st pattern to match BSTRINS:
+  //  R = or (and X, mask0), (and (shl Y, lsb), mask1)
+  //  where mask1 = (2**size - 1) << lsb, mask0 = ~mask1
+  //  =>
+  //  R = BSTRINS X, Y, msb, lsb (where msb = lsb + size - 1)
+  if (N0.getOpcode() == ISD::AND &&
+      (CN0 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) &&
+      isShiftedMask_64(~CN0->getSExtValue(), MaskIdx0, MaskLen0) &&
+      N1.getOpcode() == ISD::AND && N1.getOperand(0).getOpcode() == ISD::SHL &&
+      (CN1 = dyn_cast<ConstantSDNode>(N1.getOperand(1))) &&
+      isShiftedMask_64(CN1->getZExtValue(), MaskIdx1, MaskLen1) &&
+      MaskIdx0 == MaskIdx1 && MaskLen0 == MaskLen1 &&
+      (CN1 = dyn_cast<ConstantSDNode>(N1.getOperand(0).getOperand(1))) &&
+      (Shamt = CN1->getZExtValue()) == MaskIdx0 &&
+      (MaskIdx0 + MaskLen0 <= ValBits)) {
+    LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 1\n");
+    return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
+                       N1.getOperand(0).getOperand(0),
+                       DAG.getConstant((MaskIdx0 + MaskLen0 - 1), DL, GRLenVT),
+                       DAG.getConstant(MaskIdx0, DL, GRLenVT));
+  }
+
+  // 2nd pattern to match BSTRINS:
+  //  R = or (and X, mask0), (shl (and Y, mask1), lsb)
+  //  where mask1 = (2**size - 1), mask0 = ~(mask1 << lsb)
+  //  =>
+  //  R = BSTRINS X, Y, msb, lsb (where msb = lsb + size - 1)
+  if (N0.getOpcode() == ISD::AND &&
+      (CN0 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) &&
+      isShiftedMask_64(~CN0->getSExtValue(), MaskIdx0, MaskLen0) &&
+      N1.getOpcode() == ISD::SHL && N1.getOperand(0).getOpcode() == ISD::AND &&
+      (CN1 = dyn_cast<ConstantSDNode>(N1.getOperand(1))) &&
+      (Shamt = CN1->getZExtValue()) == MaskIdx0 &&
+      (CN1 = dyn_cast<ConstantSDNode>(N1.getOperand(0).getOperand(1))) &&
+      isShiftedMask_64(CN1->getZExtValue(), MaskIdx1, MaskLen1) &&
+      MaskLen0 == MaskLen1 && MaskIdx1 == 0 &&
+      (MaskIdx0 + MaskLen0 <= ValBits)) {
+    LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 2\n");
+    return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
+                       N1.getOperand(0).getOperand(0),
+                       DAG.getConstant((MaskIdx0 + MaskLen0 - 1), DL, GRLenVT),
+                       DAG.getConstant(MaskIdx0, DL, GRLenVT));
+  }
+
+  // 3rd pattern to match BSTRINS:
+  //  R = or (and X, mask0), (and Y, mask1)
+  //  where ~mask0 = (2**size - 1) << lsb, mask0 & mask1 = 0
+  //  =>
+  //  R = BSTRINS X, (shr (and Y, mask1), lsb), msb, lsb
+  //  where msb = lsb + size - 1
+  if (N0.getOpcode() == ISD::AND && N1.getOpcode() == ISD::AND &&
+      (CN0 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) &&
+      isShiftedMask_64(~CN0->getSExtValue(), MaskIdx0, MaskLen0) &&
+      (MaskIdx0 + MaskLen0 <= 64) &&
+      (CN1 = dyn_cast<ConstantSDNode>(N1->getOperand(1))) &&
+      (CN1->getSExtValue() & CN0->getSExtValue()) == 0) {
+    LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 3\n");
+    return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
+                       DAG.getNode(ISD::SRL, DL, N1->getValueType(0), N1,
+                                   DAG.getConstant(MaskIdx0, DL, GRLenVT)),
+                       DAG.getConstant(ValBits == 32
+                                           ? (MaskIdx0 + (MaskLen0 & 31) - 1)
+                                           : (MaskIdx0 + MaskLen0 - 1),
+                                       DL, GRLenVT),
+                       DAG.getConstant(MaskIdx0, DL, GRLenVT));
+  }
+
+  // 4th pattern to match BSTRINS:
+  //  R = or (and X, mask), (shl Y, shamt)
+  //  where mask = (2**shamt - 1)
+  //  =>
+  //  R = BSTRINS X, Y, ValBits - 1, shamt
+  //  where ValBits = 32 or 64
+  if (N0.getOpcode() == ISD::AND && N1.getOpcode() == ISD::SHL &&
+      (CN0 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) &&
+      isShiftedMask_64(CN0->getZExtValue(), MaskIdx0, MaskLen0) &&
+      MaskIdx0 == 0 && (CN1 = dyn_cast<ConstantSDNode>(N1.getOperand(1))) &&
+      (Shamt = CN1->getZExtValue()) == MaskLen0 &&
+      (MaskIdx0 + MaskLen0 <= ValBits)) {
+    LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 4\n");
+    return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
+                       N1.getOperand(0),
+                       DAG.getConstant((ValBits - 1), DL, GRLenVT),
+                       DAG.getConstant(Shamt, DL, GRLenVT));
+  }
+
+  // 5th pattern to match BSTRINS:
+  //  R = or (and X, mask), const
+  //  where ~mask = (2**size - 1) << lsb, mask & const = 0
+  //  =>
+  //  R = BSTRINS X, (const >> lsb), msb, lsb
+  //  where msb = lsb + size - 1
+  if (N0.getOpcode() == ISD::AND &&
+      (CN0 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) &&
+      isShiftedMask_64(~CN0->getSExtValue(), MaskIdx0, MaskLen0) &&
+      (CN1 = dyn_cast<ConstantSDNode>(N1)) &&
+      (CN1->getSExtValue() & CN0->getSExtValue()) == 0) {
+    LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 5\n");
+    return DAG.getNode(
+        LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
+        DAG.getConstant(CN1->getSExtValue() >> MaskIdx0, DL, ValTy),
+        DAG.getConstant((MaskIdx0 + MaskLen0 - 1), DL, GRLenVT),
+        DAG.getConstant(MaskIdx0, DL, GRLenVT));
+  }
+
+  // 6th pattern.
+  // a = b | ((c & mask) << shamt), where all positions in b to be overwritten
+  // by the incoming bits are known to be zero.
+  // =>
+  // a = BSTRINS b, c, shamt + MaskLen - 1, shamt
+  //
+  // Note that the 1st pattern is a special situation of the 6th, i.e. the 6th
+  // pattern is more common than the 1st. So we put the 1st before the 6th in
+  // order to match as many nodes as possible.
+  ConstantSDNode *CNMask, *CNShamt;
+  unsigned MaskIdx, MaskLen;
+  if (N1.getOpcode() == ISD::SHL && N1.getOperand(0).getOpcode() == ISD::AND &&
+      (CNMask = dyn_cast<ConstantSDNode>(N1.getOperand(0).getOperand(1))) &&
+      isShiftedMask_64(CNMask->getZExtValue(), MaskIdx, MaskLen) &&
+      MaskIdx == 0 && (CNShamt = dyn_cast<ConstantSDNode>(N1.getOperand(1))) &&
+      CNShamt->getZExtValue() + MaskLen <= ValBits) {
+    Shamt = CNShamt->getZExtValue();
+    APInt ShMask(ValBits, CNMask->getZExtValue() << Shamt);
+    if (ShMask.isSubsetOf(DAG.computeKnownBits(N0).Zero)) {
+      LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 6\n");
+      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0,
+                         N1.getOperand(0).getOperand(0),
+                         DAG.getConstant(Shamt + MaskLen - 1, DL, GRLenVT),
+                         DAG.getConstant(Shamt, DL, GRLenVT));
+    }
+  }
+
+  // 7th pattern.
+  // a = b | ((c << shamt) & shifted_mask), where all positions in b to be
+  // overwritten by the incoming bits are known to be zero.
+  // =>
+  // a = BSTRINS b, c, MaskIdx + MaskLen - 1, MaskIdx
+  //
+  // Similarly, the 7th pattern is more common than the 2nd. So we put the 2nd
+  // before the 7th in order to match as many nodes as possible.
+  if (N1.getOpcode() == ISD::AND &&
+      (CNMask = dyn_cast<ConstantSDNode>(N1.getOperand(1))) &&
+      isShiftedMask_64(CNMask->getZExtValue(), MaskIdx, MaskLen) &&
+      N1.getOperand(0).getOpcode() == ISD::SHL &&
+      (CNShamt = dyn_cast<ConstantSDNode>(N1.getOperand(0).getOperand(1))) &&
+      CNShamt->getZExtValue() == MaskIdx) {
+    APInt ShMask(ValBits, CNMask->getZExtValue());
+    if (ShMask.isSubsetOf(DAG.computeKnownBits(N0).Zero)) {
+      LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 7\n");
+      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0,
+                         N1.getOperand(0).getOperand(0),
+                         DAG.getConstant(MaskIdx + MaskLen - 1, DL, GRLenVT),
+                         DAG.getConstant(MaskIdx, DL, GRLenVT));
+    }
+  }
+
+  // (or a, b) and (or b, a) are equivalent, so swap the operands and retry.
+  if (!SwapAndRetried) {
+    std::swap(N0, N1);
+    SwapAndRetried = true;
+    goto Retry;
+  }
+
+  SwapAndRetried = false;
+Retry2:
+  // 8th pattern.
+  // a = b | (c & shifted_mask), where all positions in b to be overwritten by
+  // the incoming bits are known to be zero.
+  // =>
+  // a = BSTRINS b, c >> MaskIdx, MaskIdx + MaskLen - 1, MaskIdx
+  //
+  // Similarly, the 8th pattern is more common than the 4th and 5th patterns. So
+  // we put it here in order to match as many nodes as possible or generate less
+  // instructions.
+  if (N1.getOpcode() == ISD::AND &&
+      (CNMask = dyn_cast<ConstantSDNode>(N1.getOperand(1))) &&
+      isShiftedMask_64(CNMask->getZExtValue(), MaskIdx, MaskLen)) {
+    APInt ShMask(ValBits, CNMask->getZExtValue());
+    if (ShMask.isSubsetOf(DAG.computeKnownBits(N0).Zero)) {
+      LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 8\n");
+      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0,
+                         DAG.getNode(ISD::SRL, DL, N1->getValueType(0),
+                                     N1->getOperand(0),
+                                     DAG.getConstant(MaskIdx, DL, GRLenVT)),
+                         DAG.getConstant(MaskIdx + MaskLen - 1, DL, GRLenVT),
+                         DAG.getConstant(MaskIdx, DL, GRLenVT));
+    }
+  }
+  // Swap N0/N1 and retry.
+  if (!SwapAndRetried) {
+    std::swap(N0, N1);
+    SwapAndRetried = true;
+    goto Retry2;
+  }
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -510,6 +730,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::AND:
     return performANDCombine(N, DAG, DCI, Subtarget);
+  case ISD::OR:
+    return performORCombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:
     return performSRLCombine(N, DAG, DCI, Subtarget);
   }
@@ -579,6 +801,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(SLL_W)
     NODE_NAME_CASE(SRA_W)
     NODE_NAME_CASE(SRL_W)
+    NODE_NAME_CASE(BSTRINS)
     NODE_NAME_CASE(BSTRPICK)
     NODE_NAME_CASE(MOVGR2FR_W_LA64)
     NODE_NAME_CASE(MOVFR2GR_S_LA64)

@@ -7364,6 +7364,8 @@ functions is small.
 - "frame-pointer": **Max**. The value can be 0, 1, or 2. A synthesized function
   will get the "frame-pointer" function attribute, with value being "none",
   "non-leaf", or "all", respectively.
+- "function_return_thunk_extern": The synthesized function will get the
+  ``fn_return_thunk_extern`` function attribute.
 - "uwtable": **Max**. The value can be 0, 1, or 2. If the value is 1, a synthesized
   function will get the ``uwtable(sync)`` function attribute, if the value is 2,
   a synthesized function will get the ``uwtable(async)`` function attribute.
@@ -23626,8 +23628,10 @@ Semantics:
 
 This intrinsic allows annotation of a pointer to an integer with arbitrary
 strings. This can be useful for special purpose optimizations that want to look
-for these annotations. These have no other defined use; they are ignored by code
-generation and optimization.
+for these annotations. These have no other defined use; transformations preserve
+annotations on a best-effort basis but are allowed to replace the intrinsic with
+its first argument without breaking semantics and the intrinsic is completely
+dropped during instruction selection.
 
 '``llvm.annotation.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -23662,10 +23666,12 @@ the line number. It returns the value of the first argument.
 Semantics:
 """"""""""
 
-This intrinsic allows annotations to be put on arbitrary expressions
-with arbitrary strings. This can be useful for special purpose
-optimizations that want to look for these annotations. These have no
-other defined use; they are ignored by code generation and optimization.
+This intrinsic allows annotations to be put on arbitrary expressions with
+arbitrary strings. This can be useful for special purpose optimizations that
+want to look for these annotations. These have no other defined use;
+transformations preserve annotations on a best-effort basis but are allowed to
+replace the intrinsic with its first argument without breaking semantics and the
+intrinsic is completely dropped during instruction selection.
 
 '``llvm.codeview.annotation``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -652,7 +652,7 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
       M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty);
 
   HwasanRecordFrameRecordFunc = M.getOrInsertFunction(
-      "__hwasan_record_frame_record", IRB.getVoidTy(), Int64Ty);
+      "__hwasan_add_frame_record", IRB.getVoidTy(), Int64Ty);
 
   ShadowGlobal = M.getOrInsertGlobal("__hwasan_shadow",
                                      ArrayType::get(IRB.getInt8Ty(), 0));

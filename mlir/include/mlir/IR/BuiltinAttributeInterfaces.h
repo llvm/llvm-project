@@ -76,7 +76,8 @@ public:
   }
 
   /// Access the element at the given index.
-  template <typename T> T at(uint64_t index) const {
+  template <typename T>
+  T at(uint64_t index) const {
     if (isSplat)
       index = 0;
     return isContiguous ? conState.at<T>(index) : nonConState.at<T>(index);
@@ -93,7 +94,8 @@ private:
     ContiguousState(const void *firstEltPtr) : firstEltPtr(firstEltPtr) {}
 
     /// Access the element at the given index.
-    template <typename T> const T &at(uint64_t index) const {
+    template <typename T>
+    const T &at(uint64_t index) const {
       return *(reinterpret_cast<const T *>(firstEltPtr) + index);
     }
 
@@ -171,7 +173,8 @@ private:
     NonContiguousState(NonContiguousState &&other) = default;
 
     /// Access the element at the given index.
-    template <typename T> T at(uint64_t index) const {
+    template <typename T>
+    T at(uint64_t index) const {
       auto *valueIt = static_cast<OpaqueIteratorValueBase<T> *>(iterator.get());
       return valueIt->at(index);
     }
