@@ -91,7 +91,7 @@ ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
 
   std::wstring WideSharedMemoryName(SharedMemoryName.begin(),
                                     SharedMemoryName.end());
-  HANDLE SharedMemoryFile = CreateFileMappingW(
+  HANDLE SharedMemoryFile = CreateFileMapping(
       INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, Size >> 32,
       Size & 0xffffffff, WideSharedMemoryName.c_str());
   if (!SharedMemoryFile)
