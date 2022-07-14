@@ -122,11 +122,11 @@ public:
   }
 
   // An equivalent method is not available in std::string_view.
-  StringView trim(char C) const {
+  StringView trim(const char C) const {
     StringView Copy = *this;
-    while (!Copy.empty() && Copy.front() == C)
+    while (Copy.starts_with(C))
       Copy = Copy.drop_front();
-    while (!Copy.empty() && Copy.back() == C)
+    while (Copy.ends_with(C))
       Copy = Copy.drop_back();
     return Copy;
   }
@@ -135,6 +135,16 @@ public:
   bool starts_with(StringView Prefix) const {
     return Len >= Prefix.Len &&
            compareMemory(Data, Prefix.Data, Prefix.Len) == 0;
+  }
+
+  // Check if this string starts with the given Prefix.
+  bool starts_with(const char Prefix) const {
+    return !empty() && front() == Prefix;
+  }
+
+  // Check if this string ends with the given Prefix.
+  bool ends_with(const char Suffix) const {
+    return !empty() && back() == Suffix;
   }
 
   // Check if this string ends with the given Suffix.
@@ -155,6 +165,20 @@ public:
   StringView substr(size_t Start, size_t N = npos) const {
     Start = min(Start, Len);
     return StringView(Data + Start, min(N, Len - Start));
+  }
+
+  // Search for the first character matching the character
+  //
+  // Returns The index of the first character satisfying the character starting
+  // from From, or npos if not found.
+  size_t find_first_of(const char c, size_t From = 0) const noexcept {
+    StringView S = drop_front(From);
+    while (!S.empty()) {
+      if (S.front() == c)
+        return size() - S.size();
+      S = S.drop_front();
+    }
+    return npos;
   }
 
   // Search for the first character satisfying the predicate Function
