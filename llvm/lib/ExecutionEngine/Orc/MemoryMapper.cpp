@@ -208,8 +208,8 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
 
         std::wstring WideSharedMemoryName(SharedMemoryName.begin(),
                                           SharedMemoryName.end());
-        HANDLE SharedMemoryFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE,
-                                                  WideSharedMemoryName.c_str());
+        HANDLE SharedMemoryFile = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE,
+                                                   WideSharedMemoryName.c_str());
         if (!SharedMemoryFile)
           return OnReserved(errorCodeToError(mapWindowsError(GetLastError())));
 
