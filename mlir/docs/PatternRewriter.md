@@ -283,7 +283,7 @@ public:
 
 /// Apply the custom driver to `op`.
 void applyMyPatternDriver(Operation *op,
-                          const RewritePatternSet &patterns) {
+                          const FrozenRewritePatternSet &patterns) {
   // Initialize the custom PatternRewriter.
   MyPatternRewriter rewriter(op->getContext());
 
