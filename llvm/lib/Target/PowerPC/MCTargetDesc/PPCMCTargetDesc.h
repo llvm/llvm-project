@@ -118,6 +118,7 @@ static inline bool isRunOfOnes64(uint64_t Val, unsigned &MB, unsigned &ME) {
 //
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_SCHED_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "PPCGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM
