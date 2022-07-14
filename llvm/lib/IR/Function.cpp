@@ -354,6 +354,8 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
     B.addAttribute("frame-pointer", "all");
     break;
   }
+  if (M->getModuleFlag("function_return_thunk_extern"))
+    B.addAttribute(Attribute::FnRetThunkExtern);
   F->addFnAttrs(B);
   return F;
 }
