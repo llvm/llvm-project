@@ -1362,8 +1362,10 @@ Error IRLinker::linkModuleFlagsMetadata() {
              "Expected MDTuple when appending module flags");
       if (DstValue->isDistinct())
         return dyn_cast<MDTuple>(DstValue);
+      ArrayRef<MDOperand> DstOperands = DstValue->operands();
       MDTuple *New = MDTuple::getDistinct(
-          DstM.getContext(), SmallVector<Metadata *, 4>(DstValue->operands()));
+          DstM.getContext(),
+          SmallVector<Metadata *, 4>(DstOperands.begin(), DstOperands.end()));
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
       MDNode *Flag = MDTuple::getDistinct(DstM.getContext(), FlagOps);
       DstModFlags->setOperand(DstIndex, Flag);
