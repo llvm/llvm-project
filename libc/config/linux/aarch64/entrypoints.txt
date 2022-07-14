@@ -221,8 +221,14 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
+    libc.src.stdio.clearerr
+    libc.src.stdio.clearerr_unlocked
     libc.src.stdio.fclose
     libc.src.stdio.flockfile
+    libc.src.stdio.feof
+    libc.src.stdio.feof_unlocked
+    libc.src.stdio.ferror
+    libc.src.stdio.ferror_unlocked
     libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fopencookie
@@ -232,6 +238,18 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.funlockfile
     libc.src.stdio.fwrite
     libc.src.stdio.fwrite_unlocked
+    libc.src.stdio.sprintf
+    libc.src.stdio.snprintf
+    libc.src.stdio.fprintf
+    libc.src.stdio.printf
+    libc.src.stdio.stderr
+    libc.src.stdio.stdout
+
+    # stdlib.h entrypoints
+    libc.src.stdlib._Exit
+    libc.src.stdlib.atexit
+    libc.src.stdlib.exit
+    libc.src.stdlib.getenv
 
     # threads.h entrypoints
     libc.src.threads.call_once
@@ -245,6 +263,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
+    libc.src.threads.thrd_current
+    libc.src.threads.thrd_detach
+    libc.src.threads.thrd_equal
     libc.src.threads.thrd_join
 
     # pthread.h entrypoints
@@ -258,6 +279,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_attr_setguardsize
     libc.src.pthread.pthread_attr_setstack
     libc.src.pthread.pthread_attr_setstacksize
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_detach
+    libc.src.pthread.pthread_equal
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_mutexattr_destroy
     libc.src.pthread.pthread_mutexattr_init
     libc.src.pthread.pthread_mutexattr_getpshared
@@ -266,6 +296,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setpshared
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
+
+    # time.h entrypoints
+    libc.src.time.asctime
+    libc.src.time.asctime_r
+    libc.src.time.gmtime
+    libc.src.time.gmtime_r
+    libc.src.time.mktime
   )
 endif()
 

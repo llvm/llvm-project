@@ -107,13 +107,13 @@ public:
   /// `Args` are a set of parameters used by handlers of `ActionType` to
   /// determine if the action should be executed.
   template <typename ActionType, typename... Args>
-  bool shouldExecute(Args &&... args) {
+  bool shouldExecute(Args &&...args) {
     // The manager is always disabled if built without debug.
 #if !LLVM_ENABLE_ABI_BREAKING_CHECKS
     return true;
 #else
     // Invoke the `shouldExecute` method on the provided handler.
-    auto shouldExecuteFn = [&](auto *handler, auto &&... handlerParams) {
+    auto shouldExecuteFn = [&](auto *handler, auto &&...handlerParams) {
       return handler->shouldExecute(
           std::forward<decltype(handlerParams)>(handlerParams)...);
     };
@@ -139,7 +139,7 @@ private:
   template <typename ActionType, typename ResultT, typename HandlerCallbackT,
             typename... Args>
   FailureOr<ResultT> dispatchToHandler(HandlerCallbackT &&handlerCallback,
-                                       Args &&... args) {
+                                       Args &&...args) {
     static_assert(ActionType::template canHandleWith<Args...>(),
                   "cannot execute action with the given set of parameters");
 
@@ -189,7 +189,8 @@ private:
 /// This class provides a handler class that can be derived from to handle
 /// instances of this action. The parameters to its query methods map 1-1 to the
 /// types on the action type.
-template <typename... ParameterTs> class DebugAction {
+template <typename... ParameterTs>
+class DebugAction {
 public:
   class Handler : public DebugActionManager::HandlerBase {
   public:

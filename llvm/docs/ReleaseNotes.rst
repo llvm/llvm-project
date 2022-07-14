@@ -251,6 +251,8 @@ Changes to the LLVM tools
 * :doc:`llvm-objcopy <CommandGuide/llvm-objcopy>` has removed support for the legacy ``zlib-gnu`` format.
 * :doc:`llvm-objcopy <CommandGuide/llvm-objcopy>` now allows ``--set-section-flags src=... --rename-section src=tst``.
   ``--add-section=.foo1=... --rename-section=.foo1=.foo2`` now adds ``.foo1`` instead of ``.foo2``.
+* The LLVM gold plugin now ignores bitcode from the ``.llvmbc`` section of ELF
+  files when doing LTO.  https://github.com/llvm/llvm-project/issues/47216
 
 Changes to LLDB
 ---------------------------------

@@ -118,6 +118,7 @@ extern "C" void _start() {
   // value. We step over it (the "+ 1" below) to get to the env values.
   uint64_t *env_ptr = app.args->argv + app.args->argc + 1;
   uint64_t *env_end_marker = env_ptr;
+  app.envPtr = env_ptr;
   while (*env_end_marker)
     ++env_end_marker;
 

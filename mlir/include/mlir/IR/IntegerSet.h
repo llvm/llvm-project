@@ -128,7 +128,8 @@ inline ::llvm::hash_code hash_value(IntegerSet arg) {
 namespace llvm {
 
 // IntegerSet hash just like pointers.
-template <> struct DenseMapInfo<mlir::IntegerSet> {
+template <>
+struct DenseMapInfo<mlir::IntegerSet> {
   static mlir::IntegerSet getEmptyKey() {
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::IntegerSet(static_cast<mlir::IntegerSet::ImplType *>(pointer));
