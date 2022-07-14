@@ -429,7 +429,7 @@ raw_ostream &raw_ostream::operator<<(const FormattedBytes &FB) {
     indent(FB.IndentLevel);
 
     if (FB.FirstByteOffset) {
-      uint64_t Offset = FB.FirstByteOffset.getValue();
+      uint64_t Offset = FB.FirstByteOffset.value();
       llvm::write_hex(*this, Offset + LineIndex, HPS, OffsetWidth);
       *this << ": ";
     }

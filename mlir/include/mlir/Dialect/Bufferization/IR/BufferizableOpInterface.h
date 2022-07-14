@@ -471,6 +471,10 @@ allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
                              bool escape, const BufferizationOptions &options,
                              bool copy = true);
 
+/// Return `true` if the allocation of the given op is guaranteed to not escape
+/// the containing block.
+bool allocationDoesNotEscape(OpResult opResult);
+
 /// Lookup the buffer for the given value. If the value was not bufferized
 /// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
 /// from which the memref operand is returned.

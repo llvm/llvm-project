@@ -150,8 +150,8 @@ TEST(AlignmentTest, isAligned_isAddrAligned) {
     MaybeAlign A(T.alignment);
     // Test Align
     if (A) {
-      EXPECT_EQ(isAligned(A.getValue(), T.offset), T.isAligned);
-      EXPECT_EQ(isAddrAligned(A.getValue(), T.forgedAddr()), T.isAligned);
+      EXPECT_EQ(isAligned(A.value(), T.offset), T.isAligned);
+      EXPECT_EQ(isAddrAligned(A.value(), T.forgedAddr()), T.isAligned);
     }
   }
 }

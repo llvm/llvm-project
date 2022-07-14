@@ -251,9 +251,9 @@ private:
         [callback = std::forward<FnT>(callback)](
             T type, SmallVectorImpl<Type> &results, ArrayRef<Type>) {
           if (Optional<Type> resultOpt = callback(type)) {
-            bool wasSuccess = static_cast<bool>(resultOpt.getValue());
+            bool wasSuccess = static_cast<bool>(resultOpt.value());
             if (wasSuccess)
-              results.push_back(resultOpt.getValue());
+              results.push_back(resultOpt.value());
             return Optional<LogicalResult>(success(wasSuccess));
           }
           return Optional<LogicalResult>();

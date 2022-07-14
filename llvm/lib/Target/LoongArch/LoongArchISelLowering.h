@@ -41,6 +41,7 @@ enum NodeType : unsigned {
 
   FTINT,
 
+  BSTRINS,
   BSTRPICK,
 
 };

@@ -4847,7 +4847,7 @@ public:
         Optional<const SCEV *> Res =
             compareWithBackedgeCondition(SI->getCondition());
         if (Res) {
-          bool IsOne = cast<SCEVConstant>(Res.getValue())->getValue()->isOne();
+          bool IsOne = cast<SCEVConstant>(Res.value())->getValue()->isOne();
           Result = SE.getSCEV(IsOne ? SI->getTrueValue() : SI->getFalseValue());
         }
         break;
@@ -4855,7 +4855,7 @@ public:
       default: {
         Optional<const SCEV *> Res = compareWithBackedgeCondition(I);
         if (Res)
-          Result = Res.getValue();
+          Result = Res.value();
         break;
       }
       }
@@ -6595,8 +6595,8 @@ ScalarEvolution::getRangeRef(const SCEV *S,
     // Check if the IR explicitly contains !range metadata.
     Optional<ConstantRange> MDRange = GetRangeFromMetadata(U->getValue());
     if (MDRange)
-      ConservativeResult = ConservativeResult.intersectWith(MDRange.getValue(),
-                                                            RangeType);
+      ConservativeResult =
+          ConservativeResult.intersectWith(MDRange.value(), RangeType);
 
     // Use facts about recurrences in the underlying IR.  Note that add
     // recurrences are AddRecExprs and thus don't hit this path.  This
@@ -10432,7 +10432,7 @@ ScalarEvolution::getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
         getMonotonicPredicateTypeImpl(LHS, ICmpInst::getSwappedPredicate(Pred));
 
     assert(ResultSwapped && "should be able to analyze both!");
-    assert(ResultSwapped.getValue() != Result.getValue() &&
+    assert(ResultSwapped.value() != Result.value() &&
            "monotonicity should flip as we flip the predicate");
   }
 #endif

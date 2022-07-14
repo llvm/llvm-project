@@ -32,7 +32,8 @@
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_6]] : tensor<8xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_6]] : tensor<8xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi64>
-// CHECK-DAG:       %[[VAL_10:.*]] = memref.alloc() : memref<8xi64>
+// CHECK-DAG:       %[[VAL_10a:.*]] = linalg.init_tensor [8] : tensor<8xi64>
+// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_10a]] : memref<8xi64>
 // CHECK-DAG:       linalg.fill ins(%[[VAL_5]] : i64) outs(%[[VAL_10]] : memref<8xi64>)
 // CHECK-DAG:       %[[VAL_11:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_6]]] : memref<?xindex>
 // CHECK-DAG:       %[[VAL_12:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_4]]] : memref<?xindex>
@@ -72,7 +73,8 @@ func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<8xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<8xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8xi64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi64>
-// CHECK-DAG:       %[[VAL_9:.*]] = memref.alloc() : memref<8xi64>
+// CHECK-DAG:       %[[VAL_9a:.*]] = linalg.init_tensor [8] : tensor<8xi64>
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_9a]] : memref<8xi64>
 // CHECK-DAG:       linalg.fill ins(%[[VAL_3]] : i64) outs(%[[VAL_9]] : memref<8xi64>)
 // CHECK-DAG:       %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK-DAG:       %[[VAL_11:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_2]]] : memref<?xindex>

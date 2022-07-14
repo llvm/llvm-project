@@ -33,7 +33,7 @@
 
 // CHECK-LABEL: func @abs(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
-// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:         %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
@@ -52,7 +52,7 @@
 // CHECK:         return %[[VAL_14]] : tensor<32xf64>
 // CHECK:       }
 func.func @abs(%arga: tensor<32xf64, #SV>,
-          %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+               %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf64, #SV>)
     outs(%argx: tensor<32xf64>) {
@@ -65,7 +65,7 @@ func.func @abs(%arga: tensor<32xf64, #SV>,
 
 // CHECK-LABEL: func @ceil(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
-// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:         %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
@@ -84,7 +84,7 @@ func.func @abs(%arga: tensor<32xf64, #SV>,
 // CHECK:         return %[[VAL_14]] : tensor<32xf64>
 // CHECK:       }
 func.func @ceil(%arga: tensor<32xf64, #SV>,
-           %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+                %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf64, #SV>)
     outs(%argx: tensor<32xf64>) {
@@ -97,7 +97,7 @@ func.func @ceil(%arga: tensor<32xf64, #SV>,
 
 // CHECK-LABEL: func @floor(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
-// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:         %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
@@ -116,7 +116,7 @@ func.func @ceil(%arga: tensor<32xf64, #SV>,
 // CHECK:         return %[[VAL_14]] : tensor<32xf64>
 // CHECK:       }
 func.func @floor(%arga: tensor<32xf64, #SV>,
-            %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+                 %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf64, #SV>)
     outs(%argx: tensor<32xf64>) {
@@ -129,7 +129,7 @@ func.func @floor(%arga: tensor<32xf64, #SV>,
 
 // CHECK-LABEL: func @neg(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
-// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:         %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
@@ -148,7 +148,7 @@ func.func @floor(%arga: tensor<32xf64, #SV>,
 // CHECK:         return %[[VAL_14]] : tensor<32xf64>
 // CHECK:       }
 func.func @neg(%arga: tensor<32xf64, #SV>,
-          %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+               %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf64, #SV>)
     outs(%argx: tensor<32xf64>) {
@@ -162,7 +162,7 @@ func.func @neg(%arga: tensor<32xf64, #SV>,
 // CHECK-LABEL: func @add(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64>,
-// CHECK-SAME:    %[[VAL_2:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-SAME:    %[[VAL_2:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_5:.*]] = arith.constant true
@@ -207,8 +207,8 @@ func.func @neg(%arga: tensor<32xf64, #SV>,
 // CHECK:         return %[[VAL_33]] : tensor<32xf64>
 // CHECK:       }
 func.func @add(%arga: tensor<32xf64, #SV>,
-          %argb: tensor<32xf64>,
-          %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+               %argb: tensor<32xf64>,
+               %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32xf64, #SV>, tensor<32xf64>)
     outs(%argx: tensor<32xf64>) {
@@ -222,7 +222,7 @@ func.func @add(%arga: tensor<32xf64, #SV>,
 // CHECK-LABEL: func @sub(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64>,
-// CHECK-SAME:    %[[VAL_2:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-SAME:    %[[VAL_2:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_5:.*]] = arith.constant true
@@ -269,8 +269,8 @@ func.func @add(%arga: tensor<32xf64, #SV>,
 // CHECK:         return %[[VAL_35]] : tensor<32xf64>
 // CHECK:       }
 func.func @sub(%arga: tensor<32xf64, #SV>,
-          %argb: tensor<32xf64>,
-          %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+               %argb: tensor<32xf64>,
+               %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32xf64, #SV>, tensor<32xf64>)
     outs(%argx: tensor<32xf64>) {
@@ -284,7 +284,7 @@ func.func @sub(%arga: tensor<32xf64, #SV>,
 // CHECK-LABEL: func @mul(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64>,
-// CHECK-SAME:    %[[VAL_2:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-SAME:    %[[VAL_2:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:         %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>
@@ -305,8 +305,8 @@ func.func @sub(%arga: tensor<32xf64, #SV>,
 // CHECK:         return %[[VAL_17]] : tensor<32xf64>
 // CHECK:       }
 func.func @mul(%arga: tensor<32xf64, #SV>,
-          %argb: tensor<32xf64>,
-          %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+               %argb: tensor<32xf64>,
+               %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32xf64, #SV>, tensor<32xf64>)
     outs(%argx: tensor<32xf64>) {
@@ -319,7 +319,7 @@ func.func @mul(%arga: tensor<32xf64, #SV>,
 
 // CHECK-LABEL: func @divbyc(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>,
-// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-SAME:    %[[VAL_1:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 2.000000e+00 : f64
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 1 : index
@@ -339,7 +339,7 @@ func.func @mul(%arga: tensor<32xf64, #SV>,
 // CHECK:         return %[[VAL_15]] : tensor<32xf64>
 // CHECK:       }
 func.func @divbyc(%arga: tensor<32xf64, #SV>,
-           %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+                  %argx: tensor<32xf64>) -> tensor<32xf64> {
   %c = arith.constant 2.0 : f64
   %0 = linalg.generic #traitc
      ins(%arga: tensor<32xf64, #SV>)

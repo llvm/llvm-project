@@ -31,9 +31,7 @@
 // CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
-// CHECK-HIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
-// CHECK-HIR-DAG:       %[[VAL_11:.*]] = memref.alloc() : memref<32xf64>
-// CHECK-HIR:           memref.copy %[[VAL_10]], %[[VAL_11]] : memref<32xf64> to memref<32xf64>
+// CHECK-HIR-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-HIR:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-HIR-DAG:         %[[VAL_13:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_12]]] : memref<?xindex>
 // CHECK-HIR-DAG:         %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_5]] : index
@@ -64,9 +62,7 @@
 // CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparseIndices0(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-MIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
-// CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
-// CHECK-MIR-DAG:       %[[VAL_11:.*]] = memref.alloc() : memref<32xf64>
-// CHECK-MIR:           memref.copy %[[VAL_10]], %[[VAL_11]] : memref<32xf64> to memref<32xf64>
+// CHECK-MIR-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-MIR:           scf.for %[[VAL_14:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-MIR-DAG:         %[[VAL_15:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_14]]] : memref<?xindex>
 // CHECK-MIR-DAG:         %[[VAL_16:.*]] = arith.addi %[[VAL_14]], %[[VAL_5]] : index
@@ -96,13 +92,11 @@
 // CHECK-LIR-DAG:       %[[VAL_6:.*]] = call @sparsePointers0(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR-DAG:       %[[VAL_7:.*]] = call @sparseIndices0(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR-DAG:       %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
-// CHECK-LIR-DAG:       %[[VAL_9:.*]] = memref.alloc() : memref<32xf64>
-// CHECK-LIR:           memref.copy %[[VAL_2]], %[[VAL_9]] : memref<32xf64> to memref<32xf64>
 // CHECK-LIR:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-LIR-DAG:         %[[VAL_13:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_12]]] : memref<?xindex>
 // CHECK-LIR-DAG:         %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_5]] : index
 // CHECK-LIR-DAG:         %[[VAL_15:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_14]]] : memref<?xindex>
-// CHECK-LIR-DAG:         %[[VAL_16:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_12]]] : memref<32xf64>
+// CHECK-LIR-DAG:         %[[VAL_16:.*]] = memref.load %[[VAL_2]]{{\[}}%[[VAL_12]]] : memref<32xf64>
 // CHECK-LIR:             %[[VAL_17:.*]] = scf.for %[[VAL_18:.*]] = %[[VAL_13]] to %[[VAL_15]] step %[[VAL_5]] iter_args(%[[VAL_19:.*]] = %[[VAL_16]]) -> (f64) {
 // CHECK-LIR:               %[[VAL_20:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_18]]] : memref<?xindex>
 // CHECK-LIR:               %[[VAL_21:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_18]]] : memref<?xf64>
@@ -111,9 +105,9 @@
 // CHECK-LIR:               %[[VAL_24:.*]] = arith.addf %[[VAL_19]], %[[VAL_23]] : f64
 // CHECK-LIR:               scf.yield %[[VAL_24]] : f64
 // CHECK-LIR:             }
-// CHECK-LIR:             memref.store %[[VAL_17]], %[[VAL_9]]{{\[}}%[[VAL_12]]] : memref<32xf64>
+// CHECK-LIR:             memref.store %[[VAL_17]], %[[VAL_2]]{{\[}}%[[VAL_12]]] : memref<32xf64>
 // CHECK-LIR:           }
-// CHECK-LIR:           return %[[VAL_9]] : memref<32xf64>
+// CHECK-LIR:           return %[[VAL_2]] : memref<32xf64>
 // CHECK-LIR:         }
 
 func.func @matvec(%arga: tensor<32x64xf64, #CSR>,

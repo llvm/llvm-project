@@ -9,13 +9,13 @@ body: |
   bb.0:
     ; NO-FP16-LABEL: name: fp16
     ; NO-FP16: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; NO-FP16: %cst:_(s16) = G_FPTRUNC [[C]](s32)
-    ; NO-FP16: $h0 = COPY %cst(s16)
-    ; NO-FP16: RET_ReallyLR implicit $h0
+    ; NO-FP16-NEXT: %cst:_(s16) = G_FPTRUNC [[C]](s32)
+    ; NO-FP16-NEXT: $h0 = COPY %cst(s16)
+    ; NO-FP16-NEXT: RET_ReallyLR implicit $h0
     ; FP16-LABEL: name: fp16
     ; FP16: %cst:_(s16) = G_FCONSTANT half 0xH0000
-    ; FP16: $h0 = COPY %cst(s16)
-    ; FP16: RET_ReallyLR implicit $h0
+    ; FP16-NEXT: $h0 = COPY %cst(s16)
+    ; FP16-NEXT: RET_ReallyLR implicit $h0
     %cst:_(s16) = G_FCONSTANT half 0.0
     $h0 = COPY %cst
     RET_ReallyLR implicit $h0
