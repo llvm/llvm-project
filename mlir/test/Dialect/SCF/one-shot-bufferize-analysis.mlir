@@ -577,7 +577,7 @@ func.func @scf_if_out_of_place3(%t1: tensor<?xf32> {bufferization.writable = tru
 
 // CHECK-LABEL: func @write_to_same_tensor_in_loop_in_place(
 func.func @write_to_same_tensor_in_loop_in_place(
-    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %A : tensor<?xf32> {bufferization.writable = true},
     %lb : index, %ub : index, %step : index, %sz: index)
   -> (tensor<?xf32>)
 {

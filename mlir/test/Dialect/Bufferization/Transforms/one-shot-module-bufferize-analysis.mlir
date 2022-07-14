@@ -1220,8 +1220,8 @@ func.func @write_after_select_no_conflict(
 
 // CHECK-LABEL: func @write_to_same_tensor_in_loop_out_of_place(
 func.func @write_to_same_tensor_in_loop_out_of_place(
-    %A : tensor<?xf32> {linalg.inplaceable = true},
-    %B : tensor<?xf32> {linalg.inplaceable = true},
+    %A : tensor<?xf32> {bufferization.writable = true},
+    %B : tensor<?xf32> {bufferization.writable = true},
     %lb : index, %ub : index, %step : index, %sz: index)
   -> (tensor<?xf32>)
 {
@@ -1248,7 +1248,7 @@ func.func @write_to_same_tensor_in_loop_out_of_place(
 
 // CHECK-LABEL: func @write_to_same_alloc_tensor_in_place(
 func.func @write_to_same_alloc_tensor_in_place(
-    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %A : tensor<?xf32> {bufferization.writable = true},
     %lb : index, %ub : index, %step : index, %sz: index, %sz2: index)
   -> (tensor<?xf32>)
 {
@@ -1276,7 +1276,7 @@ func.func @write_to_same_alloc_tensor_in_place(
 
 // CHECK-LABEL: func @write_to_same_alloc_tensor_out_of_place(
 func.func @write_to_same_alloc_tensor_out_of_place(
-    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %A : tensor<?xf32> {bufferization.writable = true},
     %lb : index, %ub : index, %step : index, %sz: index, %sz2: index, %f: f32)
   -> (tensor<?xf32>)
 {
