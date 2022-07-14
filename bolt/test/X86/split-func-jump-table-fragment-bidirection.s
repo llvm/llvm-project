@@ -8,9 +8,10 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt -v=3 %t.exe -o %t.out 2>&1 | FileCheck %s
+# RUN: llvm-bolt -print-cfg -v=3 %t.exe -o %t.out 2>&1 | FileCheck %s
 
-# CHECK: BOLT-WARNING: Multiple fragments access same jump table: main; main.cold.1
+# CHECK: BOLT-INFO: Multiple fragments access same jump table: main; main.cold.1
+# CHECK: PIC Jump table JUMP_TABLE1 for function main, main.cold.1 at {{.*}}  with a total count of 0:
 
   .text
   .globl main

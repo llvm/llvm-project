@@ -2894,9 +2894,7 @@ void RewriteInstance::disassembleFunctions() {
   }
 
   BC->processInterproceduralReferences();
-  BC->clearJumpTableOffsets();
   BC->populateJumpTables();
-  BC->skipMarkedFragments();
 
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
@@ -2908,6 +2906,7 @@ void RewriteInstance::disassembleFunctions() {
     Function.postProcessJumpTables();
   }
 
+  BC->clearJumpTableTempData();
   BC->adjustCodePadding();
 
   for (auto &BFI : BC->getBinaryFunctions()) {
@@ -2918,7 +2917,7 @@ void RewriteInstance::disassembleFunctions() {
 
     if (!Function.isSimple()) {
       assert((!BC->HasRelocations || Function.getSize() == 0 ||
-              Function.hasSplitJumpTable()) &&
+              Function.hasIndirectTargetToSplitFragment()) &&
              "unexpected non-simple function in relocation mode");
       continue;
     }
@@ -2974,6 +2973,11 @@ void RewriteInstance::buildFunctionsCFG() {
 }
 
 void RewriteInstance::postProcessFunctions() {
+  // We mark fragments as non-simple here, not during disassembly,
+  // So we can build their CFGs.
+  BC->skipMarkedFragments();
+  BC->clearFragmentsToSkip();
+
   BC->TotalScore = 0;
   BC->SumExecutionCount = 0;
   for (auto &BFI : BC->getBinaryFunctions()) {
