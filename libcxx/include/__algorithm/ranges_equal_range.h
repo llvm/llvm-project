@@ -10,7 +10,7 @@
 #define _LIBCPP___ALGORITHM_RANGES_EQUAL_RANGE_H
 
 #include <__algorithm/equal_range.h>
-#include <__algorithm/make_projected.h>
+#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
@@ -37,27 +37,30 @@ namespace ranges {
 namespace __equal_range {
 
 struct __fn {
-
-  template <forward_iterator _Iter, sentinel_for<_Iter> _Sent, class _Tp, class _Proj = identity,
-            indirect_strict_weak_order<const _Tp*, projected<_Iter, _Proj>> _Comp = ranges::less>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  subrange<_Iter> operator()(_Iter __first, _Sent __last, const _Tp& __value, _Comp __comp = {},
-                             _Proj __proj = {}) const {
-    // TODO: implement
-    (void)__first; (void)__last; (void)__value; (void)__comp; (void)__proj;
-    return {};
+  template <
+      forward_iterator _Iter,
+      sentinel_for<_Iter> _Sent,
+      class _Tp,
+      class _Proj                                                           = identity,
+      indirect_strict_weak_order<const _Tp*, projected<_Iter, _Proj>> _Comp = ranges::less>
+  _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
+  operator()(_Iter __first, _Sent __last, const _Tp& __value, _Comp __comp = {}, _Proj __proj = {}) const {
+    auto __ret = std::__equal_range<_RangeAlgPolicy>(
+        std::move(__first), std::move(__last), __value, __comp, __proj);
+    return {std::move(__ret.first), std::move(__ret.second)};
   }
 
-  template <forward_range _Range, class _Tp, class _Proj = identity,
-            indirect_strict_weak_order<const _Tp*, projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  borrowed_subrange_t<_Range> operator()(_Range&& __range, const _Tp& __value, _Comp __comp = {},
-                                         _Proj __proj = {}) const {
-    // TODO: implement
-    (void)__range; (void)__value; (void)__comp; (void)__proj;
-    return {};
+  template <
+      forward_range _Range,
+      class _Tp,
+      class _Proj                                                                        = identity,
+      indirect_strict_weak_order<const _Tp*, projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
+  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range>
+  operator()(_Range&& __range, const _Tp& __value, _Comp __comp = {}, _Proj __proj = {}) const {
+    auto __ret = std::__equal_range<_RangeAlgPolicy>(
+        ranges::begin(__range), ranges::end(__range), __value, __comp, __proj);
+    return {std::move(__ret.first), std::move(__ret.second)};
   }
-
 };
 
 } // namespace __equal_range
