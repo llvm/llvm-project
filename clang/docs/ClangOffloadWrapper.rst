@@ -34,7 +34,7 @@ This tool can be used as follows:
     --help-list                        - Display list of available options (--help-list-hidden for more)
     --version                          - Display the version of this program
   clang-offload-wrapper options:
-    -o=<filename>                      - Output filename
+    -o <filename>                      - Output filename
     --target=<triple>                  - Target triple for the output module
 
 Example
