@@ -184,7 +184,7 @@ namespace TemplateSpecializations {
 
 namespace Diags {
   struct A { int n, m; };
-  template<A a> struct X { static_assert(a.n == a.m); }; // expected-error {{static_assert failed due to requirement 'Diags::A{1, 2}.n == Diags::A{1, 2}.m'}}
+  template<A a> struct X { static_assert(a.n == a.m); }; // expected-error {{static assertion failed due to requirement 'Diags::A{1, 2}.n == Diags::A{1, 2}.m'}}
   template struct X<A{1, 2}>; // expected-note {{in instantiation of template class 'Diags::X<{1, 2}>' requested here}}
 }
 
