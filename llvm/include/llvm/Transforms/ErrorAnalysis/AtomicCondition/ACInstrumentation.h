@@ -31,14 +31,13 @@ private:
 
   Function *ACStoreFunction;
   Function *CGStoreFunction;
-  Function *ACAnalysisFunction;
+  Function *AFfp32AnalysisFunction;
+  Function *AFfp64AnalysisFunction;
 
   // Additional Utilities
   Function *CGDotGraphFunction;
 
 public:
-  static int VarCounter;
-
   ACInstrumentation(Function *F);
 
   void instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
@@ -48,9 +47,12 @@ public:
   void instrumentCallsForMemoryLoadOperation(Instruction* BaseInstruction,
                                              long int *NumInstrumentedInstructions);
   void instrumentCallsForUnaryOperation(Instruction* BaseInstruction,
-                           long int *NumInstrumentedInstructions);
+                                        long int *NumInstrumentedInstructions);
   void instrumentCallsForBinaryOperation(Instruction* BaseInstruction,
-                            long int *NumInstrumentedInstructions);
+                                         long int *NumInstrumentedInstructions);
+  void instrumentCallsForAFAnalysis(Instruction *BaseInstruction,
+                                    Instruction *LocationToInstrument,
+                                    long int *NumInstrumentedInstructions);
 
   void instrumentBasicBlock(BasicBlock *BB,
                             long int *NumInstrumentedInstructions);
@@ -70,6 +72,11 @@ public:
 
   /// Function based functions
   static bool isUnwantedFunction(const Function *Func);
+
+  // Utility Functions
+  Value *createBBNameString(BasicBlock *BB);
+  Value *createRegisterNameString(Instruction *Inst);
+  Value *createInstructionString(Instruction *Inst);
 };
 
 } // namespace atomiccondition

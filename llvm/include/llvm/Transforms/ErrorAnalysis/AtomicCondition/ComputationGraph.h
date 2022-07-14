@@ -198,7 +198,7 @@ void fCGrecordPHIInstruction(char *InstructionString, char *ResidentBBName) {
   ResultReg[ResultRegLen]=0;
 
 #if FAF_DEBUG>=2
-  printf("Recording PHI Instruction\n", InstructionString);
+  printf("Recording PHI Instruction\n");
   printf("\tInstruction String:%s\n", InstructionString);
 #endif
 
@@ -478,7 +478,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
     break;
   case 1:
     // Setting the Left Node
-    if (fCGperformPHIResolution(LeftOpInstructionString)) {
+    if (fCGisPHIInstruction(LeftOpInstructionString)) {
 #if FAF_DEBUG
       printf("\tResolving %s\n", LeftOpInstructionString);
 #endif
@@ -808,14 +808,6 @@ void fCGDotGraph() {
 #endif
 }
 
-void fAFAnalysis() {
-
-  return ;
-}
-//void fAFAnalysis(char *InstructionString, char *InstructionToAnalyse, char *BasicBlockName, enum NodeKind NK) {
-//
-//  return ;
-//}
 
 
 

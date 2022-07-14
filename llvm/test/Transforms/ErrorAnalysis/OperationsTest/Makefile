@@ -6,6 +6,7 @@ LLI = /home/tanmay/Documents/Tools/llvm-project/build/bin/lli
 build_pass:
 	$(CXX) --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h \
 		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/ComputationGraph.h \
+		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h \
 	$(OP) -S -emit-llvm operations.c \
     	  -o operations.ll
 	$(OPT) -passes=error-analysis -S operations.ll \
