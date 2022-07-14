@@ -24,7 +24,7 @@ def CSKY_NIR : SDNode<"CSKYISD::NIR", SDTNone,
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def br_symbol_16bit : Operand<iPTR> {
+def br_symbol_16bit : Operand<OtherVT> {
   let EncoderMethod =
     "getBranchSymbolOpValue<CSKY::fixup_csky_pcrel_imm10_scale2>";
   let ParserMatchClass = CSKYSymbol;
