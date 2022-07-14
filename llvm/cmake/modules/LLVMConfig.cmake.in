@@ -73,6 +73,12 @@ if(LLVM_ENABLE_ZLIB)
   find_package(ZLIB)
 endif()
 
+set(LLVM_ENABLE_ZSTD @LLVM_ENABLE_ZSTD@)
+if(LLVM_ENABLE_ZSTD)
+  set(ZSTD_ROOT @ZSTD_ROOT@)
+  find_package(ZSTD)
+endif()
+
 set(LLVM_ENABLE_LIBXML2 @LLVM_ENABLE_LIBXML2@)
 if(LLVM_ENABLE_LIBXML2)
   find_package(LibXml2)
