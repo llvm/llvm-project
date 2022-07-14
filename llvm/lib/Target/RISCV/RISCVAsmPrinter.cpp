@@ -91,6 +91,9 @@ void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 #include "RISCVGenMCPseudoLowering.inc"
 
 void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  RISCV_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                        getSubtargetInfo().getFeatureBits());
+
   // Do any auto-generated pseudo lowerings.
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;

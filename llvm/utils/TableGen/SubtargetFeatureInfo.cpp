@@ -144,8 +144,13 @@ static bool emitFeaturesAux(StringRef TargetName, const Init &Val,
 void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     StringRef TargetName, StringRef ClassName, StringRef FuncName,
     SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {
-  OS << "FeatureBitset " << TargetName << ClassName << "::\n"
-     << FuncName << "(const FeatureBitset &FB) const {\n";
+  OS << "FeatureBitset ";
+  if (!ClassName.empty())
+    OS << TargetName << ClassName << "::\n";
+  OS << FuncName << "(const FeatureBitset &FB) ";
+  if (!ClassName.empty())
+    OS << "const ";
+  OS << "{\n";
   OS << "  FeatureBitset Features;\n";
   for (const auto &SF : SubtargetFeatures) {
     const SubtargetFeatureInfo &SFI = SF.second;
