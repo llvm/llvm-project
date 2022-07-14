@@ -828,9 +828,8 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
     if (auto BBWeight = getInitialEstimatedBlockWeight(BB))
       // If we were able to find estimated weight for the block set it to this
       // block and propagate up the IR.
-      propagateEstimatedBlockWeight(getLoopBlock(BB), DT, PDT,
-                                    BBWeight.getValue(), BlockWorkList,
-                                    LoopWorkList);
+      propagateEstimatedBlockWeight(getLoopBlock(BB), DT, PDT, BBWeight.value(),
+                                    BlockWorkList, LoopWorkList);
 
   // BlockWorklist/LoopWorkList contains blocks/loops with at least one
   // successor/exit having estimated weight. Try to propagate weight to such

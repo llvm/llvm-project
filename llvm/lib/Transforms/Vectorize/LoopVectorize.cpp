@@ -4866,7 +4866,7 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
     MaxVScale =
         TheFunction->getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
   MaxScalableVF = ElementCount::getScalable(
-      MaxVScale ? (MaxSafeElements / MaxVScale.getValue()) : 0);
+      MaxVScale ? (MaxSafeElements / MaxVScale.value()) : 0);
   if (!MaxScalableVF)
     reportVectorizationInfo(
         "Max legal vector width too small, scalable vectorization "
@@ -5261,9 +5261,9 @@ bool LoopVectorizationCostModel::isMoreProfitable(
   unsigned EstimatedWidthB = B.Width.getKnownMinValue();
   if (Optional<unsigned> VScale = getVScaleForTuning()) {
     if (A.Width.isScalable())
-      EstimatedWidthA *= VScale.getValue();
+      EstimatedWidthA *= VScale.value();
     if (B.Width.isScalable())
-      EstimatedWidthB *= VScale.getValue();
+      EstimatedWidthB *= VScale.value();
   }
 
   // Assume vscale may be larger than 1 (or the value being tuned for),
@@ -7625,7 +7625,7 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
       BestVPlan.getVectorLoopRegion()->getEntryBasicBlock();
   Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
   if (VectorizedLoopID)
-    L->setLoopID(VectorizedLoopID.getValue());
+    L->setLoopID(VectorizedLoopID.value());
   else {
     // Keep all loop hints from the original loop on the vector loop (we'll
     // replace the vectorizer-specific hints below).
@@ -10461,7 +10461,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupEpilogue});
   if (RemainderLoopID) {
-    L->setLoopID(RemainderLoopID.getValue());
+    L->setLoopID(RemainderLoopID.value());
   } else {
     if (DisableRuntimeUnroll)
       AddRuntimeUnrollDisableMetaData(L);
