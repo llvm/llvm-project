@@ -74,7 +74,7 @@ static_assert(test(std::ranges::count, a, 42));
 static_assert(test(std::ranges::count_if, a, odd));
 //static_assert(test(std::ranges::ends_with, a, a));
 static_assert(test(std::ranges::equal, a, a));
-//static_assert(test(std::ranges::equal_range, a, 42));
+static_assert(test(std::ranges::equal_range, a, 42));
 static_assert(test(std::ranges::fill, a, 42));
 static_assert(test(std::ranges::fill_n, a, 10, 42));
 static_assert(test(std::ranges::find, a, 42));

@@ -13,7 +13,7 @@ Search,lexicographical_compare,Nikolas Klauser,`D127130 <https://llvm.org/D12713
 Search,partition_point,Konstantin Varlamov,`D130070 <https://llvm.org/D130070>`_,✅
 Search,lower_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,upper_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
-Search,equal_range,Christopher Di Bella,n/a,Not started
+Search,equal_range,Hui Xie,`D129796 <https://llvm.org/D129796>`,✅
 Search,binary_search,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,min,Nikolas Klauser,`D119589 <https://llvm.org/D119589>`_,✅
 Search,max,Nikolas Klauser,`D122002 <https://llvm.org/D122002>`_,✅

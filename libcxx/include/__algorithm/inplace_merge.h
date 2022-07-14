@@ -18,6 +18,7 @@
 #include <__algorithm/rotate.h>
 #include <__algorithm/upper_bound.h>
 #include <__config>
+#include <__functional/identity.h>
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -157,7 +158,8 @@ __inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator __middle,
             __len21 = __len2 / 2;
             __m2 = __middle;
             _Ops::advance(__m2, __len21);
-            __m1 = _VSTD::__upper_bound<_Compare>(__first, __middle, *__m2, __comp);
+            // TODO: replace _ClassicAlgPolicy and __identity with _AlgPolicy and projection
+            __m1 = std::__upper_bound<_ClassicAlgPolicy>(__first, __middle, *__m2, __comp, std::__identity());
             __len11 = _Ops::distance(__first, __m1);
         }
         else
