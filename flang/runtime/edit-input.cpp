@@ -654,15 +654,25 @@ static bool EditListDirectedCharacterInput(
   // in NextInField.
   std::optional<int> remaining{length > 0 ? maxUTF8Bytes : 0};
   while (std::optional<char32_t> next{io.NextInField(remaining, edit)}) {
+    bool isSep{false};
     switch (*next) {
     case ' ':
     case '\t':
-    case ',':
-    case ';':
     case '/':
-      remaining = 0; // value separator: stop
+      isSep = true;
+      break;
+    case ',':
+      isSep = !(edit.modes.editingFlags & decimalComma);
+      break;
+    case ';':
+      isSep = !!(edit.modes.editingFlags & decimalComma);
       break;
     default:
+      break;
+    }
+    if (isSep) {
+      remaining = 0;
+    } else {
       *x++ = *next;
       remaining = --length > 0 ? maxUTF8Bytes : 0;
     }
