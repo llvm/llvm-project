@@ -585,7 +585,7 @@ func.func @mul_ds(%arga: tensor<512x1024xf32, #SparseMatrix>, %argb: tensor<512x
 // CHECK-VEC4:       return
 //
 func.func @add_dense(%arga: tensor<32x64xf64, #SparseMatrix>,
-                %argx: tensor<33x64xf64> {linalg.inplaceable = true}) -> tensor<33x64xf64> {
+                %argx: tensor<33x64xf64>) -> tensor<33x64xf64> {
   %0 = linalg.generic #trait_affine
      ins(%arga: tensor<32x64xf64, #SparseMatrix>)
     outs(%argx: tensor<33x64xf64>) {

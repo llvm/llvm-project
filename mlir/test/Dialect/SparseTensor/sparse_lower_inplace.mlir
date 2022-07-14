@@ -23,7 +23,7 @@
 // CHECK-HIR-LABEL:   func @matvec(
 // CHECK-HIR-SAME:      %[[VAL_0:.*]]: tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-HIR-SAME:      %[[VAL_1:.*]]: tensor<64xf64>,
-// CHECK-HIR-SAME:      %[[VAL_2:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-HIR-SAME:      %[[VAL_2:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-HIR-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-HIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-HIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
@@ -54,7 +54,7 @@
 // CHECK-MIR-LABEL:   func @matvec(
 // CHECK-MIR-SAME:      %[[VAL_0:.*]]: !llvm.ptr<i8>,
 // CHECK-MIR-SAME:      %[[VAL_1:.*]]: tensor<64xf64>,
-// CHECK-MIR-SAME:      %[[VAL_2:.*]]: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+// CHECK-MIR-SAME:      %[[VAL_2:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-MIR-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-MIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-MIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
@@ -85,7 +85,7 @@
 // CHECK-LIR-LABEL:   func @matvec(
 // CHECK-LIR-SAME:      %[[VAL_0:.*]]: !llvm.ptr<i8>,
 // CHECK-LIR-SAME:      %[[VAL_1:.*]]: memref<64xf64>,
-// CHECK-LIR-SAME:      %[[VAL_2:.*]]: memref<32xf64> {linalg.inplaceable = true}) -> memref<32xf64> {
+// CHECK-LIR-SAME:      %[[VAL_2:.*]]: memref<32xf64>) -> memref<32xf64> {
 // CHECK-LIR-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-LIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-LIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
@@ -112,7 +112,7 @@
 
 func.func @matvec(%arga: tensor<32x64xf64, #CSR>,
              %argb: tensor<64xf64>,
-	     %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
+	           %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait_matvec
       ins(%arga, %argb : tensor<32x64xf64, #CSR>, tensor<64xf64>)
       outs(%argx: tensor<32xf64>) {

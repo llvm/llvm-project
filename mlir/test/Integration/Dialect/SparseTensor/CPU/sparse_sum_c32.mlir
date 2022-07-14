@@ -30,7 +30,7 @@ module {
   // A kernel that sum-reduces a matrix to a single scalar.
   //
   func.func @kernel_sum_reduce(%arga: tensor<?x?xcomplex<f64>, #SparseMatrix>,
-                          %argx: tensor<complex<f64>> {linalg.inplaceable = true}) -> tensor<complex<f64>> {
+                               %argx: tensor<complex<f64>>) -> tensor<complex<f64>> {
     %0 = linalg.generic #trait_sum_reduce
       ins(%arga: tensor<?x?xcomplex<f64>, #SparseMatrix>)
       outs(%argx: tensor<complex<f64>>) {
@@ -53,9 +53,9 @@ module {
 
     // Setup memory for a single reduction scalar,
     // initialized to zero.
-    %xdata = memref.alloc() : memref<complex<f64>>
-    memref.store %d0, %xdata[] : memref<complex<f64>>
-    %x = bufferization.to_tensor %xdata : memref<complex<f64>>
+    // TODO: tensor.from_elements does not support complex.
+    %alloc = bufferization.alloc_tensor() : tensor<complex<f64>>
+    %x = tensor.insert %d0 into %alloc[] : tensor<complex<f64>>
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
@@ -70,15 +70,13 @@ module {
     // CHECK: 30.2
     // CHECK-NEXT: 22.2
     //
-    %m = bufferization.to_memref %0 : memref<complex<f64>>
-    %v = memref.load %m[] : memref<complex<f64>>
+    %v = tensor.extract %0[] : tensor<complex<f64>>
     %real = complex.re %v : complex<f64>
     %imag = complex.im %v : complex<f64>
     vector.print %real : f64
     vector.print %imag : f64
 
     // Release the resources.
-    memref.dealloc %xdata : memref<complex<f64>>
     sparse_tensor.release %a : tensor<?x?xcomplex<f64>, #SparseMatrix>
 
     return

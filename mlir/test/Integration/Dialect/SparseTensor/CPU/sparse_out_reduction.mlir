@@ -77,15 +77,13 @@ module {
     vector.print %vv : vector<4xi32>
     %dm = sparse_tensor.convert %0
       : tensor<?x?xi32, #SparseMatrix> to tensor<?x?xi32>
-    %db = bufferization.to_memref %dm : memref<?x?xi32>
-    %vm = vector.transfer_read %db[%c0, %c0], %i0: memref<?x?xi32>, vector<3x3xi32>
+    %vm = vector.transfer_read %dm[%c0, %c0], %i0: tensor<?x?xi32>, vector<3x3xi32>
     vector.print %vm : vector<3x3xi32>
 
     // Release the resources.
     sparse_tensor.release %st1 : tensor<?x?x?xi32, #SparseTensor>
     sparse_tensor.release %st2 : tensor<?x?x?xi32, #SparseTensor>
     sparse_tensor.release %0 : tensor<?x?xi32, #SparseMatrix>
-    memref.dealloc %db : memref<?x?xi32>
     return
   }
 }

@@ -46,7 +46,7 @@
 // CHECK:           %[[VAL_18:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_18]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func.func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
+func.func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR>) -> tensor<32x16xf32, #DCSR> {
   %c = arith.constant 2.0 : f32
   %0 = linalg.generic #trait_scale_inpl
     outs(%argx: tensor<32x16xf32, #DCSR>) {
@@ -80,7 +80,7 @@ func.func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplac
 // CHECK:           %[[VAL_16:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_16]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func.func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
+func.func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR>) -> tensor<32x16xf32, #DCSR> {
   %0 = linalg.generic #trait_scale_inpl
     outs(%argx: tensor<32x16xf32, #DCSR>) {
       ^bb(%x: f32):

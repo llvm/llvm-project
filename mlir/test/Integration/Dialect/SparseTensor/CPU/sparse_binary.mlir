@@ -353,10 +353,8 @@ module {
     vector.print %1 : vector<16xf64>
     // Dump the dense vector to verify structure is correct.
     %dv = sparse_tensor.convert %arg0 : tensor<?xf64, #SparseVector> to tensor<?xf64>
-    %2 = bufferization.to_memref %dv : memref<?xf64>
-    %3 = vector.transfer_read %2[%c0], %d0: memref<?xf64>, vector<32xf64>
+    %3 = vector.transfer_read %dv[%c0], %d0: tensor<?xf64>, vector<32xf64>
     vector.print %3 : vector<32xf64>
-    memref.dealloc %2 : memref<?xf64>
     return
   }
 
@@ -369,10 +367,8 @@ module {
     vector.print %1 : vector<24xi32>
     // Dump the dense vector to verify structure is correct.
     %dv = sparse_tensor.convert %arg0 : tensor<?xi32, #SparseVector> to tensor<?xi32>
-    %2 = bufferization.to_memref %dv : memref<?xi32>
-    %3 = vector.transfer_read %2[%c0], %d0: memref<?xi32>, vector<32xi32>
+    %3 = vector.transfer_read %dv[%c0], %d0: tensor<?xi32>, vector<32xi32>
     vector.print %3 : vector<32xi32>
-    memref.dealloc %2 : memref<?xi32>
     return
   }
 
@@ -380,10 +376,8 @@ module {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
     %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #DCSR> to tensor<?x?xf64>
-    %0 = bufferization.to_memref %dm : memref<?x?xf64>
-    %1 = vector.transfer_read %0[%c0, %c0], %d0: memref<?x?xf64>, vector<4x8xf64>
+    %1 = vector.transfer_read %dm[%c0, %c0], %d0: tensor<?x?xf64>, vector<4x8xf64>
     vector.print %1 : vector<4x8xf64>
-    memref.dealloc %0 : memref<?x?xf64>
     return
   }
 
@@ -392,16 +386,13 @@ module {
     %du = arith.constant -1.0 : f64
 
     %c = sparse_tensor.convert %A : tensor<4x4xf64, #DCSR> to tensor<4x4xf64>
-    %m = bufferization.to_memref %c : memref<4x4xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %du: memref<4x4xf64>, vector<4x4xf64>
+    %v = vector.transfer_read %c[%c0, %c0], %du: tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v : vector<4x4xf64>
 
     %1 = sparse_tensor.values %A : tensor<4x4xf64, #DCSR> to memref<?xf64>
     %2 = vector.transfer_read %1[%c0], %du: memref<?xf64>, vector<16xf64>
     vector.print %2 : vector<16xf64>
 
-    // Release the resources.
-    memref.dealloc %m : memref<4x4xf64>
     return
   }
 
@@ -410,16 +401,13 @@ module {
     %du = arith.constant -1 : i8
 
     %c = sparse_tensor.convert %A : tensor<4x4xi8, #DCSR> to tensor<4x4xi8>
-    %m = bufferization.to_memref %c : memref<4x4xi8>
-    %v = vector.transfer_read %m[%c0, %c0], %du: memref<4x4xi8>, vector<4x4xi8>
+    %v = vector.transfer_read %c[%c0, %c0], %du: tensor<4x4xi8>, vector<4x4xi8>
     vector.print %v : vector<4x4xi8>
 
     %1 = sparse_tensor.values %A : tensor<4x4xi8, #DCSR> to memref<?xi8>
     %2 = vector.transfer_read %1[%c0], %du: memref<?xi8>, vector<16xi8>
     vector.print %2 : vector<16xi8>
-
-    // Release the resources.
-    memref.dealloc %m : memref<4x4xi8>
+  
     return
   }
 

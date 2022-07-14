@@ -42,9 +42,9 @@ module {
   // http://tensor-compiler.org/docs/data_analytics/index.html.
   //
   func.func @kernel_mttkrp(%argb: tensor<?x?x?xf64, #SparseTensor>,
-                      %argc: tensor<?x?xf64>,
-                      %argd: tensor<?x?xf64>,
-                      %arga: tensor<?x?xf64> {linalg.inplaceable = true})
+                           %argc: tensor<?x?xf64>,
+                           %argd: tensor<?x?xf64>,
+                           %arga: tensor<?x?xf64>)
 		      -> tensor<?x?xf64> {
     %0 = linalg.generic #mttkrp
       ins(%argb, %argc, %argd:

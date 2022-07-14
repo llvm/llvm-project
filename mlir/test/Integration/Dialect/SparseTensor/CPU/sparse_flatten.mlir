@@ -45,7 +45,7 @@ module {
   // A kernel that flattens a rank 8 tensor into a dense matrix.
   //
   func.func @kernel_flatten(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>,
-                       %argx: tensor<7x3xf64> {linalg.inplaceable = true})
+                            %argx: tensor<7x3xf64>)
 		       -> tensor<7x3xf64> {
     %0 = linalg.generic #trait_flatten
       ins(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>)

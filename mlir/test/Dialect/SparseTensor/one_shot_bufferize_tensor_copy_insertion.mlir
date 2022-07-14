@@ -40,3 +40,34 @@ func.func @sparse_tensor_convert() -> tensor<20x40xf32> {
   %2 = sparse_tensor.convert %1 : tensor<20x40xf32, #DCSR> to tensor<20x40xf32>
   return %2 : tensor<20x40xf32>
 }
+
+#SV = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
+
+#trait = {
+  indexing_maps = [
+    affine_map<(i) -> (i)>,  // A (in)
+    affine_map<(i) -> (i)>   // X (out)
+  ],
+  iterator_types = ["parallel"]
+}
+
+// CHECK-LABEL: func @update_notinplace(
+//  CHECK-SAME:    %[[argb:.*]]: tensor<10xf32> 
+// CHECK-FUNC-LABEL: func @update_notinplace(
+//  CHECK-FUNC-SAME:    %[[argb:.*]]: tensor<10xf32> 
+func.func @update_notinplace(%argb: tensor<10xf32>, %arga: tensor<10xf32, #SV>)
+  -> (tensor<10xf32>, tensor<10xf32>)
+{
+  // CHECK: %[[alloc:.*]] = bufferization.alloc_tensor() copy(%[[argb]]) {bufferization.escape = [false]} : tensor<10xf32>
+  // CHECK: linalg.generic {{.*}} outs(%[[alloc]]
+  // CHECK-FUNC: %[[alloc:.*]] = bufferization.alloc_tensor() copy(%[[argb]]) {bufferization.escape = [true]} : tensor<10xf32>
+  // CHECK-FUNC: linalg.generic {{.*}} outs(%[[alloc]]
+  %0 = linalg.generic #trait
+  ins(%arga: tensor<10xf32, #SV>)
+  outs(%argb: tensor<10xf32>) {
+    ^bb(%a: f32, %x : f32):
+      %up = arith.addf %a, %x : f32
+      linalg.yield %up : f32
+  } -> tensor<10xf32>
+  return %0, %argb : tensor<10xf32>, tensor<10xf32>
+}
