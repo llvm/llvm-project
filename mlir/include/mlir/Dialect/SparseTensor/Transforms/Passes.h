@@ -23,6 +23,9 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+namespace bufferization {
+struct OneShotBufferizationOptions;
+} // namespace bufferization
 
 // Forward.
 class TypeConverter;
@@ -131,6 +134,8 @@ void populateSparseTensorConversionPatterns(
     const SparseTensorConversionOptions &options =
         SparseTensorConversionOptions());
 
+std::unique_ptr<Pass> createDenseBufferizationPass(
+    const bufferization::OneShotBufferizationOptions &options);
 std::unique_ptr<Pass> createSparseTensorConversionPass();
 std::unique_ptr<Pass>
 createSparseTensorConversionPass(const SparseTensorConversionOptions &options);

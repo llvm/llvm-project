@@ -32,8 +32,6 @@ module {
   }
   func.func @dumpAndRelease_234(%arg0: tensor<2x3x4xf64>) {
     call @dump(%arg0) : (tensor<2x3x4xf64>) -> ()
-    %1 = bufferization.to_memref %arg0 : memref<2x3x4xf64>
-    memref.dealloc %1 : memref<2x3x4xf64>
     return
   }
 

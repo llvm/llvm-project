@@ -63,14 +63,12 @@ module {
     // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
     // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
     //
-    %m = bufferization.to_memref %0 : memref<6x6xi32>
-    %v = vector.transfer_read %m[%c0, %c0], %i0
-      : memref<6x6xi32>, vector<6x6xi32>
+    %v = vector.transfer_read %0[%c0, %c0], %i0
+      : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v : vector<6x6xi32>
 
     // Release the resources.
     sparse_tensor.release %sparse_filter : tensor<3x3xi32, #DCSR>
-    memref.dealloc %m : memref<6x6xi32>
 
     return
   }
