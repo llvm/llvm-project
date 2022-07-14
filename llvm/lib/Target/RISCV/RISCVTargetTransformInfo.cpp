@@ -65,7 +65,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     if (Imm == UINT64_C(0xffff) && ST->hasStdExtZbb())
       return TTI::TCC_Free;
     // zext.w
-    if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZbb())
+    if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZba())
       return TTI::TCC_Free;
     LLVM_FALLTHROUGH;
   case Instruction::Add:
