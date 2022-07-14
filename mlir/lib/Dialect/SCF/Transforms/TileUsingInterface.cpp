@@ -126,8 +126,8 @@ static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
   bindSymbols(b.getContext(), s0, s1);
   AffineMap minMap = AffineMap::get(1, 2, {s0, s1 - d0}, b.getContext());
   Value size = getValueOrCreateConstantIndexOp(b, loc, loopRange.size);
-  return b.create<AffineMinOp>(loc, minMap, ValueRange{iv, tileSize, size})
-      .getResult();
+  return makeComposedFoldedAffineMin(
+      b, loc, minMap, SmallVector<OpFoldResult>{iv, tileSize, size});
 }
 
 /// Generate an empty loop nest that represents the tiled loop nest shell.
