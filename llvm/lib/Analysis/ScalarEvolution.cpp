@@ -6651,6 +6651,13 @@ ScalarEvolution::getRangeRef(const SCEV *S,
       }
     }
 
+    // vscale can't be equal to zero
+    if (const auto *II = dyn_cast<IntrinsicInst>(U->getValue()))
+      if (II->getIntrinsicID() == Intrinsic::vscale) {
+        ConstantRange Disallowed = APInt::getZero(BitWidth);
+        ConservativeResult = ConservativeResult.difference(Disallowed);
+      }
+
     return setRange(U, SignHint, std::move(ConservativeResult));
   }
 
