@@ -1978,11 +1978,14 @@ static void updateCallGraphAfterCoroutineSplit(
     FunctionAnalysisManager &FAM) {
   if (!Shape.CoroBegin)
     return;
-
-  for (llvm::AnyCoroEndInst *End : Shape.CoroEnds) {
-    auto &Context = End->getContext();
-    End->replaceAllUsesWith(ConstantInt::getFalse(Context));
-    End->eraseFromParent();
+  if (Shape.ABI != coro::ABI::Switch) {
+    removeCoroEnds(Shape, nullptr);
+  } else {
+    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds) {
+      auto &Context = End->getContext();
+      End->replaceAllUsesWith(ConstantInt::getFalse(Context));
+      End->eraseFromParent();
+    }
   }
 
   if (!Clones.empty()) {
