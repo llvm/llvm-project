@@ -13,6 +13,7 @@ build_pass:
 								  -o forLoop_ac.ll
 	$(CXX) --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h \
   		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/ComputationGraph.h \
+  		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h \
   	$(OP) -S -emit-llvm doubleForLoop.c \
       	  -o doubleForLoop.ll
 	$(OPT) -passes=error-analysis -S doubleForLoop.ll \

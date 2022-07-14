@@ -30,6 +30,7 @@ void confFunction(Function *FunctionToSave, Function **StorageLocation,
 ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToInstrument(InstrumentFunction),
                                                                      ACInitFunction(nullptr),
                                                                      CGInitFunction(nullptr),
+                                                                     AFInitFunction(nullptr),
                                                                      ACfp32UnaryFunction(nullptr),
                                                                      ACfp64UnaryFunction(nullptr),
                                                                      ACfp32BinaryFunction(nullptr),
@@ -39,6 +40,7 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
                                                                      CGCreateNode(nullptr),
                                                                      ACStoreFunction(nullptr),
                                                                      CGStoreFunction(nullptr),
+                                                                     AFStoreFunction(nullptr),
                                                                      AFfp32AnalysisFunction(nullptr),
                                                                      AFfp64AnalysisFunction(nullptr),
                                                                      CGDotGraphFunction(nullptr)
@@ -53,6 +55,14 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
     // Only configuring functions with certain prefixes
     if (CurrentFunction->getName().str().find("fACCreate") != std::string::npos) {
       confFunction(CurrentFunction, &ACInitFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
+    else if (CurrentFunction->getName().str().find("fCGInitialize") != std::string::npos) {
+      confFunction(CurrentFunction, &CGInitFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
+    else if (CurrentFunction->getName().str().find("fAFInitialize") != std::string::npos) {
+      confFunction(CurrentFunction, &AFInitFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
     else if (CurrentFunction->getName().str().find("fACfp32UnaryDriver") != std::string::npos) {
@@ -93,6 +103,9 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
     }
     else if (CurrentFunction->getName().str().find("fCGStoreResult") != std::string::npos) {
       confFunction(CurrentFunction, &CGStoreFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }else if (CurrentFunction->getName().str().find("fAFStoreResult") != std::string::npos) {
+      confFunction(CurrentFunction, &AFStoreFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
     else if (CurrentFunction->getName().str().find("fAFfp32Analysis") != std::string::npos) {
@@ -557,19 +570,24 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
 void ACInstrumentation::instrumentMainFunction(Function *F) {
   assert((ACInitFunction!=nullptr) &&
          (CGInitFunction!=nullptr) &&
+         (AFInitFunction!= nullptr) &&
          (ACStoreFunction!=nullptr) &&
          (CGStoreFunction!=nullptr) &&
+         (AFStoreFunction!= nullptr) &&
          (CGDotGraphFunction!=nullptr) &&
          "Function not initialized!");
   BasicBlock *BB = &(*(F->begin()));
   Instruction *Inst = BB->getFirstNonPHIOrDbg();
   IRBuilder<> InstructionBuilder(Inst);
-  std::vector<Value *> ACInitCallArgs, CGInitCallArgs, AnalysisCallArgs;
-  std::vector<Value *> ACStoreCallArgs, CGStoreCallArgs;
+  std::vector<Value *> ACInitCallArgs, CGInitCallArgs, AFInitCallArgs,
+      AnalysisCallArgs;
+  std::vector<Value *> ACStoreCallArgs, CGStoreCallArgs, AFStoreCallArgs;
   std::vector<Value *> DotGraphCallArgs;
 
-  CallInst *ACInitCallInstruction, *CGInitCallInstruction, *AnalysisCallInstruction;
-  CallInst *StoreACTableCallInstruction, *StoreCGTableCallInstruction;
+  CallInst *ACInitCallInstruction, *CGInitCallInstruction, *AFInitCallInstruction,
+      *AnalysisCallInstruction;
+  CallInst *StoreACTableCallInstruction, *StoreCGTableCallInstruction,
+      *StoreAFTableCallInstruction;
   CallInst *DotGraphCallInstruction;
 
   // Instrumenting Initialization call instruction
@@ -589,6 +607,7 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
 //  {
   ACInitCallInstruction = InstructionBuilder.CreateCall(ACInitFunction, ACInitCallArgs);
   CGInitCallInstruction = InstructionBuilder.CreateCall(CGInitFunction, CGInitCallArgs);
+  AFInitCallInstruction = InstructionBuilder.CreateCall(AFInitFunction, AFInitCallArgs);
 //  }
 
   // Instrument call to print table
@@ -598,9 +617,12 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
       if (isa<ReturnInst>(CurrentInstruction) || isa<ResumeInst>(CurrentInstruction)) {
         ArrayRef<Value *> ACStoreCallArgsRef(ACStoreCallArgs);
         ArrayRef<Value *> CGStoreCallArgsRef(CGStoreCallArgs);
+        ArrayRef<Value *> AFStoreCallArgesRef(AFStoreCallArgs);
+
         InstructionBuilder.SetInsertPoint(CurrentInstruction);
         StoreACTableCallInstruction = InstructionBuilder.CreateCall(ACStoreFunction, ACStoreCallArgsRef);
         StoreCGTableCallInstruction = InstructionBuilder.CreateCall(CGStoreFunction, CGStoreCallArgsRef);
+        StoreAFTableCallInstruction = InstructionBuilder.CreateCall(AFStoreFunction, AFStoreCallArgesRef);
 
         ArrayRef<Value *> DotGraphCallArgsRef(DotGraphCallArgs);
         DotGraphCallInstruction = InstructionBuilder.CreateCall(CGDotGraphFunction, DotGraphCallArgsRef);
@@ -608,8 +630,10 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
     }
   }
 
-  assert(ACInitCallInstruction && CGInitCallInstruction && AnalysisCallInstruction && "Invalid call instruction!");
-  assert(StoreACTableCallInstruction && StoreCGTableCallInstruction && "Invalid call instruction!");
+  assert(ACInitCallInstruction && CGInitCallInstruction &&
+         AFInitCallInstruction && AnalysisCallInstruction && "Invalid call instruction!");
+  assert(StoreACTableCallInstruction && StoreCGTableCallInstruction &&
+         StoreAFTableCallInstruction && "Invalid call instruction!");
   assert(DotGraphCallInstruction && "Invalid call instruction!");
   return;
 }

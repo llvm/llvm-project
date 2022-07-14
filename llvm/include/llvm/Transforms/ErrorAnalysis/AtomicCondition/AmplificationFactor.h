@@ -18,18 +18,38 @@ typedef struct NodeProcessingQ {
   uint64_t Size;
 } NodeProcessingQ;
 
-typedef struct AFItem {
+typedef struct FloatAFItem {
+  char *ResultRegName;
+  int ResultNodeID;
+  char *WRTRegName;
+  int WRTNodeID;
+  float AF;
+} FloatAFItem;
 
-} AFItem;
+typedef struct DoubleAFItem {
+  char *ResultRegName;
+  int ResultNodeID;
+  char *WRTRegName;
+  int WRTNodeID;
+  float AF;
+} DoubleAFItem;
 
+typedef struct AnalysisResult {
+  NodeProcessingQ *ProcessingQ;
+  FloatAFItem *FloatAFItemPointer;
+  uint64_t FloatAFRecords;
+  DoubleAFItem *DoubleAFItemPointer;
+  uint64_t DoubleAFRecords;
+} AnalysisResult;
 
 /*----------------------------------------------------------------------------*/
 /* Globals                                                                    */
 /*----------------------------------------------------------------------------*/
+AnalysisResult *AFResult;
 
-NodeProcessingQ *ProcessingQ;
-AFItem *AFItemPointer;
-
+/*----------------------------------------------------------------------------*/
+/* Utility Functions                                                          */
+/*----------------------------------------------------------------------------*/
 
 #pragma clang optimize off
 void fAFfp32markForResult(float res) {
@@ -41,6 +61,58 @@ void fAFfp64markForResult(double res) {
 }
 
 #pragma clang optimize on
+
+void fAFInitialize() {
+  AnalysisResult *AFObject = NULL;
+  int64_t Size = 1000;
+
+  // Allocating Memory to the analysis object itself
+  if( (AFObject = (AnalysisResult *)malloc(sizeof(AnalysisResult))) == NULL) {
+    printf("#AF: Queue out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+  AFObject->ProcessingQ = NULL;
+  AFObject->FloatAFItemPointer = NULL;
+  AFObject->DoubleAFItemPointer = NULL;
+  AFObject->FloatAFRecords = 0;
+  AFObject->DoubleAFRecords = 0;
+
+  // Allocating Memory for Processing Queue
+  if( (AFObject->ProcessingQ = (NodeProcessingQ *)malloc((size_t)((int64_t)sizeof(NodeProcessingQ) * Size))) == NULL) {
+    printf("#AF: Queue out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  // Allocating Memory for Amplification Factor Tables
+  if( (AFObject->FloatAFItemPointer = (FloatAFItem *)malloc((size_t)((int64_t)sizeof(FloatAFItem) * Size))) == NULL) {
+    printf("#CG: graph out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  if( (AFObject->DoubleAFItemPointer = (DoubleAFItem *)malloc((size_t)((int64_t)sizeof(DoubleAFItem) * Size))) == NULL) {
+    printf("#CG: graph out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  AFResult = AFObject;
+
+#if FAF_DEBUG
+  // Create a directory if not present
+  char *DirectoryName = (char *)malloc(strlen(LOG_DIRECTORY_NAME) * sizeof(char));
+  strcpy(DirectoryName, LOG_DIRECTORY_NAME);
+
+  char ExecutionId[5000];
+  char AFFileName[5000];
+  AFFileName[0] = '\0';
+  strcpy(AFFileName, strcat(strcpy(AFFileName, DirectoryName), "/program_log_"));
+
+  fACGenerateExecutionID(ExecutionId);
+  strcat(ExecutionId, ".txt");
+
+  strcat(AFFileName, ExecutionId);
+  printf("Amplification Factors Storage File:%s\n", AFFileName);
+#endif
+}
 
 void fAFfp32Analysis(char *InstructionToAnalyse) {
   assert(fCGisRegister(InstructionToAnalyse));
@@ -124,6 +196,12 @@ void fAFfp64Analysis(char *ResultToAnalyse) {
 
   printf("Amplification Factor of NodeID is Value\n");
   return ;
+}
+
+void fAFStoreResult() {
+//#if FAF_DEBUG
+
+//#endif
 }
 
 #endif // LLVM_AMPLIFICATIONFACTOR_H

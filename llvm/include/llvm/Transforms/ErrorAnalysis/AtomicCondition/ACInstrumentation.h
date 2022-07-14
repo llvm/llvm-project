@@ -19,6 +19,7 @@ private:
 
   Function *ACInitFunction;
   Function *CGInitFunction;
+  Function *AFInitFunction;
 
   Function *ACfp32UnaryFunction;
   Function *ACfp64UnaryFunction;
@@ -31,6 +32,8 @@ private:
 
   Function *ACStoreFunction;
   Function *CGStoreFunction;
+  Function *AFStoreFunction;
+
   Function *AFfp32AnalysisFunction;
   Function *AFfp64AnalysisFunction;
 
