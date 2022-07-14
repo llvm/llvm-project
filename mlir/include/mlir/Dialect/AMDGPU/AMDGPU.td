@@ -164,4 +164,23 @@ def AMDGPU_RawBufferAtomicFaddOp :
   let hasVerifier = 1;
 }
 
+def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
+  let summary = "Barrier that includes a wait for LDS memory operations.";
+  let description = [{
+    `amdgpu.lds_barrier` is both a barrier (all workitems in a workgroup must reach
+    the barrier before any of them may proceed past it) and a wait for all
+    operations that affect the Local Data Store (LDS) issued from that wrokgroup
+    to complete before the workgroup may continue. Since the LDS is per-workgroup
+    memory, this barrier may be used, for example, to ensure all workitems have
+    written data to LDS before any workitem attempts to read from it.
+
+    Note that `lds_barrier` does **not** force reads to or from global memory
+    to complete before execution continues. Therefore, it should be used when
+    operations on global memory can be issued far in advance of when their results
+    are used (for example, by writing them to LDS).
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+
 #endif // AMDGPU

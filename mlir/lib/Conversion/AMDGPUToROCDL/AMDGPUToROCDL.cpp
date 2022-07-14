@@ -241,6 +241,26 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
   }
 };
 
+struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
+  using ConvertOpToLLVMPattern<LDSBarrierOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(LDSBarrierOp op, LDSBarrierOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
+                                                    LLVM::AsmDialect::AD_ATT);
+    const char *asmStr = "s_waitcnt lgkmcnt(0)\ns_barrier";
+    const char *constraints = "";
+    rewriter.replaceOpWithNewOp<LLVM::InlineAsmOp>(
+        op,
+        /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
+        /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
+        /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
+        /*operand_attrs=*/ArrayAttr());
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public ConvertAMDGPUToROCDLBase<ConvertAMDGPUToROCDLPass> {
   ConvertAMDGPUToROCDLPass() = default;
@@ -269,6 +289,7 @@ struct ConvertAMDGPUToROCDLPass
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
+  patterns.add<LDSBarrierOpLowering>(converter);
   patterns.add<
       RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawBufferLoadOp>,
       RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawBufferStoreOp>,
