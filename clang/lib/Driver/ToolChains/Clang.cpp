@@ -956,6 +956,27 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fprofile-update=atomic");
   }
 
+  int FunctionGroups = 1;
+  int SelectedFunctionGroup = 0;
+  if (const auto *A = Args.getLastArg(options::OPT_fprofile_function_groups)) {
+    StringRef Val = A->getValue();
+    if (Val.getAsInteger(0, FunctionGroups) || FunctionGroups < 1)
+      D.Diag(diag::err_drv_invalid_int_value) << A->getAsString(Args) << Val;
+  }
+  if (const auto *A =
+          Args.getLastArg(options::OPT_fprofile_selected_function_group)) {
+    StringRef Val = A->getValue();
+    if (Val.getAsInteger(0, SelectedFunctionGroup) ||
+        SelectedFunctionGroup < 0 || SelectedFunctionGroup >= FunctionGroups)
+      D.Diag(diag::err_drv_invalid_int_value) << A->getAsString(Args) << Val;
+  }
+  if (FunctionGroups != 1)
+    CmdArgs.push_back(Args.MakeArgString("-fprofile-function-groups=" +
+                                         Twine(FunctionGroups)));
+  if (SelectedFunctionGroup != 0)
+    CmdArgs.push_back(Args.MakeArgString("-fprofile-selected-function-group=" +
+                                         Twine(SelectedFunctionGroup)));
+
   // Leave -fprofile-dir= an unused argument unless .gcda emission is
   // enabled. To be polite, with '-fprofile-arcs -fno-profile-arcs' consider
   // the flag used. There is no -fno-profile-dir, so the user has no
