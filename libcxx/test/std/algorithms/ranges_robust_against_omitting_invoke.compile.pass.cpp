@@ -194,7 +194,7 @@ void test_all() {
   in2_out_pred(std::ranges::set_difference, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   in2_out_pred(std::ranges::set_intersection, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   in2_out_pred(std::ranges::set_symmetric_difference, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
-  //in2_out_pred(std::ranges::set_union, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
+  in2_out_pred(std::ranges::set_union, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   in_val(std::ranges::remove, in, x, &Bar::val);
   in_pred(std::ranges::remove_if, in, &Foo::unary_pred, &Bar::val);
   // `reverse` has neither a projection nor a predicate.
