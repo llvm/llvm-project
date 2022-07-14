@@ -1131,7 +1131,21 @@ static void emitPostInstructionInfo(formatted_raw_ostream &FOS,
   FOS.flush();
 }
 
-static void disassembleObject(const Target *TheTarget, const ObjectFile &Obj,
+static void createFakeELFSections(ObjectFile &Obj) {
+  assert(Obj.isELF());
+  if (auto *Elf32LEObj = dyn_cast<ELF32LEObjectFile>(&Obj))
+    Elf32LEObj->createFakeSections();
+  else if (auto *Elf64LEObj = dyn_cast<ELF64LEObjectFile>(&Obj))
+    Elf64LEObj->createFakeSections();
+  else if (auto *Elf32BEObj = dyn_cast<ELF32BEObjectFile>(&Obj))
+    Elf32BEObj->createFakeSections();
+  else if (auto *Elf64BEObj = cast<ELF64BEObjectFile>(&Obj))
+    Elf64BEObj->createFakeSections();
+  else
+    llvm_unreachable("Unsupported binary format");
+}
+
+static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
                               MCContext &Ctx, MCDisassembler *PrimaryDisAsm,
                               MCDisassembler *SecondaryDisAsm,
                               const MCInstrAnalysis *MIA, MCInstPrinter *IP,
@@ -1197,6 +1211,9 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile &Obj,
 
   if (Obj.isWasm())
     addMissingWasmCodeSymbols(cast<WasmObjectFile>(Obj), AllSymbols);
+
+  if (Obj.isELF() && Obj.sections().empty())
+    createFakeELFSections(Obj);
 
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -1688,7 +1705,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile &Obj,
     reportWarning("failed to disassemble missing symbol " + Sym, FileName);
 }
 
-static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
+static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   const Target *TheTarget = getTarget(Obj);
 
   // Package up features to be passed to target/subtarget
@@ -1890,7 +1907,7 @@ static size_t getMaxSectionNameWidth(const ObjectFile &Obj) {
   return MaxWidth;
 }
 
-void objdump::printSectionHeaders(const ObjectFile &Obj) {
+void objdump::printSectionHeaders(ObjectFile &Obj) {
   size_t NameWidth = getMaxSectionNameWidth(Obj);
   size_t AddressWidth = 2 * Obj.getBytesInAddress();
   bool HasLMAColumn = shouldDisplayLMA(Obj);
@@ -1902,6 +1919,9 @@ void objdump::printSectionHeaders(const ObjectFile &Obj) {
   else
     outs() << "Idx " << left_justify("Name", NameWidth) << " Size     "
            << left_justify("VMA", AddressWidth) << " Type\n";
+
+  if (Obj.isELF() && Obj.sections().empty())
+    createFakeELFSections(Obj);
 
   uint64_t Idx;
   for (const SectionRef &Section : ToolSectionFilter(Obj, &Idx)) {

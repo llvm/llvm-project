@@ -457,6 +457,8 @@ public:
   elf_symbol_iterator_range getDynamicSymbolIterators() const override;
 
   bool isRelocatableObject() const override;
+
+  void createFakeSections() { EF.createFakeSections(); }
 };
 
 using ELF32LEObjectFile = ELFObjectFile<ELF32LE>;
