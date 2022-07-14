@@ -275,7 +275,8 @@ class LoopPredication {
   /// which is that an expression *can be made* invariant via SCEVExpander.
   /// Thus, this version is only suitable for finding an insert point to be be
   /// passed to SCEVExpander!
-  Instruction *findInsertPt(Instruction *User, ArrayRef<const SCEV*> Ops);
+  Instruction *findInsertPt(const SCEVExpander &Expander, Instruction *User,
+                            ArrayRef<const SCEV *> Ops);
 
   /// Return true if the value is known to produce a single fixed value across
   /// all iterations on which it executes.  Note that this does not imply
@@ -418,12 +419,13 @@ Value *LoopPredication::expandCheck(SCEVExpander &Expander,
       return Builder.getFalse();
   }
 
-  Value *LHSV = Expander.expandCodeFor(LHS, Ty, findInsertPt(Guard, {LHS}));
-  Value *RHSV = Expander.expandCodeFor(RHS, Ty, findInsertPt(Guard, {RHS}));
+  Value *LHSV =
+      Expander.expandCodeFor(LHS, Ty, findInsertPt(Expander, Guard, {LHS}));
+  Value *RHSV =
+      Expander.expandCodeFor(RHS, Ty, findInsertPt(Expander, Guard, {RHS}));
   IRBuilder<> Builder(findInsertPt(Guard, {LHSV, RHSV}));
   return Builder.CreateICmp(Pred, LHSV, RHSV);
 }
-
 
 // Returns true if its safe to truncate the IV to RangeCheckType.
 // When the IV type is wider than the range operand type, we can still do loop
@@ -516,14 +518,15 @@ Instruction *LoopPredication::findInsertPt(Instruction *Use,
   return Preheader->getTerminator();
 }
 
-Instruction *LoopPredication::findInsertPt(Instruction *Use,
-                                           ArrayRef<const SCEV*> Ops) {
+Instruction *LoopPredication::findInsertPt(const SCEVExpander &Expander,
+                                           Instruction *Use,
+                                           ArrayRef<const SCEV *> Ops) {
   // Subtlety: SCEV considers things to be invariant if the value produced is
   // the same across iterations.  This is not the same as being able to
   // evaluate outside the loop, which is what we actually need here.
   for (const SCEV *Op : Ops)
     if (!SE->isLoopInvariant(Op, L) ||
-        !isSafeToExpandAt(Op, Preheader->getTerminator(), *SE))
+        !Expander.isSafeToExpandAt(Op, Preheader->getTerminator()))
       return Use;
   return Preheader->getTerminator();
 }
@@ -589,8 +592,8 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
-  if (!isSafeToExpandAt(LatchStart, Guard, *SE) ||
-      !isSafeToExpandAt(LatchLimit, Guard, *SE)) {
+  if (!Expander.isSafeToExpandAt(LatchStart, Guard) ||
+      !Expander.isSafeToExpandAt(LatchLimit, Guard)) {
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
@@ -632,8 +635,8 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
-  if (!isSafeToExpandAt(LatchStart, Guard, *SE) ||
-      !isSafeToExpandAt(LatchLimit, Guard, *SE)) {
+  if (!Expander.isSafeToExpandAt(LatchStart, Guard) ||
+      !Expander.isSafeToExpandAt(LatchLimit, Guard)) {
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
@@ -1159,7 +1162,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   const SCEV *MinEC = getMinAnalyzeableBackedgeTakenCount(*SE, *DT, L);
   if (isa<SCEVCouldNotCompute>(MinEC) || MinEC->getType()->isPointerTy() ||
       !SE->isLoopInvariant(MinEC, L) ||
-      !isSafeToExpandAt(MinEC, WidenableBR, *SE))
+      !Rewriter.isSafeToExpandAt(MinEC, WidenableBR))
     return ChangedLoop;
 
   // Subtlety: We need to avoid inserting additional uses of the WC.  We know
@@ -1198,7 +1201,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
     if (isa<SCEVCouldNotCompute>(ExitCount) ||
         ExitCount->getType()->isPointerTy() ||
-        !isSafeToExpandAt(ExitCount, WidenableBR, *SE))
+        !Rewriter.isSafeToExpandAt(ExitCount, WidenableBR))
       continue;
 
     const bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));

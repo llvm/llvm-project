@@ -114,11 +114,22 @@ void InitializeOsSupport() {
 #  define PR_SET_TAGGED_ADDR_CTRL 55
 #  define PR_GET_TAGGED_ADDR_CTRL 56
 #  define PR_TAGGED_ADDR_ENABLE (1UL << 0)
+#  define ARCH_GET_UNTAG_MASK 0x4001
+#  define ARCH_ENABLE_TAGGED_ADDR 0x4002
   // Check we're running on a kernel that can use the tagged address ABI.
   int local_errno = 0;
-  if (internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0),
-                       &local_errno) &&
-      local_errno == EINVAL) {
+  bool has_abi;
+#  if defined(__x86_64__)
+  has_abi = (internal_iserror(internal_arch_prctl(ARCH_GET_UNTAG_MASK, 0),
+                              &local_errno) &&
+             local_errno == EINVAL);
+#  else
+  has_abi =
+      (internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0),
+                        &local_errno) &&
+       local_errno == EINVAL);
+#  endif
+  if (has_abi) {
 #  if SANITIZER_ANDROID || defined(HWASAN_ALIASING_MODE)
     // Some older Android kernels have the tagged pointer ABI on
     // unconditionally, and hence don't have the tagged-addr prctl while still
@@ -142,17 +153,11 @@ void InitializeOsSupport() {
        !internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0))) {
 #  if defined(__x86_64__) && !defined(HWASAN_ALIASING_MODE)
     // Try the new prctl API for Intel LAM.  The API is based on a currently
-    // unsubmitted patch to the Linux kernel (as of May 2021) and is thus
+    // unsubmitted patch to the Linux kernel (as of July 2022) and is thus
     // subject to change.  Patch is here:
-    // https://lore.kernel.org/linux-mm/20210205151631.43511-12-kirill.shutemov@linux.intel.com/
-    int tag_bits = kTagBits;
-    int tag_shift = kAddressTagShift;
+    // https://lore.kernel.org/linux-mm/20220712231328.5294-1-kirill.shutemov@linux.intel.com/
     if (!internal_iserror(
-            internal_prctl(PR_SET_TAGGED_ADDR_CTRL, PR_TAGGED_ADDR_ENABLE,
-                           reinterpret_cast<unsigned long>(&tag_bits),
-                           reinterpret_cast<unsigned long>(&tag_shift), 0))) {
-      CHECK_EQ(tag_bits, kTagBits);
-      CHECK_EQ(tag_shift, kAddressTagShift);
+            internal_arch_prctl(ARCH_ENABLE_TAGGED_ADDR, kTagBits))) {
       return;
     }
 #  endif  // defined(__x86_64__) && !defined(HWASAN_ALIASING_MODE)

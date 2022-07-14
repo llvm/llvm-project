@@ -501,10 +501,10 @@ Optional<StringRef> llvm::getAllocationFamily(const Value *I,
     return None;
   const auto AllocData = getAllocationDataForFunction(Callee, AnyAlloc, TLI);
   if (AllocData)
-    return mangledNameForMallocFamily(AllocData.getValue().Family);
+    return mangledNameForMallocFamily(AllocData.value().Family);
   const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
   if (FreeData)
-    return mangledNameForMallocFamily(FreeData.getValue().Family);
+    return mangledNameForMallocFamily(FreeData.value().Family);
   return None;
 }
 

@@ -810,6 +810,16 @@ def StdC : StandardSpec<"stdc"> {
               "thrd_detach",
               RetValSpec<IntType>,
               [ArgSpec<ThrdTType>]
+          >,
+          FunctionSpec<
+              "thrd_current",
+              RetValSpec<ThrdTType>,
+              [ArgSpec<VoidType>]
+          >,
+          FunctionSpec<
+              "thrd_equal",
+              RetValSpec<IntType>,
+              [ArgSpec<ThrdTType>, ArgSpec<ThrdTType>]
           >
       ]
   >;

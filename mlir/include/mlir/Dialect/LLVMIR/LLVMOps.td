@@ -348,7 +348,7 @@ def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
 class MemoryOpWithAlignmentBase {
   code setAlignmentCode = [{
     if ($alignment.hasValue()) {
-      auto align = $alignment.getValue();
+      auto align = $alignment.value();
       if (align != 0)
         inst->setAlignment(llvm::Align(align));
     }

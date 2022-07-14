@@ -140,7 +140,8 @@ void registerPass(const PassAllocatorFunction &function);
 ///   /// At namespace scope.
 ///   static PassRegistration<MyPass> reg;
 ///
-template <typename ConcretePass> struct PassRegistration {
+template <typename ConcretePass>
+struct PassRegistration {
   PassRegistration(const PassAllocatorFunction &constructor) {
     registerPass(constructor);
   }
@@ -184,7 +185,8 @@ struct PassPipelineRegistration {
 
 /// Convenience specialization of PassPipelineRegistration for EmptyPassOptions
 /// that does not pass an empty options struct to the pass builder function.
-template <> struct PassPipelineRegistration<EmptyPipelineOptions> {
+template <>
+struct PassPipelineRegistration<EmptyPipelineOptions> {
   PassPipelineRegistration(
       StringRef arg, StringRef description,
       const std::function<void(OpPassManager &)> &builder) {

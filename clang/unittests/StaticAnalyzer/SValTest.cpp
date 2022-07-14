@@ -161,6 +161,7 @@ SVAL_TEST(GetConstType, R"(
 void foo() {
   int x = 42;
   int *y = nullptr;
+  bool z = true;
 })") {
   SVal X = getByName("x");
   ASSERT_FALSE(X.getType(Context).isNull());
@@ -170,6 +171,10 @@ void foo() {
   ASSERT_FALSE(Y.getType(Context).isNull());
   expectSameSignAndBitWidth(Context.getUIntPtrType(), Y.getType(Context),
                             Context);
+
+  SVal Z = getByName("z");
+  ASSERT_FALSE(Z.getType(Context).isNull());
+  EXPECT_EQ(Context.BoolTy, Z.getType(Context));
 }
 
 SVAL_TEST(GetLocAsIntType, R"(

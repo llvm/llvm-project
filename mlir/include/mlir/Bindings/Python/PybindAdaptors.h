@@ -252,7 +252,7 @@ public:
   }
 
   template <typename Func, typename... Extra>
-  pure_subclass &def(const char *name, Func &&f, const Extra &... extra) {
+  pure_subclass &def(const char *name, Func &&f, const Extra &...extra) {
     py::cpp_function cf(
         std::forward<Func>(f), py::name(name), py::is_method(thisClass),
         py::sibling(py::getattr(thisClass, name, py::none())), extra...);
@@ -262,7 +262,7 @@ public:
 
   template <typename Func, typename... Extra>
   pure_subclass &def_property_readonly(const char *name, Func &&f,
-                                       const Extra &... extra) {
+                                       const Extra &...extra) {
     py::cpp_function cf(
         std::forward<Func>(f), py::name(name), py::is_method(thisClass),
         py::sibling(py::getattr(thisClass, name, py::none())), extra...);
@@ -274,7 +274,7 @@ public:
 
   template <typename Func, typename... Extra>
   pure_subclass &def_staticmethod(const char *name, Func &&f,
-                                  const Extra &... extra) {
+                                  const Extra &...extra) {
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_staticmethod(...) called with a non-static member "
                   "function pointer");
@@ -287,7 +287,7 @@ public:
 
   template <typename Func, typename... Extra>
   pure_subclass &def_classmethod(const char *name, Func &&f,
-                                 const Extra &... extra) {
+                                 const Extra &...extra) {
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_classmethod(...) called with a non-static member "
                   "function pointer");

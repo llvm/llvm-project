@@ -69,4 +69,12 @@ add_header_library(
     .multiply_add
 )
 
+add_header_library(
+  nearest_integer
+  HDRS
+    nearest_integer.h
+  DEPENDS
+    libc.src.__support.common
+)
+
 add_subdirectory(generic)

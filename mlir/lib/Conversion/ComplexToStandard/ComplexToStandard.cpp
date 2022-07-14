@@ -766,8 +766,8 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     Value absArg = b.create<complex::AbsOp>(elementType, arg);
     Value addAbs = b.create<arith::AddFOp>(absLhs, absArg);
 
-    Value half = b.create<arith::ConstantOp>(
-                        elementType, b.getFloatAttr(elementType, 0.5));
+    Value half = b.create<arith::ConstantOp>(elementType,
+                                             b.getFloatAttr(elementType, 0.5));
     Value halfAddAbs = b.create<arith::MulFOp>(addAbs, half);
     Value sqrtAddAbs = b.create<math::SqrtOp>(halfAddAbs);
 

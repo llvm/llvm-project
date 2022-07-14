@@ -367,6 +367,7 @@ define <vscale x 32 x half> @insert_nxv32f16_nxv2f16_26(<vscale x 32 x half> %ve
 define <vscale x 32 x half> @insert_nxv32f16_undef_nxv1f16_0(<vscale x 1 x half> %subvec) {
 ; CHECK-LABEL: insert_nxv32f16_undef_nxv1f16_0:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8m8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vector.insert.nxv1f16.nxv32f16(<vscale x 32 x half> undef, <vscale x 1 x half> %subvec, i64 0)
   ret <vscale x 32 x half> %v
@@ -380,7 +381,8 @@ define <vscale x 32 x half> @insert_nxv32f16_undef_nxv1f16_26(<vscale x 1 x half
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, mu
-; CHECK-NEXT:    vslideup.vx v14, v8, a0
+; CHECK-NEXT:    vslideup.vx v22, v8, a0
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vector.insert.nxv1f16.nxv32f16(<vscale x 32 x half> undef, <vscale x 1 x half> %subvec, i64 26)
   ret <vscale x 32 x half> %v

@@ -1025,7 +1025,8 @@ template <typename T> bool IsExpandableScalar(const Expr<T> &expr) {
 // message that needs to be augmented by the names of the left and right sides
 std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
-    const characteristics::Procedure *rhsProcedure);
+    const characteristics::Procedure *rhsProcedure,
+    std::string &whyNotCompatible);
 
 // Scalar constant expansion
 class ScalarConstantExpander {

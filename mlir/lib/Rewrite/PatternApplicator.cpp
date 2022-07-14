@@ -33,9 +33,9 @@ PatternApplicator::~PatternApplicator() = default;
 #ifndef NDEBUG
 /// Log a message for a pattern that is impossible to match.
 static void logImpossibleToMatch(const Pattern &pattern) {
-    llvm::dbgs() << "Ignoring pattern '" << pattern.getRootKind()
-                 << "' because it is impossible to match or cannot lead "
-                    "to legal IR (by cost model)\n";
+  llvm::dbgs() << "Ignoring pattern '" << pattern.getRootKind()
+               << "' because it is impossible to match or cannot lead "
+                  "to legal IR (by cost model)\n";
 }
 
 /// Log IR after pattern application.

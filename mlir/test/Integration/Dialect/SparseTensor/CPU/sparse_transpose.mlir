@@ -100,24 +100,19 @@ module {
     // CHECK-NEXT: ( 1.4, 0, 3.4 )
     //
     %x = sparse_tensor.convert %0 : tensor<4x3xf64, #DCSR> to tensor<4x3xf64>
-    %m = bufferization.to_memref %x : memref<4x3xf64>
     scf.for %i = %c0 to %c4 step %c1 {
-      %v1 = vector.transfer_read %m[%i, %c0], %du: memref<4x3xf64>, vector<3xf64>
+      %v1 = vector.transfer_read %x[%i, %c0], %du: tensor<4x3xf64>, vector<3xf64>
       vector.print %v1 : vector<3xf64>
     }
     %y = sparse_tensor.convert %1 : tensor<4x3xf64, #DCSR> to tensor<4x3xf64>
-    %n = bufferization.to_memref %y : memref<4x3xf64>
     scf.for %i = %c0 to %c4 step %c1 {
-      %v2 = vector.transfer_read %n[%i, %c0], %du: memref<4x3xf64>, vector<3xf64>
+      %v2 = vector.transfer_read %y[%i, %c0], %du: tensor<4x3xf64>, vector<3xf64>
       vector.print %v2 : vector<3xf64>
     }
 
     // Release resources.
     sparse_tensor.release %a : tensor<3x4xf64, #DCSR>
     sparse_tensor.release %0 : tensor<4x3xf64, #DCSR>
-    sparse_tensor.release %1 : tensor<4x3xf64, #DCSR>
-    memref.dealloc %m : memref<4x3xf64>
-    memref.dealloc %n : memref<4x3xf64>
 
     return
   }

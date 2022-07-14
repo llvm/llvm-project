@@ -325,6 +325,8 @@ void VEAsmPrinter::lowerGETTLSAddrAndEmitMCInsts(const MachineInstr *MI,
 }
 
 void VEAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  VE_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                     getSubtargetInfo().getFeatureBits());
 
   switch (MI->getOpcode()) {
   default:

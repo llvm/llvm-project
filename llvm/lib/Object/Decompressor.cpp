@@ -92,7 +92,8 @@ bool Decompressor::isCompressedELFSection(uint64_t Flags, StringRef Name) {
   return (Flags & ELF::SHF_COMPRESSED) || isGnuStyle(Name);
 }
 
-Error Decompressor::decompress(MutableArrayRef<char> Buffer) {
+Error Decompressor::decompress(MutableArrayRef<uint8_t> Buffer) {
   size_t Size = Buffer.size();
-  return compression::zlib::uncompress(SectionData, Buffer.data(), Size);
+  return compression::zlib::uncompress(arrayRefFromStringRef(SectionData),
+                                       Buffer.data(), Size);
 }

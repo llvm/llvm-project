@@ -64,7 +64,7 @@ Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
 Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`,✅
 Merge,set_intersection,Hui Xie,`D129233 <https://llvm.org/D129233>`,✅
 Merge,set_symmetric_difference,Hui Xie,`D129520 <https://llvm.org/D129520>`,✅
-Merge,set_union,Hui Xie,n/a,Not started
+Merge,set_union,Hui Xie,`D129657 <https://llvm.org/D129657>`,✅
 Permutation,remove,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,remove_if,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,reverse,Nikolas Klauser,`D125752 <https://llvm.org/D125752>`_,✅

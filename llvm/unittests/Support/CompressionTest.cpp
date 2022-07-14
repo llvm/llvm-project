@@ -23,18 +23,16 @@ using namespace llvm::compression;
 namespace {
 
 #if LLVM_ENABLE_ZLIB
-
-void TestZlibCompression(StringRef Input, int Level) {
-  SmallString<32> Compressed;
-  SmallString<32> Uncompressed;
-
-  zlib::compress(Input, Compressed, Level);
+static void testZlibCompression(StringRef Input, int Level) {
+  SmallVector<uint8_t, 0> Compressed;
+  SmallVector<uint8_t, 0> Uncompressed;
+  zlib::compress(arrayRefFromStringRef(Input), Compressed, Level);
 
   // Check that uncompressed buffer is the same as original.
   Error E = zlib::uncompress(Compressed, Uncompressed, Input.size());
   consumeError(std::move(E));
 
-  EXPECT_EQ(Input, Uncompressed);
+  EXPECT_EQ(Input, toStringRef(Uncompressed));
   if (Input.size() > 0) {
     // Uncompression fails if expected length is too short.
     E = zlib::uncompress(Compressed, Uncompressed, Input.size() - 1);
@@ -43,26 +41,24 @@ void TestZlibCompression(StringRef Input, int Level) {
 }
 
 TEST(CompressionTest, Zlib) {
-  TestZlibCompression("", zlib::DefaultCompression);
+  testZlibCompression("", zlib::DefaultCompression);
 
-  TestZlibCompression("hello, world!", zlib::NoCompression);
-  TestZlibCompression("hello, world!", zlib::BestSizeCompression);
-  TestZlibCompression("hello, world!", zlib::BestSpeedCompression);
-  TestZlibCompression("hello, world!", zlib::DefaultCompression);
+  testZlibCompression("hello, world!", zlib::NoCompression);
+  testZlibCompression("hello, world!", zlib::BestSizeCompression);
+  testZlibCompression("hello, world!", zlib::BestSpeedCompression);
+  testZlibCompression("hello, world!", zlib::DefaultCompression);
 
   const size_t kSize = 1024;
   char BinaryData[kSize];
-  for (size_t i = 0; i < kSize; ++i) {
+  for (size_t i = 0; i < kSize; ++i)
     BinaryData[i] = i & 255;
-  }
   StringRef BinaryDataStr(BinaryData, kSize);
 
-  TestZlibCompression(BinaryDataStr, zlib::NoCompression);
-  TestZlibCompression(BinaryDataStr, zlib::BestSizeCompression);
-  TestZlibCompression(BinaryDataStr, zlib::BestSpeedCompression);
-  TestZlibCompression(BinaryDataStr, zlib::DefaultCompression);
+  testZlibCompression(BinaryDataStr, zlib::NoCompression);
+  testZlibCompression(BinaryDataStr, zlib::BestSizeCompression);
+  testZlibCompression(BinaryDataStr, zlib::BestSpeedCompression);
+  testZlibCompression(BinaryDataStr, zlib::DefaultCompression);
 }
-
 #endif
 
 }
