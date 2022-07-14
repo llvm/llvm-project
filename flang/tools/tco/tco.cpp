@@ -24,6 +24,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -111,7 +112,8 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     if (mlir::failed(passPipeline.addToPipeline(pm, errorHandler)))
       return mlir::failure();
   } else {
-    fir::createMLIRToLLVMPassPipeline(pm);
+    // Run tco with O2 by default.
+    fir::createMLIRToLLVMPassPipeline(pm, llvm::OptimizationLevel::O2);
     fir::addLLVMDialectToLLVMPass(pm, out.os());
   }
 

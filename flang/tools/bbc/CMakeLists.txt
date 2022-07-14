@@ -19,4 +19,5 @@ FortranParser
 FortranEvaluate
 FortranSemantics
 FortranLower
+LLVMPasses
 )
