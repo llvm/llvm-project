@@ -253,7 +253,6 @@ Changes to the LLVM tools
   ``--add-section=.foo1=... --rename-section=.foo1=.foo2`` now adds ``.foo1`` instead of ``.foo2``.
 * The LLVM gold plugin now ignores bitcode from the ``.llvmbc`` section of ELF
   files when doing LTO.  https://github.com/llvm/llvm-project/issues/47216
->>>>>>> bbd6f1cd6d16... [gold] Ignore bitcode from sections inside object files
 
 Changes to LLDB
 ---------------------------------
