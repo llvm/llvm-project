@@ -611,3 +611,21 @@ func.func @warp_constant(%laneid: index) -> (vector<1xf32>) {
   }
   return %r : vector<1xf32>
 }
+
+// -----
+
+// CHECK-PROP-LABEL: func.func @vector_extract_simple(
+//       CHECK-PROP:   %[[R:.*]] = vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>) {
+//       CHECK-PROP:     %[[V:.*]] = "some_def"() : () -> vector<1xf32>
+//       CHECK-PROP:     vector.yield %[[V]] : vector<1xf32>
+//       CHECK-PROP:   }
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[R]][0] : vector<1xf32>
+//       CHECK-PROP:   return %[[E]] : f32
+func.func @vector_extract_simple(%laneid: index) -> (f32) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
+    %0 = "some_def"() : () -> (vector<1xf32>)
+    %1 = vector.extract %0[0] : vector<1xf32>
+    vector.yield %1 : f32
+  }
+  return %r : f32
+}
