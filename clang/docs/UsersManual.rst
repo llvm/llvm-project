@@ -843,6 +843,23 @@ a special character, which is the convention used by GNU Make. The -MV
 option tells Clang to put double-quotes around the entire filename, which
 is the convention used by NMake and Jom.
 
+.. option:: -femit-dwarf-unwind=<value>
+
+  When to emit DWARF unwind (EH frame) info. This is a Mach-O-specific option.
+
+  Valid values are:
+
+  * ``no-compact-unwind`` - Only emit DWARF unwind when compact unwind encodings
+    aren't available. This is the default for arm64.
+  * ``always`` - Always emit DWARF unwind regardless.
+  * ``default`` - Use the platform-specific default (``always`` for all
+    non-arm64-platforms).
+
+``no-compact-unwind`` is a performance optimization -- Clang will emit smaller
+object files that are more quickly processed by the linker. This may cause
+binary compatibility issues on older x86_64 targets, however, so use it with
+caution.
+
 .. _configuration-files:
 
 Configuration files
