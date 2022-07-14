@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectProcess.h"
-#include "CommandObjectTrace.h"
 #include "CommandObjectBreakpoint.h"
+#include "CommandObjectTrace.h"
 #include "CommandOptionsProcessLaunch.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
@@ -19,6 +19,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
@@ -1331,20 +1332,6 @@ protected:
     return result.Succeeded();
   }
 };
-
-// CommandObjectProcessSaveCore
-#pragma mark CommandObjectProcessSaveCore
-
-static constexpr OptionEnumValueElement g_corefile_save_style[] = {
-    {eSaveCoreFull, "full", "Create a core file with all memory saved"},
-    {eSaveCoreDirtyOnly, "modified-memory",
-     "Create a corefile with only modified memory saved"},
-    {eSaveCoreStackOnly, "stack",
-     "Create a corefile with only stack  memory saved"}};
-
-static constexpr OptionEnumValues SaveCoreStyles() {
-  return OptionEnumValues(g_corefile_save_style);
-}
 
 #define LLDB_OPTIONS_process_save_core
 #include "CommandOptions.inc"

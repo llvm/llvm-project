@@ -59,12 +59,6 @@ enum LoadCWDlldbinitFile {
   eLoadCWDlldbinitWarn
 };
 
-enum LoadDependentFiles {
-  eLoadDependentsDefault,
-  eLoadDependentsYes,
-  eLoadDependentsNo,
-};
-
 enum ImportStdModule {
   eImportStdModuleFalse,
   eImportStdModuleFallback,

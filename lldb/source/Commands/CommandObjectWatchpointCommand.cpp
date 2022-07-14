@@ -15,42 +15,13 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
-
-// FIXME: "script-type" needs to have its contents determined dynamically, so
-// somebody can add a new scripting language to lldb and have it pickable here
-// without having to change this enumeration by hand and rebuild lldb proper.
-static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
-    {
-        eScriptLanguageNone,
-        "command",
-        "Commands are in the lldb command interpreter language",
-    },
-    {
-        eScriptLanguagePython,
-        "python",
-        "Commands are in the Python language.",
-    },
-    {
-        eScriptLanguageLua,
-        "lua",
-        "Commands are in the Lua language.",
-    },
-    {
-        eSortOrderByName,
-        "default-script",
-        "Commands are in the default scripting language.",
-    },
-};
-
-static constexpr OptionEnumValues ScriptOptionEnum() {
-  return OptionEnumValues(g_script_option_enumeration);
-}
 
 #define LLDB_OPTIONS_watchpoint_command_add
 #include "CommandOptions.inc"
