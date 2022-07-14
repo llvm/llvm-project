@@ -185,6 +185,17 @@ typedef llvm::ImmutableMap<ConstructedObjectKey, SVal>
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
                                  ObjectsUnderConstructionMap)
 
+// This trait is responsible for storing the index of the element that is to be
+// constructed in the next iteration. As a result a CXXConstructExpr is only
+// stored if it is array type. Also the index is the index of the continous
+// memory region, which is important for multi-dimensional arrays. E.g:: int
+// arr[2][2]; assume arr[1][1] will be the next element under construction, so
+// the index is 3.
+typedef llvm::ImmutableMap<
+    std::pair<const CXXConstructExpr *, const LocationContext *>, unsigned>
+    IndexOfElementToConstructMap;
+REGISTER_TRAIT_WITH_PROGRAMSTATE(IndexOfElementToConstruct,
+                                 IndexOfElementToConstructMap)
 //===----------------------------------------------------------------------===//
 // Engine construction and deletion.
 //===----------------------------------------------------------------------===//
@@ -441,16 +452,65 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   return State;
 }
 
+ProgramStateRef ExprEngine::setIndexOfElementToConstruct(
+    ProgramStateRef State, const CXXConstructExpr *E,
+    const LocationContext *LCtx, unsigned Idx) {
+  auto Key = std::make_pair(E, LCtx->getStackFrame());
+
+  assert(!State->contains<IndexOfElementToConstruct>(Key) || Idx > 0);
+
+  return State->set<IndexOfElementToConstruct>(Key, Idx);
+}
+
+Optional<unsigned>
+ExprEngine::getIndexOfElementToConstruct(ProgramStateRef State,
+                                         const CXXConstructExpr *E,
+                                         const LocationContext *LCtx) {
+
+  return Optional<unsigned>::create(
+      State->get<IndexOfElementToConstruct>({E, LCtx->getStackFrame()}));
+}
+
+ProgramStateRef
+ExprEngine::removeIndexOfElementToConstruct(ProgramStateRef State,
+                                            const CXXConstructExpr *E,
+                                            const LocationContext *LCtx) {
+  auto Key = std::make_pair(E, LCtx->getStackFrame());
+
+  assert(E && State->contains<IndexOfElementToConstruct>(Key));
+  return State->remove<IndexOfElementToConstruct>(Key);
+}
+
 ProgramStateRef
 ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
                                        const ConstructionContextItem &Item,
                                        const LocationContext *LC, SVal V) {
   ConstructedObjectKey Key(Item, LC->getStackFrame());
+
+  const CXXConstructExpr *E = nullptr;
+
+  if (auto DS = dyn_cast_or_null<DeclStmt>(Item.getStmtOrNull())) {
+    if (auto VD = dyn_cast_or_null<VarDecl>(DS->getSingleDecl()))
+      E = dyn_cast<CXXConstructExpr>(VD->getInit());
+  }
+
+  if (!E && !Item.getStmtOrNull()) {
+    auto CtorInit = Item.getCXXCtorInitializer();
+    E = dyn_cast<CXXConstructExpr>(CtorInit->getInit());
+  }
+
   // FIXME: Currently the state might already contain the marker due to
   // incorrect handling of temporaries bound to default parameters.
-  assert(!State->get<ObjectsUnderConstruction>(Key) ||
-         Key.getItem().getKind() ==
-             ConstructionContextItem::TemporaryDestructorKind);
+  // The state will already contain the marker if we construct elements
+  // in an array, as we visit the same statement multiple times before
+  // the array declaration. The marker is removed when we exit the
+  // constructor call.
+  assert((!State->get<ObjectsUnderConstruction>(Key) ||
+          Key.getItem().getKind() ==
+              ConstructionContextItem::TemporaryDestructorKind ||
+          State->contains<IndexOfElementToConstruct>({E, LC})) &&
+         "The object is already marked as `UnderConstruction`, when it's not "
+         "supposed to!");
   return State->set<ObjectsUnderConstruction>(Key, V);
 }
 
@@ -582,6 +642,69 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
   }
 }
 
+static void printIndicesOfElementsToConstructJson(
+    raw_ostream &Out, ProgramStateRef State, const char *NL,
+    const LocationContext *LCtx, const ASTContext &Context,
+    unsigned int Space = 0, bool IsDot = false) {
+  using KeyT = std::pair<const Expr *, const LocationContext *>;
+
+  PrintingPolicy PP =
+      LCtx->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+
+  ++Space;
+  bool HasItem = false;
+
+  // Store the last key.
+  KeyT LastKey;
+  for (const auto &I : State->get<IndexOfElementToConstruct>()) {
+    const KeyT &Key = I.first;
+    if (Key.second != LCtx)
+      continue;
+
+    if (!HasItem) {
+      Out << "[" << NL;
+      HasItem = true;
+    }
+
+    LastKey = Key;
+  }
+
+  for (const auto &I : State->get<IndexOfElementToConstruct>()) {
+    const KeyT &Key = I.first;
+    unsigned Value = I.second;
+    if (Key.second != LCtx)
+      continue;
+
+    Indent(Out, Space, IsDot) << "{ ";
+
+    // Expr
+    const Expr *E = Key.first;
+    Out << "\"stmt_id\": " << E->getID(Context);
+
+    // Kind - hack to display the current index
+    Out << ", \"kind\": \"Cur: " << Value - 1 << "\"";
+
+    // Pretty-print
+    Out << ", \"pretty\": ";
+    Out << "\"" << E->getStmtClassName() << " "
+        << E->getSourceRange().printToString(Context.getSourceManager()) << " '"
+        << QualType::getAsString(E->getType().split(), PP);
+    Out << "'\"";
+
+    Out << ", \"value\": \"Next: " << Value << "\" }";
+
+    if (Key != LastKey)
+      Out << ',';
+    Out << NL;
+  }
+
+  if (HasItem)
+    Indent(Out, --Space, IsDot) << ']'; // End of "location_context".
+  else {
+    Out << "null ";
+  }
+}
+
 void ExprEngine::printJson(raw_ostream &Out, ProgramStateRef State,
                            const LocationContext *LCtx, const char *NL,
                            unsigned int Space, bool IsDot) const {
@@ -596,6 +719,23 @@ void ExprEngine::printJson(raw_ostream &Out, ProgramStateRef State,
 
     --Space;
     Indent(Out, Space, IsDot) << "]," << NL; // End of "constructing_objects".
+  } else {
+    Out << "null," << NL;
+  }
+
+  Indent(Out, Space, IsDot) << "\"index_of_element\": ";
+  if (LCtx && !State->get<IndexOfElementToConstruct>().isEmpty()) {
+    ++Space;
+
+    auto &Context = getContext();
+    Out << '[' << NL;
+    LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
+      printIndicesOfElementsToConstructJson(Out, State, NL, LC, Context, Space,
+                                            IsDot);
+    });
+
+    --Space;
+    Indent(Out, Space, IsDot) << "]," << NL; // End of "index_of_element".
   } else {
     Out << "null," << NL;
   }
@@ -961,8 +1101,9 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
   // This workaround will just run the first destructor (which will still
   // invalidate the entire array).
   EvalCallOptions CallOpts;
-  Region = makeZeroElementRegion(state, loc::MemRegionVal(Region), varType,
-                                 CallOpts.IsArrayCtorOrDtor).getAsRegion();
+  Region = makeElementRegion(state, loc::MemRegionVal(Region), varType,
+                             CallOpts.IsArrayCtorOrDtor)
+               .getAsRegion();
 
   VisitCXXDestructor(varType, Region, Dtor.getTriggerStmt(),
                      /*IsBase=*/false, Pred, Dst, CallOpts);
@@ -1045,8 +1186,7 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
   // This workaround will just run the first destructor (which will still
   // invalidate the entire array).
   EvalCallOptions CallOpts;
-  FieldVal = makeZeroElementRegion(State, FieldVal, T,
-                                   CallOpts.IsArrayCtorOrDtor);
+  FieldVal = makeElementRegion(State, FieldVal, T, CallOpts.IsArrayCtorOrDtor);
 
   VisitCXXDestructor(T, FieldVal.getAsRegion(), CurDtor->getBody(),
                      /*IsBase=*/false, Pred, Dst, CallOpts);
@@ -1105,7 +1245,7 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
       CallOpts.IsArrayCtorOrDtor = true;
     }
   } else {
-    // We'd eventually need to makeZeroElementRegion() trick here,
+    // We'd eventually need to makeElementRegion() trick here,
     // but for now we don't have the respective construction contexts,
     // so MR would always be null in this case. Do nothing for now.
   }

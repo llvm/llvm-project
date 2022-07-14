@@ -25,9 +25,14 @@ void checkNewPOD() {
 
 void checkNewArray() {
   S *s = new S[10];
-  // FIXME: Should be true once we inline array constructors.
+
+  // FIXME: Handle big array construction
   clang_analyzer_eval(s[0].x == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(s[1].x == 1); // expected-warning{{UNKNOWN}}
+
+  s = new S[4];
+  clang_analyzer_eval(s[0].x == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(s[1].x == 1); // expected-warning{{TRUE}}
 }
 
 struct NullS {

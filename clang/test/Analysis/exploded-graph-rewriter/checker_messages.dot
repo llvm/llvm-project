@@ -24,6 +24,7 @@ Node0x1 [shape=record,label=
         "constraints": null,
         "dynamic_types": null,
         "constructing_objects": null,
+        "index_of_element": null,
         "environment": null,
         "checker_messages": [
           { "checker": "alpha.core.FooChecker", "messages": [
