@@ -48,6 +48,8 @@
 #ifndef LLVM_LIB_TARGET_BPF_BTF_H
 #define LLVM_LIB_TARGET_BPF_BTF_H
 
+#include <cstdint>
+
 namespace llvm {
 namespace BTF {
 
