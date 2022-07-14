@@ -136,6 +136,8 @@ public:
   }
   template <class ConcreteInt> QualType VisitConcreteInt(ConcreteInt CI) {
     const llvm::APSInt &Value = CI.getValue();
+    if (1 == Value.getBitWidth())
+      return Context.BoolTy;
     return Context.getIntTypeForBitwidth(Value.getBitWidth(), Value.isSigned());
   }
   QualType VisitLocConcreteInt(loc::ConcreteInt CI) {
