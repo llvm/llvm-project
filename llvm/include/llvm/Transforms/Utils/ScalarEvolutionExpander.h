@@ -34,13 +34,6 @@ extern cl::opt<unsigned> SCEVCheapExpansionBudget;
 /// CanonicalMode indicates whether the expander will be used in canonical mode.
 bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE, bool CanonicalMode);
 
-/// Return true if the given expression is safe to expand in the sense that
-/// all materialized values are defined and safe to speculate at the specified
-/// location and their operands are defined at this location.
-/// CanonicalMode indicates whether the expander will be used in canonical mode.
-bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
-                      ScalarEvolution &SE, bool CanonicalMode);
-
 /// struct for holding enough information to help calculate the cost of the
 /// given SCEV when expanded into IR.
 struct SCEVOperand {

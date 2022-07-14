@@ -275,7 +275,8 @@ class LoopPredication {
   /// which is that an expression *can be made* invariant via SCEVExpander.
   /// Thus, this version is only suitable for finding an insert point to be be
   /// passed to SCEVExpander!
-  Instruction *findInsertPt(Instruction *User, ArrayRef<const SCEV*> Ops);
+  Instruction *findInsertPt(const SCEVExpander &Expander, Instruction *User,
+                            ArrayRef<const SCEV *> Ops);
 
   /// Return true if the value is known to produce a single fixed value across
   /// all iterations on which it executes.  Note that this does not imply
@@ -418,12 +419,13 @@ Value *LoopPredication::expandCheck(SCEVExpander &Expander,
       return Builder.getFalse();
   }
 
-  Value *LHSV = Expander.expandCodeFor(LHS, Ty, findInsertPt(Guard, {LHS}));
-  Value *RHSV = Expander.expandCodeFor(RHS, Ty, findInsertPt(Guard, {RHS}));
+  Value *LHSV =
+      Expander.expandCodeFor(LHS, Ty, findInsertPt(Expander, Guard, {LHS}));
+  Value *RHSV =
+      Expander.expandCodeFor(RHS, Ty, findInsertPt(Expander, Guard, {RHS}));
   IRBuilder<> Builder(findInsertPt(Guard, {LHSV, RHSV}));
   return Builder.CreateICmp(Pred, LHSV, RHSV);
 }
-
 
 // Returns true if its safe to truncate the IV to RangeCheckType.
 // When the IV type is wider than the range operand type, we can still do loop
@@ -516,15 +518,15 @@ Instruction *LoopPredication::findInsertPt(Instruction *Use,
   return Preheader->getTerminator();
 }
 
-Instruction *LoopPredication::findInsertPt(Instruction *Use,
-                                           ArrayRef<const SCEV*> Ops) {
+Instruction *LoopPredication::findInsertPt(const SCEVExpander &Expander,
+                                           Instruction *Use,
+                                           ArrayRef<const SCEV *> Ops) {
   // Subtlety: SCEV considers things to be invariant if the value produced is
   // the same across iterations.  This is not the same as being able to
   // evaluate outside the loop, which is what we actually need here.
   for (const SCEV *Op : Ops)
     if (!SE->isLoopInvariant(Op, L) ||
-        !isSafeToExpandAt(Op, Preheader->getTerminator(), *SE,
-                          /* CanonicalMode */ true))
+        !Expander.isSafeToExpandAt(Op, Preheader->getTerminator()))
       return Use;
   return Preheader->getTerminator();
 }
