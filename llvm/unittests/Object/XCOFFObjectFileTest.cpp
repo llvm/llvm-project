@@ -83,16 +83,16 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIGeneral) {
   EXPECT_TRUE(TT.hasParmsOnStack());
 
   ASSERT_TRUE(TT.getParmsType());
-  EXPECT_EQ(TT.getParmsType().getValue(), "i, f, d");
+  EXPECT_EQ(TT.getParmsType().value(), "i, f, d");
 
   ASSERT_TRUE(TT.getTraceBackTableOffset());
-  EXPECT_EQ(TT.getTraceBackTableOffset().getValue(), 64u);
+  EXPECT_EQ(TT.getTraceBackTableOffset().value(), 64u);
 
   EXPECT_FALSE(TT.getHandlerMask());
 
   ASSERT_TRUE(TT.getFunctionName());
-  EXPECT_EQ(TT.getFunctionName().getValue(), "add_all");
-  EXPECT_EQ(TT.getFunctionName().getValue().size(), 7u);
+  EXPECT_EQ(TT.getFunctionName().value(), "add_all");
+  EXPECT_EQ(TT.getFunctionName().value().size(), 7u);
 
   EXPECT_FALSE(TT.getAllocaRegister());
   EXPECT_EQ(Size, 25u);
@@ -171,11 +171,11 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIControlledStorageInfoDisp) {
   XCOFFTracebackTable TT = *TTOrErr;
   EXPECT_TRUE(TT.hasControlledStorage());
   ASSERT_TRUE(TT.getNumOfCtlAnchors());
-  EXPECT_EQ(TT.getNumOfCtlAnchors().getValue(), 2u);
+  EXPECT_EQ(TT.getNumOfCtlAnchors().value(), 2u);
 
   ASSERT_TRUE(TT.getControlledStorageInfoDisp());
 
-  SmallVector<uint32_t, 8> Disp = TT.getControlledStorageInfoDisp().getValue();
+  SmallVector<uint32_t, 8> Disp = TT.getControlledStorageInfoDisp().value();
 
   ASSERT_EQ(Disp.size(), 2UL);
   EXPECT_EQ(Disp[0], 0x05050000u);
@@ -207,10 +207,10 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIHasVectorInfo) {
   EXPECT_TRUE(TT.hasExtensionTable());
 
   ASSERT_TRUE(TT.getParmsType());
-  EXPECT_EQ(TT.getParmsType().getValue(), "v, i, f, i, d, i, v");
+  EXPECT_EQ(TT.getParmsType().value(), "v, i, f, i, d, i, v");
 
   ASSERT_TRUE(TT.getVectorExt());
-  TBVectorExt VecExt = TT.getVectorExt().getValue();
+  TBVectorExt VecExt = TT.getVectorExt().value();
 
   EXPECT_EQ(VecExt.getNumberOfVRSaved(), 0);
   EXPECT_TRUE(VecExt.isVRSavedOnStack());
@@ -240,10 +240,10 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIHasVectorInfo1) {
   XCOFFTracebackTable TT = *TTOrErr;
 
   ASSERT_TRUE(TT.getParmsType());
-  EXPECT_EQ(TT.getParmsType().getValue(), "v, i, f, i, d, i, v, v");
+  EXPECT_EQ(TT.getParmsType().value(), "v, i, f, i, d, i, v, v");
 
   ASSERT_TRUE(TT.getVectorExt());
-  TBVectorExt VecExt = TT.getVectorExt().getValue();
+  TBVectorExt VecExt = TT.getVectorExt().value();
 
   EXPECT_EQ(VecExt.getNumberOfVRSaved(), 4);
   EXPECT_FALSE(VecExt.isVRSavedOnStack());

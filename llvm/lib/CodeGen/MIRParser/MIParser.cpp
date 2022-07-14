@@ -742,7 +742,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
   if (SectionID) {
-    MBB->setSectionID(SectionID.getValue());
+    MBB->setSectionID(SectionID.value());
     MF.setBBSectionsType(BasicBlockSection::List);
   }
   return false;

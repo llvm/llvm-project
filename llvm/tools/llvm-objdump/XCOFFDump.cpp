@@ -94,8 +94,8 @@ std::string objdump::getXCOFFSymbolDescription(const SymbolInfoTy &SymbolInfo,
   std::string Result;
   // Dummy symbols have no symbol index.
   if (SymbolInfo.XCOFFSymInfo.Index)
-    Result = ("(idx: " + Twine(SymbolInfo.XCOFFSymInfo.Index.getValue()) +
-              ") " + SymbolName)
+    Result = ("(idx: " + Twine(SymbolInfo.XCOFFSymInfo.Index.value()) + ") " +
+              SymbolName)
                  .str();
   else
     Result.append(SymbolName.begin(), SymbolName.end());

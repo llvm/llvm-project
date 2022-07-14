@@ -49,7 +49,7 @@ TEST(ElfYamlTextAPI, YAMLReadableTBE) {
   EXPECT_NE(Stub.get(), nullptr);
   EXPECT_FALSE(Stub->SoName.has_value());
   EXPECT_TRUE(Stub->Target.Arch.has_value());
-  EXPECT_EQ(Stub->Target.Arch.getValue(), (uint16_t)llvm::ELF::EM_X86_64);
+  EXPECT_EQ(Stub->Target.Arch.value(), (uint16_t)llvm::ELF::EM_X86_64);
   EXPECT_EQ(Stub->NeededLibs.size(), 3u);
   EXPECT_STREQ(Stub->NeededLibs[0].c_str(), "libc.so");
   EXPECT_STREQ(Stub->NeededLibs[1].c_str(), "libfoo.so");

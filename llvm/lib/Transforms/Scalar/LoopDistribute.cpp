@@ -602,7 +602,7 @@ private:
                              : LLVMLoopDistributeFollowupCoincident});
     if (PartitionID) {
       Loop *NewLoop = Part->getDistributedLoop();
-      NewLoop->setLoopID(PartitionID.getValue());
+      NewLoop->setLoopID(PartitionID.value());
     }
   }
 };
@@ -826,7 +826,7 @@ public:
                              {LLVMLoopDistributeFollowupAll,
                               LLVMLoopDistributeFollowupFallback},
                              "llvm.loop.distribute.", true)
-              .getValue();
+              .value();
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 

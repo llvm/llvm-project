@@ -1324,7 +1324,7 @@ static LoopUnrollResult tryToUnrollLoop(
         makeFollowupLoopID(OrigLoopID, {LLVMLoopUnrollFollowupAll,
                                         LLVMLoopUnrollFollowupRemainder});
     if (RemainderLoopID)
-      RemainderLoop->setLoopID(RemainderLoopID.getValue());
+      RemainderLoop->setLoopID(RemainderLoopID.value());
   }
 
   if (UnrollResult != LoopUnrollResult::FullyUnrolled) {
@@ -1332,7 +1332,7 @@ static LoopUnrollResult tryToUnrollLoop(
         makeFollowupLoopID(OrigLoopID, {LLVMLoopUnrollFollowupAll,
                                         LLVMLoopUnrollFollowupUnrolled});
     if (NewLoopID) {
-      L->setLoopID(NewLoopID.getValue());
+      L->setLoopID(NewLoopID.value());
 
       // Do not setLoopAlreadyUnrolled if loop attributes have been specified
       // explicitly.
@@ -1645,15 +1645,15 @@ void LoopUnrollPass::printPipeline(
       OS, MapClassName2PassName);
   OS << "<";
   if (UnrollOpts.AllowPartial != None)
-    OS << (UnrollOpts.AllowPartial.getValue() ? "" : "no-") << "partial;";
+    OS << (UnrollOpts.AllowPartial.value() ? "" : "no-") << "partial;";
   if (UnrollOpts.AllowPeeling != None)
-    OS << (UnrollOpts.AllowPeeling.getValue() ? "" : "no-") << "peeling;";
+    OS << (UnrollOpts.AllowPeeling.value() ? "" : "no-") << "peeling;";
   if (UnrollOpts.AllowRuntime != None)
-    OS << (UnrollOpts.AllowRuntime.getValue() ? "" : "no-") << "runtime;";
+    OS << (UnrollOpts.AllowRuntime.value() ? "" : "no-") << "runtime;";
   if (UnrollOpts.AllowUpperBound != None)
-    OS << (UnrollOpts.AllowUpperBound.getValue() ? "" : "no-") << "upperbound;";
+    OS << (UnrollOpts.AllowUpperBound.value() ? "" : "no-") << "upperbound;";
   if (UnrollOpts.AllowProfileBasedPeeling != None)
-    OS << (UnrollOpts.AllowProfileBasedPeeling.getValue() ? "" : "no-")
+    OS << (UnrollOpts.AllowProfileBasedPeeling.value() ? "" : "no-")
        << "profile-peeling;";
   if (UnrollOpts.FullUnrollMaxCount != None)
     OS << "full-unroll-max=" << UnrollOpts.FullUnrollMaxCount << ";";

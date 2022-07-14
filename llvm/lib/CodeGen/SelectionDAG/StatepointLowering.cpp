@@ -531,14 +531,14 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     for (const Value *V : SI.Bases) {
       auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
       if (Opt) {
-        assert(Opt.getValue() &&
+        assert(Opt.value() &&
                "non gc managed base pointer found in statepoint");
       }
     }
     for (const Value *V : SI.Ptrs) {
       auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
       if (Opt) {
-        assert(Opt.getValue() &&
+        assert(Opt.value() &&
                "non gc managed derived pointer found in statepoint");
       }
     }

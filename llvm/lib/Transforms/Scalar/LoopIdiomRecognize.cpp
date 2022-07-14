@@ -1483,7 +1483,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     // anything where the alignment isn't at least the element size.
     assert((StoreAlign && LoadAlign) &&
            "Expect unordered load/store to have align.");
-    if (StoreAlign.getValue() < StoreSize || LoadAlign.getValue() < StoreSize)
+    if (StoreAlign.value() < StoreSize || LoadAlign.value() < StoreSize)
       return Changed;
 
     // If the element.atomic memcpy is not lowered into explicit
@@ -1497,7 +1497,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
     NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
-        StoreBasePtr, StoreAlign.getValue(), LoadBasePtr, LoadAlign.getValue(),
+        StoreBasePtr, StoreAlign.value(), LoadBasePtr, LoadAlign.value(),
         NumBytes, StoreSize, AATags.TBAA, AATags.TBAAStruct, AATags.Scope,
         AATags.NoAlias);
   }

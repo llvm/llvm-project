@@ -2601,7 +2601,7 @@ StringRef Record::getValueAsString(StringRef FieldName) const {
   if (!S)
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
-  return S.getValue();
+  return S.value();
 }
 
 llvm::Optional<StringRef>
