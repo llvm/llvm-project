@@ -245,6 +245,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
+    libc.src.threads.thrd_current
+    libc.src.threads.thrd_detach
+    libc.src.threads.thrd_equal
     libc.src.threads.thrd_join
 
     # pthread.h entrypoints
@@ -258,6 +261,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_attr_setguardsize
     libc.src.pthread.pthread_attr_setstack
     libc.src.pthread.pthread_attr_setstacksize
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_detach
+    libc.src.pthread.pthread_equal
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_mutexattr_destroy
     libc.src.pthread.pthread_mutexattr_init
     libc.src.pthread.pthread_mutexattr_getpshared
