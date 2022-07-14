@@ -589,7 +589,7 @@ define amdgpu_kernel void @shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> add
 ; EG-NEXT:    TEX 0 @8
 ; EG-NEXT:    ALU 0, @15, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @10
-; EG-NEXT:    ALU 12, @16, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 11, @16, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T7.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -604,13 +604,12 @@ define amdgpu_kernel void @shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> add
 ; EG-NEXT:    ALU clause starting at 15:
 ; EG-NEXT:     MOV * T7.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 16:
-; EG-NEXT:     AND_INT T0.Y, T0.X, literal.x,
-; EG-NEXT:     AND_INT T0.Z, T7.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     AND_INT T0.Z, T0.X, literal.x,
 ; EG-NEXT:     LSHR T0.W, T0.X, literal.y,
 ; EG-NEXT:     LSHR * T1.W, T7.X, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
 ; EG-NEXT:     LSHL T0.W, PS, PV.W,
-; EG-NEXT:     LSHL * T1.W, PV.Z, PV.Y,
+; EG-NEXT:     LSHL * T1.W, T7.X, PV.Z,
 ; EG-NEXT:     AND_INT T1.W, PS, literal.x,
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
@@ -684,7 +683,7 @@ define amdgpu_kernel void @shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> add
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 53, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 51, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T10.XY, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -703,10 +702,9 @@ define amdgpu_kernel void @shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> add
 ; EG-NEXT:     MOV T3.X, T10.W,
 ; EG-NEXT:     MOV * T0.Z, T6.X,
 ; EG-NEXT:     MOV * T1.Y, T2.X,
-; EG-NEXT:     AND_INT T1.W, PV.Y, literal.x,
-; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
+; EG-NEXT:     AND_INT * T1.W, PV.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T1.W, PS, PV.W,
+; EG-NEXT:     LSHL * T1.W, T0.X, PV.W,
 ; EG-NEXT:     AND_INT T1.W, PV.W, literal.x,
 ; EG-NEXT:     AND_INT * T2.W, T0.Z, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), -65536(nan)
@@ -725,10 +723,9 @@ define amdgpu_kernel void @shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> add
 ; EG-NEXT:     OR_INT * T1.W, T2.W, PV.W,
 ; EG-NEXT:     MOV T6.X, PV.W,
 ; EG-NEXT:     MOV * T0.X, T7.X,
-; EG-NEXT:     AND_INT T1.W, T0.Z, literal.x,
-; EG-NEXT:     AND_INT * T2.W, T0.Y, literal.x,
+; EG-NEXT:     AND_INT * T1.W, T0.Z, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL T1.W, PS, PV.W,
+; EG-NEXT:     LSHL T1.W, T0.Y, PV.W,
 ; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT * T1.W, PV.W, literal.x,
