@@ -311,7 +311,9 @@ void DefFormat::genParser(MethodBody &os) {
     } else {
       selfOs << formatv("(*_result_{0})", param.getName());
     }
-    os << tgfmt(param.getConvertFromStorage(), &ctx.withSelf(selfOs.str()));
+    os << param.getCppType() << "("
+       << tgfmt(param.getConvertFromStorage(), &ctx.withSelf(selfOs.str()))
+       << ")";
   }
   os << ");";
 }

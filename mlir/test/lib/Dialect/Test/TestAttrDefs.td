@@ -223,6 +223,19 @@ def TestAttrSelfTypeParameterFormat
   let assemblyFormat = "`<` $a `>`";
 }
 
+// Test overridding attribute builders with a custom builder.
+def TestOverrideBuilderAttr : Test_Attr<"TestOverrideBuilder"> {
+  let mnemonic = "override_builder";
+  let parameters = (ins "int":$a);
+  let assemblyFormat = "`<` $a `>`";
+
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+  let builders = [AttrBuilder<(ins "int":$a), [{
+    return ::mlir::IntegerAttr::get(::mlir::IndexType::get($_ctxt), a);
+  }], "::mlir::Attribute">];
+}
+
 // Test simple extern 1D vector using ElementsAttrInterface.
 def TestExtern1DI64ElementsAttr : Test_Attr<"TestExtern1DI64Elements", [
     ElementsAttrInterface
