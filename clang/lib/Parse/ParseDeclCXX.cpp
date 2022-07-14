@@ -926,9 +926,6 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
   assert(Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert) &&
          "Not a static_assert declaration");
 
-  // Save the token used for static assertion.
-  Token SavedTok = Tok;
-
   if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
     Diag(Tok, diag::ext_c11_feature) << Tok.getName();
   if (Tok.is(tok::kw_static_assert)) {
@@ -992,9 +989,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
   T.consumeClose();
 
   DeclEnd = Tok.getLocation();
-  // Passing the token used to the error message.
-  ExpectAndConsumeSemi(diag::err_expected_semi_after_static_assert,
-                       SavedTok.getName());
+  ExpectAndConsumeSemi(diag::err_expected_semi_after_static_assert);
 
   return Actions.ActOnStaticAssertDeclaration(StaticAssertLoc,
                                               AssertExpr.get(),
