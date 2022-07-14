@@ -325,24 +325,6 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   return success();
 }
 
-/// Set the attribute that triggers inplace bufferization on a FuncOp argument
-/// `bbArg`.
-static void setInPlaceFuncArgument(BlockArgument bbArg, bool inPlace) {
-  auto funcOp = cast<func::FuncOp>(bbArg.getOwner()->getParentOp());
-  funcOp.setArgAttr(bbArg.getArgNumber(),
-                    BufferizableOpInterface::kInplaceableAttrName,
-                    BoolAttr::get(bbArg.getContext(), inPlace));
-}
-
-/// Annotate the IR with the result of the analysis. For testing/debugging only.
-static void annotateOpsWithBufferizationMarkers(func::FuncOp funcOp,
-                                                const AnalysisState &state) {
-  auto bufferizableOp = cast<BufferizableOpInterface>(funcOp.getOperation());
-  for (BlockArgument bbArg : funcOp.getArguments())
-    if (bbArg.getType().isa<TensorType>())
-      setInPlaceFuncArgument(bbArg, bufferizableOp.isWritable(bbArg, state));
-}
-
 /// Fold return values that are memref casts and update function return types.
 ///
 /// During FuncOp bufferization, the exact type of the returned memrefs (if any)
@@ -413,10 +395,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
     // Mark op as fully analyzed.
     funcState.analyzedFuncOps[funcOp] = FuncOpAnalysisState::Analyzed;
-
-    // Add annotations to function arguments.
-    if (options.testAnalysisOnly)
-      annotateOpsWithBufferizationMarkers(funcOp, state);
   }
 
   return success();
