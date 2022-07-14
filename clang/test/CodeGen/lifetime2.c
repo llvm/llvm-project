@@ -89,7 +89,7 @@ extern void foo2(int p);
 // O2-LABEL: @jump_backward_over_declaration(
 int jump_backward_over_declaration(int a) {
   int *p = 0;
-// O2: call void @llvm.lifetime.start.p0i8(i64 8,
+// O2: call void @llvm.lifetime.start.p0i8(
 label1:
   if (p) {
     foo2(*p);
@@ -102,5 +102,5 @@ label1:
     goto label1;
   }
   return -1;
-// O2: call void @llvm.lifetime.end.p0i8(i64 8,
+// O2: call void @llvm.lifetime.end.p0i8(
 }
