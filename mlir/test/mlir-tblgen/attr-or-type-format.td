@@ -55,8 +55,8 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 // ATTR:   if (odsParser.parseRParen())
 // ATTR:     return {};
 // ATTR:   return TestAAttr::get(odsParser.getContext(),
-// ATTR:                         (*_result_value),
-// ATTR:                         (*_result_complex));
+// ATTR:                         IntegerAttr((*_result_value)),
+// ATTR:                         TestParamA((*_result_complex)));
 // ATTR: }
 
 // ATTR: void TestAAttr::print(::mlir::AsmPrinter &odsPrinter) const {
@@ -114,8 +114,8 @@ def AttrA : TestAttr<"TestA"> {
 // ATTR:       return {};
 // ATTR:   }
 // ATTR:   return TestBAttr::get(odsParser.getContext(),
-// ATTR:                         (*_result_v0),
-// ATTR:                         (*_result_v1));
+// ATTR:                         TestParamA((*_result_v0)),
+// ATTR:                         TestParamB((*_result_v1)));
 // ATTR: }
 
 // ATTR: void TestBAttr::print(::mlir::AsmPrinter &odsPrinter) const {
@@ -151,8 +151,8 @@ def AttrB : TestAttr<"TestB"> {
 // ATTR:   if (::mlir::failed(_result_v1))
 // ATTR:     return {};
 // ATTR:   return TestFAttr::get(odsParser.getContext(),
-// ATTR:     (*_result_v0),
-// ATTR:     (*_result_v1));
+// ATTR:     int((*_result_v0)),
+// ATTR:     int((*_result_v1)));
 // ATTR: }
 
 def AttrC : TestAttr<"TestF"> {
@@ -278,10 +278,10 @@ def TypeA : TestType<"TestC"> {
 // TYPE:   if (::mlir::failed(_result_v3))
 // TYPE:     return {};
 // TYPE:   return TestDType::get(odsParser.getContext(),
-// TYPE:                         (*_result_v0),
-// TYPE:                         (*_result_v1),
-// TYPE:                         (*_result_v2),
-// TYPE:                         (*_result_v3));
+// TYPE:                         TestParamC((*_result_v0)),
+// TYPE:                         TestParamD((*_result_v1)),
+// TYPE:                         TestParamC((*_result_v2)),
+// TYPE:                         TestParamD((*_result_v3)));
 // TYPE: }
 
 // TYPE: void TestDType::print(::mlir::AsmPrinter &odsPrinter) const {
@@ -369,10 +369,10 @@ def TypeB : TestType<"TestD"> {
 // TYPE:       return {};
 // TYPE:   }
 // TYPE:   return TestEType::get(odsParser.getContext(),
-// TYPE:     (*_result_v0),
-// TYPE:     (*_result_v1),
-// TYPE:     (*_result_v2),
-// TYPE:     (*_result_v3));
+// TYPE:     IntegerAttr((*_result_v0)),
+// TYPE:     IntegerAttr((*_result_v1)),
+// TYPE:     IntegerAttr((*_result_v2)),
+// TYPE:     IntegerAttr((*_result_v3)));
 // TYPE: }
 
 // TYPE: void TestEType::print(::mlir::AsmPrinter &odsPrinter) const {

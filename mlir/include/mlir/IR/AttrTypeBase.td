@@ -96,30 +96,38 @@ class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 // This is necessary because the `body` is also used to generate `getChecked`
 // methods, which have a different underlying `Base::get*` call.
 //
-class AttrOrTypeBuilder<dag parameters, code bodyCode = ""> {
+class AttrOrTypeBuilder<dag parameters, code bodyCode = "",
+                        string returnTypeStr = ""> {
   dag dagParams = parameters;
   code body = bodyCode;
+
+  // Change the return type of the builder. By default, it is the type of the
+  // attribute or type.
+  string returnType = returnTypeStr;
 
   // The context parameter can be inferred from one of the other parameters and
   // is not implicitly added to the parameter list.
   bit hasInferredContextParam = 0;
 }
-class AttrBuilder<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilder<parameters, bodyCode>;
-class TypeBuilder<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilder<parameters, bodyCode>;
+class AttrBuilder<dag parameters, code bodyCode = "", string returnType = "">
+  : AttrOrTypeBuilder<parameters, bodyCode, returnType>;
+class TypeBuilder<dag parameters, code bodyCode = "", string returnType = "">
+  : AttrOrTypeBuilder<parameters, bodyCode, returnType>;
 
 // A class of AttrOrTypeBuilder that is able to infer the MLIRContext parameter
 // from one of the other builder parameters. Instances of this builder do not
 // have `MLIRContext *` implicitly added to the parameter list.
-class AttrOrTypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
-  : TypeBuilder<parameters, bodyCode> {
+class AttrOrTypeBuilderWithInferredContext<dag parameters, code bodyCode = "",
+                                           string returnType = "">
+  : TypeBuilder<parameters, bodyCode, returnType> {
   let hasInferredContextParam = 1;
 }
-class AttrBuilderWithInferredContext<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode>;
-class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
-  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode>;
+class AttrBuilderWithInferredContext<dag parameters, code bodyCode = "",
+                                     string returnType = "">
+  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode, returnType>;
+class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "",
+                                     string returnType = "">
+  : AttrOrTypeBuilderWithInferredContext<parameters, bodyCode, returnType>;
 
 //===----------------------------------------------------------------------===//
 // Definitions
