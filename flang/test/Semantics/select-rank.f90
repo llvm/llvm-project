@@ -239,7 +239,7 @@ contains
         RANK(1.0)
     !ERROR: Must be a constant value
         RANK(RANK(x))
-    !ERROR: Must have INTEGER type, but is CHARACTER(1)
+    !ERROR: Must have INTEGER type, but is CHARACTER(KIND=1,LEN=6_8)
         RANK("STRING")
     END SELECT
    end subroutine

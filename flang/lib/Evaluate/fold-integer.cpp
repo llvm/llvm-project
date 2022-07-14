@@ -1053,7 +1053,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
   }
-  // TODO: dot_product, ishftc, matmul, sign, transfer
+  // TODO: dot_product, ishftc, matmul, sign
   return Expr<T>{std::move(funcRef)};
 }
 

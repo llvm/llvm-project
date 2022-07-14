@@ -29,7 +29,7 @@ subroutine arrayconstructorvalues()
   ! C7111
   !ERROR: Value in array constructor of type 'LOGICAL(4)' could not be converted to the type of the array 'INTEGER(4)'
   intarray = [integer:: .true., 2, 3, 4, 5]
-  !ERROR: Value in array constructor of type 'CHARACTER(1)' could not be converted to the type of the array 'INTEGER(4)'
+  !ERROR: Value in array constructor of type 'CHARACTER(KIND=1,LEN=22_8)' could not be converted to the type of the array 'INTEGER(4)'
   intarray = [integer:: "RAM stores information", 2, 3, 4, 5]
   !ERROR: Value in array constructor of type 'employee' could not be converted to the type of the array 'INTEGER(4)'
   intarray = [integer:: EMPLOYEE (19, "Jack"), 2, 3, 4, 5]
