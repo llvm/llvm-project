@@ -49,15 +49,32 @@ TEST(LlvmLibcStringViewTest, Equals) {
 
 TEST(LlvmLibcStringViewTest, startsWith) {
   StringView v("abc");
+  ASSERT_TRUE(v.starts_with('a'));
   ASSERT_TRUE(v.starts_with(StringView("a")));
   ASSERT_TRUE(v.starts_with(StringView("ab")));
   ASSERT_TRUE(v.starts_with(StringView("abc")));
   ASSERT_TRUE(v.starts_with(StringView()));
   ASSERT_TRUE(v.starts_with(StringView("")));
+  ASSERT_FALSE(v.starts_with('1'));
   ASSERT_FALSE(v.starts_with(StringView("123")));
   ASSERT_FALSE(v.starts_with(StringView("abd")));
   ASSERT_FALSE(v.starts_with(StringView("aaa")));
   ASSERT_FALSE(v.starts_with(StringView("abcde")));
+}
+
+TEST(LlvmLibcStringViewTest, endsWith) {
+  StringView v("abc");
+  ASSERT_TRUE(v.ends_with('c'));
+  ASSERT_TRUE(v.ends_with(StringView("c")));
+  ASSERT_TRUE(v.ends_with(StringView("bc")));
+  ASSERT_TRUE(v.ends_with(StringView("abc")));
+  ASSERT_TRUE(v.ends_with(StringView()));
+  ASSERT_TRUE(v.ends_with(StringView("")));
+  ASSERT_FALSE(v.ends_with('1'));
+  ASSERT_FALSE(v.ends_with(StringView("123")));
+  ASSERT_FALSE(v.ends_with(StringView("abd")));
+  ASSERT_FALSE(v.ends_with(StringView("aaa")));
+  ASSERT_FALSE(v.ends_with(StringView("abcde")));
 }
 
 TEST(LlvmLibcStringViewTest, RemovePrefix) {
@@ -175,4 +192,18 @@ TEST(LlvmLibcStringViewTest, ConsumeBack) {
   ASSERT_FALSE(Tmp.consume_back("###"));
   ASSERT_TRUE(Tmp.consume_back("bc"));
   ASSERT_TRUE(Tmp.equals("a"));
+}
+
+TEST(LlvmLibcStringViewTest, FindFirstOf) {
+  StringView Tmp("abca");
+  ASSERT_TRUE(Tmp.find_first_of('a') == 0);
+  ASSERT_TRUE(Tmp.find_first_of('d') == StringView::npos);
+  ASSERT_TRUE(Tmp.find_first_of('b') == 1);
+  ASSERT_TRUE(Tmp.find_first_of('a', 0) == 0);
+  ASSERT_TRUE(Tmp.find_first_of('b', 1) == 1);
+  ASSERT_TRUE(Tmp.find_first_of('a', 1) == 3);
+  ASSERT_TRUE(Tmp.find_first_of('a', 42) == StringView::npos);
+  ASSERT_FALSE(Tmp.find_first_of('c') == 1);
+  ASSERT_FALSE(Tmp.find_first_of('c', 0) == 1);
+  ASSERT_FALSE(Tmp.find_first_of('c', 1) == 1);
 }
