@@ -17,6 +17,7 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupArchitecture.h"
@@ -141,26 +142,6 @@ static uint32_t DumpTargetList(TargetList &target_list,
   }
   return num_targets;
 }
-
-// Note that the negation in the argument name causes a slightly confusing
-// mapping of the enum values.
-static constexpr OptionEnumValueElement g_dependents_enumeration[] = {
-    {
-        eLoadDependentsDefault,
-        "default",
-        "Only load dependents when the target is an executable.",
-    },
-    {
-        eLoadDependentsNo,
-        "true",
-        "Don't load dependents, even if the target is an executable.",
-    },
-    {
-        eLoadDependentsYes,
-        "false",
-        "Load dependents, even if the target is not an executable.",
-    },
-};
 
 #define LLDB_OPTIONS_target_dependents
 #include "CommandOptions.inc"
@@ -1921,26 +1902,6 @@ protected:
     }
     return result.Succeeded();
   }
-};
-
-#pragma mark CommandObjectTargetModulesDumpSymtab
-
-static constexpr OptionEnumValueElement g_sort_option_enumeration[] = {
-    {
-        eSortOrderNone,
-        "none",
-        "No sorting, use the original symbol table order.",
-    },
-    {
-        eSortOrderByAddress,
-        "address",
-        "Sort output by symbol address.",
-    },
-    {
-        eSortOrderByName,
-        "name",
-        "Sort output by symbol name.",
-    },
 };
 
 #define LLDB_OPTIONS_target_modules_dump_symtab
