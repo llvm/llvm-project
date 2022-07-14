@@ -259,8 +259,7 @@ void AsmParserState::addDefinition(Block *block, SMLoc location) {
   impl->blocks[it->second]->definition.loc = convertIdLocToRange(location);
 }
 
-void AsmParserState::addDefinition(BlockArgument blockArg,
-                                   SMLoc location) {
+void AsmParserState::addDefinition(BlockArgument blockArg, SMLoc location) {
   auto it = impl->blocksToIdx.find(blockArg.getOwner());
   assert(it != impl->blocksToIdx.end() &&
          "expected owner block to have an entry");

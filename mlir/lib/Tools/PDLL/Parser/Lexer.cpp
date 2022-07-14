@@ -44,18 +44,18 @@ std::string Token::getStringValue() const {
     assert(i + 1 <= e && "invalid string should be caught by lexer");
     auto c1 = bytes[i++];
     switch (c1) {
-      case '"':
-      case '\\':
-        result.push_back(c1);
-        continue;
-      case 'n':
-        result.push_back('\n');
-        continue;
-      case 't':
-        result.push_back('\t');
-        continue;
-      default:
-        break;
+    case '"':
+    case '\\':
+      result.push_back(c1);
+      continue;
+    case 'n':
+      result.push_back('\n');
+      continue;
+    case 't':
+      result.push_back('\t');
+      continue;
+    default:
+      break;
     }
 
     assert(i + 1 <= e && "invalid string should be caught by lexer");
@@ -101,7 +101,8 @@ Lexer::Lexer(llvm::SourceMgr &mgr, ast::DiagnosticEngine &diagEngine,
 }
 
 Lexer::~Lexer() {
-  if (addedHandlerToDiagEngine) diagEngine.setHandlerFn(nullptr);
+  if (addedHandlerToDiagEngine)
+    diagEngine.setHandlerFn(nullptr);
 }
 
 LogicalResult Lexer::pushInclude(StringRef filename, SMRange includeLoc) {
@@ -121,39 +122,39 @@ Token Lexer::emitError(SMRange loc, const Twine &msg) {
   diagEngine.emitError(loc, msg);
   return formToken(Token::error, loc.Start.getPointer());
 }
-Token Lexer::emitErrorAndNote(SMRange loc, const Twine &msg,
-                              SMRange noteLoc, const Twine &note) {
+Token Lexer::emitErrorAndNote(SMRange loc, const Twine &msg, SMRange noteLoc,
+                              const Twine &note) {
   diagEngine.emitError(loc, msg)->attachNote(note, noteLoc);
   return formToken(Token::error, loc.Start.getPointer());
 }
 Token Lexer::emitError(const char *loc, const Twine &msg) {
-  return emitError(SMRange(SMLoc::getFromPointer(loc),
-                                 SMLoc::getFromPointer(loc + 1)),
-                   msg);
+  return emitError(
+      SMRange(SMLoc::getFromPointer(loc), SMLoc::getFromPointer(loc + 1)), msg);
 }
 
 int Lexer::getNextChar() {
   char curChar = *curPtr++;
   switch (curChar) {
-    default:
-      return static_cast<unsigned char>(curChar);
-    case 0: {
-      // A nul character in the stream is either the end of the current buffer
-      // or a random nul in the file. Disambiguate that here.
-      if (curPtr - 1 != curBuffer.end()) return 0;
+  default:
+    return static_cast<unsigned char>(curChar);
+  case 0: {
+    // A nul character in the stream is either the end of the current buffer
+    // or a random nul in the file. Disambiguate that here.
+    if (curPtr - 1 != curBuffer.end())
+      return 0;
 
-      // Otherwise, return end of file.
-      --curPtr;
-      return EOF;
-    }
-    case '\n':
-    case '\r':
-      // Handle the newline character by ignoring it and incrementing the line
-      // count. However, be careful about 'dos style' files with \n\r in them.
-      // Only treat a \n\r or \r\n as a single line.
-      if ((*curPtr == '\n' || (*curPtr == '\r')) && *curPtr != curChar)
-        ++curPtr;
-      return '\n';
+    // Otherwise, return end of file.
+    --curPtr;
+    return EOF;
+  }
+  case '\n':
+  case '\r':
+    // Handle the newline character by ignoring it and incrementing the line
+    // count. However, be careful about 'dos style' files with \n\r in them.
+    // Only treat a \n\r or \r\n as a single line.
+    if ((*curPtr == '\n' || (*curPtr == '\r')) && *curPtr != curChar)
+      ++curPtr;
+    return '\n';
   }
 }
 
@@ -168,99 +169,100 @@ Token Lexer::lexToken() {
     // This always consumes at least one character.
     int curChar = getNextChar();
     switch (curChar) {
-      default:
-        // Handle identifiers: [a-zA-Z_]
-        if (isalpha(curChar) || curChar == '_') return lexIdentifier(tokStart);
+    default:
+      // Handle identifiers: [a-zA-Z_]
+      if (isalpha(curChar) || curChar == '_')
+        return lexIdentifier(tokStart);
 
-        // Unknown character, emit an error.
-        return emitError(tokStart, "unexpected character");
-      case EOF: {
-        // Return EOF denoting the end of lexing.
-        Token eof = formToken(Token::eof, tokStart);
+      // Unknown character, emit an error.
+      return emitError(tokStart, "unexpected character");
+    case EOF: {
+      // Return EOF denoting the end of lexing.
+      Token eof = formToken(Token::eof, tokStart);
 
-        // Check to see if we are in an included file.
-        SMLoc parentIncludeLoc = srcMgr.getParentIncludeLoc(curBufferID);
-        if (parentIncludeLoc.isValid()) {
-          curBufferID = srcMgr.FindBufferContainingLoc(parentIncludeLoc);
-          curBuffer = srcMgr.getMemoryBuffer(curBufferID)->getBuffer();
-          curPtr = parentIncludeLoc.getPointer();
-        }
-
-        return eof;
+      // Check to see if we are in an included file.
+      SMLoc parentIncludeLoc = srcMgr.getParentIncludeLoc(curBufferID);
+      if (parentIncludeLoc.isValid()) {
+        curBufferID = srcMgr.FindBufferContainingLoc(parentIncludeLoc);
+        curBuffer = srcMgr.getMemoryBuffer(curBufferID)->getBuffer();
+        curPtr = parentIncludeLoc.getPointer();
       }
 
-      // Lex punctuation.
-      case '-':
-        if (*curPtr == '>') {
-          ++curPtr;
-          return formToken(Token::arrow, tokStart);
-        }
-        return emitError(tokStart, "unexpected character");
-      case ':':
-        return formToken(Token::colon, tokStart);
-      case ',':
-        return formToken(Token::comma, tokStart);
-      case '.':
-        return formToken(Token::dot, tokStart);
-      case '=':
-        if (*curPtr == '>') {
-          ++curPtr;
-          return formToken(Token::equal_arrow, tokStart);
-        }
-        return formToken(Token::equal, tokStart);
-      case ';':
-        return formToken(Token::semicolon, tokStart);
-      case '[':
-        if (*curPtr == '{') {
-          ++curPtr;
-          return lexString(tokStart, /*isStringBlock=*/true);
-        }
-        return formToken(Token::l_square, tokStart);
-      case ']':
-        return formToken(Token::r_square, tokStart);
+      return eof;
+    }
 
-      case '<':
-        return formToken(Token::less, tokStart);
-      case '>':
-        return formToken(Token::greater, tokStart);
-      case '{':
-        return formToken(Token::l_brace, tokStart);
-      case '}':
-        return formToken(Token::r_brace, tokStart);
-      case '(':
-        return formToken(Token::l_paren, tokStart);
-      case ')':
-        return formToken(Token::r_paren, tokStart);
-      case '/':
-        if (*curPtr == '/') {
-          lexComment();
-          continue;
-        }
-        return emitError(tokStart, "unexpected character");
+    // Lex punctuation.
+    case '-':
+      if (*curPtr == '>') {
+        ++curPtr;
+        return formToken(Token::arrow, tokStart);
+      }
+      return emitError(tokStart, "unexpected character");
+    case ':':
+      return formToken(Token::colon, tokStart);
+    case ',':
+      return formToken(Token::comma, tokStart);
+    case '.':
+      return formToken(Token::dot, tokStart);
+    case '=':
+      if (*curPtr == '>') {
+        ++curPtr;
+        return formToken(Token::equal_arrow, tokStart);
+      }
+      return formToken(Token::equal, tokStart);
+    case ';':
+      return formToken(Token::semicolon, tokStart);
+    case '[':
+      if (*curPtr == '{') {
+        ++curPtr;
+        return lexString(tokStart, /*isStringBlock=*/true);
+      }
+      return formToken(Token::l_square, tokStart);
+    case ']':
+      return formToken(Token::r_square, tokStart);
 
-      // Ignore whitespace characters.
-      case 0:
-      case ' ':
-      case '\t':
-      case '\n':
-        return lexToken();
+    case '<':
+      return formToken(Token::less, tokStart);
+    case '>':
+      return formToken(Token::greater, tokStart);
+    case '{':
+      return formToken(Token::l_brace, tokStart);
+    case '}':
+      return formToken(Token::r_brace, tokStart);
+    case '(':
+      return formToken(Token::l_paren, tokStart);
+    case ')':
+      return formToken(Token::r_paren, tokStart);
+    case '/':
+      if (*curPtr == '/') {
+        lexComment();
+        continue;
+      }
+      return emitError(tokStart, "unexpected character");
 
-      case '#':
-        return lexDirective(tokStart);
-      case '"':
-        return lexString(tokStart, /*isStringBlock=*/false);
+    // Ignore whitespace characters.
+    case 0:
+    case ' ':
+    case '\t':
+    case '\n':
+      return lexToken();
 
-      case '0':
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-        return lexNumber(tokStart);
+    case '#':
+      return lexDirective(tokStart);
+    case '"':
+      return lexString(tokStart, /*isStringBlock=*/false);
+
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      return lexNumber(tokStart);
     }
   }
 }
@@ -273,27 +275,28 @@ void Lexer::lexComment() {
 
   while (true) {
     switch (*curPtr++) {
-      case '\n':
-      case '\r':
-        // Newline is end of comment.
+    case '\n':
+    case '\r':
+      // Newline is end of comment.
+      return;
+    case 0:
+      // If this is the end of the buffer, end the comment.
+      if (curPtr - 1 == curBuffer.end()) {
+        --curPtr;
         return;
-      case 0:
-        // If this is the end of the buffer, end the comment.
-        if (curPtr - 1 == curBuffer.end()) {
-          --curPtr;
-          return;
-        }
-        LLVM_FALLTHROUGH;
-      default:
-        // Skip over other characters.
-        break;
+      }
+      LLVM_FALLTHROUGH;
+    default:
+      // Skip over other characters.
+      break;
     }
   }
 }
 
 Token Lexer::lexDirective(const char *tokStart) {
   // Match the rest with an identifier regex: [0-9a-zA-Z_]*
-  while (isalnum(*curPtr) || *curPtr == '_') ++curPtr;
+  while (isalnum(*curPtr) || *curPtr == '_')
+    ++curPtr;
 
   StringRef str(tokStart, curPtr - tokStart);
   return Token(Token::directive, str);
@@ -301,7 +304,8 @@ Token Lexer::lexDirective(const char *tokStart) {
 
 Token Lexer::lexIdentifier(const char *tokStart) {
   // Match the rest of the identifier regex: [0-9a-zA-Z_]*
-  while (isalnum(*curPtr) || *curPtr == '_') ++curPtr;
+  while (isalnum(*curPtr) || *curPtr == '_')
+    ++curPtr;
 
   // Check to see if this identifier is a keyword.
   StringRef str(tokStart, curPtr - tokStart);
@@ -334,7 +338,8 @@ Token Lexer::lexNumber(const char *tokStart) {
   assert(isdigit(curPtr[-1]));
 
   // Handle the normal decimal case.
-  while (isdigit(*curPtr)) ++curPtr;
+  while (isdigit(*curPtr))
+    ++curPtr;
 
   return formToken(Token::integer, tokStart);
 }
@@ -352,54 +357,54 @@ Token Lexer::lexString(const char *tokStart, bool isStringBlock) {
     }
 
     switch (*curPtr++) {
-      case '"':
-        // If this is a string block, we only end the string when we encounter a
-        // `}]`.
-        if (!isStringBlock)
-          return formToken(Token::string, tokStart);
+    case '"':
+      // If this is a string block, we only end the string when we encounter a
+      // `}]`.
+      if (!isStringBlock)
+        return formToken(Token::string, tokStart);
+      continue;
+    case '}':
+      // If this is a string block, we only end the string when we encounter a
+      // `}]`.
+      if (!isStringBlock || *curPtr != ']')
         continue;
-      case '}':
-        // If this is a string block, we only end the string when we encounter a
-        // `}]`.
-        if (!isStringBlock || *curPtr != ']')
-          continue;
+      ++curPtr;
+      return formToken(Token::string_block, tokStart);
+    case 0: {
+      // If this is a random nul character in the middle of a string, just
+      // include it. If it is the end of file, then it is an error.
+      if (curPtr - 1 != curBuffer.end())
+        continue;
+      --curPtr;
+
+      StringRef expectedEndStr = isStringBlock ? "}]" : "\"";
+      return emitError(curPtr - 1,
+                       "expected '" + expectedEndStr + "' in string literal");
+    }
+
+    case '\n':
+    case '\v':
+    case '\f':
+      // String blocks allow multiple lines.
+      if (!isStringBlock)
+        return emitError(curPtr - 1, "expected '\"' in string literal");
+      continue;
+
+    case '\\':
+      // Handle explicitly a few escapes.
+      if (*curPtr == '"' || *curPtr == '\\' || *curPtr == 'n' ||
+          *curPtr == 't') {
         ++curPtr;
-        return formToken(Token::string_block, tokStart);
-      case 0: {
-        // If this is a random nul character in the middle of a string, just
-        // include it. If it is the end of file, then it is an error.
-        if (curPtr - 1 != curBuffer.end())
-          continue;
-        --curPtr;
-
-        StringRef expectedEndStr = isStringBlock ? "}]" : "\"";
-        return emitError(curPtr - 1,
-                         "expected '" + expectedEndStr + "' in string literal");
+      } else if (llvm::isHexDigit(*curPtr) && llvm::isHexDigit(curPtr[1])) {
+        // Support \xx for two hex digits.
+        curPtr += 2;
+      } else {
+        return emitError(curPtr - 1, "unknown escape in string literal");
       }
+      continue;
 
-      case '\n':
-      case '\v':
-      case '\f':
-        // String blocks allow multiple lines.
-        if (!isStringBlock)
-          return emitError(curPtr - 1, "expected '\"' in string literal");
-        continue;
-
-      case '\\':
-        // Handle explicitly a few escapes.
-        if (*curPtr == '"' || *curPtr == '\\' || *curPtr == 'n' ||
-            *curPtr == 't') {
-          ++curPtr;
-        } else if (llvm::isHexDigit(*curPtr) && llvm::isHexDigit(curPtr[1])) {
-          // Support \xx for two hex digits.
-          curPtr += 2;
-        } else {
-          return emitError(curPtr - 1, "unknown escape in string literal");
-        }
-        continue;
-
-      default:
-        continue;
+    default:
+      continue;
     }
   }
 }

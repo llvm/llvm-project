@@ -146,7 +146,6 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 
   // TODO: Load to Workgroup storage class first.
 
-
   // Get the input element accessed by this invocation.
   Value inputElementPtr = spirv::getElementPtr(
       *typeConverter, originalInputType, convertedInput, {x}, loc, rewriter);

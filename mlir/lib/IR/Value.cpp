@@ -212,4 +212,3 @@ unsigned BlockOperand::getOperandNumber() {
 unsigned OpOperand::getOperandNumber() {
   return this - &getOwner()->getOpOperands()[0];
 }
-

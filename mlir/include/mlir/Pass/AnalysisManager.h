@@ -43,7 +43,8 @@ public:
   bool isNone() const { return preservedIDs.empty(); }
 
   /// Preserve the given analyses.
-  template <typename AnalysisT> void preserve() {
+  template <typename AnalysisT>
+  void preserve() {
     preserve(TypeID::get<AnalysisT>());
   }
   template <typename AnalysisT, typename AnalysisT2, typename... OtherAnalysesT>
@@ -56,7 +57,8 @@ public:
   /// Returns true if the given analysis has been marked as preserved. Note that
   /// this simply checks for the presence of a given analysis ID and should not
   /// be used as a general preservation checker.
-  template <typename AnalysisT> bool isPreserved() const {
+  template <typename AnalysisT>
+  bool isPreserved() const {
     return isPreserved(TypeID::get<AnalysisT>());
   }
   bool isPreserved(TypeID id) const { return preservedIDs.count(id); }
@@ -110,7 +112,8 @@ struct AnalysisConcept {
 };
 
 /// A derived analysis model used to hold a specific analysis object.
-template <typename AnalysisT> struct AnalysisModel : public AnalysisConcept {
+template <typename AnalysisT>
+struct AnalysisModel : public AnalysisConcept {
   template <typename... Args>
   explicit AnalysisModel(Args &&...args)
       : analysis(std::forward<Args>(args)...) {}
@@ -135,7 +138,8 @@ class AnalysisMap {
   using ConceptMap = llvm::MapVector<TypeID, std::unique_ptr<AnalysisConcept>>;
 
   /// Utility to return the name of the given analysis class.
-  template <typename AnalysisT> static StringRef getAnalysisName() {
+  template <typename AnalysisT>
+  static StringRef getAnalysisName() {
     StringRef name = llvm::getTypeName<AnalysisT>();
     if (!name.consume_front("mlir::"))
       name.consume_front("(anonymous namespace)::");
@@ -309,7 +313,8 @@ public:
   }
 
   /// Query for the given analysis for the current operation.
-  template <typename AnalysisT> AnalysisT &getAnalysis() {
+  template <typename AnalysisT>
+  AnalysisT &getAnalysis() {
     return impl->analyses.getAnalysis<AnalysisT>(getPassInstrumentor(), *this);
   }
 
@@ -328,7 +333,8 @@ public:
   }
 
   /// Query for an analysis of a child operation, constructing it if necessary.
-  template <typename AnalysisT> AnalysisT &getChildAnalysis(Operation *op) {
+  template <typename AnalysisT>
+  AnalysisT &getChildAnalysis(Operation *op) {
     return nest(op).template getAnalysis<AnalysisT>();
   }
 

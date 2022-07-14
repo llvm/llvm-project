@@ -360,8 +360,7 @@ SerializeToHsacoPass::assembleIsa(const std::string &isa) {
   }
 
   llvm::SourceMgr srcMgr;
-  srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa),
-                            SMLoc());
+  srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa), SMLoc());
 
   const llvm::MCTargetOptions mcOptions;
   std::unique_ptr<llvm::MCRegisterInfo> mri(
@@ -469,18 +468,17 @@ SerializeToHsacoPass::serializeISA(const std::string &isa) {
 
 // Register pass to serialize GPU kernel functions to a HSACO binary annotation.
 void mlir::registerGpuSerializeToHsacoPass() {
-  PassRegistration<SerializeToHsacoPass> registerSerializeToHSACO(
-      [] {
-        // Initialize LLVM AMDGPU backend.
-        LLVMInitializeAMDGPUAsmParser();
-        LLVMInitializeAMDGPUAsmPrinter();
-        LLVMInitializeAMDGPUTarget();
-        LLVMInitializeAMDGPUTargetInfo();
-        LLVMInitializeAMDGPUTargetMC();
+  PassRegistration<SerializeToHsacoPass> registerSerializeToHSACO([] {
+    // Initialize LLVM AMDGPU backend.
+    LLVMInitializeAMDGPUAsmParser();
+    LLVMInitializeAMDGPUAsmPrinter();
+    LLVMInitializeAMDGPUTarget();
+    LLVMInitializeAMDGPUTargetInfo();
+    LLVMInitializeAMDGPUTargetMC();
 
-        return std::make_unique<SerializeToHsacoPass>("amdgcn-amd-amdhsa", "",
-                                                      "", 2);
-      });
+    return std::make_unique<SerializeToHsacoPass>("amdgcn-amd-amdhsa", "", "",
+                                                  2);
+  });
 }
 
 /// Create an instance of the GPU kernel function to HSAco binary serialization

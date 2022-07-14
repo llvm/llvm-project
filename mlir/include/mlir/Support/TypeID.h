@@ -334,7 +334,8 @@ public:
 MLIR_DECLARE_EXPLICIT_TYPE_ID(void)
 
 namespace llvm {
-template <> struct DenseMapInfo<mlir::TypeID> {
+template <>
+struct DenseMapInfo<mlir::TypeID> {
   static inline mlir::TypeID getEmptyKey() {
     void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::TypeID::getFromOpaquePointer(pointer);
@@ -350,7 +351,8 @@ template <> struct DenseMapInfo<mlir::TypeID> {
 };
 
 /// We align TypeID::Storage by 8, so allow LLVM to steal the low bits.
-template <> struct PointerLikeTypeTraits<mlir::TypeID> {
+template <>
+struct PointerLikeTypeTraits<mlir::TypeID> {
   static inline void *getAsVoidPointer(mlir::TypeID info) {
     return const_cast<void *>(info.getAsOpaquePointer());
   }

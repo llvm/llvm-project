@@ -141,7 +141,8 @@ public:
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>(). Returns false if the operation
   /// is unregistered.
-  template <template <typename T> class Trait> bool hasTrait() const {
+  template <template <typename T> class Trait>
+  bool hasTrait() const {
     return hasTrait(TypeID::get<Trait>());
   }
   bool hasTrait(TypeID traitID) const {
@@ -151,7 +152,8 @@ public:
   /// Returns true if the operation *might* have the provided trait. This
   /// means that either the operation is unregistered, or it was registered with
   /// the provide trait.
-  template <template <typename T> class Trait> bool mightHaveTrait() const {
+  template <template <typename T> class Trait>
+  bool mightHaveTrait() const {
     return mightHaveTrait(TypeID::get<Trait>());
   }
   bool mightHaveTrait(TypeID traitID) const {
@@ -161,12 +163,14 @@ public:
   /// Returns an instance of the concept object for the given interface if it
   /// was registered to this operation, null otherwise. This should not be used
   /// directly.
-  template <typename T> typename T::Concept *getInterface() const {
+  template <typename T>
+  typename T::Concept *getInterface() const {
     return impl->interfaceMap.lookup<T>();
   }
 
   /// Returns true if this operation has the given interface registered to it.
-  template <typename T> bool hasInterface() const {
+  template <typename T>
+  bool hasInterface() const {
     return hasInterface(TypeID::get<T>());
   }
   bool hasInterface(TypeID interfaceID) const {
@@ -345,7 +349,8 @@ public:
   }
 
   /// Returns true if the operation has a particular trait.
-  template <template <typename T> class Trait> bool hasTrait() const {
+  template <template <typename T> class Trait>
+  bool hasTrait() const {
     return hasTrait(TypeID::get<Trait>());
   }
 

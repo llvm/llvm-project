@@ -930,8 +930,7 @@ private:
 };
 } // namespace
 
-SSANameState::SSANameState(
-    Operation *op, const OpPrintingFlags &printerFlags)
+SSANameState::SSANameState(Operation *op, const OpPrintingFlags &printerFlags)
     : printerFlags(printerFlags) {
   llvm::SaveAndRestore<unsigned> valueIDSaver(nextValueID);
   llvm::SaveAndRestore<unsigned> argumentIDSaver(nextArgumentID);
