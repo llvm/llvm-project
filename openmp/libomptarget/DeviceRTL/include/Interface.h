@@ -245,6 +245,12 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     ListGlobalFnTy glredFct);
 ///}
 
+/// Cross team helper functions for special case reductions
+///{
+void __kmpc_xteam_sum_d(double, double *);
+void __kmpc_xteam_sum_f(float, float *);
+///}
+
 /// Synchronization
 ///
 ///{

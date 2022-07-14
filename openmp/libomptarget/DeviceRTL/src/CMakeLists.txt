@@ -10,4 +10,5 @@ target_sources(omptarget.devicertl PRIVATE
   Synchronization.cpp
   Tasking.cpp
   Utils.cpp
-  Workshare.cpp)
+  Workshare.cpp
+  Xteam.cpp)
