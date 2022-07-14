@@ -30,7 +30,6 @@ add_llvm_unittest(OrcJITTests
   OrcTestCommon.cpp
   ResourceTrackerTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
-  SharedMemoryMapperTest.cpp
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
   SymbolStringPoolTest.cpp
