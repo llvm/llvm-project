@@ -55,16 +55,23 @@ extern "C" {
 
 void RTNAME(Transfer)(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line) {
+  std::optional<std::int64_t> elements;
   if (mold.rank() > 0) {
-    std::size_t moldElementBytes{mold.ElementBytes()};
-    std::size_t elements{
-        (source.Elements() * source.ElementBytes() + moldElementBytes - 1) /
-        moldElementBytes};
-    return TransferImpl(result, source, mold, sourceFile, line,
-        static_cast<std::int64_t>(elements));
-  } else {
-    return TransferImpl(result, source, mold, sourceFile, line, {});
+    if (std::size_t sourceElementBytes{
+            source.Elements() * source.ElementBytes()}) {
+      if (std::size_t moldElementBytes{mold.ElementBytes()}) {
+        elements = static_cast<std::int64_t>(
+            (sourceElementBytes + moldElementBytes - 1) / moldElementBytes);
+      } else {
+        Terminator{sourceFile, line}.Crash("TRANSFER: zero-sized type of MOLD= "
+                                           "when SOURCE= is not zero-sized");
+      }
+    } else {
+      elements = 0;
+    }
   }
+  return TransferImpl(
+      result, source, mold, sourceFile, line, std::move(elements));
 }
 
 void RTNAME(TransferSize)(Descriptor &result, const Descriptor &source,
