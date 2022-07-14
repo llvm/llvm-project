@@ -62,7 +62,8 @@ public:
   }
 
 private:
-  template <typename T> void addDataToHash(llvm::SHA1 &hasher, const T &data) {
+  template <typename T>
+  void addDataToHash(llvm::SHA1 &hasher, const T &data) {
     hasher.update(
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
   }

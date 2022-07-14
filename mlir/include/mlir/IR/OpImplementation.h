@@ -151,10 +151,9 @@ public:
             std::enable_if_t<detect_has_print_method<AttrOrType>::value>
                 *sfinae = nullptr>
   void printStrippedAttrOrType(ArrayRef<AttrOrType> attrOrTypes) {
-    llvm::interleaveComma(attrOrTypes, getStream(),
-                          [this](AttrOrType attrOrType) {
-                            printStrippedAttrOrType(attrOrType);
-                          });
+    llvm::interleaveComma(
+        attrOrTypes, getStream(),
+        [this](AttrOrType attrOrType) { printStrippedAttrOrType(attrOrType); });
   }
 
   /// SFINAE for printing the provided attribute in the context of an operation

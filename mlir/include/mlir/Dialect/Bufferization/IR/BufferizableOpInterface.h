@@ -49,7 +49,8 @@ public:
   /// Allow the given dialects.
   ///
   /// This function adds one or multiple ALLOW entries.
-  template <typename... DialectTs> void allowDialect() {
+  template <typename... DialectTs>
+  void allowDialect() {
     // The following expands a call to allowDialectImpl for each dialect
     // in 'DialectTs'. This magic is necessary due to a limitation in the places
     // that a parameter pack can be expanded in c++11.
@@ -60,7 +61,8 @@ public:
   /// Deny the given dialects.
   ///
   /// This function adds one or multiple DENY entries.
-  template <typename... DialectTs> void denyDialect() {
+  template <typename... DialectTs>
+  void denyDialect() {
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
     (void)std::initializer_list<int>{0, (denyDialectImpl<DialectTs>(), 0)...};
   }
@@ -78,7 +80,8 @@ public:
   /// Allow the given ops.
   ///
   /// This function adds one or multiple ALLOW entries.
-  template <typename... OpTys> void allowOperation() {
+  template <typename... OpTys>
+  void allowOperation() {
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
     (void)std::initializer_list<int>{0, (allowOperationImpl<OpTys>(), 0)...};
   }
@@ -86,7 +89,8 @@ public:
   /// Deny the given ops.
   ///
   /// This function adds one or multiple DENY entries.
-  template <typename... OpTys> void denyOperation() {
+  template <typename... OpTys>
+  void denyOperation() {
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
     (void)std::initializer_list<int>{0, (denyOperationImpl<OpTys>(), 0)...};
   }
@@ -135,22 +139,26 @@ private:
   }
 
   /// Allow a dialect.
-  template <typename DialectT> void allowDialectImpl() {
+  template <typename DialectT>
+  void allowDialectImpl() {
     allowDialect(DialectT::getDialectNamespace());
   }
 
   /// Deny a dialect.
-  template <typename DialectT> void denyDialectImpl() {
+  template <typename DialectT>
+  void denyDialectImpl() {
     denyDialect(DialectT::getDialectNamespace());
   }
 
   /// Allow an op.
-  template <typename OpTy> void allowOperationImpl() {
+  template <typename OpTy>
+  void allowOperationImpl() {
     allowOperation(OpTy::getOperationName());
   }
 
   /// Deny an op.
-  template <typename OpTy> void denyOperationImpl() {
+  template <typename OpTy>
+  void denyOperationImpl() {
     denyOperation(OpTy::getOperationName());
   }
 
