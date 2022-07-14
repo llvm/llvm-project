@@ -168,7 +168,7 @@ and ``arch`` arguments are considered mandatory to make a valid image.
   
     --image=<<key>=<value>,...> - List of key and value arguments. Required
                                   keywords are 'file' and 'triple'.
-    -o=<file>                   - Write output to <file>.
+    -o <file>                   - Write output to <file>.
 
 Example
 =======
