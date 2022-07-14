@@ -1883,7 +1883,13 @@ void SIScheduleDAGMI::schedule()
   LLVM_DEBUG(dbgs() << "Preparing Scheduling\n");
 
   buildDAGWithRegPressure();
+  postprocessDAG();
+
   LLVM_DEBUG(dump());
+  if (PrintDAGs)
+    dump();
+  if (ViewMISchedDAGs)
+    viewGraph();
 
   topologicalSort();
   findRootsAndBiasEdges(TopRoots, BotRoots);
