@@ -25,7 +25,8 @@ class TraceIntelPT : public Trace {
 public:
   void Dump(Stream *s) const override;
 
-  llvm::Error SaveLiveTraceToDisk(FileSpec directory) override;
+  llvm::Expected<FileSpec> SaveToDisk(FileSpec directory,
+                                      bool compact) override;
 
   ~TraceIntelPT() override = default;
 
@@ -72,7 +73,8 @@ public:
 
   llvm::Expected<lldb::TraceCursorUP> CreateNewCursor(Thread &thread) override;
 
-  void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) override;
+  void DumpTraceInfo(Thread &thread, Stream &s, bool verbose,
+                     bool json) override;
 
   llvm::Expected<llvm::Optional<uint64_t>> GetRawTraceSize(Thread &thread);
 
@@ -104,12 +106,16 @@ public:
   ///     This value defines whether to have an intel pt trace buffer per thread
   ///     or per cpu core.
   ///
+  /// \param[in] disable_cgroup_filtering
+  ///     Disable the cgroup filtering that is automatically applied when doing
+  ///     per cpu tracing.
+  ///
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
   llvm::Error Start(uint64_t ipt_trace_size, uint64_t total_buffer_size_limit,
                     bool enable_tsc, llvm::Optional<uint64_t> psb_period,
-                    bool m_per_cpu_tracing);
+                    bool m_per_cpu_tracing, bool disable_cgroup_filtering);
 
   /// \copydoc Trace::Start
   llvm::Error Start(StructuredData::ObjectSP configuration =
@@ -156,6 +162,14 @@ public:
   /// \return
   ///     The timer object for this trace.
   TaskTimer &GetTimer();
+
+  /// \return
+  ///     The ScopedTaskTimer object for the given thread in this trace.
+  ScopedTaskTimer &GetThreadTimer(lldb::tid_t tid);
+
+  /// \return
+  ///     The global copedTaskTimer object for this trace.
+  ScopedTaskTimer &GetGlobalTimer();
 
   TraceIntelPTSP GetSharedPtr();
 
@@ -205,6 +219,9 @@ private:
   ///     errors are embedded in the instruction list. An \a llvm::Error is
   ///     returned if the decoder couldn't be properly set up.
   llvm::Expected<DecodedThreadSP> Decode(Thread &thread);
+
+  // Dump out trace info in JSON format
+  void DumpTraceInfoAsJson(Thread &thread, Stream &s, bool verbose);
 
   /// We package all the data that can change upon process stops to make sure
   /// this contract is very visible.

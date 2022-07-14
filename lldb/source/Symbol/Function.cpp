@@ -196,11 +196,10 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
   Log *log = GetLog(LLDBLog::Step);
   Status error;
   Value callee_addr_val;
-  if (!call_target.Evaluate(&exe_ctx, exe_ctx.GetRegisterContext(),
-                            /*loclist_base_load_addr=*/LLDB_INVALID_ADDRESS,
-                            /*initial_value_ptr=*/nullptr,
-                            /*object_address_ptr=*/nullptr, callee_addr_val,
-                            &error)) {
+  if (!call_target.Evaluate(
+          &exe_ctx, exe_ctx.GetRegisterContext(), LLDB_INVALID_ADDRESS,
+          /*initial_value_ptr=*/nullptr,
+          /*object_address_ptr=*/nullptr, callee_addr_val, &error)) {
     LLDB_LOGF(log, "IndirectCallEdge: Could not evaluate expression: %s",
               error.AsCString());
     return nullptr;
@@ -440,8 +439,9 @@ bool Function::GetDisassembly(const ExecutionContext &exe_ctx,
   if (disassembler_sp) {
     const bool show_address = true;
     const bool show_bytes = false;
-    disassembler_sp->GetInstructionList().Dump(&strm, show_address, show_bytes,
-                                               &exe_ctx);
+    const bool show_control_flow_kind = false;
+    disassembler_sp->GetInstructionList().Dump(
+        &strm, show_address, show_bytes, show_control_flow_kind, &exe_ctx);
     return true;
   }
   return false;

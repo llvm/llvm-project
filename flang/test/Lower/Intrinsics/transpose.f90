@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir %s -opt-transpose=false -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPtranspose_test(
 ! CHECK-SAME: %[[source:.*]]: !fir.ref<!fir.array<2x3xf32>>{{.*}}) {

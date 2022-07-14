@@ -16,7 +16,7 @@ class TestVSCode_breakpointEvents(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipUnlessDarwin
-    @expectedFailureAll(macos_version=[">=", "10.16"])
+    @expectedFailureAll(macos_version=[">=", "13.0"])
     def test_breakpoint_events(self):
         '''
             This test sets a breakpoint in a shared library and runs and stops

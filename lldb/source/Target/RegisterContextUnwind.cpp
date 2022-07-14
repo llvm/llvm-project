@@ -11,7 +11,7 @@
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/ArmUnwindInfo.h"
 #include "lldb/Symbol/CallFrameInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
@@ -381,7 +381,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   // symbol/function information - just stick in some reasonable defaults and
   // hope we can unwind past this frame.  If we're above a trap handler,
   // we may be at a bogus address because we jumped through a bogus function
-  // pointer and trapped, so don't force the arch default unwind plan in that 
+  // pointer and trapped, so don't force the arch default unwind plan in that
   // case.
   ModuleSP pc_module_sp(m_current_pc.GetModule());
   if ((!m_current_pc.IsValid() || !pc_module_sp) &&
@@ -1286,7 +1286,7 @@ RegisterContextUnwind::SavedLocationForRegister(
     // arch default unwind plan is used as the Fast Unwind Plan, we
     // need to recognize this & switch over to the Full Unwind Plan
     // to see what unwind rule that (more knoweldgeable, probably)
-    // UnwindPlan has.  If the full UnwindPlan says the register 
+    // UnwindPlan has.  If the full UnwindPlan says the register
     // location is Undefined, then it really is.
     if (active_row->GetRegisterInfo(regnum.GetAsKind(unwindplan_registerkind),
                                     unwindplan_regloc) &&
@@ -1335,13 +1335,13 @@ RegisterContextUnwind::SavedLocationForRegister(
           m_full_unwind_plan_sp->GetReturnAddressRegister() !=
               LLDB_INVALID_REGNUM) {
         // If this is a trap handler frame, we should have access to
-        // the complete register context when the interrupt/async 
+        // the complete register context when the interrupt/async
         // signal was received, we should fetch the actual saved $pc
         // value instead of the Return Address register.
         // If $pc is not available, fall back to the RA reg.
         UnwindPlan::Row::RegisterLocation scratch;
         if (m_frame_type == eTrapHandlerFrame &&
-            active_row->GetRegisterInfo 
+            active_row->GetRegisterInfo
               (pc_regnum.GetAsKind (unwindplan_registerkind), scratch)) {
           UnwindLogMsg("Providing pc register instead of rewriting to "
                        "RA reg because this is a trap handler and there is "
@@ -1642,8 +1642,9 @@ RegisterContextUnwind::SavedLocationForRegister(
                             process->GetByteOrder(),
                             process->GetAddressByteSize());
     ModuleSP opcode_ctx;
-    DWARFExpression dwarfexpr(opcode_ctx, dwarfdata, nullptr);
-    dwarfexpr.SetRegisterKind(unwindplan_registerkind);
+    DWARFExpressionList dwarfexpr(opcode_ctx, dwarfdata, nullptr);
+    dwarfexpr.GetMutableExpressionAtAddress()->SetRegisterKind(
+        unwindplan_registerkind);
     Value cfa_val = Scalar(m_cfa);
     cfa_val.SetValueType(Value::ValueType::LoadAddress);
     Value result;
@@ -2006,8 +2007,9 @@ bool RegisterContextUnwind::ReadFrameAddress(
                             process->GetByteOrder(),
                             process->GetAddressByteSize());
     ModuleSP opcode_ctx;
-    DWARFExpression dwarfexpr(opcode_ctx, dwarfdata, nullptr);
-    dwarfexpr.SetRegisterKind(row_register_kind);
+    DWARFExpressionList dwarfexpr(opcode_ctx, dwarfdata, nullptr);
+    dwarfexpr.GetMutableExpressionAtAddress()->SetRegisterKind(
+        row_register_kind);
     Value result;
     Status error;
     if (dwarfexpr.Evaluate(&exe_ctx, this, 0, nullptr, nullptr, result,

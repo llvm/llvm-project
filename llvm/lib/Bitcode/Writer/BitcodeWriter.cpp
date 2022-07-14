@@ -640,6 +640,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_COLD;
   case Attribute::DisableSanitizerInstrumentation:
     return bitc::ATTR_KIND_DISABLE_SANITIZER_INSTRUMENTATION;
+  case Attribute::FnRetThunkExtern:
+    return bitc::ATTR_KIND_FNRETTHUNK_EXTERN;
   case Attribute::Hot:
     return bitc::ATTR_KIND_HOT;
   case Attribute::ElementType:
@@ -1238,7 +1240,7 @@ static_assert(sizeof(GlobalValue::SanitizerMetadata) <= sizeof(unsigned),
 static unsigned
 serializeSanitizerMetadata(const GlobalValue::SanitizerMetadata &Meta) {
   return Meta.NoAddress | (Meta.NoHWAddress << 1) |
-         (Meta.NoMemtag << 2) | (Meta.IsDynInit << 3);
+         (Meta.Memtag << 2) | (Meta.IsDynInit << 3);
 }
 
 /// Emit top-level description of module, including target triple, inline asm,

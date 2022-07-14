@@ -14,15 +14,18 @@ int global;
 int __attribute__((no_sanitize("hwaddress"))) attributed_global;
 int __attribute__((disable_sanitizer_instrumentation)) disable_instrumentation_global;
 int ignorelisted_global;
+extern int __attribute__((no_sanitize("hwaddress"))) external_global;
 
 void func() {
   static int static_var = 0;
   const char *literal = "Hello, world!";
+  external_global = 1;
 }
 
 // CHECK: @{{.*}}attributed_global{{.*}} ={{.*}} global {{.*}}, no_sanitize_hwaddress
 // CHECK: @{{.*}}disable_instrumentation_global{{.*}} ={{.*}} global {{.*}}, no_sanitize_hwaddress
 // CHECK: @{{.*}}ignorelisted_global{{.*}} ={{.*}} global {{.*}}, no_sanitize_hwaddress
+// CHECK: @{{.*}}external_global{{.*}} ={{.*}}, no_sanitize_hwaddress
 // CHECK: @{{.*}}extra_global{{.*}}.hwasan{{.*}} =
 // CHECK: @{{.*}}global{{.*}}.hwasan{{.*}} =
 // CHECK: @{{.*}}static_var{{.*}}.hwasan{{.*}} =
@@ -34,4 +37,5 @@ void func() {
 // IGNORELIST: @{{.*}}ignorelisted_globa{{.*}} ={{.*}} global {{.*}}, no_sanitize_hwaddress
 // IGNORELIST: @{{.*}}static_var{{.*}} ={{.*}} global {{.*}}, no_sanitize_hwaddress
 // IGNORELIST: @{{.*}} = {{.*}} c"Hello, world!\00"{{.*}}, no_sanitize_hwaddress
+// IGNORELIST: @{{.*}}external_global{{.*}} ={{.*}}, no_sanitize_hwaddress
 // IGNORELIST: @{{.*}}extra_global{{.*}}.hwasan{{.*}} =

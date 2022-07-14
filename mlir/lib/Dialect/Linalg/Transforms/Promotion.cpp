@@ -49,7 +49,7 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
   auto width = layout.getTypeSize(elementType);
 
   IntegerAttr alignmentAttr;
-  if (alignment.hasValue())
+  if (alignment.has_value())
     alignmentAttr = b.getI64IntegerAttr(alignment.getValue());
 
   // Static buffer.

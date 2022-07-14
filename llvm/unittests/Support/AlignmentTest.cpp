@@ -63,11 +63,11 @@ TEST(AlignmentTest, ValidCTors) {
 
 TEST(AlignmentTest, CheckMaybeAlignHasValue) {
   EXPECT_TRUE(MaybeAlign(1));
-  EXPECT_TRUE(MaybeAlign(1).hasValue());
+  EXPECT_TRUE(MaybeAlign(1).has_value());
   EXPECT_FALSE(MaybeAlign(0));
-  EXPECT_FALSE(MaybeAlign(0).hasValue());
+  EXPECT_FALSE(MaybeAlign(0).has_value());
   EXPECT_FALSE(MaybeAlign());
-  EXPECT_FALSE(MaybeAlign().hasValue());
+  EXPECT_FALSE(MaybeAlign().has_value());
 }
 
 TEST(AlignmentTest, Division) {

@@ -257,11 +257,45 @@ bool DummyDataObject::operator==(const DummyDataObject &that) const {
       coshape == that.coshape;
 }
 
-bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual) const {
-  return type.shape() == actual.type.shape() &&
-      type.type().IsTkCompatibleWith(actual.type.type()) &&
-      attrs == actual.attrs && intent == actual.intent &&
-      coshape == actual.coshape;
+static bool AreCompatibleDummyDataObjectShapes(const Shape &x, const Shape &y) {
+  // TODO: Validate more than just compatible ranks
+  return GetRank(x) == GetRank(y);
+}
+
+bool DummyDataObject::IsCompatibleWith(
+    const DummyDataObject &actual, std::string *whyNot) const {
+  if (!AreCompatibleDummyDataObjectShapes(type.shape(), actual.type.shape())) {
+    if (whyNot) {
+      *whyNot = "incompatible dummy data object shapes";
+    }
+    return false;
+  }
+  if (!type.type().IsTkCompatibleWith(actual.type.type())) {
+    if (whyNot) {
+      *whyNot = "incompatible dummy data object types: "s +
+          type.type().AsFortran() + " vs " + actual.type.type().AsFortran();
+    }
+    return false;
+  }
+  if (attrs != actual.attrs) {
+    if (whyNot) {
+      *whyNot = "incompatible dummy data object attributes";
+    }
+    return false;
+  }
+  if (intent != actual.intent) {
+    if (whyNot) {
+      *whyNot = "incompatible dummy data object intents";
+    }
+    return false;
+  }
+  if (coshape != actual.coshape) {
+    if (whyNot) {
+      *whyNot = "incompatible dummy data object coshapes";
+    }
+    return false;
+  }
+  return true;
 }
 
 static common::Intent GetIntent(const semantics::Attrs &attrs) {
@@ -346,9 +380,27 @@ bool DummyProcedure::operator==(const DummyProcedure &that) const {
       procedure.value() == that.procedure.value();
 }
 
-bool DummyProcedure::IsCompatibleWith(const DummyProcedure &actual) const {
-  return attrs == actual.attrs && intent == actual.intent &&
-      procedure.value().IsCompatibleWith(actual.procedure.value());
+bool DummyProcedure::IsCompatibleWith(
+    const DummyProcedure &actual, std::string *whyNot) const {
+  if (attrs != actual.attrs) {
+    if (whyNot) {
+      *whyNot = "incompatible dummy procedure attributes";
+    }
+    return false;
+  }
+  if (intent != actual.intent) {
+    if (whyNot) {
+      *whyNot = "incompatible dummy procedure intents";
+    }
+    return false;
+  }
+  if (!procedure.value().IsCompatibleWith(actual.procedure.value(), whyNot)) {
+    if (whyNot) {
+      *whyNot = "incompatible dummy procedure interfaces: "s + *whyNot;
+    }
+    return false;
+  }
+  return true;
 }
 
 static std::string GetSeenProcs(
@@ -558,17 +610,32 @@ bool DummyArgument::operator==(const DummyArgument &that) const {
   return u == that.u; // name and passed-object usage are not characteristics
 }
 
-bool DummyArgument::IsCompatibleWith(const DummyArgument &actual) const {
+bool DummyArgument::IsCompatibleWith(
+    const DummyArgument &actual, std::string *whyNot) const {
   if (const auto *ifaceData{std::get_if<DummyDataObject>(&u)}) {
-    const auto *actualData{std::get_if<DummyDataObject>(&actual.u)};
-    return actualData && ifaceData->IsCompatibleWith(*actualData);
+    if (const auto *actualData{std::get_if<DummyDataObject>(&actual.u)}) {
+      return ifaceData->IsCompatibleWith(*actualData, whyNot);
+    }
+    if (whyNot) {
+      *whyNot = "one dummy argument is an object, the other is not";
+    }
   } else if (const auto *ifaceProc{std::get_if<DummyProcedure>(&u)}) {
-    const auto *actualProc{std::get_if<DummyProcedure>(&actual.u)};
-    return actualProc && ifaceProc->IsCompatibleWith(*actualProc);
+    if (const auto *actualProc{std::get_if<DummyProcedure>(&actual.u)}) {
+      return ifaceProc->IsCompatibleWith(*actualProc, whyNot);
+    }
+    if (whyNot) {
+      *whyNot = "one dummy argument is a procedure, the other is not";
+    }
   } else {
-    return std::holds_alternative<AlternateReturn>(u) &&
-        std::holds_alternative<AlternateReturn>(actual.u);
+    CHECK(std::holds_alternative<AlternateReturn>(u));
+    if (std::holds_alternative<AlternateReturn>(actual.u)) {
+      return true;
+    }
+    if (whyNot) {
+      *whyNot = "one dummy argument is an alternate return, the other is not";
+    }
   }
+  return false;
 }
 
 static std::optional<DummyArgument> CharacterizeDummyArgument(
@@ -789,34 +856,62 @@ bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
   }
 }
 
-bool FunctionResult::IsCompatibleWith(const FunctionResult &actual) const {
+bool FunctionResult::IsCompatibleWith(
+    const FunctionResult &actual, std::string *whyNot) const {
   Attrs actualAttrs{actual.attrs};
-  actualAttrs.reset(Attr::Contiguous);
+  if (!attrs.test(Attr::Contiguous)) {
+    actualAttrs.reset(Attr::Contiguous);
+  }
   if (attrs != actualAttrs) {
-    return false;
+    if (whyNot) {
+      *whyNot = "function results have incompatible attributes";
+    }
   } else if (const auto *ifaceTypeShape{std::get_if<TypeAndShape>(&u)}) {
     if (const auto *actualTypeShape{std::get_if<TypeAndShape>(&actual.u)}) {
       if (ifaceTypeShape->Rank() != actualTypeShape->Rank()) {
-        return false;
+        if (whyNot) {
+          *whyNot = "function results have distinct ranks";
+        }
       } else if (!attrs.test(Attr::Allocatable) && !attrs.test(Attr::Pointer) &&
           ifaceTypeShape->shape() != actualTypeShape->shape()) {
-        return false;
+        if (whyNot) {
+          *whyNot = "function results have distinct extents";
+        }
+      } else if (!ifaceTypeShape->type().IsTkCompatibleWith(
+                     actualTypeShape->type())) {
+        if (whyNot) {
+          *whyNot = "function results have incompatible types: "s +
+              ifaceTypeShape->type().AsFortran() + " vs "s +
+              actualTypeShape->type().AsFortran();
+        }
       } else {
-        return ifaceTypeShape->type().IsTkCompatibleWith(
-            actualTypeShape->type());
+        return true;
       }
     } else {
-      return false;
+      if (whyNot) {
+        *whyNot = "function result type and shape are not known";
+      }
     }
   } else {
     const auto *ifaceProc{std::get_if<CopyableIndirection<Procedure>>(&u)};
+    CHECK(ifaceProc != nullptr);
     if (const auto *actualProc{
             std::get_if<CopyableIndirection<Procedure>>(&actual.u)}) {
-      return ifaceProc->value().IsCompatibleWith(actualProc->value());
+      if (ifaceProc->value().IsCompatibleWith(actualProc->value(), whyNot)) {
+        return true;
+      }
+      if (whyNot) {
+        *whyNot =
+            "function results are incompatible procedure pointers: "s + *whyNot;
+      }
     } else {
-      return false;
+      if (whyNot) {
+        *whyNot =
+            "one function result is a procedure pointer, the other is not";
+      }
     }
   }
+  return false;
 }
 
 llvm::raw_ostream &FunctionResult::Dump(llvm::raw_ostream &o) const {
@@ -843,29 +938,47 @@ bool Procedure::operator==(const Procedure &that) const {
       dummyArguments == that.dummyArguments;
 }
 
-bool Procedure::IsCompatibleWith(const Procedure &actual) const {
+bool Procedure::IsCompatibleWith(
+    const Procedure &actual, std::string *whyNot) const {
   // 15.5.2.9(1): if dummy is not pure, actual need not be.
+  // Ditto with elemental.
   Attrs actualAttrs{actual.attrs};
   if (!attrs.test(Attr::Pure)) {
     actualAttrs.reset(Attr::Pure);
   }
+  if (!attrs.test(Attr::Elemental)) {
+    actualAttrs.reset(Attr::Elemental);
+  }
   if (attrs != actualAttrs) {
-    return false;
-  } else if (IsFunction() != actual.IsFunction()) {
-    return false;
-  } else if (IsFunction() &&
-      !functionResult->IsCompatibleWith(*actual.functionResult)) {
-    return false;
+    if (whyNot) {
+      *whyNot = "incompatible procedure attributes";
+    }
+  } else if ((IsFunction() && actual.IsSubroutine()) ||
+      (IsSubroutine() && actual.IsFunction())) {
+    if (whyNot) {
+      *whyNot =
+          "incompatible procedures: one is a function, the other a subroutine";
+    }
+  } else if (functionResult && actual.functionResult &&
+      !functionResult->IsCompatibleWith(*actual.functionResult, whyNot)) {
   } else if (dummyArguments.size() != actual.dummyArguments.size()) {
-    return false;
+    if (whyNot) {
+      *whyNot = "distinct numbers of dummy arguments";
+    }
   } else {
     for (std::size_t j{0}; j < dummyArguments.size(); ++j) {
-      if (!dummyArguments[j].IsCompatibleWith(actual.dummyArguments[j])) {
+      if (!dummyArguments[j].IsCompatibleWith(
+              actual.dummyArguments[j], whyNot)) {
+        if (whyNot) {
+          *whyNot = "incompatible dummy argument #"s + std::to_string(j + 1) +
+              ": "s + *whyNot;
+        }
         return false;
       }
     }
     return true;
   }
+  return false;
 }
 
 int Procedure::FindPassIndex(std::optional<parser::CharBlock> name) const {
@@ -954,8 +1067,10 @@ llvm::raw_ostream &Procedure::Dump(llvm::raw_ostream &o) const {
   attrs.Dump(o, EnumToString);
   if (functionResult) {
     functionResult->Dump(o << "TYPE(") << ") FUNCTION";
-  } else {
+  } else if (attrs.test(Attr::Subroutine)) {
     o << "SUBROUTINE";
+  } else {
+    o << "EXTERNAL";
   }
   char sep{'('};
   for (const auto &dummy : dummyArguments) {

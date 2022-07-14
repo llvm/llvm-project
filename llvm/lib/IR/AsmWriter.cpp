@@ -3615,8 +3615,8 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
       Out << ", no_sanitize_address";
     if (MD.NoHWAddress)
       Out << ", no_sanitize_hwaddress";
-    if (MD.NoMemtag)
-      Out << ", no_sanitize_memtag";
+    if (MD.Memtag)
+      Out << ", sanitize_memtag";
     if (MD.IsDynInit)
       Out << ", sanitize_address_dyninit";
   }

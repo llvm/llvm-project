@@ -27,6 +27,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/MakeSupport.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
@@ -94,34 +95,6 @@ static void EscapeSpacesAndBackslashes(const char *Arg,
       break;
     }
     Res.push_back(*Arg);
-  }
-}
-
-// Quote target names for inclusion in GNU Make dependency files.
-// Only the characters '$', '#', ' ', '\t' are quoted.
-static void QuoteTarget(StringRef Target, SmallVectorImpl<char> &Res) {
-  for (unsigned i = 0, e = Target.size(); i != e; ++i) {
-    switch (Target[i]) {
-    case ' ':
-    case '\t':
-      // Escape the preceding backslashes
-      for (int j = i - 1; j >= 0 && Target[j] == '\\'; --j)
-        Res.push_back('\\');
-
-      // Escape the space/tab
-      Res.push_back('\\');
-      break;
-    case '$':
-      Res.push_back('$');
-      break;
-    case '#':
-      Res.push_back('\\');
-      break;
-    default:
-      break;
-    }
-
-    Res.push_back(Target[i]);
   }
 }
 
@@ -1279,7 +1252,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       } else {
         CmdArgs.push_back("-MT");
         SmallString<128> Quoted;
-        QuoteTarget(A->getValue(), Quoted);
+        quoteMakeTarget(A->getValue(), Quoted);
         CmdArgs.push_back(Args.MakeArgString(Quoted));
       }
     }
@@ -1304,7 +1277,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
       CmdArgs.push_back("-MT");
       SmallString<128> Quoted;
-      QuoteTarget(DepTarget, Quoted);
+      quoteMakeTarget(DepTarget, Quoted);
       CmdArgs.push_back(Args.MakeArgString(Quoted));
     }
 
@@ -2269,8 +2242,23 @@ void Clang::AddSparcTargetArgs(const ArgList &Args,
 
 void Clang::AddSystemZTargetArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
-  bool HasBackchain = Args.hasFlag(options::OPT_mbackchain,
-                                   options::OPT_mno_backchain, false);
+  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
+    StringRef Name = A->getValue();
+
+    std::string TuneCPU;
+    if (Name == "native")
+      TuneCPU = std::string(llvm::sys::getHostCPUName());
+    else
+      TuneCPU = std::string(Name);
+
+    if (!TuneCPU.empty()) {
+      CmdArgs.push_back("-tune-cpu");
+      CmdArgs.push_back(Args.MakeArgString(TuneCPU));
+    }
+  }
+
+  bool HasBackchain =
+      Args.hasFlag(options::OPT_mbackchain, options::OPT_mno_backchain, false);
   bool HasPackedStack = Args.hasFlag(options::OPT_mpacked_stack,
                                      options::OPT_mno_packed_stack, false);
   systemz::FloatABI FloatABI =
@@ -6418,6 +6406,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (IsUsingLTO)
     Args.AddLastArg(CmdArgs, options::OPT_mibt_seal);
 
+  if (Arg *A = Args.getLastArg(options::OPT_mfunction_return_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-mfunction-return=") + A->getValue()));
+
   // Forward -f options with positive and negative forms; we translate these by
   // hand.  Do not propagate PGO options to the GPU-side compilations as the
   // profile info is for the host-side compilation only.
@@ -7079,8 +7071,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if ((IsCuda || IsHIP) && CudaDeviceInput) {
       CmdArgs.push_back("-fcuda-include-gpubinary");
       CmdArgs.push_back(CudaDeviceInput->getFilename());
-      if (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
-        CmdArgs.push_back("-fgpu-rdc");
   }
 
   if (IsCuda) {

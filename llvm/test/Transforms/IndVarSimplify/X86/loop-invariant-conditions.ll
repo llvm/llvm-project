@@ -474,15 +474,12 @@ define void @test10() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ [[PHI2:%.*]], [[LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[DEC:%.*]] = add nuw nsw i32 [[PHI1]], -1
 ; CHECK-NEXT:    br i1 false, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
-; CHECK-NEXT:    br label [[LATCH]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       right:
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[PHI2]] = phi i32 [ [[PHI1]], [[LEFT]] ], [ [[DEC]], [[RIGHT]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 -1, undef
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:

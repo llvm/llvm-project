@@ -3385,6 +3385,11 @@ void AsmPrinter::emitGlobalConstant(const DataLayout &DL, const Constant *CV,
     // look like they are at the same location.
     OutStreamer->emitIntValue(0, 1);
   }
+  if (!AliasList)
+    return;
+  for (const auto &AliasPair : *AliasList)
+    report_fatal_error("Aliases with offset " + Twine(AliasPair.first) +
+                       " were not emitted.");
 }
 
 void AsmPrinter::emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {

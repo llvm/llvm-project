@@ -241,6 +241,7 @@ struct CommonConfig {
   StringMap<SectionRename> SectionsToRename;
   StringMap<uint64_t> SetSectionAlignment;
   StringMap<SectionFlagsUpdate> SetSectionFlags;
+  StringMap<uint64_t> SetSectionType;
   StringMap<StringRef> SymbolsToRename;
 
   // Symbol info specified by --add-symbol option.

@@ -60,7 +60,7 @@ public:
 
     /// Returns the status of satisfiability checking on the queried boolean
     /// formula.
-    Status getStatus() const { return Status; }
+    Status getStatus() const { return SATCheckStatus; }
 
     /// Returns a truth assignment to boolean values that satisfies the queried
     /// boolean formula if available. Otherwise, an empty optional is returned.
@@ -71,11 +71,11 @@ public:
 
   private:
     Result(
-        enum Status Status,
+        enum Status SATCheckStatus,
         llvm::Optional<llvm::DenseMap<AtomicBoolValue *, Assignment>> Solution)
-        : Status(Status), Solution(std::move(Solution)) {}
+        : SATCheckStatus(SATCheckStatus), Solution(std::move(Solution)) {}
 
-    Status Status;
+    Status SATCheckStatus;
     llvm::Optional<llvm::DenseMap<AtomicBoolValue *, Assignment>> Solution;
   };
 

@@ -62,6 +62,7 @@ inline namespace fundamentals_v1 {
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__debug>
+#include <__functional/identity.h>
 #include <__memory/uses_allocator.h>
 #include <array>
 #include <experimental/__config>
@@ -104,9 +105,8 @@ public:
     pair<_ForwardIterator2, _ForwardIterator2>
     operator () (_ForwardIterator2 __f, _ForwardIterator2 __l) const
     {
-        return _VSTD::__search(__f, __l, __first_, __last_, __pred_,
-            typename iterator_traits<_ForwardIterator>::iterator_category(),
-            typename iterator_traits<_ForwardIterator2>::iterator_category());
+        auto __proj = __identity();
+        return std::__search_impl(__f, __l, __first_, __last_, __pred_, __proj, __proj);
     }
 
 private:

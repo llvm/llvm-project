@@ -72,9 +72,9 @@ subroutine test
   dt1x = dt1(ip1=null(mold=rp1))
   dt2x = dt2(pps0=null())
   dt2x = dt2(pps0=null(mold=dt2x%pps0))
-  !ERROR: Procedure pointer 'pps0' associated with result of reference to function 'null' that is an incompatible procedure pointer
+  !ERROR: Procedure pointer 'pps0' associated with result of reference to function 'null' that is an incompatible procedure pointer: distinct numbers of dummy arguments
   dt2x = dt2(pps0=null(mold=dt3x%pps1))
-  !ERROR: Procedure pointer 'pps1' associated with result of reference to function 'null' that is an incompatible procedure pointer
+  !ERROR: Procedure pointer 'pps1' associated with result of reference to function 'null' that is an incompatible procedure pointer: distinct numbers of dummy arguments
   dt3x = dt3(pps1=null(mold=dt2x%pps0))
   dt3x = dt3(pps1=null(mold=dt3x%pps1))
   call canbenull(null(), null()) ! fine

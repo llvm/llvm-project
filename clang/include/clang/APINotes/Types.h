@@ -76,7 +76,7 @@ public:
   }
 
   void setSwiftPrivate(llvm::Optional<bool> Private) {
-    SwiftPrivateSpecified = Private.hasValue();
+    SwiftPrivateSpecified = Private.has_value();
     SwiftPrivate = Private ? *Private : 0;
   }
 

@@ -1855,6 +1855,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DisableSanitizerInstrumentation;
   case bitc::ATTR_KIND_ELEMENTTYPE:
     return Attribute::ElementType;
+  case bitc::ATTR_KIND_FNRETTHUNK_EXTERN:
+    return Attribute::FnRetThunkExtern;
   case bitc::ATTR_KIND_INACCESSIBLEMEM_ONLY:
     return Attribute::InaccessibleMemOnly;
   case bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ARGMEMONLY:
@@ -3676,7 +3678,7 @@ GlobalValue::SanitizerMetadata deserializeSanitizerMetadata(unsigned V) {
   if (V & (1 << 1))
     Meta.NoHWAddress = true;
   if (V & (1 << 2))
-    Meta.NoMemtag = true;
+    Meta.Memtag = true;
   if (V & (1 << 3))
     Meta.IsDynInit = true;
   return Meta;

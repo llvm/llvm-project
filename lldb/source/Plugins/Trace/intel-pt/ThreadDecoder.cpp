@@ -35,9 +35,8 @@ Expected<DecodedThreadSP> ThreadDecoder::Decode() {
 }
 
 llvm::Expected<DecodedThreadSP> ThreadDecoder::DoDecode() {
-  return m_trace.GetTimer()
-      .ForThread(m_thread_sp->GetID())
-      .TimeTask<Expected<DecodedThreadSP>>(
+  return m_trace.GetThreadTimer(m_thread_sp->GetID())
+      .TimeTask(
           "Decoding instructions", [&]() -> Expected<DecodedThreadSP> {
             DecodedThreadSP decoded_thread_sp =
                 std::make_shared<DecodedThread>(m_thread_sp);

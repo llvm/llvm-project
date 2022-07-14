@@ -4593,9 +4593,12 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
       AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::AND, DL, VT, N0, Add);
     }
-    if (N1.getOpcode() == ISD::SHL &&
+    // fold (urem x, (shl pow2, y)) -> (and x, (add (shl pow2, y), -1))
+    // fold (urem x, (lshr pow2, y)) -> (and x, (add (lshr pow2, y), -1))
+    // TODO: We should sink the following into isKnownToBePowerOfTwo
+    // using a OrZero parameter analogous to our handling in ValueTracking.
+    if ((N1.getOpcode() == ISD::SHL || N1.getOpcode() == ISD::SRL) &&
         DAG.isKnownToBeAPowerOfTwo(N1.getOperand(0))) {
-      // fold (urem x, (shl pow2, y)) -> (and x, (add (shl pow2, y), -1))
       SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);
       AddToWorklist(Add.getNode());
@@ -11049,6 +11052,9 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   if (hasOperation(ISD::SRA, VT))
     if (SDValue V = foldVSelectToSignBitSplatMask(N, DAG))
       return V;
+
+  if (SimplifyDemandedVectorElts(SDValue(N, 0)))
+    return SDValue(N, 0);
 
   return SDValue();
 }

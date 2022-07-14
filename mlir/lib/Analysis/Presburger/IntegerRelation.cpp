@@ -1998,14 +1998,14 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
   int64_t lbFloorDivisor, otherLbFloorDivisor;
   for (unsigned d = 0, e = getNumDimVars(); d < e; ++d) {
     auto extent = getConstantBoundOnDimSize(d, &lb, &lbFloorDivisor, &ub);
-    if (!extent.hasValue())
+    if (!extent.has_value())
       // TODO: symbolic extents when necessary.
       // TODO: handle union if a dimension is unbounded.
       return failure();
 
     auto otherExtent = otherCst.getConstantBoundOnDimSize(
         d, &otherLb, &otherLbFloorDivisor, &otherUb);
-    if (!otherExtent.hasValue() || lbFloorDivisor != otherLbFloorDivisor)
+    if (!otherExtent.has_value() || lbFloorDivisor != otherLbFloorDivisor)
       // TODO: symbolic extents when necessary.
       return failure();
 
@@ -2026,7 +2026,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       // Uncomparable - check for constant lower/upper bounds.
       auto constLb = getConstantBound(BoundType::LB, d);
       auto constOtherLb = otherCst.getConstantBound(BoundType::LB, d);
-      if (!constLb.hasValue() || !constOtherLb.hasValue())
+      if (!constLb.has_value() || !constOtherLb.has_value())
         return failure();
       std::fill(minLb.begin(), minLb.end(), 0);
       minLb.back() = std::min(constLb.getValue(), constOtherLb.getValue());
@@ -2042,7 +2042,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       // Uncomparable - check for constant lower/upper bounds.
       auto constUb = getConstantBound(BoundType::UB, d);
       auto constOtherUb = otherCst.getConstantBound(BoundType::UB, d);
-      if (!constUb.hasValue() || !constOtherUb.hasValue())
+      if (!constUb.has_value() || !constOtherUb.has_value())
         return failure();
       std::fill(maxUb.begin(), maxUb.end(), 0);
       maxUb.back() = std::max(constUb.getValue(), constOtherUb.getValue());

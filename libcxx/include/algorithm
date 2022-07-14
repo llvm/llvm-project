@@ -649,6 +649,69 @@ namespace ranges {
     constexpr ranges::rotate_copy_result<borrowed_iterator_t<R>, O>
       ranges::rotate_copy(R&& r, iterator_t<R> middle, O result);                                   // since C++20
 
+  template<forward_iterator I1, sentinel_for<I1> S1, forward_iterator I2,
+           sentinel_for<I2> S2, class Pred = ranges::equal_to,
+           class Proj1 = identity, class Proj2 = identity>
+    requires indirectly_comparable<I1, I2, Pred, Proj1, Proj2>
+    constexpr subrange<I1>
+      ranges::search(I1 first1, S1 last1, I2 first2, S2 last2, Pred pred = {},
+                     Proj1 proj1 = {}, Proj2 proj2 = {});                                           // since C++20
+
+  template<forward_range R1, forward_range R2, class Pred = ranges::equal_to,
+           class Proj1 = identity, class Proj2 = identity>
+    requires indirectly_comparable<iterator_t<R1>, iterator_t<R2>, Pred, Proj1, Proj2>
+    constexpr borrowed_subrange_t<R1>
+      ranges::search(R1&& r1, R2&& r2, Pred pred = {},
+                     Proj1 proj1 = {}, Proj2 proj2 = {});                                           // since C++20
+
+  template<forward_iterator I, sentinel_for<I> S, class T,
+           class Pred = ranges::equal_to, class Proj = identity>
+    requires indirectly_comparable<I, const T*, Pred, Proj>
+    constexpr subrange<I>
+      ranges::search_n(I first, S last, iter_difference_t<I> count,
+                       const T& value, Pred pred = {}, Proj proj = {});                             // since C++20
+
+  template<forward_range R, class T, class Pred = ranges::equal_to,
+           class Proj = identity>
+    requires indirectly_comparable<iterator_t<R>, const T*, Pred, Proj>
+    constexpr borrowed_subrange_t<R>
+      ranges::search_n(R&& r, range_difference_t<R> count,
+                       const T& value, Pred pred = {}, Proj proj = {});                             // since C++20
+
+  template<forward_iterator I1, sentinel_for<I1> S1, forward_iterator I2, sentinel_for<I2> S2,
+           class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
+    requires indirectly_comparable<I1, I2, Pred, Proj1, Proj2>
+    constexpr subrange<I1>
+      ranges::find_end(I1 first1, S1 last1, I2 first2, S2 last2, Pred pred = {},
+                       Proj1 proj1 = {}, Proj2 proj2 = {});                                         // since C++20
+
+  template<forward_range R1, forward_range R2,
+           class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
+    requires indirectly_comparable<iterator_t<R1>, iterator_t<R2>, Pred, Proj1, Proj2>
+    constexpr borrowed_subrange_t<R1>
+      ranges::find_end(R1&& r1, R2&& r2, Pred pred = {},
+                       Proj1 proj1 = {}, Proj2 proj2 = {});                                         // since C++20
+
+  template<class I1, class I2, class O>
+    using set_symmetric_difference_result = in_in_out_result<I1, I2, O>;                            // since C++20
+
+  template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
+           weakly_incrementable O, class Comp = ranges::less,
+           class Proj1 = identity, class Proj2 = identity>
+    requires mergeable<I1, I2, O, Comp, Proj1, Proj2>
+    constexpr set_symmetric_difference_result<I1, I2, O>
+      set_symmetric_difference(I1 first1, S1 last1, I2 first2, S2 last2, O result,
+                               Comp comp = {}, Proj1 proj1 = {},
+                               Proj2 proj2 = {});                                                   // since C++20
+  
+  template<input_range R1, input_range R2, weakly_incrementable O,
+           class Comp = ranges::less, class Proj1 = identity, class Proj2 = identity>
+    requires mergeable<iterator_t<R1>, iterator_t<R2>, O, Comp, Proj1, Proj2>
+    constexpr set_symmetric_difference_result<borrowed_iterator_t<R1>,
+                                                      borrowed_iterator_t<R2>, O>
+      set_symmetric_difference(R1&& r1, R2&& r2, O result, Comp comp = {},
+                               Proj1 proj1 = {}, Proj2 proj2 = {});                                 // since C++20
+  
 }
 
     constexpr bool     // constexpr in C++20
@@ -1392,6 +1455,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_fill.h>
 #include <__algorithm/ranges_fill_n.h>
 #include <__algorithm/ranges_find.h>
+#include <__algorithm/ranges_find_end.h>
 #include <__algorithm/ranges_find_first_of.h>
 #include <__algorithm/ranges_find_if.h>
 #include <__algorithm/ranges_find_if_not.h>
@@ -1424,8 +1488,11 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_reverse.h>
 #include <__algorithm/ranges_reverse_copy.h>
 #include <__algorithm/ranges_rotate_copy.h>
+#include <__algorithm/ranges_search.h>
+#include <__algorithm/ranges_search_n.h>
 #include <__algorithm/ranges_set_difference.h>
 #include <__algorithm/ranges_set_intersection.h>
+#include <__algorithm/ranges_set_symmetric_difference.h>
 #include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_sort_heap.h>
 #include <__algorithm/ranges_stable_sort.h>

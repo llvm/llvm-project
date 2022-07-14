@@ -546,6 +546,9 @@ public:
     return BypassSlowDivWidths;
   }
 
+  /// Return true only if vscale must be a power of two.
+  virtual bool isVScaleKnownToBeAPowerOfTwo() const { return false; }
+
   /// Return true if Flow Control is an expensive operation that should be
   /// avoided.
   bool isJumpExpensive() const { return JumpIsExpensive; }

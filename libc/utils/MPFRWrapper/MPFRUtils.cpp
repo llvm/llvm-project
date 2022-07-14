@@ -106,35 +106,6 @@ static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode) {
   }
 }
 
-int get_fe_rounding(RoundingMode mode) {
-  switch (mode) {
-  case RoundingMode::Upward:
-    return FE_UPWARD;
-    break;
-  case RoundingMode::Downward:
-    return FE_DOWNWARD;
-    break;
-  case RoundingMode::TowardZero:
-    return FE_TOWARDZERO;
-    break;
-  case RoundingMode::Nearest:
-    return FE_TONEAREST;
-    break;
-  }
-}
-
-ForceRoundingMode::ForceRoundingMode(RoundingMode mode) {
-  old_rounding_mode = fegetround();
-  rounding_mode = get_fe_rounding(mode);
-  if (old_rounding_mode != rounding_mode)
-    fesetround(rounding_mode);
-}
-
-ForceRoundingMode::~ForceRoundingMode() {
-  if (old_rounding_mode != rounding_mode)
-    fesetround(old_rounding_mode);
-}
-
 class MPFRNumber {
   unsigned int mpfr_precision;
   mpfr_rnd_t mpfr_rounding;
