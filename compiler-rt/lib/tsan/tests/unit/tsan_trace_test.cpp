@@ -243,6 +243,18 @@ TRACE_TEST(Trace, MultiPart) {
   CHECK_EQ(mset.Get(1).count, 1);
 }
 
+TRACE_TEST(Trace, DeepSwitch) {
+  ThreadArray<1> thr;
+  for (int i = 0; i < 2000; i++) {
+    FuncEntry(thr, 0x1000);
+    const uptr kEvents = sizeof(TracePart) / sizeof(Event);
+    for (uptr i = 0; i < kEvents; i++) {
+      TraceMutexLock(thr, EventType::kLock, 0x4000, 0x5000, 0x6000);
+      TraceMutexUnlock(thr, 0x5000);
+    }
+  }
+}
+
 void CheckTraceState(uptr count, uptr finished, uptr excess, uptr recycle) {
   Lock l(&ctx->slot_mtx);
   Printf("CheckTraceState(%zu/%zu, %zu/%zu, %zu/%zu, %zu/%zu)\n",
