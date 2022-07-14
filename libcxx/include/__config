@@ -214,6 +214,12 @@
 #    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
 #  endif
 
+#  ifdef _LIBCPP_COMPILER_MSVC
+#    error If you successfully use libc++ with MSVC please tell the libc++ developers and consider upstreaming your \
+changes. We are not aware of anybody using this configuration and know that at least some code is currently broken. \
+If there are users of this configuration we are happy to provide support.
+#  endif
+
 // FIXME: ABI detection should be done via compiler builtin macros. This
 // is just a placeholder until Clang implements such macros. For now assume
 // that Windows compilers pretending to be MSVC++ target the Microsoft ABI,
