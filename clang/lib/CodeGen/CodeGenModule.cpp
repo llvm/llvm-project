@@ -58,6 +58,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -2843,8 +2844,8 @@ bool CodeGenModule::imbueXRayAttrs(llvm::Function *Fn, SourceLocation Loc,
   return true;
 }
 
-bool CodeGenModule::isProfileInstrExcluded(llvm::Function *Fn,
-                                           SourceLocation Loc) const {
+bool CodeGenModule::isFunctionBlockedByProfileList(llvm::Function *Fn,
+                                                   SourceLocation Loc) const {
   const auto &ProfileList = getContext().getProfileList();
   // If the profile list is empty, then instrument everything.
   if (ProfileList.isEmpty())
@@ -2869,6 +2870,20 @@ bool CodeGenModule::isProfileInstrExcluded(llvm::Function *Fn,
       return *V;
   }
   return ProfileList.getDefault();
+}
+
+bool CodeGenModule::isFunctionBlockedFromProfileInstr(
+    llvm::Function *Fn, SourceLocation Loc) const {
+  if (isFunctionBlockedByProfileList(Fn, Loc))
+    return true;
+
+  auto NumGroups = getCodeGenOpts().ProfileTotalFunctionGroups;
+  if (NumGroups > 1) {
+    auto Group = llvm::crc32(arrayRefFromStringRef(Fn->getName())) % NumGroups;
+    if (Group != getCodeGenOpts().ProfileSelectedFunctionGroup)
+      return true;
+  }
+  return false;
 }
 
 bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
