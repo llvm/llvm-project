@@ -708,7 +708,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       assert(BFI && "BFI must be available");
       auto ProfileCount = BFI->getBlockProfileCount(BB);
       assert(ProfileCount);
-      if (ProfileCount.getValue() == 0)
+      if (ProfileCount.value() == 0)
         ColdSize += Cost - CostAtBBStart;
     }
 
@@ -833,7 +833,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
       auto ProfileCount = CalleeBFI->getBlockProfileCount(&BB);
       assert(ProfileCount);
-      CurrentSavings *= ProfileCount.getValue();
+      CurrentSavings *= ProfileCount.value();
       CycleSavings += CurrentSavings;
     }
 
@@ -1787,12 +1787,12 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
 
   // return min(A, B) if B is valid.
   auto MinIfValid = [](int A, Optional<int> B) {
-    return B ? std::min(A, B.getValue()) : A;
+    return B ? std::min(A, B.value()) : A;
   };
 
   // return max(A, B) if B is valid.
   auto MaxIfValid = [](int A, Optional<int> B) {
-    return B ? std::max(A, B.getValue()) : A;
+    return B ? std::max(A, B.value()) : A;
   };
 
   // Various bonus percentages. These are multiplied by Threshold to get the

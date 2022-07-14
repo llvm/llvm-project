@@ -555,7 +555,7 @@ collectRegionsConstants(OutlinableRegion &Region,
     for (Value *V : ID.OperVals) {
       Optional<unsigned> GVNOpt = C.getGVN(V);
       assert(GVNOpt && "Expected a GVN for operand?");
-      unsigned GVN = GVNOpt.getValue();
+      unsigned GVN = GVNOpt.value();
 
       // Check if this global value has been found to not be the same already.
       if (NotSame.contains(GVN)) {
@@ -570,7 +570,7 @@ collectRegionsConstants(OutlinableRegion &Region,
       // it is considered to not be the same value.
       Optional<bool> ConstantMatches = constantMatches(V, GVN, GVNToConstant);
       if (ConstantMatches) {
-        if (ConstantMatches.getValue())
+        if (ConstantMatches.value())
           continue;
         else
           ConstantsTheSame = false;
@@ -651,7 +651,7 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
 
   // Transfer the swifterr attribute to the correct function parameter.
   if (Group.SwiftErrorArgument)
-    Group.OutlinedFunction->addParamAttr(Group.SwiftErrorArgument.getValue(),
+    Group.OutlinedFunction->addParamAttr(Group.SwiftErrorArgument.value(),
                                          Attribute::SwiftError);
 
   Group.OutlinedFunction->addFnAttr(Attribute::OptimizeForSize);
@@ -809,7 +809,7 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
     if (OutputMappings.find(Input) != OutputMappings.end())
       Input = OutputMappings.find(Input)->second;
     assert(C.getGVN(Input) && "Could not find a numbering for the given input");
-    EndInputNumbers.push_back(C.getGVN(Input).getValue());
+    EndInputNumbers.push_back(C.getGVN(Input).value());
   }
 }
 
@@ -948,11 +948,11 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
   for (unsigned InputVal : InputGVNs) {
     Optional<unsigned> CanonicalNumberOpt = C.getCanonicalNum(InputVal);
     assert(CanonicalNumberOpt && "Canonical number not found?");
-    unsigned CanonicalNumber = CanonicalNumberOpt.getValue();
+    unsigned CanonicalNumber = CanonicalNumberOpt.value();
 
     Optional<Value *> InputOpt = C.fromGVN(InputVal);
     assert(InputOpt && "Global value number not found?");
-    Value *Input = InputOpt.getValue();
+    Value *Input = InputOpt.value();
 
     DenseMap<unsigned, unsigned>::iterator AggArgIt =
         Group.CanonicalNumberToAggArg.find(CanonicalNumber);
@@ -1236,13 +1236,13 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
   Optional<unsigned> BBGVN = Cand.getGVN(PHIBB);
   assert(BBGVN && "Could not find GVN for the incoming block!");
 
-  BBGVN = Cand.getCanonicalNum(BBGVN.getValue());
+  BBGVN = Cand.getCanonicalNum(BBGVN.value());
   assert(BBGVN && "Could not find canonical number for the incoming block!");
   // Create a pair of the exit block canonical value, and the aggregate
   // argument location, connected to the canonical numbers stored in the
   // PHINode.
   PHINodeData TemporaryPair =
-      std::make_pair(std::make_pair(BBGVN.getValue(), AggArgIdx), PHIGVNs);
+      std::make_pair(std::make_pair(BBGVN.value(), AggArgIdx), PHIGVNs);
   hash_code PHINodeDataHash = encodePHINodeData(TemporaryPair);
 
   // Look for and create a new entry in our connection between canonical
@@ -1516,8 +1516,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   // Make sure that the argument in the new function has the SwiftError
   // argument.
   if (Group.SwiftErrorArgument)
-    Call->addParamAttr(Group.SwiftErrorArgument.getValue(),
-                       Attribute::SwiftError);
+    Call->addParamAttr(Group.SwiftErrorArgument.value(), Attribute::SwiftError);
 
   return Call;
 }
@@ -2082,9 +2081,9 @@ static void alignOutputBlockWithAggFunc(
   if (MatchingBB) {
     LLVM_DEBUG(dbgs() << "Set output block for region in function"
                       << Region.ExtractedFunction << " to "
-                      << MatchingBB.getValue());
+                      << MatchingBB.value());
 
-    Region.OutputBlockNum = MatchingBB.getValue();
+    Region.OutputBlockNum = MatchingBB.value();
     for (std::pair<Value *, BasicBlock *> &VtoBB : OutputBBs)
       VtoBB.second->eraseFromParent();
     return;
@@ -2679,15 +2678,14 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
   if (!OutputIdx)
     return;
 
-  if (OutputMappings.find(Outputs[OutputIdx.getValue()]) ==
-      OutputMappings.end()) {
+  if (OutputMappings.find(Outputs[OutputIdx.value()]) == OutputMappings.end()) {
     LLVM_DEBUG(dbgs() << "Mapping extracted output " << *LI << " to "
-                      << *Outputs[OutputIdx.getValue()] << "\n");
-    OutputMappings.insert(std::make_pair(LI, Outputs[OutputIdx.getValue()]));
+                      << *Outputs[OutputIdx.value()] << "\n");
+    OutputMappings.insert(std::make_pair(LI, Outputs[OutputIdx.value()]));
   } else {
-    Value *Orig = OutputMappings.find(Outputs[OutputIdx.getValue()])->second;
+    Value *Orig = OutputMappings.find(Outputs[OutputIdx.value()])->second;
     LLVM_DEBUG(dbgs() << "Mapping extracted output " << *Orig << " to "
-                      << *Outputs[OutputIdx.getValue()] << "\n");
+                      << *Outputs[OutputIdx.value()] << "\n");
     OutputMappings.insert(std::make_pair(LI, Orig));
   }
 }

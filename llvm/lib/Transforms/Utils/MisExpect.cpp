@@ -221,7 +221,7 @@ void checkBackendInstrumentation(Instruction &I,
   auto ExpectedWeightsOpt = extractWeights(&I, I.getContext());
   if (!ExpectedWeightsOpt)
     return;
-  auto ExpectedWeights = ExpectedWeightsOpt.getValue();
+  auto ExpectedWeights = ExpectedWeightsOpt.value();
   verifyMisExpect(I, RealWeights, ExpectedWeights);
 }
 
@@ -230,7 +230,7 @@ void checkFrontendInstrumentation(Instruction &I,
   auto RealWeightsOpt = extractWeights(&I, I.getContext());
   if (!RealWeightsOpt)
     return;
-  auto RealWeights = RealWeightsOpt.getValue();
+  auto RealWeights = RealWeightsOpt.value();
   verifyMisExpect(I, RealWeights, ExpectedWeights);
 }
 

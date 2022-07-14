@@ -718,8 +718,8 @@ Argument *IRPosition::getAssociatedArgument() const {
   }
 
   // If we found a unique callback candidate argument, return it.
-  if (CBCandidateArg && CBCandidateArg.getValue())
-    return CBCandidateArg.getValue();
+  if (CBCandidateArg && CBCandidateArg.value())
+    return CBCandidateArg.value();
 
   // If no callbacks were found, or none used the underlying call site operand
   // exclusively, use the direct callee argument if available.
@@ -1048,11 +1048,11 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
     recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
     return llvm::None;
   }
-  if (isa_and_nonnull<UndefValue>(SimplifiedV.getValue())) {
+  if (isa_and_nonnull<UndefValue>(SimplifiedV.value())) {
     recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
     return UndefValue::get(IRP.getAssociatedType());
   }
-  Constant *CI = dyn_cast_or_null<Constant>(SimplifiedV.getValue());
+  Constant *CI = dyn_cast_or_null<Constant>(SimplifiedV.value());
   if (CI)
     CI = dyn_cast_or_null<Constant>(
         AA::getWithType(*CI, *IRP.getAssociatedType()));
@@ -2697,8 +2697,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
       Optional<short> &NumUses = AssumeUsesMap[I];
       if (!NumUses)
         NumUses = I->getNumUses();
-      NumUses = NumUses.getValue() - /* this assume */ 1;
-      if (NumUses.getValue() != 0)
+      NumUses = NumUses.value() - /* this assume */ 1;
+      if (NumUses.value() != 0)
         continue;
       AssumeOnlyValues.insert(I);
       for (const Value *Op : I->operands())

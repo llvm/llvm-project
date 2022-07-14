@@ -47,7 +47,7 @@ Optional<std::string> Process::FindInEnvPath(StringRef EnvName,
 
   const char EnvPathSeparatorStr[] = {Separator, '\0'};
   SmallVector<StringRef, 8> Dirs;
-  SplitString(OptPath.getValue(), Dirs, EnvPathSeparatorStr);
+  SplitString(OptPath.value(), Dirs, EnvPathSeparatorStr);
 
   for (StringRef Dir : Dirs) {
     if (Dir.empty())

@@ -106,8 +106,8 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   // We don't want to proceed further for cold functions
   // or functions of unknown hotness. Lukewarm functions have no prefix.
   Optional<StringRef> SectionPrefix = MF.getFunction().getSectionPrefix();
-  if (SectionPrefix && (SectionPrefix.getValue().equals("unlikely") ||
-                        SectionPrefix.getValue().equals("unknown"))) {
+  if (SectionPrefix && (SectionPrefix.value().equals("unlikely") ||
+                        SectionPrefix.value().equals("unknown"))) {
     return false;
   }
 

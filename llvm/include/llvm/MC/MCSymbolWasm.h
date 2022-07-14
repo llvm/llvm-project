@@ -89,7 +89,7 @@ public:
   bool hasImportModule() const { return ImportModule.has_value(); }
   StringRef getImportModule() const {
     if (ImportModule)
-      return ImportModule.getValue();
+      return ImportModule.value();
     // Use a default module name of "env" for now, for compatibility with
     // existing tools.
     // TODO(sbc): Find a way to specify a default value in the object format
@@ -101,13 +101,13 @@ public:
   bool hasImportName() const { return ImportName.has_value(); }
   StringRef getImportName() const {
     if (ImportName)
-      return ImportName.getValue();
+      return ImportName.value();
     return getName();
   }
   void setImportName(StringRef Name) { ImportName = Name; }
 
   bool hasExportName() const { return ExportName.has_value(); }
-  StringRef getExportName() const { return ExportName.getValue(); }
+  StringRef getExportName() const { return ExportName.value(); }
   void setExportName(StringRef Name) { ExportName = Name; }
 
   bool isFunctionTable() const {
@@ -130,14 +130,14 @@ public:
 
   const wasm::WasmGlobalType &getGlobalType() const {
     assert(GlobalType);
-    return GlobalType.getValue();
+    return GlobalType.value();
   }
   void setGlobalType(wasm::WasmGlobalType GT) { GlobalType = GT; }
 
   bool hasTableType() const { return TableType.has_value(); }
   const wasm::WasmTableType &getTableType() const {
     assert(hasTableType());
-    return TableType.getValue();
+    return TableType.value();
   }
   void setTableType(wasm::WasmTableType TT) { TableType = TT; }
   void setTableType(wasm::ValType VT) {
