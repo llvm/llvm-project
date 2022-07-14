@@ -4870,6 +4870,8 @@ class PtGuardedByCorrectnessTest {
   int    sa[10] GUARDED_BY(mu1);
   Cell   sc[10] GUARDED_BY(mu1);
 
+  static constexpr int Cell::*pa = &Cell::a;
+
   void test1() {
     mu1.Lock();
     if (a == 0) doSomething();  // OK, we don't dereference.
@@ -4889,9 +4891,11 @@ class PtGuardedByCorrectnessTest {
 
     if (c->a == 0) doSomething();    // expected-warning {{reading the value pointed to by 'c' requires holding mutex 'mu2'}}
     c->a = 0;                        // expected-warning {{writing the value pointed to by 'c' requires holding mutex 'mu2' exclusively}}
+    c->*pa = 0;                      // expected-warning {{writing the value pointed to by 'c' requires holding mutex 'mu2' exclusively}}
 
     if ((*c).a == 0) doSomething();  // expected-warning {{reading the value pointed to by 'c' requires holding mutex 'mu2'}}
     (*c).a = 0;                      // expected-warning {{writing the value pointed to by 'c' requires holding mutex 'mu2' exclusively}}
+    (*c).*pa = 0;                    // expected-warning {{writing the value pointed to by 'c' requires holding mutex 'mu2' exclusively}}
 
     if (a[0] == 42) doSomething();     // expected-warning {{reading the value pointed to by 'a' requires holding mutex 'mu2'}}
     a[0] = 57;                         // expected-warning {{writing the value pointed to by 'a' requires holding mutex 'mu2' exclusively}}
@@ -4923,6 +4927,7 @@ class PtGuardedByCorrectnessTest {
     sa[0] = 57;                         // expected-warning {{writing variable 'sa' requires holding mutex 'mu1' exclusively}}
     if (sc[0].a == 42) doSomething();   // expected-warning {{reading variable 'sc' requires holding mutex 'mu1'}}
     sc[0].a = 57;                       // expected-warning {{writing variable 'sc' requires holding mutex 'mu1' exclusively}}
+    sc[0].*pa = 57;                     // expected-warning {{writing variable 'sc' requires holding mutex 'mu1' exclusively}}
 
     if (*sa == 42) doSomething();       // expected-warning {{reading variable 'sa' requires holding mutex 'mu1'}}
     *sa = 57;                           // expected-warning {{writing variable 'sa' requires holding mutex 'mu1' exclusively}}
