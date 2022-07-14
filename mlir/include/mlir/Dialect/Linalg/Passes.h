@@ -41,10 +41,6 @@ createLinalgTilingPass(ArrayRef<int64_t> tileSizes = {},
                            linalg::LinalgTilingLoopType::Loops);
 
 std::unique_ptr<OperationPass<func::FuncOp>>
-createLinalgPromotionPass(bool dynamicBuffers, bool useAlloca);
-std::unique_ptr<OperationPass<func::FuncOp>> createLinalgPromotionPass();
-
-std::unique_ptr<OperationPass<func::FuncOp>>
 createLinalgInlineScalarOperandsPass();
 
 /// Create a pass to convert Linalg operations to scf.for loops and
@@ -98,14 +94,6 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyTilePass(
 std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyPadPass(
     StringRef opName = "",
     const linalg::LinalgPaddingOptions &opt = linalg::LinalgPaddingOptions(),
-    const linalg::LinalgTransformationFilter &filter =
-        linalg::LinalgTransformationFilter());
-
-/// Create a LinalgStrategyPromotePass.
-std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyPromotePass(
-    StringRef opName = "",
-    const linalg::LinalgPromotionOptions &opt =
-        linalg::LinalgPromotionOptions(),
     const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
