@@ -885,19 +885,37 @@ DiagnosedSilenceableFailure
 transform::ScalarizeOp::applyToOne(linalg::LinalgOp target,
                                    SmallVectorImpl<Operation *> &results,
                                    transform::TransformState &state) {
-  LinalgTilingOptions tilingOptions;
-  tilingOptions.scalarizeDynamicDims();
-  // Tiling with "scalarize_dyn_dims" actually sets the same lambda as the
-  // tile sizes and asserts that it is not already set.
+  scf::SCFTilingOptions tilingOptions;
+  tilingOptions.setTileSizeComputationFunction([&](OpBuilder &b, Operation *) {
+    SmallVector<Value, 4> tileSizes;
+    Location loc = target.getLoc();
+    SmallVector<OpFoldResult> allShapeSizes =
+        target.createFlatListOfOperandDims(b, loc);
+    AffineMap map = target.getShapesToLoopsMap();
+    if (!map)
+      return tileSizes;
+    IRRewriter rewriter(b);
+    SmallVector<OpFoldResult> shapeSizes =
+        makeComposedFoldedMultiResultAffineApply(rewriter, loc, map,
+                                                 allShapeSizes);
+    // If the shape size is dynamic, tile by 1.
+    // Otherwise, do not tile (i.e. tile size 0).
+    for (OpFoldResult shapeSize : shapeSizes) {
+      tileSizes.push_back(getConstantIntValue(shapeSize)
+                              ? b.create<arith::ConstantIndexOp>(loc, 0)
+                              : b.create<arith::ConstantIndexOp>(loc, 1));
+    }
+    return tileSizes;
+  });
   SmallVector<int64_t> emptyTileSizes;
   SimpleRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
-  FailureOr<TiledLinalgOp> result =
-      tileWithLinalgTilingOptions(rewriter, target, tilingOptions);
-  if (failed(result))
+  FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCFForOp(
+      rewriter, cast<TilingInterface>(target.getOperation()), tilingOptions);
+  if (failed(maybeTilingResult))
     return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
 
-  results.push_back(result->op);
+  results.push_back(maybeTilingResult->tiledOp);
   return DiagnosedSilenceableFailure(success());
 }
 
@@ -1127,7 +1145,7 @@ transform::TileOp::apply(TransformResults &transformResults,
       return diag;
     }
 
-    LinalgTilingOptions tilingOptions;
+    scf::SCFTilingOptions tilingOptions;
     unsigned index = en.index();
     if (!tileSizes.empty()) {
       tilingOptions.setTileSizeComputationFunction(
@@ -1148,15 +1166,22 @@ transform::TileOp::apply(TransformResults &transformResults,
           });
     }
 
-    tilingOptions.setInterchange(extractUIntArray(getInterchange()));
+    tilingOptions.setInterchange(extractI64Array(getInterchange()));
     SimpleRewriter rewriter(linalgOp.getContext());
-    FailureOr<TiledLinalgOp> tiledOp =
-        tileWithLinalgTilingOptions(rewriter, linalgOp, tilingOptions);
-    if (failed(tiledOp))
+    FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCFForOp(
+        rewriter, cast<TilingInterface>(linalgOp.getOperation()),
+        tilingOptions);
+    if (failed(maybeTilingResult))
       return DiagnosedSilenceableFailure::definiteFailure();
 
-    tiled.push_back(tiledOp->op);
-    for (const auto &en2 : llvm::enumerate(tiledOp->loops))
+    if (linalgOp.hasBufferSemantics())
+      rewriter.eraseOp(linalgOp);
+    else
+      rewriter.replaceOp(linalgOp,
+                         maybeTilingResult->loops.front()->getResults());
+
+    tiled.push_back(maybeTilingResult->tiledOp);
+    for (const auto &en2 : llvm::enumerate(maybeTilingResult->loops))
       loops[en2.index()].push_back(en2.value());
   }
 
