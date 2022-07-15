@@ -96,7 +96,7 @@ public:
     if (auto *Directives = Contents->DepDirectives.load()) {
       if (Directives->has_value())
         return ArrayRef<dependency_directives_scan::Directive>(
-            Directives->getValue());
+            Directives->value());
     }
     return None;
   }

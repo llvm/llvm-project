@@ -85,6 +85,17 @@ public:
 
   Status InitializeConnection(std::unique_ptr<Connection> connection);
 
+  struct DebuggedProcess {
+    enum class Flag {
+      vkilled = (1u << 0),
+
+      LLVM_MARK_AS_BITMASK_ENUM(vkilled)
+    };
+
+    std::unique_ptr<NativeProcessProtocol> process_up;
+    Flag flags;
+  };
+
 protected:
   MainLoop &m_mainloop;
   MainLoop::ReadHandleUP m_network_handle_up;
@@ -94,14 +105,11 @@ protected:
   NativeProcessProtocol *m_current_process;
   NativeProcessProtocol *m_continue_process;
   std::recursive_mutex m_debugged_process_mutex;
-  std::unordered_map<lldb::pid_t, std::unique_ptr<NativeProcessProtocol>>
-      m_debugged_processes;
-  std::unordered_set<lldb::pid_t> m_vkilled_processes;
+  std::unordered_map<lldb::pid_t, DebuggedProcess> m_debugged_processes;
 
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;
 
-  lldb::StateType m_inferior_prev_state = lldb::StateType::eStateInvalid;
   llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> m_xfer_buffer_map;
   std::mutex m_saved_registers_mutex;
   std::unordered_map<uint32_t, lldb::DataBufferSP> m_saved_registers_map;

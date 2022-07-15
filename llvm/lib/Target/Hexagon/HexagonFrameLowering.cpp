@@ -1024,7 +1024,7 @@ void HexagonFrameLowering::insertCFIInstructions(MachineFunction &MF) const {
   for (auto &B : MF) {
     auto At = findCFILocation(B);
     if (At)
-      insertCFIInstructionsAt(B, At.getValue());
+      insertCFIInstructionsAt(B, At.value());
   }
 }
 

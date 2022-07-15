@@ -191,10 +191,11 @@ public:
       RawTable.push_back(0);
     }
     if (llvm::compression::zlib::isAvailable()) {
-      llvm::SmallString<1> Compressed;
-      llvm::compression::zlib::compress(RawTable, Compressed);
+      llvm::SmallVector<uint8_t, 0> Compressed;
+      llvm::compression::zlib::compress(llvm::arrayRefFromStringRef(RawTable),
+                                        Compressed);
       write32(RawTable.size(), OS);
-      OS << Compressed;
+      OS << llvm::toStringRef(Compressed);
     } else {
       write32(0, OS); // No compression.
       OS << RawTable;
@@ -220,7 +221,7 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
     return error("Truncated string table");
 
   llvm::StringRef Uncompressed;
-  llvm::SmallString<1> UncompressedStorage;
+  llvm::SmallVector<uint8_t, 0> UncompressedStorage;
   if (UncompressedSize == 0) // No compression
     Uncompressed = R.rest();
   else if (llvm::compression::zlib::isAvailable()) {
@@ -234,9 +235,10 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
                    R.rest().size(), UncompressedSize);
 
     if (llvm::Error E = llvm::compression::zlib::uncompress(
-            R.rest(), UncompressedStorage, UncompressedSize))
+            llvm::arrayRefFromStringRef(R.rest()), UncompressedStorage,
+            UncompressedSize))
       return std::move(E);
-    Uncompressed = UncompressedStorage;
+    Uncompressed = toStringRef(UncompressedStorage);
   } else
     return error("Compressed string table, but zlib is unavailable");
 

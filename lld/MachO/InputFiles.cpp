@@ -347,7 +347,7 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       section.subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
       splitRecords(*recordSize);
-    } else if (config->parseEhFrames && name == section_names::ehFrame &&
+    } else if (name == section_names::ehFrame &&
                segname == segment_names::text) {
       splitEhFrames(data, *sections.back());
     } else if (segname == segment_names::llvm) {
@@ -1117,7 +1117,7 @@ template <class LP> void ObjFile::parse() {
   }
   if (compactUnwindSection)
     registerCompactUnwind(*compactUnwindSection);
-  if (config->parseEhFrames && ehFrameSection)
+  if (ehFrameSection)
     registerEhFrames(*ehFrameSection);
 }
 

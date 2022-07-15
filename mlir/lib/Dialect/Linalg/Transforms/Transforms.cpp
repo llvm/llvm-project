@@ -103,8 +103,7 @@ void mlir::linalg::LinalgTransformationFilter::
     replaceLinalgTransformationFilter(PatternRewriter &rewriter,
                                       Operation *op) const {
   if (replacement.has_value())
-    op->setAttr(LinalgTransforms::kLinalgTransformMarker,
-                replacement.getValue());
+    op->setAttr(LinalgTransforms::kLinalgTransformMarker, replacement.value());
   else
     op->removeAttr(
         rewriter.getStringAttr(LinalgTransforms::kLinalgTransformMarker));
@@ -441,10 +440,10 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
     if (failed(unfusedTiledOp))
       return failure();
     rewriter.replaceOp(tiledAndFusedOps->op,
-                       getTiledOpResult(unfusedTiledOp.getValue()));
+                       getTiledOpResult(unfusedTiledOp.value()));
     tiledAndFusedOps->op = unfusedTiledOp->op;
   }
-  op->replaceAllUsesWith(getTiledAndFusedOpResult(tiledAndFusedOps.getValue()));
+  op->replaceAllUsesWith(getTiledAndFusedOpResult(tiledAndFusedOps.value()));
 
   filter.replaceLinalgTransformationFilter(rewriter,
                                            tiledAndFusedOps->op.getOperation());
@@ -689,40 +688,6 @@ mlir::linalg::LinalgGeneralizationPattern::returningMatchAndRewrite(
     return failure();
   filter.replaceLinalgTransformationFilter(rewriter, *genericOp);
   return genericOp;
-}
-
-mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
-    MLIRContext *context, LinalgTransformationFilter f,
-    LinalgPromotionOptions options, PatternBenefit benefit)
-    : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
-      filter(std::move(f)), options(std::move(options)) {}
-
-mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
-    StringRef opName, MLIRContext *context, LinalgPromotionOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context, {}), filter(std::move(f)),
-      options(std::move(options)) {}
-
-LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, op)))
-    return failure();
-  if (failed(promoteSubviewsPrecondition(op, options)))
-    return failure();
-
-  // TODO: We cannot use root update here. This pattern is creating other ops,
-  // so if the promotion fails, those need to be cleaned up, which doesnt seem
-  // to be happening here. So to fail properly, we should be cloning the op and
-  // deleting the previous op. This needs more investigation.
-  rewriter.startRootUpdate(op);
-  Optional<LinalgOp> promotedOp = promoteSubViews(rewriter, op, options);
-  if (!promotedOp) {
-    rewriter.cancelRootUpdate(op);
-    return op->emitError("subview promotion failed");
-  }
-  rewriter.finalizeRootUpdate(op);
-  filter.replaceLinalgTransformationFilter(rewriter, op);
-  return success();
 }
 
 mlir::linalg::LinalgPeelingPattern::LinalgPeelingPattern(

@@ -7368,6 +7368,8 @@ functions is small.
 - "frame-pointer": **Max**. The value can be 0, 1, or 2. A synthesized function
   will get the "frame-pointer" function attribute, with value being "none",
   "non-leaf", or "all", respectively.
+- "function_return_thunk_extern": The synthesized function will get the
+  ``fn_return_thunk_extern`` function attribute.
 - "uwtable": **Max**. The value can be 0, 1, or 2. If the value is 1, a synthesized
   function will get the ``uwtable(sync)`` function attribute, if the value is 2,
   a synthesized function will get the ``uwtable(async)`` function attribute.

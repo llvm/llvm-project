@@ -843,6 +843,23 @@ a special character, which is the convention used by GNU Make. The -MV
 option tells Clang to put double-quotes around the entire filename, which
 is the convention used by NMake and Jom.
 
+.. option:: -femit-dwarf-unwind=<value>
+
+  When to emit DWARF unwind (EH frame) info. This is a Mach-O-specific option.
+
+  Valid values are:
+
+  * ``no-compact-unwind`` - Only emit DWARF unwind when compact unwind encodings
+    aren't available. This is the default for arm64.
+  * ``always`` - Always emit DWARF unwind regardless.
+  * ``default`` - Use the platform-specific default (``always`` for all
+    non-arm64-platforms).
+
+``no-compact-unwind`` is a performance optimization -- Clang will emit smaller
+object files that are more quickly processed by the linker. This may cause
+binary compatibility issues on older x86_64 targets, however, so use it with
+caution.
+
 .. _configuration-files:
 
 Configuration files
@@ -2512,6 +2529,32 @@ particular instrumentation type by using a named section.
 When the file contains only excludes, all files and functions except for the
 excluded ones will be instrumented. Otherwise, only the files and functions
 specified will be instrumented.
+
+Instrument function groups
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Sometimes it is desirable to minimize the size overhead of instrumented
+binaries. One way to do this is to partition functions into groups and only
+instrument functions in a specified group. This can be done using the
+`-fprofile-function-groups` and `-fprofile-selected-function-group` options.
+
+.. option:: -fprofile-function-groups=<N>, -fprofile-selected-function-group=<i>
+
+  The following uses 3 groups
+
+  .. code-block:: console
+
+    $ clang++ -Oz -fprofile-generate=group_0/ -fprofile-function-groups=3 -fprofile-selected-function-group=0 code.cc -o code.0
+    $ clang++ -Oz -fprofile-generate=group_1/ -fprofile-function-groups=3 -fprofile-selected-function-group=1 code.cc -o code.1
+    $ clang++ -Oz -fprofile-generate=group_2/ -fprofile-function-groups=3 -fprofile-selected-function-group=2 code.cc -o code.2
+
+  After collecting raw profiles from the three binaries, they can be merged into
+  a single profile like normal.
+
+  .. code-block:: console
+
+    $ llvm-profdata merge -output=code.profdata group_*/*.profraw
+
 
 Profile remapping
 ^^^^^^^^^^^^^^^^^

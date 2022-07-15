@@ -8,6 +8,7 @@
 
 #include "config/linux/app.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/threads/thread.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
 
 #include <asm/prctl.h>
@@ -30,6 +31,8 @@ static constexpr long mmapSyscallNumber = SYS_mmap;
 #endif
 
 AppProperties app;
+
+static ThreadAttributes main_thread_attrib;
 
 // TODO: The function is x86_64 specific. Move it to config/linux/app.h
 // and generalize it. Also, dynamic loading is not handled currently.
@@ -118,6 +121,11 @@ extern "C" void _start() {
   __asm__ __volatile__("andq $0xfffffffffffffff0, %%rsp\n\t" ::: "%rsp");
   __asm__ __volatile__("andq $0xfffffffffffffff0, %%rbp\n\t" ::: "%rbp");
 
+  auto tid = __llvm_libc::syscall(SYS_gettid);
+  if (tid <= 0)
+    __llvm_libc::syscall(SYS_exit, 1);
+  __llvm_libc::main_thread_attrib.tid = tid;
+
   // After the argv array, is a 8-byte long NULL value before the array of env
   // values. The end of the env values is marked by another 8-byte long NULL
   // value. We step over it (the "+ 1" below) to get to the env values.
@@ -164,6 +172,8 @@ extern "C" void _start() {
   __llvm_libc::init_tls(tls);
   if (tls.size != 0 && !__llvm_libc::set_thread_ptr(tls.tp))
     __llvm_libc::syscall(SYS_exit, 1);
+
+  __llvm_libc::self.attrib = &__llvm_libc::main_thread_attrib;
 
   int retval = main(app.args->argc, reinterpret_cast<char **>(app.args->argv),
                     reinterpret_cast<char **>(env_ptr));

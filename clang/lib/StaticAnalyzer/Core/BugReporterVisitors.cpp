@@ -2950,7 +2950,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   PathDiagnosticLocation Loc(Cond, SM, LCtx);
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Message);
   if (shouldPrune)
-    event->setPrunable(shouldPrune.getValue());
+    event->setPrunable(shouldPrune.value());
   return event;
 }
 
@@ -3084,9 +3084,9 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
       Out << (TookTrue ? "not equal to 0" : "0");
   } else {
     if (Ty->isBooleanType())
-      Out << (IntValue.getValue()->getBoolValue() ? "true" : "false");
+      Out << (IntValue.value()->getBoolValue() ? "true" : "false");
     else
-      Out << *IntValue.getValue();
+      Out << *IntValue.value();
   }
 
   return true;
@@ -3282,7 +3282,7 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
   if (!IsSAT)
     return;
 
-  if (!IsSAT.getValue())
+  if (!IsSAT.value())
     BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
 }
 

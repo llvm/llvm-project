@@ -333,9 +333,9 @@ private:
   /// True if the original entry point was patched.
   bool IsPatched{false};
 
-  /// True if the function contains jump table with entries pointing to
-  /// locations in fragments.
-  bool HasSplitJumpTable{false};
+  /// True if the function contains explicit or implicit indirect branch to its
+  /// split fragments, e.g., split jump table, landing pad in split fragment
+  bool HasIndirectTargetToSplitFragment{false};
 
   /// True if there are no control-flow edges with successors in other functions
   /// (i.e. if tail calls have edges to function-local basic blocks).
@@ -1157,8 +1157,8 @@ public:
   /// Return the number of emitted instructions for this function.
   uint32_t getNumNonPseudos() const {
     uint32_t N = 0;
-    for (BinaryBasicBlock *const &BB : layout())
-      N += BB->getNumNonPseudos();
+    for (const BinaryBasicBlock &BB : blocks())
+      N += BB.getNumNonPseudos();
     return N;
   }
 
@@ -1437,9 +1437,12 @@ public:
   /// otherwise processed.
   bool isPseudo() const { return IsPseudo; }
 
-  /// Return true if the function contains a jump table with entries pointing
-  /// to split fragments.
-  bool hasSplitJumpTable() const { return HasSplitJumpTable; }
+  /// Return true if the function contains explicit or implicit indirect branch
+  /// to its split fragments, e.g., split jump table, landing pad in split
+  /// fragment.
+  bool hasIndirectTargetToSplitFragment() const {
+    return HasIndirectTargetToSplitFragment;
+  }
 
   /// Return true if all CFG edges have local successors.
   bool hasCanonicalCFG() const { return HasCanonicalCFG; }
@@ -1834,7 +1837,9 @@ public:
 
   void setIsPatched(bool V) { IsPatched = V; }
 
-  void setHasSplitJumpTable(bool V) { HasSplitJumpTable = V; }
+  void setHasIndirectTargetToSplitFragment(bool V) {
+    HasIndirectTargetToSplitFragment = V;
+  }
 
   void setHasCanonicalCFG(bool V) { HasCanonicalCFG = V; }
 
@@ -2330,13 +2335,13 @@ public:
   size_t estimateHotSize(const bool UseSplitSize = true) const {
     size_t Estimate = 0;
     if (UseSplitSize && isSplit()) {
-      for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-        if (!BB->isCold())
-          Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+      for (const BinaryBasicBlock &BB : blocks())
+        if (!BB.isCold())
+          Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     } else {
-      for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-        if (BB->getKnownExecutionCount() != 0)
-          Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+      for (const BinaryBasicBlock &BB : blocks())
+        if (BB.getKnownExecutionCount() != 0)
+          Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     }
     return Estimate;
   }
@@ -2345,16 +2350,16 @@ public:
     if (!isSplit())
       return estimateSize();
     size_t Estimate = 0;
-    for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-      if (BB->isCold())
-        Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+    for (const BinaryBasicBlock &BB : blocks())
+      if (BB.isCold())
+        Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     return Estimate;
   }
 
   size_t estimateSize() const {
     size_t Estimate = 0;
-    for (const BinaryBasicBlock *BB : BasicBlocksLayout)
-      Estimate += BC.computeCodeSize(BB->begin(), BB->end());
+    for (const BinaryBasicBlock &BB : blocks())
+      Estimate += BC.computeCodeSize(BB.begin(), BB.end());
     return Estimate;
   }
 

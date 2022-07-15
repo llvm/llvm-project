@@ -239,7 +239,7 @@ StringRef AttrOrTypeParameter::getComparator() const {
 StringRef AttrOrTypeParameter::getCppType() const {
   if (auto *stringType = dyn_cast<llvm::StringInit>(getDef()))
     return stringType->getValue();
-  return getDefValue<llvm::StringInit>("cppType").getValue();
+  return getDefValue<llvm::StringInit>("cppType").value();
 }
 
 StringRef AttrOrTypeParameter::getCppAccessorType() const {

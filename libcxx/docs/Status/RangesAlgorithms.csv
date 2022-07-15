@@ -40,8 +40,8 @@ Write,copy,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,copy_if,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,copy_n,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,copy_backward,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
-Write,move,Nikolas Klauser,`D126616 <https://llvm.org/D126616>`_,Under review
-Write,move_backward,Nikolas Klauser,`D126616 <https://llvm.org/D126616>`_,Under review
+Write,move,Nikolas Klauser,`D126616 <https://llvm.org/D126616>`_,✅
+Write,move_backward,Nikolas Klauser,`D126616 <https://llvm.org/D126616>`_,✅
 Write,fill,Nikolas Klauser,`D123462 <https://llvm.org/D123462>`_,✅
 Write,fill_n,Nikolas Klauser,`D123462 <https://llvm.org/D123462>`_,✅
 Write,transform,Nikolas Klauser,`D122173 <https://llvm.org/D122173>`_,✅
@@ -51,8 +51,8 @@ Write,remove_copy,Nikolas Klauser,n/a,Not started
 Write,remove_copy_if,Nikolas Klauser,n/a,Not started
 Write,replace,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
 Write,replace_if,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
-Write,replace_copy,Nikolas Klauser,n/a,Not started
-Write,replace_copy_if,Nikolas Klauser,n/a,Not started
+Write,replace_copy,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,Under review
+Write,replace_copy_if,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,Under review
 Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,✅
 Write,reverse_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
@@ -61,10 +61,10 @@ Write,unique_copy,Not assigned,n/a,Not started
 Write,partition_copy,Not assigned,n/a,Not started
 Write,partial_sort_copy,Not assigned,n/a,Not started
 Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
-Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`,✅
-Merge,set_intersection,Hui Xie,`D129233 <https://llvm.org/D129233>`,✅
-Merge,set_symmetric_difference,Hui Xie,`D129520 <https://llvm.org/D129520>`,✅
-Merge,set_union,Hui Xie,n/a,Not started
+Merge,set_difference,Hui Xie,`D128983 <https://llvm.org/D128983>`_,✅
+Merge,set_intersection,Hui Xie,`D129233 <https://llvm.org/D129233>`_,✅
+Merge,set_symmetric_difference,Hui Xie,`D129520 <https://llvm.org/D129520>`_,✅
+Merge,set_union,Hui Xie,`D129657 <https://llvm.org/D129657>`_,✅
 Permutation,remove,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,remove_if,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,reverse,Nikolas Klauser,`D125752 <https://llvm.org/D125752>`_,✅

@@ -201,7 +201,7 @@ public:
         rewriter, loc, weightPaddingAttr.getType(), weightPaddingAttr);
 
     if (op.quantization_info().has_value()) {
-      auto quantInfo = op.quantization_info().getValue();
+      auto quantInfo = op.quantization_info().value();
       weight = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
           weightPaddingVal, nullptr,
@@ -265,7 +265,7 @@ public:
         rewriter, loc, inputPaddingAttr.getType(), inputPaddingAttr);
 
     if (op.quantization_info().has_value()) {
-      auto quantInfo = op.quantization_info().getValue();
+      auto quantInfo = op.quantization_info().value();
       input = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
           inputPaddingVal, nullptr,
