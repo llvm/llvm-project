@@ -116,7 +116,7 @@ if.end12:                                         ; preds = %if.end8
   br i1 %tobool13, label %if.else, label %if.then14
 
 if.then14:                                        ; preds = %if.end12
-  callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@n, %if.then20.critedge))
+  callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %cleanup [label %if.then20.critedge]
 
 if.then20.critedge:                               ; preds = %if.then14

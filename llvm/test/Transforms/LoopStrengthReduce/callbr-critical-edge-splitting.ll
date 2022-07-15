@@ -9,8 +9,8 @@ define dso_local i32 @test1() local_unnamed_addr {
 ; LEGACYPM-NEXT:  entry:
 ; LEGACYPM-NEXT:    br label [[FOR_COND:%.*]]
 ; LEGACYPM:       for.cond:
-; LEGACYPM-NEXT:    callbr void asm sideeffect "", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, [[COND_TRUE_I:%.*]]), i8* blockaddress(@test1, [[FOR_ENDSPLIT:%.*]]))
-; LEGACYPM-NEXT:    to label [[ASM_FALLTHROUGH_I_I:%.*]] [label [[COND_TRUE_I]], label %for.endsplit]
+; LEGACYPM-NEXT:    callbr void asm sideeffect "", "!i,!i,~{dirflag},~{fpsr},~{flags}"()
+; LEGACYPM-NEXT:    to label [[ASM_FALLTHROUGH_I_I:%.*]] [label [[COND_TRUE_I:%.*]], label %for.endsplit]
 ; LEGACYPM:       asm.fallthrough.i.i:
 ; LEGACYPM-NEXT:    unreachable
 ; LEGACYPM:       cond.true.i:
@@ -28,15 +28,15 @@ define dso_local i32 @test1() local_unnamed_addr {
 ; LEGACYPM:       for.endsplit:
 ; LEGACYPM-NEXT:    br label [[FOR_END]]
 ; LEGACYPM:       for.end:
-; LEGACYPM-NEXT:    [[PGOCOUNT_PROMOTED24:%.*]] = phi i64 [ [[LSR_IV_NEXT]], [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE_FOR_END_CRIT_EDGE]] ], [ undef, [[FOR_ENDSPLIT]] ]
+; LEGACYPM-NEXT:    [[PGOCOUNT_PROMOTED24:%.*]] = phi i64 [ [[LSR_IV_NEXT]], [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE_FOR_END_CRIT_EDGE]] ], [ undef, [[FOR_ENDSPLIT:%.*]] ]
 ; LEGACYPM-NEXT:    ret i32 undef
 ;
 ; NEWPM-LABEL: @test1(
 ; NEWPM-NEXT:  entry:
 ; NEWPM-NEXT:    br label [[FOR_COND:%.*]]
 ; NEWPM:       for.cond:
-; NEWPM-NEXT:    callbr void asm sideeffect "", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, [[COND_TRUE_I:%.*]]), i8* blockaddress(@test1, [[FOR_END:%.*]]))
-; NEWPM-NEXT:    to label [[ASM_FALLTHROUGH_I_I:%.*]] [label [[COND_TRUE_I]], label %for.end]
+; NEWPM-NEXT:    callbr void asm sideeffect "", "!i,!i,~{dirflag},~{fpsr},~{flags}"()
+; NEWPM-NEXT:    to label [[ASM_FALLTHROUGH_I_I:%.*]] [label [[COND_TRUE_I:%.*]], label %for.end]
 ; NEWPM:       asm.fallthrough.i.i:
 ; NEWPM-NEXT:    unreachable
 ; NEWPM:       cond.true.i:
@@ -45,7 +45,7 @@ define dso_local i32 @test1() local_unnamed_addr {
 ; NEWPM-NEXT:    br i1 true, label [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE:%.*]], label [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]]
 ; NEWPM:       do.body.i.i.rdrand_int.exit.i_crit_edge:
 ; NEWPM-NEXT:    [[TMP0:%.*]] = add i64 1, undef
-; NEWPM-NEXT:    br i1 true, label [[FOR_END]], label [[FOR_INC:%.*]]
+; NEWPM-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_INC:%.*]]
 ; NEWPM:       for.inc:
 ; NEWPM-NEXT:    br label [[FOR_COND]]
 ; NEWPM:       for.end:
@@ -58,7 +58,7 @@ entry:
 for.cond:                                         ; preds = %for.inc, %entry
 ; It's ok to modify this test in the future should we be able to split critical
 ; edges here, just noting that this is the critical edge that we care about.
-  callbr void asm sideeffect "", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, %cond.true.i), i8* blockaddress(@test1, %for.end))
+  callbr void asm sideeffect "", "!i,!i,~{dirflag},~{fpsr},~{flags}"()
   to label %asm.fallthrough.i.i [label %cond.true.i, label %for.end]
 
 asm.fallthrough.i.i:                              ; preds = %for.cond

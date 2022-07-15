@@ -1,8 +1,8 @@
-; RUN: not llvm-diff %s %s 2>&1 | FileCheck %s
+; RUN: llvm-diff %s %s
 
 define void @foo() {
 entry:
-  callbr void asm sideeffect "", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %return), i8* blockaddress(@foo, %t_no))
+  callbr void asm sideeffect "", "!i,!i,~{dirflag},~{fpsr},~{flags}"()
           to label %asm.fallthrough [label %return, label %t_no]
 
 asm.fallthrough:
@@ -15,17 +15,9 @@ return:
   ret void
 }
 
-; CHECK:      in function bar:
-; CHECK-NOT:  in function foo:
-; CHECK-NEXT:  in block %entry:
-; CHECK-NEXT:    >   callbr void asm sideeffect "", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %t_no), i8* blockaddress(@foo, %return))
-; CHECK-NEXT:          to label %asm.fallthrough [label %return, label %t_no]
-; CHECK-NEXT:    <   callbr void asm sideeffect "", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %t_no), i8* blockaddress(@foo, %return))
-; CHECK-NEXT:          to label %asm.fallthrough [label %return, label %t_no]
-
 define void @bar() {
 entry:
-  callbr void asm sideeffect "", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %t_no), i8* blockaddress(@foo, %return))
+  callbr void asm sideeffect "", "!i,!i,~{dirflag},~{fpsr},~{flags}"()
           to label %asm.fallthrough [label %return, label %t_no]
 
 asm.fallthrough:

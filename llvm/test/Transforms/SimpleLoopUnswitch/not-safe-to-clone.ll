@@ -11,7 +11,7 @@ for.cond:                                         ; preds = %if.end8, %entry
   br i1 %tree, label %if.end8, label %if.else
 
 if.else:                                          ; preds = %for.cond
-  callbr void asm sideeffect ".pushsection __jump_table,  \22aw\22 \0A\09.popsection \0A\09", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@mem_cgroup_node_nr_lru_pages, %for.cond5))
+  callbr void asm sideeffect ".pushsection __jump_table,  \22aw\22 \0A\09.popsection \0A\09", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %if.end8 [label %for.cond5]
 
 for.cond5:                                        ; preds = %if.else, %for.cond5

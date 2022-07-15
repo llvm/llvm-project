@@ -8,7 +8,7 @@
 
 define void @test1() {
 entry:
-  callbr void asm sideeffect "je ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@test1, %a.b.normal.jump))
+  callbr void asm sideeffect "je ${0:l}", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %asm.fallthrough [label %a.b.normal.jump]
 
 asm.fallthrough:

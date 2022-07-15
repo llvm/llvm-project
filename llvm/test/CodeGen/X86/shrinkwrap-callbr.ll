@@ -48,7 +48,7 @@ ret0:
 
 if.end:
   %call = tail call i32 @fn()
-  callbr void asm sideeffect "# jump to $0", "i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@test1, %two))
+  callbr void asm sideeffect "# jump to $0", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %return [label %two]
 
 two:

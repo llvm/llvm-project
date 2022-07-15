@@ -8,8 +8,8 @@ define void @wombat(i64 %arg, i64* %arg1, i64 %arg2, i32* %arg3) {
 ; CHECK-LABEL: @wombat(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[ARG2:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    callbr void asm sideeffect "", "i,i"(i8* blockaddress(@wombat, [[BB7:%.*]]), i8* blockaddress(@wombat, [[BB_BB9_CRIT_EDGE:%.*]]))
-; CHECK-NEXT:    to label [[BB6:%.*]] [label [[BB7]], label %bb.bb9_crit_edge]
+; CHECK-NEXT:    callbr void asm sideeffect "", "!i,!i"()
+; CHECK-NEXT:    to label [[BB6:%.*]] [label [[BB7:%.*]], label %bb.bb9_crit_edge]
 ; CHECK:       bb.bb9_crit_edge:
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = trunc i64 [[TMP5]] to i32
 ; CHECK-NEXT:    br label [[BB9:%.*]]
@@ -20,13 +20,13 @@ define void @wombat(i64 %arg, i64* %arg1, i64 %arg2, i32* %arg3) {
 ; CHECK-NEXT:    tail call void @barney(i32 [[TMP8]])
 ; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb9:
-; CHECK-NEXT:    [[TMP10_PRE_PHI:%.*]] = phi i32 [ [[DOTPRE]], [[BB_BB9_CRIT_EDGE]] ], [ [[TMP8]], [[BB7]] ]
+; CHECK-NEXT:    [[TMP10_PRE_PHI:%.*]] = phi i32 [ [[DOTPRE]], [[BB_BB9_CRIT_EDGE:%.*]] ], [ [[TMP8]], [[BB7]] ]
 ; CHECK-NEXT:    store i32 [[TMP10_PRE_PHI]], i32* [[ARG3:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
   %tmp5 = or i64 %arg2, %arg
-  callbr void asm sideeffect "", "i,i"(i8* blockaddress(@wombat, %bb7), i8* blockaddress(@wombat, %bb9))
+  callbr void asm sideeffect "", "!i,!i"()
   to label %bb6 [label %bb7, label %bb9]
 
 bb6:                                              ; preds = %bb

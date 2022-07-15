@@ -96,7 +96,7 @@ dead:                                             ; No predecessors!
 ; Check that this doesn't crash
 define void @kernfs_path_from_node() {
 entry:
-  callbr void asm sideeffect "", "i"(i8* blockaddress(@kernfs_path_from_node, %while.body))
+  callbr void asm sideeffect "", "!i"()
           to label %asm.fallthrough [label %while.body]
 
 asm.fallthrough:                                  ; preds = %entry

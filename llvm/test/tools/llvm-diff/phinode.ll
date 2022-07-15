@@ -9,7 +9,7 @@
 ; CHECK-NEXT:    <   %7 = phi i32 [ 0, %2 ], [ -1, %1 ]
 ; CHECK-NEXT:    <   ret i32 %7
 define i32 @foo(i32 %0) #0 {
-  callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %6))
+  callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"()
           to label %2 [label %6]
 
 2:
