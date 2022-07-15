@@ -1009,10 +1009,10 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     }
   }
 
-  if (auto *Def = D->getDefinition()) {
-      if (D->hasAttr<FinalAttr>()) {
-          Out << " final";
-      }
+  if (D->hasDefinition()) {
+    if (D->hasAttr<FinalAttr>()) {
+      Out << " final";
+    }
   }
 
   if (D->isCompleteDefinition()) {
