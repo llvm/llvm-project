@@ -134,6 +134,19 @@ class ReleaseWorkflow:
     def issue_notify_pull_request(self, pull:github.PullRequest.PullRequest) -> None:
         self.issue.create_comment('/pull-request {}#{}'.format(self.branch_repo_name, pull.number))
 
+    def make_ignore_comment(self, comment: str) -> str:
+        """
+        Returns the comment string with a prefix that will cause
+        a Github workflow to skip parsing this comment.
+
+        :param str comment: The comment to ignore
+        """
+        return "<!--IGNORE-->\n"+comment
+
+    def issue_notify_no_milestone(self, comment:List[str]) -> None:
+        message = "{}\n\nError: Command failed due to missing milestone.".format(''.join(['>' + line for line in comment]))
+        self.issue.create_comment(self.make_ignore_comment(message))
+
     @property
     def action_url(self) -> str:
         if os.getenv('CI'):
@@ -141,7 +154,7 @@ class ReleaseWorkflow:
         return ""
 
     def issue_notify_cherry_pick_failure(self, commit:str) -> github.IssueComment.IssueComment:
-        message = "<!--IGNORE-->\nFailed to cherry-pick: {}\n\n".format(commit)
+        message = self.make_ignore_comment("Failed to cherry-pick: {}\n\n".format(commit))
         action_url = self.action_url
         if action_url:
             message += action_url + "\n\n"
@@ -295,6 +308,9 @@ elif args.command == 'release-workflow':
     release_workflow = ReleaseWorkflow(args.token, args.repo, args.issue_number,
                                        args.branch_repo, args.branch_repo_token,
                                        args.llvm_project_dir)
+    if not release_workflow.release_branch_for_issue:
+        release_workflow.issue_notify_no_milestone(sys.stdin.readlines())
+        sys.exit(1)
     if args.sub_command == 'print-release-branch':
         release_workflow.print_release_branch()
     else:

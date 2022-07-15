@@ -16,8 +16,19 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toascii
     libc.src.ctype.tolower
     libc.src.ctype.toupper
-    
+
     # string.h entrypoints
+    libc.src.string.bcmp
+    libc.src.string.bzero
+    libc.src.string.memccpy
+    libc.src.string.memchr
+    libc.src.string.memcmp
+    libc.src.string.memcpy
+    libc.src.string.memmove
+    libc.src.string.mempcpy
+    libc.src.string.memrchr
+    libc.src.string.memset
+    libc.src.string.stpcpy
     libc.src.string.stpncpy
     libc.src.string.strcat
     libc.src.string.strchr
@@ -37,7 +48,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
- 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
     libc.src.inttypes.imaxdiv
@@ -46,6 +56,10 @@ set(TARGET_LIBC_ENTRYPOINTS
  
     # stdlib.h entrypoints
     libc.src.stdlib.abs
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atof
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
     libc.src.stdlib.bsearch
     libc.src.stdlib.div
     libc.src.stdlib.labs
@@ -53,9 +67,32 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.qsort
+    libc.src.stdlib.strtod
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtold
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
+    # math.h entrypoints
+    libc.src.math.cosf
+    libc.src.math.fabs
+    libc.src.math.fabsf
+    libc.src.math.fabsl
+    libc.src.math.fdim
+    libc.src.math.fdimf
+    libc.src.math.fdiml
+    libc.src.math.fmax
+    libc.src.math.fmaxf
+    libc.src.math.fmaxl
+    libc.src.math.fmin
+    libc.src.math.fminf
+    libc.src.math.fminl
+    libc.src.math.sincosf
+    libc.src.math.sinf
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

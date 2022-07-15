@@ -168,3 +168,196 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
              "send packet: $OK#00",
              ], True)
         self.expect_gdbremote_sequence()
+
+    def multiple_resume_test(self, second_command):
+        self.build()
+        self.set_inferior_startup_launch()
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["sleep:15"])
+        self.test_sequence.add_log_lines(
+            ["read packet: $QNonStop:1#00",
+             "send packet: $OK#00",
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             "read packet: ${}#00".format(second_command),
+             "send packet: $E37#00",
+             ], True)
+        self.expect_gdbremote_sequence()
+
+    @add_test_categories(["llgs"])
+    def test_multiple_C(self):
+        self.multiple_resume_test("C05")
+
+    @add_test_categories(["llgs"])
+    def test_multiple_c(self):
+        self.multiple_resume_test("c")
+
+    @add_test_categories(["llgs"])
+    def test_multiple_s(self):
+        self.multiple_resume_test("s")
+
+    @skipIfWindows
+    @add_test_categories(["llgs"])
+    def test_multiple_vCont(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["thread:new", "stop", "sleep:15"])
+        self.test_sequence.add_log_lines(
+            ["read packet: $QNonStop:1#00",
+             "send packet: $OK#00",
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             {"direction": "send",
+              "regex": r"^%Stop:T[0-9a-fA-F]{2}thread:([0-9a-fA-F]+);",
+              "capture": {1: "tid1"},
+              },
+             "read packet: $vStopped#63",
+             {"direction": "send",
+              "regex": r"^[$]T[0-9a-fA-F]{2}thread:([0-9a-fA-F]+);",
+              "capture": {1: "tid2"},
+              },
+             "read packet: $vStopped#63",
+             "send packet: $OK#00",
+             ], True)
+        ret = self.expect_gdbremote_sequence()
+
+        self.reset_test_sequence()
+        self.test_sequence.add_log_lines(
+            ["read packet: $vCont;c:{}#00".format(ret["tid1"]),
+             "send packet: $OK#00",
+             "read packet: $vCont;c:{}#00".format(ret["tid2"]),
+             "send packet: $E37#00",
+             ], True)
+        self.expect_gdbremote_sequence()
+
+    @add_test_categories(["llgs"])
+    def test_vCont_then_stop(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["sleep:15"])
+        self.test_sequence.add_log_lines(
+            ["read packet: $QNonStop:1#00",
+             "send packet: $OK#00",
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             "read packet: $vCont;t#00",
+             "send packet: $OK#00",
+             ], True)
+        self.expect_gdbremote_sequence()
+
+    def vCont_then_partial_stop_test(self, run_both):
+        self.build()
+        self.set_inferior_startup_launch()
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["thread:new", "stop", "sleep:15"])
+        self.test_sequence.add_log_lines(
+            ["read packet: $QNonStop:1#00",
+             "send packet: $OK#00",
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             {"direction": "send",
+              "regex": r"^%Stop:T[0-9a-fA-F]{2}thread:([0-9a-fA-F]+);",
+              "capture": {1: "tid1"},
+              },
+             "read packet: $vStopped#63",
+             {"direction": "send",
+              "regex": r"^[$]T[0-9a-fA-F]{2}thread:([0-9a-fA-F]+);",
+              "capture": {1: "tid2"},
+              },
+             "read packet: $vStopped#63",
+             "send packet: $OK#00",
+             ], True)
+        ret = self.expect_gdbremote_sequence()
+
+        self.reset_test_sequence()
+        if run_both:
+            self.test_sequence.add_log_lines(
+                ["read packet: $vCont;c#00",
+                 ], True)
+        else:
+            self.test_sequence.add_log_lines(
+                ["read packet: $vCont;c:{}#00".format(ret["tid1"]),
+                 ], True)
+        self.test_sequence.add_log_lines(
+            ["send packet: $OK#00",
+             "read packet: $vCont;t:{}#00".format(ret["tid2"]),
+             "send packet: $E03#00",
+             ], True)
+        self.expect_gdbremote_sequence()
+
+    @skipIfWindows
+    @add_test_categories(["llgs"])
+    def test_vCont_then_partial_stop(self):
+        self.vCont_then_partial_stop_test(False)
+
+    @skipIfWindows
+    @add_test_categories(["llgs"])
+    def test_vCont_then_partial_stop_run_both(self):
+        self.vCont_then_partial_stop_test(True)
+
+    @skipIfWindows
+    @add_test_categories(["llgs"])
+    def test_stdio(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        # Since we can't easily ensure that lldb will send output in two parts,
+        # just put a stop in the middle.  Since we don't clear vStdio,
+        # the second message won't be delivered immediately.
+        self.prep_debug_monitor_and_inferior(
+            inferior_args=["message 1", "stop", "message 2"])
+        self.test_sequence.add_log_lines(
+            ["read packet: $QNonStop:1#00",
+             "send packet: $OK#00",
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             {"direction": "send", "regex": r"^%Stop:T.*"},
+             "read packet: $vStopped#00",
+             "send packet: $OK#00",
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             "send packet: %Stop:W00#00",
+             ], True)
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn(ret["O_content"], b"message 1\r\n")
+
+        # Now, this is somewhat messy.  expect_gdbremote_sequence() will
+        # automatically consume output packets, so we just send vStdio,
+        # assume the first reply was consumed, send another one and expect
+        # a non-consumable "OK" reply.
+        self.reset_test_sequence()
+        self.test_sequence.add_log_lines(
+            ["read packet: $vStdio#00",
+             "read packet: $vStdio#00",
+             "send packet: $OK#00",
+             ], True)
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn(ret["O_content"], b"message 2\r\n")
+
+        self.reset_test_sequence()
+        self.test_sequence.add_log_lines(
+            ["read packet: $vStopped#00",
+             "send packet: $OK#00",
+             ], True)
+        self.expect_gdbremote_sequence()
+
+    @add_test_categories(["llgs"])
+    def test_stop_reason_while_running(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        procs = self.prep_debug_monitor_and_inferior(
+                inferior_args=["thread:new", "thread:new", "stop", "sleep:15"])
+        self.test_sequence.add_log_lines(
+            ["read packet: $QNonStop:1#00",
+             "send packet: $OK#00",
+             # stop is used to synchronize starting threads
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             {"direction": "send", "regex": "%Stop:T.*"},
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             "read packet: $?#00",
+             "send packet: $OK#00",
+             ], True)
+        self.expect_gdbremote_sequence()

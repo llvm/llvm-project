@@ -37,6 +37,12 @@ enum class Symbol : SymbolID {
 #undef NONTERMINAL
 };
 
+enum class Rule : RuleID {
+#define RULE(X, Y) X = Y,
+#include "CXXSymbols.inc"
+#undef RULE
+};
+
 enum class Extension : ExtensionID {
 #define EXTENSION(X, Y) X = Y,
 #include "CXXSymbols.inc"

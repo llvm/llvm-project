@@ -223,7 +223,7 @@ define amdgpu_ps float @add3_uniform_vgpr(float inreg %a, float inreg %b, float 
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; VI-NEXT:    v_add_f32_e32 v2, s4, v2
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v2, v0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: add3_uniform_vgpr:

@@ -64,7 +64,7 @@ define i32 @asmgoto() {
 ; RET-NEXT:      int3
 ; IJMP-NOT:      int3
 entry:
-  callbr void asm sideeffect "jmp $0", "X"(ptr blockaddress(@asmgoto, %d))
+  callbr void asm sideeffect "jmp $0", "!i"()
             to label %asm.fallthrough [label %d]
      ; The asm goto above produces a direct branch:
 

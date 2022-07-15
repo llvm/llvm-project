@@ -186,6 +186,8 @@ Bug Fixes
 - Clang now checks ODR violations when merging concepts from different modules.
   Note that this may possibly break existing code, and is done so intentionally.
   Fixes `Issue 56310 <https://github.com/llvm/llvm-project/issues/56310>`_.
+- Clang will now look through type sugar when checking a member function is a
+  move assignment operator. Fixes `Issue 56456 <https://github.com/llvm/llvm-project/issues/56456>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

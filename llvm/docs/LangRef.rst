@@ -4695,6 +4695,17 @@ output.
 Note that clobbering named registers that are also present in output
 constraints is not legal.
 
+Label constraints
+"""""""""""""""""
+
+A label constraint is indicated by a "``!``" prefix and typically used in the
+form ``"!i"``. Instead of consuming call arguments, label constraints consume
+indirect destination labels of ``callbr`` instructions.
+
+Label constraints can only be used in conjunction with ``callbr`` and the
+number of label constraints must match the number of indirect destination
+labels in the ``callbr`` instruction.
+
 
 Constraint Codes
 """"""""""""""""
@@ -8416,8 +8427,8 @@ This instruction requires several arguments:
 #. '``fallthrough label``': the label reached when the inline assembly's
    execution exits the bottom.
 #. '``indirect labels``': the labels reached when a callee transfers control
-   to a location other than the '``fallthrough label``'. The blockaddress
-   constant for these should also be in the list of '``function args``'.
+   to a location other than the '``fallthrough label``'. Label constraints
+   refer to these destinations.
 #. The optional :ref:`function attributes <fnattrs>` list.
 #. The optional :ref:`operand bundles <opbundles>` list.
 
@@ -8442,11 +8453,11 @@ Example:
 .. code-block:: llvm
 
       ; "asm goto" without output constraints.
-      callbr void asm "", "r,X"(i32 %x, i8 *blockaddress(@foo, %indirect))
+      callbr void asm "", "r,!i"(i32 %x)
                   to label %fallthrough [label %indirect]
 
       ; "asm goto" with output constraints.
-      <result> = callbr i32 asm "", "=r,r,X"(i32 %x, i8 *blockaddress(@foo, %indirect))
+      <result> = callbr i32 asm "", "=r,r,!i"(i32 %x)
                   to label %fallthrough [label %indirect]
 
 .. _i_resume:
@@ -17384,7 +17395,7 @@ the runtime scaling factor of ``subvec``. The elements of ``vec`` starting at
 ``idx`` are overwritten with ``subvec``. Elements ``idx`` through (``idx`` +
 num_elements(``subvec``) - 1) must be valid ``vec`` indices. If this condition
 cannot be determined statically but is false at runtime, then the result vector
-is undefined.
+is a :ref:`poison value <poisonvalues>`.
 
 
 '``llvm.vector.extract``' Intrinsic
@@ -17428,9 +17439,9 @@ vector length of the result type. If the result type is a scalable vector,
 ``idx`` is first scaled by the result type's runtime scaling factor. Elements
 ``idx`` through (``idx`` + num_elements(result_type) - 1) must be valid vector
 indices. If this condition cannot be determined statically but is false at
-runtime, then the result vector is undefined. The ``idx`` parameter must be a
-vector index constant type (for most targets this will be an integer pointer
-type).
+runtime, then the result vector is a :ref:`poison value <poisonvalues>`. The
+``idx`` parameter must be a vector index constant type (for most targets this
+will be an integer pointer type).
 
 '``llvm.experimental.vector.reverse``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

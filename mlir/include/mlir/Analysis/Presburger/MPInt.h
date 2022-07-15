@@ -23,13 +23,24 @@
 namespace mlir {
 namespace presburger {
 
+/// Redefine these functions, which operate on 64-bit ints, to also be part of
+/// the mlir::presburger namespace. This is useful because this file defines
+/// identically-named functions that operate on MPInts, which would otherwie
+/// become the only candidates of overload resolution when calling e.g. ceilDiv
+/// from the mlir::presburger namespace. So to access the 64-bit overloads, an
+/// explict call to mlir::ceilDiv would be required. These using declarations
+/// allow overload resolution to transparently call the right function.
+using ::mlir::ceilDiv;
+using ::mlir::floorDiv;
+using ::mlir::mod;
+
 namespace detail {
-// If builtin intrinsics for overflow-checked arithmetic are available,
-// use them. Otherwise, call through to LLVM's overflow-checked arithmetic
-// functionality. Those functions also have such macro-gated uses of intrinsics,
-// however they are not always_inlined, which is important for us to achieve
-// high-performance; calling the functions directly would result in a slowdown
-// of 1.15x.
+/// If builtin intrinsics for overflow-checked arithmetic are available,
+/// use them. Otherwise, call through to LLVM's overflow-checked arithmetic
+/// functionality. Those functions also have such macro-gated uses of intrinsics
+/// but they are not always_inlined, which is important for us to achieve
+/// high-performance; calling the functions directly would result in a slowdown
+/// of 1.15x.
 LLVM_ATTRIBUTE_ALWAYS_INLINE bool addOverflow(int64_t x, int64_t y,
                                               int64_t &result) {
 #if __has_builtin(__builtin_add_overflow)
@@ -195,6 +206,7 @@ public:
   friend MPInt gcdRange(ArrayRef<MPInt> range);
   friend MPInt ceilDiv(const MPInt &lhs, const MPInt &rhs);
   friend MPInt floorDiv(const MPInt &lhs, const MPInt &rhs);
+  // The operands must be non-negative for gcd.
   friend MPInt gcd(const MPInt &a, const MPInt &b);
   friend MPInt lcm(const MPInt &a, const MPInt &b);
   friend MPInt mod(const MPInt &lhs, const MPInt &rhs);
@@ -361,6 +373,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt ceilDiv(const MPInt &lhs, const MPInt &rhs) {
   if (LLVM_LIKELY(lhs.isSmall() && rhs.isSmall())) {
     if (LLVM_UNLIKELY(detail::divWouldOverflow(lhs.getSmall(), rhs.getSmall())))
       return -lhs;
+    return MPInt(ceilDiv(lhs.getSmall(), rhs.getSmall()));
   }
   return MPInt(ceilDiv(detail::SlowMPInt(lhs), detail::SlowMPInt(rhs)));
 }
@@ -369,7 +382,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt floorDiv(const MPInt &lhs,
   if (LLVM_LIKELY(lhs.isSmall() && rhs.isSmall())) {
     if (LLVM_UNLIKELY(detail::divWouldOverflow(lhs.getSmall(), rhs.getSmall())))
       return -lhs;
-    return MPInt(mlir::floorDiv(lhs.getSmall(), rhs.getSmall()));
+    return MPInt(floorDiv(lhs.getSmall(), rhs.getSmall()));
   }
   return MPInt(floorDiv(detail::SlowMPInt(lhs), detail::SlowMPInt(rhs)));
 }
@@ -377,11 +390,12 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt floorDiv(const MPInt &lhs,
 /// is always non-negative.
 LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt mod(const MPInt &lhs, const MPInt &rhs) {
   if (LLVM_LIKELY(lhs.isSmall() && rhs.isSmall()))
-    return MPInt(mlir::mod(lhs.getSmall(), rhs.getSmall()));
+    return MPInt(mod(lhs.getSmall(), rhs.getSmall()));
   return MPInt(mod(detail::SlowMPInt(lhs), detail::SlowMPInt(rhs)));
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt gcd(const MPInt &a, const MPInt &b) {
+  assert(a >= 0 && b >= 0 && "operands must be non-negative!");
   if (LLVM_LIKELY(a.isSmall() && b.isSmall()))
     return MPInt(llvm::greatestCommonDivisor(a.getSmall(), b.getSmall()));
   return MPInt(gcd(detail::SlowMPInt(a), detail::SlowMPInt(b)));

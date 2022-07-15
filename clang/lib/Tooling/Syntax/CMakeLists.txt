@@ -5,6 +5,7 @@ add_clang_library(clangToolingSyntax
   ComputeReplacements.cpp
   Nodes.cpp
   Mutations.cpp
+  TokenBufferTokenManager.cpp
   Synthesis.cpp
   Tokens.cpp
   Tree.cpp

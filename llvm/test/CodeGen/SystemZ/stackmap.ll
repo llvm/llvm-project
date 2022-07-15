@@ -84,14 +84,14 @@
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long   -1
+; CHECK-NEXT:   .long   65535
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long   -1
+; CHECK-NEXT:   .long   65535
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
