@@ -163,6 +163,8 @@ class GoogleTest(TestFormat):
                     res.append(l)
             assert False, f'gtest did not report the result for ' + test_name
 
+        found_failed_test = False
+
         with open(test.gtest_json_file, encoding='utf-8') as f:
             jf = json.load(f)
 
@@ -179,6 +181,7 @@ class GoogleTest(TestFormat):
                     header = f"Script:\n--\n%s --gtest_filter=%s\n--\n" % (
                         ' '.join(cmd), testname)
                     if 'failures' in testinfo:
+                        found_failed_test = True
                         output += header
                         test_out = get_test_stdout(testname)
                         if test_out:
@@ -189,6 +192,12 @@ class GoogleTest(TestFormat):
                     elif result != 'COMPLETED':
                         output += header
                         output += 'unresolved test result\n'
+
+        # In some situations, like running tests with sanitizers, all test passes but
+        # the shard could still fail due to memory issues.
+        if not found_failed_test:
+            output += f"\n{out}\n--\nexit: {exitCode}\n--\n"
+
         return lit.Test.FAIL, output
 
     def prepareCmd(self, cmd):
@@ -217,7 +226,11 @@ class GoogleTest(TestFormat):
         discovered_tests = remove_gtest(discovered_tests)
         gtests = [t for t in selected_tests if t.gtest_json_file]
         selected_tests = remove_gtest(selected_tests)
+        has_failure = False
         for test in gtests:
+            if test.isFailure():
+                has_failure = True
+
             # In case gtest has bugs such that no JSON file was emitted.
             if not os.path.exists(test.gtest_json_file):
                 selected_tests.append(test)
@@ -269,4 +282,4 @@ class GoogleTest(TestFormat):
                         discovered_tests.append(subtest)
             os.remove(test.gtest_json_file)
 
-        return selected_tests, discovered_tests
+        return selected_tests, discovered_tests, has_failure
