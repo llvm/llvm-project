@@ -106,6 +106,8 @@ add_libc_unittest(
     printf_test.cpp
   DEPENDS
     libc.src.stdio.printf
+    libc.src.fenv.fesetround
+    libc.src.__support.FPUtil.fputil
 )
 
 add_subdirectory(printf_core)
