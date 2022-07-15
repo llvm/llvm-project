@@ -228,14 +228,15 @@ class GoogleTest(TestFormat):
         selected_tests = remove_gtest(selected_tests)
         has_failure = False
         for test in gtests:
-            if test.isFailure():
-                has_failure = True
-
-            # In case gtest has bugs such that no JSON file was emitted.
+            # In case gtest has bugs such that no JSON file was emitted. Or, a selected
+            # test is not found.
             if not os.path.exists(test.gtest_json_file):
                 selected_tests.append(test)
                 discovered_tests.append(test)
                 continue
+
+            if test.isFailure():
+                has_failure = True
 
             start_time = test.result.start or 0.0
 
