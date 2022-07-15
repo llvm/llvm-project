@@ -165,6 +165,21 @@ public:
   // Terminals have names like "," (kw_comma) or "OPERATOR" (kw_operator).
   llvm::StringRef symbolName(SymbolID) const;
 
+  // Gets the mangled name for a terminal/nonterminal.
+  // Compared to names in the grammar,
+  //   nonterminals `ptr-declartor` becomes `ptr_declarator`;
+  //   terminal `,` becomes `comma`;
+  //   terminal `IDENTIFIER` becomes `identifier`;
+  //   terminal `INT` becomes `int`;
+  // NOTE: for nonterminals, the mangled name is the same as the cxx::Symbol
+  // enum class; for terminals, we deliberately stripped the `kw_` prefix in
+  // favor of the simplicity.
+  std::string mangleSymbol(SymbolID) const;
+  // Gets the mangled name for the rule.
+  // E.g. for the grammar rule `ptr-declarator := ptr-operator ptr-declarator`,
+  // it is `ptr_declarator_0ptr_operator_1ptr_declarator`.
+  std::string mangleRule(RuleID) const;
+
   // Lookup the SymbolID of the nonterminal symbol by Name.
   llvm::Optional<SymbolID> findNonterminal(llvm::StringRef Name) const;
 

@@ -195,6 +195,7 @@ public:
   friend MPInt gcdRange(ArrayRef<MPInt> range);
   friend MPInt ceilDiv(const MPInt &lhs, const MPInt &rhs);
   friend MPInt floorDiv(const MPInt &lhs, const MPInt &rhs);
+  // The operands must be non-negative for gcd.
   friend MPInt gcd(const MPInt &a, const MPInt &b);
   friend MPInt lcm(const MPInt &a, const MPInt &b);
   friend MPInt mod(const MPInt &lhs, const MPInt &rhs);
@@ -382,6 +383,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt mod(const MPInt &lhs, const MPInt &rhs) {
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt gcd(const MPInt &a, const MPInt &b) {
+  assert(a >= 0 && b >= 0 && "operands must be non-negative!");
   if (LLVM_LIKELY(a.isSmall() && b.isSmall()))
     return MPInt(llvm::greatestCommonDivisor(a.getSmall(), b.getSmall()));
   return MPInt(gcd(detail::SlowMPInt(a), detail::SlowMPInt(b)));
