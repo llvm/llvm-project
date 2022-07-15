@@ -858,7 +858,7 @@ public:
   }
 
   hsa_status_t addDeviceMemoryPool(hsa_amd_memory_pool_t MemoryPool,
-                                   int DeviceId) {
+                                   unsigned int DeviceId) {
     assert(DeviceId < DeviceFineGrainedMemoryPools.size() && "Error here.");
     uint32_t GlobalFlags = 0;
     hsa_status_t Err = hsa_amd_memory_pool_get_info(
@@ -878,7 +878,7 @@ public:
   }
 
   hsa_status_t setupDevicePools(const std::vector<hsa_agent_t> &Agents) {
-    for (int DeviceId = 0; DeviceId < Agents.size(); DeviceId++) {
+    for (unsigned int DeviceId = 0; DeviceId < Agents.size(); DeviceId++) {
       hsa_status_t Err = hsa::amd_agent_iterate_memory_pools(
           Agents[DeviceId], [&](hsa_amd_memory_pool_t MemoryPool) {
             hsa_status_t ValidStatus = core::isValidMemoryPool(MemoryPool);
@@ -942,7 +942,7 @@ public:
     return HSA_STATUS_ERROR;
   }
 
-  hsa_amd_memory_pool_t getDeviceMemoryPool(int DeviceId) {
+  hsa_amd_memory_pool_t getDeviceMemoryPool(unsigned int DeviceId) {
     assert(DeviceId >= 0 && DeviceId < DeviceCoarseGrainedMemoryPools.size() &&
            "Invalid device Id");
     return DeviceCoarseGrainedMemoryPools[DeviceId];
@@ -1205,7 +1205,7 @@ LaunchVals getLaunchVals(int WarpSize, EnvironmentVariables Env,
   int NumGroups = 0;
 
   int MaxTeams = Env.MaxTeamsDefault > 0 ? Env.MaxTeamsDefault : DeviceNumTeams;
-  if (MaxTeams > RTLDeviceInfoTy::HardTeamLimit)
+  if (MaxTeams > static_cast<int>(RTLDeviceInfoTy::HardTeamLimit))
     MaxTeams = RTLDeviceInfoTy::HardTeamLimit;
 
   if (print_kernel_trace & STARTUP_DETAILS) {
