@@ -61,18 +61,16 @@ exit:
   ret void
 }
 
-; FIXME: We could handle this case even though we don't know %M.  The
-; faulting instruction is already outside the loop!
 define void @icmp_zero_urem_invariant(i64 %N, i64 %M, ptr %p) {
 ; CHECK-LABEL: @icmp_zero_urem_invariant(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[N:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[VECTOR_BODY]] ], [ [[UREM]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i64 0, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 2
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[UREM]]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -2
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -192,10 +190,10 @@ define void @icmp_zero_urem_vscale_mul8(i64 %N, ptr %p) {
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[N:%.*]], [[MUL]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[VECTOR_BODY]] ], [ [[UREM]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i64 0, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 2
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[UREM]]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -2
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -226,10 +224,10 @@ define void @icmp_zero_urem_vscale_mul64(i64 %N, ptr %p) {
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[N:%.*]], [[MUL]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[VECTOR_BODY]] ], [ [[UREM]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i64 0, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 2
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[UREM]]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -2
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -259,10 +257,10 @@ define void @icmp_zero_urem_vscale_shl3(i64 %N, ptr %p) {
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[N:%.*]], [[SHL]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[VECTOR_BODY]] ], [ [[UREM]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i64 0, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 2
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[UREM]]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -2
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -292,10 +290,10 @@ define void @icmp_zero_urem_vscale_shl6(i64 %N, ptr %p) {
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[N:%.*]], [[SHL]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[VECTOR_BODY]] ], [ [[UREM]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i64 0, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 2
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[UREM]]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -2
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
