@@ -82,9 +82,17 @@ static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
     return false;
   if (hasChild(node, Node::Kind::AsyncSuspendResumePartialFunction))
     return false;
-  if (node->getFirstChild()->getKind() == Node::Kind::Static)
-    // Traverse forward to the static node, to handle static functions.
+
+  // Peel off layers over top of Function nodes.
+  switch (node->getFirstChild()->getKind()) {
+  case Node::Kind::Static:
+  case Node::Kind::ExplicitClosure:
     node = node->getFirstChild();
+    break;
+  default:
+    break;
+  }
+
   return childAtPath(node,
                      {Node::Kind::Function, Node::Kind::Type,
                       Node::Kind::FunctionType, Node::Kind::AsyncAnnotation}) ||
