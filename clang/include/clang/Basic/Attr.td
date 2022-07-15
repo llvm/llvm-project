@@ -4022,6 +4022,17 @@ def HLSLShader : InheritableAttr {
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
 }
 
+def HLSLResource : InheritableAttr {
+  let Spellings = [];
+  let Subjects = SubjectList<[Struct]>;
+  let LangOpts = [HLSL];
+  let Args = [EnumArgument<"ResourceType", "ResourceClass",
+                           ["SRV", "UAV", "CBuffer", "Sampler"],
+                           ["SRV", "UAV", "CBuffer", "Sampler"]
+                           >];
+  let Documentation = [InternalOnly];
+}
+
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;
