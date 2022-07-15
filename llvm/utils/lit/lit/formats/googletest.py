@@ -226,19 +226,16 @@ class GoogleTest(TestFormat):
         discovered_tests = remove_gtest(discovered_tests)
         gtests = [t for t in selected_tests if t.gtest_json_file]
         selected_tests = remove_gtest(selected_tests)
-        has_failure = False
         for test in gtests:
-            # In case gtest has bugs such that no JSON file was emitted. Or, a selected
-            # test is not found.
+            # In case gtest has bugs such that no JSON file was emitted.
             if not os.path.exists(test.gtest_json_file):
                 selected_tests.append(test)
                 discovered_tests.append(test)
                 continue
 
-            if test.isFailure():
-                has_failure = True
-
             start_time = test.result.start or 0.0
+
+            has_failure_in_shard = False
 
             # Load json file to retrieve results.
             with open(test.gtest_json_file, encoding='utf-8') as f:
@@ -262,6 +259,7 @@ class GoogleTest(TestFormat):
                         if testinfo['result'] == 'SKIPPED':
                             returnCode = lit.Test.SKIPPED
                         elif 'failures' in testinfo:
+                            has_failure_in_shard = True
                             returnCode = lit.Test.FAIL
                             output = header
                             for fail in testinfo['failures']:
@@ -283,4 +281,8 @@ class GoogleTest(TestFormat):
                         discovered_tests.append(subtest)
             os.remove(test.gtest_json_file)
 
-        return selected_tests, discovered_tests, has_failure
+            if not has_failure_in_shard and test.isFailure():
+                selected_tests.append(test)
+                discovered_tests.append(test)
+
+        return selected_tests, discovered_tests
