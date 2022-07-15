@@ -973,6 +973,8 @@ private:
                             SmallVector<Value> &newOutputOperands,
                             SmallVector<AffineMap> &newIndexingMaps) const {
     llvm::SmallDenseMap<unsigned, unsigned> origToNewPos;
+    llvm::SmallDenseMap<std::tuple<Value, AffineMap, Value>, unsigned>
+        dedupedOutpts;
     // If the op doesnt have tensor semantics, keep all the outputs as
     // preserved.
     if (!genericOp.hasTensorSemantics()) {
@@ -989,22 +991,45 @@ private:
       // - it is not used in the payload, and
       // - the corresponding indexing maps are not needed for loop bound
       //   computation.
+      auto yieldOp = cast<YieldOp>(genericOp.getBody()->getTerminator());
       for (auto outputOpOperand :
            llvm::enumerate(genericOp.getOutputOperands())) {
         Value result = genericOp.getResult(outputOpOperand.index());
-        if (result.use_empty() &&
-            !genericOp.payloadUsesValueFromOperand(outputOpOperand.value())) {
-          // Check if the opoperand can be dropped without affecting loop bound
-          // computation. Add the operand to the list of dropped op operand for
-          // checking. If it cannot be dropped, need to pop the value back.
-          droppedOpOperands.push_back(outputOpOperand.value());
-          if (genericOp.canOpOperandsBeDropped(droppedOpOperands)) {
+        AffineMap indexingMap =
+            genericOp.getTiedIndexingMap(outputOpOperand.value());
+        auto key =
+            std::make_tuple(outputOpOperand.value()->get(), indexingMap,
+                            yieldOp->getOperand(outputOpOperand.index()));
+
+        // Do not drop an out if its value is used in the payload.
+        if (!genericOp.payloadUsesValueFromOperand(outputOpOperand.value())) {
+          if (result.use_empty()) {
+            // Check if the opoperand can be dropped without affecting loop
+            // bound computation. Add the operand to the list of dropped op
+            // operand for checking. If it cannot be dropped, need to pop the
+            // value back.
+            droppedOpOperands.push_back(outputOpOperand.value());
+            if (genericOp.canOpOperandsBeDropped(droppedOpOperands)) {
+              continue;
+            }
+            droppedOpOperands.pop_back();
+          }
+
+          // The out operand can also be dropped if it is computed redundantly
+          // by another result, the conditions for that are
+          // - The same operand is used as the out operand
+          // - The same indexing map is used
+          // - The same yield value is used.
+          auto it = dedupedOutpts.find(key);
+          if (it != dedupedOutpts.end()) {
+            origToNewPos[outputOpOperand.index()] = it->second;
+            droppedOpOperands.push_back(outputOpOperand.value());
             continue;
           }
-          droppedOpOperands.pop_back();
         }
 
         origToNewPos[outputOpOperand.index()] = newOutputOperands.size();
+        dedupedOutpts[key] = newOutputOperands.size();
         newOutputOperands.push_back(outputOpOperand.value()->get());
         newIndexingMaps.push_back(
             genericOp.getTiedIndexingMap(outputOpOperand.value()));
