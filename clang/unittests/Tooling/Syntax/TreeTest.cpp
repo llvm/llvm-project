@@ -27,7 +27,7 @@ private:
     ChildrenWithRoles.reserve(Children.size());
     for (const auto *Child : Children) {
       ChildrenWithRoles.push_back(std::make_pair(
-          deepCopyExpandingMacros(*Arena, Child), NodeRole::Unknown));
+          deepCopyExpandingMacros(*Arena, *TM, Child), NodeRole::Unknown));
     }
     return clang::syntax::createTree(*Arena, ChildrenWithRoles,
                                      NodeKind::UnknownExpression);
@@ -108,29 +108,29 @@ INSTANTIATE_TEST_SUITE_P(TreeTests, TreeTest,
 
 TEST_P(TreeTest, FirstLeaf) {
   buildTree("", GetParam());
-  std::vector<const Node *> Leafs = {createLeaf(*Arena, tok::l_paren),
-                                     createLeaf(*Arena, tok::r_paren)};
+  std::vector<const Node *> Leafs = {createLeaf(*Arena, *TM, tok::l_paren),
+                                     createLeaf(*Arena, *TM, tok::r_paren)};
   for (const auto *Tree : generateAllTreesWithShape(Leafs, {3u})) {
     ASSERT_TRUE(Tree->findFirstLeaf() != nullptr);
-    EXPECT_EQ(Tree->findFirstLeaf()->getToken()->kind(), tok::l_paren);
+    EXPECT_EQ(TM->getToken(Tree->findFirstLeaf()->getTokenKey())->kind(), tok::l_paren);
   }
 }
 
 TEST_P(TreeTest, LastLeaf) {
   buildTree("", GetParam());
-  std::vector<const Node *> Leafs = {createLeaf(*Arena, tok::l_paren),
-                                     createLeaf(*Arena, tok::r_paren)};
+  std::vector<const Node *> Leafs = {createLeaf(*Arena, *TM, tok::l_paren),
+                                     createLeaf(*Arena, *TM, tok::r_paren)};
   for (const auto *Tree : generateAllTreesWithShape(Leafs, {3u})) {
     ASSERT_TRUE(Tree->findLastLeaf() != nullptr);
-    EXPECT_EQ(Tree->findLastLeaf()->getToken()->kind(), tok::r_paren);
+    EXPECT_EQ(TM->getToken(Tree->findLastLeaf()->getTokenKey())->kind(), tok::r_paren);
   }
 }
 
 TEST_F(TreeTest, Iterators) {
   buildTree("", allTestClangConfigs().front());
-  std::vector<Node *> Children = {createLeaf(*Arena, tok::identifier, "a"),
-                                  createLeaf(*Arena, tok::identifier, "b"),
-                                  createLeaf(*Arena, tok::identifier, "c")};
+  std::vector<Node *> Children = {createLeaf(*Arena, *TM, tok::identifier, "a"),
+                                  createLeaf(*Arena, *TM, tok::identifier, "b"),
+                                  createLeaf(*Arena, *TM, tok::identifier, "c")};
   auto *Tree = syntax::createTree(*Arena,
                                   {{Children[0], NodeRole::LeftHandSide},
                                    {Children[1], NodeRole::OperatorToken},
@@ -180,7 +180,7 @@ class ListTest : public SyntaxTreeTest {
 private:
   std::string dumpQuotedTokensOrNull(const Node *N) {
     return N ? "'" +
-                   StringRef(N->dumpTokens(Arena->getSourceManager()))
+                   StringRef(N->dumpTokens(*TM))
                        .trim()
                        .str() +
                    "'"
@@ -233,11 +233,11 @@ TEST_P(ListTest, List_Separated_WellFormed) {
   auto *List = dyn_cast<syntax::List>(syntax::createTree(
       *Arena,
       {
-          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "c"), NodeRole::ListElement},
       },
       NodeKind::CallArguments));
 
@@ -254,10 +254,10 @@ TEST_P(ListTest, List_Separated_MissingElement) {
   auto *List = dyn_cast<syntax::List>(syntax::createTree(
       *Arena,
       {
-          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "c"), NodeRole::ListElement},
       },
       NodeKind::CallArguments));
 
@@ -274,10 +274,10 @@ TEST_P(ListTest, List_Separated_MissingDelimiter) {
   auto *List = dyn_cast<syntax::List>(syntax::createTree(
       *Arena,
       {
-          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::identifier, "c"), NodeRole::ListElement},
       },
       NodeKind::CallArguments));
 
@@ -294,10 +294,10 @@ TEST_P(ListTest, List_Separated_MissingLastElement) {
   auto *List = dyn_cast<syntax::List>(syntax::createTree(
       *Arena,
       {
-          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::comma), NodeRole::ListDelimiter},
       },
       NodeKind::CallArguments));
 
@@ -317,12 +317,12 @@ TEST_P(ListTest, List_Terminated_WellFormed) {
   auto *List = dyn_cast<syntax::List>(syntax::createTree(
       *Arena,
       {
-          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
       },
       NodeKind::NestedNameSpecifier));
 
@@ -342,11 +342,11 @@ TEST_P(ListTest, List_Terminated_MissingElement) {
   auto *List = dyn_cast<syntax::List>(syntax::createTree(
       *Arena,
       {
-          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
       },
       NodeKind::NestedNameSpecifier));
 
@@ -366,11 +366,11 @@ TEST_P(ListTest, List_Terminated_MissingDelimiter) {
   auto *List = dyn_cast<syntax::List>(syntax::createTree(
       *Arena,
       {
-          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
       },
       NodeKind::NestedNameSpecifier));
 
@@ -390,11 +390,11 @@ TEST_P(ListTest, List_Terminated_MissingLastDelimiter) {
   auto *List = dyn_cast<syntax::List>(syntax::createTree(
       *Arena,
       {
-          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
-          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
-          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, *TM, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, *TM, tok::identifier, "c"), NodeRole::ListElement},
       },
       NodeKind::NestedNameSpecifier));
 

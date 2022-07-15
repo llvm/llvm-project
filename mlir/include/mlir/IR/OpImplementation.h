@@ -723,7 +723,7 @@ public:
     }
 
     /// Returns true if this switch has a value yet.
-    bool hasValue() const { return result.hasValue(); }
+    bool hasValue() const { return result.has_value(); }
 
     /// Return the result of the switch.
     LLVM_NODISCARD operator ResultT() {
