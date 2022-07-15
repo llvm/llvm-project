@@ -5406,7 +5406,7 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
   }
 
   LLVM_DEBUG(if (ForceVectorization && !ChosenFactor.Width.isScalar() &&
-                 ChosenFactor.Cost >= ScalarCost.Cost) dbgs()
+                 !isMoreProfitable(ChosenFactor, ScalarCost)) dbgs()
              << "LV: Vectorization seems to be not beneficial, "
              << "but was forced by a user.\n");
   LLVM_DEBUG(dbgs() << "LV: Selecting VF: " << ChosenFactor.Width << ".\n");
