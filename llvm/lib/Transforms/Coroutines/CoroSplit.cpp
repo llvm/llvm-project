@@ -1961,6 +1961,13 @@ static coro::Shape splitCoroutine(Function &F,
   return Shape;
 }
 
+/// Remove calls to llvm.coro.end in the original function.
+static void removeCoroEnds(const coro::Shape &Shape) {
+  for (auto End : Shape.CoroEnds) {
+    replaceCoroEnd(End, Shape, Shape.FramePtr, /*in resume*/ false, nullptr);
+  }
+}
+
 static void updateCallGraphAfterCoroutineSplit(
     LazyCallGraph::Node &N, const coro::Shape &Shape,
     const SmallVectorImpl<Function *> &Clones, LazyCallGraph::SCC &C,
@@ -1969,10 +1976,14 @@ static void updateCallGraphAfterCoroutineSplit(
   if (!Shape.CoroBegin)
     return;
 
-  for (llvm::AnyCoroEndInst *End : Shape.CoroEnds) {
-    auto &Context = End->getContext();
-    End->replaceAllUsesWith(ConstantInt::getFalse(Context));
-    End->eraseFromParent();
+  if (Shape.ABI != coro::ABI::Switch)
+    removeCoroEnds(Shape);
+  else {
+    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds) {
+      auto &Context = End->getContext();
+      End->replaceAllUsesWith(ConstantInt::getFalse(Context));
+      End->eraseFromParent();
+    }
   }
 
   if (!Clones.empty()) {
