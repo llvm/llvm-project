@@ -163,6 +163,8 @@ class GoogleTest(TestFormat):
                     res.append(l)
             assert False, f'gtest did not report the result for ' + test_name
 
+        found_failed_test = False
+
         with open(test.gtest_json_file, encoding='utf-8') as f:
             jf = json.load(f)
 
@@ -179,6 +181,7 @@ class GoogleTest(TestFormat):
                     header = f"Script:\n--\n%s --gtest_filter=%s\n--\n" % (
                         ' '.join(cmd), testname)
                     if 'failures' in testinfo:
+                        found_failed_test = True
                         output += header
                         test_out = get_test_stdout(testname)
                         if test_out:
@@ -189,6 +192,12 @@ class GoogleTest(TestFormat):
                     elif result != 'COMPLETED':
                         output += header
                         output += 'unresolved test result\n'
+
+        # In some situations, like running tests with sanitizers, all test passes but
+        # the shard could still fail due to memory issues.
+        if not found_failed_test:
+            output += f"\n{out}\n--\nexit: {exitCode}\n--\n"
+
         return lit.Test.FAIL, output
 
     def prepareCmd(self, cmd):
