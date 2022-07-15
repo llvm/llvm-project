@@ -612,18 +612,18 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP22:%.*]] = load i8*, i8** [[TMP18]], align 8
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !12
 // CHECK1-NEXT:    [[TMP24:%.*]] = bitcast i32* [[TMP21]] to i8*
-// CHECK1-NEXT:    [[TMP25:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP23]], i8* [[TMP22]], i8* [[TMP24]]) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP25:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP23]], i8* [[TMP22]], i8* [[TMP24]])
 // CHECK1-NEXT:    [[CONV_I:%.*]] = bitcast i8* [[TMP25]] to i32*
 // CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP27:%.*]] = load i16*, i16** [[TMP26]], align 8
 // CHECK1-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP14]], 2
 // CHECK1-NEXT:    [[TMP29:%.*]] = udiv exact i64 [[TMP28]], ptrtoint (i16* getelementptr (i16, i16* null, i32 1) to i64)
-// CHECK1-NEXT:    [[TMP30:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB1]], i32 [[TMP23]], i8* bitcast (i64* @{{reduction_size[.].+[.]}}) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP30:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB1]], i32 [[TMP23]], i8* bitcast (i64* @{{reduction_size[.].+[.]}})
 // CHECK1-NEXT:    [[TMP31:%.*]] = bitcast i8* [[TMP30]] to i64*
 // CHECK1-NEXT:    store i64 [[TMP29]], i64* [[TMP31]], align 8
 // CHECK1-NEXT:    [[TMP32:%.*]] = load i8*, i8** [[TMP19]], align 8
 // CHECK1-NEXT:    [[TMP33:%.*]] = bitcast i16* [[TMP27]] to i8*
-// CHECK1-NEXT:    [[TMP34:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP23]], i8* [[TMP32]], i8* [[TMP33]]) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP34:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP23]], i8* [[TMP32]], i8* [[TMP33]])
 // CHECK1-NEXT:    [[CONV2_I:%.*]] = bitcast i8* [[TMP34]] to i16*
 // CHECK1-NEXT:    [[TMP35:%.*]] = load i32, i32* [[CONV_I]], align 4
 // CHECK1-NEXT:    [[IDXPROM_I:%.*]] = sext i32 [[TMP35]] to i64
@@ -672,7 +672,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP12:%.*]] = load i32*, i32** [[TMP11]], align 8
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !24
 // CHECK1-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP12]] to i8*
-// CHECK1-NEXT:    [[TMP15:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP13]], i8* null, i8* [[TMP14]]) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP15:%.*]] = call i8* @__kmpc_task_reduction_get_th_data(i32 [[TMP13]], i8* null, i8* [[TMP14]])
 // CHECK1-NEXT:    [[CONV_I:%.*]] = bitcast i8* [[TMP15]] to i32*
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, i32* [[CONV_I]], align 4
 // CHECK1-NEXT:    [[INC_I:%.*]] = add nsw i32 [[TMP16]], 1

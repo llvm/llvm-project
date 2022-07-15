@@ -262,7 +262,7 @@ float32x4_t test_vcvtq_high_f32_bf16(bfloat16x8_t a) {
 // CHECK-A64-LABEL: @test_vcvt_bf16_f32(
 // CHECK-A64-NEXT:  entry:
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_V1_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float> [[A]]) #[[ATTR3:[0-9]+]]
+// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_V1_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float> [[A]])
 // CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_V2_I:%.*]] = bitcast <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_V1_I]] to <16 x i8>
 // CHECK-A64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_V1_I]], <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_V1_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-A64-NEXT:    ret <4 x bfloat> [[SHUFFLE_I]]
@@ -270,7 +270,7 @@ float32x4_t test_vcvtq_high_f32_bf16(bfloat16x8_t a) {
 // CHECK-A32-HARDFP-LABEL: @test_vcvt_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
 // CHECK-A32-HARDFP-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A32-HARDFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x bfloat> @llvm.arm.neon.vcvtfp2bf.v4bf16(<4 x float> [[A]]) #[[ATTR3:[0-9]+]]
+// CHECK-A32-HARDFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x bfloat> @llvm.arm.neon.vcvtfp2bf.v4bf16(<4 x float> [[A]])
 // CHECK-A32-HARDFP-NEXT:    ret <4 x bfloat> [[VCVTFP2BF1_I]]
 //
 // CHECK-A32-SOFTFP-LABEL: @test_vcvt_bf16_f32(
@@ -281,7 +281,7 @@ float32x4_t test_vcvtq_high_f32_bf16(bfloat16x8_t a) {
 // CHECK-A32-SOFTFP-NEXT:    [[RETVAL:%.*]] = alloca <4 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[COERCE:%.*]] = alloca <4 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A32-SOFTFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x i16> @llvm.arm.neon.vcvtfp2bf.v4i16(<4 x float> [[A]]) #[[ATTR3:[0-9]+]]
+// CHECK-A32-SOFTFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x i16> @llvm.arm.neon.vcvtfp2bf.v4i16(<4 x float> [[A]])
 // CHECK-A32-SOFTFP-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[VCVTFP2BF1_I]] to <4 x bfloat>
 // CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[TMP1]], <4 x bfloat>* [[RETVAL_I1]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP2:%.*]] = bitcast <4 x bfloat>* [[RETVAL_I1]] to <2 x i32>*
@@ -307,14 +307,14 @@ bfloat16x4_t test_vcvt_bf16_f32(float32x4_t a) {
 // CHECK-A64-LABEL: @test_vcvtq_low_bf16_f32(
 // CHECK-A64-NEXT:  entry:
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_V1_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float> [[A]]) #[[ATTR3]]
+// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_V1_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float> [[A]])
 // CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_V2_I:%.*]] = bitcast <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_V1_I]] to <16 x i8>
 // CHECK-A64-NEXT:    ret <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_V1_I]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvtq_low_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
 // CHECK-A32-HARDFP-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A32-HARDFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x bfloat> @llvm.arm.neon.vcvtfp2bf.v4bf16(<4 x float> [[A]]) #[[ATTR3]]
+// CHECK-A32-HARDFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x bfloat> @llvm.arm.neon.vcvtfp2bf.v4bf16(<4 x float> [[A]])
 // CHECK-A32-HARDFP-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x bfloat> zeroinitializer, <4 x bfloat> [[VCVTFP2BF1_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 // CHECK-A32-HARDFP-NEXT:    ret <8 x bfloat> [[SHUFFLE_I]]
 //
@@ -332,7 +332,7 @@ bfloat16x4_t test_vcvt_bf16_f32(float32x4_t a) {
 // CHECK-A32-SOFTFP-NEXT:    [[RETVAL:%.*]] = alloca <8 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[COERCE:%.*]] = alloca <8 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A32-SOFTFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x i16> @llvm.arm.neon.vcvtfp2bf.v4i16(<4 x float> [[A]]) #[[ATTR3]]
+// CHECK-A32-SOFTFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x i16> @llvm.arm.neon.vcvtfp2bf.v4i16(<4 x float> [[A]])
 // CHECK-A32-SOFTFP-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[VCVTFP2BF1_I]] to <4 x bfloat>
 // CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[TMP1]], <4 x bfloat>* [[RETVAL_I1]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP2:%.*]] = bitcast <4 x bfloat>* [[RETVAL_I1]] to <2 x i32>*
@@ -378,14 +378,14 @@ bfloat16x8_t test_vcvtq_low_bf16_f32(float32x4_t a) {
 // CHECK-A64-NEXT:  entry:
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = bitcast <8 x bfloat> [[INACTIVE:%.*]] to <16 x i8>
 // CHECK-A64-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A64-NEXT:    [[VCVTQ_HIGH_BF16_V2_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn2(<8 x bfloat> [[INACTIVE]], <4 x float> [[A]]) #[[ATTR3]]
+// CHECK-A64-NEXT:    [[VCVTQ_HIGH_BF16_V2_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn2(<8 x bfloat> [[INACTIVE]], <4 x float> [[A]])
 // CHECK-A64-NEXT:    [[VCVTQ_HIGH_BF16_V3_I:%.*]] = bitcast <8 x bfloat> [[VCVTQ_HIGH_BF16_V2_I]] to <16 x i8>
 // CHECK-A64-NEXT:    ret <8 x bfloat> [[VCVTQ_HIGH_BF16_V2_I]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvtq_high_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
 // CHECK-A32-HARDFP-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A32-HARDFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x bfloat> @llvm.arm.neon.vcvtfp2bf.v4bf16(<4 x float> [[A]]) #[[ATTR3]]
+// CHECK-A32-HARDFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x bfloat> @llvm.arm.neon.vcvtfp2bf.v4bf16(<4 x float> [[A]])
 // CHECK-A32-HARDFP-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[INACTIVE:%.*]], <8 x bfloat> [[INACTIVE]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-A32-HARDFP-NEXT:    [[SHUFFLE_I8:%.*]] = shufflevector <4 x bfloat> [[VCVTFP2BF1_I]], <4 x bfloat> [[SHUFFLE_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 // CHECK-A32-HARDFP-NEXT:    ret <8 x bfloat> [[SHUFFLE_I8]]
@@ -420,7 +420,7 @@ bfloat16x8_t test_vcvtq_low_bf16_f32(float32x4_t a) {
 // CHECK-A32-SOFTFP-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* [[TMP3]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[__P01_I:%.*]] = load <8 x bfloat>, <8 x bfloat>* [[__P0_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP4:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A32-SOFTFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x i16> @llvm.arm.neon.vcvtfp2bf.v4i16(<4 x float> [[A]]) #[[ATTR3]]
+// CHECK-A32-SOFTFP-NEXT:    [[VCVTFP2BF1_I:%.*]] = call <4 x i16> @llvm.arm.neon.vcvtfp2bf.v4i16(<4 x float> [[A]])
 // CHECK-A32-SOFTFP-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[VCVTFP2BF1_I]] to <4 x bfloat>
 // CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[TMP5]], <4 x bfloat>* [[RETVAL_I8]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP6:%.*]] = bitcast <4 x bfloat>* [[RETVAL_I8]] to <2 x i32>*
@@ -477,17 +477,17 @@ bfloat16x8_t test_vcvtq_high_bf16_f32(bfloat16x8_t inactive, float32x4_t a) {
 
 // CHECK-A64-LABEL: @test_vcvth_bf16_f32(
 // CHECK-A64-NEXT:  entry:
-// CHECK-A64-NEXT:    [[VCVTH_BF16_F32_I:%.*]] = call bfloat @llvm.aarch64.neon.bfcvt(float [[A:%.*]]) #[[ATTR3]]
+// CHECK-A64-NEXT:    [[VCVTH_BF16_F32_I:%.*]] = call bfloat @llvm.aarch64.neon.bfcvt(float [[A:%.*]])
 // CHECK-A64-NEXT:    ret bfloat [[VCVTH_BF16_F32_I]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvth_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
-// CHECK-A32-HARDFP-NEXT:    [[VCVTBFP2BF_I:%.*]] = call bfloat @llvm.arm.neon.vcvtbfp2bf(float [[A:%.*]]) #[[ATTR3]]
+// CHECK-A32-HARDFP-NEXT:    [[VCVTBFP2BF_I:%.*]] = call bfloat @llvm.arm.neon.vcvtbfp2bf(float [[A:%.*]])
 // CHECK-A32-HARDFP-NEXT:    ret bfloat [[VCVTBFP2BF_I]]
 //
 // CHECK-A32-SOFTFP-LABEL: @test_vcvth_bf16_f32(
 // CHECK-A32-SOFTFP-NEXT:  entry:
-// CHECK-A32-SOFTFP-NEXT:    [[VCVTBFP2BF_I:%.*]] = call bfloat @llvm.arm.neon.vcvtbfp2bf(float [[A:%.*]]) #[[ATTR3]]
+// CHECK-A32-SOFTFP-NEXT:    [[VCVTBFP2BF_I:%.*]] = call bfloat @llvm.arm.neon.vcvtbfp2bf(float [[A:%.*]])
 // CHECK-A32-SOFTFP-NEXT:    ret bfloat [[VCVTBFP2BF_I]]
 //
 bfloat16_t test_vcvth_bf16_f32(float32_t a) {

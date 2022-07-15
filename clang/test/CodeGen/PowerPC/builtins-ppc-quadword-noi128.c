@@ -14,7 +14,7 @@
 // CHECK-LE-NEXT:  entry:
 // CHECK-LE-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubcuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]]) #[[ATTR3:[0-9]+]]
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubcuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]])
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <1 x i128> [[TMP2]] to <16 x i8>
 // CHECK-LE-NEXT:    ret <16 x i8> [[TMP3]]
 //
@@ -22,7 +22,7 @@
 // CHECK-AIX-NEXT:  entry:
 // CHECK-AIX-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
-// CHECK-AIX-NEXT:    [[TMP2:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubcuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]]) #[[ATTR3:[0-9]+]]
+// CHECK-AIX-NEXT:    [[TMP2:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubcuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]])
 // CHECK-AIX-NEXT:    [[TMP3:%.*]] = bitcast <1 x i128> [[TMP2]] to <16 x i8>
 // CHECK-AIX-NEXT:    ret <16 x i8> [[TMP3]]
 //
@@ -34,7 +34,7 @@ vector unsigned char test_subc(vector unsigned char a, vector unsigned char b) {
 // CHECK-LE-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
-// CHECK-LE-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubecuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]]) #[[ATTR3]]
+// CHECK-LE-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubecuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]])
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = bitcast <1 x i128> [[TMP3]] to <16 x i8>
 // CHECK-LE-NEXT:    ret <16 x i8> [[TMP4]]
 //
@@ -43,7 +43,7 @@ vector unsigned char test_subc(vector unsigned char a, vector unsigned char b) {
 // CHECK-AIX-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
-// CHECK-AIX-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubecuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]]) #[[ATTR3]]
+// CHECK-AIX-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubecuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]])
 // CHECK-AIX-NEXT:    [[TMP4:%.*]] = bitcast <1 x i128> [[TMP3]] to <16 x i8>
 // CHECK-AIX-NEXT:    ret <16 x i8> [[TMP4]]
 //
@@ -56,7 +56,7 @@ vector unsigned char test_subec(vector unsigned char a, vector unsigned char b,
 // CHECK-LE-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
-// CHECK-LE-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubeuqm(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]]) #[[ATTR3]]
+// CHECK-LE-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubeuqm(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]])
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = bitcast <1 x i128> [[TMP3]] to <16 x i8>
 // CHECK-LE-NEXT:    ret <16 x i8> [[TMP4]]
 //
@@ -65,7 +65,7 @@ vector unsigned char test_subec(vector unsigned char a, vector unsigned char b,
 // CHECK-AIX-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
-// CHECK-AIX-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubeuqm(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]]) #[[ATTR3]]
+// CHECK-AIX-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vsubeuqm(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]])
 // CHECK-AIX-NEXT:    [[TMP4:%.*]] = bitcast <1 x i128> [[TMP3]] to <16 x i8>
 // CHECK-AIX-NEXT:    ret <16 x i8> [[TMP4]]
 //
@@ -101,7 +101,7 @@ vector unsigned char test_sub(vector unsigned char a, vector unsigned char b,
 // CHECK-LE-NEXT:  entry:
 // CHECK-LE-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddcuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]]) #[[ATTR3]]
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddcuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]])
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <1 x i128> [[TMP2]] to <16 x i8>
 // CHECK-LE-NEXT:    ret <16 x i8> [[TMP3]]
 //
@@ -109,7 +109,7 @@ vector unsigned char test_sub(vector unsigned char a, vector unsigned char b,
 // CHECK-AIX-NEXT:  entry:
 // CHECK-AIX-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
-// CHECK-AIX-NEXT:    [[TMP2:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddcuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]]) #[[ATTR3]]
+// CHECK-AIX-NEXT:    [[TMP2:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddcuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]])
 // CHECK-AIX-NEXT:    [[TMP3:%.*]] = bitcast <1 x i128> [[TMP2]] to <16 x i8>
 // CHECK-AIX-NEXT:    ret <16 x i8> [[TMP3]]
 //
@@ -121,7 +121,7 @@ vector unsigned char test_addc(vector unsigned char a, vector unsigned char b) {
 // CHECK-LE-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
-// CHECK-LE-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddecuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]]) #[[ATTR3]]
+// CHECK-LE-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddecuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]])
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = bitcast <1 x i128> [[TMP3]] to <16 x i8>
 // CHECK-LE-NEXT:    ret <16 x i8> [[TMP4]]
 //
@@ -130,7 +130,7 @@ vector unsigned char test_addc(vector unsigned char a, vector unsigned char b) {
 // CHECK-AIX-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
-// CHECK-AIX-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddecuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]]) #[[ATTR3]]
+// CHECK-AIX-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddecuq(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]])
 // CHECK-AIX-NEXT:    [[TMP4:%.*]] = bitcast <1 x i128> [[TMP3]] to <16 x i8>
 // CHECK-AIX-NEXT:    ret <16 x i8> [[TMP4]]
 //
@@ -143,7 +143,7 @@ vector unsigned char test_addec(vector unsigned char a, vector unsigned char b,
 // CHECK-LE-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
-// CHECK-LE-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddeuqm(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]]) #[[ATTR3]]
+// CHECK-LE-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddeuqm(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]])
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = bitcast <1 x i128> [[TMP3]] to <16 x i8>
 // CHECK-LE-NEXT:    ret <16 x i8> [[TMP4]]
 //
@@ -152,7 +152,7 @@ vector unsigned char test_addec(vector unsigned char a, vector unsigned char b,
 // CHECK-AIX-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
-// CHECK-AIX-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddeuqm(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]]) #[[ATTR3]]
+// CHECK-AIX-NEXT:    [[TMP3:%.*]] = tail call <1 x i128> @llvm.ppc.altivec.vaddeuqm(<1 x i128> [[TMP0]], <1 x i128> [[TMP1]], <1 x i128> [[TMP2]])
 // CHECK-AIX-NEXT:    [[TMP4:%.*]] = bitcast <1 x i128> [[TMP3]] to <16 x i8>
 // CHECK-AIX-NEXT:    ret <16 x i8> [[TMP4]]
 //

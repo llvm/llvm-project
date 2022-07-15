@@ -15,7 +15,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[C:%.*]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[C]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[C]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLAL_LOW3_I]]
 //
 float32x2_t test_vfmlal_low_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
@@ -27,7 +27,7 @@ float32x2_t test_vfmlal_low_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[C:%.*]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[C]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLSL_LOW3_I]]
 //
 float32x2_t test_vfmlsl_low_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
@@ -39,7 +39,7 @@ float32x2_t test_vfmlsl_low_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[C:%.*]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[C]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLAL_HIGH3_I]]
 //
 float32x2_t test_vfmlal_high_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
@@ -51,7 +51,7 @@ float32x2_t test_vfmlal_high_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[C:%.*]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[C]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLSL_HIGH3_I]]
 //
 float32x2_t test_vfmlsl_high_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
@@ -63,7 +63,7 @@ float32x2_t test_vfmlsl_high_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[C:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[C]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLAL_LOW3_I]]
 //
 float32x4_t test_vfmlalq_low_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
@@ -75,7 +75,7 @@ float32x4_t test_vfmlalq_low_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[C:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[C]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLSL_LOW3_I]]
 //
 float32x4_t test_vfmlslq_low_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
@@ -87,7 +87,7 @@ float32x4_t test_vfmlslq_low_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[C:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[C]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLAL_HIGH3_I]]
 //
 float32x4_t test_vfmlalq_high_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
@@ -99,7 +99,7 @@ float32x4_t test_vfmlalq_high_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[C:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[C]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[C]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLSL_HIGH3_I]]
 //
 float32x4_t test_vfmlslq_high_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
@@ -153,7 +153,7 @@ float32x4_t test_vfmlslq_high_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
 // CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP18:%.*]] = bitcast <4 x half> [[VECINIT31]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLAL_LOW3_I]]
 //
 float32x2_t test_vfmlal_lane_low_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
@@ -205,7 +205,7 @@ float32x2_t test_vfmlal_lane_low_f16(float32x2_t a, float16x4_t b, float16x4_t c
 // CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP18:%.*]] = bitcast <4 x half> [[VECINIT31]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLAL_HIGH3_I]]
 //
 float32x2_t test_vfmlal_lane_high_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
@@ -297,7 +297,7 @@ float32x2_t test_vfmlal_lane_high_f16(float32x2_t a, float16x4_t b, float16x4_t 
 // CHECK-NEXT:    [[TMP32:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP33:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast <8 x half> [[VECINIT71]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLAL_LOW3_I]]
 //
 float32x4_t test_vfmlalq_lane_low_f16(float32x4_t a, float16x8_t b, float16x4_t c) {
@@ -389,7 +389,7 @@ float32x4_t test_vfmlalq_lane_low_f16(float32x4_t a, float16x8_t b, float16x4_t 
 // CHECK-NEXT:    [[TMP32:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP33:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast <8 x half> [[VECINIT71]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLAL_HIGH3_I]]
 //
 float32x4_t test_vfmlalq_lane_high_f16(float32x4_t a, float16x8_t b, float16x4_t c) {
@@ -441,7 +441,7 @@ float32x4_t test_vfmlalq_lane_high_f16(float32x4_t a, float16x8_t b, float16x4_t
 // CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP18:%.*]] = bitcast <4 x half> [[VECINIT31]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLAL_LOW3_I]]
 //
 float32x2_t test_vfmlal_laneq_low_f16(float32x2_t a, float16x4_t b, float16x8_t c) {
@@ -493,7 +493,7 @@ float32x2_t test_vfmlal_laneq_low_f16(float32x2_t a, float16x4_t b, float16x8_t 
 // CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP18:%.*]] = bitcast <4 x half> [[VECINIT31]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlal2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLAL_HIGH3_I]]
 //
 float32x2_t test_vfmlal_laneq_high_f16(float32x2_t a, float16x4_t b, float16x8_t c) {
@@ -585,7 +585,7 @@ float32x2_t test_vfmlal_laneq_high_f16(float32x2_t a, float16x4_t b, float16x8_t
 // CHECK-NEXT:    [[TMP32:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP33:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast <8 x half> [[VECINIT71]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLAL_LOW3_I]]
 //
 float32x4_t test_vfmlalq_laneq_low_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
@@ -677,7 +677,7 @@ float32x4_t test_vfmlalq_laneq_low_f16(float32x4_t a, float16x8_t b, float16x8_t
 // CHECK-NEXT:    [[TMP32:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP33:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast <8 x half> [[VECINIT71]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLAL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlal2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLAL_HIGH3_I]]
 //
 float32x4_t test_vfmlalq_laneq_high_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
@@ -729,7 +729,7 @@ float32x4_t test_vfmlalq_laneq_high_f16(float32x4_t a, float16x8_t b, float16x8_
 // CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP18:%.*]] = bitcast <4 x half> [[VECINIT31]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLSL_LOW3_I]]
 //
 float32x2_t test_vfmlsl_lane_low_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
@@ -781,7 +781,7 @@ float32x2_t test_vfmlsl_lane_low_f16(float32x2_t a, float16x4_t b, float16x4_t c
 // CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP18:%.*]] = bitcast <4 x half> [[VECINIT31]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLSL_HIGH3_I]]
 //
 float32x2_t test_vfmlsl_lane_high_f16(float32x2_t a, float16x4_t b, float16x4_t c) {
@@ -873,7 +873,7 @@ float32x2_t test_vfmlsl_lane_high_f16(float32x2_t a, float16x4_t b, float16x4_t 
 // CHECK-NEXT:    [[TMP32:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP33:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast <8 x half> [[VECINIT71]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLSL_LOW3_I]]
 //
 float32x4_t test_vfmlslq_lane_low_f16(float32x4_t a, float16x8_t b, float16x4_t c) {
@@ -965,7 +965,7 @@ float32x4_t test_vfmlslq_lane_low_f16(float32x4_t a, float16x8_t b, float16x4_t 
 // CHECK-NEXT:    [[TMP32:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP33:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast <8 x half> [[VECINIT71]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLSL_HIGH3_I]]
 //
 float32x4_t test_vfmlslq_lane_high_f16(float32x4_t a, float16x8_t b, float16x4_t c) {
@@ -1017,7 +1017,7 @@ float32x4_t test_vfmlslq_lane_high_f16(float32x4_t a, float16x8_t b, float16x4_t
 // CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP18:%.*]] = bitcast <4 x half> [[VECINIT31]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLSL_LOW3_I]]
 //
 float32x2_t test_vfmlsl_laneq_low_f16(float32x2_t a, float16x4_t b, float16x8_t c) {
@@ -1069,7 +1069,7 @@ float32x2_t test_vfmlsl_laneq_low_f16(float32x2_t a, float16x4_t b, float16x8_t 
 // CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x float> [[A:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x half> [[B:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP18:%.*]] = bitcast <4 x half> [[VECINIT31]] to <8 x i8>
-// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fmlsl2.v2f32.v4f16(<2 x float> [[A]], <4 x half> [[B]], <4 x half> [[VECINIT31]])
 // CHECK-NEXT:    ret <2 x float> [[VFMLSL_HIGH3_I]]
 //
 float32x2_t test_vfmlsl_laneq_high_f16(float32x2_t a, float16x4_t b, float16x8_t c) {
@@ -1161,7 +1161,7 @@ float32x2_t test_vfmlsl_laneq_high_f16(float32x2_t a, float16x4_t b, float16x8_t
 // CHECK-NEXT:    [[TMP32:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP33:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast <8 x half> [[VECINIT71]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_LOW3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLSL_LOW3_I]]
 //
 float32x4_t test_vfmlslq_laneq_low_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
@@ -1253,7 +1253,7 @@ float32x4_t test_vfmlslq_laneq_low_f16(float32x4_t a, float16x8_t b, float16x8_t
 // CHECK-NEXT:    [[TMP32:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP33:%.*]] = bitcast <8 x half> [[B:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP34:%.*]] = bitcast <8 x half> [[VECINIT71]] to <16 x i8>
-// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VFMLSL_HIGH3_I:%.*]] = call <4 x float> @llvm.aarch64.neon.fmlsl2.v4f32.v8f16(<4 x float> [[A]], <8 x half> [[B]], <8 x half> [[VECINIT71]])
 // CHECK-NEXT:    ret <4 x float> [[VFMLSL_HIGH3_I]]
 //
 float32x4_t test_vfmlslq_laneq_high_f16(float32x4_t a, float16x8_t b, float16x8_t c) {

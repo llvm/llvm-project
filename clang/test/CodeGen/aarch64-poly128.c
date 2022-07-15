@@ -60,7 +60,7 @@ void test_ld_st_p128(poly128_t * ptr) {
 // CHECK-LABEL: define {{[^@]+}}@test_vmull_p64
 // CHECK-SAME: (i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMULL_P64_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 [[A]], i64 [[B]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    [[VMULL_P64_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 [[A]], i64 [[B]])
 // CHECK-NEXT:    [[VMULL_P641_I:%.*]] = bitcast <16 x i8> [[VMULL_P64_I]] to i128
 // CHECK-NEXT:    ret i128 [[VMULL_P641_I]]
 //
@@ -75,7 +75,7 @@ poly128_t test_vmull_p64(poly64_t a, poly64_t b) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[SHUFFLE_I5]] to i64
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[B]], <2 x i64> [[B]], <1 x i32> <i32 1>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to i64
-// CHECK-NEXT:    [[VMULL_P64_I_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 [[TMP0]], i64 [[TMP1]]) #[[ATTR3]]
+// CHECK-NEXT:    [[VMULL_P64_I_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 [[TMP0]], i64 [[TMP1]])
 // CHECK-NEXT:    [[VMULL_P641_I_I:%.*]] = bitcast <16 x i8> [[VMULL_P64_I_I]] to i128
 // CHECK-NEXT:    ret i128 [[VMULL_P641_I_I]]
 //

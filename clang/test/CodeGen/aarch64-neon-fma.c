@@ -292,7 +292,7 @@ float32x4_t test_vmlsq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[B]] to <16 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[VECINIT1_I]] to <16 x i8>
-// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[B]], <2 x double> [[VECINIT1_I]], <2 x double> [[A]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[B]], <2 x double> [[VECINIT1_I]], <2 x double> [[A]])
 // CHECK-NEXT:    ret <2 x double> [[TMP3]]
 //
 float64x2_t test_vfmaq_n_f64(float64x2_t a, float64x2_t b, float64_t c) {
@@ -308,7 +308,7 @@ float64x2_t test_vfmaq_n_f64(float64x2_t a, float64x2_t b, float64_t c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[FNEG_I]] to <16 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[VECINIT1_I]] to <16 x i8>
-// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[FNEG_I]], <2 x double> [[VECINIT1_I]], <2 x double> [[A]]) #[[ATTR3]]
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[FNEG_I]], <2 x double> [[VECINIT1_I]], <2 x double> [[A]])
 // CHECK-NEXT:    ret <2 x double> [[TMP3]]
 //
 float64x2_t test_vfmsq_n_f64(float64x2_t a, float64x2_t b, float64_t c) {
