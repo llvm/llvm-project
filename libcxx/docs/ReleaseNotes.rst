@@ -63,6 +63,7 @@ Implemented Papers
 - P2418R2 - Add support for ``std::generator``-like types to ``std::format``
 - LWG3659 - Consider ``ATOMIC_FLAG_INIT`` undeprecation
 - P1423R3 - ``char8_t`` backward compatibility remediation
+- P2508R1 - Exposing ``std::basic-format-string``
 
 - Marked the following papers as "Complete" (note that some of those might have
   been implemented in a previous release but not marked as such):
