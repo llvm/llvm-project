@@ -511,6 +511,9 @@ public:
   /// Minimum time granularity (in microseconds) traced by time profiler.
   unsigned TimeTraceGranularity;
 
+  /// Path which stores the output files for -ftime-trace
+  std::string TimeTracePath;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
