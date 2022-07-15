@@ -10458,6 +10458,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("class {\n"
                "}* ptr;",
                Style);
+  // Don't confuse a multiplication after a brace-initialized expression with
+  // a class pointer.
+  verifyFormat("int i = int{42} * 34;", Style);
   verifyFormat("struct {\n"
                "}&& ptr = {};",
                Style);
