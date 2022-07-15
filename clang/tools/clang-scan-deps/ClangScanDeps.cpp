@@ -207,6 +207,12 @@ llvm::cl::opt<std::string> ModuleName(
     llvm::cl::desc("the module of which the dependencies are to be computed"),
     llvm::cl::cat(DependencyScannerCategory));
 
+llvm::cl::list<std::string> ModuleDepTargets(
+    "dependency-target",
+    llvm::cl::desc("With '-generate-modules-path-args', the names of "
+                   "dependency targets for the dependency file"),
+    llvm::cl::cat(DependencyScannerCategory));
+
 enum ResourceDirRecipeKind {
   RDRK_ModifyCompilerPath,
   RDRK_InvokeCompiler,
@@ -493,11 +499,12 @@ public:
       Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
     }
 
-    ID.CommandLine = GenerateModulesPathArgs
-                         ? FD.getCommandLine(
-                               [&](ModuleID MID) { return lookupPCMPath(MID); })
-                         : FD.getCommandLineWithoutModulePaths();
-
+    ID.CommandLine =
+        GenerateModulesPathArgs
+            ? FD.getCommandLine([&](const ModuleID &MID, ModuleOutputKind MOK) {
+                return lookupModuleOutput(MID, MOK);
+              })
+            : FD.getCommandLineWithoutModulePaths();
     Inputs.push_back(std::move(ID));
   }
 
@@ -530,7 +537,9 @@ public:
           {"command-line",
            GenerateModulesPathArgs
                ? MD.getCanonicalCommandLine(
-                     [&](ModuleID MID) { return lookupPCMPath(MID); })
+                     [&](const ModuleID &MID, ModuleOutputKind MOK) {
+                       return lookupModuleOutput(MID, MOK);
+                     })
                : MD.getCanonicalCommandLineWithoutModulePaths()},
       };
       OutModules.push_back(std::move(O));
@@ -559,11 +568,23 @@ public:
   }
 
 private:
-  StringRef lookupPCMPath(ModuleID MID) {
+  std::string lookupModuleOutput(const ModuleID &MID, ModuleOutputKind MOK) {
+    // Cache the PCM path, since it will be queried repeatedly for each module.
+    // The other outputs are only queried once during getCanonicalCommandLine.
     auto PCMPath = PCMPaths.insert({MID, ""});
     if (PCMPath.second)
       PCMPath.first->second = constructPCMPath(MID);
-    return PCMPath.first->second;
+    switch (MOK) {
+    case ModuleOutputKind::ModuleFile:
+      return PCMPath.first->second;
+    case ModuleOutputKind::DependencyFile:
+      return PCMPath.first->second + ".d";
+    case ModuleOutputKind::DependencyTargets:
+      // Null-separate the list of targets.
+      return join(ModuleDepTargets, StringRef("\0", 1));
+    case ModuleOutputKind::DiagnosticSerializationFile:
+      return PCMPath.first->second + ".diag";
+    }
   }
 
   /// Construct a path for the explicitly built PCM.

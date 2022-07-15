@@ -122,6 +122,21 @@ FilePathAndRange("filepath",
 static cl::opt<std::string>
     ModuleName("module-name", cl::desc("name of the module, of which we are "
                                        "getting file and module dependencies"));
+
+static cl::opt<std::string>
+    OutputDir("output-dir", cl::desc("directory for module output files "
+                                     "(defaults 'module-outputs')"));
+static cl::opt<bool> UseScanDepsV2("scandeps-v2",
+                                   cl::desc("use the old v2 scandeps API"));
+static cl::opt<bool>
+    SerializeDiags("serialize-diagnostics",
+                   cl::desc("module builds should serialize diagnostics"));
+static cl::opt<bool>
+    DependencyFile("dependency-file",
+                   cl::desc("module builds should write dependency files"));
+static cl::list<std::string> DependencyTargets(
+    "dependency-target",
+    cl::desc("module builds should use the given dependency target(s)"));
 }
 } // anonymous namespace
 
@@ -657,7 +672,11 @@ static void printSymbolNameAndUSR(const clang::Module *Mod, raw_ostream &OS) {
   generateFullUSRForModule(Mod, OS);
 }
 
-static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory) {
+static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
+                    bool SerializeDiags, bool DependencyFile,
+                    ArrayRef<std::string> DepTargets, bool UseV2API,
+                    std::string OutputPath,
+                    Optional<std::string> ModuleName = None) {
   CXDependencyScannerService Service =
       clang_experimental_DependencyScannerService_create_v0(
           CXDependencyMode_Full);
@@ -694,82 +713,61 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory) {
   auto CB =
       functionObjectToCCallbackRef<void(CXModuleDependencySet *)>(Callback);
 
-  CXFileDependencies *Result =
-      clang_experimental_DependencyScannerWorker_getFileDependencies_v2(
-          Worker, Args.size(), Args.data(), WorkingDirectory.c_str(),
-          CB.Callback, CB.Context, &Error);
-  if (!Result) {
-    llvm::errs() << "error: failed to get dependencies\n";
-    llvm::errs() << clang_getCString(Error) << "\n";
-    clang_disposeString(Error);
-    return 1;
+  auto LookupOutput = [&](const char *ModuleName, const char *ContextHash,
+                          CXOutputKind Kind, char *Output, size_t MaxLen) {
+    std::string Out = OutputPath + "/" + ModuleName + "_" + ContextHash;
+    switch (Kind) {
+    case CXOutputKind_ModuleFile:
+      Out += ".pcm";
+      break;
+    case CXOutputKind_Dependencies:
+      if (!DependencyFile)
+        return (size_t)0;
+      Out += ".d";
+      break;
+    case CXOutputKind_DependenciesTarget:
+      if (DepTargets.empty())
+        return (size_t)0;
+      Out = join(DepTargets, StringRef("\0", 1));
+      break;
+    case CXOutputKind_SerializedDiagnostics:
+      if (!SerializeDiags)
+        return (size_t)0;
+      Out += ".diag";
+      break;
+    }
+    if (0 < Out.size() && Out.size() <= MaxLen)
+      memcpy(Output, Out.data(), Out.size());
+    return Out.size();
+  };
+
+  auto LookupOutputCB = functionObjectToCCallbackRef<size_t(
+      const char *ModuleName, const char *ContextHash, CXOutputKind Kind,
+      char *Output, size_t MaxLen)>(LookupOutput);
+
+
+  CXFileDependencies *Result = nullptr;
+  if (UseV2API) {
+    if (ModuleName) {
+      Result =
+          clang_experimental_DependencyScannerWorker_getDependenciesByModuleName_v0(
+              Worker, Args.size(), Args.data(), ModuleName->c_str(),
+              WorkingDirectory.c_str(), CB.Callback, CB.Context, &Error);
+    } else {
+      Result =
+          clang_experimental_DependencyScannerWorker_getFileDependencies_v2(
+              Worker, Args.size(), Args.data(), WorkingDirectory.c_str(),
+              CB.Callback, CB.Context, &Error);
+    }
+  } else {
+    // Current API
+    Result = clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
+        Worker, Args.size(), Args.data(),
+        ModuleName ? ModuleName->c_str() : nullptr, WorkingDirectory.c_str(),
+        CB.Context, CB.Callback, LookupOutputCB.Context,
+        LookupOutputCB.Callback, /*Options=*/0, &Error);
   }
-  llvm::outs() << "dependencies:\n";
-  llvm::outs() << "  context-hash: " << clang_getCString(Result->ContextHash)
-               << "\n"
-               << "  module-deps:\n";
-  for (const auto &ModuleName : llvm::makeArrayRef(Result->ModuleDeps->Strings,
-                                                   Result->ModuleDeps->Count))
-    llvm::outs() << "    " << clang_getCString(ModuleName) << "\n";
-  llvm::outs() << "  file-deps:\n";
-  for (const auto &FileName :
-       llvm::makeArrayRef(Result->FileDeps->Strings, Result->FileDeps->Count))
-    llvm::outs() << "    " << clang_getCString(FileName) << "\n";
-  llvm::outs() << "  build-args:";
-  for (const auto &Arg : llvm::makeArrayRef(Result->BuildArguments->Strings,
-                                            Result->BuildArguments->Count))
-    llvm::outs() << " " << clang_getCString(Arg);
-  llvm::outs() << "\n";
 
-  clang_experimental_FileDependencies_dispose(Result);
-  clang_experimental_DependencyScannerWorker_dispose_v0(Worker);
-  clang_experimental_DependencyScannerService_dispose_v0(Service);
-  return 0;
-}
-
-static int scanDepsByModuleName(ArrayRef<const char *> Args,
-                                std::string WorkingDirectory,
-                                std::string ModuleName) {
-  CXDependencyScannerService Service =
-      clang_experimental_DependencyScannerService_create_v0(
-          CXDependencyMode_Full);
-  CXDependencyScannerWorker Worker =
-      clang_experimental_DependencyScannerWorker_create_v0(Service);
-  CXString Error;
-
-  auto Callback = [&](CXModuleDependencySet *MDS) {
-    llvm::outs() << "modules:\n";
-    for (const auto &M : llvm::makeArrayRef(MDS->Modules, MDS->Count)) {
-      llvm::outs() << "  module:\n"
-                   << "    name: " << clang_getCString(M.Name) << "\n"
-                   << "    context-hash: " << clang_getCString(M.ContextHash)
-                   << "\n"
-                   << "    module-map-path: "
-                   << clang_getCString(M.ModuleMapPath) << "\n"
-                   << "    module-deps:\n";
-      for (const auto &ModuleName :
-           llvm::makeArrayRef(M.ModuleDeps->Strings, M.ModuleDeps->Count))
-        llvm::outs() << "      " << clang_getCString(ModuleName) << "\n";
-      llvm::outs() << "    file-deps:\n";
-      for (const auto &FileName :
-           llvm::makeArrayRef(M.FileDeps->Strings, M.FileDeps->Count))
-        llvm::outs() << "      " << clang_getCString(FileName) << "\n";
-      llvm::outs() << "    build-args:";
-      for (const auto &Arg : llvm::makeArrayRef(M.BuildArguments->Strings,
-                                                M.BuildArguments->Count))
-        llvm::outs() << " " << clang_getCString(Arg);
-      llvm::outs() << "\n";
-    }
-    clang_experimental_ModuleDependencySet_dispose(MDS);
-  };
-
-  auto CB =
-      functionObjectToCCallbackRef<void(CXModuleDependencySet *)>(Callback);
-
-  CXFileDependencies *Result =
-      clang_experimental_DependencyScannerWorker_getDependenciesByModuleName_v0(
-          Worker, Args.size(), Args.data(), ModuleName.c_str(),
-          WorkingDirectory.c_str(), CB.Callback, CB.Context, &Error);
   if (!Result) {
     llvm::errs() << "error: failed to get dependencies\n";
     llvm::errs() << clang_getCString(Error) << "\n";
@@ -1105,7 +1103,9 @@ int indextest_core_main(int argc, const char **argv) {
       errs() << "error: missing working directory\n";
       return 1;
     }
-    return scanDeps(CompArgs, options::InputFiles[0]);
+    return scanDeps(CompArgs, options::InputFiles[0], options::SerializeDiags,
+                    options::DependencyFile, options::DependencyTargets,
+                    options::UseScanDepsV2, options::OutputDir);
   }
 
   if (options::Action == ActionType::ScanDepsByModuleName) {
@@ -1118,8 +1118,10 @@ int indextest_core_main(int argc, const char **argv) {
       errs() << "error: missing module name\n";
       return 1;
     }
-    return scanDepsByModuleName(CompArgs, options::InputFiles[0],
-                                options::ModuleName);
+    return scanDeps(CompArgs, options::InputFiles[0], options::SerializeDiags,
+                    options::DependencyFile, options::DependencyTargets,
+                    options::UseScanDepsV2, options::OutputDir,
+                    options::ModuleName);
   }
 
   if (options::Action == ActionType::WatchDir) {

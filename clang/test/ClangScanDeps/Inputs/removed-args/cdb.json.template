@@ -1,7 +1,7 @@
 [
   {
     "directory": "DIR",
-    "command": "clang -fsyntax-only DIR/tu.c -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -include DIR/header.h -grecord-command-line -o DIR/tu.o",
+    "command": "clang -fsyntax-only DIR/tu.c -fmodules -fimplicit-module-maps -fmodules-validate-once-per-build-session -fbuild-session-file=DIR/build-session -fmodules-prune-interval=123 -fmodules-prune-after=123 -fmodules-cache-path=DIR/cache -include DIR/header.h -grecord-command-line -o DIR/tu.o -serialize-diagnostics DIR/tu.diag -MT tu -MD -MF DIR/tu.d",
     "file": "DIR/tu.c"
   }
 ]

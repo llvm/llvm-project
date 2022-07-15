@@ -16,11 +16,14 @@ namespace tooling {
 namespace dependencies {
 
 std::vector<std::string> FullDependencies::getCommandLine(
-    std::function<StringRef(ModuleID)> LookupPCMPath) const {
+    llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
+        LookupModuleOutput) const {
   std::vector<std::string> Ret = getCommandLineWithoutModulePaths();
 
-  for (ModuleID MID : ClangModuleDeps)
-    Ret.push_back(("-fmodule-file=" + LookupPCMPath(MID)).str());
+  for (ModuleID MID : ClangModuleDeps) {
+    auto PCM = LookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
+    Ret.push_back("-fmodule-file=" + PCM);
+  }
 
   return Ret;
 }
@@ -34,13 +37,16 @@ FullDependencies::getCommandLineWithoutModulePaths() const {
   for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
     Args.push_back("-fmodule-file=" + PMD.PCMFile);
 
-  // This argument is unused in explicit compiles.
-  llvm::erase_if(Args, [](const std::string &Arg) {
-    return Arg.find("-fmodules-cache-path=") == 0;
+  // These arguments are unused in explicit compiles.
+  llvm::erase_if(Args, [](StringRef Arg) {
+    if (Arg.consume_front("-fmodules-")) {
+      return Arg.startswith("cache-path=") ||
+             Arg.startswith("prune-interval=") ||
+             Arg.startswith("prune-after=") ||
+             Arg == "validate-once-per-build-session";
+    }
+    return Arg.startswith("-fbuild-session-file=");
   });
-
-  // TODO: Filter out the remaining implicit modules leftovers
-  // (e.g. "-fmodules-prune-interval=" or "-fmodules-prune-after=").
 
   return Args;
 }
@@ -268,7 +274,7 @@ DependencyScanningTool::getFullDependencies(
   private:
     std::vector<std::string> Dependencies;
     std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
-    std::map<std::string, ModuleDeps> ClangModuleDeps;
+    llvm::MapVector<std::string, ModuleDeps, llvm::StringMap<unsigned>> ClangModuleDeps;
     std::string ContextHash;
     std::vector<std::string> OutputPaths;
     const llvm::StringSet<> &AlreadySeen;
