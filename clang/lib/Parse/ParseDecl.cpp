@@ -1787,6 +1787,11 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     }
     return ParseSimpleDeclaration(Context, DeclEnd, DeclAttrs, DeclSpecAttrs,
                                   true, nullptr, DeclSpecStart);
+
+  case tok::kw_cbuffer:
+  case tok::kw_tbuffer:
+    SingleDecl = ParseHLSLBuffer(DeclEnd);
+    break;
   case tok::kw_namespace:
     ProhibitAttributes(DeclAttrs);
     ProhibitAttributes(DeclSpecAttrs);
