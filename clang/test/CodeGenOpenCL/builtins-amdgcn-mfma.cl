@@ -348,4 +348,60 @@ void test_smfmac_i32_32x32x32_i8(global v16i* out, v2i a, v4i b, v16i c, int idx
 {
   *out = __builtin_amdgcn_smfmac_i32_32x32x32_i8(a, b, c, idx, 0, 0);
 }
+
+// CHECK-GFX940-LABEL: @test_smfmac_f32_16x16x64_bf8_bf8
+// CHECK-GFX940: call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf8.bf8(<2 x i32> %a, <4 x i32> %b, <4 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_16x16x64_bf8_bf8(global v4f* out, v2i a, v4i b, v4f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf8_bf8(a, b, c, idx, 0, 0);
+}
+
+// CHECK-GFX940-LABEL: @test_smfmac_f32_16x16x64_bf8_fp8
+// CHECK-GFX940: call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf8.fp8(<2 x i32> %a, <4 x i32> %b, <4 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_16x16x64_bf8_fp8(global v4f* out, v2i a, v4i b, v4f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_bf8_fp8(a, b, c, idx, 0, 0);
+}
+
+// CHECK-GFX940-LABEL: @test_smfmac_f32_16x16x64_fp8_bf8
+// CHECK-GFX940: call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.fp8.bf8(<2 x i32> %a, <4 x i32> %b, <4 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_16x16x64_fp8_bf8(global v4f* out, v2i a, v4i b, v4f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_fp8_bf8(a, b, c, idx, 0, 0);
+}
+
+// CHECK-GFX940-LABEL: @test_smfmac_f32_16x16x64_fp8_fp8
+// CHECK-GFX940: call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.fp8.fp8(<2 x i32> %a, <4 x i32> %b, <4 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_16x16x64_fp8_fp8(global v4f* out, v2i a, v4i b, v4f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_16x16x64_fp8_fp8(a, b, c, idx, 0, 0);
+}
+
+// CHECK-GFX940-LABEL: @test_smfmac_f32_32x32x32_bf8_bf8
+// CHECK-GFX940: call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.bf8.bf8(<2 x i32> %a, <4 x i32> %b, <16 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_32x32x32_bf8_bf8(global v16f* out, v2i a, v4i b, v16f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_bf8_bf8(a, b, c, idx, 0, 0);
+}
+
+// CHECK-GFX940-LABEL: @test_smfmac_f32_32x32x32_bf8_fp8
+// CHECK-GFX940: call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.bf8.fp8(<2 x i32> %a, <4 x i32> %b, <16 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_32x32x32_bf8_fp8(global v16f* out, v2i a, v4i b, v16f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8(a, b, c, idx, 0, 0);
+}
+
+// CHECK-GFX940-LABEL: @test_smfmac_f32_32x32x32_fp8_bf8
+// CHECK-GFX940: call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.fp8.bf8(<2 x i32> %a, <4 x i32> %b, <16 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_32x32x32_fp8_bf8(global v16f* out, v2i a, v4i b, v16f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8(a, b, c, idx, 0, 0);
+}
+
+// CHECK-GFX940-LABEL: @test_smfmac_f32_32x32x32_fp8_fp8
+// CHECK-GFX940: call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.fp8.fp8(<2 x i32> %a, <4 x i32> %b, <16 x float> %c, i32 %idx, i32 0, i32 0)
+void test_smfmac_f32_32x32x32_fp8_fp8(global v16f* out, v2i a, v4i b, v16f c, int idx)
+{
+  *out = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8(a, b, c, idx, 0, 0);
+}
 #endif // MFMA_GFX940_TESTS
