@@ -297,6 +297,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_vCont_then_partial_stop_run_both(self):
         self.vCont_then_partial_stop_test(True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_stdio(self):
         self.build()
