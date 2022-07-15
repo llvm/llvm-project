@@ -50,7 +50,7 @@ json_filename = os.environ['GTEST_OUTPUT'].split(':', 1)[1]
 if os.environ['GTEST_SHARD_INDEX'] == '0':
     test_name = os.environ['GTEST_FILTER']
     if test_name == 'QuickSubTest':
-        with open(json_filename, 'w') as f:
+        with open(json_filename, 'w', encoding='utf-8') as f:
             f.write(output)
         exit_code = 0
     elif test_name == 'InfiniteLoopSubTest':
@@ -61,7 +61,7 @@ if os.environ['GTEST_SHARD_INDEX'] == '0':
     else:
         raise SystemExit("error: invalid test name: %r" % (test_name,))
 else:
-    with open(json_filename, 'w') as f:
+    with open(json_filename, 'w', encoding='utf-8') as f:
         f.write(dummy_output)
     exit_code = 0
 
