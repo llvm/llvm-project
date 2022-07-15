@@ -107,6 +107,13 @@ struct BuiltinTypeDeclBuilder {
     return addMemberVariable("h", Record->getASTContext().VoidPtrTy, Access);
   }
 
+  BuiltinTypeDeclBuilder &
+  annotateResourceClass(HLSLResourceAttr::ResourceClass RC) {
+    Record->addAttr(
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RC));
+    return *this;
+  }
+
   static DeclRefExpr *lookupBuiltinFunction(ASTContext &AST, Sema &S,
                                             StringRef Name) {
     CXXScopeSpec SS;
@@ -361,5 +368,6 @@ void HLSLExternalSemaSource::completeBufferType(CXXRecordDecl *Record) {
   BuiltinTypeDeclBuilder(Record)
       .addHandleMember()
       .addDefaultHandleConstructor(*SemaPtr, ResourceClass::UAV)
+      .annotateResourceClass(HLSLResourceAttr::UAV)
       .completeDefinition();
 }
