@@ -8,6 +8,8 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
 #include "clang/Tooling/Syntax/Tree.h"
+#include "clang/Tooling/Syntax/Tokens.h"
+#include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
 
 using namespace clang;
 
@@ -27,35 +29,40 @@ public:
   }
 
   static std::pair<FileID, ArrayRef<Token>>
-  lexBuffer(syntax::Arena &A, std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-    return A.lexBuffer(std::move(Buffer));
+  lexBuffer(TokenBufferTokenManager &TBTM,
+            std::unique_ptr<llvm::MemoryBuffer> Buffer) {
+    return TBTM.lexBuffer(std::move(Buffer));
   }
 };
 
 // FIXME: `createLeaf` is based on `syntax::tokenize` internally, as such it
 // doesn't support digraphs or line continuations.
-syntax::Leaf *clang::syntax::createLeaf(syntax::Arena &A, tok::TokenKind K,
-                                        StringRef Spelling) {
+syntax::Leaf *clang::syntax::createLeaf(syntax::Arena &A,
+                                        TokenBufferTokenManager &TBTM,
+                                        tok::TokenKind K, StringRef Spelling) {
   auto Tokens =
-      FactoryImpl::lexBuffer(A, llvm::MemoryBuffer::getMemBufferCopy(Spelling))
+      FactoryImpl::lexBuffer(TBTM, llvm::MemoryBuffer::getMemBufferCopy(Spelling))
           .second;
   assert(Tokens.size() == 1);
   assert(Tokens.front().kind() == K &&
          "spelling is not lexed into the expected kind of token");
 
-  auto *Leaf = new (A.getAllocator()) syntax::Leaf(Tokens.begin());
+  auto *Leaf = new (A.getAllocator()) syntax::Leaf(
+    reinterpret_cast<TokenManager::Key>(Tokens.begin()));
   syntax::FactoryImpl::setCanModify(Leaf);
   Leaf->assertInvariants();
   return Leaf;
 }
 
-syntax::Leaf *clang::syntax::createLeaf(syntax::Arena &A, tok::TokenKind K) {
+syntax::Leaf *clang::syntax::createLeaf(syntax::Arena &A,
+                                        TokenBufferTokenManager &TBTM,
+                                        tok::TokenKind K) {
   const auto *Spelling = tok::getPunctuatorSpelling(K);
   if (!Spelling)
     Spelling = tok::getKeywordSpelling(K);
   assert(Spelling &&
          "Cannot infer the spelling of the token from its token kind.");
-  return createLeaf(A, K, Spelling);
+  return createLeaf(A, TBTM, K, Spelling);
 }
 
 namespace {
@@ -208,24 +215,25 @@ syntax::Tree *clang::syntax::createTree(
 }
 
 syntax::Node *clang::syntax::deepCopyExpandingMacros(syntax::Arena &A,
+                                                    TokenBufferTokenManager &TBTM,
                                                      const syntax::Node *N) {
   if (const auto *L = dyn_cast<syntax::Leaf>(N))
     // `L->getToken()` gives us the expanded token, thus we implicitly expand
     // any macros here.
-    return createLeaf(A, L->getToken()->kind(),
-                      L->getToken()->text(A.getSourceManager()));
+    return createLeaf(A, TBTM, TBTM.getToken(L->getTokenKey())->kind(),
+                       TBTM.getText(L->getTokenKey()));
 
   const auto *T = cast<syntax::Tree>(N);
   std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children;
   for (const auto *Child = T->getFirstChild(); Child;
        Child = Child->getNextSibling())
-    Children.push_back({deepCopyExpandingMacros(A, Child), Child->getRole()});
+    Children.push_back({deepCopyExpandingMacros(A, TBTM, Child), Child->getRole()});
 
   return createTree(A, Children, N->getKind());
 }
 
-syntax::EmptyStatement *clang::syntax::createEmptyStatement(syntax::Arena &A) {
+syntax::EmptyStatement *clang::syntax::createEmptyStatement(syntax::Arena &A,  TokenBufferTokenManager &TBTM) {
   return cast<EmptyStatement>(
-      createTree(A, {{createLeaf(A, tok::semi), NodeRole::Unknown}},
+      createTree(A, {{createLeaf(A, TBTM, tok::semi), NodeRole::Unknown}},
                  NodeKind::EmptyStatement));
 }
