@@ -318,3 +318,16 @@ class HelpCommandTestCase(TestBase):
                     "\(does not apply to binary output\)."])
         self.expect("help memory find", patterns=[
                     "--show-tags\n\s+Include memory tags in output."])
+
+    @no_debug_info_test
+    def test_help_show_enum_values(self):
+        """ Check the help output for a argument type contains the enum values
+        and their descriptions. """
+        self.expect("help <log-handler>", substrs=[
+            'The log handle that will be used to write out log messages.',
+            'default'  , 'Use the default (stream) log handler',
+            'stream'   , 'Write log messages to the debugger output stream',
+            'circular' , 'Write log messages to a fixed size circular buffer',
+            'os'       , 'Write log messages to the operating system log',
+        ])
+

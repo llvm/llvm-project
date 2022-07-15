@@ -16,6 +16,7 @@
 #include <cstdlib>
 
 #include "lldb/Core/Address.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -398,9 +399,28 @@ void CommandObject::GetArgumentHelp(Stream &str, CommandArgumentType arg_type,
       interpreter.OutputHelpText(str, name_str.GetString(), "--", help_text,
                                  name_str.GetSize());
     }
-  } else
+  } else {
     interpreter.OutputFormattedHelpText(str, name_str.GetString(), "--",
                                         entry->help_text, name_str.GetSize());
+
+    // Print enum values and their description if any.
+    OptionEnumValues enum_values = g_argument_table[arg_type].enum_values;
+    if (!enum_values.empty()) {
+      str.EOL();
+      size_t longest = 0;
+      for (const OptionEnumValueElement &element : enum_values)
+        longest =
+            std::max(longest, llvm::StringRef(element.string_value).size());
+      str.IndentMore(5);
+      for (const OptionEnumValueElement &element : enum_values) {
+        str.Indent();
+        interpreter.OutputHelpText(str, element.string_value, ":",
+                                   element.usage, longest);
+      }
+      str.IndentLess(5);
+      str.EOL();
+    }
+  }
 }
 
 const char *CommandObject::GetArgumentName(CommandArgumentType arg_type) {
