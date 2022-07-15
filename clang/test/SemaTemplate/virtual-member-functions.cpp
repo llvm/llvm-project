@@ -92,12 +92,12 @@ namespace PR7114 {
   public:
     class Inner : public A { };
 #if __cplusplus <= 199711L
-// expected-error@-2{{base class 'A' has private destructor}}
+// expected-error@-2{{base class 'PR7114::A' has private destructor}}
 #else
 // expected-error@-4 2 {{deleted function '~Inner' cannot override a non-deleted function}}
-// expected-note@-5 2 {{destructor of 'Inner' is implicitly deleted because base class 'A' has an inaccessible destructor}}
+// expected-note@-5 2 {{destructor of 'Inner' is implicitly deleted because base class 'PR7114::A' has an inaccessible destructor}}
 #ifdef MSABI
-// expected-note@-7 1 {{destructor of 'Inner' is implicitly deleted because base class 'A' has an inaccessible destructor}}
+// expected-note@-7 1 {{destructor of 'Inner' is implicitly deleted because base class 'PR7114::A' has an inaccessible destructor}}
 #endif
 #endif
 
@@ -140,7 +140,7 @@ namespace PR7114 {
   struct X : A {
 #if __cplusplus >= 201103L
 // expected-error@-2 {{deleted function '~X' cannot override a non-deleted function}}
-// expected-note@-3  {{destructor of 'X<int>' is implicitly deleted because base class 'A' has an inaccessible destructor}}
+// expected-note@-3  {{destructor of 'X<int>' is implicitly deleted because base class 'PR7114::A' has an inaccessible destructor}}
 #endif
     void f() { }
   };

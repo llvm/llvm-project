@@ -120,7 +120,7 @@ namespace PR11826 {
   void f() {
     pair p0(3);
 #if _MSC_VER >= 1900
-    pair p = p0; // expected-error {{call to implicitly-deleted copy constructor of 'pair'}}
+    pair p = p0; // expected-error {{call to implicitly-deleted copy constructor of 'PR11826::pair'}}
 #else
     pair p = p0;
 #endif
@@ -140,7 +140,7 @@ namespace PR11826_for_symmetry {
     pair p0(3);
     pair p(4);
 #if _MSC_VER >= 1900
-    p = p0; // expected-error {{object of type 'pair' cannot be assigned because its copy assignment operator is implicitly deleted}}
+    p = p0; // expected-error {{object of type 'PR11826_for_symmetry::pair' cannot be assigned because its copy assignment operator is implicitly deleted}}
 #else
     p = p0;
 #endif

@@ -27,4 +27,4 @@ namespace ns {
 // CHECK: analyzer-display-progress.cpp SomeOtherStruct::f() : {{[0-9]+}}
 // CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(int) : {{[0-9]+}}
 // CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(float, ::SomeStruct) : {{[0-9]+}}
-// CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(float, SomeStruct) : {{[0-9]+}}
+// CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(float, struct ns::SomeStruct) : {{[0-9]+}}

@@ -64,11 +64,11 @@ namespace ccce {
     }
     if constexpr (b) { // expected-error {{constexpr if condition is not a constant expression}} expected-note {{cannot be used in a constant expression}}
     }
-    if constexpr (s) { // expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
+    if constexpr (s) { // expected-error {{value of type 'ccce::S' is not contextually convertible to 'bool'}}
     }
 
     constexpr S constexprS;
-    if constexpr (constexprS) { // expected-error {{value of type 'const S' is not contextually convertible to 'bool'}}
+    if constexpr (constexprS) { // expected-error {{value of type 'const ccce::S' is not contextually convertible to 'bool'}}
     }
   }
 }

@@ -404,7 +404,7 @@ namespace rdar9136502 {
 namespace rdar9222009 {
 class StringRef {
   inline bool operator==(StringRef LHS, StringRef RHS) { // expected-error{{overloaded 'operator==' must be a binary operator (has 3 parameters)}}
-    return !(LHS == RHS); // expected-error{{invalid operands to binary expression ('StringRef' and 'StringRef')}}
+    return !(LHS == RHS); // expected-error{{invalid operands to binary expression ('rdar9222009::StringRef' and 'rdar9222009::StringRef')}}
   }
 };
 
@@ -481,7 +481,7 @@ namespace PR14995 {
   void h() {
     D d;
     d++;  // ok
-    ++d; // expected-error{{cannot increment value of type 'D'}}
+    ++d; // expected-error{{cannot increment value of type 'PR14995::D'}}
   }
 
   template<typename...T> struct E {

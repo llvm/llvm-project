@@ -46,7 +46,7 @@ void elided_assign() {
   Foo x = get_foo();
 }
 // CHECK: void elided_assign()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Implicit destructor)
 
@@ -54,7 +54,7 @@ void nonelided_assign() {
   Bar x = (const Bar &)get_bar();
 }
 // CHECK: void nonelided_assign()
-// CHECK: (CXXConstructExpr{{.*}}, Bar)
+// CHECK: (CXXConstructExpr{{.*}}, struct Bar)
 // CHECK: ~Bar() (Temporary object destructor)
 // CHECK: ~Bar() (Implicit destructor)
 
@@ -62,7 +62,7 @@ void elided_paren_init() {
   Foo x(get_foo());
 }
 // CHECK: void elided_paren_init()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Implicit destructor)
 
@@ -70,7 +70,7 @@ void nonelided_paren_init() {
   Bar x((const Bar &)get_bar());
 }
 // CHECK: void nonelided_paren_init()
-// CHECK: (CXXConstructExpr{{.*}}, Bar)
+// CHECK: (CXXConstructExpr{{.*}}, struct Bar)
 // CHECK: ~Bar() (Temporary object destructor)
 // CHECK: ~Bar() (Implicit destructor)
 
@@ -78,7 +78,7 @@ void elided_brace_init() {
   Foo x{get_foo()};
 }
 // CHECK: void elided_brace_init()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Implicit destructor)
 
@@ -86,7 +86,7 @@ void nonelided_brace_init() {
   Bar x{(const Bar &)get_bar()};
 }
 // CHECK: void nonelided_brace_init()
-// CHECK: (CXXConstructExpr{{.*}}, Bar)
+// CHECK: (CXXConstructExpr{{.*}}, struct Bar)
 // CHECK: ~Bar() (Temporary object destructor)
 // CHECK: ~Bar() (Implicit destructor)
 
@@ -97,7 +97,7 @@ void elided_lambda_capture_init() {
   auto z = [x=get_foo()]() {};
 }
 // CHECK: void elided_lambda_capture_init()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~(lambda at {{.*}})() (Temporary object destructor)
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~(lambda at {{.*}})() (Implicit destructor)
@@ -107,7 +107,7 @@ void nonelided_lambda_capture_init() {
   auto z = [x((const Bar &)get_bar())]() {};
 }
 // CHECK: void nonelided_lambda_capture_init()
-// CHECK: (CXXConstructExpr{{.*}}, Bar)
+// CHECK: (CXXConstructExpr{{.*}}, struct Bar)
 // CXX14: ~(lambda at {{.*}})() (Temporary object destructor)
 // CHECK: ~Bar() (Temporary object destructor)
 // CHECK: ~(lambda at {{.*}})() (Implicit destructor)
@@ -117,9 +117,9 @@ Foo elided_return_stmt_expr() {
   return ({ get_foo(); });
 }
 // CHECK: Foo elided_return_stmt_expr()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~Foo() (Temporary object destructor)
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~Foo() (Temporary object destructor)
 
 void elided_stmt_expr() {
@@ -127,7 +127,7 @@ void elided_stmt_expr() {
   ({ get_foo(); });
 }
 // CHECK: void elided_stmt_expr()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Temporary object destructor)
 
@@ -139,7 +139,7 @@ void elided_stmt_expr_multiple_stmts() {
 }
 // CHECK: void elided_stmt_expr_multiple_stmts()
 // CHECK: ~Bar() (Temporary object destructor)
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Temporary object destructor)
 
@@ -148,7 +148,7 @@ void unelided_stmt_expr() {
   ({ (const Bar &)get_bar(); });
 }
 // CHECK: void unelided_stmt_expr()
-// CHECK: (CXXConstructExpr{{.*}}, Bar)
+// CHECK: (CXXConstructExpr{{.*}}, struct Bar)
 // CHECK: ~Bar() (Temporary object destructor)
 // CHECK: ~Bar() (Temporary object destructor)
 
@@ -156,8 +156,8 @@ void elided_aggregate_init() {
   TwoFoos x{get_foo(), get_foo()};
 }
 // CHECK: void elided_aggregate_init()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~Foo() (Temporary object destructor)
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~TwoFoos() (Implicit destructor)
@@ -166,8 +166,8 @@ void nonelided_aggregate_init() {
   TwoBars x{(const Bar &)get_bar(), (const Bar &)get_bar()};
 }
 // CHECK: void nonelided_aggregate_init()
-// CHECK: (CXXConstructExpr{{.*}}, Bar)
-// CHECK: (CXXConstructExpr{{.*}}, Bar)
+// CHECK: (CXXConstructExpr{{.*}}, struct Bar)
+// CHECK: (CXXConstructExpr{{.*}}, struct Bar)
 // CHECK: ~Bar() (Temporary object destructor)
 // CHECK: ~Bar() (Temporary object destructor)
 // CHECK: ~TwoBars() (Implicit destructor)
@@ -176,8 +176,8 @@ TwoFoos return_aggregate_init() {
   return TwoFoos{get_foo(), get_foo()};
 }
 // CHECK: TwoFoos return_aggregate_init()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~TwoFoos() (Temporary object destructor)
 // CXX14: ~Foo() (Temporary object destructor)
 // CXX14: ~Foo() (Temporary object destructor)
@@ -196,7 +196,7 @@ void not_lifetime_extended() {
   puts("one destroyed before, one destroyed after");
 }
 // CHECK: void not_lifetime_extended()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CHECK: ~Foo() (Temporary object destructor)
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: one destroyed before, one destroyed after
@@ -206,15 +206,15 @@ void compound_literal() {
   (void)(Bar[]){{}, {}};
 }
 // CHECK: void compound_literal()
-// CHECK: (CXXConstructExpr, Bar)
-// CHECK: (CXXConstructExpr, Bar)
+// CHECK: (CXXConstructExpr, struct Bar)
+// CHECK: (CXXConstructExpr, struct Bar)
 // CHECK: ~Bar[2]() (Temporary object destructor)
 
 Foo elided_return() {
   return get_foo();
 }
 // CHECK: Foo elided_return()
-// CXX14: (CXXConstructExpr{{.*}}, Foo)
+// CXX14: (CXXConstructExpr{{.*}}, struct Foo)
 // CXX14: ~Foo() (Temporary object destructor)
 
 auto elided_return_lambda() {
@@ -258,7 +258,7 @@ void default_ctor_with_default_arg() {
   DefaultArgInCtor qux[3];
 }
 // CHECK: void default_ctor_with_default_arg()
-// CHECK: CXXConstructExpr, {{.*}}, DefaultArgInCtor[3]
+// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor[3]
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Temporary object destructor)
 // CHECK: .~DefaultArgInCtor[3]() (Implicit destructor)
@@ -268,7 +268,7 @@ void new_default_ctor_with_default_arg(long count) {
   new DefaultArgInCtor[count];
 }
 // CHECK: void new_default_ctor_with_default_arg(long count)
-// CHECK: CXXConstructExpr, {{.*}}, DefaultArgInCtor[]
+// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor[]
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Temporary object destructor)
 

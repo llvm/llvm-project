@@ -91,7 +91,7 @@ struct S2: virtual S1 { };
 struct S3 { };
 
 struct S4: virtual S3, S2 {
-  S4() : S2(), // expected-warning {{base class 'S2' will be initialized after base 'S3'}}
+  S4() : S2(), // expected-warning {{base class 'T1::S2' will be initialized after base 'T1::S3'}}
     S3() { };
 };
 }

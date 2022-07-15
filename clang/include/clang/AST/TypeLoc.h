@@ -430,7 +430,7 @@ protected:
     unsigned size = sizeof(LocalData);
     unsigned extraAlign = asDerived()->getExtraLocalDataAlignment();
     size = llvm::alignTo(size, extraAlign);
-    return reinterpret_cast<char *>(Base::Data) + size;
+    return reinterpret_cast<char*>(Base::Data) + size;
   }
 
   void *getNonLocalData() const {
@@ -2263,31 +2263,22 @@ class ElaboratedTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                                  ElaboratedLocInfo> {
 public:
   SourceLocation getElaboratedKeywordLoc() const {
-    return !isEmpty() ? getLocalData()->ElaboratedKWLoc : SourceLocation();
+    return this->getLocalData()->ElaboratedKWLoc;
   }
 
   void setElaboratedKeywordLoc(SourceLocation Loc) {
-    if (isEmpty()) {
-      assert(Loc.isInvalid());
-      return;
-    }
-    getLocalData()->ElaboratedKWLoc = Loc;
+    this->getLocalData()->ElaboratedKWLoc = Loc;
   }
 
   NestedNameSpecifierLoc getQualifierLoc() const {
-    return !isEmpty() ? NestedNameSpecifierLoc(getTypePtr()->getQualifier(),
-                                               getLocalData()->QualifierData)
-                      : NestedNameSpecifierLoc();
+    return NestedNameSpecifierLoc(getTypePtr()->getQualifier(),
+                                  getLocalData()->QualifierData);
   }
 
   void setQualifierLoc(NestedNameSpecifierLoc QualifierLoc) {
-    assert(QualifierLoc.getNestedNameSpecifier() ==
-               getTypePtr()->getQualifier() &&
+    assert(QualifierLoc.getNestedNameSpecifier()
+                                            == getTypePtr()->getQualifier() &&
            "Inconsistent nested-name-specifier pointer");
-    if (isEmpty()) {
-      assert(!QualifierLoc.hasQualifier());
-      return;
-    }
     getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }
 
@@ -2304,24 +2295,12 @@ public:
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
 
-  TypeLoc getNamedTypeLoc() const { return getInnerTypeLoc(); }
-
-  QualType getInnerType() const { return getTypePtr()->getNamedType(); }
-
-  bool isEmpty() const {
-    return getTypePtr()->getKeyword() == ElaboratedTypeKeyword::ETK_None &&
-           !getTypePtr()->getQualifier();
+  TypeLoc getNamedTypeLoc() const {
+    return getInnerTypeLoc();
   }
 
-  unsigned getLocalDataAlignment() const {
-    // FIXME: We want to return 1 here in the empty case, but
-    // there are bugs in how alignment is handled in TypeLocs
-    // that prevent this from working.
-    return ConcreteTypeLoc::getLocalDataAlignment();
-  }
-
-  unsigned getLocalDataSize() const {
-    return !isEmpty() ? ConcreteTypeLoc::getLocalDataSize() : 0;
+  QualType getInnerType() const {
+    return getTypePtr()->getNamedType();
   }
 
   void copy(ElaboratedTypeLoc Loc) {

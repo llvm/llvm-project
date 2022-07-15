@@ -246,12 +246,12 @@ struct S5 {
 };
 #else
 S4 s4;
-// expected-error@second.h:* {{'Field::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type 'B' (aka 'int')}}
-// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'A' (aka 'int')}}
+// expected-error@second.h:* {{'Field::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type 'Field::B' (aka 'int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'Field::A' (aka 'int')}}
 
 S5 s5;
 // expected-error@second.h:* {{'Field::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type 'int'}}
-// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'A' (aka 'int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'Field::A' (aka 'int')}}
 #endif
 
 #if defined(FIRST)
@@ -1098,7 +1098,7 @@ struct S6 {
 #else
 S6 s6;
 // expected-error@second.h:* {{'TypeDef::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found typedef 'b' with underlying type 'float'}}
-// expected-note@first.h:* {{but in 'FirstModule' found typedef 'b' with different underlying type 'F' (aka 'float')}}
+// expected-note@first.h:* {{but in 'FirstModule' found typedef 'b' with different underlying type 'TypeDef::F' (aka 'float')}}
 #endif
 
 #define DECLS       \
@@ -1224,7 +1224,7 @@ struct S6 {
 #else
 S6 s6;
 // expected-error@second.h:* {{'Using::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found type alias 'b' with underlying type 'float'}}
-// expected-note@first.h:* {{but in 'FirstModule' found type alias 'b' with different underlying type 'F' (aka 'float')}}
+// expected-note@first.h:* {{but in 'FirstModule' found type alias 'b' with different underlying type 'Using::F' (aka 'float')}}
 #endif
 
 #if defined(FIRST) || defined(SECOND)
@@ -2093,7 +2093,7 @@ struct S2 {
 };
 #else
 S2 s2;
-// expected-error@second.h:* {{'VarDecl::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found data member 'x' with type 'I' (aka 'int')}}
+// expected-error@second.h:* {{'VarDecl::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found data member 'x' with type 'VarDecl::I' (aka 'int')}}
 // expected-note@first.h:* {{but in 'FirstModule' found data member 'x' with different type 'int'}}
 #endif
 
@@ -2241,7 +2241,7 @@ struct S1 {
 };
 #else
 S1 s1;
-// expected-error@second.h:* {{'Friend::S1' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend 'T1'}}
+// expected-error@second.h:* {{'Friend::S1' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend 'Friend::T1'}}
 // expected-note@first.h:* {{but in 'FirstModule' found friend 'class T1'}}
 #endif
 
@@ -2561,8 +2561,8 @@ struct B4b {};
 struct S4 : B4b {};
 #else
 S4 s4;
-// expected-error@second.h:* {{'BaseClass::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class with type 'B4b'}}
-// expected-note@first.h:* {{but in 'FirstModule' found 1st base class with different type 'B4a'}}
+// expected-error@second.h:* {{'BaseClass::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class with type 'BaseClass::B4b'}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class with different type 'BaseClass::B4a'}}
 #endif
 
 #if defined(FIRST)
@@ -2597,8 +2597,8 @@ struct B7a {};
 struct S7 : B7a {};
 #else
 S7 s7;
-// expected-error@second.h:* {{'BaseClass::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'B7a' with no access specifier}}
-// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'B7a' with protected access specifier}}
+// expected-error@second.h:* {{'BaseClass::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'BaseClass::B7a' with no access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'BaseClass::B7a' with protected access specifier}}
 #endif
 
 #if defined(FIRST)
@@ -2609,8 +2609,8 @@ struct B8a {};
 struct S8 : private B8a {};
 #else
 S8 s8;
-// expected-error@second.h:* {{'BaseClass::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'B8a' with private access specifier}}
-// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'B8a' with public access specifier}}
+// expected-error@second.h:* {{'BaseClass::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'BaseClass::B8a' with private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'BaseClass::B8a' with public access specifier}}
 #endif
 
 #if defined(FIRST)
@@ -2621,8 +2621,8 @@ struct B9a {};
 struct S9 : public B9a {};
 #else
 S9 s9;
-// expected-error@second.h:* {{'BaseClass::S9' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'B9a' with public access specifier}}
-// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'B9a' with private access specifier}}
+// expected-error@second.h:* {{'BaseClass::S9' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'BaseClass::B9a' with public access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'BaseClass::B9a' with private access specifier}}
 #endif
 
 #if defined(FIRST)
@@ -2633,8 +2633,8 @@ struct B10a {};
 struct S10 : protected B10a {};
 #else
 S10 s10;
-// expected-error@second.h:* {{'BaseClass::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'B10a' with protected access specifier}}
-// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'B10a' with no access specifier}}
+// expected-error@second.h:* {{'BaseClass::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'BaseClass::B10a' with protected access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'BaseClass::B10a' with no access specifier}}
 #endif
 
 #define DECLS
@@ -3904,14 +3904,14 @@ Invalid1 i1;
 // expected-error@first.h:* {{'Types::UnaryTransform::Invalid1::x' from module 'FirstModule' is not present in definition of 'Types::UnaryTransform::Invalid1' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 Invalid2 i2;
-// expected-error@second.h:* {{'Types::UnaryTransform::Invalid2' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type '__underlying_type(E2b)' (aka 'unsigned int')}}
-// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type '__underlying_type(E2a)' (aka 'unsigned int')}}
+// expected-error@second.h:* {{'Types::UnaryTransform::Invalid2' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type '__underlying_type(Types::UnaryTransform::E2b)' (aka 'unsigned int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type '__underlying_type(Types::UnaryTransform::E2a)' (aka 'unsigned int')}}
 Invalid3 i3;
 // expected-error@first.h:* {{'Types::UnaryTransform::Invalid3::x' from module 'FirstModule' is not present in definition of 'Types::UnaryTransform::Invalid3' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 Invalid4 i4;
-// expected-error@second.h:* {{'Types::UnaryTransform::Invalid4' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type '__underlying_type(E4b)' (aka 'unsigned int')}}
-// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type '__underlying_type(E4a)' (aka 'unsigned int')}}
+// expected-error@second.h:* {{'Types::UnaryTransform::Invalid4' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type '__underlying_type(Types::UnaryTransform::E4b)' (aka 'unsigned int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type '__underlying_type(Types::UnaryTransform::E4a)' (aka 'unsigned int')}}
 Valid1 v1;
 Valid2 v2;
 Valid3 v3;
@@ -4603,7 +4603,7 @@ int F7() { return 0; }
 #else
 int I7 = F7();
 // expected-error@second.h:* {{'FunctionDecl::F7' has different definitions in different modules; definition in module 'SecondModule' first difference is return type is 'int'}}
-// expected-note@first.h:* {{but in 'FirstModule' found different return type 'I' (aka 'int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found different return type 'FunctionDecl::I' (aka 'int')}}
 #endif
 
 #if defined(FIRST)
@@ -4612,7 +4612,7 @@ int F8(int) { return 0; }
 int F8(I) { return 0; }
 #else
 int I8 = F8(1);
-// expected-error@second.h:* {{'FunctionDecl::F8' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st parameter with type 'I' (aka 'int')}}
+// expected-error@second.h:* {{'FunctionDecl::F8' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st parameter with type 'FunctionDecl::I' (aka 'int')}}
 // expected-note@first.h:* {{but in 'FirstModule' found 1st parameter with type 'int'}}
 #endif
 

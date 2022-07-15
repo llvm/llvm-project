@@ -217,8 +217,8 @@ template <typename T> struct B : T {
 };
 
 template <typename T> struct C : T {
-  int     foo() { return b; }      // expected-error {{no member named 'b' in 'PR16014::C<A>'}} expected-warning {{lookup into dependent bases}}
-  int    *bar() { return &b; }     // expected-error {{no member named 'b' in 'PR16014::C<A>'}} expected-warning {{lookup into dependent bases}}
+  int     foo() { return b; }      // expected-error {{no member named 'b' in 'PR16014::C<PR16014::A>'}} expected-warning {{lookup into dependent bases}}
+  int    *bar() { return &b; }     // expected-error {{no member named 'b' in 'PR16014::C<PR16014::A>'}} expected-warning {{lookup into dependent bases}}
   int     baz() { return T::b; }   // expected-error {{no member named 'b' in 'PR16014::A'}}
   int T::*qux() { return &T::b; }  // expected-error {{no member named 'b' in 'PR16014::A'}}
   int T::*fuz() { return &U::a; }  // expected-error {{use of undeclared identifier 'U'}} \

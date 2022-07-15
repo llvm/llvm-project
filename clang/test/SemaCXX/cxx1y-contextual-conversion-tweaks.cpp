@@ -88,13 +88,13 @@ namespace extended_examples {
 
 //expected-error@71 {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&&'}}
 //expected-note@70 {{previous declaration is here}}
-//expected-error@82 {{statement requires expression of integer type ('A2' invalid)}}
-//expected-error@83 {{statement requires expression of integer type ('A3' invalid)}}
-//expected-error@84 {{statement requires expression of integer type ('A4' invalid)}}
+//expected-error@82 {{statement requires expression of integer type ('extended_examples::A2' invalid)}}
+//expected-error@83 {{statement requires expression of integer type ('extended_examples::A3' invalid)}}
+//expected-error@84 {{statement requires expression of integer type ('extended_examples::A4' invalid)}}
 
 #ifdef CXX1Y
-//expected-error@81 {{statement requires expression of integer type ('A1' invalid)}}
-//expected-error@85 {{statement requires expression of integer type ('B2' invalid)}}
+//expected-error@81 {{statement requires expression of integer type ('extended_examples::A1' invalid)}}
+//expected-error@85 {{statement requires expression of integer type ('extended_examples::B2' invalid)}}
 #else
 //expected-error@81 {{'this' argument to member function 'operator int' is an lvalue, but function has rvalue ref-qualifier}} expected-note@54 {{'operator int' declared here}}
 //expected-error@85 {{'this' argument to member function 'operator int' is an lvalue, but function has rvalue ref-qualifier}} expected-note@75 {{'operator int' declared here}}
@@ -144,10 +144,10 @@ namespace extended_examples_cxx1y {
   }
 }
 
-//expected-error@142 {{statement requires expression of integer type ('C' invalid)}}
+//expected-error@142 {{statement requires expression of integer type ('extended_examples_cxx1y::C' invalid)}}
 
 #ifdef CXX1Y
-//expected-error@139 {{statement requires expression of integer type ('A2' invalid)}}
+//expected-error@139 {{statement requires expression of integer type ('extended_examples_cxx1y::A2' invalid)}}
 #else
 //expected-error@138 {{'this' argument to member function 'operator int' is an lvalue, but function has rvalue ref-qualifier}} expected-note@106 {{'operator int' declared here}}
 //expected-error@139 {{'this' argument to member function 'operator int' is an lvalue, but function has rvalue ref-qualifier}} expected-note@111 {{'operator int' declared here}}

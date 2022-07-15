@@ -47,7 +47,7 @@ public:
   // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
 #endif
   static int si = 0; // expected-error {{non-const static data member must be initialized out of line}}
-  static const NestedC ci = 0; // expected-error {{static data member of type 'const NestedC' must be initialized out of line}}
+  static const NestedC ci = 0; // expected-error {{static data member of type 'const C::NestedC' must be initialized out of line}}
   static const int nci = vs; // expected-error {{in-class initializer for static data member is not a constant expression}}
   static const int vi = 0;
   static const volatile int cvi = 0; // ok, illegal in C++11

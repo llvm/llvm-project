@@ -7,9 +7,9 @@ namespace N2 {
     class C1 {};
 
     struct S2 {
-      void func(S1*); // expected-note {{type of 1st parameter of member declaration does not match definition ('S1 *' (aka 'N2::S1 *') vs 'S1 *' (aka 'N2::N1::S1 *'))}}
-      void func(C1&, unsigned, const S1*); // expected-note {{type of 3rd parameter of member declaration does not match definition ('const S1 *' (aka 'const N2::S1 *') vs 'const S1 *' (aka 'const N2::N1::S1 *'))}}
-      void func(const S1*, unsigned); //expected-note {{type of 1st parameter of member declaration does not match definition ('const S1 *' vs 'S1')}}
+      void func(S1*); // expected-note {{type of 1st parameter of member declaration does not match definition ('N2::S1 *' vs 'N2::N1::S1 *')}}
+      void func(C1&, unsigned, const S1*); // expected-note {{type of 3rd parameter of member declaration does not match definition ('const N2::S1 *' vs 'const N2::N1::S1 *')}}
+      void func(const S1*, unsigned); //expected-note {{type of 1st parameter of member declaration does not match definition ('const N2::S1 *' vs 'N2::N1::S1')}}
       void func(unsigned, const S1*); // expected-note {{type of 1st parameter of member declaration does not match definition ('unsigned int' vs 'unsigned int *')}}
     };
 

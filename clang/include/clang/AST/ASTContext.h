@@ -2811,20 +2811,14 @@ public:
   bool typesAreBlockPointerCompatible(QualType, QualType);
 
   bool isObjCIdType(QualType T) const {
-    if (const auto *ET = dyn_cast<ElaboratedType>(T))
-      T = ET->getNamedType();
     return T == getObjCIdType();
   }
 
   bool isObjCClassType(QualType T) const {
-    if (const auto *ET = dyn_cast<ElaboratedType>(T))
-      T = ET->getNamedType();
     return T == getObjCClassType();
   }
 
   bool isObjCSelType(QualType T) const {
-    if (const auto *ET = dyn_cast<ElaboratedType>(T))
-      T = ET->getNamedType();
     return T == getObjCSelType();
   }
 

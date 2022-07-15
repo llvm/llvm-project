@@ -13,7 +13,7 @@ struct A {
 int b = sizeof(A);
 
 // CHECK:          0 | struct test1::A
-// CHECK-NEXT:     0 |   Dbl x
+// CHECK-NEXT:     0 |   test1::Dbl x
 // CHECK-NEXT:       | [sizeof=8, dsize=8, align=2, preferredalign=2,
 // CHECK-NEXT:       |  nvsize=8, nvalign=2, preferrednvalign=2]
 
@@ -31,7 +31,7 @@ union U {
 int x = sizeof(U);
 
 // CHECK:          0 | union test2::U
-// CHECK-NEXT:     0 |   DblArr da
+// CHECK-NEXT:     0 |   test2::DblArr da
 // CHECK-NEXT:     0 |   char x
 // CHECK-NEXT:       | [sizeof=2, dsize=2, align=2, preferredalign=2,
 // CHECK-NEXT:       |  nvsize=2, nvalign=2, preferrednvalign=2]
@@ -49,7 +49,7 @@ union U {
 int x = sizeof(U);
 
 // CHECK:          0 | union test3::U
-// CHECK-NEXT:     0 |   DblArr da
+// CHECK-NEXT:     0 |   test3::DblArr da
 // CHECK-NEXT:     0 |   char x
 // CHECK-NEXT:       | [sizeof=2, dsize=2, align=2, preferredalign=2,
 // CHECK-NEXT:       |  nvsize=2, nvalign=2, preferrednvalign=2]
@@ -67,7 +67,7 @@ union U {
 int x = sizeof(U);
 
 // CHECK:          0 | union test4::U
-// CHECK-NEXT:     0 |   Dbl[] DblArr
+// CHECK-NEXT:     0 |   test4::Dbl[] DblArr
 // CHECK-NEXT:     0 |   char x
 // CHECK-NEXT:       | [sizeof=2, dsize=2, align=2, preferredalign=2,
 // CHECK-NEXT:       |  nvsize=2, nvalign=2, preferrednvalign=2]

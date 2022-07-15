@@ -145,7 +145,7 @@ void test2(Foo2 f) {
   // CHECK-NEXT:   | `-DeclRefExpr {{.*}} 'f'
   // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
   f.func(1);
-  // CHECK:      RecoveryExpr {{.*}} 'ForwardClass':'Foo2::ForwardClass'
+  // CHECK:      RecoveryExpr {{.*}} 'Foo2::ForwardClass'
   // CHECK-NEXT: `-MemberExpr {{.*}} '<bound member function type>' .createFwd
   // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'f'
   f.createFwd();
@@ -202,27 +202,27 @@ void InvalidInitalizer(int x) {
   // CHECK-NEXT:  `-InitListExpr
   Bar b2 = {1};
   // CHECK:     `-VarDecl {{.*}} b3 'Bar'
-  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar':'Bar' contains-errors
+  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar' contains-errors
   // CHECK-NEXT:    `-DeclRefExpr {{.*}} 'x' 'int'
   Bar b3 = Bar(x);
   // CHECK:     `-VarDecl {{.*}} b4 'Bar'
-  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar':'Bar' contains-errors
+  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar' contains-errors
   // CHECK-NEXT:    `-InitListExpr {{.*}} 'void'
   // CHECK-NEXT:      `-DeclRefExpr {{.*}} 'x' 'int'
   Bar b4 = Bar{x};
   // CHECK:     `-VarDecl {{.*}} b5 'Bar'
-  // CHECK-NEXT: `-CXXUnresolvedConstructExpr {{.*}} 'Bar':'Bar' contains-errors 'Bar'
+  // CHECK-NEXT: `-CXXUnresolvedConstructExpr {{.*}} 'Bar' contains-errors 'Bar'
   // CHECK-NEXT:   `-RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:     `-UnresolvedLookupExpr {{.*}} 'invalid'
   Bar b5 = Bar(invalid());
   // CHECK:     `-VarDecl {{.*}} b6 'Bar'
-  // CHECK-NEXT: `-CXXUnresolvedConstructExpr {{.*}} 'Bar':'Bar' contains-errors 'Bar'
+  // CHECK-NEXT: `-CXXUnresolvedConstructExpr {{.*}} 'Bar' contains-errors 'Bar'
   // CHECK-NEXT:  `-InitListExpr {{.*}} contains-errors
   // CHECK-NEXT:   `-RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:     `-UnresolvedLookupExpr {{.*}} 'invalid'
   Bar b6 = Bar{invalid()};
 
-  // CHECK:     RecoveryExpr {{.*}} 'Bar':'Bar' contains-errors
+  // CHECK:     RecoveryExpr {{.*}} 'Bar' contains-errors
   // CHECK-NEXT:  `-IntegerLiteral {{.*}} 'int' 1
   Bar(1);
 
@@ -326,7 +326,7 @@ void CtorInitializer() {
     // CHECK-NEXT: |   `-RecoveryExpr {{.*}} '<dependent type>'
     // CHECK-NEXT: |     `-UnresolvedLookupExpr {{.*}} '<overloaded function type>'
     // CHECK-NEXT: |-CXXCtorInitializer Field {{.*}} 's' 'S'
-    // CHECK-NEXT: | `-RecoveryExpr {{.*}} 'S':'S' contains-errors
+    // CHECK-NEXT: | `-RecoveryExpr {{.*}} 'S' contains-errors
     // CHECK-NEXT: |   |-IntegerLiteral {{.*}} 1
     // CHECK-NEXT: |   `-IntegerLiteral {{.*}} 2
   };

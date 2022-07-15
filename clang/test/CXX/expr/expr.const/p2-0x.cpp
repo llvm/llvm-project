@@ -474,7 +474,7 @@ namespace std {
 namespace TypeId {
   struct S { virtual void f(); };
   constexpr S *p = 0;
-  constexpr const std::type_info &ti1 = typeid(*p); // expected-error {{must be initialized by a constant expression}} cxx11-note {{typeid applied to expression of polymorphic type 'S'}} cxx20-note {{dereferenced null pointer}}
+  constexpr const std::type_info &ti1 = typeid(*p); // expected-error {{must be initialized by a constant expression}} cxx11-note {{typeid applied to expression of polymorphic type 'TypeId::S'}} cxx20-note {{dereferenced null pointer}}
 
   struct T {} t;
   constexpr const std::type_info &ti2 = typeid(t);
