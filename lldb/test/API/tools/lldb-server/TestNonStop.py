@@ -296,3 +296,47 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @add_test_categories(["llgs"])
     def test_vCont_then_partial_stop_run_both(self):
         self.vCont_then_partial_stop_test(True)
+
+    @add_test_categories(["llgs"])
+    def test_stdio(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        # Since we can't easily ensure that lldb will send output in two parts,
+        # just put a stop in the middle.  Since we don't clear vStdio,
+        # the second message won't be delivered immediately.
+        self.prep_debug_monitor_and_inferior(
+            inferior_args=["message 1", "stop", "message 2"])
+        self.test_sequence.add_log_lines(
+            ["read packet: $QNonStop:1#00",
+             "send packet: $OK#00",
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             {"direction": "send", "regex": r"^%Stop:T.*"},
+             "read packet: $vStopped#00",
+             "send packet: $OK#00",
+             "read packet: $c#63",
+             "send packet: $OK#00",
+             "send packet: %Stop:W00#00",
+             ], True)
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn(ret["O_content"], b"message 1\r\n")
+
+        # Now, this is somewhat messy.  expect_gdbremote_sequence() will
+        # automatically consume output packets, so we just send vStdio,
+        # assume the first reply was consumed, send another one and expect
+        # a non-consumable "OK" reply.
+        self.reset_test_sequence()
+        self.test_sequence.add_log_lines(
+            ["read packet: $vStdio#00",
+             "read packet: $vStdio#00",
+             "send packet: $OK#00",
+             ], True)
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn(ret["O_content"], b"message 2\r\n")
+
+        self.reset_test_sequence()
+        self.test_sequence.add_log_lines(
+            ["read packet: $vStopped#00",
+             "send packet: $OK#00",
+             ], True)
+        self.expect_gdbremote_sequence()

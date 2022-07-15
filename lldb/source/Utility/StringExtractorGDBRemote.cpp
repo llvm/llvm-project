@@ -380,6 +380,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_vStopped;
       if (PACKET_MATCHES("vCtrlC"))
         return eServerPacketType_vCtrlC;
+      if (PACKET_MATCHES("vStdio"))
+        return eServerPacketType_vStdio;
       break;
 
     }

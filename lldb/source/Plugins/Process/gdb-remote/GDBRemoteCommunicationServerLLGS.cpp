@@ -246,6 +246,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_QNonStop,
       &GDBRemoteCommunicationServerLLGS::Handle_QNonStop);
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vStdio,
+      &GDBRemoteCommunicationServerLLGS::Handle_vStdio);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vStopped,
       &GDBRemoteCommunicationServerLLGS::Handle_vStopped);
   RegisterMemberFunctionHandler(
@@ -1192,6 +1195,9 @@ GDBRemoteCommunicationServerLLGS::SendONotification(const char *buffer,
   response.PutChar('O');
   response.PutBytesAsRawHex8(buffer, len);
 
+  if (m_non_stop)
+    return SendNotificationPacketNoLock("Stdio", m_stdio_notification_queue,
+                                        response.GetString());
   return SendPacketNoLock(response.GetString());
 }
 
@@ -3907,26 +3913,38 @@ GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::HandleNotificationAck(
+    std::deque<std::string> &queue) {
+  // Per the protocol, the first message put into the queue is sent
+  // immediately.  However, it remains the queue until the client ACKs it --
+  // then we pop it and send the next message.  The process repeats until
+  // the last message in the queue is ACK-ed, in which case the packet sends
+  // an OK response.
+  if (queue.empty())
+    return SendErrorResponse(Status("No pending notification to ack"));
+  queue.pop_front();
+  if (!queue.empty())
+    return SendPacketNoLock(queue.front());
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vStdio(
+    StringExtractorGDBRemote &packet) {
+  return HandleNotificationAck(m_stdio_notification_queue);
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_vStopped(
     StringExtractorGDBRemote &packet) {
-  // Per the protocol, the first message put into the queue is sent
-  // immediately.  However, it remains the queue until the client ACKs
-  // it via vStopped -- then we pop it and send the next message.
-  // The process repeats until the last message in the queue is ACK-ed,
-  // in which case the vStopped packet sends an OK response.
-
-  if (m_stop_notification_queue.empty())
-    return SendErrorResponse(Status("No pending notification to ack"));
-  m_stop_notification_queue.pop_front();
-  if (!m_stop_notification_queue.empty())
-    return SendPacketNoLock(m_stop_notification_queue.front());
+  PacketResult ret = HandleNotificationAck(m_stop_notification_queue);
   // If this was the last notification and all the processes exited,
   // terminate the server.
-  if (m_debugged_processes.empty()) {
+  if (m_stop_notification_queue.empty() && m_debugged_processes.empty()) {
     m_exit_now = true;
     m_mainloop.RequestTermination();
   }
-  return SendOKResponse();
+  return ret;
 }
 
 GDBRemoteCommunication::PacketResult
