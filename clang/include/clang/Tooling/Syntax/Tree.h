@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // Defines the basic structure of the syntax tree. There are two kinds of nodes:
-//   - leaf nodes correspond to a token in the expanded token stream,
+//   - leaf nodes correspond to tokens,
 //   - tree nodes correspond to language grammar constructs.
 //
 // The tree is initially built from an AST. Each node of a newly built tree
@@ -21,11 +21,8 @@
 #ifndef LLVM_CLANG_TOOLING_SYNTAX_TREE_H
 #define LLVM_CLANG_TOOLING_SYNTAX_TREE_H
 
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Tooling/Syntax/Tokens.h"
+#include "clang/Tooling/Syntax/TokenManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator.h"
@@ -36,33 +33,12 @@
 namespace clang {
 namespace syntax {
 
-/// A memory arena for syntax trees. Also tracks the underlying token buffers,
-/// source manager, etc.
+/// A memory arena for syntax trees.
+// FIXME: use BumpPtrAllocator directly.
 class Arena {
 public:
-  Arena(SourceManager &SourceMgr, const LangOptions &LangOpts,
-        const TokenBuffer &Tokens);
-
-  const SourceManager &getSourceManager() const { return SourceMgr; }
-  const LangOptions &getLangOptions() const { return LangOpts; }
-
-  const TokenBuffer &getTokenBuffer() const;
   llvm::BumpPtrAllocator &getAllocator() { return Allocator; }
-
 private:
-  /// Add \p Buffer to the underlying source manager, tokenize it and store the
-  /// resulting tokens. Used exclusively in `FactoryImpl` to materialize tokens
-  /// that were not written in user code.
-  std::pair<FileID, ArrayRef<Token>>
-  lexBuffer(std::unique_ptr<llvm::MemoryBuffer> Buffer);
-  friend class FactoryImpl;
-
-private:
-  SourceManager &SourceMgr;
-  const LangOptions &LangOpts;
-  const TokenBuffer &Tokens;
-  /// IDs and storage for additional tokenized files.
-  llvm::DenseMap<FileID, std::vector<Token>> ExtraTokens;
   /// Keeps all the allocated nodes and their intermediate data structures.
   llvm::BumpPtrAllocator Allocator;
 };
@@ -122,9 +98,9 @@ public:
   Node *getPreviousSibling() { return PreviousSibling; }
 
   /// Dumps the structure of a subtree. For debugging and testing purposes.
-  std::string dump(const SourceManager &SM) const;
+  std::string dump(const TokenManager &SM) const;
   /// Dumps the tokens forming this subtree.
-  std::string dumpTokens(const SourceManager &SM) const;
+  std::string dumpTokens(const TokenManager &SM) const;
 
   /// Asserts invariants on this node of the tree and its immediate children.
   /// Will not recurse into the subtree. No-op if NDEBUG is set.
@@ -153,16 +129,17 @@ private:
   unsigned CanModify : 1;
 };
 
-/// A leaf node points to a single token inside the expanded token stream.
+/// A leaf node points to a single token.
+// FIXME: add TokenKind field (borrow some bits from the Node::kind).
 class Leaf final : public Node {
 public:
-  Leaf(const Token *T);
+  Leaf(TokenManager::Key K);
   static bool classof(const Node *N);
 
-  const Token *getToken() const { return Tok; }
+  TokenManager::Key getTokenKey() const { return K; }
 
 private:
-  const Token *Tok;
+  TokenManager::Key K;
 };
 
 /// A node that has children and represents a syntactic language construct.

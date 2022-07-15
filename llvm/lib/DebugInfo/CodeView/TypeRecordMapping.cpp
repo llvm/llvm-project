@@ -36,8 +36,10 @@ using namespace llvm::codeview;
 namespace {
 
 #define error(X)                                                               \
-  if (auto EC = X)                                                             \
-    return EC;
+  do {                                                                         \
+    if (auto EC = X)                                                           \
+      return EC;                                                               \
+  } while (false)
 
 static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
 #define CV_TYPE(enum, val) {#enum, enum},

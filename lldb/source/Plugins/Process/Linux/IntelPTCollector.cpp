@@ -124,7 +124,7 @@ Error IntelPTCollector::TraceStart(const TraceIntelPTStartRequest &request) {
 
       // We try to use cgroup filtering whenever possible
       Optional<int> cgroup_fd;
-      if (!request.disable_cgroup_filtering.getValueOr(false))
+      if (!request.disable_cgroup_filtering.value_or(false))
         cgroup_fd = GetCGroupFileDescriptor(m_process.GetID());
 
       if (Expected<IntelPTProcessTraceUP> trace =

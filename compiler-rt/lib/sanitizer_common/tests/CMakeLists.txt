@@ -74,6 +74,7 @@ set(SANITIZER_TEST_CFLAGS_COMMON
 
 set(SANITIZER_TEST_LINK_FLAGS_COMMON
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${SANITIZER_TEST_CXX_LIBRARIES})
 
 # -gline-tables-only must be enough for these tests, so use it if possible.

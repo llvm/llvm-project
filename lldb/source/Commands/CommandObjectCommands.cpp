@@ -13,6 +13,7 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
@@ -1353,29 +1354,6 @@ protected:
 
   CommandOptions m_options;
 };
-
-// CommandObjectCommandsScriptAdd
-static constexpr OptionEnumValueElement g_script_synchro_type[] = {
-    {
-        eScriptedCommandSynchronicitySynchronous,
-        "synchronous",
-        "Run synchronous",
-    },
-    {
-        eScriptedCommandSynchronicityAsynchronous,
-        "asynchronous",
-        "Run asynchronous",
-    },
-    {
-        eScriptedCommandSynchronicityCurrentValue,
-        "current",
-        "Do not alter current setting",
-    },
-};
-
-static constexpr OptionEnumValues ScriptSynchroType() {
-  return OptionEnumValues(g_script_synchro_type);
-}
 
 #define LLDB_OPTIONS_script_add
 #include "CommandOptions.inc"

@@ -14,6 +14,7 @@
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/Language.h"
@@ -27,23 +28,6 @@ using namespace lldb_private;
 CommandObjectExpression::CommandOptions::CommandOptions() = default;
 
 CommandObjectExpression::CommandOptions::~CommandOptions() = default;
-
-static constexpr OptionEnumValueElement g_description_verbosity_type[] = {
-    {
-        eLanguageRuntimeDescriptionDisplayVerbosityCompact,
-        "compact",
-        "Only show the description string",
-    },
-    {
-        eLanguageRuntimeDescriptionDisplayVerbosityFull,
-        "full",
-        "Show the full output, including persistent variable's name and type",
-    },
-};
-
-static constexpr OptionEnumValues DescriptionVerbosityTypes() {
-  return OptionEnumValues(g_description_verbosity_type);
-}
 
 #define LLDB_OPTIONS_expression
 #include "CommandOptions.inc"
