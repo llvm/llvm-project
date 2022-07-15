@@ -2320,6 +2320,58 @@ def int_amdgcn_smfmac_f32_32x32x16_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty,
 def int_amdgcn_smfmac_i32_16x16x64_i8   : AMDGPUMSmfmacIntrinsic<llvm_v4i32_ty,  llvm_v2i32_ty, llvm_v4i32_ty>;
 def int_amdgcn_smfmac_i32_32x32x32_i8   : AMDGPUMSmfmacIntrinsic<llvm_v16i32_ty, llvm_v2i32_ty, llvm_v4i32_ty>;
 
+// llvm.amdgcn.cvt.f32.bf8 float vdst, int srcA, imm byte_sel [0..3]
+// byte_sel selects byte from srcA.
+def int_amdgcn_cvt_f32_bf8 : ClangBuiltin<"__builtin_amdgcn_cvt_f32_bf8">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+
+// llvm.amdgcn.cvt.f32.fp8 float vdst, int srcA, imm byte_sel [0..3]
+def int_amdgcn_cvt_f32_fp8 : ClangBuiltin<"__builtin_amdgcn_cvt_f32_fp8">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+
+// llvm.amdgcn.cvt.pk.f32.bf8 float2 vdst, int srcA, imm word_sel
+// word_sel = 1 selects 2 high bytes, 0 selects 2 low bytes.
+def int_amdgcn_cvt_pk_f32_bf8 : ClangBuiltin<"__builtin_amdgcn_cvt_pk_f32_bf8">,
+  Intrinsic<[llvm_v2f32_ty],
+            [llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+
+// llvm.amdgcn.cvt.pk.f32.fp8 float2 vdst, int srcA, imm word_sel.
+def int_amdgcn_cvt_pk_f32_fp8 : ClangBuiltin<"__builtin_amdgcn_cvt_pk_f32_fp8">,
+  Intrinsic<[llvm_v2f32_ty],
+            [llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+
+// llvm.amdgcn.cvt.pk.bf8.f32 int vdst, float srcA, float srcB, int old, imm word_sel
+// word_sel = 1 selects 2 high bytes in the vdst, 0 selects 2 low bytes.
+def int_amdgcn_cvt_pk_bf8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_pk_bf8_f32">,
+  Intrinsic<[llvm_i32_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]>;
+
+// llvm.amdgcn.cvt.pk.fp8.f32 int vdst, float srcA, float srcB, int old, imm word_sel
+def int_amdgcn_cvt_pk_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_pk_fp8_f32">,
+  Intrinsic<[llvm_i32_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]>;
+
+// llvm.amdgcn.cvt.sr.bf8.f32 int vdst, float srcA, int srcB, int old, imm byte_sel [0..3]
+// byte_sel selects byte to write into vdst.
+def int_amdgcn_cvt_sr_bf8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_bf8_f32">,
+  Intrinsic<[llvm_i32_ty],
+            [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]>;
+
+// llvm.amdgcn.cvt.sr.fp8.f32 int vdst, float srcA, int srcB, int old, imm byte_sel [0..3]
+def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
+  Intrinsic<[llvm_i32_ty],
+            [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]>;
+
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
