@@ -21,6 +21,14 @@ declare <4 x float> @llvm.amdgcn.smfmac.f32.16x16x32.bf16(<4 x i16>, <8 x i16>, 
 declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x16.bf16(<4 x i16>, <8 x i16>, <16 x float>, i32, i32, i32)
 declare <4 x i32> @llvm.amdgcn.smfmac.i32.16x16x64.i8(<2 x i32>, <4 x i32>, <4 x i32>, i32, i32, i32)
 declare <16 x i32> @llvm.amdgcn.smfmac.i32.32x32x32.i8(<2 x i32>, <4 x i32>, <16 x i32>, i32, i32, i32)
+declare <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf8.bf8(<2 x i32>, <4 x i32>, <4 x float>, i32, i32, i32)
+declare <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf8.fp8(<2 x i32>, <4 x i32>, <4 x float>, i32, i32, i32)
+declare <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.fp8.bf8(<2 x i32>, <4 x i32>, <4 x float>, i32, i32, i32)
+declare <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.fp8.fp8(<2 x i32>, <4 x i32>, <4 x float>, i32, i32, i32)
+declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.bf8.bf8(<2 x i32>, <4 x i32>, <16 x float>, i32, i32, i32)
+declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.bf8.fp8(<2 x i32>, <4 x i32>, <16 x float>, i32, i32, i32)
+declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.fp8.bf8(<2 x i32>, <4 x i32>, <16 x float>, i32, i32, i32)
+declare <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.fp8.fp8(<2 x i32>, <4 x i32>, <16 x float>, i32, i32, i32)
 
 ; GCN-LABEL: {{^}}test_mfma_i32_16x16x32i8:
 ; GFX940-DAG:  v_mov_b32_e32 v[[ONE:[0-9]+]], 1
@@ -340,6 +348,146 @@ bb:
   %in.1 = load <16 x i32>, <16 x i32> addrspace(1)* %arg
   %mai.1 = tail call <16 x i32> @llvm.amdgcn.smfmac.i32.32x32x32.i8(<2 x i32> %a, <4 x i32> %b, <16 x i32> %in.1, i32 %idx, i32 1, i32 2)
   store <16 x i32> %mai.1, <16 x i32> addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_smfmac_i32_16x16x64_bf8_bf8:
+; GCN:        s_load_dwordx4 s{{\[}}[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 [[CD:v]]{{\[}}[[RLO:[0-9]+]]:{{[0-9]+}}], s{{\[}}[[SLO]]:{{[0-9]+}}]{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 v[{{[0-9]+}}:[[RHI:[0-9]+]]], s[{{[0-9]+}}:[[SHI]]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 [[CD:a]][[RLO:[0-9]+]], s[[SLO]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 a[[RHI:[0-9]+]], s[[SHI]]{{$}}
+; GCN:        v_smfmac_f32_16x16x64_bf8_bf8 [[CD]]{{\[}}[[RLO]]:[[RHI]]], {{[av]}}[{{[0-9:]+}}], {{[av]}}[{{[0-9:]+}}], v{{[0-9]+}} cbsz:1 abid:2
+; GCN:        global_store_dwordx4 v{{[0-9]+}}, [[CD]]{{\[}}[[RLO]]:[[RHI]]]
+define amdgpu_kernel void @test_smfmac_i32_16x16x64_bf8_bf8(<4 x float> addrspace(1)* %arg, <2 x i32> %a, <4 x i32> %b, i32 %idx) #0 {
+bb:
+  %in.1 = load <4 x float>, <4 x float> addrspace(1)* %arg
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf8.bf8(<2 x i32> %a, <4 x i32> %b, <4 x float> %in.1, i32 %idx, i32 1, i32 2)
+  store <4 x float> %mai.1, <4 x float> addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_smfmac_i32_16x16x64_bf8_fp8:
+; GCN:        s_load_dwordx4 s{{\[}}[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 [[CD:v]]{{\[}}[[RLO:[0-9]+]]:{{[0-9]+}}], s{{\[}}[[SLO]]:{{[0-9]+}}]{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 v[{{[0-9]+}}:[[RHI:[0-9]+]]], s[{{[0-9]+}}:[[SHI]]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 [[CD:a]][[RLO:[0-9]+]], s[[SLO]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 a[[RHI:[0-9]+]], s[[SHI]]{{$}}
+; GCN:        v_smfmac_f32_16x16x64_bf8_fp8 [[CD]]{{\[}}[[RLO]]:[[RHI]]], {{[av]}}[{{[0-9:]+}}], {{[av]}}[{{[0-9:]+}}], v{{[0-9]+}} cbsz:1 abid:2
+; GCN:        global_store_dwordx4 v{{[0-9]+}}, [[CD]]{{\[}}[[RLO]]:[[RHI]]]
+define amdgpu_kernel void @test_smfmac_i32_16x16x64_bf8_fp8(<4 x float> addrspace(1)* %arg, <2 x i32> %a, <4 x i32> %b, i32 %idx) #0 {
+bb:
+  %in.1 = load <4 x float>, <4 x float> addrspace(1)* %arg
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf8.fp8(<2 x i32> %a, <4 x i32> %b, <4 x float> %in.1, i32 %idx, i32 1, i32 2)
+  store <4 x float> %mai.1, <4 x float> addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_smfmac_i32_16x16x64_fp8_bf8:
+; GCN:        s_load_dwordx4 s{{\[}}[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 [[CD:v]]{{\[}}[[RLO:[0-9]+]]:{{[0-9]+}}], s{{\[}}[[SLO]]:{{[0-9]+}}]{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 v[{{[0-9]+}}:[[RHI:[0-9]+]]], s[{{[0-9]+}}:[[SHI]]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 [[CD:a]][[RLO:[0-9]+]], s[[SLO]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 a[[RHI:[0-9]+]], s[[SHI]]{{$}}
+; GCN:        v_smfmac_f32_16x16x64_fp8_bf8 [[CD]]{{\[}}[[RLO]]:[[RHI]]], {{[av]}}[{{[0-9:]+}}], {{[av]}}[{{[0-9:]+}}], v{{[0-9]+}} cbsz:1 abid:2
+; GCN:        global_store_dwordx4 v{{[0-9]+}}, [[CD]]{{\[}}[[RLO]]:[[RHI]]]
+define amdgpu_kernel void @test_smfmac_i32_16x16x64_fp8_bf8(<4 x float> addrspace(1)* %arg, <2 x i32> %a, <4 x i32> %b, i32 %idx) #0 {
+bb:
+  %in.1 = load <4 x float>, <4 x float> addrspace(1)* %arg
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.fp8.bf8(<2 x i32> %a, <4 x i32> %b, <4 x float> %in.1, i32 %idx, i32 1, i32 2)
+  store <4 x float> %mai.1, <4 x float> addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_smfmac_i32_16x16x64_fp8_fp8:
+; GCN:        s_load_dwordx4 s{{\[}}[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 [[CD:v]]{{\[}}[[RLO:[0-9]+]]:{{[0-9]+}}], s{{\[}}[[SLO]]:{{[0-9]+}}]{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 v[{{[0-9]+}}:[[RHI:[0-9]+]]], s[{{[0-9]+}}:[[SHI]]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 [[CD:a]][[RLO:[0-9]+]], s[[SLO]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 a[[RHI:[0-9]+]], s[[SHI]]{{$}}
+; GCN:        v_smfmac_f32_16x16x64_fp8_fp8 [[CD]]{{\[}}[[RLO]]:[[RHI]]], {{[av]}}[{{[0-9:]+}}], {{[av]}}[{{[0-9:]+}}], v{{[0-9]+}} cbsz:1 abid:2
+; GCN:        global_store_dwordx4 v{{[0-9]+}}, [[CD]]{{\[}}[[RLO]]:[[RHI]]]
+define amdgpu_kernel void @test_smfmac_i32_16x16x64_fp8_fp8(<4 x float> addrspace(1)* %arg, <2 x i32> %a, <4 x i32> %b, i32 %idx) #0 {
+bb:
+  %in.1 = load <4 x float>, <4 x float> addrspace(1)* %arg
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.fp8.fp8(<2 x i32> %a, <4 x i32> %b, <4 x float> %in.1, i32 %idx, i32 1, i32 2)
+  store <4 x float> %mai.1, <4 x float> addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_smfmac_i32_32x32x32_bf8_bf8:
+; GCN:        s_load_dwordx16 s{{\[}}[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 [[CD:v]]{{\[}}[[RLO:[0-9]+]]:{{[0-9]+}}], s{{\[}}[[SLO]]:{{[0-9]+}}]{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 v[{{[0-9]+}}:[[RHI:[0-9]+]]], s[{{[0-9]+}}:[[SHI]]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 [[CD:a]][[RLO:[0-9]+]], s[[SLO]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 a[[RHI:[0-9]+]], s[[SHI]]{{$}}
+; GCN:        v_smfmac_f32_32x32x32_bf8_bf8 [[CD]]{{\[}}[[RLO]]:[[RHI]]], {{[av]}}[{{[0-9:]+}}], {{[av]}}[{{[0-9:]+}}], v{{[0-9]+}} cbsz:1 abid:2
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]]{{\[}}[[RLO]]:{{[0-9]+}}], s[{{[0-9:]+}}]{{$}}
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9:]+}}], s[{{[0-9:]+}}] offset:16
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9:]+}}], s[{{[0-9:]+}}] offset:32
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9]+}}:[[RHI]]], s[{{[0-9:]+}}] offset:48
+define amdgpu_kernel void @test_smfmac_i32_32x32x32_bf8_bf8(<16 x float> addrspace(1)* %arg, <2 x i32> %a, <4 x i32> %b, i32 %idx) #0 {
+bb:
+  %in.1 = load <16 x float>, <16 x float> addrspace(1)* %arg
+  %mai.1 = tail call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.bf8.bf8(<2 x i32> %a, <4 x i32> %b, <16 x float> %in.1, i32 %idx, i32 1, i32 2)
+  store <16 x float> %mai.1, <16 x float> addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_smfmac_i32_32x32x32_bf8_fp8:
+; GCN:        s_load_dwordx16 s{{\[}}[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 [[CD:v]]{{\[}}[[RLO:[0-9]+]]:{{[0-9]+}}], s{{\[}}[[SLO]]:{{[0-9]+}}]{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 v[{{[0-9]+}}:[[RHI:[0-9]+]]], s[{{[0-9]+}}:[[SHI]]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 [[CD:a]][[RLO:[0-9]+]], s[[SLO]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 a[[RHI:[0-9]+]], s[[SHI]]{{$}}
+; GCN:        v_smfmac_f32_32x32x32_bf8_fp8 [[CD]]{{\[}}[[RLO]]:[[RHI]]], {{[av]}}[{{[0-9:]+}}], {{[av]}}[{{[0-9:]+}}], v{{[0-9]+}} cbsz:1 abid:2
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]]{{\[}}[[RLO]]:{{[0-9]+}}], s[{{[0-9:]+}}]{{$}}
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9:]+}}], s[{{[0-9:]+}}] offset:16
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9:]+}}], s[{{[0-9:]+}}] offset:32
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9]+}}:[[RHI]]], s[{{[0-9:]+}}] offset:48
+define amdgpu_kernel void @test_smfmac_i32_32x32x32_bf8_fp8(<16 x float> addrspace(1)* %arg, <2 x i32> %a, <4 x i32> %b, i32 %idx) #0 {
+bb:
+  %in.1 = load <16 x float>, <16 x float> addrspace(1)* %arg
+  %mai.1 = tail call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.bf8.fp8(<2 x i32> %a, <4 x i32> %b, <16 x float> %in.1, i32 %idx, i32 1, i32 2)
+  store <16 x float> %mai.1, <16 x float> addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_smfmac_i32_32x32x32_fp8_bf8:
+; GCN:        s_load_dwordx16 s{{\[}}[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 [[CD:v]]{{\[}}[[RLO:[0-9]+]]:{{[0-9]+}}], s{{\[}}[[SLO]]:{{[0-9]+}}]{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 v[{{[0-9]+}}:[[RHI:[0-9]+]]], s[{{[0-9]+}}:[[SHI]]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 [[CD:a]][[RLO:[0-9]+]], s[[SLO]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 a[[RHI:[0-9]+]], s[[SHI]]{{$}}
+; GCN:        v_smfmac_f32_32x32x32_fp8_bf8 [[CD]]{{\[}}[[RLO]]:[[RHI]]], {{[av]}}[{{[0-9:]+}}], {{[av]}}[{{[0-9:]+}}], v{{[0-9]+}} cbsz:1 abid:2
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]]{{\[}}[[RLO]]:{{[0-9]+}}], s[{{[0-9:]+}}]{{$}}
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9:]+}}], s[{{[0-9:]+}}] offset:16
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9:]+}}], s[{{[0-9:]+}}] offset:32
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9]+}}:[[RHI]]], s[{{[0-9:]+}}] offset:48
+define amdgpu_kernel void @test_smfmac_i32_32x32x32_fp8_bf8(<16 x float> addrspace(1)* %arg, <2 x i32> %a, <4 x i32> %b, i32 %idx) #0 {
+bb:
+  %in.1 = load <16 x float>, <16 x float> addrspace(1)* %arg
+  %mai.1 = tail call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.fp8.bf8(<2 x i32> %a, <4 x i32> %b, <16 x float> %in.1, i32 %idx, i32 1, i32 2)
+  store <16 x float> %mai.1, <16 x float> addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_smfmac_i32_32x32x32_fp8_fp8:
+; GCN:        s_load_dwordx16 s{{\[}}[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[{{[0-9:]+}}], 0x0{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 [[CD:v]]{{\[}}[[RLO:[0-9]+]]:{{[0-9]+}}], s{{\[}}[[SLO]]:{{[0-9]+}}]{{$}}
+; VGPRCD-DAG: v_mov_b64_e32 v[{{[0-9]+}}:[[RHI:[0-9]+]]], s[{{[0-9]+}}:[[SHI]]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 [[CD:a]][[RLO:[0-9]+]], s[[SLO]]{{$}}
+; AGPRCD-DAG: v_accvgpr_write_b32 a[[RHI:[0-9]+]], s[[SHI]]{{$}}
+; GCN:        v_smfmac_f32_32x32x32_fp8_fp8 [[CD]]{{\[}}[[RLO]]:[[RHI]]], {{[av]}}[{{[0-9:]+}}], {{[av]}}[{{[0-9:]+}}], v{{[0-9]+}} cbsz:1 abid:2
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]]{{\[}}[[RLO]]:{{[0-9]+}}], s[{{[0-9:]+}}]{{$}}
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9:]+}}], s[{{[0-9:]+}}] offset:16
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9:]+}}], s[{{[0-9:]+}}] offset:32
+; GCN-DAG:    global_store_dwordx4 v{{[0-9]+}}, [[CD]][{{[0-9]+}}:[[RHI]]], s[{{[0-9:]+}}] offset:48
+define amdgpu_kernel void @test_smfmac_i32_32x32x32_fp8_fp8(<16 x float> addrspace(1)* %arg, <2 x i32> %a, <4 x i32> %b, i32 %idx) #0 {
+bb:
+  %in.1 = load <16 x float>, <16 x float> addrspace(1)* %arg
+  %mai.1 = tail call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.fp8.fp8(<2 x i32> %a, <4 x i32> %b, <16 x float> %in.1, i32 %idx, i32 1, i32 2)
+  store <16 x float> %mai.1, <16 x float> addrspace(1)* %arg
   ret void
 }
 

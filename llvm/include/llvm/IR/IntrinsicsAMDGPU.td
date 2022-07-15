@@ -2331,6 +2331,17 @@ def int_amdgcn_smfmac_f32_32x32x16_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty,
 def int_amdgcn_smfmac_i32_16x16x64_i8   : AMDGPUMSmfmacIntrinsic<llvm_v4i32_ty,  llvm_v2i32_ty, llvm_v4i32_ty>;
 def int_amdgcn_smfmac_i32_32x32x32_i8   : AMDGPUMSmfmacIntrinsic<llvm_v16i32_ty, llvm_v2i32_ty, llvm_v4i32_ty>;
 
+class AMDGPUMFp8SmfmacIntrinsic<LLVMType DestTy> :
+  AMDGPUMSmfmacIntrinsic<DestTy, llvm_v2i32_ty, llvm_v4i32_ty>;
+
+multiclass AMDGPUMFp8SmfmacIntrinsic<LLVMType DestTy> {
+  foreach kind = ["bf8_bf8", "bf8_fp8", "fp8_bf8", "fp8_fp8"] in
+    def NAME#"_"#kind : AMDGPUMFp8SmfmacIntrinsic<DestTy>;
+}
+
+defm int_amdgcn_smfmac_f32_16x16x64 : AMDGPUMFp8SmfmacIntrinsic<llvm_v4f32_ty>;
+defm int_amdgcn_smfmac_f32_32x32x32 : AMDGPUMFp8SmfmacIntrinsic<llvm_v16f32_ty>;
+
 // llvm.amdgcn.cvt.f32.bf8 float vdst, int srcA, imm byte_sel [0..3]
 // byte_sel selects byte from srcA.
 def int_amdgcn_cvt_f32_bf8 : ClangBuiltin<"__builtin_amdgcn_cvt_f32_bf8">,
