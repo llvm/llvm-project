@@ -454,19 +454,24 @@ FailureOr<TileLoopNest> mlir::linalg::tileConsumerAndFuseProducers(
     }
   };
 
+  // Perform tiling and fusion in two steps. We need to respect the loop
+  // interchange here; filter parellel dimensions based on their order *after*
+  // permutation but pass in the original configuration *before* permuation,
+  // given the tiling and interchange happen together.
+  SmallVector<int64_t> outerTileSizes(tileSizes.size(), 0);
+  SmallVector<int64_t> innerTileSizes(tileSizes.size(), 0);
+  for (int64_t i : tileInterchange.take_front(split))
+    outerTileSizes[i] = tileSizes[i];
+  for (int64_t i : tileInterchange.drop_front(split))
+    innerTileSizes[i] = tileSizes[i];
+
   // Tile the outer parallel loops and fuse the output operands.
-  SmallVector<int64_t> outerTileSizes;
-  outerTileSizes.append(tileSizes.begin(), tileSizes.begin() + split);
-  outerTileSizes.append(tileSizes.size() - split, 0);
   if (failed(tileLoopNest.tileRootOp(b, outerTileSizes, tileInterchange,
                                      tileDistribution)))
     return failure();
   fuseProducersGreedily(tileLoopNest.getRootOp().getOutputOperands());
 
   // Tile the remaining loops and fuse the input operands.
-  SmallVector<int64_t> innerTileSizes;
-  innerTileSizes.append(split, 0);
-  innerTileSizes.append(tileSizes.begin() + split, tileSizes.end());
   if (failed(tileLoopNest.tileRootOp(b, innerTileSizes, tileInterchange,
                                      tileDistribution)))
     return failure();
