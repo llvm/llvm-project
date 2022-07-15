@@ -55,21 +55,6 @@ static cl::opt<bool> SuperAlignLDSGlobals(
     cl::init(true), cl::Hidden);
 
 namespace {
-
-SmallPtrSet<GlobalValue *, 32> getUsedList(Module &M) {
-  SmallPtrSet<GlobalValue *, 32> UsedList;
-
-  SmallVector<GlobalValue *, 32> TmpVec;
-  collectUsedGlobalVariables(M, TmpVec, true);
-  UsedList.insert(TmpVec.begin(), TmpVec.end());
-
-  TmpVec.clear();
-  collectUsedGlobalVariables(M, TmpVec, false);
-  UsedList.insert(TmpVec.begin(), TmpVec.end());
-
-  return UsedList;
-}
-
 class AMDGPULowerModuleLDS : public ModulePass {
 
   static void removeFromUsedList(Module &M, StringRef Name,
@@ -153,9 +138,6 @@ class AMDGPULowerModuleLDS : public ModulePass {
                        "");
   }
 
-private:
-  SmallPtrSet<GlobalValue *, 32> UsedList;
-
 public:
   static char ID;
 
@@ -165,7 +147,6 @@ public:
 
   bool runOnModule(Module &M) override {
     CallGraph CG = CallGraph(M);
-    UsedList = getUsedList(M);
     bool Changed = superAlignLDSGlobals(M);
     Changed |= processUsedLDS(CG, M);
 
@@ -179,7 +160,6 @@ public:
       Changed |= processUsedLDS(CG, M, &F);
     }
 
-    UsedList.clear();
     return Changed;
   }
 
@@ -352,7 +332,6 @@ private:
         GV->replaceAllUsesWith(GEP);
       }
       if (GV->use_empty()) {
-        UsedList.erase(GV);
         GV->eraseFromParent();
       }
 
