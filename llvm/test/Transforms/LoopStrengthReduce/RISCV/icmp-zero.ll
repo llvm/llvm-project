@@ -92,6 +92,40 @@ exit:
   ret void
 }
 
+; We have to be careful here as SCEV can only compute a subtraction from
+; two pointers with the same base.  If we hide %end inside a unknown, we
+; can no longer compute the subtract.
+define void @icmp_zero_urem_invariant_ptr(i64 %N, i64 %M, ptr %p) {
+; CHECK-LABEL: @icmp_zero_urem_invariant_ptr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[N:%.*]], [[M:%.*]]
+; CHECK-NEXT:    [[END:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[UREM]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[P]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    store i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr i64, ptr [[IV]], i64 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq ptr [[IV_NEXT]], [[END]]
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %urem = urem i64 %N, %M
+  %end = getelementptr i64, ptr %p, i64 %urem
+  br label %vector.body
+
+vector.body:
+  %iv = phi ptr [ %p, %entry ], [ %iv.next, %vector.body ]
+  store i64 0, ptr %p
+  %iv.next = getelementptr i64, ptr %iv, i64 1
+  %done = icmp eq ptr %iv.next, %end
+  br i1 %done, label %exit, label %vector.body
+
+exit:
+  ret void
+}
+
 ; Negative test - We can not hoist because we don't know value of %M.
 define void @icmp_zero_urem_nohoist(i64 %N, i64 %M, ptr %p) {
 ; CHECK-LABEL: @icmp_zero_urem_nohoist(
