@@ -1416,10 +1416,7 @@ public:
     // that a parameter pack can be expanded in c++11.
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
     (void)std::initializer_list<int>{
-        0, (addImpl<Ts>(/*debugLabels=*/llvm::None,
-                        std::forward<ConstructorArg>(arg),
-                        std::forward<ConstructorArgs>(args)...),
-            0)...};
+        0, (addImpl<Ts>(/*debugLabels=*/llvm::None, arg, args...), 0)...};
     return *this;
   }
   /// An overload of the above `add` method that allows for attaching a set
