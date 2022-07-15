@@ -127,7 +127,7 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
       // If the loop is branched to from an indirect terminator, we won't
       // be able to fully transform the loop, because it prohibits
       // edge splitting.
-      if (P->getTerminator()->isIndirectTerminator())
+      if (isa<IndirectBrInst>(P->getTerminator()))
         return nullptr;
 
       // Keep track of it.
@@ -256,7 +256,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     if (PN->getIncomingValue(i) != PN ||
         !L->contains(PN->getIncomingBlock(i))) {
       // We can't split indirect control flow edges.
-      if (PN->getIncomingBlock(i)->getTerminator()->isIndirectTerminator())
+      if (isa<IndirectBrInst>(PN->getIncomingBlock(i)->getTerminator()))
         return nullptr;
       OuterLoopPreds.push_back(PN->getIncomingBlock(i));
     }
@@ -375,7 +375,7 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   std::vector<BasicBlock*> BackedgeBlocks;
   for (BasicBlock *P : predecessors(Header)) {
     // Indirect edges cannot be split, so we must fail if we find one.
-    if (P->getTerminator()->isIndirectTerminator())
+    if (isa<IndirectBrInst>(P->getTerminator()))
       return nullptr;
 
     if (P != Preheader) BackedgeBlocks.push_back(P);
