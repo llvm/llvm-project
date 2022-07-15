@@ -1970,6 +1970,22 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
 }
 
 static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
+  // If information useful for showing the disassembly is missing, try to find a
+  // more complete binary and disassemble that instead.
+  OwningBinary<Binary> FetchedBinary;
+  if (Obj->symbols().empty()) {
+    if (Optional<OwningBinary<Binary>> FetchedBinaryOpt =
+            fetchBinaryByBuildID(*Obj)) {
+      if (auto *O = dyn_cast<ObjectFile>(FetchedBinaryOpt->getBinary())) {
+        if (!O->symbols().empty() ||
+            (!O->sections().empty() && Obj->sections().empty())) {
+          FetchedBinary = std::move(*FetchedBinaryOpt);
+          Obj = O;
+        }
+      }
+    }
+  }
+
   const Target *TheTarget = getTarget(Obj);
 
   // Package up features to be passed to target/subtarget
@@ -2074,14 +2090,13 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
 
   const ObjectFile *DbgObj = Obj;
-  OwningBinary<Binary> DebugBinary;
-  if (!DbgObj->hasDebugInfo()) {
+  if (!FetchedBinary.getBinary() && !Obj->hasDebugInfo()) {
     if (Optional<OwningBinary<Binary>> DebugBinaryOpt =
             fetchBinaryByBuildID(*Obj)) {
       if (auto *FetchedObj =
               dyn_cast<const ObjectFile>(DebugBinaryOpt->getBinary())) {
         if (FetchedObj->hasDebugInfo()) {
-          DebugBinary = std::move(*DebugBinaryOpt);
+          FetchedBinary = std::move(*DebugBinaryOpt);
           DbgObj = FetchedObj;
         }
       }
