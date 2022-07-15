@@ -1066,10 +1066,25 @@ Compiler/Platform-specific topics
 
 Notes for specific compilers and/or platforms.
 
-Microsoft Visual C++
---------------------
+Windows
+-------
 
 **LLVM_COMPILER_JOBS**:STRING
   Specifies the maximum number of parallel compiler jobs to use per project
   when building with msbuild or Visual Studio. Only supported for the Visual
   Studio 2010 CMake generator. 0 means use all processors. Default is 0.
+
+**CMAKE_MT**:STRING
+  When compiling with clang-cl, recent CMake versions will default to selecting
+  `llvm-mt` as the Manifest Tool instead of Microsoft's `mt.exe`. This will
+  often cause errors like:
+
+  .. code-block:: console
+
+    -- Check for working C compiler: [...]clang-cl.exe - broken
+    [...]
+        MT: command [...] failed (exit code 0x1) with the following output:
+        llvm-mt: error: no libxml2
+        ninja: build stopped: subcommand failed.
+
+  To work around this error, set `CMAKE_MT=mt`.
