@@ -77,7 +77,7 @@ TokenStream cook(const TokenStream &Code, const LangOptions &LangOpts) {
   auto CleanedStorage = std::make_shared<llvm::BumpPtrAllocator>();
   clang::IdentifierTable Identifiers(LangOpts);
   TokenStream Result(CleanedStorage);
-
+  Result.addPayload(Code.getPayload());
   for (auto Tok : Code.tokens()) {
     if (Tok.flag(LexFlags::NeedsCleaning)) {
       // Remove escaped newlines and trigraphs.

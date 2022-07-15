@@ -170,6 +170,18 @@ public:
     return Storage[1];
   }
 
+  /// Returns the shared payload.
+  std::shared_ptr<void> getPayload() const { return Payload; }
+  /// Adds the given payload to the stream.
+  void addPayload(std::shared_ptr<void> P) {
+    if (!Payload)
+      Payload = std::move(P);
+    else
+      Payload = std::make_shared<
+          std::pair<std::shared_ptr<void>, std::shared_ptr<void>>>(
+          std::move(P), std::move(Payload));
+  }
+
   /// Print the tokens in this stream to the output stream.
   ///
   /// The presence of newlines/spaces is preserved, but not the quantity.

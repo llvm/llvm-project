@@ -116,7 +116,7 @@ clang::LangOptions genericLangOpts(clang::Language Lang,
 }
 
 TokenStream stripComments(const TokenStream &Input) {
-  TokenStream Out;
+  TokenStream Out(Input.getPayload());
   for (const Token &T : Input.tokens()) {
     if (T.Kind == tok::comment)
       continue;
