@@ -7249,7 +7249,7 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
   Operator *U = cast<Operator>(V);
   if (auto BO = MatchBinaryOp(U, DT)) {
     bool IsConstArg = isa<ConstantInt>(BO->RHS);
-    switch (U->getOpcode()) {
+    switch (BO->Opcode) {
     case Instruction::Add: {
       // For additions and multiplications, traverse add/mul chains for which we
       // can potentially create a single SCEV, to reduce the number of
@@ -7291,7 +7291,10 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
       } while (true);
       return nullptr;
     }
-
+    case Instruction::Sub:
+    case Instruction::UDiv:
+    case Instruction::URem:
+      break;
     case Instruction::AShr:
     case Instruction::Shl:
     case Instruction::Xor:
@@ -7303,7 +7306,10 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
       if (!IsConstArg && BO->LHS->getType()->isIntegerTy(1))
         return nullptr;
       break;
+    case Instruction::LShr:
+      return getUnknown(V);
     default:
+      llvm_unreachable("Unhandled binop");
       break;
     }
 
@@ -11191,14 +11197,13 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
     if (ProveViaGuard(Pair.first))
       return true;
 
-    const BranchInst *LoopEntryPredicate =
+    const BranchInst *BlockEntryPredicate =
         dyn_cast<BranchInst>(Pair.first->getTerminator());
-    if (!LoopEntryPredicate ||
-        LoopEntryPredicate->isUnconditional())
+    if (!BlockEntryPredicate || BlockEntryPredicate->isUnconditional())
       continue;
 
-    if (ProveViaCond(LoopEntryPredicate->getCondition(),
-                     LoopEntryPredicate->getSuccessor(0) != Pair.second))
+    if (ProveViaCond(BlockEntryPredicate->getCondition(),
+                     BlockEntryPredicate->getSuccessor(0) != Pair.second))
       return true;
   }
 
