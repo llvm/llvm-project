@@ -135,12 +135,22 @@ public:
       for (std::size_t j{0}; j < elements; ++j) {
         using Char = typename Scalar::value_type;
         auto at{static_cast<std::size_t>(offset_ + j * stride)};
-        if (at + length > image_.data_.size()) {
+        auto chunk{length};
+        if (at + chunk > image_.data_.size()) {
           CHECK(padWithZero_);
-          break;
+          if (at >= image_.data_.size()) {
+            chunk = 0;
+          } else {
+            chunk = image_.data_.size() - at;
+          }
         }
-        const Char *data{reinterpret_cast<const Char *>(&image_.data_[at])};
-        typedValue[j].assign(data, length);
+        if (chunk > 0) {
+          const Char *data{reinterpret_cast<const Char *>(&image_.data_[at])};
+          typedValue[j].assign(data, chunk);
+        }
+        if (chunk < length && padWithZero_) {
+          typedValue[j].append(length - chunk, Char{});
+        }
       }
       return AsGenericExpr(
           Const{length, std::move(typedValue), std::move(extents_)});
@@ -153,12 +163,15 @@ public:
         if (at + chunk > image_.data_.size()) {
           CHECK(padWithZero_);
           if (at >= image_.data_.size()) {
-            break;
+            chunk = 0;
+          } else {
+            chunk = image_.data_.size() - at;
           }
-          chunk = image_.data_.size() - at;
         }
         // TODO endianness
-        std::memcpy(&typedValue[j], &image_.data_[at], chunk);
+        if (chunk > 0) {
+          std::memcpy(&typedValue[j], &image_.data_[at], chunk);
+        }
       }
       return AsGenericExpr(Const{std::move(typedValue), std::move(extents_)});
     }

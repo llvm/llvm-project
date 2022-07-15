@@ -34,4 +34,9 @@ module m
   logical, parameter :: test_c2i_v_2 = all(jc3 == [int(z'61626364'), int(z'65666768')]) .or. all(jc3 == [int(z'64636261'), int(z'68676665')])
   integer, parameter :: jc4(*) = transfer(["abcd", "efgh"], 0, 1)
   logical, parameter :: test_c2i_vs_1 = all(jc4 == [int(z'61626364')]) .or. all(jc4 == [int(z'64636261')])
+
+  integer, parameter :: le1 = int(z'64636261', 4), be1 = int(z'65666768', 4)
+  character*5, parameter :: le1c(*) = transfer(le1, [character(5)::])
+  character*5, parameter :: be1c(*) = transfer(be1, [character(5)::])
+  logical, parameter :: test_i2c_s = all(le1c == ["abcd"//char(0)]) .or. all(be1c == ["efgh"//char(0)])
 end module
