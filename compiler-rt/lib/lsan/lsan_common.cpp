@@ -949,7 +949,7 @@ void __lsan_ignore_object(const void *p) {
   Lock l(&global_mutex);
   IgnoreObjectResult res = IgnoreObjectLocked(p);
   if (res == kIgnoreObjectInvalid)
-    VReport(1, "__lsan_ignore_object(): no heap object found at %p", p);
+    VReport(1, "__lsan_ignore_object(): no heap object found at %p\n", p);
   if (res == kIgnoreObjectAlreadyIgnored)
     VReport(1,
             "__lsan_ignore_object(): "
