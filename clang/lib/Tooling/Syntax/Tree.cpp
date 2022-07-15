@@ -8,9 +8,8 @@
 #include "clang/Tooling/Syntax/Tree.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Syntax/Nodes.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 
