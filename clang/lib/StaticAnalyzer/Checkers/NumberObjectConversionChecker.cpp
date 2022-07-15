@@ -196,10 +196,12 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
                                                      AnalysisManager &AM,
                                                      BugReporter &BR) const {
   // Currently this matches CoreFoundation opaque pointer typedefs.
-  auto CSuspiciousNumberObjectExprM = expr(ignoringParenImpCasts(
-      expr(hasType(elaboratedType(namesType(typedefType(
-               hasDeclaration(anyOf(typedefDecl(hasName("CFNumberRef")),
-                                    typedefDecl(hasName("CFBooleanRef")))))))))
+  auto CSuspiciousNumberObjectExprM =
+      expr(ignoringParenImpCasts(
+          expr(hasType(
+              typedefType(hasDeclaration(anyOf(
+                  typedefDecl(hasName("CFNumberRef")),
+                  typedefDecl(hasName("CFBooleanRef")))))))
           .bind("c_object")));
 
   // Currently this matches XNU kernel number-object pointers.
@@ -238,9 +240,8 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
 
   // The .bind here is in order to compose the error message more accurately.
   auto ObjCSuspiciousScalarBooleanTypeM =
-      qualType(elaboratedType(namesType(
-                   typedefType(hasDeclaration(typedefDecl(hasName("BOOL")))))))
-          .bind("objc_bool_type");
+      qualType(typedefType(hasDeclaration(
+                   typedefDecl(hasName("BOOL"))))).bind("objc_bool_type");
 
   // The .bind here is in order to compose the error message more accurately.
   auto SuspiciousScalarBooleanTypeM =
@@ -252,9 +253,9 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
   // for storing pointers.
   auto SuspiciousScalarNumberTypeM =
       qualType(hasCanonicalType(isInteger()),
-               unless(elaboratedType(namesType(typedefType(hasDeclaration(
-                   typedefDecl(matchesName("^::u?intptr_t$"))))))))
-          .bind("int_type");
+               unless(typedefType(hasDeclaration(
+                   typedefDecl(matchesName("^::u?intptr_t$"))))))
+      .bind("int_type");
 
   auto SuspiciousScalarTypeM =
       qualType(anyOf(SuspiciousScalarBooleanTypeM,

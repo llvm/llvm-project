@@ -265,13 +265,13 @@ namespace PR15291 {
   typedef void (*fptr_t)(int);
   typedef void __attribute__((noreturn)) (*fptr_noreturn_t)(int);
 
-  // expected-note@+1 {{candidate function not viable: no overload of 'bar' matching 'fptr_t' (aka 'void (*)(int)') for 1st argument}}
+  // expected-note@+1 {{candidate function not viable: no overload of 'bar' matching 'PR15291::fptr_t' (aka 'void (*)(int)') for 1st argument}}
   void accept_fptr_t(fptr_t f) {
     f(42);
   }
 
-  // expected-note@+2 {{candidate function not viable: no overload of 'baz' matching 'fptr_noreturn_t' (aka 'void (*)(int) __attribute__((noreturn))') for 1st argument}}
-  // expected-note@+1 {{candidate function not viable: no overload of 'qux' matching 'fptr_noreturn_t' (aka 'void (*)(int) __attribute__((noreturn))') for 1st argument}}
+  // expected-note@+2 {{candidate function not viable: no overload of 'baz' matching 'PR15291::fptr_noreturn_t' (aka 'void (*)(int) __attribute__((noreturn))') for 1st argument}}
+  // expected-note@+1 {{candidate function not viable: no overload of 'qux' matching 'PR15291::fptr_noreturn_t' (aka 'void (*)(int) __attribute__((noreturn))') for 1st argument}}
   void accept_fptr_noreturn_t(fptr_noreturn_t f) {
     f(42);
   }

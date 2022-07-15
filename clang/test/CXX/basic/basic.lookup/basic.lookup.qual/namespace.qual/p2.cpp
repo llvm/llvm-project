@@ -63,11 +63,11 @@ void test3() {
 
   int i = Ints::zero;
   Numbers2::f(i);
-  Numbers2::g(i); // expected-error {{no viable conversion from 'int' to 'Number'}}
+  Numbers2::g(i); // expected-error {{no viable conversion from 'int' to 'Numbers::Number'}}
 
   float f = Floats::zero;
   Numbers2::f(f);
-  Numbers2::g(f); // expected-error {{no viable conversion from 'float' to 'Number'}}
+  Numbers2::g(f); // expected-error {{no viable conversion from 'float' to 'Numbers::Number'}}
 }
 
 namespace inline_ns {

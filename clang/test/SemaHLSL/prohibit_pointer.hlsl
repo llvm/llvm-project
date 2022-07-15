@@ -75,7 +75,7 @@ struct Fish {
 int gone_fishing() {
   Fish F;
   int Result = *F; // user-defined dereference operators work
-  // expected-error@+1 {{member reference type 'Fins' is not a pointer}}
+  // expected-error@+1 {{member reference type 'Fish::Fins' is not a pointer}}
   Result += F->Left;
   return Result;
 }

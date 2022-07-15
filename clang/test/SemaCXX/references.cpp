@@ -90,7 +90,7 @@ class Test6 { // expected-warning{{class 'Test6' does not declare any constructo
   int& okay; // expected-note{{reference member 'okay' will never be initialized}}
 };
 
-struct C : B, A { }; // expected-warning {{direct base 'A' is inaccessible due to ambiguity:\n    struct C -> B -> A\nstruct C -> A}}
+struct C : B, A { }; // expected-warning {{direct base 'A' is inaccessible due to ambiguity:\n    struct C -> struct B -> struct A\nstruct C -> struct A}}
 
 void test7(C& c) {
   A& a1 = c; // expected-error {{ambiguous conversion from derived class 'C' to base class 'A':}}
@@ -180,7 +180,7 @@ namespace ExplicitRefInit {
   // This is invalid: we can't copy-initialize an 'A' temporary using an
   // explicit constructor.
   struct A { explicit A(int); };
-  const A &a(0); // expected-error {{reference to type 'const A' could not bind to an rvalue of type 'int'}}
+  const A &a(0); // expected-error {{reference to type 'const ExplicitRefInit::A' could not bind to an rvalue of type 'int'}}
 }
 
 namespace RefCollapseTypePrinting {

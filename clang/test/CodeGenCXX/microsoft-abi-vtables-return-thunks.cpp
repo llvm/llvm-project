@@ -20,11 +20,11 @@ struct K : J { virtual E *foo(); K(); };
 J::J() {}
 
 // VFTABLES-LABEL: VFTable for 'test1::H' in 'test1::I' in 'test1::J' (3 entries).
-// VFTABLES-NEXT:   0 | D *test1::J::foo()
+// VFTABLES-NEXT:   0 | test1::D *test1::J::foo()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test1::B *'): 4 non-virtual]
-// VFTABLES-NEXT:   1 | D *test1::J::foo()
+// VFTABLES-NEXT:   1 | test1::D *test1::J::foo()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test1::C *'): 0 non-virtual]
-// VFTABLES-NEXT:   2 | D *test1::J::foo()
+// VFTABLES-NEXT:   2 | test1::D *test1::J::foo()
 
 // GLOBALS-LABEL: @"??_7J@test1@@6B@" = linkonce_odr unnamed_addr constant { [3 x i8*] }
 // GLOBALS: @"?foo@J@test1@@QAEPAUB@2@XZ"
@@ -34,13 +34,13 @@ J::J() {}
 K::K() {}
 
 // VFTABLES-LABEL: VFTable for 'test1::H' in 'test1::I' in 'test1::J' in 'test1::K' (4 entries).
-// VFTABLES-NEXT:   0 | E *test1::K::foo()
+// VFTABLES-NEXT:   0 | test1::E *test1::K::foo()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test1::B *'): 4 non-virtual]
-// VFTABLES-NEXT:   1 | E *test1::K::foo()
+// VFTABLES-NEXT:   1 | test1::E *test1::K::foo()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test1::C *'): 0 non-virtual]
-// VFTABLES-NEXT:   2 | E *test1::K::foo()
+// VFTABLES-NEXT:   2 | test1::E *test1::K::foo()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test1::D *'): 0 non-virtual]
-// VFTABLES-NEXT:   3 | E *test1::K::foo()
+// VFTABLES-NEXT:   3 | test1::E *test1::K::foo()
 
 // Only B to C requires adjustment, but we get 3 thunks in K's vftable, two of
 // which are trivial.
@@ -86,20 +86,20 @@ struct K : J { virtual E *foo(); K(); };
 J::J() {}
 
 // VFTABLES-LABEL: VFTable for 'test2::H' in 'test2::I' in 'test2::J' (2 entries).
-// VFTABLES-NEXT:    0 | D *test2::J::foo()
+// VFTABLES-NEXT:    0 | test2::D *test2::J::foo()
 // VFTABLES-NEXT:         [return adjustment (to type 'struct test2::B *'): 4 non-virtual]
-// VFTABLES-NEXT:    1 | D *test2::J::foo()
+// VFTABLES-NEXT:    1 | test2::D *test2::J::foo()
 
 // GLOBALS-LABEL: @"??_7J@test2@@6B@" = linkonce_odr unnamed_addr constant { [2 x i8*] }
 
 K::K() {}
 
 // VFTABLES-LABEL: VFTable for 'test2::H' in 'test2::I' in 'test2::J' in 'test2::K' (3 entries).
-// VFTABLES-NEXT:    0 | E *test2::K::foo()
+// VFTABLES-NEXT:    0 | test2::E *test2::K::foo()
 // VFTABLES-NEXT:         [return adjustment (to type 'struct test2::B *'): 4 non-virtual]
-// VFTABLES-NEXT:    1 | E *test2::K::foo()
+// VFTABLES-NEXT:    1 | test2::E *test2::K::foo()
 // VFTABLES-NEXT:         [return adjustment (to type 'struct test2::D *'): 0 non-virtual]
-// VFTABLES-NEXT:    2 | E *test2::K::foo()
+// VFTABLES-NEXT:    2 | test2::E *test2::K::foo()
 
 // GLOBALS-LABEL: @"??_7K@test2@@6B@" = linkonce_odr unnamed_addr constant { [3 x i8*] }
 
@@ -116,9 +116,9 @@ struct B : virtual A {
 
 struct C : virtual A, B {
 // VFTABLES-LABEL: VFTable for 'pr20479::A' in 'pr20479::B' in 'pr20479::C' (2 entries).
-// VFTABLES-NEXT:   0 | B *pr20479::B::f()
+// VFTABLES-NEXT:   0 | pr20479::B *pr20479::B::f()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct pr20479::A *'): vbase #1, 0 non-virtual]
-// VFTABLES-NEXT:   1 | B *pr20479::B::f()
+// VFTABLES-NEXT:   1 | pr20479::B *pr20479::B::f()
   C();
 };
 
@@ -140,10 +140,10 @@ struct B : virtual A {
 
 struct C : virtual A, virtual B {
 // VFTABLES-LABEL: VFTable for 'pr21073::A' in 'pr21073::B' in 'pr21073::C' (2 entries).
-// VFTABLES-NEXT:   0 | B *pr21073::B::f()
+// VFTABLES-NEXT:   0 | pr21073::B *pr21073::B::f()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct pr21073::A *'): vbase #1, 0 non-virtual]
 // VFTABLES-NEXT:       [this adjustment: 8 non-virtual]
-// VFTABLES-NEXT:   1 | B *pr21073::B::f()
+// VFTABLES-NEXT:   1 | pr21073::B *pr21073::B::f()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct pr21073::B *'): 0 non-virtual]
 // VFTABLES-NEXT:       [this adjustment: 8 non-virtual]
   C();
@@ -164,9 +164,9 @@ struct D : B, C { D(); };
 D::D() {}
 
 // VFTABLES-LABEL: VFTable for 'pr21073_2::A' in 'pr21073_2::C' in 'pr21073_2::D' (2 entries)
-// VFTABLES-NEXT:   0 | C *pr21073_2::C::foo()
+// VFTABLES-NEXT:   0 | pr21073_2::C *pr21073_2::C::foo()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct pr21073_2::A *'): vbase #1, 0 non-virtual]
-// VFTABLES-NEXT:   1 | C *pr21073_2::C::foo()
+// VFTABLES-NEXT:   1 | pr21073_2::C *pr21073_2::C::foo()
 
 // GLOBALS-LABEL: @"??_7D@pr21073_2@@6B@" = {{.*}} constant { [2 x i8*] }
 // GLOBALS: @"?foo@C@pr21073_2@@QAEPAUA@2@XZ"
@@ -186,13 +186,13 @@ struct D : virtual B, virtual A, C {
 D::D() {}
 
 // VFTABLES-LABEL: VFTable for 'test3::A' in 'test3::B' in 'test3::X' in 'test3::C' in 'test3::D' (3 entries).
-// VFTABLES-NEXT:   0 | D *test3::D::fn()
+// VFTABLES-NEXT:   0 | test3::D *test3::D::fn()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test3::A *'): vbase #1, 0 non-virtual]
 // VFTABLES-NEXT:       [this adjustment: vtordisp at -4, 0 non-virtual]
-// VFTABLES-NEXT:   1 | D *test3::D::fn()
+// VFTABLES-NEXT:   1 | test3::D *test3::D::fn()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test3::B *'): vbase #2, 0 non-virtual]
 // VFTABLES-NEXT:       [this adjustment: vtordisp at -4, 0 non-virtual]
-// VFTABLES-NEXT:   2 | D *test3::D::fn()
+// VFTABLES-NEXT:   2 | test3::D *test3::D::fn()
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test3::D *'): 0 non-virtual]
 // VFTABLES-NEXT:       [this adjustment: vtordisp at -4, 0 non-virtual]
 
@@ -214,5 +214,5 @@ C c;
 // VFTABLES-LABEL: VFTable indices for 'pr34302::C' (2 entries).
 // VFTABLES-NEXT:  -- accessible via vbtable index 1, vfptr at offset 0 --
 // VFTABLES-NEXT:    0 | pr34302::C::~C() [scalar deleting]
-// VFTABLES-NEXT:    2 | C *pr34302::C::f()
+// VFTABLES-NEXT:    2 | pr34302::C *pr34302::C::f()
 }

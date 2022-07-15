@@ -1041,7 +1041,7 @@ namespace DependentInt {
     using T2 = M<C<N>>;
     T2 p;
     T1 x = p;
-    // CHECK-ELIDE-NOTREE: no viable conversion from 'M<C<N, INT<1>>>' to 'M<C<int, INT<0>>>'
+    // CHECK-ELIDE-NOTREE: no viable conversion from 'M<C<DependentInt::N, INT<1>>>' to 'M<C<int, INT<0>>>'
   }
 }
 
@@ -1058,7 +1058,7 @@ template <typename T, typename A = allocator<const Atom *> > class vector {};
 void foo() {
   vector<Atom *> v;
   AtomVector v2(v);
-  // CHECK-ELIDE-NOTREE: no known conversion from 'vector<Atom *, [...]>' to 'const vector<const PR17510::Atom *, [...]>'
+  // CHECK-ELIDE-NOTREE: no known conversion from 'vector<PR17510::Atom *, [...]>' to 'const vector<const PR17510::Atom *, [...]>'
 }
 }
 

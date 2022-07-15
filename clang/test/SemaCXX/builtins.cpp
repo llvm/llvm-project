@@ -144,7 +144,7 @@ struct IncompleteMember {
   Incomplete &i;
 };
 void test_incomplete(Incomplete *i, IncompleteMember *im) {
-  // expected-error@+1 {{incomplete type 'Incomplete' where a complete type is required}}
+  // expected-error@+1 {{incomplete type 'test_launder::Incomplete' where a complete type is required}}
   __builtin_launder(i);
   __builtin_launder(&i); // OK
   __builtin_launder(im); // OK

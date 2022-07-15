@@ -52,8 +52,8 @@ void testBlockWithCopyExpression(StructWithCopyConstructor s) {
 
 // CHECK: [B1]
 // CHECK-NEXT:   1: s
-// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, NoOp, const StructWithCopyConstructor)
-// CHECK-NEXT:   3: [B1.2] (CXXConstructExpr, const StructWithCopyConstructor)
+// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, NoOp, const struct StructWithCopyConstructor)
+// CHECK-NEXT:   3: [B1.2] (CXXConstructExpr, const struct StructWithCopyConstructor)
 // CHECK-NEXT:   4: ^{ }
 // CHECK-NEXT:   5: (void)([B1.4]) (CStyleCastExpr, ToVoid, void)
 // CHECK-NEXT:   Preds (1): B2
@@ -76,8 +76,8 @@ void testBlockWithCaptureByReference() {
 
 // CHECK: [B1]
 // CHECK-NEXT:   1: 5
-// WARNINGS-NEXT:   2: [B1.1] (CXXConstructExpr, StructWithCopyConstructor)
-// ANALYZER-NEXT:   2: [B1.1] (CXXConstructExpr, [B1.3], StructWithCopyConstructor)
+// WARNINGS-NEXT:   2: [B1.1] (CXXConstructExpr, struct StructWithCopyConstructor)
+// ANALYZER-NEXT:   2: [B1.1] (CXXConstructExpr, [B1.3], struct StructWithCopyConstructor)
 // CHECK-NEXT:   3: StructWithCopyConstructor s(5) __attribute__((blocks("byref")));
 // CHECK-NEXT:   4: ^{ }
 // CHECK-NEXT:   5: (void)([B1.4]) (CStyleCastExpr, ToVoid, void)

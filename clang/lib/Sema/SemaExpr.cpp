@@ -4519,6 +4519,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::ConstantMatrix:
     case Type::Record:
     case Type::Enum:
+    case Type::Elaborated:
     case Type::TemplateSpecialization:
     case Type::ObjCObject:
     case Type::ObjCInterface:
@@ -4527,9 +4528,6 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::Pipe:
     case Type::BitInt:
       llvm_unreachable("type class is never variably-modified!");
-    case Type::Elaborated:
-      T = cast<ElaboratedType>(Ty)->getNamedType();
-      break;
     case Type::Adjusted:
       T = cast<AdjustedType>(Ty)->getOriginalType();
       break;
