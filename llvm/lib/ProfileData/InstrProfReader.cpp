@@ -1034,12 +1034,24 @@ IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
   if (Err)
     return std::move(Err);
   // Found it. Look for counters with the right hash.
+
+  // A flag to indicate if the records are from the same type
+  // of profile (i.e cs vs nocs).
+  bool CSBitMatch = false;
+
   for (const NamedInstrProfRecord &I : Data) {
     // Check for a match and fill the vector if there is one.
     if (I.Hash == FuncHash)
       return std::move(I);
+    if (NamedInstrProfRecord::hasCSFlagInHash(I.Hash) ==
+        NamedInstrProfRecord::hasCSFlagInHash(FuncHash)) {
+      CSBitMatch = true;
+    }
   }
-  return error(instrprof_error::hash_mismatch);
+  if (CSBitMatch) {
+    return error(instrprof_error::hash_mismatch);
+  }
+  return error(instrprof_error::unknown_function);
 }
 
 Expected<memprof::MemProfRecord>
