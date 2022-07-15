@@ -49,6 +49,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     FunctionRef<Type<TypeCategory::Real, KIND>> &&funcRef) {
   using T = Type<TypeCategory::Real, KIND>;
   using ComplexT = Type<TypeCategory::Complex, KIND>;
+  using Int4 = Type<TypeCategory::Integer, 4>;
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -86,7 +87,6 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "bessel_jn" || name == "bessel_yn") {
     if (args.size() == 2) { // elemental
       // runtime functions use int arg
-      using Int4 = Type<TypeCategory::Integer, 4>;
       if (auto callable{GetHostRuntimeWrapper<T, Int4, T>(name)}) {
         return FoldElementalIntrinsic<T, Int4, T>(
             context, std::move(funcRef), *callable);
@@ -144,6 +144,10 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "epsilon") {
     return Expr<T>{Scalar<T>::EPSILON()};
+  } else if (name == "fraction") {
+    return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T>(
+            [](const Scalar<T> &x) -> Scalar<T> { return x.FRACTION(); }));
   } else if (name == "huge") {
     return Expr<T>{Scalar<T>::HUGE()};
   } else if (name == "hypot") {
@@ -250,6 +254,12 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           },
           byExpr->u);
     }
+  } else if (name == "set_exponent") {
+    return FoldElementalIntrinsic<T, T, Int4>(context, std::move(funcRef),
+        ScalarFunc<T, T, Int4>(
+            [&](const Scalar<T> &x, const Scalar<Int4> &i) -> Scalar<T> {
+              return x.SET_EXPONENT(i.ToInt64());
+            }));
   } else if (name == "sign") {
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), &Scalar<T>::SIGN);
@@ -315,7 +325,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   }
-  // TODO: dot_product, fraction, matmul, norm2, set_exponent
+  // TODO: dot_product, matmul, norm2
   return Expr<T>{std::move(funcRef)};
 }
 
