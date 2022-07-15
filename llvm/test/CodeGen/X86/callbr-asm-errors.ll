@@ -1,7 +1,7 @@
 ; RUN: not llc -mtriple=i686-- < %s 2> %t
 ; RUN: FileCheck %s < %t
 
-; CHECK: Duplicate callbr destination
+; CHECK:  Number of label constraints does not match number of callbr dests
 
 ; A test for asm-goto duplicate labels limitation
 

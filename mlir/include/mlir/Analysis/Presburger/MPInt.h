@@ -24,12 +24,12 @@ namespace mlir {
 namespace presburger {
 
 namespace detail {
-// If builtin intrinsics for overflow-checked arithmetic are available,
-// use them. Otherwise, call through to LLVM's overflow-checked arithmetic
-// functionality. Those functions also have such macro-gated uses of intrinsics,
-// however they are not always_inlined, which is important for us to achieve
-// high-performance; calling the functions directly would result in a slowdown
-// of 1.15x.
+/// If builtin intrinsics for overflow-checked arithmetic are available,
+/// use them. Otherwise, call through to LLVM's overflow-checked arithmetic
+/// functionality. Those functions also have such macro-gated uses of intrinsics
+/// but they are not always_inlined, which is important for us to achieve
+/// high-performance; calling the functions directly would result in a slowdown
+/// of 1.15x.
 LLVM_ATTRIBUTE_ALWAYS_INLINE bool addOverflow(int64_t x, int64_t y,
                                               int64_t &result) {
 #if __has_builtin(__builtin_add_overflow)
@@ -195,6 +195,7 @@ public:
   friend MPInt gcdRange(ArrayRef<MPInt> range);
   friend MPInt ceilDiv(const MPInt &lhs, const MPInt &rhs);
   friend MPInt floorDiv(const MPInt &lhs, const MPInt &rhs);
+  // The operands must be non-negative for gcd.
   friend MPInt gcd(const MPInt &a, const MPInt &b);
   friend MPInt lcm(const MPInt &a, const MPInt &b);
   friend MPInt mod(const MPInt &lhs, const MPInt &rhs);
@@ -382,6 +383,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt mod(const MPInt &lhs, const MPInt &rhs) {
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt gcd(const MPInt &a, const MPInt &b) {
+  assert(a >= 0 && b >= 0 && "operands must be non-negative!");
   if (LLVM_LIKELY(a.isSmall() && b.isSmall()))
     return MPInt(llvm::greatestCommonDivisor(a.getSmall(), b.getSmall()));
   return MPInt(gcd(detail::SlowMPInt(a), detail::SlowMPInt(b)));

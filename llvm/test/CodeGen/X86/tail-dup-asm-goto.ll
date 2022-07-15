@@ -5,7 +5,7 @@
 ; during code gen.
 declare dso_local void @foo()
 
-define i8* @test1(i8** %arg1, i8* %arg2) {
+define ptr @test1(ptr %arg1, ptr %arg2) {
   ; CHECK-LABEL: name: test1
   ; CHECK: bb.0.bb:
   ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
@@ -36,12 +36,12 @@ define i8* @test1(i8** %arg1, i8* %arg2) {
   ; CHECK:   $rax = COPY [[PHI]]
   ; CHECK:   RET 0, $rax
 bb:
-  %i28.i = load i8*, i8** %arg1, align 8
-  %if = icmp ne i8* %i28.i, %arg2
+  %i28.i = load ptr, ptr %arg1, align 8
+  %if = icmp ne ptr %i28.i, %arg2
   br i1 %if, label %bb100, label %bb106
 
 bb100:                                            ; preds = %bb
-  store i8* null, i8** %arg1, align 8
+  store ptr null, ptr %arg1, align 8
   br label %bb110
 
 bb106:                                            ; preds = %bb
@@ -49,13 +49,13 @@ bb106:                                            ; preds = %bb
   br label %bb110
 
 bb110:                                            ; preds = %bb106, %bb100
-  %i10.1 = phi i8* [ %arg2, %bb106 ], [ %i28.i, %bb100 ]
-  callbr void asm sideeffect "#$0 $1 $2", "i,i,i,~{dirflag},~{fpsr},~{flags}"(i32 42, i1 false, i8* blockaddress(@test1, %bb17.i.i.i))
+  %i10.1 = phi ptr [ %arg2, %bb106 ], [ %i28.i, %bb100 ]
+  callbr void asm sideeffect "#$0 $1 $2", "i,i,!i,~{dirflag},~{fpsr},~{flags}"(i32 42, i1 false)
           to label %kmem_cache_has_cpu_partial.exit [label %bb17.i.i.i]
 
 bb17.i.i.i:                                       ; preds = %bb110
   br label %kmem_cache_has_cpu_partial.exit
 
 kmem_cache_has_cpu_partial.exit:                  ; preds = %bb110
-  ret i8* %i10.1
+  ret ptr %i10.1
 }

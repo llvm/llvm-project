@@ -64,6 +64,7 @@ static_library("Commands") {
     "CommandObjectVersion.cpp",
     "CommandObjectWatchpoint.cpp",
     "CommandObjectWatchpointCommand.cpp",
+    "CommandOptionArgumentTable.cpp",
     "CommandOptionsProcessLaunch.cpp",
   ]
 }

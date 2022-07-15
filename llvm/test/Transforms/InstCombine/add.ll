@@ -759,6 +759,19 @@ define i8 @not_masked_add(i8 %x) {
   ret i8 %r
 }
 
+define i8 @masked_add_multi_use(i8 %x) {
+; CHECK-LABEL: @masked_add_multi_use(
+; CHECK-NEXT:    [[TMP:%.*]] = add i8 [[X:%.*]], 96
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP:%.*]], -16
+; CHECK-NEXT:    call void @use(i8 [[X]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %and = and i8 %x, -16 ; 0xf0
+  %r = add i8 %and, 96  ; 0x60
+  call void @use(i8 %x) ; extra use
+  ret i8 %r
+}
+
 define i32 @test35(i32 %a) {
 ; CHECK-LABEL: @test35(
 ; CHECK-NEXT:    ret i32 -1

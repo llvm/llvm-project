@@ -218,8 +218,8 @@ SlowMPInt detail::mod(const SlowMPInt &lhs, const SlowMPInt &rhs) {
 }
 
 SlowMPInt detail::gcd(const SlowMPInt &a, const SlowMPInt &b) {
-  return SlowMPInt(
-      llvm::APIntOps::GreatestCommonDivisor(a.val.abs(), b.val.abs()));
+  assert(a >= 0 && b >= 0 && "operands must be non-negative!");
+  return SlowMPInt(llvm::APIntOps::GreatestCommonDivisor(a.val, b.val));
 }
 
 /// Returns the least common multiple of 'a' and 'b'.

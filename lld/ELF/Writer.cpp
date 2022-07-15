@@ -1973,8 +1973,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         continue;
       for (Symbol *sym : file->requiredSymbols)
         if (sym->isUndefined() && !sym->isWeak())
-          diagnose(toString(file) + ": undefined reference to " +
-                   toString(*sym) + " [--no-allow-shlib-undefined]");
+          diagnose("undefined reference due to --no-allow-shlib-undefined: " +
+                   toString(*sym) + "\n>>> referenced by " + toString(file));
     }
   }
 

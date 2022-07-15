@@ -2745,14 +2745,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       for (const auto *E : GS->labels()) {
         JumpDest Dest = getJumpDestForLabel(E->getLabel());
         Transfer.push_back(Dest.getBlock());
-        llvm::BlockAddress *BA =
-            llvm::BlockAddress::get(CurFn, Dest.getBlock());
-        Args.push_back(BA);
-        ArgTypes.push_back(BA->getType());
-        ArgElemTypes.push_back(nullptr);
         if (!Constraints.empty())
           Constraints += ',';
-        Constraints += 'i';
+        Constraints += "!i";
       }
       Fallthrough = createBasicBlock("asm.fallthrough");
     }

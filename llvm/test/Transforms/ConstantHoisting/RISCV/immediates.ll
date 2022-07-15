@@ -65,7 +65,7 @@ define i64 @test7(i64 %a) nounwind {
 }
 
 ; Check that we don't hoist zext.w with Zba.
-define i64 @test8(i64 %a) nounwind "target-features"="+zbb" {
+define i64 @test8(i64 %a) nounwind "target-features"="+zba" {
 ; CHECK-LABEL: test8
 ; CHECK: and i64 %a, 4294967295
   %1 = and i64 %a, 4294967295

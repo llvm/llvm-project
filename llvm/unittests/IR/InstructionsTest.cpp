@@ -1498,7 +1498,7 @@ TEST(InstructionsTest, CallBrInstruction) {
   std::unique_ptr<Module> M = parseIR(Context, R"(
 define void @foo() {
 entry:
-  callbr void asm sideeffect "// XXX: ${0:l}", "X"(i8* blockaddress(@foo, %branch_test.exit))
+  callbr void asm sideeffect "// XXX: ${0:l}", "!i"()
           to label %land.rhs.i [label %branch_test.exit]
 
 land.rhs.i:
@@ -1528,20 +1528,6 @@ if.end:
   EXPECT_EQ(&BranchTestExit, CBI.getIndirectDest(0));
   CBI.setIndirectDest(0, &IfThen);
   EXPECT_EQ(&IfThen, CBI.getIndirectDest(0));
-
-  // Further, test that changing the indirect destination updates the arg
-  // operand to use the block address of the new indirect destination basic
-  // block. This is a critical invariant of CallBrInst.
-  BlockAddress *IndirectBA = BlockAddress::get(CBI.getIndirectDest(0));
-  BlockAddress *ArgBA = cast<BlockAddress>(CBI.getArgOperand(0));
-  EXPECT_EQ(IndirectBA, ArgBA)
-      << "After setting the indirect destination, callbr had an indirect "
-         "destination of '"
-      << CBI.getIndirectDest(0)->getName() << "', but a argument of '"
-      << ArgBA->getBasicBlock()->getName() << "'. These should always match:\n"
-      << CBI;
-  EXPECT_EQ(IndirectBA->getBasicBlock(), &IfThen);
-  EXPECT_EQ(ArgBA->getBasicBlock(), &IfThen);
 }
 
 TEST(InstructionsTest, UnaryOperator) {

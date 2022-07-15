@@ -114,11 +114,11 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
 
   uint8_t LPStartEncoding = Data.getU8(&Offset);
   uint64_t LPStart = 0;
+  // Convert to offset if LPStartEncoding is typed absptr DW_EH_PE_absptr
   if (Optional<uint64_t> MaybeLPStart = Data.getEncodedPointer(
           &Offset, LPStartEncoding, Offset + LSDASectionAddress))
-    LPStart = *MaybeLPStart;
-
-  assert(LPStart == 0 && "support for split functions not implemented");
+    LPStart = (LPStartEncoding && 0xFF == 0) ? *MaybeLPStart
+                                             : *MaybeLPStart - Address;
 
   const uint8_t TTypeEncoding = Data.getU8(&Offset);
   size_t TTypeEncodingSize = 0;
@@ -175,10 +175,34 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
         &CallSitePtr, CallSiteEncoding, CallSitePtr + LSDASectionAddress);
     uint64_t ActionEntry = Data.getULEB128(&CallSitePtr);
 
+    uint64_t LPOffset = LPStart + LandingPad;
+    uint64_t LPAddress = Address + LPOffset;
+
+    // Verify if landing pad code is located outside current function
+    // Support landing pad to builtin_unreachable
+    if (LPAddress < Address || LPAddress > Address + getSize()) {
+      BinaryFunction *Fragment =
+          BC.getBinaryFunctionContainingAddress(LPAddress);
+      assert(Fragment != nullptr &&
+             "BOLT-ERROR: cannot find landing pad fragment");
+      BC.addInterproceduralReference(this, Fragment->getAddress());
+      BC.processInterproceduralReferences();
+      auto isFragmentOf = [](BinaryFunction *Fragment,
+                             BinaryFunction *Parent) -> bool {
+        return (Fragment->isFragment() && Fragment->isParentFragment(Parent));
+      };
+      assert((isFragmentOf(this, Fragment) || isFragmentOf(Fragment, this)) &&
+             "BOLT-ERROR: cannot have landing pads in different "
+             "functions");
+      setHasIndirectTargetToSplitFragment(true);
+      BC.addFragmentsToSkip(this);
+      return;
+    }
+
     if (opts::PrintExceptions) {
       outs() << "Call Site: [0x" << Twine::utohexstr(RangeBase + Start)
              << ", 0x" << Twine::utohexstr(RangeBase + Start + Length)
-             << "); landing pad: 0x" << Twine::utohexstr(LPStart + LandingPad)
+             << "); landing pad: 0x" << Twine::utohexstr(LPOffset)
              << "; action entry: 0x" << Twine::utohexstr(ActionEntry) << "\n";
       outs() << "  current offset is " << (CallSitePtr - CallSiteTableStart)
              << '\n';
@@ -186,19 +210,19 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
 
     // Create a handler entry if necessary.
     MCSymbol *LPSymbol = nullptr;
-    if (LandingPad) {
-      if (!getInstructionAtOffset(LandingPad)) {
+    if (LPOffset) {
+      if (!getInstructionAtOffset(LPOffset)) {
         if (opts::Verbosity >= 1)
-          errs() << "BOLT-WARNING: landing pad " << Twine::utohexstr(LandingPad)
+          errs() << "BOLT-WARNING: landing pad " << Twine::utohexstr(LPOffset)
                  << " not pointing to an instruction in function " << *this
                  << " - ignoring.\n";
       } else {
-        auto Label = Labels.find(LandingPad);
+        auto Label = Labels.find(LPOffset);
         if (Label != Labels.end()) {
           LPSymbol = Label->second;
         } else {
           LPSymbol = BC.Ctx->createNamedTempSymbol("LP");
-          Labels[LandingPad] = LPSymbol;
+          Labels[LPOffset] = LPSymbol;
         }
       }
     }
