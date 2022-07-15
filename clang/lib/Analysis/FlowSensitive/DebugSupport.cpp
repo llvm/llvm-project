@@ -103,8 +103,7 @@ Constraints
 
     auto StatusString = debugString(Result.getStatus());
     auto Solution = Result.getSolution();
-    auto SolutionString =
-        Solution.hasValue() ? "\n" + debugString(Solution.value()) : "";
+    auto SolutionString = Solution ? "\n" + debugString(Solution.value()) : "";
 
     return formatv(
         Template,

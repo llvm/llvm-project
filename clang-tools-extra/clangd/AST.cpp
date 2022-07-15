@@ -942,7 +942,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
       TailIt = std::copy(Info.Tail.rbegin(), Info.Tail.rend(), TailIt);
       // Prepare next recursion level
       Pack = Info.Pack;
-      CurrentFunction = Info.PackTarget.getValueOr(nullptr);
+      CurrentFunction = Info.PackTarget.value_or(nullptr);
       Depth++;
       // If we are recursing into a previously encountered function: Abort
       if (CurrentFunction) {
