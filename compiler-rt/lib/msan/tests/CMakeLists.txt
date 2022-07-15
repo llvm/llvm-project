@@ -54,6 +54,7 @@ set(MSAN_UNITTEST_INSTRUMENTED_CFLAGS
 set(MSAN_UNITTEST_LINK_FLAGS
   -nostdlib++
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
   -fsanitize=memory
   # Don't need -stdlib=libc++ because we explicitly list libc++.a in the linker
   # inputs.
