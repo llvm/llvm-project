@@ -2780,16 +2780,18 @@ bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind, llvm::Function *Fn,
   // NoSanitize by function name.
   if (NoSanitizeL.containsFunction(Kind, Fn->getName()))
     return true;
-  // NoSanitize by location.
+  // NoSanitize by location. Check "mainfile" prefix.
+  auto &SM = Context.getSourceManager();
+  const FileEntry &MainFile = *SM.getFileEntryForID(SM.getMainFileID());
+  if (NoSanitizeL.containsMainFile(Kind, MainFile.getName()))
+    return true;
+
+  // Check "src" prefix.
   if (Loc.isValid())
     return NoSanitizeL.containsLocation(Kind, Loc);
   // If location is unknown, this may be a compiler-generated function. Assume
   // it's located in the main file.
-  auto &SM = Context.getSourceManager();
-  if (const auto *MainFile = SM.getFileEntryForID(SM.getMainFileID())) {
-    return NoSanitizeL.containsFile(Kind, MainFile->getName());
-  }
-  return false;
+  return NoSanitizeL.containsFile(Kind, MainFile.getName());
 }
 
 bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind,
@@ -2799,8 +2801,13 @@ bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind,
   const auto &NoSanitizeL = getContext().getNoSanitizeList();
   if (NoSanitizeL.containsGlobal(Kind, GV->getName(), Category))
     return true;
+  auto &SM = Context.getSourceManager();
+  if (NoSanitizeL.containsMainFile(
+          Kind, SM.getFileEntryForID(SM.getMainFileID())->getName(), Category))
+    return true;
   if (NoSanitizeL.containsLocation(Kind, Loc, Category))
     return true;
+
   // Check global type.
   if (!Ty.isNull()) {
     // Drill down the array types: if global variable of a fixed type is

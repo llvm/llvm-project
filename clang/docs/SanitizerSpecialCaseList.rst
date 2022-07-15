@@ -75,6 +75,9 @@ tool-specific docs.
     # Turn off checks for the source file (use absolute path or path relative
     # to the current working directory):
     src:/path/to/source/file.c
+    # Turn off checks for this main file, including files included by it.
+    # Useful when the main file instead of an included file should be ignored.
+    mainfile:file.c
     # Turn off checks for a particular functions (use mangled names):
     fun:MyFooBar
     fun:_Z8MyFooBarv
@@ -93,3 +96,18 @@ tool-specific docs.
     [cfi-vcall|cfi-icall]
     fun:*BadCfiCall
     # Entries without sections are placed into [*] and apply to all sanitizers
+
+``mainfile`` is similar to applying ``-fno-sanitize=`` to a set of files but
+does not need plumbing into the build system. This works well for internal
+linkage functions but has a caveat for C++ vague linkage functions.
+
+C++ vague linkage functions (e.g. inline functions, template instantiations) are
+deduplicated at link time. A function (in an included file) ignored by a
+specific ``mainfile`` pattern may not be the prevailing copy picked by the
+linker. Therefore, using ``mainfile`` requires caution. It may still be useful,
+e.g. when patterns are picked in a way to ensure the prevailing one is ignored.
+(There is action-at-a-distance risk.)
+
+``mainfile`` can be useful enabling a ubsan check for a large code base when
+finding the direct stack frame triggering the failure for every failure is
+difficult.
