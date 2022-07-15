@@ -144,6 +144,7 @@ class X11 : public Copyable5<int, float> {
 class X12 : public CopyableAlias<float> {
   X12(const X12 &other) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling a base constructor
+  // CHECK-FIXES: X12(const X12 &other) {}
 };
 
 template <typename T>
@@ -165,7 +166,7 @@ FROMMACRO
 class X15 : public CopyableAlias2 {
   X15(const X15 &other) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling a base constructor
-  // CHECK-FIXES: X15(const X15 &other)  : Copyable5(other) {}
+  // CHECK-FIXES: X15(const X15 &other) {}
 };
 
 class X16 : public NonCopyable {

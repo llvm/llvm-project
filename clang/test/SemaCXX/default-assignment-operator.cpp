@@ -154,7 +154,7 @@ namespace ProtectedCheck {
 #if __cplusplus <= 199711L
   // expected-note@-2 {{implicit copy assignment operator}}
 #else
-  // expected-error@-4 {{object of type 'Z' cannot be assigned because its copy assignment operator is implicitly deleted}}
+  // expected-error@-4 {{object of type 'ProtectedCheck::Z' cannot be assigned because its copy assignment operator is implicitly deleted}}
 #endif
 }
 
@@ -165,7 +165,7 @@ namespace MultiplePaths {
 
   struct X1 : public virtual X0 { };
 
-  struct X2 : X0, X1 { }; // expected-warning{{direct base 'X0' is inaccessible due to ambiguity:\n    struct MultiplePaths::X2 -> X0\n    struct MultiplePaths::X2 -> X1 -> X0}}
+  struct X2 : X0, X1 { }; // expected-warning{{direct base 'MultiplePaths::X0' is inaccessible due to ambiguity:\n    struct MultiplePaths::X2 -> struct MultiplePaths::X0\n    struct MultiplePaths::X2 -> struct MultiplePaths::X1 -> struct MultiplePaths::X0}}
 
   void f(X2 x2) { x2 = x2; }
 }

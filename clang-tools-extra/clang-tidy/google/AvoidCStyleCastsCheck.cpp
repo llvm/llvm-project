@@ -130,12 +130,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     // case of overloaded functions, so detection of redundant casts is trickier
     // in this case. Don't emit "redundant cast" warnings for function
     // pointer/reference types.
-    QualType Src = SourceTypeAsWritten, Dst = DestTypeAsWritten;
-    if (const auto *ElTy = dyn_cast<ElaboratedType>(Src))
-      Src = ElTy->getNamedType();
-    if (const auto *ElTy = dyn_cast<ElaboratedType>(Dst))
-      Dst = ElTy->getNamedType();
-    if (Src == Dst) {
+    if (SourceTypeAsWritten == DestTypeAsWritten) {
       diag(CastExpr->getBeginLoc(), "redundant cast to the same type")
           << FixItHint::CreateRemoval(ReplaceRange);
       return;

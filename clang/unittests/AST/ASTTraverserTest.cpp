@@ -1211,9 +1211,9 @@ void decompTuple()
 CXXRecordDecl 'Record'
 |-CXXRecordDecl 'Record'
 |-CXXConstructorDecl 'Record'
-| |-CXXCtorInitializer 'Simple'
+| |-CXXCtorInitializer 'struct Simple'
 | | `-CXXConstructExpr
-| |-CXXCtorInitializer 'Other'
+| |-CXXCtorInitializer 'struct Other'
 | | `-CXXConstructExpr
 | |-CXXCtorInitializer 'm_i'
 | | `-IntegerLiteral
@@ -1234,7 +1234,7 @@ CXXRecordDecl 'Record'
               R"cpp(
 CXXRecordDecl 'Record'
 |-CXXConstructorDecl 'Record'
-| |-CXXCtorInitializer 'Simple'
+| |-CXXCtorInitializer 'struct Simple'
 | | `-CXXConstructExpr
 | |-CXXCtorInitializer 'm_i'
 | | `-IntegerLiteral

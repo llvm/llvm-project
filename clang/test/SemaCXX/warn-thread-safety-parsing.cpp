@@ -1485,7 +1485,7 @@ class Foo {
   int a GUARDED_BY(mu1_);
   int b GUARDED_BY(mu2_);
   int c GUARDED_BY(mu3_);  // \
-    // expected-warning {{'guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Derived3'}}
+    // expected-warning {{'guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'InheritanceTest::Derived3'}}
 
   void foo() EXCLUSIVE_LOCKS_REQUIRED(mu1_, mu2_) {
     a = 0;

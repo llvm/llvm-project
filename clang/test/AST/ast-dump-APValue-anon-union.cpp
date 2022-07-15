@@ -30,23 +30,23 @@ union U1 {
 
 void Test() {
   constexpr S0 s0{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s0 'const S0':'const S0' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} s0 'const S0' constexpr listinit
   // CHECK-NEXT:  |   |-value: Struct
   // CHECK-NEXT:  |   | `-field: Union .i Int 42
 
   constexpr U0 u0a{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u0a 'const U0':'const U0' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u0a 'const U0' constexpr listinit
   // CHECK-NEXT:  |   |-value: Union None
 
   constexpr U0 u0b{3.1415f};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u0b 'const U0':'const U0' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u0b 'const U0' constexpr listinit
   // CHECK-NEXT:  |   |-value: Union . Union .f Float 3.141500e+00
 
   constexpr U1 u1a{};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u1a 'const U1':'const U1' constexpr listinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u1a 'const U1' constexpr listinit
   // CHECK-NEXT:  |   |-value: Union . Union .f Float 0.000000e+00
 
   constexpr U1 u1b{3.1415f};
-  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u1b 'const U1':'const U1' constexpr listinit
+  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u1b 'const U1' constexpr listinit
   // CHECK-NEXT:      |-value: Union . Union .f Float 3.141500e+00
 }

@@ -10,7 +10,7 @@ namespace ExplicitConv {
   void test(const Y& y) {
     X x(static_cast<X>(y));
     X x2((X)y);
-    X x3 = y; // expected-error{{no viable conversion from 'const Y' to 'X'}}
+    X x3 = y; // expected-error{{no viable conversion from 'const ExplicitConv::Y' to 'ExplicitConv::X'}}
   }
 }
 

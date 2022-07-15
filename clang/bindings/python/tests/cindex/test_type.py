@@ -58,7 +58,7 @@ class TestType(unittest.TestCase):
         self.assertIsNotNone(fields[1].translation_unit)
         self.assertEqual(fields[1].spelling, 'b')
         self.assertFalse(fields[1].type.is_const_qualified())
-        self.assertEqual(fields[1].type.kind, TypeKind.ELABORATED)
+        self.assertEqual(fields[1].type.kind, TypeKind.TYPEDEF)
         self.assertEqual(fields[1].type.get_canonical().kind, TypeKind.INT)
         self.assertEqual(fields[1].type.get_declaration().spelling, 'I')
         self.assertEqual(fields[1].type.get_typedef_name(), 'I')

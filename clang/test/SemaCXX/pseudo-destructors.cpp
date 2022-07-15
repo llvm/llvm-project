@@ -108,15 +108,15 @@ struct Derived : Base {
 
 void test() {
   Derived d;
-  static_cast<Base *>(&d).~Base(); // expected-error {{member reference type 'Base *' is a pointer; did you mean to use '->'}}
-  d->~Derived(); // expected-error {{member reference type 'Derived' is not a pointer; did you mean to use '.'}}
+  static_cast<Base *>(&d).~Base(); // expected-error {{member reference type 'dotPointerAccess::Base *' is a pointer; did you mean to use '->'}}
+  d->~Derived(); // expected-error {{member reference type 'dotPointerAccess::Derived' is not a pointer; did you mean to use '.'}}
 }
 
 typedef Derived *Foo;
 
 void test2(Foo d) {
   d.~Foo(); // This is ok
-  d.~Derived(); // expected-error {{member reference type 'Foo' (aka 'dotPointerAccess::Derived *') is a pointer; did you mean to use '->'}}
+  d.~Derived(); // expected-error {{member reference type 'dotPointerAccess::Foo' (aka 'dotPointerAccess::Derived *') is a pointer; did you mean to use '->'}}
 }
 }
 

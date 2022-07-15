@@ -24,7 +24,7 @@ struct Derived2 : Base2 {
 // CHECK-OVERRIDE-FINAL: Identifier: "Derived" [6:7 - 6:14] ClassDecl=Derived:6:7 (Definition)
 // CHECK-OVERRIDE-FINAL: Keyword: "final" [6:15 - 6:20] attribute(final)=
 // CHECK-OVERRIDE-FINAL: Punctuation: ":" [6:21 - 6:22] ClassDecl=Derived:6:7 (Definition)
-// CHECK-OVERRIDE-FINAL: Keyword: "public" [6:23 - 6:29] C++ base class specifier=Base:1:7 [access=public isVirtual=false]
+// CHECK-OVERRIDE-FINAL: Keyword: "public" [6:23 - 6:29] C++ base class specifier=class Base:1:7 [access=public isVirtual=false]
 // CHECK-OVERRIDE-FINAL: Identifier: "Base" [6:30 - 6:34] TypeRef=class Base:1:7
 // CHECK-OVERRIDE-FINAL: Punctuation: "{" [6:35 - 6:36] ClassDecl=Derived:6:7 (Definition)
 // CHECK-OVERRIDE-FINAL: Keyword: "virtual" [7:3 - 7:10] CXXMethod=f:7:16 (virtual) [Overrides @3:16]

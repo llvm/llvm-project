@@ -45,7 +45,7 @@ namespace test2 {
   // For now this tests that a second 'extern "C"' is not necessary to trigger
   // the warning.
   struct A;
-  extern "C" A f(void); // expected-warning {{'f' has C-linkage specified, but returns incomplete type 'A' which could be incompatible with C}}
+  extern "C" A f(void); // expected-warning {{'f' has C-linkage specified, but returns incomplete type 'test2::A' which could be incompatible with C}}
   struct A {
     A(const A&);
   };
@@ -74,8 +74,8 @@ extern "C" {
 #pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
 A xyzzy();
 #pragma clang diagnostic pop
-A bbb(); // expected-warning {{'bbb' has C-linkage specified, but returns user-defined type 'A' which is incompatible with C}}
-A ccc() { // expected-warning {{'ccc' has C-linkage specified, but returns user-defined type 'A' which is incompatible with C}}
+A bbb(); // expected-warning {{'bbb' has C-linkage specified, but returns user-defined type 'rdar13364028::A' which is incompatible with C}}
+A ccc() { // expected-warning {{'ccc' has C-linkage specified, but returns user-defined type 'rdar13364028::A' which is incompatible with C}}
   return A();
 };
 }

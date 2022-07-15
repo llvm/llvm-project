@@ -33,7 +33,7 @@ concept C = requires(T t) { t.a.b; };
 static_assert(C<Good>);
 static_assert(!C<Bad>);
 static_assert(C<Bad>); // cxx20-error {{static_assert failed}}
-  // cxx20-note@-1 {{because 'Bad' does not satisfy 'C'}}
+  // cxx20-note@-1 {{because 'DotFollowingFunctionName::Bad' does not satisfy 'C'}}
 #endif
 } // namespace DotFollowingFunctionName
 
@@ -58,6 +58,6 @@ concept C = requires(T t) { t.begin(); };
 static_assert(C<Good>);
 static_assert(!C<Bad>);
 static_assert(C<Bad>); // cxx20-error {{static_assert failed}}
-  // cxx20-note@-1 {{because 'Bad' (aka 'Holder<Incomplete> *') does not satisfy 'C'}}
+  // cxx20-note@-1 {{because 'DotFollowingPointer::Bad' (aka 'Holder<Incomplete> *') does not satisfy 'C'}}
 #endif
 } // namespace DotFollowingPointer

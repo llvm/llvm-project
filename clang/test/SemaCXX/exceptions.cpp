@@ -173,15 +173,15 @@ struct D2 : D {};
 
 void f1() {
   try {
-  } catch (B &b) { // expected-note {{for type 'B &'}}
-  } catch (D &d) { // expected-warning {{exception of type 'D &' will be caught by earlier handler}}
+  } catch (B &b) { // expected-note {{for type 'HandlerInversion::B &'}}
+  } catch (D &d) { // expected-warning {{exception of type 'HandlerInversion::D &' will be caught by earlier handler}}
   }
 }
 
 void f2() {
   try {
-  } catch (B *b) { // expected-note {{for type 'B *'}}
-  } catch (D *d) { // expected-warning {{exception of type 'D *' will be caught by earlier handler}}
+  } catch (B *b) { // expected-note {{for type 'HandlerInversion::B *'}}
+  } catch (D *d) { // expected-warning {{exception of type 'HandlerInversion::D *' will be caught by earlier handler}}
   }
 }
 
@@ -207,8 +207,8 @@ void f5() {
 
 void f6() {
   try {
-  } catch (B &b) {  // expected-note {{for type 'B &'}}
-  } catch (D2 &d) {  // expected-warning {{exception of type 'D2 &' will be caught by earlier handler}}
+  } catch (B &b) {  // expected-note {{for type 'HandlerInversion::B &'}}
+  } catch (D2 &d) {  // expected-warning {{exception of type 'HandlerInversion::D2 &' will be caught by earlier handler}}
   }
 }
 
@@ -226,18 +226,18 @@ void f7() {
 
 void f8() {
   try {
-  } catch (const B &b) {  // expected-note {{for type 'const B &'}}
-  } catch (D2 &d) {  // expected-warning {{exception of type 'D2 &' will be caught by earlier handler}}
+  } catch (const B &b) {  // expected-note {{for type 'const HandlerInversion::B &'}}
+  } catch (D2 &d) {  // expected-warning {{exception of type 'HandlerInversion::D2 &' will be caught by earlier handler}}
   }
 
   try {
-  } catch (B &b) {  // expected-note {{for type 'B &'}}
-  } catch (const D2 &d) {  // expected-warning {{exception of type 'const D2 &' will be caught by earlier handler}}
+  } catch (B &b) {  // expected-note {{for type 'HandlerInversion::B &'}}
+  } catch (const D2 &d) {  // expected-warning {{exception of type 'const HandlerInversion::D2 &' will be caught by earlier handler}}
   }
 
   try {
-  } catch (B b) { // expected-note {{for type 'B'}}
-  } catch (D &d) { // expected-warning {{exception of type 'D &' will be caught by earlier handler}}
+  } catch (B b) { // expected-note {{for type 'HandlerInversion::B'}}
+  } catch (D &d) { // expected-warning {{exception of type 'HandlerInversion::D &' will be caught by earlier handler}}
   }
 }
 }
