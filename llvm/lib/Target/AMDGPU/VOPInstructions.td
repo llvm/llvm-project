@@ -1270,6 +1270,7 @@ multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_f
 
 class Base_VOP3_DPP16<bits<10> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
     : VOP3_DPP<op, opName, ps.Pfl, 1> {
+  let VOP3_OPSEL = ps.Pfl.HasOpSel;
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
@@ -1285,6 +1286,7 @@ class VOP3_DPP16<bits<10> op, VOP_DPP_Pseudo ps, int subtarget,
 
 class Base_VOP3_DPP8<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
     : VOP3_DPP8<op, opName, ps.Pfl> {
+  let VOP3_OPSEL = ps.Pfl.HasOpSel;
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
