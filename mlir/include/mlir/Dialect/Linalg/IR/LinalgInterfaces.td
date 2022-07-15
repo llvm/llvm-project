@@ -701,6 +701,20 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return the operand for a `blockArgument`.
+      }],
+      /*retTy=*/"OpOperand *",
+      /*methodName=*/"getTiedOpOperand",
+      /*args=*/(ins "BlockArgument":$blockArgument),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        assert(blockArgument.getOwner() == getBlock());
+        return &this->getOperation()->getOpOperand(
+            blockArgument.getArgNumber());
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the input or output indexing map for `opOperand`.
       }],
       /*retTy=*/"AffineMap",
