@@ -351,4 +351,36 @@ exit:
   ret void
 }
 
+; Loop invariant does not neccessarily mean dominating the loop.  Forming
+; an ICmpZero from this example would be illegal even though the operands
+; to the compare are loop invariant.
+define void @loop_invariant_definition(i64 %arg) {
+; CHECK-LABEL: @loop_invariant_definition(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[T1:%.*]]
+; CHECK:       t1:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[T1]] ], [ -1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 1
+; CHECK-NEXT:    br i1 true, label [[T4:%.*]], label [[T1]]
+; CHECK:       t4:
+; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[LSR_IV_NEXT]] to i32
+; CHECK-NEXT:    [[T6:%.*]] = add i32 [[T5]], 1
+; CHECK-NEXT:    [[T7:%.*]] = icmp eq i32 [[T5]], [[T6]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %t1
+
+t1:                                                ; preds = %1, %0
+  %t2 = phi i64 [ %t3, %t1 ], [ 0, %entry ]
+  %t3 = add nuw i64 %t2, 1
+  br i1 true, label %t4, label %t1
+
+t4:                                                ; preds = %1
+  %t5 = trunc i64 %t2 to i32
+  %t6 = add i32 %t5, 1
+  %t7 = icmp eq i32 %t5, %t6
+  ret void
+}
+
 declare i64 @llvm.vscale.i64()
