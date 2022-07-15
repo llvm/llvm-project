@@ -608,6 +608,8 @@ enum CommandArgumentType {
   eArgTypeConnectURL,
   eArgTypeTargetID,
   eArgTypeStopHookID,
+  eArgTypeReproducerProvider,
+  eArgTypeReproducerSignal,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
