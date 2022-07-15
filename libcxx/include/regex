@@ -13,6 +13,7 @@
 /*
     regex synopsis
 
+#include <compare>
 #include <initializer_list>
 
 namespace std
@@ -239,50 +240,54 @@ template <class BiIter>
     operator==(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
 template <class BiIter>
+    auto
+    operator<=>(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs); // Since C++20
+
+ template <class BiIter>                                                     // Removed in C++20
     bool
     operator!=(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator==(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator!=(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator<(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator>(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool operator>=(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
                     const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator<=(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
                const sub_match<BiIter>& rhs);
@@ -292,56 +297,62 @@ template <class BiIter, class ST, class SA>
     operator==(const sub_match<BiIter>& lhs,
                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Since C++20
+    auto
+    operator<=>(const sub_match<BiIter>& lhs,
+                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
+
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator!=(const sub_match<BiIter>& lhs,
                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator<(const sub_match<BiIter>& lhs,
               const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
-    bool operator>(const sub_match<BiIter>& lhs,
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
+    bool
+    operator>(const sub_match<BiIter>& lhs,
                    const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator>=(const sub_match<BiIter>& lhs,
                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator<=(const sub_match<BiIter>& lhs,
                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator==(typename iterator_traits<BiIter>::value_type const* lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator!=(typename iterator_traits<BiIter>::value_type const* lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(typename iterator_traits<BiIter>::value_type const* lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(typename iterator_traits<BiIter>::value_type const* lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(typename iterator_traits<BiIter>::value_type const* lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(typename iterator_traits<BiIter>::value_type const* lhs,
                const sub_match<BiIter>& rhs);
@@ -351,57 +362,62 @@ template <class BiIter>
     operator==(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Since C++20
+    auto
+    operator<=>(const sub_match<BiIter>& lhs,
+                typename iterator_traits<BiIter>::value_type const* rhs);
+
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator!=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(const sub_match<BiIter>& lhs,
               typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(const sub_match<BiIter>& lhs,
               typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator==(typename iterator_traits<BiIter>::value_type const& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator!=(typename iterator_traits<BiIter>::value_type const& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(typename iterator_traits<BiIter>::value_type const& lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(typename iterator_traits<BiIter>::value_type const& lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(typename iterator_traits<BiIter>::value_type const& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(typename iterator_traits<BiIter>::value_type const& lhs,
                const sub_match<BiIter>& rhs);
@@ -411,27 +427,32 @@ template <class BiIter>
     operator==(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Since C++20
+    auto
+    operator<=>(const sub_match<BiIter>& lhs,
+                typename iterator_traits<BiIter>::value_type const& rhs);
+
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator!=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(const sub_match<BiIter>& lhs,
               typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(const sub_match<BiIter>& lhs,
               typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const& rhs);
@@ -5032,6 +5053,15 @@ operator==(const sub_match<_BiIter>& __x, const sub_match<_BiIter>& __y)
     return __x.compare(__y) == 0;
 }
 
+#if _LIBCPP_STD_VER >= 20
+template<class _BiIter>
+using __sub_match_cat = compare_three_way_result_t<basic_string<typename iterator_traits<_BiIter>::value_type>>;
+
+template <class _BiIter>
+_LIBCPP_HIDE_FROM_ABI auto operator<=>(const sub_match<_BiIter>& __x, const sub_match<_BiIter>& __y) {
+    return static_cast<__sub_match_cat<_BiIter>>(__x.compare(__y) <=> 0);
+}
+#else // _LIBCPP_STD_VER >= 20
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5124,6 +5154,7 @@ operator<=(const basic_string<typename iterator_traits<_BiIter>::value_type, _ST
 {
     return !(__y < __x);
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _BiIter, class _ST, class _SA>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -5134,6 +5165,14 @@ operator==(const sub_match<_BiIter>& __x,
     return __x.compare(typename sub_match<_BiIter>::string_type(__y.data(), __y.size())) == 0;
 }
 
+#if _LIBCPP_STD_VER >= 20
+template <class _BiIter, class _ST, class _SA>
+_LIBCPP_HIDE_FROM_ABI auto operator<=>(
+    const sub_match<_BiIter>& __x, const basic_string<typename iterator_traits<_BiIter>::value_type, _ST, _SA>& __y) {
+    return static_cast<__sub_match_cat<_BiIter>>(
+        __x.compare(typename sub_match<_BiIter>::string_type(__y.data(), __y.size())) <=> 0);
+}
+#else // _LIBCPP_STD_VER >= 20
 template <class _BiIter, class _ST, class _SA>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5231,6 +5270,7 @@ operator<=(typename iterator_traits<_BiIter>::value_type const* __x,
 {
     return !(__y < __x);
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -5241,6 +5281,13 @@ operator==(const sub_match<_BiIter>& __x,
     return __x.compare(__y) == 0;
 }
 
+#if _LIBCPP_STD_VER >= 20
+template <class _BiIter>
+_LIBCPP_HIDE_FROM_ABI auto
+operator<=>(const sub_match<_BiIter>& __x, typename iterator_traits<_BiIter>::value_type const* __y) {
+    return static_cast<__sub_match_cat<_BiIter>>(__x.compare(__y) <=> 0);
+}
+#else // _LIBCPP_STD_VER >= 20
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5341,6 +5388,7 @@ operator<=(typename iterator_traits<_BiIter>::value_type const& __x,
 {
     return !(__y < __x);
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -5352,6 +5400,14 @@ operator==(const sub_match<_BiIter>& __x,
     return __x.compare(string_type(1, __y)) == 0;
 }
 
+#if _LIBCPP_STD_VER >= 20
+template <class _BiIter>
+_LIBCPP_HIDE_FROM_ABI auto
+operator<=>(const sub_match<_BiIter>& __x, typename iterator_traits<_BiIter>::value_type const& __y) {
+    using string_type = basic_string<typename iterator_traits<_BiIter>::value_type>;
+    return static_cast<__sub_match_cat<_BiIter>>(__x.compare(string_type(1, __y)) <=> 0);
+}
+#else // _LIBCPP_STD_VER >= 20
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5397,6 +5453,7 @@ operator<=(const sub_match<_BiIter>& __x,
 {
     return !(__y < __x);
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _CharT, class _ST, class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
