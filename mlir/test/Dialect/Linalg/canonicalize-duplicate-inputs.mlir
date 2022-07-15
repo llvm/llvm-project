@@ -262,3 +262,27 @@ func.func @multiple_redundant_args(%arg0 : tensor<?x?xi32>, %arg1 : tensor<?xi32
 //      CHECK:     %[[T5:.+]] = arith.addi %[[T4]], %[[B4]]
 //      CHECK:     linalg.yield %[[T5]]
 //      CHECK:  return %[[RETURN]]
+
+// -----
+
+// Drop redundant results.
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @drop_redundant_results(
+    %arg0 : tensor<?x?xf32>) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
+  %0:2 = linalg.generic {
+    indexing_maps = [#map, #map, #map],
+    iterator_types = ["parallel", "parallel"]}
+    ins(%arg0 : tensor<?x?xf32>)
+    outs(%arg0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>) {
+    ^bb0(%b0 : f32, %b1 : f32, %b2 : f32):
+      %1 = arith.addf %b0, %b0 : f32
+      linalg.yield %1, %1 : f32, f32
+    } -> (tensor<?x?xf32>, tensor<?x?xf32>)
+  return %0#0, %0#1 : tensor<?x?xf32>, tensor<?x?xf32>
+}
+//      CHECK: func @drop_redundant_results
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?xf32>
+//      CHECK:   %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:       outs(%[[ARG0]] :
+//      CHECK:   return %[[GENERIC]]
