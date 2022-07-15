@@ -22,7 +22,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   LinalgStrategyPasses.cpp
   NamedOpConversions.cpp
   Promotion.cpp
-  SparseTensorRewriting.cpp
   Split.cpp
   SplitReduction.cpp
   Tiling.cpp

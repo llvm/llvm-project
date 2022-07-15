@@ -134,11 +134,18 @@ void populateSparseTensorConversionPatterns(
     const SparseTensorConversionOptions &options =
         SparseTensorConversionOptions());
 
-std::unique_ptr<Pass> createDenseBufferizationPass(
-    const bufferization::OneShotBufferizationOptions &options);
 std::unique_ptr<Pass> createSparseTensorConversionPass();
 std::unique_ptr<Pass>
 createSparseTensorConversionPass(const SparseTensorConversionOptions &options);
+
+//===----------------------------------------------------------------------===//
+// Other rewriting rules and passes.
+//===----------------------------------------------------------------------===//
+
+void populateSparseTensorRewriting(RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createDenseBufferizationPass(
+    const bufferization::OneShotBufferizationOptions &options);
 
 //===----------------------------------------------------------------------===//
 // Registration.
