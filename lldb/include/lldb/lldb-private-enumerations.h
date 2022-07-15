@@ -231,6 +231,29 @@ enum LogHandlerKind {
   eLogHandlerDefault = eLogHandlerStream,
 };
 
+enum ReproducerProvider {
+  eReproducerProviderCommands,
+  eReproducerProviderFiles,
+  eReproducerProviderSymbolFiles,
+  eReproducerProviderGDB,
+  eReproducerProviderProcessInfo,
+  eReproducerProviderVersion,
+  eReproducerProviderWorkingDirectory,
+  eReproducerProviderHomeDirectory,
+  eReproducerProviderNone,
+};
+
+enum ReproducerCrashSignal {
+  eReproducerCrashSigill,
+  eReproducerCrashSigsegv,
+};
+
+enum LoadDependentFiles {
+  eLoadDependentsDefault,
+  eLoadDependentsYes,
+  eLoadDependentsNo,
+};
+
 inline std::string GetStatDescription(lldb_private::StatisticKind K) {
    switch (K) {
    case StatisticKind::ExpressionSuccessful:

@@ -10458,6 +10458,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("class {\n"
                "}* ptr;",
                Style);
+  // Don't confuse a multiplication after a brace-initialized expression with
+  // a class pointer.
+  verifyFormat("int i = int{42} * 34;", Style);
   verifyFormat("struct {\n"
                "}&& ptr = {};",
                Style);
@@ -25738,6 +25741,17 @@ TEST_F(FormatTest, RemoveBraces) {
                "// comment\n"
                "else {\n"
                "  bar();\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  if (b)\n"
+               "    c = 1; // comment\n"
+               "}",
+               "if (a) {\n"
+               "  if (b) {\n"
+               "    c = 1; // comment\n"
+               "  }\n"
                "}",
                Style);
 

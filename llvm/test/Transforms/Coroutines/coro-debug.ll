@@ -56,7 +56,7 @@ sw.epilog:                                        ; preds = %sw.bb
   %4 = load i32, i32* %x.addr, align 4, !dbg !20
   %add = add nsw i32 %4, 1, !dbg !21
   store i32 %add, i32* %x.addr, align 4, !dbg !22
-  %asm_res = callbr i32 asm "", "=r,r,i"(i32 %x, i8* blockaddress(@f, %indirect.dest))
+  %asm_res = callbr i32 asm "", "=r,r,!i"(i32 %x)
           to label %coro_Cleanup [label %indirect.dest]
 
 indirect.dest:

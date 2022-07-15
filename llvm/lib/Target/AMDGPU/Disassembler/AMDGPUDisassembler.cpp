@@ -474,7 +474,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3P)
           convertVOP3PDPPInst(MI);
         else if (AMDGPU::isVOPC64DPP(MI.getOpcode()))
-          convertVOPCDPPInst(MI);
+          convertVOPCDPPInst(MI); // Special VOP3 case
+        else {
+          assert(MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3);
+          convertVOP3DPPInst(MI); // Regular VOP3 case
+        }
         break;
       }
       Res = tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address);
@@ -768,6 +772,43 @@ DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
   return MCDisassembler::Success;
 }
 
+struct VOPModifiers {
+  unsigned OpSel = 0;
+  unsigned OpSelHi = 0;
+  unsigned NegLo = 0;
+  unsigned NegHi = 0;
+};
+
+// Reconstruct values of VOP3/VOP3P operands such as op_sel.
+// Note that these values do not affect disassembler output,
+// so this is only necessary for consistency with src_modifiers.
+static VOPModifiers collectVOPModifiers(const MCInst &MI,
+                                        bool IsVOP3P = false) {
+  VOPModifiers Modifiers;
+  unsigned Opc = MI.getOpcode();
+  const int ModOps[] = {AMDGPU::OpName::src0_modifiers,
+                        AMDGPU::OpName::src1_modifiers,
+                        AMDGPU::OpName::src2_modifiers};
+  for (int J = 0; J < 3; ++J) {
+    int OpIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
+    if (OpIdx == -1)
+      continue;
+
+    unsigned Val = MI.getOperand(OpIdx).getImm();
+
+    Modifiers.OpSel |= !!(Val & SISrcMods::OP_SEL_0) << J;
+    if (IsVOP3P) {
+      Modifiers.OpSelHi |= !!(Val & SISrcMods::OP_SEL_1) << J;
+      Modifiers.NegLo |= !!(Val & SISrcMods::NEG) << J;
+      Modifiers.NegHi |= !!(Val & SISrcMods::NEG_HI) << J;
+    } else if (J == 0) {
+      Modifiers.OpSel |= !!(Val & SISrcMods::DST_OP_SEL) << 3;
+    }
+  }
+
+  return Modifiers;
+}
+
 // We must check FI == literal to reject not genuine dpp8 insts, and we must
 // first add optional MI operands to check FI
 DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
@@ -778,6 +819,11 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
   } else if ((MCII->get(Opc).TSFlags & SIInstrFlags::VOPC) ||
              AMDGPU::isVOPC64DPP(Opc)) {
     convertVOPCDPPInst(MI);
+  } else if (MI.getNumOperands() < DescNumOps &&
+             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1) {
+    auto Mods = collectVOPModifiers(MI);
+    insertNamedMCOperand(MI, MCOperand::createImm(Mods.OpSel),
+                         AMDGPU::OpName::op_sel);
   } else {
     // Insert dummy unused src modifiers.
     if (MI.getNumOperands() < DescNumOps &&
@@ -791,6 +837,18 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
                            AMDGPU::OpName::src1_modifiers);
   }
   return isValidDPP8(MI) ? MCDisassembler::Success : MCDisassembler::SoftFail;
+}
+
+DecodeStatus AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
+  unsigned Opc = MI.getOpcode();
+  unsigned DescNumOps = MCII->get(Opc).getNumOperands();
+  if (MI.getNumOperands() < DescNumOps &&
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1) {
+    auto Mods = collectVOPModifiers(MI);
+    insertNamedMCOperand(MI, MCOperand::createImm(Mods.OpSel),
+                         AMDGPU::OpName::op_sel);
+  }
+  return MCDisassembler::Success;
 }
 
 // Note that before gfx10, the MIMG encoding provided no information about
@@ -937,45 +995,27 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
 DecodeStatus AMDGPUDisassembler::convertVOP3PDPPInst(MCInst &MI) const {
   unsigned Opc = MI.getOpcode();
   unsigned DescNumOps = MCII->get(Opc).getNumOperands();
+  auto Mods = collectVOPModifiers(MI, true);
 
   if (MI.getNumOperands() < DescNumOps &&
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in) != -1)
     insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::vdst_in);
 
-  const int ModOps[] = {AMDGPU::OpName::src0_modifiers,
-                        AMDGPU::OpName::src1_modifiers,
-                        AMDGPU::OpName::src2_modifiers};
-  unsigned OpSel = 0;
-  unsigned OpSelHi = 0;
-  unsigned NegLo = 0;
-  unsigned NegHi = 0;
-  for (int J = 0; J < 3; ++J) {
-    int OpIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
-    if (OpIdx == -1)
-      break;
-    unsigned Val = MI.getOperand(OpIdx).getImm();
-
-    OpSel |= !!(Val & SISrcMods::OP_SEL_0) << J;
-    OpSelHi |= !!(Val & SISrcMods::OP_SEL_1) << J;
-    NegLo |= !!(Val & SISrcMods::NEG) << J;
-    NegHi |= !!(Val & SISrcMods::NEG_HI) << J;
-  }
-
   if (MI.getNumOperands() < DescNumOps &&
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1)
-    insertNamedMCOperand(MI, MCOperand::createImm(OpSel),
+    insertNamedMCOperand(MI, MCOperand::createImm(Mods.OpSel),
                          AMDGPU::OpName::op_sel);
   if (MI.getNumOperands() < DescNumOps &&
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi) != -1)
-    insertNamedMCOperand(MI, MCOperand::createImm(OpSelHi),
+    insertNamedMCOperand(MI, MCOperand::createImm(Mods.OpSelHi),
                          AMDGPU::OpName::op_sel_hi);
   if (MI.getNumOperands() < DescNumOps &&
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo) != -1)
-    insertNamedMCOperand(MI, MCOperand::createImm(NegLo),
+    insertNamedMCOperand(MI, MCOperand::createImm(Mods.NegLo),
                          AMDGPU::OpName::neg_lo);
   if (MI.getNumOperands() < DescNumOps &&
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_hi) != -1)
-    insertNamedMCOperand(MI, MCOperand::createImm(NegHi),
+    insertNamedMCOperand(MI, MCOperand::createImm(Mods.NegHi),
                          AMDGPU::OpName::neg_hi);
 
   return MCDisassembler::Success;

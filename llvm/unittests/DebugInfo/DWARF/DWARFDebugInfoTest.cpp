@@ -1948,40 +1948,6 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
   EXPECT_EQ(DIEs.find(Val2)->second, AbbrevPtrVal2);
 }
 
-TEST(DWARFDebugInfo, TestErrorReporting) {
-  Triple Triple("x86_64-pc-linux");
-  if (!isConfigurationSupported(Triple))
-    GTEST_SKIP();
-
-  auto ExpectedDG = dwarfgen::Generator::create(Triple, 4 /*DwarfVersion*/);
-  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
-  dwarfgen::Generator *DG = ExpectedDG.get().get();
-  AsmPrinter *AP = DG->getAsmPrinter();
-  MCContext *MC = DG->getMCContext();
-
-  // Emit two compressed sections with broken headers.
-  AP->OutStreamer->switchSection(
-      MC->getELFSection(".zdebug_foo", 0 /*Type*/, 0 /*Flags*/));
-  AP->OutStreamer->emitBytes("0");
-  AP->OutStreamer->switchSection(
-      MC->getELFSection(".zdebug_bar", 0 /*Type*/, 0 /*Flags*/));
-  AP->OutStreamer->emitBytes("0");
-
-  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
-  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
-  EXPECT_TRUE((bool)Obj);
-
-  // DWARFContext parses whole file and finds the two errors we expect.
-  int Errors = 0;
-  std::unique_ptr<DWARFContext> Ctx1 = DWARFContext::create(
-      **Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
-      [&](Error E) {
-        ++Errors;
-        consumeError(std::move(E));
-      });
-  EXPECT_TRUE(Errors == 2);
-}
-
 TEST(DWARFDebugInfo, TestDWARFDieRangeInfoContains) {
   DWARFVerifier::DieRangeInfo Empty;
   ASSERT_TRUE(Empty.contains(Empty));

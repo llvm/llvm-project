@@ -34,7 +34,7 @@ define void @x() {
 ; CHECK-NEXT:  Ltmp0: ## Block address taken
 ; CHECK-NEXT:  LBB1_1: ## %overflow
 ; CHECK-NEXT:    retl
-  callbr void asm "#  ${0:l}\0A", "i"(ptr blockaddress(@x, %overflow))
+  callbr void asm "#  ${0:l}\0A", "!i"()
           to label %return [label %overflow]
 
 overflow:

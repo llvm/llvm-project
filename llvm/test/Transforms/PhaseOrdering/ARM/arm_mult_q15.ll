@@ -19,9 +19,9 @@ define void @arm_mult_q15(i16* %pSrcA, i16* %pSrcB, i16 * noalias %pDst, i32 %bl
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -8
 ; CHECK-NEXT:    [[IND_END:%.*]] = and i32 [[BLOCKSIZE]], 7
-; CHECK-NEXT:    [[IND_END9:%.*]] = getelementptr i16, i16* [[PSRCA:%.*]], i32 [[N_VEC]]
-; CHECK-NEXT:    [[IND_END11:%.*]] = getelementptr i16, i16* [[PDST:%.*]], i32 [[N_VEC]]
-; CHECK-NEXT:    [[IND_END13:%.*]] = getelementptr i16, i16* [[PSRCB:%.*]], i32 [[N_VEC]]
+; CHECK-NEXT:    [[IND_END8:%.*]] = getelementptr i16, i16* [[PSRCA:%.*]], i32 [[N_VEC]]
+; CHECK-NEXT:    [[IND_END10:%.*]] = getelementptr i16, i16* [[PDST:%.*]], i32 [[N_VEC]]
+; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i16, i16* [[PSRCB:%.*]], i32 [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -48,9 +48,9 @@ define void @arm_mult_q15(i16* %pSrcA, i16* %pSrcB, i16 * noalias %pDst, i32 %bl
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[WHILE_BODY_PREHEADER17]]
 ; CHECK:       while.body.preheader17:
 ; CHECK-NEXT:    [[BLKCNT_07_PH:%.*]] = phi i32 [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[PSRCA_ADDR_06_PH:%.*]] = phi i16* [ [[PSRCA]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END9]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[PDST_ADDR_05_PH:%.*]] = phi i16* [ [[PDST]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END11]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[PSRCB_ADDR_04_PH:%.*]] = phi i16* [ [[PSRCB]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END13]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[PSRCA_ADDR_06_PH:%.*]] = phi i16* [ [[PSRCA]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END8]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[PDST_ADDR_05_PH:%.*]] = phi i16* [ [[PDST]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END10]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[PSRCB_ADDR_04_PH:%.*]] = phi i16* [ [[PSRCB]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END12]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[BLKCNT_07:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BLKCNT_07_PH]], [[WHILE_BODY_PREHEADER17]] ]

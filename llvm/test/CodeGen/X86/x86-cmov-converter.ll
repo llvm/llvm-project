@@ -1057,5 +1057,5 @@ exit:
   ret void
 }
 
-attributes #0 = {"target-cpu"="x86-64"}
+attributes #0 = {"target-cpu"="x86-64" "tune-cpu"="x86-64"}
 !0 = !{}
